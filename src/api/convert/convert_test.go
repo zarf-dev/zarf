@@ -229,8 +229,8 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 	require.False(t, comp.Optional)
 
 	require.Equal(t, "linux", comp.Target.OS)
-	require.Equal(t, "amd64", comp.Target.Architecture)
-	require.Equal(t, "vanilla", comp.Target.Flavor)
+	require.Equal(t, "amd64", comp.Selector.Architecture)
+	require.Equal(t, "vanilla", comp.Selector.Flavor)
 
 	// v1alpha1 Import.Path/URL get promoted into the v1beta1 Local/Remote lists.
 	require.Len(t, comp.Import.Local, 1)
@@ -861,7 +861,9 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 				Optional:    true,
 				ComponentSpec: v1beta1.ComponentSpec{
 					Target: v1beta1.ComponentTarget{
-						OS:           "linux",
+						OS: "linux",
+					},
+					Selector: v1beta1.ComponentSelector{
 						Architecture: "amd64",
 						Flavor:       "vanilla",
 					},
