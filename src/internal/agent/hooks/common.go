@@ -7,9 +7,7 @@ package hooks
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 
@@ -134,15 +132,21 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 	}
 
 	b, err := fetchManifestBytes(ctx, ref, client, plainHTTP, imageAddress)
-	if err != nil && isTransportSchemeFailure(err) {
-		// The cached decision may now be wrong (e.g. the registry's scheme changed
-		// since it was last negotiated); invalidate and retry once with a fresh probe.
+	if err != nil {
+		// Re-verify the cached decision regardless of what kind of error this was:
+		// re-probing is cheap (a single fast request via the unwrapped transport)
+		// and doesn't depend on recognizing every shape a "the scheme changed"
+		// failure can take across registry implementations — some, e.g. Go's own
+		// http.Server, reject a plaintext request on a TLS-only port with a
+		// well-formed but ordinary-looking error response that's indistinguishable
+		// by error type from an unrelated failure. If the fresh probe agrees with
+		// what was already used, this error is unrelated to scheme and is reported
+		// as-is; if it disagrees, the scheme changed underneath us and it's worth
+		// one retry with the corrected value.
 		transportNegotiator.Invalidate(ref.Registry)
-		plainHTTP, negotiateErr := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, ocitransport.ProbeOptions{Transport: probeTransport})
-		if negotiateErr != nil {
-			return "", negotiateErr
+		if fresh, negotiateErr := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, ocitransport.ProbeOptions{Transport: probeTransport}); negotiateErr == nil && fresh != plainHTTP {
+			b, err = fetchManifestBytes(ctx, ref, client, fresh, imageAddress)
 		}
-		b, err = fetchManifestBytes(ctx, ref, client, plainHTTP, imageAddress)
 	}
 	if err != nil {
 		return "", fmt.Errorf("got an error when trying to access the manifest for %s, error %w", imageAddress, err)
@@ -175,13 +179,4 @@ func fetchManifestBytes(ctx context.Context, ref registry.Reference, client *aut
 	}
 	_, b, err := oras.FetchBytes(ctx, repo, imageAddress, oras.DefaultFetchBytesOptions)
 	return b, err
-}
-
-// isTransportSchemeFailure reports whether err looks like a connection-level
-// failure rather than a well-formed HTTP response (401, 403, 404, 5xx) — matching
-// Negotiator.Invalidate's documented contract for when a cached decision may be
-// wrong.
-func isTransportSchemeFailure(err error) bool {
-	var opErr *net.OpError
-	return errors.As(err, &opErr) || errors.Is(err, http.ErrSchemeMismatch)
 }
