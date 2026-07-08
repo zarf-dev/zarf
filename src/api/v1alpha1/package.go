@@ -277,8 +277,12 @@ type ZarfBuildData struct {
 	originalAPIVersion string
 }
 
-// OriginalAPIVersion returns the apiVersion the package was read from before any conversion.
-func (b ZarfBuildData) OriginalAPIVersion() string {
+// GetOriginalAPIVersion returns the apiVersion the package was read from before any conversion,
+// defaulting to this package's apiVersion when one was never recorded.
+func (b ZarfBuildData) GetOriginalAPIVersion() string {
+	if b.originalAPIVersion == "" {
+		return APIVersion
+	}
 	return b.originalAPIVersion
 }
 

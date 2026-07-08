@@ -13,7 +13,6 @@ import (
 // TestConvertGenericRoundTripLossless asserts that decoding a v1alpha1 package, converting it to
 // the generic representation and back, reproduces the original exactly. layout and zoci load built
 // v1alpha1 packages through this round-trip, so any drift would change packages across build hosts
-// FIXME: add roundtrip test for v1beta1 also
 func TestConvertGenericRoundTripLossless(t *testing.T) {
 	t.Parallel()
 
@@ -138,10 +137,6 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 		Values:        v1alpha1.ZarfValues{Files: []string{"vals.yaml"}, Schema: "schema.json"},
 		Documentation: map[string]string{"doc": "doc.md"},
 	}
-
-	// Conversion records provenance in the unexported originalAPIVersion field (not serialized,
-	// so it does not affect package bytes); mirror it on the expected value.
-	original.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
 
 	roundTripped := ConvertFromGeneric(ConvertToGeneric(original))
 	require.Equal(t, original, roundTripped)

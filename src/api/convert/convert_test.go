@@ -344,7 +344,7 @@ func TestV1Beta1PkgToV1Alpha1_ServiceMarksInitPackage(t *testing.T) {
 					},
 				},
 			}
-			result := PackageV1Beta1ToV1Alpha1(pkg)
+			result := PackageV1beta1ToV1alpha1(pkg)
 			require.Equal(t, tt.expectedKind, result.Kind)
 		})
 	}
@@ -458,6 +458,48 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 			tt.validate(t, result.Components[0].Charts[0])
 		})
 	}
+}
+
+func TestV1Alpha1PkgToV1Beta1_WaitConditionBackfill(t *testing.T) {
+	t.Parallel()
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name: "wait-comp",
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						OnSuccess: []v1alpha1.ZarfComponentAction{
+							{
+								Wait: &v1alpha1.ZarfComponentActionWait{
+									Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+										Kind: "Pod", Name: "my-pod", Namespace: "default",
+									},
+								},
+							},
+							{
+								Wait: &v1alpha1.ZarfComponentActionWait{
+									Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+										Kind: "Pod", Name: "ready-pod", Namespace: "default", Condition: "Ready",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	result := PackageV1alpha1ToV1beta1(pkg)
+
+	onSuccess := result.Components[0].Actions.OnDeploy.OnSuccess
+	require.Len(t, onSuccess, 2)
+	// v1alpha1 empty condition meant "wait until exists"; backfill it so v1beta1 kstatus readiness
+	// does not silently change the behavior of migrated packages.
+	require.Equal(t, "exists", onSuccess[0].Wait.Cluster.Condition)
+	// An explicit condition is preserved as-is.
+	require.Equal(t, "Ready", onSuccess[1].Wait.Cluster.Condition)
 }
 
 func TestV1Alpha1PkgToV1Beta1_ManifestSkipWait(t *testing.T) {
@@ -584,6 +626,51 @@ func TestV1Alpha1PkgToV1Beta1_Actions(t *testing.T) {
 	require.Equal(t, "echo failure", actions.OnDeploy.OnFailure[0].Cmd)
 }
 
+func TestV1Alpha1PkgToV1Beta1_AfterOnSuccessSetVariables(t *testing.T) {
+	t.Parallel()
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name: "sv-comp",
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						After: []v1alpha1.ZarfComponentAction{
+							{
+								Cmd:          "echo after",
+								SetVariables: []v1alpha1.Variable{{Name: "AFTER_VAR"}},
+							},
+						},
+						OnSuccess: []v1alpha1.ZarfComponentAction{
+							{
+								Cmd:          "echo success",
+								SetVariables: []v1alpha1.Variable{{Name: "SUCCESS_VAR", Sensitive: true}},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	result := PackageV1alpha1ToV1beta1(pkg)
+
+	require.Len(t, result.Components[0].Actions.OnDeploy.OnSuccess, 2)
+
+	afterAction := result.Components[0].Actions.OnDeploy.OnSuccess[0]
+	require.Equal(t, "echo after", afterAction.Cmd)
+	afterVars := afterAction.GetDeprecatedSetVariables() //nolint:staticcheck // shim used only by the API conversion layer
+	require.Len(t, afterVars, 1)
+	require.Equal(t, "AFTER_VAR", afterVars[0].Name)
+
+	successAction := result.Components[0].Actions.OnDeploy.OnSuccess[1]
+	require.Equal(t, "echo success", successAction.Cmd)
+	successVars := successAction.GetDeprecatedSetVariables() //nolint:staticcheck // shim used only by the API conversion layer
+	require.Len(t, successVars, 1)
+	require.Equal(t, "SUCCESS_VAR", successVars[0].Name)
+	require.True(t, successVars[0].Sensitive)
+}
+
 func TestV1Alpha1PkgToV1Beta1_Files(t *testing.T) {
 	t.Parallel()
 	tmpl := true
@@ -665,18 +752,6 @@ func TestV1Alpha1PkgToV1Beta1_DeprecatedVersionShim(t *testing.T) {
 	require.Equal(t, "1.2.3", chart.GetDeprecatedVersion()) //nolint:staticcheck // shim used only by the API conversion layer
 }
 
-func TestV1Alpha1PkgToV1Beta1_OriginalAPIVersion(t *testing.T) {
-	t.Parallel()
-	pkg := v1alpha1.ZarfPackage{
-		APIVersion: v1alpha1.APIVersion,
-		Kind:       v1alpha1.ZarfPackageConfig,
-	}
-
-	result := PackageV1alpha1ToV1beta1(pkg)
-
-	require.Equal(t, v1alpha1.APIVersion, result.Build.GetOriginalAPIVersion())
-}
-
 // --- v1beta1 → v1alpha1 tests ---
 
 func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
@@ -706,7 +781,7 @@ func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 		},
 	}
 
-	result := PackageV1Beta1ToV1Alpha1(pkg)
+	result := PackageV1beta1ToV1alpha1(pkg)
 
 	require.Equal(t, v1alpha1.APIVersion, result.APIVersion)
 	require.Equal(t, v1alpha1.ZarfPackageConfig, result.Kind)
@@ -759,7 +834,7 @@ func TestV1Beta1PkgToV1Alpha1_Build(t *testing.T) {
 		},
 	}
 
-	result := PackageV1Beta1ToV1Alpha1(pkg)
+	result := PackageV1beta1ToV1alpha1(pkg)
 
 	require.Equal(t, v1alpha1.ZarfPackageConfig, result.Kind)
 	require.Equal(t, "my-machine", result.Build.Terminal)
@@ -811,7 +886,7 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 		},
 	}
 
-	result := PackageV1Beta1ToV1Alpha1(pkg)
+	result := PackageV1beta1ToV1alpha1(pkg)
 
 	require.Len(t, result.Components, 1)
 	comp := result.Components[0]
@@ -938,7 +1013,7 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 					},
 				},
 			}
-			result := PackageV1Beta1ToV1Alpha1(pkg)
+			result := PackageV1beta1ToV1alpha1(pkg)
 			require.Len(t, result.Components, 1)
 			require.Len(t, result.Components[0].Charts, 1)
 			tt.validate(t, result.Components[0].Charts[0])
@@ -968,7 +1043,7 @@ func TestV1Beta1PkgToV1Alpha1_ManifestSkipWaitInversion(t *testing.T) {
 		},
 	}
 
-	result := PackageV1Beta1ToV1Alpha1(pkg)
+	result := PackageV1beta1ToV1alpha1(pkg)
 
 	require.Len(t, result.Components[0].Manifests, 2)
 
@@ -1027,7 +1102,7 @@ func TestV1Beta1PkgToV1Alpha1_Actions(t *testing.T) {
 		},
 	}
 
-	result := PackageV1Beta1ToV1Alpha1(pkg)
+	result := PackageV1beta1ToV1alpha1(pkg)
 
 	require.Len(t, result.Components, 1)
 	actions := result.Components[0].Actions
@@ -1082,7 +1157,7 @@ func TestV1Beta1PkgToV1Alpha1_VariablesShim(t *testing.T) {
 		},
 	}, v1beta1.Package{Kind: v1beta1.ZarfPackageConfig})
 
-	result := PackageV1Beta1ToV1Alpha1(pkg)
+	result := PackageV1beta1ToV1alpha1(pkg)
 
 	require.Len(t, result.Variables, 1)
 	v := result.Variables[0]
@@ -1096,33 +1171,6 @@ func TestV1Beta1PkgToV1Alpha1_VariablesShim(t *testing.T) {
 	require.Len(t, result.Constants, 1)
 	require.Equal(t, "MY_CONST", result.Constants[0].Name)
 	require.Equal(t, "const-val", result.Constants[0].Value)
-}
-
-func TestV1Beta1PkgToV1Alpha1_OriginalAPIVersion(t *testing.T) {
-	t.Parallel()
-	pkg := v1beta1.Package{
-		APIVersion: v1beta1.APIVersion,
-		Kind:       v1beta1.ZarfPackageConfig,
-	}
-
-	result := PackageV1Beta1ToV1Alpha1(pkg)
-
-	require.Equal(t, v1beta1.APIVersion, result.Build.OriginalAPIVersion())
-}
-
-func TestOriginalAPIVersion_SurvivesRoundTrip(t *testing.T) {
-	t.Parallel()
-	pkg := v1alpha1.ZarfPackage{
-		APIVersion: v1alpha1.APIVersion,
-		Kind:       v1alpha1.ZarfPackageConfig,
-	}
-
-	beta := PackageV1alpha1ToV1beta1(pkg)
-	require.Equal(t, v1alpha1.APIVersion, beta.Build.GetOriginalAPIVersion())
-
-	// Converting back must preserve the true original, not report v1beta1.
-	result := PackageV1Beta1ToV1Alpha1(beta)
-	require.Equal(t, v1alpha1.APIVersion, result.Build.OriginalAPIVersion())
 }
 
 func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
@@ -1145,6 +1193,7 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 			URL:                    "https://example.com",
 			Authors:                "Test Author",
 			AllowNamespaceOverride: &allowOverride,
+			YOLO:                   true,
 		},
 		Build: v1alpha1.ZarfBuildData{
 			Terminal:     "my-machine",
@@ -1154,10 +1203,11 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 		},
 		Components: []v1alpha1.ZarfComponent{
 			{
-				Name:     "test-comp",
-				Required: &required,
-				Images:   []string{"nginx:latest"},
-				Repos:    []string{"https://github.com/example/repo", "https://github.com/example/other"},
+				Name:            "test-comp",
+				Required:        &required,
+				DeprecatedGroup: "my-group",
+				Images:          []string{"nginx:latest"},
+				Repos:           []string{"https://github.com/example/repo", "https://github.com/example/other"},
 				StateAccess: []v1alpha1.StateAccessKey{
 					v1alpha1.StateAccessRegistryCredentials,
 					v1alpha1.StateAccessGitCredentials,
@@ -1216,7 +1266,7 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 
 	// Round-trip: v1alpha1 → v1beta1 → v1alpha1.
 	beta := PackageV1alpha1ToV1beta1(original)
-	result := PackageV1Beta1ToV1Alpha1(beta)
+	result := PackageV1beta1ToV1alpha1(beta)
 
 	require.Equal(t, v1alpha1.APIVersion, result.APIVersion)
 	require.Equal(t, original.Kind, result.Kind)
@@ -1226,12 +1276,14 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 	require.Equal(t, original.Metadata.Architecture, result.Metadata.Architecture)
 	require.Equal(t, original.Metadata.URL, result.Metadata.URL)
 	require.Equal(t, original.Metadata.Authors, result.Metadata.Authors)
+	require.True(t, result.Metadata.YOLO)
 
 	require.Len(t, result.Components, 1)
 	comp := result.Components[0]
 	require.Equal(t, "test-comp", comp.Name)
 	require.NotNil(t, comp.Required)
 	require.True(t, *comp.Required)
+	require.Equal(t, "my-group", comp.DeprecatedGroup)
 	require.Equal(t, []string{"nginx:latest"}, comp.Images)
 
 	// Repos and StateAccess should survive the round-trip unchanged.

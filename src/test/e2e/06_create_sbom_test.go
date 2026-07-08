@@ -27,7 +27,6 @@ func TestCreateSBOM(t *testing.T) {
 
 	expectedFiles := []string{
 		"sbom-viewer-ghcr.io_zarf-dev_doom-game_0.0.1.html",
-		"compare.html",
 		"ghcr.io_zarf-dev_doom-game_0.0.1.json",
 	}
 
@@ -73,5 +72,4 @@ func TestCreateSBOM(t *testing.T) {
 	require.FileExists(t, filepath.Join(outSbomPath, "init", "ghcr.io_go-gitea_gitea_1.24.6-rootless.json"))
 	require.FileExists(t, filepath.Join(outSbomPath, "init", "sbom-viewer-zarf-component-k3s.html"))
 	require.FileExists(t, filepath.Join(outSbomPath, "init", "zarf-component-k3s.json"))
-	require.FileExists(t, filepath.Join(outSbomPath, "init", "compare.html"))
 }

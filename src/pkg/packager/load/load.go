@@ -36,6 +36,8 @@ type DefinitionOptions struct {
 	// SkipRequiredValues ignores values schema validation errors when a "required" field is empty. Used when a package
 	// value should be supplied at deploy-time and doesn't have a default set in the package values.
 	SkipRequiredValues bool
+	// SkipValuesSchemaValidation skips schema validation for the package values entirely.
+	SkipValuesSchemaValidation bool
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
@@ -122,7 +124,7 @@ func v1alpha1PackageDefinition(ctx context.Context, g internalTypes.Package, pkg
 			return DefinedPackage{}, err
 		}
 	}
-	if err := validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues); err != nil {
+	if err := validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation); err != nil {
 		return DefinedPackage{}, err
 	}
 	return DefinedPackage{Pkg: pkg, ImportedSchemas: importedSchemas}, nil
@@ -145,7 +147,7 @@ func v1beta1PackageDefinition(ctx context.Context, g internalTypes.Package, pkgP
 	return DefinedPackage{Pkg: v1alpha1Pkg, ImportedSchemas: importedSchemas}, nil
 }
 
-func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -173,8 +175,10 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		}
 	}
 
-	if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: skipRequiredValues}); err != nil {
-		return err
+	if !skipSchemaValidation {
+		if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: skipRequiredValues}); err != nil {
+			return err
+		}
 	}
 
 	l.Debug("done layout.Validate",

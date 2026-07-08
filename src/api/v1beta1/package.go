@@ -21,7 +21,7 @@ type Package struct {
 	// The API version of the Zarf package.
 	APIVersion string `json:"apiVersion" jsonschema:"enum=zarf.dev/v1beta1"`
 	// The kind of Zarf package.
-	Kind PackageKind `json:"kind" jsonschema:"enum=ZarfPackageConfig"`
+	Kind PackageKind `json:"kind" jsonschema:"enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	// Package metadata.
 	Metadata PackageMetadata `json:"metadata,omitempty"`
 	// Zarf-generated package build data.
@@ -89,7 +89,8 @@ type PackageMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// Prevent namespace overrides for this package.
 	PreventNamespaceOverride bool `json:"preventNamespaceOverride,omitempty"`
-	// yolo removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
+	// *** REMOVED FIELDS ***
+	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
 	yolo bool
 }
 
@@ -134,8 +135,12 @@ type BuildData struct {
 	originalAPIVersion string
 }
 
-// GetOriginalAPIVersion returns the apiVersion the package was read from before any conversion.
+// GetOriginalAPIVersion returns the apiVersion the package was read from before any conversion,
+// defaulting to this package's apiVersion when one was never recorded.
 func (b BuildData) GetOriginalAPIVersion() string {
+	if b.originalAPIVersion == "" {
+		return APIVersion
+	}
 	return b.originalAPIVersion
 }
 

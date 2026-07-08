@@ -1,0 +1,9 @@
+// SPDX-FileCopyrightText: 2024 Shun Sakai
+//
+// SPDX-License-Identifier: CC-BY-4.0
+
+= List of Authors
+
+== Original author
+
+* https://github.com/sorairolake[Shun Sakai]

@@ -37,26 +37,24 @@ import (
 )
 
 type initOptions struct {
-	setVariables            map[string]string
-	optionalComponents      string
-	storageClass            string
-	gitServer               state.GitServerInfo
-	registryInfo            state.RegistryInfo
-	artifactServer          state.ArtifactServerInfo
-	injectorPort            int
-	adoptExistingResources  bool
-	forceConflicts          bool
-	timeout                 time.Duration
-	retries                 int
-	publicKeyPath           string
-	verify                  bool
-	skipSignatureValidation bool
-	confirm                 bool
-	ociConcurrency          int
-	agentTLSCAPath          string
-	agentTLSCertPath        string
-	agentTLSKeyPath         string
-	agentMutationPolicy     string
+	setVariables           map[string]string
+	optionalComponents     string
+	storageClass           string
+	gitServer              state.GitServerInfo
+	registryInfo           state.RegistryInfo
+	artifactServer         state.ArtifactServerInfo
+	injectorPort           int
+	adoptExistingResources bool
+	forceConflicts         bool
+	timeout                time.Duration
+	retries                int
+	confirm                bool
+	ociConcurrency         int
+	agentTLSCAPath         string
+	agentTLSCertPath       string
+	agentTLSKeyPath        string
+	agentMutationPolicy    string
+	packageVerifyFlags
 }
 
 func newInitCommand() *cobra.Command {
@@ -69,7 +67,7 @@ func newInitCommand() *cobra.Command {
 		Long:    lang.CmdInitLong,
 		Example: lang.CmdInitExample,
 		Args:    cobra.MaximumNArgs(1),
-		PreRun:  o.preRun,
+		PreRunE: o.preRunE,
 		RunE:    o.run,
 	}
 
@@ -112,6 +110,9 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.artifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
 	cmd.Flags().StringVar(&o.artifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
 	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
+	_ = cmd.Flags().MarkDeprecated("artifact-url", lang.ArtifactServerDeprecated)
+	_ = cmd.Flags().MarkDeprecated("artifact-push-username", lang.ArtifactServerDeprecated)
+	_ = cmd.Flags().MarkDeprecated("artifact-push-token", lang.ArtifactServerDeprecated)
 
 	// Flags for providing user-managed agent TLS certificates
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
@@ -126,14 +127,8 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
-	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
-	if errSig != nil {
-		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
-	}
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	// Agent TLS flags must all be provided together
 	cmd.MarkFlagsRequiredTogether("agent-tls-ca", "agent-tls-cert", "agent-tls-key")
@@ -148,19 +143,6 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().SortFlags = true
 
 	return cmd
-}
-
-func (o *initOptions) preRun(cmd *cobra.Command, _ []string) {
-	// Handle deprecated --skip-signature-validation flag for backwards compatibility
-	if cmd.Flags().Changed("skip-signature-validation") {
-		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
-
-		if cmd.Flags().Changed("verify") {
-			return
-		}
-
-		o.verify = !o.skipSignatureValidation
-	}
 }
 
 func (o *initOptions) run(cmd *cobra.Command, args []string) error {
@@ -221,8 +203,8 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
-		VerificationStrategy: getVerificationStrategy(o.verify),
+		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerificationStrategy: o.verify.toStrategy(),
 		Filter:               filter,
 		Architecture:         config.GetArch(),
 		CachePath:            cachePath,

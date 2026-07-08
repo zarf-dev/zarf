@@ -12,13 +12,7 @@ import (
 )
 
 // ConvertToGeneric converts a v1alpha1 ZarfPackage to the internal generic representation.
-// FIXME: move this and the roundtrip test to previous PR
 func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.Package {
-	// Preserve an already-recorded original across multi-hop conversions; otherwise this is the original.
-	originalAPIVersion := pkg.Build.OriginalAPIVersion()
-	if originalAPIVersion == "" {
-		originalAPIVersion = pkg.APIVersion
-	}
 	g := types.Package{
 		APIVersion: pkg.APIVersion,
 		Kind:       string(pkg.Kind),
@@ -54,7 +48,7 @@ func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.Package {
 			Signed:                     pkg.Build.Signed,
 			DifferentialMissing:        pkg.Build.DifferentialMissing,
 			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
-			OriginalAPIVersion:         originalAPIVersion,
+			OriginalAPIVersion:         pkg.Build.GetOriginalAPIVersion(),
 		},
 		Values: types.Values{
 			Files:  pkg.Values.Files,
@@ -297,7 +291,7 @@ func waitToGeneric(w *v1alpha1.ZarfComponentActionWait) *types.ComponentActionWa
 // ConvertFromGeneric converts the internal generic representation to a v1alpha1 ZarfPackage.
 func ConvertFromGeneric(g types.Package) v1alpha1.ZarfPackage {
 	// An empty source apiVersion is the implicit v1alpha1 form; preserve it so a v1alpha1
-	// round-trip stays byte-for-byte lossless. Any other source becomes explicit v1alpha1.
+	// round-trip stays byte-for-byte lossless.
 	apiVersion := v1alpha1.APIVersion
 	if g.APIVersion == "" {
 		apiVersion = ""
@@ -409,8 +403,6 @@ func buildFromGeneric(b types.BuildData) v1alpha1.ZarfBuildData {
 			Reason:  vr.Reason,
 		})
 	}
-
-	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
 
 	return out
 }

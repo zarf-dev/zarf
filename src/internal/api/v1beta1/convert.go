@@ -5,19 +5,16 @@
 package v1beta1
 
 import (
+	"maps"
 	"strings"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
 )
 
 // ConvertToGeneric converts a v1beta1 Package to the internal generic representation.
 func ConvertToGeneric(pkg v1beta1.Package) types.Package {
-	// Preserve an already-recorded original across multi-hop conversions; otherwise this is the original.
-	originalAPIVersion := pkg.Build.GetOriginalAPIVersion()
-	if originalAPIVersion == "" {
-		originalAPIVersion = pkg.APIVersion
-	}
 	// Carry the equivalent v1alpha1 AllowNamespaceOverride pointer so conversions to v1alpha1
 	// produce an explicit value rather than relying on a projection.
 	allowNamespaceOverride := !pkg.Metadata.PreventNamespaceOverride
@@ -33,6 +30,7 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 			Annotations:              pkg.Metadata.Annotations,
 			PreventNamespaceOverride: pkg.Metadata.PreventNamespaceOverride,
 			AllowNamespaceOverride:   &allowNamespaceOverride,
+			YOLO:                     pkg.Metadata.GetDeprecatedYOLO(), //nolint:staticcheck // shim used only by the API conversion layer
 		},
 		Build: types.BuildData{
 			Hostname:                   pkg.Build.Hostname,
@@ -48,7 +46,7 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 			Signed:                     pkg.Build.Signed,
 			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
 			AggregateChecksum:          pkg.Build.AggregateChecksum,
-			OriginalAPIVersion:         originalAPIVersion,
+			OriginalAPIVersion:         pkg.Build.GetOriginalAPIVersion(),
 		},
 		Values: types.Values{
 			Files:  pkg.Values.Files,
@@ -88,6 +86,7 @@ func componentToGeneric(c v1beta1.Component) types.Component {
 		},
 		Import:         importToGeneric(c.Import),
 		Actions:        actionsToGeneric(c.Actions),
+		Group:          c.GetDeprecatedGroup(),                                             //nolint:staticcheck // shim used only by the API conversion layer
 		DataInjections: deprecatedDataInjectionsToGeneric(c.GetDeprecatedDataInjections()), //nolint:staticcheck // shim used only by the API conversion layer
 	}
 
@@ -317,8 +316,13 @@ func ConvertFromGeneric(g types.Package) v1beta1.Package {
 		pkg.Kind = v1beta1.ZarfPackageConfig
 	}
 
+	// v1beta1 treats an empty wait.cluster.condition as a kstatus readiness check, whereas v1alpha1
+	// treated it as "wait until the resource exists". Backfill "exists" on migration so existing
+	// packages keep their original behavior.
+	migrateFromV1alpha1 := g.Build.OriginalAPIVersion == v1alpha1.APIVersion
+
 	for _, c := range g.Components {
-		pkg.Components = append(pkg.Components, componentFromGeneric(c, isInit))
+		pkg.Components = append(pkg.Components, componentFromGeneric(c, isInit, migrateFromV1alpha1))
 	}
 
 	pkg = v1beta1.SetDeprecatedFromGeneric(g, pkg)
@@ -327,13 +331,18 @@ func ConvertFromGeneric(g types.Package) v1beta1.Package {
 }
 
 func metadataFromGeneric(m types.PackageMetadata) v1beta1.PackageMetadata {
+	var annotations map[string]string
+	if m.Annotations != nil {
+		annotations = make(map[string]string, len(m.Annotations))
+		maps.Copy(annotations, m.Annotations)
+	}
 	meta := v1beta1.PackageMetadata{
 		Name:         m.Name,
 		Description:  m.Description,
 		Version:      m.Version,
 		Uncompressed: m.Uncompressed,
 		Architecture: m.Architecture,
-		Annotations:  m.Annotations,
+		Annotations:  annotations,
 	}
 
 	// Map v1alpha1 AllowNamespaceOverride (*bool, default allow) onto v1beta1 PreventNamespaceOverride (bool, default allow).
@@ -396,12 +405,10 @@ func buildFromGeneric(b types.BuildData, m types.PackageMetadata) v1beta1.BuildD
 		})
 	}
 
-	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
-
 	return out
 }
 
-func componentFromGeneric(c types.Component, isInit bool) v1beta1.Component {
+func componentFromGeneric(c types.Component, isInit, migrateFromV1alpha1 bool) v1beta1.Component {
 	bc := v1beta1.Component{
 		Name:        c.Name,
 		Description: c.Description,
@@ -452,6 +459,10 @@ func componentFromGeneric(c types.Component, isInit bool) v1beta1.Component {
 			Path:   ia.Path,
 			Images: ia.Images,
 		})
+	}
+
+	if migrateFromV1alpha1 {
+		backfillWaitExists(&bc.Actions)
 	}
 
 	// Convert v1alpha1 HealthChecks into onDeploy onSuccess wait actions.
@@ -700,6 +711,21 @@ func waitFromGeneric(w *types.ComponentActionWait) *v1beta1.ComponentActionWait 
 		}
 	}
 	return bw
+}
+
+// backfillWaitExists sets any action wait.cluster.condition left empty to "exists", preserving
+// v1alpha1 wait semantics. Health-check-derived waits are appended after this runs and keep an
+// empty condition so they use v1beta1 kstatus readiness checks.
+func backfillWaitExists(actions *v1beta1.ComponentActions) {
+	for _, set := range []*v1beta1.ComponentActionSet{&actions.OnCreate, &actions.OnDeploy, &actions.OnRemove} {
+		for _, slice := range [][]v1beta1.ComponentAction{set.Before, set.OnSuccess, set.OnFailure} {
+			for k := range slice {
+				if w := slice[k].Wait; w != nil && w.Cluster != nil && w.Cluster.Condition == "" {
+					w.Cluster.Condition = "exists"
+				}
+			}
+		}
+	}
 }
 
 // healthCheckKind returns the wait-for kind string for a v1alpha1 health check.

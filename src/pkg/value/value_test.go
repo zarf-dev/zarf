@@ -332,7 +332,7 @@ func TestExtract(t *testing.T) {
 		expect any
 	}{
 		{
-			name: "extract root path returns entire map",
+			name: "extract root path returns entire map (as a `map` not a `Values`)",
 			values: Values{
 				"key1": "value1",
 				"key2": map[string]any{
@@ -340,7 +340,7 @@ func TestExtract(t *testing.T) {
 				},
 			},
 			path: ".",
-			expect: Values{
+			expect: map[string]any{
 				"key1": "value1",
 				"key2": map[string]any{
 					"nested": "value2",
@@ -513,6 +513,64 @@ func TestSet(t *testing.T) {
 					"resources": map[string]any{
 						"limits": map[string]any{
 							"cpu": "100m",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "merge map value into a deeply nested map",
+			values: Values{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"memory": "512Mi",
+						},
+					},
+				},
+			},
+			path: ".deployment.resources.limits",
+			value: map[string]any{
+				"cpu": "100m",
+			},
+			expect: Values{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"cpu":    "100m",
+							"memory": "512Mi",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "merge map value into a root path",
+			values: Values{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"memory": "512Mi",
+						},
+					},
+				},
+			},
+			path: ".",
+			value: map[string]any{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"cpu": "100m",
+						},
+					},
+				},
+			},
+			expect: Values{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"cpu":    "100m",
+							"memory": "512Mi",
 						},
 					},
 				},
