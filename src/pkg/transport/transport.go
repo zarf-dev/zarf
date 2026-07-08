@@ -14,11 +14,13 @@
 // unreachable because the flag wasn't set for an unrelated reason.
 //
 // This package answers the question per host instead: it probes the host directly
-// and only ever falls back to plain HTTP when the host proves it speaks plaintext
-// HTTP on that port. It never falls back on a timeout, a refused connection, a TLS
-// certificate error, or an ordinary non-2xx status code — none of those prove
-// anything about the correct scheme, and treating them as license to downgrade would
-// make Zarf a protocol-downgrade oracle.
+// and only falls back to plain HTTP on definitive proof — either the same port
+// answers plaintext HTTP underneath a failed TLS handshake, or (only for a bare
+// hostname with no explicit port, where HTTPS and HTTP resolve to different default
+// ports) a real HTTP response on the conventional HTTP port once the HTTPS default
+// port has proven completely unreachable. It never falls back on a TLS certificate
+// error or an ordinary non-2xx status code — those prove something is listening and
+// speaking a protocol, which is not evidence the correct scheme is different.
 package transport
 
 import (
@@ -26,6 +28,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -180,15 +183,49 @@ func decide(ctx context.Context, host string, opts ProbeOptions) (bool, error) {
 	// misread as a garbled TLS record whose first 5 bytes spell "HTTP/"), and
 	// net/http's Client normalizes that into the exported http.ErrSchemeMismatch
 	// sentinel.
-	if !errors.Is(httpsErr, http.ErrSchemeMismatch) {
-		return false, fmt.Errorf("registry %q did not respond over HTTPS and did not present definitive proof of a plain HTTP endpoint; refusing to downgrade to plain HTTP: %w", host, httpsErr)
+	if errors.Is(httpsErr, http.ErrSchemeMismatch) {
+		httpErr := probe(ctx, "http", host, opts)
+		if httpErr != nil {
+			return false, errors.Join(httpsErr, httpErr)
+		}
+		return true, nil
 	}
 
-	httpErr := probe(ctx, "http", host, opts)
-	if httpErr != nil {
-		return false, errors.Join(httpsErr, httpErr)
+	// A bare hostname with no explicit port defaults to a different port per scheme
+	// (443 vs 80), so a plaintext responder on the conventional HTTP port can never
+	// produce the same-port proof above. If the HTTPS attempt didn't get far enough to
+	// even prove something is listening — no TCP connection, not a certificate error —
+	// a real HTTP response on the conventional HTTP port counts as proof instead.
+	// decide is only ever reached when the caller already opted into plain HTTP for
+	// this negotiation, so this doesn't downgrade anything silently.
+	if !hasExplicitPort(host) && isConnectionFailure(httpsErr) {
+		if httpErr := probe(ctx, "http", host, opts); httpErr == nil {
+			return true, nil
+		}
 	}
-	return true, nil
+
+	return false, fmt.Errorf("registry %q did not respond over HTTPS and did not present definitive proof of a plain HTTP endpoint; refusing to downgrade to plain HTTP: %w", host, httpsErr)
+}
+
+// hasExplicitPort reports whether host includes an explicit port (e.g. "host:5000"
+// or "[::1]:5000"), as opposed to a bare hostname or IP that resolves to a
+// scheme-dependent default port.
+func hasExplicitPort(host string) bool {
+	_, _, err := net.SplitHostPort(host)
+	return err == nil
+}
+
+// isConnectionFailure reports whether err means the probe never got far enough to
+// prove anything is listening — connection refused, network/host unreachable, DNS
+// failure, or the probe's own timeout — as opposed to a TLS or certificate error,
+// which proves something is listening and speaking a protocol on that port.
+func isConnectionFailure(err error) bool {
+	var opErr *net.OpError
+	if errors.As(err, &opErr) {
+		return opErr.Op == "dial"
+	}
+	var dnsErr *net.DNSError
+	return errors.As(err, &dnsErr) || errors.Is(err, context.DeadlineExceeded)
 }
 
 // probe sends an anonymous GET to <scheme>://<host>/v2/. Any completed HTTP response

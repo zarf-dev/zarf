@@ -6,6 +6,8 @@ package transport
 import (
 	"context"
 	"crypto/tls"
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -218,6 +220,80 @@ func TestUsePlainHTTP_TTLExpiryReProbes(t *testing.T) {
 	_, err = n.UsePlainHTTP(context.Background(), host, ProbeOptions{InsecureSkipTLSVerify: true})
 	require.NoError(t, err)
 	require.Equal(t, int32(2), requests.Load())
+}
+
+func TestHasExplicitPort(t *testing.T) {
+	tests := []struct {
+		host string
+		want bool
+	}{
+		{"registry.example.com", false},
+		{"registry.example.com:5000", true},
+		{"127.0.0.1", false},
+		{"127.0.0.1:5000", true},
+		{"[::1]:5000", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.host, func(t *testing.T) {
+			require.Equal(t, tt.want, hasExplicitPort(tt.host))
+		})
+	}
+}
+
+func TestIsConnectionFailure(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"dial OpError", &net.OpError{Op: "dial", Err: errors.New("connection refused")}, true},
+		{"non-dial OpError", &net.OpError{Op: "remote error", Err: errors.New("tls: bad certificate")}, false},
+		{"DNS error", &net.DNSError{Err: "no such host", Name: "nope.invalid"}, true},
+		{"context deadline exceeded", context.DeadlineExceeded, true},
+		{"generic error", errors.New("boom"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, isConnectionFailure(tt.err))
+		})
+	}
+}
+
+func TestUsePlainHTTP_BareHostFallsBackToHTTPDefaultPortWhenHTTPSUnreachable(t *testing.T) {
+	// Simulates a bare hostname (no explicit port): HTTPS defaults to 443 (completely
+	// unreachable here) and HTTP defaults to 80 (answers) -- the gap this fix closes.
+	// Binding real privileged ports in a test isn't practical, so a custom dialer
+	// redirects by port instead: :443 to a connection failure, :80 to a real local
+	// HTTP server.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	_, srvPort, err := net.SplitHostPort(hostOf(t, srv.URL))
+	require.NoError(t, err)
+
+	var dialer net.Dialer
+	rt := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			_, port, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			switch port {
+			case "443":
+				return nil, &net.OpError{Op: "dial", Net: network, Err: errors.New("connection refused")}
+			case "80":
+				return dialer.DialContext(ctx, network, "127.0.0.1:"+srvPort)
+			default:
+				return nil, fmt.Errorf("unexpected port %q", port)
+			}
+		},
+	}
+
+	n := New(Options{})
+	got, err := n.UsePlainHTTP(context.Background(), "bare-host.invalid", ProbeOptions{Transport: rt})
+	require.NoError(t, err)
+	require.True(t, got, "a bare hostname whose HTTPS default port is unreachable but whose HTTP default port answers must fall back to plain HTTP")
 }
 
 func TestUsePlainHTTP_UsesInjectedTransport(t *testing.T) {
