@@ -194,7 +194,9 @@ func decide(ctx context.Context, host string, opts ProbeOptions) (bool, error) {
 // probe sends an anonymous GET to <scheme>://<host>/v2/. Any completed HTTP response
 // counts as proof the scheme is correct, regardless of status code: a 401 or 403
 // over TLS still proves the endpoint speaks HTTPS, so there is no need to
-// authenticate merely to determine transport.
+// authenticate merely to determine transport. Redirects are not followed, for the
+// same reason: a redirect response is already proof enough, and following one risks
+// judging a different host's scheme instead of host's.
 func probe(ctx context.Context, scheme, host string, opts ProbeOptions) error {
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
@@ -216,7 +218,12 @@ func probe(ctx context.Context, scheme, host string, opts ProbeOptions) error {
 		rt = baseTransport
 	}
 
-	client := &http.Client{Transport: rt}
+	client := &http.Client{
+		Transport: rt,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
