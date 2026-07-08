@@ -19,16 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// SetupInMemoryRegistryDynamic starts an in-memory registry on an auto-allocated port.
-func SetupInMemoryRegistryDynamic(ctx context.Context, t *testing.T) string {
-	t.Helper()
-	port, err := helpers.GetAvailablePort()
-	require.NoError(t, err)
-	return SetupInMemoryRegistry(ctx, t, port)
-}
-
-// SetupInMemoryRegistry sets up an in-memory registry on localhost and returns the address.
-func SetupInMemoryRegistry(ctx context.Context, t *testing.T, port int) string {
+func startInMemoryRegistry(ctx context.Context, t *testing.T, port int) (*registry.Registry, string) {
 	t.Helper()
 	config := &configuration.Configuration{}
 	config.HTTP.Addr = fmt.Sprintf(":%d", port)
@@ -50,5 +41,36 @@ func SetupInMemoryRegistry(ctx context.Context, t *testing.T, port int) string {
 		require.NoError(t, conn.Close())
 		return true
 	}, 5*time.Second, 10*time.Millisecond, "registry did not start in time")
+	return ref, addr
+}
+
+// SetupInMemoryRegistryDynamic starts an in-memory registry on an auto-allocated port.
+func SetupInMemoryRegistryDynamic(ctx context.Context, t *testing.T) string {
+	t.Helper()
+	port, err := helpers.GetAvailablePort()
+	require.NoError(t, err)
+	return SetupInMemoryRegistry(ctx, t, port)
+}
+
+// SetupInMemoryRegistry sets up an in-memory registry on localhost and returns the address.
+func SetupInMemoryRegistry(ctx context.Context, t *testing.T, port int) string {
+	t.Helper()
+	_, addr := startInMemoryRegistry(ctx, t, port)
 	return addr
+}
+
+// SetupInMemoryRegistryStoppable starts an in-memory registry on an auto-allocated port
+// and returns its address plus a function to stop it, for tests that need to simulate
+// the registry becoming completely unreachable.
+func SetupInMemoryRegistryStoppable(ctx context.Context, t *testing.T) (string, func()) {
+	t.Helper()
+	port, err := helpers.GetAvailablePort()
+	require.NoError(t, err)
+	ref, addr := startInMemoryRegistry(ctx, t, port)
+	stop := func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = ref.Shutdown(shutdownCtx) //nolint:errcheck // best-effort shutdown in test cleanup
+	}
+	return addr, stop
 }

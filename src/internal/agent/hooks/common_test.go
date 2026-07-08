@@ -145,6 +145,41 @@ func TestConfigMediaTypes(t *testing.T) {
 	}
 }
 
+func TestGetManifestConfigMediaType_RetriesAfterCachedSchemeBecomesUnreachable(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	url, stop := testutil.SetupInMemoryRegistryStoppable(ctx, t)
+
+	// A minimal local manifest is enough here: this test is about the negotiator's
+	// invalidate-and-retry wiring, not about resolving a real image, so it doesn't
+	// need a real registry pull.
+	repo := testutil.NewRepo(t, url+"/fixtures/agent")
+	config := testutil.PushBlob(ctx, t, repo, v1.MediaTypeImageConfig, []byte(`{"architecture":"amd64"}`))
+	manifest := testutil.PushManifest(ctx, t, repo, config, nil)
+	require.NoError(t, repo.Tag(ctx, manifest, "v1"))
+
+	s := &state.State{RegistryInfo: state.RegistryInfo{Address: url}}
+	ref := fmt.Sprintf("%s/fixtures/agent:v1", url)
+
+	// First call negotiates and caches plainHTTP=true for this host.
+	_, err := getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, ref)
+	require.NoError(t, err)
+
+	// The registry becomes completely unreachable under the cached scheme.
+	stop()
+
+	// The fetch now fails at the connection level, which must trigger Invalidate
+	// and a re-negotiation attempt. Nothing is listening at all anymore, so
+	// re-negotiation also fails -- but that failure comes from decide() directly
+	// (returned unwrapped), not the generic fetch-error wrapper below, which is how
+	// we tell the retry path was actually taken rather than skipped.
+	_, err = getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, ref)
+	require.Error(t, err)
+	require.NotContains(t, err.Error(), "got an error when trying to access the manifest",
+		"this wrapper means the retry path was never entered")
+	require.Contains(t, err.Error(), "refusing to downgrade",
+		"the error should come from decide()'s re-negotiation failure, proving Invalidate+retry ran")
+}
+
 func TestIsTransportSchemeFailure(t *testing.T) {
 	tests := []struct {
 		name string

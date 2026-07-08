@@ -137,8 +137,10 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
 			// Reuse the same transport the real push will use (which may be an
-			// mTLS client-certificate transport for a cluster-tunneled registry)
-			plainHTTP, err = ocitransport.From(ctx).UsePlainHTTP(ctx, registryRef.Host(), ocitransport.ProbeOptions{InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify, Transport: transport})
+			// mTLS client-certificate transport for a cluster-tunneled registry),
+			// but stripped of any retry wrapper: probing must stay fast, not retry
+			// with backoff on every connection failure.
+			plainHTTP, err = ocitransport.From(ctx).UsePlainHTTP(ctx, registryRef.Host(), ocitransport.ProbeOptions{InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify, Transport: unwrapRetryTransport(transport)})
 			if err != nil {
 				return err
 			}

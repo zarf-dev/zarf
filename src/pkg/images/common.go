@@ -195,6 +195,17 @@ func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Durati
 	return retry.NewTransport(transport), nil
 }
 
+// unwrapRetryTransport returns rt's underlying RoundTripper if rt is an oras-go
+// retry.Transport, so a scheme probe never inherits its retry/backoff behavior:
+// probing must fail fast on a connection error, not retry it into a multi-second
+// (or, compounded across the negotiate-invalidate-retry cycle, multi-minute) stall.
+func unwrapRetryTransport(rt http.RoundTripper) http.RoundTripper {
+	if retryRT, ok := rt.(*retry.Transport); ok && retryRT.Base != nil {
+		return retryRT.Base
+	}
+	return rt
+}
+
 // NoopOpt is a no-op option for crane.
 func NoopOpt(*crane.Options) {}
 

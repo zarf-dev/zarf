@@ -26,6 +26,7 @@ import (
 	"oras.land/oras-go/v2/registry"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
+	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
 // transportNegotiator decides plain-HTTP vs. HTTPS for the internal Zarf registry as
@@ -123,8 +124,11 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 		}),
 	}
 
-	// Reuse the same transport the real fetch will use (which may be an mTLS client-certificate transport)
-	plainHTTP, err := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, ocitransport.ProbeOptions{Transport: transport})
+	// Reuse the same transport the real fetch will use (which may be an mTLS
+	// client-certificate transport), but stripped of any retry wrapper: probing must
+	// stay fast, not retry with backoff on every connection failure.
+	probeTransport := unwrapRetryTransport(transport)
+	plainHTTP, err := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, ocitransport.ProbeOptions{Transport: probeTransport})
 	if err != nil {
 		return "", err
 	}
@@ -134,7 +138,7 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 		// The cached decision may now be wrong (e.g. the registry's scheme changed
 		// since it was last negotiated); invalidate and retry once with a fresh probe.
 		transportNegotiator.Invalidate(ref.Registry)
-		plainHTTP, negotiateErr := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, ocitransport.ProbeOptions{Transport: transport})
+		plainHTTP, negotiateErr := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, ocitransport.ProbeOptions{Transport: probeTransport})
 		if negotiateErr != nil {
 			return "", negotiateErr
 		}
@@ -150,6 +154,17 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 	}
 
 	return manifest.Config.MediaType, nil
+}
+
+// unwrapRetryTransport returns rt's underlying RoundTripper if rt is an oras-go
+// retry.Transport, so a scheme probe never inherits its retry/backoff behavior:
+// probing must fail fast on a connection error, not retry it into a multi-second
+// (or, compounded across the negotiate-invalidate-retry cycle, multi-minute) stall.
+func unwrapRetryTransport(rt http.RoundTripper) http.RoundTripper {
+	if retryRT, ok := rt.(*orasRetry.Transport); ok && retryRT.Base != nil {
+		return retryRT.Base
+	}
+	return rt
 }
 
 func fetchManifestBytes(ctx context.Context, ref registry.Reference, client *auth.Client, plainHTTP bool, imageAddress string) ([]byte, error) {
