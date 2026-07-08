@@ -37,12 +37,7 @@ func GetCosignArtifacts(ctx context.Context, image string, client *auth.Client, 
 
 	// This image reference was discovered by scanning a package's resources, not
 	// named explicitly on the command line, so remoteOptions.PlainHTTP is not applied
-	// to it directly. Instead, the flag gates whether transport is verified per host
-	// at all: when unset (the common case), HTTPS is used with no network probe;
-	// when set, negotiation confirms whether this specific host actually needs plain
-	// HTTP, rather than forcing it the way the flag would if applied directly.
-	// Negotiated once and reused across the digest, signature, and attestation
-	// lookups below, which all live on the same registry host.
+	// to it directly.
 	var plainHTTP bool
 	if remoteOptions.PlainHTTP {
 		plainHTTP, err = negotiate.From(ctx).UsePlainHTTP(ctx, ref.Context().RegistryStr(), negotiate.ProbeOptions{InsecureSkipTLSVerify: remoteOptions.InsecureSkipTLSVerify})

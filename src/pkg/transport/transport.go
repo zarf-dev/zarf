@@ -33,10 +33,10 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// probeTimeout bounds a single scheme-probe request. Probing does not use retries —
-// a single fast attempt keeps the common (HTTPS works) case cheap and keeps
-// transport-level errors unwrapped so decide can reliably detect a
-// tls.RecordHeaderError.
+// probeTimeout bounds a single scheme-probe request using the package's default
+// transport, which makes one attempt with no retries so decide can reliably detect
+// http.ErrSchemeMismatch. A caller-supplied ProbeOptions.Transport that retries
+// internally is only bounded by probeTimeout in aggregate, not per attempt.
 const probeTimeout = 5 * time.Second
 
 // negativeCacheTTL bounds how long a failed negotiation is cached before the next
@@ -55,7 +55,9 @@ type ProbeOptions struct {
 	InsecureSkipTLSVerify bool
 	// Transport, when set, is used for the probe instead of the package's default
 	// transport. Provide this when reaching the host requires something a generic
-	// transport can't do like  presenting a client certificate to an mTLS-secured registry
+	// transport can't do, like presenting a client certificate to an mTLS-secured
+	// registry. If it retries internally, probing is slower and less precise than
+	// the package's no-retry default; see probeTimeout.
 	Transport http.RoundTripper
 }
 
