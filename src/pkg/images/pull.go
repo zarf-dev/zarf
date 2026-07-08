@@ -37,6 +37,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	orasCache "github.com/defenseunicorns/pkg/oci/cache"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -159,10 +160,11 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			repo.Reference = ref
 			repo.Client = client
 
-			// Only verify per-host when the flag is set at all; if it's unset
-			// HTTPS is already the correct default and there's nothing to negotiate.
+			// Only verify per-host when the flag is set, or when the host is
+			// localhost: a local dev/test registry is commonly plain HTTP even
+			// when --plain-http wasn't passed for that specific purpose.
 			var plainHTTP bool
-			if opts.PlainHTTP {
+			if opts.PlainHTTP || dns.IsLocalhost(repo.Reference.Host()) {
 				plainHTTP, err = negotiate.From(ctx).UsePlainHTTP(ctx, repo.Reference.Host(), negotiate.ProbeOptions{InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify})
 				if err != nil {
 					// It could be an image on the daemon instead of a registry.
