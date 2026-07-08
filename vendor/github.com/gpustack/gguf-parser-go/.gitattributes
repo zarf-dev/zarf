@@ -1,0 +1,4 @@
+* text=auto eol=lf
+
+**/go.sum linguist-generated=true
+**/zz_generated.*.go linguist-generated=true
