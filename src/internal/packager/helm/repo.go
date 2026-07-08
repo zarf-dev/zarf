@@ -306,6 +306,9 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		Verify:  downloader.VerifyNever,
 		Getters: getter.All(pull.Settings),
 		Options: []getter.Option{
+			// plainHTTP is negotiated only in the OCI branch above and stays false for
+			// a traditional repo; Helm's http/https getter (unlike its OCI getter)
+			// never reads this option, taking its scheme from chartURL instead.
 			getter.WithPlainHTTP(plainHTTP),
 			getter.WithInsecureSkipVerifyTLS(remoteOptions.InsecureSkipTLSVerify),
 			getter.WithBasicAuth(username, password),
