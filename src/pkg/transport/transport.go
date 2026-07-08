@@ -156,11 +156,7 @@ func (n *Negotiator) lookup(host string) (plainHTTP bool, ok bool, cachedErr err
 // Callers should only invalidate in response to a transport-level failure that
 // plausibly means the cached scheme is now wrong — e.g. a TLS handshake failure when
 // a request was sent over HTTPS, or a connection reset/refused when a request was
-// sent over the cached plain-HTTP scheme. Do not invalidate on an ordinary HTTP
-// response (401, 403, 404, 5xx): receiving a well-formed response already proves the
-// scheme choice was correct, so the failure is unrelated (credentials, a missing
-// resource, an upstream error) and re-probing would only add latency and mask the
-// real cause.
+// sent over the cached plain-HTTP scheme.
 func (n *Negotiator) Invalidate(host string) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -181,9 +177,7 @@ func decide(ctx context.Context, host string, opts ProbeOptions) (bool, error) {
 	// tls.RecordHeaderError (the server's plaintext response line, "HTTP/1.1 ...", is
 	// misread as a garbled TLS record whose first 5 bytes spell "HTTP/"), and
 	// net/http's Client normalizes that into the exported http.ErrSchemeMismatch
-	// sentinel. This is definitive proof of plaintext, unlike a timeout, a refused
-	// connection, or a certificate error — none of which prove anything about which
-	// scheme is correct.
+	// sentinel.
 	if !errors.Is(httpsErr, http.ErrSchemeMismatch) {
 		return false, fmt.Errorf("registry %q did not respond over HTTPS and did not present definitive proof of a plain HTTP endpoint; refusing to downgrade to plain HTTP: %w", host, httpsErr)
 	}
@@ -243,11 +237,7 @@ func WithNegotiator(ctx context.Context, n *Negotiator) context.Context {
 // the zarf CLI's root command (which is what installs a per-invocation Negotiator;
 // see cmd/root.go) never populates the context key at all. A shared, lazily built
 // singleton means that caller still gets real caching and singleflight dedup across
-// its own calls, rather than a fresh, empty-cache Negotiator every time. A positive
-// TTL is used, rather than the zero (never expire) TTL the CLI installs for itself,
-// because unlike a CLI invocation this singleton's lifetime is whatever its host
-// process's lifetime is — potentially long-running — so decisions should still
-// expire eventually.
+// its own calls, rather than a fresh, empty-cache Negotiator every time.
 var defaultNegotiator = sync.OnceValue(func() *Negotiator {
 	return New(Options{TTL: 5 * time.Minute})
 })
