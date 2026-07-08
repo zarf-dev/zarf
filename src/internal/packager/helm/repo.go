@@ -60,16 +60,6 @@ func negotiateChartPlainHTTP(ctx context.Context, ociURL string, remoteOptions t
 	return plainHTTP, nil
 }
 
-// negotiateChartDependenciesPlainHTTP loads the chart from disk and negotiates its
-// OCI dependency hosts; see negotiateLoadedChartDependenciesPlainHTTP.
-func negotiateChartDependenciesPlainHTTP(ctx context.Context, chart v1alpha1.ZarfChart, remoteOptions types.RemoteOptions) (bool, error) {
-	_, parsed, err := loadAndValidateChart(chart.LocalPath)
-	if err != nil {
-		return false, err
-	}
-	return negotiateLoadedChartDependenciesPlainHTTP(ctx, chart.Name, parsed.Metadata.Dependencies, remoteOptions)
-}
-
 // negotiateLoadedChartDependenciesPlainHTTP negotiates a chart's OCI-referenced
 // dependency hosts (see negotiateChartPlainHTTP). Charts with no OCI dependencies
 // return HTTPS without probing. Dependencies spanning hosts that disagree on scheme
@@ -142,7 +132,7 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 	)
 
 	// Load and validate the chart
-	cl, _, err := loadAndValidateChart(chart.LocalPath)
+	cl, parsed, err := loadAndValidateChart(chart.LocalPath)
 	if err != nil {
 		return err
 	}
@@ -151,7 +141,7 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 	var saved string
 	temp := filepath.Join(chartPath, "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
-		err = buildChartDependencies(ctx, chart, cachePath, remoteOptions)
+		err = buildChartDependencies(ctx, chart, cachePath, parsed.Metadata.Dependencies, remoteOptions)
 		if err != nil {
 			return fmt.Errorf("unable to build dependencies for the chart: %w", err)
 		}
@@ -410,12 +400,14 @@ func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, valuesPath str
 	return nil
 }
 
-// buildChartDependencies builds the helm chart dependencies
-func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart, cachePath string, remoteOptions types.RemoteOptions) error {
+// buildChartDependencies builds the helm chart dependencies. dependencies is the
+// already-loaded chart's declared Chart.yaml dependencies; the caller has already
+// loaded the chart to get here, so this avoids reloading it from disk.
+func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart, cachePath string, dependencies []*chartv2.Dependency, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 
 	// negotiate the transport instead of forcing the global flag.
-	plainHTTP, err := negotiateChartDependenciesPlainHTTP(ctx, chart, remoteOptions)
+	plainHTTP, err := negotiateLoadedChartDependenciesPlainHTTP(ctx, chart.Name, dependencies, remoteOptions)
 	if err != nil {
 		return err
 	}
