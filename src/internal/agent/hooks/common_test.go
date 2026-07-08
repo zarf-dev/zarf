@@ -7,9 +7,11 @@ import (
 	"context"
 	crand "crypto/rand"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -139,6 +141,40 @@ func TestConfigMediaTypes(t *testing.T) {
 			mediaType, err := getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, fmt.Sprintf("%s/%s", url, tt.relRef))
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, mediaType)
+		})
+	}
+}
+
+func TestIsTransportSchemeFailure(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "wrapped net.OpError",
+			err:  fmt.Errorf("dial failed: %w", &net.OpError{Op: "dial", Err: errors.New("connection refused")}),
+			want: true,
+		},
+		{
+			name: "wrapped ErrSchemeMismatch",
+			err:  fmt.Errorf("fetch failed: %w", http.ErrSchemeMismatch),
+			want: true,
+		},
+		{
+			name: "ordinary application error",
+			err:  errors.New("404 not found"),
+			want: false,
+		},
+		{
+			name: "nil error",
+			err:  nil,
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, isTransportSchemeFailure(tt.err))
 		})
 	}
 }

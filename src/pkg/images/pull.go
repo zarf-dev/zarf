@@ -55,11 +55,7 @@ type PullOptions struct {
 	InsecureSkipTLSVerify bool
 	ResponseHeaderTimeout time.Duration
 	// PlainHTTP is not applied directly to these (third-party) image references — it
-	// gates whether transport is negotiated per host at all. When false (the common
-	// case), HTTPS is used with no network probe, since a false/unset flag was never
-	// grounds to force plain HTTP here anyway. When true, negotiation verifies which
-	// hosts among this pull's images actually need plain HTTP, rather than forcing it
-	// onto all of them the way the flag would if applied directly.
+	// gates whether transport is negotiated per host at all.
 	PlainHTTP bool
 }
 
@@ -72,8 +68,7 @@ type imagePullInfo struct {
 	// leaf manifest in "arch[/variant]" form. Empty for single-platform manifests.
 	platforms []string
 	// plainHTTP is the transport scheme negotiated for this image's registry during the
-	// metadata-fetch pass; orasSave reuses it rather than re-probing the (already
-	// known-reachable) host.
+	// metadata-fetch pass
 	plainHTTP bool
 }
 
@@ -164,12 +159,8 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			repo.Reference = ref
 			repo.Client = client
 
-			// This image reference was discovered by reading package data (the
-			// package's images: list), not named explicitly by the user on this
-			// command line — --plain-http was not necessarily meant for this
-			// registry. Only verify per-host when the flag is set at all; if it's
-			// unset, HTTPS is already the correct default and there's nothing to
-			// negotiate.
+			// Only verify per-host when the flag is set at all; if it's unset
+			// HTTPS is already the correct default and there's nothing to negotiate.
 			var plainHTTP bool
 			if opts.PlainHTTP {
 				plainHTTP, err = negotiate.From(ctx).UsePlainHTTP(ctx, repo.Reference.Host(), negotiate.ProbeOptions{InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify})
