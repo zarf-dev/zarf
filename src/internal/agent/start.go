@@ -62,6 +62,7 @@ func StartWebhook(ctx context.Context, cluster *cluster.Cluster) error {
 
 // StartHTTPProxy launches the zarf agent proxy in the cluster.
 func StartHTTPProxy(ctx context.Context, cluster *cluster.Cluster) error {
+	logger.From(ctx).Warn("the Zarf internal proxy will is deprecated and will be removed in a future release")
 	mux := http.NewServeMux()
 	mux.Handle("/", agentHttp.ProxyHandler(ctx, cluster))
 	return startServer(ctx, httpPort, mux)
