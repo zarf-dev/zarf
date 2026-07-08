@@ -33,9 +33,9 @@ type Package struct {
 	// Documentation files included in the package.
 	Documentation map[string]string `json:"documentation,omitempty"`
 
-	// Variables removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
+	// *** REMOVED FIELDS ***
+	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
 	variables []InteractiveVariable
-	// Constants removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
 	constants []Constant
 }
 
