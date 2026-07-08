@@ -7,9 +7,17 @@ package convert
 import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/api/types"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 )
+
+// GenericToCanonicalAPIVersion takes a generic Package and converts it to the API version
+// that package layout is currently using.
+// Intentionally only callable internally since it uses the generic type
+func GenericToCanonicalAPIVersion(gen types.Package) v1alpha1.ZarfPackage {
+	return internalv1alpha1.ConvertFromGeneric(gen)
+}
 
 // PackageV1alpha1ToV1beta1 converts a v1alpha1 ZarfPackage to a v1beta1 Package.
 func PackageV1alpha1ToV1beta1(pkg v1alpha1.ZarfPackage) v1beta1.Package {
