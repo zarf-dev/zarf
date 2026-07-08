@@ -213,6 +213,82 @@ func TestUsePlainHTTP_TTLExpiryReProbes(t *testing.T) {
 	require.Equal(t, int32(2), requests.Load())
 }
 
+func TestUsePlainHTTP_NegativeCacheDoesNotReprobeWithinTTL(t *testing.T) {
+	var accepts atomic.Int32
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer l.Close() //nolint:errcheck
+
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		for {
+			conn, err := l.Accept()
+			if err != nil {
+				return
+			}
+			accepts.Add(1)
+			conn.Close() //nolint:errcheck
+		}
+	}()
+
+	n := New(Options{})
+	fakeNow := time.Now()
+	n.now = func() time.Time { return fakeNow }
+
+	_, err = n.UsePlainHTTP(context.Background(), l.Addr().String(), ProbeOptions{})
+	require.Error(t, err)
+	first := accepts.Load()
+	require.GreaterOrEqual(t, first, int32(1))
+
+	// Still within negativeCacheTTL: the cached failure is returned without probing again.
+	_, err = n.UsePlainHTTP(context.Background(), l.Addr().String(), ProbeOptions{})
+	require.Error(t, err)
+	require.Equal(t, first, accepts.Load(), "a cached failure must not re-probe within negativeCacheTTL")
+
+	// Past negativeCacheTTL: re-probes.
+	fakeNow = fakeNow.Add(negativeCacheTTL + time.Second)
+	_, err = n.UsePlainHTTP(context.Background(), l.Addr().String(), ProbeOptions{})
+	require.Error(t, err)
+	require.Greater(t, accepts.Load(), first, "past negativeCacheTTL, the next call must re-probe")
+}
+
+func TestUsePlainHTTP_ProbeContextDecoupledFromCaller(t *testing.T) {
+	entered := make(chan struct{})
+	unblock := make(chan struct{})
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		close(entered)
+		<-unblock
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	host := hostOf(t, srv.URL)
+
+	n := New(Options{})
+
+	aCtx, aCancel := context.WithCancel(context.Background())
+	aErr := make(chan error, 1)
+	bErr := make(chan error, 1)
+
+	go func() {
+		_, err := n.UsePlainHTTP(aCtx, host, ProbeOptions{InsecureSkipTLSVerify: true})
+		aErr <- err
+	}()
+	<-entered // A's probe request has reached the server and is now blocked there.
+
+	go func() {
+		_, err := n.UsePlainHTTP(context.Background(), host, ProbeOptions{InsecureSkipTLSVerify: true})
+		bErr <- err
+	}()
+	time.Sleep(50 * time.Millisecond) // give B time to join A's in-flight singleflight call
+
+	aCancel()
+	close(unblock)
+
+	require.NoError(t, <-aErr, "the shared probe must not fail even for the caller whose context was canceled")
+	require.NoError(t, <-bErr, "a concurrent caller's healthy context must not be affected by another caller's cancellation")
+}
+
 func TestNegotiator_Invalidate(t *testing.T) {
 	var requests atomic.Int32
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

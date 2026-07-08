@@ -7,7 +7,9 @@ package hooks
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -127,14 +129,17 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 		return "", err
 	}
 
-	registry := &orasRemote.Repository{
-		PlainHTTP: plainHTTP,
-		Reference: ref,
-		Client:    client,
+	b, err := fetchManifestBytes(ctx, ref, client, plainHTTP, imageAddress)
+	if err != nil && isTransportSchemeFailure(err) {
+		// The cached decision may now be wrong (e.g. the registry's scheme changed
+		// since it was last negotiated); invalidate and retry once with a fresh probe.
+		transportNegotiator.Invalidate(ref.Registry)
+		plainHTTP, negotiateErr := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, negotiate.ProbeOptions{Transport: transport})
+		if negotiateErr != nil {
+			return "", negotiateErr
+		}
+		b, err = fetchManifestBytes(ctx, ref, client, plainHTTP, imageAddress)
 	}
-
-	_, b, err := oras.FetchBytes(ctx, registry, imageAddress, oras.DefaultFetchBytesOptions)
-
 	if err != nil {
 		return "", fmt.Errorf("got an error when trying to access the manifest for %s, error %w", imageAddress, err)
 	}
@@ -145,4 +150,23 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 	}
 
 	return manifest.Config.MediaType, nil
+}
+
+func fetchManifestBytes(ctx context.Context, ref registry.Reference, client *auth.Client, plainHTTP bool, imageAddress string) ([]byte, error) {
+	repo := &orasRemote.Repository{
+		PlainHTTP: plainHTTP,
+		Reference: ref,
+		Client:    client,
+	}
+	_, b, err := oras.FetchBytes(ctx, repo, imageAddress, oras.DefaultFetchBytesOptions)
+	return b, err
+}
+
+// isTransportSchemeFailure reports whether err looks like a connection-level
+// failure rather than a well-formed HTTP response (401, 403, 404, 5xx) — matching
+// Negotiator.Invalidate's documented contract for when a cached decision may be
+// wrong.
+func isTransportSchemeFailure(err error) bool {
+	var opErr *net.OpError
+	return errors.As(err, &opErr) || errors.Is(err, http.ErrSchemeMismatch)
 }

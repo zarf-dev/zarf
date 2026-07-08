@@ -39,6 +39,13 @@ import (
 // tls.RecordHeaderError.
 const probeTimeout = 5 * time.Second
 
+// negativeCacheTTL bounds how long a failed negotiation is cached before the next
+// call re-probes. This is separate from, and always shorter than, Options.TTL: even
+// a CLI invocation (TTL 0, decisions otherwise never expire) must not hammer an
+// unreachable host with a fresh probeTimeout on every single call made during one
+// command.
+const negativeCacheTTL = 30 * time.Second
+
 // ProbeOptions configures a single scheme-negotiation probe.
 type ProbeOptions struct {
 	// InsecureSkipTLSVerify disables TLS certificate verification during the HTTPS
@@ -63,7 +70,10 @@ type Options struct {
 
 type cacheEntry struct {
 	plainHTTP bool
-	at        time.Time
+	// err is non-nil for a cached failure, which expires after negativeCacheTTL
+	// instead of the Negotiator's configured TTL; see lookup.
+	err error
+	at  time.Time
 }
 
 // Negotiator decides, per host, whether Zarf should speak plain HTTP or HTTPS to a
@@ -92,25 +102,26 @@ func New(o Options) *Negotiator {
 
 // UsePlainHTTP returns true if host should be reached over plain HTTP rather than
 // HTTPS, deciding by probing the host directly (see decide). A cached decision is
-// reused until it expires; see Options.TTL.
+// reused until it expires; see Options.TTL. Failures are cached too, but only for
+// negativeCacheTTL.
 func (n *Negotiator) UsePlainHTTP(ctx context.Context, host string, opts ProbeOptions) (bool, error) {
-	if v, ok := n.lookup(host); ok {
-		return v, nil
+	if v, ok, cachedErr := n.lookup(host); ok {
+		return v, cachedErr
 	}
 
 	v, err, _ := n.group.Do(host, func() (any, error) {
 		// Re-check under the singleflight in case a concurrent call just populated it.
-		if v, ok := n.lookup(host); ok {
-			return v, nil
+		if v, ok, cachedErr := n.lookup(host); ok {
+			return v, cachedErr
 		}
-		plainHTTP, err := decide(ctx, host, opts)
-		if err != nil {
-			return false, err
-		}
+		// Decoupled from ctx: this probe is shared across every concurrent caller
+		// negotiating host, so one caller's cancellation must not fail it for the
+		// others. probeTimeout still bounds it.
+		plainHTTP, decideErr := decide(context.WithoutCancel(ctx), host, opts)
 		n.mu.Lock()
-		n.cache[host] = cacheEntry{plainHTTP: plainHTTP, at: n.now()}
+		n.cache[host] = cacheEntry{plainHTTP: plainHTTP, err: decideErr, at: n.now()}
 		n.mu.Unlock()
-		return plainHTTP, nil
+		return plainHTTP, decideErr
 	})
 	if err != nil {
 		return false, err
@@ -122,17 +133,21 @@ func (n *Negotiator) UsePlainHTTP(ctx context.Context, host string, opts ProbeOp
 	return plainHTTP, nil
 }
 
-func (n *Negotiator) lookup(host string) (bool, bool) {
+func (n *Negotiator) lookup(host string) (plainHTTP bool, ok bool, cachedErr error) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
-	entry, ok := n.cache[host]
-	if !ok {
-		return false, false
+	entry, found := n.cache[host]
+	if !found {
+		return false, false, nil
 	}
-	if n.ttl > 0 && n.now().Sub(entry.at) > n.ttl {
-		return false, false
+	ttl := n.ttl
+	if entry.err != nil {
+		ttl = negativeCacheTTL
 	}
-	return entry.plainHTTP, true
+	if ttl > 0 && n.now().Sub(entry.at) > ttl {
+		return false, false, nil
+	}
+	return entry.plainHTTP, true, entry.err
 }
 
 // Invalidate drops any cached decision for host, forcing the next UsePlainHTTP call
