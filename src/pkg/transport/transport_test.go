@@ -213,6 +213,26 @@ func TestUsePlainHTTP_TTLExpiryReProbes(t *testing.T) {
 	require.Equal(t, int32(2), requests.Load())
 }
 
+func TestUsePlainHTTP_DoesNotFollowRedirects(t *testing.T) {
+	var targetHits atomic.Int32
+	target := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		targetHits.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer target.Close()
+
+	redirector := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target.URL+"/v2/", http.StatusFound)
+	}))
+	defer redirector.Close()
+
+	n := New(Options{})
+	got, err := n.UsePlainHTTP(context.Background(), hostOf(t, redirector.URL), ProbeOptions{InsecureSkipTLSVerify: true})
+	require.NoError(t, err)
+	require.False(t, got, "a redirect response over TLS still proves HTTPS")
+	require.Equal(t, int32(0), targetHits.Load(), "the probe must not follow the redirect to a different host")
+}
+
 func TestUsePlainHTTP_NegativeCacheDoesNotReprobeWithinTTL(t *testing.T) {
 	var accepts atomic.Int32
 	l, err := net.Listen("tcp", "127.0.0.1:0")
