@@ -5,6 +5,7 @@ package transport
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 )
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
 
 func hostOf(t *testing.T, rawURL string) string {
 	t.Helper()
@@ -211,6 +218,54 @@ func TestUsePlainHTTP_TTLExpiryReProbes(t *testing.T) {
 	_, err = n.UsePlainHTTP(context.Background(), host, ProbeOptions{InsecureSkipTLSVerify: true})
 	require.NoError(t, err)
 	require.Equal(t, int32(2), requests.Load())
+}
+
+func TestUsePlainHTTP_UsesInjectedTransport(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	base := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}} //nolint:gosec // test-only, talking to our own httptest server
+	var calls atomic.Int32
+	custom := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		calls.Add(1)
+		return base.RoundTrip(req)
+	})
+
+	n := New(Options{})
+	// InsecureSkipTLSVerify is ignored when Transport is set; the injected transport
+	// above must be used as-is, self-signed cert and all.
+	got, err := n.UsePlainHTTP(context.Background(), hostOf(t, srv.URL), ProbeOptions{Transport: custom})
+	require.NoError(t, err)
+	require.False(t, got)
+	require.GreaterOrEqual(t, calls.Load(), int32(1), "the injected Transport must be used for the probe")
+}
+
+func TestUsePlainHTTP_AlreadyCanceledContextStillCompletes(t *testing.T) {
+	// The probe is decoupled from the caller's context (see UsePlainHTTP) so that one
+	// caller's cancellation can't fail a shared in-flight probe for others. A direct
+	// consequence: even a solo caller's already-canceled context does not short-circuit
+	// the probe.
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	n := New(Options{})
+	got, err := n.UsePlainHTTP(ctx, hostOf(t, srv.URL), ProbeOptions{InsecureSkipTLSVerify: true})
+	require.NoError(t, err)
+	require.False(t, got)
+}
+
+func TestUsePlainHTTP_EmptyHost(t *testing.T) {
+	n := New(Options{})
+	got, err := n.UsePlainHTTP(context.Background(), "", ProbeOptions{})
+	require.Error(t, err)
+	require.False(t, got)
 }
 
 func TestUsePlainHTTP_DoesNotFollowRedirects(t *testing.T) {
