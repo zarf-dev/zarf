@@ -18,8 +18,8 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocitransport"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	negotiate "github.com/zarf-dev/zarf/src/pkg/transport"
 	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -41,7 +41,7 @@ func negotiateImportPlainHTTP(ctx context.Context, importURL string, remoteOptio
 	if err != nil {
 		return false, fmt.Errorf("unable to parse import url %q: %w", importURL, err)
 	}
-	plainHTTP, err := negotiate.From(ctx).UsePlainHTTP(ctx, ref.Registry, negotiate.ProbeOptions{InsecureSkipTLSVerify: remoteOptions.InsecureSkipTLSVerify})
+	plainHTTP, err := ocitransport.From(ctx).UsePlainHTTP(ctx, ref.Registry, ocitransport.ProbeOptions{InsecureSkipTLSVerify: remoteOptions.InsecureSkipTLSVerify})
 	if err != nil {
 		return false, fmt.Errorf("unable to resolve import %q: %w", importURL, err)
 	}

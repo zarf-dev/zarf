@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package transport decides whether a registry should be reached over plain HTTP or
-// HTTPS.
+// Package ocitransport decides whether an OCI registry should be reached over plain
+// HTTP or HTTPS.
 //
 // Zarf's --plain-http flag is a global, process-wide setting, but many registries
 // Zarf talks to during a single command are not the registry the user meant that
@@ -21,7 +21,7 @@
 // port has proven completely unreachable. It never falls back on a TLS certificate
 // error or an ordinary non-2xx status code — those prove something is listening and
 // speaking a protocol, which is not evidence the correct scheme is different.
-package transport
+package ocitransport
 
 import (
 	"context"

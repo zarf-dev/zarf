@@ -40,8 +40,8 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/ocitransport"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	negotiate "github.com/zarf-dev/zarf/src/pkg/transport"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -165,7 +165,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			// when --plain-http wasn't passed for that specific purpose.
 			var plainHTTP bool
 			if opts.PlainHTTP || dns.IsLocalhost(repo.Reference.Host()) {
-				plainHTTP, err = negotiate.From(ctx).UsePlainHTTP(ctx, repo.Reference.Host(), negotiate.ProbeOptions{InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify})
+				plainHTTP, err = ocitransport.From(ctx).UsePlainHTTP(ctx, repo.Reference.Host(), ocitransport.ProbeOptions{InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify})
 				if err != nil {
 					// It could be an image on the daemon instead of a registry.
 					l.Warn("unable to reach registry, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)

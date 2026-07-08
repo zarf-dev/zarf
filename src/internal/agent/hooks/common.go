@@ -18,8 +18,8 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/ocitransport"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	negotiate "github.com/zarf-dev/zarf/src/pkg/transport"
 	admission "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"oras.land/oras-go/v2"
@@ -31,7 +31,7 @@ import (
 // transportNegotiator decides plain-HTTP vs. HTTPS for the internal Zarf registry as
 // seen from in-cluster. Unlike a CLI invocation, the agent is a long-running process,
 // so decisions are cached with a bounded TTL rather than for the process lifetime.
-var transportNegotiator = negotiate.New(negotiate.Options{TTL: 5 * time.Minute})
+var transportNegotiator = ocitransport.New(ocitransport.Options{TTL: 5 * time.Minute})
 
 const (
 	// AgentErrTransformGitURL is thrown when the agent fails to make the git url a Zarf compatible url
@@ -124,7 +124,7 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 	}
 
 	// Reuse the same transport the real fetch will use (which may be an mTLS client-certificate transport)
-	plainHTTP, err := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, negotiate.ProbeOptions{Transport: transport})
+	plainHTTP, err := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, ocitransport.ProbeOptions{Transport: transport})
 	if err != nil {
 		return "", err
 	}
@@ -134,7 +134,7 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 		// The cached decision may now be wrong (e.g. the registry's scheme changed
 		// since it was last negotiated); invalidate and retry once with a fresh probe.
 		transportNegotiator.Invalidate(ref.Registry)
-		plainHTTP, negotiateErr := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, negotiate.ProbeOptions{Transport: transport})
+		plainHTTP, negotiateErr := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, ocitransport.ProbeOptions{Transport: transport})
 		if negotiateErr != nil {
 			return "", negotiateErr
 		}

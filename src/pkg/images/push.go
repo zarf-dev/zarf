@@ -23,10 +23,10 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocitransport"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	negotiate "github.com/zarf-dev/zarf/src/pkg/transport"
 )
 
 const defaultRetries = 3
@@ -138,7 +138,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			var err error
 			// Reuse the same transport the real push will use (which may be an
 			// mTLS client-certificate transport for a cluster-tunneled registry)
-			plainHTTP, err = negotiate.From(ctx).UsePlainHTTP(ctx, registryRef.Host(), negotiate.ProbeOptions{InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify, Transport: transport})
+			plainHTTP, err = ocitransport.From(ctx).UsePlainHTTP(ctx, registryRef.Host(), ocitransport.ProbeOptions{InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify, Transport: transport})
 			if err != nil {
 				return err
 			}
