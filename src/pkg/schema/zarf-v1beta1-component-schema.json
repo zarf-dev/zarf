@@ -468,6 +468,28 @@
       ],
       "type": "object"
     },
+    "ComponentSelector": {
+      "additionalProperties": false,
+      "description": "ComponentSelector filters a component for inclusion at package create time.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "architecture": {
+          "description": "Only include component for the given package architecture.",
+          "enum": [
+            "amd64",
+            "arm64"
+          ],
+          "type": "string"
+        },
+        "flavor": {
+          "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "ComponentSpec": {
       "additionalProperties": false,
       "description": "ComponentSpec is a reduced component definition used in component configs.",
@@ -525,6 +547,10 @@
           },
           "type": "array"
         },
+        "selector": {
+          "$ref": "#/$defs/ComponentSelector",
+          "description": "Filter when this component is included during package creation based on architecture or flavor."
+        },
         "service": {
           "description": "The Zarf CLI service this component provides, such as the registry, injector, or agent.",
           "enum": [
@@ -545,30 +571,18 @@
         },
         "target": {
           "$ref": "#/$defs/ComponentTarget",
-          "description": "Filter when this component is included in package creation or deployment."
+          "description": "Filter when this component is deployed based on OS."
         }
       },
       "type": "object"
     },
     "ComponentTarget": {
       "additionalProperties": false,
-      "description": "ComponentTarget filters a component to only apply for a given local OS, architecture, or flavor.",
+      "description": "ComponentTarget filters a component to only apply for a given local OS at deploy time.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
-        "architecture": {
-          "description": "Only include component for the given package architecture.",
-          "enum": [
-            "amd64",
-            "arm64"
-          ],
-          "type": "string"
-        },
-        "flavor": {
-          "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'.",
-          "type": "string"
-        },
         "os": {
           "description": "Only deploy component to specified OS.",
           "enum": [
