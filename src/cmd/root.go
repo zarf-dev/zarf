@@ -236,9 +236,16 @@ func setupRootFlags(rootCmd *cobra.Command) {
 
 	// Core functionality
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", vpr.GetString(VZarfCache), lang.RootCmdFlagCachePath)
-	rootCmd.PersistentFlags().MarkDeprecated("zarf-cache", "use --cache instead")
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "cache", vpr.GetString(VZarfCache), lang.RootCmdFlagCachePath)
+	cachePath := vpr.GetString(VCache)
+	if cachePath == "" {
+		cachePath = vpr.GetString(VZarfCache)
+	}
+	if cachePath == "" {
+		cachePath = config.ZarfDefaultCachePath
+	}
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", cachePath, lang.RootCmdFlagCachePath)
+	_ = rootCmd.PersistentFlags().MarkDeprecated("zarf-cache", "use --cache instead")
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "cache", cachePath, lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
 	// Security
