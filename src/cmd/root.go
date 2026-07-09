@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 )
 
 var (
@@ -96,6 +97,8 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	ctx := logger.WithContext(cmd.Context(), l)
+	// One negotiator per CLI invocation; decisions never expire (TTL 0) since Zarf is a short-lived process
+	ctx = ocischeme.WithNegotiator(ctx, ocischeme.New(ocischeme.Options{}))
 	cmd.SetContext(ctx)
 
 	// Print enabled features once we have a logger available
