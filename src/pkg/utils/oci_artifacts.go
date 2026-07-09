@@ -12,7 +12,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/ocitransport"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/errdef"
@@ -40,7 +40,7 @@ func GetCosignArtifacts(ctx context.Context, image string, client *auth.Client, 
 	// to it directly.
 	var plainHTTP bool
 	if remoteOptions.PlainHTTP {
-		plainHTTP, err = ocitransport.From(ctx).UsePlainHTTP(ctx, ref.Context().RegistryStr(), ocitransport.ProbeOptions{InsecureSkipTLSVerify: remoteOptions.InsecureSkipTLSVerify})
+		plainHTTP, err = ocischeme.From(ctx).UsePlainHTTP(ctx, ref.Context().RegistryStr(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: remoteOptions.InsecureSkipTLSVerify})
 		if err != nil {
 			// If we can't reach the registry, we can't get the cosign artifacts so log the error and skip it
 			l.Debug("could not reach registry for cosign artifact lookup", "image", image, "error", err)

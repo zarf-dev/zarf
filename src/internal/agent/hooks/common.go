@@ -16,7 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/ocitransport"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	admission "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,7 +30,7 @@ import (
 // transportNegotiator decides plain-HTTP vs. HTTPS for the internal Zarf registry as
 // seen from in-cluster. Unlike a CLI invocation, the agent is a long-running process,
 // so decisions are cached with a bounded TTL rather than for the process lifetime.
-var transportNegotiator = ocitransport.New(ocitransport.Options{TTL: 5 * time.Minute})
+var transportNegotiator = ocischeme.New(ocischeme.Options{TTL: 5 * time.Minute})
 
 const (
 	// AgentErrTransformGitURL is thrown when the agent fails to make the git url a Zarf compatible url
@@ -126,7 +126,7 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 	// client-certificate transport), but stripped of any retry wrapper: probing must
 	// stay fast, not retry with backoff on every connection failure.
 	probeTransport := unwrapRetryTransport(transport)
-	plainHTTP, err := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, ocitransport.ProbeOptions{Transport: probeTransport})
+	plainHTTP, err := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, ocischeme.ProbeOptions{Transport: probeTransport})
 	if err != nil {
 		return "", err
 	}
@@ -144,7 +144,7 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 		// as-is; if it disagrees, the scheme changed underneath us and it's worth
 		// one retry with the corrected value.
 		transportNegotiator.Invalidate(ref.Registry)
-		if fresh, negotiateErr := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, ocitransport.ProbeOptions{Transport: probeTransport}); negotiateErr == nil && fresh != plainHTTP {
+		if fresh, negotiateErr := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, ocischeme.ProbeOptions{Transport: probeTransport}); negotiateErr == nil && fresh != plainHTTP {
 			b, err = fetchManifestBytes(ctx, ref, client, fresh, imageAddress)
 		}
 	}
