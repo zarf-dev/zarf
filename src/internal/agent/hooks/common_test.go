@@ -146,13 +146,13 @@ func TestConfigMediaTypes(t *testing.T) {
 	}
 }
 
-func TestGetManifestConfigMediaType_RetriesAfterCachedSchemeBecomesUnreachable(t *testing.T) {
+func TestGetManifestConfigMediaType_FailsWhenRegistryBecomesUnreachable(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	url, stop := testutil.SetupInMemoryRegistryStoppable(ctx, t)
 
-	// A minimal local manifest is enough here: this test is about the negotiator's
-	// invalidate-and-retry wiring, not about resolving a real image, so it doesn't
-	// need a real registry pull.
+	// A minimal local manifest is enough here: this test is about surfacing a
+	// sensible error when the registry disappears, not about resolving a real
+	// image, so it doesn't need a real registry pull.
 	repo := testutil.NewRepo(t, url+"/fixtures/agent")
 	config := testutil.PushBlob(ctx, t, repo, v1.MediaTypeImageConfig, []byte(`{"architecture":"amd64"}`))
 	manifest := testutil.PushManifest(ctx, t, repo, config, nil)
@@ -161,24 +161,18 @@ func TestGetManifestConfigMediaType_RetriesAfterCachedSchemeBecomesUnreachable(t
 	s := &state.State{RegistryInfo: state.RegistryInfo{Address: url}}
 	ref := fmt.Sprintf("%s/fixtures/agent:v1", url)
 
-	// First call negotiates and caches plainHTTP=true for this host.
 	_, err := getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, ref)
 	require.NoError(t, err)
 
-	// The registry becomes completely unreachable under the cached scheme.
+	// The registry becomes completely unreachable.
 	stop()
 
-	// The fetch now fails, which must trigger Invalidate and a re-negotiation
-	// attempt regardless of the failure's shape (see getManifestConfigMediaType).
-	// Nothing is listening at all anymore, so re-negotiation also fails, and since
-	// there's no fresh value to retry with, the original fetch error is reported
-	// via the standard wrapper -- this scenario alone can't distinguish "retry was
-	// attempted and also failed" from "retry was skipped," since both end up here.
-	// That distinction (real recovery, not just a sane error) is what
-	// TestGetManifestConfigMediaType_RecoversWhenRegistrySchemeChanges covers.
+	// Each call negotiates fresh -- there is no cache to go stale -- so this fails
+	// at the negotiation step itself, before ever attempting the manifest fetch, and
+	// surfaces the negotiator's own error rather than the fetch-path wrapper.
 	_, err = getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, ref)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "got an error when trying to access the manifest")
+	require.Contains(t, err.Error(), "refusing to downgrade to plain HTTP")
 }
 
 func TestGetManifestConfigMediaType_RecoversWhenRegistrySchemeChanges(t *testing.T) {
@@ -220,9 +214,10 @@ func TestGetManifestConfigMediaType_RecoversWhenRegistrySchemeChanges(t *testing
 	manifestB := testutil.PushManifest(ctx, t, repoB, configB, nil)
 	require.NoError(t, repoB.Tag(ctx, manifestB, "v1"))
 
-	// The cached decision (plainHTTP=true) is now stale. getManifestConfigMediaType
-	// must detect this on the failed fetch, invalidate, re-negotiate, and recover --
-	// not just fail sanely, but actually succeed with the corrected scheme.
+	// The registry now speaks HTTPS instead of plain HTTP. getManifestConfigMediaType
+	// negotiates fresh on every call, so this call's own initial probe picks up the
+	// new scheme directly -- not just failing sanely, but actually succeeding
+	// against the corrected scheme.
 	mediaType, err = getManifestConfigMediaType(ctx, s, transport, ref)
 	require.NoError(t, err)
 	require.Equal(t, v1.MediaTypeImageConfig, mediaType)
