@@ -87,15 +87,29 @@ func ParseServiceKey(s string) (ServiceKey, error) {
 	return "", fmt.Errorf("invalid service key %q, valid keys are: %v", s, AllServiceKeys())
 }
 
+// PackageStatus defines the overall deployment status of a Zarf package.
+type PackageStatus string
+
+// All the different status options for a Zarf Package
+const (
+	PackageStatusUnknown      PackageStatus = "Unknown"
+	PackageStatusSucceeded    PackageStatus = "Succeeded"
+	PackageStatusFailed       PackageStatus = "Failed"
+	PackageStatusDeploying    PackageStatus = "Deploying"
+	PackageStatusRemoving     PackageStatus = "Removing"
+	PackageStatusRemoveFailed PackageStatus = "RemoveFailed"
+)
+
 // ComponentStatus defines the deployment status of a Zarf component within a package.
 type ComponentStatus string
 
 // All the different status options for a Zarf Component
 const (
-	ComponentStatusSucceeded ComponentStatus = "Succeeded"
-	ComponentStatusFailed    ComponentStatus = "Failed"
-	ComponentStatusDeploying ComponentStatus = "Deploying"
-	ComponentStatusRemoving  ComponentStatus = "Removing"
+	ComponentStatusSucceeded    ComponentStatus = "Succeeded"
+	ComponentStatusFailed       ComponentStatus = "Failed"
+	ComponentStatusDeploying    ComponentStatus = "Deploying"
+	ComponentStatusRemoving     ComponentStatus = "Removing"
+	ComponentStatusRemoveFailed ComponentStatus = "RemoveFailed"
 )
 
 // IPFamily defines the different possible IPfamilies that can be used in Kubernetes clusters
@@ -627,6 +641,20 @@ func WithPackageConnectivity(connected bool) DeployedPackageOptions {
 	}
 }
 
+// WithPackageSource records the source string (e.g. oci:// URL or tarball path) used to deploy the package.
+func WithPackageSource(source string) DeployedPackageOptions {
+	return func(o *DeployedPackage) {
+		o.Source = source
+	}
+}
+
+// WithPackageStatus sets the overall deployment status of the package.
+func WithPackageStatus(status PackageStatus) DeployedPackageOptions {
+	return func(o *DeployedPackage) {
+		o.Status = status
+	}
+}
+
 // PackageConnectivity defines the connectivity mode of package deployments
 type PackageConnectivity string
 
@@ -640,8 +668,11 @@ const (
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
-	Name                string               `json:"name"`
-	Digest              string               `json:"digest"`
+	Name   string `json:"name"`
+	Digest string `json:"digest"`
+	// Source is the original source string used to deploy the package (e.g. oci:// URL, path to tarball).
+	Source              string               `json:"source,omitempty"`
+	Status              PackageStatus        `json:"status,omitempty"`
 	Data                v1alpha1.ZarfPackage `json:"data"`
 	CLIVersion          string               `json:"cliVersion"`
 	Generation          int                  `json:"generation"`
@@ -672,6 +703,15 @@ func (d *DeployedPackage) GetPackageConnectivity() PackageConnectivity {
 		return PackageConnectivityAirGap
 	}
 	return d.PackageConnectivity
+}
+
+// GetStatus returns the overall deployment status of the package.
+// Defaults to Unknown for packages deployed before status tracking was introduced.
+func (d *DeployedPackage) GetStatus() PackageStatus {
+	if d.Status == "" {
+		return PackageStatusUnknown
+	}
+	return d.Status
 }
 
 // ConnectString contains information about a connection made with Zarf connect.

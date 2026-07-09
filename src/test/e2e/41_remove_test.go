@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 func TestRemovePackageComponents(t *testing.T) {
@@ -29,6 +30,14 @@ func TestRemovePackageComponents(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
+	// Verify package status is Succeeded and source is recorded after successful deploy
+	c, err := cluster.New(t.Context())
+	require.NoError(t, err)
+	deployedPackage, err := c.GetDeployedPackage(t.Context(), "remove-test")
+	require.NoError(t, err)
+	require.Equal(t, state.PackageStatusSucceeded, deployedPackage.Status)
+	require.Equal(t, packagePath, deployedPackage.Source)
+
 	// Asking for removal of a component that doesn't exist should error
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "remove-test", "--components=unknown_component", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
@@ -37,12 +46,11 @@ func TestRemovePackageComponents(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "remove-test", "--components=first", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	c, err := cluster.New(t.Context())
-	require.NoError(t, err)
-	deployedPackage, err := c.GetDeployedPackage(t.Context(), "remove-test")
+	deployedPackage, err = c.GetDeployedPackage(t.Context(), "remove-test")
 	require.NoError(t, err)
 	require.Len(t, deployedPackage.DeployedComponents, 1)
 	require.Equal(t, "second", deployedPackage.DeployedComponents[0].Name)
+	require.Equal(t, state.PackageStatusSucceeded, deployedPackage.Status)
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", packagePath, "--components=second", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -68,13 +76,16 @@ func TestRemoveFailedPackagedComponents(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--timeout", "3s")
 	require.Error(t, err, stdOut, stdErr)
 
-	// check state that the installedChart is deployed and recorded in state
+	// check state that the installedChart is deployed and recorded in state, and that status reflects failure
 	c, err := cluster.New(t.Context())
 	require.NoError(t, err)
 	deployedPackage, err := c.GetDeployedPackage(t.Context(), "failing-deploy-remove-test")
 	require.NoError(t, err)
+	require.Equal(t, state.PackageStatusFailed, deployedPackage.Status)
+	require.Equal(t, packagePath, deployedPackage.Source)
 	require.Len(t, deployedPackage.DeployedComponents, 2)
 	require.Equal(t, "second", deployedPackage.DeployedComponents[1].Name)
+	require.Equal(t, state.ComponentStatusFailed, deployedPackage.DeployedComponents[1].Status)
 	require.Len(t, deployedPackage.DeployedComponents[1].InstalledCharts, 1)
 
 	// remove the package by component
