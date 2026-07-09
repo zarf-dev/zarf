@@ -120,33 +120,12 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 	// client-certificate transport), but stripped of any retry wrapper: probing must
 	// stay fast, not retry with backoff on every connection failure.
 	probeTransport := unwrapRetryTransport(transport)
-	// A fresh Negotiator per probe, not a shared/cached one: the agent is a
-	// long-running process, but every admission request already paid this same
-	// probe cost before this package existed, and a fresh probe never risks acting
-	// on a decision that's gone stale by the time this request comes in.
-	probe := func() (bool, error) {
-		return ocischeme.New(ocischeme.Options{}).UsePlainHTTP(ctx, ref.Registry, ocischeme.ProbeOptions{Transport: probeTransport})
-	}
-	plainHTTP, err := probe()
+	plainHTTP, err := ocischeme.New(ocischeme.Options{}).UsePlainHTTP(ctx, ref.Registry, ocischeme.ProbeOptions{Transport: probeTransport})
 	if err != nil {
 		return "", err
 	}
 
 	b, err := fetchManifestBytes(ctx, ref, client, plainHTTP, imageAddress)
-	if err != nil {
-		// Re-probe regardless of what kind of error this was: re-probing is cheap (a
-		// single fast request via the unwrapped transport) and doesn't depend on
-		// recognizing every shape a "the scheme changed" failure can take across
-		// registry implementations — some, e.g. Go's own http.Server, reject a
-		// plaintext request on a TLS-only port with a well-formed but ordinary-looking
-		// error response that's indistinguishable by error type from an unrelated
-		// failure. If the fresh probe agrees with what was already used, this error is
-		// unrelated to scheme and is reported as-is; if it disagrees, the scheme
-		// changed underneath us and it's worth one retry with the corrected value.
-		if fresh, negotiateErr := probe(); negotiateErr == nil && fresh != plainHTTP {
-			b, err = fetchManifestBytes(ctx, ref, client, fresh, imageAddress)
-		}
-	}
 	if err != nil {
 		return "", fmt.Errorf("got an error when trying to access the manifest for %s, error %w", imageAddress, err)
 	}
@@ -162,7 +141,7 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 // unwrapRetryTransport returns rt's underlying RoundTripper if rt is an oras-go
 // retry.Transport, so a scheme probe never inherits its retry/backoff behavior:
 // probing must fail fast on a connection error, not retry it into a multi-second
-// (or, compounded across the negotiate-invalidate-retry cycle, multi-minute) stall.
+// stall.
 func unwrapRetryTransport(rt http.RoundTripper) http.RoundTripper {
 	if retryRT, ok := rt.(*orasRetry.Transport); ok && retryRT.Base != nil {
 		return retryRT.Base
