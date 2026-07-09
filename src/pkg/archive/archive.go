@@ -398,7 +398,9 @@ func writeEntry(root *os.Root, rel, linkTarget string, f archives.FileInfo, flag
 	}
 	switch {
 	case f.IsDir():
-		return root.MkdirAll(rel, f.Mode().Perm())
+		// Go 1.26.5 (GO-2026-4970 fix) rejects os.Root paths with a
+		// trailing slash; tar directory entries conventionally have one.
+		return root.MkdirAll(strings.TrimSuffix(rel, "/"), f.Mode().Perm())
 	case linkTarget != "":
 		if err := validateEntryName(linkTarget); err != nil {
 			return err
