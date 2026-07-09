@@ -143,9 +143,6 @@ $ zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNA
 # Initializing w/ an external git server:
 $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 
-# Initializing w/ an external artifact server:
-$ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
-
 # NOTE: Not specifying a pull username/password will use the push user for pulling as well.
 `
 
@@ -182,6 +179,9 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInitFlagArtifactURL       = "[alpha] External artifact registry url to use for this Zarf cluster"
 	CmdInitFlagArtifactPushUser  = "[alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts."
 	CmdInitFlagArtifactPushToken = "[alpha] API Token for the push-user to access the artifact registry"
+
+	// The artifact server is deprecated across init and tools creds commands.
+	ArtifactServerDeprecated = "The artifact server is deprecated and will be removed in a future release"
 
 	// zarf internal
 	CmdInternalShort = "Internal tools used by zarf"
