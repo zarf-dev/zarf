@@ -431,7 +431,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 
 				for _, image := range scan.Matches {
 					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient)
+					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient, opts.RemoteOptions)
 					if err != nil {
 						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
@@ -440,7 +440,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 
 				for _, image := range scan.PotentialMatches {
 					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient)
+					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient, opts.RemoteOptions)
 					if err != nil {
 						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}

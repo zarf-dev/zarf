@@ -82,6 +82,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 		"do not upload the generated attestation, but send the attestation output to STDOUT")
 	cmd.Flags().BoolVarP(&o.Replace, "replace", "", false,
 		"")
+	_ = cmd.Flags().MarkDeprecated("replace", "not needed when OCI referrers become the default behavior")
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")
@@ -110,9 +111,11 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
 		"url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr")
 	_ = cmd.RegisterFlagCompletionFunc("timestamp-server-url", cobra.NoFileCompletions)
+	_ = cmd.Flags().MarkDeprecated("timestamp-server-url", "please use a signing config to specify a timestamp server url; see `cosign signing-config --help`")
 
 	cmd.Flags().BoolVar(&o.RecordCreationTimestamp, "record-creation-timestamp", false,
 		"set the createdAt timestamp in the attestation artifact to the time it was created; by default, cosign sets this to the zero value")
+	_ = cmd.Flags().MarkDeprecated("record-creation-timestamp", "not used with the new bundle format")
 
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
 		"issue a code signing certificate from Fulcio, even if a key is provided")
@@ -123,12 +126,13 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true, "attach a Sigstore bundle using OCI referrers API")
+	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
-		"whether to use a TUF-provided signing config for the service URLs. Must set --new-bundle-format, which will store verification material in the new format")
+		"whether to use a TUF-provided signing config for the service URLs")
 
 	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
-		"path to a signing config file. Must provide --new-bundle-format, which will store verification material in the new format")
+		"path to a signing config file")
 
 	cmd.MarkFlagsMutuallyExclusive("use-signing-config", "signing-config")
 

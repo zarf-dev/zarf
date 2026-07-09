@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -135,7 +136,11 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		plainHTTP := cfg.PlainHTTP
 		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
-			plainHTTP, err = ShouldUsePlainHTTP(ctx, registryRef.Host(), client)
+			// Reuse the same transport the real push will use (which may be an
+			// mTLS client-certificate transport for a cluster-tunneled registry),
+			// but stripped of any retry wrapper: probing must stay fast, not retry
+			// with backoff on every connection failure.
+			plainHTTP, err = ocischeme.From(ctx).UsePlainHTTP(ctx, registryRef.Host(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify, Transport: unwrapRetryTransport(transport)})
 			if err != nil {
 				return err
 			}

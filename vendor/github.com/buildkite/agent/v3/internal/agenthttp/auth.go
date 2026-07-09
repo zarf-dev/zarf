@@ -37,7 +37,7 @@ func (t authenticatedTransport) RoundTrip(req *http.Request) (*http.Response, er
 	}
 
 	if t.Token == "" && t.Bearer == "" {
-		return nil, fmt.Errorf("Invalid token, empty string supplied")
+		return nil, fmt.Errorf("invalid token: empty string supplied")
 	}
 
 	// Per net/http#RoundTripper:
