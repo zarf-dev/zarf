@@ -99,7 +99,7 @@ func anyZarfServiceUsable(requiresGit, requiresRegistry bool, s *state.State) bo
 	return (requiresGit && s.GitServer.IsConfigured()) || (requiresRegistry && s.RegistryInfo.IsConfigured())
 }
 
-func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, transport http.RoundTripper, imageAddress string) (string, error) {
+func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, transport http.RoundTripper, imageAddress string, useMTLS bool) (string, error) {
 	ref, err := registry.ParseReference(imageAddress)
 	if err != nil {
 		return "", err
@@ -116,13 +116,20 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 		}),
 	}
 
-	// Reuse the same transport the real fetch will use (which may be an mTLS
-	// client-certificate transport), but stripped of any retry wrapper: probing must
-	// stay fast, not retry with backoff on every connection failure.
-	probeTransport := unwrapRetryTransport(transport)
-	plainHTTP, err := ocischeme.New(ocischeme.Options{}).UsePlainHTTP(ctx, ref.Registry, ocischeme.ProbeOptions{Transport: probeTransport})
-	if err != nil {
-		return "", err
+	// mTLS already proves the scheme is HTTPS; only negotiate when that isn't
+	// already certain, since the negotiation itself is a probe over the same
+	// connection the real fetch depends on, and a registry that requires mTLS
+	// never has a plain-HTTP path for it to find anyway.
+	plainHTTP := false
+	if !useMTLS {
+		// Reuse the same transport the real fetch will use, but stripped of any
+		// retry wrapper: probing must stay fast, not retry with backoff on every
+		// connection failure.
+		probeTransport := unwrapRetryTransport(transport)
+		plainHTTP, err = ocischeme.New(ocischeme.Options{}).UsePlainHTTP(ctx, ref.Registry, ocischeme.ProbeOptions{Transport: probeTransport})
+		if err != nil {
+			return "", err
+		}
 	}
 
 	b, err := fetchManifestBytes(ctx, ref, client, plainHTTP, imageAddress)

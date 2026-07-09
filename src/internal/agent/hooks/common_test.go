@@ -136,7 +136,7 @@ func TestConfigMediaTypes(t *testing.T) {
 			populateRegistry(ctx, t, url, tt.artifact, tt.Opts)
 
 			s := &state.State{RegistryInfo: state.RegistryInfo{Address: url}}
-			mediaType, err := getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, fmt.Sprintf("%s/%s", url, tt.relRef))
+			mediaType, err := getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, fmt.Sprintf("%s/%s", url, tt.relRef), false)
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, mediaType)
 		})
