@@ -2605,6 +2605,28 @@
                 },
                 "type": "array"
               },
+              "selector": {
+                "additionalProperties": false,
+                "description": "Filter when this component is included during package creation based on architecture or flavor.",
+                "patternProperties": {
+                  "^x-": {}
+                },
+                "properties": {
+                  "architecture": {
+                    "description": "Only include component for the given package architecture.",
+                    "enum": [
+                      "amd64",
+                      "arm64"
+                    ],
+                    "type": "string"
+                  },
+                  "flavor": {
+                    "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
               "service": {
                 "description": "The Zarf CLI service this component provides, such as the registry, injector, or agent.",
                 "enum": [
@@ -2625,23 +2647,11 @@
               },
               "target": {
                 "additionalProperties": false,
-                "description": "Filter when this component is included in package creation or deployment.",
+                "description": "Filter when this component is deployed based on OS.",
                 "patternProperties": {
                   "^x-": {}
                 },
                 "properties": {
-                  "architecture": {
-                    "description": "Only include component for the given package architecture.",
-                    "enum": [
-                      "amd64",
-                      "arm64"
-                    ],
-                    "type": "string"
-                  },
-                  "flavor": {
-                    "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'.",
-                    "type": "string"
-                  },
                   "os": {
                     "description": "Only deploy component to specified OS.",
                     "enum": [
