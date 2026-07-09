@@ -46,7 +46,7 @@ jobs:
 
       ## ── Tier 2: grype on the built binary ───────────────────────────────────
       ## Surfaces indirect-dependency CVEs that consumers of the Zarf binary may
-      ## face. VEX statements in .vex/zarf.openvex.json suppress accepted findings.
+      ## face. VEX statements in .vex/zarf.cli.openvex.json suppress accepted findings.
       ## Fails the workflow on any un-suppressed High or Critical finding.
 
       - name: Build Zarf binary

@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://github.com/zarf-dev/zarf/blob/main/.vex/zarf.openvex.json",
+  "@id": "https://github.com/zarf-dev/zarf/blob/main/.vex/zarf.cli.openvex.json",
   "author": "zarf-dev/zarf maintainers",
-  "version": 1,
+  "version": 6,
   "statements": [
     {
       "vulnerability": {
@@ -59,8 +59,36 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "containerd v1 is an indirect dependency of Zarf, pulled in transitively by the embedded k9s tool (zarf tools monitor). k9s uses containerd's gRPC client API (api/services/*) to connect to a running containerd daemon for cluster monitoring. The vulnerable code parses /etc/group from an image during container setup to assign supplementary groups, which can trigger unbounded memory allocation. This parsing occurs in the server-side container runtime setup path. Neither k9s nor Zarf executes container setup and the group-parsing code is never invoked. The Go vulnerability database lacks symbol-level data for this CVE, causing govulncheck to report package-level reachability; the specific vulnerable runtime functions are not in Zarf's execute path.",
       "timestamp": "2026-07-01T19:34:52.786569012Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-fxhp-mv3v-67qp"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/oras.land/oras-go/v2@v2.6.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "oras-go's file.Store can auto-extract a pulled artifact layer when its descriptor carries the io.deis.oras.content.unpack annotation, and a crafted hardlink entry with a relative Linkname can escape the extraction directory via process CWD resolution. Upstream has no fix available yet (fix state: not-fixed). Zarf's only use of file.Store (src/pkg/zoci/pull.go, PullPackage) explicitly sets dst.SkipUnpack = true, which oras-go's Push implementation checks before ever calling the vulnerable extraction routine (content/file/file.go: if needUnpack ... \u0026\u0026 !s.SkipUnpack), so the annotation-driven auto-unpack path is never reached. Zarf lays out and extracts package layers itself and does not rely on oras-go's auto-unpack behavior.",
+      "timestamp": "2026-07-09T22:45:43.745306323Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "golang.org/x/crypto/openpgp is unmaintained and flagged unsafe by design regardless of usage. govulncheck's reported call chain shows Zarf's signing path (src/pkg/signing/cosign.go CosignSignBlobWithOptions -\u003e cosign's SignBlobCmd -\u003e sigstore-go pkg/sign.Bundle/GetTransparencyLogEntry) reaching rekor's PGP public-key parser (pkg/pki/pgp.NewPublicKey -\u003e golang.org/x/crypto/openpgp ReadKeyRing/ReadEntity/addUserID/VerifyUserIdSignature). This is a static-analysis over-approximation: rekor's pki.NewArtifactFactory dispatches to one PKI implementation via an explicit Format argument (pkg/pki/factory.go), and sigstore-go hardcodes that format to x509 for every hashedrekord transparency-log entry it creates (pkg/sign/transparency.go: artifactProperties.PKIFormat = string(pki.X509)). Zarf never supplies or accepts PGP-format keys in its signing flags, so the PGP branch of rekor's format dispatch, and therefore the vulnerable openpgp code, is never exercised at runtime.",
+      "timestamp": "2026-07-09T22:45:43.759794903Z"
     }
   ],
   "timestamp": "2026-07-01T19:34:52Z",
-  "last_updated": "2026-07-01T19:34:52Z"
+  "last_updated": "2026-07-09T22:45:43Z"
 }

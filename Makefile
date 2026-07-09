@@ -245,7 +245,7 @@ scan-grype: build ## Scan the Zarf binary for CVEs using grype + VEX suppression
 	@test -d ./build || mkdir ./build
 	grype $(ZARF_BIN) --config .grype.yaml -o json > build/grype.json --fail-on high
 
-vex-lint: ## Check for orphaned VEX statements in .vex/zarf.openvex.json (requires: run scan-grype first)
+vex-lint: ## Check for orphaned VEX statements in .vex/zarf.cli.openvex.json (requires: run scan-grype first)
 	@test -f build/grype.json || (echo "ERROR: build/grype.json not found — run 'make scan-grype' first" && exit 1)
 	hack/check-vex-orphans.sh
 

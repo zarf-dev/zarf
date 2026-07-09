@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 #
-# Checks for orphaned VEX statements: entries in .vex/zarf.openvex.json whose
+# Checks for orphaned VEX statements: entries in .vex/zarf.cli.openvex.json whose
 # vulnerability ID no longer appears in the current grype scan results
 # (build/grype.json). Orphaned statements should be reviewed and removed so the
 # VEX document stays accurate and does not silently suppress future findings with
@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-VEX_FILE=".vex/zarf.openvex.json"
+VEX_FILE=".vex/zarf.cli.openvex.json"
 GRYPE_JSON="build/grype.json"
 
 if [[ ! -f "$VEX_FILE" ]]; then

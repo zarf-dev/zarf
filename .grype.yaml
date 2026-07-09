@@ -1,4 +1,4 @@
 # OpenVEX documents consumed by grype; not_affected/fixed statements suppress matching results.
-# To add a new suppression, add a statement to .vex/zarf.openvex.json using vexctl.
+# To add a new suppression, add a statement to .vex/zarf.cli.openvex.json using vexctl.
 vex-documents:
-  - .vex/zarf.openvex.json
+  - .vex/zarf.cli.openvex.json

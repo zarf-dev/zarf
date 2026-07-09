@@ -28,9 +28,9 @@ You can use this file to reproduce Zarf's accepted-CVE posture when scanning wit
 [`grype`](https://github.com/anchore/grype):
 
 ```bash
-grype zarf --vex zarf.openvex.json
+grype zarf --vex zarf.cli.openvex.json
 ```
 
-`zarf.openvex.json` is available as a standalone asset on each
+`zarf.cli.openvex.json` is available as a standalone asset on each
 [GitHub release](https://github.com/zarf-dev/zarf/releases) and is bundled inside the
 init package.

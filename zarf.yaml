@@ -5,7 +5,7 @@ metadata:
   allowNamespaceOverride: false
 
 documentation:
-  zarf.openvex.json: .vex/zarf.openvex.json
+  zarf.cli.openvex.json: .vex/zarf.cli.openvex.json
 
 components:
   - name: k3s
