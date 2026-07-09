@@ -27,7 +27,6 @@ zarf tools registry prune [flags]
 
 ```
       --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
-      --cache string                       Specify the location of the Zarf cache directory (default "~/.zarf-cache")
       --features stringToString            Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify           Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --plain-http                         Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.

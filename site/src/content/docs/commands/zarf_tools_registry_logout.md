@@ -33,7 +33,6 @@ zarf tools registry logout [SERVER] [flags]
 
 ```
       --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
-      --cache string                       Specify the location of the Zarf cache directory (default "~/.zarf-cache")
       --features stringToString            Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure                           Allow image references to be fetched without TLS
       --insecure-skip-tls-verify           Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
