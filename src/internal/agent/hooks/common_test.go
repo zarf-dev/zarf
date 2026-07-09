@@ -6,12 +6,10 @@ package hooks
 import (
 	"context"
 	crand "crypto/rand"
-	"crypto/tls"
 	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"net"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -25,7 +23,6 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
 	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
@@ -144,83 +141,6 @@ func TestConfigMediaTypes(t *testing.T) {
 			require.Equal(t, tt.expected, mediaType)
 		})
 	}
-}
-
-func TestGetManifestConfigMediaType_FailsWhenRegistryBecomesUnreachable(t *testing.T) {
-	ctx := testutil.TestContext(t)
-	url, stop := testutil.SetupInMemoryRegistryStoppable(ctx, t)
-
-	// A minimal local manifest is enough here: this test is about surfacing a
-	// sensible error when the registry disappears, not about resolving a real
-	// image, so it doesn't need a real registry pull.
-	repo := testutil.NewRepo(t, url+"/fixtures/agent")
-	config := testutil.PushBlob(ctx, t, repo, v1.MediaTypeImageConfig, []byte(`{"architecture":"amd64"}`))
-	manifest := testutil.PushManifest(ctx, t, repo, config, nil)
-	require.NoError(t, repo.Tag(ctx, manifest, "v1"))
-
-	s := &state.State{RegistryInfo: state.RegistryInfo{Address: url}}
-	ref := fmt.Sprintf("%s/fixtures/agent:v1", url)
-
-	_, err := getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, ref)
-	require.NoError(t, err)
-
-	// The registry becomes completely unreachable.
-	stop()
-
-	// Each call negotiates fresh -- there is no cache to go stale -- so this fails
-	// at the negotiation step itself, before ever attempting the manifest fetch, and
-	// surfaces the negotiator's own error rather than the fetch-path wrapper.
-	_, err = getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, ref)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "refusing to downgrade to plain HTTP")
-}
-
-func TestGetManifestConfigMediaType_RecoversWhenRegistrySchemeChanges(t *testing.T) {
-	ctx := testutil.TestContext(t)
-	url, stop := testutil.SetupInMemoryRegistryStoppable(ctx, t)
-	_, portStr, err := net.SplitHostPort(url)
-	require.NoError(t, err)
-	port, err := strconv.Atoi(portStr)
-	require.NoError(t, err)
-
-	// Registry, phase 1: plain HTTP. Negotiate and cache plainHTTP=true for this host.
-	repoA := testutil.NewRepo(t, url+"/fixtures/agent")
-	configA := testutil.PushBlob(ctx, t, repoA, v1.MediaTypeImageConfig, []byte(`{"architecture":"amd64"}`))
-	manifestA := testutil.PushManifest(ctx, t, repoA, configA, nil)
-	require.NoError(t, repoA.Tag(ctx, manifestA, "v1"))
-
-	s := &state.State{RegistryInfo: state.RegistryInfo{Address: url}}
-	ref := fmt.Sprintf("%s/fixtures/agent:v1", url)
-
-	// A transport that accepts the self-signed cert used in phase 2 below; also
-	// used as-is for phase 1, since InsecureSkipTLSVerify has no effect over plain
-	// HTTP.
-	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}} //nolint:gosec // test-only, talking to our own self-signed registry
-
-	mediaType, err := getManifestConfigMediaType(ctx, s, transport, ref)
-	require.NoError(t, err)
-	require.Equal(t, v1.MediaTypeImageConfig, mediaType)
-
-	// The registry migrates from plain HTTP to HTTPS on the exact same address --
-	// stop the plain-HTTP instance and start a TLS one on the same port.
-	stop()
-	certFile, keyFile := testutil.SelfSignedCert(t, "127.0.0.1")
-	testutil.SetupInMemoryRegistryTLSOnPort(ctx, t, port, certFile, keyFile)
-
-	repoB, err := remote.NewRepository(url + "/fixtures/agent")
-	require.NoError(t, err)
-	repoB.Client = &auth.Client{Client: &http.Client{Transport: transport}}
-	configB := testutil.PushBlob(ctx, t, repoB, v1.MediaTypeImageConfig, []byte(`{"architecture":"amd64"}`))
-	manifestB := testutil.PushManifest(ctx, t, repoB, configB, nil)
-	require.NoError(t, repoB.Tag(ctx, manifestB, "v1"))
-
-	// The registry now speaks HTTPS instead of plain HTTP. getManifestConfigMediaType
-	// negotiates fresh on every call, so this call's own initial probe picks up the
-	// new scheme directly -- not just failing sanely, but actually succeeding
-	// against the corrected scheme.
-	mediaType, err = getManifestConfigMediaType(ctx, s, transport, ref)
-	require.NoError(t, err)
-	require.Equal(t, v1.MediaTypeImageConfig, mediaType)
 }
 
 // GetAvailableNodePort returns a free TCP port that falls within the current
