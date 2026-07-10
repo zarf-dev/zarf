@@ -134,12 +134,19 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			}),
 		}
 
-		// mTLS already proves the scheme is HTTPS; only negotiate when that isn't
-		// already certain, since the negotiation itself is a probe over the same
-		// tunnel the real push depends on, and a registry that requires mTLS never
-		// has a plain-HTTP path for it to find anyway.
+		// mTLS already proves the scheme is HTTPS, and Zarf's own internal registry
+		// (when not fronted by the mTLS proxy) never has a TLS listener of its own
+		// (see packages/zarf-registry/registry-values.yaml) -- both are
+		// already-known facts, not something to probe for. Negotiate only for
+		// anything else, since the negotiation itself is a probe over the same
+		// tunnel the real push depends on.
 		plainHTTP := cfg.PlainHTTP
-		if !usingMTLS && dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
+		switch {
+		case usingMTLS:
+			plainHTTP = false
+		case registryInfo.IsInternal():
+			plainHTTP = true
+		case dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP:
 			var err error
 			// Reuse the same transport the real push will use, but stripped of any
 			// retry wrapper: probing must stay fast, not retry with backoff on every

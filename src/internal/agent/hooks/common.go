@@ -116,12 +116,19 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 		}),
 	}
 
-	// mTLS already proves the scheme is HTTPS; only negotiate when that isn't
-	// already certain, since the negotiation itself is a probe over the same
-	// connection the real fetch depends on, and a registry that requires mTLS
-	// never has a plain-HTTP path for it to find anyway.
-	plainHTTP := false
-	if !useMTLS {
+	// mTLS already proves the scheme is HTTPS, and Zarf's own internal registry
+	// (when not fronted by the mTLS proxy) never has a TLS listener of its own --
+	// both are already-known facts, not something to probe for. Negotiate only for
+	// anything else (e.g. an externally-configured registry), since the
+	// negotiation itself is a probe over the same connection the real fetch
+	// depends on.
+	var plainHTTP bool
+	switch {
+	case useMTLS:
+		plainHTTP = false
+	case zarfState.RegistryInfo.IsInternal():
+		plainHTTP = true
+	default:
 		// Reuse the same transport the real fetch will use, but stripped of any
 		// retry wrapper: probing must stay fast, not retry with backoff on every
 		// connection failure.
