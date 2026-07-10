@@ -105,6 +105,21 @@ func New(o Options) *Negotiator {
 	}
 }
 
+// KnownPlainHTTP reports whether a registry's scheme is already certain without
+// probing: mTLS implies HTTPS, and Zarf's own internal registry (when not fronted
+// by the mTLS proxy) never has a TLS listener of its own. ok is false when neither
+// applies, meaning the caller must negotiate via UsePlainHTTP instead.
+func KnownPlainHTTP(usingMTLS, isInternal bool) (plainHTTP bool, ok bool) {
+	switch {
+	case usingMTLS:
+		return false, true
+	case isInternal:
+		return true, true
+	default:
+		return false, false
+	}
+}
+
 // UsePlainHTTP returns true if host should be reached over plain HTTP rather than
 // HTTPS, deciding by probing the host directly (see decide). A cached decision is
 // reused until it expires; see Options.TTL. Failures are cached too, but only for
