@@ -88,7 +88,6 @@ func mergeCharts(base, head []v1beta1.Chart) []v1beta1.Chart {
 		if h.SkipSchemaValidation {
 			c.SkipSchemaValidation = true
 		}
-		// FIXME: check if the ordering is correct here
 		c.ValuesFiles = append(c.ValuesFiles, h.ValuesFiles...)
 		c.Values = append(c.Values, h.Values...)
 		out[idx] = c
