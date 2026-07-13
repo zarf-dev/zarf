@@ -1,0 +1,11 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: test-inspect-definition-v1beta1
+  description: a self-contained v1beta1 package
+  architecture: amd64
+components:
+- name: image-test
+  description: this component is loaded and converted down to v1alpha1
+  images:
+  - name: nginx:1.27.0
