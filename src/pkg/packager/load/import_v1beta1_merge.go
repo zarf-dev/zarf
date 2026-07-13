@@ -13,11 +13,11 @@ func mergeComponentSpec(base, head v1beta1.ComponentSpec) v1beta1.ComponentSpec 
 	if head.Target.OS != "" {
 		merged.Target.OS = head.Target.OS
 	}
-	if head.Target.Architecture != "" {
-		merged.Target.Architecture = head.Target.Architecture
+	if head.Selector.Architecture != "" {
+		merged.Selector.Architecture = head.Selector.Architecture
 	}
-	if head.Target.Flavor != "" {
-		merged.Target.Flavor = head.Target.Flavor
+	if head.Selector.Flavor != "" {
+		merged.Selector.Flavor = head.Selector.Flavor
 	}
 	if head.Service != "" {
 		merged.Service = head.Service

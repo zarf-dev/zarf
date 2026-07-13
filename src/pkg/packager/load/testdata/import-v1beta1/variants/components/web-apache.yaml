@@ -3,7 +3,7 @@ kind: ZarfComponentConfig
 metadata:
   name: web
 component:
-  target:
+  selector:
     flavor: apache
   images:
     - name: httpd:2.4

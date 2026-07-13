@@ -3,7 +3,7 @@ kind: ZarfComponentConfig
 metadata:
   name: web
 component:
-  target:
+  selector:
     flavor: nginx
   images:
     - name: nginx:1.27

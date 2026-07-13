@@ -41,7 +41,7 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath
 	var components []v1beta1.Component
 	var vals importedValues
 	for _, component := range pkg.Components {
-		if !compatibleComponentV1Beta1(component.Target, arch, flavor) {
+		if !compatibleComponentV1Beta1(component.Selector, arch, flavor) {
 			continue
 		}
 		mergedSpec, compVals, err := resolveComponentSpecImports(ctx, component.ComponentSpec, baseDir, arch, flavor, []string{filepath.Clean(pkgPath.ManifestFile)})
@@ -147,7 +147,7 @@ func selectImportVariant(entries []v1beta1.ComponentImportLocal, specDir, arch, 
 
 	var compatible []loadedComponentConfig
 	for _, lc := range loaded {
-		if compatibleComponentV1Beta1(lc.config.Component.Target, arch, flavor) {
+		if compatibleComponentV1Beta1(lc.config.Component.Selector, arch, flavor) {
 			compatible = append(compatible, lc)
 		}
 	}
@@ -202,9 +202,9 @@ func validateComponentImportV1Beta1(imp v1beta1.ComponentImport) error {
 
 // compatibleComponentV1Beta1 reports whether a component target matches the active architecture and flavor.
 // OS targeting is a deploy-time filter and is not evaluated here.
-func compatibleComponentV1Beta1(target v1beta1.ComponentTarget, arch, flavor string) bool {
-	satisfiesArch := target.Architecture == "" || target.Architecture == arch
-	satisfiesFlavor := target.Flavor == "" || target.Flavor == flavor
+func compatibleComponentV1Beta1(selector v1beta1.ComponentSelector, arch, flavor string) bool {
+	satisfiesArch := selector.Architecture == "" || selector.Architecture == arch
+	satisfiesFlavor := selector.Flavor == "" || selector.Flavor == flavor
 	return satisfiesArch && satisfiesFlavor
 }
 
