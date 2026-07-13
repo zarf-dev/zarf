@@ -60,6 +60,26 @@ func negotiateChartPlainHTTP(ctx context.Context, ociURL string, remoteOptions t
 	return plainHTTP, nil
 }
 
+// newChartRegistryClient builds a Helm registry client for an OCI chart reference,
+// negotiating the transport scheme for its host (see negotiateChartPlainHTTP). It
+// returns the client alongside the negotiated plainHTTP so callers can pass the same
+// scheme to the chart getter.
+func newChartRegistryClient(ctx context.Context, ociURL string, remoteOptions types.RemoteOptions) (*registry.Client, bool, error) {
+	plainHTTP, err := negotiateChartPlainHTTP(ctx, ociURL, remoteOptions)
+	if err != nil {
+		return nil, false, err
+	}
+	clientOpts := []registry.ClientOption{registry.ClientOptEnableCache(true)}
+	if plainHTTP {
+		clientOpts = append(clientOpts, registry.ClientOptPlainHTTP())
+	}
+	regClient, err := registry.NewClient(clientOpts...)
+	if err != nil {
+		return nil, false, fmt.Errorf("unable to create the new registry client: %w", err)
+	}
+	return regClient, plainHTTP, nil
+}
+
 // negotiateLoadedChartDependenciesPlainHTTP negotiates a chart's OCI-referenced
 // dependency hosts (see negotiateChartPlainHTTP). Charts with no OCI dependencies
 // return HTTPS without probing. Dependencies spanning hosts that disagree on scheme
@@ -218,9 +238,9 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		regClient *registry.Client
 		chartURL  string
 		err       error
-		// plainHTTP is only ever negotiated (never taken from remoteOptions.PlainHTTP
-		// directly) for the OCI branch below: chart.URL was discovered by reading
-		// package data, not named explicitly on this command line, so the global
+		// plainHTTP is always negotiated for an OCI chart host (never taken from
+		// remoteOptions.PlainHTTP directly): the host was discovered by reading package
+		// data or a repo index, not named explicitly on this command line, so the global
 		// --plain-http flag is not necessarily meant for it.
 		plainHTTP bool
 	)
@@ -239,17 +259,9 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 
 	// Handle OCI registries
 	if registry.IsOCI(chart.URL) {
-		plainHTTP, err = negotiateChartPlainHTTP(ctx, chart.URL, remoteOptions)
+		regClient, plainHTTP, err = newChartRegistryClient(ctx, chart.URL, remoteOptions)
 		if err != nil {
 			return err
-		}
-		clientOpts := []registry.ClientOption{registry.ClientOptEnableCache(true)}
-		if plainHTTP {
-			clientOpts = append(clientOpts, registry.ClientOptPlainHTTP())
-		}
-		regClient, err = registry.NewClient(clientOpts...)
-		if err != nil {
-			return fmt.Errorf("unable to create the new registry client: %w", err)
 		}
 		chartURL = chart.URL
 		// Explicitly set the pull version for OCI
@@ -282,6 +294,16 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		)
 		if err != nil {
 			return fmt.Errorf("unable to pull the helm chart: %w", err)
+		}
+
+		// A classic Helm repo index may redirect a chart to an OCI reference
+		// Helm's downloader requires a registry client to resolve
+		// an OCI ref, so build one for the resolved URL.
+		if registry.IsOCI(chartURL) {
+			regClient, plainHTTP, err = newChartRegistryClient(ctx, chartURL, remoteOptions)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
