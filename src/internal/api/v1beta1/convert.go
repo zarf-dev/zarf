@@ -389,6 +389,7 @@ func buildFromGeneric(b types.BuildData, m types.PackageMetadata) v1beta1.BuildD
 		Signed:                     b.Signed,
 		ProvenanceFiles:            b.ProvenanceFiles,
 	}
+	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
 
 	// AggregateChecksum lives in metadata in v1alpha1, build in v1beta1.
 	switch {

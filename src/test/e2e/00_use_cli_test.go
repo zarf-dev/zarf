@@ -16,7 +16,6 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	goyaml "github.com/goccy/go-yaml"
 	"github.com/otiai10/copy"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/stretchr/testify/require"
@@ -75,18 +74,9 @@ func TestUseCLI(t *testing.T) {
 
 		stdOut, _, err := e2e.Zarf(t, "dev", "inspect", "definition", pathToPackage, "--architecture=amd64")
 		require.NoError(t, err)
-
-		// In this milestone a v1beta1 package is converted down and printed as v1alpha1.
-		// FIXME: print functionality should change to convert to whichever format
-		var parsed struct {
-			APIVersion string `yaml:"apiVersion"`
-			Metadata   struct {
-				Name string `yaml:"name"`
-			} `yaml:"metadata"`
-		}
-		require.NoError(t, goyaml.Unmarshal([]byte(stdOut), &parsed))
-		require.Equal(t, "zarf.dev/v1alpha1", parsed.APIVersion)
-		require.Equal(t, "test-inspect-definition-v1beta1", parsed.Metadata.Name)
+		b, err := os.ReadFile(filepath.Join(pathToPackage, "expected-zarf.yaml"))
+		require.NoError(t, err)
+		require.Contains(t, stdOut, string(b))
 	})
 
 	t.Run("zarf dev sha256sum <local>", func(t *testing.T) {

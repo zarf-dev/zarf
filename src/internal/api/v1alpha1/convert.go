@@ -396,6 +396,7 @@ func buildFromGeneric(b types.BuildData) v1alpha1.ZarfBuildData {
 		Signed:                     b.Signed,
 		ProvenanceFiles:            b.ProvenanceFiles,
 	}
+	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
 
 	for _, vr := range b.VersionRequirements {
 		out.VersionRequirements = append(out.VersionRequirements, v1alpha1.VersionRequirement{

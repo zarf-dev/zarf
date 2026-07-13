@@ -24,8 +24,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
+	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -301,12 +304,15 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	if err != nil {
 		return err
 	}
-	defined.Pkg.Build = v1alpha1.ZarfBuildData{}
-	err = utils.ColorPrintYAML(defined.Pkg, nil, false)
-	if err != nil {
-		return err
+
+	// Zarf operates internally on v1alpha1, but the definition is printed in the apiVersion it was authored in.
+	if defined.Pkg.Build.GetOriginalAPIVersion() == v1beta1.APIVersion {
+		pkg := internalv1beta1.ConvertFromGeneric(internalv1alpha1.ConvertToGeneric(defined.Pkg))
+		pkg.Build = v1beta1.BuildData{}
+		return utils.ColorPrintYAML(pkg, nil, false)
 	}
-	return nil
+	defined.Pkg.Build = v1alpha1.ZarfBuildData{}
+	return utils.ColorPrintYAML(defined.Pkg, nil, false)
 }
 
 type devInspectManifestsOptions struct {
