@@ -116,10 +116,9 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 		}),
 	}
 
-	// Negotiate only when the scheme isn't already a known fact (see
-	// ocischeme.KnownPlainHTTP), since the negotiation itself is a probe over the
-	// same connection the real fetch depends on.
-	plainHTTP, ok := ocischeme.KnownPlainHTTP(useMTLS, zarfState.RegistryInfo.IsInternal())
+	// Negotiate only when the registry's scheme isn't already known, since the
+	// negotiation itself is a probe over the same connection the real fetch depends on.
+	plainHTTP, ok := zarfState.RegistryInfo.KnownPlainHTTP(useMTLS)
 	if !ok {
 		// Reuse the same transport the real fetch will use, but stripped of any
 		// retry wrapper: probing must stay fast, not retry with backoff on every

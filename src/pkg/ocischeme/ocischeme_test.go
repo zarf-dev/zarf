@@ -461,30 +461,6 @@ func TestNegotiator_Invalidate(t *testing.T) {
 	require.Equal(t, int32(2), requests.Load(), "invalidating a host must force a re-probe")
 }
 
-func TestKnownPlainHTTP(t *testing.T) {
-	tests := []struct {
-		name          string
-		usingMTLS     bool
-		isInternal    bool
-		wantPlainHTTP bool
-		wantOK        bool
-	}{
-		{name: "mTLS always means HTTPS, even if also internal", usingMTLS: true, isInternal: true, wantPlainHTTP: false, wantOK: true},
-		{name: "mTLS means HTTPS", usingMTLS: true, isInternal: false, wantPlainHTTP: false, wantOK: true},
-		{name: "internal without mTLS means plain HTTP", usingMTLS: false, isInternal: true, wantPlainHTTP: true, wantOK: true},
-		{name: "neither is known, caller must negotiate", usingMTLS: false, isInternal: false, wantOK: false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			plainHTTP, ok := KnownPlainHTTP(tt.usingMTLS, tt.isInternal)
-			require.Equal(t, tt.wantOK, ok)
-			if tt.wantOK {
-				require.Equal(t, tt.wantPlainHTTP, plainHTTP)
-			}
-		})
-	}
-}
-
 func TestWithNegotiatorAndFrom(t *testing.T) {
 	t.Run("returns a usable negotiator when none is installed", func(t *testing.T) {
 		n := From(context.Background())

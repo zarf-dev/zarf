@@ -134,11 +134,10 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			}),
 		}
 
-		// Negotiate only when the scheme isn't already a known fact (see
-		// ocischeme.KnownPlainHTTP), since the negotiation itself is a probe over
-		// the same tunnel the real push depends on.
+		// Negotiate only when the registry's scheme isn't already known, since the
+		// negotiation itself is a probe over the same tunnel the real push depends on.
 		plainHTTP := cfg.PlainHTTP
-		known, ok := ocischeme.KnownPlainHTTP(usingMTLS, registryInfo.IsInternal())
+		known, ok := registryInfo.KnownPlainHTTP(usingMTLS)
 		if ok {
 			plainHTTP = known
 		}

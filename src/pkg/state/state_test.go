@@ -21,6 +21,32 @@ func TestAgentIsConfigured(t *testing.T) {
 	require.True(t, (&State{AgentTLS: pki.GeneratedPKI{Cert: []byte("cert")}}).AgentIsConfigured())
 }
 
+func TestRegistryInfoKnownPlainHTTP(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		registry      RegistryInfo
+		usingMTLS     bool
+		wantPlainHTTP bool
+		wantKnown     bool
+	}{
+		{name: "mTLS always means HTTPS, even for an internal registry", registry: RegistryInfo{RegistryMode: RegistryModeProxy}, usingMTLS: true, wantKnown: true},
+		{name: "mTLS means HTTPS for an external registry", registry: RegistryInfo{RegistryMode: RegistryModeExternal}, usingMTLS: true, wantKnown: true},
+		{name: "internal registry without mTLS means plain HTTP", registry: RegistryInfo{RegistryMode: RegistryModeNodePort}, wantPlainHTTP: true, wantKnown: true},
+		{name: "external registry without mTLS must negotiate", registry: RegistryInfo{RegistryMode: RegistryModeExternal}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plainHTTP, known := tt.registry.KnownPlainHTTP(tt.usingMTLS)
+			require.Equal(t, tt.wantKnown, known)
+			if known {
+				require.Equal(t, tt.wantPlainHTTP, plainHTTP)
+			}
+		})
+	}
+}
+
 // TODO: Change password gen method to make testing possible.
 func TestMergeStateRegistry(t *testing.T) {
 	t.Parallel()

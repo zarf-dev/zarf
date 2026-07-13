@@ -368,6 +368,21 @@ func (ri RegistryInfo) ShouldUseMTLS() bool {
 	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
 }
 
+// KnownPlainHTTP reports whether the registry's scheme is already certain without
+// probing. An active mTLS transport implies HTTPS, while Zarf's internal registry
+// without mTLS only serves plain HTTP. known is false when the caller must
+// negotiate the scheme.
+func (ri RegistryInfo) KnownPlainHTTP(usingMTLS bool) (plainHTTP bool, known bool) {
+	switch {
+	case usingMTLS:
+		return false, true
+	case ri.IsInternal():
+		return true, true
+	default:
+		return false, false
+	}
+}
+
 // Htpasswd returns an htpasswd-formatted string for the registry's push and pull users.
 // Returns an empty string for external registries.
 func (ri RegistryInfo) Htpasswd() (string, error) {
