@@ -26,6 +26,9 @@ updates:
       actions-organization:
         patterns:
           - "actions/*"
+      codeql:
+        patterns:
+          - "github/codeql-action/*"
     schedule:
       interval: weekly
     cooldown:
