@@ -54,6 +54,9 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 	if registryInfo.Address == "" {
 		return fmt.Errorf("registry address must be specified")
 	}
+	if registryInfo.ShouldUseMTLS() && cfg.Cluster == nil {
+		return fmt.Errorf("registry uses Zarf-managed mTLS, but no cluster is available to obtain its client certificate")
+	}
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
 	}
@@ -106,7 +109,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 
 		var transport http.RoundTripper
 		var certs pki.GeneratedPKI
-		usingMTLS := cfg.Cluster != nil && registryInfo.ShouldUseMTLS()
+		usingMTLS := registryInfo.ShouldUseMTLS()
 		if usingMTLS {
 			certs, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
 			if err != nil {
@@ -137,7 +140,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		// Negotiate only when the registry's scheme isn't already known, since the
 		// negotiation itself is a probe over the same tunnel the real push depends on.
 		plainHTTP := cfg.PlainHTTP
-		known, ok := registryInfo.KnownPlainHTTP(usingMTLS)
+		known, ok := registryInfo.KnownPlainHTTP()
 		if ok {
 			plainHTTP = known
 		}

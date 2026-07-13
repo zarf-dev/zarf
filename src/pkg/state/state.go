@@ -369,12 +369,12 @@ func (ri RegistryInfo) ShouldUseMTLS() bool {
 }
 
 // KnownPlainHTTP reports whether the registry's scheme is already certain without
-// probing. An active mTLS transport implies HTTPS, while Zarf's internal registry
-// without mTLS only serves plain HTTP. known is false when the caller must
-// negotiate the scheme.
-func (ri RegistryInfo) KnownPlainHTTP(usingMTLS bool) (plainHTTP bool, known bool) {
+// probing. Zarf-managed mTLS implies HTTPS, while Zarf's internal registry without
+// mTLS only serves plain HTTP. known is false when the caller must negotiate the
+// scheme.
+func (ri RegistryInfo) KnownPlainHTTP() (plainHTTP bool, known bool) {
 	switch {
-	case usingMTLS:
+	case ri.ShouldUseMTLS():
 		return false, true
 	case ri.IsInternal():
 		return true, true

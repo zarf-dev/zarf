@@ -27,18 +27,16 @@ func TestRegistryInfoKnownPlainHTTP(t *testing.T) {
 	tests := []struct {
 		name          string
 		registry      RegistryInfo
-		usingMTLS     bool
 		wantPlainHTTP bool
 		wantKnown     bool
 	}{
-		{name: "mTLS always means HTTPS, even for an internal registry", registry: RegistryInfo{RegistryMode: RegistryModeProxy}, usingMTLS: true, wantKnown: true},
-		{name: "mTLS means HTTPS for an external registry", registry: RegistryInfo{RegistryMode: RegistryModeExternal}, usingMTLS: true, wantKnown: true},
+		{name: "Zarf-managed mTLS means HTTPS", registry: RegistryInfo{RegistryMode: RegistryModeProxy, MTLSStrategy: MTLSStrategyZarfManaged}, wantKnown: true},
 		{name: "internal registry without mTLS means plain HTTP", registry: RegistryInfo{RegistryMode: RegistryModeNodePort}, wantPlainHTTP: true, wantKnown: true},
 		{name: "external registry without mTLS must negotiate", registry: RegistryInfo{RegistryMode: RegistryModeExternal}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plainHTTP, known := tt.registry.KnownPlainHTTP(tt.usingMTLS)
+			plainHTTP, known := tt.registry.KnownPlainHTTP()
 			require.Equal(t, tt.wantKnown, known)
 			if known {
 				require.Equal(t, tt.wantPlainHTTP, plainHTTP)
