@@ -219,37 +219,6 @@ components:
 		require.Error(t, err)
 	})
 
-	t.Run("variants with mismatched names error", func(t *testing.T) {
-		t.Parallel()
-		dir := t.TempDir()
-		require.NoError(t, os.WriteFile(filepath.Join(dir, "a.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
-kind: ZarfComponentConfig
-metadata:
-  name: alpha
-component: {}
-`), 0o600))
-		require.NoError(t, os.WriteFile(filepath.Join(dir, "b.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
-kind: ZarfComponentConfig
-metadata:
-  name: beta
-component: {}
-`), 0o600))
-		writePkg(t, dir, `apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
-metadata:
-  name: mismatch
-components:
-  - name: mismatch
-    import:
-      local:
-        - path: a.yaml
-        - path: b.yaml
-`)
-		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
-		require.ErrorContains(t, err, "same name")
-	})
-
 	t.Run("multiple compatible variants error", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()

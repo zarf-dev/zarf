@@ -111,7 +111,7 @@ type loadedComponentConfig struct {
 
 // selectImportVariant loads every local import entry and selects the single one compatible with the
 // active target. A single entry is always selected. When more than one entry is given they are treated
-// as variants: they must share a name and exactly one must be compatible with the target.
+// as variants: exactly one must be compatible with the target.
 func selectImportVariant(entries []v1beta1.ComponentImportLocal, specDir, arch, flavor string, importStack []string) (loadedComponentConfig, error) {
 	var loaded []loadedComponentConfig
 	for _, entry := range entries {
@@ -132,14 +132,6 @@ func selectImportVariant(entries []v1beta1.ComponentImportLocal, specDir, arch, 
 		return loaded[0], nil
 	}
 
-	// FIXME: do we need this requirement?
-	name := loaded[0].config.Metadata.Name
-	for _, lc := range loaded[1:] {
-		if lc.config.Metadata.Name != name {
-			return loadedComponentConfig{}, fmt.Errorf("imported component variants must share the same name, found %q and %q", name, lc.config.Metadata.Name)
-		}
-	}
-
 	var compatible []loadedComponentConfig
 	for _, lc := range loaded {
 		if compatibleComponentV1Beta1(lc.config.Component.Selector, arch, flavor) {
@@ -148,11 +140,11 @@ func selectImportVariant(entries []v1beta1.ComponentImportLocal, specDir, arch, 
 	}
 	switch len(compatible) {
 	case 0:
-		return loadedComponentConfig{}, fmt.Errorf("no imported component variant named %q is compatible with the package target", name)
+		return loadedComponentConfig{}, fmt.Errorf("no imported component variant is compatible with the package target")
 	case 1:
 		return compatible[0], nil
 	default:
-		return loadedComponentConfig{}, fmt.Errorf("multiple imported component variants named %q are compatible with the package target", name)
+		return loadedComponentConfig{}, fmt.Errorf("multiple imported component variants are compatible with the package target")
 	}
 }
 
