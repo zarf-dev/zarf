@@ -239,18 +239,6 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 
 	// Handle OCI registries
 	if registry.IsOCI(chart.URL) {
-		plainHTTP, err = negotiateChartPlainHTTP(ctx, chart.URL, remoteOptions)
-		if err != nil {
-			return err
-		}
-		clientOpts := []registry.ClientOption{registry.ClientOptEnableCache(true)}
-		if plainHTTP {
-			clientOpts = append(clientOpts, registry.ClientOptPlainHTTP())
-		}
-		regClient, err = registry.NewClient(clientOpts...)
-		if err != nil {
-			return fmt.Errorf("unable to create the new registry client: %w", err)
-		}
 		chartURL = chart.URL
 		// Explicitly set the pull version for OCI
 		pull.Version = chart.Version
@@ -283,6 +271,12 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		if err != nil {
 			return fmt.Errorf("unable to pull the helm chart: %w", err)
 		}
+	}
+
+	// A traditional Helm repository can resolve a chart to an OCI reference.
+	regClient, plainHTTP, err = newChartRegistryClient(ctx, chartURL, remoteOptions)
+	if err != nil {
+		return err
 	}
 
 	contentCache := filepath.Join(cachePath, contentCachePath)
@@ -352,6 +346,27 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		"duration", time.Since(start),
 	)
 	return nil
+}
+
+func newChartRegistryClient(ctx context.Context, chartURL string, remoteOptions types.RemoteOptions) (*registry.Client, bool, error) {
+	if !registry.IsOCI(chartURL) {
+		return nil, false, nil
+	}
+
+	plainHTTP, err := negotiateChartPlainHTTP(ctx, chartURL, remoteOptions)
+	if err != nil {
+		return nil, false, err
+	}
+
+	clientOpts := []registry.ClientOption{registry.ClientOptEnableCache(true)}
+	if plainHTTP {
+		clientOpts = append(clientOpts, registry.ClientOptPlainHTTP())
+	}
+	regClient, err := registry.NewClient(clientOpts...)
+	if err != nil {
+		return nil, false, fmt.Errorf("unable to create the new registry client: %w", err)
+	}
+	return regClient, plainHTTP, nil
 }
 
 // DownloadChartFromGitToTemp downloads a chart from git into a temp directory
