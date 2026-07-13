@@ -78,3 +78,42 @@ entries:
 	require.NoError(t, err)
 	require.FileExists(t, StandardName(chartPath, chart)+".tgz")
 }
+
+// TestDownloadPublishedChartFromOCI covers a chart whose URL is itself an OCI
+// reference, so Zarf provisions a registry client directly rather than resolving
+// through a classic Helm repository index.
+func TestDownloadPublishedChartFromOCI(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	// Package a minimal chart into a tarball to push to the registry.
+	ch := &chartv2.Chart{Metadata: &chartv2.Metadata{
+		APIVersion: chartv2.APIVersionV1,
+		Name:       "simple-chart",
+		Version:    "1.0.0",
+	}}
+	tgzPath, err := chartutil.Save(ch, t.TempDir())
+	require.NoError(t, err)
+	chartData, err := os.ReadFile(tgzPath)
+	require.NoError(t, err)
+
+	// Push the chart to an in-memory OCI registry over plain HTTP.
+	regAddr := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	regClient, err := registry.NewClient(registry.ClientOptPlainHTTP())
+	require.NoError(t, err)
+	_, err = regClient.Push(chartData, fmt.Sprintf("%s/charts/simple-chart:1.0.0", regAddr))
+	require.NoError(t, err)
+
+	chart := v1alpha1.ZarfChart{
+		Name:    "simple-chart",
+		Version: "1.0.0",
+		URL:     fmt.Sprintf("oci://%s/charts/simple-chart", regAddr),
+	}
+	chartPath := t.TempDir()
+	err = PackageChart(ctx, chart, chartPath, t.TempDir(), t.TempDir(), types.RemoteOptions{
+		PlainHTTP:             true,
+		InsecureSkipTLSVerify: true,
+	})
+	require.NoError(t, err)
+	require.FileExists(t, StandardName(chartPath, chart)+".tgz")
+}
