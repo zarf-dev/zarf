@@ -59,7 +59,9 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 						Remote: []v1beta1.ComponentImportRemote{{URL: "oci://example.com/pkg"}},
 					},
 					Target: v1beta1.ComponentTarget{
-						OS:           "linux",
+						OS: "linux",
+					},
+					Selector: v1beta1.ComponentSelector{
 						Architecture: "arm64",
 						Flavor:       "prod",
 					},

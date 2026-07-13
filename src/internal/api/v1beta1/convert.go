@@ -81,8 +81,8 @@ func componentToGeneric(c v1beta1.Component) types.Component {
 		StateAccess:  stateAccessToGeneric(c.StateAccess),
 		Target: types.ComponentTarget{
 			OS:           c.Target.OS,
-			Architecture: c.Target.Architecture,
-			Flavor:       c.Target.Flavor,
+			Architecture: c.Selector.Architecture,
+			Flavor:       c.Selector.Flavor,
 		},
 		Import:         importToGeneric(c.Import),
 		Actions:        actionsToGeneric(c.Actions),
@@ -417,7 +417,9 @@ func componentFromGeneric(c types.Component, isInit, migrateFromV1alpha1 bool) v
 			Repositories: repositoriesFromGeneric(c.Repositories),
 			StateAccess:  stateAccessFromGeneric(c.StateAccess),
 			Target: v1beta1.ComponentTarget{
-				OS:           c.Target.OS,
+				OS: c.Target.OS,
+			},
+			Selector: v1beta1.ComponentSelector{
 				Architecture: c.Target.Architecture,
 				Flavor:       c.Target.Flavor,
 			},
