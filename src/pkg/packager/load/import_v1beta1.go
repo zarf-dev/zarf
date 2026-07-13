@@ -26,16 +26,11 @@ type importedValues struct {
 
 // resolveImportsV1Beta1 resolves local component config imports into a v1beta1 package definition.
 // Each package component may import one or more ZarfComponentConfig files; filtering compatible components also happens here
-// FIXME: perhaps base directory should be passed in instead of packagePath
-func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath, arch, flavor string) (v1beta1.Package, []string, error) {
+func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, arch, flavor string) (v1beta1.Package, []string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start resolveImportsV1Beta1", "pkg", pkg.Metadata.Name, "arch", arch, "flavor", flavor)
 
-	pkgPath, err := layout.ResolvePackagePath(packagePath)
-	if err != nil {
-		return v1beta1.Package{}, nil, err
-	}
 	baseDir := pkgPath.BaseDir
 
 	var components []v1beta1.Component

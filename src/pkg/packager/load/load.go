@@ -134,7 +134,7 @@ func v1beta1PackageDefinition(ctx context.Context, g internalTypes.Package, pkgP
 	pkg := internalv1beta1.ConvertFromGeneric(g)
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 
-	pkg, importedSchemas, err := resolveImportsV1Beta1(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor)
+	pkg, importedSchemas, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor)
 	if err != nil {
 		return DefinedPackage{}, err
 	}

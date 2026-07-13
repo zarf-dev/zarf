@@ -16,6 +16,13 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
+func mustPackagePath(t *testing.T, dir string) layout.PackagePath {
+	t.Helper()
+	pkgPath, err := layout.ResolvePackagePath(filepath.Join(dir, layout.ZarfYAML))
+	require.NoError(t, err)
+	return pkgPath
+}
+
 func loadV1Beta1Package(t *testing.T, dir string) v1beta1.Package {
 	t.Helper()
 	ctx := testutil.TestContext(t)
@@ -35,7 +42,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "single")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, schemas, err := resolveImportsV1Beta1(ctx, pkg, filepath.Join(dir, layout.ZarfYAML), "amd64", "")
+		resolved, schemas, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.NoError(t, err)
 
 		require.Len(t, resolved.Components, 1)
@@ -62,7 +69,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "mixed")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, filepath.Join(dir, layout.ZarfYAML), "amd64", "")
+		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.NoError(t, err)
 
 		require.Len(t, resolved.Components, 3)
@@ -80,7 +87,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "nested")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, filepath.Join(dir, layout.ZarfYAML), "amd64", "")
+		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.NoError(t, err)
 
 		require.Len(t, resolved.Components, 1)
@@ -100,7 +107,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "cycle")
 		pkg := loadV1Beta1Package(t, dir)
 
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, filepath.Join(dir, layout.ZarfYAML), "amd64", "")
+		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.ErrorContains(t, err, "cycle")
 	})
 
@@ -109,7 +116,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "variants")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, filepath.Join(dir, layout.ZarfYAML), "amd64", "apache")
+		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "apache")
 		require.NoError(t, err)
 
 		require.Len(t, resolved.Components, 1)
@@ -121,7 +128,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "variants")
 		pkg := loadV1Beta1Package(t, dir)
 
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, filepath.Join(dir, layout.ZarfYAML), "amd64", "")
+		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.ErrorContains(t, err, "no imported component")
 	})
 
@@ -130,7 +137,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "merge")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, filepath.Join(dir, layout.ZarfYAML), "amd64", "")
+		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.NoError(t, err)
 
 		comp := resolved.Components[0]
@@ -171,7 +178,7 @@ components:
         - url: oci://example.com/component:1.0.0
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, filepath.Join(dir, layout.ZarfYAML), "amd64", "")
+		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.ErrorContains(t, err, "remote")
 	})
 
@@ -189,7 +196,7 @@ components:
         - path: does-not-exist.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, filepath.Join(dir, layout.ZarfYAML), "amd64", "")
+		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.ErrorContains(t, err, "does-not-exist.yaml")
 	})
 
@@ -208,7 +215,7 @@ components:
         - path: child
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, filepath.Join(dir, layout.ZarfYAML), "amd64", "")
+		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.Error(t, err)
 	})
 
@@ -239,7 +246,7 @@ components:
         - path: b.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, filepath.Join(dir, layout.ZarfYAML), "amd64", "")
+		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.ErrorContains(t, err, "same name")
 	})
 
@@ -270,7 +277,7 @@ components:
         - path: b.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, filepath.Join(dir, layout.ZarfYAML), "amd64", "")
+		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.ErrorContains(t, err, "multiple")
 	})
 }
