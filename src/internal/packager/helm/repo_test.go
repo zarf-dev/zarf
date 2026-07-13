@@ -79,9 +79,6 @@ entries:
 	require.FileExists(t, StandardName(chartPath, chart)+".tgz")
 }
 
-// TestDownloadPublishedChartFromOCI covers a chart whose URL is itself an OCI
-// reference, so Zarf provisions a registry client directly rather than resolving
-// through a classic Helm repository index.
 func TestDownloadPublishedChartFromOCI(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
