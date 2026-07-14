@@ -3,7 +3,6 @@ updates:
   - package-ecosystem: gomod
     directories:
       - "/"
-    vendor: true
     schedule:
       interval: daily
     cooldown:
@@ -27,6 +26,9 @@ updates:
       actions-organization:
         patterns:
           - "actions/*"
+      codeql:
+        patterns:
+          - "github/codeql-action/*"
     schedule:
       interval: weekly
     cooldown:

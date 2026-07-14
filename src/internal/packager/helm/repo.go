@@ -218,9 +218,9 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		regClient *registry.Client
 		chartURL  string
 		err       error
-		// plainHTTP is only ever negotiated (never taken from remoteOptions.PlainHTTP
-		// directly) for the OCI branch below: chart.URL was discovered by reading
-		// package data, not named explicitly on this command line, so the global
+		// plainHTTP is always negotiated for an OCI chart host (never taken from
+		// remoteOptions.PlainHTTP directly): the host was discovered by reading package
+		// data or a repo index, not named explicitly on this command line, so the global
 		// --plain-http flag is not necessarily meant for it.
 		plainHTTP bool
 	)
@@ -239,18 +239,6 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 
 	// Handle OCI registries
 	if registry.IsOCI(chart.URL) {
-		plainHTTP, err = negotiateChartPlainHTTP(ctx, chart.URL, remoteOptions)
-		if err != nil {
-			return err
-		}
-		clientOpts := []registry.ClientOption{registry.ClientOptEnableCache(true)}
-		if plainHTTP {
-			clientOpts = append(clientOpts, registry.ClientOptPlainHTTP())
-		}
-		regClient, err = registry.NewClient(clientOpts...)
-		if err != nil {
-			return fmt.Errorf("unable to create the new registry client: %w", err)
-		}
 		chartURL = chart.URL
 		// Explicitly set the pull version for OCI
 		pull.Version = chart.Version
@@ -282,6 +270,23 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		)
 		if err != nil {
 			return fmt.Errorf("unable to pull the helm chart: %w", err)
+		}
+	}
+
+	// chartURL is OCI either when given directly or when a classic Helm repo
+	// index redirects to an OCI reference
+	if registry.IsOCI(chartURL) {
+		plainHTTP, err = negotiateChartPlainHTTP(ctx, chartURL, remoteOptions)
+		if err != nil {
+			return err
+		}
+		clientOpts := []registry.ClientOption{registry.ClientOptEnableCache(true)}
+		if plainHTTP {
+			clientOpts = append(clientOpts, registry.ClientOptPlainHTTP())
+		}
+		regClient, err = registry.NewClient(clientOpts...)
+		if err != nil {
+			return fmt.Errorf("unable to create the new registry client: %w", err)
 		}
 	}
 
