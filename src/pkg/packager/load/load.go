@@ -192,7 +192,6 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 }
 
 // validateV1Beta1 validates a v1beta1 package before it is converted down to v1alpha1.
-// Non-schema v1beta1 rules will grow in src/internal/api/v1beta1 over time; for now this is schema-only.
 func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath string, flavor string) error {
 	l := logger.From(ctx)
 	start := time.Now()
@@ -201,6 +200,13 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 		"packagePath", packagePath,
 		"flavor", flavor,
 	)
+
+	if !hasFlavoredComponentV1Beta1(pkg, flavor) {
+		l.Warn("flavor not used in package", "flavor", flavor)
+	}
+	if err := internalv1beta1.ValidatePackage(pkg); err != nil {
+		return fmt.Errorf("package validation failed: %w", err)
+	}
 
 	findings, err := lint.ValidatePackageSchemaAtPathV1Beta1(packagePath)
 	if err != nil {
@@ -212,8 +218,6 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 			Findings:    findings,
 		}
 	}
-
-	// FIXME: need to add validate for v1beta1
 
 	l.Debug("done v1beta1 validate",
 		"pkg", pkg.Metadata.Name,
@@ -265,6 +269,15 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	for _, comp := range pkg.Components {
 		if comp.Only.Flavor == flavor {
+			return true
+		}
+	}
+	return false
+}
+
+func hasFlavoredComponentV1Beta1(pkg v1beta1.Package, flavor string) bool {
+	for _, comp := range pkg.Components {
+		if comp.Selector.Flavor == flavor {
 			return true
 		}
 	}
