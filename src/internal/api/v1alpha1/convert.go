@@ -78,6 +78,7 @@ func componentToGeneric(c v1alpha1.ZarfComponent) types.Component {
 		Name:           c.Name,
 		Description:    c.Description,
 		Default:        c.Default,
+		Optional:       !c.IsRequired(),
 		Required:       c.Required,
 		Group:          c.DeprecatedGroup,
 		DataInjections: dataInjectionsToGeneric(c.DataInjections),

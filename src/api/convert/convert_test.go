@@ -276,6 +276,36 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 	require.Equal(t, "default", comp.Actions.OnDeploy.OnSuccess[1].Wait.Cluster.Namespace)
 }
 
+func TestV1Alpha1PkgToV1Beta1_RequiredOptionalShift(t *testing.T) {
+	t.Parallel()
+	b := func(v bool) *bool { return &v }
+	tests := []struct {
+		name         string
+		required     *bool
+		wantOptional bool
+	}{
+		// v1alpha1 defaults an unset required to optional (the inverse of v1beta1's required default),
+		// so a component that omits it must become Optional=true rather than v1beta1's zero value.
+		{name: "unset required is optional", required: nil, wantOptional: true},
+		{name: "explicit false is optional", required: b(false), wantOptional: true},
+		{name: "explicit true is required", required: b(true), wantOptional: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pkg := v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{Name: "comp", Required: tt.required},
+				},
+			}
+			result := PackageV1alpha1ToV1beta1(pkg)
+			require.Len(t, result.Components, 1)
+			require.Equal(t, tt.wantOptional, result.Components[0].Optional)
+		})
+	}
+}
+
 func TestV1Alpha1PkgToV1Beta1_ServiceInference(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

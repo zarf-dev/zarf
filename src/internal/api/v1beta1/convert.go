@@ -483,9 +483,9 @@ func componentFromGeneric(c types.Component, isInit, migrateFromV1alpha1 bool) v
 	return bc
 }
 
-// optionalFromGeneric maps the v1alpha1 Required *bool and v1beta1 Optional bool onto a single v1beta1 Optional bool.
-// v1alpha1: Required=nil/false → Optional=true; Required=true → Optional=false.
-// v1beta1: Optional flows through directly when Required is nil.
+// optionalFromGeneric resolves the v1beta1 Optional flag from the generic representation.
+// A v1alpha1-sourced package carries an explicit Required pointer, which wins; otherwise Optional
+// flows through (the v1alpha1 layer already folds an unset required into Optional).
 func optionalFromGeneric(optional bool, required *bool) bool {
 	if required != nil {
 		return !*required
