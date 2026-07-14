@@ -160,7 +160,7 @@ func chartToGeneric(ch v1alpha1.ZarfChart) types.Chart {
 		Name:                 ch.Name,
 		Namespace:            ch.Namespace,
 		ReleaseName:          ch.ReleaseName,
-		ValuesFiles:          ch.ValuesFiles,
+		ValuesFiles:          valuesFilesToGeneric(ch.ValuesFiles, ch.TemplatedValuesFiles),
 		SkipSchemaValidation: ch.SchemaValidation != nil && !*ch.SchemaValidation,
 		ServerSideApply:      ch.ServerSideApply,
 		SkipWait:             ch.NoWait,
@@ -172,9 +172,34 @@ func chartToGeneric(ch v1alpha1.ZarfChart) types.Chart {
 		SchemaValidation:     ch.SchemaValidation,
 		Variables:            chartVarsToGeneric(ch.Variables),
 		Values:               chartValuesToGeneric(ch.Values),
-		TemplatedValuesFiles: ch.TemplatedValuesFiles,
 	}
 	return gc
+}
+
+// valuesFilesToGeneric folds the v1alpha1 plain and templated values file lists into the generic
+// object form, marking the templated entries with EnableTemplating.
+func valuesFilesToGeneric(plain, templated []string) []types.ValuesFile {
+	var out []types.ValuesFile
+	for _, p := range plain {
+		out = append(out, types.ValuesFile{Path: p})
+	}
+	for _, p := range templated {
+		out = append(out, types.ValuesFile{Path: p, EnableTemplating: true})
+	}
+	return out
+}
+
+// valuesFilesFromGeneric splits the generic object form back into the v1alpha1 plain and templated
+// lists based on EnableTemplating.
+func valuesFilesFromGeneric(vfs []types.ValuesFile) (plain, templated []string) {
+	for _, vf := range vfs {
+		if vf.EnableTemplating {
+			templated = append(templated, vf.Path)
+		} else {
+			plain = append(plain, vf.Path)
+		}
+	}
+	return plain, templated
 }
 
 func chartValuesToGeneric(vals []v1alpha1.ZarfChartValue) []types.ChartValue {
@@ -547,20 +572,19 @@ func manifestFromGeneric(m types.Manifest) v1alpha1.ZarfManifest {
 
 func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 	ac := v1alpha1.ZarfChart{
-		Name:                 ch.Name,
-		Namespace:            ch.Namespace,
-		ReleaseName:          ch.ReleaseName,
-		ValuesFiles:          ch.ValuesFiles,
-		ServerSideApply:      ch.ServerSideApply,
-		NoWait:               ch.SkipWait,
-		URL:                  ch.URL,
-		RepoName:             ch.RepoName,
-		GitPath:              ch.GitPath,
-		LocalPath:            ch.LocalPath,
-		Version:              ch.Version,
-		Variables:            chartVarsFromGeneric(ch.Variables),
-		TemplatedValuesFiles: ch.TemplatedValuesFiles,
+		Name:            ch.Name,
+		Namespace:       ch.Namespace,
+		ReleaseName:     ch.ReleaseName,
+		ServerSideApply: ch.ServerSideApply,
+		NoWait:          ch.SkipWait,
+		URL:             ch.URL,
+		RepoName:        ch.RepoName,
+		GitPath:         ch.GitPath,
+		LocalPath:       ch.LocalPath,
+		Version:         ch.Version,
+		Variables:       chartVarsFromGeneric(ch.Variables),
 	}
+	ac.ValuesFiles, ac.TemplatedValuesFiles = valuesFilesFromGeneric(ch.ValuesFiles)
 
 	// Prefer preserved v1alpha1 SchemaValidation; otherwise derive from SkipSchemaValidation.
 	if ch.SchemaValidation != nil {

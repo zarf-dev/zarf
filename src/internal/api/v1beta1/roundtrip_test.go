@@ -83,7 +83,7 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 							Namespace:            "default",
 							ReleaseName:          "rel",
 							SkipWait:             true,
-							ValuesFiles:          []string{"values.yaml"},
+							ValuesFiles:          []v1beta1.ValuesFile{{Path: "values.yaml", EnableTemplating: true}},
 							SkipSchemaValidation: true,
 							ServerSideApply:      v1beta1.ServerSideApplyAuto,
 							HelmRepository:       &v1beta1.HelmRepositorySource{Name: "chart", URL: "https://charts.example.com", Version: "1.0.0"},

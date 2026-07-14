@@ -176,7 +176,7 @@ type Chart struct {
 	Name                 string
 	Namespace            string
 	ReleaseName          string
-	ValuesFiles          []string
+	ValuesFiles          []ValuesFile
 	Values               []ChartValue
 	SkipSchemaValidation bool
 	ServerSideApply      string
@@ -189,14 +189,19 @@ type Chart struct {
 	OCI            *OCISource
 
 	// v1alpha1-only flat source fields. Used during conversion to populate structured sources.
-	URL                  string
-	RepoName             string
-	GitPath              string
-	LocalPath            string
-	Version              string
-	SchemaValidation     *bool
-	Variables            []ZarfChartVariable
-	TemplatedValuesFiles []string
+	URL              string
+	RepoName         string
+	GitPath          string
+	LocalPath        string
+	Version          string
+	SchemaValidation *bool
+	Variables        []ZarfChartVariable
+}
+
+// ValuesFile is a values file merged into a Helm chart, optionally rendered with Zarf templating.
+type ValuesFile struct {
+	Path             string
+	EnableTemplating bool
 }
 
 // ChartValue maps a source path to a target path.

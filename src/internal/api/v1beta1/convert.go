@@ -162,7 +162,7 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 		Name:                 ch.Name,
 		Namespace:            ch.Namespace,
 		ReleaseName:          ch.ReleaseName,
-		ValuesFiles:          ch.ValuesFiles,
+		ValuesFiles:          valuesFilesToGeneric(ch.ValuesFiles),
 		SkipSchemaValidation: ch.SkipSchemaValidation,
 		ServerSideApply:      string(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
@@ -564,7 +564,7 @@ func chartFromGeneric(ch types.Chart) v1beta1.Chart {
 		Name:                 ch.Name,
 		Namespace:            ch.Namespace,
 		ReleaseName:          ch.ReleaseName,
-		ValuesFiles:          ch.ValuesFiles,
+		ValuesFiles:          valuesFilesFromGeneric(ch.ValuesFiles),
 		SkipSchemaValidation: ch.SkipSchemaValidation,
 		ServerSideApply:      v1beta1.ServerSideApplyMode(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
@@ -622,6 +622,22 @@ func chartValuesFromGeneric(vals []types.ChartValue) []v1beta1.ChartValue {
 			TargetPath:   v.TargetPath,
 			ExcludePaths: v.ExcludePaths,
 		})
+	}
+	return out
+}
+
+func valuesFilesToGeneric(vfs []v1beta1.ValuesFile) []types.ValuesFile {
+	var out []types.ValuesFile
+	for _, vf := range vfs {
+		out = append(out, types.ValuesFile{Path: vf.Path, EnableTemplating: vf.EnableTemplating})
+	}
+	return out
+}
+
+func valuesFilesFromGeneric(vfs []types.ValuesFile) []v1beta1.ValuesFile {
+	var out []v1beta1.ValuesFile
+	for _, vf := range vfs {
+		out = append(out, v1beta1.ValuesFile{Path: vf.Path, EnableTemplating: vf.EnableTemplating})
 	}
 	return out
 }
