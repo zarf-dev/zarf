@@ -195,8 +195,9 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 
 	for _, v := range ch.Values {
 		gc.Values = append(gc.Values, types.ChartValue{
-			SourcePath: v.SourcePath,
-			TargetPath: v.TargetPath,
+			SourcePath:   v.SourcePath,
+			TargetPath:   v.TargetPath,
+			ExcludePaths: v.ExcludePaths,
 		})
 	}
 
@@ -617,8 +618,9 @@ func chartValuesFromGeneric(vals []types.ChartValue) []v1beta1.ChartValue {
 	var out []v1beta1.ChartValue
 	for _, v := range vals {
 		out = append(out, v1beta1.ChartValue{
-			SourcePath: v.SourcePath,
-			TargetPath: v.TargetPath,
+			SourcePath:   v.SourcePath,
+			TargetPath:   v.TargetPath,
+			ExcludePaths: v.ExcludePaths,
 		})
 	}
 	return out

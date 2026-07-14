@@ -491,6 +491,30 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 	}
 }
 
+func TestChartValueExcludePathsRoundTrip(t *testing.T) {
+	t.Parallel()
+	excludes := []string{".registry.image", ".registry.tag"}
+
+	alpha := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{{
+			Name: "chart-comp",
+			Charts: []v1alpha1.ZarfChart{{
+				Name:   "my-chart",
+				Values: []v1alpha1.ZarfChartValue{{SourcePath: ".a", TargetPath: ".b", ExcludePaths: excludes}},
+			}},
+		}},
+	}
+
+	// v1alpha1 → v1beta1 carries excludePaths.
+	beta := PackageV1alpha1ToV1beta1(alpha)
+	require.Equal(t, excludes, beta.Components[0].Charts[0].Values[0].ExcludePaths)
+
+	// v1beta1 → v1alpha1 carries it back.
+	back := PackageV1beta1ToV1alpha1(beta)
+	require.Equal(t, excludes, back.Components[0].Charts[0].Values[0].ExcludePaths)
+}
+
 func TestV1Alpha1PkgToV1Beta1_WaitConditionBackfill(t *testing.T) {
 	t.Parallel()
 	pkg := v1alpha1.ZarfPackage{

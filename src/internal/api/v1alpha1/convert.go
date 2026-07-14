@@ -180,8 +180,9 @@ func chartValuesToGeneric(vals []v1alpha1.ZarfChartValue) []types.ChartValue {
 	var out []types.ChartValue
 	for _, v := range vals {
 		out = append(out, types.ChartValue{
-			SourcePath: v.SourcePath,
-			TargetPath: v.TargetPath,
+			SourcePath:   v.SourcePath,
+			TargetPath:   v.TargetPath,
+			ExcludePaths: v.ExcludePaths,
 		})
 	}
 	return out
@@ -575,8 +576,9 @@ func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 
 	for _, v := range ch.Values {
 		ac.Values = append(ac.Values, v1alpha1.ZarfChartValue{
-			SourcePath: v.SourcePath,
-			TargetPath: v.TargetPath,
+			SourcePath:   v.SourcePath,
+			TargetPath:   v.TargetPath,
+			ExcludePaths: v.ExcludePaths,
 		})
 	}
 

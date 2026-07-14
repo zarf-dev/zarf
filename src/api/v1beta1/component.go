@@ -193,6 +193,8 @@ type ChartValue struct {
 	SourcePath string `json:"sourcePath"`
 	// The target path within the Helm chart values.
 	TargetPath string `json:"targetPath"`
+	// Paths under sourcePath to omit when mapping to the target. Each path must be a descendant of sourcePath.
+	ExcludePaths []string `json:"excludePaths,omitempty" jsonschema:"pattern=^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$,example=.registry.image"`
 }
 
 // HelmRepositorySource represents a Helm chart stored in a Helm repository.

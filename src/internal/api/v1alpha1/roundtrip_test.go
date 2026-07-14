@@ -180,9 +180,6 @@ var lossyFields = map[string]map[string]string{
 	"ZarfComponentAction": {
 		"Template": "*bool collapses into the generic EnableTemplating bool, so nil and false merge",
 	},
-	"ZarfChartValue": {
-		"ExcludePaths": "no equivalent in the generic/v1beta1 model; dropped by the conversion",
-	},
 }
 
 // TestConvertGenericRoundTripFuzz reflectively populates every field of a ZarfPackage with random,
@@ -214,6 +211,10 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 func fillValue(v reflect.Value, rng *rand.Rand) {
 	switch v.Kind() {
 	case reflect.Pointer:
+		// Leave the pointer nil sometimes so both the set and unset states are exercised.
+		if rng.Intn(2) == 0 {
+			return
+		}
 		v.Set(reflect.New(v.Type().Elem()))
 		fillValue(v.Elem(), rng)
 	case reflect.Struct:

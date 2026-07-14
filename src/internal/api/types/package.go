@@ -189,8 +189,9 @@ type Chart struct {
 
 // ChartValue maps a source path to a target path.
 type ChartValue struct {
-	SourcePath string
-	TargetPath string
+	SourcePath   string
+	TargetPath   string
+	ExcludePaths []string
 }
 
 // HelmRepositorySource represents a chart stored in a Helm repository.
