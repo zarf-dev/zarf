@@ -174,12 +174,6 @@ var lossyFields = map[string]map[string]string{
 	"ZarfComponent": {
 		"DeprecatedScripts": "deprecated pre-actions format; not carried through the conversion",
 	},
-	"ZarfFile": {
-		"Template": "*bool collapses into the generic EnableTemplating bool, so nil and false merge",
-	},
-	"ZarfComponentAction": {
-		"Template": "*bool collapses into the generic EnableTemplating bool, so nil and false merge",
-	},
 }
 
 // TestConvertGenericRoundTripFuzz reflectively populates every field of a ZarfPackage with random,

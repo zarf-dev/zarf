@@ -227,6 +227,8 @@ type File struct {
 	Symlinks         []string
 	ExtractPath      string
 	EnableTemplating bool
+	// Template is the v1alpha1 *bool preserved so an unset value round-trips losslessly.
+	Template *bool
 }
 
 // Image represents an OCI image in the package.
@@ -287,6 +289,8 @@ type ComponentAction struct {
 	// v1alpha1-only round-trip fields.
 	SetVariables          []Variable
 	DeprecatedSetVariable string
+	// Template is the v1alpha1 *bool preserved so an unset value round-trips losslessly.
+	Template *bool
 }
 
 // SetValue declares a value that can be set during a deploy.

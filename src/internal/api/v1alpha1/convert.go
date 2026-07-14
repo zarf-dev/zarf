@@ -117,6 +117,7 @@ func componentToGeneric(c v1alpha1.ZarfComponent) types.Component {
 			Symlinks:         f.Symlinks,
 			ExtractPath:      f.ExtractPath,
 			EnableTemplating: derefBool(f.Template),
+			Template:         f.Template,
 		})
 	}
 
@@ -236,6 +237,7 @@ func actionToGeneric(a v1alpha1.ZarfComponentAction) types.ComponentAction {
 		Description:           a.Description,
 		Wait:                  waitToGeneric(a.Wait),
 		EnableTemplating:      derefBool(a.Template),
+		Template:              a.Template,
 		SetVariables:          varsToGeneric(a.SetVariables),
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 	}
@@ -466,8 +468,9 @@ func componentFromGeneric(c types.Component, fromV1alpha1 bool) v1alpha1.ZarfCom
 			Executable:  f.Executable,
 			Symlinks:    f.Symlinks,
 			ExtractPath: f.ExtractPath,
+			Template:    f.Template,
 		}
-		if f.EnableTemplating {
+		if af.Template == nil && f.EnableTemplating {
 			t := true
 			af.Template = &t
 		}
@@ -632,6 +635,7 @@ func actionFromGeneric(a types.ComponentAction) v1alpha1.ZarfComponentAction {
 		Cmd:                   a.Cmd,
 		Description:           a.Description,
 		Wait:                  waitFromGeneric(a.Wait),
+		Template:              a.Template,
 		SetVariables:          varsFromGeneric(a.SetVariables),
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 	}
@@ -644,7 +648,7 @@ func actionFromGeneric(a types.ComponentAction) v1alpha1.ZarfComponentAction {
 		v := int(*a.Retries)
 		aa.MaxRetries = &v
 	}
-	if a.EnableTemplating {
+	if aa.Template == nil && a.EnableTemplating {
 		t := true
 		aa.Template = &t
 	}
