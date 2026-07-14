@@ -543,6 +543,60 @@ func TestValuesFilesTemplatingRoundTrip(t *testing.T) {
 	require.Equal(t, []string{"templated.yaml"}, back.Components[0].Charts[0].TemplatedValuesFiles)
 }
 
+func TestChartGitSSHURLRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	// An ssh:// URL carries a git@host user; the user's @ must not be mistaken for a version ref.
+	alpha := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{{
+			Name: "chart-comp",
+			Charts: []v1alpha1.ZarfChart{{
+				Name:    "my-chart",
+				URL:     "ssh://git@github.com/example/repo.git",
+				GitPath: "charts/my-chart",
+				Version: "1.2.3",
+			}},
+		}},
+	}
+
+	beta := PackageV1alpha1ToV1beta1(alpha)
+	require.NotNil(t, beta.Components[0].Charts[0].Git)
+	// The version is appended as a ref rather than lost to the ssh user's @.
+	require.Equal(t, "ssh://git@github.com/example/repo.git@1.2.3", beta.Components[0].Charts[0].Git.URL)
+
+	back := PackageV1beta1ToV1alpha1(beta)
+	// The ssh user survives and the ref splits back into Version.
+	require.Equal(t, "ssh://git@github.com/example/repo.git", back.Components[0].Charts[0].URL)
+	require.Equal(t, "1.2.3", back.Components[0].Charts[0].Version)
+	require.Equal(t, "charts/my-chart", back.Components[0].Charts[0].GitPath)
+}
+
+func TestChartGitURLRefBeatsVersion(t *testing.T) {
+	t.Parallel()
+
+	// A ref in the URL and a differing Version is contradictory; v1alpha1 deploy prefers the URL ref,
+	// so the round-trip must preserve v1, not silently switch to v2.
+	alpha := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{{
+			Name: "chart-comp",
+			Charts: []v1alpha1.ZarfChart{{
+				Name:    "my-chart",
+				URL:     "https://github.com/example/repo.git@v1",
+				GitPath: "charts/my-chart",
+				Version: "v2",
+			}},
+		}},
+	}
+
+	back := PackageV1beta1ToV1alpha1(PackageV1alpha1ToV1beta1(alpha))
+	// URL ref wins: v1alpha1 deploy would append Version only if the URL had no ref, so the ref must
+	// land in Version with the ref stripped from URL.
+	require.Equal(t, "https://github.com/example/repo.git", back.Components[0].Charts[0].URL)
+	require.Equal(t, "v1", back.Components[0].Charts[0].Version)
+}
+
 func TestV1Alpha1PkgToV1Beta1_WaitConditionBackfill(t *testing.T) {
 	t.Parallel()
 	pkg := v1alpha1.ZarfPackage{

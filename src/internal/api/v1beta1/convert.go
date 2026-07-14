@@ -11,6 +11,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 // ConvertToGeneric converts a v1beta1 Package to the internal generic representation.
@@ -591,7 +592,9 @@ func chartFromGeneric(ch types.Chart) v1beta1.Chart {
 			bc.OCI = &v1beta1.OCISource{URL: ch.URL, Version: ch.Version}
 		case ch.GitPath != "" || isGitURL(ch.URL):
 			gitURL := ch.URL
-			if ch.Version != "" && !strings.Contains(ch.URL, "@") {
+			// Append the chart version as a git ref only when the URL parses and does not already
+			// carry one.
+			if _, ref, err := transform.GitURLSplitRef(ch.URL); err == nil && ref == "" && ch.Version != "" {
 				gitURL += "@" + ch.Version
 			}
 			bc.Git = &v1beta1.GitSource{URL: gitURL, Path: ch.GitPath}
@@ -760,10 +763,11 @@ func healthCheckKind(kind, apiVersion string) string {
 }
 
 func isGitURL(url string) bool {
-	if idx := strings.LastIndex(url, "@"); idx > 0 {
-		url = url[:idx]
+	gitURLNoRef, _, err := transform.GitURLSplitRef(url)
+	if err != nil {
+		return false
 	}
-	return strings.HasSuffix(url, ".git")
+	return strings.HasSuffix(gitURLNoRef, ".git")
 }
 
 func repositoriesToGeneric(in []v1beta1.Repository) []string {

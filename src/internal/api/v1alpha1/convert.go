@@ -5,10 +5,9 @@
 package v1alpha1
 
 import (
-	"strings"
-
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 // ConvertToGeneric converts a v1alpha1 ZarfPackage to the internal generic representation.
@@ -609,14 +608,18 @@ func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 				ac.Version = ch.OCI.Version
 			}
 		case ch.Git != nil && ch.Git.URL != "":
-			gitURL := ch.Git.URL
-			if idx := strings.LastIndex(gitURL, "@"); idx > 0 {
-				if ac.Version == "" {
-					ac.Version = gitURL[idx+1:]
-				}
-				gitURL = gitURL[:idx]
+			// Split the ref off with the shared parser so an ssh://git@host style user is not
+			// mistaken for a ref; a URL it cannot parse is carried through unchanged.
+			gitURL, ref, err := transform.GitURLSplitRef(ch.Git.URL)
+			if err != nil {
+				gitURL, ref = ch.Git.URL, ""
 			}
 			ac.URL = gitURL
+			// A ref embedded in the URL is authoritative and overrides the carried chart version,
+			// matching v1alpha1 deploy which prefers the URL ref over Version.
+			if ref != "" {
+				ac.Version = ref
+			}
 			ac.GitPath = ch.Git.Path
 		case ch.Local != nil && ch.Local.Path != "":
 			ac.LocalPath = ch.Local.Path
