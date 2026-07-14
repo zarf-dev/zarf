@@ -951,9 +951,8 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 	require.Equal(t, "my-component", comp.Name)
 	require.Equal(t, "test component", comp.Description)
 
-	// Optional=true → Required=false.
-	require.NotNil(t, comp.Required)
-	require.False(t, *comp.Required)
+	// Optional=true → Required unset (nil); v1alpha1 treats an absent required as optional.
+	require.Nil(t, comp.Required)
 
 	require.Equal(t, "linux", comp.Only.LocalOS)
 	require.Equal(t, "amd64", comp.Only.Cluster.Architecture)

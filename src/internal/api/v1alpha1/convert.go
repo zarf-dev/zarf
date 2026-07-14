@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
 )
 
@@ -317,13 +316,8 @@ func ConvertFromGeneric(g types.Package) v1alpha1.ZarfPackage {
 		pkg.Kind = v1alpha1.ZarfPackageConfig
 	}
 
-	// Only a v1alpha1 source carries a meaningful raw Required pointer; an empty apiVersion is the
-	// implicit v1alpha1 form (see detectAPIVersion), so anything but an explicit v1beta1 apiVersion
-	// is treated as v1alpha1 and its unset Required is preserved verbatim.
-	fromV1alpha1 := g.APIVersion != v1beta1.APIVersion
-
 	for _, c := range g.Components {
-		pkg.Components = append(pkg.Components, componentFromGeneric(c, fromV1alpha1))
+		pkg.Components = append(pkg.Components, componentFromGeneric(c))
 	}
 
 	// A component providing a Zarf CLI service marks this as an init package.
@@ -440,12 +434,12 @@ func scriptsFromGeneric(s types.DeprecatedComponentScripts) v1alpha1.DeprecatedZ
 	}
 }
 
-func componentFromGeneric(c types.Component, fromV1alpha1 bool) v1alpha1.ZarfComponent {
+func componentFromGeneric(c types.Component) v1alpha1.ZarfComponent {
 	ac := v1alpha1.ZarfComponent{
 		Name:              c.Name,
 		Description:       c.Description,
 		Default:           c.Default,
-		Required:          requiredFromGeneric(c.Optional, c.Required, fromV1alpha1),
+		Required:          requiredFromGeneric(c.Optional, c.Required),
 		DeprecatedGroup:   c.Group,
 		DataInjections:    dataInjectionsFromGeneric(c.DataInjections),
 		HealthChecks:      healthChecksFromGeneric(c.HealthChecks),
@@ -515,15 +509,19 @@ func componentFromGeneric(c types.Component, fromV1alpha1 bool) v1alpha1.ZarfCom
 	return ac
 }
 
-// requiredFromGeneric maps the generic representation back to the v1alpha1 Required pointer.
-// A v1alpha1 source carries its original Required verbatim, so an unset (nil) value survives the
-// round-trip losslessly. A v1beta1 source has no Required, so it is derived by inverting Optional.
-func requiredFromGeneric(optional bool, required *bool, fromV1alpha1 bool) *bool {
-	if fromV1alpha1 {
+// requiredFromGeneric maps the generic representation back to the v1alpha1 Required pointer. An
+// explicit Required is preserved verbatim, so a v1alpha1 round-trip (including an unset nil) is
+// lossless. When it is unset, only a required component is materialized as an explicit &true, since
+// v1alpha1 treats an absent required as optional; leaving it nil keeps optional components implicit.
+func requiredFromGeneric(optional bool, required *bool) *bool {
+	if required != nil {
 		return required
 	}
-	v := !optional
-	return &v
+	if !optional {
+		v := true
+		return &v
+	}
+	return nil
 }
 
 func manifestFromGeneric(m types.Manifest) v1alpha1.ZarfManifest {
