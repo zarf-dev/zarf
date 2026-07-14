@@ -64,6 +64,26 @@ func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
 	require.Equal(t, "abc123", result.Build.AggregateChecksum)
 }
 
+func TestV1Alpha1PkgToV1Beta1_ReservedAnnotationNotClobbered(t *testing.T) {
+	t.Parallel()
+	// A field migrates into a reserved metadata.* annotation key, but an author who already set that
+	// key explicitly must keep their value rather than have the field overwrite it.
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name: "test-pkg",
+			URL:  "https://from-field.example.com",
+			Annotations: map[string]string{
+				"metadata.url": "https://from-annotation.example.com",
+			},
+		},
+	}
+
+	result := PackageV1alpha1ToV1beta1(pkg)
+
+	require.Equal(t, "https://from-annotation.example.com", result.Metadata.Annotations["metadata.url"])
+}
+
 func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
 	t.Parallel()
 	signed := true

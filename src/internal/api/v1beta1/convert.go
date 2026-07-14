@@ -370,6 +370,11 @@ func metadataFromGeneric(m types.PackageMetadata) v1beta1.PackageMetadata {
 		if meta.Annotations == nil {
 			meta.Annotations = make(map[string]string)
 		}
+		// Don't clobber an annotation the author already set on a reserved metadata.* key; their
+		// explicit value wins over the migrated field.
+		if _, exists := meta.Annotations[k]; exists {
+			continue
+		}
 		meta.Annotations[k] = v
 	}
 
