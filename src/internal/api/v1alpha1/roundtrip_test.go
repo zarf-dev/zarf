@@ -4,13 +4,13 @@
 package v1alpha1
 
 import (
-	"fmt"
 	"math/rand"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 // TestConvertGenericRoundTripLossless asserts that decoding a v1alpha1 package, converting it to
@@ -155,7 +155,7 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	for i := range 1000 {
 		var pkg v1alpha1.ZarfPackage
-		fillValue(reflect.ValueOf(&pkg).Elem(), rng)
+		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
 
 		// apiVersion and kind are canonicalized on conversion, so they never round-trip an arbitrary
 		// value; pin them to valid forms and let every other field vary.
@@ -164,52 +164,5 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 
 		roundTripped := ConvertFromGeneric(ConvertToGeneric(pkg))
 		require.Equalf(t, pkg, roundTripped, "round-trip diverged on iteration %d", i)
-	}
-}
-
-// fillValue recursively sets v to a random, non-zero value. Unexported fields cannot be set via
-// reflection and are left zero; the conversion never populates them, so they stay equal on both sides.
-func fillValue(v reflect.Value, rng *rand.Rand) {
-	switch v.Kind() {
-	case reflect.Pointer:
-		// Leave the pointer nil sometimes so both the set and unset states are exercised.
-		if rng.Intn(2) == 0 {
-			return
-		}
-		v.Set(reflect.New(v.Type().Elem()))
-		fillValue(v.Elem(), rng)
-	case reflect.Struct:
-		for i := range v.NumField() {
-			if f := v.Field(i); f.CanSet() {
-				fillValue(f, rng)
-			}
-		}
-	case reflect.Slice:
-		n := 1 + rng.Intn(2)
-		s := reflect.MakeSlice(v.Type(), n, n)
-		for i := range n {
-			fillValue(s.Index(i), rng)
-		}
-		v.Set(s)
-	case reflect.Map:
-		m := reflect.MakeMap(v.Type())
-		for range 1 + rng.Intn(2) {
-			key := reflect.New(v.Type().Key()).Elem()
-			fillValue(key, rng)
-			val := reflect.New(v.Type().Elem()).Elem()
-			fillValue(val, rng)
-			m.SetMapIndex(key, val)
-		}
-		v.Set(m)
-	case reflect.String:
-		v.SetString(fmt.Sprintf("s%d", rng.Intn(1<<30)))
-	case reflect.Bool:
-		v.SetBool(rng.Intn(2) == 1)
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		v.SetInt(int64(1 + rng.Intn(1000)))
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		v.SetUint(uint64(1 + rng.Intn(1000)))
-	case reflect.Float32, reflect.Float64:
-		v.SetFloat(float64(1 + rng.Intn(1000)))
 	}
 }

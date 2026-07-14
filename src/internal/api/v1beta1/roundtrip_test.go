@@ -4,10 +4,13 @@
 package v1beta1
 
 import (
+	"math/rand"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 // TestConvertGenericRoundTripLossless asserts that a v1beta1 package converted to the generic
@@ -176,4 +179,45 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 
 	roundTripped := ConvertFromGeneric(ConvertToGeneric(original))
 	require.Equal(t, original, roundTripped)
+}
+
+// TestConvertGenericRoundTripFuzz reflectively populates every field of a Package with random,
+// non-zero values and asserts the generic round-trip reproduces it exactly. Walking the struct by
+// reflection means a newly added field is exercised automatically, so a field the conversion forgets
+// to carry is caught here rather than silently dropped.
+func TestConvertGenericRoundTripFuzz(t *testing.T) {
+	t.Parallel()
+
+	rng := rand.New(rand.NewSource(1))
+	for i := range 1000 {
+		var pkg v1beta1.Package
+		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
+
+		// apiVersion and kind are canonicalized on conversion, so they never round-trip an arbitrary
+		// value; pin them to valid forms and let every other field vary.
+		pkg.APIVersion = v1beta1.APIVersion
+		pkg.Kind = v1beta1.ZarfPackageConfig
+		for ci := range pkg.Components {
+			for chi := range pkg.Components[ci].Charts {
+				keepOneChartSource(&pkg.Components[ci].Charts[chi])
+			}
+		}
+
+		roundTripped := ConvertFromGeneric(ConvertToGeneric(pkg))
+		require.Equalf(t, pkg, roundTripped, "round-trip diverged on iteration %d", i)
+	}
+}
+
+// keepOneChartSource clears all but the highest-precedence chart source. The sources are mutually
+// exclusive, so blind fuzzing that sets several produces an invalid chart the conversion cannot
+// round-trip; this keeps the one chartFromGeneric would select.
+func keepOneChartSource(c *v1beta1.Chart) {
+	switch {
+	case c.HelmRepository != nil:
+		c.Git, c.Local, c.OCI = nil, nil, nil
+	case c.Git != nil:
+		c.Local, c.OCI = nil, nil
+	case c.Local != nil:
+		c.OCI = nil
+	}
 }
