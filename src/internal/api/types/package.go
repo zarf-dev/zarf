@@ -101,12 +101,24 @@ type Component struct {
 	Actions       ComponentActions
 
 	// v1alpha1-only fields preserved for lossless round-trip.
-	Default        bool
-	Required       *bool
-	Group          string
-	DataInjections []ZarfDataInjection
-	HealthChecks   []NamespacedObjectKindReference
-	Distros        []string
+	Default           bool
+	Required          *bool
+	Group             string
+	DataInjections    []ZarfDataInjection
+	HealthChecks      []NamespacedObjectKindReference
+	Distros           []string
+	DeprecatedScripts DeprecatedComponentScripts
+}
+
+// DeprecatedComponentScripts is the v1alpha1-only pre-actions scripts block, preserved for lossless
+// round-trip.
+type DeprecatedComponentScripts struct {
+	ShowOutput     bool
+	TimeoutSeconds int
+	Retry          bool
+	Prepare        []string
+	Before         []string
+	After          []string
 }
 
 // ComponentTarget filters a component to a target OS/arch/flavor.

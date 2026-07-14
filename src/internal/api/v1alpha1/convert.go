@@ -76,16 +76,17 @@ func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.Package {
 
 func componentToGeneric(c v1alpha1.ZarfComponent) types.Component {
 	gc := types.Component{
-		Name:           c.Name,
-		Description:    c.Description,
-		Default:        c.Default,
-		Optional:       !c.IsRequired(),
-		Required:       c.Required,
-		Group:          c.DeprecatedGroup,
-		DataInjections: dataInjectionsToGeneric(c.DataInjections),
-		HealthChecks:   healthChecksToGeneric(c.HealthChecks),
-		Repositories:   c.Repos,
-		StateAccess:    stateAccessToGeneric(c.StateAccess),
+		Name:              c.Name,
+		Description:       c.Description,
+		Default:           c.Default,
+		Optional:          !c.IsRequired(),
+		Required:          c.Required,
+		Group:             c.DeprecatedGroup,
+		DataInjections:    dataInjectionsToGeneric(c.DataInjections),
+		HealthChecks:      healthChecksToGeneric(c.HealthChecks),
+		DeprecatedScripts: scriptsToGeneric(c.DeprecatedScripts),
+		Repositories:      c.Repos,
+		StateAccess:       stateAccessToGeneric(c.StateAccess),
 		Target: types.ComponentTarget{
 			OS:           c.Only.LocalOS,
 			Architecture: c.Only.Cluster.Architecture,
@@ -417,17 +418,40 @@ func buildFromGeneric(b types.BuildData) v1alpha1.ZarfBuildData {
 	return out
 }
 
+func scriptsToGeneric(s v1alpha1.DeprecatedZarfComponentScripts) types.DeprecatedComponentScripts {
+	return types.DeprecatedComponentScripts{
+		ShowOutput:     s.ShowOutput,
+		TimeoutSeconds: s.TimeoutSeconds,
+		Retry:          s.Retry,
+		Prepare:        s.Prepare,
+		Before:         s.Before,
+		After:          s.After,
+	}
+}
+
+func scriptsFromGeneric(s types.DeprecatedComponentScripts) v1alpha1.DeprecatedZarfComponentScripts {
+	return v1alpha1.DeprecatedZarfComponentScripts{
+		ShowOutput:     s.ShowOutput,
+		TimeoutSeconds: s.TimeoutSeconds,
+		Retry:          s.Retry,
+		Prepare:        s.Prepare,
+		Before:         s.Before,
+		After:          s.After,
+	}
+}
+
 func componentFromGeneric(c types.Component, fromV1alpha1 bool) v1alpha1.ZarfComponent {
 	ac := v1alpha1.ZarfComponent{
-		Name:            c.Name,
-		Description:     c.Description,
-		Default:         c.Default,
-		Required:        requiredFromGeneric(c.Optional, c.Required, fromV1alpha1),
-		DeprecatedGroup: c.Group,
-		DataInjections:  dataInjectionsFromGeneric(c.DataInjections),
-		HealthChecks:    healthChecksFromGeneric(c.HealthChecks),
-		Repos:           c.Repositories,
-		StateAccess:     stateAccessFromGeneric(c.StateAccess),
+		Name:              c.Name,
+		Description:       c.Description,
+		Default:           c.Default,
+		Required:          requiredFromGeneric(c.Optional, c.Required, fromV1alpha1),
+		DeprecatedGroup:   c.Group,
+		DataInjections:    dataInjectionsFromGeneric(c.DataInjections),
+		HealthChecks:      healthChecksFromGeneric(c.HealthChecks),
+		DeprecatedScripts: scriptsFromGeneric(c.DeprecatedScripts),
+		Repos:             c.Repositories,
+		StateAccess:       stateAccessFromGeneric(c.StateAccess),
 		Only: v1alpha1.ZarfComponentOnlyTarget{
 			LocalOS: c.Target.OS,
 			Cluster: v1alpha1.ZarfComponentOnlyCluster{

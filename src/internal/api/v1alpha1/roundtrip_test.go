@@ -166,21 +166,10 @@ func TestConvertGenericRoundTripPreservesRequired(t *testing.T) {
 	}
 }
 
-// lossyFields lists v1alpha1 fields that intentionally do not survive the generic round-trip, keyed
-// by struct type name then field name. The fuzz filler leaves them zero so they compare equal. A
-// field NOT listed here is expected to round-trip; adding one to the API without either carrying it
-// through the conversion or justifying it here will fail TestConvertGenericRoundTripFuzz on purpose.
-var lossyFields = map[string]map[string]string{
-	"ZarfComponent": {
-		"DeprecatedScripts": "deprecated pre-actions format; not carried through the conversion",
-	},
-}
-
 // TestConvertGenericRoundTripFuzz reflectively populates every field of a ZarfPackage with random,
 // non-zero values and asserts the generic round-trip reproduces it exactly. Walking the struct by
 // reflection means a newly added field is exercised automatically, so a field the conversion forgets
-// to carry is caught here rather than silently dropped. Fields known not to round-trip are recorded
-// in lossyFields and left at their zero value.
+// to carry is caught here rather than silently dropped.
 func TestConvertGenericRoundTripFuzz(t *testing.T) {
 	t.Parallel()
 
@@ -200,8 +189,7 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 }
 
 // fillValue recursively sets v to a random, non-zero value. Unexported fields cannot be set via
-// reflection and are left zero; the conversion never populates them, so they stay equal on both
-// sides. Fields recorded in lossyFields are also left zero.
+// reflection and are left zero; the conversion never populates them, so they stay equal on both sides.
 func fillValue(v reflect.Value, rng *rand.Rand) {
 	switch v.Kind() {
 	case reflect.Pointer:
@@ -212,13 +200,10 @@ func fillValue(v reflect.Value, rng *rand.Rand) {
 		v.Set(reflect.New(v.Type().Elem()))
 		fillValue(v.Elem(), rng)
 	case reflect.Struct:
-		lossy := lossyFields[v.Type().Name()]
 		for i := range v.NumField() {
-			f := v.Field(i)
-			if _, skip := lossy[v.Type().Field(i).Name]; skip || !f.CanSet() {
-				continue
+			if f := v.Field(i); f.CanSet() {
+				fillValue(f, rng)
 			}
-			fillValue(f, rng)
 		}
 	case reflect.Slice:
 		n := 1 + rng.Intn(2)
