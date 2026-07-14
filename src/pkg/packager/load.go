@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -33,7 +34,7 @@ type LoadOptions struct {
 	Architecture string
 	// Deprecated: Use VerifyBlobOptions instead.
 	PublicKeyPath     string
-	VerifyBlobOptions *utils.VerifyBlobOptions
+	VerifyBlobOptions *signing.VerifyBlobOptions
 	Filter            filters.ComponentFilterStrategy
 	Output            string
 	// number of layers to pull in parallel
@@ -63,7 +64,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	// Only applies when VerifyBlobOptions is not already set,
 	// ensuring the new API takes precedence over the deprecated field.
 	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
-		defaults := utils.DefaultVerifyBlobOptions()
+		defaults := signing.DefaultVerifyBlobOptions()
 		defaults.Key = opts.PublicKeyPath
 		opts.VerifyBlobOptions = &defaults
 	}
@@ -202,7 +203,7 @@ func identifySource(src string) (string, error) {
 	if state.DeployedPackageNameRegex(src) {
 		return "cluster", nil
 	}
-	return "", fmt.Errorf("unknown source %s", src)
+	return "", fmt.Errorf("unknown source %s. Did you forget the scheme (e.g. (oci://) or file extension (e.g. .tar.zst)?", src)
 }
 
 // GetPackageFromSourceOrCluster retrieves a Zarf package from a source or cluster.

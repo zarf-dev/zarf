@@ -1,0 +1,2 @@
+# absentFile is never defined by values or a setValues action.
+value={{ .Values.absentFile }}

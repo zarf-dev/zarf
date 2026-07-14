@@ -1,0 +1,9 @@
+kind: ZarfInitConfig
+metadata:
+  name: init
+
+components:
+  - name: zarf-agent
+    required: true
+    import:
+      path: ../../../../packages/zarf-agent

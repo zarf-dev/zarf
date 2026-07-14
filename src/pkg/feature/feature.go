@@ -203,10 +203,10 @@ func featuresToMap(fs []Feature) map[Name]Feature {
 // List of feature names
 const (
 	// AxolotlMode declares the "axolotl-mode" feature
-	AxolotlMode     Name = "axolotl-mode"
-	RegistryProxy   Name = "registry-proxy"
-	Values          Name = "values"
-	BundleSignature Name = "bundle-signature"
+	AxolotlMode            Name = "axolotl-mode"
+	RegistryProxy          Name = "registry-proxy"
+	Values                 Name = "values"
+	DockerDaemonDirectPull Name = "docker-daemon-direct-pull"
 )
 
 func init() {
@@ -240,16 +240,17 @@ func init() {
 			Description: "Enabling \"values\" allows for Helm-like values files to be imported. Values are intended to" +
 				"be used for advanced configuration of Zarf components and offer a simple and more flexible " +
 				"alternative to Variables .",
-			Enabled: false,
+			Enabled: true,
 			Since:   "v0.64.0",
 			Stage:   Alpha,
 		},
 		{
-			Name:        BundleSignature,
-			Description: "Enables Sigstore bundle format signatures. When disabled, only legacy signature format is produced.",
-			Enabled:     false,
-			Since:       "v0.72.0",
-			Stage:       Alpha,
+			Name: DockerDaemonDirectPull,
+			Description: "Saves images from the local Docker daemon directly via the engine's OCI image export " +
+				"disabling this feature falls back to pulling with Crane.",
+			Enabled: true,
+			Since:   "v0.80.0",
+			Stage:   GA,
 		},
 	}
 

@@ -12,13 +12,18 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
-	"github.com/zarf-dev/zarf/src/pkg/images"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	admission "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
+	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
 const (
@@ -27,6 +32,44 @@ const (
 	// AgentErrTransformOCIURL is thrown when the agent fails to make the OCI url a Zarf compatible url
 	AgentErrTransformOCIURL = "unable to transform the OCIRepo URL"
 )
+
+// withMutationGuard returns an AdmitFunc that unmarshals the request object,
+// checks namespace labels and ShouldMutate, then delegates to fn.
+func withMutationGuard[T any, PT interface {
+	*T
+	metav1.Object
+}](
+	c *cluster.Cluster,
+	mode state.MutationPolicy,
+	fn func(ctx context.Context, r *admission.AdmissionRequest, obj PT) (*operations.Result, error),
+) operations.AdmitFunc {
+	return func(ctx context.Context, r *admission.AdmissionRequest) (*operations.Result, error) {
+		obj := PT(new(T))
+		if err := json.Unmarshal(r.Object.Raw, obj); err != nil {
+			return nil, fmt.Errorf(lang.ErrUnmarshal, err)
+		}
+		var nsLabels map[string]string
+		if r.Namespace != "" {
+			var err error
+			nsLabels, err = getNamespaceLabels(ctx, c, r.Namespace)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if !operations.ShouldMutate(obj.GetLabels(), nsLabels, mode) {
+			return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
+		}
+		return fn(ctx, r, obj)
+	}
+}
+
+func getNamespaceLabels(ctx context.Context, c *cluster.Cluster, name string) (map[string]string, error) {
+	ns, err := c.Clientset.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get namespace %s: %w", name, err)
+	}
+	return ns.Labels, nil
+}
 
 func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	if currLabels == nil {
@@ -73,19 +116,16 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 		}),
 	}
 
-	plainHTTP, err := images.ShouldUsePlainHTTP(ctx, ref.Registry, client)
+	// Reuse the same transport the real fetch will use (which may be an mTLS
+	// client-certificate transport), but stripped of any retry wrapper: probing must
+	// stay fast, not retry with backoff on every connection failure.
+	probeTransport := unwrapRetryTransport(transport)
+	plainHTTP, err := ocischeme.New(ocischeme.Options{}).UsePlainHTTP(ctx, ref.Registry, ocischeme.ProbeOptions{Transport: probeTransport})
 	if err != nil {
 		return "", err
 	}
 
-	registry := &orasRemote.Repository{
-		PlainHTTP: plainHTTP,
-		Reference: ref,
-		Client:    client,
-	}
-
-	_, b, err := oras.FetchBytes(ctx, registry, imageAddress, oras.DefaultFetchBytesOptions)
-
+	b, err := fetchManifestBytes(ctx, ref, client, plainHTTP, imageAddress)
 	if err != nil {
 		return "", fmt.Errorf("got an error when trying to access the manifest for %s, error %w", imageAddress, err)
 	}
@@ -96,4 +136,25 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 	}
 
 	return manifest.Config.MediaType, nil
+}
+
+// unwrapRetryTransport returns rt's underlying RoundTripper if rt is an oras-go
+// retry.Transport, so a scheme probe never inherits its retry/backoff behavior:
+// probing must fail fast on a connection error, not retry it into a multi-second
+// stall.
+func unwrapRetryTransport(rt http.RoundTripper) http.RoundTripper {
+	if retryRT, ok := rt.(*orasRetry.Transport); ok && retryRT.Base != nil {
+		return retryRT.Base
+	}
+	return rt
+}
+
+func fetchManifestBytes(ctx context.Context, ref registry.Reference, client *auth.Client, plainHTTP bool, imageAddress string) ([]byte, error) {
+	repo := &orasRemote.Repository{
+		PlainHTTP: plainHTTP,
+		Reference: ref,
+		Client:    client,
+	}
+	_, b, err := oras.FetchBytes(ctx, repo, imageAddress, oras.DefaultFetchBytesOptions)
+	return b, err
 }

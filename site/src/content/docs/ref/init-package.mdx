@@ -189,7 +189,7 @@ The `zarf-agent` modifies [ArgoCD applications](https://argo-cd.readthedocs.io/e
 
 During the [`zarf init`](/commands/zarf_init) operation, the Zarf Agent will add the `zarf.dev/agent: ignore` label to prevent the Agent from modifying any resources in that namespace. This is done because there is no way to guarantee the images used by pods in existing namespaces are available in the Zarf Registry.
 
-If you would like to adopt pre-existing resources into a Zarf deployment you can use the `--adopt-existing-resources` flag on [`zarf package deploy`](/commands/zarf_package_deploy/) to adopt those resources into the Helm Releases that Zarf manages (including namespaces). This will add the requisite annotations and labels to those resources and drop the `zarf.dev/agent: ignore` label from any namespaces specified by those resources.
+If you would like to adopt pre-existing resources into a Zarf deployment you can use the `--adopt-existing-resources` flag on [`zarf package deploy`](/commands/zarf_package_deploy/) to adopt those resources into the Helm Releases that Zarf manages (including namespaces). This will add the requisite annotations and labels to those resources and add the `zarf.dev/agent: mutate` label to any namespace specified by those resources.
 
 :::
 
@@ -201,13 +201,18 @@ Without this unique hash, images from different registries with the same path—
 
 Additionally, when Git repositories are pushed to the Zarf Git server their name is appended with a CRC32 hash to prevent similar collisions.
 
-#### Excluding Resources from `zarf-agent`
+#### Agent Mutation Rules
 
-Resources can be excluded at the namespace or resources level by adding the `zarf.dev/agent: ignore` label.
+The agent's mutation behavior is controlled by the `--agent-mutation-policy` flag on `zarf init`. It accepts two values:
+
+- **`all`** (default) — the agent mutates all applicable resources. To exclude a resource, add the label `zarf.dev/agent: ignore` to it or its namespace.
+- **`labeled`** — the agent only mutates resources (or resources in namespaces) labeled `zarf.dev/agent: mutate`. All namespaces deployed by Zarf are automatically labeled `zarf.dev/agent: mutate` unless they already carry a `zarf.dev/agent` label.
+
+In both policies, a label on the resource always takes priority over a label on its namespace. A resource labeled `zarf.dev/agent: mutate` in a namespace labeled `zarf.dev/agent: ignore` will be mutated, and vice versa.
 
 Zarf will refuse to adopt the Kubernetes [initial namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces) (`default`, `kube-*`, etc...). This is because these namespaces are critical to the operation of the cluster and should not be managed by Zarf.
 
-Additionally, when adopting resources, ensure that the namespaces specified are dedicated to Zarf, or add the `zarf.dev/agent: ignore` label to any non-Zarf managed resources in those namespaces (and ensure that updates to those resources do not strip that label) otherwise [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) errors may occur.
+When adopting resources, ensure that the namespaces specified are dedicated to Zarf, or add the `zarf.dev/agent: ignore` label to any non-Zarf managed resources in those namespaces (and ensure that updates to those resources do not strip that label) otherwise [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) errors may occur.
 
 The Agent does not need to create any secrets in the cluster. Instead, during `zarf init` and `zarf package deploy`, secrets are automatically created in a [Helm Postrender Hook](https://helm.sh/docs/topics/advanced/#post-rendering) for any namespaces Zarf sees. If you have resources managed by [Flux](https://fluxcd.io/) that are not in a namespace managed by Zarf, you can either create the secrets manually or include a manifest to create the namespace in your package and let Zarf create the secrets for you.
 

@@ -1,0 +1,49 @@
+package haskell
+
+import (
+	"context"
+	"fmt"
+
+	"go.yaml.in/yaml/v3"
+
+	"github.com/anchore/syft/internal/log"
+	"github.com/anchore/syft/internal/unknown"
+	"github.com/anchore/syft/syft/artifact"
+	"github.com/anchore/syft/syft/file"
+	"github.com/anchore/syft/syft/pkg"
+	"github.com/anchore/syft/syft/pkg/cataloger/generic"
+)
+
+var _ generic.Parser = parseStackYaml
+
+type stackYaml struct {
+	ExtraDeps []string `yaml:"extra-deps"`
+}
+
+// parseStackYaml is a parser function for stack.yaml contents, returning all packages discovered.
+func parseStackYaml(_ context.Context, _ file.Resolver, _ *generic.Environment, reader file.LocationReadCloser) ([]pkg.Package, []artifact.Relationship, error) {
+	var stackFile stackYaml
+
+	if err := yaml.NewDecoder(reader).Decode(&stackFile); err != nil {
+		log.WithFields("error", err, "path", reader.RealPath).Trace("failed to parse stack.yaml")
+		return nil, nil, fmt.Errorf("failed to parse stack.yaml file: %w", err)
+	}
+
+	var pkgs []pkg.Package
+	for _, dep := range stackFile.ExtraDeps {
+		pkgName, pkgVersion, pkgHash := parseStackPackageEncoding(dep)
+		pkgs = append(
+			pkgs,
+			newPackage(
+				pkgName,
+				pkgVersion,
+				pkg.HackageStackYamlEntry{
+					PkgHash: pkgHash,
+				},
+				reader.Location,
+			),
+		)
+	}
+
+	return pkgs, nil, unknown.IfEmptyf(pkgs, "unable to determine packages")
+}

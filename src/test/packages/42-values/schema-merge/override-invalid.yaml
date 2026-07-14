@@ -1,0 +1,4 @@
+# replicas: 7 violates the parent schema's maximum of 5.
+# The child schema allowed up to 10, so a failed validation here proves
+# the parent's constraint was preserved in the merged schema.
+replicas: 7

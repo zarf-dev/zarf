@@ -1,0 +1,307 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+package packager
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/template"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/value"
+)
+
+// validateTemplateRefs ensures every go-templated .Values reference in the package's components can
+// be resolved before any component is deployed. A reference is satisfiable if it resolves against the
+// already-known values, or if any setValues action anywhere in the package declares it. This turns
+// the late, mid-deploy missingkey errors from template.Apply into a single up-front failure so a
+// package never half-deploys.
+func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, vals value.Values) error {
+	if pkgLayout == nil {
+		return fmt.Errorf("pkg layout is required")
+	}
+	components := pkgLayout.Pkg.Components
+	defined := newDefinedValues(vals)
+
+	var errs []error
+	for _, component := range components {
+		componentErrs, err := checkComponent(ctx, pkgLayout, component, defined)
+		if err != nil {
+			return err
+		}
+		errs = append(errs, componentErrs...)
+	}
+	return errors.Join(errs...)
+}
+
+func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, defined *definedValues) ([]error, error) {
+	onDeploy := component.Actions.OnDeploy
+	var errs []error
+
+	for _, action := range onDeploy.Before {
+		errs = append(errs, checkAction(component, action, defined)...)
+		defined.addAction(action)
+	}
+
+	sources, err := componentFileSources(ctx, pkgLayout, component)
+	if err != nil {
+		return nil, err
+	}
+	for _, src := range sources {
+		errs = append(errs, checkTemplateString(src.content, defined, src.location)...)
+	}
+
+	for _, chart := range component.Charts {
+		for _, cv := range chart.Values {
+			if !defined.hasValue(value.Path(cv.SourcePath).Segments()) {
+				errs = append(errs, fmt.Errorf("component %q chart %q: maps undefined value %s to %s",
+					component.Name, chart.Name, cv.SourcePath, cv.TargetPath))
+			}
+		}
+	}
+
+	for _, action := range onDeploy.After {
+		errs = append(errs, checkAction(component, action, defined)...)
+		defined.addAction(action)
+	}
+	for _, action := range onDeploy.OnSuccess {
+		errs = append(errs, checkAction(component, action, defined)...)
+		defined.addAction(action)
+	}
+	for _, action := range onDeploy.OnFailure {
+		errs = append(errs, checkAction(component, action, defined)...)
+		defined.addAction(action)
+	}
+
+	return errs, nil
+}
+
+func checkAction(component v1alpha1.ZarfComponent, action v1alpha1.ZarfComponentAction, defined *definedValues) []error {
+	if !action.ShouldTemplate() {
+		return nil
+	}
+	location := fmt.Sprintf("component %q action %q", component.Name, actionLabel(action))
+	var errs []error
+	for _, s := range actionTemplateStrings(action) {
+		errs = append(errs, checkTemplateString(s, defined, location)...)
+	}
+	return errs
+}
+
+// definedValues describes the value keys a package can provide at deploy time.
+type definedValues struct {
+	vals         value.Values
+	setValueKeys [][]string
+	setValueRoot bool
+}
+
+func newDefinedValues(vals value.Values) *definedValues {
+	if vals == nil {
+		vals = value.Values{}
+	}
+	return &definedValues{vals: vals}
+}
+
+func (d *definedValues) addAction(action v1alpha1.ZarfComponentAction) {
+	for _, sv := range action.SetValues {
+		if sv.Key == "." {
+			d.setValueRoot = true
+			continue
+		}
+		if segments := value.Path(sv.Key).Segments(); len(segments) > 0 {
+			d.setValueKeys = append(d.setValueKeys, segments)
+		}
+	}
+}
+
+func (d *definedValues) hasValue(path []string) bool {
+	if d.setValueRoot {
+		return true
+	}
+	for _, key := range d.setValueKeys {
+		if hasPrefix(path, key) {
+			return true
+		}
+	}
+	p := value.Path("." + strings.Join(path, "."))
+	_, err := d.vals.Extract(p)
+	return err == nil
+}
+
+func checkTemplateString(s string, defined *definedValues, location string) []error {
+	refs, err := template.ReferencedKeys(s)
+	if err != nil {
+		return []error{fmt.Errorf("%s: invalid go-template: %w", location, err)}
+	}
+	var errs []error
+	for _, path := range refs.Values {
+		if !defined.hasValue(path) {
+			errs = append(errs, fmt.Errorf("%s: references undefined value .Values.%s", location, strings.Join(path, ".")))
+		}
+	}
+	return errs
+}
+
+// templateSource pairs a template string with a human-readable location for error messages.
+type templateSource struct {
+	content  string
+	location string
+}
+
+// componentFileSources extracts and reads the go-templated manifest, file, and chart values-file
+// contents for a component.
+func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent) (_ []templateSource, err error) {
+	hasManifests := false
+	for _, m := range component.Manifests {
+		if m.IsTemplate() {
+			hasManifests = true
+			break
+		}
+	}
+	hasFiles := false
+	for _, f := range component.Files {
+		if f.IsTemplate() {
+			hasFiles = true
+			break
+		}
+	}
+	hasTemplatedValues := false
+	for _, chart := range component.Charts {
+		if len(chart.TemplatedValuesFiles) > 0 {
+			hasTemplatedValues = true
+			break
+		}
+	}
+	if !hasManifests && !hasFiles && !hasTemplatedValues {
+		return nil, nil
+	}
+
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+
+	var sources []templateSource
+	if hasManifests {
+		manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.ManifestsComponentDir)
+		if err != nil {
+			return nil, err
+		}
+		for _, manifest := range component.Manifests {
+			if !manifest.IsTemplate() {
+				continue
+			}
+			for idx := range manifest.Files {
+				path := filepath.Join(manifestDir, layout.ManifestFileName(manifest.Name, idx))
+				content, err := os.ReadFile(path)
+				if err != nil {
+					return nil, err
+				}
+				sources = append(sources, templateSource{
+					content:  string(content),
+					location: fmt.Sprintf("component %q manifest %q", component.Name, manifest.Name),
+				})
+			}
+		}
+	}
+	if hasFiles {
+		filesDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.FilesComponentDir)
+		if err != nil {
+			return nil, err
+		}
+		for fileIdx, file := range component.Files {
+			if !file.IsTemplate() {
+				continue
+			}
+			fileLocation := filepath.Join(filesDir, layout.ComponentFileRelPath(fileIdx, file.Target))
+			fileList := []string{fileLocation}
+			if helpers.IsDir(fileLocation) {
+				fileList, err = helpers.RecursiveFileList(fileLocation, nil, false)
+				if err != nil {
+					return nil, err
+				}
+			}
+			for _, subFile := range fileList {
+				content, err := os.ReadFile(subFile)
+				if err != nil {
+					return nil, err
+				}
+				sources = append(sources, templateSource{
+					content:  string(content),
+					location: fmt.Sprintf("component %q file %q", component.Name, file.Target),
+				})
+			}
+		}
+	}
+	if hasTemplatedValues {
+		valuesDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.ValuesComponentDir)
+		if err != nil {
+			return nil, err
+		}
+		for _, chart := range component.Charts {
+			for _, vf := range helm.GetChartValuesFiles(chart) {
+				if !vf.Template {
+					continue
+				}
+				content, err := os.ReadFile(helm.StandardValuesName(valuesDir, chart, vf.GlobalIdx))
+				if err != nil {
+					return nil, err
+				}
+				sources = append(sources, templateSource{
+					content:  string(content),
+					location: fmt.Sprintf("component %q chart %q templated values file %q", component.Name, chart.Name, vf.Source),
+				})
+			}
+		}
+	}
+	return sources, nil
+}
+
+func actionTemplateStrings(a v1alpha1.ZarfComponentAction) []string {
+	if a.Wait != nil {
+		var out []string
+		if c := a.Wait.Cluster; c != nil {
+			out = append(out, c.Kind, c.Name, c.Namespace, c.Condition)
+		}
+		if n := a.Wait.Network; n != nil {
+			out = append(out, n.Protocol, n.Address)
+		}
+		return out
+	}
+	return []string{a.Cmd}
+}
+
+func actionLabel(a v1alpha1.ZarfComponentAction) string {
+	if a.Description != "" {
+		return a.Description
+	}
+	if a.Wait != nil {
+		return "wait"
+	}
+	return helpers.Truncate(a.Cmd, 60, false)
+}
+
+func hasPrefix(path, prefix []string) bool {
+	if len(prefix) > len(path) {
+		return false
+	}
+	for i, seg := range prefix {
+		if path[i] != seg {
+			return false
+		}
+	}
+	return true
+}

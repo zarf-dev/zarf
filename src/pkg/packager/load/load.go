@@ -33,6 +33,8 @@ type DefinitionOptions struct {
 	// SkipRequiredValues ignores values schema validation errors when a "required" field is empty. Used when a package
 	// value should be supplied at deploy-time and doesn't have a default set in the package values.
 	SkipRequiredValues bool
+	// SkipValuesSchemaValidation skips schema validation for the package values entirely.
+	SkipValuesSchemaValidation bool
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
@@ -42,8 +44,16 @@ type DefinitionOptions struct {
 	types.RemoteOptions
 }
 
+// DefinedPackage is the result of loading and resolving a package definition.
+// ImportedSchemas is transient assembly state — child schema paths collected during
+// import resolution that must be passed to AssemblePackage for merging.
+type DefinedPackage struct {
+	Pkg             v1alpha1.ZarfPackage
+	ImportedSchemas []string
+}
+
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
-func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (v1alpha1.ZarfPackage, error) {
+func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (DefinedPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
@@ -54,47 +64,48 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinedPackage{}, err
 	}
 
 	b, err := os.ReadFile(pkgPath.ManifestFile)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinedPackage{}, err
 	}
 	pkg, err := pkgcfg.Parse(ctx, b)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinedPackage{}, err
 	}
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinedPackage{}, err
 	}
-	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+	var importedSchemas []string
+	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinedPackage{}, err
 	}
 
 	if len(pkg.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
+		return DefinedPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
+			return DefinedPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
+	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinedPackage{}, err
 	}
 	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
-	return pkg, nil
+	return DefinedPackage{Pkg: pkg, ImportedSchemas: importedSchemas}, nil
 }
 
-func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -114,6 +125,7 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
+
 	if len(findings) != 0 {
 		return &lint.LintError{
 			PackageName: pkg.Metadata.Name,
@@ -121,8 +133,10 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		}
 	}
 
-	if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: skipRequiredValues}); err != nil {
-		return err
+	if !skipSchemaValidation {
+		if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: skipRequiredValues}); err != nil {
+			return err
+		}
 	}
 
 	l.Debug("done layout.Validate",

@@ -19,39 +19,64 @@ Kubernetes clusters are accessed via credentials in your current kubecontext def
 zarf package deploy [ PACKAGE_SOURCE ] [flags]
 ```
 
+### Examples
+
+```
+
+# Deploy a local package tarball
+$ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst --confirm
+
+# Deploy a package from an OCI registry (requires oci:// scheme)
+$ zarf package deploy oci://ghcr.io/my-org/my-package:1.0.0 --confirm
+
+# Deploy a package from an HTTPS URL (--shasum required for integrity verification)
+$ zarf package deploy https://example.com/zarf-package-my-app-amd64-1.0.0.tar.zst --shasum <sha256sum> --confirm
+
+# Deploy a split package (pass the .part000 file)
+$ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst.part000 --confirm
+
+```
+
 ### Options
 
 ```
-      --adopt-existing-resources       Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
-      --components string              Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
-  -c, --confirm                        Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
-      --connected                      Deploy without pushing images/repos; label resources to bypass the Zarf agent
-      --force-conflicts                Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources.
-  -h, --help                           help for deploy
-  -k, --key string                     Path to public key file for validating signed packages
-  -n, --namespace string               [Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined.
-      --oci-concurrency int            Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --retries int                    Number of retries to perform for Zarf operations like git/image pushes (default 3)
-      --set-values stringToString      Specify deployment package values to set on the command line (key.path=value). (default [])
-      --set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
-      --shasum string                  Shasum of the package to deploy. Required if deploying a remote https package.
-      --timeout duration               Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
-  -v, --values strings                 [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
-      --verify                         Verify the Zarf package signature
+      --adopt-existing-resources                Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
+      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
+      --certificate-identity-regexp string      Regex variant of --certificate-identity
+      --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
+      --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
+      --components string                       Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
+  -c, --confirm                                 Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
+      --connected                               Deploy without pushing images/repos; label resources to bypass the Zarf agent
+      --force-conflicts                         Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources.
+  -h, --help                                    help for deploy
+      --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
+  -k, --key string                              Path to public key file for validating signed packages
+  -n, --namespace string                        [Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined.
+      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --set-values stringToString               Specify deployment package values to set on the command line (key.path=value). (default [])
+      --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
+      --shasum string                           Shasum of the package to deploy. Required if deploying a remote https package.
+      --timeout duration                        Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
+      --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
+      --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+  -v, --values strings                          [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
+      --verify verifyMode[=always]              Signature verification mode (always|if-possible|never). (default if-possible)
 ```
 
 ### Options inherited from parent commands
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
-      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --cache string               Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
 ### SEE ALSO

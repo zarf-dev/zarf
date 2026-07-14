@@ -41,14 +41,17 @@ var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
 
 // ZarfInjectorOptions represents the options used by injector pod
 type ZarfInjectorOptions struct {
-	// - RegistryNodePort, with using uint16 allows for only the valid ports, this includes 0 as it will allow Kubernetes to choose the node port for us
+	// RegistryNodePort, using uint16 allows for only valid ports; 0 lets Kubernetes choose
 	RegistryNodePort uint16
-	// - InjectorNodePort, with using uint16 allows for only the valid ports, this includes 0 as it will allow Kubernetes to choose the node port for us
+	// InjectorNodePort, using uint16 allows for only valid ports; 0 lets Kubernetes choose
 	InjectorNodePort uint16
+	// IPFamily determines the injector listen address; defaults to IPv4 when unset
+	IPFamily state.IPFamily
 }
 
-// StartInjection initializes a Zarf injection into the cluster
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, pkgName string, architecture string, opts ZarfInjectorOptions) (int, error) {
+// StartInjection initializes a Zarf injection into the cluster.
+// Returns the image used for the injector pod and the node port the injector service is exposed on.
+func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, pkgName string, architecture string, opts ZarfInjectorOptions) (string, int, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -58,19 +61,19 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	// Stop any previous running injection before starting.
 	err := c.StopInjection(ctx)
 	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
 
 	l.Info("creating Zarf injector resources")
 
 	svc, err := c.createInjectorNodeportService(ctx, pkgName, opts)
 	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
 
 	payloadCmNames, shasum, err := c.CreateInjectorConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs, pkgName)
 	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
 
 	resReq := v1ac.ResourceRequirements().
@@ -84,13 +87,13 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		})
 	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq, architecture)
 	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
 
-	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName)
+	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily)
 	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
-		return 0, fmt.Errorf("error creating pod in cluster: %w", err)
+		return "", 0, fmt.Errorf("error creating pod in cluster: %w", err)
 	}
 
 	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
@@ -103,11 +106,11 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	}
 	err = healthchecks.Run(waitCtx, c.Watcher, []v1alpha1.NamespacedObjectKindReference{podRef})
 	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
 
 	l.Debug("done with injection", "duration", time.Since(start))
-	return int(svc.Spec.Ports[0].NodePort), nil
+	return injectorImage, int(svc.Spec.Ports[0].NodePort), nil
 }
 
 // CreateInjectorConfigMaps creates the required configmaps to run the injector
@@ -298,7 +301,12 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 		podsByNode[pod.Spec.NodeName] = append(podsByNode[pod.Spec.NodeName], pod)
 	}
 
-	// Evaluate nodes one by one, return early when suitable
+	type nodeFallback struct {
+		image string
+		node  string
+	}
+	var fallback *nodeFallback
+
 	for _, node := range nodeList.Items {
 		if hasBlockingTaints(node.Spec.Taints) {
 			l.Debug("skipping node: blocking taints", "node", node.Name)
@@ -311,7 +319,7 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 
 		availCPU := node.Status.Allocatable.Cpu().DeepCopy()
 		availMem := node.Status.Allocatable.Memory().DeepCopy()
-		var candidateImage string
+		var candidateNoCreds, candidateFallback string
 
 		for _, pod := range podsByNode[node.Name] {
 			podReqs := componenthelpers.AggregateContainerRequests(&pod, componenthelpers.PodResourcesOptions{})
@@ -322,20 +330,39 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 				availMem.Sub(*memReq)
 			}
 
-			// Collect candidate images (containers, init, ephemeral)
+			noCreds := len(pod.Spec.ImagePullSecrets) == 0
+			// Collect candidate images (containers, init, ephemeral), preferring pods without imagePullSecrets
 			for _, ctn := range pod.Spec.Containers {
-				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
-					candidateImage = ctn.Image
+				if zarfImageRegex.MatchString(ctn.Image) {
+					continue
+				}
+				if candidateFallback == "" {
+					candidateFallback = ctn.Image
+				}
+				if noCreds && candidateNoCreds == "" {
+					candidateNoCreds = ctn.Image
 				}
 			}
 			for _, ctn := range pod.Spec.InitContainers {
-				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
-					candidateImage = ctn.Image
+				if zarfImageRegex.MatchString(ctn.Image) {
+					continue
+				}
+				if candidateFallback == "" {
+					candidateFallback = ctn.Image
+				}
+				if noCreds && candidateNoCreds == "" {
+					candidateNoCreds = ctn.Image
 				}
 			}
 			for _, ctn := range pod.Spec.EphemeralContainers {
-				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
-					candidateImage = ctn.Image
+				if zarfImageRegex.MatchString(ctn.Image) {
+					continue
+				}
+				if candidateFallback == "" {
+					candidateFallback = ctn.Image
+				}
+				if noCreds && candidateNoCreds == "" {
+					candidateNoCreds = ctn.Image
 				}
 			}
 		}
@@ -357,14 +384,23 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 			continue
 		}
 
-		if candidateImage != "" {
-			l.Debug("selected image for injector", "node", node.Name, "image", candidateImage)
-			return candidateImage, node.Name, nil
+		if candidateNoCreds != "" {
+			l.Debug("selected image for injector", "node", node.Name, "image", candidateNoCreds)
+			return candidateNoCreds, node.Name, nil
+		}
+		if candidateFallback != "" && fallback == nil {
+			l.Debug("found fallback image, continuing search for image without pull credentials", "node", node.Name, "image", candidateFallback)
+			fallback = &nodeFallback{image: candidateFallback, node: node.Name}
+			continue
 		}
 
 		l.Debug("no suitable image found on node", "node", node.Name)
 	}
 
+	if fallback != nil {
+		l.Debug("selected fallback image for injector", "node", fallback.node, "image", fallback.image)
+		return fallback.image, fallback.node, nil
+	}
 	return "", "", fmt.Errorf("no suitable injector image or node exists")
 }
 
@@ -498,7 +534,13 @@ func hasBlockingTaints(taints []corev1.Taint) bool {
 	return false
 }
 
-func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, pkgName string) *v1ac.PodApplyConfiguration {
+func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, pkgName string, ipFamily state.IPFamily) *v1ac.PodApplyConfiguration {
+	listenHost := "0.0.0.0"
+	if ipFamily == state.IPFamilyIPv6 {
+		listenHost = "[::]"
+	}
+	listenAddr := fmt.Sprintf("%s:%d", listenHost, 5000)
+
 	executeMode := int32(0777)
 	userID := int64(1000)
 	groupID := int64(2000)
@@ -566,7 +608,7 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 						WithImage(image).
 						WithImagePullPolicy(corev1.PullIfNotPresent).
 						WithWorkingDir("/zarf-init").
-						WithCommand("/zarf-init/zarf-injector", shasum).
+						WithCommand("/zarf-init/zarf-injector", shasum, listenAddr).
 						WithVolumeMounts(volumeMounts...).
 						WithSecurityContext(
 							v1ac.SecurityContext().

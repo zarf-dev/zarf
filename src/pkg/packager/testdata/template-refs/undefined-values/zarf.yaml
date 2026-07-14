@@ -1,0 +1,12 @@
+kind: ZarfPackageConfig
+metadata:
+  name: template-refs-undefined-values
+components:
+  - name: comp
+    charts:
+      - name: values-chart
+        version: 1.0.0
+        namespace: test
+        localPath: chart
+        templatedValuesFiles:
+          - templated-values.yaml

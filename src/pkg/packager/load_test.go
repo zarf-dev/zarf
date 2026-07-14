@@ -17,7 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -69,7 +69,7 @@ func TestLoadPackage(t *testing.T) {
 		tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
 
 		keyPath := filepath.Join("layout", "testdata", "cosign.pub")
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = keyPath
 
 		// VerifyNever should skip verification entirely and succeed
@@ -82,15 +82,24 @@ func TestLoadPackage(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
 
-		// VerifyIfPossible should warn but continue on unsigned package
+		// VerifyIfPossible with no material should warn but continue on unsigned package
 		opt = LoadOptions{
 			VerificationStrategy: layout.VerifyIfPossible,
-			VerifyBlobOptions:    &verifyOpts,
 			Filter:               filters.Empty(),
 		}
 		pkgLayout, err = LoadPackage(ctx, tarPath, opt)
 		require.NoError(t, err)
 		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+
+		// VerifyIfPossible with a key against an unsigned package is always fatal
+		opt = LoadOptions{
+			VerificationStrategy: layout.VerifyIfPossible,
+			VerifyBlobOptions:    &verifyOpts,
+			Filter:               filters.Empty(),
+		}
+		_, err = LoadPackage(ctx, tarPath, opt)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
 
 		// VerifyAlways should fail on unsigned package
 		opt = LoadOptions{
@@ -226,7 +235,7 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	c := &cluster.Cluster{
 		Clientset: fake.NewClientset(),
 	}
-	_, err = c.RecordPackageDeployment(ctx, pkg, nil, 1)
+	_, err = c.RecordPackageDeployment(ctx, pkg, "sha256:abcdeadbeef", nil, 1)
 	require.NoError(t, err)
 	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", "", LoadOptions{})
 	require.NoError(t, err)

@@ -17,7 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -36,7 +36,7 @@ func defaultTestRemoteOptions() types.RemoteOptions {
 func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string) *layout.PackageLayout {
 	t.Helper()
 
-	verifyOpts := utils.DefaultVerifyBlobOptions()
+	verifyOpts := signing.DefaultVerifyBlobOptions()
 	verifyOpts.Key = publicKeyPath
 
 	// Generate tmpdir and pull published package from local registry
@@ -221,6 +221,10 @@ func TestPublishSkeleton(t *testing.T) {
 }
 
 func TestPublishPackage(t *testing.T) {
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
+	signOpts.Password = "password"
+
 	tt := []struct {
 		name          string
 		path          string
@@ -240,9 +244,8 @@ func TestPublishPackage(t *testing.T) {
 			name: "Sign and publish package",
 			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOptions{
-				RemoteOptions:      defaultTestRemoteOptions(),
-				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
-				SigningKeyPassword: "password",
+				RemoteOptions:   defaultTestRemoteOptions(),
+				SignBlobOptions: signOpts,
 			},
 			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
 			expectedTag:   "0.0.1",
@@ -279,8 +282,8 @@ func TestPublishPackage(t *testing.T) {
 			//build data changes when signed
 			layoutActual.Pkg.Build = v1alpha1.ZarfBuildData{}
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
-			if tc.opts.SigningKeyPath != "" {
-				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Signature))
+			if tc.opts.SignBlobOptions.Key != "" {
+				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Bundle))
 			}
 		})
 	}
