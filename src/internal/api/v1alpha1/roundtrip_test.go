@@ -140,6 +140,7 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 		Values:        v1alpha1.ZarfValues{Files: []string{"vals.yaml"}, Schema: "schema.json"},
 		Documentation: map[string]string{"doc": "doc.md"},
 	}
+	original.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
 
 	roundTripped := ConvertFromGeneric(ConvertToGeneric(original))
 	require.Equal(t, original, roundTripped)
@@ -161,6 +162,7 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 		// value; pin them to valid forms and let every other field vary.
 		pkg.APIVersion = v1alpha1.APIVersion
 		pkg.Kind = v1alpha1.ZarfPackageConfig
+		pkg.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
 
 		roundTripped := ConvertFromGeneric(ConvertToGeneric(pkg))
 		require.Equalf(t, pkg, roundTripped, "round-trip diverged on iteration %d", i)

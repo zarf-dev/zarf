@@ -176,6 +176,7 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 		Values:        v1beta1.Values{Files: []string{"vals.yaml"}, Schema: "schema.json"},
 		Documentation: map[string]string{"doc": "doc.md"},
 	}
+	original.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
 
 	roundTripped := ConvertFromGeneric(ConvertToGeneric(original))
 	require.Equal(t, original, roundTripped)
@@ -197,6 +198,7 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 		// value; pin them to valid forms and let every other field vary.
 		pkg.APIVersion = v1beta1.APIVersion
 		pkg.Kind = v1beta1.ZarfPackageConfig
+		pkg.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
 		for ci := range pkg.Components {
 			for chi := range pkg.Components[ci].Charts {
 				keepOneChartSource(&pkg.Components[ci].Charts[chi])

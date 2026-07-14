@@ -84,6 +84,34 @@ func TestV1Alpha1PkgToV1Beta1_ReservedAnnotationNotClobbered(t *testing.T) {
 	require.Equal(t, "https://from-annotation.example.com", result.Metadata.Annotations["metadata.url"])
 }
 
+func TestV1Alpha1PkgToV1Beta1_PreservesOriginalAPIVersion(t *testing.T) {
+	t.Parallel()
+	pkg := v1alpha1.ZarfPackage{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       v1alpha1.ZarfPackageConfig,
+		Metadata:   v1alpha1.ZarfMetadata{Name: "test-pkg"},
+	}
+
+	result := PackageV1alpha1ToV1beta1(pkg)
+
+	// The converted package must remember it originated as v1alpha1 rather than report itself as
+	// v1beta1-native, so a later conversion still applies v1alpha1 migration semantics.
+	require.Equal(t, v1alpha1.APIVersion, result.Build.GetOriginalAPIVersion())
+}
+
+func TestV1Beta1PkgToV1Alpha1_PreservesOriginalAPIVersion(t *testing.T) {
+	t.Parallel()
+	pkg := v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
+		Metadata:   v1beta1.PackageMetadata{Name: "test-pkg"},
+	}
+
+	result := PackageV1beta1ToV1alpha1(pkg)
+
+	require.Equal(t, v1beta1.APIVersion, result.Build.GetOriginalAPIVersion())
+}
+
 func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
 	t.Parallel()
 	signed := true

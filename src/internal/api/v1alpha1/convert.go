@@ -426,6 +426,9 @@ func buildFromGeneric(b types.BuildData) v1alpha1.ZarfBuildData {
 		ProvenanceFiles:            b.ProvenanceFiles,
 	}
 
+	// Preserve the apiVersion the package was originally read from across the conversion.
+	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
+
 	for _, vr := range b.VersionRequirements {
 		out.VersionRequirements = append(out.VersionRequirements, v1alpha1.VersionRequirement{
 			Version: vr.Version,

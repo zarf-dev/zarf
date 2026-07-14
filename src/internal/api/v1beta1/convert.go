@@ -397,6 +397,9 @@ func buildFromGeneric(b types.BuildData, m types.PackageMetadata) v1beta1.BuildD
 		ProvenanceFiles:            b.ProvenanceFiles,
 	}
 
+	// Preserve the apiVersion the package was originally read from across the conversion.
+	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
+
 	// AggregateChecksum lives in metadata in v1alpha1, build in v1beta1.
 	switch {
 	case b.AggregateChecksum != "":
