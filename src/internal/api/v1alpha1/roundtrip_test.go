@@ -141,3 +141,24 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 	roundTripped := ConvertFromGeneric(ConvertToGeneric(original))
 	require.Equal(t, original, roundTripped)
 }
+
+// TestConvertGenericRoundTripPreservesRequired asserts that a component's Required pointer survives
+// the generic round-trip byte-for-byte, including an unset (nil) value. v1alpha1 defaults an unset
+// required to optional, so collapsing nil to &false would drift the serialized package. An empty
+// apiVersion is the implicit v1alpha1 form and must round-trip identically to the explicit one.
+func TestConvertGenericRoundTripPreservesRequired(t *testing.T) {
+	t.Parallel()
+
+	b := func(v bool) *bool { return &v }
+	for _, apiVersion := range []string{v1alpha1.APIVersion, ""} {
+		for _, required := range []*bool{nil, b(false), b(true)} {
+			original := v1alpha1.ZarfPackage{
+				APIVersion: apiVersion,
+				Kind:       v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{{Name: "comp", Required: required}},
+			}
+			roundTripped := ConvertFromGeneric(ConvertToGeneric(original))
+			require.Equal(t, required, roundTripped.Components[0].Required)
+		}
+	}
+}

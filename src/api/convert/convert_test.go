@@ -366,7 +366,8 @@ func TestV1Beta1PkgToV1Alpha1_ServiceMarksInitPackage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			pkg := v1beta1.Package{
-				Kind: v1beta1.ZarfPackageConfig,
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfPackageConfig,
 				Components: []v1beta1.Component{
 					{
 						Name:          "zarf-registry",
@@ -883,7 +884,8 @@ func TestV1Beta1PkgToV1Alpha1_Build(t *testing.T) {
 func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 	t.Parallel()
 	pkg := v1beta1.Package{
-		Kind: v1beta1.ZarfPackageConfig,
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
 		Components: []v1beta1.Component{
 			{
 				Name:        "my-component",
@@ -1037,7 +1039,8 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			pkg := v1beta1.Package{
-				Kind: v1beta1.ZarfPackageConfig,
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfPackageConfig,
 				Components: []v1beta1.Component{
 					{
 						Name:          "chart-comp",
@@ -1056,7 +1059,8 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 func TestV1Beta1PkgToV1Alpha1_ManifestSkipWaitInversion(t *testing.T) {
 	t.Parallel()
 	pkg := v1beta1.Package{
-		Kind: v1beta1.ZarfPackageConfig,
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
 		Components: []v1beta1.Component{
 			{
 				Name: "manifest-comp",
@@ -1095,7 +1099,8 @@ func TestV1Beta1PkgToV1Alpha1_Actions(t *testing.T) {
 	retriesDef := int32(2)
 
 	pkg := v1beta1.Package{
-		Kind: v1beta1.ZarfPackageConfig,
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
 		Components: []v1beta1.Component{
 			{
 				Name: "action-comp",

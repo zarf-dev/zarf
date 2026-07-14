@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
 )
 
@@ -312,8 +313,13 @@ func ConvertFromGeneric(g types.Package) v1alpha1.ZarfPackage {
 		pkg.Kind = v1alpha1.ZarfPackageConfig
 	}
 
+	// Only a v1alpha1 source carries a meaningful raw Required pointer; an empty apiVersion is the
+	// implicit v1alpha1 form (see detectAPIVersion), so anything but an explicit v1beta1 apiVersion
+	// is treated as v1alpha1 and its unset Required is preserved verbatim.
+	fromV1alpha1 := g.APIVersion != v1beta1.APIVersion
+
 	for _, c := range g.Components {
-		pkg.Components = append(pkg.Components, componentFromGeneric(c))
+		pkg.Components = append(pkg.Components, componentFromGeneric(c, fromV1alpha1))
 	}
 
 	// A component providing a Zarf CLI service marks this as an init package.
@@ -408,12 +414,12 @@ func buildFromGeneric(b types.BuildData) v1alpha1.ZarfBuildData {
 	return out
 }
 
-func componentFromGeneric(c types.Component) v1alpha1.ZarfComponent {
+func componentFromGeneric(c types.Component, fromV1alpha1 bool) v1alpha1.ZarfComponent {
 	ac := v1alpha1.ZarfComponent{
 		Name:            c.Name,
 		Description:     c.Description,
 		Default:         c.Default,
-		Required:        requiredFromGeneric(c.Optional, c.Required),
+		Required:        requiredFromGeneric(c.Optional, c.Required, fromV1alpha1),
 		DeprecatedGroup: c.Group,
 		DataInjections:  dataInjectionsFromGeneric(c.DataInjections),
 		HealthChecks:    healthChecksFromGeneric(c.HealthChecks),
@@ -481,10 +487,11 @@ func componentFromGeneric(c types.Component) v1alpha1.ZarfComponent {
 	return ac
 }
 
-// requiredFromGeneric maps the v1beta1 Optional and v1alpha1 Required back to v1alpha1 Required.
-// Prefers preserved v1alpha1 Required; otherwise inverts Optional.
-func requiredFromGeneric(optional bool, required *bool) *bool {
-	if required != nil {
+// requiredFromGeneric maps the generic representation back to the v1alpha1 Required pointer.
+// A v1alpha1 source carries its original Required verbatim, so an unset (nil) value survives the
+// round-trip losslessly. A v1beta1 source has no Required, so it is derived by inverting Optional.
+func requiredFromGeneric(optional bool, required *bool, fromV1alpha1 bool) *bool {
+	if fromV1alpha1 {
 		return required
 	}
 	v := !optional
