@@ -48,12 +48,7 @@ func run() error {
 	if err := writeSchema("zarf-v1beta1-component-schema.json", v1beta1Component); err != nil {
 		return err
 	}
-
-	combined, err := generateSchema(v1alpha1Package, v1beta1Package)
-	if err != nil {
-		return err
-	}
-	return writeSchemaFile("zarf.schema.json", combined)
+	return writeSchema("zarf.schema.json", v1alpha1Package, v1beta1Package)
 }
 
 func writeSchema(filename string, apis ...schemaAPI) error {
