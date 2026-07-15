@@ -9,7 +9,7 @@ component:
       local:
         path: loki-chart
       valuesFiles:
-        - loki-values.yaml
+        - path: loki-values.yaml
   files:
     - source: motd.txt
       destination: /etc/motd

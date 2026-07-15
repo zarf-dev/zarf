@@ -53,7 +53,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		require.Len(t, comp.Charts, 1)
 		require.NotNil(t, comp.Charts[0].Local)
 		require.Equal(t, filepath.Join("components", "loki-chart"), comp.Charts[0].Local.Path)
-		require.Equal(t, []string{filepath.Join("components", "loki-values.yaml")}, comp.Charts[0].ValuesFiles)
+		require.Equal(t, []v1beta1.ValuesFile{{Path: filepath.Join("components", "loki-values.yaml")}}, comp.Charts[0].ValuesFiles)
 
 		require.Len(t, comp.Files, 1)
 		require.Equal(t, filepath.Join("components", "motd.txt"), comp.Files[0].Source)
