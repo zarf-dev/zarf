@@ -52,16 +52,16 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 
 		require.Len(t, comp.Charts, 1)
 		require.NotNil(t, comp.Charts[0].Local)
-		require.Equal(t, filepath.Join("components", "loki-chart"), comp.Charts[0].Local.Path)
-		require.Equal(t, []v1beta1.ValuesFile{{Path: filepath.Join("components", "loki-values.yaml")}}, comp.Charts[0].ValuesFiles)
+		require.Equal(t, "components/loki-chart", comp.Charts[0].Local.Path)
+		require.Equal(t, []v1beta1.ValuesFile{{Path: "components/loki-values.yaml"}}, comp.Charts[0].ValuesFiles)
 
 		require.Len(t, comp.Files, 1)
-		require.Equal(t, filepath.Join("components", "motd.txt"), comp.Files[0].Source)
+		require.Equal(t, "components/motd.txt", comp.Files[0].Source)
 
 		require.Equal(t, []v1beta1.Image{{Name: "grafana/loki:2.9.0"}}, comp.Images)
 
-		require.Equal(t, []string{filepath.Join("components", "logging-values.yaml")}, resolved.Values.Files)
-		require.Equal(t, []string{filepath.Join("components", "logging.schema.json")}, schemas)
+		require.Equal(t, []string{"components/logging-values.yaml"}, resolved.Values.Files)
+		require.Equal(t, []string{"components/logging.schema.json"}, schemas)
 	})
 
 	t.Run("non-importing components are preserved alongside an importing one", func(t *testing.T) {
@@ -96,10 +96,10 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 
 		require.Len(t, comp.Charts, 1)
 		require.NotNil(t, comp.Charts[0].Local)
-		require.Equal(t, filepath.Join("components", "app-chart"), comp.Charts[0].Local.Path)
+		require.Equal(t, "components/app-chart", comp.Charts[0].Local.Path)
 
 		require.Len(t, comp.Files, 1)
-		require.Equal(t, filepath.Join("components", "base", "base.txt"), comp.Files[0].Source)
+		require.Equal(t, "components/base/base.txt", comp.Files[0].Source)
 	})
 
 	t.Run("cyclic imports error", func(t *testing.T) {
@@ -151,7 +151,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		require.Equal(t, "app", comp.Charts[0].Namespace)
 		require.Equal(t, "custom-release", comp.Charts[0].ReleaseName)
 		require.NotNil(t, comp.Charts[0].Local)
-		require.Equal(t, filepath.Join("components", "app-chart"), comp.Charts[0].Local.Path)
+		require.Equal(t, "components/app-chart", comp.Charts[0].Local.Path)
 	})
 }
 
