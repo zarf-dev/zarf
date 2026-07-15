@@ -168,7 +168,7 @@ func fixPathsV1Beta1(spec v1beta1.ComponentSpec, relativeToHead string) v1beta1.
 			spec.Charts[i].Local.Path = makePathRelativeTo(spec.Charts[i].Local.Path, relativeToHead)
 		}
 		for j := range spec.Charts[i].ValuesFiles {
-			spec.Charts[i].ValuesFiles[j] = makePathRelativeTo(spec.Charts[i].ValuesFiles[j], relativeToHead)
+			spec.Charts[i].ValuesFiles[j].Path = makePathRelativeTo(spec.Charts[i].ValuesFiles[j].Path, relativeToHead)
 		}
 	}
 	for i := range spec.Manifests {
