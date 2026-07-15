@@ -142,8 +142,6 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 	}
 	original.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
 
-	original.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
-
 	roundTripped := ConvertFromGeneric(ConvertToGeneric(original))
 	require.Equal(t, original, roundTripped)
 }

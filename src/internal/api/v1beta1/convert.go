@@ -396,7 +396,6 @@ func buildFromGeneric(b types.BuildData, m types.PackageMetadata) v1beta1.BuildD
 		Signed:                     b.Signed,
 		ProvenanceFiles:            b.ProvenanceFiles,
 	}
-	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
 
 	// Preserve the apiVersion the package was originally read from across the conversion.
 	out.SetOriginalAPIVersion(b.OriginalAPIVersion)

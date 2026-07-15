@@ -71,9 +71,8 @@ func ParseAs[T any](ctx context.Context, b []byte, apiVersion string) (T, error)
 	return zero, fmt.Errorf("no %q document found in package definition", handler.version)
 }
 
-// ParseMultiDoc parses a multi doc zarf.yaml file, generally from an already built package,
-// into the internal generic representation. Multi doc definitions may contain one document
-// per apiVersion; the highest-priority known version wins.
+// ParseMultiDoc parses a multi doc zarf.yaml file, into the internal generic representation
+// Multi doc definitions may contain one document per apiVersion; the highest-priority known version wins.
 func ParseMultiDoc(ctx context.Context, b []byte) (types.Package, error) {
 	l := logger.From(ctx)
 	docs, err := parseZarfYAMLDocs(b)

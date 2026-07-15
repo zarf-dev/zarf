@@ -56,8 +56,6 @@ type DefinedPackage struct {
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
-// It dispatches on the manifest's apiVersion; v1beta1 packages are converted down to v1alpha1 so the
-// rest of Zarf continues to operate on a single internal type.
 func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (DefinedPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
