@@ -535,8 +535,8 @@ github.com/anchore/go-sync
 # github.com/anchore/go-version v1.2.2-0.20210903204242-51efa5b487c4
 ## explicit; go 1.14
 github.com/anchore/go-version
-# github.com/anchore/grype v0.104.2
-## explicit; go 1.24.9
+# github.com/anchore/grype v0.110.0
+## explicit; go 1.25.8
 github.com/anchore/grype/cmd/grype/cli/options
 github.com/anchore/grype/grype
 github.com/anchore/grype/grype/db/internal/gormadapter
@@ -556,7 +556,6 @@ github.com/anchore/grype/grype/distro
 github.com/anchore/grype/grype/event
 github.com/anchore/grype/grype/event/monitor
 github.com/anchore/grype/grype/grypeerr
-github.com/anchore/grype/grype/internal
 github.com/anchore/grype/grype/internal/packagemetadata
 github.com/anchore/grype/grype/match
 github.com/anchore/grype/grype/matcher
@@ -565,11 +564,13 @@ github.com/anchore/grype/grype/matcher/bitnami
 github.com/anchore/grype/grype/matcher/dotnet
 github.com/anchore/grype/grype/matcher/dpkg
 github.com/anchore/grype/grype/matcher/golang
+github.com/anchore/grype/grype/matcher/hex
 github.com/anchore/grype/grype/matcher/internal
 github.com/anchore/grype/grype/matcher/internal/result
 github.com/anchore/grype/grype/matcher/java
 github.com/anchore/grype/grype/matcher/javascript
 github.com/anchore/grype/grype/matcher/msrc
+github.com/anchore/grype/grype/matcher/pacman
 github.com/anchore/grype/grype/matcher/portage
 github.com/anchore/grype/grype/matcher/python
 github.com/anchore/grype/grype/matcher/rpm
@@ -1104,8 +1105,8 @@ github.com/containerd/cgroups/v3/cgroup1/stats
 # github.com/containerd/console v1.0.5
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/containerd/containerd v1.7.29
-## explicit; go 1.23.0
+# github.com/containerd/containerd v1.7.32
+## explicit; go 1.24.0
 github.com/containerd/containerd/archive/compression
 github.com/containerd/containerd/content
 github.com/containerd/containerd/errdefs
@@ -1266,8 +1267,8 @@ github.com/defenseunicorns/pkg/oci/cache
 github.com/deitch/magic/pkg/magic
 github.com/deitch/magic/pkg/magic/internal
 github.com/deitch/magic/pkg/magic/parser
-# github.com/derailed/k9s v0.50.18
-## explicit; go 1.25.1
+# github.com/derailed/k9s v0.51.0
+## explicit; go 1.25.8
 github.com/derailed/k9s/cmd
 github.com/derailed/k9s/internal
 github.com/derailed/k9s/internal/client
@@ -1830,7 +1831,7 @@ github.com/goccy/go-yaml/parser
 github.com/goccy/go-yaml/printer
 github.com/goccy/go-yaml/scanner
 github.com/goccy/go-yaml/token
-# github.com/gocsaf/csaf/v3 v3.5.0
+# github.com/gocsaf/csaf/v3 v3.5.1
 ## explicit; go 1.24.9
 github.com/gocsaf/csaf/v3/csaf
 github.com/gocsaf/csaf/v3/internal/misc
@@ -2298,7 +2299,7 @@ github.com/lithammer/dedent
 # github.com/lithammer/fuzzysearch v1.1.8
 ## explicit; go 1.15
 github.com/lithammer/fuzzysearch/fuzzy
-# github.com/lmittmann/tint v1.0.7
+# github.com/lmittmann/tint v1.1.3
 ## explicit; go 1.21
 github.com/lmittmann/tint
 # github.com/lucasb-eyer/go-colorful v1.3.0
@@ -2712,8 +2713,8 @@ github.com/protocolbuffers/txtpbfmt/wrap
 ## explicit; go 1.24.0
 github.com/pterm/pterm
 github.com/pterm/pterm/internal
-# github.com/rakyll/hey v0.1.4
-## explicit; go 1.13
+# github.com/rakyll/hey v0.1.5
+## explicit; go 1.24.0
 github.com/rakyll/hey/requester
 # github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9
 ## explicit
@@ -3951,8 +3952,8 @@ gorm.io/gorm/logger
 gorm.io/gorm/migrator
 gorm.io/gorm/schema
 gorm.io/gorm/utils
-# helm.sh/helm/v3 v3.19.2
-## explicit; go 1.24.0
+# helm.sh/helm/v3 v3.20.2
+## explicit; go 1.25.0
 helm.sh/helm/v3/internal/fileutil
 helm.sh/helm/v3/internal/resolver
 helm.sh/helm/v3/internal/sympath

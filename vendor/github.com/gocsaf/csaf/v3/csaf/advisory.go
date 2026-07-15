@@ -891,8 +891,8 @@ func (rs Revisions) Validate() error {
 
 // Validate validates an Engine.
 func (e *Engine) Validate() error {
-	if e.Version == nil {
-		return errors.New("'version' is missing")
+	if e.Name == nil {
+		return errors.New("'name' is missing")
 	}
 	return nil
 }
