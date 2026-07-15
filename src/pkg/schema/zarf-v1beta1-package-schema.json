@@ -144,9 +144,9 @@
           "type": "array"
         },
         "valuesFiles": {
-          "description": "List of local values file paths or remote URLs to include in the package; these will be merged together when deployed.",
+          "description": "List of values files to include in the package; these will be merged together when deployed.",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/ValuesFile"
           },
           "type": "array"
         }
@@ -163,6 +163,17 @@
         "^x-": {}
       },
       "properties": {
+        "excludePaths": {
+          "description": "Paths under sourcePath to omit when mapping to the target. Each path must be a descendant of sourcePath.",
+          "items": {
+            "examples": [
+              ".registry.image"
+            ],
+            "pattern": "^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$",
+            "type": "string"
+          },
+          "type": "array"
+        },
         "sourcePath": {
           "description": "The source path for the value.",
           "type": "string"
@@ -1040,6 +1051,27 @@
           "type": "string"
         }
       },
+      "type": "object"
+    },
+    "ValuesFile": {
+      "additionalProperties": false,
+      "description": "ValuesFile is a values file merged into a Helm chart on deploy.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "enableTemplating": {
+          "description": "Render Zarf template values in the file at deploy time before merging it.",
+          "type": "boolean"
+        },
+        "path": {
+          "description": "Local path or remote URL of the values file.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
       "type": "object"
     },
     "VersionRequirement": {

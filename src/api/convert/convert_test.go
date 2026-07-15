@@ -64,6 +64,54 @@ func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
 	require.Equal(t, "abc123", result.Build.AggregateChecksum)
 }
 
+func TestV1Alpha1PkgToV1Beta1_ReservedAnnotationNotClobbered(t *testing.T) {
+	t.Parallel()
+	// A field migrates into a reserved metadata.* annotation key, but an author who already set that
+	// key explicitly must keep their value rather than have the field overwrite it.
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name: "test-pkg",
+			URL:  "https://from-field.example.com",
+			Annotations: map[string]string{
+				"metadata.url": "https://from-annotation.example.com",
+			},
+		},
+	}
+
+	result := PackageV1alpha1ToV1beta1(pkg)
+
+	require.Equal(t, "https://from-annotation.example.com", result.Metadata.Annotations["metadata.url"])
+}
+
+func TestV1Alpha1PkgToV1Beta1_PreservesOriginalAPIVersion(t *testing.T) {
+	t.Parallel()
+	pkg := v1alpha1.ZarfPackage{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       v1alpha1.ZarfPackageConfig,
+		Metadata:   v1alpha1.ZarfMetadata{Name: "test-pkg"},
+	}
+
+	result := PackageV1alpha1ToV1beta1(pkg)
+
+	// The converted package must remember it originated as v1alpha1 rather than report itself as
+	// v1beta1-native, so a later conversion still applies v1alpha1 migration semantics.
+	require.Equal(t, v1alpha1.APIVersion, result.Build.GetOriginalAPIVersion())
+}
+
+func TestV1Beta1PkgToV1Alpha1_PreservesOriginalAPIVersion(t *testing.T) {
+	t.Parallel()
+	pkg := v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
+		Metadata:   v1beta1.PackageMetadata{Name: "test-pkg"},
+	}
+
+	result := PackageV1beta1ToV1alpha1(pkg)
+
+	require.Equal(t, v1beta1.APIVersion, result.Build.GetOriginalAPIVersion())
+}
+
 func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
 	t.Parallel()
 	signed := true
@@ -276,6 +324,36 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 	require.Equal(t, "default", comp.Actions.OnDeploy.OnSuccess[1].Wait.Cluster.Namespace)
 }
 
+func TestV1Alpha1PkgToV1Beta1_RequiredOptionalShift(t *testing.T) {
+	t.Parallel()
+	b := func(v bool) *bool { return &v }
+	tests := []struct {
+		name         string
+		required     *bool
+		wantOptional bool
+	}{
+		// v1alpha1 defaults an unset required to optional (the inverse of v1beta1's required default),
+		// so a component that omits it must become Optional=true rather than v1beta1's zero value.
+		{name: "unset required is optional", required: nil, wantOptional: true},
+		{name: "explicit false is optional", required: b(false), wantOptional: true},
+		{name: "explicit true is required", required: b(true), wantOptional: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pkg := v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{Name: "comp", Required: tt.required},
+				},
+			}
+			result := PackageV1alpha1ToV1beta1(pkg)
+			require.Len(t, result.Components, 1)
+			require.Equal(t, tt.wantOptional, result.Components[0].Optional)
+		})
+	}
+}
+
 func TestV1Alpha1PkgToV1Beta1_ServiceInference(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -336,7 +414,8 @@ func TestV1Beta1PkgToV1Alpha1_ServiceMarksInitPackage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			pkg := v1beta1.Package{
-				Kind: v1beta1.ZarfPackageConfig,
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfPackageConfig,
 				Components: []v1beta1.Component{
 					{
 						Name:          "zarf-registry",
@@ -458,6 +537,112 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 			tt.validate(t, result.Components[0].Charts[0])
 		})
 	}
+}
+
+func TestChartValueExcludePathsRoundTrip(t *testing.T) {
+	t.Parallel()
+	excludes := []string{".registry.image", ".registry.tag"}
+
+	alpha := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{{
+			Name: "chart-comp",
+			Charts: []v1alpha1.ZarfChart{{
+				Name:   "my-chart",
+				Values: []v1alpha1.ZarfChartValue{{SourcePath: ".a", TargetPath: ".b", ExcludePaths: excludes}},
+			}},
+		}},
+	}
+
+	// v1alpha1 → v1beta1 carries excludePaths.
+	beta := PackageV1alpha1ToV1beta1(alpha)
+	require.Equal(t, excludes, beta.Components[0].Charts[0].Values[0].ExcludePaths)
+
+	// v1beta1 → v1alpha1 carries it back.
+	back := PackageV1beta1ToV1alpha1(beta)
+	require.Equal(t, excludes, back.Components[0].Charts[0].Values[0].ExcludePaths)
+}
+
+func TestValuesFilesTemplatingRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	alpha := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{{
+			Name: "chart-comp",
+			Charts: []v1alpha1.ZarfChart{{
+				Name:                 "my-chart",
+				ValuesFiles:          []string{"plain.yaml"},
+				TemplatedValuesFiles: []string{"templated.yaml"},
+			}},
+		}},
+	}
+
+	// v1alpha1 → v1beta1: plain files keep templating off, templated files gain enableTemplating.
+	beta := PackageV1alpha1ToV1beta1(alpha)
+	require.Equal(t, []v1beta1.ValuesFile{
+		{Path: "plain.yaml", EnableTemplating: false},
+		{Path: "templated.yaml", EnableTemplating: true},
+	}, beta.Components[0].Charts[0].ValuesFiles)
+
+	// v1beta1 → v1alpha1: enableTemplating splits back into the two v1alpha1 lists.
+	back := PackageV1beta1ToV1alpha1(beta)
+	require.Equal(t, []string{"plain.yaml"}, back.Components[0].Charts[0].ValuesFiles)
+	require.Equal(t, []string{"templated.yaml"}, back.Components[0].Charts[0].TemplatedValuesFiles)
+}
+
+func TestChartGitSSHURLRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	// An ssh:// URL carries a git@host user; the user's @ must not be mistaken for a version ref.
+	alpha := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{{
+			Name: "chart-comp",
+			Charts: []v1alpha1.ZarfChart{{
+				Name:    "my-chart",
+				URL:     "ssh://git@github.com/example/repo.git",
+				GitPath: "charts/my-chart",
+				Version: "1.2.3",
+			}},
+		}},
+	}
+
+	beta := PackageV1alpha1ToV1beta1(alpha)
+	require.NotNil(t, beta.Components[0].Charts[0].Git)
+	// The version is appended as a ref rather than lost to the ssh user's @.
+	require.Equal(t, "ssh://git@github.com/example/repo.git@1.2.3", beta.Components[0].Charts[0].Git.URL)
+
+	back := PackageV1beta1ToV1alpha1(beta)
+	// The ssh user survives and the ref splits back into Version.
+	require.Equal(t, "ssh://git@github.com/example/repo.git", back.Components[0].Charts[0].URL)
+	require.Equal(t, "1.2.3", back.Components[0].Charts[0].Version)
+	require.Equal(t, "charts/my-chart", back.Components[0].Charts[0].GitPath)
+}
+
+func TestChartGitURLRefBeatsVersion(t *testing.T) {
+	t.Parallel()
+
+	// A ref in the URL and a differing Version is contradictory; v1alpha1 deploy prefers the URL ref,
+	// so the round-trip must preserve v1, not silently switch to v2.
+	alpha := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{{
+			Name: "chart-comp",
+			Charts: []v1alpha1.ZarfChart{{
+				Name:    "my-chart",
+				URL:     "https://github.com/example/repo.git@v1",
+				GitPath: "charts/my-chart",
+				Version: "v2",
+			}},
+		}},
+	}
+
+	back := PackageV1beta1ToV1alpha1(PackageV1alpha1ToV1beta1(alpha))
+	// URL ref wins: v1alpha1 deploy would append Version only if the URL had no ref, so the ref must
+	// land in Version with the ref stripped from URL.
+	require.Equal(t, "https://github.com/example/repo.git", back.Components[0].Charts[0].URL)
+	require.Equal(t, "v1", back.Components[0].Charts[0].Version)
 }
 
 func TestV1Alpha1PkgToV1Beta1_WaitConditionBackfill(t *testing.T) {
@@ -853,7 +1038,8 @@ func TestV1Beta1PkgToV1Alpha1_Build(t *testing.T) {
 func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 	t.Parallel()
 	pkg := v1beta1.Package{
-		Kind: v1beta1.ZarfPackageConfig,
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
 		Components: []v1beta1.Component{
 			{
 				Name:        "my-component",
@@ -895,9 +1081,8 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 	require.Equal(t, "my-component", comp.Name)
 	require.Equal(t, "test component", comp.Description)
 
-	// Optional=true → Required=false.
-	require.NotNil(t, comp.Required)
-	require.False(t, *comp.Required)
+	// Optional=true → Required unset (nil); v1alpha1 treats an absent required as optional.
+	require.Nil(t, comp.Required)
 
 	require.Equal(t, "linux", comp.Only.LocalOS)
 	require.Equal(t, "amd64", comp.Only.Cluster.Architecture)
@@ -1007,7 +1192,8 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			pkg := v1beta1.Package{
-				Kind: v1beta1.ZarfPackageConfig,
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfPackageConfig,
 				Components: []v1beta1.Component{
 					{
 						Name:          "chart-comp",
@@ -1026,7 +1212,8 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 func TestV1Beta1PkgToV1Alpha1_ManifestSkipWaitInversion(t *testing.T) {
 	t.Parallel()
 	pkg := v1beta1.Package{
-		Kind: v1beta1.ZarfPackageConfig,
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
 		Components: []v1beta1.Component{
 			{
 				Name: "manifest-comp",
@@ -1065,7 +1252,8 @@ func TestV1Beta1PkgToV1Alpha1_Actions(t *testing.T) {
 	retriesDef := int32(2)
 
 	pkg := v1beta1.Package{
-		Kind: v1beta1.ZarfPackageConfig,
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
 		Components: []v1beta1.Component{
 			{
 				Name: "action-comp",

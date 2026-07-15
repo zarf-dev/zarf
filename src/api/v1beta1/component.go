@@ -158,8 +158,8 @@ type Chart struct {
 	ReleaseName string `json:"releaseName,omitempty"`
 	// Whether to skip waiting for chart resources to be ready before continuing.
 	SkipWait bool `json:"skipWait,omitempty"`
-	// List of local values file paths or remote URLs to include in the package; these will be merged together when deployed.
-	ValuesFiles []string `json:"valuesFiles,omitempty"`
+	// List of values files to include in the package; these will be merged together when deployed.
+	ValuesFiles []ValuesFile `json:"valuesFiles,omitempty"`
 	// List of value sources mapped to their Helm override targets.
 	Values []ChartValue `json:"values,omitempty"`
 	// Skip validation of the chart's values against its JSON schema. Defaults to false.
@@ -187,12 +187,22 @@ func (c Chart) GetDeprecatedVariables() []ZarfChartVariable {
 	return c.variables
 }
 
+// ValuesFile is a values file merged into a Helm chart on deploy.
+type ValuesFile struct {
+	// Local path or remote URL of the values file.
+	Path string `json:"path"`
+	// Render Zarf template values in the file at deploy time before merging it.
+	EnableTemplating bool `json:"enableTemplating,omitempty"`
+}
+
 // ChartValue maps a values source path to a Helm chart target path.
 type ChartValue struct {
 	// The source path for the value.
 	SourcePath string `json:"sourcePath"`
 	// The target path within the Helm chart values.
 	TargetPath string `json:"targetPath"`
+	// Paths under sourcePath to omit when mapping to the target. Each path must be a descendant of sourcePath.
+	ExcludePaths []string `json:"excludePaths,omitempty" jsonschema:"pattern=^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$,example=.registry.image"`
 }
 
 // HelmRepositorySource represents a Helm chart stored in a Helm repository.

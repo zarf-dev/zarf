@@ -11,6 +11,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 // ConvertToGeneric converts a v1beta1 Package to the internal generic representation.
@@ -162,7 +163,7 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 		Name:                 ch.Name,
 		Namespace:            ch.Namespace,
 		ReleaseName:          ch.ReleaseName,
-		ValuesFiles:          ch.ValuesFiles,
+		ValuesFiles:          valuesFilesToGeneric(ch.ValuesFiles),
 		SkipSchemaValidation: ch.SkipSchemaValidation,
 		ServerSideApply:      string(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
@@ -195,8 +196,9 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 
 	for _, v := range ch.Values {
 		gc.Values = append(gc.Values, types.ChartValue{
-			SourcePath: v.SourcePath,
-			TargetPath: v.TargetPath,
+			SourcePath:   v.SourcePath,
+			TargetPath:   v.TargetPath,
+			ExcludePaths: v.ExcludePaths,
 		})
 	}
 
@@ -368,6 +370,11 @@ func metadataFromGeneric(m types.PackageMetadata) v1beta1.PackageMetadata {
 		if meta.Annotations == nil {
 			meta.Annotations = make(map[string]string)
 		}
+		// Don't clobber an annotation the author already set on a reserved metadata.* key; their
+		// explicit value wins over the migrated field.
+		if _, exists := meta.Annotations[k]; exists {
+			continue
+		}
 		meta.Annotations[k] = v
 	}
 
@@ -389,6 +396,9 @@ func buildFromGeneric(b types.BuildData, m types.PackageMetadata) v1beta1.BuildD
 		Signed:                     b.Signed,
 		ProvenanceFiles:            b.ProvenanceFiles,
 	}
+	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
+
+	// Preserve the apiVersion the package was originally read from across the conversion.
 	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
 
 	// AggregateChecksum lives in metadata in v1alpha1, build in v1beta1.
@@ -484,9 +494,9 @@ func componentFromGeneric(c types.Component, isInit, migrateFromV1alpha1 bool) v
 	return bc
 }
 
-// optionalFromGeneric maps the v1alpha1 Required *bool and v1beta1 Optional bool onto a single v1beta1 Optional bool.
-// v1alpha1: Required=nil/false → Optional=true; Required=true → Optional=false.
-// v1beta1: Optional flows through directly when Required is nil.
+// optionalFromGeneric resolves the v1beta1 Optional flag from the generic representation.
+// A v1alpha1-sourced package carries an explicit Required pointer, which wins; otherwise Optional
+// flows through (the v1alpha1 layer already folds an unset required into Optional).
 func optionalFromGeneric(optional bool, required *bool) bool {
 	if required != nil {
 		return !*required
@@ -564,7 +574,7 @@ func chartFromGeneric(ch types.Chart) v1beta1.Chart {
 		Name:                 ch.Name,
 		Namespace:            ch.Namespace,
 		ReleaseName:          ch.ReleaseName,
-		ValuesFiles:          ch.ValuesFiles,
+		ValuesFiles:          valuesFilesFromGeneric(ch.ValuesFiles),
 		SkipSchemaValidation: ch.SkipSchemaValidation,
 		ServerSideApply:      v1beta1.ServerSideApplyMode(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
@@ -591,7 +601,9 @@ func chartFromGeneric(ch types.Chart) v1beta1.Chart {
 			bc.OCI = &v1beta1.OCISource{URL: ch.URL, Version: ch.Version}
 		case ch.GitPath != "" || isGitURL(ch.URL):
 			gitURL := ch.URL
-			if ch.Version != "" && !strings.Contains(ch.URL, "@") {
+			// Append the chart version as a git ref only when the URL parses and does not already
+			// carry one.
+			if _, ref, err := transform.GitURLSplitRef(ch.URL); err == nil && ref == "" && ch.Version != "" {
 				gitURL += "@" + ch.Version
 			}
 			bc.Git = &v1beta1.GitSource{URL: gitURL, Path: ch.GitPath}
@@ -618,9 +630,26 @@ func chartValuesFromGeneric(vals []types.ChartValue) []v1beta1.ChartValue {
 	var out []v1beta1.ChartValue
 	for _, v := range vals {
 		out = append(out, v1beta1.ChartValue{
-			SourcePath: v.SourcePath,
-			TargetPath: v.TargetPath,
+			SourcePath:   v.SourcePath,
+			TargetPath:   v.TargetPath,
+			ExcludePaths: v.ExcludePaths,
 		})
+	}
+	return out
+}
+
+func valuesFilesToGeneric(vfs []v1beta1.ValuesFile) []types.ValuesFile {
+	var out []types.ValuesFile
+	for _, vf := range vfs {
+		out = append(out, types.ValuesFile{Path: vf.Path, EnableTemplating: vf.EnableTemplating})
+	}
+	return out
+}
+
+func valuesFilesFromGeneric(vfs []types.ValuesFile) []v1beta1.ValuesFile {
+	var out []v1beta1.ValuesFile
+	for _, vf := range vfs {
+		out = append(out, v1beta1.ValuesFile{Path: vf.Path, EnableTemplating: vf.EnableTemplating})
 	}
 	return out
 }
@@ -743,10 +772,11 @@ func healthCheckKind(kind, apiVersion string) string {
 }
 
 func isGitURL(url string) bool {
-	if idx := strings.LastIndex(url, "@"); idx > 0 {
-		url = url[:idx]
+	gitURLNoRef, _, err := transform.GitURLSplitRef(url)
+	if err != nil {
+		return false
 	}
-	return strings.HasSuffix(url, ".git")
+	return strings.HasSuffix(gitURLNoRef, ".git")
 }
 
 func repositoriesToGeneric(in []v1beta1.Repository) []string {

@@ -4,10 +4,13 @@
 package v1alpha1
 
 import (
+	"math/rand"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 // TestConvertGenericRoundTripLossless asserts that decoding a v1alpha1 package, converting it to
@@ -137,9 +140,33 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 		Values:        v1alpha1.ZarfValues{Files: []string{"vals.yaml"}, Schema: "schema.json"},
 		Documentation: map[string]string{"doc": "doc.md"},
 	}
+	original.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
 
 	original.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
 
 	roundTripped := ConvertFromGeneric(ConvertToGeneric(original))
 	require.Equal(t, original, roundTripped)
+}
+
+// TestConvertGenericRoundTripFuzz reflectively populates every field of a ZarfPackage with random,
+// non-zero values and asserts the generic round-trip reproduces it exactly. Walking the struct by
+// reflection means a newly added field is exercised automatically, so a field the conversion forgets
+// to carry is caught here rather than silently dropped.
+func TestConvertGenericRoundTripFuzz(t *testing.T) {
+	t.Parallel()
+
+	rng := rand.New(rand.NewSource(1))
+	for i := range 1000 {
+		var pkg v1alpha1.ZarfPackage
+		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
+
+		// apiVersion and kind are canonicalized on conversion, so they never round-trip an arbitrary
+		// value; pin them to valid forms and let every other field vary.
+		pkg.APIVersion = v1alpha1.APIVersion
+		pkg.Kind = v1alpha1.ZarfPackageConfig
+		pkg.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
+
+		roundTripped := ConvertFromGeneric(ConvertToGeneric(pkg))
+		require.Equalf(t, pkg, roundTripped, "round-trip diverged on iteration %d", i)
+	}
 }

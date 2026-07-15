@@ -5,10 +5,9 @@
 package v1alpha1
 
 import (
-	"strings"
-
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 // ConvertToGeneric converts a v1alpha1 ZarfPackage to the internal generic representation.
@@ -75,15 +74,17 @@ func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.Package {
 
 func componentToGeneric(c v1alpha1.ZarfComponent) types.Component {
 	gc := types.Component{
-		Name:           c.Name,
-		Description:    c.Description,
-		Default:        c.Default,
-		Required:       c.Required,
-		Group:          c.DeprecatedGroup,
-		DataInjections: dataInjectionsToGeneric(c.DataInjections),
-		HealthChecks:   healthChecksToGeneric(c.HealthChecks),
-		Repositories:   c.Repos,
-		StateAccess:    stateAccessToGeneric(c.StateAccess),
+		Name:              c.Name,
+		Description:       c.Description,
+		Default:           c.Default,
+		Optional:          !c.IsRequired(),
+		Required:          c.Required,
+		Group:             c.DeprecatedGroup,
+		DataInjections:    dataInjectionsToGeneric(c.DataInjections),
+		HealthChecks:      healthChecksToGeneric(c.HealthChecks),
+		DeprecatedScripts: scriptsToGeneric(c.DeprecatedScripts),
+		Repositories:      c.Repos,
+		StateAccess:       stateAccessToGeneric(c.StateAccess),
 		Target: types.ComponentTarget{
 			OS:           c.Only.LocalOS,
 			Architecture: c.Only.Cluster.Architecture,
@@ -115,6 +116,7 @@ func componentToGeneric(c v1alpha1.ZarfComponent) types.Component {
 			Symlinks:         f.Symlinks,
 			ExtractPath:      f.ExtractPath,
 			EnableTemplating: derefBool(f.Template),
+			Template:         f.Template,
 		})
 	}
 
@@ -157,7 +159,7 @@ func chartToGeneric(ch v1alpha1.ZarfChart) types.Chart {
 		Name:                 ch.Name,
 		Namespace:            ch.Namespace,
 		ReleaseName:          ch.ReleaseName,
-		ValuesFiles:          ch.ValuesFiles,
+		ValuesFiles:          valuesFilesToGeneric(ch.ValuesFiles, ch.TemplatedValuesFiles),
 		SkipSchemaValidation: ch.SchemaValidation != nil && !*ch.SchemaValidation,
 		ServerSideApply:      ch.ServerSideApply,
 		SkipWait:             ch.NoWait,
@@ -169,17 +171,43 @@ func chartToGeneric(ch v1alpha1.ZarfChart) types.Chart {
 		SchemaValidation:     ch.SchemaValidation,
 		Variables:            chartVarsToGeneric(ch.Variables),
 		Values:               chartValuesToGeneric(ch.Values),
-		TemplatedValuesFiles: ch.TemplatedValuesFiles,
 	}
 	return gc
+}
+
+// valuesFilesToGeneric folds the v1alpha1 plain and templated values file lists into the generic
+// object form, marking the templated entries with EnableTemplating.
+func valuesFilesToGeneric(plain, templated []string) []types.ValuesFile {
+	var out []types.ValuesFile
+	for _, p := range plain {
+		out = append(out, types.ValuesFile{Path: p})
+	}
+	for _, p := range templated {
+		out = append(out, types.ValuesFile{Path: p, EnableTemplating: true})
+	}
+	return out
+}
+
+// valuesFilesFromGeneric splits the generic object form back into the v1alpha1 plain and templated
+// lists based on EnableTemplating.
+func valuesFilesFromGeneric(vfs []types.ValuesFile) (plain, templated []string) {
+	for _, vf := range vfs {
+		if vf.EnableTemplating {
+			templated = append(templated, vf.Path)
+		} else {
+			plain = append(plain, vf.Path)
+		}
+	}
+	return plain, templated
 }
 
 func chartValuesToGeneric(vals []v1alpha1.ZarfChartValue) []types.ChartValue {
 	var out []types.ChartValue
 	for _, v := range vals {
 		out = append(out, types.ChartValue{
-			SourcePath: v.SourcePath,
-			TargetPath: v.TargetPath,
+			SourcePath:   v.SourcePath,
+			TargetPath:   v.TargetPath,
+			ExcludePaths: v.ExcludePaths,
 		})
 	}
 	return out
@@ -233,6 +261,7 @@ func actionToGeneric(a v1alpha1.ZarfComponentAction) types.ComponentAction {
 		Description:           a.Description,
 		Wait:                  waitToGeneric(a.Wait),
 		EnableTemplating:      derefBool(a.Template),
+		Template:              a.Template,
 		SetVariables:          varsToGeneric(a.SetVariables),
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 	}
@@ -398,6 +427,9 @@ func buildFromGeneric(b types.BuildData) v1alpha1.ZarfBuildData {
 	}
 	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
 
+	// Preserve the apiVersion the package was originally read from across the conversion.
+	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
+
 	for _, vr := range b.VersionRequirements {
 		out.VersionRequirements = append(out.VersionRequirements, v1alpha1.VersionRequirement{
 			Version: vr.Version,
@@ -408,17 +440,40 @@ func buildFromGeneric(b types.BuildData) v1alpha1.ZarfBuildData {
 	return out
 }
 
+func scriptsToGeneric(s v1alpha1.DeprecatedZarfComponentScripts) types.DeprecatedComponentScripts {
+	return types.DeprecatedComponentScripts{
+		ShowOutput:     s.ShowOutput,
+		TimeoutSeconds: s.TimeoutSeconds,
+		Retry:          s.Retry,
+		Prepare:        s.Prepare,
+		Before:         s.Before,
+		After:          s.After,
+	}
+}
+
+func scriptsFromGeneric(s types.DeprecatedComponentScripts) v1alpha1.DeprecatedZarfComponentScripts {
+	return v1alpha1.DeprecatedZarfComponentScripts{
+		ShowOutput:     s.ShowOutput,
+		TimeoutSeconds: s.TimeoutSeconds,
+		Retry:          s.Retry,
+		Prepare:        s.Prepare,
+		Before:         s.Before,
+		After:          s.After,
+	}
+}
+
 func componentFromGeneric(c types.Component) v1alpha1.ZarfComponent {
 	ac := v1alpha1.ZarfComponent{
-		Name:            c.Name,
-		Description:     c.Description,
-		Default:         c.Default,
-		Required:        requiredFromGeneric(c.Optional, c.Required),
-		DeprecatedGroup: c.Group,
-		DataInjections:  dataInjectionsFromGeneric(c.DataInjections),
-		HealthChecks:    healthChecksFromGeneric(c.HealthChecks),
-		Repos:           c.Repositories,
-		StateAccess:     stateAccessFromGeneric(c.StateAccess),
+		Name:              c.Name,
+		Description:       c.Description,
+		Default:           c.Default,
+		Required:          requiredFromGeneric(c.Optional, c.Required),
+		DeprecatedGroup:   c.Group,
+		DataInjections:    dataInjectionsFromGeneric(c.DataInjections),
+		HealthChecks:      healthChecksFromGeneric(c.HealthChecks),
+		DeprecatedScripts: scriptsFromGeneric(c.DeprecatedScripts),
+		Repos:             c.Repositories,
+		StateAccess:       stateAccessFromGeneric(c.StateAccess),
 		Only: v1alpha1.ZarfComponentOnlyTarget{
 			LocalOS: c.Target.OS,
 			Cluster: v1alpha1.ZarfComponentOnlyCluster{
@@ -459,8 +514,9 @@ func componentFromGeneric(c types.Component) v1alpha1.ZarfComponent {
 			Executable:  f.Executable,
 			Symlinks:    f.Symlinks,
 			ExtractPath: f.ExtractPath,
+			Template:    f.Template,
 		}
-		if f.EnableTemplating {
+		if af.Template == nil && f.EnableTemplating {
 			t := true
 			af.Template = &t
 		}
@@ -481,14 +537,19 @@ func componentFromGeneric(c types.Component) v1alpha1.ZarfComponent {
 	return ac
 }
 
-// requiredFromGeneric maps the v1beta1 Optional and v1alpha1 Required back to v1alpha1 Required.
-// Prefers preserved v1alpha1 Required; otherwise inverts Optional.
+// requiredFromGeneric maps the generic representation back to the v1alpha1 Required pointer. An
+// explicit Required is preserved verbatim, so a v1alpha1 round-trip (including an unset nil) is
+// lossless. When it is unset, only a required component is materialized as an explicit &true, since
+// v1alpha1 treats an absent required as optional; leaving it nil keeps optional components implicit.
 func requiredFromGeneric(optional bool, required *bool) *bool {
 	if required != nil {
 		return required
 	}
-	v := !optional
-	return &v
+	if !optional {
+		v := true
+		return &v
+	}
+	return nil
 }
 
 func manifestFromGeneric(m types.Manifest) v1alpha1.ZarfManifest {
@@ -514,20 +575,19 @@ func manifestFromGeneric(m types.Manifest) v1alpha1.ZarfManifest {
 
 func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 	ac := v1alpha1.ZarfChart{
-		Name:                 ch.Name,
-		Namespace:            ch.Namespace,
-		ReleaseName:          ch.ReleaseName,
-		ValuesFiles:          ch.ValuesFiles,
-		ServerSideApply:      ch.ServerSideApply,
-		NoWait:               ch.SkipWait,
-		URL:                  ch.URL,
-		RepoName:             ch.RepoName,
-		GitPath:              ch.GitPath,
-		LocalPath:            ch.LocalPath,
-		Version:              ch.Version,
-		Variables:            chartVarsFromGeneric(ch.Variables),
-		TemplatedValuesFiles: ch.TemplatedValuesFiles,
+		Name:            ch.Name,
+		Namespace:       ch.Namespace,
+		ReleaseName:     ch.ReleaseName,
+		ServerSideApply: ch.ServerSideApply,
+		NoWait:          ch.SkipWait,
+		URL:             ch.URL,
+		RepoName:        ch.RepoName,
+		GitPath:         ch.GitPath,
+		LocalPath:       ch.LocalPath,
+		Version:         ch.Version,
+		Variables:       chartVarsFromGeneric(ch.Variables),
 	}
+	ac.ValuesFiles, ac.TemplatedValuesFiles = valuesFilesFromGeneric(ch.ValuesFiles)
 
 	// Prefer preserved v1alpha1 SchemaValidation; otherwise derive from SkipSchemaValidation.
 	if ch.SchemaValidation != nil {
@@ -552,14 +612,18 @@ func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 				ac.Version = ch.OCI.Version
 			}
 		case ch.Git != nil && ch.Git.URL != "":
-			gitURL := ch.Git.URL
-			if idx := strings.LastIndex(gitURL, "@"); idx > 0 {
-				if ac.Version == "" {
-					ac.Version = gitURL[idx+1:]
-				}
-				gitURL = gitURL[:idx]
+			// Split the ref off with the shared parser so an ssh://git@host style user is not
+			// mistaken for a ref; a URL it cannot parse is carried through unchanged.
+			gitURL, ref, err := transform.GitURLSplitRef(ch.Git.URL)
+			if err != nil {
+				gitURL, ref = ch.Git.URL, ""
 			}
 			ac.URL = gitURL
+			// A ref embedded in the URL is authoritative and overrides the carried chart version,
+			// matching v1alpha1 deploy which prefers the URL ref over Version.
+			if ref != "" {
+				ac.Version = ref
+			}
 			ac.GitPath = ch.Git.Path
 		case ch.Local != nil && ch.Local.Path != "":
 			ac.LocalPath = ch.Local.Path
@@ -568,8 +632,9 @@ func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 
 	for _, v := range ch.Values {
 		ac.Values = append(ac.Values, v1alpha1.ZarfChartValue{
-			SourcePath: v.SourcePath,
-			TargetPath: v.TargetPath,
+			SourcePath:   v.SourcePath,
+			TargetPath:   v.TargetPath,
+			ExcludePaths: v.ExcludePaths,
 		})
 	}
 
@@ -623,6 +688,7 @@ func actionFromGeneric(a types.ComponentAction) v1alpha1.ZarfComponentAction {
 		Cmd:                   a.Cmd,
 		Description:           a.Description,
 		Wait:                  waitFromGeneric(a.Wait),
+		Template:              a.Template,
 		SetVariables:          varsFromGeneric(a.SetVariables),
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 	}
@@ -635,7 +701,7 @@ func actionFromGeneric(a types.ComponentAction) v1alpha1.ZarfComponentAction {
 		v := int(*a.Retries)
 		aa.MaxRetries = &v
 	}
-	if a.EnableTemplating {
+	if aa.Template == nil && a.EnableTemplating {
 		t := true
 		aa.Template = &t
 	}

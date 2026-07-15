@@ -101,12 +101,24 @@ type Component struct {
 	Actions       ComponentActions
 
 	// v1alpha1-only fields preserved for lossless round-trip.
-	Default        bool
-	Required       *bool
-	Group          string
-	DataInjections []ZarfDataInjection
-	HealthChecks   []NamespacedObjectKindReference
-	Distros        []string
+	Default           bool
+	Required          *bool
+	Group             string
+	DataInjections    []ZarfDataInjection
+	HealthChecks      []NamespacedObjectKindReference
+	Distros           []string
+	DeprecatedScripts DeprecatedComponentScripts
+}
+
+// DeprecatedComponentScripts is the v1alpha1-only pre-actions scripts block, preserved for lossless
+// round-trip.
+type DeprecatedComponentScripts struct {
+	ShowOutput     bool
+	TimeoutSeconds int
+	Retry          bool
+	Prepare        []string
+	Before         []string
+	After          []string
 }
 
 // ComponentTarget filters a component to a target OS/arch/flavor.
@@ -164,7 +176,7 @@ type Chart struct {
 	Name                 string
 	Namespace            string
 	ReleaseName          string
-	ValuesFiles          []string
+	ValuesFiles          []ValuesFile
 	Values               []ChartValue
 	SkipSchemaValidation bool
 	ServerSideApply      string
@@ -177,20 +189,26 @@ type Chart struct {
 	OCI            *OCISource
 
 	// v1alpha1-only flat source fields. Used during conversion to populate structured sources.
-	URL                  string
-	RepoName             string
-	GitPath              string
-	LocalPath            string
-	Version              string
-	SchemaValidation     *bool
-	Variables            []ZarfChartVariable
-	TemplatedValuesFiles []string
+	URL              string
+	RepoName         string
+	GitPath          string
+	LocalPath        string
+	Version          string
+	SchemaValidation *bool
+	Variables        []ZarfChartVariable
+}
+
+// ValuesFile is a values file merged into a Helm chart, optionally rendered with Zarf templating.
+type ValuesFile struct {
+	Path             string
+	EnableTemplating bool
 }
 
 // ChartValue maps a source path to a target path.
 type ChartValue struct {
-	SourcePath string
-	TargetPath string
+	SourcePath   string
+	TargetPath   string
+	ExcludePaths []string
 }
 
 // HelmRepositorySource represents a chart stored in a Helm repository.
@@ -226,6 +244,8 @@ type File struct {
 	Symlinks         []string
 	ExtractPath      string
 	EnableTemplating bool
+	// Template is the v1alpha1 *bool preserved so an unset value round-trips losslessly.
+	Template *bool
 }
 
 // Image represents an OCI image in the package.
@@ -286,6 +306,8 @@ type ComponentAction struct {
 	// v1alpha1-only round-trip fields.
 	SetVariables          []Variable
 	DeprecatedSetVariable string
+	// Template is the v1alpha1 *bool preserved so an unset value round-trips losslessly.
+	Template *bool
 }
 
 // SetValue declares a value that can be set during a deploy.
