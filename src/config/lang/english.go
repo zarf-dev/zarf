@@ -143,9 +143,6 @@ $ zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNA
 # Initializing w/ an external git server:
 $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 
-# Initializing w/ an external artifact server:
-$ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
-
 # NOTE: Not specifying a pull username/password will use the push user for pulling as well.
 `
 
@@ -182,6 +179,9 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInitFlagArtifactURL       = "[alpha] External artifact registry url to use for this Zarf cluster"
 	CmdInitFlagArtifactPushUser  = "[alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts."
 	CmdInitFlagArtifactPushToken = "[alpha] API Token for the push-user to access the artifact registry"
+
+	// The artifact server is deprecated across init and tools creds commands.
+	ArtifactServerDeprecated = "The artifact server is deprecated and will be removed in a future release"
 
 	// zarf internal
 	CmdInternalShort = "Internal tools used by zarf"
@@ -224,8 +224,8 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageShort                       = "Zarf package commands for creating, deploying, and inspecting packages"
 	CmdPackageFlagConcurrency             = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
 	CmdPackageFlagFlagPublicKey           = "Path to public key file for validating signed packages"
-	CmdPackageFlagVerify                  = "Verify the Zarf package signature"
-	CmdPackageFlagSkipSignatureValidation = "[Deprecated] Skip validating the signature of the Zarf package"
+	CmdPackageFlagVerify                  = "Signature verification mode (always|if-possible|never)."
+	CmdPackageFlagSkipSignatureValidation = "[Deprecated] Skip validating the signature of the Zarf package. Use --verify=never instead."
 	CmdPackageFlagRetries                 = "Number of retries to perform for Zarf operations like git/image pushes"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
@@ -615,6 +615,15 @@ $ zarf tools registry push image.tar reg.example.com/stefanprodan/podinfo:6.4.0
 
   # Login with password from stdin
   $ echo "mypassword" | zarf tools registry login --username myuser --password-stdin docker.io`
+
+	CmdToolsRegistryLogoutShort = "Log out from a registry"
+
+	CmdToolsRegistryLogoutExample = `
+  # Log out from a registry
+  $ zarf tools registry logout registry.example.com
+	`
+
+	CmdToolsRegistryLogoutPromptNoRegistryProvidedErr = "a registry address must be provided"
 
 	CmdToolsRegistryPullExample = `
 # Pull an image from an internal repo in Zarf to a local tarball

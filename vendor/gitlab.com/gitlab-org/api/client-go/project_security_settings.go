@@ -1,0 +1,98 @@
+//
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+package gitlab
+
+import (
+	"net/http"
+	"time"
+)
+
+type (
+	ProjectSecuritySettingsServiceInterface interface {
+		// ListProjectSecuritySettings lists all of a project's security settings.
+		//
+		// GitLab API Docs:
+		// https://docs.gitlab.com/api/project_security_settings/#list-project-security-settings
+		ListProjectSecuritySettings(pid any, options ...RequestOptionFunc) (*ProjectSecuritySettings, *Response, error)
+		// UpdateSecretPushProtectionEnabledSetting updates the secret_push_protection_enabled
+		// setting for a project to the provided value.
+		//
+		// GitLab API Docs:
+		// https://docs.gitlab.com/api/project_security_settings/#update-secret_push_protection_enabled-setting
+		UpdateSecretPushProtectionEnabledSetting(pid any, opt UpdateProjectSecuritySettingsOptions, options ...RequestOptionFunc) (*ProjectSecuritySettings, *Response, error)
+	}
+
+	// ProjectSecuritySettingsService handles communication with the Project Security Settings
+	// related methods of the GitLab API.
+	//
+	// GitLab API docs:
+	// https://docs.gitlab.com/api/project_security_settings/
+	ProjectSecuritySettingsService struct {
+		client *Client
+	}
+)
+
+var _ ProjectSecuritySettingsServiceInterface = (*ProjectSecuritySettingsService)(nil)
+
+// ProjectSecuritySettings represents the project security settings data.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/api/project_security_settings/
+type ProjectSecuritySettings struct {
+	ProjectID                           int64      `json:"project_id"`
+	CreatedAt                           *time.Time `json:"created_at"`
+	UpdatedAt                           *time.Time `json:"updated_at"`
+	AutoFixContainerScanning            bool       `json:"auto_fix_container_scanning"`
+	AutoFixDAST                         bool       `json:"auto_fix_dast"`
+	AutoFixDependencyScanning           bool       `json:"auto_fix_dependency_scanning"`
+	AutoFixSAST                         bool       `json:"auto_fix_sast"`
+	ContinuousVulnerabilityScansEnabled bool       `json:"continuous_vulnerability_scans_enabled"`
+	ContainerScanningForRegistryEnabled bool       `json:"container_scanning_for_registry_enabled"`
+	SecretPushProtectionEnabled         bool       `json:"secret_push_protection_enabled"`
+}
+
+// String gets a string representation of the ProjectSecuritySettings data.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/api/project_security_settings/
+func (s ProjectSecuritySettings) String() string {
+	return Stringify(s)
+}
+
+func (s *ProjectSecuritySettingsService) ListProjectSecuritySettings(pid any, options ...RequestOptionFunc) (*ProjectSecuritySettings, *Response, error) {
+	return do[*ProjectSecuritySettings](s.client,
+		withPath("projects/%s/security_settings", ProjectID{pid}),
+		withRequestOpts(options...),
+	)
+}
+
+// UpdateProjectSecuritySettingsOptions represent the request options for updating
+// the project security settings.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/api/project_security_settings/#update-secret_push_protection_enabled-setting
+type UpdateProjectSecuritySettingsOptions struct {
+	SecretPushProtectionEnabled *bool `url:"secret_push_protection_enabled,omitempty" json:"secret_push_protection_enabled,omitempty"`
+}
+
+func (s *ProjectSecuritySettingsService) UpdateSecretPushProtectionEnabledSetting(pid any, opt UpdateProjectSecuritySettingsOptions, options ...RequestOptionFunc) (*ProjectSecuritySettings, *Response, error) {
+	return do[*ProjectSecuritySettings](s.client,
+		withMethod(http.MethodPut),
+		withPath("projects/%s/security_settings", ProjectID{pid}),
+		withAPIOpts(opt),
+		withRequestOpts(options...),
+	)
+}

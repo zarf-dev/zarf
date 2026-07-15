@@ -15,27 +15,40 @@ import (
 
 	"github.com/invopop/jsonschema"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
 
 func main() {
-	schema, err := generateV1Alpha1Schema()
-	if err != nil {
-		fmt.Println("Error generating schema: %v", err)
+	if err := writeSchema("v1alpha1", "zarf-v1alpha1-schema.json", &v1alpha1.ZarfPackage{}); err != nil {
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-
-	// Add trailing newline to match linter expectations
-	schema = append(schema, '\n')
-
-	if err := os.WriteFile("zarf-v1alpha1-schema.json", schema, 0644); err != nil {
-		fmt.Println("Error writing schema file: %v", err)
+	if err := writeSchema("v1beta1", "zarf-v1beta1-package-schema.json", &v1beta1.Package{}); err != nil {
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-
-	fmt.Println("Successfully generated zarf-schema.json")
+	if err := writeSchema("v1beta1", "zarf-v1beta1-component-schema.json", &v1beta1.ComponentConfig{}); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 }
 
-func generateV1Alpha1Schema() ([]byte, error) {
+func writeSchema(apiVersion, filename string, rootType any) error {
+	schema, err := generateSchema(apiVersion, rootType)
+	if err != nil {
+		return fmt.Errorf("error generating %s schema: %w", filename, err)
+	}
+
+	schema = append(schema, '\n')
+
+	if err := os.WriteFile(filename, schema, 0644); err != nil {
+		return fmt.Errorf("error writing schema file: %w", err)
+	}
+	fmt.Printf("Successfully generated %s\n", filename)
+	return nil
+}
+
+func generateSchema(apiVersion string, rootType any) ([]byte, error) {
 	reflector := jsonschema.Reflector{ExpandedStruct: true}
 
 	// AddGoComments breaks if called with an absolute path, so we save the current
@@ -55,14 +68,14 @@ func generateV1Alpha1Schema() ([]byte, error) {
 		return nil, fmt.Errorf("unable to change to schema directory: %w", err)
 	}
 
-	typePackagePath := filepath.Join("..", "..", "api", "v1alpha1")
+	typePackagePath := filepath.Join("..", "..", "api", apiVersion)
+	modulePath := fmt.Sprintf("github.com/zarf-dev/zarf/src/api/%s", apiVersion)
 
-	// Get the Go comments from the v1alpha1 package
-	if err := reflector.AddGoComments("github.com/zarf-dev/zarf/src/api/v1alpha1", typePackagePath); err != nil {
+	if err := reflector.AddGoComments(modulePath, typePackagePath); err != nil {
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)
 	}
 
-	schema := reflector.Reflect(&v1alpha1.ZarfPackage{})
+	schema := reflector.Reflect(rootType)
 
 	schemaData, err := json.MarshalIndent(schema, "", "  ")
 	if err != nil {

@@ -67,7 +67,7 @@ func newInitCommand() *cobra.Command {
 		Long:    lang.CmdInitLong,
 		Example: lang.CmdInitExample,
 		Args:    cobra.MaximumNArgs(1),
-		PreRun:  o.preRun,
+		PreRunE: o.preRunE,
 		RunE:    o.run,
 	}
 
@@ -110,6 +110,9 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.artifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
 	cmd.Flags().StringVar(&o.artifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
 	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
+	_ = cmd.Flags().MarkDeprecated("artifact-url", lang.ArtifactServerDeprecated)
+	_ = cmd.Flags().MarkDeprecated("artifact-push-username", lang.ArtifactServerDeprecated)
+	_ = cmd.Flags().MarkDeprecated("artifact-push-token", lang.ArtifactServerDeprecated)
 
 	// Flags for providing user-managed agent TLS certificates
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
@@ -203,7 +206,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 
 	loadOpt := packager.LoadOptions{
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
-		VerificationStrategy: getVerificationStrategy(o.verify),
+		VerificationStrategy: o.verify.toStrategy(),
 		Filter:               filter,
 		Architecture:         config.GetArch(),
 		CachePath:            cachePath,
