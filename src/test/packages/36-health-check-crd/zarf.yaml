@@ -11,23 +11,20 @@ components:
     manifests:
       - name: seed
         namespace: health-check-crd
-        noWait: true
         files:
           - seed-configmap.yaml
-    healthChecks:
-      - name: seed
-        namespace: health-check-crd
-        apiVersion: v1
-        kind: ConfigMap
 
-  # Registers the CRD after the RESTMapper cache was populated.
+  # Registers the CRD via a chart crds/ directory, the way real charts ship CRDs.
+  # Helm installs and establishes crds/ objects but leaves them out of the release
+  # manifest, so the status watcher never observes the CustomResourceDefinition
+  # and never resets its RESTMapper cache - the condition that surfaces the bug.
   - name: install-crd
     required: true
-    manifests:
-      - name: crd
+    charts:
+      - name: crd-chart
         namespace: health-check-crd
-        files:
-          - crd.yaml
+        localPath: crd-chart
+        version: 0.1.0
 
   # Health checks a custom resource of the CRD above. A RESTMapper that caches
   # discovery on first use and never reloads cannot map this kind, so this check
@@ -37,7 +34,6 @@ components:
     manifests:
       - name: cr
         namespace: health-check-crd
-        noWait: true
         files:
           - cr.yaml
     healthChecks:
