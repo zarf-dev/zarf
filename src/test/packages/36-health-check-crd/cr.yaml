@@ -1,0 +1,6 @@
+apiVersion: test.zarf.dev/v1alpha1
+kind: ZarfRegression
+metadata:
+  name: regression
+  namespace: health-check-crd
+spec: {}

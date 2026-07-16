@@ -1,0 +1,47 @@
+kind: ZarfPackageConfig
+metadata:
+  name: health-check-crd
+  description: Regression test for health checking a CRD registered earlier in the same deploy
+
+components:
+  # Forces the shared status watcher's RESTMapper to cache a discovery snapshot
+  # taken before the CRD below exists.
+  - name: seed-cache
+    required: true
+    manifests:
+      - name: seed
+        namespace: health-check-crd
+        noWait: true
+        files:
+          - seed-configmap.yaml
+    healthChecks:
+      - name: seed
+        namespace: health-check-crd
+        apiVersion: v1
+        kind: ConfigMap
+
+  # Registers the CRD after the RESTMapper cache was populated.
+  - name: install-crd
+    required: true
+    manifests:
+      - name: crd
+        namespace: health-check-crd
+        files:
+          - crd.yaml
+
+  # Health checks a custom resource of the CRD above. A RESTMapper that caches
+  # discovery on first use and never reloads cannot map this kind, so this check
+  # hangs until the deploy times out.
+  - name: health-check-cr
+    required: true
+    manifests:
+      - name: cr
+        namespace: health-check-crd
+        noWait: true
+        files:
+          - cr.yaml
+    healthChecks:
+      - name: regression
+        namespace: health-check-crd
+        apiVersion: test.zarf.dev/v1alpha1
+        kind: ZarfRegression
