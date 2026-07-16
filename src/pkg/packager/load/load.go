@@ -75,6 +75,8 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return DefinedPackage{}, err
 	}
 
+	// fixme: should probably get api version and use parse as here instead
+	// this should be get newest API version
 	genPkg, err := pkgcfg.ParseMultiDoc(ctx, b)
 	if err != nil {
 		return DefinedPackage{}, err
