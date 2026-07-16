@@ -151,8 +151,7 @@ func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	// NewDynamicRESTMapper reloads discovery so CRDs registered
-	// mid-deploy resolve on the next lookup.
+	// NewDynamicRESTMapper reloads discovery so CRDs registered mid-deploy resolve on the next lookup.
 	restMapper, err := apiutil.NewDynamicRESTMapper(cfg, httpClient)
 	if err != nil {
 		return nil, err
