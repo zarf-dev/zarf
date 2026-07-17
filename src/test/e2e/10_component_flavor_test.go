@@ -90,7 +90,7 @@ func TestPublishFlavor(t *testing.T) {
 	// A skeleton is architecture-agnostic, so it retains every arch variant of the flavor's components.
 	assertSkeleton := func(t *testing.T, flavor string) {
 		t.Helper()
-		_, _, err := e2e.Zarf(t, "package", "publish", flavorTest, "--flavor", flavor, "--no-color", "oci://"+ref, "--plain-http")
+		_, _, err := e2e.Zarf(t, "package", "publish", flavorTest, "--flavor", flavor, "oci://"+ref, "--plain-http")
 		require.NoError(t, err)
 
 		stdOut, _, err := e2e.Zarf(t, "package", "inspect", "definition", "oci://"+ref+"/test-package-flavors:v0.0.0-"+flavor, "--plain-http", "-a", "skeleton")
