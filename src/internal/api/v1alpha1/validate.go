@@ -292,7 +292,8 @@ func validateChart(chart v1alpha1.ZarfChart) error {
 		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartURLOrPath, chart.Name))
 	}
 
-	if chart.Version == "" {
+	// Local charts take their version from the chart's own Chart.yaml, so a version is only required for remote charts.
+	if chart.LocalPath == "" && chart.Version == "" {
 		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartVersion, chart.Name))
 	}
 
