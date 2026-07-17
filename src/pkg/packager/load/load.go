@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -26,6 +27,21 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+// VariantDimension is a dimension along which components of the same name may vary.
+type VariantDimension string
+
+const (
+	// VariantArchitecture is the only.cluster.architecture dimension of a component.
+	VariantArchitecture VariantDimension = "architecture"
+	// VariantFlavor is the only.flavor dimension of a component.
+	VariantFlavor VariantDimension = "flavor"
+)
+
+// AllVariantDimension returns every variant dimension.
+func AllVariantDimension() []VariantDimension {
+	return []VariantDimension{VariantArchitecture, VariantFlavor}
+}
+
 // DefinitionOptions are the optional parameters to load.PackageDefinition
 type DefinitionOptions struct {
 	Flavor       string
@@ -41,8 +57,10 @@ type DefinitionOptions struct {
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
-	// Skeleton retains all architecture variants instead of filtering to the build host arch
-	Skeleton bool
+	// SkipVariantFilters lists dimensions to retain instead of filtering out.
+	// e.g. VariantArchitecture retains every only.cluster.architecture variant of a
+	// component, as used when publishing skeletons.
+	SkipVariantFilters []VariantDimension
 	types.RemoteOptions
 }
 
@@ -77,7 +95,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return DefinedPackage{}, err
 	}
-	if opts.Skeleton {
+	if slices.Contains(opts.SkipVariantFilters, VariantArchitecture) {
 		pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 	} else {
 		pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
