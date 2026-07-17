@@ -35,3 +35,22 @@ func TestHealthChecks(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "Running", stdOut)
 }
+
+func TestHealthCheckCRDRegisteredMidDeploy(t *testing.T) {
+	t.Log("E2E: Health check for a CRD registered mid-deploy")
+
+	tmpdir := t.TempDir()
+	_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/36-health-check-crd", "-o", tmpdir, "--confirm")
+	require.NoError(t, err)
+
+	packageName := fmt.Sprintf("zarf-package-health-check-crd-%s.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
+
+	defer func() {
+		_, _, err := e2e.Zarf(t, "package", "remove", "health-check-crd", "--confirm")
+		require.NoError(t, err)
+	}()
+
+	_, _, err = e2e.Zarf(t, "package", "deploy", path, "--timeout", "3m", "--confirm")
+	require.NoError(t, err)
+}

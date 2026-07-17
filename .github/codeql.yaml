@@ -3,6 +3,7 @@ paths-ignore:
   - src/pkg/utils/credentials.go
   - site/**
   - build/**
+  - vendor/**
 
 query-filters:
   - exclude:

@@ -19,8 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"helm.sh/helm/v4/pkg/action"
 	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
 
 	corev1 "k8s.io/api/core/v1"
@@ -34,12 +32,12 @@ import (
 type renderer struct {
 	chart v1alpha1.ZarfChart
 
-	adoptExistingResources bool
-	cluster                *cluster.Cluster
-	connectedDeploy        bool
-	state                  *state.State
-	actionConfig           *action.Configuration
-	variableConfig         *variables.VariableConfig
+	takeOwnership   bool
+	cluster         *cluster.Cluster
+	connectedDeploy bool
+	state           *state.State
+	actionConfig    *action.Configuration
+	variableConfig  *variables.VariableConfig
 
 	connectStrings    state.ConnectStrings
 	namespaces        map[string]*corev1.Namespace
@@ -47,7 +45,7 @@ type renderer struct {
 	namespaceOverride string
 }
 
-func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, connectedDeploy bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
+func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, takeOwnership bool, c *cluster.Cluster, connectedDeploy bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
 	if actionConfig == nil {
 		return nil, fmt.Errorf("action configuration required to run post renderer")
 	}
@@ -59,17 +57,17 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 	}
 	// Update secrets when not in connected mode, as connected packages in hybrid / air-gap clusters could rely on pulling from the registry with ###ZARF_REGISTRY###
 	rend := &renderer{
-		chart:                  chart,
-		adoptExistingResources: adoptExistingResources,
-		cluster:                c,
-		connectedDeploy:        connectedDeploy,
-		state:                  s,
-		actionConfig:           actionConfig,
-		variableConfig:         variableConfig,
-		connectStrings:         state.ConnectStrings{},
-		namespaces:             map[string]*corev1.Namespace{},
-		pkgName:                pkgName,
-		namespaceOverride:      namespaceOverride,
+		chart:             chart,
+		takeOwnership:     takeOwnership,
+		cluster:           c,
+		connectedDeploy:   connectedDeploy,
+		state:             s,
+		actionConfig:      actionConfig,
+		variableConfig:    variableConfig,
+		connectStrings:    state.ConnectStrings{},
+		namespaces:        map[string]*corev1.Namespace{},
+		pkgName:           pkgName,
+		namespaceOverride: namespaceOverride,
 	}
 
 	namespace, err := rend.cluster.Clientset.CoreV1().Namespaces().Get(ctx, rend.chart.Namespace, metav1.GetOptions{})
@@ -78,7 +76,7 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 	}
 	if kerrors.IsNotFound(err) {
 		rend.namespaces[rend.chart.Namespace] = cluster.NewZarfManagedNamespace(rend.chart.Namespace)
-	} else if rend.adoptExistingResources {
+	} else if rend.takeOwnership {
 		delete(namespace.Labels, cluster.AgentLabel)
 		namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
 		rend.namespaces[rend.chart.Namespace] = namespace
@@ -135,7 +133,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("unable to create the missing namespace %s", name)
 			}
-		} else if r.adoptExistingResources {
+		} else if r.takeOwnership {
 			// Refuse to adopt namespace if it is one of four initial Kubernetes namespaces.
 			// https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
 			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
@@ -185,16 +183,6 @@ func (r *renderer) shouldAddAgentIgnoreLabels() bool {
 
 func (r *renderer) editHelmResources(ctx context.Context, resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
 	l := logger.From(ctx)
-	dc, err := dynamic.NewForConfig(r.cluster.RestConfig)
-	if err != nil {
-		return err
-	}
-	groupResources, err := restmapper.GetAPIGroupResources(r.cluster.Clientset.Discovery())
-	if err != nil {
-		return err
-	}
-	mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
-
 	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
 		newContent, rawData, err := processManifestContent(resource.Content, func(obj *unstructured.Unstructured) error {
@@ -269,49 +257,6 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			r.namespaces[namespace] = cluster.NewZarfManagedNamespace(namespace)
 		}
 
-		// If we have been asked to adopt existing resources, process those now as well
-		if r.adoptExistingResources {
-			deployedNamespace := namespace
-			if deployedNamespace == "" {
-				deployedNamespace = r.chart.Namespace
-			}
-
-			err := func() error {
-				mapping, err := mapper.RESTMapping(rawData.GroupVersionKind().GroupKind())
-				if err != nil {
-					return err
-				}
-				resource, err := dc.Resource(mapping.Resource).Namespace(deployedNamespace).Get(ctx, rawData.GetName(), metav1.GetOptions{})
-				// Ignore resources that are yet to be created
-				if kerrors.IsNotFound(err) {
-					return nil
-				}
-				if err != nil {
-					return err
-				}
-				labels := resource.GetLabels()
-				if labels == nil {
-					labels = map[string]string{}
-				}
-				labels["app.kubernetes.io/managed-by"] = "Helm"
-				resource.SetLabels(labels)
-				annotations := resource.GetAnnotations()
-				if annotations == nil {
-					annotations = map[string]string{}
-				}
-				annotations["meta.helm.sh/release-name"] = r.chart.ReleaseName
-				annotations["meta.helm.sh/release-namespace"] = r.chart.Namespace
-				resource.SetAnnotations(annotations)
-				_, err = dc.Resource(mapping.Resource).Namespace(deployedNamespace).Update(ctx, resource, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				return nil
-			}()
-			if err != nil {
-				return fmt.Errorf("unable to adopt the resource %s: %w", rawData.GetName(), err)
-			}
-		}
 		// Finally place this back onto the output buffer
 		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
 	}

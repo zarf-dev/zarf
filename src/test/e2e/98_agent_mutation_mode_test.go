@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -49,8 +50,13 @@ func TestAgentMutationPolicy(t *testing.T) {
 	_, _, err = e2e.Kubectl(t, "create", "namespace", nsName)
 	require.NoError(t, err)
 
-	_, _, err = e2e.Kubectl(t, "run", podName, "-n", nsName,
-		"--image=ghcr.io/zarf-dev/images/alpine:3.21.3", "--restart=Never", "--", "sleep", "100")
+	// Sometimes the agent flakes, it's possible it's going to the old agent pod just before it finishes terminating
+	// Adding a retry here to test this hypothesis
+	err = retry.Do(func() error {
+		_, _, err := e2e.Kubectl(t, "run", podName, "-n", nsName,
+			"--image=ghcr.io/zarf-dev/images/alpine:3.21.3", "--restart=Never", "--", "sleep", "100")
+		return err
+	}, retry.Attempts(2))
 	require.NoError(t, err)
 
 	// The agent must not have rewritten the image — it should still point to the original registry.

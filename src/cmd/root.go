@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 )
 
 var (
@@ -96,6 +97,8 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	ctx := logger.WithContext(cmd.Context(), l)
+	// One negotiator per CLI invocation; decisions never expire (TTL 0) since Zarf is a short-lived process
+	ctx = ocischeme.WithNegotiator(ctx, ocischeme.New(ocischeme.Options{}))
 	cmd.SetContext(ctx)
 
 	// Print enabled features once we have a logger available
@@ -211,6 +214,8 @@ func NewZarfCommand() *cobra.Command {
 		setupRootFlags(rootCmd)
 	}
 
+	setupGroupedFlagUsage(rootCmd)
+
 	return rootCmd
 }
 
@@ -231,7 +236,16 @@ func setupRootFlags(rootCmd *cobra.Command) {
 
 	// Core functionality
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", vpr.GetString(VZarfCache), lang.RootCmdFlagCachePath)
+	cachePath := vpr.GetString(VCache)
+	if cachePath == "" {
+		cachePath = vpr.GetString(VZarfCache)
+	}
+	if cachePath == "" {
+		cachePath = config.ZarfDefaultCachePath
+	}
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", cachePath, lang.RootCmdFlagCachePath)
+	_ = rootCmd.PersistentFlags().MarkDeprecated("zarf-cache", "use --cache instead")
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "cache", cachePath, lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
 	// Security

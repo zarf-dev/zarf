@@ -39,7 +39,7 @@ func TestPushPackage(t *testing.T) {
 
 	fetchedRoot, err := remote.FetchRoot(ctx)
 	require.NoError(t, err)
-	require.Equal(t, zoci.ZarfConfigMediaType, fetchedRoot.Config.MediaType)
+	require.Equal(t, layout.ZarfConfigMediaType, fetchedRoot.Config.MediaType)
 
 	configBytes, err := remote.FetchLayer(ctx, fetchedRoot.Config)
 	require.NoError(t, err)

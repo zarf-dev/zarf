@@ -1,0 +1,56 @@
+tools:
+  # we want to use a pinned version of binny to manage the toolchain (so binny manages itself!)
+  - name: binny
+    version:
+      want: v0.9.0
+    method: go-install
+    with:
+      repo: anchore/binny
+
+  # used at release to generate the changelog
+  - name: chronicle
+    version:
+      want: v0.8.0
+    method: github-release
+    with:
+      repo: anchore/chronicle
+
+  # used to produce SBOMs during release
+  - name: syft
+    version:
+      want: latest
+    method: github-release
+    with:
+      repo: anchore/syft
+
+  # used for linting
+  - name: golangci-lint
+    version:
+      want: v2.3.0
+    method: github-release
+    with:
+      repo: golangci/golangci-lint
+
+  # used for organizing imports during static analysis
+  - name: gosimports
+    version:
+      want: v0.3.8
+    method: github-release
+    with:
+      repo: rinchsan/gosimports
+
+  # used during static analysis for license compliance
+  - name: bouncer
+    version:
+      want: v0.4.0
+    method: github-release
+    with:
+      repo: wagoodman/go-bouncer
+
+  # used for triggering a release
+  - name: gh
+    version:
+      want: v2.58.0
+    method: github-release
+    with:
+      repo: cli/cli

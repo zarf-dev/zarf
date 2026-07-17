@@ -1,0 +1,475 @@
+package v6
+
+import (
+	"errors"
+	"fmt"
+	"regexp"
+	"strings"
+	"time"
+
+	"gorm.io/gorm"
+
+	"github.com/anchore/grype/grype/version"
+	"github.com/anchore/grype/internal/log"
+)
+
+type OSSpecifiers []*OSSpecifier
+
+// OSSpecifier is a struct that represents a distro in a way that can be used to query the affected package store.
+type OSSpecifier struct {
+	// Name of the distro as identified by the ID field in /etc/os-release (or similar normalized name, e.g. "oracle" instead of "ol")
+	Name string
+
+	// MajorVersion is the first field in the VERSION_ID field in /etc/os-release (e.g. 7 in "7.0.1406")
+	MajorVersion string
+
+	// MinorVersion is the second field in the VERSION_ID field in /etc/os-release (e.g. 0 in "7.0.1406")
+	MinorVersion string
+
+	// RemainingVersion is anything after the minor version in the VERSION_ID field in /etc/os-release (e.g. 1406 in "7.0.1406")
+	RemainingVersion string
+
+	// LabelVersion is a string that represents a floating version (e.g. "edge" or "unstable") or is the CODENAME field in /etc/os-release (e.g. "wheezy" for debian 7)
+	LabelVersion string
+
+	// Channel is a string that represents a different feed for fix and vulnerability data (e.g. "eus" for RHEL)
+	Channel string
+
+	// DisableAliasing prevents OS aliasing when true (used for exact distro matching)
+	DisableAliasing bool
+
+	// DisableFallback prevents fallback to less specific version matching when true.
+	// When set, only exact version matches are returned (no major-only fallback).
+	// Used for EOL lookups where we don't want e.g. Alpine 3.24 to match Alpine 3.12.
+	DisableFallback bool
+}
+
+func (d *OSSpecifier) clean() {
+	d.MajorVersion = trimZeroes(d.MajorVersion)
+	d.MinorVersion = trimZeroes(d.MinorVersion)
+}
+
+func (d *OSSpecifier) String() string {
+	if d == nil {
+		return anyOS
+	}
+
+	if *d == *NoOSSpecified {
+		return "none"
+	}
+
+	var ver string
+	if d.MajorVersion != "" {
+		ver = d.version()
+	} else {
+		ver = d.LabelVersion
+	}
+
+	distroDisplayName := d.Name
+	if ver != "" {
+		distroDisplayName += "@" + ver
+	}
+	if ver == d.MajorVersion && d.LabelVersion != "" {
+		distroDisplayName += " (" + d.LabelVersion + ")"
+	}
+
+	return distroDisplayName
+}
+
+func (d OSSpecifier) version() string {
+	if d.MajorVersion != "" {
+		if d.MinorVersion != "" {
+			if d.RemainingVersion != "" {
+				return d.MajorVersion + "." + d.MinorVersion + "." + d.RemainingVersion
+			}
+			return d.MajorVersion + "." + d.MinorVersion
+		}
+		return d.MajorVersion
+	}
+
+	return d.LabelVersion
+}
+
+func (d OSSpecifiers) String() string {
+	if d.IsAny() {
+		return anyOS
+	}
+	var parts []string
+	for _, v := range d {
+		parts = append(parts, v.String())
+	}
+	return strings.Join(parts, ", ")
+}
+
+func (d OSSpecifiers) IsAny() bool {
+	if len(d) == 0 {
+		return true
+	}
+	if len(d) == 1 && d[0] == AnyOSSpecified {
+		return true
+	}
+	return false
+}
+
+func (d OSSpecifier) matchesVersionPattern(pattern string) bool {
+	// check if version or version label matches the given regex
+	r, err := regexp.Compile(pattern)
+	if err != nil {
+		log.Tracef("failed to compile distro specifier regex pattern %q: %v", pattern, err)
+		return false
+	}
+
+	if r.MatchString(d.version()) {
+		return true
+	}
+
+	if d.LabelVersion != "" {
+		return r.MatchString(d.LabelVersion)
+	}
+	return false
+}
+
+type OperatingSystemStoreReader interface {
+	GetOperatingSystems(OSSpecifier) ([]OperatingSystem, error)
+}
+
+type OperatingSystemStoreWriter interface {
+	// UpdateOperatingSystemEOL updates the EOL and EOAS dates for an operating system
+	// matching the given specifier. Returns the number of records updated.
+	UpdateOperatingSystemEOL(spec OSSpecifier, eolDate, eoasDate *time.Time) (int64, error)
+}
+
+type operatingSystemStore struct {
+	db            *gorm.DB
+	blobStore     *blobStore
+	clientVersion *version.Version
+}
+
+func newOperatingSystemStore(db *gorm.DB, bs *blobStore) *operatingSystemStore {
+	return &operatingSystemStore{
+		db:            db,
+		blobStore:     bs,
+		clientVersion: version.New(fmt.Sprintf("%d.%d.%d", ModelVersion, Revision, Addition), version.SemanticFormat),
+	}
+}
+
+func (s *operatingSystemStore) addOsFromPackages(packages ...*packageHandle) error { // nolint:dupl
+	cacheInst, ok := cacheFromContext(s.db.Statement.Context)
+	if !ok {
+		return fmt.Errorf("unable to fetch OS cache from context")
+	}
+
+	var final []*OperatingSystem
+	byCacheKey := make(map[string][]*OperatingSystem)
+	for _, p := range packages {
+		if p.OperatingSystem != nil {
+			p.OperatingSystem.clean()
+			key := p.OperatingSystem.cacheKey()
+			if existingID, ok := cacheInst.getID(p.OperatingSystem); ok {
+				// seen in a previous transaction...
+				p.OperatingSystemID = &existingID
+			} else if _, ok := byCacheKey[key]; !ok {
+				// not seen within this transaction
+				final = append(final, p.OperatingSystem)
+			}
+			byCacheKey[key] = append(byCacheKey[key], p.OperatingSystem)
+		}
+	}
+
+	if len(final) == 0 {
+		return nil
+	}
+
+	if err := s.db.Create(final).Error; err != nil {
+		return fmt.Errorf("unable to create OS records: %w", err)
+	}
+
+	// update the cache with the new records
+	for _, ref := range final {
+		cacheInst.set(ref)
+	}
+
+	// update all references with the IDs from the cache
+	for _, refs := range byCacheKey {
+		for _, ref := range refs {
+			id, ok := cacheInst.getID(ref)
+			if ok {
+				ref.setRowID(id)
+			}
+		}
+	}
+
+	// update the parent objects with the FK ID
+	for _, p := range packages {
+		if p.OperatingSystem != nil {
+			p.OperatingSystemID = &p.OperatingSystem.ID
+		}
+	}
+	return nil
+}
+
+func (s *operatingSystemStore) GetOperatingSystems(d OSSpecifier) ([]OperatingSystem, error) {
+	if d.Name == "" && d.LabelVersion == "" {
+		return nil, ErrMissingOSIdentification
+	}
+
+	// search for aliases for the given distro; we intentionally map some OSs to other OSs in terms of
+	// vulnerability (e.g. `centos` is an alias for `rhel`). If an alias is found always use that alias in
+	// searches (there will never be anything in the DB for aliased distros).
+	// Skip aliasing if explicitly disabled (used for exact distro matching).
+	if !d.DisableAliasing {
+		if err := s.applyOSAlias(&d); err != nil {
+			return nil, err
+		}
+	}
+
+	d.clean()
+
+	// handle non-version fields
+	query := s.prepareQuery(d)
+
+	// handle version-like fields
+	return s.searchForOSExactVersions(query, d)
+}
+
+func (s *operatingSystemStore) applyOSAlias(d *OSSpecifier) error {
+	if d.Name == "" {
+		return nil
+	}
+
+	var aliases []OperatingSystemSpecifierOverride
+	err := s.db.Where("alias = ? collate nocase", d.Name).Find(&aliases).Error
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("failed to resolve alias for distro %q: %w", d.Name, err)
+		}
+		return nil
+	}
+
+	return applyOSSpecifierOverrides(d, aliases, s.clientVersion)
+}
+
+func applyOSSpecifierOverrides(d *OSSpecifier, overrides []OperatingSystemSpecifierOverride, clientVersion *version.Version) error {
+	for _, o := range overrides {
+		canUse, err := canUseOverride(o, clientVersion)
+		if err != nil {
+			log.Tracef("failed to check if override %q is applicable for client version %s: %v", o.Alias, clientVersion, err)
+			// we cannot check if we can use this override, so we assume it is applicable
+		} else if !canUse {
+			// this override is not applicable for the current client version
+			continue
+		}
+
+		if o.Codename != "" && o.Codename != d.LabelVersion {
+			continue
+		}
+
+		if o.Version != "" && o.Version != d.version() {
+			continue
+		}
+
+		if o.VersionPattern != "" && !d.matchesVersionPattern(o.VersionPattern) {
+			continue
+		}
+
+		// first match wins, we do not apply any further overrides
+		applyOverride(d, o)
+		break
+	}
+
+	return nil
+}
+
+func applyOverride(d *OSSpecifier, override OperatingSystemSpecifierOverride) bool {
+	var applied bool
+	if override.ReplacementName != nil {
+		d.Name = *override.ReplacementName
+		applied = true
+	}
+
+	if override.Rolling {
+		d.MajorVersion = ""
+		d.MinorVersion = ""
+		applied = true
+	}
+
+	if override.ReplacementMajorVersion != nil {
+		d.MajorVersion = *override.ReplacementMajorVersion
+		applied = true
+	}
+
+	if override.ReplacementMinorVersion != nil {
+		d.MinorVersion = *override.ReplacementMinorVersion
+		applied = true
+	}
+
+	if override.ReplacementLabelVersion != nil {
+		d.LabelVersion = *override.ReplacementLabelVersion
+		applied = true
+	}
+
+	if override.ReplacementChannel != nil {
+		d.Channel = *override.ReplacementChannel
+		applied = true
+	}
+	return applied
+}
+
+func canUseOverride(override OperatingSystemSpecifierOverride, clientVersion *version.Version) (bool, error) {
+	if override.ApplicableClientDBSchemas == "" || clientVersion == nil {
+		return true, nil
+	}
+	c, err := version.GetConstraint(override.ApplicableClientDBSchemas, version.SemanticFormat)
+	if err != nil {
+		return true, fmt.Errorf("unable to parse version constraint: %w", err)
+	}
+	ok, err := c.Satisfied(clientVersion)
+	if err != nil {
+		return true, fmt.Errorf("unable to check if client constraint: %w", err)
+	}
+	if !ok {
+		// explicitly told that this override does not apply to this client version
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (s *operatingSystemStore) prepareQuery(d OSSpecifier) *gorm.DB {
+	query := s.db.Model(&OperatingSystem{})
+
+	if d.Name != "" {
+		query = query.Where("name = ? collate nocase OR release_id = ? collate nocase", d.Name, d.Name)
+	}
+
+	if d.LabelVersion != "" {
+		query = query.Where("codename = ? collate nocase OR label_version = ? collate nocase", d.LabelVersion, d.LabelVersion)
+	}
+
+	if d.Channel != "" {
+		query = query.Where("channel = ? collate nocase", d.Channel)
+	} else {
+		// we specifically want to match vanilla...
+		query = query.Where("channel IS NULL OR channel = ''")
+	}
+	return query
+}
+
+func (s *operatingSystemStore) searchForOSExactVersions(query *gorm.DB, d OSSpecifier) ([]OperatingSystem, error) {
+	var allOs []OperatingSystem
+
+	handleQuery := func(q *gorm.DB, desc string) ([]OperatingSystem, error) {
+		err := q.Find(&allOs).Error
+		if err == nil {
+			return allOs, nil
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("failed to query distro by %s: %w", desc, err)
+		}
+		return nil, nil
+	}
+
+	if d.MajorVersion == "" && d.MinorVersion == "" {
+		return handleQuery(query, "name and codename only")
+	}
+
+	// search by the most specific criteria first, then fallback
+	var result []OperatingSystem
+	var err error
+	if d.MajorVersion != "" {
+		if d.MinorVersion != "" {
+			// non-empty major and minor versions
+			specificQuery := query.Session(&gorm.Session{}).Where("major_version = ? AND minor_version = ?", d.MajorVersion, d.MinorVersion)
+			result, err = handleQuery(specificQuery, "major and minor versions")
+			if err != nil || len(result) > 0 {
+				return result, err
+			}
+		} else {
+			// empty minor version - exact match for major-only distros (e.g., Debian 8, 9, 10...)
+			majorExclusiveQuery := query.Session(&gorm.Session{}).Where("major_version = ? AND minor_version = ?", d.MajorVersion, "")
+			result, err = handleQuery(majorExclusiveQuery, "major version with empty minor")
+			if err != nil || len(result) > 0 {
+				return result, err
+			}
+		}
+
+		// when fallback is disabled, don't try less specific version matches
+		if d.DisableFallback {
+			return nil, nil
+		}
+
+		// fallback to major version only, requiring the minor version to be blank. Note: it is important that we don't
+		// match on any record with the given major version, we must only match on records that are intentionally empty
+		// minor version. For instance, the DB may have rhel 8.1, 8.2, 8.3, 8.4, etc. We don't want to arbitrarily match
+		// on one of these or match even the latest version, as even that may yield incorrect vulnerability matching
+		// results. We are only intending to allow matches for when the vulnerability data is only specified at the major version level.
+		majorExclusiveQuery := query.Session(&gorm.Session{}).Where("major_version = ? AND minor_version = ?", d.MajorVersion, "")
+		result, err = handleQuery(majorExclusiveQuery, "exclusively major version")
+		if err != nil || len(result) > 0 {
+			return result, err
+		}
+
+		// fallback to major version for any minor version
+		majorQuery := query.Session(&gorm.Session{}).Where("major_version = ?", d.MajorVersion)
+		result, err = handleQuery(majorQuery, "major version with any minor version")
+		if err != nil || len(result) > 0 {
+			return result, err
+		}
+	}
+
+	return allOs, nil
+}
+
+// UpdateOperatingSystemEOL updates the EOL and EOAS dates for operating systems
+// matching the given specifier. Returns the number of records updated.
+func (s *operatingSystemStore) UpdateOperatingSystemEOL(spec OSSpecifier, eolDate, eoasDate *time.Time) (int64, error) {
+	spec.clean()
+
+	// Build the query to find matching OS records
+	query := s.db.Model(&OperatingSystem{})
+
+	if spec.Name != "" {
+		query = query.Where("name = ? collate nocase", spec.Name)
+	}
+
+	if spec.MajorVersion != "" {
+		query = query.Where("major_version = ?", spec.MajorVersion)
+	}
+
+	if spec.MinorVersion != "" {
+		query = query.Where("minor_version = ?", spec.MinorVersion)
+	}
+
+	if spec.LabelVersion != "" {
+		query = query.Where("codename = ? collate nocase OR label_version = ? collate nocase", spec.LabelVersion, spec.LabelVersion)
+	}
+
+	// Update the EOL fields
+	updates := map[string]interface{}{
+		"eol_date":  eolDate,
+		"eoas_date": eoasDate,
+	}
+
+	result := query.Updates(updates)
+	if result.Error != nil {
+		return 0, fmt.Errorf("failed to update OS EOL data: %w", result.Error)
+	}
+
+	return result.RowsAffected, nil
+}
+
+func trimZeroes(s string) string {
+	// trim leading zeros from the version components
+	if s == "" {
+		return s
+	}
+	if s[0] == '0' {
+		s = strings.TrimLeft(s, "0")
+	}
+	if s == "" {
+		// we've not only trimmed leading zeros, but also the entire string
+		// we should preserve the zero value for the version
+		return "0"
+	}
+	return s
+}

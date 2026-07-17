@@ -229,7 +229,9 @@ func TestPackageInspectManifests(t *testing.T) {
 				components:   tc.components,
 			}
 			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
-			err = opts.run(context.Background(), []string{packagePath})
+			testCmd := &cobra.Command{}
+			testCmd.SetContext(context.Background())
+			err = opts.run(testCmd, []string{packagePath})
 			if tc.expectedErr != "" {
 				require.ErrorContains(t, err, tc.expectedErr)
 				return
@@ -391,7 +393,9 @@ func checkPackageValuesInspectFiles(t *testing.T, tc ValuesFilesTestData) {
 		components:   tc.components,
 	}
 	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
-	err = opts.run(context.Background(), []string{packagePath})
+	testCmd := &cobra.Command{}
+	testCmd.SetContext(context.Background())
+	err = opts.run(testCmd, []string{packagePath})
 	if tc.expectedErr != "" {
 		require.ErrorContains(t, err, tc.expectedErr)
 		return
@@ -672,4 +676,70 @@ func TestVerifyInsecureIgnoreTlogEnvRespected(t *testing.T) {
 	cmd := newPackageVerifyCommand(v)
 	f := cmd.Flags().Lookup("insecure-ignore-tlog")
 	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
+}
+
+func TestBuildVerifyBlobOptions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		identity        string
+		identityRegexp  string
+		flagTlogChanged bool // simulate --insecure-ignore-tlog being explicitly passed
+		viperTlogSet    bool // simulate ZARF_PACKAGE_INSECURE_IGNORE_TLOG env var
+		wantIgnoreTlog  bool
+	}{
+		{
+			name:           "no identity: IgnoreTlog stays at flag default (true)",
+			wantIgnoreTlog: true,
+		},
+		{
+			name:           "identity set, no explicit override: tlog forced on",
+			identity:       "user@example.com",
+			wantIgnoreTlog: false,
+		},
+		{
+			name:           "identity regexp set, no explicit override: tlog forced on",
+			identityRegexp: ".*@example\\.com",
+			wantIgnoreTlog: false,
+		},
+		{
+			name:            "identity set, flag explicitly changed: override honored",
+			identity:        "user@example.com",
+			flagTlogChanged: true,
+			wantIgnoreTlog:  true,
+		},
+		{
+			name:           "identity set, viper key set: override honored",
+			identity:       "user@example.com",
+			viperTlogSet:   true,
+			wantIgnoreTlog: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			v := newTestViper()
+			if tc.viperTlogSet {
+				v.Set(VPkgInsecureIgnoreTlog, true)
+			}
+
+			// Use a real command with the verify flag set registered so that
+			// cmd.Flags().Changed works correctly.
+			var f packageVerifyFlags
+			cmd := &cobra.Command{}
+			cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &f))
+
+			f.certificateIdentity = tc.identity
+			f.certificateIdentityRegexp = tc.identityRegexp
+
+			if tc.flagTlogChanged {
+				require.NoError(t, cmd.Flags().Set("insecure-ignore-tlog", "true"))
+			}
+
+			opts := f.buildVerifyBlobOptions(cmd, v)
+			require.Equal(t, tc.wantIgnoreTlog, opts.CommonVerifyOptions.IgnoreTlog)
+		})
+	}
 }

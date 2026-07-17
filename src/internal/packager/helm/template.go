@@ -53,7 +53,10 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 	client.IncludeCRDs = true
 	// TODO: Further research this with regular/OCI charts
 	client.Verify = false
-	client.PlainHTTP = remoteOptions.PlainHTTP
+	// client.PlainHTTP is intentionally left unset: RunWithContext (below) never
+	// reads it for an already-loaded chart like this one — Helm only consults it in
+	// LocateChart, which resolves a chart by name/reference before loading, a step
+	// TemplateChart doesn't perform.
 	client.InsecureSkipTLSVerify = remoteOptions.InsecureSkipTLSVerify
 	if kubeVersion != "" {
 		parsedKubeVersion, err := common.ParseKubeVersion(kubeVersion)

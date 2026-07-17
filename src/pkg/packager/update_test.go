@@ -11,7 +11,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
-func TestUpdateNeeded(t *testing.T) {
+func TestImageUpdateNeeded(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -284,13 +284,73 @@ func TestUpdateNeeded(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := updateNeeded(tt.zarfPackage, tt.definitionImageResults)
+			got := imageUpdateNeeded(tt.zarfPackage, tt.definitionImageResults)
 			require.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func TestCreateUpdate(t *testing.T) {
+func TestCreateSchemaUpdate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		zarfPackage    v1alpha1.ZarfPackage
+		schemaFilename string
+		inputYAML      string
+		outputYAML     string
+	}{
+		{
+			name:           "adds values.schema when no values key exists",
+			zarfPackage:    v1alpha1.ZarfPackage{},
+			schemaFilename: "values.schema.json",
+			inputYAML: `metadata:
+  name: test-package
+`,
+			outputYAML: `metadata:
+  name: test-package
+values:
+  schema: values.schema.json
+`,
+		},
+		{
+			name: "adds schema under existing values while preserving files",
+			zarfPackage: v1alpha1.ZarfPackage{
+				Values: v1alpha1.ZarfValues{
+					Files: []string{"values.yaml"},
+				},
+			},
+			schemaFilename: "values.schema.json",
+			inputYAML: `metadata:
+  name: test-package
+values:
+  files:
+    - values.yaml
+`,
+			outputYAML: `metadata:
+  name: test-package
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			astFile, err := parser.ParseBytes([]byte(tt.inputYAML), parser.ParseComments)
+			require.NoError(t, err)
+
+			err = createSchemaUpdate(tt.zarfPackage, tt.schemaFilename, astFile)
+
+			require.NoError(t, err)
+			require.Equal(t, tt.outputYAML, astFile.String())
+		})
+	}
+}
+
+func TestCreateImageUpdate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -396,10 +456,10 @@ components:
 			astFile, err := parser.ParseBytes([]byte(tt.inputYAML), parser.ParseComments)
 			require.NoError(t, err)
 
-			got, err := createUpdate(tt.zarfPackage, tt.definitionImageResults, astFile)
+			err = createImageUpdate(tt.zarfPackage, tt.definitionImageResults, astFile)
 
 			require.NoError(t, err)
-			require.Equal(t, tt.outputYAML, got)
+			require.Equal(t, tt.outputYAML, astFile.String())
 		})
 	}
 }

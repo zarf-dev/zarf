@@ -1,6 +1,6 @@
 This example shows you how to deploy [Longhorn](https://longhorn.io/) using Zarf.
 
-Before deploying Longhorn make sure your nodes are configured with the [Longhorn Installation Requirements](https://longhorn.io/docs/latest/deploy/install/#installation-requirements).
+Before deploying Longhorn, make sure your nodes are configured with the [Longhorn Installation Requirements](https://longhorn.io/docs/latest/deploy/install/#installation-requirements). Note that the automated `longhornctl` preflight environment checker is not included in this package to support multi-architecture compatibility, so node readiness must be verified manually.
 
 You will need [open-iscsi](https://longhorn.io/docs/latest/deploy/install/#installing-open-iscsi) installed.
 

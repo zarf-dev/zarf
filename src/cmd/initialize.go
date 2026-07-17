@@ -37,26 +37,24 @@ import (
 )
 
 type initOptions struct {
-	setVariables            map[string]string
-	optionalComponents      string
-	storageClass            string
-	gitServer               state.GitServerInfo
-	registryInfo            state.RegistryInfo
-	artifactServer          state.ArtifactServerInfo
-	injectorPort            int
-	adoptExistingResources  bool
-	forceConflicts          bool
-	timeout                 time.Duration
-	retries                 int
-	publicKeyPath           string
-	verify                  bool
-	skipSignatureValidation bool
-	confirm                 bool
-	ociConcurrency          int
-	agentTLSCAPath          string
-	agentTLSCertPath        string
-	agentTLSKeyPath         string
-	agentMutationPolicy     string
+	setVariables        map[string]string
+	optionalComponents  string
+	storageClass        string
+	gitServer           state.GitServerInfo
+	registryInfo        state.RegistryInfo
+	artifactServer      state.ArtifactServerInfo
+	injectorPort        int
+	takeOwnership       bool
+	forceConflicts      bool
+	timeout             time.Duration
+	retries             int
+	confirm             bool
+	ociConcurrency      int
+	agentTLSCAPath      string
+	agentTLSCertPath    string
+	agentTLSKeyPath     string
+	agentMutationPolicy string
+	packageVerifyFlags
 }
 
 func newInitCommand() *cobra.Command {
@@ -69,7 +67,7 @@ func newInitCommand() *cobra.Command {
 		Long:    lang.CmdInitLong,
 		Example: lang.CmdInitExample,
 		Args:    cobra.MaximumNArgs(1),
-		PreRun:  o.preRun,
+		PreRunE: o.preRunE,
 		RunE:    o.run,
 	}
 
@@ -112,6 +110,9 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.artifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
 	cmd.Flags().StringVar(&o.artifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
 	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
+	_ = cmd.Flags().MarkDeprecated("artifact-url", lang.ArtifactServerDeprecated)
+	_ = cmd.Flags().MarkDeprecated("artifact-push-username", lang.ArtifactServerDeprecated)
+	_ = cmd.Flags().MarkDeprecated("artifact-push-token", lang.ArtifactServerDeprecated)
 
 	// Flags for providing user-managed agent TLS certificates
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
@@ -120,20 +121,16 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.agentMutationPolicy, "agent-mutation-policy", v.GetString(VInitAgentMutationPolicy), `Controls agent mutation behavior: "all" mutates all resources by default, "labeled" mutates only resources labeled zarf.dev/agent: mutate`)
 
 	// Flags that control how a deployment proceeds
-	// Always require adopt-existing-resources flag (no viper)
-	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	// Always require take-ownership flag (no viper)
+	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
+	cmd.Flags().BoolVar(&o.takeOwnership, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
-	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
-	if errSig != nil {
-		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
-	}
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	// Agent TLS flags must all be provided together
 	cmd.MarkFlagsRequiredTogether("agent-tls-ca", "agent-tls-cert", "agent-tls-key")
@@ -148,19 +145,6 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().SortFlags = true
 
 	return cmd
-}
-
-func (o *initOptions) preRun(cmd *cobra.Command, _ []string) {
-	// Handle deprecated --skip-signature-validation flag for backwards compatibility
-	if cmd.Flags().Changed("skip-signature-validation") {
-		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
-
-		if cmd.Flags().Changed("verify") {
-			return
-		}
-
-		o.verify = !o.skipSignatureValidation
-	}
 }
 
 func (o *initOptions) run(cmd *cobra.Command, args []string) error {
@@ -221,8 +205,8 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
-		VerificationStrategy: getVerificationStrategy(o.verify),
+		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerificationStrategy: o.verify.toStrategy(),
 		Filter:               filter,
 		Architecture:         config.GetArch(),
 		CachePath:            cachePath,
@@ -239,21 +223,21 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}()
 
 	opts := packager.DeployOptions{
-		GitServer:              o.gitServer,
-		RegistryInfo:           o.registryInfo,
-		ArtifactServer:         o.artifactServer,
-		AdoptExistingResources: o.adoptExistingResources,
-		ForceConflicts:         o.forceConflicts,
-		Timeout:                o.timeout,
-		Retries:                o.retries,
-		OCIConcurrency:         o.ociConcurrency,
-		SetVariables:           o.setVariables,
-		StorageClass:           o.storageClass,
-		InjectorPort:           o.injectorPort,
-		RemoteOptions:          defaultRemoteOptions(),
-		IsInteractive:          !o.confirm,
-		AgentTLS:               agentTLS,
-		AgentMutationPolicy:    state.MutationPolicy(o.agentMutationPolicy),
+		GitServer:           o.gitServer,
+		RegistryInfo:        o.registryInfo,
+		ArtifactServer:      o.artifactServer,
+		TakeOwnership:       o.takeOwnership,
+		ForceConflicts:      o.forceConflicts,
+		Timeout:             o.timeout,
+		Retries:             o.retries,
+		OCIConcurrency:      o.ociConcurrency,
+		SetVariables:        o.setVariables,
+		StorageClass:        o.storageClass,
+		InjectorPort:        o.injectorPort,
+		RemoteOptions:       defaultRemoteOptions(),
+		IsInteractive:       !o.confirm,
+		AgentTLS:            agentTLS,
+		AgentMutationPolicy: state.MutationPolicy(o.agentMutationPolicy),
 	}
 	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {

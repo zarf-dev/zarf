@@ -182,7 +182,8 @@ func (v Values) Extract(path Path) (any, error) {
 
 	// Fetch everything if given the root path "."
 	if path == "." {
-		return v, nil
+		// Convert the return value to a map[string]any to not leak Values from extract
+		return map[string]any(v), nil
 	}
 
 	parts := path.Segments()
@@ -220,19 +221,11 @@ func (v Values) Set(path Path, newVal any) error {
 
 	// Handle root path "." - merge the value directly into the map
 	if path == "." {
-		var valueMap map[string]any
-		switch val := newVal.(type) {
-		case Values:
-			valueMap = val
-		case map[string]any:
-			valueMap = val
-		default:
+		newMap, newIsMap := newVal.(map[string]any)
+		if !newIsMap {
 			return fmt.Errorf("cannot merge non-map value at root path")
 		}
-		// Merge the map contents into v
-		for k, val := range valueMap {
-			v[k] = val
-		}
+		v.DeepMerge(newMap)
 		return nil
 	}
 
@@ -242,8 +235,13 @@ func (v Values) Set(path Path, newVal any) error {
 	current := v
 	for i, part := range parts {
 		if i == len(parts)-1 {
-			// Set the value at the last key in the path
-			current[part] = newVal
+			newMap, newIsMap := newVal.(map[string]any)
+			currMap, currIsMap := current[part].(map[string]any)
+			if newIsMap && currIsMap {
+				Values(currMap).DeepMerge(newMap)
+			} else {
+				current[part] = newVal
+			}
 		} else {
 			if _, exists := current[part]; !exists {
 				// If the part does not exist, create a new map for it
@@ -309,6 +307,7 @@ func deepCopyValue(val any) any {
 			cp[k] = deepCopyValue(sub)
 		}
 		return cp
+	// We should not hit this case because Values should not contain Values but this is defensive
 	case Values:
 		return deepCopyValue(map[string]any(t))
 	case []any:
