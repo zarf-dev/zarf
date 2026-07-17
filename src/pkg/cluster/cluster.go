@@ -168,7 +168,7 @@ type invalidatingWatcher struct {
 	discoveryCache discovery.CachedDiscoveryInterface
 }
 
-// Watch invalidates the discovery cache and then delegates to the wrapped watcher.
+// Watch the cluster for changes made to the specified objects.
 func (w *invalidatingWatcher) Watch(ctx context.Context, objs object.ObjMetadataSet, opts watcher.Options) <-chan event.Event {
 	w.discoveryCache.Invalidate()
 	return w.StatusWatcher.Watch(ctx, objs, opts)
