@@ -108,7 +108,7 @@ func TestResolveImports(t *testing.T) {
 		{
 			name:             "all variants are included",
 			path:             "./testdata/import/all-variants",
-			expectedChecksum: "30c3897f07ca4434723651e1477e96f9a10d36c2be978e8323cb49287221bc61",
+			expectedChecksum: "7b9b0d81444cef4db9e2b57f9620e6db4bedc659e08faaa32a3b4b061b176e16",
 			allVariants:      true,
 		},
 	}

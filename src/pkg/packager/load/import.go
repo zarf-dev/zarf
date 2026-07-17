@@ -181,16 +181,13 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 		if len(found) == 0 {
 			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("no compatible component named %s found", name)
-		} else if len(found) > 1 {
+		} else if len(found) > 1 && !allVariants {
 			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("multiple components named %s found", name)
 		}
-		importedComponent := found[0]
-
 		importPath, err := fetchOCISkeleton(ctx, component, pkgPath.BaseDir, cachePath, remoteOptions)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, nil, err
 		}
-
 		// this is a special case for paths and imports where we do not want to join BaseDir and importPath
 		// we check that the path is valid but ensure the value remains relative for fixing
 		fileInfo, err := os.Stat(filepath.Join(pkgPath.BaseDir, importPath))
@@ -200,16 +197,18 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		if !fileInfo.IsDir() {
 			importPath = filepath.Dir(importPath)
 		}
-		importedComponent = fixPaths(importedComponent, importPath, pkgPath.BaseDir)
-		composed, err := overrideMetadata(importedComponent, component)
-		if err != nil {
-			return v1alpha1.ZarfPackage{}, nil, err
-		}
-		composed = overrideDeprecated(composed, component)
-		composed = overrideActions(composed, component)
-		composed = overrideResources(composed, component)
+		for i := range found {
+			importedComponent := fixPaths(found[i], importPath, pkgPath.BaseDir)
+			composed, err := overrideMetadata(importedComponent, component)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, nil, err
+			}
+			composed = overrideDeprecated(composed, component)
+			composed = overrideActions(composed, component)
+			composed = overrideResources(composed, component)
 
-		components = append(components, composed)
+			components = append(components, composed)
+		}
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
 		for _, v := range importedPkg.Values.Files {

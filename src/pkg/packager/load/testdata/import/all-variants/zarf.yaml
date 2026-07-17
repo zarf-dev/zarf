@@ -26,3 +26,8 @@ components:
     import:
       path: child
       name: different-child-flavor
+
+  - name: has-multiple-child-arches
+    import:
+      path: child
+      name: arches

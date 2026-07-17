@@ -1,6 +1,11 @@
 kind: ZarfPackageConfig
 metadata:
   name: example-package-flavors
+constants:
+  - name: TEST_CONST
+    value: "foo"
+variables:
+  - name: TEST_VAR
 components:
   - name: has-flavor
     description: this already has a flavor so it shouldn't get overwritten
@@ -18,3 +23,11 @@ components:
     description: ensure that all flavors are also included from child
     only:
       flavor: seaweed
+  - name: has-multiple-child-arches
+    only:
+      cluster:
+        architecture: amd64
+  - name: has-multiple-child-arches
+    only:
+      cluster:
+        architecture: arm64

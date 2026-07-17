@@ -2,6 +2,12 @@ kind: ZarfPackageConfig
 metadata:
   name: example-package-flavors-child
 
+constants:
+  - name: TEST_CONST
+    value: "foo"
+variables:
+  - name: TEST_VAR
+
 components:
   - name: has-no-flavor
 
@@ -12,3 +18,13 @@ components:
   - name: different-child-flavor
     only:
       flavor: seaweed
+
+  - name: arches
+    only:
+      cluster:
+        architecture: amd64
+
+  - name: arches
+    only:
+      cluster:
+        architecture: arm64
