@@ -23,12 +23,16 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 const (
@@ -147,17 +151,27 @@ func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	httpClient, err := rest.HTTPClientFor(cfg)
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
-	// NewDynamicRESTMapper reloads discovery so CRDs registered mid-deploy resolve on the next lookup.
-	restMapper, err := apiutil.NewDynamicRESTMapper(cfg, httpClient)
-	if err != nil {
-		return nil, err
-	}
+	discoveryCache := memory.NewMemCacheClient(discoveryClient)
+	restMapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryCache)
 	sw := watcher.NewDefaultStatusWatcher(dynamicClient, restMapper)
-	return sw, nil
+	return &invalidatingWatcher{StatusWatcher: sw, discoveryCache: discoveryCache}, nil
+}
+
+// invalidatingWatcher invalidates the discovery cache before each watch so that
+// CRDs registered since the previous watch resolve on the next mapping lookup.
+type invalidatingWatcher struct {
+	watcher.StatusWatcher
+	discoveryCache discovery.CachedDiscoveryInterface
+}
+
+// Watch invalidates the discovery cache and then delegates to the wrapped watcher.
+func (w *invalidatingWatcher) Watch(ctx context.Context, objs object.ObjMetadataSet, opts watcher.Options) <-chan event.Event {
+	w.discoveryCache.Invalidate()
+	return w.StatusWatcher.Watch(ctx, objs, opts)
 }
 
 // InitStateOptions tracks the user-defined options during cluster initialization.
