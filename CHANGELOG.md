@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.81.1](https://github.com/zarf-dev/zarf/compare/v0.81.0...v0.81.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* change adoptExistingResources to takeOwnership ([#5010](https://github.com/zarf-dev/zarf/issues/5010)) ([c5eb289](https://github.com/zarf-dev/zarf/commit/c5eb289bcd535979d47e1b8311744d5018929479))
+* **helm:** create registry client for http chart with OCI re-direct ([#5067](https://github.com/zarf-dev/zarf/issues/5067)) ([34d0cf1](https://github.com/zarf-dev/zarf/commit/34d0cf1a8322a70a8e1f3605038d64dfeb9401e4))
+* **mTLS:** prevent negotiation when portforward with mTLS ([#5054](https://github.com/zarf-dev/zarf/issues/5054)) ([bbce3c3](https://github.com/zarf-dev/zarf/commit/bbce3c3a3da5157346b4afac0655cebf1ba8ebd7))
+* **proxy:** support for system CA with mTLS certs ([#5074](https://github.com/zarf-dev/zarf/issues/5074)) ([93f4719](https://github.com/zarf-dev/zarf/commit/93f471919c2f6e3a295d0c28040f093e04620f67))
+* **wait:** properly wait for crds introduced mid-deploy ([#5077](https://github.com/zarf-dev/zarf/issues/5077)) ([d15007f](https://github.com/zarf-dev/zarf/commit/d15007fe967ba21c713fb2ac99fbd24f4c7d606a))
+
 ## [0.81.0](https://github.com/zarf-dev/zarf/compare/v0.80.0...v0.81.0) (2026-07-09)
 
 
