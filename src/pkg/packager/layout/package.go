@@ -22,7 +22,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -66,6 +65,10 @@ const (
 	// VerifyNever will skip all verification of a package.
 	VerifyNever
 )
+
+// ErrNoVerificationMaterial is returned when there is nothing to verify against.
+// VerifyIfPossible tolerates this; all other verification errors are always fatal.
+var ErrNoVerificationMaterial = errors.New("no verification material available")
 
 // DirPath returns base directory of the package layout
 func (p *PackageLayout) DirPath() string {
@@ -137,15 +140,17 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 		opts.VerifyBlobOptions = &defaults
 	}
 
-	if opts.VerificationStrategy < VerifyNever {
+	if opts.VerificationStrategy != VerifyNever {
 		verifyOptions := signing.DefaultVerifyBlobOptions()
 		if opts.VerifyBlobOptions != nil {
 			verifyOptions = *opts.VerifyBlobOptions
 		}
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
 		if err != nil {
-			if opts.VerificationStrategy == VerifyIfPossible {
-				l.Warn("package signature could not be verified:", "error", err.Error())
+			// VerifyIfPossible tolerates only "nothing to verify against".
+			// Tampered signatures and unsigned-with-material are always fatal.
+			if opts.VerificationStrategy == VerifyIfPossible && errors.Is(err, ErrNoVerificationMaterial) {
+				l.Warn("package signature not verified; continuing", "reason", err.Error())
 				return pkgLayout, nil
 			}
 			return nil, fmt.Errorf("signature verification failed: %w", err)
@@ -233,7 +238,6 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 	}()
 
 	tmpZarfYAMLPath := filepath.Join(tmpDir, ZarfYAML)
-	tmpSignaturePath := filepath.Join(tmpDir, Signature)
 	tmpBundlePath := filepath.Join(tmpDir, Bundle)
 
 	// Update in-memory state
@@ -253,21 +257,9 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		}
 	}()
 
-	// Keyless signatures require bundle format — the cert chain cannot be stored in the
-	// legacy .sig file. For key-based signing, respect the BundleSignature feature flag.
-	bundleEnabled := feature.IsEnabled(feature.BundleSignature)
-	if opts.Keyless && !bundleEnabled {
-		return fmt.Errorf("keyless signing requires the %q feature flag", feature.BundleSignature)
-	}
-
-	// Append signature files to the provenance files list.
-	// These are created after checksum generation and cannot be in checksums.txt.
-	// Listing them here allows integrity validation to dynamically exclude them
-	// without hardcoded knowledge of every possible signature file.
-	if !slices.Contains(p.Pkg.Build.ProvenanceFiles, Signature) {
-		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Signature)
-	}
-	if bundleEnabled && !slices.Contains(p.Pkg.Build.ProvenanceFiles, Bundle) {
+	// Append the bundle to the provenance files list so integrity validation can
+	// dynamically exclude it from checksum enforcement.
+	if !slices.Contains(p.Pkg.Build.ProvenanceFiles, Bundle) {
 		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Bundle)
 		p.Pkg.Build.VersionRequirements = append(p.Pkg.Build.VersionRequirements, v1alpha1.VersionRequirement{
 			Version: "v0.71.0",
@@ -286,30 +278,21 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		return fmt.Errorf("failed to write temp %s: %w", ZarfYAML, err)
 	}
 
-	// Configure signing to write to temp directory
+	// Configure signing. cosign v3.1.1+ writes only the bundle when NewBundleFormat=true.
 	signOpts := opts
-	signOpts.NewBundleFormat = bundleEnabled
+	signOpts.NewBundleFormat = true
 
-	// Validate outputs before setting temporary paths
-	actualSignaturePath := filepath.Join(p.dirPath, Signature)
 	actualBundlePath := filepath.Join(p.dirPath, Bundle)
-	signOpts.OutputSignature = actualSignaturePath
-	if bundleEnabled {
-		signOpts.BundlePath = actualBundlePath
-	}
+	signOpts.BundlePath = actualBundlePath
 
-	err = signOpts.CheckOverwrite(ctx)
-	if err != nil {
+	if err = signOpts.CheckOverwrite(ctx); err != nil {
 		return err
 	}
 
-	signOpts.OutputSignature = tmpSignaturePath
-	if bundleEnabled {
-		signOpts.BundlePath = tmpBundlePath
-	}
+	signOpts.BundlePath = tmpBundlePath
 
 	// Perform the signing operation on the temp file
-	l.Debug("signing package", "source", tmpZarfYAMLPath, "signature", tmpSignaturePath)
+	l.Debug("signing package", "source", tmpZarfYAMLPath, "bundle", tmpBundlePath)
 	if _, err = signing.CosignSignBlobWithOptions(ctx, tmpZarfYAMLPath, signOpts); err != nil {
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
@@ -325,30 +308,26 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		return fmt.Errorf("failed to update %s after signing: %w", ZarfYAML, err)
 	}
 
-	if err = os.Rename(tmpSignaturePath, actualSignaturePath); err != nil {
+	if err = os.Rename(tmpBundlePath, actualBundlePath); err != nil {
 		if writeErr := os.WriteFile(zarfYAMLPath, originalZarfYAMLBytes, helpers.ReadWriteUser); writeErr != nil {
-			l.Warn("failed to restore original zarf.yaml after signature rename failure", "error", writeErr)
+			l.Warn("failed to restore original zarf.yaml after bundle rename failure", "error", writeErr)
 		}
-		return fmt.Errorf("failed to move signature after signing: %w", err)
+		return fmt.Errorf("failed to move bundle after signing: %w", err)
 	}
 
-	if bundleEnabled {
-		if err = os.Rename(tmpBundlePath, actualBundlePath); err != nil {
-			if writeErr := os.WriteFile(zarfYAMLPath, originalZarfYAMLBytes, helpers.ReadWriteUser); writeErr != nil {
-				l.Warn("failed to restore original zarf.yaml after bundle rename failure", "error", writeErr)
-			}
-			if rmErr := os.Remove(actualSignaturePath); rmErr != nil && !os.IsNotExist(rmErr) {
-				l.Warn("failed to remove signature file after bundle rename failure", "error", rmErr)
-			}
-			return fmt.Errorf("failed to move bundle after signing: %w", err)
+	// Remove any legacy zarf.yaml.sig left from a previous sign operation.
+	// The bundle supersedes it; leaving it in place would be misleading.
+	legacySignaturePath := filepath.Join(p.dirPath, Signature)
+	if rmErr := os.Remove(legacySignaturePath); rmErr != nil && !errors.Is(rmErr, fs.ErrNotExist) {
+		l.Warn("failed to remove legacy signature file", "path", legacySignaturePath, "error", rmErr)
+	}
+
+	if info, bundleErr := signing.ReadBundleInfo(actualBundlePath); bundleErr == nil {
+		if info.Identity != "" {
+			l.Info("keyless signed package", "identity", info.Identity, "issuer", info.Issuer)
 		}
-		if info, bundleErr := signing.ReadBundleInfo(actualBundlePath); bundleErr == nil {
-			if info.Identity != "" {
-				l.Info("keyless signed package", "identity", info.Identity, "issuer", info.Issuer)
-			}
-		} else {
-			l.Debug("could not read bundle info after signing", "error", bundleErr)
-		}
+	} else {
+		l.Debug("could not read bundle info after signing", "error", bundleErr)
 	}
 
 	if err := p.computeManifest(ctx); err != nil {
@@ -389,9 +368,10 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 	// Handle the case where the package is not signed
 	if !p.IsSigned() {
 		if hasVerificationMaterial {
+			// Providing material implies expecting a signature — always fatal.
 			return errors.New("verification material was provided but the package is not signed")
 		}
-		return errors.New("package is not signed - verification cannot be performed")
+		return fmt.Errorf("package is not signed - verification cannot be performed: %w", ErrNoVerificationMaterial)
 	}
 
 	// Check for bundle format signature (preferred). Parse it once for both method
@@ -405,17 +385,17 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 		switch bundleInfo.Method {
 		case signing.SigningMethodKeyless:
 			if !hasKeylessIdentity && !hasCert {
-				return errors.New("package was signed with keyless method; provide --certificate-identity + --certificate-oidc-issuer to verify")
+				return fmt.Errorf("package was signed with keyless method; provide --certificate-identity + --certificate-oidc-issuer to verify: %w", ErrNoVerificationMaterial)
 			}
 		case signing.SigningMethodKey:
 			if !hasKey && !hasCert {
-				return errors.New("package was signed with a key; provide --key to verify")
+				return fmt.Errorf("package was signed with a key; provide --key to verify: %w", ErrNoVerificationMaterial)
 			}
 		}
 	}
 
 	if !hasVerificationMaterial {
-		return errors.New("package is signed but no verification material was provided (--key, --certificate-identity + --certificate-oidc-issuer)")
+		return fmt.Errorf("package is signed but no verification material was provided (--key, --certificate-identity + --certificate-oidc-issuer): %w", ErrNoVerificationMaterial)
 	}
 
 	if hasBundleInfo {

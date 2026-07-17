@@ -1,0 +1,65 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    - gocritic
+    - godox
+    - gosec
+    - govet
+    - ineffassign
+    - staticcheck
+    - unconvert
+    - whitespace
+  settings:
+    gocritic:
+      disabled-checks:
+        - dupImport
+        - ifElseChain
+        - octalLiteral
+        - whyNoLint
+        - wrapperFunc
+        - exitAfterDefer
+        - hugeParam
+        - ptrToRefParam
+        - paramTypeCombine
+        - unnamedResult
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    misspell:
+      locale: US
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - errcheck
+          - gocritic
+          - gocyclo
+          - gosec
+        path: _test\.go
+      - linters:
+          - gocritic
+        text: 'unnecessaryDefer:'
+      - linters:
+          - gocritic
+        text: 'preferDecodeRune:'
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

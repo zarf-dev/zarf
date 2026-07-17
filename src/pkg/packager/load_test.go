@@ -82,15 +82,24 @@ func TestLoadPackage(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
 
-		// VerifyIfPossible should warn but continue on unsigned package
+		// VerifyIfPossible with no material should warn but continue on unsigned package
 		opt = LoadOptions{
 			VerificationStrategy: layout.VerifyIfPossible,
-			VerifyBlobOptions:    &verifyOpts,
 			Filter:               filters.Empty(),
 		}
 		pkgLayout, err = LoadPackage(ctx, tarPath, opt)
 		require.NoError(t, err)
 		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+
+		// VerifyIfPossible with a key against an unsigned package is always fatal
+		opt = LoadOptions{
+			VerificationStrategy: layout.VerifyIfPossible,
+			VerifyBlobOptions:    &verifyOpts,
+			Filter:               filters.Empty(),
+		}
+		_, err = LoadPackage(ctx, tarPath, opt)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
 
 		// VerifyAlways should fail on unsigned package
 		opt = LoadOptions{

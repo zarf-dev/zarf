@@ -30,7 +30,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
+	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 const (
@@ -153,9 +155,23 @@ func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	restMapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
+	discoveryCache := memory.NewMemCacheClient(discoveryClient)
+	restMapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryCache)
 	sw := watcher.NewDefaultStatusWatcher(dynamicClient, restMapper)
-	return sw, nil
+	return &invalidatingWatcher{StatusWatcher: sw, discoveryCache: discoveryCache}, nil
+}
+
+// invalidatingWatcher invalidates the discovery cache before each watch so that
+// CRDs registered since the previous watch resolve on the next mapping lookup.
+type invalidatingWatcher struct {
+	watcher.StatusWatcher
+	discoveryCache discovery.CachedDiscoveryInterface
+}
+
+// Watch the cluster for changes made to the specified objects.
+func (w *invalidatingWatcher) Watch(ctx context.Context, objs object.ObjMetadataSet, opts watcher.Options) <-chan event.Event {
+	w.discoveryCache.Invalidate()
+	return w.StatusWatcher.Watch(ctx, objs, opts)
 }
 
 // InitStateOptions tracks the user-defined options during cluster initialization.

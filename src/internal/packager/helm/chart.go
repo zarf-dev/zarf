@@ -55,8 +55,8 @@ func shouldForceConflicts(ssa string, lastRelease release.Accessor, forceConflic
 
 // InstallUpgradeOptions provide options for the Helm install/upgrade operation
 type InstallUpgradeOptions struct {
-	// AdoptExistingResources is true if the chart should adopt existing namespaces
-	AdoptExistingResources bool
+	// TakeOwnership is true if the chart should adopt existing resources and namespaces
+	TakeOwnership bool
 	// ForceConflicts causes Helm to take ownership of conflicting fields during Server-Side Apply
 	ForceConflicts bool
 	// VariableConfig is used to template the variables in the chart
@@ -100,7 +100,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
+	postRender, err := newRenderer(ctx, zarfChart, opts.TakeOwnership, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
 	if err != nil {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -220,7 +220,7 @@ func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, upda
 		opts.VariableConfig = template.GetZarfVariableConfig(ctx, opts.IsInteractive)
 	}
 
-	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
+	postRender, err := newRenderer(ctx, zarfChart, opts.TakeOwnership, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
 	if err != nil {
 		return fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -302,6 +302,9 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.ServerSideApply = zarfChart.GetServerSideApply() != "false"
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), nil, opts.ForceConflicts)
 
+	// Adopt pre-existing resources into the release instead of erroring on ownership conflicts.
+	client.TakeOwnership = opts.TakeOwnership
+
 	// Perform the loadedChart installation.
 	return client.RunWithContext(ctx, chart, chartValues)
 }
@@ -333,6 +336,9 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 		return nil, err
 	}
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), rel, opts.ForceConflicts)
+
+	// Adopt pre-existing resources into the release instead of erroring on ownership conflicts.
+	client.TakeOwnership = opts.TakeOwnership
 
 	client.SkipCRDs = true
 

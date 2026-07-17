@@ -1,0 +1,57 @@
+package matcher
+
+import (
+	"github.com/anchore/grype/grype/match"
+	"github.com/anchore/grype/grype/matcher/apk"
+	"github.com/anchore/grype/grype/matcher/bitnami"
+	"github.com/anchore/grype/grype/matcher/dotnet"
+	"github.com/anchore/grype/grype/matcher/dpkg"
+	"github.com/anchore/grype/grype/matcher/golang"
+	"github.com/anchore/grype/grype/matcher/hex"
+	"github.com/anchore/grype/grype/matcher/java"
+	"github.com/anchore/grype/grype/matcher/javascript"
+	"github.com/anchore/grype/grype/matcher/msrc"
+	"github.com/anchore/grype/grype/matcher/pacman"
+	"github.com/anchore/grype/grype/matcher/portage"
+	"github.com/anchore/grype/grype/matcher/python"
+	"github.com/anchore/grype/grype/matcher/rpm"
+	"github.com/anchore/grype/grype/matcher/ruby"
+	"github.com/anchore/grype/grype/matcher/rust"
+	"github.com/anchore/grype/grype/matcher/stock"
+)
+
+// Config contains values used by individual matcher structs for advanced configuration
+type Config struct {
+	Java       java.MatcherConfig
+	Ruby       ruby.MatcherConfig
+	Python     python.MatcherConfig
+	Dotnet     dotnet.MatcherConfig
+	Javascript javascript.MatcherConfig
+	Golang     golang.MatcherConfig
+	Rust       rust.MatcherConfig
+	Hex        hex.MatcherConfig
+	Stock      stock.MatcherConfig
+	Dpkg       dpkg.MatcherConfig
+	Rpm        rpm.MatcherConfig
+}
+
+func NewDefaultMatchers(mc Config) []match.Matcher {
+	return []match.Matcher{
+		dpkg.NewDpkgMatcher(mc.Dpkg),
+		ruby.NewRubyMatcher(mc.Ruby),
+		python.NewPythonMatcher(mc.Python),
+		dotnet.NewDotnetMatcher(mc.Dotnet),
+		rpm.NewRpmMatcher(mc.Rpm),
+		java.NewJavaMatcher(mc.Java),
+		javascript.NewJavascriptMatcher(mc.Javascript),
+		&apk.Matcher{},
+		golang.NewGolangMatcher(mc.Golang),
+		&msrc.Matcher{},
+		&portage.Matcher{},
+		rust.NewRustMatcher(mc.Rust),
+		hex.NewHexMatcher(mc.Hex),
+		stock.NewStockMatcher(mc.Stock),
+		&bitnami.Matcher{},
+		&pacman.Matcher{},
+	}
+}
