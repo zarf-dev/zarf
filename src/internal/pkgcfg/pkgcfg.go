@@ -71,15 +71,43 @@ func ParseAs[T any](ctx context.Context, b []byte, apiVersion string) (T, error)
 	return zero, fmt.Errorf("no %q document found in package definition", handler.version)
 }
 
+// SelectVersion returns the apiVersion Zarf will decode from a package definition that may contain
+// multiple documents; the highest-priority known version wins. Use it to pick the decode target
+// before calling ParseAs.
+func SelectVersion(ctx context.Context, b []byte) (string, error) {
+	docs, err := parseZarfYAMLDocs(b)
+	if err != nil {
+		return "", err
+	}
+	handler, _, err := selectHandler(ctx, docs)
+	if err != nil {
+		return "", err
+	}
+	return handler.version, nil
+}
+
 // ParseMultiDoc parses a multi doc zarf.yaml file, into the internal generic representation
 // Multi doc definitions may contain one document per apiVersion; the highest-priority known version wins.
 func ParseMultiDoc(ctx context.Context, b []byte) (types.Package, error) {
-	l := logger.From(ctx)
 	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
 		return types.Package{}, err
 	}
+	handler, node, err := selectHandler(ctx, docs)
+	if err != nil {
+		return types.Package{}, err
+	}
+	native, err := handler.decode(ctx, node)
+	if err != nil {
+		return types.Package{}, err
+	}
+	return handler.toGeneric(native), nil
+}
 
+// selectHandler picks the highest-priority known apiVersion among the documents, returning its
+// handler and body node. It errors on a duplicate apiVersion or when no known version is present.
+func selectHandler(ctx context.Context, docs []*ast.DocumentNode) (apiVersionHandler, ast.Node, error) {
+	l := logger.From(ctx)
 	var (
 		chosen     apiVersionHandler
 		chosenNode ast.Node
@@ -90,7 +118,7 @@ func ParseMultiDoc(ctx context.Context, b []byte) (types.Package, error) {
 	for i, doc := range docs {
 		version, err := apiVersionFromNode(doc.Body)
 		if err != nil {
-			return types.Package{}, fmt.Errorf("document %d: reading apiVersion: %w", i, err)
+			return apiVersionHandler{}, nil, fmt.Errorf("document %d: reading apiVersion: %w", i, err)
 		}
 		handler, known := handlerFor(version)
 		if !known {
@@ -98,7 +126,7 @@ func ParseMultiDoc(ctx context.Context, b []byte) (types.Package, error) {
 			continue
 		}
 		if seenVersions[handler.version] {
-			return types.Package{}, fmt.Errorf("duplicate apiVersion %q in package definition", handler.version)
+			return apiVersionHandler{}, nil, fmt.Errorf("duplicate apiVersion %q in package definition", handler.version)
 		}
 		seenVersions[handler.version] = true
 		if !found || handler.priority > chosen.priority {
@@ -109,13 +137,9 @@ func ParseMultiDoc(ctx context.Context, b []byte) (types.Package, error) {
 	}
 
 	if !found {
-		return types.Package{}, errors.New("no supported apiVersion found in package definition")
+		return apiVersionHandler{}, nil, errors.New("no supported apiVersion found in package definition")
 	}
-	native, err := chosen.decode(ctx, chosenNode)
-	if err != nil {
-		return types.Package{}, err
-	}
-	return chosen.toGeneric(native), nil
+	return chosen, chosenNode, nil
 }
 
 func decodeV1Alpha1(ctx context.Context, node ast.Node) (any, error) {
