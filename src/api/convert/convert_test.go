@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	"github.com/zarf-dev/zarf/src/internal/api/types"
 )
 
 func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
@@ -155,79 +154,6 @@ func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
 	require.Equal(t, []string{"sig.json"}, result.Build.ProvenanceFiles)
 }
 
-func TestV1Alpha1PkgToV1Beta1_VariablesAndConstantsShim(t *testing.T) {
-	t.Parallel()
-	pkg := v1alpha1.ZarfPackage{
-		Kind: v1alpha1.ZarfPackageConfig,
-		Variables: []v1alpha1.InteractiveVariable{
-			{
-				Variable: v1alpha1.Variable{
-					Name:       "MY_VAR",
-					Sensitive:  true,
-					AutoIndent: true,
-					Pattern:    "^[a-z]+$",
-					Type:       v1alpha1.FileVariableType,
-				},
-				Description: "A variable",
-				Default:     "default-val",
-				Prompt:      true,
-			},
-		},
-		Constants: []v1alpha1.Constant{
-			{
-				Name:        "MY_CONST",
-				Value:       "const-val",
-				Description: "A constant",
-				AutoIndent:  true,
-				Pattern:     ".*",
-			},
-		},
-	}
-
-	result := PackageV1alpha1ToV1beta1(pkg)
-
-	vars := result.GetDeprecatedVariables() //nolint:staticcheck // shim used only by the API conversion layer
-	require.Len(t, vars, 1)
-	require.Equal(t, "MY_VAR", vars[0].Name)
-	require.True(t, vars[0].Sensitive)
-	require.True(t, vars[0].AutoIndent)
-	require.Equal(t, "^[a-z]+$", vars[0].Pattern)
-	require.Equal(t, v1beta1.FileVariableType, vars[0].Type)
-	require.Equal(t, "A variable", vars[0].Description)
-	require.Equal(t, "default-val", vars[0].Default)
-	require.True(t, vars[0].Prompt)
-
-	consts := result.GetDeprecatedConstants() //nolint:staticcheck // shim used only by the API conversion layer
-	require.Len(t, consts, 1)
-	require.Equal(t, "MY_CONST", consts[0].Name)
-	require.Equal(t, "const-val", consts[0].Value)
-	require.Equal(t, "A constant", consts[0].Description)
-	require.True(t, consts[0].AutoIndent)
-}
-
-func TestV1Alpha1PkgToV1Beta1_YOLOAndGroupShim(t *testing.T) {
-	t.Parallel()
-	pkg := v1alpha1.ZarfPackage{
-		Kind: v1alpha1.ZarfPackageConfig,
-		Metadata: v1alpha1.ZarfMetadata{
-			Name: "yolo-pkg",
-			YOLO: true,
-		},
-		Components: []v1alpha1.ZarfComponent{
-			{
-				Name:            "comp",
-				DeprecatedGroup: "my-group",
-			},
-		},
-	}
-
-	result := PackageV1alpha1ToV1beta1(pkg)
-
-	require.True(t, result.Metadata.GetDeprecatedYOLO()) //nolint:staticcheck // shim used only by the API conversion layer
-	require.Len(t, result.Components, 1)
-	require.Equal(t, "my-group", result.Components[0].GetDeprecatedGroup()) //nolint:staticcheck // shim used only by the API conversion layer
-}
-
 func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 	t.Parallel()
 	required := true
@@ -254,9 +180,6 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 				StateAccess: []v1alpha1.StateAccessKey{
 					v1alpha1.StateAccessRegistryCredentials,
 					v1alpha1.StateAccessGitCredentials,
-				},
-				DataInjections: []v1alpha1.ZarfDataInjection{
-					{Source: "/data", Target: v1alpha1.ZarfContainerTarget{Namespace: "default", Selector: "app=test", Container: "main", Path: "/inject"}},
 				},
 				HealthChecks: []v1alpha1.NamespacedObjectKindReference{
 					{APIVersion: "apps/v1", Kind: "Deployment", Namespace: "default", Name: "my-deploy"},
@@ -302,11 +225,6 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 		v1beta1.StateAccessRegistryCredentials,
 		v1beta1.StateAccessGitCredentials,
 	}, comp.StateAccess)
-
-	// DataInjections should be preserved via the private shim.
-	di := comp.GetDeprecatedDataInjections() //nolint:staticcheck // shim used only by the API conversion layer
-	require.Len(t, di, 1)
-	require.Equal(t, "/data", di[0].Source)
 
 	// HealthChecks should become onDeploy.onSuccess wait actions with kind in <kind>.<version>.<group> format.
 	require.Len(t, comp.Actions.OnDeploy.OnSuccess, 2)
@@ -751,10 +669,6 @@ func TestV1Alpha1PkgToV1Beta1_Actions(t *testing.T) {
 								MaxRetries:      &maxRetries,
 								Dir:             &dir,
 								Description:     "run before",
-								SetVariables: []v1alpha1.Variable{
-									{Name: "OUT_VAR", Sensitive: true},
-								},
-								DeprecatedSetVariable: "OLD_VAR",
 							},
 						},
 						After: []v1alpha1.ZarfComponentAction{
@@ -796,12 +710,6 @@ func TestV1Alpha1PkgToV1Beta1_Actions(t *testing.T) {
 	require.NotNil(t, before.Retries)
 	require.Equal(t, int32(3), *before.Retries)
 	require.Equal(t, "run before", before.Description)
-	// SetVariables should include both the explicit one and the deprecated one, surfaced via the shim.
-	setVars := before.GetDeprecatedSetVariables() //nolint:staticcheck // shim used only by the API conversion layer
-	require.Len(t, setVars, 2)
-	require.Equal(t, "OUT_VAR", setVars[0].Name)
-	require.True(t, setVars[0].Sensitive)
-	require.Equal(t, "OLD_VAR", setVars[1].Name)
 
 	// OnSuccess should be the merge of v1alpha1 After + OnSuccess.
 	require.Len(t, actions.OnDeploy.OnSuccess, 2)
@@ -811,51 +719,6 @@ func TestV1Alpha1PkgToV1Beta1_Actions(t *testing.T) {
 	// OnFailure
 	require.Len(t, actions.OnDeploy.OnFailure, 1)
 	require.Equal(t, "echo failure", actions.OnDeploy.OnFailure[0].Cmd)
-}
-
-func TestV1Alpha1PkgToV1Beta1_AfterOnSuccessSetVariables(t *testing.T) {
-	t.Parallel()
-	pkg := v1alpha1.ZarfPackage{
-		Kind: v1alpha1.ZarfPackageConfig,
-		Components: []v1alpha1.ZarfComponent{
-			{
-				Name: "sv-comp",
-				Actions: v1alpha1.ZarfComponentActions{
-					OnDeploy: v1alpha1.ZarfComponentActionSet{
-						After: []v1alpha1.ZarfComponentAction{
-							{
-								Cmd:          "echo after",
-								SetVariables: []v1alpha1.Variable{{Name: "AFTER_VAR"}},
-							},
-						},
-						OnSuccess: []v1alpha1.ZarfComponentAction{
-							{
-								Cmd:          "echo success",
-								SetVariables: []v1alpha1.Variable{{Name: "SUCCESS_VAR", Sensitive: true}},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	result := PackageV1alpha1ToV1beta1(pkg)
-
-	require.Len(t, result.Components[0].Actions.OnDeploy.OnSuccess, 2)
-
-	afterAction := result.Components[0].Actions.OnDeploy.OnSuccess[0]
-	require.Equal(t, "echo after", afterAction.Cmd)
-	afterVars := afterAction.GetDeprecatedSetVariables() //nolint:staticcheck // shim used only by the API conversion layer
-	require.Len(t, afterVars, 1)
-	require.Equal(t, "AFTER_VAR", afterVars[0].Name)
-
-	successAction := result.Components[0].Actions.OnDeploy.OnSuccess[1]
-	require.Equal(t, "echo success", successAction.Cmd)
-	successVars := successAction.GetDeprecatedSetVariables() //nolint:staticcheck // shim used only by the API conversion layer
-	require.Len(t, successVars, 1)
-	require.Equal(t, "SUCCESS_VAR", successVars[0].Name)
-	require.True(t, successVars[0].Sensitive)
 }
 
 func TestV1Alpha1PkgToV1Beta1_Files(t *testing.T) {
@@ -912,31 +775,6 @@ func TestV1Alpha1PkgToV1Beta1_ValuesAndDocumentation(t *testing.T) {
 	require.Equal(t, []string{"values.yaml"}, result.Values.Files)
 	require.Equal(t, "values.schema.json", result.Values.Schema)
 	require.Equal(t, "# Hello", result.Documentation["readme"])
-}
-
-func TestV1Alpha1PkgToV1Beta1_DeprecatedVersionShim(t *testing.T) {
-	t.Parallel()
-	pkg := v1alpha1.ZarfPackage{
-		Kind: v1alpha1.ZarfPackageConfig,
-		Components: []v1alpha1.ZarfComponent{
-			{
-				Name: "chart-comp",
-				Charts: []v1alpha1.ZarfChart{
-					{
-						Name:    "my-chart",
-						URL:     "https://charts.example.com",
-						Version: "1.2.3",
-					},
-				},
-			},
-		},
-	}
-
-	result := PackageV1alpha1ToV1beta1(pkg)
-
-	require.Len(t, result.Components[0].Charts, 1)
-	chart := result.Components[0].Charts[0]
-	require.Equal(t, "1.2.3", chart.GetDeprecatedVersion()) //nolint:staticcheck // shim used only by the API conversion layer
 }
 
 // --- v1beta1 → v1alpha1 tests ---
@@ -1328,44 +1166,6 @@ func TestV1Beta1PkgToV1Alpha1_Actions(t *testing.T) {
 	require.Equal(t, "echo failure", actions.OnDeploy.OnFailure[0].Cmd)
 }
 
-func TestV1Beta1PkgToV1Alpha1_VariablesShim(t *testing.T) {
-	t.Parallel()
-	pkg := v1beta1.SetDeprecatedFromGeneric(types.Package{
-		Variables: []types.InteractiveVariable{
-			{
-				Variable: types.Variable{
-					Name:       "MY_VAR",
-					Sensitive:  true,
-					AutoIndent: true,
-					Pattern:    "^[a-z]+$",
-					Type:       types.FileVariableType,
-				},
-				Description: "A variable",
-				Default:     "default-val",
-				Prompt:      true,
-			},
-		},
-		Constants: []types.Constant{
-			{Name: "MY_CONST", Value: "const-val"},
-		},
-	}, v1beta1.Package{Kind: v1beta1.ZarfPackageConfig})
-
-	result := PackageV1beta1ToV1alpha1(pkg)
-
-	require.Len(t, result.Variables, 1)
-	v := result.Variables[0]
-	require.Equal(t, "MY_VAR", v.Name)
-	require.True(t, v.Sensitive)
-	require.Equal(t, v1alpha1.FileVariableType, v.Type)
-	require.Equal(t, "A variable", v.Description)
-	require.Equal(t, "default-val", v.Default)
-	require.True(t, v.Prompt)
-
-	require.Len(t, result.Constants, 1)
-	require.Equal(t, "MY_CONST", result.Constants[0].Name)
-	require.Equal(t, "const-val", result.Constants[0].Value)
-}
-
 func TestGitRepoRefConversion(t *testing.T) {
 	t.Parallel()
 
@@ -1644,7 +1444,10 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 		},
 	}
 
-	// Round-trip: v1alpha1 → v1beta1 → v1alpha1.
+	// Round-trip: v1alpha1 → v1beta1 → v1alpha1. Fields common to both schemas survive. Fields removed
+	// in v1beta1 do not: v1beta1 has nowhere to hold them, so they are dropped when rendering to it.
+	// Losslessness for removed fields is guaranteed only through the internal superset (see the
+	// v1alpha1 generic round-trip test), not through a public cross-version round-trip.
 	beta := PackageV1alpha1ToV1beta1(original)
 	result := PackageV1beta1ToV1alpha1(beta)
 
@@ -1656,14 +1459,16 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 	require.Equal(t, original.Metadata.Architecture, result.Metadata.Architecture)
 	require.Equal(t, original.Metadata.URL, result.Metadata.URL)
 	require.Equal(t, original.Metadata.Authors, result.Metadata.Authors)
-	require.True(t, result.Metadata.YOLO)
+	// YOLO is removed in v1beta1, so it is dropped on the round-trip.
+	require.False(t, result.Metadata.YOLO)
 
 	require.Len(t, result.Components, 1)
 	comp := result.Components[0]
 	require.Equal(t, "test-comp", comp.Name)
 	require.NotNil(t, comp.Required)
 	require.True(t, *comp.Required)
-	require.Equal(t, "my-group", comp.DeprecatedGroup)
+	// Group is removed in v1beta1, so it is dropped on the round-trip.
+	require.Empty(t, comp.DeprecatedGroup)
 	require.Equal(t, []string{"nginx:latest"}, comp.Images)
 
 	// Repos and StateAccess should survive the round-trip unchanged.
@@ -1691,13 +1496,8 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 	require.NotNil(t, comp.Actions.OnDeploy.Before[0].MaxTotalSeconds)
 	require.Equal(t, 30, *comp.Actions.OnDeploy.Before[0].MaxTotalSeconds)
 
-	// DataInjections should survive round-trip via private shim.
-	require.Len(t, comp.DataInjections, 1)
-	require.Equal(t, "/data", comp.DataInjections[0].Source)
-
-	// Constants and variables.
-	require.Len(t, result.Constants, 1)
-	require.Equal(t, "MY_CONST", result.Constants[0].Name)
-	require.Len(t, result.Variables, 1)
-	require.Equal(t, "MY_VAR", result.Variables[0].Name)
+	// DataInjections, constants, and variables are removed in v1beta1, so they are dropped on the round-trip.
+	require.Empty(t, comp.DataInjections)
+	require.Empty(t, result.Constants)
+	require.Empty(t, result.Variables)
 }

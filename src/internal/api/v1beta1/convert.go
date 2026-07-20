@@ -33,7 +33,6 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 			Annotations:              pkg.Metadata.Annotations,
 			PreventNamespaceOverride: pkg.Metadata.PreventNamespaceOverride,
 			AllowNamespaceOverride:   &allowNamespaceOverride,
-			YOLO:                     pkg.Metadata.GetDeprecatedYOLO(), //nolint:staticcheck // shim used only by the API conversion layer
 		},
 		Build: types.BuildData{
 			Hostname:                   pkg.Build.Hostname,
@@ -56,8 +55,6 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 			Schema: pkg.Values.Schema,
 		},
 		Documentation: pkg.Documentation,
-		Variables:     deprecatedVarsToGeneric(pkg.GetDeprecatedVariables()),      //nolint:staticcheck // shim used only by the API conversion layer
-		Constants:     deprecatedConstantsToGeneric(pkg.GetDeprecatedConstants()), //nolint:staticcheck // shim used only by the API conversion layer
 	}
 
 	for _, vr := range pkg.Build.VersionRequirements {
@@ -87,10 +84,8 @@ func componentToGeneric(c v1beta1.Component) types.Component {
 			Architecture: c.Selector.Architecture,
 			Flavor:       c.Selector.Flavor,
 		},
-		Import:         importToGeneric(c.Import),
-		Actions:        actionsToGeneric(c.Actions),
-		Group:          c.GetDeprecatedGroup(),                                             //nolint:staticcheck // shim used only by the API conversion layer
-		DataInjections: deprecatedDataInjectionsToGeneric(c.GetDeprecatedDataInjections()), //nolint:staticcheck // shim used only by the API conversion layer
+		Import:  importToGeneric(c.Import),
+		Actions: actionsToGeneric(c.Actions),
 	}
 
 	for _, m := range c.Manifests {
@@ -169,8 +164,6 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 		SkipSchemaValidation: ch.SkipSchemaValidation,
 		ServerSideApply:      string(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
-		Version:              ch.GetDeprecatedVersion(),                                 //nolint:staticcheck // shim used only by the API conversion layer
-		Variables:            deprecatedChartVarsToGeneric(ch.GetDeprecatedVariables()), //nolint:staticcheck // shim used only by the API conversion layer
 	}
 
 	if ch.HelmRepository != nil {
@@ -255,7 +248,6 @@ func actionToGeneric(a v1beta1.ComponentAction) types.ComponentAction {
 		Description:      a.Description,
 		Wait:             waitToGeneric(a.Wait),
 		EnableTemplating: a.EnableTemplating,
-		SetVariables:     deprecatedSetVarsToGeneric(a.GetDeprecatedSetVariables()), //nolint:staticcheck // shim used only by the API conversion layer
 	}
 
 	for _, sv := range a.SetValues {
@@ -329,8 +321,6 @@ func ConvertFromGeneric(g types.Package) v1beta1.Package {
 	for _, c := range g.Components {
 		pkg.Components = append(pkg.Components, componentFromGeneric(c, isInit, migrateFromV1alpha1))
 	}
-
-	pkg = v1beta1.SetDeprecatedFromGeneric(g, pkg)
 
 	return pkg
 }
@@ -846,59 +836,6 @@ func stateAccessFromGeneric(in []string) []v1beta1.StateAccessKey {
 	return out
 }
 
-func deprecatedVarToGeneric(v v1beta1.Variable) types.Variable {
-	return types.Variable{
-		Name:       v.Name,
-		Sensitive:  v.Sensitive,
-		AutoIndent: v.AutoIndent,
-		Pattern:    v.Pattern,
-		Type:       types.VariableType(v.Type),
-	}
-}
-
-func deprecatedVarsToGeneric(in []v1beta1.InteractiveVariable) []types.InteractiveVariable {
-	var out []types.InteractiveVariable
-	for _, v := range in {
-		out = append(out, types.InteractiveVariable{
-			Variable:    deprecatedVarToGeneric(v.Variable),
-			Description: v.Description,
-			Default:     v.Default,
-			Prompt:      v.Prompt,
-		})
-	}
-	return out
-}
-
-func deprecatedConstantsToGeneric(in []v1beta1.Constant) []types.Constant {
-	var out []types.Constant
-	for _, c := range in {
-		out = append(out, types.Constant{
-			Name:        c.Name,
-			Value:       c.Value,
-			Description: c.Description,
-			AutoIndent:  c.AutoIndent,
-			Pattern:     c.Pattern,
-		})
-	}
-	return out
-}
-
-func deprecatedChartVarsToGeneric(in []v1beta1.ZarfChartVariable) []types.ZarfChartVariable {
-	var out []types.ZarfChartVariable
-	for _, v := range in {
-		out = append(out, types.ZarfChartVariable{Name: v.Name, Description: v.Description, Path: v.Path})
-	}
-	return out
-}
-
-func deprecatedSetVarsToGeneric(in []v1beta1.Variable) []types.Variable {
-	var out []types.Variable
-	for _, v := range in {
-		out = append(out, deprecatedVarToGeneric(v))
-	}
-	return out
-}
-
 func gitRefToGeneric(ref v1beta1.GitRef) *types.GitRef {
 	if ref == (v1beta1.GitRef{}) {
 		return nil
@@ -953,21 +890,4 @@ func classifyGitRef(ref string) v1beta1.GitRef {
 		return v1beta1.GitRef{Branch: branch}
 	}
 	return v1beta1.GitRef{Tag: strings.TrimPrefix(parsed, "refs/tags/")}
-}
-
-func deprecatedDataInjectionsToGeneric(in []v1beta1.ZarfDataInjection) []types.ZarfDataInjection {
-	var out []types.ZarfDataInjection
-	for _, d := range in {
-		out = append(out, types.ZarfDataInjection{
-			Source: d.Source,
-			Target: types.ZarfContainerTarget{
-				Namespace: d.Target.Namespace,
-				Selector:  d.Target.Selector,
-				Container: d.Target.Container,
-				Path:      d.Target.Path,
-			},
-			Compress: d.Compress,
-		})
-	}
-	return out
 }
