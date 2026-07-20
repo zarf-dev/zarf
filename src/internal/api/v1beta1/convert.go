@@ -8,9 +8,11 @@ import (
 	"maps"
 	"strings"
 
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
+	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
@@ -943,25 +945,14 @@ func classifyGitRef(ref string) v1beta1.GitRef {
 	if ref == "" {
 		return v1beta1.GitRef{}
 	}
-	if isCommitSHA(ref) {
+	if plumbing.IsHash(ref) {
 		return v1beta1.GitRef{Commit: ref}
 	}
-	if strings.HasPrefix(ref, "refs/heads/") {
-		return v1beta1.GitRef{Branch: strings.TrimPrefix(ref, "refs/heads/")}
+	parsed := string(git.ParseRef(ref))
+	if branch, ok := strings.CutPrefix(parsed, "refs/heads/"); ok {
+		return v1beta1.GitRef{Branch: branch}
 	}
-	return v1beta1.GitRef{Tag: strings.TrimPrefix(ref, "refs/tags/")}
-}
-
-func isCommitSHA(s string) bool {
-	if len(s) != 40 {
-		return false
-	}
-	for _, c := range s {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-			return false
-		}
-	}
-	return true
+	return v1beta1.GitRef{Tag: strings.TrimPrefix(parsed, "refs/tags/")}
 }
 
 func deprecatedDataInjectionsToGeneric(in []v1beta1.ZarfDataInjection) []types.ZarfDataInjection {
