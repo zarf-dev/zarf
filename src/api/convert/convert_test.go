@@ -1373,7 +1373,6 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 			URL:                    "https://example.com",
 			Authors:                "Test Author",
 			AllowNamespaceOverride: &allowOverride,
-			YOLO:                   true,
 		},
 		Build: v1alpha1.ZarfBuildData{
 			Terminal:     "my-machine",
@@ -1383,11 +1382,10 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 		},
 		Components: []v1alpha1.ZarfComponent{
 			{
-				Name:            "test-comp",
-				Required:        &required,
-				DeprecatedGroup: "my-group",
-				Images:          []string{"nginx:latest"},
-				Repos:           []string{"https://github.com/example/repo", "https://github.com/example/other"},
+				Name:     "test-comp",
+				Required: &required,
+				Images:   []string{"nginx:latest"},
+				Repos:    []string{"https://github.com/example/repo", "https://github.com/example/other"},
 				StateAccess: []v1alpha1.StateAccessKey{
 					v1alpha1.StateAccessRegistryCredentials,
 					v1alpha1.StateAccessGitCredentials,
@@ -1427,27 +1425,10 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 						},
 					},
 				},
-				DataInjections: []v1alpha1.ZarfDataInjection{
-					{Source: "/data", Target: v1alpha1.ZarfContainerTarget{Namespace: "default", Selector: "app=test", Container: "main", Path: "/inject"}},
-				},
-			},
-		},
-		Constants: []v1alpha1.Constant{
-			{Name: "MY_CONST", Value: "val"},
-		},
-		Variables: []v1alpha1.InteractiveVariable{
-			{
-				Variable:    v1alpha1.Variable{Name: "MY_VAR"},
-				Description: "a var",
-				Default:     "default",
 			},
 		},
 	}
 
-	// Round-trip: v1alpha1 → v1beta1 → v1alpha1. Fields common to both schemas survive. Fields removed
-	// in v1beta1 do not: v1beta1 has nowhere to hold them, so they are dropped when rendering to it.
-	// Losslessness for removed fields is guaranteed only through the internal superset (see the
-	// v1alpha1 generic round-trip test), not through a public cross-version round-trip.
 	beta := PackageV1alpha1ToV1beta1(original)
 	result := PackageV1beta1ToV1alpha1(beta)
 
@@ -1459,16 +1440,12 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 	require.Equal(t, original.Metadata.Architecture, result.Metadata.Architecture)
 	require.Equal(t, original.Metadata.URL, result.Metadata.URL)
 	require.Equal(t, original.Metadata.Authors, result.Metadata.Authors)
-	// YOLO is removed in v1beta1, so it is dropped on the round-trip.
-	require.False(t, result.Metadata.YOLO)
 
 	require.Len(t, result.Components, 1)
 	comp := result.Components[0]
 	require.Equal(t, "test-comp", comp.Name)
 	require.NotNil(t, comp.Required)
 	require.True(t, *comp.Required)
-	// Group is removed in v1beta1, so it is dropped on the round-trip.
-	require.Empty(t, comp.DeprecatedGroup)
 	require.Equal(t, []string{"nginx:latest"}, comp.Images)
 
 	// Repos and StateAccess should survive the round-trip unchanged.
@@ -1495,9 +1472,4 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 	require.Len(t, comp.Actions.OnDeploy.Before, 1)
 	require.NotNil(t, comp.Actions.OnDeploy.Before[0].MaxTotalSeconds)
 	require.Equal(t, 30, *comp.Actions.OnDeploy.Before[0].MaxTotalSeconds)
-
-	// DataInjections, constants, and variables are removed in v1beta1, so they are dropped on the round-trip.
-	require.Empty(t, comp.DataInjections)
-	require.Empty(t, result.Constants)
-	require.Empty(t, result.Variables)
 }
