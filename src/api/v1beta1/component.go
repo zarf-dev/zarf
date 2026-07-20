@@ -12,25 +12,6 @@ type Component struct {
 	// Do not install this component unless explicitly requested. Defaults to false, meaning the component is required.
 	Optional      bool `json:"optional,omitempty"`
 	ComponentSpec `json:",inline"`
-
-	// *** REMOVED FIELDS ***
-	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
-	dataInjections []ZarfDataInjection
-	group          string
-}
-
-// GetDeprecatedDataInjections returns the v1alpha1 data injections carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (c Component) GetDeprecatedDataInjections() []ZarfDataInjection {
-	return c.dataInjections
-}
-
-// GetDeprecatedGroup returns the v1alpha1 group carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (c Component) GetDeprecatedGroup() string {
-	return c.group
 }
 
 // GetImages returns all image names specified in the component, including those from ImageArchives.
@@ -166,25 +147,6 @@ type Chart struct {
 	SkipSchemaValidation bool `json:"skipSchemaValidation,omitempty"`
 	// Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart. Defaults to "auto" when omitted.
 	ServerSideApply ServerSideApplyMode `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto,default=auto"`
-
-	// *** REMOVED FIELDS ***
-	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
-	version   string
-	variables []ZarfChartVariable
-}
-
-// GetDeprecatedVersion returns the deprecated top-level chart version, used as a v1alpha1 backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (c Chart) GetDeprecatedVersion() string {
-	return c.version
-}
-
-// GetDeprecatedVariables returns the v1alpha1 chart variables carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (c Chart) GetDeprecatedVariables() []ZarfChartVariable {
-	return c.variables
 }
 
 // ValuesFile is a values file merged into a Helm chart on deploy.
@@ -215,12 +177,24 @@ type HelmRepositorySource struct {
 	Version string `json:"version"`
 }
 
+// GitRef selects a single Git reference. Exactly one of Tag, Branch, or Commit must be set.
+type GitRef struct {
+	// The Git tag.
+	Tag string `json:"tag,omitempty"`
+	// The Git branch.
+	Branch string `json:"branch,omitempty"`
+	// The Git commit SHA.
+	Commit string `json:"commit,omitempty"`
+}
+
 // GitSource represents a Helm chart stored in a Git repository.
 type GitSource struct {
-	// The URL of the Git repository where the Helm chart is stored.
+	// The URL of the Git repository where the Helm chart is stored. Must not contain an @ref suffix.
 	URL string `json:"url"`
 	// The subdirectory containing the chart within a Git repo.
 	Path string `json:"path,omitempty"`
+	// The Git reference to check out. Required for charts.
+	Ref GitRef `json:"ref"`
 }
 
 // LocalSource represents a Helm chart stored locally.
@@ -229,12 +203,20 @@ type LocalSource struct {
 	Path string `json:"path"`
 }
 
+// OCIRef selects a single OCI reference. Exactly one of Tag or Digest must be set.
+type OCIRef struct {
+	// The OCI tag.
+	Tag string `json:"tag,omitempty"`
+	// The OCI digest, in the form sha256:<sha>.
+	Digest string `json:"digest,omitempty"`
+}
+
 // OCISource represents a Helm chart stored in an OCI registry.
 type OCISource struct {
 	// The URL of the OCI registry where the Helm chart is stored.
 	URL string `json:"url"`
-	// The version of the chart in the OCI registry.
-	Version string `json:"version"`
+	// The OCI reference to pull. Exactly one of Ref.Tag or Ref.Digest must be set.
+	Ref OCIRef `json:"ref"`
 }
 
 // File defines a file to deploy.
@@ -275,6 +257,8 @@ type ImageArchive struct {
 type Repository struct {
 	// The URL of the git repository.
 	URL string `json:"url"`
+	// The Git reference to mirror. Optional; when unset, all branches and tags are mirrored.
+	Ref *GitRef `json:"ref,omitempty"`
 }
 
 // StateAccessKey identifies a named group of sensitive state fields available in {{ .State }} Go templates.
@@ -351,17 +335,6 @@ type ComponentAction struct {
 	Wait *ComponentActionWait `json:"wait,omitempty"`
 	// EnableTemplating enables go-template processing on the cmd field.
 	EnableTemplating bool `json:"enableTemplating,omitempty"`
-
-	// *** REMOVED FIELDS ***
-	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
-	setVariables []Variable
-}
-
-// GetDeprecatedSetVariables returns the v1alpha1 setVariables carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (a ComponentAction) GetDeprecatedSetVariables() []Variable {
-	return a.setVariables
 }
 
 // SetValueType declares the expected input back from the cmd, allowing structured data to be parsed.

@@ -32,25 +32,6 @@ type Package struct {
 	Values Values `json:"values,omitempty"`
 	// Documentation files included in the package.
 	Documentation map[string]string `json:"documentation,omitempty"`
-
-	// *** REMOVED FIELDS ***
-	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
-	variables []InteractiveVariable
-	constants []Constant
-}
-
-// GetDeprecatedVariables returns the v1alpha1 variables carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (pkg Package) GetDeprecatedVariables() []InteractiveVariable {
-	return pkg.variables
-}
-
-// GetDeprecatedConstants returns the v1alpha1 constants carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (pkg Package) GetDeprecatedConstants() []Constant {
-	return pkg.constants
 }
 
 // HasImages returns true if one of the components contains an image.
@@ -89,16 +70,6 @@ type PackageMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// Prevent namespace overrides for this package.
 	PreventNamespaceOverride bool `json:"preventNamespaceOverride,omitempty"`
-	// *** REMOVED FIELDS ***
-	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
-	yolo bool
-}
-
-// GetDeprecatedYOLO returns the v1alpha1 YOLO field carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (m PackageMetadata) GetDeprecatedYOLO() bool {
-	return m.yolo
 }
 
 // BuildData is written during package create to track details of the created package.
