@@ -607,6 +607,75 @@ func TestV1Alpha1PkgToV1Beta1_WaitConditionBackfill(t *testing.T) {
 	require.Equal(t, "Ready", onSuccess[1].Wait.Cluster.Condition)
 }
 
+func TestV1Alpha1PkgToV1Beta1_HealthCheckKeepsKStatusCondition(t *testing.T) {
+	t.Parallel()
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name: "hc-comp",
+				HealthChecks: []v1alpha1.NamespacedObjectKindReference{
+					{APIVersion: "apps/v1", Kind: "Deployment", Namespace: "default", Name: "my-deploy"},
+				},
+			},
+		},
+	}
+
+	result := PackageV1alpha1ToV1beta1(pkg)
+
+	onSuccess := result.Components[0].Actions.OnDeploy.OnSuccess
+	require.Len(t, onSuccess, 1)
+	require.NotNil(t, onSuccess[0].Wait)
+	require.NotNil(t, onSuccess[0].Wait.Cluster)
+	require.Equal(t, "Deployment.v1.apps", onSuccess[0].Wait.Cluster.Kind)
+	// A v1alpha1 health check is a kstatus readiness check. v1beta1 treats an empty condition as
+	// kstatus readiness, so the derived wait must keep an empty condition rather than backfill "exists".
+	require.Empty(t, onSuccess[0].Wait.Cluster.Condition)
+}
+
+func TestV1Alpha1PkgToV1Beta1_HealthCheckAndWaitConditionInteraction(t *testing.T) {
+	t.Parallel()
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name: "mixed-comp",
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						OnSuccess: []v1alpha1.ZarfComponentAction{
+							{
+								Wait: &v1alpha1.ZarfComponentActionWait{
+									Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+										Kind: "Pod", Name: "my-pod", Namespace: "default",
+									},
+								},
+							},
+						},
+					},
+				},
+				HealthChecks: []v1alpha1.NamespacedObjectKindReference{
+					{APIVersion: "apps/v1", Kind: "Deployment", Namespace: "default", Name: "my-deploy"},
+				},
+			},
+		},
+	}
+
+	result := PackageV1alpha1ToV1beta1(pkg)
+
+	onSuccess := result.Components[0].Actions.OnDeploy.OnSuccess
+	require.Len(t, onSuccess, 2)
+
+	// The authored wait carried an empty condition, which meant "wait until exists" in v1alpha1; it is
+	// backfilled so v1beta1's kstatus-readiness default does not silently change its behavior.
+	require.Equal(t, "Pod", onSuccess[0].Wait.Cluster.Kind)
+	require.Equal(t, "exists", onSuccess[0].Wait.Cluster.Condition)
+
+	// The health-check-derived wait is appended after the backfill and keeps an empty condition, so it
+	// runs as a v1beta1 kstatus readiness check, matching v1alpha1 health-check semantics.
+	require.Equal(t, "Deployment.v1.apps", onSuccess[1].Wait.Cluster.Kind)
+	require.Empty(t, onSuccess[1].Wait.Cluster.Condition)
+}
+
 func TestV1Alpha1PkgToV1Beta1_ManifestSkipWait(t *testing.T) {
 	t.Parallel()
 	pkg := v1alpha1.ZarfPackage{
