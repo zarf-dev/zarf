@@ -292,7 +292,7 @@ func validateChart(chart v1alpha1.ZarfChart) error {
 		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartURLOrPath, chart.Name))
 	}
 
-	// Local charts don't need to be found ihn an upstream repo and their Chart.yaml already has a version
+	// Local charts don't need to be found in an upstream repo and their Chart.yaml already has a version
 	if chart.LocalPath == "" && chart.Version == "" {
 		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartVersion, chart.Name))
 	}
