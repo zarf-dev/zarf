@@ -657,6 +657,28 @@
       ],
       "type": "object"
     },
+    "GitRef": {
+      "additionalProperties": false,
+      "description": "GitRef selects a single Git reference.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "branch": {
+          "description": "The Git branch.",
+          "type": "string"
+        },
+        "commit": {
+          "description": "The Git commit SHA.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "The Git tag.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "GitSource": {
       "additionalProperties": false,
       "description": "GitSource represents a Helm chart stored in a Git repository.",
@@ -668,13 +690,18 @@
           "description": "The subdirectory containing the chart within a Git repo.",
           "type": "string"
         },
+        "ref": {
+          "$ref": "#/$defs/GitRef",
+          "description": "The Git reference to check out. Required for charts."
+        },
         "url": {
-          "description": "The URL of the Git repository where the Helm chart is stored.",
+          "description": "The URL of the Git repository where the Helm chart is stored. Must not contain an @ref suffix.",
           "type": "string"
         }
       },
       "required": [
-        "url"
+        "url",
+        "ref"
       ],
       "type": "object"
     },
@@ -848,6 +875,24 @@
       ],
       "type": "object"
     },
+    "OCIRef": {
+      "additionalProperties": false,
+      "description": "OCIRef selects a single OCI reference.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "digest": {
+          "description": "The OCI digest, in the form sha256:\u003csha\u003e.",
+          "type": "string"
+        },
+        "tag": {
+          "description": "The OCI tag.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "OCISource": {
       "additionalProperties": false,
       "description": "OCISource represents a Helm chart stored in an OCI registry.",
@@ -855,18 +900,18 @@
         "^x-": {}
       },
       "properties": {
+        "ref": {
+          "$ref": "#/$defs/OCIRef",
+          "description": "The OCI reference to pull. Exactly one of Ref.Tag or Ref.Digest must be set."
+        },
         "url": {
           "description": "The URL of the OCI registry where the Helm chart is stored.",
-          "type": "string"
-        },
-        "version": {
-          "description": "The version of the chart in the OCI registry.",
           "type": "string"
         }
       },
       "required": [
         "url",
-        "version"
+        "ref"
       ],
       "type": "object"
     },
@@ -877,6 +922,10 @@
         "^x-": {}
       },
       "properties": {
+        "ref": {
+          "$ref": "#/$defs/GitRef",
+          "description": "The Git reference to mirror. Optional; when unset, all branches and tags are mirrored."
+        },
         "url": {
           "description": "The URL of the git repository.",
           "type": "string"
