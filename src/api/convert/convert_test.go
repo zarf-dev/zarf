@@ -461,7 +461,7 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 			validate: func(t *testing.T, c v1beta1.Chart) {
 				require.NotNil(t, c.OCI)
 				require.Equal(t, "oci://ghcr.io/stefanprodan/charts/podinfo", c.OCI.URL)
-				require.Equal(t, "6.4.0", c.OCI.Version)
+				require.Equal(t, v1beta1.OCIRef{Tag: "6.4.0"}, c.OCI.Ref)
 			},
 		},
 		{
@@ -474,8 +474,9 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 			},
 			validate: func(t *testing.T, c v1beta1.Chart) {
 				require.NotNil(t, c.Git)
-				require.Equal(t, "https://github.com/example/repo@6.4.0", c.Git.URL)
+				require.Equal(t, "https://github.com/example/repo", c.Git.URL)
 				require.Equal(t, "charts/my-chart", c.Git.Path)
+				require.Equal(t, v1beta1.GitRef{Tag: "6.4.0"}, c.Git.Ref)
 			},
 		},
 		{
@@ -489,6 +490,7 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 				require.NotNil(t, c.Git)
 				require.Equal(t, "https://github.com/example/repo", c.Git.URL)
 				require.Equal(t, "charts/my-chart", c.Git.Path)
+				require.Equal(t, v1beta1.GitRef{}, c.Git.Ref)
 			},
 		},
 		{
@@ -501,9 +503,10 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 			},
 			validate: func(t *testing.T, c v1beta1.Chart) {
 				require.NotNil(t, c.Git)
-				// URL already has @ref, should not double-append version.
-				require.Equal(t, "https://github.com/example/repo.git@v2.0.0", c.Git.URL)
+				// Ref from URL wins; URL is stripped of @ref.
+				require.Equal(t, "https://github.com/example/repo.git", c.Git.URL)
 				require.Equal(t, "charts/my-chart", c.Git.Path)
+				require.Equal(t, v1beta1.GitRef{Tag: "v2.0.0"}, c.Git.Ref)
 			},
 		},
 		{
@@ -610,11 +613,10 @@ func TestChartGitSSHURLRoundTrip(t *testing.T) {
 
 	beta := PackageV1alpha1ToV1beta1(alpha)
 	require.NotNil(t, beta.Components[0].Charts[0].Git)
-	// The version is appended as a ref rather than lost to the ssh user's @.
-	require.Equal(t, "ssh://git@github.com/example/repo.git@1.2.3", beta.Components[0].Charts[0].Git.URL)
+	require.Equal(t, "ssh://git@github.com/example/repo.git", beta.Components[0].Charts[0].Git.URL)
+	require.Equal(t, v1beta1.GitRef{Tag: "1.2.3"}, beta.Components[0].Charts[0].Git.Ref)
 
 	back := PackageV1beta1ToV1alpha1(beta)
-	// The ssh user survives and the ref splits back into Version.
 	require.Equal(t, "ssh://git@github.com/example/repo.git", back.Components[0].Charts[0].URL)
 	require.Equal(t, "1.2.3", back.Components[0].Charts[0].Version)
 	require.Equal(t, "charts/my-chart", back.Components[0].Charts[0].GitPath)
@@ -1138,8 +1140,8 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 			chart: v1beta1.Chart{
 				Name: "podinfo",
 				OCI: &v1beta1.OCISource{
-					URL:     "oci://ghcr.io/stefanprodan/charts/podinfo",
-					Version: "6.4.0",
+					URL: "oci://ghcr.io/stefanprodan/charts/podinfo",
+					Ref: v1beta1.OCIRef{Tag: "6.4.0"},
 				},
 			},
 			validate: func(t *testing.T, c v1alpha1.ZarfChart) {
@@ -1148,12 +1150,13 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 			},
 		},
 		{
-			name: "git repo with version in url",
+			name: "git repo with tag ref",
 			chart: v1beta1.Chart{
 				Name: "my-chart",
 				Git: &v1beta1.GitSource{
-					URL:  "https://github.com/example/repo@6.4.0",
+					URL:  "https://github.com/example/repo",
 					Path: "charts/my-chart",
+					Ref:  v1beta1.GitRef{Tag: "6.4.0"},
 				},
 			},
 			validate: func(t *testing.T, c v1alpha1.ZarfChart) {
@@ -1163,7 +1166,7 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 			},
 		},
 		{
-			name: "git repo without version",
+			name: "git repo without ref",
 			chart: v1beta1.Chart{
 				Name: "my-chart",
 				Git: &v1beta1.GitSource{

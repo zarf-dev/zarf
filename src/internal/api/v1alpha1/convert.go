@@ -83,7 +83,7 @@ func componentToGeneric(c v1alpha1.ZarfComponent) types.Component {
 		DataInjections:    dataInjectionsToGeneric(c.DataInjections),
 		HealthChecks:      healthChecksToGeneric(c.HealthChecks),
 		DeprecatedScripts: scriptsToGeneric(c.DeprecatedScripts),
-		Repositories:      c.Repos,
+		Repositories:      reposToGeneric(c.Repos),
 		StateAccess:       stateAccessToGeneric(c.StateAccess),
 		Target: types.ComponentTarget{
 			OS:           c.Only.LocalOS,
@@ -471,7 +471,7 @@ func componentFromGeneric(c types.Component) v1alpha1.ZarfComponent {
 		DataInjections:    dataInjectionsFromGeneric(c.DataInjections),
 		HealthChecks:      healthChecksFromGeneric(c.HealthChecks),
 		DeprecatedScripts: scriptsFromGeneric(c.DeprecatedScripts),
-		Repos:             c.Repositories,
+		Repos:             reposFromGeneric(c.Repositories),
 		StateAccess:       stateAccessFromGeneric(c.StateAccess),
 		Only: v1alpha1.ZarfComponentOnlyTarget{
 			LocalOS: c.Target.OS,
@@ -607,22 +607,25 @@ func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 			}
 		case ch.OCI != nil && ch.OCI.URL != "":
 			ac.URL = ch.OCI.URL
-			if ac.Version == "" {
+			if ch.OCI.Ref != nil {
+				if ch.OCI.Ref.Tag != "" {
+					ac.Version = ch.OCI.Ref.Tag
+				} else if ch.OCI.Ref.Digest != "" {
+					ac.Version = ch.OCI.Ref.Digest
+				}
+			} else if ac.Version == "" {
 				ac.Version = ch.OCI.Version
 			}
 		case ch.Git != nil && ch.Git.URL != "":
-			// Split the ref off with the shared parser so an ssh://git@host style user is not
-			// mistaken for a ref; a URL it cannot parse is carried through unchanged.
-			gitURL, ref, err := transform.GitURLSplitRef(ch.Git.URL)
-			if err != nil {
-				gitURL, ref = ch.Git.URL, ""
+			// Use transform.GitURLSplitRef to strip any embedded @ref from the URL so the
+			// runtime's identical GitURLSplitRef call in PackageChart sees a clean URL and
+			// appends @Version exactly once.
+			if urlNoRef, _, err := transform.GitURLSplitRef(ch.Git.URL); err == nil {
+				ac.URL = urlNoRef
+			} else {
+				ac.URL = ch.Git.URL
 			}
-			ac.URL = gitURL
-			// A ref embedded in the URL is authoritative and overrides the carried chart version,
-			// matching v1alpha1 deploy which prefers the URL ref over Version.
-			if ref != "" {
-				ac.Version = ref
-			}
+			ac.Version = flattenGitRef(ch.Git.Ref)
 			ac.GitPath = ch.Git.Path
 		case ch.Local != nil && ch.Local.Path != "":
 			ac.LocalPath = ch.Local.Path
@@ -918,6 +921,52 @@ func healthChecksFromGeneric(in []types.NamespacedObjectKindReference) []v1alpha
 		})
 	}
 	return out
+}
+
+func reposToGeneric(repos []string) []types.Repository {
+	var out []types.Repository
+	for _, url := range repos {
+		out = append(out, types.Repository{URL: url})
+	}
+	return out
+}
+
+func reposFromGeneric(repos []types.Repository) []string {
+	var out []string
+	for _, r := range repos {
+		url := r.URL
+		if r.Ref != nil {
+			if refStr := flattenGitRef(r.Ref); refStr != "" {
+				// Strip any existing @ref from the URL before appending, matching the
+				// split/join that transform.GitURLSplitRef + git.Clone perform at runtime.
+				if urlNoRef, _, err := transform.GitURLSplitRef(url); err == nil {
+					url = urlNoRef
+				}
+				url += "@" + refStr
+			}
+		}
+		out = append(out, url)
+	}
+	return out
+}
+
+// flattenGitRef returns a ref string that, when passed through git.ParseRef at runtime,
+// produces the same plumbing.ReferenceName as the structured ref intended. Tags are returned
+// bare (ParseRef wraps them with refs/tags/), commits are returned as-is (ParseRef recognises
+// hashes), and branches are prefixed with refs/heads/ so ParseRef preserves them.
+func flattenGitRef(ref *types.GitRef) string {
+	if ref == nil {
+		return ""
+	}
+	switch {
+	case ref.Tag != "":
+		return ref.Tag
+	case ref.Commit != "":
+		return ref.Commit
+	case ref.Branch != "":
+		return "refs/heads/" + ref.Branch
+	}
+	return ""
 }
 
 func stateAccessToGeneric(in []v1alpha1.StateAccessKey) []string {

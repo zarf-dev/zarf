@@ -215,12 +215,24 @@ type HelmRepositorySource struct {
 	Version string `json:"version"`
 }
 
+// GitRef selects a single Git reference. Exactly one of Tag, Branch, or Commit must be set.
+type GitRef struct {
+	// The Git tag.
+	Tag string `json:"tag,omitempty"`
+	// The Git branch.
+	Branch string `json:"branch,omitempty"`
+	// The Git commit SHA.
+	Commit string `json:"commit,omitempty"`
+}
+
 // GitSource represents a Helm chart stored in a Git repository.
 type GitSource struct {
-	// The URL of the Git repository where the Helm chart is stored.
+	// The URL of the Git repository where the Helm chart is stored. Must not contain an @ref suffix.
 	URL string `json:"url"`
 	// The subdirectory containing the chart within a Git repo.
 	Path string `json:"path,omitempty"`
+	// The Git reference to check out. Required for charts.
+	Ref GitRef `json:"ref"`
 }
 
 // LocalSource represents a Helm chart stored locally.
@@ -229,12 +241,20 @@ type LocalSource struct {
 	Path string `json:"path"`
 }
 
+// OCIRef selects a single OCI reference. Exactly one of Tag or Digest must be set.
+type OCIRef struct {
+	// The OCI tag.
+	Tag string `json:"tag,omitempty"`
+	// The OCI digest, in the form sha256:<sha>.
+	Digest string `json:"digest,omitempty"`
+}
+
 // OCISource represents a Helm chart stored in an OCI registry.
 type OCISource struct {
 	// The URL of the OCI registry where the Helm chart is stored.
 	URL string `json:"url"`
-	// The version of the chart in the OCI registry.
-	Version string `json:"version"`
+	// The OCI reference to pull. Exactly one of Ref.Tag or Ref.Digest must be set.
+	Ref OCIRef `json:"ref"`
 }
 
 // File defines a file to deploy.
@@ -275,6 +295,8 @@ type ImageArchive struct {
 type Repository struct {
 	// The URL of the git repository.
 	URL string `json:"url"`
+	// The Git reference to mirror. Optional; when unset, all branches and tags are mirrored.
+	Ref *GitRef `json:"ref,omitempty"`
 }
 
 // StateAccessKey identifies a named group of sensitive state fields available in {{ .State }} Go templates.

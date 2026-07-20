@@ -96,7 +96,7 @@ type Component struct {
 	Files         []File
 	Images        []Image
 	ImageArchives []ImageArchive
-	Repositories  []string
+	Repositories  []Repository
 	StateAccess   []string
 	Actions       ComponentActions
 
@@ -218,10 +218,18 @@ type HelmRepositorySource struct {
 	Version string
 }
 
+// GitRef selects a single Git reference.
+type GitRef struct {
+	Tag    string
+	Branch string
+	Commit string
+}
+
 // GitSource represents a chart stored in a Git repository.
 type GitSource struct {
 	URL  string
 	Path string
+	Ref  *GitRef
 }
 
 // LocalSource represents a chart stored locally.
@@ -229,10 +237,23 @@ type LocalSource struct {
 	Path string
 }
 
+// OCIRef selects a single OCI reference.
+type OCIRef struct {
+	Tag    string
+	Digest string
+}
+
 // OCISource represents a chart stored in an OCI registry.
 type OCISource struct {
 	URL     string
 	Version string
+	Ref     *OCIRef
+}
+
+// Repository defines a git repository.
+type Repository struct {
+	URL string
+	Ref *GitRef
 }
 
 // File is the superset of file fields across API versions.

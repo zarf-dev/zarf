@@ -182,6 +182,7 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 		gc.Git = &types.GitSource{
 			URL:  ch.Git.URL,
 			Path: ch.Git.Path,
+			Ref:  gitRefToGeneric(ch.Git.Ref),
 		}
 	}
 	if ch.Local != nil {
@@ -189,8 +190,8 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 	}
 	if ch.OCI != nil {
 		gc.OCI = &types.OCISource{
-			URL:     ch.OCI.URL,
-			Version: ch.OCI.Version,
+			URL: ch.OCI.URL,
+			Ref: ociRefToGeneric(ch.OCI.Ref),
 		}
 	}
 
@@ -589,23 +590,33 @@ func chartFromGeneric(ch types.Chart) v1beta1.Chart {
 			Version: ch.HelmRepository.Version,
 		}
 	case ch.Git != nil:
-		bc.Git = &v1beta1.GitSource{URL: ch.Git.URL, Path: ch.Git.Path}
+		bc.Git = &v1beta1.GitSource{
+			URL:  ch.Git.URL,
+			Path: ch.Git.Path,
+			Ref:  gitRefFromGeneric(ch.Git.Ref),
+		}
 	case ch.Local != nil:
 		bc.Local = &v1beta1.LocalSource{Path: ch.Local.Path}
 	case ch.OCI != nil:
-		bc.OCI = &v1beta1.OCISource{URL: ch.OCI.URL, Version: ch.OCI.Version}
+		bc.OCI = &v1beta1.OCISource{
+			URL: ch.OCI.URL,
+			Ref: ociRefFromGeneric(ch.OCI.Ref),
+		}
 	case ch.URL != "":
 		switch {
 		case strings.HasPrefix(ch.URL, "oci://"):
-			bc.OCI = &v1beta1.OCISource{URL: ch.URL, Version: ch.Version}
+			bc.OCI = &v1beta1.OCISource{URL: ch.URL, Ref: v1beta1.OCIRef{Tag: ch.Version}}
 		case ch.GitPath != "" || isGitURL(ch.URL):
 			gitURL := ch.URL
-			// Append the chart version as a git ref only when the URL parses and does not already
-			// carry one.
-			if _, ref, err := transform.GitURLSplitRef(ch.URL); err == nil && ref == "" && ch.Version != "" {
-				gitURL += "@" + ch.Version
+			refStr := ""
+			if urlNoRef, r, err := transform.GitURLSplitRef(ch.URL); err == nil {
+				gitURL = urlNoRef
+				refStr = r
 			}
-			bc.Git = &v1beta1.GitSource{URL: gitURL, Path: ch.GitPath}
+			if refStr == "" && ch.Version != "" {
+				refStr = ch.Version
+			}
+			bc.Git = &v1beta1.GitSource{URL: gitURL, Path: ch.GitPath, Ref: classifyGitRef(refStr)}
 		default:
 			bc.HelmRepository = &v1beta1.HelmRepositorySource{
 				Name:    ch.RepoName,
@@ -778,18 +789,41 @@ func isGitURL(url string) bool {
 	return strings.HasSuffix(gitURLNoRef, ".git")
 }
 
-func repositoriesToGeneric(in []v1beta1.Repository) []string {
-	var out []string
+func repositoriesToGeneric(in []v1beta1.Repository) []types.Repository {
+	var out []types.Repository
 	for _, r := range in {
-		out = append(out, r.URL)
+		gr := types.Repository{URL: r.URL}
+		if r.Ref != nil {
+			gr.Ref = &types.GitRef{
+				Tag:    r.Ref.Tag,
+				Branch: r.Ref.Branch,
+				Commit: r.Ref.Commit,
+			}
+		}
+		out = append(out, gr)
 	}
 	return out
 }
 
-func repositoriesFromGeneric(in []string) []v1beta1.Repository {
+func repositoriesFromGeneric(in []types.Repository) []v1beta1.Repository {
 	var out []v1beta1.Repository
-	for _, url := range in {
-		out = append(out, v1beta1.Repository{URL: url})
+	for _, r := range in {
+		br := v1beta1.Repository{URL: r.URL}
+		if r.Ref != nil {
+			br.Ref = &v1beta1.GitRef{
+				Tag:    r.Ref.Tag,
+				Branch: r.Ref.Branch,
+				Commit: r.Ref.Commit,
+			}
+		} else {
+			// v1alpha1 repos embed the ref in the URL; split it for v1beta1.
+			if urlNoRef, refStr, err := transform.GitURLSplitRef(r.URL); err == nil && refStr != "" {
+				br.URL = urlNoRef
+				ref := classifyGitRef(refStr)
+				br.Ref = &ref
+			}
+		}
+		out = append(out, br)
 	}
 	return out
 }
@@ -861,6 +895,73 @@ func deprecatedSetVarsToGeneric(in []v1beta1.Variable) []types.Variable {
 		out = append(out, deprecatedVarToGeneric(v))
 	}
 	return out
+}
+
+func gitRefToGeneric(ref v1beta1.GitRef) *types.GitRef {
+	if ref == (v1beta1.GitRef{}) {
+		return nil
+	}
+	return &types.GitRef{
+		Tag:    ref.Tag,
+		Branch: ref.Branch,
+		Commit: ref.Commit,
+	}
+}
+
+func gitRefFromGeneric(ref *types.GitRef) v1beta1.GitRef {
+	if ref == nil {
+		return v1beta1.GitRef{}
+	}
+	return v1beta1.GitRef{
+		Tag:    ref.Tag,
+		Branch: ref.Branch,
+		Commit: ref.Commit,
+	}
+}
+
+func ociRefToGeneric(ref v1beta1.OCIRef) *types.OCIRef {
+	if ref == (v1beta1.OCIRef{}) {
+		return nil
+	}
+	return &types.OCIRef{
+		Tag:    ref.Tag,
+		Digest: ref.Digest,
+	}
+}
+
+func ociRefFromGeneric(ref *types.OCIRef) v1beta1.OCIRef {
+	if ref == nil {
+		return v1beta1.OCIRef{}
+	}
+	return v1beta1.OCIRef{
+		Tag:    ref.Tag,
+		Digest: ref.Digest,
+	}
+}
+
+func classifyGitRef(ref string) v1beta1.GitRef {
+	if ref == "" {
+		return v1beta1.GitRef{}
+	}
+	if isCommitSHA(ref) {
+		return v1beta1.GitRef{Commit: ref}
+	}
+	if strings.HasPrefix(ref, "refs/heads/") {
+		return v1beta1.GitRef{Branch: strings.TrimPrefix(ref, "refs/heads/")}
+	}
+	return v1beta1.GitRef{Tag: strings.TrimPrefix(ref, "refs/tags/")}
+}
+
+func isCommitSHA(s string) bool {
+	if len(s) != 40 {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 func deprecatedDataInjectionsToGeneric(in []v1beta1.ZarfDataInjection) []types.ZarfDataInjection {

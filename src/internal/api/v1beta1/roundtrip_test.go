@@ -91,7 +91,7 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 						},
 						{
 							Name: "git-chart",
-							Git:  &v1beta1.GitSource{URL: "https://github.com/example/repo.git", Path: "charts/app"},
+							Git:  &v1beta1.GitSource{URL: "https://github.com/example/repo.git", Path: "charts/app", Ref: v1beta1.GitRef{Tag: "1.0.0"}},
 						},
 						{
 							Name:  "local-chart",
@@ -99,7 +99,7 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 						},
 						{
 							Name: "oci-chart",
-							OCI:  &v1beta1.OCISource{URL: "oci://example.com/chart", Version: "2.0.0"},
+							OCI:  &v1beta1.OCISource{URL: "oci://example.com/chart", Ref: v1beta1.OCIRef{Tag: "2.0.0"}},
 						},
 					},
 					Manifests: []v1beta1.Manifest{
