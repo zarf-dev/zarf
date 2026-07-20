@@ -564,7 +564,6 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 			s.RegistryInfo.RegistryMode = state.RegistryModeExternal
 		}
 	}
-	state.DebugPrint(ctx, s)
 	return s, nil
 }
 
