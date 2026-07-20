@@ -1485,8 +1485,8 @@ func TestGitChartRefConversion(t *testing.T) {
 			gitPath:         "charts/app",
 			wantURL:         "https://github.com/example/repo.git",
 			wantRef:         v1beta1.GitRef{Branch: "release-1.54.x"},
-			wantBackURL:     "https://github.com/example/repo.git",
-			wantBackVersion: "refs/heads/release-1.54.x",
+			wantBackURL:     "https://github.com/example/repo.git@refs/heads/release-1.54.x",
+			wantBackVersion: "",
 		},
 		{
 			name:            "commit in version",
@@ -1513,8 +1513,8 @@ func TestGitChartRefConversion(t *testing.T) {
 			gitPath:         "chart",
 			wantURL:         "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test",
 			wantRef:         v1beta1.GitRef{Branch: "main"},
-			wantBackURL:     "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test",
-			wantBackVersion: "refs/heads/main",
+			wantBackURL:     "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test@refs/heads/main",
+			wantBackVersion: "",
 		},
 	}
 

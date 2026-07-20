@@ -5,6 +5,8 @@
 package v1alpha1
 
 import (
+	"strings"
+
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -617,15 +619,18 @@ func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 				ac.Version = ch.OCI.Version
 			}
 		case ch.Git != nil && ch.Git.URL != "":
-			// Use transform.GitURLSplitRef to strip any embedded @ref from the URL so the
-			// runtime's identical GitURLSplitRef call in PackageChart sees a clean URL and
-			// appends @Version exactly once.
+			gitURL := ch.Git.URL
 			if urlNoRef, _, err := transform.GitURLSplitRef(ch.Git.URL); err == nil {
-				ac.URL = urlNoRef
-			} else {
-				ac.URL = ch.Git.URL
+				gitURL = urlNoRef
 			}
-			ac.Version = flattenGitRef(ch.Git.Ref)
+			ref := flattenGitRef(ch.Git.Ref)
+			// If it starts with refs/ then it shouldn't be included in the version as this becomes a filepath
+			if strings.HasPrefix(ref, "refs/") {
+				ac.URL = gitURL + "@" + ref
+			} else {
+				ac.URL = gitURL
+				ac.Version = ref
+			}
 			ac.GitPath = ch.Git.Path
 		case ch.Local != nil && ch.Local.Path != "":
 			ac.LocalPath = ch.Local.Path
@@ -951,9 +956,7 @@ func reposFromGeneric(repos []types.Repository) []string {
 }
 
 // flattenGitRef returns a ref string that, when passed through git.ParseRef at runtime,
-// produces the same plumbing.ReferenceName as the structured ref intended. Tags are returned
-// bare (ParseRef wraps them with refs/tags/), commits are returned as-is (ParseRef recognises
-// hashes), and branches are prefixed with refs/heads/ so ParseRef preserves them.
+// produces the same plumbing.ReferenceName as the structured ref intended
 func flattenGitRef(ref *types.GitRef) string {
 	if ref == nil {
 		return ""
