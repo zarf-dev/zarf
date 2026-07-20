@@ -1366,6 +1366,193 @@ func TestV1Beta1PkgToV1Alpha1_VariablesShim(t *testing.T) {
 	require.Equal(t, "const-val", result.Constants[0].Value)
 }
 
+func TestGitRepoRefConversion(t *testing.T) {
+	t.Parallel()
+
+	commitSHA := "524980951ff16e19dc25232e9aea8fd693989ba6"
+
+	tests := []struct {
+		name        string
+		v1alpha1URL string
+		wantURL     string
+		wantRef     *v1beta1.GitRef
+	}{
+		{
+			name:        "tag",
+			v1alpha1URL: "https://github.com/defenseunicorns/zarf.git@v0.16.0",
+			wantURL:     "https://github.com/defenseunicorns/zarf.git",
+			wantRef:     &v1beta1.GitRef{Tag: "v0.16.0"},
+		},
+		{
+			name:        "branch",
+			v1alpha1URL: "https://github.com/DoD-Platform-One/big-bang.git@refs/heads/release-1.54.x",
+			wantURL:     "https://github.com/DoD-Platform-One/big-bang.git",
+			wantRef:     &v1beta1.GitRef{Branch: "release-1.54.x"},
+		},
+		{
+			name:        "commit",
+			v1alpha1URL: "https://github.com/defenseunicorns/zarf.git@" + commitSHA,
+			wantURL:     "https://github.com/defenseunicorns/zarf.git",
+			wantRef:     &v1beta1.GitRef{Commit: commitSHA},
+		},
+		{
+			name:        "no ref",
+			v1alpha1URL: "https://github.com/defenseunicorns/zarf.git",
+			wantURL:     "https://github.com/defenseunicorns/zarf.git",
+			wantRef:     nil,
+		},
+		{
+			name:        "azure devops tag",
+			v1alpha1URL: "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test@v1.0.0",
+			wantURL:     "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test",
+			wantRef:     &v1beta1.GitRef{Tag: "v1.0.0"},
+		},
+		{
+			name:        "azure devops commit",
+			v1alpha1URL: "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test@" + commitSHA,
+			wantURL:     "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test",
+			wantRef:     &v1beta1.GitRef{Commit: commitSHA},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			alpha := v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{{
+					Name:  "comp",
+					Repos: []string{tc.v1alpha1URL},
+				}},
+			}
+
+			beta := PackageV1alpha1ToV1beta1(alpha)
+			require.Len(t, beta.Components[0].Repositories, 1)
+			got := beta.Components[0].Repositories[0]
+			require.Equal(t, tc.wantURL, got.URL)
+			if tc.wantRef == nil {
+				require.Nil(t, got.Ref)
+			} else {
+				require.NotNil(t, got.Ref)
+				require.Equal(t, *tc.wantRef, *got.Ref)
+			}
+
+			back := PackageV1beta1ToV1alpha1(beta)
+			require.Len(t, back.Components[0].Repos, 1)
+			require.Equal(t, tc.v1alpha1URL, back.Components[0].Repos[0])
+		})
+	}
+}
+
+func TestGitChartRefConversion(t *testing.T) {
+	t.Parallel()
+
+	commitSHA := "524980951ff16e19dc25232e9aea8fd693989ba6"
+
+	tests := []struct {
+		name            string
+		url             string
+		version         string
+		gitPath         string
+		wantURL         string
+		wantRef         v1beta1.GitRef
+		wantBackURL     string
+		wantBackVersion string
+	}{
+		{
+			name:            "tag in version",
+			url:             "https://github.com/example/repo.git",
+			version:         "v1.0.0",
+			gitPath:         "charts/app",
+			wantURL:         "https://github.com/example/repo.git",
+			wantRef:         v1beta1.GitRef{Tag: "v1.0.0"},
+			wantBackURL:     "https://github.com/example/repo.git",
+			wantBackVersion: "v1.0.0",
+		},
+		{
+			name:            "tag in url",
+			url:             "https://github.com/example/repo.git@v1.0.0",
+			gitPath:         "charts/app",
+			wantURL:         "https://github.com/example/repo.git",
+			wantRef:         v1beta1.GitRef{Tag: "v1.0.0"},
+			wantBackURL:     "https://github.com/example/repo.git",
+			wantBackVersion: "v1.0.0",
+		},
+		{
+			name:            "branch in url",
+			url:             "https://github.com/example/repo.git@refs/heads/release-1.54.x",
+			gitPath:         "charts/app",
+			wantURL:         "https://github.com/example/repo.git",
+			wantRef:         v1beta1.GitRef{Branch: "release-1.54.x"},
+			wantBackURL:     "https://github.com/example/repo.git",
+			wantBackVersion: "refs/heads/release-1.54.x",
+		},
+		{
+			name:            "commit in version",
+			url:             "https://github.com/example/repo.git",
+			version:         commitSHA,
+			gitPath:         "charts/app",
+			wantURL:         "https://github.com/example/repo.git",
+			wantRef:         v1beta1.GitRef{Commit: commitSHA},
+			wantBackURL:     "https://github.com/example/repo.git",
+			wantBackVersion: commitSHA,
+		},
+		{
+			name:            "azure devops tag in url",
+			url:             "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test@v1.0.0",
+			gitPath:         "chart",
+			wantURL:         "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test",
+			wantRef:         v1beta1.GitRef{Tag: "v1.0.0"},
+			wantBackURL:     "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test",
+			wantBackVersion: "v1.0.0",
+		},
+		{
+			name:            "azure devops branch in url",
+			url:             "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test@refs/heads/main",
+			gitPath:         "chart",
+			wantURL:         "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test",
+			wantRef:         v1beta1.GitRef{Branch: "main"},
+			wantBackURL:     "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test",
+			wantBackVersion: "refs/heads/main",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			alpha := v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{{
+					Name: "comp",
+					Charts: []v1alpha1.ZarfChart{{
+						Name:    "my-chart",
+						URL:     tc.url,
+						Version: tc.version,
+						GitPath: tc.gitPath,
+					}},
+				}},
+			}
+
+			beta := PackageV1alpha1ToV1beta1(alpha)
+			require.Len(t, beta.Components[0].Charts, 1)
+			chart := beta.Components[0].Charts[0]
+			require.NotNil(t, chart.Git)
+			require.Equal(t, tc.wantURL, chart.Git.URL)
+			require.Equal(t, tc.wantRef, chart.Git.Ref)
+			require.Equal(t, tc.gitPath, chart.Git.Path)
+
+			back := PackageV1beta1ToV1alpha1(beta)
+			require.Len(t, back.Components[0].Charts, 1)
+			backChart := back.Components[0].Charts[0]
+			require.Equal(t, tc.wantBackURL, backChart.URL)
+			require.Equal(t, tc.wantBackVersion, backChart.Version)
+			require.Equal(t, tc.gitPath, backChart.GitPath)
+		})
+	}
+}
+
 func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 	t.Parallel()
 	required := true
