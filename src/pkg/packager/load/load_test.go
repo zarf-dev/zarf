@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -160,12 +161,14 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
-	t.Run("loads, validates, and converts down to v1alpha1", func(t *testing.T) {
+	t.Run("loads and validates, exposing both a v1alpha1 and a faithful v1beta1 view", func(t *testing.T) {
 		t.Parallel()
 		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-package"), DefinitionOptions{})
 		require.NoError(t, err)
+		require.Equal(t, v1beta1.APIVersion, defined.OriginalAPIVersion())
 
-		pkg := defined.Pkg
+		pkg, err := defined.AsV1alpha1()
+		require.NoError(t, err)
 		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
 		require.Equal(t, "beta-package", pkg.Metadata.Name)
 		require.NotEmpty(t, pkg.Metadata.Architecture)
@@ -174,6 +177,15 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		require.Equal(t, []string{"nginx:1.27.0"}, pkg.Components[0].Images)
 		require.Equal(t, []string{"https://github.com/zarf-dev/zarf.git"}, pkg.Components[0].Repos)
 		require.Empty(t, defined.ImportedSchemas)
+
+		// The v1beta1 view preserves fields with no v1alpha1 representation — here an image's source.
+		// Collapsing to v1alpha1 on load (the previous approach) dropped these.
+		betaPkg, err := defined.AsV1beta1()
+		require.NoError(t, err)
+		require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
+		require.Len(t, betaPkg.Components, 1)
+		require.Equal(t, "nginx:1.27.0", betaPkg.Components[0].Images[0].Name)
+		require.Equal(t, "daemon", betaPkg.Components[0].Images[0].Source)
 	})
 
 	t.Run("resolves a local component config import", func(t *testing.T) {
@@ -181,7 +193,8 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-with-import"), DefinitionOptions{})
 		require.NoError(t, err)
 
-		pkg := defined.Pkg
+		pkg, err := defined.AsV1alpha1()
+		require.NoError(t, err)
 		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
 		require.Len(t, pkg.Components, 1)
 		require.Equal(t, "imported", pkg.Components[0].Name)

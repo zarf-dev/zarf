@@ -9,5 +9,6 @@ components:
     description: a component with an image and a repository
     images:
       - name: nginx:1.27.0
+        source: daemon
     repositories:
       - url: https://github.com/zarf-dev/zarf.git

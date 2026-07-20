@@ -67,6 +67,10 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	if err != nil {
 		return "", err
 	}
+	pkg, err := defined.AsV1alpha1()
+	if err != nil {
+		return "", err
+	}
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
@@ -76,7 +80,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	var differentialPkg v1alpha1.ZarfPackage
 	if opts.DifferentialPackagePath != "" {
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
-			Architecture:   defined.Pkg.Metadata.Architecture,
+			Architecture:   pkg.Metadata.Architecture,
 			RemoteOptions:  opts.RemoteOptions,
 			LayerTypes:     []zoci.LayerType{zoci.MetadataLayers},
 			OCIConcurrency: opts.OCIConcurrency,
@@ -103,7 +107,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,
 	}
-	pkgLayout, err := layout.AssemblePackage(ctx, defined.Pkg, pkgPath.BaseDir, defined.ImportedSchemas, assembleOpt)
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, pkgPath.BaseDir, defined.ImportedSchemas, assembleOpt)
 	if err != nil {
 		return "", err
 	}
