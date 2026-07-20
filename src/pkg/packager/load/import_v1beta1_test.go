@@ -28,7 +28,7 @@ func loadV1Beta1Package(t *testing.T, dir string) v1beta1.Package {
 	ctx := testutil.TestContext(t)
 	b, err := os.ReadFile(filepath.Join(dir, layout.ZarfYAML))
 	require.NoError(t, err)
-	pkg, err := pkgcfg.ParseAs[v1beta1.Package](ctx, b, v1beta1.APIVersion)
+	pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
 	require.NoError(t, err)
 	return pkg
 }

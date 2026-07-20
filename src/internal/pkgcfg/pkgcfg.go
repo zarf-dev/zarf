@@ -20,31 +20,67 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// apiVersionHandler pairs a supported apiVersion with its decoder. decode returns the package
-// in its native type (e.g. v1alpha1.ZarfPackage or v1beta1.Package) with any version-specific
-// migrations applied;
-type apiVersionHandler struct {
+// Decoder decodes one apiVersion's document into its native package type T and converts that into
+// the internal generic representation
+type Decoder[T any] struct {
 	version   string
 	priority  int
-	decode    func(ctx context.Context, node ast.Node) (any, error)
-	toGeneric func(pkg any) types.Package
+	decode    func(ctx context.Context, node ast.Node) (T, error)
+	toGeneric func(T) types.Package
 }
 
-// knownAPIVersions lists every apiVersion this Zarf version can decode. To add a
-// new version, append an entry with a higher priority than any existing one
-var knownAPIVersions = []apiVersionHandler{
-	{version: v1alpha1.APIVersion, priority: 1, decode: decodeV1Alpha1, toGeneric: v1alpha1ToGeneric},
-	{version: v1beta1.APIVersion, priority: 2, decode: decodeV1Beta1, toGeneric: v1beta1ToGeneric},
+// V1Alpha1 decodes the v1alpha1 ZarfPackage schema.
+var V1Alpha1 = Decoder[v1alpha1.ZarfPackage]{
+	version:   v1alpha1.APIVersion,
+	priority:  1,
+	decode:    decodeV1Alpha1,
+	toGeneric: internalv1alpha1.ConvertToGeneric,
 }
 
-// ParseAs returns the document for the given apiVersion from a package definition that may
-// contain multiple documents, decoded into its native type T.
-func ParseAs[T any](ctx context.Context, b []byte, apiVersion string) (T, error) {
-	var zero T
-	handler, known := handlerFor(apiVersion)
-	if !known {
-		return zero, fmt.Errorf("unsupported apiVersion %q", apiVersion)
+// V1Beta1 decodes the v1beta1 Package schema.
+var V1Beta1 = Decoder[v1beta1.Package]{
+	version:   v1beta1.APIVersion,
+	priority:  2,
+	decode:    decodeV1Beta1,
+	toGeneric: internalv1beta1.ConvertToGeneric,
+}
+
+// knownDecoders lists every apiVersion this Zarf version can decode, type-erased for version
+// selection. To add a new version, declare its Decoder above and append it here with a higher
+// priority than any existing one.
+var knownDecoders = []genericDecoder{
+	V1Alpha1.toGenericEncoder(),
+	V1Beta1.toGenericEncoder(),
+}
+
+// genericDecoder is the type-erased view of a Decoder, decoding straight to the internal generic
+// representation. It is used for version selection and for ParseMultiDoc, which do not need the
+// native type.
+type genericDecoder struct {
+	version  string
+	priority int
+	decode   func(ctx context.Context, node ast.Node) (types.Package, error)
+}
+
+// erase drops the native type parameter, folding decode and toGeneric into a single node→generic step.
+func (d Decoder[T]) toGenericEncoder() genericDecoder {
+	return genericDecoder{
+		version:  d.version,
+		priority: d.priority,
+		decode: func(ctx context.Context, node ast.Node) (types.Package, error) {
+			pkg, err := d.decode(ctx, node)
+			if err != nil {
+				return types.Package{}, err
+			}
+			return d.toGeneric(pkg), nil
+		},
 	}
+}
+
+// ParseAs returns the document matching the decoder's apiVersion from a package definition that may
+// contain multiple documents, decoded into its native type.
+func ParseAs[T any](ctx context.Context, b []byte, d Decoder[T]) (T, error) {
+	var zero T
 	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
 		return zero, err
@@ -54,21 +90,12 @@ func ParseAs[T any](ctx context.Context, b []byte, apiVersion string) (T, error)
 		if err != nil {
 			return zero, fmt.Errorf("document %d: reading apiVersion: %w", i, err)
 		}
-		docHandler, docKnown := handlerFor(version)
-		if !docKnown || docHandler.version != handler.version {
+		if normalizeAPIVersion(version) != d.version {
 			continue
 		}
-		native, err := handler.decode(ctx, doc.Body)
-		if err != nil {
-			return zero, err
-		}
-		out, ok := native.(T)
-		if !ok {
-			return zero, fmt.Errorf("decoded %q package does not match the requested type", handler.version)
-		}
-		return out, nil
+		return d.decode(ctx, doc.Body)
 	}
-	return zero, fmt.Errorf("no %q document found in package definition", handler.version)
+	return zero, fmt.Errorf("no %q document found in package definition", d.version)
 }
 
 // SelectVersion returns the apiVersion Zarf will decode from a package definition that may contain
@@ -79,11 +106,11 @@ func SelectVersion(ctx context.Context, b []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	handler, _, err := selectHandler(ctx, docs)
+	d, _, err := selectDecoder(ctx, docs)
 	if err != nil {
 		return "", err
 	}
-	return handler.version, nil
+	return d.version, nil
 }
 
 // ParseMultiDoc parses a multi doc zarf.yaml file, into the internal generic representation
@@ -93,23 +120,40 @@ func ParseMultiDoc(ctx context.Context, b []byte) (types.Package, error) {
 	if err != nil {
 		return types.Package{}, err
 	}
-	handler, node, err := selectHandler(ctx, docs)
+	d, node, err := selectDecoder(ctx, docs)
 	if err != nil {
 		return types.Package{}, err
 	}
-	native, err := handler.decode(ctx, node)
-	if err != nil {
-		return types.Package{}, err
-	}
-	return handler.toGeneric(native), nil
+	return d.decode(ctx, node)
 }
 
-// selectHandler picks the highest-priority known apiVersion among the documents, returning its
-// handler and body node. It errors on a duplicate apiVersion or when no known version is present.
-func selectHandler(ctx context.Context, docs []*ast.DocumentNode) (apiVersionHandler, ast.Node, error) {
+func decodeV1Alpha1(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, error) {
+	var pkg v1alpha1.ZarfPackage
+	if err := goyaml.NodeToValue(node, &pkg); err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	pkg = internalv1alpha1.ApplyMigrations(ctx, pkg)
+	pkg.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
+	return pkg, nil
+}
+
+// decodeV1Beta1 decodes a v1beta1 document into its native type. v1beta1 has no v1alpha1-style
+// migrations.
+func decodeV1Beta1(_ context.Context, node ast.Node) (v1beta1.Package, error) {
+	var pkg v1beta1.Package
+	if err := goyaml.NodeToValue(node, &pkg); err != nil {
+		return v1beta1.Package{}, err
+	}
+	pkg.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
+	return pkg, nil
+}
+
+// selectDecoder picks the highest-priority known apiVersion among the documents, returning its
+// decoder and body node. It errors on a duplicate apiVersion or when no known version is present.
+func selectDecoder(ctx context.Context, docs []*ast.DocumentNode) (genericDecoder, ast.Node, error) {
 	l := logger.From(ctx)
 	var (
-		chosen     apiVersionHandler
+		chosen     genericDecoder
 		chosenNode ast.Node
 		found      bool
 	)
@@ -118,69 +162,46 @@ func selectHandler(ctx context.Context, docs []*ast.DocumentNode) (apiVersionHan
 	for i, doc := range docs {
 		version, err := apiVersionFromNode(doc.Body)
 		if err != nil {
-			return apiVersionHandler{}, nil, fmt.Errorf("document %d: reading apiVersion: %w", i, err)
+			return genericDecoder{}, nil, fmt.Errorf("document %d: reading apiVersion: %w", i, err)
 		}
-		handler, known := handlerFor(version)
+		d, known := decoderFor(version)
 		if !known {
 			l.Debug("found unsupported API version during parse", "apiVersion", version)
 			continue
 		}
-		if seenVersions[handler.version] {
-			return apiVersionHandler{}, nil, fmt.Errorf("duplicate apiVersion %q in package definition", handler.version)
+		if seenVersions[d.version] {
+			return genericDecoder{}, nil, fmt.Errorf("duplicate apiVersion %q in package definition", d.version)
 		}
-		seenVersions[handler.version] = true
-		if !found || handler.priority > chosen.priority {
-			chosen = handler
+		seenVersions[d.version] = true
+		if !found || d.priority > chosen.priority {
+			chosen = d
 			chosenNode = doc.Body
 			found = true
 		}
 	}
 
 	if !found {
-		return apiVersionHandler{}, nil, errors.New("no supported apiVersion found in package definition")
+		return genericDecoder{}, nil, errors.New("no supported apiVersion found in package definition")
 	}
 	return chosen, chosenNode, nil
 }
 
-func decodeV1Alpha1(ctx context.Context, node ast.Node) (any, error) {
-	var pkg v1alpha1.ZarfPackage
-	if err := goyaml.NodeToValue(node, &pkg); err != nil {
-		return nil, err
-	}
-	pkg = internalv1alpha1.ApplyMigrations(ctx, pkg)
-	pkg.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
-	return pkg, nil
-}
-
-func v1alpha1ToGeneric(pkg any) types.Package {
-	return internalv1alpha1.ConvertToGeneric(pkg.(v1alpha1.ZarfPackage)) //nolint:errcheck
-}
-
-// decodeV1Beta1 decodes a v1beta1 document into its native type. v1beta1 has no v1alpha1-style
-// migrations; the conversion to the internal generic representation happens in v1beta1ToGeneric.
-func decodeV1Beta1(_ context.Context, node ast.Node) (any, error) {
-	var pkg v1beta1.Package
-	if err := goyaml.NodeToValue(node, &pkg); err != nil {
-		return nil, err
-	}
-	pkg.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
-	return pkg, nil
-}
-
-func v1beta1ToGeneric(pkg any) types.Package {
-	return internalv1beta1.ConvertToGeneric(pkg.(v1beta1.Package)) //nolint:errcheck
-}
-
-func handlerFor(version string) (apiVersionHandler, bool) {
-	if version == "" {
-		version = v1alpha1.APIVersion
-	}
-	for _, h := range knownAPIVersions {
-		if h.version == version {
-			return h, true
+func decoderFor(version string) (genericDecoder, bool) {
+	version = normalizeAPIVersion(version)
+	for _, d := range knownDecoders {
+		if d.version == version {
+			return d, true
 		}
 	}
-	return apiVersionHandler{}, false
+	return genericDecoder{}, false
+}
+
+// normalizeAPIVersion treats an absent apiVersion as v1alpha1, which predates the required field.
+func normalizeAPIVersion(version string) string {
+	if version == "" {
+		return v1alpha1.APIVersion
+	}
+	return version
 }
 
 func apiVersionFromNode(node ast.Node) (string, error) {

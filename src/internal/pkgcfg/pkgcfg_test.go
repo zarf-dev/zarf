@@ -138,7 +138,7 @@ components:
   - name: first
     description: a component
 `
-	pkg, err := ParseAs[v1beta1.Package](context.Background(), []byte(yaml), v1beta1.APIVersion)
+	pkg, err := ParseAs(context.Background(), []byte(yaml), V1Beta1)
 	require.NoError(t, err)
 	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, "beta-pkg", pkg.Metadata.Name)
@@ -153,13 +153,13 @@ func TestParseAsSelectsFromMultiDoc(t *testing.T) {
 
 	// The requested apiVersion's document is returned regardless of where it sits among others.
 	mixed := "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\n---\napiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: beta\ncomponents:\n  - name: c\n"
-	pkg, err := ParseAs[v1beta1.Package](ctx, []byte(mixed), v1beta1.APIVersion)
+	pkg, err := ParseAs(ctx, []byte(mixed), V1Beta1)
 	require.NoError(t, err)
 	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, "beta", pkg.Metadata.Name)
 
 	// The same definition can be read as its v1alpha1 document by naming that apiVersion.
-	alpha, err := ParseAs[v1alpha1.ZarfPackage](ctx, []byte(mixed), v1alpha1.APIVersion)
+	alpha, err := ParseAs(ctx, []byte(mixed), V1Alpha1)
 	require.NoError(t, err)
 	require.Equal(t, "alpha", alpha.Metadata.Name)
 }
@@ -168,9 +168,9 @@ func TestParseAsV1Alpha1(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	// A document with no apiVersion is treated as v1alpha1, matching handlerFor.
+	// A document with no apiVersion is treated as v1alpha1.
 	omitted := "kind: ZarfPackageConfig\nmetadata:\n  name: no-api-version\ncomponents:\n  - name: c\n"
-	pkg, err := ParseAs[v1alpha1.ZarfPackage](ctx, []byte(omitted), v1alpha1.APIVersion)
+	pkg, err := ParseAs(ctx, []byte(omitted), V1Alpha1)
 	require.NoError(t, err)
 	require.Equal(t, "no-api-version", pkg.Metadata.Name)
 
@@ -187,7 +187,7 @@ components:
       prepare:
         - "echo hello"
 `
-	pkg, err = ParseAs[v1alpha1.ZarfPackage](ctx, []byte(withScripts), v1alpha1.APIVersion)
+	pkg, err = ParseAs(ctx, []byte(withScripts), V1Alpha1)
 	require.NoError(t, err)
 	require.Contains(t, pkg.Build.Migrations, internalv1alpha1.ScriptsToActionsMigrated)
 	require.Equal(t, "echo hello", pkg.Components[0].Actions.OnCreate.Before[0].Cmd)
@@ -197,17 +197,13 @@ func TestParseAsErrors(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	_, err := ParseAs[v1beta1.Package](ctx, []byte(""), v1beta1.APIVersion)
+	_, err := ParseAs(ctx, []byte(""), V1Beta1)
 	require.ErrorContains(t, err, "no package definition found")
 
 	// A definition without a matching document errors rather than falling back.
 	alphaOnly := "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\n"
-	_, err = ParseAs[v1beta1.Package](ctx, []byte(alphaOnly), v1beta1.APIVersion)
+	_, err = ParseAs(ctx, []byte(alphaOnly), V1Beta1)
 	require.ErrorContains(t, err, `no "zarf.dev/v1beta1" document found`)
-
-	// An unknown requested apiVersion is rejected up front.
-	_, err = ParseAs[v1beta1.Package](ctx, []byte(alphaOnly), newer)
-	require.ErrorContains(t, err, `unsupported apiVersion "`+newer+`"`)
 }
 
 func TestParseDecodesV1Beta1ToGeneric(t *testing.T) {
@@ -229,26 +225,26 @@ func TestParseDecodesV1Beta1ToGeneric(t *testing.T) {
 	require.Equal(t, "beta", pkg.Metadata.Name)
 }
 
-func TestHandlerFor(t *testing.T) {
+func TestDecoderFor(t *testing.T) {
 	t.Parallel()
 
-	// Empty apiVersion and explicit v1alpha1 must resolve to the same handler.
-	emptyHandler, emptyOK := handlerFor("")
+	// Empty apiVersion and explicit v1alpha1 must resolve to the same decoder.
+	emptyDecoder, emptyOK := decoderFor("")
 	require.True(t, emptyOK)
-	v1Handler, v1OK := handlerFor(v1alpha1.APIVersion)
+	v1Decoder, v1OK := decoderFor(v1alpha1.APIVersion)
 	require.True(t, v1OK)
-	require.Equal(t, v1Handler.version, emptyHandler.version)
-	require.Equal(t, v1Handler.priority, emptyHandler.priority)
+	require.Equal(t, v1Decoder.version, emptyDecoder.version)
+	require.Equal(t, v1Decoder.priority, emptyDecoder.priority)
 
-	_, unknownOK := handlerFor("zarf.dev/v1beta999")
+	_, unknownOK := decoderFor("zarf.dev/v1beta999")
 	require.False(t, unknownOK)
 
 	// Duplicate priorities would make "latest" ambiguous.
 	priorities := map[int]string{}
-	for _, h := range knownAPIVersions {
-		if existing, dup := priorities[h.priority]; dup {
-			t.Fatalf("duplicate priority %d shared by %q and %q", h.priority, existing, h.version)
+	for _, d := range knownDecoders {
+		if existing, dup := priorities[d.priority]; dup {
+			t.Fatalf("duplicate priority %d shared by %q and %q", d.priority, existing, d.version)
 		}
-		priorities[h.priority] = h.version
+		priorities[d.priority] = d.version
 	}
 }

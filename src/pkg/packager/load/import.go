@@ -101,7 +101,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
-			importedPkg, err = pkgcfg.ParseAs[v1alpha1.ZarfPackage](ctx, b, v1alpha1.APIVersion)
+			importedPkg, err = pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}

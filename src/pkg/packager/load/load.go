@@ -106,7 +106,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	var defined DefinedPackage
 	switch version {
 	case v1beta1.APIVersion:
-		pkg, err := pkgcfg.ParseAs[v1beta1.Package](ctx, b, version)
+		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
 		if err != nil {
 			return DefinedPackage{}, err
 		}
@@ -115,7 +115,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return DefinedPackage{}, err
 		}
 	case v1alpha1.APIVersion:
-		pkg, err := pkgcfg.ParseAs[v1alpha1.ZarfPackage](ctx, b, version)
+		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 		if err != nil {
 			return DefinedPackage{}, err
 		}
