@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "linkinator": "^7.5.3",
-    "markdownlint-cli2": "^0.20.0",
+    "markdownlint-cli2": "^0.23.1",
     "remark-gemoji": "^8.0.0",
     "yaml": "^2.8.3"
   },
