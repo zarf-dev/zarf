@@ -211,12 +211,10 @@ Provide individual values via command line:
 ```bash
 # Set values at deploy time
 zarf package deploy my-package.tar.zst \
-  --features="values=true" \
   --set-values="app.environment=staging,app.replicas=5"
 
 # Set values during removal
 zarf package remove my-package \
-  --features="values=true" \
   --set-values="app.environment=staging"
 ```
 
@@ -227,7 +225,6 @@ Provide entire values files with the `-v` or `--values` flag:
 ```bash
 # Multiple values files (later files override earlier ones)
 zarf package deploy my-package.tar.zst \
-  --features="values=true" \
   -v base-values.yaml \
   -v override-values.yaml
 ```
