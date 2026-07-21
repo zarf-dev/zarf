@@ -8,16 +8,6 @@ import Properties from '@components/SchemaItemProperties.astro';
 
 Package Values provide a familiar way to define reusable configuration data in your Zarf packages. Unlike the legacy [Variables and Constants](/ref/values/) system that uses string substitution with `###ZARF_VAR_###` syntax, Package Values uses Go templates with access to structured data and types, [go's templating engine](https://pkg.go.dev/text/template), and custom functions like those offered by [Sprig](/ref/templating/).
 
-## Overview
-
-Package Values allow you to:
-
-- Define structured configuration data in separate YAML files similar to [Helm's values files](https://helm.sh/docs/chart_template_guide/values_files/)
-- Use Go template syntax (`{{ .Values.key }}`) for interpolation
-- Leverage Go's templating engine alongside [custom functions and objects](#templating)
-- Directly map Zarf package values to Helm chart values
-- Maintain clean separation between configuration and deployment logic
-
 ## Defining Values
 
 ### Values Files
