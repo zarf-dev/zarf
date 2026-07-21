@@ -14,8 +14,7 @@ Package Values allow you to:
 
 - Define structured configuration data in separate YAML files similar to [Helm's values files](https://helm.sh/docs/chart_template_guide/values_files/)
 - Use Go template syntax (`{{ .Values.key }}`) for interpolation
-{/* FIXME, link to a short section about sprig functions */}
-- Leverage Go's templating engine for advanced transformations and use functions using [Sprig](/ref/templating/)
+- Leverage Go's templating engine alongside [custom functions and objects](#templating)
 - Directly map Zarf package values to Helm chart values
 - Maintain clean separation between configuration and deployment logic
 
@@ -80,7 +79,7 @@ Values are accessed in templates through the `.Values` template object. See the 
 
 :::note
 
-Package Values are available during `onDeploy` and `onRemove` actions, but **not** during `onCreate` actions. This is because values are typically provided at deployment time, not package creation time.
+Package Values are available during `onDeploy` and `onRemove` actions, but **not** during `onCreate` actions.
 
 :::
 
@@ -295,58 +294,6 @@ A subset of [Helm functions](https://helm.sh/docs/chart_template_guide/function_
 - **TOML**: `toToml`, `fromToml`
 - **YAML**: `toYaml`, `mustToYaml`, `toYamlPretty`, `fromYaml`, `fromYamlArray`
 - **JSON**: `toJson`, `mustToJson`, `fromJson`, `fromJsonArray`
-
-## Migration from Variables and Constants
-
-If you're migrating from the legacy Variables/Constants system:
-
-### Before (Legacy)
-
-```yaml
-# zarf.yaml
-variables:
-  - name: DATABASE_USERNAME
-    default: "postgres"
-```
-
-```yaml
-# config.yaml
-data:
-  username: ###ZARF_VAR_DATABASE_USERNAME###
-```
-
-### After (Package Values)
-
-```yaml
-# zarf.yaml
-values:
-  files:
-    - values.yaml
-
-components:
-  - name: app
-    manifests:
-      - name: configmap
-        template: true  # Required for Go templates
-        files:
-          - config.yaml
-```
-
-```yaml
-# values/values.yaml
-database:
-  username: "postgres"
-```
-
-```yaml
-# config.yaml
-data:
-  username: {{ .Values.database.username }}
-```
-
-**Benefits of the new approach:**
-- Structured and typed data (numbers, booleans, arrays, objects)
-- Access to powerful template engine and function chaining
 
 ## Examples
 

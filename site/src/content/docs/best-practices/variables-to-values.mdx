@@ -13,3 +13,51 @@ This guide explains how to migrate your package from variables to values. Migrat
 ## Verify
 
 To verify that this change made no impact on your package run `zarf dev inspect manifests` before and after your migration. There should be no change aside from the `# Source` comment.
+
+## Migration from Variables and Constants
+
+Below shows an example migration
+
+### Before (Legacy)
+
+```yaml
+# zarf.yaml
+variables:
+  - name: DATABASE_USERNAME
+    default: "postgres"
+```
+
+```yaml
+# config.yaml
+data:
+  username: ###ZARF_VAR_DATABASE_USERNAME###
+```
+
+### After (Package Values)
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - values.yaml
+
+components:
+  - name: app
+    manifests:
+      - name: configmap
+        template: true  # Required for Go templates
+        files:
+          - config.yaml
+```
+
+```yaml
+# values.yaml
+database:
+  username: "postgres"
+```
+
+```yaml
+# config.yaml
+data:
+  username: {{ .Values.database.username }}
+```
