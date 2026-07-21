@@ -35,7 +35,7 @@ Multiple values files are merged in order, with later files taking precedence.
 
 :::note
 
-Every value referenced by a Go template must be explicitly defined, either in the package's values files or provided at deploy time, even if its value is empty. Deployments fail early on missing keys.
+Every key referenced by the package must be explicitly defined, either in the package's values files or provided at deploy time. A key can be defined as empty, but deploy is blocked if any key is missing.
 
 :::
 
@@ -73,12 +73,6 @@ The schema validates values during deployment, helping catch configuration error
 
 Values are accessed in templates through the `.Values` template object. See the [Templating](#templating) section for details on the other available template objects (`.State`, `.Pkg`) and functions.
 
-:::note
-
-Package Values are available during `onDeploy` and `onRemove` actions, but **not** during `onCreate` actions.
-
-:::
-
 ### In Manifests
 
 Enable Go templating in manifest files by setting `template: true`:
@@ -106,6 +100,12 @@ components:
           - cmd: echo "Environment: {{ .Values.app.environment }}"
             template: true  # Required to enable templating in actions
 ```
+
+:::note
+
+Package Values are available during `onDeploy` and `onRemove` actions, but **not** during `onCreate` actions.
+
+:::
 
 #### Setting Values from Actions
 
@@ -213,6 +213,17 @@ registry: {{ .State.Registry.Address }}
 
 Override or provide values when deploying or removing a package:
 
+### Using Values Files
+
+Provide entire values files with the `-v` or `--values` flag:
+
+```bash
+# Multiple values files (later files override earlier ones)
+zarf package deploy my-package.tar.zst \
+  -v base-values.yaml \
+  -v override-values.yaml
+```
+
 ### Using --set-values Flag
 
 Provide individual values via command line:
@@ -225,29 +236,6 @@ zarf package deploy my-package.tar.zst \
 # Set values during removal
 zarf package remove my-package \
   --set-values="app.environment=staging"
-```
-
-### Using Values Files
-
-Provide entire values files with the `-v` or `--values` flag:
-
-```bash
-# Multiple values files (later files override earlier ones)
-zarf package deploy my-package.tar.zst \
-  -v base-values.yaml \
-  -v override-values.yaml
-```
-
-### Configuration Files
-
-Values files can also be set in a Zarf config file:
-
-```yaml
-# ~/.zarf-config.yaml
-package:
-  deploy:
-    values:
-      - custom-values.yaml
 ```
 
 ### Precedence
