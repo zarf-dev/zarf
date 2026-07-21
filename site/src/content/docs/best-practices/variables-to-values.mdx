@@ -2,19 +2,17 @@
 title: "Variables to Values"
 ---
 
-This guide explains how to migrate your package from variables to values. Migrating has several benefits:
+This guide explains how to migrate your package from variables to [package values](/ref/package-values). Migrating has several benefits:
 
-- Values are have a map structure that is much more intuitive when declaring a large yaml block.
+- More intuitive map structure - especially beneficial for large yaml block configuration.
 - Standard go-template engine with built-in and custom functions.
-- Built-in objects such as Package and State
-- Ability to Toggle on or off
-
+- Built-in objects such as Package and State.
 
 ## Verify
 
 To verify that this change made no impact on your package run `zarf dev inspect manifests` before and after your migration. There should be no change aside from the `# Source` comment.
 
-## Migrating manifests and files
+## Migrating Manifests and Files
 
 Below shows an example migration for a regular text file. The below example shows manifests, however this format is applicable to files and Helm values files when templating is enabled.
 
@@ -62,7 +60,7 @@ data:
   username: {{ .Values.database.username }}
 ```
 
-## Migrating Helm charts
+## Migrating Helm Charts
 
 Helm charts don't use Zarf templating. Instead of substituting variables into a chart's values file, map Package Values directly onto the chart's values with `sourcePath` and `targetPath`.
 
@@ -116,9 +114,9 @@ app:
 
 `sourcePath` references your Package Values (everything under `.Values.*`) and `targetPath` references the chart's `values.yaml` structure.
 
-### Keeping a templated values file
+### Templated Values Files
 
-If you need templating logic or built-in objects that `sourcePath`/`targetPath` mappings can't express, move the file to `templatedValuesFiles` and replace the `###ZARF_VAR_###` substitutions with Go templates. Templated values files have Go templates rendered at deploy time, giving them access to the built-in [templating](/ref/package-values/#templating) functions and objects such as `.State`.
+When [Zarf templating](/ref/package-values/#templating) built-ins are required use `templatedValuesFiles`. Migration then looks the same as [Manifests and Files](#migrating-manifests-and-files) and the values files has access to template objects such as `.State`.
 
 ```yaml
 # zarf.yaml
