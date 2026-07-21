@@ -6,7 +6,7 @@ sidebar:
 
 import Properties from '@components/SchemaItemProperties.astro';
 
-Package Values provide a familiar way to define reusable configuration data in your Zarf packages. Unlike the legacy [Variables and Constants](/ref/values/) system that uses string substitution with `###ZARF_VAR_###` syntax, Package Values uses Go templates with access to structured data and types, [go's templating engine](https://pkg.go.dev/text/template), and custom functions like those offered by [Sprig](/ref/templating/).
+Package Values provide a familiar way to define configuration data in your Zarf packages. Unlike the legacy [Variables and Constants](/ref/values/) system that uses string substitution with `###ZARF_VAR_###` syntax, Package Values uses [Go templates](https://pkg.go.dev/text/template) with access to structured data and custom functions like those offered by [Sprig](/ref/templating/).
 
 ## Defining Values
 
