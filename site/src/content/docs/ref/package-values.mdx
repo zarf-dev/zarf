@@ -27,37 +27,19 @@ Values are defined in YAML files and are declared in your `zarf.yaml` package co
 
 ```yaml
 # zarf.yaml
-kind: ZarfPackageConfig
-metadata:
-  name: my-package
 values:
   files:
     - values.yaml
-    - overrides.yaml
-  schema: values-schema.json  # Optional JSON schema for validation
+  schema: values-schema.json  # Optional
 ```
 
 The values files contain structured YAML data:
 
 ```yaml
 # values/values.yaml
-site:
-  name: "My Application"
-  organization: "MyOrg"
-  styles: |
-    body { font-family: sans-serif; }
-
 app:
   environment: "production"
   replicas: 3
-  features:
-    - "templating"
-    - "sprig-functions"
-  ports: [80, 443, 8080]
-
-database:
-  host: "postgres.local"
-  port: 5432
 ```
 
 Multiple values files are merged in order, with later files taking precedence.
@@ -82,17 +64,9 @@ values:
     "app": {
       "type": "object",
       "properties": {
-        "replicas": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 10
-        },
-        "environment": {
-          "type": "string",
-          "enum": ["development", "staging", "production"]
-        }
+        "replicas": { "type": "integer", "minimum": 1, "maximum": 10 }
       },
-      "required": ["replicas", "environment"]
+      "required": ["replicas"]
     }
   }
 }
@@ -122,8 +96,6 @@ components:
         template: true  # Enables Go template processing
         files:
           - deployment.yaml
-          - service.yaml
-          - configmap.yaml
 ```
 
 See the [Templating Reference](/ref/templating/) for complete details on template syntax, Sprig functions, and advanced usage.
@@ -138,9 +110,7 @@ components:
     actions:
       onCreate:
         after:
-          - cmd: |
-              echo "Deploying {{ .Values.site.name }}"
-              echo "Environment: {{ .Values.app.environment }}"
+          - cmd: echo "Environment: {{ .Values.app.environment }}"
             template: true  # Required to enable templating in actions
 ```
 
@@ -164,17 +134,6 @@ components:
             setValues:
               - name: existing.config
                 type: json
-
-          - cmd: |
-              cat <<EOF
-              apiVersion: v1
-              kind: Config
-              settings:
-                debug: true
-              EOF
-            setValues:
-              - name: runtime.settings
-                type: yaml
 ```
 
 The `setValues` field accepts:
@@ -196,23 +155,10 @@ components:
         namespace: my-app
         localPath: charts/my-chart
         values:
-          # Map .Values.app.name to .appName in the Helm chart
-          - sourcePath: ".app.name"
-            targetPath: ".appName"
-
-          # Map nested values
           - sourcePath: ".app.replicas"
             targetPath: ".replicaCount"
-
-          # Map to deeply nested chart values
           - sourcePath: ".database.host"
             targetPath: ".config.database.host"
-
-          # Multiple mappings to the same target - last one wins
-          - sourcePath: ".database.host"
-            targetPath: ".config.database.host"
-          - sourcePath: ".database.host_override"
-            targetPath: ".config.database.host"  # Takes priority
 ```
 
 #### Mapping All Values
@@ -220,35 +166,13 @@ components:
 While passing only the necessary values provides better security, you can map all Package Values directly to a Helm chart by using `.` for both `sourcePath` and `targetPath`:
 
 ```yaml
-components:
-  - name: helm-component
-    charts:
-      - name: my-chart
-        version: 1.0.0
-        namespace: my-app
-        localPath: charts/my-chart
-        values:
-          # Map all Package Values to the Helm chart's values
-          - sourcePath: "."
-            targetPath: "."
+values:
+  # Map all Package Values to the Helm chart's values
+  - sourcePath: "."
+    targetPath: "."
 ```
 
 This approach passes your entire Package Values structure to the Helm chart, useful when your values file structure matches the chart's expected values schema.
-
-**Example:**
-
-```yaml
-# values/values.yaml
-replicaCount: 3
-image:
-  repository: nginx
-  tag: "1.21"
-service:
-  type: ClusterIP
-  port: 80
-```
-
-With `sourcePath: "."` and `targetPath: "."`, all these values are passed directly to the Helm chart as if you had specified them in the chart's `values.yaml`.
 
 #### Mapping Behavior
 
@@ -259,7 +183,7 @@ With `sourcePath: "."` and `targetPath: "."`, all these values are passed direct
 
 <Properties item="ZarfChartValue" />
 
-## Setting Values at Deploy Time
+## Setting Values
 
 Override or provide values when deploying or removing a package:
 
@@ -284,21 +208,11 @@ zarf package remove my-package \
 Provide entire values files with the `-v` or `--values` flag:
 
 ```bash
-# Deploy with custom values file
-zarf package deploy my-package.tar.zst \
-  --features="values=true" \
-  -v custom-values.yaml
-
 # Multiple values files (later files override earlier ones)
 zarf package deploy my-package.tar.zst \
   --features="values=true" \
   -v base-values.yaml \
   -v override-values.yaml
-
-# Also works with zarf dev deploy
-zarf dev deploy \
-  --features="values=true" \
-  -v dev-values.yaml
 ```
 
 ### Configuration Files
@@ -311,9 +225,6 @@ package:
   deploy:
     values:
       - custom-values.yaml
-  remove:
-    values:
-      - cleanup-values.yaml
 ```
 
 ## Inspecting Values
@@ -321,11 +232,11 @@ package:
 Zarf provides commands to inspect the results of values without having to deploy a package:
 
 ```bash
-# View the results of templates. This also works with command line and --set-values.
-zarf dev inspect manifests --features="values=true"
+# Inspect chart and regular manifests from a package definition
+zarf dev inspect manifests .
 
-# View helm values files mappings
-zarf package inspect values-files my-package.tar.zst --features="values=true"
+# Inspect chart and regular manifests from a built package
+zarf package inspect manifests my-package.tar.zst
 ```
 
 ## Migration from Variables and Constants
@@ -339,26 +250,12 @@ If you're migrating from the legacy Variables/Constants system:
 variables:
   - name: DATABASE_USERNAME
     default: "postgres"
-
-constants:
-  - name: APP_VERSION
-    value: "1.0.0"
-
-components:
-  - name: app
-    manifests:
-      - name: configmap
-        files:
-          - config.yaml
 ```
 
 ```yaml
 # config.yaml
-apiVersion: v1
-kind: ConfigMap
 data:
   username: ###ZARF_VAR_DATABASE_USERNAME###
-  version: ###ZARF_CONST_APP_VERSION###
 ```
 
 ### After (Package Values)
@@ -382,18 +279,12 @@ components:
 # values/values.yaml
 database:
   username: "postgres"
-
-app:
-  version: "1.0.0"
 ```
 
 ```yaml
 # config.yaml
-apiVersion: v1
-kind: ConfigMap
 data:
   username: {{ .Values.database.username }}
-  version: {{ .Values.app.version }}
 ```
 
 **Benefits of the new approach:**
