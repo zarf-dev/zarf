@@ -6,7 +6,7 @@ sidebar:
 
 import Properties from '@components/SchemaItemProperties.astro';
 
-Package Values provide a familiar way to define configuration data in your Zarf packages. Unlike the legacy [Variables and Constants](/ref/values/) system that uses string substitution with `###ZARF_VAR_###` syntax, Package Values uses [Go templates](https://pkg.go.dev/text/template) with access to structured data and custom functions like those offered by [Sprig](/ref/templating/).
+Package Values provide a familiar way to define configuration data in your Zarf packages. Unlike the legacy [Variables and Constants](/ref/values/) system that uses string substitution with `###ZARF_VAR_###` syntax, Package Values uses [Go templates](https://pkg.go.dev/text/template) with access to structured data and custom functions like those offered by [Sprig](#functions).
 
 ## Defining Values
 
@@ -71,7 +71,7 @@ The schema validates values during deployment, helping catch configuration error
 
 ## Using Values
 
-Values are accessed in templates through the `.Values` template object. See the [Templating Reference](/ref/templating/#template-objects) for details on all available template objects (`.Values`, `.Metadata`, `.Build`, etc.).
+Values are accessed in templates through the `.Values` template object. See the [Templating](#templating) section for details on the other available template objects (`.State`, `.Pkg`) and functions.
 
 :::note
 
@@ -339,8 +339,7 @@ See the [values-templating example](/ref/examples/values-templating) for a compl
 
 ## Related Documentation
 
-- [Package Values Best Practices](/best-practices/package-values/) - Best practices for using Package Values
-- [Templating Reference](/ref/templating/) - Complete guide to Go templates and Sprig functions
+- [Variables to Values](/best-practices/variables-to-values/) - Migrating from the legacy Variables and Constants system
 - [Deployment Variables (Legacy)](/ref/values/) - Legacy Variables and Constants system
 - [Actions](/ref/actions/) - Component action configuration
 - [Components](/ref/components/) - Component structure and features
