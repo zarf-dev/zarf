@@ -239,6 +239,63 @@ zarf dev inspect manifests .
 zarf package inspect manifests my-package.tar.zst
 ```
 
+## Templating
+
+Zarf exposes custom go-templating functions and objects. This section details what is available to **manifests**, **files**, and **action `cmd` fields** when templated. Helm charts continue to use Helm's templating system.
+
+### Cluster State (`.State`)
+
+The `.State` object exposes Zarf cluster state.
+
+**Non-sensitive fields** are always available with no additional declaration:
+
+| Field | Description |
+|---|---|
+| `.State.StorageClass` | Default storage class (cf. `###ZARF_STORAGE_CLASS###`) |
+| `.State.IPFamily` | `"ipv4"`, `"ipv6"`, or `"dual"` (cf. `###ZARF_IPV6_ONLY###`) |
+| `.State.Registry.Address` | Registry URL (cf. `###ZARF_REGISTRY###`) |
+| `.State.Registry.Port` | Registry port (cf. `###ZARF_REGISTRY_PORT###`) |
+| `.State.Registry.PushUsername` | Registry push username |
+| `.State.Registry.PullUsername` | Registry pull username |
+| `.State.Registry.Mode` | `"nodeport"`, `"proxy"`, or `"external"` (cf. `###ZARF_REGISTRY_PROXY###`) |
+| `.State.Registry.MTLSEnabled` | `bool` (cf. `###ZARF_REGISTRY_MTLS_ENABLED###`) |
+| `.State.Registry.SeedAddress` | Localhost seed registry address (cf. `###ZARF_SEED_REGISTRY###`) |
+| `.State.Git.Address` | Git server URL |
+| `.State.Git.PushUsername` | Git push username (cf. `###ZARF_GIT_PUSH###`) |
+| `.State.Git.PullUsername` | Git pull username (cf. `###ZARF_GIT_PULL###`) |
+| `.State.Git.IsInternal` | `bool` |
+| `.State.Injector.Image` | Injector container image (cf. `###ZARF_INJECTOR_IMAGE###`) |
+| `.State.Injector.Port` | Injector host port (cf. `###ZARF_INJECTOR_HOSTPORT###`) |
+| `.State.Injector.PayloadConfigMaps` | Number of payload ConfigMaps (cf. `###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###`) |
+| `.State.Injector.PayloadShaSum` | SHA sum of injector payload (cf. `###ZARF_INJECTOR_SHASUM###`) |
+
+**Sensitive fields** require a `stateAccess` declaration on the component. Accessing a sensitive field without the corresponding group causes a template error at deploy time:
+
+```yaml
+components:
+  - name: my-component
+    stateAccess:
+      - registryCredentials   # unlocks .State.Registry.{PushPassword,PullPassword,Secret,Htpasswd}
+      - gitCredentials        # unlocks .State.Git.{PushPassword,PullPassword}
+      - agentCerts            # unlocks .State.Agent.{CA,Cert,Key} (base64-encoded)
+```
+
+See the [values-templating example](/ref/examples/values-templating/) for a working demonstration of `.State` fields in manifests and actions.
+
+### Package Object (`.Pkg`)
+
+The `.Pkg` object gives access the parent package definition. See [values-templating example](/ref/examples/values-templating) for an in-depth example.
+
+### Functions
+
+The [default sprig functions](https://masterminds.github.io/sprig/) except for `getHostByName`, `env`, and `expandEnv` are included.
+
+A subset of [Helm functions](https://helm.sh/docs/chart_template_guide/function_list/#totoml-musttotoml) are included:
+
+- **TOML**: `toToml`, `fromToml`
+- **YAML**: `toYaml`, `mustToYaml`, `toYamlPretty`, `fromYaml`, `fromYamlArray`
+- **JSON**: `toJson`, `mustToJson`, `fromJson`, `fromJsonArray`
+
 ## Migration from Variables and Constants
 
 If you're migrating from the legacy Variables/Constants system:
@@ -293,7 +350,7 @@ data:
 
 ## Examples
 
-See the [values-templating example](/ref/examples/) for a complete working example demonstrating:
+See the [values-templating example](/ref/examples/values-templating) for a complete working example demonstrating:
 
 - File-based values configuration
 - Manifest templating with Go templates
