@@ -182,6 +182,28 @@ This approach passes your entire Package Values structure to the Helm chart, use
 
 <Properties item="ZarfChartValue" />
 
+#### Templated Values Files
+
+Use `templatedValuesFiles` when you need Zarf's built-in [templating](#templating) inside a Helm values file. Templated values files have Go templates rendered at deploy time, giving you access to `.Values`, `.State`, and the templating functions:
+
+```yaml
+components:
+  - name: helm-component
+    charts:
+      - name: my-chart
+        version: 1.0.0
+        namespace: my-app
+        localPath: charts/my-chart
+        templatedValuesFiles:
+          - chart-values.yaml
+```
+
+```yaml
+# chart-values.yaml
+replicaCount: {{ .Values.app.replicas }}
+registry: {{ .State.Registry.Address }}
+```
+
 ## Setting Values
 
 Override or provide values when deploying or removing a package:
