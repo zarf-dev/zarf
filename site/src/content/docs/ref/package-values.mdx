@@ -19,7 +19,7 @@ Values are defined in YAML files and are declared in your `zarf.yaml` package co
 values:
   files:
     - values.yaml
-  schema: values-schema.json  # Optional
+  schema: values-schema.json
 ```
 
 The values files contain structured YAML data:
@@ -32,6 +32,12 @@ app:
 ```
 
 Multiple values files are merged in order, with later files taking precedence.
+
+:::note
+
+Every value referenced by a Go template must be explicitly defined, either in the package's values files or provided at deploy time, even if its value is empty. Deployments fail early on missing keys.
+
+:::
 
 ### Schema Validation
 
