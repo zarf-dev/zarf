@@ -1,0 +1,15 @@
+---
+title: "Variables to Values"
+---
+
+This guide explains how to migrate your package from variables to values. Migrating has several benefits:
+
+- Values are have a map structure that is much more intuitive when declaring a large yaml block.
+- Standard go-template engine with built-in and custom functions.
+- Built-in objects such as Package and State
+- Ability to Toggle on or off
+
+
+## Verify
+
+To verify that this change made no impact on your package run `zarf dev inspect manifests` before and after your migration. There should be no change aside from the `# Source` comment.
