@@ -78,7 +78,6 @@ components:
   - name: app
     charts:
       - name: my-chart
-        version: 1.0.0
         namespace: my-app
         localPath: charts/my-chart
         valuesFiles:
@@ -102,7 +101,6 @@ components:
   - name: app
     charts:
       - name: my-chart
-        version: 1.0.0
         namespace: my-app
         localPath: charts/my-chart
         values:
@@ -117,3 +115,29 @@ app:
 ```
 
 `sourcePath` references your Package Values (everything under `.Values.*`) and `targetPath` references the chart's `values.yaml` structure.
+
+### Keeping a templated values file
+
+If you need templating logic or built-in objects that `sourcePath`/`targetPath` mappings can't express, move the file to `templatedValuesFiles` and replace the `###ZARF_VAR_###` substitutions with Go templates. Templated values files have Go templates rendered at deploy time, giving them access to the built-in [templating](/ref/package-values/#templating) functions and objects such as `.State`.
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - package-values.yaml
+
+components:
+  - name: app
+    charts:
+      - name: my-chart
+        namespace: my-app
+        localPath: charts/my-chart
+        templatedValuesFiles:
+          - chart-values.yaml
+```
+
+```yaml
+# chart-values.yaml
+replicaCount: {{ .Values.app.replicas }}
+imageRegistry: {{ .State.Registry.Address }}
+```
