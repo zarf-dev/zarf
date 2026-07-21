@@ -290,6 +290,18 @@ The `.State` object exposes Zarf cluster state.
 
 **Sensitive fields** require a `stateAccess` declaration on the component. Accessing a sensitive field without the corresponding group causes a template error at deploy time:
 
+| Field | Description |
+|---|---|
+| `.State.Registry.PushPassword` | Registry push password (cf. `###ZARF_REGISTRY_AUTH_PUSH###`) |
+| `.State.Registry.PullPassword` | Registry pull password (cf. `###ZARF_REGISTRY_AUTH_PULL###`) |
+| `.State.Registry.Secret` | Registry secret (cf. `###ZARF_REGISTRY_SECRET###`) |
+| `.State.Registry.Htpasswd` | Registry `htpasswd` contents (cf. `###ZARF_HTPASSWD###`) |
+| `.State.Git.PushPassword` | Git push password (cf. `###ZARF_GIT_AUTH_PUSH###`) |
+| `.State.Git.PullPassword` | Git pull password (cf. `###ZARF_GIT_AUTH_PULL###`) |
+| `.State.Agent.CA` | Agent CA certificate, base64-encoded (cf. `###ZARF_AGENT_CA###`) |
+| `.State.Agent.Cert` | Agent certificate, base64-encoded (cf. `###ZARF_AGENT_CRT###`) |
+| `.State.Agent.Key` | Agent private key, base64-encoded (cf. `###ZARF_AGENT_KEY###`) |
+
 ```yaml
 components:
   - name: my-component
