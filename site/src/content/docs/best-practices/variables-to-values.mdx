@@ -14,9 +14,9 @@ This guide explains how to migrate your package from variables to values. Migrat
 
 To verify that this change made no impact on your package run `zarf dev inspect manifests` before and after your migration. There should be no change aside from the `# Source` comment.
 
-## Migration from Variables and Constants
+## Migrating manifests and files
 
-Below shows an example migration
+Below shows an example migration for a regular text file. The below example shows manifests, however this format is applicable to files and Helm values files when templating is enabled.
 
 ### Before (Legacy)
 
@@ -39,7 +39,7 @@ data:
 # zarf.yaml
 values:
   files:
-    - values.yaml
+    - package-values.yaml
 
 components:
   - name: app
@@ -51,7 +51,7 @@ components:
 ```
 
 ```yaml
-# values.yaml
+# package-values.yaml
 database:
   username: "postgres"
 ```
@@ -61,3 +61,59 @@ database:
 data:
   username: {{ .Values.database.username }}
 ```
+
+## Migrating Helm charts
+
+Helm charts don't use Zarf templating. Instead of substituting variables into a chart's values file, map Package Values directly onto the chart's values with `sourcePath` and `targetPath`.
+
+### Before (Legacy)
+
+```yaml
+# zarf.yaml
+variables:
+  - name: REPLICA_COUNT
+    default: "3"
+
+components:
+  - name: app
+    charts:
+      - name: my-chart
+        version: 1.0.0
+        namespace: my-app
+        localPath: charts/my-chart
+        valuesFiles:
+          - chart-values.yaml
+```
+
+```yaml
+# chart-values.yaml
+replicaCount: ###ZARF_VAR_REPLICA_COUNT###
+```
+
+### After (Package Values)
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - package-values.yaml
+
+components:
+  - name: app
+    charts:
+      - name: my-chart
+        version: 1.0.0
+        namespace: my-app
+        localPath: charts/my-chart
+        values:
+          - sourcePath: ".app.replicas"
+            targetPath: ".replicaCount"
+```
+
+```yaml
+# package-values.yaml
+app:
+  replicas: 3
+```
+
+`sourcePath` references your Package Values (everything under `.Values.*`) and `targetPath` references the chart's `values.yaml` structure.
