@@ -60,27 +60,6 @@ data:
   username: {{ .Values.database.username }}
 ```
 
-### Structured Values
-
-Legacy variables are strings, so injecting a block like `tolerations` meant storing indented YAML in a single variable and relying on `.variables.autoIndent`. Because values are a map, keep the structure native and render it with `toYaml`:
-
-```yaml
-# package-values.yaml
-tolerations:
-  - key: "dedicated"
-    operator: "Exists"
-    effect: "NoSchedule"
-```
-
-```yaml
-# deployment.yaml
-spec:
-  template:
-    spec:
-      tolerations:
-        {{- toYaml .Values.tolerations | nindent 8 }}
-```
-
 ## Migrating Helm Charts
 
 Helm charts don't use Zarf templating. Instead of substituting variables into a chart's values file, map Package Values directly onto the chart's values with `sourcePath` and `targetPath`.
@@ -209,3 +188,34 @@ components:
 database:
   username: "postgres"
 ```
+
+### Structured Values
+
+Legacy variables are strings, so injecting a block like `tolerations` meant storing indented YAML in a single variable and relying on `.variables.autoIndent`. Because values are a map, keep the structure native and render it with `toYaml`:
+
+```yaml
+# package-values.yaml
+tolerations:
+  - key: "dedicated"
+    operator: "Exists"
+    effect: "NoSchedule"
+```
+
+```yaml
+# deployment.yaml
+spec:
+  template:
+    spec:
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+```
+
+
+## Migrating Constants
+
+Constants have no direct replacement. A constant is a fixed value a deployer cannot override, whereas any package value can be overridden at deploy time with `--set-values` or `-v`. Depending on why the constant existed, approximate it one of these ways:
+
+- **Hardcode the value.** For values consumed by a Helm chart, place the fixed value directly in the chart's static `valuesFiles` rather than mapping it from package values.
+{/* TODO, once we have a function that gets an image from a component, use that as the example */}
+- **Read from the `.Pkg` object.** Constants from the package data don't need to be duplicated. For example, `{{ .Pkg.Metadata.Version }}` replaces a `###ZARF_CONST_APP_VERSION###` set to the package version.
+- **Pin it in the schema.** Give the value a fixed `const` in the [values schema](/ref/package-values/#schema-validation) so validation rejects any deploy-time override.
