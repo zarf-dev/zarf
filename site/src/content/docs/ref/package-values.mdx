@@ -169,6 +169,19 @@ values:
 
 This approach passes your entire Package Values structure to the Helm chart, useful when your values file structure matches the chart's expected values schema.
 
+#### Excluding Paths
+
+When mapping a subtree, use `excludePaths` to omit specific descendants of the `sourcePath`. This is useful for withholding irrelevant or intentionally static keys. For instance, often times values
+
+```yaml
+values:
+  # Map everything under .database except the image
+  - sourcePath: ".database"
+    targetPath: ".config.database"
+    excludePaths:
+      - ".database.image"
+```
+
 #### Mapping Behavior
 
 - Mappings are evaluated in order from top to bottom
