@@ -97,23 +97,19 @@ components:
           - deployment.yaml
 ```
 
-See the [Templating Reference](/ref/templating/) for complete details on template syntax, Sprig functions, and advanced usage.
-
 ### In Actions
 
-Actions require explicit opt-in to templating. Set `template: true` on individual actions:
+Each action requires opt-in templating, set `template: true` on individual actions:
 
 ```yaml
 components:
   - name: my-component
     actions:
-      onCreate:
+      onDeploy:
         after:
           - cmd: echo "Environment: {{ .Values.app.environment }}"
             template: true  # Required to enable templating in actions
 ```
-
-See the [Templating Reference](/ref/templating/) for details on templating in actions and why it requires opt-in.
 
 #### Setting Values from Actions
 

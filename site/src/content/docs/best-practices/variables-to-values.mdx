@@ -141,3 +141,52 @@ components:
 replicaCount: {{ .Values.app.replicas }}
 imageRegistry: {{ .State.Registry.Address }}
 ```
+
+## Migrating actions
+
+Legacy variables are substituted into action `cmd` fields automatically. With values, actions require `template: true` to opt in, then reference values as Go templates. Actions that captured output into a variable with `setVariables` use `setValues` instead.
+
+### Before (Legacy)
+
+```yaml
+# zarf.yaml
+variables:
+  - name: DATABASE_USERNAME
+    default: "postgres"
+
+components:
+  - name: app
+    actions:
+      onDeploy:
+        after:
+          - cmd: echo "user is ###ZARF_VAR_DATABASE_USERNAME###"
+          - cmd: echo "generated-password-123"
+            setVariables:
+              - name: DATABASE_PASSWORD
+```
+
+### After (Package Values)
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - package-values.yaml
+
+components:
+  - name: app
+    actions:
+      onDeploy:
+        after:
+          - cmd: echo "user is {{ .Values.database.username }}"
+            template: true  # Required for Go templates
+          - cmd: echo "generated-password-123"
+            setValues:
+              - name: database.password
+```
+
+```yaml
+# package-values.yaml
+database:
+  username: "postgres"
+```
