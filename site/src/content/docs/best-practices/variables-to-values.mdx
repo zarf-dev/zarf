@@ -213,7 +213,7 @@ spec:
 
 ## Migrating Constants
 
-Constants have no direct replacement. A constant is a fixed value a deployer cannot override, whereas any package value can be overridden at deploy time with `--set-values` or `-v`. Depending on why the constant existed, approximate it one of these ways:
+Constants have no direct replacement. A constant is a fixed value a deployer cannot override, whereas any package value can be overridden at deploy time with `--set-values` or `-v`. Depending on why the constant existed, replace it one of these ways:
 
 - **Hardcode the value.** For values consumed by a Helm chart, place the fixed value directly in the chart's static `valuesFiles` rather than mapping it from package values.
 {/* TODO, once we have a function that gets an image from a component, use that as the example */}
