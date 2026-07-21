@@ -1,5 +1,5 @@
 ---
-title: Deployment Values
+title: Deployment Variables
 sidebar:
   order: 35
 ---
@@ -9,9 +9,9 @@ import ExampleYAML from "@components/ExampleYAML.astro";
 
 Deploy time values are used throughout the Zarf deployment process to template `manifests` and `files`, set Helm values, or provide environment variables for `actions`, and can be provided by the `zarf package deploy` user, the `zarf package create` user, or internally by Zarf itself.
 
-## Using Values
+## Using Variables
 
-### Value Templates
+### Variable Templates
 
 Values can be templated into `manifests`, `files`, and `charts` using a unique `###ZARF_VAR_<VALUE_KEY>###` syntax anywhere in the file, where `<VALUE_KEY>` is the name of the value along with any associated prefix in ALL_CAPS (see [Setting Values](#setting-values) below). This allows you to punch through other templating engines to place values precisely where you want in a given file.  You can also control how this templating happens when defining a value such as with the `autoIndent` key on `constants` and `variables`.  A simple value template for a [Zarf Variable](#variables-zarf_var_) named `DATABASE_USERNAME` would look like the following:
 
@@ -135,7 +135,7 @@ constants:
 <Properties item="Constant" />
 
 
-### Internal Values (`ZARF_`)
+### Internal Variables (`ZARF_`)
 
 In addition to user supplied Variables, and Constants, Zarf maintains a list of internal variables that components can use for more advanced functionality (such as within [`init` packages](/ref/init-package)).  Below are the current values Zarf supports:
 
