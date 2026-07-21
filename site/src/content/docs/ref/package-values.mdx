@@ -254,6 +254,14 @@ package:
       - custom-values.yaml
 ```
 
+### Precedence
+
+Values are merged from several sources. When the same key is set in more than one place, later sources in this list win:
+
+1. **Package `values.files`** baked into the package at build time (merged in order, later file wins)
+2. **Deploy-time values files** from `-v`/`--values` (merged in order, later file wins).
+3. **`--set-values`** flags.
+
 ## Inspecting Values
 
 Zarf provides commands to inspect the results of values without having to deploy a package:
