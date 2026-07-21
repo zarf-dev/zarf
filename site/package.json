@@ -6,10 +6,10 @@
   "scripts": {
     "lint": "markdownlint-cli2 . --config ../.markdownlint-cli2.jsonc",
     "lint:fix": "markdownlint-cli2 --fix . --config ../.markdownlint-cli2.jsonc",
-    "predev": "mkdir -p src/assets/schema && cp ../zarf.schema.json src/assets/schema/latest.json && node hack/copy-examples.js",
+    "predev": "mkdir -p src/assets/schema/latest && cp ../src/pkg/schema/zarf-v1alpha1-schema.json src/assets/schema/latest/v1alpha1.json && cp ../src/pkg/schema/zarf-v1beta1-package-schema.json src/assets/schema/latest/v1beta1.json && node hack/copy-examples.js",
     "dev": "astro dev",
     "start": "astro dev",
-    "prebuild": "mkdir -p src/assets/schema && cp ../zarf.schema.json src/assets/schema/latest.json && node hack/copy-examples.js",
+    "prebuild": "mkdir -p src/assets/schema/latest && cp ../src/pkg/schema/zarf-v1alpha1-schema.json src/assets/schema/latest/v1alpha1.json && cp ../src/pkg/schema/zarf-v1beta1-package-schema.json src/assets/schema/latest/v1beta1.json && node hack/copy-examples.js",
     "build": "rm -rf dist && astro check && astro build",
     "check": "npm run prebuild && astro check",
     "build:versions": "node hack/build-versions.mjs",

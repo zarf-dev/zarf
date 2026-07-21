@@ -70,8 +70,8 @@ const topics = [
   ...versions.map((v) => ({ id: v.slug, label: v.ref, link: `/${v.slug}/`, items: buildSidebar(v.slug) })),
 ];
 
-// Associate generated pages that aren't in any sidebar with a topic.
-const topicsOption: Record<string, string[]> = { latest: ["/404"] };
+// Associate pages that aren't in any sidebar (404, sidebar-hidden pages) with a topic.
+const topicsOption: Record<string, string[]> = { latest: ["/404", "/schema/v1beta1-package"] };
 
 // https://astro.build/config
 export default defineConfig({
