@@ -123,16 +123,16 @@ components:
         after:
           - cmd: echo "generated-password-123"
             setValues:
-              - name: database.password
+              - key: .database.password
 
           - cmd: kubectl get configmap app-config -o json
             setValues:
-              - name: existing.config
+              - key: .existing.config
                 type: json
 ```
 
 The `setValues` field accepts:
-- `name`: The path where the value should be stored (e.g., `database.password`)
+- `key`: The dotted path where the value should be stored (e.g., `.database.password`)
 - `type`: The format of the output - `string` (default), `json`, or `yaml`
 
 Values set via `setValues` are available in subsequent actions and manifests within the same deployment.
@@ -171,7 +171,7 @@ This approach passes your entire Package Values structure to the Helm chart, use
 
 #### Excluding Paths
 
-When mapping a subtree, use `excludePaths` to omit specific descendants of the `sourcePath`. This is useful for withholding irrelevant or intentionally static keys. For instance, often times values
+When mapping a subtree, use `excludePaths` to omit specific descendants of the `sourcePath`. This is useful for withholding irrelevant or intentionally static keys, such as an image reference that is fixed at package creation.
 
 ```yaml
 values:
@@ -323,7 +323,7 @@ The `.Pkg` object gives access the parent package definition. See [values-templa
 
 ### Functions
 
-The [default sprig functions](https://masterminds.github.io/sprig/) except for `getHostByName`, `env`, and `expandEnv` are included.
+The [default sprig functions](https://masterminds.github.io/sprig/) except for `getHostByName`, `env`, and `expandenv` are included.
 
 A subset of [Helm functions](https://helm.sh/docs/chart_template_guide/function_list/#totoml-musttotoml) are included:
 
@@ -345,6 +345,6 @@ See the [values-templating example](/ref/examples/values-templating) for a compl
 
 - [Package Values Best Practices](/best-practices/package-values/) - Best practices for using Package Values
 - [Templating Reference](/ref/templating/) - Complete guide to Go templates and Sprig functions
-- [Deployment Values (Legacy)](/ref/values/) - Legacy Variables and Constants system
+- [Deployment Variables (Legacy)](/ref/values/) - Legacy Variables and Constants system
 - [Actions](/ref/actions/) - Component action configuration
 - [Components](/ref/components/) - Component structure and features

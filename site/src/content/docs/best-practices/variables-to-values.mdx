@@ -140,7 +140,7 @@ replicaCount: {{ .Values.app.replicas }}
 imageRegistry: {{ .State.Registry.Address }}
 ```
 
-## Migrating actions
+## Migrating Actions
 
 Legacy variables are substituted into action `cmd` fields automatically. With values, actions require `template: true` to opt in, then reference values as Go templates. Actions that captured output into a variable with `setVariables` use `setValues` instead.
 
