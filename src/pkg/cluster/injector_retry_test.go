@@ -128,25 +128,6 @@ func TestClientGoStopsRetryingWhenContextExpires(t *testing.T) {
 	require.Equal(t, int32(1), attempts.Load())
 }
 
-func TestStopInjectionRetriesTooManyRequests(t *testing.T) {
-	t.Parallel()
-
-	cs := fake.NewClientset()
-	var attempts atomic.Int32
-	cs.PrependReactor("delete", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
-		if attempts.Add(1) == 1 {
-			return true, nil, kerrors.NewTooManyRequests("control plane throttled", 0)
-		}
-		return false, nil, nil
-	})
-	c := &Cluster{Clientset: cs}
-
-	err := c.StopInjection(t.Context())
-
-	require.NoError(t, err)
-	require.Equal(t, int32(2), attempts.Load())
-}
-
 func TestStopInjectionRetriesPayloadConfigMapCleanup(t *testing.T) {
 	t.Parallel()
 

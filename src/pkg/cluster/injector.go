@@ -40,8 +40,6 @@ import (
 
 var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
 
-var errInjectorNodePortConflict = errors.New("injector service NodePort conflicts with registry NodePort")
-
 const (
 	payloadConfigMapBaseDelay = 250 * time.Millisecond
 	payloadConfigMapMaxDelay  = 2 * time.Second
@@ -99,10 +97,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	}
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily)
-	_, err = retryInjectorRequest(ctx, "apply injector pod", func() error {
-		_, err := c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-		return err
-	})
+	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return "", 0, fmt.Errorf("error creating pod in cluster: %w", err)
 	}
@@ -157,15 +152,11 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	start := time.Now()
 	l := logger.From(ctx)
 	l.Debug("deleting injector resources")
-	_, err := retryInjectorRequest(ctx, "delete injector pod", func() error {
-		return c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
-	})
+	err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-	_, err = retryInjectorRequest(ctx, "delete injector service", func() error {
-		return c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
-	})
+	err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
@@ -218,10 +209,7 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 
 	// TODO: Replace with wait package in the future.
 	err = wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
-		_, err := retryInjectorRequest(ctx, "get injector pod during cleanup", func() error {
-			_, getErr := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
-			return getErr
-		})
+		_, err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
 		if kerrors.IsNotFound(err) {
 			return true, nil
 		}
@@ -703,36 +691,29 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName str
 		})
 
 		var err error
-		_, err = retryInjectorRequest(ctx, "apply injector service", func() error {
-			svc, err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-			return err
-		})
+		svc, err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
-			return retry.Unrecoverable(err)
+			return err
 		}
 
 		assignedNodePort := int(svc.Spec.Ports[0].NodePort)
 		if assignedNodePort == int(opts.RegistryNodePort) {
 			l.Info("injector service NodePort conflicts with registry NodePort, recreating service", "conflictingPort", assignedNodePort)
-			_, deleteErr := retryInjectorRequest(ctx, "delete conflicting injector service", func() error {
-				return c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
-			})
+			deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
 			if deleteErr != nil {
-				return retry.Unrecoverable(deleteErr)
+				return deleteErr
 			}
-			return fmt.Errorf("%w: %d", errInjectorNodePortConflict, opts.RegistryNodePort)
+			return fmt.Errorf("nodePort conflict with registry port %d", opts.RegistryNodePort)
 		}
 		return nil
-	}, retry.Attempts(10), retry.Delay(500*time.Millisecond), retry.Context(timeoutCtx), retry.RetryIf(func(err error) bool {
-		return errors.Is(err, errInjectorNodePortConflict)
-	}))
+	}, retry.Attempts(10), retry.Delay(500*time.Millisecond), retry.Context(timeoutCtx))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the injector nodeport service: %w", err)
 	}
 	return svc, nil
 }
 
-// retryInjectorRequest retries headerless transient Kubernetes API throttles for idempotent injector operations.
+// retryInjectorRequest retries headerless transient Kubernetes API throttles for idempotent injector ConfigMap operations.
 func retryInjectorRequest(ctx context.Context, operation string, request func() error) (retried bool, err error) {
 	l := logger.From(ctx)
 	err = retry.Do(func() error {
