@@ -315,7 +315,7 @@ func TestPublishPackageDirectoryNameCollision(t *testing.T) {
 			require.NoError(t, err)
 
 			// Create a temporary directory to use as working directory and
-			// create a subdir with same name as the package to test name collission
+			// create a subdir with same name as the package to test name collision
 			// https://github.com/zarf-dev/zarf/issues/4148
 			tmpDir := t.TempDir()
 			collisionDir := filepath.Join(tmpDir, "test")
