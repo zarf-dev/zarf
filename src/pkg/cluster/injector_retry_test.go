@@ -5,52 +5,24 @@ package cluster
 
 import (
 	"context"
-	cryptorand "crypto/rand"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/v1/layout"
-	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	k8stesting "k8s.io/client-go/testing"
 )
-
-func TestClientGoRetriesConfigMapApplyWithRetryAfter(t *testing.T) {
-	t.Parallel()
-
-	var attempts atomic.Int32
-	client := newCoreV1Client(t, func(w http.ResponseWriter, _ *http.Request) {
-		if attempts.Add(1) == 1 {
-			writeTooManyRequests(w, "0")
-			return
-		}
-		writeConfigMap(w)
-	})
-
-	_, err := client.ConfigMaps(state.ZarfNamespaceName).Apply(t.Context(), v1ac.ConfigMap("zarf-payload-000", state.ZarfNamespaceName), metav1.ApplyOptions{
-		FieldManager: FieldManagerName,
-		Force:        true,
-	})
-
-	require.NoError(t, err)
-	require.Equal(t, int32(2), attempts.Load())
-}
 
 func TestClientGoRetriesConfigMapDeleteWithRetryAfter(t *testing.T) {
 	t.Parallel()
@@ -79,10 +51,7 @@ func TestClientGoDoesNotRetryHeaderlessTooManyRequests(t *testing.T) {
 		writeTooManyRequests(w, "")
 	})
 
-	_, err := client.ConfigMaps(state.ZarfNamespaceName).Apply(t.Context(), v1ac.ConfigMap("zarf-payload-000", state.ZarfNamespaceName), metav1.ApplyOptions{
-		FieldManager: FieldManagerName,
-		Force:        true,
-	})
+	err := client.ConfigMaps(state.ZarfNamespaceName).DeleteCollection(t.Context(), metav1.DeleteOptions{}, metav1.ListOptions{})
 
 	require.Error(t, err)
 	require.True(t, kerrors.IsTooManyRequests(err))
@@ -98,10 +67,7 @@ func TestClientGoBoundsRetriesWithRetryAfter(t *testing.T) {
 		writeTooManyRequests(w, "0")
 	})
 
-	_, err := client.ConfigMaps(state.ZarfNamespaceName).Apply(t.Context(), v1ac.ConfigMap("zarf-payload-000", state.ZarfNamespaceName), metav1.ApplyOptions{
-		FieldManager: FieldManagerName,
-		Force:        true,
-	})
+	err := client.ConfigMaps(state.ZarfNamespaceName).DeleteCollection(t.Context(), metav1.DeleteOptions{}, metav1.ListOptions{})
 
 	require.Error(t, err)
 	require.True(t, kerrors.IsTooManyRequests(err))
@@ -119,10 +85,7 @@ func TestClientGoStopsRetryingWhenContextExpires(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 25*time.Millisecond)
 	defer cancel()
 
-	_, err := client.ConfigMaps(state.ZarfNamespaceName).Apply(ctx, v1ac.ConfigMap("zarf-payload-000", state.ZarfNamespaceName), metav1.ApplyOptions{
-		FieldManager: FieldManagerName,
-		Force:        true,
-	})
+	err := client.ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{})
 
 	require.ErrorIs(t, err, context.DeadlineExceeded)
 	require.Equal(t, int32(1), attempts.Load())
@@ -147,71 +110,17 @@ func TestStopInjectionRetriesPayloadConfigMapCleanup(t *testing.T) {
 	require.Equal(t, int32(2), attempts.Load())
 }
 
-func TestCreateInjectorConfigMapsRetriesTooManyRequests(t *testing.T) {
+func TestStopInjectionDoesNotListLegacyPayloadConfigMaps(t *testing.T) {
 	t.Parallel()
 
 	cs := fake.NewClientset()
-	var attempts atomic.Int32
-	cs.PrependReactor("patch", "configmaps", func(action k8stesting.Action) (bool, runtime.Object, error) {
-		patchAction, ok := action.(k8stesting.PatchAction)
-		if !ok || patchAction.GetName() != "rust-binary" {
-			return false, nil, nil
-		}
-		if attempts.Add(1) == 1 {
-			return true, nil, kerrors.NewTooManyRequests("control plane throttled", 0)
-		}
-		return false, nil, nil
-	})
 	c := &Cluster{Clientset: cs}
-	tmpDir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "zarf-injector"), []byte("injector"), 0o644))
-	idx, err := random.Index(1, 1, 1)
-	require.NoError(t, err)
-	_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
-	require.NoError(t, err)
 
-	_, _, err = c.CreateInjectorConfigMaps(t.Context(), tmpDir, t.TempDir(), nil, "test")
+	err := c.StopInjection(t.Context())
 
 	require.NoError(t, err)
-	require.Equal(t, int32(2), attempts.Load())
-}
-
-func TestCreatePayloadConfigMapsResumesAfterTooManyRequests(t *testing.T) {
-	t.Parallel()
-
-	cs := fake.NewClientset()
-	attempts := map[string]int{}
-	cs.PrependReactor("patch", "configmaps", func(action k8stesting.Action) (bool, runtime.Object, error) {
-		patchAction, ok := action.(k8stesting.PatchAction)
-		if !ok {
-			return false, nil, nil
-		}
-		name := patchAction.GetName()
-		attempts[name]++
-		if name == "zarf-payload-000" && attempts[name] == 1 {
-			return true, nil, kerrors.NewTooManyRequests("control plane throttled", 0)
-		}
-		return false, nil, nil
-	})
-	c := &Cluster{Clientset: cs}
-	tmpDir := t.TempDir()
-	seedImagesDir := filepath.Join(tmpDir, "seed-images")
-	idx, err := random.Index(1, 1, 1)
-	require.NoError(t, err)
-	_, err = layout.Write(seedImagesDir, idx)
-	require.NoError(t, err)
-	payload := make([]byte, 1024*768+1)
-	_, err = cryptorand.Read(payload)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(seedImagesDir, "payload"), payload, 0o644))
-
-	cmNames, _, err := c.createPayloadConfigMaps(t.Context(), tmpDir, t.TempDir(), nil, "test")
-
-	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(cmNames), 2)
-	require.Equal(t, 2, attempts[cmNames[0]])
-	for _, cmName := range cmNames[1:] {
-		require.Equal(t, 1, attempts[cmName])
+	for _, action := range cs.Actions() {
+		require.False(t, action.GetVerb() == "list" && action.GetResource().Resource == "configmaps")
 	}
 }
 
@@ -293,16 +202,6 @@ func writeTooManyRequests(w http.ResponseWriter, retryAfter string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusTooManyRequests)
 	writeJSON(w, kerrors.NewTooManyRequests("control plane throttled", 0).ErrStatus)
-}
-
-func writeConfigMap(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
-	writeJSON(w, &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "zarf-payload-000",
-			Namespace: state.ZarfNamespaceName,
-		},
-	})
 }
 
 func writeSuccessStatus(w http.ResponseWriter) {

@@ -40,11 +40,6 @@ import (
 
 var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
 
-const (
-	payloadConfigMapBaseDelay = 250 * time.Millisecond
-	payloadConfigMapMaxDelay  = 2 * time.Second
-)
-
 // ZarfInjectorOptions represents the options used by injector pod
 type ZarfInjectorOptions struct {
 	// RegistryNodePort, using uint16 allows for only valid ports; 0 lets Kubernetes choose
@@ -137,10 +132,7 @@ func (c *Cluster) CreateInjectorConfigMaps(ctx context.Context, tmpDir, imagesDi
 		WithLabels(map[string]string{
 			PackageLabel: pkgName,
 		})
-	_, err = retryInjectorRequest(ctx, "apply injector binary ConfigMap", func() error {
-		_, err := c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-		return err
-	})
+	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return nil, "", err
 	}
@@ -182,29 +174,6 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	})
 	if err != nil {
 		return err
-	}
-
-	// This is needed because labels were not present in payload config maps previously.
-	// Without this injector will fail if the config maps exist from a previous Zarf version.
-	var cmList *corev1.ConfigMapList
-	_, err = retryInjectorRequest(ctx, "list legacy injector payload ConfigMaps", func() error {
-		var listErr error
-		cmList, listErr = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-		return listErr
-	})
-	if err != nil {
-		return err
-	}
-	for _, cm := range cmList.Items {
-		if !strings.HasPrefix(cm.Name, "zarf-payload-") {
-			continue
-		}
-		_, err = retryInjectorRequest(ctx, "delete legacy injector payload ConfigMap", func() error {
-			return c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
-		})
-		if err != nil {
-			return err
-		}
 	}
 
 	// TODO: Replace with wait package in the future.
@@ -269,7 +238,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 		return nil, "", err
 	}
 	cmNames := []string{}
-	payloadConfigMapDelay := payloadConfigMapBaseDelay
 	l.Info("adding archived binary configmaps of registry image to the cluster")
 	for i, data := range chunks {
 		fileName := fmt.Sprintf("zarf-payload-%03d", i)
@@ -282,25 +250,14 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 			WithBinaryData(map[string][]byte{
 				fileName: data,
 			})
-		retried, err := retryInjectorRequest(ctx, "apply injector payload ConfigMap", func() error {
-			_, applyErr := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-			return applyErr
-		})
+		_, err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return nil, "", err
 		}
 		cmNames = append(cmNames, fileName)
 
-		if retried {
-			payloadConfigMapDelay = min(payloadConfigMapDelay*2, payloadConfigMapMaxDelay)
-		} else if payloadConfigMapDelay > payloadConfigMapBaseDelay {
-			payloadConfigMapDelay = max(payloadConfigMapDelay/2, payloadConfigMapBaseDelay)
-		}
-		if i < len(chunks)-1 {
-			if err := waitForPayloadConfigMapPacing(ctx, payloadConfigMapDelay); err != nil {
-				return nil, "", err
-			}
-		}
+		// Give the control plane a 250ms buffer between each configmap.
+		time.Sleep(250 * time.Millisecond)
 	}
 	return cmNames, shasum, nil
 }
@@ -712,7 +669,7 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName str
 	return svc, nil
 }
 
-// retryInjectorRequest retries headerless transient Kubernetes API throttles for idempotent injector ConfigMap operations.
+// retryInjectorRequest retries headerless transient Kubernetes API throttles for injector payload cleanup.
 func retryInjectorRequest(ctx context.Context, operation string, request func() error) (retried bool, err error) {
 	l := logger.From(ctx)
 	err = retry.Do(func() error {
@@ -749,15 +706,4 @@ func retryInjectorRequest(ctx context.Context, operation string, request func() 
 func hasServerRetryDelay(err error) bool {
 	_, ok := kerrors.SuggestsClientDelay(err)
 	return ok
-}
-
-func waitForPayloadConfigMapPacing(ctx context.Context, delay time.Duration) error {
-	timer := time.NewTimer(delay)
-	defer timer.Stop()
-	select {
-	case <-timer.C:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
 }
