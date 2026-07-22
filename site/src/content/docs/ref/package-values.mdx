@@ -89,7 +89,7 @@ components:
 
 ### In Actions
 
-Each action requires opt-in templating, set `template: true` on individual actions:
+Each action requires opt-in templating, set `template: true` on each `cmd`:
 
 ```yaml
 components:
@@ -103,7 +103,7 @@ components:
 
 :::note
 
-Package Values are available during `onDeploy` and `onRemove` actions, but **not** during `onCreate` actions.
+Templating can be enabled during `onDeploy` and `onRemove` actions, but **not** during `onCreate` actions.
 
 :::
 
@@ -315,7 +315,7 @@ See the [values-templating example](/ref/examples/values-templating/) for a work
 
 ### Package Object (`.Pkg`)
 
-The `.Pkg` object gives access to the package definition. See [values-templating example](/ref/examples/values-templating) for an example.
+The `.Pkg` object gives access to the package definition. See this used in the [values-templating](/ref/examples/values-templating) example.
 
 ### Functions
 
