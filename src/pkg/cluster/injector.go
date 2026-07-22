@@ -27,6 +27,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -38,6 +39,13 @@ import (
 )
 
 var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
+
+var errInjectorNodePortConflict = errors.New("injector service NodePort conflicts with registry NodePort")
+
+const (
+	payloadConfigMapBaseDelay = 250 * time.Millisecond
+	payloadConfigMapMaxDelay  = 2 * time.Second
+)
 
 // ZarfInjectorOptions represents the options used by injector pod
 type ZarfInjectorOptions struct {
@@ -91,7 +99,10 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	}
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily)
-	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+	_, err = retryInjectorRequest(ctx, "apply injector pod", func() error {
+		_, err := c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+		return err
+	})
 	if err != nil {
 		return "", 0, fmt.Errorf("error creating pod in cluster: %w", err)
 	}
@@ -131,7 +142,10 @@ func (c *Cluster) CreateInjectorConfigMaps(ctx context.Context, tmpDir, imagesDi
 		WithLabels(map[string]string{
 			PackageLabel: pkgName,
 		})
-	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+	_, err = retryInjectorRequest(ctx, "apply injector binary ConfigMap", func() error {
+		_, err := c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+		return err
+	})
 	if err != nil {
 		return nil, "", err
 	}
@@ -143,15 +157,21 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	start := time.Now()
 	l := logger.From(ctx)
 	l.Debug("deleting injector resources")
-	err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
+	_, err := retryInjectorRequest(ctx, "delete injector pod", func() error {
+		return c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
+	})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-	err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+	_, err = retryInjectorRequest(ctx, "delete injector service", func() error {
+		return c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+	})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	_, err = retryInjectorRequest(ctx, "delete injector binary ConfigMap", func() error {
+		return c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
@@ -166,14 +186,21 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	listOpts := metav1.ListOptions{
 		LabelSelector: selector.String(),
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	_, err = retryInjectorRequest(ctx, "delete injector payload ConfigMaps", func() error {
+		return c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	})
 	if err != nil {
 		return err
 	}
 
 	// This is needed because labels were not present in payload config maps previously.
 	// Without this injector will fail if the config maps exist from a previous Zarf version.
-	cmList, err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	var cmList *corev1.ConfigMapList
+	_, err = retryInjectorRequest(ctx, "list legacy injector payload ConfigMaps", func() error {
+		var listErr error
+		cmList, listErr = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+		return listErr
+	})
 	if err != nil {
 		return err
 	}
@@ -181,7 +208,9 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 		if !strings.HasPrefix(cm.Name, "zarf-payload-") {
 			continue
 		}
-		err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
+		_, err = retryInjectorRequest(ctx, "delete legacy injector payload ConfigMap", func() error {
+			return c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
+		})
 		if err != nil {
 			return err
 		}
@@ -189,7 +218,10 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 
 	// TODO: Replace with wait package in the future.
 	err = wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
-		_, err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
+		_, err := retryInjectorRequest(ctx, "get injector pod during cleanup", func() error {
+			_, getErr := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
+			return getErr
+		})
 		if kerrors.IsNotFound(err) {
 			return true, nil
 		}
@@ -250,6 +282,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 	}
 
 	cmNames := []string{}
+	payloadConfigMapDelay := payloadConfigMapBaseDelay
 	l.Info("adding archived binary configmaps of registry image to the cluster")
 	for i, data := range chunks {
 		fileName := fmt.Sprintf("zarf-payload-%03d", i)
@@ -262,14 +295,25 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 			WithBinaryData(map[string][]byte{
 				fileName: data,
 			})
-		_, err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+		retried, err := retryInjectorRequest(ctx, "apply injector payload ConfigMap", func() error {
+			_, applyErr := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+			return applyErr
+		})
 		if err != nil {
 			return nil, "", err
 		}
 		cmNames = append(cmNames, fileName)
 
-		// Give the control plane a 250ms buffer between each configmap
-		time.Sleep(250 * time.Millisecond)
+		if retried {
+			payloadConfigMapDelay = min(payloadConfigMapDelay*2, payloadConfigMapMaxDelay)
+		} else if payloadConfigMapDelay > payloadConfigMapBaseDelay {
+			payloadConfigMapDelay = max(payloadConfigMapDelay/2, payloadConfigMapBaseDelay)
+		}
+		if i < len(chunks)-1 {
+			if err := waitForPayloadConfigMapPacing(ctx, payloadConfigMapDelay); err != nil {
+				return nil, "", err
+			}
+		}
 	}
 	return cmNames, shasum, nil
 }
@@ -659,24 +703,74 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName str
 		})
 
 		var err error
-		svc, err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-		if err != nil {
+		_, err = retryInjectorRequest(ctx, "apply injector service", func() error {
+			svc, err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 			return err
+		})
+		if err != nil {
+			return retry.Unrecoverable(err)
 		}
 
 		assignedNodePort := int(svc.Spec.Ports[0].NodePort)
 		if assignedNodePort == int(opts.RegistryNodePort) {
 			l.Info("injector service NodePort conflicts with registry NodePort, recreating service", "conflictingPort", assignedNodePort)
-			deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+			_, deleteErr := retryInjectorRequest(ctx, "delete conflicting injector service", func() error {
+				return c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+			})
 			if deleteErr != nil {
-				return deleteErr
+				return retry.Unrecoverable(deleteErr)
 			}
-			return fmt.Errorf("nodePort conflict with registry port %d", opts.RegistryNodePort)
+			return fmt.Errorf("%w: %d", errInjectorNodePortConflict, opts.RegistryNodePort)
 		}
 		return nil
-	}, retry.Attempts(10), retry.Delay(500*time.Millisecond), retry.Context(timeoutCtx))
+	}, retry.Attempts(10), retry.Delay(500*time.Millisecond), retry.Context(timeoutCtx), retry.RetryIf(func(err error) bool {
+		return errors.Is(err, errInjectorNodePortConflict)
+	}))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the injector nodeport service: %w", err)
 	}
 	return svc, nil
+}
+
+// retryInjectorRequest retries headerless transient Kubernetes API throttles for idempotent injector operations.
+func retryInjectorRequest(ctx context.Context, operation string, request func() error) (retried bool, err error) {
+	l := logger.From(ctx)
+	err = retry.Do(func() error {
+		requestErr := request()
+		if requestErr == nil {
+			return nil
+		}
+		if !kerrors.IsTooManyRequests(requestErr) || hasServerRetryDelay(requestErr) {
+			return retry.Unrecoverable(requestErr)
+		}
+		return requestErr
+	},
+		retry.Attempts(uint(config.ZarfDefaultRetries)),
+		retry.Delay(config.ZarfDefaultRetryDelay),
+		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
+		retry.DelayType(retry.CombineDelay(retry.BackOffDelay, retry.RandomDelay)),
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+		retry.OnRetry(func(n uint, requestErr error) {
+			retried = true
+			l.Warn("retrying transient Kubernetes API request", "operation", operation, "attempt", n+1, "maxAttempts", config.ZarfDefaultRetries, "error", requestErr)
+		}),
+	)
+	return retried, err
+}
+
+func hasServerRetryDelay(err error) bool {
+	_, ok := kerrors.SuggestsClientDelay(err)
+	return ok
+}
+
+func waitForPayloadConfigMapPacing(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
