@@ -27,6 +27,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -151,7 +152,9 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	_, err = retryInjectorRequest(ctx, "delete injector binary ConfigMap", func() error {
+		return c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
@@ -166,25 +169,11 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	listOpts := metav1.ListOptions{
 		LabelSelector: selector.String(),
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	_, err = retryInjectorRequest(ctx, "delete injector payload ConfigMaps", func() error {
+		return c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	})
 	if err != nil {
 		return err
-	}
-
-	// This is needed because labels were not present in payload config maps previously.
-	// Without this injector will fail if the config maps exist from a previous Zarf version.
-	cmList, err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, cm := range cmList.Items {
-		if !strings.HasPrefix(cm.Name, "zarf-payload-") {
-			continue
-		}
-		err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
-		if err != nil {
-			return err
-		}
 	}
 
 	// TODO: Replace with wait package in the future.
@@ -248,7 +237,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 	if err != nil {
 		return nil, "", err
 	}
-
 	cmNames := []string{}
 	l.Info("adding archived binary configmaps of registry image to the cluster")
 	for i, data := range chunks {
@@ -268,7 +256,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 		}
 		cmNames = append(cmNames, fileName)
 
-		// Give the control plane a 250ms buffer between each configmap
+		// Give the control plane a 250ms buffer between each configmap.
 		time.Sleep(250 * time.Millisecond)
 	}
 	return cmNames, shasum, nil
@@ -679,4 +667,43 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName str
 		return nil, fmt.Errorf("failed to create the injector nodeport service: %w", err)
 	}
 	return svc, nil
+}
+
+// retryInjectorRequest retries headerless transient Kubernetes API throttles for injector payload cleanup.
+func retryInjectorRequest(ctx context.Context, operation string, request func() error) (retried bool, err error) {
+	l := logger.From(ctx)
+	err = retry.Do(func() error {
+		requestErr := request()
+		if requestErr == nil {
+			return nil
+		}
+		if !kerrors.IsTooManyRequests(requestErr) || hasServerRetryDelay(requestErr) {
+			return retry.Unrecoverable(requestErr)
+		}
+		return requestErr
+	},
+		retry.Attempts(uint(config.ZarfDefaultRetries)),
+		retry.Delay(config.ZarfDefaultRetryDelay),
+		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
+		retry.DelayType(func(n uint, requestErr error, retryConfig *retry.Config) time.Duration {
+			delay := retry.CombineDelay(retry.BackOffDelay, retry.RandomDelay)(n, requestErr, retryConfig)
+			retried = true
+			l.Warn("retrying transient Kubernetes API request",
+				"operation", operation,
+				"attempt", n+1,
+				"maxAttempts", config.ZarfDefaultRetries,
+				"nextDelay", delay,
+				"error", requestErr,
+			)
+			return delay
+		}),
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+	)
+	return retried, err
+}
+
+func hasServerRetryDelay(err error) bool {
+	_, ok := kerrors.SuggestsClientDelay(err)
+	return ok
 }
