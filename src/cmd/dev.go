@@ -84,7 +84,7 @@ func parseSchemaValues(ctx context.Context, basePath string, defined load.Define
 	return zarfValues, nil
 }
 
-func rootPackageValuesFiles(ctx context.Context, basePath string) ([]string, error) {
+func rootPackageValuesFiles(ctx context.Context, basePath string, setPkgTmpl map[string]string) ([]string, error) {
 	pkgPath, err := layout.ResolvePackagePath(basePath)
 	if err != nil {
 		return nil, err
@@ -96,6 +96,16 @@ func rootPackageValuesFiles(ctx context.Context, basePath string) ([]string, err
 	pkg, err := pkgcfg.Parse(ctx, b)
 	if err != nil {
 		return nil, err
+	}
+	templateMap := map[string]string{
+		v1alpha1.ZarfPackageArch: config.GetArch(pkg.Metadata.Architecture),
+	}
+	for key, value := range setPkgTmpl {
+		templateMap[fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, key)] = value
+		templateMap[fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageVariablePrefix, key)] = value
+	}
+	if err := utils.ReloadYamlTemplate(&pkg, templateMap); err != nil {
+		return nil, fmt.Errorf("unable to render root package templates: %w", err)
 	}
 	return pkg.Values.Files, nil
 }
@@ -213,7 +223,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	}
 
 	// Step 1: Merge package defaults, limiting imported defaults to their selected components' chart value mappings.
-	rootValuesFiles, err := rootPackageValuesFiles(ctx, basePath)
+	rootValuesFiles, err := rootPackageValuesFiles(ctx, basePath, o.setPkgTmpl)
 	if err != nil {
 		return fmt.Errorf("unable to read root package values files: %w", err)
 	}
