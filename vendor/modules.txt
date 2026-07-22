@@ -1539,8 +1539,8 @@ github.com/extism/go-sdk
 # github.com/facebookincubator/nvdtools v0.1.5
 ## explicit; go 1.14
 github.com/facebookincubator/nvdtools/wfn
-# github.com/fairwindsops/pluto/v5 v5.22.7
-## explicit; go 1.25.5
+# github.com/fairwindsops/pluto/v5 v5.24.1
+## explicit; go 1.26.2
 github.com/fairwindsops/pluto/v5
 github.com/fairwindsops/pluto/v5/pkg/api
 # github.com/fatih/camelcase v1.0.0
@@ -2482,7 +2482,7 @@ github.com/olekukonko/cat
 # github.com/olekukonko/errors v1.2.0
 ## explicit; go 1.21
 github.com/olekukonko/errors
-# github.com/olekukonko/ll v0.1.6
+# github.com/olekukonko/ll v0.1.7
 ## explicit; go 1.21
 github.com/olekukonko/ll
 github.com/olekukonko/ll/lh
