@@ -84,7 +84,7 @@ data:
         <h3>Package values (via .Pkg)</h3>
         <pre>Name: {{ .Pkg.Metadata.Name }}</pre>
         <pre>CLI version during build: {{ .Pkg.Build.Version }}</pre>
-        <pre>Nginx Image: {{ range .Pkg.Components }}{{ if eq .Name "values-with-manifest" }}{{ index .Images 0 }}{{ end }}{{ end }}</pre>
+        <pre>Nginx Image: {{ index (.Pkg.GetComponent "values-with-manifest").Images 0 }}</pre>
 
         {{ .Values.site.footer }}
       </body>
