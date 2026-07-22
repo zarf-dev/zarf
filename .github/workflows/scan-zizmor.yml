@@ -1,0 +1,49 @@
+name: Validate Zizmor
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches: ["main"]
+  schedule:
+    # Weekly, Monday 04:27 UTC. Off the :00 mark and clear of the other
+    # scheduled scans (CodeQL Fri 02:32, Scorecard Sat 01:30).
+    - cron: "27 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  zizmor:
+    name: Zizmor analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Upload SARIF to the code-scanning dashboard (push / schedule only).
+      security-events: write
+      # zizmor's online audits read workflow/action metadata via the API.
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # Advisory for now: zizmor reports findings but does not fail the build.
+      # The repo currently has a backlog of findings that are being remediated
+      # in severity-ordered follow-up PRs (see zarf-dev/zarf#4849). Once that
+      # backlog is cleared, drop `continue-on-error` so this becomes a gate.
+      - name: Run zizmor (advisory)
+        run: pipx run zizmor==1.26.1 --format sarif .github/ > zizmor.sarif
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Skip on pull_request: forked-PR tokens are read-only and cannot write
+      # security events, which would fail the upload. The dashboard stays
+      # current via push-to-main and the weekly schedule (mirrors scorecard.yaml).
+      - name: Upload SARIF to code scanning
+        if: ${{ github.event_name == 'push' || github.event_name == 'schedule' }}
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        with:
+          sarif_file: zizmor.sarif
+          category: zizmor
