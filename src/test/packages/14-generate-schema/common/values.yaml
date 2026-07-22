@@ -1,3 +1,5 @@
 backend:
   name: schema-app
   replicaCount: 2
+frontend:
+  enabled: true

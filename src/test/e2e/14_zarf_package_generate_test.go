@@ -93,6 +93,10 @@ func TestZarfDevGenerate(t *testing.T) {
 		// .backend.replicas should take the description from the child values.schema.json
 		require.Equal(t, "Replica count", bReplicas["description"])
 
+		// .frontend belongs to an unimported component and must not be included from the child values file.
+		_, hasFrontend := props["frontend"]
+		require.False(t, hasFrontend)
+
 		// .backend.service.port should be pulled in from the child's mapped chart
 		bService, ok := backendProps["service"].(map[string]any)
 		require.True(t, ok)

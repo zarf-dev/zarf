@@ -22,3 +22,13 @@ components:
             targetPath: "."
             excludePaths:
               - ".backend.image"
+  - name: frontend-chart
+    charts:
+      - name: frontend-chart
+        version: 0.1.0
+        releaseName: frontend-chart
+        namespace: frontend-test
+        localPath: ../chart
+        values:
+          - sourcePath: ".frontend"
+            targetPath: "."

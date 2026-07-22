@@ -27,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -57,6 +58,81 @@ func parseValues(ctx context.Context, valuesFiles []string, setValues map[string
 		}
 	}
 	return values, nil
+}
+
+func parseSchemaValues(ctx context.Context, basePath string, defined load.DefinedPackage, rootValuesFiles []string) (value.Values, error) {
+	rootValuesPaths := map[string]bool{}
+	for _, path := range rootValuesFiles {
+		rootValuesPaths[normalizedValuesPath(path)] = true
+	}
+
+	sourcePaths := chartValueSourcePaths(defined.Pkg.Components)
+
+	zarfValues := value.Values{}
+	for _, path := range defined.Pkg.Values.Files {
+		values, err := value.ParseFiles(ctx, []string{filepath.Join(basePath, path)}, value.ParseFilesOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse package values file %q: %w", path, err)
+		}
+
+		if !rootValuesPaths[normalizedValuesPath(path)] {
+			values = filterValuesForSourcePaths(values, sourcePaths)
+		}
+		zarfValues.DeepMerge(values)
+	}
+
+	return zarfValues, nil
+}
+
+func rootPackageValuesFiles(ctx context.Context, basePath string) ([]string, error) {
+	pkgPath, err := layout.ResolvePackagePath(basePath)
+	if err != nil {
+		return nil, err
+	}
+	b, err := os.ReadFile(pkgPath.ManifestFile)
+	if err != nil {
+		return nil, err
+	}
+	pkg, err := pkgcfg.Parse(ctx, b)
+	if err != nil {
+		return nil, err
+	}
+	return pkg.Values.Files, nil
+}
+
+func chartValueSourcePaths(components []v1alpha1.ZarfComponent) []string {
+	var sourcePaths []string
+	for _, component := range components {
+		for _, chart := range component.Charts {
+			for _, chartValue := range chart.Values {
+				sourcePaths = append(sourcePaths, chartValue.SourcePath)
+			}
+		}
+	}
+	return sourcePaths
+}
+
+func filterValuesForSourcePaths(values value.Values, sourcePaths []string) value.Values {
+	filteredValues := value.Values{}
+	for _, sourcePath := range sourcePaths {
+		mappedValue, err := values.Extract(value.Path(sourcePath))
+		if err != nil {
+			// A mapping may rely entirely on chart defaults, so an absent package default
+			// is not an error during schema generation.
+			continue
+		}
+		if err := filteredValues.Set(value.Path(sourcePath), mappedValue); err != nil {
+			continue
+		}
+	}
+	return filteredValues
+}
+
+func normalizedValuesPath(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.ToSlash(filepath.Clean(path))
 }
 
 func newDevCommand() *cobra.Command {
@@ -136,12 +212,12 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 		return err
 	}
 
-	// Step 1: Merge default values.files to create initial set of default Zarf values
-	valuesPaths := make([]string, len(defined.Pkg.Values.Files))
-	for i, file := range defined.Pkg.Values.Files {
-		valuesPaths[i] = filepath.Join(basePath, file)
+	// Step 1: Merge package defaults, limiting imported defaults to their selected components' chart value mappings.
+	rootValuesFiles, err := rootPackageValuesFiles(ctx, basePath)
+	if err != nil {
+		return fmt.Errorf("unable to read root package values files: %w", err)
 	}
-	zarfValues, err := value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
+	zarfValues, err := parseSchemaValues(ctx, basePath, defined, rootValuesFiles)
 	if err != nil {
 		return fmt.Errorf("unable to parse package values files: %w", err)
 	}
