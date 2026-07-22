@@ -268,7 +268,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 	if err != nil {
 		return nil, "", err
 	}
-
 	cmNames := []string{}
 	payloadConfigMapDelay := payloadConfigMapBaseDelay
 	l.Info("adding archived binary configmaps of registry image to the cluster")
@@ -729,13 +728,20 @@ func retryInjectorRequest(ctx context.Context, operation string, request func() 
 		retry.Attempts(uint(config.ZarfDefaultRetries)),
 		retry.Delay(config.ZarfDefaultRetryDelay),
 		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
-		retry.DelayType(retry.CombineDelay(retry.BackOffDelay, retry.RandomDelay)),
+		retry.DelayType(func(n uint, requestErr error, retryConfig *retry.Config) time.Duration {
+			delay := retry.CombineDelay(retry.BackOffDelay, retry.RandomDelay)(n, requestErr, retryConfig)
+			retried = true
+			l.Warn("retrying transient Kubernetes API request",
+				"operation", operation,
+				"attempt", n+1,
+				"maxAttempts", config.ZarfDefaultRetries,
+				"nextDelay", delay,
+				"error", requestErr,
+			)
+			return delay
+		}),
 		retry.LastErrorOnly(true),
 		retry.Context(ctx),
-		retry.OnRetry(func(n uint, requestErr error) {
-			retried = true
-			l.Warn("retrying transient Kubernetes API request", "operation", operation, "attempt", n+1, "maxAttempts", config.ZarfDefaultRetries, "error", requestErr)
-		}),
 	)
 	return retried, err
 }
