@@ -10,7 +10,7 @@ This guide explains how to migrate your package from variables to [package value
 
 ## Verify
 
-To verify that this change made no impact on your package run `zarf dev inspect manifests` before and after your migration. There should be no change aside from the `# Source` comment.
+To verify that this change made no impact on your package run `zarf dev inspect manifests` before your migration with the appropriate variables set. Then run the command the same command with values set post migration. The yaml content should match.
 
 ## Migrating Manifests and Files
 
