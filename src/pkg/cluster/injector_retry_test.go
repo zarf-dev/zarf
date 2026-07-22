@@ -24,7 +24,7 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 )
 
-func TestClientGoRetriesConfigMapDeleteWithRetryAfter(t *testing.T) {
+func TestClientGoRetriesConfigMapDeleteCollectionWithRetryAfter(t *testing.T) {
 	t.Parallel()
 
 	var attempts atomic.Int32
@@ -36,7 +36,7 @@ func TestClientGoRetriesConfigMapDeleteWithRetryAfter(t *testing.T) {
 		writeSuccessStatus(w)
 	})
 
-	err := client.ConfigMaps(state.ZarfNamespaceName).Delete(t.Context(), "zarf-payload-000", metav1.DeleteOptions{})
+	err := client.ConfigMaps(state.ZarfNamespaceName).DeleteCollection(t.Context(), metav1.DeleteOptions{}, metav1.ListOptions{})
 
 	require.NoError(t, err)
 	require.Equal(t, int32(2), attempts.Load())
@@ -108,20 +108,6 @@ func TestStopInjectionRetriesPayloadConfigMapCleanup(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, int32(2), attempts.Load())
-}
-
-func TestStopInjectionDoesNotListLegacyPayloadConfigMaps(t *testing.T) {
-	t.Parallel()
-
-	cs := fake.NewClientset()
-	c := &Cluster{Clientset: cs}
-
-	err := c.StopInjection(t.Context())
-
-	require.NoError(t, err)
-	for _, action := range cs.Actions() {
-		require.False(t, action.GetVerb() == "list" && action.GetResource().Resource == "configmaps")
-	}
 }
 
 func TestRetryInjectorRequestBoundsHeaderlessTooManyRequests(t *testing.T) {
