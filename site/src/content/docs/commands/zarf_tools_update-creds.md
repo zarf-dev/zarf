@@ -8,11 +8,11 @@ tableOfContents: false
 
 ## zarf tools update-creds
 
-Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service
+Updates the credentials for deployed Zarf services (deprecated; prefer the per-service subcommands)
 
 ### Synopsis
 
-Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service. i.e. 'zarf tools update-creds registry'
+Updates the credentials for deployed Zarf services. Deprecated: prefer the per-service subcommands, e.g. 'zarf tools update-creds registry', 'zarf tools update-creds git', or 'zarf tools update-creds agent', which update a single service and fail loudly instead of leaving the cluster in an inconsistent state.
 
 ```
 zarf tools update-creds [flags]
@@ -87,4 +87,7 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 ### SEE ALSO
 
 * [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools update-creds agent](/commands/zarf_tools_update-creds_agent/)	 - Updates the TLS certificates for the deployed Zarf agent
+* [zarf tools update-creds git](/commands/zarf_tools_update-creds_git/)	 - Updates the credentials for the deployed Zarf git server
+* [zarf tools update-creds registry](/commands/zarf_tools_update-creds_registry/)	 - Updates the credentials for the deployed Zarf registry
 
