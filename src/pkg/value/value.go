@@ -144,10 +144,10 @@ func ParseLocalFile(ctx context.Context, path string) (Values, error) {
 	return m, nil
 }
 
-// InferType converts a --set-values scalar string into its natural type, following Helm's
-// scalar rules: "true"/"false" become booleans, "null" becomes nil, and whole base-10 numbers
-// become int64. Everything else, including decimals (1.5) and leading-zero numbers (0755), stays
-// a string. Wrapping the value in single quotes forces a string, e.g. "'123'" yields "123".
+// InferType converts a --set-values scalar string into its natural type: "true"/"false" become
+// booleans and whole base-10 numbers become int64. Everything else, including decimals (1.5) and
+// leading-zero numbers (0755), stays a string. Wrapping the value in single quotes forces a
+// string, e.g. "'123'" yields "123".
 func InferType(s string) any {
 	if len(s) >= 2 && s[0] == '\'' && s[len(s)-1] == '\'' {
 		return s[1 : len(s)-1]
@@ -157,9 +157,6 @@ func InferType(s string) any {
 	}
 	if strings.EqualFold(s, "false") {
 		return false
-	}
-	if strings.EqualFold(s, "null") {
-		return nil
 	}
 	// A leading zero (0755) signals an intentional string, except for "0" itself.
 	if s == "0" {

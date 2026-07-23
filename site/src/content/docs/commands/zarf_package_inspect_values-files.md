@@ -43,7 +43,7 @@ $ zarf package inspect values-files oci://ghcr.io/my-org/my-package:1.0.0
   -k, --key string                              Path to public key file for validating signed packages
       --kube-version string                     Override the default helm template KubeVersion when performing a package chart template
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --set-values stringToString               Specify deployment package values to set on the command line (key.path=value). Values are type-inferred: true/false become booleans, and whole numbers become integers; everything else stays a string (default [])
+      --set-values stringToString               Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
       --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.

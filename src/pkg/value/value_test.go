@@ -1007,7 +1007,7 @@ func TestInferType(t *testing.T) {
 		{name: "true is a bool", in: "true", expected: true},
 		{name: "false is a bool", in: "false", expected: false},
 		{name: "mixed-case bool", in: "True", expected: true},
-		{name: "null is nil", in: "null", expected: nil},
+		{name: "null stays a string", in: "null", expected: "null"},
 		{name: "whole number is int64", in: "3", expected: int64(3)},
 		{name: "zero is int64", in: "0", expected: int64(0)},
 		{name: "negative whole number is int64", in: "-5", expected: int64(-5)},
@@ -1018,7 +1018,6 @@ func TestInferType(t *testing.T) {
 		{name: "empty stays a string", in: "", expected: ""},
 		{name: "single quotes force a string bool", in: "'true'", expected: "true"},
 		{name: "single quotes force a string int", in: "'123'", expected: "123"},
-		{name: "single quotes force a string null", in: "'null'", expected: "null"},
 		{name: "single quotes preserve inner content", in: "''", expected: ""},
 	}
 	for _, tt := range tests {

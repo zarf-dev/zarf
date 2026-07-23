@@ -238,7 +238,7 @@ zarf package remove my-package \
   --set-values="app.environment=staging"
 ```
 
-`--set-values` accepts `key.path=value` pairs with nested keys (`a.b.c=value`). Values are type-inferred: `true`/`false` become booleans, `null` becomes null, and whole base-10 numbers become integers. Everything else, such as decimals (`1.5`) and leading-zero numbers (`0755`), stays a string. To force a value that would otherwise be inferred to stay a string, wrap it in single quotes, e.g. `--set-values="version='123'"`. Lists and other types are not supported through `--set-values`; provide them through a `--values` file instead.
+`--set-values` accepts `key.path=value` pairs with nested keys (`a.b.c=value`). Values are type-inferred: `true`/`false` become booleans and whole base-10 numbers become integers. Everything else, such as decimals (`1.5`) and leading-zero numbers (`0755`), stays a string. To force a value that would otherwise be inferred to stay a string, wrap it in single quotes, e.g. `--set-values="version='123'"`. Lists and other types are not supported through `--set-values`; provide them through a `--values` file instead.
 
 ### Precedence
 
