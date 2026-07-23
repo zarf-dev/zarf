@@ -36,7 +36,7 @@ func TestCustomInit(t *testing.T) {
 
 	/* Test operations during package deploy */
 	// Test that we get an error when trying to deploy a package without providing the public key
-	stdOut, stdErr, err = e2e.Zarf(t, "init", "--verify", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "init", "--verify=always", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "package was signed with a key; provide --key to verify")
 

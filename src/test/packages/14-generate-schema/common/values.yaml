@@ -1,0 +1,3 @@
+backend:
+  name: schema-app
+  replicaCount: 2

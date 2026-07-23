@@ -81,6 +81,16 @@ func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
 }
 
+// GetComponent returns the component with the given name, or an error if no such component exists.
+func (pkg ZarfPackage) GetComponent(name string) (ZarfComponent, error) {
+	for _, component := range pkg.Components {
+		if component.Name == name {
+			return component, nil
+		}
+	}
+	return ZarfComponent{}, fmt.Errorf("no component named %q in package %q", name, pkg.Metadata.Name)
+}
+
 // HasImages returns true if one of the components contains an image.
 func (pkg ZarfPackage) HasImages() bool {
 	for _, component := range pkg.Components {
@@ -273,6 +283,18 @@ type ZarfBuildData struct {
 	// These are files added after checksum generation (e.g., signature files).
 	// This list is authenticated through the signed zarf.yaml.
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
+	// originalAPIVersion records the apiVersion the package was read from before any conversion.
+	originalAPIVersion string
+}
+
+// OriginalAPIVersion returns the apiVersion the package was read from before any conversion.
+func (b ZarfBuildData) OriginalAPIVersion() string {
+	return b.originalAPIVersion
+}
+
+// SetOriginalAPIVersion records the apiVersion the package was read from before any conversion.
+func (b *ZarfBuildData) SetOriginalAPIVersion(apiVersion string) {
+	b.originalAPIVersion = apiVersion
 }
 
 // ZarfValues imports package-level values files and validation.

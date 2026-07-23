@@ -1,0 +1,5 @@
+apiVersion: v2
+name: adopt-no-ns-template
+description: Minimal chart without a namespace template for adopt label testing
+type: application
+version: 0.1.0

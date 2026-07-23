@@ -19,49 +19,102 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
-// UpdateImages updates the images field for components in a zarf.yaml
+// UpdateSchema updates the values.schema field in a zarf.yaml to point to the given relative schema filename.
+func UpdateSchema(ctx context.Context, packagePath string, schemaFilename string) error {
+	l := logger.From(ctx)
+	return modifyManifest(packagePath, func(zarfPackage v1alpha1.ZarfPackage, astFile *ast.File, manifestPath string) (bool, error) {
+		if err := createSchemaUpdate(zarfPackage, schemaFilename, astFile); err != nil {
+			return false, fmt.Errorf("failed to create update: %w", err)
+		}
+		l.Info("successfully updated schema path", "path", manifestPath)
+		return true, nil
+	})
+}
+
+// UpdateImages updates the images field for components in a zarf.yaml.
 func UpdateImages(ctx context.Context, packagePath string, definitionImageResults []DefinitionImageResult) error {
 	l := logger.From(ctx)
+	return modifyManifest(packagePath, func(zarfPackage v1alpha1.ZarfPackage, astFile *ast.File, manifestPath string) (bool, error) {
+		if !imageUpdateNeeded(zarfPackage, definitionImageResults) {
+			l.Info("no update needed, images are already up to date", "path", manifestPath)
+			return false, nil
+		}
+		if err := createImageUpdate(zarfPackage, definitionImageResults, astFile); err != nil {
+			return false, fmt.Errorf("failed to create update: %w", err)
+		}
+		l.Info("successfully updated images", "path", manifestPath)
+		return true, nil
+	})
+}
 
+// modifyManifest loads the zarf.yaml at packagePath, calls fn with the parsed package and AST,
+// and writes the result back only if fn signals that a change was made.
+func modifyManifest(packagePath string, fn func(v1alpha1.ZarfPackage, *ast.File, string) (bool, error)) error {
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
 		return fmt.Errorf("unable to access package path %q: %w", packagePath, err)
 	}
 
-	packageConfigBytes, err := os.ReadFile(pkgPath.ManifestFile)
+	b, err := os.ReadFile(pkgPath.ManifestFile)
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", pkgPath.ManifestFile, err)
 	}
 
-	zarfPackage := v1alpha1.ZarfPackage{}
-	if err := yaml.Unmarshal(packageConfigBytes, &zarfPackage); err != nil {
+	var zarfPackage v1alpha1.ZarfPackage
+	if err := yaml.Unmarshal(b, &zarfPackage); err != nil {
 		return fmt.Errorf("failed to parse zarf.yaml: %w", err)
 	}
 
-	if !updateNeeded(zarfPackage, definitionImageResults) {
-		l.Info("no update needed, images are already up to date", "path", pkgPath.ManifestFile)
-		return nil
-	}
-
-	astFile, err := parser.ParseBytes(packageConfigBytes, parser.ParseComments)
+	astFile, err := parser.ParseBytes(b, parser.ParseComments)
 	if err != nil {
 		return fmt.Errorf("failed to parse %s as AST: %w", pkgPath.ManifestFile, err)
 	}
 
-	updatedZarfYaml, err := createUpdate(zarfPackage, definitionImageResults, astFile)
+	changed, err := fn(zarfPackage, astFile, pkgPath.ManifestFile)
 	if err != nil {
-		return fmt.Errorf("failed to create update: %w", err)
+		return err
+	}
+	if !changed {
+		return nil
 	}
 
-	if err := os.WriteFile(pkgPath.ManifestFile, []byte(updatedZarfYaml), helpers.ReadAllWriteUser); err != nil {
+	if err := os.WriteFile(pkgPath.ManifestFile, []byte(astFile.String()), helpers.ReadAllWriteUser); err != nil {
 		return fmt.Errorf("failed to write updated %s: %w", pkgPath.ManifestFile, err)
 	}
-
-	l.Info("successfully updated images", "path", pkgPath.ManifestFile)
 	return nil
 }
 
-func createUpdate(zarfPackage v1alpha1.ZarfPackage, definitionImageResults []DefinitionImageResult, astFile *ast.File) (string, error) {
+func createSchemaUpdate(zarfPackage v1alpha1.ZarfPackage, schemaFilename string, astFile *ast.File) error {
+	// If values.files exists we must merge only schema into the existing values map to
+	// preserve the files list. Otherwise, create the whole values mapping from scratch.
+	var pathStr string
+	var patchValue any
+	if zarfPackage.Values.Files != nil {
+		pathStr = "$.values"
+		patchValue = map[string]any{"schema": schemaFilename}
+	} else {
+		pathStr = "$"
+		patchValue = map[string]any{"values": map[string]any{"schema": schemaFilename}}
+	}
+
+	patchNode, err := yaml.ValueToNode(patchValue)
+	if err != nil {
+		return fmt.Errorf("failed to create YAML node for schema: %w", err)
+	}
+
+	p, err := yaml.PathString(pathStr)
+	if err != nil {
+		return fmt.Errorf("failed to create YAML path: %w", err)
+	}
+
+	if err := p.MergeFromNode(astFile, patchNode); err != nil {
+		return fmt.Errorf("failed to merge schema path: %w", err)
+	}
+
+	return nil
+}
+
+func createImageUpdate(zarfPackage v1alpha1.ZarfPackage, definitionImageResults []DefinitionImageResult, astFile *ast.File) error {
 	// Note: yamlpath support of goccy/go-yaml only has index-based lookup
 	componentToIndex := make(map[string]int, len(zarfPackage.Components))
 	for i, component := range zarfPackage.Components {
@@ -90,13 +143,11 @@ func createUpdate(zarfPackage v1alpha1.ZarfPackage, definitionImageResults []Def
 			patch["imageArchives"] = result.ImageArchives
 		}
 
-		err := patchComponent(patch, result.ComponentName, componentIndex, astFile)
-
-		if err != nil {
-			return "", err
+		if err := patchComponent(patch, result.ComponentName, componentIndex, astFile); err != nil {
+			return err
 		}
 	}
-	return astFile.String(), nil
+	return nil
 }
 
 func patchComponent(patch map[string]any, component string, componentIndex int, astFile *ast.File) error {
@@ -117,7 +168,7 @@ func patchComponent(patch map[string]any, component string, componentIndex int, 
 	return nil
 }
 
-func updateNeeded(zarfPackage v1alpha1.ZarfPackage, definitionImageResults []DefinitionImageResult) bool {
+func imageUpdateNeeded(zarfPackage v1alpha1.ZarfPackage, definitionImageResults []DefinitionImageResult) bool {
 	definitionImageResultsByComponent := make(map[string]DefinitionImageResult, len(definitionImageResults))
 	for _, d := range definitionImageResults {
 		definitionImageResultsByComponent[d.ComponentName] = d

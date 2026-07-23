@@ -1,0 +1,24 @@
+kind: ZarfPackageConfig
+metadata:
+  name: generate-schema-test
+  description: Package fixture for zarf dev generate-schema e2e tests
+
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
+
+components:
+  - name: backend-chart
+    required: true
+    charts:
+      - name: backend-chart
+        version: 0.1.0
+        releaseName: backend-chart
+        namespace: backend-test
+        localPath: ../chart
+        values:
+          - sourcePath: ".backend"
+            targetPath: "."
+            excludePaths:
+              - ".backend.image"

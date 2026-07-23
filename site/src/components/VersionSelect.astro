@@ -1,0 +1,70 @@
+---
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import Select from "@astrojs/starlight/components/Select.astro";
+
+interface DocsVersion {
+  ref: string;
+  slug: string;
+}
+
+// build-versions.mjs writes versions.json; a missing file means no archived versions.
+let versions: DocsVersion[] = [];
+try {
+  const raw = readFileSync(path.join(process.cwd(), "versions.json"), "utf8");
+  versions = JSON.parse(raw).versions;
+} catch {}
+
+// Single build serves every version at base "/", so the current version comes
+// from the URL's leading slug segment (e.g. /v0-76/...) rather than BASE_URL.
+const segment = Astro.url.pathname.split("/").filter(Boolean)[0] ?? "";
+const currentBase = /^v\d+-\d+$/.test(segment) ? `/${segment}/` : "/";
+
+const options = [
+  { label: "Latest", value: "/" },
+  ...versions.map((v) => ({ label: v.ref, value: `/${v.slug}/` })),
+].map((o) => ({ ...o, selected: o.value === currentBase }));
+---
+
+{
+  options.length > 1 && (
+    <starlight-version-select data-current-base={currentBase}>
+      <Select
+        icon="open-book"
+        label="Select documentation version"
+        options={options}
+        width="7em"
+      />
+    </starlight-version-select>
+  )
+}
+
+<script>
+  class StarlightVersionSelect extends HTMLElement {
+    constructor() {
+      super();
+      const select = this.querySelector<HTMLSelectElement>("select");
+      if (!select) return;
+      const currentBase = this.dataset.currentBase || "/";
+
+      select.addEventListener("change", () => {
+        const targetBase = select.value;
+        const { pathname, search, hash } = window.location;
+        const sub = pathname.startsWith(currentBase)
+          ? pathname.slice(currentBase.length)
+          : pathname.replace(/^\//, "");
+        const targetPath = `${targetBase}${sub}`;
+
+        // Same page in the target version if it exists, else that version's home (avoids a 404).
+        fetch(targetPath, { method: "HEAD" })
+          .then((res) => {
+            window.location.href = res.ok ? `${targetPath}${search}${hash}` : targetBase;
+          })
+          .catch(() => {
+            window.location.href = targetBase;
+          });
+      });
+    }
+  }
+  customElements.define("starlight-version-select", StarlightVersionSelect);
+</script>

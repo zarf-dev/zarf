@@ -13,17 +13,24 @@ repos:
       - id: end-of-file-fixer
         exclude: |
             (?x)^(
+                vendor/.*|
                 src/internal/packager/images/testdata/.*|
                 site/src/content/docs/commands/.*
             )$
       - id: fix-byte-order-marker
+        exclude: vendor/.*
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
-        exclude: site/src/content/docs/commands/.*
+        exclude: |
+            (?x)^(
+                vendor/.*|
+                site/src/content/docs/commands/.*
+            )$
   - repo: https://github.com/sirosen/texthooks
     rev: 72a68994497c827ced727b7c6b2567cfc5a96cb2  # 0.6.4
     hooks:
       - id: fix-smartquotes
+        exclude: vendor/.*
   - repo: local
     hooks:
       - id: check-docs-and-schema

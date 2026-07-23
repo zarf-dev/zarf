@@ -1,0 +1,53 @@
+# IDE
+.server/
+.vscode/
+.history/
+.idea/
+
+# local development
+go.work
+go.work.sum
+/specs
+mise.toml
+
+# releases
+CHANGELOG.md
+VERSION
+/test/results
+/dist
+/snapshot
+
+# assets
+*.fingerprint
+*.tar
+*.jar
+*.war
+*.ear
+*.jpi
+*.hpi
+*.zip
+*.log
+.images
+.tmp/
+.tool/
+coverage.txt
+bin/
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# macOS Finder metadata
+.DS_STORE
+
+*.profile
+

@@ -340,7 +340,7 @@ func TestInit(t *testing.T) {
 			}
 			zarfNs, err := cs.CoreV1().Namespaces().Get(ctx, state.ZarfNamespaceName, metav1.GetOptions{})
 			require.NoError(t, err)
-			require.Equal(t, map[string]string{"app.kubernetes.io/managed-by": "zarf"}, zarfNs.Labels)
+			require.Equal(t, map[string]string{"app.kubernetes.io/managed-by": "zarf", AgentLabel: "mutate"}, zarfNs.Labels)
 			for _, ns := range tt.namespaces {
 				if ns.Name == zarfNs.Name {
 					continue

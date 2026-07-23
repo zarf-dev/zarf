@@ -14,20 +14,43 @@ Displays the 'zarf.yaml' definition for the specified package
 zarf package inspect definition [ PACKAGE_SOURCE ] [flags]
 ```
 
+### Examples
+
+```
+
+# Inspect the zarf.yaml of a local package tarball
+$ zarf package inspect definition zarf-package-my-app-amd64-1.0.0.tar.zst
+
+# Inspect the zarf.yaml of a package in an OCI registry (requires oci:// scheme)
+$ zarf package inspect definition oci://ghcr.io/my-org/my-package:1.0.0
+
+# Inspect the zarf.yaml of a package deployed to a cluster
+$ zarf package inspect definition my-package
+
+```
+
 ### Options
 
 ```
-  -h, --help                  help for definition
-  -k, --key string            Path to public key file for validating signed packages
-  -n, --namespace string      [Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag.
-      --oci-concurrency int   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --verify                Verify the Zarf package signature
+      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
+      --certificate-identity-regexp string      Regex variant of --certificate-identity
+      --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
+      --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
+  -h, --help                                    help for definition
+      --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
+  -k, --key string                              Path to public key file for validating signed packages
+  -n, --namespace string                        [Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag.
+      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
+      --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+      --verify verifyMode[=always]              Signature verification mode (always|if-possible|never). (default if-possible)
 ```
 
 ### Options inherited from parent commands
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --cache string               Specify the location of the Zarf cache directory (default "~/.zarf-cache")
       --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
@@ -35,7 +58,6 @@ zarf package inspect definition [ PACKAGE_SOURCE ] [flags]
       --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
 ### SEE ALSO

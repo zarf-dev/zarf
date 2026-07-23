@@ -1,0 +1,13 @@
+kind: pipeline
+name: default
+steps:
+steps:
+- name: build
+  image: golang
+  commands:
+  - git config --global url."https://".insteadOf git://
+  - make install.tools
+  - mkdir -p $GOPATH/src/github.com/vbatts && ln -sf $(pwd) $GOPATH/src/github.com/vbatts/go-mtree
+  - make validation
+  - make validation.tags
+  - make build.arches

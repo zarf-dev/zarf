@@ -1,0 +1,2 @@
+**/test-fixtures/cache/**/* filter=lfs diff=lfs merge=lfs -text
+**/test-fixtures/assets/**/* filter=lfs diff=lfs merge=lfs -text

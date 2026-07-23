@@ -1,0 +1,26 @@
+# go-macholibre
+
+A Go library for handling Mach-O universal binaries (multi-architecture binaries) on macOS and iOS platforms.
+
+## What it does
+
+This library provides functionality to:
+- Parse and manipulate Mach-O universal binaries (fat binaries)
+- Extract individual architecture binaries from universal binaries
+- Create universal binaries from individual architecture binaries
+- Work with CPU architectures like amd64, arm64, etc.
+
+## Key components
+
+- `UniversalFile`: Represents a Mach-O universal binary containing multiple architectures
+- `UniversalArchHeader`: Handles architecture-specific headers within universal binaries
+- `ExtractedFile` and `ExtractedReader`: For extracting individual architectures
+
+## Development
+
+Requires Go 1.17+ and uses git-lfs for test fixtures. Tests can only be generated on macOS due to `lipo` dependency.
+
+## Dependencies
+
+- `github.com/go-restruct/restruct`: Binary structure parsing
+- Standard Go `debug/macho` package for Mach-O format support

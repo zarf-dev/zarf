@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "tag": {
+      "type": "string",
+      "description": "Docker image tag"
+    },
+    "replicas": {
+      "type": "number",
+      "description": "Replica count from second schema"
+    }
+  }
+}

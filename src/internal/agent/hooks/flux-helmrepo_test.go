@@ -28,6 +28,7 @@ func createFluxHelmRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxHelmR
 	require.NoError(t, err)
 	return &v1.AdmissionRequest{
 		Operation: op,
+		Namespace: testNamespace,
 		Object: runtime.RawExtension{
 			Raw: raw,
 		},
@@ -367,7 +368,7 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 				testState = &state.State{RegistryInfo: tt.registryInfo}
 			}
 			c := createTestClientWithZarfState(ctx, t, testState)
-			handler := admission.NewHandler().Serve(ctx, NewHelmRepositoryMutationHook(ctx, c))
+			handler := admission.NewHandler().Serve(ctx, NewHelmRepositoryMutationHook(c, state.MutationPolicyAll))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)

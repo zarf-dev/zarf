@@ -79,8 +79,20 @@ func generateValuesOverrides(_ context.Context, chart v1alpha1.ZarfChart, compon
 			return nil, fmt.Errorf("targetPath \"%s\" must start with a dot", chartValue.TargetPath)
 		}
 
+		// Drop any excluded sub-paths before extracting. Work on a copy so the
+		// shared source values are not mutated for other charts.
+		sourceValues := opts.values
+		if len(chartValue.ExcludePaths) > 0 {
+			sourceValues = opts.values.DeepCopy()
+			for _, excludePath := range chartValue.ExcludePaths {
+				if err := sourceValues.Delete(value.Path(excludePath)); err != nil {
+					return nil, fmt.Errorf("unable to exclude path %s: %w", excludePath, err)
+				}
+			}
+		}
+
 		// Extract value from source path in values
-		sourceValue, err := opts.values.Extract(value.Path(chartValue.SourcePath))
+		sourceValue, err := sourceValues.Extract(value.Path(chartValue.SourcePath))
 		if err != nil {
 			return nil, fmt.Errorf("unable to extract value source: %w", err)
 		}

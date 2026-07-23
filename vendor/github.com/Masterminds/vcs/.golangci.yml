@@ -1,0 +1,24 @@
+linters:
+  disable-all: true
+  enable:
+    - deadcode
+    - dupl
+    - gofmt
+    - goimports
+    - gosimple
+    - govet
+    - ineffassign
+    - nakedret
+    - revive
+    - structcheck
+    - unused
+    - varcheck
+    - staticcheck
+
+linters-settings:
+  gofmt:
+    simplify: true
+  goimports:
+    local-prefixes: helm.sh/helm/v3
+  dupl:
+    threshold: 400

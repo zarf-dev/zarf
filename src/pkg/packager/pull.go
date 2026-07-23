@@ -196,6 +196,10 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
+	// Use the digest resolved from the registry rather than recomputing from local
+	// files. This is cheaper and accurate even for partial pulls where file-based
+	// computation would produce a different (partial) digest.
+	pkgLayout.SetRegistryDigest(desc.Digest.String())
 	return pkgLayout, nil
 }
 

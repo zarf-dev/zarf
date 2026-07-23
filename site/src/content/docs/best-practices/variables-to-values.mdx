@@ -1,0 +1,239 @@
+---
+title: "Variables to Values"
+---
+
+This guide explains how to migrate your package from variables to [package values](/ref/package-values). Migrating has several benefits:
+
+- Intuitive map structure - especially beneficial for large yaml block configuration.
+- Standard go-template engine with built-in and custom functions.
+- Built-in objects such as Package and State.
+
+## Migrating Manifests and Files
+
+Below shows an example migration for a regular text file. The example shows manifests, however this format is applicable to files and Helm values files when templating is enabled.
+
+### Before (Legacy)
+
+```yaml
+# zarf.yaml
+variables:
+  - name: DATABASE_USERNAME
+    default: "postgres"
+```
+
+```yaml
+# config.yaml
+data:
+  username: ###ZARF_VAR_DATABASE_USERNAME###
+```
+
+### After (Package Values)
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - package-values.yaml  # should match the filename with actual values, see below
+
+components:
+  - name: app
+    manifests:
+      - name: configmap
+        template: true  # Required for Go templates
+        files:
+          - config.yaml # should match the filename with templates, see below
+```
+
+```yaml
+# package-values.yaml
+database:
+  username: "postgres"
+```
+
+```yaml
+# config.yaml
+data:
+  username: {{ .Values.database.username }}
+```
+
+## Migrating Helm Charts
+
+Helm charts don't use Zarf templating. Instead of substituting variables into a chart's values file, map Package Values directly onto the chart's values with `sourcePath` and `targetPath`.
+
+### Before (Legacy)
+
+```yaml
+# zarf.yaml
+variables:
+  - name: REPLICA_COUNT
+    default: "3"
+
+components:
+  - name: app
+    charts:
+      - name: my-chart
+        namespace: my-app
+        localPath: charts/my-chart
+        valuesFiles:
+          - chart-values.yaml
+```
+
+```yaml
+# chart-values.yaml
+replicaCount: ###ZARF_VAR_REPLICA_COUNT###
+```
+
+Charts also support a legacy `variables` block with a `path` that overrides a chart value directly, without a values file:
+
+```yaml
+# zarf.yaml
+components:
+  - name: app
+    charts:
+      - name: my-chart
+        namespace: my-app
+        localPath: charts/my-chart
+        variables:
+          - name: REPLICA_COUNT
+            description: "Override the number of pod replicas"
+            path: replicaCount
+```
+
+Both forms migrate the same way.
+
+### After (Package Values)
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - package-values.yaml
+
+components:
+  - name: app
+    charts:
+      - name: my-chart
+        namespace: my-app
+        localPath: charts/my-chart
+        values:
+          - sourcePath: ".app.replicas"
+            targetPath: ".replicaCount"
+```
+
+```yaml
+# package-values.yaml
+app:
+  replicas: 3
+```
+
+`sourcePath` references your Package Values (everything under `.Values.*`) and `targetPath` references the chart's `values.yaml` structure.
+
+### Templated Values Files
+
+When [Zarf templating](/ref/package-values/#templating) built-ins are required use `templatedValuesFiles`. Migration then looks the same as [Manifests and Files](#migrating-manifests-and-files) and the values files have access to template objects such as `.State`.
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - package-values.yaml
+
+components:
+  - name: app
+    charts:
+      - name: my-chart
+        namespace: my-app
+        localPath: charts/my-chart
+        templatedValuesFiles:
+          - chart-values.yaml
+```
+
+```yaml
+# chart-values.yaml
+replicaCount: {{ .Values.app.replicas }}
+imageRegistry: {{ .State.Registry.Address }}
+```
+
+## Migrating Actions
+
+Legacy variables are substituted into action `cmd` fields automatically. With values, actions require `template: true` to opt in, then reference values as Go templates. Actions that captured output into a variable with `setVariables` use `setValues` instead.
+
+### Before (Legacy)
+
+```yaml
+# zarf.yaml
+variables:
+  - name: DATABASE_USERNAME
+    default: "postgres"
+
+components:
+  - name: app
+    actions:
+      onDeploy:
+        after:
+          - cmd: echo "user is ###ZARF_VAR_DATABASE_USERNAME###"
+          - cmd: echo "generated-password-123"
+            setVariables:
+              - name: DATABASE_PASSWORD
+```
+
+### After (Package Values)
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - package-values.yaml
+
+components:
+  - name: app
+    actions:
+      onDeploy:
+        after:
+          - cmd: echo "user is {{ .Values.database.username }}"
+            template: true  # Required for Go templates
+          - cmd: echo "generated-password-123"
+            setValues:
+              - key: .database.password
+```
+
+```yaml
+# package-values.yaml
+database:
+  username: "postgres"
+```
+
+### Structured Values
+
+Legacy variables are strings, so injecting a block like `tolerations` meant storing indented YAML in a single variable and relying on `.variables.autoIndent`. Because values are a map, keep the structure native and render it with `toYaml`:
+
+```yaml
+# package-values.yaml
+tolerations:
+  - key: "dedicated"
+    operator: "Exists"
+    effect: "NoSchedule"
+```
+
+```yaml
+# deployment.yaml
+spec:
+  template:
+    spec:
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+```
+
+
+## Migrating Constants
+
+Constants have no direct replacement. A constant is a fixed value a deployer cannot override, whereas any package value can be overridden at deploy time with `--set-values` or `-v`. Depending on why the constant existed, replace it one of these ways:
+
+- **Pin it in the schema.** Give the value a fixed `const` in the [values schema](/ref/package-values/#schema-validation) so validation rejects any deploy-time override.
+- **Hardcode the value.** For values consumed by a Helm chart, place the fixed value directly in the chart's static `valuesFiles` rather than mapping it from package values.
+{/* TODO, once we have a function that gets an image from a component, use that as the example */}
+- **Read from the `.Pkg` object.** Constants from the package data don't need to be duplicated. For example, `{{ .Pkg.Metadata.Version }}` replaces a `###ZARF_CONST_APP_VERSION###` set to the package version.
+
+## Verify
+
+To verify that the migration made no impact on your package run `zarf dev inspect manifests` before your migration with the appropriate variables set. Then run the command the same command with values set post migration. The yaml content should match.

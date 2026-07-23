@@ -283,7 +283,7 @@ func TestPublishPackage(t *testing.T) {
 			layoutActual.Pkg.Build = v1alpha1.ZarfBuildData{}
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 			if tc.opts.SignBlobOptions.Key != "" {
-				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Signature))
+				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Bundle))
 			}
 		})
 	}

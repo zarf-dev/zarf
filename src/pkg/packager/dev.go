@@ -50,6 +50,8 @@ type DevDeployOptions struct {
 	CachePath      string
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
+	TakeOwnership bool
 	types.RemoteOptions
 }
 
@@ -78,7 +80,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		SkipVersionCheck: opts.SkipVersionCheck,
 		RemoteOptions:    opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return err
 	}
@@ -87,17 +89,17 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		filters.ByLocalOS(runtime.GOOS),
 		filters.ForDeploy(opts.OptionalComponents, false),
 	)
-	pkg.Components, err = filter.Apply(pkg)
+	defined.Pkg.Components, err = filter.Apply(defined.Pkg)
 	if err != nil {
 		return err
 	}
 
 	// If not building for airgap, strip out all images and repos
 	if !opts.AirgapMode {
-		for idx := range pkg.Components {
-			pkg.Components[idx].Images = []string{}
-			pkg.Components[idx].ImageArchives = []v1alpha1.ImageArchive{}
-			pkg.Components[idx].Repos = []string{}
+		for idx := range defined.Pkg.Components {
+			defined.Pkg.Components[idx].Images = []string{}
+			defined.Pkg.Components[idx].ImageArchives = []v1alpha1.ImageArchive{}
+			defined.Pkg.Components[idx].Repos = []string{}
 		}
 	}
 
@@ -108,7 +110,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		OCIConcurrency:    opts.OCIConcurrency,
 		CachePath:         opts.CachePath,
 	}
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, createOpts)
+	pkgLayout, err := layout.AssemblePackage(ctx, defined.Pkg, packagePath, defined.ImportedSchemas, createOpts)
 	if err != nil {
 		return err
 	}
@@ -164,6 +166,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		Connected:      !opts.AirgapMode,
 		OCIConcurrency: opts.OCIConcurrency,
 		RemoteOptions:  opts.RemoteOptions,
+		TakeOwnership:  opts.TakeOwnership,
 	})
 	if err != nil {
 		return err

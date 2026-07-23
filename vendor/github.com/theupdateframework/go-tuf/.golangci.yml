@@ -1,0 +1,10 @@
+linters:
+  disable-all: true
+  enable:
+    - staticcheck
+    - gofmt
+    - govet
+    - gosimple
+    - unused
+    - typecheck
+    - forbidigo

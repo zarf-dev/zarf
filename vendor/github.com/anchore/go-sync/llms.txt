@@ -1,0 +1,32 @@
+# go-sync
+
+A collection of Go synchronization utilities by Anchore.
+
+## Project Overview
+
+This Go library provides synchronization primitives and utilities:
+
+- `sync.Executor` - A simple executor interface with bounded executor implementation
+- `sync.Collector` - Interface to concurrently execute tasks and collect results  
+- `sync.List` - Concurrent list, queue, and stack implementation
+- Various executor implementations (serial, bounded, unbounded, errgroup-based)
+- Parallel writer utilities
+- Context management utilities
+
+## Key Files
+
+- `executor.go` - Main executor interface and factory functions
+- `collector.go` - Task collection and concurrent execution
+- `list.go` - Thread-safe list/queue/stack implementation
+- `parallel_writer.go` - Utilities for parallel writing operations
+- `context.go` - Context management helpers
+
+## Status
+
+This project is in alpha status with an unstable API that may change.
+
+## Dependencies
+
+- Go 1.23.0+
+- golang.org/x/sync v0.16.0
+- github.com/stretchr/testify v1.11.0 (testing)

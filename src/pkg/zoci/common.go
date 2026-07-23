@@ -21,10 +21,6 @@ import (
 type LayerType string
 
 const (
-	// ZarfConfigMediaType is the media type for the manifest config
-	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
-	// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
-	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 	// DefaultConcurrency is the default concurrency used for operations
 	DefaultConcurrency = 6
 	//DefaultRetries is the default number of retries for operations

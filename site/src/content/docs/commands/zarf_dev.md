@@ -20,6 +20,7 @@ Commands useful for developing packages
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --cache string               Specify the location of the Zarf cache directory (default "~/.zarf-cache")
       --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
@@ -27,7 +28,6 @@ Commands useful for developing packages
       --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
 ### SEE ALSO
@@ -37,6 +37,7 @@ Commands useful for developing packages
 * [zarf dev find-images](/commands/zarf_dev_find-images/)	 - Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.
 * [zarf dev generate](/commands/zarf_dev_generate/)	 - Creates a zarf.yaml automatically from a given remote (git) Helm chart
 * [zarf dev generate-config](/commands/zarf_dev_generate-config/)	 - Generates a config file for Zarf
+* [zarf dev generate-schema](/commands/zarf_dev_generate-schema/)	 - Generates a JSON schema for Zarf values based on the package definition and chart defaults
 * [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to gather information about a Zarf package using its package definition
 * [zarf dev lint](/commands/zarf_dev_lint/)	 - Lints the given package for valid schema and recommended practices
 * [zarf dev patch-git](/commands/zarf_dev_patch-git/)	 - Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:

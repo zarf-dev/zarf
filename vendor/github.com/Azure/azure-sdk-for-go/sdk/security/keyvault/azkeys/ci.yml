@@ -1,0 +1,39 @@
+# NOTE: Please refer to https://aka.ms/azsdk/engsys/ci-yaml before editing this file.
+trigger:
+  branches:
+    include:
+      - main
+      - feature/*
+      - hotfix/*
+      - release/*
+  paths:
+    include:
+    - sdk/security/keyvault/azkeys
+
+pr:
+  branches:
+    include:
+      - main
+      - feature/*
+      - hotfix/*
+      - release/*
+  paths:
+    include:
+    - sdk/security/keyvault/azkeys
+
+extends:
+  template: /eng/pipelines/templates/jobs/archetype-sdk-client.yml
+  parameters:
+    TimeoutInMinutes: 120
+    ServiceDirectory: 'security/keyvault/azkeys'
+    RunLiveTests: true
+    UsePipelineProxy: false
+    PersistOidcToken: true
+
+    # Due to the high cost of Managed HSMs, we only want to test using them weekly.
+    ${{ if contains(variables['Build.DefinitionName'], 'weekly') }}:
+      AdditionalMatrixConfigs:
+        - Name: keyvault_test_matrix_addons
+          Path: sdk/security/keyvault/azkeys/platform-matrix.json
+          Selection: sparse
+          GenerateVMJobs: true

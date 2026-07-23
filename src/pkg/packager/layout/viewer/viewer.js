@@ -43,9 +43,5 @@ function initData() {
 	});
 }
 
-function compare() {
-	window.location.href = 'compare.html';
-}
-
 initSelector();
 initData();

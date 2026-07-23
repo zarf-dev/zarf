@@ -21,7 +21,6 @@ zarf dev deploy [flags]
 ### Options
 
 ```
-      --adopt-existing-resources              Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --components string                     Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
       --connected                             Create and deploy without images and repositories; label resources to bypass the Zarf agent (default true)
       --create-set stringToString             Specify package templates to set on the command line (KEY=value) (default [])
@@ -31,6 +30,7 @@ zarf dev deploy [flags]
       --oci-concurrency int                   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --registry-override stringArray         Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
       --retries int                           Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --take-ownership                        Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --timeout duration                      Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
 ```
 
@@ -38,6 +38,7 @@ zarf dev deploy [flags]
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --cache string               Specify the location of the Zarf cache directory (default "~/.zarf-cache")
       --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
@@ -45,7 +46,6 @@ zarf dev deploy [flags]
       --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
 ### SEE ALSO

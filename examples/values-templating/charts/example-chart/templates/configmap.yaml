@@ -12,7 +12,7 @@ data:
   # Test basic mappings
   app-name: "{{ .Values.appName }}"
   replica-count: "{{ .Values.replicaCount }}"
-  image-tag: "{{ .Values.image.tag }}"
+  image-reference: "{{ .Values.image.reference }}"
 
   # Test nested object mapping
   database-host: "{{ .Values.config.database.host }}"

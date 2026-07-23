@@ -1,0 +1,20 @@
+kind: ZarfPackageConfig
+metadata:
+  name: template-refs-undefined-file
+components:
+  - name: comp
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo set
+            setValues:
+              - key: .fromAction
+    files:
+      - source: data.txt
+        target: data.txt
+        template: true
+    manifests:
+      - name: cm
+        template: true
+        files:
+          - manifest.yaml

@@ -46,5 +46,5 @@ spec:
       volumes:
         - name: data
           image:
-            reference: kiwix-data:local
+            reference: zarf.internal/kiwix-data:local
             pullPolicy: "Always"

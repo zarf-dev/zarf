@@ -11,20 +11,13 @@ webhooks:
           values:
             # Ensure we don't mess with kube-system
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- if eq .Values.mutationPolicy "all" }}
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
         # Ignore K3s Klipper
         - key: svccontroller.k3s.cattle.io/svcname
           operator: DoesNotExist
@@ -57,20 +50,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- if eq .Values.mutationPolicy "all" }}
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
     clientConfig:
       service:
         name: {{ .Values.service.name }}
@@ -100,20 +86,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- if eq .Values.mutationPolicy "all" }}
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
     clientConfig:
       service:
         name: {{ .Values.service.name }}
@@ -144,20 +123,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- if eq .Values.mutationPolicy "all" }}
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
     clientConfig:
       service:
         name: {{ .Values.service.name }}
@@ -188,20 +160,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- if eq .Values.mutationPolicy "all" }}
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
     clientConfig:
       service:
         name: {{ .Values.service.name }}
@@ -230,20 +195,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- if eq .Values.mutationPolicy "all" }}
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
     clientConfig:
       service:
         name: {{ .Values.service.name }}
@@ -272,20 +230,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- if eq .Values.mutationPolicy "all" }}
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
         - key: argocd.argoproj.io/secret-type
           operator: In
           values:
@@ -319,20 +270,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- if eq .Values.mutationPolicy "all" }}
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
     clientConfig:
       service:
         name: agent-hook

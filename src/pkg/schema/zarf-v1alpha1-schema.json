@@ -449,6 +449,13 @@
           ],
           "type": "string"
         },
+        "templatedValuesFiles": {
+          "description": "[alpha] List of local values file paths or remote URLs that will have Go templates applied at deploy time",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "url": {
           "description": "The URL of the OCI registry, chart repository, or git repo where the helm chart is stored.",
           "examples": [
@@ -497,10 +504,21 @@
         "^x-": {}
       },
       "properties": {
+        "excludePaths": {
+          "description": "Paths under sourcePath to omit when mapping to the target. Each path must be a descendant of sourcePath.",
+          "items": {
+            "examples": [
+              ".registry.image"
+            ],
+            "pattern": "^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$",
+            "type": "string"
+          },
+          "type": "array"
+        },
         "sourcePath": {
           "description": "Path to Zarf values key. A single dot (.) represents the root.",
           "examples": [
-            ".registry.port"
+            ".registry"
           ],
           "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
@@ -508,7 +526,7 @@
         "targetPath": {
           "description": "Path to chart values key. A single dot (.) represents the root.",
           "examples": [
-            ".service.port"
+            ".distribution"
           ],
           "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
@@ -647,6 +665,13 @@
         "scripts": {
           "$ref": "#/$defs/DeprecatedZarfComponentScripts",
           "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0."
+        },
+        "stateAccess": {
+          "description": "Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).\nValid values: \"registryCredentials\", \"gitCredentials\", \"agentCerts\".",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [

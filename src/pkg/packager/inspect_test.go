@@ -159,6 +159,24 @@ func TestInspectDefinitionResources(t *testing.T) {
 			},
 		},
 		{
+			name:       "chart with templatedValuesFiles renders Go templates",
+			packageDir: inspectTestDataPath("chart-with-templated-values-files"),
+			opts: InspectDefinitionResourcesOptions{
+				Values: value.Values{
+					"replicas": 3,
+					"imageTag": "1.21",
+				},
+			},
+			expectedResources: 2, // 1 chart resource + 1 values file resource
+			expectedContent: []string{
+				// from valuesFiles (static, no templating)
+				"staticField: from-static-file",
+				// from templatedValuesFiles (Go templates resolved from .Values)
+				"replicaCount: 3",
+				"image: nginx:1.21",
+			},
+		},
+		{
 			name:       "chart with values and variables",
 			packageDir: inspectTestDataPath("chart-with-helm-values"),
 			opts: InspectDefinitionResourcesOptions{

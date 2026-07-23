@@ -147,6 +147,8 @@ Another way to bring OCI images can into the package is via archives of [OCI lay
 
 An OCI layout can have any number of images, Zarf will pull all images that are listed in the sub-field `imageArchives.images`. If a listed image is not found in the archive then Zarf will error. In order for Zarf to find an image its [descriptor](https://specs.opencontainers.org/image-spec/descriptor/?v=v1.1.1) in the OCI-layout index.json must include the annotation "io.containerd.image.name" or "org.opencontainers.image.ref.name". `docker save` and `podman save` will automatically add at least one of these annotations.
 
+Locally-built images that are not pulled from a public registry should be referenced under the reserved [`.internal`](https://www.icann.org/en/board-activities-and-meetings/materials/approved-resolutions-special-meeting-of-the-icann-board-24-07-2024-en#section2.b) top-level domain (for example `zarf.internal/my-app:1.0.0`). The `.internal` TLD will never resolve on the public internet, which avoids accidentally pulling an unexpected image if a registry reference is mistyped or rewriting fails. `zarf dev lint` emits a warning when an image archive image does not use a `.internal` domain.
+
 
 ```yaml
 - name: image-archive

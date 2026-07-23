@@ -1,0 +1,11 @@
+---
+import Default from '@astrojs/starlight/components/MarkdownContent.astro';
+import { versionFromPath } from '../lib/version.ts';
+
+const version = versionFromPath(Astro.url.pathname);
+---
+
+<Default {...Astro.props}>
+  <span data-pagefind-filter={`version:${version}`} aria-hidden="true" style="display:none" />
+  <slot />
+</Default>

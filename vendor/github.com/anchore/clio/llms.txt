@@ -1,0 +1,30 @@
+# CLIO
+
+CLIO is a Go library that provides an easy way to bootstrap CLI applications with batteries included.
+
+## What it does
+
+CLIO integrates several popular Go libraries to provide:
+- CLI argument parsing and config management via cobra/viper/fangs
+- Event bus system via partybus for execution visibility
+- Pluggable logger interface
+- Output redaction for sensitive data
+- Generic UI interface that works with TUI frameworks
+
+## Repository structure
+
+This is a Go library with the main functionality in:
+- `application.go` - Core application bootstrap logic
+- `ui.go` - UI interface definitions
+- `logging.go` - Logger setup and configuration
+- `eventloop.go` - Event bus management
+- `config_command.go` - Configuration command handling
+- `version.go` - Version information
+
+## Key features
+
+- Alpha status - API may change
+- Designed to work seamlessly with cobra commands
+- Supports configuration via files, environment variables, and CLI flags
+- Provides event-driven architecture for complex CLI applications
+- Includes built-in profiling support

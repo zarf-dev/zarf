@@ -1,0 +1,8 @@
+kind: ZarfPackageConfig
+metadata:
+  name: top-package
+components:
+  - name: nested-component
+    required: true
+    import:
+      path: middle

@@ -399,7 +399,8 @@ func ForNetwork(ctx context.Context, protocol, address, condition string, timeou
 
 func forNetwork(ctx context.Context, protocol string, address string, condition string, timeout time.Duration, waitInterval time.Duration) error {
 	l := logger.From(ctx)
-	expired := time.After(timeout)
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
 	condition = strings.ToLower(condition)
 	if condition == "" {
@@ -416,54 +417,31 @@ func forNetwork(ctx context.Context, protocol string, address string, condition 
 
 	for {
 		// Delay the check for 100ms the first time and then the wait interval after that
-		time.Sleep(delay)
+		pauseTimer := time.NewTimer(delay)
+		select {
+		case <-timeoutCtx.Done():
+			pauseTimer.Stop()
+			if ctx.Err() != nil {
+				return fmt.Errorf("wait cancelled: %w", ctx.Err())
+			}
+			return errors.New("wait timed out")
+		case <-pauseTimer.C:
+		}
 		delay = waitInterval
 
-		select {
-		case <-expired:
-			return errors.New("wait timed out")
-		case <-ctx.Done():
-			return errors.New("received interrupt")
-		default:
-			switch protocol {
-			case "http", "https":
-				// Handle HTTP and HTTPS endpoints.
-				url := fmt.Sprintf("%s://%s", protocol, address)
-
-				// Default to checking for a 2xx response.
-				if condition == "success" {
-					// Try to get the URL and check the status code.
-					resp, err := httpClient.Get(url)
-					if err != nil {
-						l.Debug(err.Error())
-						continue
-					}
-					err = resp.Body.Close()
-					if err != nil {
-						l.Debug(err.Error())
-					}
-
-					// If the status code is not in the 2xx range, try again.
-					if resp.StatusCode < 200 || resp.StatusCode > 299 {
-						l.Debug("did not receive 2xx status code", "responseCode", resp.StatusCode)
-						continue
-					}
-
-					// Success, break out of the switch statement.
-					break
-				}
-
-				// Convert the condition to an int and check if it's a valid HTTP status code.
-				code, err := strconv.Atoi(condition)
-				if err != nil {
-					return fmt.Errorf("http status code %s is not an integer: %w", condition, err)
-				}
-				if http.StatusText(code) == "" {
-					return errors.New("http status code is unknown")
-				}
-
+		switch protocol {
+		case "http", "https":
+			// Handle HTTP and HTTPS endpoints.
+			url := fmt.Sprintf("%s://%s", protocol, address)
+			req, err := http.NewRequestWithContext(timeoutCtx, http.MethodGet, url, nil)
+			if err != nil {
+				l.Debug(err.Error())
+				continue
+			}
+			// Default to checking for a 2xx response.
+			if condition == "success" {
 				// Try to get the URL and check the status code.
-				resp, err := httpClient.Get(url)
+				resp, err := httpClient.Do(req)
 				if err != nil {
 					l.Debug(err.Error())
 					continue
@@ -473,26 +451,56 @@ func forNetwork(ctx context.Context, protocol string, address string, condition 
 					l.Debug(err.Error())
 				}
 
-				if resp.StatusCode != code {
-					l.Debug("did not receive expected status code", "expected", code, "actual", resp.StatusCode)
+				// If the status code is not in the 2xx range, try again.
+				if resp.StatusCode < 200 || resp.StatusCode > 299 {
+					l.Debug("did not receive 2xx status code", "responseCode", resp.StatusCode)
 					continue
 				}
-			default:
-				// Fallback to any generic protocol using net.Dial
-				conn, err := net.Dial(protocol, address)
-				if err != nil {
-					l.Debug(err.Error())
-					continue
-				}
-				err = conn.Close()
-				if err != nil {
-					l.Debug(err.Error())
-					continue
-				}
+
+				// Success, break out of the switch statement.
+				break
 			}
 
-			// Yay, we made it!
-			return nil
+			// Convert the condition to an int and check if it's a valid HTTP status code.
+			code, err := strconv.Atoi(condition)
+			if err != nil {
+				return fmt.Errorf("http status code %s is not an integer: %w", condition, err)
+			}
+			if http.StatusText(code) == "" {
+				return errors.New("http status code is unknown")
+			}
+
+			// Try to get the URL and check the status code.
+			resp, err := httpClient.Do(req)
+			if err != nil {
+				l.Debug(err.Error())
+				continue
+			}
+			err = resp.Body.Close()
+			if err != nil {
+				l.Debug(err.Error())
+			}
+
+			if resp.StatusCode != code {
+				l.Debug("did not receive expected status code", "expected", code, "actual", resp.StatusCode)
+				continue
+			}
+		default:
+			// Fallback to any generic protocol using net.Dial
+			var d net.Dialer
+			conn, err := d.DialContext(timeoutCtx, protocol, address)
+			if err != nil {
+				l.Debug(err.Error())
+				continue
+			}
+			err = conn.Close()
+			if err != nil {
+				l.Debug(err.Error())
+				continue
+			}
 		}
+
+		// Yay, we made it!
+		return nil
 	}
 }

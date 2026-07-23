@@ -1,0 +1,259 @@
+package internal
+
+import (
+	"fmt"
+	"regexp"
+	"slices"
+	"strings"
+
+	"github.com/anchore/packageurl-go"
+	"github.com/anchore/syft/internal/log"
+	"github.com/anchore/syft/syft/cpe"
+	"github.com/anchore/syft/syft/pkg"
+	cataloger "github.com/anchore/syft/syft/pkg/cataloger/common/cpe"
+)
+
+// Backfill takes all information present in the package and attempts to fill in any missing information
+// from any available sources, such as the Metadata, PURL, or CPEs.
+//
+// Backfill does not call p.SetID(), but this needs to be called later to ensure it's up to date
+func Backfill(p *pkg.Package) {
+	backfillFromPurl(p)
+	backfillFromCPE(p)
+}
+
+func backfillFromCPE(p *pkg.Package) {
+	if len(p.CPEs) == 0 {
+		return
+	}
+
+	c := p.CPEs[0]
+
+	if p.Type == "" {
+		p.Type = cataloger.TargetSoftwareToPackageType(c.Attributes.TargetSW)
+	}
+}
+
+func backfillFromPurl(p *pkg.Package) {
+	if p.PURL == "" {
+		return
+	}
+
+	purl, err := packageurl.FromString(p.PURL)
+	if err != nil {
+		log.Debugf("unable to parse purl: %s: %w", p.PURL, err)
+		return
+	}
+
+	var cpes []cpe.CPE
+	epoch := ""
+	rpmmod := ""
+	arch := ""
+
+	for _, qualifier := range purl.Qualifiers {
+		switch qualifier.Key {
+		case pkg.PURLQualifierCPES:
+			rawCpes := strings.Split(qualifier.Value, ",")
+			for _, rawCpe := range rawCpes {
+				c, err := cpe.New(rawCpe, cpe.DeclaredSource)
+				if err != nil {
+					log.Debugf("unable to decode cpe %s in purl %s: %w", rawCpe, p.PURL, err)
+					continue
+				}
+				cpes = append(cpes, c)
+			}
+		case pkg.PURLQualifierEpoch:
+			epoch = qualifier.Value
+		case pkg.PURLQualifierRpmModularity:
+			rpmmod = qualifier.Value
+		case pkg.PURLQualifierArch:
+			arch = qualifier.Value
+		}
+	}
+
+	if p.Type == "" {
+		p.Type = pkg.TypeFromPURL(p.PURL)
+	}
+	if p.Language == "" {
+		p.Language = pkg.LanguageFromPURL(p.PURL)
+	}
+	if p.Name == "" {
+		p.Name = nameFromPurl(purl)
+	}
+
+	setVersionFromPurl(p, purl, epoch)
+
+	if p.Language == pkg.Java {
+		setJavaMetadataFromPurl(p, purl)
+	}
+
+	setDistroMetadata(p, rpmmod, arch)
+
+	for _, c := range cpes {
+		if slices.Contains(p.CPEs, c) {
+			continue
+		}
+		p.CPEs = append(p.CPEs, c)
+	}
+}
+
+func setDistroMetadata(p *pkg.Package, rpmmod, arch string) {
+	switch p.Type {
+	case pkg.RpmPkg:
+		setRpmMetadataFromPurl(p, rpmmod, arch)
+	case pkg.DebPkg:
+		setDpkgMetadataFromPurl(p, arch)
+	case pkg.AlpmPkg:
+		setAlpmMetadataFromPurl(p, arch)
+	case pkg.ApkPkg:
+		setApkMetadataFromPurl(p, arch)
+	}
+}
+
+func setJavaMetadataFromPurl(p *pkg.Package, _ packageurl.PackageURL) {
+	if p.Type != pkg.JavaPkg {
+		return
+	}
+	if p.Metadata == nil {
+		// since we don't know if the purl elements directly came from pom properties or the manifest,
+		// we can only go as far as to set the type to JavaArchive, but not fill in the group id and artifact id
+		p.Metadata = pkg.JavaArchive{}
+	}
+}
+
+func setRpmMetadataFromPurl(p *pkg.Package, rpmmod, arch string) {
+	if p.Type != pkg.RpmPkg {
+		return
+	}
+	if rpmmod == "" && arch == "" {
+		return
+	}
+
+	if p.Metadata == nil {
+		p.Metadata = pkg.RpmDBEntry{}
+	}
+
+	switch m := p.Metadata.(type) {
+	case pkg.RpmDBEntry:
+		if m.ModularityLabel == nil && rpmmod != "" {
+			m.ModularityLabel = &rpmmod
+		}
+		if m.Arch == "" {
+			m.Arch = arch
+		}
+		p.Metadata = m
+	case pkg.RpmArchive:
+		if m.ModularityLabel == nil && rpmmod != "" {
+			m.ModularityLabel = &rpmmod
+		}
+		if m.Arch == "" {
+			m.Arch = arch
+		}
+		p.Metadata = m
+	}
+}
+
+func setDpkgMetadataFromPurl(p *pkg.Package, arch string) {
+	if p.Type != pkg.DebPkg {
+		return
+	}
+	if arch == "" {
+		return
+	}
+
+	if p.Metadata == nil {
+		p.Metadata = pkg.DpkgDBEntry{}
+	}
+
+	switch m := p.Metadata.(type) {
+	case pkg.DpkgDBEntry:
+		if m.Architecture == "" {
+			m.Architecture = arch
+		}
+		p.Metadata = m
+	case pkg.DpkgArchiveEntry:
+		if m.Architecture == "" {
+			m.Architecture = arch
+		}
+		p.Metadata = m
+	}
+}
+
+func setAlpmMetadataFromPurl(p *pkg.Package, arch string) {
+	if p.Type != pkg.AlpmPkg {
+		return
+	}
+	if arch == "" {
+		return
+	}
+
+	if p.Metadata == nil {
+		p.Metadata = pkg.AlpmDBEntry{Architecture: arch}
+		return
+	}
+
+	if m, ok := p.Metadata.(pkg.AlpmDBEntry); ok {
+		if m.Architecture == "" {
+			m.Architecture = arch
+		}
+		p.Metadata = m
+	}
+}
+
+func setApkMetadataFromPurl(p *pkg.Package, arch string) {
+	if p.Type != pkg.ApkPkg {
+		return
+	}
+	if arch == "" {
+		return
+	}
+
+	if p.Metadata == nil {
+		p.Metadata = pkg.ApkDBEntry{Architecture: arch}
+		return
+	}
+
+	if m, ok := p.Metadata.(pkg.ApkDBEntry); ok {
+		if m.Architecture == "" {
+			m.Architecture = arch
+		}
+		p.Metadata = m
+	}
+}
+
+func setVersionFromPurl(p *pkg.Package, purl packageurl.PackageURL, epoch string) {
+	if p.Version == "" {
+		p.Version = purl.Version
+	}
+
+	if epoch != "" && p.Type == pkg.RpmPkg && !epochPrefix.MatchString(p.Version) {
+		p.Version = fmt.Sprintf("%s:%s", epoch, p.Version)
+	}
+}
+
+var epochPrefix = regexp.MustCompile(`^\d+:`)
+
+// nameFromPurl returns the syft package name of the package from the purl. If the purl includes a namespace,
+// the name is prefixed as appropriate based on the PURL type
+func nameFromPurl(purl packageurl.PackageURL) string {
+	if !NameExcludesPurlNamespace(purl.Type) && purl.Namespace != "" {
+		return fmt.Sprintf("%s/%s", purl.Namespace, purl.Name)
+	}
+	return purl.Name
+}
+
+func NameExcludesPurlNamespace(purlType string) bool {
+	switch purlType {
+	case packageurl.TypeAlpine,
+		packageurl.TypeAlpm,
+		packageurl.TypeConan,
+		packageurl.TypeCpan,
+		packageurl.TypeDebian,
+		packageurl.TypeMaven,
+		packageurl.TypeQpkg,
+		packageurl.TypeRPM,
+		packageurl.TypeSWID:
+		return true
+	}
+	return false
+}

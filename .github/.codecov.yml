@@ -1,5 +1,5 @@
 # To validate:
-#   cat codecov.yml | curl --data-binary @- https://codecov.io/validate
+#   cat .github/.codecov.yml | curl --data-binary @- https://codecov.io/validate
 
 codecov:
   notify:
@@ -7,14 +7,8 @@ codecov:
 
 coverage:
   status:
-    patch: false
-
-  status:
     project:
       default:
         target: auto
         threshold: 1%
-    patch:
-      default:
-        enabled: no # disable patch since it is noisy and not correct
-        if_not_found: success
+    patch: false

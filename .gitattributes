@@ -7,3 +7,5 @@
 *.tar binary
 *.part00* binary
 */blobs/sha256/* binary
+
+vendor/** -text

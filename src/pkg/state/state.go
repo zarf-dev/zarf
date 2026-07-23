@@ -14,6 +14,17 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+)
+
+// MutationPolicy controls the agent's default mutation behavior.
+type MutationPolicy string
+
+const (
+	// MutationPolicyAll mutates all resources unless they carry zarf.dev/agent: ignore/skip.
+	MutationPolicyAll MutationPolicy = "all"
+	// MutationPolicyLabeled mutates only resources (or namespaces) labeled zarf.dev/agent: mutate.
+	MutationPolicyLabeled MutationPolicy = "labeled"
 )
 
 // Declares secrets and metadata keys and values.
@@ -152,8 +163,10 @@ type State struct {
 	// PKI certificate information for the agent pods Zarf manages
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
 	// AgentTLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated
-	AgentTLSUserProvided bool         `json:"agentTLSUserProvided,omitempty"`
-	InjectorInfo         InjectorInfo `json:"injectorInfo"`
+	AgentTLSUserProvided bool `json:"agentTLSUserProvided,omitempty"`
+	// AgentMutationPolicy controls the conditions required for the agent to mutate resources
+	AgentMutationPolicy MutationPolicy `json:"agentMutationPolicy"`
+	InjectorInfo        InjectorInfo   `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -355,6 +368,38 @@ func (ri RegistryInfo) ShouldUseMTLS() bool {
 	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
 }
 
+// KnownPlainHTTP reports whether the registry's scheme is already certain without
+// probing. Zarf-managed mTLS implies HTTPS, while Zarf's internal registry without
+// mTLS only serves plain HTTP. known is false when the caller must negotiate the
+// scheme.
+func (ri RegistryInfo) KnownPlainHTTP() (plainHTTP bool, known bool) {
+	switch {
+	case ri.ShouldUseMTLS():
+		return false, true
+	case ri.IsInternal():
+		return true, true
+	default:
+		return false, false
+	}
+}
+
+// Htpasswd returns an htpasswd-formatted string for the registry's push and pull users.
+// Returns an empty string for external registries.
+func (ri RegistryInfo) Htpasswd() (string, error) {
+	if !ri.IsInternal() {
+		return "", nil
+	}
+	pushUser, err := utils.GetHtpasswdString(ri.PushUsername, ri.PushPassword)
+	if err != nil {
+		return "", fmt.Errorf("generating htpasswd for push user: %w", err)
+	}
+	pullUser, err := utils.GetHtpasswdString(ri.PullUsername, ri.PullPassword)
+	if err != nil {
+		return "", fmt.Errorf("generating htpasswd for pull user: %w", err)
+	}
+	return fmt.Sprintf("%s\\n%s", pushUser, pullUser), nil
+}
+
 // CheckIfRegistryAddressOrCredsChanged compares two RegistryInfo structs and returns true if the creds or address changed
 func CheckIfRegistryAddressOrCredsChanged(existing, given RegistryInfo) bool {
 	if given.PushUsername != "" && existing.PushUsername != given.PushUsername {
@@ -475,6 +520,8 @@ type MergeOptions struct {
 	Services       ServiceSet
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
+	AgentMutationPolicy MutationPolicy
 }
 
 // Merge merges init options for provided services into the provided state to create a new state struct
@@ -533,6 +580,9 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			}
 			newState.AgentTLS = agentTLS
 			newState.AgentTLSUserProvided = false
+		}
+		if opts.AgentMutationPolicy != "" {
+			newState.AgentMutationPolicy = opts.AgentMutationPolicy
 		}
 	}
 
@@ -606,6 +656,7 @@ const (
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
 	Name                string               `json:"name"`
+	Digest              string               `json:"digest"`
 	Data                v1alpha1.ZarfPackage `json:"data"`
 	CLIVersion          string               `json:"cliVersion"`
 	Generation          int                  `json:"generation"`

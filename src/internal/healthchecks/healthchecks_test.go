@@ -7,6 +7,9 @@ package healthchecks
 import (
 	"context"
 	"errors"
+	"fmt"
+	"maps"
+	"slices"
 	"testing"
 	"time"
 
@@ -14,7 +17,9 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
@@ -159,4 +164,99 @@ func TestFailedHealthChecks(t *testing.T) {
 
 	require.Error(t, err)
 	require.Equal(t, "failed-job: Job not ready, status is Failed, message: Job Failed. failed: 1/1", err.Error())
+}
+
+func TestHealthChecksUseNamespaceScopedWatchesAcrossNamespaces(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
+
+	fakeClient := dynamicfake.NewSimpleDynamicClient(scheme.Scheme)
+	fakeMapper := testutil.NewFakeRESTMapper(v1.SchemeGroupVersion.WithKind("Pod"))
+	statusWatcher := watcher.NewDefaultStatusWatcher(fakeClient, fakeMapper)
+
+	healthChecks := make([]v1alpha1.NamespacedObjectKindReference, 0, 2)
+	for _, namespace := range []string{"alpha", "bravo"} {
+		pod := readyPod(fmt.Sprintf("pod-%s", namespace), namespace)
+		err := fakeClient.Tracker().Create(
+			schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"},
+			pod,
+			namespace,
+		)
+		require.NoError(t, err)
+		healthChecks = append(healthChecks, v1alpha1.NamespacedObjectKindReference{
+			APIVersion: pod.GetAPIVersion(),
+			Kind:       pod.GetKind(),
+			Namespace:  pod.GetNamespace(),
+			Name:       pod.GetName(),
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	require.NoError(t, Run(ctx, statusWatcher, healthChecks))
+
+	assertResourceWatchNamespaces(t, fakeClient, "pods", []string{"alpha", "bravo"})
+}
+
+func TestHealthChecksKeepClusterScopedResourcesAtRoot(t *testing.T) {
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
+
+	fakeClient := dynamicfake.NewSimpleDynamicClient(scheme.Scheme)
+	fakeMapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{v1.SchemeGroupVersion})
+	fakeMapper.Add(v1.SchemeGroupVersion.WithKind("Pod"), meta.RESTScopeNamespace)
+	fakeMapper.Add(v1.SchemeGroupVersion.WithKind("Namespace"), meta.RESTScopeRoot)
+	statusWatcher := watcher.NewDefaultStatusWatcher(fakeClient, fakeMapper)
+
+	pod := readyPod("app", "apps")
+	namespace := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "v1",
+		"kind":       "Namespace",
+		"metadata": map[string]any{
+			"name": "apps",
+		},
+		"status": map[string]any{
+			"phase": "Active",
+		},
+	}}
+	require.NoError(t, fakeClient.Tracker().Create(
+		schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}, pod, pod.GetNamespace()))
+	require.NoError(t, fakeClient.Tracker().Create(
+		schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}, namespace, ""))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	require.NoError(t, WaitForReadyRuntime(ctx, statusWatcher, []runtime.Object{pod, namespace}))
+
+	assertResourceWatchNamespaces(t, fakeClient, "pods", []string{"apps"})
+	assertResourceWatchNamespaces(t, fakeClient, "namespaces", []string{""})
+}
+
+func readyPod(name, namespace string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "v1",
+		"kind":       "Pod",
+		"metadata": map[string]any{
+			"name":      name,
+			"namespace": namespace,
+		},
+		"status": map[string]any{
+			"conditions": []any{
+				map[string]any{"type": "Ready", "status": "True"},
+			},
+			"phase": "Running",
+		},
+	}}
+}
+
+func assertResourceWatchNamespaces(t *testing.T, fakeClient *dynamicfake.FakeDynamicClient, resource string, expected []string) {
+	t.Helper()
+
+	actual := map[string]struct{}{}
+	for _, action := range fakeClient.Actions() {
+		if action.GetResource().Resource != resource || (action.GetVerb() != "list" && action.GetVerb() != "watch") {
+			continue
+		}
+		actual[action.GetNamespace()] = struct{}{}
+	}
+
+	require.ElementsMatch(t, expected, slices.Collect(maps.Keys(actual)))
 }

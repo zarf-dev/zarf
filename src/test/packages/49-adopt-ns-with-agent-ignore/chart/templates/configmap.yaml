@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: adopt-ns-with-agent-ignore-config
+  namespace: {{ .Release.Namespace }}
+data:
+  key: value

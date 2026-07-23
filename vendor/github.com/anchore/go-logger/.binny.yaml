@@ -1,0 +1,3 @@
+# only pull in version updates that were released more than a week ago (low-pass filter for quickly-retracted releases)
+cooldown: 7d
+tools:

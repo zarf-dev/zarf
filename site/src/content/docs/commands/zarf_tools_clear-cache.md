@@ -17,14 +17,14 @@ zarf tools clear-cache [flags]
 ### Options
 
 ```
-  -h, --help                help for clear-cache
-      --zarf-cache string   Specify the location of the Zarf artifact cache (images and git repositories) (default "~/.zarf-cache")
+  -h, --help   help for clear-cache
 ```
 
 ### Options inherited from parent commands
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --cache string               Specify the location of the Zarf cache directory (default "~/.zarf-cache")
       --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")

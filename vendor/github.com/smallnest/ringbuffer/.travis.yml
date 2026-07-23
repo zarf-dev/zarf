@@ -1,0 +1,21 @@
+language: go
+
+
+go:
+  - tip
+  - 1.15.x
+  - 1.16.x
+
+before_script:
+  - go get -v github.com/smallnest/ringbuffer
+  - go get github.com/mattn/goveralls
+
+script:
+ - go test -v ./...
+ - goveralls -service=travis-ci
+
+notifications:
+  email:
+    recipients: smallnest@gmail.com
+    on_success: change
+    on_failure: always

@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K9s plugin schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+      "shortCut": { "type": "string" },
+      "override": { "type": "boolean" },
+      "description": { "type": "string" },
+      "confirm": { "type": "boolean" },
+      "dangerous": { "type": "boolean" },
+      "scopes": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "command": { "type": "string" },
+      "background": { "type": "boolean" },
+      "overwriteOutput": { "type": "boolean" },
+      "args": {
+        "type": "array",
+        "items": { "type": ["string", "number"] }
+      },
+      "inputs": {
+        "type": "array",
+        "maxItems": 5,
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "label": { "type": "string" },
+            "type": { "type": "string", "enum": ["string", "number", "bool", "dropdown"] },
+            "required": { "type": "boolean" },
+            "default": { "type": ["string", "number", "boolean"] },
+            "options": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": ["name", "type"],
+          "if": { "required": ["default"] },
+          "then": {
+            "properties": { "required": { "const": true } },
+            "required": ["required"]
+          }
+        }
+      }
+  },
+  "required": ["shortCut", "description", "scopes", "command"]
+}

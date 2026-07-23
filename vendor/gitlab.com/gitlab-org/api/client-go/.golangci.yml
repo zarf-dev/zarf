@@ -1,0 +1,147 @@
+version: "2"
+
+# Options for analysis running
+run:
+  concurrency: 4
+  issues-exit-code: 1
+  tests: true
+
+# Output configuration options
+output:
+  formats:
+    text:
+      path: stdout
+      colors: false
+      print-issued-lines: false
+    code-climate:
+      path: gl-code-quality-report.json
+linters:
+  enable:
+    - asciicheck
+    - canonicalheader
+    - dogsled
+    - dupword
+    - errorlint
+    - goconst
+    - godoclint
+    - misspell
+    - modernize
+    - nakedret
+    - nolintlint
+    - revive
+    - sloglint
+    - staticcheck
+    - testifylint
+    - unconvert
+    - usestdlibvars
+    - usetesting
+    - whitespace
+    - tparallel
+    - paralleltest
+  disable:
+    - errcheck
+  settings:
+    misspell:
+      locale: US
+      ignore-rules:
+        - noteable
+    modernize:
+      disable:
+        - omitzero
+    revive:
+      enable-all-rules: false
+      rules:
+        - name: comment-spacings
+        - name: deep-exit
+        - name: error-strings
+        - name: get-return
+        - name: identical-switch-branches
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: redundant-import-alias
+        - name: struct-tag
+        - name: time-date
+        - name: unnecessary-stmt
+        - name: unused-parameter
+        - name: use-errors-new
+        - name: var-naming
+          arguments:
+           - []
+           - []
+           - - skip-package-name-collision-with-go-std: true
+
+    staticcheck:
+      checks:
+        - ST1020
+        - ST1021
+        - ST1022
+    testifylint:
+      disable-all: true
+      enable:
+        - blank-import
+        - bool-compare
+        - compares
+        - contains
+        - empty
+        - encoded-compare
+        - equal-values
+        - error-is-as
+        - error-nil
+        - expected-actual
+        - formatter
+        - go-require
+        - len
+        - negative-positive
+        - nil-compare
+        - regexp
+        - useless-assert
+    usestdlibvars:
+      http-method: false
+      http-status-code: false
+      time-date-month: true
+    usetesting:
+      context-background: true
+      context-todo: true
+      os-temp-dir: true
+
+  # List of regexps of issue texts to exclude.
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: (.+)\.go$
+        text: ^.*, make it a constant$
+      - source: "// Deprecated:"
+        linters:
+          - staticcheck
+      - source: "// GitLab API docs:"
+        linters:
+          - staticcheck
+      - path: _test\.go$
+        text: unused-parameter
+        linters:
+          - revive
+      - path: ^testing/
+        linters:
+          - revive
+    paths:
+      - third_party$
+      - builtin$
+      - examples/*
+issues:
+  # Maximum issues count per one linter (set to 0 to disable)
+  max-issues-per-linter: 0
+  # Maximum count of issues with the same text (set to 0 to disable)
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofumpt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

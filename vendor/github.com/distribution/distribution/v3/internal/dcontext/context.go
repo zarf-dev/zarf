@@ -1,0 +1,72 @@
+package dcontext
+
+import (
+	"context"
+	"maps"
+	"sync"
+
+	"github.com/distribution/distribution/v3/internal/uuid"
+)
+
+// instanceContext is a context that provides only an instance id. It is
+// provided as the main background context.
+type instanceContext struct {
+	context.Context
+	id   string    // id of context, logged as "instance.id"
+	once sync.Once // once protect generation of the id
+}
+
+func (ic *instanceContext) Value(key any) any {
+	if key == "instance.id" {
+		ic.once.Do(func() {
+			// We want to lazy initialize the UUID such that we don't
+			// call a random generator from the package initialization
+			// code. For various reasons random could not be available
+			// https://github.com/distribution/distribution/issues/782
+			ic.id = uuid.NewString()
+		})
+		return ic.id
+	}
+
+	return ic.Context.Value(key)
+}
+
+var background = &instanceContext{
+	Context: context.Background(),
+}
+
+// Background returns a non-nil, empty Context. The background context
+// provides a single key, "instance.id" that is globally unique to the
+// process.
+func Background() context.Context {
+	return background
+}
+
+// stringMapContext is a simple context implementation that checks a map for a
+// key, falling back to a parent if not present.
+type stringMapContext struct {
+	context.Context
+	m map[string]any
+}
+
+// WithValues returns a context that proxies lookups through a map. Only
+// supports string keys.
+func WithValues(ctx context.Context, m map[string]any) context.Context {
+	mo := make(map[string]any, len(m)) // make our own copy.
+	maps.Copy(mo, m)
+
+	return stringMapContext{
+		Context: ctx,
+		m:       mo,
+	}
+}
+
+func (smc stringMapContext) Value(key any) any {
+	if ks, ok := key.(string); ok {
+		if v, ok := smc.m[ks]; ok {
+			return v
+		}
+	}
+
+	return smc.Context.Value(key)
+}

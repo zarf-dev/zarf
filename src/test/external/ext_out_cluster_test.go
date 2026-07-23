@@ -136,7 +136,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	// Use Zarf to mirror a package to the services (do this as test 0 so that the registry is unpolluted)
 	t := suite.T()
 	tmpdir := t.TempDir()
-	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom", "--features", "values=true")
+	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom")
 	suite.NoError(err)
 	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())), "--confirm"}
 	mirrorArgs = append(mirrorArgs, outClusterCredentialArgs...)
@@ -182,7 +182,7 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	err := exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
-	err = exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", temp, "--skip-sbom", "--features=values=true")
+	err = exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", temp, "--skip-sbom")
 	suite.NoError(err)
 
 	testValuesPath := filepath.Join(temp, "test-values.yaml")
@@ -194,7 +194,6 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 		filepath.Join(temp, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())),
 		"--confirm",
 		"--values", testValuesPath,
-		"--features", "values=true",
 	}
 
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)

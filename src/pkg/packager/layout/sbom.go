@@ -123,12 +123,6 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		}
 	}
 
-	// Include the compare tool if there are any image SBOMs OR component SBOMs
-	err = createSBOMCompareAsset(outputPath)
-	if err != nil {
-		return err
-	}
-
 	err = createReproducibleTarballFromDir(outputPath, "", filepath.Join(buildPath, "sboms.tar"), false)
 	if err != nil {
 		return err
@@ -200,7 +194,7 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 		return nil
 	}
 	for i, file := range component.Files {
-		path := filepath.Join(tmpDir, component.Name, string(FilesComponentDir), strconv.Itoa(i), filepath.Base(file.Target))
+		path := filepath.Join(tmpDir, component.Name, string(FilesComponentDir), ComponentFileRelPath(i, file.Target))
 		err := appendSBOMFiles(path)
 		if err != nil {
 			return nil, err
@@ -296,10 +290,6 @@ func createSBOMViewerAsset(outputDir, identifier string, jsonData, jsonList []by
 	return createSBOMHTML(outputDir, filename, "viewer/template.gohtml", jsonData, jsonList)
 }
 
-func createSBOMCompareAsset(outputDir string) error {
-	return createSBOMHTML(outputDir, "compare.html", "viewer/compare.gohtml", nil, nil)
-}
-
 func createSBOMHTML(outputDir, filename, goTemplate string, jsonData, jsonList []byte) error {
 	path := filepath.Join(outputDir, getNormalizedFileName(filename))
 	file, err := os.Create(path)
@@ -329,10 +319,6 @@ func createSBOMHTML(outputDir, filename, goTemplate string, jsonData, jsonList [
 	if err != nil {
 		return err
 	}
-	compareJS, err := loadFileJS("compare.js")
-	if err != nil {
-		return err
-	}
 	tplData := struct {
 		ThemeCSS  template.CSS
 		ViewerCSS template.CSS
@@ -341,7 +327,6 @@ func createSBOMHTML(outputDir, filename, goTemplate string, jsonData, jsonList [
 		LibraryJS template.JS
 		CommonJS  template.JS
 		ViewerJS  template.JS
-		CompareJS template.JS
 	}{
 		ThemeCSS:  themeCSS,
 		ViewerCSS: viewerCSS,
@@ -350,7 +335,6 @@ func createSBOMHTML(outputDir, filename, goTemplate string, jsonData, jsonList [
 		LibraryJS: libraryJS,
 		CommonJS:  commonJS,
 		ViewerJS:  viewerJS,
-		CompareJS: compareJS,
 	}
 	tpl, err := template.ParseFS(viewerAssets, goTemplate)
 	if err != nil {

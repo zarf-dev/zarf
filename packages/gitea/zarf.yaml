@@ -39,6 +39,21 @@ variables:
     description: Disables the ability to register new users
     default: "true"
 
+  - name: GIT_SERVER_AFFINITY
+    description: Custom affinity map for the gitea deployment
+    default: ""
+    autoIndent: true
+
+  - name: GIT_SERVER_TOLERATIONS
+    description: Custom tolerations array for the gitea deployment
+    default: ""
+    autoIndent: true
+
+  - name: GIT_SERVER_NODE_SELECTOR
+    description: Custom node selector map for the gitea deployment
+    default: ""
+    autoIndent: true
+
 constants:
   - name: GITEA_IMAGE
     value: "###ZARF_PKG_TMPL_GITEA_IMAGE###"

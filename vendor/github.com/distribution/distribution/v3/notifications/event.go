@@ -1,0 +1,149 @@
+package notifications
+
+import (
+	"fmt"
+	"time"
+
+	events "github.com/docker/go-events"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+)
+
+// EventAction constants used in action field of Event.
+const (
+	EventActionPull   = "pull"
+	EventActionPush   = "push"
+	EventActionMount  = "mount"
+	EventActionDelete = "delete"
+)
+
+const (
+	// EventsMediaType is the mediatype for the json event envelope. If the
+	// Event, ActorRecord, SourceRecord or Envelope structs change, the version
+	// number should be incremented.
+	EventsMediaType = "application/vnd.docker.distribution.events.v2+json"
+	// LayerMediaType is the media type for image rootfs diffs (aka "layers")
+	// used by Docker. We don't expect this to change for quite a while.
+	layerMediaType = "application/vnd.docker.container.image.rootfs.diff+x-gtar"
+)
+
+// Envelope defines the fields of a json event envelope message that can hold
+// one or more events.
+type Envelope struct {
+	// Events make up the contents of the envelope. Events present in a single
+	// envelope are not necessarily related.
+	Events []events.Event `json:"events,omitempty"`
+}
+
+// TODO(stevvooe): The event type should be separate from the json format. It
+// should be defined as an interface. Leaving as is for now since we don't
+// need that at this time. If we make this change, the struct below would be
+// called "EventRecord".
+
+// Event provides the fields required to describe a registry event.
+type Event struct {
+	// ID provides a unique identifier for the event.
+	ID string `json:"id,omitempty"`
+
+	// Timestamp is the time at which the event occurred.
+	Timestamp time.Time `json:"timestamp"`
+
+	// Action indicates what action encompasses the provided event.
+	Action string `json:"action,omitempty"`
+
+	// Target uniquely describes the target of the event.
+	Target struct {
+		// TODO(stevvooe): Use http.DetectContentType for layers, maybe.
+
+		v1.Descriptor
+
+		// Length in bytes of content. Same as Size field in Descriptor.
+		// Provided for backwards compatibility.
+		Length int64 `json:"length,omitempty"`
+
+		// Repository identifies the named repository.
+		Repository string `json:"repository,omitempty"`
+
+		// FromRepository identifies the named repository which a blob was mounted
+		// from if appropriate.
+		FromRepository string `json:"fromRepository,omitempty"`
+
+		// URL provides a direct link to the content.
+		URL string `json:"url,omitempty"`
+
+		// Tag provides the tag
+		Tag string `json:"tag,omitempty"`
+
+		// References provides the references descriptors.
+		References []v1.Descriptor `json:"references,omitempty"`
+	} `json:"target"`
+
+	// Request covers the request that generated the event.
+	Request RequestRecord `json:"request"`
+
+	// Actor specifies the agent that initiated the event. For most
+	// situations, this could be from the authorization context of the request.
+	Actor ActorRecord `json:"actor"`
+
+	// Source identifies the registry node that generated the event. Put
+	// differently, while the actor "initiates" the event, the source
+	// "generates" it.
+	Source SourceRecord `json:"source"`
+}
+
+// ActorRecord specifies the agent that initiated the event. For most
+// situations, this could be from the authorization context of the request.
+// Data in this record can refer to both the initiating client and the
+// generating request.
+type ActorRecord struct {
+	// Name corresponds to the subject or username associated with the
+	// request context that generated the event.
+	Name string `json:"name,omitempty"`
+
+	// TODO(stevvooe): Look into setting a session cookie to get this
+	// without docker daemon.
+	//    SessionID
+
+	// TODO(stevvooe): Push the "Docker-Command" header to replace cookie and
+	// get the actual command.
+	//    Command
+}
+
+// RequestRecord covers the request that generated the event.
+type RequestRecord struct {
+	// ID uniquely identifies the request that initiated the event.
+	ID string `json:"id"`
+
+	// Addr contains the ip or hostname and possibly port of the client
+	// connection that initiated the event. This is the RemoteAddr from
+	// the standard http request.
+	Addr string `json:"addr,omitempty"`
+
+	// Host is the externally accessible host name of the registry instance,
+	// as specified by the http host header on incoming requests.
+	Host string `json:"host,omitempty"`
+
+	// Method has the request method that generated the event.
+	Method string `json:"method"`
+
+	// UserAgent contains the user agent header of the request.
+	UserAgent string `json:"useragent"`
+}
+
+// SourceRecord identifies the registry node that generated the event. Put
+// differently, while the actor "initiates" the event, the source "generates"
+// it.
+type SourceRecord struct {
+	// Addr contains the ip or hostname and the port of the registry node
+	// that generated the event. Generally, this will be resolved by
+	// os.Hostname() along with the running port.
+	Addr string `json:"addr,omitempty"`
+
+	// InstanceID identifies a running instance of an application. Changes
+	// after each restart.
+	InstanceID string `json:"instanceID,omitempty"`
+}
+
+// ErrSinkClosed is returned if a write is issued to a sink that has been
+// closed. If encountered, the error should be considered terminal and
+// retries will not be successful.
+var ErrSinkClosed = fmt.Errorf("sink: closed")

@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -52,6 +53,9 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 	}
 	if registryInfo.Address == "" {
 		return fmt.Errorf("registry address must be specified")
+	}
+	if registryInfo.ShouldUseMTLS() && cfg.Cluster == nil {
+		return fmt.Errorf("registry uses Zarf-managed mTLS, but no cluster is available to obtain its client certificate")
 	}
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
@@ -105,7 +109,8 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 
 		var transport http.RoundTripper
 		var certs pki.GeneratedPKI
-		if cfg.Cluster != nil && registryInfo.ShouldUseMTLS() {
+		usingMTLS := registryInfo.ShouldUseMTLS()
+		if usingMTLS {
 			certs, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
 			if err != nil {
 				return err
@@ -132,10 +137,19 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			}),
 		}
 
+		// Negotiate only when the registry's scheme isn't already known, since the
+		// negotiation itself is a probe over the same tunnel the real push depends on.
 		plainHTTP := cfg.PlainHTTP
-		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
+		known, ok := registryInfo.KnownPlainHTTP()
+		if ok {
+			plainHTTP = known
+		}
+		if !ok && dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
-			plainHTTP, err = ShouldUsePlainHTTP(ctx, registryRef.Host(), client)
+			// Reuse the same transport the real push will use, but stripped of any
+			// retry wrapper: probing must stay fast, not retry with backoff on every
+			// connection failure.
+			plainHTTP, err = ocischeme.From(ctx).UsePlainHTTP(ctx, registryRef.Host(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify, Transport: unwrapRetryTransport(transport)})
 			if err != nil {
 				return err
 			}

@@ -282,6 +282,31 @@ func TestPull(t *testing.T) {
 	}
 }
 
+func TestPull_LocalhostAutoDetectsPlainHTTPWithoutFlag(t *testing.T) {
+	// A localhost registry must be reachable over plain HTTP even when the caller
+	// never set PlainHTTP, matching Push's long-standing localhost auto-detection.
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+
+	repo := testutil.NewRepo(t, upstream+"/fixtures/local")
+	config := testutil.PushBlob(ctx, t, repo, ocispec.MediaTypeImageConfig, []byte(`{"architecture":"amd64"}`))
+	manifest := testutil.PushManifest(ctx, t, repo, config, nil)
+	require.NoError(t, repo.Tag(ctx, manifest, "v1"))
+
+	ref, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/local:v1", upstream))
+	require.NoError(t, err)
+
+	destDir := t.TempDir()
+	_, err = Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+		CacheDirectory: t.TempDir(),
+		Arch:           "amd64",
+		// PlainHTTP intentionally left false: localhost must be auto-detected.
+	})
+	require.NoError(t, err)
+	requireManifestBlobs(t, destDir, manifest.Digest.String())
+}
+
 func TestPullInvalidCache(t *testing.T) {
 	// pulling an image with an invalid layer in the cache should still pull the image
 	t.Parallel()

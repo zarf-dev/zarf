@@ -406,7 +406,6 @@ func TestPackageTarballDirectoryStructure(t *testing.T) {
 			// |   |-- ingest
 			// |   `-- oci-layout
 			// |-- sboms
-			// |   |-- compare.html
 			// |   |-- ghcr.io_stefanprodan_podinfo_6.4.0.json
 			// |   |-- ghcr.io_stefanprodan_podinfo_6.4.1.json
 			// |   |-- sbom-viewer-ghcr.io_stefanprodan_podinfo_6.4.0.html
@@ -490,7 +489,6 @@ func TestPackageTarballDirectoryStructure(t *testing.T) {
 			// sboms
 			sbomsDir := filepath.Join(unpackAll, "sboms")
 			wantFiles := []string{
-				"compare.html",
 				"ghcr.io_stefanprodan_podinfo_6.4.0.json",
 				"ghcr.io_stefanprodan_podinfo_6.4.1.json",
 				"sbom-viewer-ghcr.io_stefanprodan_podinfo_6.4.0.html",

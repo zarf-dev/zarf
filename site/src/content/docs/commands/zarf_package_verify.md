@@ -22,8 +22,11 @@ zarf package verify PACKAGE_SOURCE [flags]
 
 ```
 
-# Verify a signed package
+# Verify a signed local package tarball
 $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst --key ./public-key.pub
+
+# Verify a package in an OCI registry (requires oci:// scheme)
+$ zarf package verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./public-key.pub
 
 # Verify an unsigned package (checksums only)
 $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
@@ -49,6 +52,7 @@ $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --cache string               Specify the location of the Zarf cache directory (default "~/.zarf-cache")
       --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
@@ -56,7 +60,6 @@ $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
       --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
 ### SEE ALSO

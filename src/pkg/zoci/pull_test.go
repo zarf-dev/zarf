@@ -247,6 +247,61 @@ func TestAssembleLayers(t *testing.T) {
 	require.Contains(t, digests, pkg.image.layer.Digest.String(), "image layer blob present")
 }
 
+func TestAllPublishedLayersArePulled(t *testing.T) {
+	ctx := testutil.TestContext(t)
+
+	dir := t.TempDir()
+	zarfYAML := `kind: ZarfPackageConfig
+metadata:
+  name: all-layers-test
+  version: 0.0.1
+  architecture: amd64
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
+documentation:
+  readme: README.md
+components:
+  - name: with-file
+    required: true
+    files:
+      - source: data.txt
+        target: data.txt
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(zarfYAML), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "data.txt"), []byte("hello\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "README.md"), []byte("# test\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "values.yaml"), []byte("foo: bar\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "values.schema.json"), []byte(`{"type":"object"}`), 0o644))
+
+	tmpdir := t.TempDir()
+	packagePath, err := packager.Create(ctx, dir, tmpdir, packager.CreateOptions{
+		CachePath:      tmpdir,
+		SigningKeyPath: "testdata/cosign.key",
+	})
+	require.NoError(t, err)
+
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	remote, components := publishPackage(ctx, t, packagePath, upstream)
+
+	// Verify that for each entry on the manifest there is an associated layer pulled by remote.AssembleLayers
+	root, err := remote.FetchRoot(ctx)
+	require.NoError(t, err)
+
+	pulled, err := remote.AssembleLayers(ctx, components, zoci.GetAllLayerTypes()...)
+	require.NoError(t, err)
+	pulledDigests := map[string]struct{}{}
+	for _, l := range pulled {
+		pulledDigests[l.Digest.String()] = struct{}{}
+	}
+
+	for _, published := range root.Layers {
+		_, ok := pulledDigests[published.Digest.String()]
+		require.True(t, ok, "published layer %q (%s) is not pulled by AssembleLayers", published.Annotations[ocispec.AnnotationTitle], published.Digest)
+	}
+}
+
 func buildAndPublishPackage(ctx context.Context, t *testing.T, imageRef, upstream string) *zoci.Remote {
 	t.Helper()
 	packagePath := createVirtualPackage(ctx, t, imageRef)
