@@ -499,10 +499,6 @@ func loadClusterAndState(ctx context.Context) (*cluster.Cluster, *state.State, e
 	if err != nil {
 		return nil, nil, err
 	}
-	// TODO: Determine if this is actually needed.
-	if s.Distro == "" {
-		return nil, nil, errors.New("zarf state secret did not load properly")
-	}
 	return c, s, nil
 }
 
@@ -557,6 +553,10 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	c, oldState, err := loadClusterAndState(ctx)
 	if err != nil {
 		return err
+	}
+
+	if !oldState.RegistryInfo.IsConfigured() {
+		return errors.New("no registry is configured in the Zarf state; nothing to update")
 	}
 
 	newState, err := state.Merge(oldState, state.MergeOptions{
@@ -638,6 +638,10 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	if !oldState.GitServer.IsConfigured() {
+		return errors.New("no git server is configured in the Zarf state; nothing to update")
+	}
+
 	newState, err := state.Merge(oldState, state.MergeOptions{
 		GitServer: o.gitServer,
 		Services:  state.NewServiceSet(state.GitKey),
@@ -661,13 +665,7 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 	}
 
-	// Zarf now only configures state with a Git server if a git server is deployed
-	// since there is still old state, we continue to check the cluster if the Git server exists
-	internalGitServerExists, err := c.InternalGitServerExists(ctx)
-	if err != nil {
-		return err
-	}
-	if newState.GitServer.IsInternal() && internalGitServerExists {
+	if newState.GitServer.IsInternal() {
 		if err := c.UpdateInternalGitServerSecret(ctx, oldState.GitServer, newState.GitServer); err != nil {
 			return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
 		}
@@ -711,6 +709,10 @@ func (o *updateAgentCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	c, oldState, err := loadClusterAndState(ctx)
 	if err != nil {
 		return err
+	}
+
+	if !oldState.AgentIsConfigured() {
+		return errors.New("no agent is configured in the Zarf state; nothing to update")
 	}
 
 	opts := state.MergeOptions{Services: state.NewServiceSet(state.AgentKey)}
