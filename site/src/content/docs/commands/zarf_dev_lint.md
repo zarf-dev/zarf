@@ -21,6 +21,7 @@ zarf dev lint [ DIRECTORY ] [flags]
 ### Options
 
 ```
+      --all-variants         Lints all package components, regardless of flavor. NOTE: This will disable checks for component name uniqueness.
   -f, --flavor string        The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                 help for lint
       --set stringToString   Specify package templates to set on the command line (KEY=value) (default [])

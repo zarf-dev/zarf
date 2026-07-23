@@ -17,9 +17,10 @@ import (
 func TestZarfPackageValidate(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name         string
-		pkg          v1alpha1.ZarfPackage
-		expectedErrs []string
+		name            string
+		pkg             v1alpha1.ZarfPackage
+		expectedErrs    []string
+		validateOptions ValidateOpts
 	}{
 		{
 			name: "valid package",
@@ -138,12 +139,134 @@ func TestZarfPackageValidate(t *testing.T) {
 				PkgValidateErrYOLONoDistro,
 			},
 		},
+		{
+			name: "duplicate component names",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name: "duplicate-component-name-pacakage",
+				},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "component1",
+					},
+					{
+						Name: "component1",
+					},
+				},
+			},
+			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrComponentNameNotUnique, "component1"),
+			},
+		},
+		{
+			name: "duplicate component names, skip component name uniqueness validation",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name: "duplicate-component-name-pacakage",
+				},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "component1",
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Flavor:  "strawberry",
+							LocalOS: "darwin",
+							Cluster: v1alpha1.ZarfComponentOnlyCluster{
+								Architecture: "arm64",
+								Distros: []string{
+									"eks",
+									"rke2",
+								},
+							},
+						},
+					},
+					{
+						Name: "component1",
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Flavor:  "blueberry",
+							LocalOS: "darwin",
+							Cluster: v1alpha1.ZarfComponentOnlyCluster{
+								Architecture: "arm64",
+								Distros: []string{
+									"eks",
+									"rke2",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedErrs: nil,
+			validateOptions: ValidateOpts{
+				SkipComponentNameUniquenessValidation: true,
+			},
+		},
+		{
+			name: "duplicate component names, skip component name uniqueness validation, only blocks are the same",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name: "duplicate-component-name-pacakage-with-duplicate-only",
+				},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "component2",
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Flavor:  "test",
+							LocalOS: "darwin",
+							Cluster: v1alpha1.ZarfComponentOnlyCluster{
+								Architecture: "arm64",
+								Distros: []string{
+									"eks",
+									"rke2",
+								},
+							},
+						},
+					},
+					{
+						Name: "component2",
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Flavor:  "different",
+							LocalOS: "darwin",
+							Cluster: v1alpha1.ZarfComponentOnlyCluster{
+								Architecture: "arm64",
+								Distros: []string{
+									"eks",
+									"rke2",
+								},
+							},
+						},
+					},
+					{
+						Name: "component2",
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Flavor:  "test",
+							LocalOS: "darwin",
+							Cluster: v1alpha1.ZarfComponentOnlyCluster{
+								Architecture: "arm64",
+								Distros: []string{
+									"eks",
+									"rke2",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrComponentNameNotUnique, "component2"),
+			},
+			validateOptions: ValidateOpts{
+				SkipComponentNameUniquenessValidation: true,
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := ValidatePackage(tt.pkg)
+			err := ValidatePackage(tt.pkg, tt.validateOptions)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
