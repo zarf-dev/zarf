@@ -1,0 +1,22 @@
+kind: ZarfPackageConfig
+metadata:
+  name: skeleton-multiarch
+  description: package with same-named components gated per architecture, direct and imported
+  version: 0.0.1
+
+components:
+  - name: direct
+    required: true
+    only:
+      cluster:
+        architecture: amd64
+  - name: direct
+    required: true
+    only:
+      cluster:
+        architecture: arm64
+  - name: imported
+    required: true
+    import:
+      path: sub
+      name: shared

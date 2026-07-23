@@ -220,6 +220,31 @@ func TestPublishSkeleton(t *testing.T) {
 	}
 }
 
+func TestPublishSkeletonMultiArch(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	registryRef := createRegistry(ctx, t)
+
+	ref, err := PublishSkeleton(ctx, "testdata/skeleton-multiarch", registryRef, PublishSkeletonOptions{
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+
+	rmt, err := zoci.NewRemote(ctx, ref.String(), zoci.PlatformForSkeleton(), oci.WithPlainHTTP(true))
+	require.NoError(t, err)
+	pkg, err := rmt.FetchZarfYAML(ctx)
+	require.NoError(t, err)
+
+	got := []string{}
+	for _, comp := range pkg.Components {
+		got = append(got, comp.Name+"/"+comp.Only.Cluster.Architecture)
+	}
+	// Skeletons retain every architecture variant for both direct and imported components.
+	require.ElementsMatch(t, []string{
+		"direct/amd64", "direct/arm64",
+		"imported/amd64", "imported/arm64",
+	}, got)
+}
+
 func TestPublishPackage(t *testing.T) {
 	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
