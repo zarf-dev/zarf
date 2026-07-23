@@ -38,12 +38,11 @@ func TestConnectAndCreds(t *testing.T) {
 
 	connectToZarfServices(ctx, t)
 
-	// Registry, git, and agent each have dedicated subcommands. Because we use kubectl scale in an
-	// earlier command we use force conflicts to reclaim those fields where the subcommand supports it.
-	stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "registry", "--confirm", "--force-conflicts")
+	stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "registry", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	stdOut, stdErr, err = e2e.Zarf(t, "tools", "update-creds", "git", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+	// Because we use kubectl scale the agent in an earlier command we force conflict
 	stdOut, stdErr, err = e2e.Zarf(t, "tools", "update-creds", "agent", "--confirm", "--force-conflicts")
 	require.NoError(t, err, stdOut, stdErr)
 	// The artifact server is deprecated and only updatable through the legacy command.
