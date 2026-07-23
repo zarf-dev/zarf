@@ -26,11 +26,17 @@ func TestParseValuesCoercesSetValues(t *testing.T) {
 		"nested.enabled": "false",
 	})
 	require.NoError(t, err)
+	app, ok := vals["app"].(map[string]any)
+	require.True(t, ok)
+	site, ok := vals["site"].(map[string]any)
+	require.True(t, ok)
+	nested, ok := vals["nested"].(map[string]any)
+	require.True(t, ok)
 	require.Equal(t, true, vals["myBooleanVar"])
-	require.Equal(t, uint64(3), vals["app"].(map[string]any)["replicas"])
-	require.Equal(t, "my-site", vals["site"].(map[string]any)["name"])
-	require.Equal(t, "1.0.0", vals["app"].(map[string]any)["version"])
-	require.Equal(t, false, vals["nested"].(map[string]any)["enabled"])
+	require.Equal(t, uint64(3), app["replicas"])
+	require.Equal(t, "my-site", site["name"])
+	require.Equal(t, "1.0.0", app["version"])
+	require.Equal(t, false, nested["enabled"])
 }
 
 func TestDevInspectManifests(t *testing.T) {
