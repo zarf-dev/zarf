@@ -102,6 +102,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 		var importedPkg v1alpha1.ZarfPackage
 		var innerSchemas []string
+		var importRemote *zoci.Remote
 		if component.Import.Path != "" {
 			importPath := filepath.Join(pkgPath.BaseDir, component.Import.Path)
 			for _, sp := range importStack {
@@ -143,19 +144,19 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
-			remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(),
+			importRemote, err = zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(),
 				cacheModifier, oci.WithPlainHTTP(plainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify))
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
-			_, err = remote.ResolveRoot(ctx)
+			descriptor, err := importRemote.ResolveRoot(ctx)
 			if err != nil {
 				if strings.Contains(err.Error(), "no matching manifest was found in the manifest list") {
 					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", component.Import.URL, err)
 				}
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
-			importedPkg, err = remote.FetchZarfYAML(ctx)
+			importedPkg, err = importRemote.FetchZarfYAMLFromDescriptor(ctx, descriptor)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
@@ -186,7 +187,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 		importedComponent := found[0]
 
-		importPath, err := fetchOCISkeleton(ctx, component, pkgPath.BaseDir, cachePath, remoteOptions)
+		importPath, err := fetchOCISkeleton(ctx, component, pkgPath.BaseDir, cachePath, importRemote)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, nil, err
 		}
@@ -306,9 +307,12 @@ func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
 }
 
 // TODO (phillebaba): Refactor package structure so that pullOCI can be used instead.
-func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string, remoteOptions types.RemoteOptions) (string, error) {
+func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string, remote *zoci.Remote) (string, error) {
 	if component.Import.URL == "" {
 		return component.Import.Path, nil
+	}
+	if remote == nil {
+		return "", fmt.Errorf("missing remote for OCI import %s", component.Import.URL)
 	}
 
 	name := component.Name
@@ -321,25 +325,6 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		return "", err
 	}
 
-	// Get the descriptor for the component.
-	plainHTTP, err := negotiateImportPlainHTTP(ctx, component.Import.URL, remoteOptions)
-	if err != nil {
-		return "", err
-	}
-	remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(),
-		oci.WithPlainHTTP(plainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify))
-	if err != nil {
-		return "", err
-	}
-	_, err = remote.ResolveRoot(ctx)
-	if err != nil {
-		// This error likely won't occur as the root has been resolved before this function is invoked.
-		// This serves as a secondary mechanism to highlight the potential for the package existing without a published skeleton.
-		if strings.Contains(err.Error(), "no matching manifest was found in the manifest list") {
-			return "", fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", component.Import.URL, err)
-		}
-		return "", fmt.Errorf("published skeleton package for %s does not exist: %w", component.Import.URL, err)
-	}
 	manifest, err := remote.FetchRoot(ctx)
 	if err != nil {
 		return "", err
