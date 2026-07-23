@@ -116,13 +116,18 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 		}),
 	}
 
-	// Reuse the same transport the real fetch will use (which may be an mTLS
-	// client-certificate transport), but stripped of any retry wrapper: probing must
-	// stay fast, not retry with backoff on every connection failure.
-	probeTransport := unwrapRetryTransport(transport)
-	plainHTTP, err := ocischeme.New(ocischeme.Options{}).UsePlainHTTP(ctx, ref.Registry, ocischeme.ProbeOptions{Transport: probeTransport})
-	if err != nil {
-		return "", err
+	// Negotiate only when the registry's scheme isn't already known, since the
+	// negotiation itself is a probe over the same connection the real fetch depends on.
+	plainHTTP, ok := zarfState.RegistryInfo.KnownPlainHTTP()
+	if !ok {
+		// Reuse the same transport the real fetch will use, but stripped of any
+		// retry wrapper: probing must stay fast, not retry with backoff on every
+		// connection failure.
+		probeTransport := unwrapRetryTransport(transport)
+		plainHTTP, err = ocischeme.New(ocischeme.Options{}).UsePlainHTTP(ctx, ref.Registry, ocischeme.ProbeOptions{Transport: probeTransport})
+		if err != nil {
+			return "", err
+		}
 	}
 
 	b, err := fetchManifestBytes(ctx, ref, client, plainHTTP, imageAddress)

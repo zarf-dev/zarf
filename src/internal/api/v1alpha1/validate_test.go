@@ -293,6 +293,18 @@ func TestValidateChart(t *testing.T) {
 			},
 		},
 		{
+			name:         "local path without version",
+			chart:        v1alpha1.ZarfChart{Name: "chart1", Namespace: "whatever", LocalPath: "wherever"},
+			expectedErrs: nil,
+		},
+		{
+			name:  "url without version",
+			chart: v1alpha1.ZarfChart{Name: "chart1", Namespace: "whatever", URL: "http://whatever"},
+			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrChartVersion, "chart1"),
+			},
+		},
+		{
 			name:         "invalid releaseName",
 			chart:        v1alpha1.ZarfChart{ReleaseName: "namedwithperiods-0.47.0", Name: "releaseName", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
 			expectedErrs: []string{"invalid release name 'namedwithperiods-0.47.0'"},

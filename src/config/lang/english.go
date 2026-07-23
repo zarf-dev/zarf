@@ -307,7 +307,8 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 	CmdPackageCreateCleanPathErr              = "Invalid characters in Zarf cache path, defaulting to %s"
 
 	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
-	CmdPackageDeployFlagAdoptExistingResources = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
+	CmdPackageDeployFlagTakeOwnership          = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
+	CmdPackageDeployFlagAdoptExistingResources = "Deprecated: use --take-ownership instead."
 	CmdPackageDeployFlagConnected              = "Deploy without pushing images/repos; label resources to bypass the Zarf agent"
 	CmdPackageDeployFlagForceConflicts         = "Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources."
 	CmdPackageDeployFlagSetVariables           = "Specify deployment variables to set on the command line (KEY=value)"

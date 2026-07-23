@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -290,8 +291,8 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 				suite.DirExists(filepath.Join(chartDir, dir))
 				continue
 			}
-			tgz := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
-			suite.FileExists(filepath.Join(chartDir, tgz))
+			tgz := helm.StandardName(chartDir, chart) + ".tgz"
+			suite.FileExists(tgz)
 		}
 
 		var containsFiles bool

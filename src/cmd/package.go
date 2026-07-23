@@ -278,20 +278,20 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 }
 
 type packageDeployOptions struct {
-	valuesFiles            []string
-	namespaceOverride      string
-	confirm                bool
-	adoptExistingResources bool
-	connected              bool
-	forceConflicts         bool
-	timeout                time.Duration
-	retries                int
-	setVariables           map[string]string
-	setValues              map[string]string
-	optionalComponents     string
-	shasum                 string
-	skipVersionCheck       bool
-	ociConcurrency         int
+	valuesFiles        []string
+	namespaceOverride  string
+	confirm            bool
+	takeOwnership      bool
+	connected          bool
+	forceConflicts     bool
+	timeout            time.Duration
+	retries            int
+	setVariables       map[string]string
+	setValues          map[string]string
+	optionalComponents string
+	shasum             string
+	skipVersionCheck   bool
+	ociConcurrency     int
 	packageVerifyFlags
 }
 
@@ -313,8 +313,10 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 
-	// Always require adopt-existing-resources flag (no viper)
-	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	// Always require take-ownership flag (no viper)
+	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
+	cmd.Flags().BoolVar(&o.takeOwnership, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().BoolVar(&o.connected, "connected", v.GetBool(VPkgDeployConnected), lang.CmdPackageDeployFlagConnected)
 	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
@@ -391,18 +393,18 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}()
 
 	deployOpts := packager.DeployOptions{
-		Values:                 values,
-		AdoptExistingResources: o.adoptExistingResources,
-		Connected:              o.connected,
-		ForceConflicts:         o.forceConflicts,
-		Timeout:                o.timeout,
-		Retries:                o.retries,
-		OCIConcurrency:         o.ociConcurrency,
-		SetVariables:           o.setVariables,
-		NamespaceOverride:      o.namespaceOverride,
-		RemoteOptions:          defaultRemoteOptions(),
-		IsInteractive:          !o.confirm,
-		SkipVersionCheck:       o.skipVersionCheck,
+		Values:            values,
+		TakeOwnership:     o.takeOwnership,
+		Connected:         o.connected,
+		ForceConflicts:    o.forceConflicts,
+		Timeout:           o.timeout,
+		Retries:           o.retries,
+		OCIConcurrency:    o.ociConcurrency,
+		SetVariables:      o.setVariables,
+		NamespaceOverride: o.namespaceOverride,
+		RemoteOptions:     defaultRemoteOptions(),
+		IsInteractive:     !o.confirm,
+		SkipVersionCheck:  o.skipVersionCheck,
 	}
 
 	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)

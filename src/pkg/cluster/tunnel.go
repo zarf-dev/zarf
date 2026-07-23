@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+	"k8s.io/kubectl/pkg/util/podutils"
 	"k8s.io/streaming/pkg/httpstream"
 
 	"github.com/avast/retry-go/v4"
@@ -584,7 +585,15 @@ func (tunnel *Tunnel) getAttachablePodForService(ctx context.Context) (string, e
 	if len(podList.Items) < 1 {
 		return "", fmt.Errorf("no pods found for service %s", tunnel.resourceName)
 	}
-	return podList.Items[0].Name, nil
+	// status.phase=Running alone isn't enough: a pod stays "Running" throughout its
+	// graceful termination (e.g. mid-rollout), so without also checking these, a
+	// port-forward can bind to a pod that's already on its way out.
+	for _, pod := range podList.Items {
+		if pod.DeletionTimestamp == nil && podutils.IsPodReady(&pod) {
+			return pod.Name, nil
+		}
+	}
+	return "", fmt.Errorf("no ready pods found for service %s", tunnel.resourceName)
 }
 
 // Inspired by https://github.com/kubernetes/kubernetes/blob/1ee1ff97fb7f9755a44d29bee0c80d2ccbed68dc/staging/src/k8s.io/kubectl/pkg/cmd/portforward/portforward.go#L139-L156

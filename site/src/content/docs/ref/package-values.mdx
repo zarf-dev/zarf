@@ -1,0 +1,345 @@
+---
+title: Package Values
+sidebar:
+  order: 36
+---
+
+import Properties from '@components/SchemaItemProperties.astro';
+
+Package Values provide a familiar way to define configuration data in your Zarf packages. Unlike the legacy [Variables and Constants](/ref/values/) system that uses string substitution with `###ZARF_VAR_###` syntax, Package Values uses [Go templates](https://pkg.go.dev/text/template) with access to structured data and custom functions like those offered by [Sprig](#functions).
+
+## Defining Values
+
+### Values Files
+
+Values are defined in YAML files and are declared in your `zarf.yaml` package configuration:
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - values.yaml
+  schema: values-schema.json
+```
+
+The values files contain structured YAML data:
+
+```yaml
+# values/values.yaml
+app:
+  environment: "production"
+  replicas: 3
+```
+
+Multiple values files are merged in order, with later files taking precedence.
+
+:::note
+
+Every key referenced by the package must be explicitly defined, either in the package's values files or provided at deploy time. A key can be defined as empty, but deploy is blocked if any key is missing.
+
+:::
+
+### Schema Validation
+
+Optionally provide a JSON schema to validate the values supplied at deploy time:
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - values.yaml
+  schema: values-schema.json
+```
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "app": {
+      "type": "object",
+      "properties": {
+        "replicas": { "type": "integer", "minimum": 1, "maximum": 10 }
+      },
+      "required": ["replicas"]
+    }
+  }
+}
+```
+
+Generate a schema that includes each package value using `zarf dev generate-schema`.
+
+## Using Values
+
+Values are accessed in templates through the `.Values` template object. See the [Templating](#templating) section for details on the other available template objects (`.State`, `.Pkg`) and functions.
+
+### In Manifests
+
+Enable Go templating in manifest files by setting `template: true`:
+
+```yaml
+components:
+  - name: my-component
+    manifests:
+      - name: app-manifests
+        template: true  # Enables Go template processing
+        files:
+          - deployment.yaml
+```
+
+### In Actions
+
+Each action requires opt-in templating, set `template: true` on each `cmd`:
+
+```yaml
+components:
+  - name: my-component
+    actions:
+      onDeploy:
+        after:
+          - cmd: echo "Environment: {{ .Values.app.environment }}"
+            template: true  # Required to enable templating in actions
+```
+
+:::note
+
+Templating can be enabled during `onDeploy` and `onRemove` actions, but **not** during `onCreate` actions.
+
+:::
+
+#### Setting Values from Actions
+
+Actions can dynamically set values using the `setValues` field, similar to `setVariables`:
+
+```yaml
+components:
+  - name: dynamic-config
+    actions:
+      onDeploy:
+        after:
+          - cmd: echo "generated-password-123"
+            setValues:
+              - key: .database.password
+
+          - cmd: kubectl get configmap app-config -o json
+            setValues:
+              - key: .existing.config
+                type: json
+```
+
+The `setValues` field accepts:
+- `key`: The dotted path where the value should be stored (e.g., `.database.password`)
+- `type`: The format of the output - `string` (default), `json`, or `yaml`
+
+Values set via `setValues` are available in subsequent actions and manifests within the same deployment.
+
+### Mapping to Helm Chart Values
+
+Map Package Values to Helm chart values using `sourcePath` and `targetPath`:
+
+```yaml
+components:
+  - name: helm-component
+    charts:
+      - name: my-chart
+        version: 1.0.0
+        namespace: my-app
+        localPath: charts/my-chart
+        values:
+          - sourcePath: ".app.replicas"
+            targetPath: ".replicaCount"
+          - sourcePath: ".database.host"
+            targetPath: ".config.database.host"
+```
+
+#### Mapping All Values
+
+While passing only the necessary values provides better security, you can map all Package Values directly to a Helm chart by using `.` for both `sourcePath` and `targetPath`:
+
+```yaml
+values:
+  # Map all Package Values to the Helm chart's values
+  - sourcePath: "."
+    targetPath: "."
+```
+
+This approach passes your entire Package Values structure to the Helm chart, useful when your values file structure matches the chart's expected values schema.
+
+#### Excluding Paths
+
+When mapping a subtree, use `excludePaths` to omit specific descendants of the `sourcePath`. This is useful for withholding irrelevant or intentionally static keys, such as an image reference that is fixed at package creation.
+
+```yaml
+values:
+  # Map everything under .database except the image
+  - sourcePath: ".database"
+    targetPath: ".config.database"
+    excludePaths:
+      - ".database.image"
+```
+
+#### Mapping Behavior
+
+- Mappings are evaluated in order from top to bottom
+- Later mappings to the same `targetPath` override earlier ones
+- Source paths reference your Package Values e.g. everything within `.Values.*`.
+- Target paths reference the Helm chart's `values.yaml` structure
+
+<Properties item="ZarfChartValue" />
+
+#### Templated Values Files
+
+Use `templatedValuesFiles` when you need Zarf's built-in [templating](#templating) inside a Helm values file. Templated values files have Go templates rendered at deploy time, giving you access to `.Values`, `.State`, and the templating functions:
+
+```yaml
+components:
+  - name: helm-component
+    charts:
+      - name: my-chart
+        version: 1.0.0
+        namespace: my-app
+        localPath: charts/my-chart
+        templatedValuesFiles:
+          - chart-values.yaml
+```
+
+```yaml
+# chart-values.yaml
+replicaCount: {{ .Values.app.replicas }}
+registry: {{ .State.Registry.Address }}
+```
+
+## Setting Values
+
+Override or provide values when deploying or removing a package:
+
+### Using Values Files
+
+Provide entire values files with the `-v` or `--values` flag:
+
+```bash
+# Multiple values files (later files override earlier ones)
+zarf package deploy my-package.tar.zst \
+  -v base-values.yaml \
+  -v override-values.yaml
+```
+
+### Using --set-values Flag
+
+Provide individual values via command line:
+
+```bash
+# Set values at deploy time
+zarf package deploy my-package.tar.zst \
+  --set-values="app.environment=staging,app.replicas=5"
+
+# Set values during removal
+zarf package remove my-package \
+  --set-values="app.environment=staging"
+```
+
+### Precedence
+
+Values are merged from several sources. When the same key is set in more than one place, later sources in this list win:
+
+1. **Package `values.files`** baked into the package at build time (merged in order, later file wins)
+2. **Deploy-time values files** from `-v`/`--values` (merged in order, later file wins).
+3. **`--set-values`** flags.
+
+## Inspecting Values
+
+Zarf provides commands to inspect the results of values without having to deploy a package:
+
+```bash
+# Inspect chart and regular manifests from a package definition
+zarf dev inspect manifests .
+
+# Inspect chart and regular manifests from a built package
+zarf package inspect manifests my-package.tar.zst
+```
+
+## Templating
+
+Zarf exposes custom go-templating functions and objects. This section details what is available to **manifests**, **files**, and **action `cmd` fields** when templated. Helm charts continue to use Helm's templating system.
+
+### Cluster State (`.State`)
+
+The `.State` object exposes Zarf cluster state.
+
+**Non-sensitive fields** are always available with no additional declaration:
+
+| Field | Description |
+|---|---|
+| `.State.StorageClass` | Default storage class (cf. `###ZARF_STORAGE_CLASS###`) |
+| `.State.IPFamily` | `"ipv4"`, `"ipv6"`, or `"dual"` (cf. `###ZARF_IPV6_ONLY###`) |
+| `.State.Registry.Address` | Registry URL (cf. `###ZARF_REGISTRY###`) |
+| `.State.Registry.Port` | Registry port (cf. `###ZARF_REGISTRY_PORT###`) |
+| `.State.Registry.PushUsername` | Registry push username |
+| `.State.Registry.PullUsername` | Registry pull username |
+| `.State.Registry.Mode` | `"nodeport"`, `"proxy"`, or `"external"` (cf. `###ZARF_REGISTRY_PROXY###`) |
+| `.State.Registry.MTLSEnabled` | `bool` (cf. `###ZARF_REGISTRY_MTLS_ENABLED###`) |
+| `.State.Registry.SeedAddress` | Localhost seed registry address (cf. `###ZARF_SEED_REGISTRY###`) |
+| `.State.Git.Address` | Git server URL |
+| `.State.Git.PushUsername` | Git push username (cf. `###ZARF_GIT_PUSH###`) |
+| `.State.Git.PullUsername` | Git pull username (cf. `###ZARF_GIT_PULL###`) |
+| `.State.Git.IsInternal` | `bool` |
+| `.State.Injector.Image` | Injector container image (cf. `###ZARF_INJECTOR_IMAGE###`) |
+| `.State.Injector.Port` | Injector host port (cf. `###ZARF_INJECTOR_HOSTPORT###`) |
+| `.State.Injector.PayloadConfigMaps` | Number of payload ConfigMaps (cf. `###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###`) |
+| `.State.Injector.PayloadShaSum` | SHA sum of injector payload (cf. `###ZARF_INJECTOR_SHASUM###`) |
+
+**Sensitive fields** require a `stateAccess` declaration on the component. Accessing a sensitive field without the corresponding group causes a template error at deploy time:
+
+| Field | Description |
+|---|---|
+| `.State.Registry.PushPassword` | Registry push password (cf. `###ZARF_REGISTRY_AUTH_PUSH###`) |
+| `.State.Registry.PullPassword` | Registry pull password (cf. `###ZARF_REGISTRY_AUTH_PULL###`) |
+| `.State.Registry.Secret` | Registry secret (cf. `###ZARF_REGISTRY_SECRET###`) |
+| `.State.Registry.Htpasswd` | Registry `htpasswd` contents (cf. `###ZARF_HTPASSWD###`) |
+| `.State.Git.PushPassword` | Git push password (cf. `###ZARF_GIT_AUTH_PUSH###`) |
+| `.State.Git.PullPassword` | Git pull password (cf. `###ZARF_GIT_AUTH_PULL###`) |
+| `.State.Agent.CA` | Agent CA certificate, base64-encoded (cf. `###ZARF_AGENT_CA###`) |
+| `.State.Agent.Cert` | Agent certificate, base64-encoded (cf. `###ZARF_AGENT_CRT###`) |
+| `.State.Agent.Key` | Agent private key, base64-encoded (cf. `###ZARF_AGENT_KEY###`) |
+
+```yaml
+components:
+  - name: my-component
+    stateAccess:
+      - registryCredentials   # unlocks .State.Registry.{PushPassword,PullPassword,Secret,Htpasswd}
+      - gitCredentials        # unlocks .State.Git.{PushPassword,PullPassword}
+      - agentCerts            # unlocks .State.Agent.{CA,Cert,Key} (base64-encoded)
+```
+
+See the [values-templating example](/ref/examples/values-templating/) for a working demonstration of `.State` fields in manifests and actions.
+
+### Package Object (`.Pkg`)
+
+The `.Pkg` object gives access to the package definition. See this used in the [values-templating](/ref/examples/values-templating) example.
+
+### Functions
+
+[sprig functions](https://masterminds.github.io/sprig/) except for `getHostByName`, `env`, and `expandenv` are included.
+
+A subset of [Helm functions](https://helm.sh/docs/chart_template_guide/function_list/#totoml-musttotoml) are included:
+
+- **TOML**: `toToml`, `fromToml`
+- **YAML**: `toYaml`, `mustToYaml`, `toYamlPretty`, `fromYaml`, `fromYamlArray`
+- **JSON**: `toJson`, `mustToJson`, `fromJson`, `fromJsonArray`
+
+## Examples
+
+See the [values-templating example](/ref/examples/values-templating) for a complete working example demonstrating:
+
+- File-based values configuration
+- Manifest templating with Go templates
+- Helm chart value mappings
+- Action templating
+- Sprig function usage
+
+## Related Documentation
+
+- [Variables to Values](/best-practices/variables-to-values/) - Migrating from the legacy Variables and Constants system
+- [Deployment Variables (Legacy)](/ref/values/) - Legacy Variables and Constants system
+- [Actions](/ref/actions/) - Component action configuration
+- [Components](/ref/components/) - Component structure and features

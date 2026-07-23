@@ -389,13 +389,31 @@ func GenerateMTLSCerts(caSubject string, serverDNSNames []string, serverCommonNa
 }
 
 // TransportWithKey creates an HTTP transport configured with mTLS certificates.
+//
+// The registry CA is added to, rather than replaces, the system trust store. Registry
+// storage drivers can redirect blob requests to external endpoints such as S3
 func TransportWithKey(certs GeneratedPKI) (http.RoundTripper, error) {
+	rootCAs, err := x509.SystemCertPool()
+	if err != nil || rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+
+	return transportWithKey(certs, rootCAs)
+}
+
+// transportWithKey creates an mTLS transport using baseRootCAs as the existing
+// trusted roots. It is split out to make the combined trust behavior testable
+// without depending on the host's system trust store.
+func transportWithKey(certs GeneratedPKI, baseRootCAs *x509.CertPool) (http.RoundTripper, error) {
 	cert, err := tls.X509KeyPair(certs.Cert, certs.Key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load client certificate: %w", err)
 	}
 
-	caCertPool := x509.NewCertPool()
+	if baseRootCAs == nil {
+		baseRootCAs = x509.NewCertPool()
+	}
+	caCertPool := baseRootCAs.Clone()
 	if !caCertPool.AppendCertsFromPEM(certs.CA) {
 		return nil, fmt.Errorf("failed to parse CA certificate")
 	}

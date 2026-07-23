@@ -882,22 +882,28 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 
 func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alpha1.VersionRequirement {
 	var reqs []v1alpha1.VersionRequirement
-	var hasImageArchives, hasTemplatedValuesFiles bool
+	var hasImageArchives, hasTemplatedValuesFiles, hasVersionlessChart bool
 	for _, comp := range pkg.Components {
 		if !hasImageArchives && len(comp.ImageArchives) > 0 {
 			hasImageArchives = true
 		}
-		if !hasTemplatedValuesFiles {
-			for _, chart := range comp.Charts {
-				if len(chart.TemplatedValuesFiles) > 0 {
-					hasTemplatedValuesFiles = true
-					break
-				}
+		for _, chart := range comp.Charts {
+			if len(chart.TemplatedValuesFiles) > 0 {
+				hasTemplatedValuesFiles = true
+			}
+			if chart.Version == "" {
+				hasVersionlessChart = true
 			}
 		}
-		if hasImageArchives && hasTemplatedValuesFiles {
+		if hasImageArchives && hasTemplatedValuesFiles && hasVersionlessChart {
 			break
 		}
+	}
+	if hasVersionlessChart {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.65.0",
+			Reason:  "This package contains a chart without a version, which is only supported on v0.65.0+",
+		})
 	}
 	if hasImageArchives {
 		reqs = append(reqs, v1alpha1.VersionRequirement{

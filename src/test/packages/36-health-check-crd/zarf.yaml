@@ -1,0 +1,33 @@
+kind: ZarfPackageConfig
+metadata:
+  name: health-check-crd
+  description: Regression test for waiting for a CRD registered earlier in the same deploy
+
+components:
+  # Forces the shared status watcher's RESTMapper to cache a discovery snapshot
+  # taken before the CRD below exists.
+  - name: seed-cache
+    required: true
+    manifests:
+      - name: seed
+        namespace: health-check-crd
+        files:
+          - seed-configmap.yaml
+
+  # Registers the CRD
+  - name: install-crd
+    required: true
+    charts:
+      - name: crd-chart
+        namespace: health-check-crd
+        localPath: crd-chart
+        version: 0.1.0
+
+  # Create a CR,
+  - name: health-check-cr
+    required: true
+    manifests:
+      - name: cr
+        namespace: health-check-crd
+        files:
+          - cr.yaml

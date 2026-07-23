@@ -232,6 +232,10 @@ func TestCollectVersionRequirements(t *testing.T) {
 		Version: "v0.77.0",
 		Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
 	}
+	versionlessChartReq := v1alpha1.VersionRequirement{
+		Version: "v0.65.0",
+		Reason:  "This package contains a chart without a version, which is only supported on v0.65.0+",
+	}
 
 	tests := []struct {
 		name     string
@@ -286,6 +290,40 @@ func TestCollectVersionRequirements(t *testing.T) {
 				},
 			},
 			expected: []v1alpha1.VersionRequirement{imageArchivesReq},
+		},
+		{
+			name: "chart without a version triggers v0.65.0",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name:   "c1",
+						Charts: []v1alpha1.ZarfChart{{Name: "local", LocalPath: "./chart"}},
+					},
+				},
+			},
+			expected: []v1alpha1.VersionRequirement{versionlessChartReq},
+		},
+		{
+			name: "versionless chart requirement is only emitted once across charts",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{Name: "c1", Charts: []v1alpha1.ZarfChart{{Name: "a", LocalPath: "./a"}}},
+					{Name: "c2", Charts: []v1alpha1.ZarfChart{{Name: "b", LocalPath: "./b"}}},
+				},
+			},
+			expected: []v1alpha1.VersionRequirement{versionlessChartReq},
+		},
+		{
+			name: "chart with a version has no requirement",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name:   "c1",
+						Charts: []v1alpha1.ZarfChart{{Name: "local", LocalPath: "./chart", Version: "1.0.0"}},
+					},
+				},
+			},
+			expected: nil,
 		},
 	}
 
