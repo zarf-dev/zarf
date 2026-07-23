@@ -1029,6 +1029,20 @@ func TestParseSet(t *testing.T) {
 		require.Equal(t, "viaDot", leadingDot["key"])
 	})
 
+	t.Run("list elements are type-inferred per element", func(t *testing.T) {
+		t.Parallel()
+		vals := Values{}
+		require.NoError(t, vals.ParseSet([]string{
+			"nums={1,2,3}",
+			"bools={true,false}",
+			"mixed={1,1.5,0755,x}",
+		}))
+		require.Equal(t, []any{int64(1), int64(2), int64(3)}, vals["nums"])
+		require.Equal(t, []any{true, false}, vals["bools"])
+		// Each element is typed independently
+		require.Equal(t, []any{int64(1), "1.5", "0755", "x"}, vals["mixed"])
+	})
+
 	t.Run("later overrides earlier", func(t *testing.T) {
 		t.Parallel()
 		vals := Values{}
