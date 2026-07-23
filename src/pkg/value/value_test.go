@@ -997,115 +997,34 @@ func TestDeepCopy(t *testing.T) {
 	require.Equal(t, snapshot, original)
 }
 
-func TestParseSet(t *testing.T) {
+func TestInferType(t *testing.T) {
 	t.Parallel()
-
-	t.Run("Helm --set type inference and syntax", func(t *testing.T) {
-		t.Parallel()
-		vals := Values{}
-		require.NoError(t, vals.ParseSet([]string{
-			"aBool=true",
-			"anInt=3",
-			"aFloatStaysString=3.14",
-			"leadingZeroStaysString=0755",
-			"semver=1.0.0",
-			"nested.key=value",
-			"aList={a,b,c}",
-			"indexed[0]=x",
-			".leadingDot.key=viaDot",
-		}))
-		require.Equal(t, true, vals["aBool"])
-		require.Equal(t, int64(3), vals["anInt"])
-		require.Equal(t, "3.14", vals["aFloatStaysString"])
-		require.Equal(t, "0755", vals["leadingZeroStaysString"])
-		require.Equal(t, "1.0.0", vals["semver"])
-		nested, ok := vals["nested"].(map[string]any)
-		require.True(t, ok)
-		require.Equal(t, "value", nested["key"])
-		require.Equal(t, []any{"a", "b", "c"}, vals["aList"])
-		require.Equal(t, []any{"x"}, vals["indexed"])
-		leadingDot, ok := vals["leadingDot"].(map[string]any)
-		require.True(t, ok)
-		require.Equal(t, "viaDot", leadingDot["key"])
-	})
-
-	t.Run("list elements are type-inferred per element", func(t *testing.T) {
-		t.Parallel()
-		vals := Values{}
-		require.NoError(t, vals.ParseSet([]string{
-			"nums={1,2,3}",
-			"bools={true,false}",
-			"mixed={1,1.5,0755,x}",
-		}))
-		require.Equal(t, []any{int64(1), int64(2), int64(3)}, vals["nums"])
-		require.Equal(t, []any{true, false}, vals["bools"])
-		// Each element is typed independently
-		require.Equal(t, []any{int64(1), "1.5", "0755", "x"}, vals["mixed"])
-	})
-
-	t.Run("leading dot and escape handling", func(t *testing.T) {
-		t.Parallel()
-		tests := []struct {
-			name     string
-			sets     []string
-			expected Values
-		}{
-			{
-				name:     "leading dot stripped for each key in a comma-joined element",
-				sets:     []string{".a=1,.b=2"},
-				expected: Values{"a": int64(1), "b": int64(2)},
-			},
-			{
-				name:     "commas inside a list value do not start a new key",
-				sets:     []string{".a={x,y,z},.b=2"},
-				expected: Values{"a": []any{"x", "y", "z"}, "b": int64(2)},
-			},
-			{
-				name:     "only the leading dot is stripped, nesting dots preserved",
-				sets:     []string{".app.name=web,.app.port=8080"},
-				expected: Values{"app": map[string]any{"name": "web", "port": int64(8080)}},
-			},
-			{
-				name:     "escaped comma in a value does not start a new key",
-				sets:     []string{`.a=x\,y,.b=2`},
-				expected: Values{"a": "x,y", "b": int64(2)},
-			},
-			{
-				name:     "multiple escaped commas stay in one value",
-				sets:     []string{`.a=1\,2\,3`},
-				expected: Values{"a": "1,2,3"},
-			},
-			{
-				name:     "escaped leading dot is preserved in the key",
-				sets:     []string{`\.a=1`},
-				expected: Values{".a": int64(1)},
-			},
-			{
-				name:     "escaped dot inside a key is a literal, not a nesting separator",
-				sets:     []string{`a\.b=1`},
-				expected: Values{"a.b": int64(1)},
-			},
-		}
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
-				vals := Values{}
-				require.NoError(t, vals.ParseSet(tt.sets))
-				require.Equal(t, tt.expected, vals)
-			})
-		}
-	})
-
-	t.Run("later overrides earlier", func(t *testing.T) {
-		t.Parallel()
-		vals := Values{}
-		require.NoError(t, vals.ParseSet([]string{"key=first", "key=second"}))
-		require.Equal(t, "second", vals["key"])
-	})
-
-	t.Run("invalid syntax errors", func(t *testing.T) {
-		t.Parallel()
-		vals := Values{}
-		require.Error(t, vals.ParseSet([]string{"noEquals"}))
-	})
+	tests := []struct {
+		name     string
+		in       string
+		expected any
+	}{
+		{name: "true is a bool", in: "true", expected: true},
+		{name: "false is a bool", in: "false", expected: false},
+		{name: "mixed-case bool", in: "True", expected: true},
+		{name: "null is nil", in: "null", expected: nil},
+		{name: "whole number is int64", in: "3", expected: int64(3)},
+		{name: "zero is int64", in: "0", expected: int64(0)},
+		{name: "negative whole number is int64", in: "-5", expected: int64(-5)},
+		{name: "decimal stays a string", in: "3.14", expected: "3.14"},
+		{name: "leading zero stays a string", in: "0755", expected: "0755"},
+		{name: "semver stays a string", in: "1.0.0", expected: "1.0.0"},
+		{name: "plain word stays a string", in: "my-site", expected: "my-site"},
+		{name: "empty stays a string", in: "", expected: ""},
+		{name: "single quotes force a string bool", in: "'true'", expected: "true"},
+		{name: "single quotes force a string int", in: "'123'", expected: "123"},
+		{name: "single quotes force a string null", in: "'null'", expected: "null"},
+		{name: "single quotes preserve inner content", in: "''", expected: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.expected, InferType(tt.in))
+		})
+	}
 }

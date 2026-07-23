@@ -287,7 +287,7 @@ type packageDeployOptions struct {
 	timeout            time.Duration
 	retries            int
 	setVariables       map[string]string
-	setValues          []string
+	setValues          map[string]string
 	optionalComponents string
 	shasum             string
 	skipVersionCheck   bool
@@ -326,7 +326,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
 	_ = cmd.Flags().MarkDeprecated("set", "Use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
-	cmd.Flags().StringArrayVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	cmd.Flags().StringVar(&o.shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
@@ -353,7 +353,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	)
 
 	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
-	o.setValues = append(GetStringSlice(v, VPkgDeploySetValues), o.setValues...)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -793,7 +793,7 @@ type packageInspectValuesFilesOptions struct {
 	kubeVersion    string
 	setVariables   map[string]string
 	valuesFiles    []string
-	setValues      []string
+	setValues      map[string]string
 	outputWriter   io.Writer
 	ociConcurrency int
 	packageVerifyFlags
@@ -826,7 +826,7 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringArrayVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
@@ -843,7 +843,7 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
 	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
-	o.setValues = append(GetStringSlice(v, VPkgDeploySetValues), o.setValues...)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -901,7 +901,7 @@ type packageInspectManifestsOptions struct {
 	kubeVersion    string
 	setVariables   map[string]string
 	valuesFiles    []string
-	setValues      []string
+	setValues      map[string]string
 	outputWriter   io.Writer
 	ociConcurrency int
 	packageVerifyFlags
@@ -933,7 +933,7 @@ func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringArrayVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
@@ -950,7 +950,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
 	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
-	o.setValues = append(GetStringSlice(v, VPkgDeploySetValues), o.setValues...)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -1395,7 +1395,7 @@ type packageRemoveOptions struct {
 	skipVersionCheck   bool
 	ociConcurrency     int
 	valuesFiles        []string
-	setValues          []string
+	setValues          map[string]string
 	packageVerifyFlags
 }
 
@@ -1421,7 +1421,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when removing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, lang.CmdPackageRemoveFlagValuesFiles)
-	cmd.Flags().StringArrayVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
@@ -1435,7 +1435,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 
 	v := getViper()
 	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
-	o.setValues = append(GetStringSlice(v, VPkgRemoveSetValues), o.setValues...)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgRemoveSetValues), o.setValues)
 	vals, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err

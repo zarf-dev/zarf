@@ -19,12 +19,12 @@ import (
 
 func TestParseValuesCoercesSetValues(t *testing.T) {
 	t.Parallel()
-	vals, err := parseValues(context.Background(), nil, []string{
-		"myBooleanVar=true",
-		"app.replicas=3",
-		"site.name=my-site",
-		"app.version=1.0.0",
-		"nested.enabled=false",
+	vals, err := parseValues(context.Background(), nil, map[string]string{
+		"myBooleanVar":   "true",
+		"app.replicas":   "3",
+		"site.name":      "my-site",
+		"app.version":    "1.0.0",
+		"nested.enabled": "false",
 	})
 	require.NoError(t, err)
 	app, ok := vals["app"].(map[string]any)
@@ -43,11 +43,12 @@ func TestParseValuesCoercesSetValues(t *testing.T) {
 func TestParseValuesMergesConfigBaseWithCLI(t *testing.T) {
 	t.Parallel()
 	v := viper.New()
-	v.Set(VPkgRemoveSetValues, []string{"app.name=fromConfig", "app.replicas=1"})
+	v.Set(VPkgRemoveSetValues, map[string]string{"app.name": "fromConfig", "app.replicas": "1"})
 
 	// Mirror the merge every set-values command performs: config set_values are the base,
 	// CLI --set-values are applied after so they win per-key.
-	setValues := append(GetStringSlice(v, VPkgRemoveSetValues), "app.replicas=5", "app.tag=latest")
+	cliSetValues := map[string]string{"app.replicas": "5", "app.tag": "latest"}
+	setValues := mergeMap(v.GetStringMapString(VPkgRemoveSetValues), cliSetValues)
 
 	vals, err := parseValues(context.Background(), nil, setValues)
 	require.NoError(t, err)
@@ -72,7 +73,7 @@ func TestDevInspectManifests(t *testing.T) {
 		deploySetVariables map[string]string
 		createSetPkgTmpl   map[string]string
 		valuesFiles        []string
-		setValues          []string
+		setValues          map[string]string
 		kubeVersion        string
 		flavor             string
 		expectedErr        string
@@ -132,9 +133,9 @@ func TestDevInspectManifests(t *testing.T) {
 			valuesFiles: []string{
 				filepath.Join("testdata", "inspect-manifests", "manifest-with-values", "user-values.yaml"),
 			},
-			setValues: []string{
-				"replicas=5",
-				"imageTag=latest",
+			setValues: map[string]string{
+				"replicas": "5",
+				"imageTag": "latest",
 			},
 		},
 		{
@@ -148,12 +149,12 @@ func TestDevInspectManifests(t *testing.T) {
 			packageName:    "manifest-with-package-values",
 			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest-with-package-values"),
 			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest-with-package-values", "expected-override.yaml"),
-			setValues: []string{
-				"app.name=overridden-app",
-				"app.replicas=5",
-				"app.image.repository=nginx",
-				"app.image.tag=latest",
-				"app.port=8080",
+			setValues: map[string]string{
+				"app.name":             "overridden-app",
+				"app.replicas":         "5",
+				"app.image.repository": "nginx",
+				"app.image.tag":        "latest",
+				"app.port":             "8080",
 			},
 		},
 	}
@@ -203,7 +204,7 @@ func TestDevInspectValuesFiles(t *testing.T) {
 		packageName    string
 		setVariables   map[string]string
 		valuesFiles    []string
-		setValues      []string
+		setValues      map[string]string
 		expectedErr    string
 		components     string
 	}{
@@ -236,8 +237,8 @@ func TestDevInspectValuesFiles(t *testing.T) {
 			valuesFiles: []string{
 				filepath.Join("testdata", "inspect-values-files", "chart-with-values", "user-values.yaml"),
 			},
-			setValues: []string{
-				"customField=fromCLI",
+			setValues: map[string]string{
+				"customField": "fromCLI",
 			},
 		},
 	}

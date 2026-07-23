@@ -312,7 +312,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 	CmdPackageDeployFlagConnected              = "Deploy without pushing images/repos; label resources to bypass the Zarf agent"
 	CmdPackageDeployFlagForceConflicts         = "Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources."
 	CmdPackageDeployFlagSetVariables           = "Specify deployment variables to set on the command line (KEY=value)"
-	CmdPackageDeployFlagSetValues              = "Specify deployment package values to set on the command line (key.path=value). Values are type-inferred: true/false become booleans and whole numbers become integers, everything else stays a string"
+	CmdPackageDeployFlagSetValues              = "Specify deployment package values to set on the command line (key.path=value). Values are type-inferred: true/false become booleans, and whole numbers become integers; everything else stays a string"
 	CmdPackageDeployFlagComponents             = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
 	CmdPackageDeployFlagShasum                 = "Shasum of the package to deploy. Required if deploying a remote https package."
 	CmdPackageDeployFlagTimeout                = "Timeout for health checks and Helm operations such as installs and rollbacks"
