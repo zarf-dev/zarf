@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://github.com/zarf-dev/zarf/blob/main/.vex/zarf.cli.openvex.json",
   "author": "zarf-dev/zarf maintainers",
-  "version": 9,
+  "version": 10,
   "statements": [
     {
       "vulnerability": {
@@ -87,8 +87,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Zarf links containerd only through Helm v3's OCI registry client, which imports the client-side github.com/containerd/containerd/remotes package. Zarf does not run containerd's CRI plugin or restore CRI checkpoints, so the vulnerable CRI checkpoint log-restoration path is not in Zarf's runtime execution path.",
       "timestamp": "2026-07-23T17:26:02.607422901Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-hrxh-6v49-42gf"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.81.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The advisory affects xDS RBAC authorization and inbound gRPC HTTP/2 server handling. Zarf has no production call to grpc.NewServer, xds.NewGRPCServer, or grpc.Server.Serve; its exposed admission endpoint is a net/http webhook. The gRPC integrations are outbound clients: Docker CLI OpenTelemetry export, cloud-storage access used by Syft, and Cosign SPIFFE workload-API access. Although cloud-storage blank-imports gRPC xDS direct path and links the implementation, Zarf neither starts a gRPC/xDS server nor receives xDS RBAC policies, so the vulnerable code cannot execute.",
+      "timestamp": "2026-07-23T22:13:32.122366026Z"
     }
   ],
   "timestamp": "2026-07-01T19:34:52Z",
-  "last_updated": "2026-07-23T17:26:02Z"
+  "last_updated": "2026-07-23T22:13:32Z"
 }
