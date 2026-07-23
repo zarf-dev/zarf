@@ -249,10 +249,5 @@ vex-lint: ## Check for orphaned VEX statements in .vex/zarf.cli.openvex.json (re
 	@test -f build/grype.json || (echo "ERROR: build/grype.json not found — run 'make scan-grype' first" && exit 1)
 	hack/check-vex-orphans.sh
 
-# INTERNAL: used to test for new CVEs that may have been introduced; delegates to scan-grype
-test-cves: scan-grype
-
-cve-report: scan-grype ## Create a CVE report for the current project (must `brew install grype` first)
-
 lint-go: ## Run golang-ci-lint to lint the go code (must `brew install golangci-lint` first)
 	golangci-lint run
