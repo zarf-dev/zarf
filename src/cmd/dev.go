@@ -360,7 +360,6 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		return err
 	}
 
-	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
 	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
@@ -458,7 +457,6 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		return err
 	}
 
-	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
 	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
@@ -928,7 +926,6 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
 	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {

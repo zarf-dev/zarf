@@ -352,7 +352,6 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		strings.ToUpper,
 	)
 
-	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
 	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
@@ -842,7 +841,6 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
-	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
 	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
@@ -949,7 +947,6 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
-	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
 	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
@@ -1434,7 +1431,6 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	v := getViper()
-	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
 	o.setValues = mergeMap(v.GetStringMapString(VPkgRemoveSetValues), o.setValues)
 	vals, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
