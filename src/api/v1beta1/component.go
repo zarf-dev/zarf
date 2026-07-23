@@ -12,25 +12,6 @@ type Component struct {
 	// Do not install this component unless explicitly requested. Defaults to false, meaning the component is required.
 	Optional      bool `json:"optional,omitempty"`
 	ComponentSpec `json:",inline"`
-
-	// *** REMOVED FIELDS ***
-	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
-	dataInjections []ZarfDataInjection
-	group          string
-}
-
-// GetDeprecatedDataInjections returns the v1alpha1 data injections carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (c Component) GetDeprecatedDataInjections() []ZarfDataInjection {
-	return c.dataInjections
-}
-
-// GetDeprecatedGroup returns the v1alpha1 group carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (c Component) GetDeprecatedGroup() string {
-	return c.group
 }
 
 // GetImages returns all image names specified in the component, including those from ImageArchives.
@@ -166,25 +147,6 @@ type Chart struct {
 	SkipSchemaValidation bool `json:"skipSchemaValidation,omitempty"`
 	// Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart. Defaults to "auto" when omitted.
 	ServerSideApply ServerSideApplyMode `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto,default=auto"`
-
-	// *** REMOVED FIELDS ***
-	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
-	version   string
-	variables []ZarfChartVariable
-}
-
-// GetDeprecatedVersion returns the deprecated top-level chart version, used as a v1alpha1 backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (c Chart) GetDeprecatedVersion() string {
-	return c.version
-}
-
-// GetDeprecatedVariables returns the v1alpha1 chart variables carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (c Chart) GetDeprecatedVariables() []ZarfChartVariable {
-	return c.variables
 }
 
 // ValuesFile is a values file merged into a Helm chart on deploy.
@@ -373,17 +335,6 @@ type ComponentAction struct {
 	Wait *ComponentActionWait `json:"wait,omitempty"`
 	// EnableTemplating enables go-template processing on the cmd field.
 	EnableTemplating bool `json:"enableTemplating,omitempty"`
-
-	// *** REMOVED FIELDS ***
-	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
-	setVariables []Variable
-}
-
-// GetDeprecatedSetVariables returns the v1alpha1 setVariables carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (a ComponentAction) GetDeprecatedSetVariables() []Variable {
-	return a.setVariables
 }
 
 // SetValueType declares the expected input back from the cmd, allowing structured data to be parsed.
