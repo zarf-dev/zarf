@@ -144,14 +144,56 @@ func ParseLocalFile(ctx context.Context, path string) (Values, error) {
 	return m, nil
 }
 
-// ParseSet merges Helm --set style override strings into the receiver
+// ParseSet merges Helm --set style override strings into the receiver. A leading dot on each key
+// path is accepted and stripped for consistency with the sourcePath/targetPath convention, e.g.
+// ".replicas=5" and "replicas=5" are equivalent.
 func (v Values) ParseSet(sets []string) error {
 	for _, s := range sets {
-		if err := strvals.ParseInto(strings.TrimPrefix(s, "."), v); err != nil {
+		if err := strvals.ParseInto(stripKeyLeadingDots(s), v); err != nil {
 			return fmt.Errorf("failed parsing --set-values data: %w", err)
 		}
 	}
 	return nil
+}
+
+// stripKeyLeadingDots removes a single leading dot from each key path in a Helm --set style line.
+func stripKeyLeadingDots(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	atKeyStart := true
+	inList := false
+	escaped := false
+	var prev rune
+	for _, r := range s {
+		switch {
+		case escaped:
+			b.WriteRune(r)
+			escaped = false
+			atKeyStart = false
+		case r == '\\':
+			b.WriteRune(r)
+			escaped = true
+			atKeyStart = false
+		case atKeyStart && r == '.':
+			atKeyStart = false // strip the leading dot without writing it
+		case r == '{' && prev == '=':
+			inList = true
+			b.WriteRune(r)
+			atKeyStart = false
+		case r == '}' && inList:
+			inList = false
+			b.WriteRune(r)
+			atKeyStart = false
+		case r == ',' && !inList:
+			b.WriteRune(r)
+			atKeyStart = true
+		default:
+			b.WriteRune(r)
+			atKeyStart = false
+		}
+		prev = r
+	}
+	return b.String()
 }
 
 // DeepMerge merges one or more Values maps recursively into the receiver via mutation.

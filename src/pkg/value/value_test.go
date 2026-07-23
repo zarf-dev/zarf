@@ -1043,6 +1043,59 @@ func TestParseSet(t *testing.T) {
 		require.Equal(t, []any{int64(1), "1.5", "0755", "x"}, vals["mixed"])
 	})
 
+	t.Run("leading dot and escape handling", func(t *testing.T) {
+		t.Parallel()
+		tests := []struct {
+			name     string
+			sets     []string
+			expected Values
+		}{
+			{
+				name:     "leading dot stripped for each key in a comma-joined element",
+				sets:     []string{".a=1,.b=2"},
+				expected: Values{"a": int64(1), "b": int64(2)},
+			},
+			{
+				name:     "commas inside a list value do not start a new key",
+				sets:     []string{".a={x,y,z},.b=2"},
+				expected: Values{"a": []any{"x", "y", "z"}, "b": int64(2)},
+			},
+			{
+				name:     "only the leading dot is stripped, nesting dots preserved",
+				sets:     []string{".app.name=web,.app.port=8080"},
+				expected: Values{"app": map[string]any{"name": "web", "port": int64(8080)}},
+			},
+			{
+				name:     "escaped comma in a value does not start a new key",
+				sets:     []string{`.a=x\,y,.b=2`},
+				expected: Values{"a": "x,y", "b": int64(2)},
+			},
+			{
+				name:     "multiple escaped commas stay in one value",
+				sets:     []string{`.a=1\,2\,3`},
+				expected: Values{"a": "1,2,3"},
+			},
+			{
+				name:     "escaped leading dot is preserved in the key",
+				sets:     []string{`\.a=1`},
+				expected: Values{".a": int64(1)},
+			},
+			{
+				name:     "escaped dot inside a key is a literal, not a nesting separator",
+				sets:     []string{`a\.b=1`},
+				expected: Values{"a.b": int64(1)},
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+				vals := Values{}
+				require.NoError(t, vals.ParseSet(tt.sets))
+				require.Equal(t, tt.expected, vals)
+			})
+		}
+	})
+
 	t.Run("later overrides earlier", func(t *testing.T) {
 		t.Parallel()
 		vals := Values{}
