@@ -996,3 +996,29 @@ func TestDeepCopy(t *testing.T) {
 
 	require.Equal(t, snapshot, original)
 }
+
+func TestCoerceScalar(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		input    string
+		expected any
+	}{
+		{name: "bool true", input: "true", expected: true},
+		{name: "bool false", input: "false", expected: false},
+		{name: "unsigned int", input: "3", expected: uint64(3)},
+		{name: "negative int", input: "-5", expected: int64(-5)},
+		{name: "float", input: "3.14", expected: 3.14},
+		{name: "semver stays string", input: "1.0.0", expected: "1.0.0"},
+		{name: "plain string", input: "hello", expected: "hello"},
+		{name: "empty stays empty string", input: "", expected: ""},
+		{name: "quoted bool stays string", input: "'true'", expected: "true"},
+		{name: "explicit null", input: "null", expected: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.expected, CoerceScalar(tt.input))
+		})
+	}
+}

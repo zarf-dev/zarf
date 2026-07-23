@@ -16,6 +16,23 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
+func TestParseValuesCoercesSetValues(t *testing.T) {
+	t.Parallel()
+	vals, err := parseValues(context.Background(), nil, map[string]string{
+		"myBooleanVar":   "true",
+		"app.replicas":   "3",
+		"site.name":      "my-site",
+		"app.version":    "1.0.0",
+		"nested.enabled": "false",
+	})
+	require.NoError(t, err)
+	require.Equal(t, true, vals["myBooleanVar"])
+	require.Equal(t, uint64(3), vals["app"].(map[string]any)["replicas"])
+	require.Equal(t, "my-site", vals["site"].(map[string]any)["name"])
+	require.Equal(t, "1.0.0", vals["app"].(map[string]any)["version"])
+	require.Equal(t, false, vals["nested"].(map[string]any)["enabled"])
+}
+
 func TestDevInspectManifests(t *testing.T) {
 	t.Parallel()
 

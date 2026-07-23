@@ -134,6 +134,36 @@ func TestValuesSchema(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
+	t.Run("typed --set-values pass schema validation at deploy time", func(t *testing.T) {
+		src := filepath.Join("src", "test", "packages", "42-values", "schema-valid")
+		tmpdir := t.TempDir()
+
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+
+		packageName := fmt.Sprintf("zarf-package-test-values-schema-valid-%s.tar.zst", e2e.Arch)
+		path := filepath.Join(tmpdir, packageName)
+
+		// A boolean and an integer schema field set via --set-values must be type-inferred
+		// rather than left as strings, otherwise deploy fails with "Expected: boolean/integer,
+		// given: string". A successful deploy confirms the coercion.
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm",
+			"--set-values", "enabled=false", "--set-values", "replicas=5")
+		require.NoError(t, err, stdOut, stdErr)
+
+		kubectlOut, _, err := e2e.Kubectl(t, "get", "configmap", "test-values-schema-configmap", "-o", "jsonpath='{.data.replicas}'")
+		require.NoError(t, err, "unable to get configmap")
+		require.Contains(t, kubectlOut, "5", "replicas should be set from --set-values")
+
+		kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-values-schema-configmap", "-o", "jsonpath='{.data.enabled}'")
+		require.NoError(t, err, "unable to get configmap")
+		require.Contains(t, kubectlOut, "false", "enabled should be set from --set-values")
+
+		// Cleanup
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values-schema-valid", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+	})
+
 	t.Run("invalid values fail schema validation at create time", func(t *testing.T) {
 		src := filepath.Join("src", "test", "packages", "42-values", "schema-invalid")
 		tmpdir := t.TempDir()

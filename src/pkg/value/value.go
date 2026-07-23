@@ -143,6 +143,21 @@ func ParseLocalFile(ctx context.Context, path string) (Values, error) {
 	return m, nil
 }
 
+// CoerceScalar parses a raw --set-values override into a typed scalar using YAML scalar
+// semantics, so a CLI override infers its type the same way an equivalent line in a values
+// file would (e.g. "true" -> bool, "3" -> number). An empty string is preserved as an empty
+// string, and any value that does not parse as YAML falls back to the original string.
+func CoerceScalar(s string) any {
+	if s == "" {
+		return ""
+	}
+	var out any
+	if err := yaml.Unmarshal([]byte(s), &out); err != nil {
+		return s
+	}
+	return out
+}
+
 // DeepMerge merges one or more Values maps recursively into the receiver via mutation.
 // Later maps in the variadic arguments take precedence over earlier ones.
 func (v Values) DeepMerge(sources ...Values) {
