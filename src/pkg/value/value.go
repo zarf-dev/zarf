@@ -143,11 +143,9 @@ func ParseLocalFile(ctx context.Context, path string) (Values, error) {
 	return m, nil
 }
 
-// CoerceScalar parses a raw --set-values override into a typed scalar using YAML scalar
-// semantics, so a CLI override infers its type the same way an equivalent line in a values
-// file would (e.g. "true" -> bool, "3" -> number). An empty string is preserved as an empty
-// string, and any value that does not parse as YAML falls back to the original string.
-func CoerceScalar(s string) any {
+// InferType parses a raw string value into a typed scalar using YAML semantics, so a
+// value infers its type like the same line in a values file would ("true" -> bool, "3" -> number).
+func InferType(s string) any {
 	if s == "" {
 		return ""
 	}

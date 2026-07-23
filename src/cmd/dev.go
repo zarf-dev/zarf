@@ -52,7 +52,7 @@ func parseValues(ctx context.Context, valuesFiles []string, setValues map[string
 		if !strings.HasPrefix(key, ".") {
 			path = value.Path("." + key)
 		}
-		if err := values.Set(path, value.CoerceScalar(val)); err != nil {
+		if err := values.Set(path, value.InferType(val)); err != nil {
 			return nil, fmt.Errorf("unable to set value at path %s: %w", key, err)
 		}
 	}
