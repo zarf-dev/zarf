@@ -28,6 +28,8 @@ func Build(path string, destination string, kustomizeAllowAnyDirectory bool, ena
 
 	if enableKustomizePlugins {
 		buildOptions.PluginConfig = krustytypes.MakePluginConfig(krustytypes.PluginRestrictionsNone, krustytypes.BploUseStaticallyLinked)
+		buildOptions.PluginConfig.HelmConfig.Enabled = true
+		buildOptions.PluginConfig.HelmConfig.Command = "helm"
 	}
 
 	kustomizer := krusty.MakeKustomizer(buildOptions)
