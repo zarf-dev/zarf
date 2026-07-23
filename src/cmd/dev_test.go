@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -37,6 +38,24 @@ func TestParseValuesCoercesSetValues(t *testing.T) {
 	require.Equal(t, "my-site", site["name"])
 	require.Equal(t, "1.0.0", app["version"])
 	require.Equal(t, false, nested["enabled"])
+}
+
+func TestParseValuesMergesConfigBaseWithCLI(t *testing.T) {
+	t.Parallel()
+	v := viper.New()
+	v.Set(VPkgRemoveSetValues, []string{"app.name=fromConfig", "app.replicas=1"})
+
+	// Mirror the merge every set-values command performs: config set_values are the base,
+	// CLI --set-values are applied after so they win per-key.
+	setValues := append(GetStringSlice(v, VPkgRemoveSetValues), "app.replicas=5", "app.tag=latest")
+
+	vals, err := parseValues(context.Background(), nil, setValues)
+	require.NoError(t, err)
+	app, ok := vals["app"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "fromConfig", app["name"], "config-only key must survive when CLI values are provided")
+	require.Equal(t, int64(5), app["replicas"], "CLI value must override config base per key")
+	require.Equal(t, "latest", app["tag"], "CLI-only key must be applied")
 }
 
 func TestDevInspectManifests(t *testing.T) {

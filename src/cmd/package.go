@@ -1421,8 +1421,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when removing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, lang.CmdPackageRemoveFlagValuesFiles)
-	// FIXME: might need merge map still
-	cmd.Flags().StringArrayVar(&o.setValues, "set-values", GetStringSlice(v, VPkgRemoveSetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringArrayVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
@@ -1434,6 +1433,9 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	v := getViper()
+	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
+	o.setValues = append(GetStringSlice(v, VPkgRemoveSetValues), o.setValues...)
 	vals, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -1448,7 +1450,6 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	v := getViper()
 	c, _ := cluster.New(ctx) //nolint:errcheck
 	loadOpts := packager.LoadOptions{
 		VerificationStrategy: o.verify.toStrategy(),
