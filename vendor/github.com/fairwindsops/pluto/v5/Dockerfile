@@ -1,4 +1,4 @@
-FROM alpine:3.23
+FROM alpine:3.23.4
 
 LABEL org.opencontainers.image.authors="FairwindsOps, Inc." \
       org.opencontainers.image.vendor="FairwindsOps, Inc." \
@@ -8,6 +8,9 @@ LABEL org.opencontainers.image.authors="FairwindsOps, Inc." \
       org.opencontainers.image.source="https://github.com/FairwindsOps/pluto" \
       org.opencontainers.image.url="https://github.com/FairwindsOps/pluto" \
       org.opencontainers.image.licenses="Apache License 2.0"
+
+# Install CA bundle for TLS.
+RUN apk --no-cache add ca-certificates
 
 USER nobody
 COPY pluto /
