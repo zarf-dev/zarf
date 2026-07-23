@@ -1012,6 +1012,7 @@ func TestParseSet(t *testing.T) {
 			"nested.key=value",
 			"aList={a,b,c}",
 			"indexed[0]=x",
+			".leadingDot.key=viaDot",
 		}))
 		require.Equal(t, true, vals["aBool"])
 		require.Equal(t, int64(3), vals["anInt"])
@@ -1023,15 +1024,9 @@ func TestParseSet(t *testing.T) {
 		require.Equal(t, "value", nested["key"])
 		require.Equal(t, []any{"a", "b", "c"}, vals["aList"])
 		require.Equal(t, []any{"x"}, vals["indexed"])
-	})
-
-	t.Run("leading dot path style is accepted", func(t *testing.T) {
-		t.Parallel()
-		vals := Values{}
-		require.NoError(t, vals.ParseSet([]string{".app.replicas=3"}))
-		app, ok := vals["app"].(map[string]any)
+		leadingDot, ok := vals["leadingDot"].(map[string]any)
 		require.True(t, ok)
-		require.Equal(t, int64(3), app["replicas"])
+		require.Equal(t, "viaDot", leadingDot["key"])
 	})
 
 	t.Run("later overrides earlier", func(t *testing.T) {
