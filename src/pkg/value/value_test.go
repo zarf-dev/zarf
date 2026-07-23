@@ -1025,6 +1025,15 @@ func TestParseSet(t *testing.T) {
 		require.Equal(t, []any{"x"}, vals["indexed"])
 	})
 
+	t.Run("leading dot path style is accepted", func(t *testing.T) {
+		t.Parallel()
+		vals := Values{}
+		require.NoError(t, vals.ParseSet([]string{".app.replicas=3"}))
+		app, ok := vals["app"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, int64(3), app["replicas"])
+	})
+
 	t.Run("later overrides earlier", func(t *testing.T) {
 		t.Parallel()
 		vals := Values{}

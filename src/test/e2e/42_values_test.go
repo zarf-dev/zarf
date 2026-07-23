@@ -121,8 +121,9 @@ func TestValuesSchema(t *testing.T) {
 		// Deploy should also succeed.
 		packageName := fmt.Sprintf("zarf-package-test-values-schema-valid-%s.tar.zst", e2e.Arch)
 		path := filepath.Join(tmpdir, packageName)
+		// ".replicas" exercises the leading-dot (.Values path) form; "enabled" the dotless form.
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm",
-			"--set-values", "enabled=false", "--set-values", "replicas=5")
+			"--set-values", "enabled=false", "--set-values", ".replicas=5")
 		require.NoError(t, err, stdOut, stdErr)
 
 		// Verify the configmap was created with the correct values

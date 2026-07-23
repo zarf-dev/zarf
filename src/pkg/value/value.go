@@ -144,14 +144,10 @@ func ParseLocalFile(ctx context.Context, path string) (Values, error) {
 	return m, nil
 }
 
-// ParseSet merges Helm --set style override strings into the receiver, one at a time and in
-// order. It delegates to Helm's strvals parser so the accepted syntax and type inference
-// (booleans and integers, lists via {a,b,c}, indexing via key[0]=x, escaping) match
-// `helm install --set` exactly.
-// FIXME: might have to accept leading "." still
+// ParseSet merges Helm --set style override strings into the receiver
 func (v Values) ParseSet(sets []string) error {
 	for _, s := range sets {
-		if err := strvals.ParseInto(s, v); err != nil {
+		if err := strvals.ParseInto(strings.TrimPrefix(s, "."), v); err != nil {
 			return fmt.Errorf("failed parsing --set-values data: %w", err)
 		}
 	}
