@@ -1,0 +1,13 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component:
+  import:
+    local:
+      - path: base/base.yaml
+  charts:
+    - name: app-chart
+      namespace: app
+      local:
+        path: app-chart

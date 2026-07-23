@@ -1,0 +1,9 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: single-import
+components:
+  - name: logging
+    import:
+      local:
+        - path: components/logging.yaml

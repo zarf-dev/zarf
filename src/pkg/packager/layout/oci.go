@@ -20,6 +20,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"oras.land/oras-go/v2"
@@ -177,10 +178,11 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("reading %s for manifest: %w", ZarfYAML, err)
 	}
-	zarfPkg, err := pkgcfg.ParseMultiDoc(ctx, zarfYAMLBytes)
+	generic, err := pkgcfg.ParseMultiDoc(ctx, zarfYAMLBytes)
 	if err != nil {
 		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
 	}
+	zarfPkg := convert.GenericToCanonicalAPIVersion(generic)
 	configBytes, err := json.Marshal(zarfPkg)
 	if err != nil {
 		return err

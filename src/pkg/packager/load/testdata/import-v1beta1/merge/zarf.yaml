@@ -1,0 +1,15 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: merge-import
+components:
+  - name: app
+    images:
+      - name: redis:7
+        source: daemon
+    charts:
+      - name: app
+        releaseName: custom-release
+    import:
+      local:
+        - path: components/app.yaml

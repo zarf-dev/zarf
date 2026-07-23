@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
@@ -29,7 +30,11 @@ func (r *Remote) FetchZarfYAML(ctx context.Context) (v1alpha1.ZarfPackage, error
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	return pkgcfg.ParseMultiDoc(ctx, b)
+	generic, err := pkgcfg.ParseMultiDoc(ctx, b)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	return internalv1alpha1.ConvertFromGeneric(generic), nil
 }
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.

@@ -25,9 +25,11 @@ func TestAssembleSkeleton(t *testing.T) {
 
 	defined, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOptions{})
 	require.NoError(t, err)
+	pkg, err := defined.AsV1alpha1()
+	require.NoError(t, err)
 
 	opt := layout.AssembleSkeletonOptions{}
-	pkgLayout, err := layout.AssembleSkeleton(ctx, defined.Pkg, "./testdata/zarf-skeleton-package", defined.ImportedSchemas, opt)
+	pkgLayout, err := layout.AssembleSkeleton(ctx, pkg, "./testdata/zarf-skeleton-package", defined.ImportedSchemas, opt)
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
@@ -74,8 +76,10 @@ func TestGetSBOM(t *testing.T) {
 	writePackageToDisk(t, pkg, tmpdir)
 	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
+	loadedPkg, err := defined.AsV1alpha1()
+	require.NoError(t, err)
 
-	pkgLayout, err := layout.AssemblePackage(ctx, defined.Pkg, tmpdir, nil, layout.AssembleOptions{})
+	pkgLayout, err := layout.AssemblePackage(ctx, loadedPkg, tmpdir, nil, layout.AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
@@ -165,13 +169,15 @@ func TestCreateAbsoluteSources(t *testing.T) {
 
 			defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 			require.NoError(t, err)
+			loadedPkg, err := defined.AsV1alpha1()
+			require.NoError(t, err)
 
 			var pkgLayout *layout.PackageLayout
 			if tt.isSkeleton {
-				pkgLayout, err = layout.AssembleSkeleton(ctx, defined.Pkg, tmpdir, defined.ImportedSchemas, layout.AssembleSkeletonOptions{})
+				pkgLayout, err = layout.AssembleSkeleton(ctx, loadedPkg, tmpdir, defined.ImportedSchemas, layout.AssembleSkeletonOptions{})
 				require.NoError(t, err)
 			} else {
-				pkgLayout, err = layout.AssemblePackage(ctx, defined.Pkg, tmpdir, nil, layout.AssembleOptions{SkipSBOM: true})
+				pkgLayout, err = layout.AssemblePackage(ctx, loadedPkg, tmpdir, nil, layout.AssembleOptions{SkipSBOM: true})
 				require.NoError(t, err)
 			}
 			docsDir := filepath.Join(tmpdir, "docs-dir")
@@ -251,8 +257,10 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	writePackageToDisk(t, childPkg, childDir)
 	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
+	loadedPkg, err := defined.AsV1alpha1()
+	require.NoError(t, err)
 	// create the package
-	pkgLayout, err := layout.AssemblePackage(context.Background(), defined.Pkg, tmpdir, nil, layout.AssembleOptions{})
+	pkgLayout, err := layout.AssemblePackage(context.Background(), loadedPkg, tmpdir, nil, layout.AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the component has the correct file

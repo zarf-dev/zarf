@@ -12,9 +12,12 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	internalTypes "github.com/zarf-dev/zarf/src/internal/api/types"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
+	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
@@ -44,12 +47,35 @@ type DefinitionOptions struct {
 	types.RemoteOptions
 }
 
+// PackageAccessor is the read contract for a package source, exposing a per-version definition.
+type PackageAccessor interface {
+	AsV1alpha1() (v1alpha1.ZarfPackage, error)
+	AsV1beta1() (v1beta1.Package, error)
+}
+
 // DefinedPackage is the result of loading and resolving a package definition.
 // ImportedSchemas is transient assembly state — child schema paths collected during
 // import resolution that must be passed to AssemblePackage for merging.
 type DefinedPackage struct {
-	Pkg             v1alpha1.ZarfPackage
+	pkg             internalTypes.Package
 	ImportedSchemas []string
+}
+
+var _ PackageAccessor = DefinedPackage{}
+
+// AsV1alpha1 returns the package definition as a v1alpha1 ZarfPackage.
+func (d DefinedPackage) AsV1alpha1() (v1alpha1.ZarfPackage, error) {
+	return internalv1alpha1.ConvertFromGeneric(d.pkg), nil
+}
+
+// AsV1beta1 returns the package definition as a v1beta1 Package.
+func (d DefinedPackage) AsV1beta1() (v1beta1.Package, error) {
+	return internalv1beta1.ConvertFromGeneric(d.pkg), nil
+}
+
+// OriginalAPIVersion returns the apiVersion the package was authored in before any conversion.
+func (d DefinedPackage) OriginalAPIVersion() string {
+	return d.pkg.Build.OriginalAPIVersion
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
@@ -71,11 +97,43 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return DefinedPackage{}, err
 	}
-	pkg, err := pkgcfg.Parse(ctx, b)
+
+	version, err := pkgcfg.SelectVersion(ctx, b)
 	if err != nil {
 		return DefinedPackage{}, err
 	}
+
+	var defined DefinedPackage
+	switch version {
+	case v1beta1.APIVersion:
+		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
+		if err != nil {
+			return DefinedPackage{}, err
+		}
+		defined, err = v1beta1PackageDefinition(ctx, pkg, pkgPath, opts)
+		if err != nil {
+			return DefinedPackage{}, err
+		}
+	case v1alpha1.APIVersion:
+		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
+		if err != nil {
+			return DefinedPackage{}, err
+		}
+		defined, err = v1alpha1PackageDefinition(ctx, pkg, pkgPath, opts)
+		if err != nil {
+			return DefinedPackage{}, err
+		}
+	default:
+		return DefinedPackage{}, fmt.Errorf("unrecognized API version")
+	}
+
+	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
+	return defined, nil
+}
+
+func v1alpha1PackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	var err error
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return DefinedPackage{}, err
@@ -97,12 +155,25 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return DefinedPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation)
+	if err := validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation); err != nil {
+		return DefinedPackage{}, err
+	}
+	return DefinedPackage{pkg: internalv1alpha1.ConvertToGeneric(pkg), ImportedSchemas: importedSchemas}, nil
+}
+
+func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
+	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+
+	pkg, importedSchemas, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor)
 	if err != nil {
 		return DefinedPackage{}, err
 	}
-	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
-	return DefinedPackage{Pkg: pkg, ImportedSchemas: importedSchemas}, nil
+
+	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
+		return DefinedPackage{}, err
+	}
+
+	return DefinedPackage{pkg: internalv1beta1.ConvertToGeneric(pkg), ImportedSchemas: importedSchemas}, nil
 }
 
 func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool) error {
@@ -149,6 +220,43 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	return nil
 }
 
+// validateV1Beta1 validates a v1beta1 package before it is converted down to v1alpha1.
+func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath string, flavor string) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	l.Debug("start v1beta1 validate",
+		"pkg", pkg.Metadata.Name,
+		"packagePath", packagePath,
+		"flavor", flavor,
+	)
+
+	if !hasFlavoredComponentV1Beta1(pkg, flavor) {
+		l.Warn("flavor not used in package", "flavor", flavor)
+	}
+	if err := internalv1beta1.ValidatePackage(pkg); err != nil {
+		return fmt.Errorf("package validation failed: %w", err)
+	}
+
+	findings, err := lint.ValidatePackageSchemaAtPathV1Beta1(packagePath)
+	if err != nil {
+		return fmt.Errorf("unable to check schema: %w", err)
+	}
+	if len(findings) != 0 {
+		return &lint.LintError{
+			PackageName: pkg.Metadata.Name,
+			Findings:    findings,
+		}
+	}
+
+	l.Debug("done v1beta1 validate",
+		"pkg", pkg.Metadata.Name,
+		"path", packagePath,
+		"findings", findings,
+		"duration", time.Since(start),
+	)
+	return nil
+}
+
 type validateValuesSchemaOptions struct {
 	skipRequired bool
 }
@@ -190,6 +298,15 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	for _, comp := range pkg.Components {
 		if comp.Only.Flavor == flavor {
+			return true
+		}
+	}
+	return false
+}
+
+func hasFlavoredComponentV1Beta1(pkg v1beta1.Package, flavor string) bool {
+	for _, comp := range pkg.Components {
+		if comp.Selector.Flavor == flavor {
 			return true
 		}
 	}

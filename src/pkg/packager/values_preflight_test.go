@@ -354,7 +354,9 @@ func assembleLayout(t *testing.T, srcDir string) *layout.PackageLayout {
 	ctx := testutil.TestContext(t)
 	defined, err := load.PackageDefinition(ctx, srcDir, load.DefinitionOptions{})
 	require.NoError(t, err)
-	pkgLayout, err := layout.AssemblePackage(ctx, defined.Pkg, srcDir, nil, layout.AssembleOptions{SkipSBOM: true})
+	pkg, err := defined.AsV1alpha1()
+	require.NoError(t, err)
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, srcDir, nil, layout.AssembleOptions{SkipSBOM: true})
 	require.NoError(t, err)
 	return pkgLayout
 }

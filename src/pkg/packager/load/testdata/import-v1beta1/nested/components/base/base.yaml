@@ -1,0 +1,8 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: base
+component:
+  files:
+    - source: base.txt
+      destination: /etc/base.txt

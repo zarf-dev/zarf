@@ -82,22 +82,26 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if err != nil {
 		return err
 	}
+	pkg, err := defined.AsV1alpha1()
+	if err != nil {
+		return err
+	}
 
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.ForDeploy(opts.OptionalComponents, false),
 	)
-	defined.Pkg.Components, err = filter.Apply(defined.Pkg)
+	pkg.Components, err = filter.Apply(pkg)
 	if err != nil {
 		return err
 	}
 
 	// If not building for airgap, strip out all images and repos
 	if !opts.AirgapMode {
-		for idx := range defined.Pkg.Components {
-			defined.Pkg.Components[idx].Images = []string{}
-			defined.Pkg.Components[idx].ImageArchives = []v1alpha1.ImageArchive{}
-			defined.Pkg.Components[idx].Repos = []string{}
+		for idx := range pkg.Components {
+			pkg.Components[idx].Images = []string{}
+			pkg.Components[idx].ImageArchives = []v1alpha1.ImageArchive{}
+			pkg.Components[idx].Repos = []string{}
 		}
 	}
 
@@ -108,7 +112,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		OCIConcurrency:    opts.OCIConcurrency,
 		CachePath:         opts.CachePath,
 	}
-	pkgLayout, err := layout.AssemblePackage(ctx, defined.Pkg, packagePath, defined.ImportedSchemas, createOpts)
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, defined.ImportedSchemas, createOpts)
 	if err != nil {
 		return err
 	}
