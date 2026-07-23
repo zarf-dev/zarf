@@ -18,6 +18,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/xeipuuv/gojsonschema"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"helm.sh/helm/v4/pkg/strvals"
 )
 
 // Values provides a map of keys to values for use in templating and Helm overrides.
@@ -143,17 +144,18 @@ func ParseLocalFile(ctx context.Context, path string) (Values, error) {
 	return m, nil
 }
 
-// InferType parses a raw string value into a typed scalar using YAML semantics, so a
-// value infers its type like the same line in a values file would ("true" -> bool, "3" -> number).
-func InferType(s string) any {
-	if s == "" {
-		return ""
+// ParseSet merges Helm --set style override strings into the receiver, one at a time and in
+// order. It delegates to Helm's strvals parser so the accepted syntax and type inference
+// (booleans and integers, lists via {a,b,c}, indexing via key[0]=x, escaping) match
+// `helm install --set` exactly.
+// FIXME: might have to accept leading "." still
+func (v Values) ParseSet(sets []string) error {
+	for _, s := range sets {
+		if err := strvals.ParseInto(s, v); err != nil {
+			return fmt.Errorf("failed parsing --set-values data: %w", err)
+		}
 	}
-	var out any
-	if err := yaml.Unmarshal([]byte(s), &out); err != nil {
-		return s
-	}
-	return out
+	return nil
 }
 
 // DeepMerge merges one or more Values maps recursively into the receiver via mutation.

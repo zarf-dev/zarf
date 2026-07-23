@@ -18,12 +18,12 @@ import (
 
 func TestParseValuesCoercesSetValues(t *testing.T) {
 	t.Parallel()
-	vals, err := parseValues(context.Background(), nil, map[string]string{
-		"myBooleanVar":   "true",
-		"app.replicas":   "3",
-		"site.name":      "my-site",
-		"app.version":    "1.0.0",
-		"nested.enabled": "false",
+	vals, err := parseValues(context.Background(), nil, []string{
+		"myBooleanVar=true",
+		"app.replicas=3",
+		"site.name=my-site",
+		"app.version=1.0.0",
+		"nested.enabled=false",
 	})
 	require.NoError(t, err)
 	app, ok := vals["app"].(map[string]any)
@@ -33,7 +33,7 @@ func TestParseValuesCoercesSetValues(t *testing.T) {
 	nested, ok := vals["nested"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, true, vals["myBooleanVar"])
-	require.Equal(t, uint64(3), app["replicas"])
+	require.Equal(t, int64(3), app["replicas"])
 	require.Equal(t, "my-site", site["name"])
 	require.Equal(t, "1.0.0", app["version"])
 	require.Equal(t, false, nested["enabled"])
@@ -53,7 +53,7 @@ func TestDevInspectManifests(t *testing.T) {
 		deploySetVariables map[string]string
 		createSetPkgTmpl   map[string]string
 		valuesFiles        []string
-		setValues          map[string]string
+		setValues          []string
 		kubeVersion        string
 		flavor             string
 		expectedErr        string
@@ -113,9 +113,9 @@ func TestDevInspectManifests(t *testing.T) {
 			valuesFiles: []string{
 				filepath.Join("testdata", "inspect-manifests", "manifest-with-values", "user-values.yaml"),
 			},
-			setValues: map[string]string{
-				"replicas": "5",
-				"imageTag": "latest",
+			setValues: []string{
+				"replicas=5",
+				"imageTag=latest",
 			},
 		},
 		{
@@ -129,12 +129,12 @@ func TestDevInspectManifests(t *testing.T) {
 			packageName:    "manifest-with-package-values",
 			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest-with-package-values"),
 			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest-with-package-values", "expected-override.yaml"),
-			setValues: map[string]string{
-				"app.name":             "overridden-app",
-				"app.replicas":         "5",
-				"app.image.repository": "nginx",
-				"app.image.tag":        "latest",
-				"app.port":             "8080",
+			setValues: []string{
+				"app.name=overridden-app",
+				"app.replicas=5",
+				"app.image.repository=nginx",
+				"app.image.tag=latest",
+				"app.port=8080",
 			},
 		},
 	}
@@ -184,7 +184,7 @@ func TestDevInspectValuesFiles(t *testing.T) {
 		packageName    string
 		setVariables   map[string]string
 		valuesFiles    []string
-		setValues      map[string]string
+		setValues      []string
 		expectedErr    string
 		components     string
 	}{
@@ -217,8 +217,8 @@ func TestDevInspectValuesFiles(t *testing.T) {
 			valuesFiles: []string{
 				filepath.Join("testdata", "inspect-values-files", "chart-with-values", "user-values.yaml"),
 			},
-			setValues: map[string]string{
-				"customField": "fromCLI",
+			setValues: []string{
+				"customField=fromCLI",
 			},
 		},
 	}

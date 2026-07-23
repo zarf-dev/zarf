@@ -997,28 +997,44 @@ func TestDeepCopy(t *testing.T) {
 	require.Equal(t, snapshot, original)
 }
 
-func TestInferType(t *testing.T) {
+func TestParseSet(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name     string
-		input    string
-		expected any
-	}{
-		{name: "bool true", input: "true", expected: true},
-		{name: "bool false", input: "false", expected: false},
-		{name: "unsigned int", input: "3", expected: uint64(3)},
-		{name: "negative int", input: "-5", expected: int64(-5)},
-		{name: "float", input: "3.14", expected: 3.14},
-		{name: "semver stays string", input: "1.0.0", expected: "1.0.0"},
-		{name: "plain string", input: "hello", expected: "hello"},
-		{name: "empty stays empty string", input: "", expected: ""},
-		{name: "quoted bool stays string", input: "'true'", expected: "true"},
-		{name: "explicit null", input: "null", expected: nil},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			require.Equal(t, tt.expected, InferType(tt.input))
-		})
-	}
+
+	t.Run("Helm --set type inference and syntax", func(t *testing.T) {
+		t.Parallel()
+		vals := Values{}
+		require.NoError(t, vals.ParseSet([]string{
+			"aBool=true",
+			"anInt=3",
+			"aFloatStaysString=3.14",
+			"leadingZeroStaysString=0755",
+			"semver=1.0.0",
+			"nested.key=value",
+			"aList={a,b,c}",
+			"indexed[0]=x",
+		}))
+		require.Equal(t, true, vals["aBool"])
+		require.Equal(t, int64(3), vals["anInt"])
+		require.Equal(t, "3.14", vals["aFloatStaysString"])
+		require.Equal(t, "0755", vals["leadingZeroStaysString"])
+		require.Equal(t, "1.0.0", vals["semver"])
+		nested, ok := vals["nested"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, "value", nested["key"])
+		require.Equal(t, []any{"a", "b", "c"}, vals["aList"])
+		require.Equal(t, []any{"x"}, vals["indexed"])
+	})
+
+	t.Run("later overrides earlier", func(t *testing.T) {
+		t.Parallel()
+		vals := Values{}
+		require.NoError(t, vals.ParseSet([]string{"key=first", "key=second"}))
+		require.Equal(t, "second", vals["key"])
+	})
+
+	t.Run("invalid syntax errors", func(t *testing.T) {
+		t.Parallel()
+		vals := Values{}
+		require.Error(t, vals.ParseSet([]string{"noEquals"}))
+	})
 }

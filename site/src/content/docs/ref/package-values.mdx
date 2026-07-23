@@ -238,6 +238,8 @@ zarf package remove my-package \
   --set-values="app.environment=staging"
 ```
 
+`--set-values` uses [Helm's `--set` format](https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set). Values are type-inferred: `true`/`false` become booleans, `null` becomes null, and whole base-10 numbers become integers. Everything else such as decimals (`1.5`), versions (`1.0.0`), and leading-zero numbers (`0755`) stays a string. To set a value whose type the flag won't infer, such as a float, provide it through a `--values` file where YAML determines the type.
+
 ### Precedence
 
 Values are merged from several sources. When the same key is set in more than one place, later sources in this list win:

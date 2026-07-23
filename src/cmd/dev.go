@@ -41,20 +41,14 @@ import (
 
 var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, state.ZarfInClusterContainerRegistryNodePort)
 
-// parseValues parses values from file paths and applies set-values overrides on top.
-func parseValues(ctx context.Context, valuesFiles []string, setValues map[string]string) (value.Values, error) {
+// parseValues parses values from file paths and applies Helm --set style overrides on top.
+func parseValues(ctx context.Context, valuesFiles []string, setValues []string) (value.Values, error) {
 	values, err := value.ParseFiles(ctx, valuesFiles, value.ParseFilesOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse values files: %w", err)
 	}
-	for key, val := range setValues {
-		path := value.Path(key)
-		if !strings.HasPrefix(key, ".") {
-			path = value.Path("." + key)
-		}
-		if err := values.Set(path, value.InferType(val)); err != nil {
-			return nil, fmt.Errorf("unable to set value at path %s: %w", key, err)
-		}
+	if err := values.ParseSet(setValues); err != nil {
+		return nil, err
 	}
 	return values, nil
 }
@@ -313,7 +307,7 @@ type devInspectManifestsOptions struct {
 	createSetPkgTmpl   map[string]string
 	deploySetVariables map[string]string
 	valuesFiles        []string
-	setValues          map[string]string
+	setValues          []string
 	kubeVersion        string
 	outputWriter       io.Writer
 }
@@ -342,7 +336,7 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringArrayVar(&o.setValues, "set-values", GetStringSlice(v, VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -354,7 +348,6 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -409,7 +402,7 @@ type devInspectValuesFilesOptions struct {
 	createSetPkgTmpl   map[string]string
 	deploySetVariables map[string]string
 	valuesFiles        []string
-	setValues          map[string]string
+	setValues          []string
 	kubeVersion        string
 	outputWriter       io.Writer
 }
@@ -439,7 +432,7 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringArrayVar(&o.setValues, "set-values", GetStringSlice(v, VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -451,7 +444,6 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -853,7 +845,7 @@ type devFindImagesOptions struct {
 	flavor              string
 	deploySetVariables  map[string]string
 	valuesFiles         []string
-	setValues           map[string]string
+	setValues           []string
 	kubeVersionOverride string
 	why                 string
 	skipCosign          bool
@@ -891,7 +883,7 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringArrayVar(&o.setValues, "set-values", GetStringSlice(v, VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	// allow for the override of the default helm KubeVersion
 	cmd.Flags().StringVar(&o.kubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	// check which manifests are using this particular image
@@ -919,7 +911,6 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {

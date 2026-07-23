@@ -145,7 +145,7 @@ func TestPackageInspectManifests(t *testing.T) {
 		packageName    string
 		setVariables   map[string]string
 		valuesFiles    []string
-		setValues      map[string]string
+		setValues      []string
 		kubeVersion    string
 		expectedErr    string
 	}{
@@ -192,9 +192,9 @@ func TestPackageInspectManifests(t *testing.T) {
 			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest-with-values"),
 			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest-with-values", "expected.yaml"),
 			valuesFiles:    []string{filepath.Join("testdata", "inspect-manifests", "manifest-with-values", "user-values.yaml")},
-			setValues: map[string]string{
-				"replicas": "5",
-				"imageTag": "latest",
+			setValues: []string{
+				"replicas=5",
+				"imageTag=latest",
 			},
 		},
 		{
@@ -268,7 +268,7 @@ type ValuesFilesTestData struct {
 	packageName    string
 	setVariables   map[string]string
 	valuesFiles    []string
-	setValues      map[string]string
+	setValues      []string
 	kubeVersion    string
 	expectedErr    string
 }
@@ -319,8 +319,8 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 				"REPLICAS": "3",
 			},
 			valuesFiles: []string{filepath.Join("testdata", "inspect-values-files", "chart-with-values", "user-values.yaml")},
-			setValues: map[string]string{
-				"customField": "fromCLI",
+			setValues: []string{
+				"customField=fromCLI",
 			},
 		},
 		{
@@ -331,8 +331,8 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 			packageName:    "chart-with-values",
 			definitionDir:  filepath.Join("testdata", "inspect-values-files", "chart-with-values"),
 			expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart-with-values", "expected-baked.yaml"),
-			setValues: map[string]string{
-				"port": "9999",
+			setValues: []string{
+				"port=9999",
 			},
 		},
 	}
