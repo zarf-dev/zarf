@@ -343,7 +343,7 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -441,7 +441,7 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -894,7 +894,7 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	// allow for the override of the default helm KubeVersion
 	cmd.Flags().StringVar(&o.kubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	// check which manifests are using this particular image

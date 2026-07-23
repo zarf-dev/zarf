@@ -326,7 +326,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
 	_ = cmd.Flags().MarkDeprecated("set", "Use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	cmd.Flags().StringVar(&o.shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
@@ -826,7 +826,7 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
@@ -933,7 +933,7 @@ func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
@@ -1421,7 +1421,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when removing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, lang.CmdPackageRemoveFlagValuesFiles)
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgRemoveSetValues), lang.CmdPackageDeployFlagSetValues)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
