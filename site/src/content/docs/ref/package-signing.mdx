@@ -1,26 +1,18 @@
 ---
-title: Package Signing
+title: Sign a Package
 sidebar:
   order: 85
 ---
 
 ## Overview
 
-Package signing verifies a package's source and contents before deployment. Zarf implements signing and verification with [Cosign](https://github.com/sigstore/cosign), supporting key-based signing with a local private key or cloud KMS, and keyless signing with a Sigstore OIDC identity.
+Package signing lets consumers verify a package's contents and that it was signed by an expected identity before deployment. Zarf implements signing and verification with [Cosign](https://github.com/sigstore/cosign), supporting key-based signing with a local private key or cloud KMS, and keyless signing with a Sigstore OIDC identity.
 
-Zarf signs the `zarf.yaml` file in the package. Because this file contains metadata and checksums for every package file, one signature verifies the entire package.
+Zarf signs the `zarf.yaml` file in the package. That file contains metadata and checksums for every package file. When you run `zarf package verify`, Zarf verifies the signature and checks each package file against those checksums.
 
 ## Signature Format
 
 Packages store signatures in the [Sigstore bundle format](https://docs.sigstore.dev/about/bundle/) as `zarf.bundle.sig`. The bundle stores the signature and its supporting verification data in a format compatible with Sigstore tooling.
-
-The bundle format follows the [Sigstore Bundle Specification](https://github.com/sigstore/cosign/blob/main/specs/BUNDLE_SPEC.md). Re-sign a package with a legacy signature to update it to the bundle format:
-
-```bash
-zarf package sign zarf-package-example-amd64.tar.zst --overwrite
-```
-
-Use `--overwrite` whenever the package already has a signature.
 
 ## Choosing a Signing Method
 
@@ -273,16 +265,6 @@ zarf package verify zarf-package-example-amd64.tar.zst \
   --use-signed-timestamps
 ```
 
-### Verifying Checksums Only
-
-Verify package integrity without signature verification:
-
-```bash
-zarf package verify zarf-package-example-amd64.tar.zst
-```
-
-This confirms that package files match their expected checksums but does not verify authenticity or source.
-
 ### Verifying During Deployment
 
 Verify signatures during package deployment:
@@ -303,17 +285,6 @@ If signature verification fails and `--verify` is specified, Zarf aborts the dep
 
 Verify with the public key that corresponds to the signing key.
 
-### Package Requires a Public Key
-
-```
-✖ package is signed but no key was provided
-```
-
-Provide the public key when deploying or inspecting a signed package:
-
-```bash
-zarf package deploy zarf-package-example-amd64.tar.zst --key cosign.pub
-```
 
 ### Incorrect Private Key Password
 
