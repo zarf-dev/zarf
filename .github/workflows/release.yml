@@ -29,6 +29,11 @@ jobs:
       - name: Install tools
         uses: ./.github/actions/install-tools
 
+      - name: Install UPX
+        uses: crazy-max/ghaction-upx@v3
+        with:
+          install-only: true
+
       - name: Build CLI
         run: |
           CLI_VERSION=$GITHUB_REF_NAME make build-cli-linux-amd
