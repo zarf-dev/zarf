@@ -326,7 +326,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
 	_ = cmd.Flags().MarkDeprecated("set", "Use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
-	cmd.Flags().StringArrayVar(&o.setValues, "set-values", GetStringSlice(v, VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringArrayVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	cmd.Flags().StringVar(&o.shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
@@ -352,6 +352,8 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		strings.ToUpper,
 	)
 
+	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
+	o.setValues = append(GetStringSlice(v, VPkgDeploySetValues), o.setValues...)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -824,7 +826,7 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringArrayVar(&o.setValues, "set-values", GetStringSlice(v, VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringArrayVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
@@ -840,6 +842,8 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
+	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
+	o.setValues = append(GetStringSlice(v, VPkgDeploySetValues), o.setValues...)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -929,7 +933,7 @@ func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringArrayVar(&o.setValues, "set-values", GetStringSlice(v, VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringArrayVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
@@ -945,6 +949,8 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
+	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
+	o.setValues = append(GetStringSlice(v, VPkgDeploySetValues), o.setValues...)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err

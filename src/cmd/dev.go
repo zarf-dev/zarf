@@ -336,7 +336,7 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringArrayVar(&o.setValues, "set-values", GetStringSlice(v, VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringArrayVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -353,6 +353,8 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		return err
 	}
 
+	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
+	o.setValues = append(GetStringSlice(v, VPkgDeploySetValues), o.setValues...)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -432,7 +434,7 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringArrayVar(&o.setValues, "set-values", GetStringSlice(v, VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringArrayVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -449,6 +451,8 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		return err
 	}
 
+	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
+	o.setValues = append(GetStringSlice(v, VPkgDeploySetValues), o.setValues...)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -883,7 +887,7 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
-	cmd.Flags().StringArrayVar(&o.setValues, "set-values", GetStringSlice(v, VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringArrayVar(&o.setValues, "set-values", nil, lang.CmdPackageDeployFlagSetValues)
 	// allow for the override of the default helm KubeVersion
 	cmd.Flags().StringVar(&o.kubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	// check which manifests are using this particular image
@@ -917,6 +921,8 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Config set_values act as a base; CLI --set-values are applied after so they win per-key.
+	o.setValues = append(GetStringSlice(v, VPkgDeploySetValues), o.setValues...)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
