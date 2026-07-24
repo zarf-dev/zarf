@@ -23,7 +23,7 @@ type Package struct {
 	// The API version of the Zarf package.
 	APIVersion string `json:"apiVersion" jsonschema:"enum=zarf.dev/v1beta1"`
 	// The kind of Zarf package.
-	Kind PackageKind `json:"kind" jsonschema:"enum=ZarfPackageConfig"`
+	Kind PackageKind `json:"kind" jsonschema:"enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	// Package metadata.
 	Metadata PackageMetadata `json:"metadata,omitempty"`
 	// Zarf-generated package build data.
@@ -34,25 +34,6 @@ type Package struct {
 	Values Values `json:"values,omitempty"`
 	// Documentation files included in the package.
 	Documentation map[string]string `json:"documentation,omitempty"`
-
-	// Variables removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
-	variables []InteractiveVariable
-	// Constants removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
-	constants []Constant
-}
-
-// GetDeprecatedVariables returns the v1alpha1 variables carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (pkg Package) GetDeprecatedVariables() []InteractiveVariable {
-	return pkg.variables
-}
-
-// GetDeprecatedConstants returns the v1alpha1 constants carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (pkg Package) GetDeprecatedConstants() []Constant {
-	return pkg.constants
 }
 
 // GetComponent returns the component with the given name, or an error if no such component exists.
@@ -101,15 +82,6 @@ type PackageMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// Prevent namespace overrides for this package.
 	PreventNamespaceOverride bool `json:"preventNamespaceOverride,omitempty"`
-	// yolo removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
-	yolo bool
-}
-
-// GetDeprecatedYOLO returns the v1alpha1 YOLO field carried as a backwards-compatibility shim.
-//
-// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
-func (m PackageMetadata) GetDeprecatedYOLO() bool {
-	return m.yolo
 }
 
 // BuildData is written during package create to track details of the created package.
@@ -146,8 +118,12 @@ type BuildData struct {
 	originalAPIVersion string
 }
 
-// GetOriginalAPIVersion returns the apiVersion the package was read from before any conversion.
+// GetOriginalAPIVersion returns the apiVersion the package was read from before any conversion,
+// defaulting to this package's apiVersion when one was never recorded.
 func (b BuildData) GetOriginalAPIVersion() string {
+	if b.originalAPIVersion == "" {
+		return APIVersion
+	}
 	return b.originalAPIVersion
 }
 
