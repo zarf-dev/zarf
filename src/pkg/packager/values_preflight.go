@@ -256,7 +256,7 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 				if !vf.Template {
 					continue
 				}
-				content, err := os.ReadFile(helm.StandardValuesName(valuesDir, chart, vf.GlobalIdx))
+				content, err := os.ReadFile(filepath.Join(valuesDir, layout.ChartValuesFileName(chart, vf.GlobalIdx)))
 				if err != nil {
 					return nil, err
 				}

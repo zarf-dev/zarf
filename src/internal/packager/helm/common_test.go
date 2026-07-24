@@ -25,13 +25,14 @@ func TestParseChartValues(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// ValuesFiles land at global index 0; TemplatedValuesFiles at global index 1 (len(ValuesFiles) + local index).
-	regularPath := StandardValuesName(tmpDir, chart, 0)
-	templatedPath := StandardValuesName(tmpDir, chart, 1)
+	paths := testChartPaths{valuesDir: tmpDir}
+	regularPath := paths.ValuesFile(chart, 0)
+	templatedPath := paths.ValuesFile(chart, 1)
 
 	require.NoError(t, os.WriteFile(regularPath, []byte("shared: from-regular\nregularOnly: present"), 0o644))
 	require.NoError(t, os.WriteFile(templatedPath, []byte("shared: from-templated\ntemplatedOnly: present"), 0o644))
 
-	merged, err := parseChartValues(chart, tmpDir, nil)
+	merged, err := parseChartValues(chart, paths, nil)
 	require.NoError(t, err)
 
 	// TemplatedValuesFiles are appended after ValuesFiles in the Helm merge list,

@@ -377,13 +377,13 @@ func uninstallChart(name string, actionConfig *action.Configuration, timeout tim
 }
 
 // LoadChartData loads a chart from a tarball and returns the Helm SDK representation of the chart and it's values
-func LoadChartData(zarfChart v1alpha1.ZarfChart, chartPath string, valuesPath string, valuesOverrides map[string]any) (*chartv2.Chart, common.Values, error) {
-	loadedChart, err := loadChartFromTarball(zarfChart, chartPath)
+func LoadChartData(zarfChart v1alpha1.ZarfChart, paths ChartPaths, valuesOverrides map[string]any) (*chartv2.Chart, common.Values, error) {
+	loadedChart, err := loadChartFromTarball(zarfChart, paths)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to load chart tarball: %w", err)
 	}
 
-	chartValues, err := parseChartValues(zarfChart, valuesPath, valuesOverrides)
+	chartValues, err := parseChartValues(zarfChart, paths, valuesOverrides)
 	if err != nil {
 		return loadedChart, nil, fmt.Errorf("unable to parse chart values: %w", err)
 	}

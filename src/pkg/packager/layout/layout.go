@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 // Constants used in the default package layout.
@@ -71,4 +73,40 @@ func KustomizationFileName(manifestName string, idx int) string {
 // file's contents are stored.
 func ComponentFileRelPath(idx int, target string) string {
 	return filepath.Join(strconv.Itoa(idx), filepath.Base(target))
+}
+
+// ChartArchiveName returns the base file name for a chart's packaged tarball:
+// "<name>" when the version is empty, otherwise "<name>-<version>".
+func ChartArchiveName(chart v1alpha1.ZarfChart) string {
+	if chart.Version == "" {
+		return chart.Name
+	}
+	return chart.Name + "-" + chart.Version
+}
+
+// ChartValuesFileName returns the base file name for the idx-th values file of a
+// chart, as stored within a component's values directory.
+func ChartValuesFileName(chart v1alpha1.ZarfChart, idx int) string {
+	return ChartArchiveName(chart) + "-" + strconv.Itoa(idx)
+}
+
+// ChartPaths resolves the on-disk locations of a chart's packaged artifacts
+// within a component's charts and values directories. It satisfies the path seam
+// the `helm` package depends on, so `helm` receives resolved paths rather than
+// re-deriving the package layout convention itself.
+type ChartPaths struct {
+	// ChartsDir is the directory holding chart tarballs.
+	ChartsDir string
+	// ValuesDir is the directory holding chart values files.
+	ValuesDir string
+}
+
+// Archive returns the full path to the chart's packaged tarball.
+func (p ChartPaths) Archive(chart v1alpha1.ZarfChart) string {
+	return filepath.Join(p.ChartsDir, ChartArchiveName(chart)) + ".tgz"
+}
+
+// ValuesFile returns the full path to the idx-th values file for the chart.
+func (p ChartPaths) ValuesFile(chart v1alpha1.ZarfChart, idx int) string {
+	return filepath.Join(p.ValuesDir, ChartValuesFileName(chart, idx))
 }
