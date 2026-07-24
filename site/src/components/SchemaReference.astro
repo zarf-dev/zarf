@@ -1,7 +1,8 @@
 ---
 import { loadSchema } from "../lib/schema";
 
-const json = await loadSchema(Astro.url.pathname);
+const { apiVersion } = Astro.props;
+const json = await loadSchema(Astro.url.pathname, apiVersion);
 const defs = json["$defs"] as Record<string, any>;
 
 // BFS walk from root properties to produce natural reading order.

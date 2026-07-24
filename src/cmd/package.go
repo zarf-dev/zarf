@@ -278,20 +278,20 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 }
 
 type packageDeployOptions struct {
-	valuesFiles            []string
-	namespaceOverride      string
-	confirm                bool
-	adoptExistingResources bool
-	connected              bool
-	forceConflicts         bool
-	timeout                time.Duration
-	retries                int
-	setVariables           map[string]string
-	setValues              map[string]string
-	optionalComponents     string
-	shasum                 string
-	skipVersionCheck       bool
-	ociConcurrency         int
+	valuesFiles        []string
+	namespaceOverride  string
+	confirm            bool
+	takeOwnership      bool
+	connected          bool
+	forceConflicts     bool
+	timeout            time.Duration
+	retries            int
+	setVariables       map[string]string
+	setValues          map[string]string
+	optionalComponents string
+	shasum             string
+	skipVersionCheck   bool
+	ociConcurrency     int
 	packageVerifyFlags
 }
 
@@ -313,8 +313,10 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 
-	// Always require adopt-existing-resources flag (no viper)
-	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	// Always require take-ownership flag (no viper)
+	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
+	cmd.Flags().BoolVar(&o.takeOwnership, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().BoolVar(&o.connected, "connected", v.GetBool(VPkgDeployConnected), lang.CmdPackageDeployFlagConnected)
 	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
@@ -349,9 +351,8 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		o.setVariables,
 		strings.ToUpper,
 	)
-	// Merge values; CLI --set-values overrides viper config, matching --set-variables.
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -391,18 +392,18 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}()
 
 	deployOpts := packager.DeployOptions{
-		Values:                 values,
-		AdoptExistingResources: o.adoptExistingResources,
-		Connected:              o.connected,
-		ForceConflicts:         o.forceConflicts,
-		Timeout:                o.timeout,
-		Retries:                o.retries,
-		OCIConcurrency:         o.ociConcurrency,
-		SetVariables:           o.setVariables,
-		NamespaceOverride:      o.namespaceOverride,
-		RemoteOptions:          defaultRemoteOptions(),
-		IsInteractive:          !o.confirm,
-		SkipVersionCheck:       o.skipVersionCheck,
+		Values:            values,
+		TakeOwnership:     o.takeOwnership,
+		Connected:         o.connected,
+		ForceConflicts:    o.forceConflicts,
+		Timeout:           o.timeout,
+		Retries:           o.retries,
+		OCIConcurrency:    o.ociConcurrency,
+		SetVariables:      o.setVariables,
+		NamespaceOverride: o.namespaceOverride,
+		RemoteOptions:     defaultRemoteOptions(),
+		IsInteractive:     !o.confirm,
+		SkipVersionCheck:  o.skipVersionCheck,
 	}
 
 	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)
@@ -839,8 +840,8 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -945,8 +946,8 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -1429,6 +1430,8 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	v := getViper()
+	o.setValues = mergeMap(v.GetStringMapString(VPkgRemoveSetValues), o.setValues)
 	vals, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -1443,7 +1446,6 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	v := getViper()
 	c, _ := cluster.New(ctx) //nolint:errcheck
 	loadOpts := packager.LoadOptions{
 		VerificationStrategy: o.verify.toStrategy(),

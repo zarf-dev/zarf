@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// TestHelmAdoptionAgentLabel verifies that --adopt-existing-resources handles
+// TestHelmAdoptionAgentLabel verifies that --take-ownership handles
 // the zarf.dev/agent:ignore label correctly depending on whether the package
 // defines the label in a namespace Helm template.
 func TestHelmAdoptionAgentLabel(t *testing.T) {
@@ -44,7 +44,7 @@ func TestHelmAdoptionAgentLabel(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		_, stdErr, err = e2e.Zarf(t, "package", "deploy", noTemplatePkg, "--confirm", "--adopt-existing-resources")
+		_, stdErr, err = e2e.Zarf(t, "package", "deploy", noTemplatePkg, "--confirm", "--take-ownership")
 		require.NoError(t, err, stdErr)
 
 		namespace, err := c.Clientset.CoreV1().Namespaces().Get(t.Context(), ns, metav1.GetOptions{})
@@ -69,7 +69,7 @@ func TestHelmAdoptionAgentLabel(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		_, stdErr, err = e2e.Zarf(t, "package", "deploy", withTemplatePkg, "--confirm", "--adopt-existing-resources")
+		_, stdErr, err = e2e.Zarf(t, "package", "deploy", withTemplatePkg, "--confirm", "--take-ownership")
 		require.NoError(t, err, stdErr)
 
 		namespace, err := c.Clientset.CoreV1().Namespaces().Get(t.Context(), ns, metav1.GetOptions{})

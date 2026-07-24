@@ -1,0 +1,40 @@
+---
+import Default from '@astrojs/starlight/components/Search.astro';
+---
+
+<Default />
+
+<style is:global>
+  /* Version filter panel is hidden — version scoping is applied programmatically. */
+  .pagefind-ui__filter-panel { display: none !important; }
+</style>
+
+<script>
+  import { versionFromPath } from '../lib/version.ts';
+
+  const pageVersion = versionFromPath(window.location.pathname);
+
+  // Pagefind lazy-loads its search UI and renders the version filter checkbox
+  // asynchronously, so we watch for it to appear. One click is enough: Pagefind
+  // holds the selection in its own state, which survives later searches and
+  // re-renders — so we disconnect once it's applied.
+  function scopeSearchToVersion(root: HTMLElement) {
+    const activate = () => {
+      const input = root.querySelector<HTMLInputElement>(
+        `.pagefind-ui__filter-panel input[value="${pageVersion}"]`
+      );
+      if (!input || input.checked) return false;
+      input.click();
+      return true;
+    };
+
+    if (activate()) return;
+    const observer = new MutationObserver(() => {
+      if (activate()) observer.disconnect();
+    });
+    observer.observe(root, { childList: true, subtree: true });
+  }
+
+  const searchRoot = document.getElementById('starlight__search');
+  if (searchRoot) scopeSearchToVersion(searchRoot);
+</script>

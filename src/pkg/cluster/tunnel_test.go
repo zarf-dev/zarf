@@ -214,6 +214,89 @@ func TestFindPodContainerPort(t *testing.T) {
 	}
 }
 
+func TestGetAttachablePodForService(t *testing.T) {
+	t.Parallel()
+
+	readyCondition := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+	notReadyCondition := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionFalse}
+	now := metav1.Now()
+
+	tests := []struct {
+		name        string
+		pods        []corev1.Pod
+		expectedErr string
+		expectedPod string
+	}{
+		{
+			name:        "no pods",
+			expectedErr: "no pods found for service web",
+		},
+		{
+			name: "only a terminating pod",
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-terminating", Labels: map[string]string{"app": "web"}, DeletionTimestamp: &now, Finalizers: []string{"keep-around-for-test"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
+				},
+			},
+			expectedErr: "no ready pods found for service web",
+		},
+		{
+			name: "only a not-ready pod",
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-not-ready", Labels: map[string]string{"app": "web"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{notReadyCondition}},
+				},
+			},
+			expectedErr: "no ready pods found for service web",
+		},
+		{
+			name: "skips terminating and not-ready pods, picks the ready one",
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-terminating", Labels: map[string]string{"app": "web"}, DeletionTimestamp: &now, Finalizers: []string{"keep-around-for-test"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-not-ready", Labels: map[string]string{"app": "web"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{notReadyCondition}},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-ready", Labels: map[string]string{"app": "web"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
+				},
+			},
+			expectedPod: "web-ready",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			clientset := fake.NewClientset()
+			svc := corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web"},
+				Spec:       corev1.ServiceSpec{Selector: map[string]string{"app": "web"}},
+			}
+			_, err := clientset.CoreV1().Services(svc.Namespace).Create(context.Background(), &svc, metav1.CreateOptions{})
+			require.NoError(t, err)
+			for i := range tt.pods {
+				_, err := clientset.CoreV1().Pods(tt.pods[i].Namespace).Create(context.Background(), &tt.pods[i], metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			tunnel := &Tunnel{clientset: clientset, namespace: "app-ns", resourceName: "web"}
+			podName, err := tunnel.getAttachablePodForService(context.Background())
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedPod, podName)
+		})
+	}
+}
+
 func TestServiceInfoFromNodePortURL(t *testing.T) {
 	t.Parallel()
 

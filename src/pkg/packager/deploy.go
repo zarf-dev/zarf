@@ -50,7 +50,11 @@ type DeployOptions struct {
 	// Values are values passed in at deploy time. They can come from the CLI, user configuration, or set directly by
 	// API callers.
 	value.Values
-	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
+	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
+	TakeOwnership bool
+	// AdoptExistingResources adopts any pre-existing K8s resources into the Helm charts managed by Zarf.
+	//
+	// Deprecated: use TakeOwnership instead.
 	AdoptExistingResources bool
 	// Connected deploys without mirroring images/repos and labels resources to bypass the Zarf agent
 	Connected bool
@@ -614,16 +618,16 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		}
 
 		helmOpts := helm.InstallUpgradeOptions{
-			AdoptExistingResources: opts.AdoptExistingResources,
-			ForceConflicts:         opts.ForceConflicts,
-			VariableConfig:         d.vc,
-			State:                  d.s,
-			Cluster:                d.c,
-			ConnectedDeploy:        opts.Connected,
-			Timeout:                opts.Timeout,
-			PkgName:                pkgLayout.Pkg.Metadata.Name,
-			NamespaceOverride:      opts.NamespaceOverride,
-			IsInteractive:          opts.IsInteractive,
+			TakeOwnership:     opts.TakeOwnership || opts.AdoptExistingResources,
+			ForceConflicts:    opts.ForceConflicts,
+			VariableConfig:    d.vc,
+			State:             d.s,
+			Cluster:           d.c,
+			ConnectedDeploy:   opts.Connected,
+			Timeout:           opts.Timeout,
+			PkgName:           pkgLayout.Pkg.Metadata.Name,
+			NamespaceOverride: opts.NamespaceOverride,
+			IsInteractive:     opts.IsInteractive,
 		}
 		helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, valuesOverrides)
 		if err != nil {
@@ -704,16 +708,16 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			return installedCharts, err
 		}
 		helmOpts := helm.InstallUpgradeOptions{
-			AdoptExistingResources: opts.AdoptExistingResources,
-			ForceConflicts:         opts.ForceConflicts,
-			VariableConfig:         d.vc,
-			State:                  d.s,
-			Cluster:                d.c,
-			ConnectedDeploy:        opts.Connected,
-			Timeout:                opts.Timeout,
-			PkgName:                pkgLayout.Pkg.Metadata.Name,
-			NamespaceOverride:      opts.NamespaceOverride,
-			IsInteractive:          opts.IsInteractive,
+			TakeOwnership:     opts.TakeOwnership || opts.AdoptExistingResources,
+			ForceConflicts:    opts.ForceConflicts,
+			VariableConfig:    d.vc,
+			State:             d.s,
+			Cluster:           d.c,
+			ConnectedDeploy:   opts.Connected,
+			Timeout:           opts.Timeout,
+			PkgName:           pkgLayout.Pkg.Metadata.Name,
+			NamespaceOverride: opts.NamespaceOverride,
+			IsInteractive:     opts.IsInteractive,
 		}
 
 		// Install the chart.

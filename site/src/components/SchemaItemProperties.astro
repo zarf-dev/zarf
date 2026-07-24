@@ -1,7 +1,7 @@
 ---
 import { loadSchema } from "../lib/schema";
 
-const { item, include, invert, unwrap } = Astro.props;
+const { item, include, invert, unwrap, apiVersion } = Astro.props;
 
 const includesElement = (key: string) => {
   if (!include) {
@@ -13,7 +13,7 @@ const includesElement = (key: string) => {
   }
 };
 
-const json = await loadSchema(Astro.url.pathname);
+const json = await loadSchema(Astro.url.pathname, apiVersion);
 
 const itemSchema = json["$defs"][item];
 

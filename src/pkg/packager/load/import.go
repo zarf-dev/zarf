@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/types"
 
@@ -25,10 +26,27 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	ocistore "oras.land/oras-go/v2/content/oci"
+	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
+
+// negotiateImportPlainHTTP decides the transport scheme for an `import: url:` OCI reference.
+func negotiateImportPlainHTTP(ctx context.Context, importURL string, remoteOptions types.RemoteOptions) (bool, error) {
+	if !remoteOptions.PlainHTTP {
+		return false, nil
+	}
+	ref, err := registry.ParseReference(strings.TrimPrefix(importURL, helpers.OCIURLPrefix))
+	if err != nil {
+		return false, fmt.Errorf("unable to parse import url %q: %w", importURL, err)
+	}
+	plainHTTP, err := ocischeme.From(ctx).UsePlainHTTP(ctx, ref.Registry, ocischeme.ProbeOptions{InsecureSkipTLSVerify: remoteOptions.InsecureSkipTLSVerify})
+	if err != nil {
+		return false, fmt.Errorf("unable to resolve import %q: %w", importURL, err)
+	}
+	return plainHTTP, nil
+}
 
 func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	if component.Import.Name != "" {
@@ -121,8 +139,12 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
+			plainHTTP, err := negotiateImportPlainHTTP(ctx, component.Import.URL, remoteOptions)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, nil, err
+			}
 			remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(),
-				cacheModifier, oci.WithPlainHTTP(remoteOptions.PlainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify))
+				cacheModifier, oci.WithPlainHTTP(plainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify))
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
@@ -300,8 +322,12 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	}
 
 	// Get the descriptor for the component.
+	plainHTTP, err := negotiateImportPlainHTTP(ctx, component.Import.URL, remoteOptions)
+	if err != nil {
+		return "", err
+	}
 	remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(),
-		oci.WithPlainHTTP(remoteOptions.PlainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify))
+		oci.WithPlainHTTP(plainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify))
 	if err != nil {
 		return "", err
 	}

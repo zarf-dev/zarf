@@ -118,16 +118,26 @@ func TestValuesSchema(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
-		// Deploy should also succeed
+		// Deploy should also succeed.
 		packageName := fmt.Sprintf("zarf-package-test-values-schema-valid-%s.tar.zst", e2e.Arch)
 		path := filepath.Join(tmpdir, packageName)
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
+		// ".replicas" exercises the leading-dot (.Values path) form; "enabled" the dotless form.
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm",
+			"--set-values", "enabled=false", "--set-values", ".replicas=5")
 		require.NoError(t, err, stdOut, stdErr)
 
 		// Verify the configmap was created with the correct values
 		kubectlOut, _, err := e2e.Kubectl(t, "get", "configmap", "test-values-schema-configmap", "-o", "jsonpath='{.data.appName}'")
 		require.NoError(t, err, "unable to get configmap")
 		require.Contains(t, kubectlOut, "test-app")
+
+		kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-values-schema-configmap", "-o", "jsonpath='{.data.replicas}'")
+		require.NoError(t, err, "unable to get configmap")
+		require.Contains(t, kubectlOut, "5", "replicas should be set from --set-values")
+
+		kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-values-schema-configmap", "-o", "jsonpath='{.data.enabled}'")
+		require.NoError(t, err, "unable to get configmap")
+		require.Contains(t, kubectlOut, "false", "enabled should be set from --set-values")
 
 		// Cleanup
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values-schema-valid", "--confirm")

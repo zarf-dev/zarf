@@ -4,6 +4,8 @@
 // Package v1beta1 holds the definition of the v1beta1 Zarf Package. This API is work in progress and not yet used within Zarf.
 package v1beta1
 
+import "fmt"
+
 // PackageKind is an enum of the different kinds of Zarf packages.
 type PackageKind string
 
@@ -32,6 +34,16 @@ type Package struct {
 	Values Values `json:"values,omitempty"`
 	// Documentation files included in the package.
 	Documentation map[string]string `json:"documentation,omitempty"`
+}
+
+// GetComponent returns the component with the given name, or an error if no such component exists.
+func (pkg Package) GetComponent(name string) (Component, error) {
+	for _, component := range pkg.Components {
+		if component.Name == name {
+			return component, nil
+		}
+	}
+	return Component{}, fmt.Errorf("no component named %q in package %q", name, pkg.Metadata.Name)
 }
 
 // HasImages returns true if one of the components contains an image.

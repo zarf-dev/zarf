@@ -48,6 +48,8 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	if err != nil {
 		return nil, err
 	}
+	// Zarf lays out package layers itself and never relies on oras-go's annotation-driven auto-unpack
+	dst.SkipUnpack = true
 	defer func(dst *file.Store) {
 		err2 := dst.Close()
 		err = errors.Join(err, err2)

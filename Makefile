@@ -111,7 +111,7 @@ build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli
 docs-and-schema: ## Generate the Zarf Documentation and Schema
 	go generate ./src/pkg/schema
 	ZARF_CONFIG=hack/empty-config.toml go run main.go internal gen-cli-docs
-	cp src/pkg/schema/zarf-v1alpha1-schema.json zarf.schema.json
+	cp src/pkg/schema/zarf.schema.json zarf.schema.json
 	hack/cots/update-gitea.sh
 
 init-package-with-agent: build build-local-agent-image init-package
@@ -226,7 +226,7 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 
 .PHONY: test-unit
 test-unit: ## Run unit tests
-	go test -failfast -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg="./src/..." $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test')
+	CGO_ENABLED=1 go test -failfast -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg="./src/..." $$(CGO_ENABLED=1 go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test')
 
 .PHONY: test-unit-quick
 test-unit-quick: ## Run unit tests without the race detector or coverage

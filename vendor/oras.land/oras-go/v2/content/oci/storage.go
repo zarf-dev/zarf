@@ -33,7 +33,7 @@ import (
 // bufPool is a pool of byte buffers that can be reused for copying content
 // between files.
 var bufPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		// the buffer size should be larger than or equal to 128 KiB
 		// for performance considerations.
 		// we choose 1 MiB here so there will be less disk I/O.

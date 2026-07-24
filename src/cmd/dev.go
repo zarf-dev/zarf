@@ -41,7 +41,8 @@ import (
 
 var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, state.ZarfInClusterContainerRegistryNodePort)
 
-// parseValues parses values from file paths and applies set-values overrides on top.
+// parseValues parses values from file paths and applies key.path=value overrides on top. Each
+// override value is type-inferred; see value.InferType for the rules.
 func parseValues(ctx context.Context, valuesFiles []string, setValues map[string]string) (value.Values, error) {
 	values, err := value.ParseFiles(ctx, valuesFiles, value.ParseFilesOptions{})
 	if err != nil {
@@ -52,7 +53,7 @@ func parseValues(ctx context.Context, valuesFiles []string, setValues map[string
 		if !strings.HasPrefix(key, ".") {
 			path = value.Path("." + key)
 		}
-		if err := values.Set(path, val); err != nil {
+		if err := values.Set(path, value.InferType(val)); err != nil {
 			return nil, fmt.Errorf("unable to set value at path %s: %w", key, err)
 		}
 	}
@@ -355,12 +356,12 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -452,12 +453,12 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -499,19 +500,19 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 }
 
 type devDeployOptions struct {
-	createSetPkgTmpl       map[string]string
-	deploySetVariables     map[string]string
-	registryOverrides      []string
-	flavor                 string
-	registryURL            string
-	adoptExistingResources bool
-	timeout                time.Duration
-	retries                int
-	optionalComponents     string
-	noYOLO                 bool
-	connected              bool
-	ociConcurrency         int
-	skipVersionCheck       bool
+	createSetPkgTmpl   map[string]string
+	deploySetVariables map[string]string
+	registryOverrides  []string
+	flavor             string
+	registryURL        string
+	takeOwnership      bool
+	timeout            time.Duration
+	retries            int
+	optionalComponents string
+	noYOLO             bool
+	connected          bool
+	ociConcurrency     int
+	skipVersionCheck   bool
 }
 
 func newDevDeployCommand(v *viper.Viper) *cobra.Command {
@@ -539,8 +540,10 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 
-	// Always require adopt-existing-resources flag (no viper)
-	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	// Always require take-ownership flag (no viper)
+	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
+	cmd.Flags().BoolVar(&o.takeOwnership, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
@@ -594,6 +597,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:      defaultRemoteOptions(),
 		CachePath:          cachePath,
 		SkipVersionCheck:   o.skipVersionCheck,
+		TakeOwnership:      o.takeOwnership,
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -917,13 +921,13 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
