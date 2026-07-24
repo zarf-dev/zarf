@@ -25,6 +25,26 @@ type ReferenceFromMetadataOptions struct {
 	Tag string
 }
 
+// ReferenceAtDigest returns source's registry and repository pinned to digest.
+// Any tag in source is intentionally discarded.
+func ReferenceAtDigest(source registry.Reference, digest string) (registry.Reference, error) {
+	ref := registry.Reference{
+		Registry:   source.Registry,
+		Repository: source.Repository,
+		Reference:  digest,
+	}
+	if err := ref.ValidateRegistry(); err != nil {
+		return registry.Reference{}, fmt.Errorf("invalid digest-pinned reference: %w", err)
+	}
+	if err := ref.ValidateRepository(); err != nil {
+		return registry.Reference{}, fmt.Errorf("invalid digest-pinned reference: %w", err)
+	}
+	if err := ref.ValidateReferenceAsDigest(); err != nil {
+		return registry.Reference{}, fmt.Errorf("invalid digest-pinned reference: %w", err)
+	}
+	return ref, nil
+}
+
 // ReferenceFromMetadataWithOptions returns a reference for the given metadata with optional overrides
 func ReferenceFromMetadataWithOptions(registryLocation string, pkg v1alpha1.ZarfPackage, opts ReferenceFromMetadataOptions) (registry.Reference, error) {
 	// Explicit requirement for version in order to publish
