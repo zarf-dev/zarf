@@ -160,15 +160,17 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 
 	for _, component := range defined.Pkg.Components {
 		for _, chart := range component.Charts {
-			chartPath := filepath.Join(tmpDir, "charts", chart.Name)
-			valuesFilePath := filepath.Join(tmpDir, "values")
+			chartPaths := layout.ChartPaths{
+				ChartsDir: filepath.Join(tmpDir, "charts", chart.Name),
+				ValuesDir: filepath.Join(tmpDir, "values"),
+			}
 
-			err := layout.PackageChart(ctx, chart, basePath, chartPath, valuesFilePath, cachePath, defaultRemoteOptions())
+			err := layout.PackageChart(ctx, chart, basePath, chartPaths, cachePath, defaultRemoteOptions())
 			if err != nil {
 				return fmt.Errorf("unable to package chart %q for schema generation: %w", chart.Name, err)
 			}
 
-			helmChart, valuesFilesValues, err := helm.LoadChartData(chart, chartPath, valuesFilePath, nil)
+			helmChart, valuesFilesValues, err := helm.LoadChartData(chart, chartPaths, nil)
 			if err != nil {
 				return fmt.Errorf("unable to load default values for chart %q: %w", chart.Name, err)
 			}

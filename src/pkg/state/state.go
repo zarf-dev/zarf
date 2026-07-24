@@ -12,7 +12,9 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -381,6 +383,22 @@ func (ri RegistryInfo) KnownPlainHTTP() (plainHTTP bool, known bool) {
 	default:
 		return false, false
 	}
+}
+
+// ResolvePlainHTTP decides whether host should be reached over plain HTTP for this
+// registry. A scheme known from state (KnownPlainHTTP) wins outright; otherwise a
+// localhost registry is probed (unless forcePlainHTTP already forces plain HTTP),
+// and every other host defaults to forcePlainHTTP. This is also the authoritative
+// scheme resolver downstream consumers should call to determine scheme when pushing
+// to a Zarf-deployed registry.
+func (ri RegistryInfo) ResolvePlainHTTP(ctx context.Context, host string, forcePlainHTTP bool, probe ocischeme.ProbeOptions) (bool, error) {
+	if known, ok := ri.KnownPlainHTTP(); ok {
+		return known, nil
+	}
+	if !forcePlainHTTP && dns.IsLocalhost(host) {
+		return ocischeme.From(ctx).UsePlainHTTP(ctx, host, probe)
+	}
+	return forcePlainHTTP, nil
 }
 
 // Htpasswd returns an htpasswd-formatted string for the registry's push and pull users.

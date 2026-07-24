@@ -629,7 +629,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			NamespaceOverride: opts.NamespaceOverride,
 			IsInteractive:     opts.IsInteractive,
 		}
-		helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, valuesOverrides)
+		helmChart, values, err := helm.LoadChartData(chart, layout.ChartPaths{ChartsDir: chartDir, ValuesDir: valuesDir}, valuesOverrides)
 		if err != nil {
 			return installedCharts, fmt.Errorf("failed to load chart data: %w", err)
 		}

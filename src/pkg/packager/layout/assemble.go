@@ -379,9 +379,11 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 
 	// If any helm charts are defined, process them.
 	for _, chart := range component.Charts {
-		chartPath := filepath.Join(compBuildPath, string(ChartsComponentDir))
-		valuesFilePath := filepath.Join(compBuildPath, string(ValuesComponentDir))
-		err := PackageChart(ctx, chart, packagePath, chartPath, valuesFilePath, cachePath, remoteOpts)
+		paths := ChartPaths{
+			ChartsDir: filepath.Join(compBuildPath, string(ChartsComponentDir)),
+			ValuesDir: filepath.Join(compBuildPath, string(ValuesComponentDir)),
+		}
+		err := PackageChart(ctx, chart, packagePath, paths, cachePath, remoteOpts)
 		if err != nil {
 			return err
 		}
@@ -579,7 +581,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 }
 
 // PackageChart takes a Zarf Chart definition and packs it into a package layout
-func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath, chartPath, valuesFilePath, cachePath string, remoteOpts types.RemoteOptions) error {
+func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath string, paths ChartPaths, cachePath string, remoteOpts types.RemoteOptions) error {
 	if chart.LocalPath != "" && !filepath.IsAbs(chart.LocalPath) {
 		chart.LocalPath = filepath.Join(packagePath, chart.LocalPath)
 	}
@@ -603,7 +605,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath, ch
 	}
 	chart.TemplatedValuesFiles = templatedValuesFiles
 
-	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath, cachePath, remoteOpts); err != nil {
+	if err := helm.PackageChart(ctx, chart, paths, cachePath, remoteOpts); err != nil {
 		return err
 	}
 	chart.ValuesFiles = oldValuesFiles
@@ -646,7 +648,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				continue
 			}
 
-			rel := filepath.ToSlash(fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), valuesIdx))
+			rel := filepath.ToSlash(filepath.Join(string(ValuesComponentDir), ChartValuesFileName(chart, valuesIdx)))
 			component.Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
 			if !filepath.IsAbs(path) {
@@ -663,7 +665,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				continue
 			}
 
-			rel := filepath.ToSlash(fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), nValuesFiles+valuesIdx))
+			rel := filepath.ToSlash(filepath.Join(string(ValuesComponentDir), ChartValuesFileName(chart, nValuesFiles+valuesIdx)))
 			component.Charts[chartIdx].TemplatedValuesFiles[valuesIdx] = rel
 
 			if !filepath.IsAbs(path) {

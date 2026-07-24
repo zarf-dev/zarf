@@ -71,12 +71,13 @@ entries:
 		URL:     repoSrv.URL,
 	}
 	chartPath := t.TempDir()
-	err = PackageChart(ctx, chart, chartPath, t.TempDir(), t.TempDir(), types.RemoteOptions{
+	paths := testChartPaths{chartsDir: chartPath, valuesDir: t.TempDir()}
+	err = PackageChart(ctx, chart, paths, t.TempDir(), types.RemoteOptions{
 		PlainHTTP:             true,
 		InsecureSkipTLSVerify: true,
 	})
 	require.NoError(t, err)
-	require.FileExists(t, StandardName(chartPath, chart)+".tgz")
+	require.FileExists(t, paths.Archive(chart))
 }
 
 func TestDownloadPublishedChartFromOCI(t *testing.T) {
@@ -107,10 +108,11 @@ func TestDownloadPublishedChartFromOCI(t *testing.T) {
 		URL:     fmt.Sprintf("oci://%s/charts/simple-chart", regAddr),
 	}
 	chartPath := t.TempDir()
-	err = PackageChart(ctx, chart, chartPath, t.TempDir(), t.TempDir(), types.RemoteOptions{
+	paths := testChartPaths{chartsDir: chartPath, valuesDir: t.TempDir()}
+	err = PackageChart(ctx, chart, paths, t.TempDir(), types.RemoteOptions{
 		PlainHTTP:             true,
 		InsecureSkipTLSVerify: true,
 	})
 	require.NoError(t, err)
-	require.FileExists(t, StandardName(chartPath, chart)+".tgz")
+	require.FileExists(t, paths.Archive(chart))
 }

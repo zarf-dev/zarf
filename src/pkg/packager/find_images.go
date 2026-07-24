@@ -298,7 +298,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 			}
 			resources = append(resources, yamls...)
 			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
-			chartTarball := helm.StandardName(chartPath, zarfChart) + ".tgz"
+			chartTarball := filepath.Join(chartPath, layout.ChartArchiveName(zarfChart)) + ".tgz"
 			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 			if err != nil {
 				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", zarfChart.URL, err)

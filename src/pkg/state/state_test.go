@@ -5,11 +5,15 @@
 package state
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 )
 
@@ -43,6 +47,65 @@ func TestRegistryInfoKnownPlainHTTP(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRegistryInfoResolvePlainHTTP(t *testing.T) {
+	t.Parallel()
+
+	const nonLocal = "registry.example.com"
+	ctx := context.Background()
+
+	// A scheme known from state wins outright; host and forcePlainHTTP are ignored.
+	t.Run("Zarf-managed mTLS resolves to HTTPS", func(t *testing.T) {
+		t.Parallel()
+		ri := RegistryInfo{RegistryMode: RegistryModeProxy, MTLSStrategy: MTLSStrategyZarfManaged}
+		got, err := ri.ResolvePlainHTTP(ctx, "127.0.0.1:5000", true, ocischeme.ProbeOptions{})
+		require.NoError(t, err)
+		require.False(t, got)
+	})
+	t.Run("internal registry resolves to plain HTTP", func(t *testing.T) {
+		t.Parallel()
+		ri := RegistryInfo{RegistryMode: RegistryModeNodePort}
+		got, err := ri.ResolvePlainHTTP(ctx, nonLocal, false, ocischeme.ProbeOptions{})
+		require.NoError(t, err)
+		require.True(t, got)
+	})
+
+	// Unknown scheme + non-local host never probes; it defaults to forcePlainHTTP.
+	t.Run("external non-local host defaults to forcePlainHTTP", func(t *testing.T) {
+		t.Parallel()
+		ri := RegistryInfo{RegistryMode: RegistryModeExternal}
+		off, err := ri.ResolvePlainHTTP(ctx, nonLocal, false, ocischeme.ProbeOptions{})
+		require.NoError(t, err)
+		require.False(t, off)
+		on, err := ri.ResolvePlainHTTP(ctx, nonLocal, true, ocischeme.ProbeOptions{})
+		require.NoError(t, err)
+		require.True(t, on)
+	})
+
+	// forcePlainHTTP short-circuits the probe even for a localhost registry.
+	t.Run("localhost with forcePlainHTTP skips probe", func(t *testing.T) {
+		t.Parallel()
+		ri := RegistryInfo{RegistryMode: RegistryModeExternal}
+		got, err := ri.ResolvePlainHTTP(ctx, "127.0.0.1:1", true, ocischeme.ProbeOptions{})
+		require.NoError(t, err)
+		require.True(t, got)
+	})
+
+	// Unknown scheme + localhost host is probed; a plain-HTTP responder yields true.
+	t.Run("localhost registry is probed and negotiates plain HTTP", func(t *testing.T) {
+		t.Parallel()
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		t.Cleanup(srv.Close)
+
+		probeCtx := ocischeme.WithNegotiator(context.Background(), ocischeme.New(ocischeme.Options{}))
+		ri := RegistryInfo{RegistryMode: RegistryModeExternal}
+		got, err := ri.ResolvePlainHTTP(probeCtx, srv.Listener.Addr().String(), false, ocischeme.ProbeOptions{})
+		require.NoError(t, err)
+		require.True(t, got)
+	})
 }
 
 // TODO: Change password gen method to make testing possible.

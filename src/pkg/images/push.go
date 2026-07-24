@@ -20,7 +20,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
@@ -139,20 +138,12 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 
 		// Negotiate only when the registry's scheme isn't already known, since the
 		// negotiation itself is a probe over the same tunnel the real push depends on.
-		plainHTTP := cfg.PlainHTTP
-		known, ok := registryInfo.KnownPlainHTTP()
-		if ok {
-			plainHTTP = known
-		}
-		if !ok && dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
-			var err error
-			// Reuse the same transport the real push will use, but stripped of any
-			// retry wrapper: probing must stay fast, not retry with backoff on every
-			// connection failure.
-			plainHTTP, err = ocischeme.From(ctx).UsePlainHTTP(ctx, registryRef.Host(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify, Transport: unwrapRetryTransport(transport)})
-			if err != nil {
-				return err
-			}
+		// Reuse the same transport the real push will use, but stripped of any retry
+		// wrapper: probing must stay fast, not retry with backoff on every failure.
+		var plainHTTP bool
+		plainHTTP, err = registryInfo.ResolvePlainHTTP(ctx, registryRef.Host(), cfg.PlainHTTP, ocischeme.ProbeOptions{InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify, Transport: unwrapRetryTransport(transport)})
+		if err != nil {
+			return err
 		}
 
 		pushImage := func(srcName, dstName string) error {
