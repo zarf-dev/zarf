@@ -41,7 +41,8 @@ import (
 
 var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, state.ZarfInClusterContainerRegistryNodePort)
 
-// parseValues parses values from file paths and applies set-values overrides on top.
+// parseValues parses values from file paths and applies key.path=value overrides on top. Each
+// override value is type-inferred; see value.InferType for the rules.
 func parseValues(ctx context.Context, valuesFiles []string, setValues map[string]string) (value.Values, error) {
 	values, err := value.ParseFiles(ctx, valuesFiles, value.ParseFilesOptions{})
 	if err != nil {
@@ -52,7 +53,7 @@ func parseValues(ctx context.Context, valuesFiles []string, setValues map[string
 		if !strings.HasPrefix(key, ".") {
 			path = value.Path("." + key)
 		}
-		if err := values.Set(path, val); err != nil {
+		if err := values.Set(path, value.InferType(val)); err != nil {
 			return nil, fmt.Errorf("unable to set value at path %s: %w", key, err)
 		}
 	}
@@ -354,12 +355,12 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -451,12 +452,12 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -919,13 +920,13 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err

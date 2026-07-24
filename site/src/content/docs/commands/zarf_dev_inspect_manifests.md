@@ -22,7 +22,7 @@ zarf dev inspect manifests [ DIRECTORY ] [flags]
   -f, --flavor string                         The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                                  help for manifests
       --kube-version string                   Override the default helm template KubeVersion when performing a package chart template
-      --set-values stringToString             Specify deployment package values to set on the command line (key.path=value). (default [])
+      --set-values stringToString             Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
       --values strings                        [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
 ```
 
