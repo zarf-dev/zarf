@@ -87,6 +87,50 @@ func TestAllLayersRespectsRequestedComponents(t *testing.T) {
 	require.Len(t, allLayersSubset, 3)
 }
 
+func TestFetchZarfYAMLFromDescriptor_PinsRemoteToResolvedPackage(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	first := buildVirtualPackage(ctx, t)
+	second := buildVirtualPackage(ctx, t)
+	packageRegistry := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+
+	remote, firstComponents := publishPackage(ctx, t, first.packagePath, packageRegistry)
+	firstDescriptor, err := remote.ResolveRoot(ctx)
+	require.NoError(t, err)
+
+	_, secondComponents := publishPackage(ctx, t, second.packagePath, packageRegistry)
+	secondDescriptor, err := remote.ResolveRoot(ctx)
+	require.NoError(t, err)
+	require.NotEqual(t, firstDescriptor.Digest, secondDescriptor.Digest)
+	require.NotEqual(t, firstComponents, secondComponents)
+
+	metadataRemote, err := zoci.NewRemote(ctx, remote.Repo().Reference.String(), oci.PlatformForArch("amd64"), oci.WithPlainHTTP(true))
+	require.NoError(t, err)
+	metadataDescriptor, metadataPkg, err := metadataRemote.FetchPackageMetadata(ctx)
+	require.NoError(t, err)
+	require.Equal(t, secondDescriptor.Digest, metadataDescriptor.Digest)
+	require.Equal(t, secondComponents, metadataPkg.Components)
+
+	expectedRoot, err := remote.FetchManifest(ctx, firstDescriptor)
+	require.NoError(t, err)
+
+	pkg, err := remote.FetchZarfYAMLFromDescriptor(ctx, firstDescriptor)
+	require.NoError(t, err)
+	require.Equal(t, firstComponents, pkg.Components)
+
+	root, err := remote.FetchRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, expectedRoot, root)
+
+	layers, err := remote.AssembleLayers(ctx, pkg.Components, zoci.ComponentLayers)
+	require.NoError(t, err)
+	for _, layer := range layers {
+		require.Contains(t, expectedRoot.Layers, layer)
+	}
+
+	_, err = remote.FetchRootFromDescriptor(ctx, secondDescriptor)
+	require.ErrorContains(t, err, "already pinned")
+}
+
 // writeVirtualPackageDef writes a minimal zarf package definition that references imageRef.
 func writeVirtualPackageDef(t *testing.T, imageRef string) string {
 	t.Helper()

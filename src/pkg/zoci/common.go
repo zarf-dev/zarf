@@ -6,6 +6,7 @@ package zoci
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -59,9 +60,11 @@ type PublishOptions struct {
 	Tag string
 }
 
-// Remote is a wrapper around the Oras remote repository with zarf specific functions
+// Remote is a wrapper around the Oras remote repository with zarf specific functions.
 type Remote struct {
 	*oci.OrasRemote
+	root           *oci.Manifest
+	rootDescriptor ocispec.Descriptor
 }
 
 // NewRemote returns an oras remote repository client and context for the given url
@@ -76,7 +79,39 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 	if err != nil {
 		return nil, err
 	}
-	return &Remote{remote}, nil
+	return &Remote{OrasRemote: remote}, nil
+}
+
+// FetchRoot fetches and caches the manifest for the remote reference.
+func (r *Remote) FetchRoot(ctx context.Context) (*oci.Manifest, error) {
+	if r.root != nil {
+		return r.root, nil
+	}
+	descriptor, err := r.ResolveRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.FetchRootFromDescriptor(ctx, descriptor)
+}
+
+// FetchRootFromDescriptor fetches and caches the manifest identified by descriptor.
+// Subsequent methods on this Remote use the cached manifest, ensuring they all read
+// from the same package even if its tag moves in the registry.
+func (r *Remote) FetchRootFromDescriptor(ctx context.Context, descriptor ocispec.Descriptor) (*oci.Manifest, error) {
+	if r.root != nil {
+		if r.rootDescriptor.Digest != descriptor.Digest {
+			return nil, fmt.Errorf("remote root is already pinned to %s, cannot use %s", r.rootDescriptor.Digest, descriptor.Digest)
+		}
+		return r.root, nil
+	}
+
+	root, err := r.FetchManifest(ctx, descriptor)
+	if err != nil {
+		return nil, err
+	}
+	r.root = root
+	r.rootDescriptor = descriptor
+	return root, nil
 }
 
 // GetOCICacheModifier takes in a Zarf cachePath and uses it to return an oci.WithCache modifier

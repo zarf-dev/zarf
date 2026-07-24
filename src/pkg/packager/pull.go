@@ -139,15 +139,11 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
-	desc, err := remote.ResolveRoot(ctx)
+	desc, pkg, err := remote.FetchPackageMetadata(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not find package %s with architecture %s: %w", opts.Source, platform.Architecture, err)
+		return nil, fmt.Errorf("could not fetch metadata for package %s with architecture %s: %w", opts.Source, platform.Architecture, err)
 	}
 	isPartial := false
-	pkg, err := remote.FetchZarfYAML(ctx)
-	if err != nil {
-		return nil, err
-	}
 	if supportsFiltering(desc.Platform) {
 		pkg.Components, err = opts.Filter.Apply(pkg)
 		if err != nil {
