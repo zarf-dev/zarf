@@ -16,7 +16,6 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -88,15 +87,7 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		}
 	}
 
-	zarfDesc := root.Locate(layout.ZarfYAML)
-	if oci.IsEmptyDescriptor(zarfDesc) {
-		return nil, fmt.Errorf("unable to find %s in the manifest", layout.ZarfYAML)
-	}
-	b, err := content.FetchAll(ctx, fetcher, zarfDesc)
-	if err != nil {
-		return nil, err
-	}
-	pkg, err := pkgcfg.ParseMultiDoc(ctx, b)
+	pkg, err := FetchZarfYAML(ctx, root, fetcher)
 	if err != nil {
 		return nil, err
 	}

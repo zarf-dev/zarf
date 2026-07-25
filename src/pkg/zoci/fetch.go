@@ -13,23 +13,29 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"oras.land/oras-go/v2/content"
 )
 
-// FetchZarfYAML fetches the zarf.yaml file from the remote repository.
-func (r *Remote) FetchZarfYAML(ctx context.Context) (v1alpha1.ZarfPackage, error) {
-	manifest, err := r.FetchRoot(ctx)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	descriptor := manifest.Locate(layout.ZarfYAML)
+// FetchZarfYAML fetches and parses the zarf.yaml layer of an already-fetched root manifest.
+func FetchZarfYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher) (v1alpha1.ZarfPackage, error) {
+	descriptor := root.Locate(layout.ZarfYAML)
 	if oci.IsEmptyDescriptor(descriptor) {
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to find %s in the manifest", layout.ZarfYAML)
 	}
-	b, err := r.FetchLayer(ctx, descriptor)
+	b, err := content.FetchAll(ctx, fetcher, descriptor)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
 	return pkgcfg.ParseMultiDoc(ctx, b)
+}
+
+// FetchZarfYAML fetches the zarf.yaml file from the remote repository.
+func (r *Remote) FetchZarfYAML(ctx context.Context) (v1alpha1.ZarfPackage, error) {
+	root, err := r.FetchRoot(ctx)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	return FetchZarfYAML(ctx, root, r)
 }
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.
