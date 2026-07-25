@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -279,27 +280,27 @@ func (c *Cluster) findPodContainerPort(ctx context.Context, svc corev1.Service) 
 	return 0, nil
 }
 
-// TODO: Refactor to use netip.AddrPort instead of a string for nodePortURL.
-// it currently assumes that the nodePortURL is in the form 127.0.0.1:<port>
-// ServiceInfoFromNodePortURL returns the Kubernetes Service that corresponds to the given NodePort URL
+// ServiceInfoFromNodePortURL returns the Kubernetes Service that corresponds to the given NodePort URL.
+// nodePortURL may be a bare host:port (e.g. "localhost:31999") or a full URL.
 func ServiceInfoFromNodePortURL(services []corev1.Service, nodePortURL string) (corev1.Service, int, error) {
-	// Attempt to parse as normal, if this fails add a scheme to the URL (docker registries don't use schemes)
-	parsedURL, err := url.Parse(nodePortURL)
+	// url.Parse misreads a bare "localhost:31999" as scheme:opaque (empty host), so
+	// fall back to the raw string and let net.SplitHostPort do the splitting.
+	rawHost := nodePortURL
+	if u, err := url.Parse(nodePortURL); err == nil && u.Host != "" {
+		rawHost = u.Host
+	}
+	hostname, portStr, err := net.SplitHostPort(rawHost)
 	if err != nil {
-		parsedURL, err = url.Parse("scheme://" + nodePortURL)
-		if err != nil {
-			return corev1.Service{}, 0, err
-		}
+		return corev1.Service{}, 0, err
 	}
 
-	// Match hostname against localhost ip/hostnames
-	hostname := parsedURL.Hostname()
-	if hostname != helpers.IPV4Localhost && hostname != "localhost" {
+	// NodePort tunnels are served on loopback.
+	if !dns.IsLocalhost(hostname) {
 		return corev1.Service{}, 0, fmt.Errorf("node port services should be on localhost")
 	}
 
 	// Get the node port from the nodeportURL.
-	nodePort, err := strconv.Atoi(parsedURL.Port())
+	nodePort, err := strconv.Atoi(portStr)
 	if err != nil {
 		return corev1.Service{}, 0, err
 	}

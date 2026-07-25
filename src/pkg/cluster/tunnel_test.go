@@ -312,7 +312,7 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 	}{
 		{
 			name:        "invalid node port",
-			nodePortURL: "example.com",
+			nodePortURL: "example.com:30001",
 			expectedErr: "node port services should be on localhost",
 		},
 		{
@@ -395,6 +395,65 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 			expectedName:      "good-service",
 			expectedIP:        "good-ip",
 			expectedPort:      3333,
+		},
+		{
+			name:        "bare localhost host:port (issue #4518)",
+			nodePortURL: "localhost:30001",
+			services: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "good-service", Namespace: "good-namespace"},
+					Spec: corev1.ServiceSpec{
+						Type:      corev1.ServiceTypeNodePort,
+						Ports:     []corev1.ServicePort{{NodePort: 30001, Port: 3333}},
+						ClusterIP: "good-ip",
+					},
+				},
+			},
+			expectedNamespace: "good-namespace",
+			expectedName:      "good-service",
+			expectedIP:        "good-ip",
+			expectedPort:      3333,
+		},
+		{
+			name:        "bare loopback ip host:port",
+			nodePortURL: "127.0.0.1:30001",
+			services: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "good-service", Namespace: "good-namespace"},
+					Spec: corev1.ServiceSpec{
+						Type:      corev1.ServiceTypeNodePort,
+						Ports:     []corev1.ServicePort{{NodePort: 30001, Port: 3333}},
+						ClusterIP: "good-ip",
+					},
+				},
+			},
+			expectedNamespace: "good-namespace",
+			expectedName:      "good-service",
+			expectedIP:        "good-ip",
+			expectedPort:      3333,
+		},
+		{
+			name:        "ipv6 loopback host:port",
+			nodePortURL: "[::1]:30001",
+			services: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "good-service", Namespace: "good-namespace"},
+					Spec: corev1.ServiceSpec{
+						Type:      corev1.ServiceTypeNodePort,
+						Ports:     []corev1.ServicePort{{NodePort: 30001, Port: 3333}},
+						ClusterIP: "good-ip",
+					},
+				},
+			},
+			expectedNamespace: "good-namespace",
+			expectedName:      "good-service",
+			expectedIP:        "good-ip",
+			expectedPort:      3333,
+		},
+		{
+			name:        "non-loopback private ip rejected",
+			nodePortURL: "192.168.1.5:30001",
+			expectedErr: "node port services should be on localhost",
 		},
 	}
 	for _, tt := range tests {

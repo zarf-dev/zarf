@@ -395,7 +395,7 @@ func (ri RegistryInfo) ResolvePlainHTTP(ctx context.Context, host string, forceP
 	if known, ok := ri.KnownPlainHTTP(); ok {
 		return known, nil
 	}
-	if !forcePlainHTTP && dns.IsLocalhost(host) {
+	if !forcePlainHTTP && dns.IsLocalOrPrivate(host) {
 		return ocischeme.From(ctx).UsePlainHTTP(ctx, host, probe)
 	}
 	return forcePlainHTTP, nil
