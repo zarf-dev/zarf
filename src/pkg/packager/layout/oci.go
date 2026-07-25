@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/defenseunicorns/pkg/oci"
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -268,6 +269,18 @@ func (p *PackageLayout) Fetch(_ context.Context, target ocispec.Descriptor) (io.
 		return os.Open(filePath)
 	}
 	return nil, errdef.ErrNotFound
+}
+
+// Manifest returns the package's computed OCI manifest for use in zoci functions
+func (p *PackageLayout) Manifest() (*oci.Manifest, error) {
+	if p.cache == nil {
+		return nil, errors.New("package OCI manifest has not been computed")
+	}
+	var m oci.Manifest
+	if err := json.Unmarshal(p.cache.manifestJSON, &m); err != nil {
+		return nil, fmt.Errorf("parsing computed manifest: %w", err)
+	}
+	return &m, nil
 }
 
 // Exists implements oras.ReadOnlyTarget.

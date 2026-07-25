@@ -38,7 +38,7 @@ func (r *Remote) FetchImagesIndex(ctx context.Context) (*ocispec.Index, error) {
 	if err != nil {
 		return nil, err
 	}
-	result, err := oci.FetchJSONFile[*ocispec.Index](ctx, r.FetchLayer, manifest, layout.IndexPath)
+	result, err := oci.FetchJSONFile[*ocispec.Index](ctx, r, manifest, layout.IndexPath)
 	if err != nil {
 		return nil, err
 	}

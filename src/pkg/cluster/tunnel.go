@@ -172,7 +172,7 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 		if err != nil {
 			return "", nil, err
 		}
-		svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
+		svc, port, err := ServiceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
 
 		// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
 		if err == nil {
@@ -280,8 +280,9 @@ func (c *Cluster) findPodContainerPort(ctx context.Context, svc corev1.Service) 
 }
 
 // TODO: Refactor to use netip.AddrPort instead of a string for nodePortURL.
-// This functions assumes that the nodePortURL is in the form 127.0.0.1:<port>
-func serviceInfoFromNodePortURL(services []corev1.Service, nodePortURL string) (corev1.Service, int, error) {
+// it currently assumes that the nodePortURL is in the form 127.0.0.1:<port>
+// ServiceInfoFromNodePortURL returns the Kubernetes Service that corresponds to the given NodePort URL
+func ServiceInfoFromNodePortURL(services []corev1.Service, nodePortURL string) (corev1.Service, int, error) {
 	// Attempt to parse as normal, if this fails add a scheme to the URL (docker registries don't use schemes)
 	parsedURL, err := url.Parse(nodePortURL)
 	if err != nil {
