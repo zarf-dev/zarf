@@ -518,6 +518,20 @@ func confirmCredentialUpdate(ctx context.Context, oldState, newState *state.Stat
 	return confirm, nil
 }
 
+// runWithRollback runs forward and, if it fails, attempts rollback to restore the previous
+// credentials. It reports whether the update failed and was rolled back, or whether the rollback
+// also failed and the cluster needs manual repair.
+func runWithRollback(ctx context.Context, service string, forward, rollback func() error) error {
+	if err := forward(); err != nil {
+		logger.From(ctx).Warn(fmt.Sprintf("%s credential update failed; rolling back to the previous credentials", service), "error", err.Error())
+		if rbErr := rollback(); rbErr != nil {
+			return fmt.Errorf("%s credential update failed (%w); rollback also failed (%w); the cluster may be in an inconsistent state and require manual repair", service, err, rbErr)
+		}
+		return fmt.Errorf("%s credential update failed and was rolled back to the previous credentials: %w", service, err)
+	}
+	return nil
+}
+
 type updateRegistryCredsOptions struct {
 	confirm        bool
 	forceConflicts bool
@@ -574,22 +588,28 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	if err := c.UpdateZarfManagedImageSecrets(ctx, newState); err != nil {
-		return err
-	}
+	// mTLS regeneration mints fresh, self-consistent certificates that are independent of the
+	// credentials being rotated, so it runs as a forward-only side effect and is not rolled back.
 	if newState.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
 		if err := c.ApplyZarfManagedMTLSSecrets(ctx); err != nil {
 			return err
 		}
 	}
-	if err := c.SaveState(ctx, newState); err != nil {
-		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
-	}
 
-	if newState.RegistryInfo.IsInternal() {
+	return runWithRollback(ctx, "registry",
+		func() error { return o.applyState(ctx, c, newState) },
+		func() error { return o.applyState(ctx, c, oldState) },
+	)
+}
+
+// applyState reconciles the cluster to the registry credentials in s. The registry deployment is
+// updated first so the still-serving pod keeps matching the not-yet-updated pull secrets throughout
+// the rollout, then the pull secrets are updated, then state is persisted as the final commit.
+func (o *updateRegistryCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, s *state.State) error {
+	if s.RegistryInfo.IsInternal() {
 		helmOpts := helm.InstallUpgradeOptions{
 			VariableConfig: template.GetZarfVariableConfig(ctx, !o.confirm),
-			State:          newState,
+			State:          s,
 			Cluster:        c,
 			Timeout:        config.ZarfDefaultTimeout,
 			IsInteractive:  !o.confirm,
@@ -598,6 +618,12 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		if err := helm.UpdateZarfRegistryValues(ctx, helmOpts); err != nil {
 			return fmt.Errorf("unable to update Zarf Registry values: %w", err)
 		}
+	}
+	if err := c.UpdateZarfManagedImageSecrets(ctx, s); err != nil {
+		return err
+	}
+	if err := c.SaveState(ctx, s); err != nil {
+		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 	}
 	return nil
 }
@@ -656,17 +682,28 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	if err := c.UpdateZarfManagedGitSecrets(ctx, newState); err != nil {
-		return err
-	}
-	if err := c.SaveState(ctx, newState); err != nil {
-		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
-	}
+	return runWithRollback(ctx, "git server",
+		func() error { return o.applyState(ctx, c, oldState, newState) },
+		func() error { return o.applyState(ctx, c, newState, oldState) },
+	)
+}
 
-	if newState.GitServer.IsInternal() {
-		if err := c.UpdateInternalGitServerSecret(ctx, oldState.GitServer, newState.GitServer); err != nil {
+// applyState reconciles the cluster to the git credentials in toState. The internal Gitea users are
+// updated first (authenticating with fromState's push credentials), then the pull secrets, then
+// state is persisted as the final commit. Because Gitea is reached with fromState's credentials, a
+// rollback can only authenticate when the forward Gitea update fully succeeded; a partial forward
+// failure surfaces as a failed rollback requiring manual repair.
+func (o *updateGitCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, fromState, toState *state.State) error {
+	if toState.GitServer.IsInternal() {
+		if err := c.UpdateInternalGitServerSecret(ctx, fromState.GitServer, toState.GitServer); err != nil {
 			return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
 		}
+	}
+	if err := c.UpdateZarfManagedGitSecrets(ctx, toState); err != nil {
+		return err
+	}
+	if err := c.SaveState(ctx, toState); err != nil {
+		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 	}
 	return nil
 }
@@ -737,13 +774,18 @@ func (o *updateAgentCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	if err := c.SaveState(ctx, newState); err != nil {
-		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
-	}
+	return runWithRollback(ctx, "agent",
+		func() error { return o.applyState(ctx, c, newState) },
+		func() error { return o.applyState(ctx, c, oldState) },
+	)
+}
 
+// applyState reconciles the cluster to the agent credentials in s. The agent deployment is updated
+// first, then state is persisted as the final commit.
+func (o *updateAgentCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, s *state.State) error {
 	helmOpts := helm.InstallUpgradeOptions{
 		VariableConfig: template.GetZarfVariableConfig(ctx, !o.confirm),
-		State:          newState,
+		State:          s,
 		Cluster:        c,
 		Timeout:        config.ZarfDefaultTimeout,
 		IsInteractive:  !o.confirm,
@@ -751,6 +793,9 @@ func (o *updateAgentCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 	if err := helm.UpdateZarfAgentValues(ctx, helmOpts); err != nil {
 		return fmt.Errorf("unable to update Zarf Agent TLS secrets: %w", err)
+	}
+	if err := c.SaveState(ctx, s); err != nil {
+		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 	}
 	return nil
 }
