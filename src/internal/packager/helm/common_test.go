@@ -26,8 +26,8 @@ func TestParseChartValues(t *testing.T) {
 
 	// ValuesFiles land at global index 0; TemplatedValuesFiles at global index 1 (len(ValuesFiles) + local index).
 	paths := testChartPaths{valuesDir: tmpDir}
-	regularPath := paths.ValuesFile(chart, 0)
-	templatedPath := paths.ValuesFile(chart, 1)
+	regularPath := paths.ValuesFile(chart.Name, chart.Version, 0)
+	templatedPath := paths.ValuesFile(chart.Name, chart.Version, 1)
 
 	require.NoError(t, os.WriteFile(regularPath, []byte("shared: from-regular\nregularOnly: present"), 0o644))
 	require.NoError(t, os.WriteFile(templatedPath, []byte("shared: from-templated\ntemplatedOnly: present"), 0o644))

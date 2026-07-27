@@ -648,7 +648,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				continue
 			}
 
-			rel := filepath.ToSlash(filepath.Join(string(ValuesComponentDir), ChartValuesFileName(chart, valuesIdx)))
+			rel := filepath.ToSlash(filepath.Join(string(ValuesComponentDir), ChartValuesFileName(chart.Name, chart.Version, valuesIdx)))
 			component.Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
 			if !filepath.IsAbs(path) {
@@ -665,7 +665,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				continue
 			}
 
-			rel := filepath.ToSlash(filepath.Join(string(ValuesComponentDir), ChartValuesFileName(chart, nValuesFiles+valuesIdx)))
+			rel := filepath.ToSlash(filepath.Join(string(ValuesComponentDir), ChartValuesFileName(chart.Name, chart.Version, nValuesFiles+valuesIdx)))
 			component.Charts[chartIdx].TemplatedValuesFiles[valuesIdx] = rel
 
 			if !filepath.IsAbs(path) {

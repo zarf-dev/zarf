@@ -77,7 +77,7 @@ entries:
 		InsecureSkipTLSVerify: true,
 	})
 	require.NoError(t, err)
-	require.FileExists(t, paths.Archive(chart))
+	require.FileExists(t, paths.Archive(chart.Name, chart.Version))
 }
 
 func TestDownloadPublishedChartFromOCI(t *testing.T) {
@@ -114,5 +114,5 @@ func TestDownloadPublishedChartFromOCI(t *testing.T) {
 		InsecureSkipTLSVerify: true,
 	})
 	require.NoError(t, err)
-	require.FileExists(t, paths.Archive(chart))
+	require.FileExists(t, paths.Archive(chart.Name, chart.Version))
 }

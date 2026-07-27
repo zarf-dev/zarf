@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 // Constants used in the default package layout.
@@ -76,18 +75,20 @@ func ComponentFileRelPath(idx int, target string) string {
 }
 
 // ChartArchiveName returns the base file name for a chart's packaged tarball:
-// "<name>" when the version is empty, otherwise "<name>-<version>".
-func ChartArchiveName(chart v1alpha1.ZarfChart) string {
-	if chart.Version == "" {
-		return chart.Name
+// "<name>" when the version is empty, otherwise "<name>-<version>". It takes the
+// name and version rather than a chart so the layout convention is not tied to a
+// particular API version of the chart type.
+func ChartArchiveName(name, version string) string {
+	if version == "" {
+		return name
 	}
-	return chart.Name + "-" + chart.Version
+	return name + "-" + version
 }
 
-// ChartValuesFileName returns the base file name for the idx-th values file of a
-// chart, as stored within a component's values directory.
-func ChartValuesFileName(chart v1alpha1.ZarfChart, idx int) string {
-	return ChartArchiveName(chart) + "-" + strconv.Itoa(idx)
+// ChartValuesFileName returns the base file name for the idx-th values file of the
+// named chart, as stored within a component's values directory.
+func ChartValuesFileName(name, version string, idx int) string {
+	return ChartArchiveName(name, version) + "-" + strconv.Itoa(idx)
 }
 
 // ChartPaths resolves the on-disk locations of a chart's packaged artifacts
@@ -101,12 +102,12 @@ type ChartPaths struct {
 	ValuesDir string
 }
 
-// Archive returns the full path to the chart's packaged tarball.
-func (p ChartPaths) Archive(chart v1alpha1.ZarfChart) string {
-	return filepath.Join(p.ChartsDir, ChartArchiveName(chart)) + ".tgz"
+// Archive returns the full path to the named chart's packaged tarball.
+func (p ChartPaths) Archive(name, version string) string {
+	return filepath.Join(p.ChartsDir, ChartArchiveName(name, version)) + ".tgz"
 }
 
-// ValuesFile returns the full path to the idx-th values file for the chart.
-func (p ChartPaths) ValuesFile(chart v1alpha1.ZarfChart, idx int) string {
-	return filepath.Join(p.ValuesDir, ChartValuesFileName(chart, idx))
+// ValuesFile returns the full path to the idx-th values file for the named chart.
+func (p ChartPaths) ValuesFile(name, version string, idx int) string {
+	return filepath.Join(p.ValuesDir, ChartValuesFileName(name, version, idx))
 }

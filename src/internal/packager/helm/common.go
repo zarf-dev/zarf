@@ -35,10 +35,10 @@ var contentCachePath = filepath.Join("helm", "content")
 // the helm package operates on resolved paths rather than deriving the layout
 // convention itself.
 type ChartPaths interface {
-	// Archive returns the full path to the chart's packaged tarball.
-	Archive(chart v1alpha1.ZarfChart) string
-	// ValuesFile returns the full path to the idx-th values file for the chart.
-	ValuesFile(chart v1alpha1.ZarfChart, idx int) string
+	// Archive returns the full path to the named chart's packaged tarball.
+	Archive(name, version string) string
+	// ValuesFile returns the full path to the idx-th values file for the named chart.
+	ValuesFile(name, version string, idx int) string
 }
 
 // ChartFromZarfManifest generates a helm chart and config from a given Zarf manifest.
@@ -112,7 +112,7 @@ func GetChartValuesFiles(chart v1alpha1.ZarfChart) []ChartValuesFile {
 // loadChartFromTarball returns a helm chart from a tarball.
 func loadChartFromTarball(chart v1alpha1.ZarfChart, paths ChartPaths) (*chartv2.Chart, error) {
 	// Load the loadedChart tarball
-	loadedChart, err := loader.Load(paths.Archive(chart))
+	loadedChart, err := loader.Load(paths.Archive(chart.Name, chart.Version))
 	if err != nil {
 		return nil, fmt.Errorf("unable to load helm chart archive: %w", err)
 	}
@@ -129,7 +129,7 @@ func parseChartValues(chart v1alpha1.ZarfChart, paths ChartPaths, valuesOverride
 	valueOpts := &values.Options{}
 
 	for _, f := range GetChartValuesFiles(chart) {
-		valueOpts.ValueFiles = append(valueOpts.ValueFiles, paths.ValuesFile(chart, f.GlobalIdx))
+		valueOpts.ValueFiles = append(valueOpts.ValueFiles, paths.ValuesFile(chart.Name, chart.Version, f.GlobalIdx))
 	}
 
 	httpProvider := getter.Provider{

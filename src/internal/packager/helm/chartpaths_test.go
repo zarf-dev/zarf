@@ -6,8 +6,6 @@ package helm
 import (
 	"fmt"
 	"path/filepath"
-
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 // testChartPaths is an in-package ChartPaths implementation for tests.
@@ -16,17 +14,17 @@ type testChartPaths struct {
 	valuesDir string
 }
 
-func (p testChartPaths) archiveName(chart v1alpha1.ZarfChart) string {
-	if chart.Version == "" {
-		return chart.Name
+func (p testChartPaths) archiveName(name, version string) string {
+	if version == "" {
+		return name
 	}
-	return chart.Name + "-" + chart.Version
+	return name + "-" + version
 }
 
-func (p testChartPaths) Archive(chart v1alpha1.ZarfChart) string {
-	return filepath.Join(p.chartsDir, p.archiveName(chart)) + ".tgz"
+func (p testChartPaths) Archive(name, version string) string {
+	return filepath.Join(p.chartsDir, p.archiveName(name, version)) + ".tgz"
 }
 
-func (p testChartPaths) ValuesFile(chart v1alpha1.ZarfChart, idx int) string {
-	return filepath.Join(p.valuesDir, fmt.Sprintf("%s-%d", p.archiveName(chart), idx))
+func (p testChartPaths) ValuesFile(name, version string, idx int) string {
+	return filepath.Join(p.valuesDir, fmt.Sprintf("%s-%d", p.archiveName(name, version), idx))
 }

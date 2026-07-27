@@ -139,7 +139,7 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, p
 
 	// Handle the chart directory or tarball.
 	var saved string
-	temp := filepath.Join(filepath.Dir(paths.Archive(chart)), "temp")
+	temp := filepath.Join(filepath.Dir(paths.Archive(chart.Name, chart.Version)), "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
 		err = buildChartDependencies(ctx, chart, cachePath, parsed.Metadata.Dependencies, remoteOptions)
 		if err != nil {
@@ -374,7 +374,7 @@ func DownloadChartFromGitToTemp(ctx context.Context, url string) (string, error)
 
 func finalizeChartPackage(ctx context.Context, chart v1alpha1.ZarfChart, paths ChartPaths, saved string) error {
 	// Ensure the name is consistent for deployments
-	err := helpers.CreatePathAndCopy(saved, paths.Archive(chart))
+	err := helpers.CreatePathAndCopy(saved, paths.Archive(chart.Name, chart.Version))
 	if err != nil {
 		return fmt.Errorf("unable to save the final chart tarball: %w", err)
 	}
@@ -388,7 +388,7 @@ func finalizeChartPackage(ctx context.Context, chart v1alpha1.ZarfChart, paths C
 
 func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, paths ChartPaths) error {
 	for _, f := range GetChartValuesFiles(chart) {
-		dst := paths.ValuesFile(chart, f.GlobalIdx)
+		dst := paths.ValuesFile(chart.Name, chart.Version, f.GlobalIdx)
 
 		if helpers.IsURL(f.Source) {
 			if err := utils.DownloadToFile(ctx, f.Source, dst); err != nil {

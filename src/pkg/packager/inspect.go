@@ -223,7 +223,7 @@ func templateValuesFiles(ctx context.Context, chart v1alpha1.ZarfChart, valuesDi
 
 	if len(chart.TemplatedValuesFiles) == 0 {
 		for _, f := range chartFiles {
-			valueFilePath := filepath.Join(valuesDir, layout.ChartValuesFileName(chart, f.GlobalIdx))
+			valueFilePath := filepath.Join(valuesDir, layout.ChartValuesFileName(chart.Name, chart.Version, f.GlobalIdx))
 			if err := opts.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 				return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
 			}
@@ -242,7 +242,7 @@ func templateValuesFiles(ctx context.Context, chart v1alpha1.ZarfChart, valuesDi
 	}
 
 	for _, f := range chartFiles {
-		valueFilePath := filepath.Join(valuesDir, layout.ChartValuesFileName(chart, f.GlobalIdx))
+		valueFilePath := filepath.Join(valuesDir, layout.ChartValuesFileName(chart.Name, chart.Version, f.GlobalIdx))
 		if err := opts.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 			return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
 		}
