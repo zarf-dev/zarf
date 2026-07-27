@@ -518,9 +518,7 @@ func confirmCredentialUpdate(ctx context.Context, oldState, newState *state.Stat
 	return confirm, nil
 }
 
-// runWithRollback runs forward and, if it fails, attempts rollback to restore the previous
-// credentials. It reports whether the update failed and was rolled back, or whether the rollback
-// also failed and the cluster needs manual repair.
+// runWithRollback runs forward and, if it fails, attempts rollback to restore the previous credentials
 func runWithRollback(ctx context.Context, service string, forward, rollback func() error) error {
 	if err := forward(); err != nil {
 		logger.From(ctx).Warn(fmt.Sprintf("%s credential update failed; rolling back to the previous credentials", service), "error", err.Error())
@@ -588,8 +586,7 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	// mTLS regeneration mints fresh, self-consistent certificates that are independent of the
-	// credentials being rotated, so it runs as a forward-only side effect and is not rolled back.
+	// mTLS certs are not part of state, and so not part of the rollback
 	if newState.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
 		if err := c.ApplyZarfManagedMTLSSecrets(ctx); err != nil {
 			return err
