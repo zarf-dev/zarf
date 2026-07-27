@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
-
 )
 
 // Constants used in the default package layout.

@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart/common"
 	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
@@ -29,17 +30,6 @@ import (
 )
 
 var contentCachePath = filepath.Join("helm", "content")
-
-// ChartPaths resolves the on-disk locations of a chart's packaged artifacts.
-// Callers (which own the package layout convention) supply an implementation, so
-// the helm package operates on resolved paths rather than deriving the layout
-// convention itself.
-type ChartPaths interface {
-	// Archive returns the full path to the named chart's packaged tarball.
-	Archive(name, version string) string
-	// ValuesFile returns the full path to the idx-th values file for the named chart.
-	ValuesFile(name, version string, idx int) string
-}
 
 // ChartFromZarfManifest generates a helm chart and config from a given Zarf manifest.
 func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageName, componentName string) (v1alpha1.ZarfChart, *chartv2.Chart, error) {
@@ -110,7 +100,7 @@ func GetChartValuesFiles(chart v1alpha1.ZarfChart) []ChartValuesFile {
 }
 
 // loadChartFromTarball returns a helm chart from a tarball.
-func loadChartFromTarball(chart v1alpha1.ZarfChart, paths ChartPaths) (*chartv2.Chart, error) {
+func loadChartFromTarball(chart v1alpha1.ZarfChart, paths layout.ChartPaths) (*chartv2.Chart, error) {
 	// Load the loadedChart tarball
 	loadedChart, err := loader.Load(paths.Archive(chart.Name, chart.Version))
 	if err != nil {
@@ -125,7 +115,7 @@ func loadChartFromTarball(chart v1alpha1.ZarfChart, paths ChartPaths) (*chartv2.
 }
 
 // parseChartValues reads the context of the chart values into an interface if it exists.
-func parseChartValues(chart v1alpha1.ZarfChart, paths ChartPaths, valuesOverrides map[string]any) (common.Values, error) {
+func parseChartValues(chart v1alpha1.ZarfChart, paths layout.ChartPaths, valuesOverrides map[string]any) (common.Values, error) {
 	valueOpts := &values.Options{}
 
 	for _, f := range GetChartValuesFiles(chart) {

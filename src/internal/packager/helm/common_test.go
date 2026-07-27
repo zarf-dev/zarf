@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 func TestParseChartValues(t *testing.T) {
@@ -25,7 +26,7 @@ func TestParseChartValues(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// ValuesFiles land at global index 0; TemplatedValuesFiles at global index 1 (len(ValuesFiles) + local index).
-	paths := testChartPaths{valuesDir: tmpDir}
+	paths := layout.ChartPaths{ValuesDir: tmpDir}
 	regularPath := paths.ValuesFile(chart.Name, chart.Version, 0)
 	templatedPath := paths.ValuesFile(chart.Name, chart.Version, 1)
 

@@ -17,6 +17,7 @@ import (
 	"helm.sh/helm/v4/pkg/registry"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -71,7 +72,7 @@ entries:
 		URL:     repoSrv.URL,
 	}
 	chartPath := t.TempDir()
-	paths := testChartPaths{chartsDir: chartPath, valuesDir: t.TempDir()}
+	paths := layout.ChartPaths{ChartsDir: chartPath, ValuesDir: t.TempDir()}
 	err = PackageChart(ctx, chart, paths, t.TempDir(), types.RemoteOptions{
 		PlainHTTP:             true,
 		InsecureSkipTLSVerify: true,
@@ -108,7 +109,7 @@ func TestDownloadPublishedChartFromOCI(t *testing.T) {
 		URL:     fmt.Sprintf("oci://%s/charts/simple-chart", regAddr),
 	}
 	chartPath := t.TempDir()
-	paths := testChartPaths{chartsDir: chartPath, valuesDir: t.TempDir()}
+	paths := layout.ChartPaths{ChartsDir: chartPath, ValuesDir: t.TempDir()}
 	err = PackageChart(ctx, chart, paths, t.TempDir(), types.RemoteOptions{
 		PlainHTTP:             true,
 		InsecureSkipTLSVerify: true,

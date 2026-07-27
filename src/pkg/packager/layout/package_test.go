@@ -4,6 +4,7 @@
 package layout
 
 import (
+	"archive/tar"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
@@ -1092,8 +1093,7 @@ func TestGetDocumentation(t *testing.T) {
 			}
 
 			tarPath := filepath.Join(pkgDir, DocumentationTar)
-			err := createReproducibleTarballFromDir(docTempDir, "", tarPath, false)
-			require.NoError(t, err)
+			writeDocumentationTar(t, docTempDir, tarPath)
 		}
 
 		pkg := v1alpha1.ZarfPackage{
@@ -1861,4 +1861,34 @@ func TestHasValuesSchema(t *testing.T) {
 		}
 		require.True(t, p.HasValuesSchema(), "file on disk should take precedence over empty metadata field")
 	})
+}
+
+// writeDocumentationTar tars the flat contents of dir, which is all the
+// documentation reader needs. Package assembly writes this tarball with its own
+// reproducible writer; reading it back does not depend on those guarantees.
+func writeDocumentationTar(t *testing.T, dir, tarPath string) {
+	t.Helper()
+
+	f, err := os.Create(tarPath)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, f.Close()) }()
+
+	tw := tar.NewWriter(f)
+	defer func() { require.NoError(t, tw.Close()) }()
+
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	for _, entry := range entries {
+		info, err := entry.Info()
+		require.NoError(t, err)
+		header, err := tar.FileInfoHeader(info, "")
+		require.NoError(t, err)
+		header.Name = entry.Name()
+		require.NoError(t, tw.WriteHeader(header))
+
+		content, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+		require.NoError(t, err)
+		_, err = tw.Write(content)
+		require.NoError(t, err)
+	}
 }

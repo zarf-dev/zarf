@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package layout
+package assemble
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/images"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 func TestGetChecksum(t *testing.T) {
@@ -389,11 +390,11 @@ func TestImageLayoutHasIndex(t *testing.T) {
 
 			dir := t.TempDir()
 			if tt.writeFile {
-				err := os.WriteFile(filepath.Join(dir, IndexJSON), []byte(tt.indexJSON), 0o600)
+				err := os.WriteFile(filepath.Join(dir, layout.IndexJSON), []byte(tt.indexJSON), 0o600)
 				require.NoError(t, err)
 			}
 
-			got, err := imageLayoutHasIndex(dir)
+			got, err := layout.HasImageIndex(dir)
 			if tt.errContains != "" {
 				require.ErrorContains(t, err, tt.errContains)
 				return
@@ -413,7 +414,7 @@ func TestMergeAndWriteValuesFile(t *testing.T) {
 		buildPath := t.TempDir()
 		err := mergeAndWriteValuesFile(ctx, nil, t.TempDir(), buildPath)
 		require.NoError(t, err)
-		_, err = os.Stat(filepath.Join(buildPath, ValuesYAML))
+		_, err = os.Stat(filepath.Join(buildPath, layout.ValuesYAML))
 		require.ErrorIs(t, err, os.ErrNotExist)
 	})
 
@@ -428,7 +429,7 @@ func TestMergeAndWriteValuesFile(t *testing.T) {
 		err := mergeAndWriteValuesFile(ctx, []string{"base.yaml", "override.yaml"}, pkgDir, buildPath)
 		require.NoError(t, err)
 
-		out, err := os.ReadFile(filepath.Join(buildPath, ValuesYAML))
+		out, err := os.ReadFile(filepath.Join(buildPath, layout.ValuesYAML))
 		require.NoError(t, err)
 		require.Contains(t, string(out), "key: override")
 		require.Contains(t, string(out), "extra: present")
@@ -451,7 +452,7 @@ func TestMergeAndWriteValuesSchema(t *testing.T) {
 		buildPath := t.TempDir()
 		err := mergeAndWriteValuesSchema(ctx, "", nil, testdataDir, buildPath)
 		require.NoError(t, err)
-		_, err = os.Stat(filepath.Join(buildPath, ValuesSchema))
+		_, err = os.Stat(filepath.Join(buildPath, layout.ValuesSchema))
 		require.ErrorIs(t, err, os.ErrNotExist, "no schema file should be written when there is nothing to merge")
 	})
 
@@ -460,7 +461,7 @@ func TestMergeAndWriteValuesSchema(t *testing.T) {
 		buildPath := t.TempDir()
 		err := mergeAndWriteValuesSchema(ctx, "parent-with-required.schema.json", nil, testdataDir, buildPath)
 		require.NoError(t, err)
-		written, err := os.ReadFile(filepath.Join(buildPath, ValuesSchema))
+		written, err := os.ReadFile(filepath.Join(buildPath, layout.ValuesSchema))
 		require.NoError(t, err)
 		original, err := os.ReadFile(filepath.Join(testdataDir, "parent-with-required.schema.json"))
 		require.NoError(t, err)
@@ -632,7 +633,7 @@ func TestMergeAndWriteValuesSchema(t *testing.T) {
 			buildPath := t.TempDir()
 			err := mergeAndWriteValuesSchema(ctx, tt.parentSchema, tt.importedSchemas, testdataDir, buildPath)
 			require.NoError(t, err)
-			written, err := os.ReadFile(filepath.Join(buildPath, ValuesSchema))
+			written, err := os.ReadFile(filepath.Join(buildPath, layout.ValuesSchema))
 			require.NoError(t, err)
 			require.JSONEq(t, tt.expectedSchema, string(written))
 		})

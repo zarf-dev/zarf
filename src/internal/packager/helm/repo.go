@@ -17,6 +17,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -88,7 +89,7 @@ func negotiateLoadedChartDependenciesPlainHTTP(ctx context.Context, chartName st
 }
 
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
-func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, paths ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
+func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	if len(chart.URL) > 0 {
 		url, refPlain, err := transform.GitURLSplitRef(chart.URL)
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
@@ -123,7 +124,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, paths ChartPath
 }
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, paths ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
+func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 	l.Info("processing local helm chart",
 		"name", chart.Name,
@@ -180,7 +181,7 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, p
 }
 
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
-func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, paths ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
+func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 	l.Info("processing Helm chart", "name", chart.Name)
 
@@ -201,7 +202,7 @@ func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, paths Ch
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, paths ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
+func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Info("processing Helm chart",
@@ -372,7 +373,7 @@ func DownloadChartFromGitToTemp(ctx context.Context, url string) (string, error)
 	return repository.Path(), nil
 }
 
-func finalizeChartPackage(ctx context.Context, chart v1alpha1.ZarfChart, paths ChartPaths, saved string) error {
+func finalizeChartPackage(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, saved string) error {
 	// Ensure the name is consistent for deployments
 	err := helpers.CreatePathAndCopy(saved, paths.Archive(chart.Name, chart.Version))
 	if err != nil {
@@ -386,7 +387,7 @@ func finalizeChartPackage(ctx context.Context, chart v1alpha1.ZarfChart, paths C
 	return nil
 }
 
-func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, paths ChartPaths) error {
+func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths) error {
 	for _, f := range GetChartValuesFiles(chart) {
 		dst := paths.ValuesFile(chart.Name, chart.Version, f.GlobalIdx)
 

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -25,7 +26,7 @@ func TestChartTemplate(t *testing.T) {
 		LocalPath: chartPath,
 	}
 	tmpdir := t.TempDir()
-	paths := testChartPaths{chartsDir: tmpdir, valuesDir: tmpdir}
+	paths := layout.ChartPaths{ChartsDir: tmpdir, ValuesDir: tmpdir}
 	err := PackageChart(ctx, chart, paths, tmpdir, types.RemoteOptions{})
 	require.NoError(t, err)
 	kubeVersion := ""

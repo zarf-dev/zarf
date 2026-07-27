@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package layout_test
+package assemble_test
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -26,8 +27,8 @@ func TestAssembleSkeleton(t *testing.T) {
 	defined, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOptions{})
 	require.NoError(t, err)
 
-	opt := layout.AssembleSkeletonOptions{}
-	pkgLayout, err := layout.AssembleSkeleton(ctx, defined.Pkg, "./testdata/zarf-skeleton-package", defined.ImportedSchemas, opt)
+	opt := assemble.AssembleSkeletonOptions{}
+	pkgLayout, err := assemble.AssembleSkeleton(ctx, defined.Pkg, "./testdata/zarf-skeleton-package", defined.ImportedSchemas, opt)
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
@@ -75,7 +76,7 @@ func TestGetSBOM(t *testing.T) {
 	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
 
-	pkgLayout, err := layout.AssemblePackage(ctx, defined.Pkg, tmpdir, nil, layout.AssembleOptions{})
+	pkgLayout, err := assemble.AssemblePackage(ctx, defined.Pkg, tmpdir, nil, assemble.AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
@@ -168,10 +169,10 @@ func TestCreateAbsoluteSources(t *testing.T) {
 
 			var pkgLayout *layout.PackageLayout
 			if tt.isSkeleton {
-				pkgLayout, err = layout.AssembleSkeleton(ctx, defined.Pkg, tmpdir, defined.ImportedSchemas, layout.AssembleSkeletonOptions{})
+				pkgLayout, err = assemble.AssembleSkeleton(ctx, defined.Pkg, tmpdir, defined.ImportedSchemas, assemble.AssembleSkeletonOptions{})
 				require.NoError(t, err)
 			} else {
-				pkgLayout, err = layout.AssemblePackage(ctx, defined.Pkg, tmpdir, nil, layout.AssembleOptions{SkipSBOM: true})
+				pkgLayout, err = assemble.AssemblePackage(ctx, defined.Pkg, tmpdir, nil, assemble.AssembleOptions{SkipSBOM: true})
 				require.NoError(t, err)
 			}
 			docsDir := filepath.Join(tmpdir, "docs-dir")
@@ -252,7 +253,7 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
 	// create the package
-	pkgLayout, err := layout.AssemblePackage(context.Background(), defined.Pkg, tmpdir, nil, layout.AssembleOptions{})
+	pkgLayout, err := assemble.AssemblePackage(context.Background(), defined.Pkg, tmpdir, nil, assemble.AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the component has the correct file

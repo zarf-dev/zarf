@@ -31,6 +31,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -165,7 +166,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 				ValuesDir: filepath.Join(tmpDir, "values"),
 			}
 
-			err := layout.PackageChart(ctx, chart, basePath, chartPaths, cachePath, defaultRemoteOptions())
+			err := assemble.PackageChart(ctx, chart, basePath, chartPaths, cachePath, defaultRemoteOptions())
 			if err != nil {
 				return fmt.Errorf("unable to package chart %q for schema generation: %w", chart.Name, err)
 			}

@@ -23,6 +23,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/memory"
@@ -305,4 +306,28 @@ func (p *PackageLayout) Resolve(_ context.Context, reference string) (ocispec.De
 		return p.cache.desc, nil
 	}
 	return ocispec.Descriptor{}, errdef.ErrNotFound
+}
+
+// HasImageIndex reports whether the OCI image layout at imageDir contains a
+// multi-platform image index. It takes a directory rather than a PackageLayout so
+// it also serves callers assembling a package that does not exist yet.
+func HasImageIndex(imageDir string) (bool, error) {
+	idxPath := filepath.Join(imageDir, IndexJSON)
+	b, err := os.ReadFile(idxPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to read %s: %w", idxPath, err)
+	}
+	var idx ocispec.Index
+	if err := json.Unmarshal(b, &idx); err != nil {
+		return false, fmt.Errorf("failed to parse %s: %w", idxPath, err)
+	}
+	for _, m := range idx.Manifests {
+		if images.IsIndex(m.MediaType) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
