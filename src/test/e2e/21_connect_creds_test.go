@@ -46,7 +46,7 @@ func TestConnectAndCreds(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "tools", "update-creds", "agent", "--confirm", "--force-conflicts")
 	require.NoError(t, err, stdOut, stdErr)
 	// The artifact server is deprecated and only updatable through the legacy command.
-	stdOut, stdErr, err = e2e.Zarf(t, "tools", "update-creds", "artifact", "--confirm", "--force-conflicts")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "update-creds", "artifact", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	newAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
