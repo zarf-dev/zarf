@@ -2,5 +2,5 @@
 customField: fromPackage
 image:
   pullPolicy: IfNotPresent
-port: "9999"
+port: 9999
 ---

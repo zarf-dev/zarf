@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -141,6 +142,32 @@ func ParseLocalFile(ctx context.Context, path string) (Values, error) {
 		}
 	}
 	return m, nil
+}
+
+// InferType converts a --set-values scalar string into its natural type: "true"/"false" become
+// booleans and whole base-10 numbers become int64. Everything else, including decimals (1.5) and
+// leading-zero numbers (0755), stays a string. Wrapping the value in single quotes forces a
+// string, e.g. "'123'" yields "123".
+func InferType(s string) any {
+	if len(s) >= 2 && s[0] == '\'' && s[len(s)-1] == '\'' {
+		return s[1 : len(s)-1]
+	}
+	if strings.EqualFold(s, "true") {
+		return true
+	}
+	if strings.EqualFold(s, "false") {
+		return false
+	}
+	// A leading zero (0755) signals an intentional string, except for "0" itself.
+	if s == "0" {
+		return int64(0)
+	}
+	if len(s) != 0 && s[0] != '0' {
+		if iv, err := strconv.ParseInt(s, 10, 64); err == nil {
+			return iv
+		}
+	}
+	return s
 }
 
 // DeepMerge merges one or more Values maps recursively into the receiver via mutation.

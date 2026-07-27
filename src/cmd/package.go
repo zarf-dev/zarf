@@ -351,9 +351,8 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		o.setVariables,
 		strings.ToUpper,
 	)
-	// Merge values; CLI --set-values overrides viper config, matching --set-variables.
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -841,8 +840,8 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -947,8 +946,8 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -1431,6 +1430,8 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	v := getViper()
+	o.setValues = mergeMap(v.GetStringMapString(VPkgRemoveSetValues), o.setValues)
 	vals, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -1445,7 +1446,6 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	v := getViper()
 	c, _ := cluster.New(ctx) //nolint:errcheck
 	loadOpts := packager.LoadOptions{
 		VerificationStrategy: o.verify.toStrategy(),

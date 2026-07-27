@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.82.0](https://github.com/zarf-dev/zarf/compare/v0.81.1...v0.82.0) (2026-07-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **values:** type inference in set-values cli parsing ([#5103](https://github.com/zarf-dev/zarf/issues/5103))
+
+### Features
+
+* expose GetComponent function for package templating ([#5092](https://github.com/zarf-dev/zarf/issues/5092)) ([c1f0624](https://github.com/zarf-dev/zarf/commit/c1f06247789ad2c4a8f815be070e6f98df3547cc))
+* **healthchecks:** use namespace-scoped watches for improved permissions handling ([#5091](https://github.com/zarf-dev/zarf/issues/5091)) ([5e2e9be](https://github.com/zarf-dev/zarf/commit/5e2e9bed0dc89eb4dc4acfe5e9b929d9ebfad3c4))
+* **schema:** support multiple API versions from a single schema file ([#4949](https://github.com/zarf-dev/zarf/issues/4949)) ([f6d5cdd](https://github.com/zarf-dev/zarf/commit/f6d5cdd2690356d9736d68c49ca4d49a6cb84d96))
+* stop requiring version for localpath charts ([#5080](https://github.com/zarf-dev/zarf/issues/5080)) ([82ec120](https://github.com/zarf-dev/zarf/commit/82ec12072042fb856f0abf61f611e7bd30a42efd))
+* **values:** type inference in set-values cli parsing ([#5103](https://github.com/zarf-dev/zarf/issues/5103)) ([fe2da73](https://github.com/zarf-dev/zarf/commit/fe2da733dad439754611f87613d9e5de31bb2099))
+
+
+### Bug Fixes
+
+* agent webhook logs ([#5081](https://github.com/zarf-dev/zarf/issues/5081)) ([b44a809](https://github.com/zarf-dev/zarf/commit/b44a809a6daf998196b6ad2844627fe22c7ce341))
+* **injection:** support retry for toomanyrequests ([#5095](https://github.com/zarf-dev/zarf/issues/5095)) ([da7d2a8](https://github.com/zarf-dev/zarf/commit/da7d2a88b0af36f55795c1ba88cbab9b8254b900))
+
 ## [0.81.1](https://github.com/zarf-dev/zarf/compare/v0.81.0...v0.81.1) (2026-07-17)
 
 
