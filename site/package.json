@@ -25,7 +25,7 @@
     "astro": "^7.0.7",
     "mermaid": "^10.9.4",
     "rehype-autolink-headings": "^7.1.0",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.3",
     "starlight-sidebar-topics": "^0.7.0",
     "typescript": "^5.4.3",
     "unist-util-visit": "^5.0.0"
