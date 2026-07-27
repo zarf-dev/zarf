@@ -602,8 +602,8 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	)
 }
 
-// applyState reconciles the cluster to the registry credentials in s. The registry deployment is
-// updated first so the still-serving pod keeps matching the not-yet-updated pull secrets throughout
+// applyState reconciles the cluster to the given registry credentials. The registry deployment is
+// updated first so the old pod keeps matching the not-yet-updated pull secrets throughout
 // the rollout, then the pull secrets are updated, then state is persisted as the final commit.
 func (o *updateRegistryCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, s *state.State) error {
 	if s.RegistryInfo.IsInternal() {
@@ -663,7 +663,7 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	if !oldState.GitServer.IsConfigured() {
-		return errors.New("no git server is configured in the Zarf state; nothing to update")
+		return errors.New("no Git server is configured in the Zarf state; nothing to update")
 	}
 
 	newState, err := state.Merge(oldState, state.MergeOptions{
@@ -671,7 +671,7 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		Services:  state.NewServiceSet(state.GitKey),
 	})
 	if err != nil {
-		return fmt.Errorf("unable to update git server credentials: %w", err)
+		return fmt.Errorf("unable to update Git server credentials: %w", err)
 	}
 
 	confirm, err := confirmCredentialUpdate(ctx, oldState, newState, state.GitKey, o.confirm)
@@ -682,17 +682,12 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	return runWithRollback(ctx, "git server",
+	return runWithRollback(ctx, "Git server",
 		func() error { return o.applyState(ctx, c, oldState, newState) },
 		func() error { return o.applyState(ctx, c, newState, oldState) },
 	)
 }
 
-// applyState reconciles the cluster to the git credentials in toState. The internal Gitea users are
-// updated first (authenticating with fromState's push credentials), then the pull secrets, then
-// state is persisted as the final commit. Because Gitea is reached with fromState's credentials, a
-// rollback can only authenticate when the forward Gitea update fully succeeded; a partial forward
-// failure surfaces as a failed rollback requiring manual repair.
 func (o *updateGitCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, fromState, toState *state.State) error {
 	if toState.GitServer.IsInternal() {
 		if err := c.UpdateInternalGitServerSecret(ctx, fromState.GitServer, toState.GitServer); err != nil {
@@ -780,8 +775,6 @@ func (o *updateAgentCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	)
 }
 
-// applyState reconciles the cluster to the agent credentials in s. The agent deployment is updated
-// first, then state is persisted as the final commit.
 func (o *updateAgentCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, s *state.State) error {
 	helmOpts := helm.InstallUpgradeOptions{
 		VariableConfig: template.GetZarfVariableConfig(ctx, !o.confirm),
