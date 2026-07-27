@@ -9,6 +9,7 @@ func AllTypes() []any {
 	return []any{
 		pkg.AlpmDBEntry{},
 		pkg.ApkDBEntry{},
+		pkg.AppleAppBundleEntry{},
 		pkg.BinarySignature{},
 		pkg.BitnamiSBOMEntry{},
 		pkg.BunLockEntry{},
@@ -67,10 +68,12 @@ func AllTypes() []any {
 		pkg.RubyGemspec{},
 		pkg.RustBinaryAuditEntry{},
 		pkg.RustCargoLockEntry{},
+		pkg.SafeTensorsModelInfo{},
 		pkg.SnapEntry{},
 		pkg.SwiftPackageManagerResolvedEntry{},
 		pkg.SwiplPackEntry{},
 		pkg.TerraformLockProviderEntry{},
+		pkg.VcpkgManifest{},
 		pkg.WordpressPluginEntry{},
 		pkg.YarnLockEntry{},
 	}

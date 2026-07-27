@@ -668,6 +668,16 @@ catalogers:
             type: BinaryPkg
       - method: glob
         criteria:
+          - '**/{firefox,firefox.exe}'
+        packages:
+          - class: firefox-binary
+            name: firefox
+            purl: pkg:generic/firefox
+            cpes:
+              - cpe:2.3:a:mozilla:firefox:*:*:*:*:*:*:*:*
+            type: BinaryPkg
+      - method: glob
+        criteria:
           - '**/ffmpeg'
         packages:
           - class: ffmpeg-binary
@@ -845,6 +855,26 @@ catalogers:
             purl: pkg:generic/elastic-agent
             cpes:
               - cpe:2.3:a:elastic:elastic_agent:*:*:*:*:*:*:*:*
+            type: BinaryPkg
+      - method: glob
+        criteria:
+          - '**/libkrb5.so*'
+        packages:
+          - class: krb5-library
+            name: krb5
+            purl: pkg:generic/krb5
+            cpes:
+              - cpe:2.3:a:mit:kerberos_5:*:*:*:*:*:*:*:*
+            type: BinaryPkg
+      - method: glob
+        criteria:
+          - '**/libkrb5.so*'
+        packages:
+          - class: heimdal-krb5-library
+            name: heimdal-krb5
+            purl: pkg:generic/heimdal-krb5
+            cpes:
+              - cpe:2.3:a:heimdal_project:heimdal:*:*:*:*:*:*:*:*
             type: BinaryPkg
       - method: glob
         criteria:
@@ -1035,6 +1065,9 @@ catalogers:
         detector: # AUTO-GENERATED
           method: glob # AUTO-GENERATED
           criteria: # AUTO-GENERATED
+            - '**/*.DLL'
+            - '**/*.EXE'
+            - '**/*.BPL'
             - '**/*.dll'
             - '**/*.exe'
             - '**/*.bpl'

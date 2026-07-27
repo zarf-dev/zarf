@@ -3,10 +3,10 @@ package rpmdb
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
+	"fmt"
 	"io"
 	"unsafe"
-
-	"golang.org/x/xerrors"
 )
 
 const (
@@ -92,11 +92,11 @@ type hdrblob struct {
 func headerImport(data []byte) ([]indexEntry, error) {
 	blob, err := hdrblobInit(data)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to initialize header blob: %w", err)
+		return nil, fmt.Errorf("failed to initialize header blob: %w", err)
 	}
 	indexEntries, err := hdrblobImport(*blob, data)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to import header blob: %w", err)
+		return nil, fmt.Errorf("failed to import header blob: %w", err)
 	}
 	return indexEntries, nil
 }
@@ -108,17 +108,17 @@ func hdrblobInit(data []byte) (*hdrblob, error) {
 	reader := bytes.NewReader(data)
 
 	if err = binary.Read(reader, binary.BigEndian, &blob.il); err != nil {
-		return nil, xerrors.Errorf("invalid index length: %w", err)
+		return nil, fmt.Errorf("invalid index length: %w", err)
 	}
 	if err = binary.Read(reader, binary.BigEndian, &blob.dl); err != nil {
-		return nil, xerrors.Errorf("invalid data length: %w", err)
+		return nil, fmt.Errorf("invalid data length: %w", err)
 	}
 	blob.dataStart = int32(unsafe.Sizeof(blob.il)) + int32(unsafe.Sizeof(blob.dl)) + blob.il*int32(unsafe.Sizeof(entryInfo{}))
 	blob.pvlen = int32(unsafe.Sizeof(blob.il)) + int32(unsafe.Sizeof(blob.dl)) + blob.il*int32(unsafe.Sizeof(entryInfo{})) + blob.dl
 	blob.dataEnd = blob.dataStart + blob.dl
 
 	if blob.il < 1 {
-		return nil, xerrors.New("region no tags error")
+		return nil, errors.New("region no tags error")
 	}
 
 	blob.peList = make([]entryInfo, blob.il)
@@ -128,19 +128,19 @@ func hdrblobInit(data []byte) (*hdrblob, error) {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return nil, xerrors.Errorf("failed to read entry info: %w", err)
+			return nil, fmt.Errorf("failed to read entry info: %w", err)
 		}
 		blob.peList[i] = pe
 	}
 	if blob.pvlen >= headerMaxbytes {
-		return nil, xerrors.Errorf("blob size(%d) BAD, 8 + 16 * il(%d) + dl(%d)", blob.pvlen, blob.il, blob.dl)
+		return nil, fmt.Errorf("blob size(%d) BAD, 8 + 16 * il(%d) + dl(%d)", blob.pvlen, blob.il, blob.dl)
 	}
 
 	if err := hdrblobVerifyRegion(&blob, data); err != nil {
-		return nil, xerrors.Errorf("failed to verify region in the header blob: %w", err)
+		return nil, fmt.Errorf("failed to verify region in the header blob: %w", err)
 	}
 	if err := hdrblobVerifyInfo(&blob, data); err != nil {
-		return nil, xerrors.Errorf("failed to verify info: %w", err)
+		return nil, fmt.Errorf("failed to verify info: %w", err)
 	}
 
 	return &blob, nil
@@ -157,7 +157,7 @@ func hdrblobImport(blob hdrblob, data []byte) ([]indexEntry, error) {
 		/* An original v3 header, create a legacy region entry for it */
 		indexEntries, rdlen, err = regionSwab(data, blob.peList, 0, blob.dataStart, blob.dataEnd)
 		if err != nil {
-			return nil, xerrors.Errorf("failed to parse legacy index entries: %w", err)
+			return nil, fmt.Errorf("failed to parse legacy index entries: %w", err)
 		}
 	} else {
 		/* Either a v4 header or an "upgraded" v3 header with a legacy region */
@@ -169,19 +169,19 @@ func hdrblobImport(blob hdrblob, data []byte) ([]indexEntry, error) {
 		// ref. https://github.com/rpm-software-management/rpm/blob/rpm-4.14.3-release/lib/header.c#L917
 		indexEntries, rdlen, err = regionSwab(data, blob.peList[1:ril], 0, blob.dataStart, blob.dataEnd)
 		if err != nil {
-			return nil, xerrors.Errorf("failed to parse region entries: %w", err)
+			return nil, fmt.Errorf("failed to parse region entries: %w", err)
 		}
 		if rdlen < 0 {
-			return nil, xerrors.New("invalid region length")
+			return nil, errors.New("invalid region length")
 		}
 
 		if blob.ril < int32(len(blob.peList)-1) {
 			dribbleIndexEntries, rdlen, err = regionSwab(data, blob.peList[ril:], rdlen, blob.dataStart, blob.dataEnd)
 			if err != nil {
-				return nil, xerrors.Errorf("failed to parse dribble entries: %w", err)
+				return nil, fmt.Errorf("failed to parse dribble entries: %w", err)
 			}
 			if rdlen < 0 {
-				return nil, xerrors.New("invalid length of dribble entries")
+				return nil, errors.New("invalid length of dribble entries")
 			}
 
 			uniqTagMap := make(map[int32]indexEntry)
@@ -201,7 +201,7 @@ func hdrblobImport(blob hdrblob, data []byte) ([]indexEntry, error) {
 	}
 
 	if rdlen != blob.dl {
-		return nil, xerrors.Errorf("the calculated length (%d) is different from the data length (%d)", rdlen, blob.dl)
+		return nil, fmt.Errorf("the calculated length (%d) is different from the data length (%d)", rdlen, blob.dl)
 	}
 	return indexEntries, nil
 }
@@ -219,29 +219,29 @@ func hdrblobVerifyInfo(blob *hdrblob, data []byte) error {
 		info := ei2h(pe)
 
 		if end > info.Offset {
-			return xerrors.Errorf("invalid offset info: %+v", info)
+			return fmt.Errorf("invalid offset info: %+v", info)
 		}
 
 		if hdrchkTag(info.Tag) {
-			return xerrors.Errorf("invalid tag info: %+v", info)
+			return fmt.Errorf("invalid tag info: %+v", info)
 		}
 
 		if hdrchkType(info.Type) {
-			return xerrors.Errorf("invalid type info: %+v", info)
+			return fmt.Errorf("invalid type info: %+v", info)
 		}
 
 		if hdrchkAlign(info.Type, info.Offset) {
-			return xerrors.Errorf("invalid align info: %+v", info)
+			return fmt.Errorf("invalid align info: %+v", info)
 		}
 
 		if hdrchkRange(blob.dl, info.Offset) {
-			return xerrors.Errorf("invalid range info: %+v", info)
+			return fmt.Errorf("invalid range info: %+v", info)
 		}
 
 		length := dataLength(data, info.Type, info.Count, blob.dataStart+info.Offset, blob.dataEnd)
 		end := info.Offset + int32(length)
 		if hdrchkRange(blob.dl, end) || length <= 0 {
-			return xerrors.Errorf("invalid data length info: %+v", info)
+			return fmt.Errorf("invalid data length info: %+v", info)
 		}
 	}
 	return nil
@@ -277,22 +277,22 @@ func hdrblobVerifyRegion(blob *hdrblob, data []byte) error {
 	}
 
 	if einfo.Type != REGION_TAG_TYPE || einfo.Count != uint32(REGION_TAG_COUNT) {
-		return xerrors.New("invalid region tag")
+		return errors.New("invalid region tag")
 	}
 
 	if hdrchkRange(blob.dl, einfo.Offset+REGION_TAG_COUNT) {
-		return xerrors.New("invalid region offset")
+		return errors.New("invalid region offset")
 	}
 
 	// ref. https://github.com/rpm-software-management/rpm/blob/rpm-4.14.3-release/lib/header.c#L1842
 	var trailer entryInfo
 	regionEnd := blob.dataStart + einfo.Offset
 	if regionEnd > int32(len(data)) || regionEnd+REGION_TAG_COUNT > int32(len(data)) {
-		return xerrors.New("invalid region offset")
+		return errors.New("invalid region offset")
 	}
 
 	if err := binary.Read(bytes.NewReader(data[regionEnd:regionEnd+REGION_TAG_COUNT]), binary.LittleEndian, &trailer); err != nil {
-		return xerrors.Errorf("failed to parse trailer: %w", err)
+		return fmt.Errorf("failed to parse trailer: %w", err)
 	}
 	blob.rdl = regionEnd + REGION_TAG_COUNT - blob.dataStart
 
@@ -301,14 +301,14 @@ func hdrblobVerifyRegion(blob *hdrblob, data []byte) error {
 	}
 
 	if einfo.Tag != regionTag || einfo.Type != REGION_TAG_TYPE || einfo.Count != uint32(REGION_TAG_COUNT) {
-		return xerrors.New("invalid region trailer")
+		return errors.New("invalid region trailer")
 	}
 
 	einfo = ei2h(trailer)
 	einfo.Offset = -einfo.Offset
 	blob.ril = einfo.Offset / int32(unsafe.Sizeof(blob.peList[0]))
 	if (einfo.Offset%REGION_TAG_COUNT) != 0 || hdrchkRange(blob.il, blob.ril) || hdrchkRange(blob.dl, blob.rdl) {
-		return xerrors.Errorf("invalid region size, region %d", regionTag)
+		return fmt.Errorf("invalid region size, region %d", regionTag)
 	}
 
 	blob.regionTag = regionTag
@@ -340,7 +340,7 @@ func regionSwab(data []byte, peList []entryInfo, dl, dataStart, dataEnd int32) (
 
 		start := dataStart + indexEntry.Info.Offset
 		if start >= dataEnd {
-			return nil, 0, xerrors.New("invalid data offset")
+			return nil, 0, errors.New("invalid data offset")
 		}
 
 		if i < len(peList)-1 && typeSizes[indexEntry.Info.Type] == -1 {
@@ -349,12 +349,12 @@ func regionSwab(data []byte, peList []entryInfo, dl, dataStart, dataEnd int32) (
 			indexEntry.Length = dataLength(data, indexEntry.Info.Type, indexEntry.Info.Count, start, dataEnd)
 		}
 		if indexEntry.Length < 0 {
-			return nil, 0, xerrors.New("invalid data length")
+			return nil, 0, errors.New("invalid data length")
 		}
 
 		end := int(start) + indexEntry.Length
 		if start > int32(len(data)) || end > len(data) {
-			return nil, 0, xerrors.New("invalid data length")
+			return nil, 0, errors.New("invalid data length")
 		}
 		indexEntry.Data = data[start:end]
 		indexEntries[i] = indexEntry

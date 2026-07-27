@@ -3,8 +3,7 @@ package bdb
 import (
 	"bytes"
 	"encoding/binary"
-
-	"golang.org/x/xerrors"
+	"fmt"
 )
 
 // source: https://github.com/berkeleydb/libdb/blob/5b7b02ae052442626af54c176335b67ecc613a30/src/dbinc/db_page.h#L130
@@ -31,7 +30,7 @@ func ParseHashMetadataPage(data []byte) (*HashMetadataPage, error) {
 	pageMetadata.Swapped = false
 	err := binary.Read(bytes.NewReader(data), binary.LittleEndian, &metadata)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to unpack HashMetadataPage: %w", err)
+		return nil, fmt.Errorf("failed to unpack HashMetadataPage: %w", err)
 	}
 
 	if metadata.Magic == HashMagicNumberBE {
@@ -39,7 +38,7 @@ func ParseHashMetadataPage(data []byte) (*HashMetadataPage, error) {
 		pageMetadata.Swapped = true
 		err := binary.Read(bytes.NewReader(data), binary.BigEndian, &metadata.GenericMetadataPage)
 		if err != nil {
-			return nil, xerrors.Errorf("failed to unpack HashMetadataPage: %w", err)
+			return nil, fmt.Errorf("failed to unpack HashMetadataPage: %w", err)
 		}
 	}
 
@@ -55,11 +54,11 @@ func (p *HashMetadata) validate() error {
 	}
 
 	if p.Magic != HashMagicNumber {
-		return xerrors.Errorf("unexpected DB magic number: %+v", p.Magic)
+		return fmt.Errorf("unexpected DB magic number: %+v", p.Magic)
 	}
 
 	if p.PageType != HashMetadataPageType {
-		return xerrors.Errorf("unexpected page type: %+v", p.PageType)
+		return fmt.Errorf("unexpected page type: %+v", p.PageType)
 	}
 
 	return nil
