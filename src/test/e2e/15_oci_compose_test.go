@@ -290,7 +290,7 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 				suite.DirExists(filepath.Join(chartDir, dir))
 				continue
 			}
-			tgz := filepath.Join(chartDir, layout.ChartArchiveName(chart.Name, chart.Version)) + ".tgz"
+			tgz := filepath.Join(chartDir, layout.ChartArchiveName(chart.Name, chart.Version))
 			suite.FileExists(tgz)
 		}
 

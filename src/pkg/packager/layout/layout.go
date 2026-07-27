@@ -73,27 +73,29 @@ func ComponentFileRelPath(idx int, target string) string {
 	return filepath.Join(strconv.Itoa(idx), filepath.Base(target))
 }
 
-// ChartArchiveName returns the base file name for a chart's packaged tarball:
-// "<name>" when the version is empty, otherwise "<name>-<version>". It takes the
-// name and version rather than a chart so the layout convention is not tied to a
-// particular API version of the chart type.
-func ChartArchiveName(name, version string) string {
+// chartStem is the name both of a chart's packaged artifacts are built from:
+// "<name>" when the version is empty, otherwise "<name>-<version>".
+func chartStem(name, version string) string {
 	if version == "" {
 		return name
 	}
 	return name + "-" + version
 }
 
-// ChartValuesFileName returns the base file name for the idx-th values file of the
-// named chart, as stored within a component's values directory.
+// ChartArchiveName returns the file name of a chart's packaged tarball, within a
+// component's charts directory.
+func ChartArchiveName(name, version string) string {
+	return chartStem(name, version) + ".tgz"
+}
+
+// ChartValuesFileName returns the file name of the idx-th values file of the named
+// chart, within a component's values directory.
 func ChartValuesFileName(name, version string, idx int) string {
-	return ChartArchiveName(name, version) + "-" + strconv.Itoa(idx)
+	return chartStem(name, version) + "-" + strconv.Itoa(idx)
 }
 
 // ChartPaths resolves the on-disk locations of a chart's packaged artifacts
-// within a component's charts and values directories. It satisfies the path seam
-// the `helm` package depends on, so `helm` receives resolved paths rather than
-// re-deriving the package layout convention itself.
+// within a component's charts and values directories.
 type ChartPaths struct {
 	// ChartsDir is the directory holding chart tarballs.
 	ChartsDir string
@@ -103,7 +105,7 @@ type ChartPaths struct {
 
 // Archive returns the full path to the named chart's packaged tarball.
 func (p ChartPaths) Archive(name, version string) string {
-	return filepath.Join(p.ChartsDir, ChartArchiveName(name, version)) + ".tgz"
+	return filepath.Join(p.ChartsDir, ChartArchiveName(name, version))
 }
 
 // ValuesFile returns the full path to the idx-th values file for the named chart.

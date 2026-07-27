@@ -4,8 +4,7 @@
 // Package assemble builds a Zarf package on disk: it resolves each component's
 // charts, manifests, files, repos, images and data injections into the layout that
 // package layout reads back. It owns the build-time dependencies (helm, git,
-// kustomize, image pulls, SBOM generation) so that layout stays a read-and-name
-// package.
+// kustomize, image pulls, SBOM generation) so `layout` can focus on reading and naming.
 package assemble
 
 import (

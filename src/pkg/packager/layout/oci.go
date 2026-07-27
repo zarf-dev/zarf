@@ -308,9 +308,9 @@ func (p *PackageLayout) Resolve(_ context.Context, reference string) (ocispec.De
 	return ocispec.Descriptor{}, errdef.ErrNotFound
 }
 
-// HasImageIndex reports whether the OCI image layout at imageDir contains a
-// multi-platform image index. It takes a directory rather than a PackageLayout so
-// it also serves callers assembling a package that does not exist yet.
+// HasImageIndex reports whether the package layout has a multi-platform image.
+// It takes a directory rather than a PackageLayout so callers assembling a
+// package layout may use it as well.
 func HasImageIndex(imageDir string) (bool, error) {
 	idxPath := filepath.Join(imageDir, IndexJSON)
 	b, err := os.ReadFile(idxPath)
