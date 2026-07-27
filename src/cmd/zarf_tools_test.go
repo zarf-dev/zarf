@@ -143,7 +143,7 @@ func TestRunWithRollback(t *testing.T) {
 			rollback:         rollbackErr,
 			wantRollbackCall: true,
 			wantErr:          true,
-			wantErrContains:  "require manual repair",
+			wantErrContains:  "the cluster may be in an inconsistent state",
 		},
 	}
 
