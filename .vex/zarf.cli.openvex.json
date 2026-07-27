@@ -1,0 +1,108 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/zarf-dev/zarf/blob/main/.vex/zarf.cli.openvex.json",
+  "author": "zarf-dev/zarf maintainers",
+  "version": 10,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GHSA-xhf5-7wjv-pqxp"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.32"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Zarf links containerd only through Helm v3's OCI registry client, which imports the client-side github.com/containerd/containerd/remotes package. Zarf does not run containerd's CRI plugin, manage container lifecycle, or invoke the restart-monitor logger, so the vulnerable CRI label-handling path is not in Zarf's runtime execution path.",
+      "timestamp": "2026-07-01T19:34:52.775612099Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-jpcc-p29g-p8mq"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.32"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Zarf links containerd only through Helm v3's OCI registry client, which imports the client-side github.com/containerd/containerd/remotes package. Zarf does not run containerd's CRI plugin or perform runtime container setup, so the vulnerable supplementary-group parsing path is not in Zarf's runtime execution path.",
+      "timestamp": "2026-07-01T19:34:52.786569012Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "golang.org/x/crypto/openpgp is unmaintained and flagged unsafe by design regardless of usage. govulncheck's reported call chain shows Zarf's signing path (src/pkg/signing/cosign.go CosignSignBlobWithOptions -\u003e cosign's SignBlobCmd -\u003e sigstore-go pkg/sign.Bundle/GetTransparencyLogEntry) reaching rekor's PGP public-key parser (pkg/pki/pgp.NewPublicKey -\u003e golang.org/x/crypto/openpgp ReadKeyRing/ReadEntity/addUserID/VerifyUserIdSignature). This is a static-analysis over-approximation: rekor's pki.NewArtifactFactory dispatches to one PKI implementation via an explicit Format argument (pkg/pki/factory.go), and sigstore-go hardcodes that format to x509 for every hashedrekord transparency-log entry it creates (pkg/sign/transparency.go: artifactProperties.PKIFormat = string(pki.X509)). Zarf never supplies or accepts PGP-format keys in its signing flags, so the PGP branch of rekor's format dispatch, and therefore the vulnerable openpgp code, is never exercised at runtime.",
+      "timestamp": "2026-07-09T22:45:43.759794903Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5064"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.32"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Zarf links containerd only through Helm v3's OCI registry client, which imports the client-side github.com/containerd/containerd/remotes package. Zarf does not run containerd's CRI plugin, restore CRI checkpoints, or invoke CDI handling, so the vulnerable checkpoint-restoration path is not in Zarf's runtime execution path.",
+      "timestamp": "2026-07-23T17:26:02.58358562Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5338"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.32"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Zarf links containerd only through Helm v3's OCI registry client, which imports the client-side github.com/containerd/containerd/remotes package. Zarf does not run containerd's CRI plugin or import CRI checkpoints, so the vulnerable checkpoint image-reference handling and local image-cache path are not in Zarf's runtime execution path.",
+      "timestamp": "2026-07-23T17:26:02.594877442Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5622"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.32"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Zarf links containerd only through Helm v3's OCI registry client, which imports the client-side github.com/containerd/containerd/remotes package. Zarf does not run containerd's CRI plugin or restore CRI checkpoints, so the vulnerable CRI checkpoint log-restoration path is not in Zarf's runtime execution path.",
+      "timestamp": "2026-07-23T17:26:02.607422901Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-hrxh-6v49-42gf"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.81.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The advisory affects xDS RBAC authorization and inbound gRPC HTTP/2 server handling. Zarf has no production call to grpc.NewServer, xds.NewGRPCServer, or grpc.Server.Serve; its exposed admission endpoint is a net/http webhook. The gRPC integrations are outbound clients: Docker CLI OpenTelemetry export, cloud-storage access used by Syft, and Cosign SPIFFE workload-API access. Although cloud-storage blank-imports gRPC xDS direct path and links the implementation, Zarf neither starts a gRPC/xDS server nor receives xDS RBAC policies, so the vulnerable code cannot execute.",
+      "timestamp": "2026-07-23T22:13:32.122366026Z"
+    }
+  ],
+  "timestamp": "2026-07-01T19:34:52Z",
+  "last_updated": "2026-07-23T22:13:32Z"
+}
