@@ -886,7 +886,6 @@ $ zarf tools update-creds agent --agent-tls-ca={CA_PATH} --agent-tls-cert={CERT_
 `
 
 	CmdToolsUpdateCredsConfirmFlag          = "Confirm updating credentials without prompting"
-	CmdToolsUpdateCredsConfirmProvided      = "Confirm flag specified, continuing without prompting."
 	CmdToolsUpdateCredsConfirmContinue      = "Continue with these changes?"
 	CmdToolsUpdateCredsUnableUpdateRegistry = "Unable to update Zarf Registry values: %s"
 	CmdToolsUpdateCredsUnableUpdateAgent    = "Unable to update Zarf Agent TLS secrets: %s"
