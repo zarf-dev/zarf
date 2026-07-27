@@ -86,6 +86,32 @@
     "Chart": {
       "additionalProperties": false,
       "description": "Chart defines a helm chart to be deployed.",
+      "oneOf": [
+        {
+          "required": [
+            "helmRepository"
+          ],
+          "title": "helmRepository"
+        },
+        {
+          "required": [
+            "git"
+          ],
+          "title": "git"
+        },
+        {
+          "required": [
+            "local"
+          ],
+          "title": "local"
+        },
+        {
+          "required": [
+            "oci"
+          ],
+          "title": "oci"
+        }
+      ],
       "patternProperties": {
         "^x-": {}
       },
