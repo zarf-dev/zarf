@@ -12,7 +12,7 @@ Updates the credentials for deployed Zarf services (deprecated; prefer the per-s
 
 ### Synopsis
 
-Updates the credentials for deployed Zarf services. Deprecated: prefer the per-service subcommands, e.g. 'zarf tools update-creds registry', 'zarf tools update-creds git', or 'zarf tools update-creds agent', which update a single service and fail loudly instead of leaving the cluster in an inconsistent state.
+Updates the credentials for deployed Zarf services. Deprecated: prefer the per-service subcommands, ('zarf tools update-creds registry|git|agent'), which update a single service
 
 ```
 zarf tools update-creds [flags]
