@@ -120,10 +120,7 @@ Register a token passed directly as a masked secret so your CI platform redacts 
 
 By default, keyless signatures include a Rekor transparency-log entry. This entry extends verification beyond the Fulcio certificate's approximately 10-minute validity period.
 
-Use a TSA timestamp instead when Rekor is unavailable or you do not want to publish the signing event in Rekor:
-
-1. Rekor is unavailable in your environment.
-2. Rekor is a public transparency log, and a TSA timestamp better meets your privacy requirements.
+Use a TSA timestamp instead when Rekor is unavailable or you do not want to publish the signing event in Rekor.
 
 ```bash
 zarf package sign zarf-package-example-amd64.tar.zst \
