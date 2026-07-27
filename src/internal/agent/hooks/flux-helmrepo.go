@@ -128,7 +128,7 @@ func populateHelmRepoPatchOperations(repoURL string, isInternal bool, useMTLS bo
 	}
 
 	if useMTLS {
-		patches = append(patches, operations.AddPatchOperation("/spec/certSecretRef", meta.LocalObjectReference{Name: cluster.RegistryClientTLSSecret}))
+		patches = append(patches, operations.AddPatchOperation("/spec/certSecretRef", meta.LocalObjectReference{Name: state.RegistryClientTLSSecret}))
 	}
 
 	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", meta.LocalObjectReference{Name: config.ZarfImagePullSecretName}))

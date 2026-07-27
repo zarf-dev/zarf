@@ -16,7 +16,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -544,7 +543,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 				),
 				operations.AddPatchOperation(
 					"/spec/certSecretRef",
-					fluxmeta.LocalObjectReference{Name: cluster.RegistryClientTLSSecret},
+					fluxmeta.LocalObjectReference{Name: state.RegistryClientTLSSecret},
 				),
 				operations.ReplacePatchOperation(
 					"/spec/ref/tag",

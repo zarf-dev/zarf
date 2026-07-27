@@ -304,6 +304,43 @@ const (
 	MTLSStrategyZarfManaged MTLSStrategy = "zarf-managed"
 )
 
+// Secrets holding the registry mTLS certificates, and the keys within them. The keys are
+// the standard kubernetes.io/tls format plus the conventional CA companion.
+const (
+	// RegistryServerTLSSecret holds the certificate the registry serves.
+	RegistryServerTLSSecret = "zarf-registry-server-tls"
+	// RegistryClientTLSSecret holds the certificate clients present to the registry.
+	RegistryClientTLSSecret = "zarf-registry-client-tls"
+
+	RegistrySecretCAPath   = "ca.crt"
+	RegistrySecretCertPath = "tls.crt"
+	RegistrySecretKeyPath  = "tls.key"
+)
+
+// RegistryCertFromSecretData reads a registry mTLS keypair out of the secret data Zarf
+// stores. It is the exact inverse of RegistryCertSecretData, and takes the data map
+// rather than the secret so that deciding *how* to read the secret stays with the caller.
+func RegistryCertFromSecretData(data map[string][]byte) (pki.GeneratedPKI, error) {
+	certs := pki.GeneratedPKI{
+		CA:   data[RegistrySecretCAPath],
+		Cert: data[RegistrySecretCertPath],
+		Key:  data[RegistrySecretKeyPath],
+	}
+	if len(certs.CA) == 0 || len(certs.Cert) == 0 || len(certs.Key) == 0 {
+		return pki.GeneratedPKI{}, fmt.Errorf("registry TLS secret is incomplete")
+	}
+	return certs, nil
+}
+
+// RegistryCertSecretData lays a registry mTLS keypair out as Kubernetes secret data.
+func RegistryCertSecretData(certs pki.GeneratedPKI) map[string][]byte {
+	return map[string][]byte{
+		RegistrySecretCAPath:   certs.CA,
+		RegistrySecretCertPath: certs.Cert,
+		RegistrySecretKeyPath:  certs.Key,
+	}
+}
+
 // RegistryMode defines how the registry is accessed
 type RegistryMode string
 

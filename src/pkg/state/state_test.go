@@ -549,3 +549,42 @@ func TestMergeInstalledChartsForComponent(t *testing.T) {
 		})
 	}
 }
+
+func TestRegistryCertSecretData(t *testing.T) {
+	t.Parallel()
+
+	certs := pki.GeneratedPKI{CA: []byte("ca"), Cert: []byte("cert"), Key: []byte("key")}
+
+	t.Run("round trips", func(t *testing.T) {
+		t.Parallel()
+		got, err := RegistryCertFromSecretData(RegistryCertSecretData(certs))
+		require.NoError(t, err)
+		require.Equal(t, certs, got)
+	})
+
+	t.Run("writes the standard kubernetes.io/tls keys", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, map[string][]byte{
+			"ca.crt":  []byte("ca"),
+			"tls.crt": []byte("cert"),
+			"tls.key": []byte("key"),
+		}, RegistryCertSecretData(certs))
+	})
+
+	t.Run("rejects data missing any key", func(t *testing.T) {
+		t.Parallel()
+		for _, missing := range []string{RegistrySecretCAPath, RegistrySecretCertPath, RegistrySecretKeyPath} {
+			data := RegistryCertSecretData(certs)
+			delete(data, missing)
+
+			_, err := RegistryCertFromSecretData(data)
+			require.ErrorContains(t, err, "incomplete", "missing %s should be rejected", missing)
+		}
+	})
+
+	t.Run("rejects absent data", func(t *testing.T) {
+		t.Parallel()
+		_, err := RegistryCertFromSecretData(nil)
+		require.ErrorContains(t, err, "incomplete")
+	})
+}
