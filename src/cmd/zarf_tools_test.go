@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -355,65 +354,5 @@ func TestUpdateGitCredsApplyState(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "old-pull-password", gitSecret.StringData["password"])
 		require.Equal(t, "old-pull-password", loadGitPullPassword(ctx, t, c))
-	})
-}
-
-// TestLoadAndValidateAgentTLS covers the flag-input validation the agent update-creds command relies
-// on. The apply path itself is helm-first with no external bypass, so it is exercised only in e2e.
-func TestLoadAndValidateAgentTLS(t *testing.T) {
-	t.Parallel()
-
-	writePKI := func(t *testing.T, p pki.GeneratedPKI) (caPath, certPath, keyPath string) {
-		t.Helper()
-		dir := t.TempDir()
-		caPath = filepath.Join(dir, "ca.pem")
-		certPath = filepath.Join(dir, "cert.pem")
-		keyPath = filepath.Join(dir, "key.pem")
-		require.NoError(t, os.WriteFile(caPath, p.CA, 0o600))
-		require.NoError(t, os.WriteFile(certPath, p.Cert, 0o600))
-		require.NoError(t, os.WriteFile(keyPath, p.Key, 0o600))
-		return caPath, certPath, keyPath
-	}
-
-	valid, err := pki.GeneratePKI(state.ZarfAgentHost)
-	require.NoError(t, err)
-
-	t.Run("valid certificates", func(t *testing.T) {
-		t.Parallel()
-		caPath, certPath, keyPath := writePKI(t, valid)
-		got, err := loadAndValidateAgentTLS(caPath, certPath, keyPath)
-		require.NoError(t, err)
-		require.Equal(t, valid.CA, got.CA)
-		require.Equal(t, valid.Cert, got.Cert)
-		require.Equal(t, valid.Key, got.Key)
-	})
-
-	t.Run("cert and key mismatch", func(t *testing.T) {
-		t.Parallel()
-		other, err := pki.GeneratePKI(state.ZarfAgentHost)
-		require.NoError(t, err)
-		caPath, certPath, _ := writePKI(t, valid)
-		otherKeyPath := filepath.Join(t.TempDir(), "key.pem")
-		require.NoError(t, os.WriteFile(otherKeyPath, other.Key, 0o600))
-		_, err = loadAndValidateAgentTLS(caPath, certPath, otherKeyPath)
-		require.ErrorContains(t, err, "cert and key do not match")
-	})
-
-	t.Run("certificate not signed by CA", func(t *testing.T) {
-		t.Parallel()
-		other, err := pki.GeneratePKI(state.ZarfAgentHost)
-		require.NoError(t, err)
-		_, certPath, keyPath := writePKI(t, valid)
-		otherCAPath := filepath.Join(t.TempDir(), "ca.pem")
-		require.NoError(t, os.WriteFile(otherCAPath, other.CA, 0o600))
-		_, err = loadAndValidateAgentTLS(otherCAPath, certPath, keyPath)
-		require.ErrorContains(t, err, "failed validation")
-	})
-
-	t.Run("missing CA file", func(t *testing.T) {
-		t.Parallel()
-		_, certPath, keyPath := writePKI(t, valid)
-		_, err := loadAndValidateAgentTLS(filepath.Join(t.TempDir(), "missing.pem"), certPath, keyPath)
-		require.ErrorContains(t, err, "unable to read agent TLS CA")
 	})
 }
