@@ -996,3 +996,34 @@ func TestDeepCopy(t *testing.T) {
 
 	require.Equal(t, snapshot, original)
 }
+
+func TestInferType(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		in       string
+		expected any
+	}{
+		{name: "true is a bool", in: "true", expected: true},
+		{name: "false is a bool", in: "false", expected: false},
+		{name: "mixed-case bool", in: "True", expected: true},
+		{name: "null stays a string", in: "null", expected: "null"},
+		{name: "whole number is int64", in: "3", expected: int64(3)},
+		{name: "zero is int64", in: "0", expected: int64(0)},
+		{name: "negative whole number is int64", in: "-5", expected: int64(-5)},
+		{name: "decimal stays a string", in: "3.14", expected: "3.14"},
+		{name: "leading zero stays a string", in: "0755", expected: "0755"},
+		{name: "semver stays a string", in: "1.0.0", expected: "1.0.0"},
+		{name: "plain word stays a string", in: "my-site", expected: "my-site"},
+		{name: "empty stays a string", in: "", expected: ""},
+		{name: "single quotes force a string bool", in: "'true'", expected: "true"},
+		{name: "single quotes force a string int", in: "'123'", expected: "123"},
+		{name: "single quotes preserve inner content", in: "''", expected: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.expected, InferType(tt.in))
+		})
+	}
+}
