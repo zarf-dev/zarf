@@ -63,9 +63,6 @@ containerSecurityContext:
       - ALL
   privileged: false
   readOnlyRootFilesystem: true
-  runAsGroup: 1000
-  runAsNonRoot: true
-  runAsUser: 1000
 
 serviceAccount:
   create: true
