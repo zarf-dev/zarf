@@ -28,7 +28,7 @@ require (
 	github.com/fluxcd/source-controller/api v1.8.2
 	github.com/go-git/go-git/v5 v5.19.1
 	github.com/goccy/go-yaml v1.19.2
-	github.com/golang-cz/devslog v0.0.15
+	github.com/golang-cz/devslog v0.0.17
 	github.com/google/go-containerregistry v0.21.7
 	github.com/invopop/jsonschema v0.14.0
 	github.com/mholt/archives v0.1.5
