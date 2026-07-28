@@ -12,6 +12,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 func TestSingleNamespaceOverride(t *testing.T) {
@@ -65,9 +68,26 @@ func TestSingleNamespaceOverride(t *testing.T) {
 		require.Equal(t, "test2", configMap.Namespace)
 	}
 
+	c, err := cluster.New(t.Context())
+	require.NoError(t, err)
+	overridePkg, err := c.GetDeployedPackage(t.Context(), "test-package", state.WithPackageNamespaceOverride("test2"))
+	require.NoError(t, err)
+	for _, c := range overridePkg.DeployedComponents {
+		for _, chart := range c.InstalledCharts {
+			require.Equal(t, "test2", chart.Namespace, "override package secret must not reference baseline namespace charts")
+		}
+	}
+
 	// remove the baseline by package name
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-package", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// removing the baseline must not tear down the override's helm release
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "configmaps", "-l", "zarf.dev/package=test-package,zarf.dev/namespace-override=test2", "--all-namespaces", "-o", "json")
+	require.NoError(t, err, stdOut, stdErr)
+	configMaps = &corev1.ConfigMapList{}
+	require.NoError(t, json.Unmarshal([]byte(stdOut), configMaps))
+	require.Len(t, configMaps.Items, 3, "override deployment should survive baseline removal")
 
 	// remove the namespace-override package by package name
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-package", "--namespace", "test2", "--confirm")

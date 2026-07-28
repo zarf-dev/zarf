@@ -81,6 +81,16 @@ func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
 }
 
+// GetComponent returns the component with the given name, or an error if no such component exists.
+func (pkg ZarfPackage) GetComponent(name string) (ZarfComponent, error) {
+	for _, component := range pkg.Components {
+		if component.Name == name {
+			return component, nil
+		}
+	}
+	return ZarfComponent{}, fmt.Errorf("no component named %q in package %q", name, pkg.Metadata.Name)
+}
+
 // HasImages returns true if one of the components contains an image.
 func (pkg ZarfPackage) HasImages() bool {
 	for _, component := range pkg.Components {
@@ -213,7 +223,7 @@ type ZarfMetadata struct {
 	// Additional information about this package.
 	Description string `json:"description,omitempty"`
 	// Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with).
-	Version string `json:"version,omitempty"`
+	Version string `json:"version,omitempty" jsonschema:"pattern=^[^/\\\\]*$"`
 	// Link to package information when online.
 	URL string `json:"url,omitempty"`
 	// An image URL to embed in this package (Reserved for future use in Zarf UI).
@@ -260,11 +270,11 @@ type ZarfBuildData struct {
 	// Whether this package was created with differential components.
 	Differential bool `json:"differential,omitempty"`
 	// Version of a previously built package used as the basis for creating this differential package.
-	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
+	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty" jsonschema:"pattern=^[^/\\\\]*$"`
 	// List of components that were not included in this package due to differential packaging.
 	DifferentialMissing []string `json:"differentialMissing,omitempty"`
 	// The flavor of Zarf used to build this package.
-	Flavor string `json:"flavor,omitempty"`
+	Flavor string `json:"flavor,omitempty" jsonschema:"pattern=^[^/\\\\]*$"`
 	// Whether this package was signed
 	Signed *bool `json:"signed,omitempty"`
 	// Requirements for specific package operations.
@@ -273,6 +283,18 @@ type ZarfBuildData struct {
 	// These are files added after checksum generation (e.g., signature files).
 	// This list is authenticated through the signed zarf.yaml.
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
+	// originalAPIVersion records the apiVersion the package was read from before any conversion.
+	originalAPIVersion string
+}
+
+// OriginalAPIVersion returns the apiVersion the package was read from before any conversion.
+func (b ZarfBuildData) OriginalAPIVersion() string {
+	return b.originalAPIVersion
+}
+
+// SetOriginalAPIVersion records the apiVersion the package was read from before any conversion.
+func (b *ZarfBuildData) SetOriginalAPIVersion(apiVersion string) {
+	b.originalAPIVersion = apiVersion
 }
 
 // ZarfValues imports package-level values files and validation.

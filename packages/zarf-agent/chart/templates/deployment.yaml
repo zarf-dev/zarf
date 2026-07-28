@@ -38,6 +38,14 @@ spec:
               path: /healthz
               port: 8443
               scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8443
+              scheme: HTTPS
+            periodSeconds: 3
+            timeoutSeconds: 2
+            failureThreshold: 2
           ports:
             - containerPort: 8443
           securityContext:
@@ -53,6 +61,9 @@ spec:
             limits:
               memory: {{ .Values.resources.limits.memory }}
               cpu: {{ .Values.resources.limits.cpu }}
+          env:
+            - name: ZARF_AGENT_MUTATION_POLICY
+              value: {{ .Values.mutationPolicy }}
           volumeMounts:
             - name: tls-certs
               mountPath: /etc/certs

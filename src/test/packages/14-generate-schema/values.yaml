@@ -1,0 +1,3 @@
+app:
+  name: schema-app
+  replicas: 2

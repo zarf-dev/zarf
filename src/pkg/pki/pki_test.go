@@ -6,6 +6,11 @@ package pki
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -96,6 +101,64 @@ func TestGeneratePKIWithOptions(t *testing.T) {
 	require.NoError(t, err)
 	expectedExpiry := creationTime.Add(duration)
 	require.Equal(t, expectedExpiry, cert.NotAfter)
+}
+
+func TestTransportWithKeyFollowsRedirectToSeparatelyTrustedEndpoint(t *testing.T) {
+	originalNow := now
+	now = time.Now
+	t.Cleanup(func() { now = originalNow })
+
+	registryServerPKI, registryClientPKI, err := GenerateMTLSCerts("registry CA", nil, "registry", "registry-client")
+	require.NoError(t, err)
+
+	externalPKI, err := GeneratePKI("external")
+	require.NoError(t, err)
+
+	externalCert, err := tls.X509KeyPair(externalPKI.Cert, externalPKI.Key)
+	require.NoError(t, err)
+	externalServer := newTLSServer(t, &tls.Config{Certificates: []tls.Certificate{externalCert}}, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer externalServer.Close()
+
+	registryCert, err := tls.X509KeyPair(registryServerPKI.Cert, registryServerPKI.Key)
+	require.NoError(t, err)
+	registryClientCAs := x509.NewCertPool()
+	require.True(t, registryClientCAs.AppendCertsFromPEM(registryClientPKI.CA))
+	registryServer := newTLSServer(t, &tls.Config{
+		Certificates: []tls.Certificate{registryCert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    registryClientCAs,
+	}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, externalServer.URL, http.StatusTemporaryRedirect)
+	}))
+	defer registryServer.Close()
+
+	externalRootCAs := x509.NewCertPool()
+	require.True(t, externalRootCAs.AppendCertsFromPEM(externalPKI.CA))
+	transport, err := transportWithKey(registryClientPKI, externalRootCAs)
+	require.NoError(t, err)
+
+	client := &http.Client{Transport: transport}
+	response, err := client.Get(registryServer.URL)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, response.Body.Close())
+	}()
+	require.Equal(t, http.StatusNoContent, response.StatusCode)
+}
+
+func newTLSServer(t *testing.T, tlsConfig *tls.Config, handler http.Handler) *httptest.Server {
+	t.Helper()
+
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	server := httptest.NewUnstartedServer(handler)
+	server.Listener = listener
+	server.TLS = tlsConfig
+	server.StartTLS()
+	return server
 }
 
 func TestGetRemainingCertLifePercentage(t *testing.T) {

@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: parent-package
+values:
+  files:
+    - import-a/a-values.yaml
+    - import-b/b-values.yaml
+    - parent-values.yaml
+components:
+  - name: component-a
+    required: true
+  - name: component-b
+    required: true

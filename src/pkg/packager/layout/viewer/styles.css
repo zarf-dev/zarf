@@ -69,6 +69,16 @@ body {
     align-items: center;
   }
 
+  .deprecation-banner {
+    background: #ffcc4d;
+    color: #10184c;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-weight: bold;
+    text-align: center;
+  }
+
   .top-bar .element {
     display: flex;
     align-items: center;
@@ -223,20 +233,4 @@ body {
 
   #actions {
     margin-bottom: 50px;
-  }
-
-  .file-selector {
-    display: inline-block;
-  }
-
-  .added {
-    background-color: #22541a;
-  }
-
-  .removed {
-    background-color: #541a22;
-  }
-
-  .changed {
-    background-color: #544c1a;
   }

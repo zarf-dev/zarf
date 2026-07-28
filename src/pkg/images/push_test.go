@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -73,10 +72,7 @@ func TestPush(t *testing.T) {
 				require.NoError(t, saveIndexToOCILayout(tc.SourceDirectory, idx))
 			}()
 			ctx := testutil.TestContext(t)
-			// setup in memory registry
-			port, err := helpers.GetAvailablePort()
-			require.NoError(t, err)
-			address := testutil.SetupInMemoryRegistry(ctx, t, port)
+			address := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 			if tc.namespace != "" {
 				address = fmt.Sprintf("%s/%s", address, tc.namespace)
 			}
@@ -84,7 +80,6 @@ func TestPush(t *testing.T) {
 			regInfo := state.RegistryInfo{
 				Address: address,
 			}
-			require.NoError(t, err)
 
 			for _, name := range tc.imageNames {
 				ref, err := transform.ParseImageRef(name)
@@ -95,7 +90,6 @@ func TestPush(t *testing.T) {
 			// push images to registry
 			opts := PushOptions{
 				PlainHTTP: true,
-				Arch:      "amd64",
 			}
 			err = Push(ctx, imageList, tc.SourceDirectory, regInfo, opts)
 
@@ -116,6 +110,16 @@ func TestPush(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPushRequiresClusterForZarfManagedMTLS(t *testing.T) {
+	t.Parallel()
+
+	err := Push(context.Background(), []transform.Image{{Reference: "registry.example.com/repository:tag"}}, ".", state.RegistryInfo{
+		Address:      "registry.example.com",
+		MTLSStrategy: state.MTLSStrategyZarfManaged,
+	}, PushOptions{})
+	require.EqualError(t, err, "registry uses Zarf-managed mTLS, but no cluster is available to obtain its client certificate")
 }
 
 func verifyImageExists(ctx context.Context, t *testing.T, ref string) {

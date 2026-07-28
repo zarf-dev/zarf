@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-preflight-configmap
+  namespace: default
+data:
+  value: "should-never-be-applied"

@@ -21,6 +21,8 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
+const testNamespace = "test"
+
 type admissionTest struct {
 	name         string
 	admissionReq *v1.AdmissionRequest
@@ -48,6 +50,10 @@ func createTestClientWithZarfState(ctx context.Context, t *testing.T, s *state.S
 		},
 	}
 	_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, secret, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNamespace}}
+	_, err = c.Clientset.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	require.NoError(t, err)
 	return c
 }

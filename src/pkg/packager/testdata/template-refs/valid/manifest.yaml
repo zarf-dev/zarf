@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm
+data:
+  present: "{{ .Values.present }}"
+  fromAction: "{{ .Values.fromAction }}"

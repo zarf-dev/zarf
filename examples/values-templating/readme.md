@@ -1,10 +1,12 @@
 # [ALPHA] Values & Templates Example
 
-This example demonstrates the pre-release alpha version of Zarf's values templating system, including support for **Sprig functions** for advanced template processing and **Helm chart value overrides**.
+This example demonstrates the pre-release alpha version of Zarf's values templating system, including support for **Sprig functions** for advanced template processing, **Helm chart value overrides**, and **cluster state access** via `.State`.
 
 ## Features Demonstrated
 
 - **Basic templating** with `{{ .Values.* }}`, `{{ .Build.* }}`, `{{ .Metadata.* }}`, `{{ .Constants.* }}`, and `{{ .Variables.* }}`
+- **Cluster state** with `{{ .State.Registry.Address }}`, `{{ .State.StorageClass }}`, `{{ .State.IPFamily }}`, and other non-sensitive runtime fields via `.State`
+- **Package object** access via `.Pkg`, including `{{ (.Pkg.GetComponent "name").Images }}` to look up a component by name
 - **Sprig functions** for string manipulation, lists, math, encoding, and more
 - **File templating** with both simple substitution and complex transformations
 - **Dynamic configuration** using template functions for practical Kubernetes deployments

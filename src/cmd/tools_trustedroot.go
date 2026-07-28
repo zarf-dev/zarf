@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
 func newTrustedRootCommand() *cobra.Command {
@@ -79,7 +79,7 @@ func newTrustedRootCreateCommand() *cobra.Command {
 				return errors.New("provide --with-default-services to retrieve the public Sigstore trusted root, or specify --fulcio/--rekor/--ctfe/--tsa to compose a custom trusted root")
 			}
 
-			ctx, cancel := context.WithTimeout(cmd.Context(), utils.CosignDefaultTimeout)
+			ctx, cancel := context.WithTimeout(cmd.Context(), signing.CosignDefaultTimeout)
 			defer cancel()
 			return optionsToCreateCmd(o).Exec(ctx)
 		},

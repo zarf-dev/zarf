@@ -18,7 +18,8 @@ components:
     imageArchives:
       - path: kiwix-data.tar
         images:
-          - kiwix-data:local
+            # Using zarf.internal as our registry ensures our manifest will never pull from a squatted registry url even if mutation is never run.
+          - zarf.internal/kiwix-data:local
     actions:
       onCreate:
         before:
@@ -29,10 +30,10 @@ components:
           # NOTE: If `zarf package create`ing regularly you should mirror content to a web host you control to be a friendly neighbor
 
           # Build a container image containing the ZIM data file
-          - cmd: docker build -t kiwix-data:local .
+          - cmd: docker build -t zarf.internal/kiwix-data:local .
 
           # Export the container image to a tar archive for use as an image archive
-          - cmd: docker save kiwix-data:local -o kiwix-data.tar
+          - cmd: docker save zarf.internal/kiwix-data:local -o kiwix-data.tar
 
 documentation:
   readme: readme.md

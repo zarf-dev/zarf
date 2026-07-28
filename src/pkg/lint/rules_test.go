@@ -92,6 +92,66 @@ func TestUnpinnnedFileWarning(t *testing.T) {
 	require.Len(t, findings, 1)
 }
 
+func TestImagesWithoutDomain(t *testing.T) {
+	t.Parallel()
+	component := v1alpha1.ZarfComponent{Images: []string{
+		"myapp:1.0.0",
+		"library/myapp:1.0.0",
+		"docker.io/library/myapp:1.0.0",
+		"ghcr.io/zarf-dev/zarf:v0.1.0",
+		"localhost:5000/myapp:1.0.0",
+		"###ZARF_PKG_TMPL_IMAGE###",
+	}}
+	findings := checkForImagesWithoutDomain(component, 0)
+	expected := []PackageFinding{
+		{
+			Item:        "myapp:1.0.0",
+			Description: "Image reference does not specify a registry domain",
+			Severity:    SevWarn,
+			YqPath:      ".components.[0].images.[0]",
+		},
+		{
+			Item:        "library/myapp:1.0.0",
+			Description: "Image reference does not specify a registry domain",
+			Severity:    SevWarn,
+			YqPath:      ".components.[0].images.[1]",
+		},
+	}
+	require.Equal(t, expected, findings)
+}
+
+func TestImageArchivesWithoutInternalDomain(t *testing.T) {
+	t.Parallel()
+	component := v1alpha1.ZarfComponent{ImageArchives: []v1alpha1.ImageArchive{
+		{
+			Path: "images.tar",
+			Images: []string{
+				"zarf.internal/myapp:1.0.0",
+				"my.registry.internal:5000/myapp:1.0.0",
+				"myapp:1.0.0",
+				"docker.io/library/myapp:1.0.0",
+				"###ZARF_PKG_TMPL_IMAGE###",
+			},
+		},
+	}}
+	findings := checkForImageArchivesWithoutInternalDomain(component, 0)
+	expected := []PackageFinding{
+		{
+			Item:        "myapp:1.0.0",
+			Description: "Image archive image should use a .internal domain to avoid resolving to a public registry",
+			Severity:    SevWarn,
+			YqPath:      ".components.[0].imageArchives.[0].images.[2]",
+		},
+		{
+			Item:        "docker.io/library/myapp:1.0.0",
+			Description: "Image archive image should use a .internal domain to avoid resolving to a public registry",
+			Severity:    SevWarn,
+			YqPath:      ".components.[0].imageArchives.[0].images.[3]",
+		},
+	}
+	require.Equal(t, expected, findings)
+}
+
 func TestIsImagePinned(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

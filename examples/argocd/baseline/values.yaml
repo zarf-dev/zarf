@@ -19,6 +19,19 @@ configs:
       url: https://github.com/argoproj/argocd-example-apps.git
       username: ""
       password: ""
+    oci-helm:
+      name: podinfo-helm
+      url: oci://ghcr.io/stefanprodan/charts/podinfo
+      username: ""
+      password: ""
+      type: helm
+      enableOCI: "true"
+    oci-manifests:
+      name: oci-repo
+      url: oci://registry-1.docker.io/dhpup/oci-edge
+      username: ""
+      password: ""
+      type: oci
 
 redis:
   image:

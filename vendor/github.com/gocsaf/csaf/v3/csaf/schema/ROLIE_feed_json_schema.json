@@ -1,0 +1,291 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/oasis-tcs/csaf/master/csaf_2.0/json_schema/ROLIE_feed_json_schema.json",
+  "title": "ROLIE Feed auxiliary Schema",
+  "description": "Representation of CSAF ROLIE feed as a JSON document.",
+  "$defs": {
+    "json_link_t": {
+      "title": "JSON Link",
+      "description": "Contains the URL of the JSON file.",
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://.+\\.json$"
+    },
+    "link_t": {
+      "title": "List of Links",
+      "description": "Contains a list of links related to the current context.",
+      "type": "array",
+      "prefixItems": [
+        {
+          "title": "Link",
+          "description": "Specifies the JSON link.",
+          "type": "object",
+          "required": [
+            "rel",
+            "href"
+          ],
+          "properties": {
+            "href": {
+              "title": "Hyper reference",
+              "description": "Contains the URL of the JSON file.",
+              "$ref": "#/$defs/json_link_t"
+            },
+            "rel": {
+              "title": "Relationship",
+              "description": "Contains the relationship value of the link.",
+              "type": "string",
+              "enum": [
+                "self"
+              ]
+            }
+          }
+        }
+      ],
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "title": "Link",
+        "description": "Specifies a single link.",
+        "type": "object",
+        "required": [
+          "rel",
+          "href"
+        ],
+        "properties": {
+          "href": {
+            "title": "Hyper reference",
+            "description": "Contains the URL of the link.",
+            "type": "string",
+            "format": "uri"
+          },
+          "rel": {
+            "title": "Relationship",
+            "description": "Contains the relationship value of the link.",
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "type": "object",
+  "required": [
+    "feed"
+  ],
+  "properties": {
+    "feed": {
+      "title": "CSAF ROLIE feed",
+      "description": "Contains all information of the feed.",
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "link",
+        "category",
+        "updated",
+        "entry"
+      ],
+      "properties": {
+        "id": {
+          "title": "ID",
+          "description": "Contains a unique identifier for this ROLIE feed.",
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9+\\-_\\.]+$",
+          "minLength": 1
+        },
+        "title": {
+          "title": "Feed title",
+          "description": "Contains the title for this ROLIE feed.",
+          "type": "string",
+          "minLength": 1
+        },
+        "link": {
+          "title": "List of Links",
+          "description": "Contains a list of links related to this feed.",
+          "$ref": "#/$defs/link_t"
+        },
+        "category": {
+          "title": "List of Categories",
+          "description": "Contains a list of categories related to this feed.",
+          "type": "array",
+          "prefixItems": [
+            {
+              "title": "CSAF ROLIE category",
+              "description": "Contains the required ROLIE category value.",
+              "type": "object",
+              "required": [
+                "scheme",
+                "term"
+              ],
+              "properties": {
+                "scheme": {
+                  "title": "Scheme",
+                  "description": "Contains the URI of the scheme to use.",
+                  "type": "string",
+                  "enum": [
+                    "urn:ietf:params:rolie:category:information-type"
+                  ]
+                },
+                "term": {
+                  "title": "Term",
+                  "description": "Contains the term that is valid in the context of the scheme.",
+                  "type": "string",
+                  "enum": [
+                    "csaf"
+                  ]
+                }
+              }
+            }
+          ],
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "title": "Category",
+            "description": "Specifies a single category.",
+            "type": "object",
+            "required": [
+              "scheme",
+              "term"
+            ],
+            "properties": {
+              "scheme": {
+                "title": "Scheme",
+                "description": "Contains the URI of the scheme to use.",
+                "type": "string",
+                "format": "uri"
+              },
+              "term": {
+                "title": "Term",
+                "description": "Contains the term that is valid in the context of the scheme.",
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "updated": {
+          "title": "Updated",
+          "description": "Contains the date and time this feed was updated the last time.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "entry": {
+          "title": "List of Entries",
+          "description": "Contains a list of feed entries.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "title": "Entry",
+            "description": "Contains all information for a single feed entry.",
+            "type": "object",
+            "required": [
+              "id",
+              "title",
+              "link",
+              "published",
+              "updated",
+              "content",
+              "format"
+            ],
+            "properties": {
+              "id": {
+                "title": "ID",
+                "description": "Contains the document tracking ID of the CSAF document.",
+                "type": "string",
+                "pattern": "^[\\S](.*[\\S])?$",
+                "minLength": 1
+              },
+              "title": {
+                "title": "Title",
+                "description": "Contains the document title of the CSAF document.",
+                "type": "string",
+                "minLength": 1
+              },
+              "link": {
+                "title": "List of Links",
+                "description": "Contains a list of links related to this entry.",
+                "$ref": "#/$defs/link_t"
+              },
+              "published": {
+                "title": "Published",
+                "description": "Contains the date and time this entry was initially added to the feed.",
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated": {
+                "title": "Updated",
+                "description": "Contains the date and time this entry was the last time updated in the feed.",
+                "type": "string",
+                "format": "date-time"
+              },
+              "summary": {
+                "title": "Summary",
+                "description": "Contains the summary of the CSAF document.",
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "title": "Content",
+                    "description": "Contains the actual text of the summary.",
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "content": {
+                "title": "Content of the entry",
+                "description": "Contains information about the content.",
+                "type": "object",
+                "required": [
+                  "type",
+                  "src"
+                ],
+                "properties": {
+                  "src": {
+                    "title": "Source Code",
+                    "description": "Contains a link to the source code of the file",
+                    "$ref": "#/$defs/json_link_t"
+                  },
+                  "type": {
+                    "title": "MIME type",
+                    "description": "Contains the MIME type of the content.",
+                    "type": "string",
+                    "enum": [
+                      "application/json"
+                    ]
+                  }
+                }
+              },
+              "format": {
+                "title": "Format",
+                "description": "Contains information about the format of the entry.",
+                "type": "object",
+                "required": [
+                  "schema",
+                  "version"
+                ],
+                "properties": {
+                  "schema": {
+                    "title": "Schema of the entry",
+                    "description": "Contains the schema the CSAF document is valid against.",
+                    "type": "string",
+                    "enum": [
+                      "https://docs.oasis-open.org/csaf/csaf/v2.0/csaf_json_schema.json"
+                    ]
+                  },
+                  "version": {
+                    "title": "CSAF Version",
+                    "description": "Contains the CSAF version the document was written in.",
+                    "type": "string",
+                    "enum": [
+                      "2.0"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

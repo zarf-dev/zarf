@@ -1,0 +1,320 @@
+// Copyright 2020 The CUE Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Copyright 2018 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Originally generated with: go run qgo.go -exclude=Append,Unquote,Itoa,CanBackquote,FormatComplex extract strconv
+
+package strconv
+
+import (
+	"cuelang.org/go/cue/literal"
+	"cuelang.org/go/internal"
+	"math/big"
+	"strconv"
+)
+
+// ParseBool returns the boolean value represented by the string.
+// It accepts 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False.
+// Any other value returns an error.
+func ParseBool(str string) (bool, error) {
+	return strconv.ParseBool(str)
+}
+
+// FormatBool returns "true" or "false" according to the value of b.
+func FormatBool(b bool) string {
+	return strconv.FormatBool(b)
+}
+
+// ParseFloat converts the string s to a floating-point number
+// with the precision specified by bitSize: 32 for float32, or 64 for float64.
+// When bitSize=32, the result still has type float64, but it will be
+// convertible to float32 without changing its value.
+//
+// ParseFloat accepts decimal and hexadecimal floating-point number syntax.
+// If s is well-formed and near a valid floating-point number,
+// ParseFloat returns the nearest floating-point number rounded
+// using IEEE754 unbiased rounding.
+// (Parsing a hexadecimal floating-point value only rounds when
+// there are more bits in the hexadecimal representation than
+// will fit in the mantissa.)
+//
+// The errors that ParseFloat returns have concrete type *NumError
+// and include err.Num = s.
+//
+// If s is not syntactically well-formed, ParseFloat returns err.Err = ErrSyntax.
+//
+// If s is syntactically well-formed but is more than 1/2 ULP
+// away from the largest floating point number of the given size,
+// ParseFloat returns f = ±Inf, err.Err = ErrRange.
+//
+// ParseFloat recognizes the strings "NaN", and the (possibly signed) strings "Inf" and "Infinity"
+// as their respective special floating point values. It ignores case when matching.
+func ParseFloat(s string, bitSize int) (float64, error) {
+	return strconv.ParseFloat(s, bitSize)
+}
+
+// ParseNumber interprets s using the full CUE number literal syntax and returns
+// the resulting value as an arbitrary-precision decimal. It accepts decimal
+// and non-decimal bases, underscores as separators, fractional syntax, and
+// the decimal or binary multiplier suffixes defined by CUE (for example "1Ki"
+// and "10M").
+//
+// If s is not syntactically well-formed, ParseNumber returns a *strconv.NumError
+// with Err containing detailed syntax information. Semantic errors, such as a
+// multiplier that cannot be represented, are reported in the same way.
+func ParseNumber(s string) (*internal.Decimal, error) {
+	var info literal.NumInfo
+	if err := literal.ParseNum(s, &info); err != nil {
+		return nil, &strconv.NumError{
+			Func: "ParseNumber",
+			Num:  s,
+			Err:  err,
+		}
+	}
+
+	var dec internal.Decimal
+	if err := info.Decimal(&dec); err != nil {
+		return nil, &strconv.NumError{
+			Func: "ParseNumber",
+			Num:  s,
+			Err:  err,
+		}
+	}
+	return &dec, nil
+}
+
+// IntSize is the size in bits of an int or uint value.
+const IntSize = 64
+
+// ParseUint is like [ParseInt] but for unsigned numbers.
+func ParseUint(s string, base int, bitSize int) (*big.Int, error) {
+	if bitSize < 0 {
+		return nil, &strconv.NumError{
+			Func: "ParseUint",
+			Num:  s,
+			Err:  strconv.ErrRange,
+		}
+	}
+
+	// Parse the number using big.Int to handle arbitrary precision
+	i := new(big.Int)
+	i, ok := i.SetString(s, base)
+	if !ok {
+		return nil, &strconv.NumError{
+			Func: "ParseUint",
+			Num:  s,
+			Err:  strconv.ErrSyntax,
+		}
+	}
+
+	// Check if the value is negative (not allowed for unsigned)
+	if i.Sign() < 0 {
+		return nil, &strconv.NumError{
+			Func: "ParseUint",
+			Num:  s,
+			Err:  strconv.ErrRange,
+		}
+	}
+
+	// If bitSize is 0, return unlimited precision result
+	if bitSize == 0 {
+		return i, nil
+	}
+
+	// Check if the value fits in the specified bit size
+	// For unsigned integers, the range is [0, 2^bitSize-1]
+	if i.BitLen() <= bitSize {
+		return i, nil
+	}
+
+	return nil, &strconv.NumError{
+		Func: "ParseUint",
+		Num:  s,
+		Err:  strconv.ErrRange,
+	}
+}
+
+// ParseInt interprets a string s in the given base (0, 2 to 36) and
+// bit size and returns the corresponding value i.
+//
+// If the base argument is 0, the true base is implied by the string's
+// prefix: 2 for "0b", 8 for "0" or "0o", 16 for "0x", and 10 otherwise.
+// Also, for argument base 0 only, underscore characters are permitted
+// as defined by the Go syntax for integer literals.
+//
+// The bitSize argument specifies the integer type that the result must fit into.
+// If bitSize is 0, the result is unconstrained (unlimited precision).
+// If bitSize is positive, the result must fit in a signed integer of that many bits.
+// If bitSize is negative, an error is returned.
+func ParseInt(s string, base int, bitSize int) (*big.Int, error) {
+	if bitSize < 0 {
+		return nil, &strconv.NumError{
+			Func: "ParseInt",
+			Num:  s,
+			Err:  strconv.ErrRange,
+		}
+	}
+
+	// Parse the number using big.Int to handle arbitrary precision
+	i := new(big.Int)
+	i, ok := i.SetString(s, base)
+	if !ok {
+		return nil, &strconv.NumError{
+			Func: "ParseInt",
+			Num:  s,
+			Err:  strconv.ErrSyntax,
+		}
+	}
+
+	// If bitSize is 0, return unlimited precision result
+	if bitSize == 0 {
+		return i, nil
+	}
+	// Check if the value fits in the specified bit size
+	// For signed integers, the range is [-2^(bitSize-1), 2^(bitSize-1)-1]
+	bitLen := i.BitLen()
+	if bitLen <= bitSize-1 {
+		return i, nil
+	}
+	if i.Sign() < 0 && bitLen == bitSize {
+		// It might be all 1s; add one and see if it fits.
+		x := big.NewInt(1)
+		x.Add(i, x)
+		if x.BitLen() <= bitSize-1 {
+			return i, nil
+		}
+	}
+	return nil, &strconv.NumError{
+		Func: "ParseInt",
+		Num:  s,
+		Err:  strconv.ErrRange,
+	}
+}
+
+// Atoi is equivalent to ParseInt(s, 10, 0), converted to type int.
+func Atoi(s string) (*big.Int, error) {
+	n, err := ParseInt(s, 10, 0)
+	if err == nil {
+		return n, nil
+	}
+	if nerr, ok := err.(*strconv.NumError); ok {
+		nerr.Func = "Atoi"
+	}
+	return nil, err
+}
+
+// FormatFloat converts the floating-point number f to a string,
+// according to the format fmt and precision prec. It rounds the
+// result assuming that the original was obtained from a floating-point
+// value of bitSize bits (32 for float32, 64 for float64).
+//
+// The format fmt is one of
+// 'b' (-ddddp±ddd, a binary exponent),
+// 'e' (-d.dddde±dd, a decimal exponent),
+// 'E' (-d.ddddE±dd, a decimal exponent),
+// 'f' (-ddd.dddd, no exponent),
+// 'g' ('e' for large exponents, 'f' otherwise),
+// 'G' ('E' for large exponents, 'f' otherwise),
+// 'x' (-0xd.ddddp±ddd, a hexadecimal fraction and binary exponent), or
+// 'X' (-0Xd.ddddP±ddd, a hexadecimal fraction and binary exponent).
+//
+// The precision prec controls the number of digits (excluding the exponent)
+// printed by the 'e', 'E', 'f', 'g', 'G', 'x', and 'X' formats.
+// For 'e', 'E', 'f', 'x', and 'X', it is the number of digits after the decimal point.
+// For 'g' and 'G' it is the maximum number of significant digits (trailing
+// zeros are removed).
+// The special precision -1 uses the smallest number of digits
+// necessary such that ParseFloat will return f exactly.
+func FormatFloat(f float64, fmt byte, prec, bitSize int) string {
+	return strconv.FormatFloat(f, fmt, prec, bitSize)
+}
+
+// FormatUint returns the string representation of i in the given base,
+// for 2 <= base <= 62. The result uses:
+// For 10 <= digit values <= 35, the lower-case letters 'a' to 'z'
+// For 36 <= digit values <= 61, the upper-case letters 'A' to 'Z'
+func FormatUint(i *big.Int, base int) string {
+	return i.Text(base)
+}
+
+// FormatInt returns the string representation of i in the given base,
+// for 2 <= base <= 62. The result uses:
+// For 10 <= digit values <= 35, the lower-case letters 'a' to 'z'
+// For 36 <= digit values <= 61, the upper-case letters 'A' to 'Z'
+func FormatInt(i *big.Int, base int) string {
+	return i.Text(base)
+}
+
+// Quote returns a double-quoted Go string literal representing s. The
+// returned string uses Go escape sequences (\t, \n, \xFF, \u0100) for
+// control characters and non-printable characters as defined by
+// IsPrint.
+func Quote(s string) string {
+	return strconv.Quote(s)
+}
+
+// QuoteToASCII returns a double-quoted Go string literal representing s.
+// The returned string uses Go escape sequences (\t, \n, \xFF, \u0100) for
+// non-ASCII characters and non-printable characters as defined by IsPrint.
+func QuoteToASCII(s string) string {
+	return strconv.QuoteToASCII(s)
+}
+
+// QuoteToGraphic returns a double-quoted Go string literal representing s.
+// The returned string leaves Unicode graphic characters, as defined by
+// IsGraphic, unchanged and uses Go escape sequences (\t, \n, \xFF, \u0100)
+// for non-graphic characters.
+func QuoteToGraphic(s string) string {
+	return strconv.QuoteToGraphic(s)
+}
+
+// QuoteRune returns a single-quoted Go character literal representing the
+// rune. The returned string uses Go escape sequences (\t, \n, \xFF, \u0100)
+// for control characters and non-printable characters as defined by IsPrint.
+func QuoteRune(r rune) string {
+	return strconv.QuoteRune(r)
+}
+
+// QuoteRuneToASCII returns a single-quoted Go character literal representing
+// the rune. The returned string uses Go escape sequences (\t, \n, \xFF,
+// \u0100) for non-ASCII characters and non-printable characters as defined
+// by IsPrint.
+func QuoteRuneToASCII(r rune) string {
+	return strconv.QuoteRuneToASCII(r)
+}
+
+// QuoteRuneToGraphic returns a single-quoted Go character literal representing
+// the rune. If the rune is not a Unicode graphic character,
+// as defined by IsGraphic, the returned string will use a Go escape sequence
+// (\t, \n, \xFF, \u0100).
+func QuoteRuneToGraphic(r rune) string {
+	return strconv.QuoteRuneToGraphic(r)
+}
+
+// IsPrint reports whether the rune is defined as printable by Go, with
+// the same definition as unicode.IsPrint: letters, numbers, punctuation,
+// symbols and ASCII space.
+func IsPrint(r rune) bool {
+	return strconv.IsPrint(r)
+}
+
+// IsGraphic reports whether the rune is defined as a Graphic by Unicode. Such
+// characters include letters, marks, numbers, punctuation, symbols, and
+// spaces, from categories L, M, N, P, S, and Zs.
+func IsGraphic(r rune) bool {
+	return strconv.IsGraphic(r)
+}

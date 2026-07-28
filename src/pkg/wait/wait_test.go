@@ -5,6 +5,8 @@
 package wait
 
 import (
+	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -146,6 +148,153 @@ func TestForNetwork(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestForNetworkTCP(t *testing.T) {
+	t.Parallel()
+
+	ln, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { ln.Close() }) //nolint:errcheck
+
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			conn.Close() //nolint:errcheck
+		}
+	}()
+
+	addr := ln.Addr().String()
+	err = forNetwork(t.Context(), "tcp", addr, "", 500*time.Millisecond, 10*time.Millisecond)
+	require.NoError(t, err)
+}
+
+func TestForNetworkCancellationAndTimeout(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		protocol  string
+		address   string
+		makeCtx   func(t *testing.T) context.Context
+		timeout   time.Duration
+		interval  time.Duration
+		wantErr   string
+		wantIs    error
+		wantNotIs []error
+	}{
+		{
+			name:     "http context cancelled",
+			protocol: "http",
+			address:  "localhost:1",
+			makeCtx: func(t *testing.T) context.Context {
+				ctx, cancel := context.WithCancel(t.Context())
+				t.Cleanup(cancel)
+				go func() {
+					time.Sleep(50 * time.Millisecond)
+					cancel()
+				}()
+				return ctx
+			},
+			timeout:   10 * time.Second,
+			interval:  10 * time.Second,
+			wantErr:   "wait cancelled: context canceled",
+			wantIs:    context.Canceled,
+			wantNotIs: []error{context.DeadlineExceeded},
+		},
+		{
+			name:     "http context deadline exceeded",
+			protocol: "http",
+			address:  "localhost:1",
+			makeCtx: func(t *testing.T) context.Context {
+				ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+				t.Cleanup(cancel)
+				return ctx
+			},
+			timeout:   10 * time.Second,
+			interval:  10 * time.Second,
+			wantErr:   "wait cancelled: context deadline exceeded",
+			wantIs:    context.DeadlineExceeded,
+			wantNotIs: []error{context.Canceled},
+		},
+		{
+			name:      "http internal timeout",
+			protocol:  "http",
+			address:   "localhost:1",
+			makeCtx:   func(t *testing.T) context.Context { return t.Context() },
+			timeout:   100 * time.Millisecond,
+			interval:  10 * time.Millisecond,
+			wantErr:   "wait timed out",
+			wantNotIs: []error{context.DeadlineExceeded, context.Canceled},
+		},
+		{
+			name:     "tcp context cancelled",
+			protocol: "tcp",
+			address:  "localhost:1",
+			makeCtx: func(t *testing.T) context.Context {
+				ctx, cancel := context.WithCancel(t.Context())
+				t.Cleanup(cancel)
+				go func() {
+					time.Sleep(50 * time.Millisecond)
+					cancel()
+				}()
+				return ctx
+			},
+			timeout:   10 * time.Second,
+			interval:  10 * time.Second,
+			wantErr:   "wait cancelled: context canceled",
+			wantIs:    context.Canceled,
+			wantNotIs: []error{context.DeadlineExceeded},
+		},
+		{
+			name:     "tcp context deadline exceeded",
+			protocol: "tcp",
+			address:  "localhost:1",
+			makeCtx: func(t *testing.T) context.Context {
+				ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+				t.Cleanup(cancel)
+				return ctx
+			},
+			timeout:   10 * time.Second,
+			interval:  10 * time.Second,
+			wantErr:   "wait cancelled: context deadline exceeded",
+			wantIs:    context.DeadlineExceeded,
+			wantNotIs: []error{context.Canceled},
+		},
+		{
+			name:      "tcp internal timeout",
+			protocol:  "tcp",
+			address:   "localhost:1",
+			makeCtx:   func(t *testing.T) context.Context { return t.Context() },
+			timeout:   100 * time.Millisecond,
+			interval:  10 * time.Millisecond,
+			wantErr:   "wait timed out",
+			wantNotIs: []error{context.DeadlineExceeded, context.Canceled},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := tt.makeCtx(t)
+
+			start := time.Now()
+			err := forNetwork(ctx, tt.protocol, tt.address, "", tt.timeout, tt.interval)
+			elapsed := time.Since(start)
+
+			require.EqualError(t, err, tt.wantErr)
+			if tt.wantIs != nil {
+				require.ErrorIs(t, err, tt.wantIs)
+			}
+			for _, notIs := range tt.wantNotIs {
+				require.NotErrorIs(t, err, notIs)
+			}
+			require.Less(t, elapsed, 500*time.Millisecond, "forNetwork should return promptly")
 		})
 	}
 }

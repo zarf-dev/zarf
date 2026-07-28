@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: schema-chart-values
+data:
+  name: {{ .Values.name | default "unknown" | quote }}
+  replicas: {{ .Values.replicaCount | quote }}
+  port: {{ .Values.service.port | quote }}

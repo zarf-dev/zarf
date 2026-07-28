@@ -1,0 +1,79 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+package test
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/stretchr/testify/require"
+	"oras.land/oras-go/v2/registry"
+
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/test/testutil"
+)
+
+// TestIndexImage exercises digest-pinned multi-platform images end-to-end:
+// create + publish + pull + deploy of a single-arch package with an image pulled by index digest
+func TestIndexImage(t *testing.T) {
+	t.Log("E2E: index-sha image preserved as the full upstream index")
+
+	pkgDefinitionPath := filepath.Join("src", "test", "packages", "48-multi-platform-image")
+	createDir := t.TempDir()
+
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", pkgDefinitionPath, "-o", createDir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Since there's only one image, tagged by index digest this will also work on arm64
+	createdPkgPath := filepath.Join(createDir, "zarf-package-index-image-amd64-0.0.1.tar.zst")
+
+	registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
+	ref := registry.Reference{
+		Registry:   registryURL,
+		Repository: "index-image",
+		Reference:  "0.0.1",
+	}
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "publish", createdPkgPath, "oci://"+registryURL, "--plain-http")
+	require.NoError(t, err, stdOut, stdErr)
+
+	pullDir := t.TempDir()
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", "oci://"+ref.String(), "--plain-http", "-o", pullDir, "-a", "amd64")
+	require.NoError(t, err, stdOut, stdErr)
+
+	pulledPkgPath := filepath.Join(pullDir, "zarf-package-index-image-amd64-0.0.1.tar.zst")
+
+	pkgLayout, err := layout.LoadFromTar(t.Context(), pulledPkgPath, layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+
+	idxBytes, err := os.ReadFile(filepath.Join(pkgLayout.GetImageDirPath(), "index.json"))
+	require.NoError(t, err)
+	var idx ocispec.Index
+	require.NoError(t, json.Unmarshal(idxBytes, &idx))
+
+	sbomDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), sbomDir))
+	sbomEntries, err := os.ReadDir(sbomDir)
+	require.NoError(t, err)
+	count := 0
+	for _, entry := range sbomEntries {
+		name := entry.Name()
+		if strings.HasSuffix(name, ".json") && strings.Contains(name, "podinfo_6.4.0") {
+			count++
+		}
+	}
+	require.GreaterOrEqual(t, count, 2, "expected per-platform SBOMs for the digested multi-platform image")
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pulledPkgPath, "--confirm", "--skip-version-check")
+	require.NoError(t, err, stdOut, stdErr)
+	t.Cleanup(func() {
+		_, _, err = e2e.Zarf(t, "package", "remove", "index-image", "--confirm", "--skip-version-check")
+		require.NoError(t, err)
+	})
+}

@@ -1,0 +1,19 @@
+# Anchore Fangs
+
+This is a Go library that simplifies integrating Cobra (CLI framework) and Viper (configuration management) for Anchore's Go-based CLI tools.
+
+## Purpose
+Fangs provides best practices and patterns for combining Cobra and Viper in a consistent, simple way across Anchore projects.
+
+## Key Features
+- Configuration struct definitions with mapstructure tags
+- Seamless integration between CLI flags and configuration files  
+- Support for embedded structs with squash option
+- Automatic config loading from multiple sources (files, environment, flags)
+
+## Usage Pattern
+1. Define configuration structs with mapstructure tags
+2. Create Cobra commands with flags using *Var* variants
+3. Call config.Load() to merge all configuration sources
+
+This library emerged from years of experience building CLI tools at Anchore and codifies proven patterns that avoid common pitfalls when using Cobra and Viper together.

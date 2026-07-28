@@ -1,0 +1,16 @@
+kind: ZarfPackageConfig
+metadata:
+  name: manifest-adoption
+  version: 0.0.1
+
+components:
+  - name: baseline
+    required: true
+    manifests:
+      - name: multi-games
+        namespace: manifest-adoption
+        files:
+          - manifests/deployment.yaml
+          - manifests/clusterrole.yaml
+    images:
+      - ghcr.io/zarf-dev/doom-game:0.0.1

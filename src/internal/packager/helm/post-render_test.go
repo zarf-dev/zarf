@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -150,6 +152,58 @@ data:
 	require.NoError(t, err)
 	require.True(t, found)
 	require.Equal(t, "key: value\n", data["config.yaml"])
+}
+
+func TestRendererShouldAddAgentIgnoreLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		renderer renderer
+		expected bool
+	}{
+		{
+			name: "connected deploy with configured agent",
+			renderer: renderer{
+				connectedDeploy: true,
+				state: &state.State{
+					AgentTLS: pki.GeneratedPKI{Cert: []byte("cert")},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "connected deploy without configured agent",
+			renderer: renderer{
+				connectedDeploy: true,
+				state:           &state.State{},
+			},
+			expected: false,
+		},
+		{
+			name: "airgap deploy with configured agent",
+			renderer: renderer{
+				state: &state.State{
+					AgentTLS: pki.GeneratedPKI{Cert: []byte("cert")},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "connected deploy without state",
+			renderer: renderer{
+				connectedDeploy: true,
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.expected, tt.renderer.shouldAddAgentIgnoreLabels())
+		})
+	}
 }
 
 func TestAddAgentIgnoreLabels(t *testing.T) {
@@ -394,7 +448,9 @@ func TestAgentMutatedKindsMatchesWebhook(t *testing.T) {
 	require.NoError(t, err)
 
 	// Strip Helm template directives so the manifest can be parsed as plain YAML.
-	cleaned := regexp.MustCompile(`{{[^}]*}}`).ReplaceAllString(string(data), "placeholder")
+	// then replace remaining inline expressions with a placeholder.
+	cleaned := regexp.MustCompile(`(?m)^\s*{{[^}]*}}\s*\n`).ReplaceAllString(string(data), "")
+	cleaned = regexp.MustCompile(`{{[^}]*}}`).ReplaceAllString(cleaned, "placeholder")
 
 	// Only parse the rules — decoding the full MutatingWebhookConfiguration would
 	// fail on the templated caBundle placeholder which is not valid base64.

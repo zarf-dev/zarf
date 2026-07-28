@@ -12,6 +12,7 @@ metadata:
   annotations:
     # Sprig example: Base64 encode sensitive data references
     config.zarf.dev/data-hash: {{ .Values.app.config_data | b64enc }}
+    version: {{ .Values.app.version }}
 spec:
   selector:
     matchLabels:

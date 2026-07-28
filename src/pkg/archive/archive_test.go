@@ -5,12 +5,15 @@
 package archive
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/mholt/archives"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,6 +57,159 @@ func generateAndCleanupSources(t *testing.T, sources []string) []string {
 		paths[i] = path
 	}
 	return paths
+}
+
+// tarBytes builds an uncompressed tar archive in memory from the given name->content entries.
+func tarBytes(t *testing.T, entries map[string]string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	for name, content := range entries {
+		require.NoError(t, tw.WriteHeader(&tar.Header{
+			Name:     name,
+			Mode:     0o644,
+			Size:     int64(len(content)),
+			Typeflag: tar.TypeReg,
+		}))
+		_, err := tw.Write([]byte(content))
+		require.NoError(t, err)
+	}
+	require.NoError(t, tw.Close())
+	return buf.Bytes()
+}
+
+// treeContents walks dir and returns a map of slash-separated relative path -> file content.
+func treeContents(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	require.NoError(t, filepath.Walk(dir, func(path string, fi os.FileInfo, err error) error {
+		require.NoError(t, err)
+		if fi.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(dir, path)
+		require.NoError(t, err)
+		out[filepath.ToSlash(rel)] = readTestFile(t, path)
+		return nil
+	}))
+	return out
+}
+
+func TestDecompressStreamRequiresExtractor(t *testing.T) {
+	t.Parallel()
+	err := DecompressStream(t.Context(), bytes.NewReader(nil), t.TempDir(), DecompressOpts{})
+	require.ErrorContains(t, err, "Extractor must be set")
+}
+
+func TestDecompressStreamOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		archive     func(t *testing.T) []byte
+		opts        DecompressOpts
+		setup       func(t *testing.T, outDir string)
+		expectError string
+		want        map[string]string
+	}{
+		{
+			name: "default extracts every entry",
+			archive: func(t *testing.T) []byte {
+				return tarBytes(t, map[string]string{"a.txt": "alpha", "nested/b.txt": "beta"})
+			},
+			opts: DecompressOpts{Extractor: archives.Tar{}},
+			want: map[string]string{"a.txt": "alpha", "nested/b.txt": "beta"},
+		},
+		{
+			name: "strip components drops leading path element",
+			archive: func(t *testing.T) []byte {
+				return tarBytes(t, map[string]string{"top/a.txt": "alpha", "top/b.txt": "beta"})
+			},
+			opts: DecompressOpts{Extractor: archives.Tar{}, StripComponents: 1},
+			want: map[string]string{"a.txt": "alpha", "b.txt": "beta"},
+		},
+		{
+			name: "filter extracts only requested files",
+			archive: func(t *testing.T) []byte {
+				return tarBytes(t, map[string]string{"keep.txt": "keep", "drop.txt": "drop"})
+			},
+			opts: DecompressOpts{Extractor: archives.Tar{}, Files: []string{"keep.txt"}},
+			want: map[string]string{"keep.txt": "keep"},
+		},
+		{
+			name: "filter errors when a requested file is missing",
+			archive: func(t *testing.T) []byte {
+				return tarBytes(t, map[string]string{"present.txt": "here"})
+			},
+			opts:        DecompressOpts{Extractor: archives.Tar{}, Files: []string{"absent.txt"}},
+			expectError: "absent.txt",
+		},
+		{
+			name: "filter skips validation when requested",
+			archive: func(t *testing.T) []byte {
+				return tarBytes(t, map[string]string{"present.txt": "here"})
+			},
+			opts: DecompressOpts{Extractor: archives.Tar{}, Files: []string{"absent.txt"}, SkipValidation: true},
+			want: map[string]string{},
+		},
+		{
+			name: "overwrite truncates an existing file",
+			archive: func(t *testing.T) []byte {
+				return tarBytes(t, map[string]string{"f.txt": "short"})
+			},
+			opts: DecompressOpts{Extractor: archives.Tar{}, OverwriteExisting: true},
+			setup: func(t *testing.T, outDir string) {
+				writeTestFile(t, filepath.Join(outDir, "f.txt"), "a much longer original value")
+			},
+			want: map[string]string{"f.txt": "short"},
+		},
+		{
+			name: "unarchive all recurses into nested tar",
+			archive: func(t *testing.T) []byte {
+				inner := tarBytes(t, map[string]string{"foo.txt": "nested content"})
+				return tarBytes(t, map[string]string{"inner.tar": string(inner)})
+			},
+			opts: DecompressOpts{Extractor: archives.Tar{}, UnarchiveAll: true},
+			want: map[string]string{"foo.txt": "nested content"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			outDir := t.TempDir()
+			if tc.setup != nil {
+				tc.setup(t, outDir)
+			}
+			err := DecompressStream(t.Context(), bytes.NewReader(tc.archive(t)), outDir, tc.opts)
+			if tc.expectError != "" {
+				require.ErrorContains(t, err, tc.expectError)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.want, treeContents(t, outDir))
+		})
+	}
+}
+
+// TestDecompressStreamMatchesDecompress asserts the stream and file paths produce identical trees.
+func TestDecompressStreamMatchesDecompress(t *testing.T) {
+	t.Parallel()
+	raw := tarBytes(t, map[string]string{
+		"top/a.txt":        "alpha",
+		"top/nested/b.txt": "beta",
+	})
+
+	fileDir := t.TempDir()
+	tarPath := filepath.Join(t.TempDir(), "archive.tar")
+	writeTestFile(t, tarPath, string(raw))
+	require.NoError(t, Decompress(t.Context(), tarPath, fileDir, DecompressOpts{StripComponents: 1}))
+
+	streamDir := t.TempDir()
+	require.NoError(t, DecompressStream(t.Context(), bytes.NewReader(raw), streamDir,
+		DecompressOpts{Extractor: archives.Tar{}, StripComponents: 1}))
+
+	require.Equal(t, treeContents(t, fileDir), treeContents(t, streamDir))
 }
 
 func TestCompress(t *testing.T) {

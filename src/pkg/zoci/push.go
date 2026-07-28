@@ -6,29 +6,17 @@ package zoci
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"maps"
-	"os"
-	"sort"
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content/file"
 )
-
-// OCITimestampFormat is the format used for the OCI timestamp annotation
-const OCITimestampFormat = time.RFC3339
 
 // PushPackage publishes the zarf package to the remote repository.
 func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayout, opts PublishOptions) (_ ocispec.Descriptor, err error) {
@@ -48,63 +36,14 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		opts.Retries = DefaultRetries
 	}
 
-	tempDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("failed to create temp directory: %w", err)
+	if !pkgLayout.IsPushable() {
+		return ocispec.Descriptor{}, fmt.Errorf("package layout is not pushable; manifest cache must be computed before publishing")
 	}
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			l.Warn("failed to remove temp directory", "path", tempDir, "error", err)
-		}
-	}()
-
-	src, err := file.New(tempDir)
-	if err != nil {
-		return ocispec.Descriptor{}, err
-	}
-	defer func(src *file.Store) {
-		err2 := src.Close()
-		err = errors.Join(err, err2)
-	}(src)
-
-	// Stage blobs into local store
-	var descs []ocispec.Descriptor
-	files, err := pkgLayout.Files()
-	if err != nil {
-		return ocispec.Descriptor{}, err
-	}
-	for path, name := range files {
-		desc, err := src.Add(ctx, name, ZarfLayerMediaTypeBlob, path)
-		if err != nil {
-			return ocispec.Descriptor{}, err
-		}
-		descs = append(descs, desc)
-	}
-	// Sort by digest for deterministic ordering
-	sort.Slice(descs, func(i, j int) bool {
-		return descs[i].Digest < descs[j].Digest
-	})
-
-	annotations := annotationsFromMetadata(pkgLayout.Pkg.Metadata)
-
-	// Back-compatible timestamp parsing → OCI format
-	t, err := time.Parse(v1alpha1.BuildTimestampFormat, pkgLayout.Pkg.Build.Timestamp)
-	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("unable to parse timestamp: %w", err)
-	}
-	annotations[ocispec.AnnotationCreated] = t.Format(OCITimestampFormat)
 
 	copyOpts := r.OrasRemote.GetDefaultCopyOpts()
 	copyOpts.Concurrency = opts.OCIConcurrency
 
-	// For progress reporting and size estimation
-	// (root + manifestConfigDesc sizes are unknown until built each attempt;
-	// this is a conservative total using layer sizes; progress still works fine.)
-	totalSize := oci.SumDescsSize(descs)
-
-	if annotations[ocispec.AnnotationTitle] == "" {
-		return ocispec.Descriptor{}, fmt.Errorf("invalid annotations: please include value for %q", ocispec.AnnotationTitle)
-	}
+	totalSize := pkgLayout.TotalSize()
 
 	var publishedDesc ocispec.Descriptor
 	err = retry.Do(
@@ -112,33 +51,16 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 			l.Info("pushing package to registry", "destination", r.Repo().Reference.String(),
 				"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
 
-			manifestConfigBytes, err := json.Marshal(pkgLayout.Pkg)
-			if err != nil {
-				return err
-			}
-			manifestConfigDesc, err := r.PushLayer(ctx, manifestConfigBytes, ZarfConfigMediaType)
-			if err != nil {
-				return err
-			}
-
-			root, packErr := r.OrasRemote.PackAndTagManifest(ctx, src, descs, manifestConfigDesc, annotations)
-			if packErr != nil {
-				return packErr
-			}
-
-			// Update the total with manifest + config for better progress (optional)
-			attemptTotal := totalSize + root.Size + manifestConfigDesc.Size
-
 			trackedRemote := images.NewTrackedTarget(
 				r.Repo(),
-				attemptTotal,
+				totalSize,
 				images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()),
 			)
 			trackedRemote.StartReporting(ctx)
 			defer trackedRemote.StopReporting()
 
 			var copyErr error
-			publishedDesc, copyErr = oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
+			publishedDesc, copyErr = oras.Copy(ctx, pkgLayout, pkgLayout.Digest(), trackedRemote, "", copyOpts)
 			if copyErr != nil {
 				return copyErr
 			}
@@ -170,30 +92,4 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		"duration", time.Since(start).Round(100*time.Millisecond))
 
 	return publishedDesc, nil
-}
-
-func annotationsFromMetadata(metadata v1alpha1.ZarfMetadata) map[string]string {
-	annotations := map[string]string{
-		ocispec.AnnotationTitle:       metadata.Name,
-		ocispec.AnnotationDescription: metadata.Description,
-	}
-
-	if url := metadata.URL; url != "" {
-		annotations[ocispec.AnnotationURL] = url
-	}
-	if authors := metadata.Authors; authors != "" {
-		annotations[ocispec.AnnotationAuthors] = authors
-	}
-	if documentation := metadata.Documentation; documentation != "" {
-		annotations[ocispec.AnnotationDocumentation] = documentation
-	}
-	if source := metadata.Source; source != "" {
-		annotations[ocispec.AnnotationSource] = source
-	}
-	if vendor := metadata.Vendor; vendor != "" {
-		annotations[ocispec.AnnotationVendor] = vendor
-	}
-	// annotations explicitly defined in `metadata.annotations` take precedence over legacy fields
-	maps.Copy(annotations, metadata.Annotations)
-	return annotations
 }

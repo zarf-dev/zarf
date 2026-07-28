@@ -44,6 +44,11 @@ variables:
     autoIndent: true
     sensitive: true
     type: file
+  # EXTRA_DATA demonstrates a multi-line variable substituted as the sole entry under a YAML
+  # mapping key (see nginx-extra-configmap.yaml). Also serves as regression coverage for #4863.
+  - name: EXTRA_DATA
+    default: |
+      extra-key: extra-value
 
 components:
   # The following component templates the provided config file with the defined ENVIRONMENT
@@ -79,6 +84,7 @@ components:
       - name: variables-with-nginx
         files:
           - nginx-configmap.yaml
+          - nginx-extra-configmap.yaml
           - nginx-deployment.yaml
           - nginx-service.yaml
 

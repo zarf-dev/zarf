@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seed
+  namespace: health-check-crd
+data:
+  purpose: forces the status watcher to cache discovery before the CRD exists

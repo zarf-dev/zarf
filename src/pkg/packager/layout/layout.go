@@ -5,12 +5,16 @@
 package layout
 
 import (
+	"fmt"
 	"path/filepath"
+	"strconv"
 )
 
 // Constants used in the default package layout.
 const (
-	ZarfYAML     = "zarf.yaml"
+	ZarfYAML = "zarf.yaml"
+	// Deprecated: legacy signature format superseded by Bundle (zarf.bundle.sig) since v0.71.0 and no longer produced as of v0.81.0.
+	// This field is retained to ensure backwards compatibility with verification of older packages.
 	Signature    = "zarf.yaml.sig"
 	Bundle       = "zarf.bundle.sig"
 	Checksums    = "checksums.txt"
@@ -50,3 +54,21 @@ const (
 	DataComponentDir      ComponentDir = "data"
 	ValuesComponentDir    ComponentDir = "values"
 )
+
+// ManifestFileName returns the file name, within a component's manifests directory, that stores the
+// idx-th file of the named manifest.
+func ManifestFileName(manifestName string, idx int) string {
+	return fmt.Sprintf("%s-%d.yaml", manifestName, idx)
+}
+
+// KustomizationFileName returns the file name, within a component's manifests directory, that stores
+// the idx-th rendered kustomization of the named manifest.
+func KustomizationFileName(manifestName string, idx int) string {
+	return fmt.Sprintf("kustomization-%s-%d.yaml", manifestName, idx)
+}
+
+// ComponentFileRelPath returns the path, relative to a component's files directory, where the idx-th
+// file's contents are stored.
+func ComponentFileRelPath(idx int, target string) string {
+	return filepath.Join(strconv.Itoa(idx), filepath.Base(target))
+}
