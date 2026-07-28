@@ -35,6 +35,7 @@ spec:
 {{- end }}
     spec:
       serviceAccountName: {{ include "docker-registry.serviceAccountName" . }}
+      automountServiceAccountToken: false
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
 {{ toYaml .Values.imagePullSecrets | indent 8 }}
@@ -69,6 +70,7 @@ spec:
           securityContext:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
+            privileged: false
             runAsNonRoot: true
             capabilities:
               drop: ["ALL"]
