@@ -14,29 +14,29 @@ values:
   schema: values-schema.json
 
 component:
-  name: k3s
   target:
     os: linux
+  selector:
     architecture: arm64
   files:
     - source: zarf-clean-k3s.sh
-      target: /opt/zarf/zarf-clean-k3s.sh
+      destination: /opt/zarf/zarf-clean-k3s.sh
       executable: true
     - source: k3s.service
-      target: /etc/systemd/system/k3s.service
+      destination: /etc/systemd/system/k3s.service
       symlinks:
         - /etc/systemd/system/multi-user.target.wants/k3s.service
     - source: https://github.com/k3s-io/k3s/releases/download/v1.34.3+k3s1/k3s-arm64
-      shasum: fa37b06df7ae82b46de6679a8682b6ece2adf531709bed6299086716c1038147
-      target: /usr/sbin/k3s
+      checksum: fa37b06df7ae82b46de6679a8682b6ece2adf531709bed6299086716c1038147
+      destination: /usr/sbin/k3s
       executable: true
       symlinks:
         - /usr/sbin/kubectl
         - /usr/sbin/ctr
         - /usr/sbin/crictl
     - source: https://github.com/k3s-io/k3s/releases/download/v1.34.3+k3s1/k3s-airgap-images-arm64.tar.zst
-      shasum: b6cb3c06f19859d3a5fba54b305097e89d2a86b5bce9e8360a46b9d2e67da565
-      target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
+      checksum: b6cb3c06f19859d3a5fba54b305097e89d2a86b5bce9e8360a46b9d2e67da565
+      destination: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
   actions:
     onDeploy:
       defaults:
@@ -50,7 +50,7 @@ component:
           description: Check if the current system has a, RFC1123 compliant hostname
         - cmd: "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
           description: If running a RHEL variant, disable 'firewalld' per k3s docs
-      after:
+      onSuccess:
         - cmd: systemctl daemon-reload
           description: Reload the system services
         - cmd: systemctl enable k3s

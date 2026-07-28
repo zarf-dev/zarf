@@ -3,7 +3,7 @@ kind: ZarfInitConfig
 metadata:
   name: init
   description: Used to establish a new Zarf cluster
-  allowNamespaceOverride: false
+  preventNamespaceOverride: true
   annotations:
     source: https://github.com/zarf-dev/zarf
     documentation: https://docs.zarf.dev
@@ -26,7 +26,8 @@ components:
   - name: zarf-injector
     import:
       local:
-        - path: registry/zarf-injector.yaml
+        - path: registry/zarf-injector-amd64.yaml
+        - path: registry/zarf-injector-arm64.yaml
 
   - name: zarf-seed-registry
     import:
@@ -50,7 +51,7 @@ components:
         - path: agent/zarf-agent.yaml
     images:
       - name: "[[ .agent.image ]]:[[ .agent.tag ]]"
-        source: [[ if eq .agent.tag "local" ]]daemon[[ else ]]registry[[ end ]]
+        source: "[[ if eq .agent.tag \"local\" ]]daemon[[ else ]]registry[[ end ]]"
     actions:
       onCreate:
         before:
@@ -58,7 +59,7 @@ components:
             shell:
               windows: pwsh
             dir: ../..
-            template: true
+            enableValues: true
             description: Build the local agent image (if 'agent.tag' was specified as 'local')
 
   - name: git-server

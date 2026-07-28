@@ -12,6 +12,7 @@ values:
   schema: values-schema.json
 
 component:
+  service: git-server
   manifests:
     - name: git-connect
       namespace: zarf
@@ -27,7 +28,7 @@ component:
       valuesFiles:
         - gitea-values.yaml
       values:
-        - sourcePath: ".agent"
+        - sourcePath: ".gitServer"
           targetPath: "."
   actions:
     onDeploy:
@@ -35,8 +36,8 @@ component:
         - cmd: ./zarf internal update-gitea-pvc
           setVariables:
             - name: GIT_SERVER_CREATE_PVC
-          mute: true
-      after:
+          silent: true
+      onSuccess:
         - cmd: ./zarf internal create-read-only-gitea-user
           retries: 3
           maxTotalSeconds: 60

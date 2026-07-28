@@ -7,8 +7,7 @@ metadata:
     Serves as the primary docker registry for the cluster.
 
 component:
-  services:
-    isRegistry: true
+  service: registry
   manifests:
     - name: registry-connect
       namespace: zarf

@@ -14,8 +14,7 @@ values:
   schema: values-schema.json
 
 component:
-  services:
-    isAgent: true
+  service: agent
   charts:
     - name: zarf-agent
       releaseName: zarf-d2db14ef40305397791454e883b26fc94ad9615d

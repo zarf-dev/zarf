@@ -3,7 +3,7 @@ kind: ZarfInitConfig
 metadata:
   name: init
   description: This is how a custom init package user would create their package
-  allowNamespaceOverride: false
+  preventNamespaceOverride: true
 
 values:
   files:
@@ -19,7 +19,8 @@ components:
   - name: zarf-injector
     import:
       remote:
-        - url: oci://ghcr.io/zarf-dev/init/zarf-injector:1.0.0
+        - url: oci://ghcr.io/zarf-dev/init/zarf-injector-amd64:1.0.0
+        - url: oci://ghcr.io/zarf-dev/init/zarf-injector-arm64:1.0.0
 
   - name: zarf-seed-registry
     import:

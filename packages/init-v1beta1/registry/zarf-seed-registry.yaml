@@ -11,8 +11,7 @@ values:
   schema: values-schema.json
 
 component:
-  services:
-    isRegistry: true
+  service: seed-registry
   charts:
     - name: docker-registry
       releaseName: zarf-docker-registry
