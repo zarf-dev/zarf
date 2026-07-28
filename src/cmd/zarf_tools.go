@@ -523,7 +523,7 @@ func runWithRollback(ctx context.Context, service string, forward, rollback func
 	if err := forward(); err != nil {
 		logger.From(ctx).Warn(fmt.Sprintf("%s credential update failed; rolling back to the previous credentials", service), "error", err.Error())
 		if rbErr := rollback(); rbErr != nil {
-			return fmt.Errorf("%s credential update failed (%w); rollback also failed (%w); the cluster may be in an inconsistent state and require manual repair", service, err, rbErr)
+			return fmt.Errorf("%s credential update failed (%w); rollback also failed (%w); the cluster may be in an inconsistent state", service, err, rbErr)
 		}
 		return fmt.Errorf("%s credential update failed and was rolled back to the previous credentials: %w", service, err)
 	}
