@@ -4,7 +4,7 @@
 package layout
 
 import (
-	"archive/tar"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -1869,26 +1870,11 @@ func TestHasValuesSchema(t *testing.T) {
 func writeDocumentationTar(t *testing.T, dir, tarPath string) {
 	t.Helper()
 
-	f, err := os.Create(tarPath)
-	require.NoError(t, err)
-	defer func() { require.NoError(t, f.Close()) }()
-
-	tw := tar.NewWriter(f)
-	defer func() { require.NoError(t, tw.Close()) }()
-
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
+	sources := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		info, err := entry.Info()
-		require.NoError(t, err)
-		header, err := tar.FileInfoHeader(info, "")
-		require.NoError(t, err)
-		header.Name = entry.Name()
-		require.NoError(t, tw.WriteHeader(header))
-
-		content, err := os.ReadFile(filepath.Join(dir, entry.Name()))
-		require.NoError(t, err)
-		_, err = tw.Write(content)
-		require.NoError(t, err)
+		sources = append(sources, filepath.Join(dir, entry.Name()))
 	}
+	require.NoError(t, archive.Compress(context.Background(), sources, tarPath, archive.CompressOpts{}))
 }
