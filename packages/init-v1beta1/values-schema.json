@@ -3,16 +3,157 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Container image for the zarf-agent (without tag)"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Container image tag for the zarf-agent"
+        },
+        "tls": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ca": {
+              "type": "string",
+              "description": "PEM-encoded CA certificate for the Zarf agent"
+            },
+            "cert": {
+              "type": "string",
+              "description": "PEM-encoded TLS certificate for the Zarf agent"
+            },
+            "key": {
+              "type": "string",
+              "description": "PEM-encoded TLS private key for the Zarf agent"
+            }
+          }
+        }
+      }
+    },
+    "gitServer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "type": "string",
+          "description": "Git server URL"
+        },
+        "pushUsername": {
+          "type": "string",
+          "description": "Git server push username"
+        },
+        "pushPassword": {
+          "type": "string",
+          "description": "Git server push password"
+        },
+        "pullUsername": {
+          "type": "string",
+          "description": "Git server pull username"
+        },
+        "pullPassword": {
+          "type": "string",
+          "description": "Git server pull password"
+        }
+      }
+    },
+    "gitea": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Full container image reference for Gitea, including tag"
+        }
+      }
+    },
     "injector": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "image": {
+          "type": "string",
+          "description": "Container image for the Zarf injector"
+        },
+        "port": {
+          "type": "integer",
+          "description": "Port that the Zarf injector is exposed through"
+        },
         "tolerations": {
           "type": "array",
           "description": "Custom tolerations applied to the Zarf injector pod",
           "items": {
             "type": "object"
           }
+        }
+      }
+    },
+    "proxy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Container image for the registry proxy (without tag)"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Container image tag for the registry proxy"
+        }
+      }
+    },
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Container image for the registry (without tag)"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Container image tag for the registry"
+        },
+        "address": {
+          "type": "string",
+          "description": "Registry URL"
+        },
+        "port": {
+          "type": "integer",
+          "description": "Registry port"
+        },
+        "pushUsername": {
+          "type": "string",
+          "description": "Registry push username"
+        },
+        "pushPassword": {
+          "type": "string",
+          "description": "Registry push password"
+        },
+        "pullUsername": {
+          "type": "string",
+          "description": "Registry pull username"
+        },
+        "pullPassword": {
+          "type": "string",
+          "description": "Registry pull password"
+        },
+        "secret": {
+          "type": "string",
+          "description": "Registry secret"
+        },
+        "mode": {
+          "type": "string",
+          "description": "Registry access mode",
+          "enum": ["nodeport", "proxy", "external"]
+        },
+        "mtlsEnabled": {
+          "type": "boolean",
+          "description": "Enable mTLS for the registry"
         }
       }
     }

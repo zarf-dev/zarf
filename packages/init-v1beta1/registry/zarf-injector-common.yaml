@@ -9,5 +9,9 @@ metadata:
 component:
   service: injector
   stateValues:
+    - sourcePath: ".injector.image"
+      targetPath: ".Injector.Image"
+    - sourcePath: ".injector.port"
+      targetPath: ".Injector.Port"
     - sourcePath: ".injector.tolerations"
       targetPath: ".Injector.Tolerations"

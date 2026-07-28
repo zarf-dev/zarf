@@ -13,6 +13,17 @@ values:
 
 component:
   service: git-server
+  stateValues:
+    - sourcePath: ".gitServer.address"
+      targetPath: ".Git.Address"
+    - sourcePath: ".gitServer.pushUsername"
+      targetPath: ".Git.PushUsername"
+    - sourcePath: ".gitServer.pullUsername"
+      targetPath: ".Git.PullUsername"
+    - sourcePath: ".gitServer.pushPassword"
+      targetPath: ".Git.PushPassword"
+    - sourcePath: ".gitServer.pullPassword"
+      targetPath: ".Git.PullPassword"
   manifests:
     - name: git-connect
       namespace: zarf

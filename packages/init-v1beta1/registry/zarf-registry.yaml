@@ -8,6 +8,25 @@ metadata:
 
 component:
   service: registry
+  stateValues:
+    - sourcePath: ".registry.address"
+      targetPath: ".Registry.Address"
+    - sourcePath: ".registry.port"
+      targetPath: ".Registry.Port"
+    - sourcePath: ".registry.pushUsername"
+      targetPath: ".Registry.PushUsername"
+    - sourcePath: ".registry.pullUsername"
+      targetPath: ".Registry.PullUsername"
+    - sourcePath: ".registry.mode"
+      targetPath: ".Registry.Mode"
+    - sourcePath: ".registry.mtlsEnabled"
+      targetPath: ".Registry.MTLSEnabled"
+    - sourcePath: ".registry.pushPassword"
+      targetPath: ".Registry.PushPassword"
+    - sourcePath: ".registry.pullPassword"
+      targetPath: ".Registry.PullPassword"
+    - sourcePath: ".registry.secret"
+      targetPath: ".Registry.Secret"
   manifests:
     - name: registry-connect
       namespace: zarf

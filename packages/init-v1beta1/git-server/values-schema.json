@@ -19,6 +19,26 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "address": {
+          "type": "string",
+          "description": "Git server URL"
+        },
+        "pushUsername": {
+          "type": "string",
+          "description": "Git server push username"
+        },
+        "pushPassword": {
+          "type": "string",
+          "description": "Git server push password"
+        },
+        "pullUsername": {
+          "type": "string",
+          "description": "Git server pull username"
+        },
+        "pullPassword": {
+          "type": "string",
+          "description": "Git server pull password"
+        },
         "pvc": {
           "type": "object",
           "additionalProperties": false,

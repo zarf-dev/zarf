@@ -17,6 +17,24 @@
           "type": "string",
           "description": "Container image tag for the zarf-agent"
         },
+        "tls": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ca": {
+              "type": "string",
+              "description": "PEM-encoded CA certificate for the Zarf agent"
+            },
+            "cert": {
+              "type": "string",
+              "description": "PEM-encoded TLS certificate for the Zarf agent"
+            },
+            "key": {
+              "type": "string",
+              "description": "PEM-encoded TLS private key for the Zarf agent"
+            }
+          }
+        },
         "affinity": {
           "type": "object",
           "description": "Custom affinity map for the zarf-agent deployment"

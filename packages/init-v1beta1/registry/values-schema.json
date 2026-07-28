@@ -17,6 +17,43 @@
           "type": "string",
           "description": "Container image tag for the registry"
         },
+        "address": {
+          "type": "string",
+          "description": "Registry URL"
+        },
+        "port": {
+          "type": "integer",
+          "description": "Registry port"
+        },
+        "pushUsername": {
+          "type": "string",
+          "description": "Registry push username"
+        },
+        "pushPassword": {
+          "type": "string",
+          "description": "Registry push password"
+        },
+        "pullUsername": {
+          "type": "string",
+          "description": "Registry pull username"
+        },
+        "pullPassword": {
+          "type": "string",
+          "description": "Registry pull password"
+        },
+        "secret": {
+          "type": "string",
+          "description": "Registry secret"
+        },
+        "mode": {
+          "type": "string",
+          "description": "Registry access mode",
+          "enum": ["nodeport", "proxy", "external"]
+        },
+        "mtlsEnabled": {
+          "type": "boolean",
+          "description": "Enable mTLS for the registry"
+        },
         "pvc": {
           "type": "object",
           "additionalProperties": false,
