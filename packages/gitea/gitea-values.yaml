@@ -49,10 +49,10 @@ image:
   rootless: true
 
 podSecurityContext:
-  fsGroup: 1000
-  runAsGroup: 1000
+  fsGroup: ###ZARF_VAR_GIT_SERVER_SECURITY_CONTEXT_FS_GROUP###
+  runAsGroup: ###ZARF_VAR_GIT_SERVER_SECURITY_CONTEXT_RUN_AS_GROUP###
   runAsNonRoot: true
-  runAsUser: 1000
+  runAsUser: ###ZARF_VAR_GIT_SERVER_SECURITY_CONTEXT_RUN_AS_USER###
   seccompProfile:
     type: RuntimeDefault
 
