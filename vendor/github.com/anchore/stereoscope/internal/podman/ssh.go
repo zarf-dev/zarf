@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -204,6 +205,12 @@ func hostKey(host, knownHostsPath string) ssh.PublicKey {
 	for scanner.Scan() {
 		_, hosts, key, _, _, err := ssh.ParseKnownHosts(scanner.Bytes())
 		if err != nil {
+			// ssh.ParseKnownHosts returns io.EOF for comment, blank, or
+			// whitespace-only lines. Those are valid in an OpenSSH
+			// known_hosts file, so skip them quietly instead of logging.
+			if errors.Is(err, io.EOF) {
+				continue
+			}
 			log.Errorf("Failed to parse known_hosts: %s", scanner.Text())
 			continue
 		}
