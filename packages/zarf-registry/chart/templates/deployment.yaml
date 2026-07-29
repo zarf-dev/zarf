@@ -35,7 +35,6 @@ spec:
 {{- end }}
     spec:
       serviceAccountName: {{ include "docker-registry.serviceAccountName" . }}
-      automountServiceAccountToken: false
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
 {{ toYaml .Values.imagePullSecrets | indent 8 }}
