@@ -1,19 +1,12 @@
-//
-// Copyright (c) 2011-2019 Canonical Ltd
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2011-2019 Canonical Ltd
+// Copyright 2025 The go-yaml Project Contributors
+// SPDX-License-Identifier: Apache-2.0
 
-package yaml
+// Tag resolution for YAML scalars.
+// Determines implicit types (int, float, bool, null, timestamp) from untagged
+// scalar values.
+
+package libyaml
 
 import (
 	"encoding/base64"
@@ -34,6 +27,11 @@ var (
 	resolveMap   = make(map[string]resolveMapItem)
 )
 
+// negativeZero represents -0.0 for YAML encoding/decoding
+// this is needed because Go constants cannot express -0.0
+// https://staticcheck.dev/docs/checks/#SA4026
+var negativeZero = math.Copysign(0.0, -1.0)
+
 func init() {
 	t := resolveTable
 	t[int('+')] = 'S' // Sign
@@ -41,7 +39,7 @@ func init() {
 	for _, c := range "0123456789" {
 		t[int(c)] = 'D' // Digit
 	}
-	for _, c := range "yYnNtTfFoO~" {
+	for _, c := range "yYnNtTfFoO~<" { // < for merge key <<
 		t[int(c)] = 'M' // In map
 	}
 	t[int('.')] = '.' // Float (potentially in map)
@@ -68,59 +66,6 @@ func init() {
 			m[s] = resolveMapItem{item.v, item.tag}
 		}
 	}
-}
-
-const (
-	nullTag      = "!!null"
-	boolTag      = "!!bool"
-	strTag       = "!!str"
-	intTag       = "!!int"
-	floatTag     = "!!float"
-	timestampTag = "!!timestamp"
-	seqTag       = "!!seq"
-	mapTag       = "!!map"
-	binaryTag    = "!!binary"
-	mergeTag     = "!!merge"
-)
-
-// negativeZero represents -0.0 for YAML encoding/decoding
-// this is needed because Go constants cannot express -0.0
-// https://staticcheck.dev/docs/checks/#SA4026
-var negativeZero = math.Copysign(0.0, -1.0)
-
-var (
-	longTags  = make(map[string]string)
-	shortTags = make(map[string]string)
-)
-
-func init() {
-	for _, stag := range []string{nullTag, boolTag, strTag, intTag, floatTag, timestampTag, seqTag, mapTag, binaryTag, mergeTag} {
-		ltag := longTag(stag)
-		longTags[stag] = ltag
-		shortTags[ltag] = stag
-	}
-}
-
-const longTagPrefix = "tag:yaml.org,2002:"
-
-func shortTag(tag string) string {
-	if strings.HasPrefix(tag, longTagPrefix) {
-		if stag, ok := shortTags[tag]; ok {
-			return stag
-		}
-		return "!!" + tag[len(longTagPrefix):]
-	}
-	return tag
-}
-
-func longTag(tag string) string {
-	if strings.HasPrefix(tag, "!!") {
-		if ltag, ok := longTags[tag]; ok {
-			return ltag
-		}
-		return longTagPrefix + tag[2:]
-	}
-	return tag
 }
 
 func resolvableTag(tag string) bool {
@@ -157,7 +102,7 @@ func resolve(tag string, in string) (rtag string, out any) {
 				}
 			}
 		}
-		failf("cannot decode %s `%s` as a %s", shortTag(rtag), in, shortTag(tag))
+		failf("cannot construct %s `%s` as a %s", shortTag(rtag), in, shortTag(tag))
 	}()
 
 	// Any data is accepted as a !!str or !!binary.
