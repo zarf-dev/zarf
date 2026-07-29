@@ -43,6 +43,41 @@ func (in NamespacedObjectReference) String() string {
 	return in.Name
 }
 
+// DependencyReference contains enough information to locate the referenced Kubernetes resource object
+// and optional CEL expression to assess its readiness.
+type DependencyReference struct {
+	// Name of the referent.
+	// +required
+	Name string `json:"name"`
+
+	// Namespace of the referent, defaults to the namespace of the resource
+	// object that contains the reference.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+
+	// ReadyExpr is a CEL expression that can be used to assess the readiness
+	// of a dependency. When specified, the built-in readiness check
+	// is replaced by the logic defined in the CEL expression.
+	// To make the CEL expression additive to the built-in readiness check,
+	// the feature gate `AdditiveCELDependencyCheck` must be set to `true`.
+	// +optional
+	ReadyExpr string `json:"readyExpr,omitempty"`
+}
+
+// String implements the fmt.Stringer interface for DependencyReference.
+// Returns the dependency reference in the format: [namespace/]name[@readyExpr]
+// Examples: "app", "ns/app", "app@ready", "ns/app@obj.status.ready"
+func (in DependencyReference) String() string {
+	s := in.Name
+	if in.Namespace != "" {
+		s = in.Namespace + "/" + s
+	}
+	if in.ReadyExpr != "" {
+		s = s + "@" + in.ReadyExpr
+	}
+	return s
+}
+
 // NamespacedObjectKindReference contains enough information to locate the typed referenced Kubernetes resource object
 // in any namespace.
 type NamespacedObjectKindReference struct {
@@ -183,6 +218,17 @@ type ValuesReference struct {
 	// transient error will still result in a reconciliation failure.
 	// +optional
 	Optional bool `json:"optional,omitempty"`
+
+	// Literal marks this ValuesReference as a literal value. When set in
+	// combination with TargetPath, the referenced value is merged at the target
+	// path without interpreting Helm's `--set` syntax (commas, brackets, dots,
+	// equal signs, etc.), mirroring the behavior of `helm --set-literal`. This
+	// is the only safe way to inject arbitrary file content (config files, JSON
+	// blobs, multi-line strings containing special characters) through
+	// `valuesFrom`. Has no effect when TargetPath is empty: in that mode the
+	// referenced value is always YAML-merged at the root.
+	// +optional
+	Literal bool `json:"literal,omitempty"`
 }
 
 // GetValuesKey returns the defined ValuesKey, or the default ('values.yaml').
