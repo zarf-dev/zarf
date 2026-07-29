@@ -1258,7 +1258,7 @@ github.com/decred/dcrd/dcrec/secp256k1/v4
 # github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
 ## explicit; go 1.24.0
 github.com/defenseunicorns/pkg/helpers/v2
-# github.com/defenseunicorns/pkg/oci v1.3.0
+# github.com/defenseunicorns/pkg/oci v1.3.1
 ## explicit; go 1.24.0
 github.com/defenseunicorns/pkg/oci
 github.com/defenseunicorns/pkg/oci/cache

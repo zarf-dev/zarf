@@ -48,16 +48,6 @@ const (
 	NamespaceOverrideLabel string = "zarf.dev/namespace-override"
 )
 
-// Registry TLS secret and certificate names
-const (
-	RegistryServerTLSSecret = "zarf-registry-server-tls"
-	RegistryClientTLSSecret = "zarf-registry-client-tls"
-
-	RegistrySecretCAPath   = "ca.crt"
-	RegistrySecretCertPath = "tls.crt"
-	RegistrySecretKeyPath  = "tls.key"
-)
-
 // Cluster Zarf specific cluster management functions.
 type Cluster struct {
 	// Clientset implements k8s client api
@@ -428,24 +418,11 @@ func (c *Cluster) ignoreExistingNamespacesForAgent(ctx context.Context) error {
 // GetRegistryClientMTLSCert retrieves the client cert for interacting with the internal Zarf registry while in registry proxy mode.
 // Returns an error if the secret is not found or incomplete.
 func (c *Cluster) GetRegistryClientMTLSCert(ctx context.Context) (pki.GeneratedPKI, error) {
-	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryClientTLSSecret, metav1.GetOptions{})
+	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.RegistryClientTLSSecret, metav1.GetOptions{})
 	if err != nil {
 		return pki.GeneratedPKI{}, fmt.Errorf("failed to get client TLS secret: %w", err)
 	}
-
-	caCertPEM := clientSecret.Data[RegistrySecretCAPath]
-	clientCertPEM := clientSecret.Data[RegistrySecretCertPath]
-	clientKeyPEM := clientSecret.Data[RegistrySecretKeyPath]
-
-	if len(caCertPEM) == 0 || len(clientCertPEM) == 0 || len(clientKeyPEM) == 0 {
-		return pki.GeneratedPKI{}, fmt.Errorf("client TLS secret is incomplete")
-	}
-
-	return pki.GeneratedPKI{
-		CA:   caCertPEM,
-		Cert: clientCertPEM,
-		Key:  clientKeyPEM,
-	}, nil
+	return state.RegistryCertFromSecretData(clientSecret.Data)
 }
 
 // needsCertRenewal determines if a tls secret needs renewal by checking if it doesn't exist or has less than half of it's remaining life
@@ -476,17 +453,17 @@ func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath str
 // ShouldRenewRegistryCerts checks if any of the registry mTLS certificates (CA, server, or client) have less remaining life
 // than the threshold, and renews all certs if so
 func (c *Cluster) ShouldRenewRegistryCerts(ctx context.Context, renewalThresholdPercentage float64) (bool, error) {
-	needsCARenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCAPath, renewalThresholdPercentage)
+	needsCARenewal, err := c.needsCertRenewal(ctx, state.RegistryServerTLSSecret, state.RegistrySecretCAPath, renewalThresholdPercentage)
 	if err != nil {
 		return false, fmt.Errorf("failed to check CA certificate renewal: %w", err)
 	}
 
-	needsServerRenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCertPath, renewalThresholdPercentage)
+	needsServerRenewal, err := c.needsCertRenewal(ctx, state.RegistryServerTLSSecret, state.RegistrySecretCertPath, renewalThresholdPercentage)
 	if err != nil {
 		return false, fmt.Errorf("failed to check server certificate renewal: %w", err)
 	}
 
-	needsClientRenewal, err := c.needsCertRenewal(ctx, RegistryClientTLSSecret, RegistrySecretCertPath, renewalThresholdPercentage)
+	needsClientRenewal, err := c.needsCertRenewal(ctx, state.RegistryClientTLSSecret, state.RegistrySecretCertPath, renewalThresholdPercentage)
 	if err != nil {
 		return false, fmt.Errorf("failed to check client certificate renewal: %w", err)
 	}
@@ -497,16 +474,12 @@ func (c *Cluster) ShouldRenewRegistryCerts(ctx context.Context, renewalThreshold
 // ApplyRegistryClientCertSecret using the given pki to the given namespace.
 // Accepts a namespace so the secret can live in any namespace that requires interacting with the registry
 func (c *Cluster) ApplyRegistryClientCertSecret(ctx context.Context, clientPKI pki.GeneratedPKI, namespace string) error {
-	serverSecret := v1ac.Secret(RegistryClientTLSSecret, namespace).
+	serverSecret := v1ac.Secret(state.RegistryClientTLSSecret, namespace).
 		WithType(corev1.SecretTypeTLS).
 		WithLabels(map[string]string{
 			state.ZarfManagedByLabel: "zarf",
 		}).
-		WithData(map[string][]byte{
-			RegistrySecretCertPath: clientPKI.Cert,
-			RegistrySecretKeyPath:  clientPKI.Key,
-			RegistrySecretCAPath:   clientPKI.CA,
-		})
+		WithData(state.RegistryCertSecretData(clientPKI))
 	if _, err := c.Clientset.CoreV1().Secrets(namespace).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create client TLS secret: %w", err)
 	}
@@ -522,21 +495,17 @@ func (c *Cluster) ApplyZarfRegistryCertSecrets(ctx context.Context, serverPKI, c
 		return err
 	}
 
-	serverSecret := v1ac.Secret(RegistryServerTLSSecret, state.ZarfNamespaceName).
+	serverSecret := v1ac.Secret(state.RegistryServerTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithLabels(map[string]string{
 			state.ZarfManagedByLabel: "zarf",
 		}).
-		WithData(map[string][]byte{
-			RegistrySecretCertPath: serverPKI.Cert,
-			RegistrySecretKeyPath:  serverPKI.Key,
-			RegistrySecretCAPath:   serverPKI.CA,
-		})
+		WithData(state.RegistryCertSecretData(serverPKI))
 	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create server TLS secret: %w", err)
 	}
 
-	l.Info("applying secrets for registry mTLS in the Zarf namespace", "secrets", []string{RegistryServerTLSSecret, RegistryClientTLSSecret})
+	l.Info("applying secrets for registry mTLS in the Zarf namespace", "secrets", []string{state.RegistryServerTLSSecret, state.RegistryClientTLSSecret})
 	return nil
 }
 

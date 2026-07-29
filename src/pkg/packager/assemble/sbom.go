@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package layout
+package assemble
 
 import (
 	"context"
@@ -39,6 +39,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -71,7 +72,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 	}
 	var targets []imageSBOMTarget
 	for _, refInfo := range images {
-		platformImages, err := loadOCIImagePlatforms(filepath.Join(buildPath, string(ImagesDir)), refInfo)
+		platformImages, err := loadOCIImagePlatforms(filepath.Join(buildPath, string(layout.ImagesDir)), refInfo)
 		if err != nil {
 			return fmt.Errorf("failed to load OCI image: %w", err)
 		}
@@ -132,7 +133,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 }
 
 func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, identifier string) ([]byte, error) {
-	imageCachePath := filepath.Join(cachePath, ImagesDir)
+	imageCachePath := filepath.Join(cachePath, layout.ImagesDir)
 
 	// This is a write cache
 	if err := helpers.CreateDirectory(imageCachePath, helpers.ReadExecuteAllWriteUser); err != nil {
@@ -175,7 +176,7 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
-	tarPath := filepath.Join(buildPath, ComponentsDir, component.Name) + ".tar"
+	tarPath := filepath.Join(buildPath, layout.ComponentsDir, component.Name) + ".tar"
 	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
 	if err != nil {
 		return nil, err
@@ -194,14 +195,14 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 		return nil
 	}
 	for i, file := range component.Files {
-		path := filepath.Join(tmpDir, component.Name, string(FilesComponentDir), ComponentFileRelPath(i, file.Target))
+		path := filepath.Join(tmpDir, component.Name, string(layout.FilesComponentDir), layout.ComponentFileRelPath(i, file.Target))
 		err := appendSBOMFiles(path)
 		if err != nil {
 			return nil, err
 		}
 	}
 	for i, data := range component.DataInjections {
-		path := filepath.Join(tmpDir, component.Name, string(DataComponentDir), strconv.Itoa(i), filepath.Base(data.Target.Path))
+		path := filepath.Join(tmpDir, component.Name, string(layout.DataComponentDir), strconv.Itoa(i), filepath.Base(data.Target.Path))
 		err := appendSBOMFiles(path)
 		if err != nil {
 			return nil, err

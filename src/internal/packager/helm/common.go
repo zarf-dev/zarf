@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart/common"
 	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
@@ -76,21 +77,6 @@ func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, package
 	return chart, tmpChart, nil
 }
 
-// StandardName generates a predictable full path for a helm chart for Zarf.
-func StandardName(destination string, chart v1alpha1.ZarfChart) string {
-	// While it is not possible for v1alpha1 packages to be created with an empty version, future API versions will allow this.
-	// This check is introduced in v0.65.0, allowing future packages with empty versions to have backwards compatibility
-	if chart.Version == "" {
-		return filepath.Join(destination, chart.Name)
-	}
-	return filepath.Join(destination, chart.Name+"-"+chart.Version)
-}
-
-// StandardValuesName generates a predictable full path for the values file for a helm chart for zarf
-func StandardValuesName(destination string, chart v1alpha1.ZarfChart, idx int) string {
-	return fmt.Sprintf("%s-%d", StandardName(destination, chart), idx)
-}
-
 // ChartValuesFile represents a single values file for a Helm chart with its global sequential index.
 // Template indicates whether Go template rendering should be applied at deploy time.
 type ChartValuesFile struct {
@@ -101,7 +87,7 @@ type ChartValuesFile struct {
 
 // GetChartValuesFiles returns a flat ordered list of all values files for a chart.
 // ValuesFiles appear first (indices 0..n-1), followed by TemplatedValuesFiles (indices n..n+m-1).
-// All files share the same global sequential index space and are stored via StandardValuesName.
+// All files share the same global sequential index space and are stored via ChartPaths.ValuesFile.
 func GetChartValuesFiles(chart v1alpha1.ZarfChart) []ChartValuesFile {
 	files := make([]ChartValuesFile, 0, len(chart.ValuesFiles)+len(chart.TemplatedValuesFiles))
 	for i, src := range chart.ValuesFiles {
@@ -114,12 +100,9 @@ func GetChartValuesFiles(chart v1alpha1.ZarfChart) []ChartValuesFile {
 }
 
 // loadChartFromTarball returns a helm chart from a tarball.
-func loadChartFromTarball(chart v1alpha1.ZarfChart, chartPath string) (*chartv2.Chart, error) {
-	// Get the path the temporary helm chart tarball
-	sourceFile := StandardName(chartPath, chart) + ".tgz"
-
+func loadChartFromTarball(chart v1alpha1.ZarfChart, paths layout.ChartPaths) (*chartv2.Chart, error) {
 	// Load the loadedChart tarball
-	loadedChart, err := loader.Load(sourceFile)
+	loadedChart, err := loader.Load(paths.Archive(chart.Name, chart.Version))
 	if err != nil {
 		return nil, fmt.Errorf("unable to load helm chart archive: %w", err)
 	}
@@ -132,11 +115,11 @@ func loadChartFromTarball(chart v1alpha1.ZarfChart, chartPath string) (*chartv2.
 }
 
 // parseChartValues reads the context of the chart values into an interface if it exists.
-func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrides map[string]any) (common.Values, error) {
+func parseChartValues(chart v1alpha1.ZarfChart, paths layout.ChartPaths, valuesOverrides map[string]any) (common.Values, error) {
 	valueOpts := &values.Options{}
 
 	for _, f := range GetChartValuesFiles(chart) {
-		valueOpts.ValueFiles = append(valueOpts.ValueFiles, StandardValuesName(valuesPath, chart, f.GlobalIdx))
+		valueOpts.ValueFiles = append(valueOpts.ValueFiles, paths.ValuesFile(chart.Name, chart.Version, f.GlobalIdx))
 	}
 
 	httpProvider := getter.Provider{
