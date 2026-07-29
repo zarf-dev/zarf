@@ -13,6 +13,7 @@ const repoDir = path.resolve(siteDir, "..");
 const docsDir = path.join(siteDir, "src/content/docs");
 const schemaDir = path.join(siteDir, "src/assets/schema");
 const worktreeRoot = path.join(repoDir, ".docs-version-builds");
+const zarfGitRepo = "https://github.com/zarf-dev/zarf.git";
 
 // Minors kept in the switcher, from the current major and the one before it.
 // Majors older than the previous one are dropped entirely.
@@ -85,7 +86,7 @@ function versionsFromTags(tags) {
 }
 
 function discoverGitTags() {
-  const output = git(["ls-remote", "--tags", "origin", "v*.*.*"], {
+  const output = git(["ls-remote", "--tags", zarfGitRepo, "v*.*.*"], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "inherit"],
   });
@@ -143,7 +144,7 @@ async function stageVersion({ ref, slug }) {
   console.log(`\n=== Staging ${slug} from ${ref} ===`);
   // CI often uses a shallow clone without tag commits; fetch the tag's commit.
   try {
-    git(["fetch", "--depth=1", "origin", "tag", ref, "--no-tags"]);
+    git(["fetch", "--depth=1", zarfGitRepo, "tag", ref, "--no-tags"]);
   } catch {
     console.warn(`git fetch of tag ${ref} failed; assuming it is already present`);
   }
