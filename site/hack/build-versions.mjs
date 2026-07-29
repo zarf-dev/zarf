@@ -21,6 +21,7 @@ const KEEP_CURRENT_MAJOR = 10;
 const KEEP_PREVIOUS_MAJOR = 3;
 
 const VERSION_SLUG = /^v\d+-\d+$/;
+const SEMVER_TAG = /^v?\d+\.\d+\.\d+$/;
 
 function git(args, opts = {}) {
   return execFileSync("git", args, { cwd: repoDir, stdio: "inherit", ...opts });
@@ -67,21 +68,11 @@ function toVersion(tag) {
   return { ref: tag, slug: slugOf(minorKey(tag)) };
 }
 
-// Released minors, newest first, capped per major.
-async function discoverVersions() {
-  const headers = { Accept: "application/vnd.github+json" };
-  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-  const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100`, { headers });
-  if (!res.ok) {
-    throw new Error(`GitHub API returned ${res.status} ${res.statusText} for ${REPO} releases`);
-  }
-  const releases = await res.json();
-  const tags = releases.filter((r) => !r.prerelease && !r.draft).map((r) => r.tag_name);
-
+function versionsFromTags(tags) {
   // Keep only the newest patch per minor.
   const newestByMinor = new Map();
   for (const tag of tags) {
-    if (!/^v?\d+\.\d+\.\d+$/.test(tag)) continue;
+    if (!SEMVER_TAG.test(tag)) continue;
     const minor = minorKey(tag);
     const current = newestByMinor.get(minor);
     if (!current || parseSemver(tag)[2] > parseSemver(current)[2]) {
@@ -92,6 +83,46 @@ async function discoverVersions() {
   const minorsDesc = [...newestByMinor.keys()].sort(cmpMinorDesc);
   const archived = limitByMajor(minorsDesc).map((m) => toVersion(newestByMinor.get(m)));
   return { latest: minorsDesc[0], archived };
+}
+
+async function discoverReleaseTags() {
+  const headers = { Accept: "application/vnd.github+json" };
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100`, { headers });
+  if (!res.ok) {
+    throw new Error(`GitHub API returned ${res.status} ${res.statusText} for ${REPO} releases`);
+  }
+  const releases = await res.json();
+  return releases.filter((r) => !r.prerelease && !r.draft).map((r) => r.tag_name);
+}
+
+function discoverGitTags() {
+  const output = git(["ls-remote", "--tags", "origin", "v*.*.*"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+
+  return [
+    ...new Set(
+      output
+        .split("\n")
+        .map((line) => line.trim().split(/\s+/)[1])
+        .filter(Boolean)
+        .map((ref) => ref.replace(/^refs\/tags\//, "").replace(/\^\{\}$/, ""))
+        .filter((tag) => SEMVER_TAG.test(tag)),
+    ),
+  ];
+}
+
+// Released minors, newest first, capped per major.
+async function discoverVersions() {
+  try {
+    return versionsFromTags(await discoverReleaseTags());
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`${message}; falling back to git tag discovery`);
+    return versionsFromTags(discoverGitTags());
+  }
 }
 
 // ---------------------------------------------------------------------------
