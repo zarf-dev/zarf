@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -47,21 +48,16 @@ type DefinitionOptions struct {
 	types.RemoteOptions
 }
 
-// PackageAccessor is the read contract for a package source, exposing a per-version definition.
-type PackageAccessor interface {
-	AsV1alpha1() (v1alpha1.ZarfPackage, error)
-	AsV1beta1() (v1beta1.Package, error)
-}
-
 // DefinedPackage is the result of loading and resolving a package definition.
 // ImportedSchemas is transient assembly state — child schema paths collected during
 // import resolution that must be passed to AssemblePackage for merging.
 type DefinedPackage struct {
+	// FIXME: we might want to put a loaded package here that adheres to the package accessor interface
 	pkg             internalTypes.Package
 	ImportedSchemas []string
 }
 
-var _ PackageAccessor = DefinedPackage{}
+var _ api.PackageAccessor = DefinedPackage{}
 
 // AsV1alpha1 returns the package definition as a v1alpha1 ZarfPackage.
 func (d DefinedPackage) AsV1alpha1() (v1alpha1.ZarfPackage, error) {
