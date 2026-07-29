@@ -14,7 +14,10 @@ Evaluates components in a Zarf file to identify images specified in their helm c
 
 Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.
 
-Components that have repos that host helm charts can be processed by providing the --repo-chart-path.
+Images defined as part of Helm test hooks are excluded. Images explicitly defined in the helm.sh/images
+annotation in a component Helm chart's Chart.yaml are included regardless of their presence in the rendered
+chart. Components that have git repositories that host helm charts can be processed by providing the
+--repo-chart-path.
 
 ```
 zarf dev find-images [ DIRECTORY ] [flags]
