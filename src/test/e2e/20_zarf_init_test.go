@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -28,6 +27,15 @@ const (
 	minIOAccessKey       = "minioadmin"
 	minIOSecretKey       = "minioadmin"
 	minIOEndpoint        = "http://minio.zarf-minio.svc.cluster.local:9000"
+
+	minIORegistryTestPackagePath = "src/test/packages/20-init-minio-registry"
+	minIOManifestPath            = minIORegistryTestPackagePath + "/minio.yaml"
+	minIOConfigPath              = minIORegistryTestPackagePath + "/zarf-config.yaml"
+
+	minIOServiceAccountName = "zarf-registry-minio"
+	minIOAnnotationKey      = "minio.zarf.dev/backend"
+	minIOAnnotationValue    = "s3"
+	minIORootDirectory      = "/zarf-init-test"
 )
 
 type minIORegistryConfig struct {
@@ -149,11 +157,7 @@ func setupMinIORegistryBackend(t *testing.T) *minIORegistryConfig {
 
 	t.Log("E2E: Configuring init registry with a MinIO S3-compatible backend")
 
-	manifestPath := filepath.Join(t.TempDir(), "minio.yaml")
-	err := os.WriteFile(manifestPath, []byte(minIOManifest()), 0600)
-	require.NoError(t, err)
-
-	stdOut, stdErr, err := e2e.Kubectl(t, "apply", "-f", manifestPath)
+	stdOut, stdErr, err := e2e.Kubectl(t, "apply", "-f", minIOManifestPath)
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Kubectl(t, "wait", "deployment", "minio", "-n", minIONamespace, "--for=condition=Available", "--timeout=3m")
@@ -163,52 +167,14 @@ func setupMinIORegistryBackend(t *testing.T) *minIORegistryConfig {
 	require.NoError(t, err, stdOut, stdErr)
 
 	cfg := minIORegistryConfig{
-		ServiceAccountName: "zarf-registry-minio",
-		AnnotationKey:      "minio.zarf.dev/backend",
-		AnnotationValue:    "s3",
-		RootDirectory:      "/zarf-init-test",
+		ServiceAccountName: minIOServiceAccountName,
+		AnnotationKey:      minIOAnnotationKey,
+		AnnotationValue:    minIOAnnotationValue,
+		RootDirectory:      minIORootDirectory,
 	}
 
-	registryExtraEnvVars := fmt.Sprintf(`- name: REGISTRY_STORAGE
-  value: s3
-- name: REGISTRY_STORAGE_REDIRECT_DISABLE
-  value: "true"
-- name: REGISTRY_STORAGE_S3_REGION
-  value: us-east-1
-- name: REGISTRY_STORAGE_S3_REGIONENDPOINT
-  value: %s
-- name: REGISTRY_STORAGE_S3_BUCKET
-  value: %s
-- name: REGISTRY_STORAGE_S3_ROOTDIRECTORY
-  value: %s
-- name: REGISTRY_STORAGE_S3_ACCESSKEY
-  value: %s
-- name: REGISTRY_STORAGE_S3_SECRETKEY
-  value: %s
-- name: REGISTRY_STORAGE_S3_SECURE
-  value: "false"
-- name: REGISTRY_STORAGE_S3_FORCEPATHSTYLE
-  value: "true"
-`, minIOEndpoint, minIOBucket, cfg.RootDirectory, minIOAccessKey, minIOSecretKey)
-
-	configPath := filepath.Join(t.TempDir(), "zarf-config.yaml")
-	configFile := fmt.Sprintf(`package:
-  deploy:
-    set:
-      REGISTRY_PVC_ENABLED: "false"
-      REGISTRY_HPA_MAX: "1"
-      REGISTRY_CREATE_SERVICE_ACCOUNT: "true"
-      REGISTRY_SERVICE_ACCOUNT_NAME: %q
-      REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS: |-
-        %s: %q
-      REGISTRY_EXTRA_ENVS: |-
-%s
-`, cfg.ServiceAccountName, cfg.AnnotationKey, cfg.AnnotationValue, indent(registryExtraEnvVars, 8))
-	err = os.WriteFile(configPath, []byte(configFile), 0600)
-	require.NoError(t, err)
-
 	previousConfig, hadPreviousConfig := os.LookupEnv("ZARF_CONFIG")
-	err = os.Setenv("ZARF_CONFIG", configPath)
+	err = os.Setenv("ZARF_CONFIG", minIOConfigPath)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		if hadPreviousConfig {
@@ -263,103 +229,6 @@ func verifyMinIORegistryBackend(t *testing.T, cfg minIORegistryConfig) {
 	stdOut, stdErr, err = e2e.Kubectl(t, "run", "minio-list-registry", "-n", minIONamespace, "--image=quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z", "--restart=Never", "--attach", "--rm", "--command", "--", "/bin/sh", "-c", fmt.Sprintf("mc alias set local %s %s %s >/dev/null && mc ls --recursive local/%s%s", minIOEndpoint, minIOAccessKey, minIOSecretKey, minIOBucket, cfg.RootDirectory))
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "docker/registry")
-}
-
-func indent(s string, spaces int) string {
-	prefix := strings.Repeat(" ", spaces)
-	return prefix + strings.ReplaceAll(strings.TrimRight(s, "\n"), "\n", "\n"+prefix)
-}
-
-func minIOManifest() string {
-	return fmt.Sprintf(`apiVersion: v1
-kind: Namespace
-metadata:
-  name: %[1]s
-  labels:
-    zarf.dev/agent: ignore
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: minio
-  namespace: %[1]s
-spec:
-  selector:
-    matchLabels:
-      app: minio
-  template:
-    metadata:
-      labels:
-        app: minio
-    spec:
-      containers:
-        - name: minio
-          image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
-          args:
-            - server
-            - /data
-            - --console-address
-            - :9001
-          env:
-            - name: MINIO_ROOT_USER
-              value: %[2]s
-            - name: MINIO_ROOT_PASSWORD
-              value: %[3]s
-          ports:
-            - name: s3
-              containerPort: 9000
-            - name: console
-              containerPort: 9001
-          readinessProbe:
-            httpGet:
-              path: /minio/health/ready
-              port: 9000
-            initialDelaySeconds: 5
-            periodSeconds: 5
-          volumeMounts:
-            - name: data
-              mountPath: /data
-      volumes:
-        - name: data
-          emptyDir: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: minio
-  namespace: %[1]s
-spec:
-  selector:
-    app: minio
-  ports:
-    - name: s3
-      port: 9000
-      targetPort: 9000
-    - name: console
-      port: 9001
-      targetPort: 9001
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: create-zarf-registry-bucket
-  namespace: %[1]s
-spec:
-  backoffLimit: 6
-  template:
-    spec:
-      restartPolicy: OnFailure
-      containers:
-        - name: mc
-          image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
-          command:
-            - /bin/sh
-            - -c
-          args:
-            - |
-              mc alias set local http://minio.%[1]s.svc.cluster.local:9000 %[2]s %[3]s
-              mc mb --ignore-existing local/%[4]s
-`, minIONamespace, minIOAccessKey, minIOSecretKey, minIOBucket)
 }
 
 func verifyZarfNamespaceLabels(t *testing.T) {

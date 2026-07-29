@@ -1,0 +1,30 @@
+package:
+  deploy:
+    set:
+      REGISTRY_PVC_ENABLED: "false"
+      REGISTRY_HPA_MAX: "1"
+      REGISTRY_CREATE_SERVICE_ACCOUNT: "true"
+      REGISTRY_SERVICE_ACCOUNT_NAME: "zarf-registry-minio"
+      REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS: |-
+        minio.zarf.dev/backend: "s3"
+      REGISTRY_EXTRA_ENVS: |-
+        - name: REGISTRY_STORAGE
+          value: s3
+        - name: REGISTRY_STORAGE_REDIRECT_DISABLE
+          value: "true"
+        - name: REGISTRY_STORAGE_S3_REGION
+          value: us-east-1
+        - name: REGISTRY_STORAGE_S3_REGIONENDPOINT
+          value: http://minio.zarf-minio.svc.cluster.local:9000
+        - name: REGISTRY_STORAGE_S3_BUCKET
+          value: zarf-registry
+        - name: REGISTRY_STORAGE_S3_ROOTDIRECTORY
+          value: /zarf-init-test
+        - name: REGISTRY_STORAGE_S3_ACCESSKEY
+          value: minioadmin
+        - name: REGISTRY_STORAGE_S3_SECRETKEY
+          value: minioadmin
+        - name: REGISTRY_STORAGE_S3_SECURE
+          value: "false"
+        - name: REGISTRY_STORAGE_S3_FORCEPATHSTYLE
+          value: "true"
