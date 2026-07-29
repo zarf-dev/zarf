@@ -34,8 +34,6 @@ jobs:
 
       - name: run site build
         run: npm run build:versions
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
 
       - name: check links
         run: npm run link-check

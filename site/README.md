@@ -50,7 +50,7 @@ regenerating its examples and schema (`src/assets/schema/<slug>.json`) from the
 tag's `examples/` and `zarf.schema.json`. Archived content therefore renders with
 the **current** toolchain and components, never its own.
 
-Versions are discovered from GitHub Releases and reduced to the newest patch per
+Versions are discovered from git tags and reduced to the newest patch per
 minor. Only the current major and the one before it are kept — the current major shows
 its last 10 minors and the previous major its latest 3 minors.
 The set is written to versions.json, which the version switcher reads.

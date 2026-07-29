@@ -14,7 +14,6 @@ const docsDir = path.join(siteDir, "src/content/docs");
 const schemaDir = path.join(siteDir, "src/assets/schema");
 const worktreeRoot = path.join(repoDir, ".docs-version-builds");
 
-const REPO = "zarf-dev/zarf";
 // Minors kept in the switcher, from the current major and the one before it.
 // Majors older than the previous one are dropped entirely.
 const KEEP_CURRENT_MAJOR = 10;
@@ -85,17 +84,6 @@ function versionsFromTags(tags) {
   return { latest: minorsDesc[0], archived };
 }
 
-async function discoverReleaseTags() {
-  const headers = { Accept: "application/vnd.github+json" };
-  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-  const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100`, { headers });
-  if (!res.ok) {
-    throw new Error(`GitHub API returned ${res.status} ${res.statusText} for ${REPO} releases`);
-  }
-  const releases = await res.json();
-  return releases.filter((r) => !r.prerelease && !r.draft).map((r) => r.tag_name);
-}
-
 function discoverGitTags() {
   const output = git(["ls-remote", "--tags", "origin", "v*.*.*"], {
     encoding: "utf8",
@@ -114,15 +102,9 @@ function discoverGitTags() {
   ];
 }
 
-// Released minors, newest first, capped per major.
+// Released version tags, newest minor first, capped per major.
 async function discoverVersions() {
-  try {
-    return versionsFromTags(await discoverReleaseTags());
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn(`${message}; falling back to git tag discovery`);
-    return versionsFromTags(discoverGitTags());
-  }
+  return versionsFromTags(discoverGitTags());
 }
 
 // ---------------------------------------------------------------------------
