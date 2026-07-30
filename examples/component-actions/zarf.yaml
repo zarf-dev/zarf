@@ -3,9 +3,9 @@ metadata:
   name: component-actions
   description: Component actions examples
 
-variables:
-  - name: DOG_SOUND
-    default: ruff
+values:
+  files:
+    - values.yaml
 
 # See the example README.md in this folder or /adrs/0010-scripts-actions.md for more info.
 components:
@@ -81,62 +81,62 @@ components:
         after:
           - cmd: rm test-deploy-after.txt
 
-  - name: on-deploy-with-variable
+  - name: on-deploy-with-value
     actions:
       # runs during "zarf package deploy"
       onDeploy:
         # runs before the component is deployed
         before:
-          - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
+          - cmd: echo "the dog says {{ .Values.sounds.dog }}"
+            template: true
 
-  - name: on-deploy-with-dynamic-variable
+  - name: on-deploy-with-dynamic-value
     actions:
       # runs during "zarf package deploy"
       onDeploy:
         # runs before the component is deployed
         before:
-          # setVariables can be used to set a variable for use in other actions or components
+          # setValues can be used to set a value for use in other actions or components
           - cmd: echo "meow"
-            # the name of the variable to set with the output of the action (only useable onDeploy)
-            setVariables:
-              - name: CAT_SOUND
-          # this action will have access to the variable set in the previous action
-          - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
+            # the key to set with the output of the action (only useable onDeploy)
+            setValues:
+              - key: .sounds.cat
+          # this action will have access to the value set in the previous action
+          - cmd: echo "the cat says {{ .Values.sounds.cat }}"
+            template: true
 
-  - name: on-deploy-with-multiple-variables
+  - name: on-deploy-with-multiple-values
     actions:
       # runs during "zarf package deploy"
       onDeploy:
         # runs before the component is deployed
         before:
-          # setting this variable will allow it to be used in other actions with additional variables
+          # setting this value will allow it to be used in other actions with additional values
           # set in other actions or components
           - cmd: echo "hiss"
-            # setVariables defines a list of variables to set from the `cmd` standard out.
-            setVariables:
-              - name: SNAKE_SOUND
-                # marks this variable as sensitive to prevent it from being output in the Zarf log
-                sensitive: true
-                # autoIndent tells Zarf to maintain spacing for any newlines when templating into a yaml file
-                autoIndent: true
+            # setValues defines a list of values to set from the `cmd` standard out.
+            setValues:
+              - key: .sounds.snake
         # onSuccess will only run if steps in this component are successful
         onSuccess:
-          # this action will print the CAT_SOUND variable that was set in a previous component
-          - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
-          # this action will print the DOG_SOUND variable set at the top of the zarf.yaml file
-          - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
-          # this action will print the SNAKE_SOUND variable set within this component
-          # > NOTE: when including a variable in a command output this will be written to the log regardless of the sensitive setting
-          # - use `mute` if you want to silence the command output for sensitive variables
-          - cmd: echo "the snake says ${ZARF_VAR_SNAKE_SOUND}"
+          # this action will print the cat sound value that was set in a previous component
+          - cmd: echo "the cat says {{ .Values.sounds.cat }}"
+            template: true
+          # this action will print the dog sound value set in values.yaml
+          - cmd: echo "the dog says {{ .Values.sounds.dog }}"
+            template: true
+          # this action will print the snake sound value set within this component
+          - cmd: echo "the snake says {{ .Values.sounds.snake }}"
+            template: true
 
-  - name: on-deploy-with-template-use-of-variable
+  - name: on-deploy-with-template-use-of-value
     files:
       # this file will be copied to the target location and the cat, dog, and snake sounds will be replaced with their values
-      # requires the on-deploy-with-dynamic-variable and on-deploy-with-multiple-variables components
+      # requires the on-deploy-with-dynamic-value and on-deploy-with-multiple-values components
       - source: test.txt
         target: test-templated.txt
-        shasum: 3c0404e0c767ace905c361fadded6c4b91fdb88aa07d5c42d2a220a87564836d
+        shasum: d84fa3f5071b5cee0ffb09989c95b0078f4265ed485b314492a19bab2e3f69f3
+        template: true
 
   - name: on-deploy-with-timeout
     description: This component will fail after 1 second
@@ -173,10 +173,10 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: touch $ZARF_VAR_TEST_FILENAME
+          - cmd: touch $TEST_FILENAME
             env:
-              # this will set the env var ZARF_VAR_TEST_FILENAME - useful for passing information into scripts
-              - ZARF_VAR_TEST_FILENAME=test-filename-from-env.txt
+              # this will set the env var TEST_FILENAME - useful for passing information into scripts
+              - TEST_FILENAME=test-filename-from-env.txt
 
   - name: on-create-with-network-wait-action
     description: This component will wait for 15 seconds for a network resource to be available

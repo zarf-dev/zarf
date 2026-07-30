@@ -1,0 +1,5 @@
+sounds:
+  # FIXME: this needed?
+  cat: ""
+  dog: ruff
+  snake: ""
