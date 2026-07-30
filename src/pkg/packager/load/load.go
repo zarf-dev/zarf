@@ -47,16 +47,16 @@ type DefinitionOptions struct {
 	types.RemoteOptions
 }
 
-// DefinedPackage is the result of loading and resolving a package definition.
+// ResolvedPackage is the result of loading and resolving a package definition.
 // ImportedSchemas is transient assembly state — child schema paths collected during
 // import resolution that must be passed to AssemblePackage for merging.
-type DefinedPackage struct {
+type ResolvedPackage struct {
 	PackageDefinition api.PackageDefinition
 	ImportedSchemas   []string
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
-func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (DefinedPackage, error) {
+func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (ResolvedPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
@@ -67,90 +67,90 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
-		return DefinedPackage{}, err
+		return ResolvedPackage{}, err
 	}
 
 	b, err := os.ReadFile(pkgPath.ManifestFile)
 	if err != nil {
-		return DefinedPackage{}, err
+		return ResolvedPackage{}, err
 	}
 
 	version, err := pkgcfg.SelectVersion(ctx, b)
 	if err != nil {
-		return DefinedPackage{}, err
+		return ResolvedPackage{}, err
 	}
 
-	var defined DefinedPackage
+	var defined ResolvedPackage
 	switch version {
 	case v1beta1.APIVersion:
 		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
 		if err != nil {
-			return DefinedPackage{}, err
+			return ResolvedPackage{}, err
 		}
 		defined, err = v1beta1PackageDefinition(ctx, pkg, pkgPath, opts)
 		if err != nil {
-			return DefinedPackage{}, err
+			return ResolvedPackage{}, err
 		}
 	case v1alpha1.APIVersion:
 		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 		if err != nil {
-			return DefinedPackage{}, err
+			return ResolvedPackage{}, err
 		}
 		defined, err = v1alpha1PackageDefinition(ctx, pkg, pkgPath, opts)
 		if err != nil {
-			return DefinedPackage{}, err
+			return ResolvedPackage{}, err
 		}
 	default:
-		return DefinedPackage{}, fmt.Errorf("unrecognized API version")
+		return ResolvedPackage{}, fmt.Errorf("unrecognized API version")
 	}
 
 	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
 	return defined, nil
 }
 
-func v1alpha1PackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
+func v1alpha1PackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, opts DefinitionOptions) (ResolvedPackage, error) {
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 	var err error
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
-		return DefinedPackage{}, err
+		return ResolvedPackage{}, err
 	}
 	var importedSchemas []string
 	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
-		return DefinedPackage{}, err
+		return ResolvedPackage{}, err
 	}
 
 	if len(pkg.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
-		return DefinedPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
+		return ResolvedPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 		if err != nil {
-			return DefinedPackage{}, err
+			return ResolvedPackage{}, err
 		}
 	}
 	if err := validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation); err != nil {
-		return DefinedPackage{}, err
+		return ResolvedPackage{}, err
 	}
-	return DefinedPackage{PackageDefinition: api.NewPackageDefinitionFromV1alpha1(pkg), ImportedSchemas: importedSchemas}, nil
+	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1alpha1(pkg), ImportedSchemas: importedSchemas}, nil
 }
 
-func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
+func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, opts DefinitionOptions) (ResolvedPackage, error) {
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 
 	pkg, importedSchemas, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor)
 	if err != nil {
-		return DefinedPackage{}, err
+		return ResolvedPackage{}, err
 	}
 
 	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
-		return DefinedPackage{}, err
+		return ResolvedPackage{}, err
 	}
 
-	return DefinedPackage{PackageDefinition: api.NewPackageDefinitionFromV1beta1(pkg), ImportedSchemas: importedSchemas}, nil
+	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1beta1(pkg), ImportedSchemas: importedSchemas}, nil
 }
 
 func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool) error {
