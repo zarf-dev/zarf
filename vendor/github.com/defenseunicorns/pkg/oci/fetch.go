@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
@@ -63,35 +64,41 @@ func (o *OrasRemote) FetchRoot(ctx context.Context) (*Manifest, error) {
 
 // FetchManifest fetches the manifest with the given descriptor from the remote repository.
 func (o *OrasRemote) FetchManifest(ctx context.Context, desc ocispec.Descriptor) (manifest *Manifest, err error) {
-	return FetchUnmarshal[*Manifest](ctx, o.FetchLayer, json.Unmarshal, desc)
+	return FetchUnmarshal[*Manifest](ctx, o, json.Unmarshal, desc)
 }
 
-// FetchLayer fetches the layer with the given descriptor from the remote repository.
-func (o *OrasRemote) FetchLayer(ctx context.Context, desc ocispec.Descriptor) (bytes []byte, err error) {
-	var src oras.ReadOnlyTarget
-	src = o.repo
+// src returns the read target for layer fetches, wrapping the repository with the
+// layer cache when one is configured.
+func (o *OrasRemote) src() oras.ReadOnlyTarget {
 	if o.cache != nil {
-		src = orasCache.New(o.repo, o.cache)
+		return orasCache.New(o.repo, o.cache)
 	}
-	return content.FetchAll(ctx, src, desc)
+	return o.repo
+}
+
+// Fetch fetches the content for the given descriptor, honoring the layer cache
+// when configured. This satisfies oras content.Fetcher, so an OrasRemote can be
+// passed directly to oras helpers such as content.FetchAll and FetchJSONFile.
+func (o *OrasRemote) Fetch(ctx context.Context, desc ocispec.Descriptor) (io.ReadCloser, error) {
+	return o.src().Fetch(ctx, desc)
+}
+
+// FetchLayer fetches (and digest-verifies) the layer with the given descriptor.
+func (o *OrasRemote) FetchLayer(ctx context.Context, desc ocispec.Descriptor) (bytes []byte, err error) {
+	return content.FetchAll(ctx, o, desc)
 }
 
 // FetchLayerReader fetches the layer with the given descriptor from the remote repository.
 func (o *OrasRemote) FetchLayerReader(ctx context.Context, desc ocispec.Descriptor) (*content.VerifyReader, error) {
-	var src oras.ReadOnlyTarget
-	src = o.repo
-	if o.cache != nil {
-		src = orasCache.New(o.repo, o.cache)
-	}
-	r, err := src.Fetch(ctx, desc)
+	r, err := o.Fetch(ctx, desc)
 	if err != nil {
 		return nil, err
 	}
 	return content.NewVerifyReader(r, desc), nil
 }
 
-// FetchJSONFile fetches the given JSON file from the remote repository.
-func FetchJSONFile[T any](ctx context.Context, fetcher func(ctx context.Context, desc ocispec.Descriptor) (bytes []byte, err error), manifest *Manifest, path string) (result T, err error) {
+// FetchJSONFile fetches and unmarshals the JSON file at path, located via the manifest.
+func FetchJSONFile[T any](ctx context.Context, fetcher content.Fetcher, manifest *Manifest, path string) (result T, err error) {
 	descriptor := manifest.Locate(path)
 	if IsEmptyDescriptor(descriptor) {
 		return result, fmt.Errorf("unable to find %s in the manifest", path)
@@ -99,8 +106,8 @@ func FetchJSONFile[T any](ctx context.Context, fetcher func(ctx context.Context,
 	return FetchUnmarshal[T](ctx, fetcher, json.Unmarshal, descriptor)
 }
 
-// FetchYAMLFile fetches the given YAML file from the remote repository.
-func FetchYAMLFile[T any](ctx context.Context, fetcher func(ctx context.Context, desc ocispec.Descriptor) (bytes []byte, err error), manifest *Manifest, path string) (result T, err error) {
+// FetchYAMLFile fetches and unmarshals the YAML file at path, located via the manifest.
+func FetchYAMLFile[T any](ctx context.Context, fetcher content.Fetcher, manifest *Manifest, path string) (result T, err error) {
 	descriptor := manifest.Locate(path)
 	if IsEmptyDescriptor(descriptor) {
 		return result, fmt.Errorf("unable to find %s in the manifest", path)
@@ -108,14 +115,13 @@ func FetchYAMLFile[T any](ctx context.Context, fetcher func(ctx context.Context,
 	return FetchUnmarshal[T](ctx, fetcher, goyaml.Unmarshal, descriptor)
 }
 
-// FetchUnmarshal fetches the given descriptor from the remote repository and unmarshals it.
-func FetchUnmarshal[T any](ctx context.Context, fetcher func(ctx context.Context, desc ocispec.Descriptor) (bytes []byte, err error), unmarshaler func(data []byte, v any) error, descriptor ocispec.Descriptor) (result T, err error) {
-	bytes, err := fetcher(ctx, descriptor)
+// FetchUnmarshal fetches (and digest-verifies, via content.FetchAll) the descriptor and unmarshals it.
+func FetchUnmarshal[T any](ctx context.Context, fetcher content.Fetcher, unmarshaler func(data []byte, v any) error, descriptor ocispec.Descriptor) (result T, err error) {
+	b, err := content.FetchAll(ctx, fetcher, descriptor)
 	if err != nil {
 		return result, err
 	}
-	err = unmarshaler(bytes, &result)
-	if err != nil {
+	if err := unmarshaler(b, &result); err != nil {
 		return result, err
 	}
 	return result, nil

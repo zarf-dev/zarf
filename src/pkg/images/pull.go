@@ -164,7 +164,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			// localhost: a local dev/test registry is commonly plain HTTP even
 			// when --plain-http wasn't passed for that specific purpose.
 			var plainHTTP bool
-			if opts.PlainHTTP || dns.IsLocalhost(repo.Reference.Host()) {
+			if opts.PlainHTTP || dns.IsLocalOrPrivate(repo.Reference.Host()) {
 				plainHTTP, err = ocischeme.From(ctx).UsePlainHTTP(ctx, repo.Reference.Host(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify})
 				if err != nil {
 					// It could be an image on the daemon instead of a registry.

@@ -25,14 +25,14 @@
     "astro": "^7.0.7",
     "mermaid": "^10.9.4",
     "rehype-autolink-headings": "^7.1.0",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.3",
     "starlight-sidebar-topics": "^0.7.0",
     "typescript": "^5.4.3",
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
     "linkinator": "^7.5.3",
-    "markdownlint-cli2": "^0.20.0",
+    "markdownlint-cli2": "^0.23.2",
     "remark-gemoji": "^8.0.0",
     "yaml": "^2.8.3"
   },

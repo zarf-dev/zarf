@@ -19,6 +19,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 
@@ -242,13 +243,13 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		}
 	}
 	// Create skeleton buildpath
-	createOpts := layout.AssembleSkeletonOptions{
+	createOpts := assemble.AssembleSkeletonOptions{
 		SigningKeyPath:       opts.SigningKeyPath,
 		SigningKeyPassword:   opts.SigningKeyPassword,
 		Flavor:               opts.Flavor,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
-	pkgLayout, err := layout.AssembleSkeleton(ctx, defined.Pkg, path, defined.ImportedSchemas, createOpts)
+	pkgLayout, err := assemble.AssembleSkeleton(ctx, defined.Pkg, path, defined.ImportedSchemas, createOpts)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
 	}

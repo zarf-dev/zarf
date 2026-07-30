@@ -124,3 +124,12 @@ slog.SetDefault(logger)
 | StringerFormatter   | Use Stringer interface for formatting                          | false          | bool                 |
 | NoColor             | Disable coloring                                               | false          | bool                 |
 | SameSourceInfoColor | Keep same color for whole source info                          | false          | bool                 |
+
+### Environment variables
+
+Coloring is also disabled automatically when:
+
+- `NO_COLOR` is set to any non-empty value (see [no-color.org](https://no-color.org/)).
+- `TERM=dumb`.
+
+The environment signal wins over an explicit `NoColor: false` in `Options`.

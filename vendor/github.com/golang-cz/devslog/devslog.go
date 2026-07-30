@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
+	"os"
 	"reflect"
 	"runtime"
 	"sort"
@@ -118,7 +119,25 @@ func NewHandler(out io.Writer, o *Options) *developHandler {
 		}
 	}
 
+	if envDisablesColor() {
+		h.opts.NoColor = true
+	}
+
 	return h
+}
+
+// envDisablesColor reports whether the environment signals that ANSI color
+// output should be suppressed. Follows the NO_COLOR convention
+// (https://no-color.org/) — any non-empty value disables color — and the
+// older TERM=dumb convention.
+func envDisablesColor() bool {
+	if os.Getenv("NO_COLOR") != "" {
+		return true
+	}
+	if os.Getenv("TERM") == "dumb" {
+		return true
+	}
+	return false
 }
 
 func ensureValidColor(c Color, defaultColor Color) Color {
@@ -199,7 +218,7 @@ func (h *developHandler) formatSourceInfo(b []byte, r *slog.Record) []byte {
 		b = append(b, ' ')
 
 		if h.opts.SameSourceInfoColor {
-			b = append(b, h.underlineText(h.colorString(append(append([]byte(s.File), ':'), []byte(strconv.Itoa(s.Line))...), fgBlue))...)
+			b = append(b, h.underlineText(h.colorStringFainted(append(append([]byte(s.File), ':'), []byte(strconv.Itoa(s.Line))...), fgCyan))...)
 		} else {
 			b = append(b, h.underlineText(h.colorStringFainted([]byte(s.File), fgCyan))...)
 			b = append(b, h.faintedText([]byte(":"))...)
@@ -311,8 +330,8 @@ func (h *developHandler) colorize(b []byte, as attributes, l int, group []string
 			mark = h.colorString([]byte("#"), fgYellow)
 			val = h.colorString(val, fgYellow)
 		case slog.KindBool:
-			mark = h.colorString([]byte("#"), fgRed)
-			val = h.colorString(val, fgRed)
+			mark = h.colorString([]byte("#"), fgBlue)
+			val = h.colorString(val, fgBlue)
 		case slog.KindString:
 			if len(val) == 0 {
 				val = h.colorStringFainted([]byte("empty"), fgWhite)
@@ -397,9 +416,9 @@ func (h *developHandler) colorize(b []byte, as attributes, l int, group []string
 				vs = atb(uv.Uint())
 				val = append(val, h.colorString(vs, fgYellow)...)
 			case reflect.Bool:
-				mark = h.colorString([]byte("#"), fgRed)
+				mark = h.colorString([]byte("#"), fgBlue)
 				vs = atb(uv.Bool())
-				val = append(val, h.colorString(vs, fgRed)...)
+				val = append(val, h.colorString(vs, fgBlue)...)
 			case reflect.String:
 				s := uv.String()
 				if len(s) == 0 {
@@ -648,7 +667,7 @@ func (h *developHandler) elementType(t reflect.Type, v reflect.Value, l int, p i
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		b = h.colorString(atb(v.Uint()), fgYellow)
 	case reflect.Bool:
-		b = h.colorString(atb(v.Bool()), fgRed)
+		b = h.colorString(atb(v.Bool()), fgBlue)
 	case reflect.String:
 		s := v.String()
 		if len(s) == 0 {

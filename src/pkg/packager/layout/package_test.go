@@ -4,6 +4,7 @@
 package layout
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -1092,8 +1094,7 @@ func TestGetDocumentation(t *testing.T) {
 			}
 
 			tarPath := filepath.Join(pkgDir, DocumentationTar)
-			err := createReproducibleTarballFromDir(docTempDir, "", tarPath, false)
-			require.NoError(t, err)
+			writeDocumentationTar(t, docTempDir, tarPath)
 		}
 
 		pkg := v1alpha1.ZarfPackage{
@@ -1861,4 +1862,19 @@ func TestHasValuesSchema(t *testing.T) {
 		}
 		require.True(t, p.HasValuesSchema(), "file on disk should take precedence over empty metadata field")
 	})
+}
+
+// writeDocumentationTar tars the flat contents of dir, which is all the
+// documentation reader needs. Package assembly writes this tarball with its own
+// reproducible writer; reading it back does not depend on those guarantees.
+func writeDocumentationTar(t *testing.T, dir, tarPath string) {
+	t.Helper()
+
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	sources := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		sources = append(sources, filepath.Join(dir, entry.Name()))
+	}
+	require.NoError(t, archive.Compress(context.Background(), sources, tarPath, archive.CompressOpts{}))
 }
