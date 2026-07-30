@@ -39,6 +39,10 @@ const (
 	// GitProviderGitHub provides support for authentication to git
 	// repositories using GitHub App authentication
 	GitProviderGitHub string = "github"
+
+	// GitProviderAWS provides support for authentication to AWS CodeCommit
+	// repositories using IAM credentials.
+	GitProviderAWS string = "aws"
 )
 
 const (
@@ -77,7 +81,7 @@ const (
 
 // GitRepositorySpec specifies the required configuration to produce an
 // Artifact for a Git repository.
-// +kubebuilder:validation:XValidation:rule="!has(self.serviceAccountName) || (has(self.provider) && self.provider == 'azure')",message="serviceAccountName can only be set when provider is 'azure'"
+// +kubebuilder:validation:XValidation:rule="!has(self.serviceAccountName) || (has(self.provider) && (self.provider == 'azure' || self.provider == 'aws'))",message="serviceAccountName can only be set when provider is 'azure' or 'aws'"
 type GitRepositorySpec struct {
 	// URL specifies the Git repository URL, it can be an HTTP/S or SSH address.
 	// +kubebuilder:validation:Pattern="^(http|https|ssh)://.*$"
@@ -93,14 +97,14 @@ type GitRepositorySpec struct {
 	// +optional
 	SecretRef *meta.LocalObjectReference `json:"secretRef,omitempty"`
 
-	// Provider used for authentication, can be 'azure', 'github', 'generic'.
+	// Provider used for authentication, can be 'aws', 'azure', 'github', 'generic'.
 	// When not specified, defaults to 'generic'.
-	// +kubebuilder:validation:Enum=generic;azure;github
+	// +kubebuilder:validation:Enum=generic;aws;azure;github
 	// +optional
 	Provider string `json:"provider,omitempty"`
 
 	// ServiceAccountName is the name of the Kubernetes ServiceAccount used to
-	// authenticate to the GitRepository. This field is only supported for 'azure' provider.
+	// authenticate to the GitRepository. This field is only supported for 'azure' and 'aws' providers.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
@@ -238,7 +242,8 @@ type GitRepositoryVerification struct {
 	Mode GitVerificationMode `json:"mode,omitempty"`
 
 	// SecretRef specifies the Secret containing the public keys of trusted Git
-	// authors.
+	// authors. PGP public keys must be stored under keys with the .asc suffix,
+	// and SSH public keys must be stored under keys with the .sshpub suffix.
 	// +required
 	SecretRef meta.LocalObjectReference `json:"secretRef"`
 }
@@ -354,12 +359,13 @@ func (v *GitRepositoryVerification) VerifyTag() bool {
 // +genclient
 // +kubebuilder:storageversion
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=gitrepo
+// +kubebuilder:resource:shortName=gitrepo,categories=all;fluxcd;fluxcd-sources
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="URL",type=string,JSONPath=`.spec.url`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description=""
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status",description=""
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message",description=""
+// +kubebuilder:metadata:annotations="kustomize.toolkit.fluxcd.io/substitute=disabled"
 
 // GitRepository is the Schema for the gitrepositories API.
 type GitRepository struct {
