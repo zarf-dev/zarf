@@ -60,13 +60,13 @@ type DefinedPackage struct {
 var _ api.PackageAccessor = DefinedPackage{}
 
 // AsV1alpha1 returns the package definition as a v1alpha1 ZarfPackage.
-func (d DefinedPackage) AsV1alpha1() (v1alpha1.ZarfPackage, error) {
-	return internalv1alpha1.ConvertFromGeneric(d.pkg), nil
+func (d DefinedPackage) AsV1alpha1() v1alpha1.ZarfPackage {
+	return internalv1alpha1.ConvertFromGeneric(d.pkg)
 }
 
 // AsV1beta1 returns the package definition as a v1beta1 Package.
-func (d DefinedPackage) AsV1beta1() (v1beta1.Package, error) {
-	return internalv1beta1.ConvertFromGeneric(d.pkg), nil
+func (d DefinedPackage) AsV1beta1() v1beta1.Package {
+	return internalv1beta1.ConvertFromGeneric(d.pkg)
 }
 
 // OriginalAPIVersion returns the apiVersion the package was authored in before any conversion.

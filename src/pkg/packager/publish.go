@@ -237,10 +237,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	pkg, err := defined.AsV1alpha1()
-	if err != nil {
-		return registry.Reference{}, err
-	}
+	pkg := defined.AsV1alpha1()
 	for _, comp := range pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")

@@ -11,6 +11,6 @@ import (
 
 // PackageAccessor is the read contract for a package source, exposing a per-version definition.
 type PackageAccessor interface {
-	AsV1alpha1() (v1alpha1.ZarfPackage, error)
-	AsV1beta1() (v1beta1.Package, error)
+	AsV1alpha1() v1alpha1.ZarfPackage
+	AsV1beta1() v1beta1.Package
 }

@@ -167,8 +167,7 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, v1beta1.APIVersion, defined.OriginalAPIVersion())
 
-		pkg, err := defined.AsV1alpha1()
-		require.NoError(t, err)
+		pkg := defined.AsV1alpha1()
 		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
 		require.Equal(t, "beta-package", pkg.Metadata.Name)
 		require.NotEmpty(t, pkg.Metadata.Architecture)
@@ -180,8 +179,7 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 
 		// The v1beta1 view preserves fields with no v1alpha1 representation — here an image's source.
 		// Collapsing to v1alpha1 on load (the previous approach) dropped these.
-		betaPkg, err := defined.AsV1beta1()
-		require.NoError(t, err)
+		betaPkg := defined.AsV1beta1()
 		require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
 		require.Len(t, betaPkg.Components, 1)
 		require.Equal(t, "nginx:1.27.0", betaPkg.Components[0].Images[0].Name)
@@ -193,8 +191,7 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-with-import"), DefinitionOptions{})
 		require.NoError(t, err)
 
-		pkg, err := defined.AsV1alpha1()
-		require.NoError(t, err)
+		pkg := defined.AsV1alpha1()
 		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
 		require.Len(t, pkg.Components, 1)
 		require.Equal(t, "imported", pkg.Components[0].Name)
