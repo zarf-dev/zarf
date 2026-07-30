@@ -168,6 +168,31 @@ func TestUniqueNamespaces(t *testing.T) {
 	}
 }
 
+func TestGetComponent(t *testing.T) {
+	t.Parallel()
+
+	pkg := ZarfPackage{
+		Components: []ZarfComponent{
+			{Name: "first", Images: []string{"docker.io/library/nginx:latest"}},
+			{Name: "second"},
+		},
+	}
+
+	t.Run("returns matching component", func(t *testing.T) {
+		t.Parallel()
+		got, err := pkg.GetComponent("first")
+		require.NoError(t, err)
+		require.Equal(t, "first", got.Name)
+		require.Equal(t, []string{"docker.io/library/nginx:latest"}, got.Images)
+	})
+
+	t.Run("errors when component is absent", func(t *testing.T) {
+		t.Parallel()
+		_, err := pkg.GetComponent("missing")
+		require.Error(t, err)
+	})
+}
+
 func TestZarfPackageIsSBOMable(t *testing.T) {
 	t.Parallel()
 

@@ -36,8 +36,32 @@ func traversePathOperator(_ *dataTreeNavigator, context Context, expressionNode 
 	return context.ChildContext(matches), nil
 }
 
+// resolveAliasChain follows an alias chain iteratively, returning the
+// first non-alias node. Returns an error if a cycle is detected.
+func resolveAliasChain(node *CandidateNode) (*CandidateNode, error) {
+	if node.Kind != AliasNode {
+		return node, nil
+	}
+	visited := map[*CandidateNode]bool{}
+	for node.Kind == AliasNode {
+		if visited[node] {
+			return nil, fmt.Errorf("alias cycle detected")
+		}
+		visited[node] = true
+		log.Debug("its an alias!")
+		node = node.Alias
+	}
+	return node, nil
+}
+
 func traverse(context Context, matchingNode *CandidateNode, operation *Operation) (*list.List, error) {
-	log.Debug("Traversing %v", NodeToString(matchingNode))
+	log.Debugf("Traversing %v", NodeToString(matchingNode))
+
+	var err error
+	matchingNode, err = resolveAliasChain(matchingNode)
+	if err != nil {
+		return nil, err
+	}
 
 	if matchingNode.Tag == "!!null" && operation.Value != "[]" && !context.DontAutoCreate {
 		log.Debugf("Guessing kind")
@@ -55,17 +79,13 @@ func traverse(context Context, matchingNode *CandidateNode, operation *Operation
 
 	switch matchingNode.Kind {
 	case MappingNode:
-		log.Debug("its a map with %v entries", len(matchingNode.Content)/2)
+		log.Debugf("its a map with %v entries", len(matchingNode.Content)/2)
 		return traverseMap(context, matchingNode, createStringScalarNode(operation.StringValue), operation.Preferences.(traversePreferences), false)
 
 	case SequenceNode:
-		log.Debug("its a sequence of %v things!", len(matchingNode.Content))
+		log.Debugf("its a sequence of %v things!", len(matchingNode.Content))
 		return traverseArray(matchingNode, operation, operation.Preferences.(traversePreferences))
 
-	case AliasNode:
-		log.Debug("its an alias!")
-		matchingNode = matchingNode.Alias
-		return traverse(context, matchingNode, operation)
 	default:
 		return list.New(), nil
 	}
@@ -79,7 +99,11 @@ func traverseArrayOperator(d *dataTreeNavigator, context Context, expressionNode
 	log.Debugf("--traverseArrayOperator")
 
 	if expressionNode.RHS != nil && expressionNode.RHS.RHS != nil && expressionNode.RHS.RHS.Operation.OperationType == createMapOpType {
-		return sliceArrayOperator(d, context, expressionNode.RHS.RHS)
+		lhsContext, err := d.GetMatchingNodes(context, expressionNode.LHS)
+		if err != nil {
+			return Context{}, err
+		}
+		return sliceArrayOperator(d, lhsContext, expressionNode.RHS.RHS)
 	}
 
 	lhs, err := d.GetMatchingNodes(context, expressionNode.LHS)
@@ -125,7 +149,13 @@ func traverseNodesWithArrayIndices(context Context, indicesToTraverse []*Candida
 	return context.ChildContext(matchingNodeMap), nil
 }
 
-func traverseArrayIndices(context Context, matchingNode *CandidateNode, indicesToTraverse []*CandidateNode, prefs traversePreferences) (*list.List, error) { // call this if doc / alias like the other traverse
+func traverseArrayIndices(context Context, matchingNode *CandidateNode, indicesToTraverse []*CandidateNode, prefs traversePreferences) (*list.List, error) {
+	var err error
+	matchingNode, err = resolveAliasChain(matchingNode)
+	if err != nil {
+		return nil, err
+	}
+
 	if matchingNode.Tag == "!!null" {
 		log.Debugf("OperatorArrayTraverse got a null - turning it into an empty array")
 		// auto vivification
@@ -138,9 +168,6 @@ func traverseArrayIndices(context Context, matchingNode *CandidateNode, indicesT
 	}
 
 	switch matchingNode.Kind {
-	case AliasNode:
-		matchingNode = matchingNode.Alias
-		return traverseArrayIndices(context, matchingNode, indicesToTraverse, prefs)
 	case SequenceNode:
 		return traverseArrayWithIndices(matchingNode, indicesToTraverse, prefs)
 	case MappingNode:
@@ -158,7 +185,7 @@ func traverseMapWithIndices(context Context, candidate *CandidateNode, indices [
 	var matchingNodeMap = list.New()
 
 	for _, indexNode := range indices {
-		log.Debug("traverseMapWithIndices: %v", indexNode.Value)
+		log.Debugf("traverseMapWithIndices: %v", indexNode.Value)
 		newNodes, err := traverseMap(context, candidate, indexNode, prefs, false)
 		if err != nil {
 			return nil, err
@@ -183,7 +210,7 @@ func traverseArrayWithIndices(node *CandidateNode, indices []*CandidateNode, pre
 	}
 
 	for _, indexNode := range indices {
-		log.Debug("traverseArrayWithIndices: '%v'", indexNode.Value)
+		log.Debugf("traverseArrayWithIndices: '%v'", indexNode.Value)
 		index, err := parseInt(indexNode.Value)
 		if err != nil && prefs.OptionalTraverse {
 			continue
@@ -366,7 +393,7 @@ func traverseMergeAnchor(newMatches *orderedmap.OrderedMap, merge *CandidateNode
 }
 
 func traverseArray(candidate *CandidateNode, operation *Operation, prefs traversePreferences) (*list.List, error) {
-	log.Debug("operation Value %v", operation.Value)
+	log.Debugf("operation Value %v", operation.Value)
 	indices := []*CandidateNode{{Value: operation.StringValue}}
 	return traverseArrayWithIndices(candidate, indices, prefs)
 }

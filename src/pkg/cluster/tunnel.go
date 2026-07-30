@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -20,6 +21,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+	"k8s.io/kubectl/pkg/util/podutils"
 	"k8s.io/streaming/pkg/httpstream"
 
 	"github.com/avast/retry-go/v4"
@@ -171,7 +173,7 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 		if err != nil {
 			return "", nil, err
 		}
-		svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
+		svc, port, err := ServiceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
 
 		// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
 		if err == nil {
@@ -278,26 +280,27 @@ func (c *Cluster) findPodContainerPort(ctx context.Context, svc corev1.Service) 
 	return 0, nil
 }
 
-// TODO: Refactor to use netip.AddrPort instead of a string for nodePortURL.
-// This functions assumes that the nodePortURL is in the form 127.0.0.1:<port>
-func serviceInfoFromNodePortURL(services []corev1.Service, nodePortURL string) (corev1.Service, int, error) {
-	// Attempt to parse as normal, if this fails add a scheme to the URL (docker registries don't use schemes)
-	parsedURL, err := url.Parse(nodePortURL)
+// ServiceInfoFromNodePortURL returns the Kubernetes Service that corresponds to the given NodePort URL.
+// nodePortURL may be a bare host:port (e.g. "localhost:31999") or a full URL.
+func ServiceInfoFromNodePortURL(services []corev1.Service, nodePortURL string) (corev1.Service, int, error) {
+	// url.Parse misreads a bare "localhost:31999" as scheme:opaque (empty host), so
+	// fall back to the raw string and let net.SplitHostPort do the splitting.
+	rawHost := nodePortURL
+	if u, err := url.Parse(nodePortURL); err == nil && u.Host != "" {
+		rawHost = u.Host
+	}
+	hostname, portStr, err := net.SplitHostPort(rawHost)
 	if err != nil {
-		parsedURL, err = url.Parse("scheme://" + nodePortURL)
-		if err != nil {
-			return corev1.Service{}, 0, err
-		}
+		return corev1.Service{}, 0, err
 	}
 
-	// Match hostname against localhost ip/hostnames
-	hostname := parsedURL.Hostname()
-	if hostname != helpers.IPV4Localhost && hostname != "localhost" {
+	// NodePort tunnels are served on loopback.
+	if !dns.IsLocalhost(hostname) {
 		return corev1.Service{}, 0, fmt.Errorf("node port services should be on localhost")
 	}
 
 	// Get the node port from the nodeportURL.
-	nodePort, err := strconv.Atoi(parsedURL.Port())
+	nodePort, err := strconv.Atoi(portStr)
 	if err != nil {
 		return corev1.Service{}, 0, err
 	}
@@ -584,7 +587,15 @@ func (tunnel *Tunnel) getAttachablePodForService(ctx context.Context) (string, e
 	if len(podList.Items) < 1 {
 		return "", fmt.Errorf("no pods found for service %s", tunnel.resourceName)
 	}
-	return podList.Items[0].Name, nil
+	// status.phase=Running alone isn't enough: a pod stays "Running" throughout its
+	// graceful termination (e.g. mid-rollout), so without also checking these, a
+	// port-forward can bind to a pod that's already on its way out.
+	for _, pod := range podList.Items {
+		if pod.DeletionTimestamp == nil && podutils.IsPodReady(&pod) {
+			return pod.Name, nil
+		}
+	}
+	return "", fmt.Errorf("no ready pods found for service %s", tunnel.resourceName)
 }
 
 // Inspired by https://github.com/kubernetes/kubernetes/blob/1ee1ff97fb7f9755a44d29bee0c80d2ccbed68dc/staging/src/k8s.io/kubectl/pkg/cmd/portforward/portforward.go#L139-L156

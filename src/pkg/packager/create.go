@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -95,7 +96,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		differentialPkg = pkgLayout.Pkg
 	}
 
-	assembleOpt := layout.AssembleOptions{
+	assembleOpt := assemble.AssembleOptions{
 		SkipSBOM:             opts.SkipSBOM,
 		OCIConcurrency:       opts.OCIConcurrency,
 		DifferentialPackage:  differentialPkg,
@@ -107,7 +108,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,
 	}
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, pkgPath.BaseDir, defined.ImportedSchemas, assembleOpt)
+	pkgLayout, err := assemble.AssemblePackage(ctx, pkg, pkgPath.BaseDir, defined.ImportedSchemas, assembleOpt)
 	if err != nil {
 		return "", err
 	}

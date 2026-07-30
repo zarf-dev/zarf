@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -356,7 +357,7 @@ func assembleLayout(t *testing.T, srcDir string) *layout.PackageLayout {
 	require.NoError(t, err)
 	pkg, err := defined.AsV1alpha1()
 	require.NoError(t, err)
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, srcDir, nil, layout.AssembleOptions{SkipSBOM: true})
+	pkgLayout, err := assemble.AssemblePackage(ctx, pkg, srcDir, nil, assemble.AssembleOptions{SkipSBOM: true})
 	require.NoError(t, err)
 	return pkgLayout
 }

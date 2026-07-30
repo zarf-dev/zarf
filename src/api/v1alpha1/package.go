@@ -81,6 +81,16 @@ func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
 }
 
+// GetComponent returns the component with the given name, or an error if no such component exists.
+func (pkg ZarfPackage) GetComponent(name string) (ZarfComponent, error) {
+	for _, component := range pkg.Components {
+		if component.Name == name {
+			return component, nil
+		}
+	}
+	return ZarfComponent{}, fmt.Errorf("no component named %q in package %q", name, pkg.Metadata.Name)
+}
+
 // HasImages returns true if one of the components contains an image.
 func (pkg ZarfPackage) HasImages() bool {
 	for _, component := range pkg.Components {

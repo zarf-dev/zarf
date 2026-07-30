@@ -74,55 +74,6 @@ func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
 	return true
 }
 
-func buildScheme(plainHTTP bool) string {
-	if plainHTTP {
-		return "http"
-	}
-	return "https"
-}
-
-// Ping verifies if a user can connect to a registry
-func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) (err error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	url := fmt.Sprintf("%s://%s/v2/", buildScheme(plainHTTP), registryURL)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, resp.Body.Close())
-	}()
-
-	switch resp.StatusCode {
-	case http.StatusOK, http.StatusUnauthorized, http.StatusForbidden:
-		return nil
-	}
-	return fmt.Errorf("could not connect to registry %s over %s. status code: %d", registryURL, buildScheme(plainHTTP), resp.StatusCode)
-}
-
-// ShouldUsePlainHTTP returns true if the registryURL is an http endpoint
-// This is inspired by the Crane functionality to determine the schema to be used - https://github.com/google/go-containerregistry/blob/main/pkg/v1/remote/transport/ping.go
-// Zarf relies heavily on this logic, as the internal registry communicates over HTTP, however we want Zarf to be flexible should the registry be over https in the future
-func ShouldUsePlainHTTP(ctx context.Context, registryURL string, client *auth.Client) (bool, error) {
-	// If the https connection works use https
-	err := Ping(ctx, false, registryURL, client)
-	if err == nil {
-		return false, nil
-	}
-	logger.From(ctx).Debug("failing back to plainHTTP connection", "registryUrl", registryURL, "err", err)
-	// If https regular request failed and plainHTTP is allowed check again over plainHTTP
-	err2 := Ping(ctx, true, registryURL, client)
-	if err2 != nil {
-		return false, errors.Join(err, err2)
-	}
-	return true, nil
-}
-
 // IsManifest reports whether the media type represents an OCI manifest.
 func IsManifest(mediaType string) bool {
 	switch mediaType {
@@ -242,6 +193,17 @@ func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Durati
 	// Users frequently run into servers hanging indefinitely, if the server doesn't send headers in 10 seconds then we timeout to avoid this
 	transport.ResponseHeaderTimeout = responseHeaderTimeout
 	return retry.NewTransport(transport), nil
+}
+
+// unwrapRetryTransport returns rt's underlying RoundTripper if rt is an oras-go
+// retry.Transport, so a scheme probe never inherits its retry/backoff behavior:
+// probing must fail fast on a connection error, not retry it into a multi-second
+// (or, compounded across the negotiate-invalidate-retry cycle, multi-minute) stall.
+func unwrapRetryTransport(rt http.RoundTripper) http.RoundTripper {
+	if retryRT, ok := rt.(*retry.Transport); ok && retryRT.Base != nil {
+		return retryRT.Base
+	}
+	return rt
 }
 
 // NoopOpt is a no-op option for crane.

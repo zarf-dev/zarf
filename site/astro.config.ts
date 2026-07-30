@@ -8,9 +8,9 @@ import { remarkLinkRewrite } from "./src/plugins/remark-link-rewrite.ts";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { VERSION_SLUG } from "./src/lib/version.ts";
 
 const docsDir = fileURLToPath(new URL("./src/content/docs/", import.meta.url));
-const VERSION_SLUG = /^v\d+-\d+$/;
 
 // Archived versions staged by build-versions.mjs; absent in plain/dev builds.
 let versions: { ref: string; slug: string }[] = [];
@@ -26,6 +26,11 @@ const sections = readdirSync(docsDir, { withFileTypes: true })
   .map((e) => e.name.replace(/\.mdx?$/, ""))
   .filter((name) => name !== "index");
 
+function hasPage(slug: string, page: string): boolean {
+  const rel = slug ? `${slug}/${page}` : page;
+  return existsSync(path.join(docsDir, `${rel}.mdx`)) || existsSync(path.join(docsDir, `${rel}.md`));
+}
+
 // Build a Starlight sidebar for one docs version. `slug` is "" for the current
 // checkout (Latest) or a version slug (e.g. "0-76") for an archived subtree.
 // Sections missing from an older version are skipped so autogenerate never
@@ -34,8 +39,6 @@ function buildSidebar(slug: string): any[] {
   const base = slug ? `/${slug}` : "";
   const rel = (p: string) => (slug ? `${slug}/${p}` : p);
   const hasDir = (d: string) => existsSync(path.join(docsDir, rel(d)));
-  const hasPage = (p: string) =>
-    existsSync(path.join(docsDir, rel(`${p}.mdx`))) || existsSync(path.join(docsDir, rel(`${p}.md`)));
 
   const items: any[] = [{ label: "Overview", link: `${base}/` }];
 
@@ -46,7 +49,7 @@ function buildSidebar(slug: string): any[] {
     items.push({ label, items: [{ autogenerate }], ...(opts.collapsed ? { collapsed: true } : {}) });
   };
   const pageLink = (label: string, p: string) => {
-    if (hasPage(p)) items.push({ label, link: `${base}/${p}` });
+    if (hasPage(slug, p)) items.push({ label, link: `${base}/${p}` });
   };
 
   dirGroup("Start Here", "getting-started");
@@ -70,8 +73,22 @@ const topics = [
   ...versions.map((v) => ({ id: v.slug, label: v.ref, link: `/${v.slug}/`, items: buildSidebar(v.slug) })),
 ];
 
-// Associate generated pages that aren't in any sidebar with a topic.
-const topicsOption: Record<string, string[]> = { latest: ["/404"] };
+// Associate pages that aren't in any sidebar (404, sidebar-hidden pages) with a topic.
+function unlistedPages(slug: string): string[] {
+  const base = slug ? `/${slug}` : "";
+  const pages = slug ? [] : ["/404"];
+
+  if (hasPage(slug, "schema/v1beta1-package")) {
+    pages.push(`${base}/schema/v1beta1-package`);
+  }
+
+  return pages;
+}
+
+const topicsOption: Record<string, string[]> = {
+  latest: unlistedPages(""),
+  ...Object.fromEntries(versions.map((version) => [version.slug, unlistedPages(version.slug)])),
+};
 
 // https://astro.build/config
 export default defineConfig({
@@ -117,6 +134,8 @@ export default defineConfig({
         SkipLink: "./src/components/SkipLink.astro",
         ThemeSelect: "./src/components/ThemeSelect.astro",
         Sidebar: "./src/components/Sidebar.astro",
+        Search: "./src/components/Search.astro",
+        MarkdownContent: "./src/components/MarkdownContent.astro",
       },
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/zarf-dev/zarf' },

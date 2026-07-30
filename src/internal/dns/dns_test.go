@@ -62,7 +62,7 @@ func TestServiceURL(t *testing.T) {
 	}
 }
 
-func TestIsLocalHost(t *testing.T) {
+func TestIsLocalOrPrivate(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		URL      string
@@ -96,7 +96,31 @@ func TestIsLocalHost(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.URL, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tt.expected, IsLocalhost(tt.URL))
+			require.Equal(t, tt.expected, IsLocalOrPrivate(tt.URL))
+		})
+	}
+}
+
+func TestIsLocalhost(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		host     string
+		expected bool
+	}{
+		{host: "localhost", expected: true},
+		{host: "127.0.0.1", expected: true},
+		{host: "127.0.0.2", expected: true},
+		{host: "::1", expected: true},
+		{host: "10.2.3.4", expected: false},
+		{host: "192.168.1.5", expected: false},
+		{host: "foo.local", expected: false},
+		{host: "gcr.io", expected: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.host, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.expected, IsLocalhost(tt.host))
 		})
 	}
 }

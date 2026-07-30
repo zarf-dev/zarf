@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
@@ -186,7 +185,7 @@ func (b *Work) makeRequest(c *http.Client) {
 	if err == nil {
 		size = resp.ContentLength
 		code = resp.StatusCode
-		io.Copy(ioutil.Discard, resp.Body)
+		io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
 	}
 	t := now()
@@ -209,7 +208,9 @@ func (b *Work) makeRequest(c *http.Client) {
 func (b *Work) runWorker(client *http.Client, n int) {
 	var throttle <-chan time.Time
 	if b.QPS > 0 {
-		throttle = time.Tick(time.Duration(1e6/(b.QPS)) * time.Microsecond)
+		ticker := time.NewTicker(time.Duration(1e6/(b.QPS)) * time.Microsecond)
+		defer ticker.Stop()
+		throttle = ticker.C
 	}
 
 	if b.DisableRedirects {
@@ -263,25 +264,11 @@ func (b *Work) runWorkers() {
 }
 
 // cloneRequest returns a clone of the provided *http.Request.
-// The clone is a shallow copy of the struct and its Header map.
 func cloneRequest(r *http.Request, body []byte) *http.Request {
-	// shallow copy of the struct
-	r2 := new(http.Request)
-	*r2 = *r
-	// deep copy of the Header
-	r2.Header = make(http.Header, len(r.Header))
-	for k, s := range r.Header {
-		r2.Header[k] = append([]string(nil), s...)
-	}
+	r2 := r.Clone(r.Context())
 	if len(body) > 0 {
-		r2.Body = ioutil.NopCloser(bytes.NewReader(body))
+		r2.Body = io.NopCloser(bytes.NewReader(body))
 	}
 	return r2
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

@@ -316,6 +316,30 @@ func TestApply(t *testing.T) {
 			expected: "echo HELLO WORLD",
 		},
 		{
+			name: "package GetComponent lookup",
+			s:    `image {{ index (.Pkg.GetComponent "web").Images 0 }}`,
+			objects: Objects{
+				objectKeyPackage: v1alpha1.ZarfPackage{
+					Components: []v1alpha1.ZarfComponent{
+						{Name: "web", Images: []string{"nginx:latest"}},
+					},
+				},
+			},
+			expected: "image nginx:latest",
+		},
+		{
+			name: "package GetComponent missing component errors",
+			s:    `image {{ (.Pkg.GetComponent "absent").Name }}`,
+			objects: Objects{
+				objectKeyPackage: v1alpha1.ZarfPackage{
+					Components: []v1alpha1.ZarfComponent{
+						{Name: "web"},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name:    "invalid template syntax",
 			s:       "echo {{ .Values.missing",
 			objects: Objects{},

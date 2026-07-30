@@ -18,11 +18,13 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/defenseunicorns/pkg/oci"
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/memory"
@@ -272,6 +274,18 @@ func (p *PackageLayout) Fetch(_ context.Context, target ocispec.Descriptor) (io.
 	return nil, errdef.ErrNotFound
 }
 
+// Manifest returns the package's computed OCI manifest for use in zoci functions
+func (p *PackageLayout) Manifest() (*oci.Manifest, error) {
+	if p.cache == nil {
+		return nil, errors.New("package OCI manifest has not been computed")
+	}
+	var m oci.Manifest
+	if err := json.Unmarshal(p.cache.manifestJSON, &m); err != nil {
+		return nil, fmt.Errorf("parsing computed manifest: %w", err)
+	}
+	return &m, nil
+}
+
 // Exists implements oras.ReadOnlyTarget.
 func (p *PackageLayout) Exists(_ context.Context, target ocispec.Descriptor) (bool, error) {
 	if p.cache == nil {
@@ -294,4 +308,28 @@ func (p *PackageLayout) Resolve(_ context.Context, reference string) (ocispec.De
 		return p.cache.desc, nil
 	}
 	return ocispec.Descriptor{}, errdef.ErrNotFound
+}
+
+// HasImageIndex reports whether the package layout has a multi-platform image.
+// It takes a directory rather than a PackageLayout so callers assembling a
+// package layout may use it as well.
+func HasImageIndex(imageDir string) (bool, error) {
+	idxPath := filepath.Join(imageDir, IndexJSON)
+	b, err := os.ReadFile(idxPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to read %s: %w", idxPath, err)
+	}
+	var idx ocispec.Index
+	if err := json.Unmarshal(b, &idx); err != nil {
+		return false, fmt.Errorf("failed to parse %s: %w", idxPath, err)
+	}
+	for _, m := range idx.Manifests {
+		if images.IsIndex(m.MediaType) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

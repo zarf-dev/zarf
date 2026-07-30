@@ -16,11 +16,44 @@ func getSliceNumber(d *dataTreeNavigator, context Context, node *CandidateNode, 
 	return parseInt(result.MatchingNodes.Front().Value.(*CandidateNode).Value)
 }
 
+// clampSliceIndex resolves a possibly-negative slice index against
+// length and clamps the result to [0, length].
+func clampSliceIndex(index, length int) int {
+	if index < 0 {
+		index += length
+	}
+	if index < 0 {
+		return 0
+	}
+	if index > length {
+		return length
+	}
+	return index
+}
+
+func sliceStringNode(lhsNode *CandidateNode, firstNumber int, secondNumber int) *CandidateNode {
+	runes := []rune(lhsNode.Value)
+	length := len(runes)
+
+	relativeFirstNumber := clampSliceIndex(firstNumber, length)
+	relativeSecondNumber := clampSliceIndex(secondNumber, length)
+	if relativeSecondNumber < relativeFirstNumber {
+		relativeSecondNumber = relativeFirstNumber
+	}
+
+	log.Debugf("sliceStringNode: slice from %v to %v", relativeFirstNumber, relativeSecondNumber)
+
+	slicedString := string(runes[relativeFirstNumber:relativeSecondNumber])
+	replacement := lhsNode.CreateReplacement(ScalarNode, lhsNode.Tag, slicedString)
+	replacement.Style = lhsNode.Style
+	return replacement
+}
+
 func sliceArrayOperator(d *dataTreeNavigator, context Context, expressionNode *ExpressionNode) (Context, error) {
 
 	log.Debug("slice array operator!")
-	log.Debug("lhs: %v", expressionNode.LHS.Operation.toString())
-	log.Debug("rhs: %v", expressionNode.RHS.Operation.toString())
+	log.Debugf("lhs: %v", expressionNode.LHS.Operation.toString())
+	log.Debugf("rhs: %v", expressionNode.RHS.Operation.toString())
 
 	results := list.New()
 
@@ -28,13 +61,8 @@ func sliceArrayOperator(d *dataTreeNavigator, context Context, expressionNode *E
 		lhsNode := el.Value.(*CandidateNode)
 
 		firstNumber, err := getSliceNumber(d, context, lhsNode, expressionNode.LHS)
-
 		if err != nil {
 			return Context{}, err
-		}
-		relativeFirstNumber := firstNumber
-		if relativeFirstNumber < 0 {
-			relativeFirstNumber = len(lhsNode.Content) + firstNumber
 		}
 
 		secondNumber, err := getSliceNumber(d, context, lhsNode, expressionNode.RHS)
@@ -42,14 +70,15 @@ func sliceArrayOperator(d *dataTreeNavigator, context Context, expressionNode *E
 			return Context{}, err
 		}
 
-		relativeSecondNumber := secondNumber
-		if relativeSecondNumber < 0 {
-			relativeSecondNumber = len(lhsNode.Content) + secondNumber
-		} else if relativeSecondNumber > len(lhsNode.Content) {
-			relativeSecondNumber = len(lhsNode.Content)
+		if lhsNode.Kind == ScalarNode && lhsNode.guessTagFromCustomType() == "!!str" {
+			results.PushBack(sliceStringNode(lhsNode, firstNumber, secondNumber))
+			continue
 		}
 
-		log.Debug("calculateIndicesToTraverse: slice from %v to %v", relativeFirstNumber, relativeSecondNumber)
+		relativeFirstNumber := clampSliceIndex(firstNumber, len(lhsNode.Content))
+		relativeSecondNumber := clampSliceIndex(secondNumber, len(lhsNode.Content))
+
+		log.Debugf("calculateIndicesToTraverse: slice from %v to %v", relativeFirstNumber, relativeSecondNumber)
 
 		var newResults []*CandidateNode
 		for i := relativeFirstNumber; i < relativeSecondNumber; i++ {

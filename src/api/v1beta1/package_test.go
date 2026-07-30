@@ -42,6 +42,34 @@ func TestPackageHasImages(t *testing.T) {
 	require.True(t, pkg.HasImages())
 }
 
+func TestGetComponent(t *testing.T) {
+	t.Parallel()
+
+	pkg := Package{
+		Components: []Component{
+			{
+				Name:          "first",
+				ComponentSpec: ComponentSpec{Images: []Image{{Name: "docker.io/library/nginx:latest"}}},
+			},
+			{Name: "second"},
+		},
+	}
+
+	t.Run("returns matching component", func(t *testing.T) {
+		t.Parallel()
+		got, err := pkg.GetComponent("first")
+		require.NoError(t, err)
+		require.Equal(t, "first", got.Name)
+		require.Equal(t, []Image{{Name: "docker.io/library/nginx:latest"}}, got.Images)
+	})
+
+	t.Run("errors when component is absent", func(t *testing.T) {
+		t.Parallel()
+		_, err := pkg.GetComponent("missing")
+		require.Error(t, err)
+	})
+}
+
 func TestPackageIsSBOMable(t *testing.T) {
 	t.Parallel()
 

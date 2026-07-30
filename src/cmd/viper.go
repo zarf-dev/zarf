@@ -26,6 +26,7 @@ const (
 	// Root config keys
 
 	VArchitecture          = "architecture"
+	VCache                 = "cache"
 	VZarfCache             = "zarf_cache"
 	VTmpDir                = "tmp_dir"
 	VPlainHTTP             = "plain_http"
@@ -260,7 +261,6 @@ func PrintViperConfigUsed(ctx context.Context) error {
 func setDefaults(v *viper.Viper) {
 	// Root defaults that are non-zero values
 	v.SetDefault(VLogLevel, "info")
-	v.SetDefault(VZarfCache, config.ZarfDefaultCachePath)
 	v.SetDefault(VLogFormat, string(logger.FormatConsole))
 
 	// Package defaults that are non-zero values

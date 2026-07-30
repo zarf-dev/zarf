@@ -19,6 +19,8 @@ site:
 app:
   environment: "production"
   replicas: 3
+  # Pinned by the schema's `const`; overriding it at deploy time fails validation.
+  version: "1.0.0"
   # Configuration data that can be hashed for integrity checks
   config_data: "important application configuration data"
   # Optional field to demonstrate default values

@@ -112,6 +112,16 @@ func TestPush(t *testing.T) {
 	}
 }
 
+func TestPushRequiresClusterForZarfManagedMTLS(t *testing.T) {
+	t.Parallel()
+
+	err := Push(context.Background(), []transform.Image{{Reference: "registry.example.com/repository:tag"}}, ".", state.RegistryInfo{
+		Address:      "registry.example.com",
+		MTLSStrategy: state.MTLSStrategyZarfManaged,
+	}, PushOptions{})
+	require.EqualError(t, err, "registry uses Zarf-managed mTLS, but no cluster is available to obtain its client certificate")
+}
+
 func verifyImageExists(ctx context.Context, t *testing.T, ref string) {
 	repo := &orasRemote.Repository{}
 	var err error

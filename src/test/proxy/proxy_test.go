@@ -40,10 +40,10 @@ func (suite *RegistryProxyTestSuite) Test_0_RegistryProxyInit() {
 	suite.NoError(err, stdOut, stdErr)
 
 	// Verify the registry proxy TLS secrets were created
-	_, err = suite.cluster.Clientset.CoreV1().Secrets("zarf").Get(ctx, cluster.RegistryServerTLSSecret, metav1.GetOptions{})
+	_, err = suite.cluster.Clientset.CoreV1().Secrets("zarf").Get(ctx, state.RegistryServerTLSSecret, metav1.GetOptions{})
 	suite.NoError(err, "zarf-registry-server-tls secret should exist")
 
-	_, err = suite.cluster.Clientset.CoreV1().Secrets("zarf").Get(ctx, cluster.RegistryClientTLSSecret, metav1.GetOptions{})
+	_, err = suite.cluster.Clientset.CoreV1().Secrets("zarf").Get(ctx, state.RegistryClientTLSSecret, metav1.GetOptions{})
 	suite.NoError(err, "zarf-registry-client-tls secret should exist")
 }
 
@@ -78,10 +78,10 @@ func (suite *RegistryProxyTestSuite) Test_2_UpdateCredsUpdatesMTLSSecrets() {
 	suite.NotEqual(originalPKI.Cert, updatedPKI.Cert)
 
 	// Get the updated client TLS secret from the dos-games namespace
-	updatedNamespaceSecret, err := suite.cluster.Clientset.CoreV1().Secrets("dos-games").Get(ctx, cluster.RegistryClientTLSSecret, metav1.GetOptions{})
+	updatedNamespaceSecret, err := suite.cluster.Clientset.CoreV1().Secrets("dos-games").Get(ctx, state.RegistryClientTLSSecret, metav1.GetOptions{})
 	suite.NoError(err)
 
-	suite.Equal(updatedPKI.Cert, updatedNamespaceSecret.Data[cluster.RegistrySecretCertPath])
+	suite.Equal(updatedPKI.Cert, updatedNamespaceSecret.Data[state.RegistrySecretCertPath])
 }
 
 func (suite *RegistryProxyTestSuite) Test_3_OCIOpsPackage() {

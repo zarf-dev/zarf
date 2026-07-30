@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	tmpl "github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -137,7 +138,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 					return nil, err
 				}
 
-				helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, chartOverrides)
+				helmChart, values, err := helm.LoadChartData(chart, layout.ChartPaths{ChartsDir: chartDir, ValuesDir: valuesDir}, chartOverrides)
 				if err != nil {
 					return nil, fmt.Errorf("failed to load chart data: %w", err)
 				}
@@ -223,7 +224,7 @@ func templateValuesFiles(ctx context.Context, chart v1alpha1.ZarfChart, valuesDi
 
 	if len(chart.TemplatedValuesFiles) == 0 {
 		for _, f := range chartFiles {
-			valueFilePath := helm.StandardValuesName(valuesDir, chart, f.GlobalIdx)
+			valueFilePath := filepath.Join(valuesDir, layout.ChartValuesFileName(chart.Name, chart.Version, f.GlobalIdx))
 			if err := opts.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 				return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
 			}
@@ -242,7 +243,7 @@ func templateValuesFiles(ctx context.Context, chart v1alpha1.ZarfChart, valuesDi
 	}
 
 	for _, f := range chartFiles {
-		valueFilePath := helm.StandardValuesName(valuesDir, chart, f.GlobalIdx)
+		valueFilePath := filepath.Join(valuesDir, layout.ChartValuesFileName(chart.Name, chart.Version, f.GlobalIdx))
 		if err := opts.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 			return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
 		}
@@ -381,7 +382,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 }
 
 func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage, stateAccess tmpl.StateAccess) (_ []Resource, err error) {
-	if err := layout.PackageManifest(ctx, manifest, baseComponentDir, packagePath); err != nil {
+	if err := assemble.PackageManifest(ctx, manifest, baseComponentDir, packagePath); err != nil {
 		return nil, err
 	}
 
@@ -459,7 +460,7 @@ func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, compon
 	baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage, s *state.State, stateAccess []v1alpha1.StateAccessKey, kubeVersion string, isInteractive bool, cachePath string, remoteOptions types.RemoteOptions) (Resource, common.Values, error) {
 	chartPath := filepath.Join(baseComponentDir, string(layout.ChartsComponentDir))
 	valuesFilePath := filepath.Join(baseComponentDir, string(layout.ValuesComponentDir))
-	if err := layout.PackageChart(ctx, zarfChart, packagePath, chartPath, valuesFilePath, cachePath, remoteOptions); err != nil {
+	if err := assemble.PackageChart(ctx, zarfChart, packagePath, layout.ChartPaths{ChartsDir: chartPath, ValuesDir: valuesFilePath}, cachePath, remoteOptions); err != nil {
 		return Resource{}, common.Values{}, err
 	}
 
@@ -483,7 +484,7 @@ func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, compon
 		return Resource{}, common.Values{}, err
 	}
 
-	chart, values, err := helm.LoadChartData(zarfChart, chartPath, valuesFilePath, chartOverrides)
+	chart, values, err := helm.LoadChartData(zarfChart, layout.ChartPaths{ChartsDir: chartPath, ValuesDir: valuesFilePath}, chartOverrides)
 	if err != nil {
 		return Resource{}, common.Values{}, fmt.Errorf("failed to load chart data: %w", err)
 	}

@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
 )
 
@@ -48,6 +49,8 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	if err != nil {
 		return nil, err
 	}
+	// Zarf lays out package layers itself and never relies on oras-go's annotation-driven auto-unpack
+	dst.SkipUnpack = true
 	defer func(dst *file.Store) {
 		err2 := dst.Close()
 		err = errors.Join(err, err2)
@@ -71,12 +74,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 // AssembleLayers returns the OCI layer descriptors for the requested components.
 // The include parameter specifies which layer types to return.
 // All layers are included if include is empty and Metadata layers are always included
-func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, include ...LayerType) ([]ocispec.Descriptor, error) {
-	root, err := r.FetchRoot(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, requestedComponents []v1alpha1.ZarfComponent, include ...LayerType) ([]ocispec.Descriptor, error) {
 	if len(include) == 0 {
 		include = GetAllLayerTypes()
 	}
@@ -89,13 +87,13 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 		}
 	}
 
-	pkg, err := r.FetchZarfYAML(ctx)
+	pkg, err := FetchZarfYAML(ctx, root, fetcher)
 	if err != nil {
 		return nil, err
 	}
 
 	if slices.Contains(include, ComponentLayers) || slices.Contains(include, ImageLayers) {
-		componentLayers, images, err := r.LayersFromComponents(ctx, pkg, requestedComponents)
+		componentLayers, images, err := LayersFromComponents(root, pkg, requestedComponents)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +101,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 			layers = append(layers, componentLayers...)
 		}
 		if slices.Contains(include, ImageLayers) && len(images) > 0 {
-			imageLayers, err := r.LayersFromImages(ctx, images)
+			imageLayers, err := LayersFromImages(ctx, root, fetcher, images)
 			if err != nil {
 				return nil, err
 			}
@@ -130,13 +128,9 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 	return layers, nil
 }
 
-// LayersFromComponents returns the layers for the given components to pull from OCI.
-func (r *Remote) LayersFromComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, requestedComponents []v1alpha1.ZarfComponent) ([]ocispec.Descriptor, map[string]bool, error) {
-	root, err := r.FetchRoot(ctx)
-	if err != nil {
-		return []ocispec.Descriptor{}, map[string]bool{}, err
-	}
-
+// LayersFromComponents returns the layers for the requested components and
+// the set of images those components reference, selecting from root.
+func LayersFromComponents(root *oci.Manifest, pkg v1alpha1.ZarfPackage, requestedComponents []v1alpha1.ZarfComponent) ([]ocispec.Descriptor, map[string]bool, error) {
 	layers := make([]ocispec.Descriptor, 0)
 
 	images := map[string]bool{}
@@ -157,14 +151,10 @@ func (r *Remote) LayersFromComponents(ctx context.Context, pkg v1alpha1.ZarfPack
 	return layers, images, nil
 }
 
-// LayersFromImages returns the layers for the given images to pull from OCI.
-func (r *Remote) LayersFromImages(ctx context.Context, imageList map[string]bool) ([]ocispec.Descriptor, error) {
-	root, err := r.FetchRoot(ctx)
-	if err != nil {
-		return []ocispec.Descriptor{}, err
-	}
-
-	index, err := r.FetchImagesIndex(ctx)
+// LayersFromImages returns the image blob layers referenced by imageList, selecting
+// from root. fetcher reads image manifests/indexes to walk multi-arch children.
+func LayersFromImages(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, imageList map[string]bool) ([]ocispec.Descriptor, error) {
+	index, err := oci.FetchJSONFile[*ocispec.Index](ctx, fetcher, root, layout.IndexPath)
 	if err != nil {
 		return nil, err
 	}
@@ -195,13 +185,13 @@ func (r *Remote) LayersFromImages(ctx context.Context, imageList map[string]bool
 
 		switch {
 		case images.IsIndex(entry.MediaType):
-			childLayers, err := r.layersFromIndexChildren(ctx, root, entry)
+			childLayers, err := layersFromIndexChildren(ctx, root, fetcher, entry)
 			if err != nil {
 				return nil, err
 			}
 			layers = append(layers, childLayers...)
 		case images.IsManifest(entry.MediaType):
-			manifestLayers, err := r.layersFromManifestChildren(ctx, root, entry)
+			manifestLayers, err := layersFromManifestChildren(ctx, root, fetcher, entry)
 			if err != nil {
 				return nil, err
 			}
@@ -214,8 +204,8 @@ func (r *Remote) LayersFromImages(ctx context.Context, imageList map[string]bool
 	return oci.RemoveDuplicateDescriptors(layers), nil
 }
 
-func (r *Remote) layersFromManifestChildren(ctx context.Context, root *oci.Manifest, manifestDesc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-	manifest, err := oci.FetchJSONFile[*ocispec.Manifest](ctx, r.FetchLayer, root, filepath.Join(layout.ImagesBlobsDir, manifestDesc.Digest.Encoded()))
+func layersFromManifestChildren(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, manifestDesc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+	manifest, err := oci.FetchJSONFile[*ocispec.Manifest](ctx, fetcher, root, filepath.Join(layout.ImagesBlobsDir, manifestDesc.Digest.Encoded()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch manifest %s: %w", manifestDesc.Digest, err)
 	}
@@ -229,8 +219,8 @@ func (r *Remote) layersFromManifestChildren(ctx context.Context, root *oci.Manif
 	return layers, nil
 }
 
-func (r *Remote) layersFromIndexChildren(ctx context.Context, root *oci.Manifest, indexDesc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-	idx, err := oci.FetchJSONFile[*ocispec.Index](ctx, r.FetchLayer, root, filepath.Join(layout.ImagesBlobsDir, indexDesc.Digest.Encoded()))
+func layersFromIndexChildren(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, indexDesc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+	idx, err := oci.FetchJSONFile[*ocispec.Index](ctx, fetcher, root, filepath.Join(layout.ImagesBlobsDir, indexDesc.Digest.Encoded()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch child index %s: %w", indexDesc.Digest, err)
 	}
@@ -239,13 +229,13 @@ func (r *Remote) layersFromIndexChildren(ctx context.Context, root *oci.Manifest
 		layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, child.Digest.Encoded())))
 		switch {
 		case images.IsIndex(child.MediaType):
-			nestedLayers, err := r.layersFromIndexChildren(ctx, root, child)
+			nestedLayers, err := layersFromIndexChildren(ctx, root, fetcher, child)
 			if err != nil {
 				return nil, err
 			}
 			layers = append(layers, nestedLayers...)
 		case images.IsManifest(child.MediaType):
-			manifestLayers, err := r.layersFromManifestChildren(ctx, root, child)
+			manifestLayers, err := layersFromManifestChildren(ctx, root, fetcher, child)
 			if err != nil {
 				return nil, err
 			}
@@ -255,4 +245,34 @@ func (r *Remote) layersFromIndexChildren(ctx context.Context, root *oci.Manifest
 		}
 	}
 	return layers, nil
+}
+
+// AssembleLayers returns the OCI layer descriptors for the requested components.
+// The include parameter specifies which layer types to return.
+// All layers are included if include is empty and Metadata layers are always included
+func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, include ...LayerType) ([]ocispec.Descriptor, error) {
+	root, err := r.FetchRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return AssembleLayers(ctx, root, r, requestedComponents, include...)
+}
+
+// LayersFromComponents returns the layers for the requested components and
+// the set of images those components reference, selecting from root.
+func (r *Remote) LayersFromComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, requestedComponents []v1alpha1.ZarfComponent) ([]ocispec.Descriptor, map[string]bool, error) {
+	root, err := r.FetchRoot(ctx)
+	if err != nil {
+		return []ocispec.Descriptor{}, map[string]bool{}, err
+	}
+	return LayersFromComponents(root, pkg, requestedComponents)
+}
+
+// LayersFromImages returns the layers for the given images to pull from OCI.
+func (r *Remote) LayersFromImages(ctx context.Context, imageList map[string]bool) ([]ocispec.Descriptor, error) {
+	root, err := r.FetchRoot(ctx)
+	if err != nil {
+		return []ocispec.Descriptor{}, err
+	}
+	return LayersFromImages(ctx, root, r, imageList)
 }

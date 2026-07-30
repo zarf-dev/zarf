@@ -196,7 +196,7 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, useMTLS boo
 	}
 
 	if useMTLS {
-		patches = append(patches, operations.AddPatchOperation("/spec/certSecretRef", meta.LocalObjectReference{Name: cluster.RegistryClientTLSSecret}))
+		patches = append(patches, operations.AddPatchOperation("/spec/certSecretRef", meta.LocalObjectReference{Name: state.RegistryClientTLSSecret}))
 	}
 
 	// If semver is used we don't want to add the ":latest" tag + crc to the spec

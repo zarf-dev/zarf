@@ -36,7 +36,7 @@ func syftSBOMProvider(userInput string, config ProviderConfig, applyChannel func
 		}
 	}
 
-	d := distroFromSBOM(s, config, applyChannel)
+	d, distroDetectionFailed := distroFromSBOM(s, config, applyChannel)
 
 	catalog := removePackagesByOverlap(s.Artifacts.Packages, s.Relationships, d)
 
@@ -46,8 +46,9 @@ func syftSBOMProvider(userInput string, config ProviderConfig, applyChannel func
 	}
 
 	return FromCollection(catalog, config.SynthesisConfig, enhancers...), Context{
-		Source: &src,
-		Distro: d,
+		Source:                &src,
+		Distro:                d,
+		DistroDetectionFailed: distroDetectionFailed,
 	}, s, nil
 }
 
@@ -88,6 +89,10 @@ func getSBOMReader(userInput string) (io.ReadSeeker, string, error) {
 
 	case explicitlySpecifyingPurlList(userInput):
 		filepath := strings.TrimPrefix(userInput, purlInputPrefix)
+		return openFile(filepath)
+
+	case explicitlySpecifyingCPEList(userInput):
+		filepath := strings.TrimPrefix(userInput, cpeListPrefix)
 		return openFile(filepath)
 
 	case explicitlySpecifyingSBOM(userInput):
@@ -176,4 +181,8 @@ func explicitlySpecifyingSBOM(userInput string) bool {
 
 func explicitlySpecifyingPurlList(userInput string) bool {
 	return strings.HasPrefix(userInput, purlInputPrefix)
+}
+
+func explicitlySpecifyingCPEList(userInput string) bool {
+	return strings.HasPrefix(userInput, cpeListPrefix)
 }

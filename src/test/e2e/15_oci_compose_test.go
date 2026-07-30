@@ -290,8 +290,8 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 				suite.DirExists(filepath.Join(chartDir, dir))
 				continue
 			}
-			tgz := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
-			suite.FileExists(filepath.Join(chartDir, tgz))
+			tgz := filepath.Join(chartDir, layout.ChartArchiveName(chart.Name, chart.Version))
+			suite.FileExists(tgz)
 		}
 
 		var containsFiles bool

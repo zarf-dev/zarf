@@ -612,7 +612,7 @@ func (p *PackageLayout) GetImageDirPath() string {
 
 // HasImageIndex reports whether the package layout has a multi-platform image
 func (p *PackageLayout) HasImageIndex() (bool, error) {
-	return imageLayoutHasIndex(p.GetImageDirPath())
+	return HasImageIndex(p.GetImageDirPath())
 }
 
 // Archive creates a tarball from the package layout and returns the path to that tarball

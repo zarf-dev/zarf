@@ -9,6 +9,10 @@
           "description": "Application configuration data",
           "type": "string"
         },
+        "version": {
+          "description": "Application version pinned with const so it cannot be overridden at deploy time",
+          "const": "1.0.0"
+        },
         "environment": {
           "description": "Deployment environment",
           "enum": [
