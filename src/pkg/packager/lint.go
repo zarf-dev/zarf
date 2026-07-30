@@ -45,7 +45,7 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	if err != nil {
 		return err
 	}
-	pkg := defined.AsV1alpha1()
+	pkg := defined.PackageDefinition.AsV1alpha1()
 	findings := []lint.PackageFinding{}
 	for i, component := range pkg.Components {
 		findings = append(findings, lint.CheckComponentValues(component, i)...)

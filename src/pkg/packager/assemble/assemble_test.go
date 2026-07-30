@@ -651,7 +651,7 @@ func TestAssembleSkeleton(t *testing.T) {
 
 	defined, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOptions{})
 	require.NoError(t, err)
-	pkg := defined.AsV1alpha1()
+	pkg := defined.PackageDefinition.AsV1alpha1()
 
 	opt := AssembleSkeletonOptions{}
 	pkgLayout, err := AssembleSkeleton(ctx, pkg, "./testdata/zarf-skeleton-package", defined.ImportedSchemas, opt)
@@ -701,7 +701,7 @@ func TestGetSBOM(t *testing.T) {
 	writePackageToDisk(t, pkg, tmpdir)
 	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
-	loadedPkg := defined.AsV1alpha1()
+	loadedPkg := defined.PackageDefinition.AsV1alpha1()
 
 	pkgLayout, err := AssemblePackage(ctx, loadedPkg, tmpdir, nil, AssembleOptions{})
 	require.NoError(t, err)
@@ -793,7 +793,7 @@ func TestCreateAbsoluteSources(t *testing.T) {
 
 			defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 			require.NoError(t, err)
-			loadedPkg := defined.AsV1alpha1()
+			loadedPkg := defined.PackageDefinition.AsV1alpha1()
 
 			var pkgLayout *layout.PackageLayout
 			if tt.isSkeleton {
@@ -880,7 +880,7 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	writePackageToDisk(t, childPkg, childDir)
 	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
-	loadedPkg := defined.AsV1alpha1()
+	loadedPkg := defined.PackageDefinition.AsV1alpha1()
 	// create the package
 	pkgLayout, err := AssemblePackage(context.Background(), loadedPkg, tmpdir, nil, AssembleOptions{})
 	require.NoError(t, err)

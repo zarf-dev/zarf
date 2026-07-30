@@ -296,7 +296,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if err != nil {
 		return nil, err
 	}
-	pkg := defined.AsV1alpha1()
+	pkg := defined.PackageDefinition.AsV1alpha1()
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, opts.IsInteractive)
 	if err != nil {
 		return nil, err

@@ -16,7 +16,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	internalTypes "github.com/zarf-dev/zarf/src/internal/api/types"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
@@ -52,26 +51,8 @@ type DefinitionOptions struct {
 // ImportedSchemas is transient assembly state — child schema paths collected during
 // import resolution that must be passed to AssemblePackage for merging.
 type DefinedPackage struct {
-	// FIXME: we might want to put a loaded package here that adheres to the package accessor interface
-	pkg             internalTypes.Package
-	ImportedSchemas []string
-}
-
-var _ api.PackageAccessor = DefinedPackage{}
-
-// AsV1alpha1 returns the package definition as a v1alpha1 ZarfPackage.
-func (d DefinedPackage) AsV1alpha1() v1alpha1.ZarfPackage {
-	return internalv1alpha1.ConvertFromGeneric(d.pkg)
-}
-
-// AsV1beta1 returns the package definition as a v1beta1 Package.
-func (d DefinedPackage) AsV1beta1() v1beta1.Package {
-	return internalv1beta1.ConvertFromGeneric(d.pkg)
-}
-
-// OriginalAPIVersion returns the apiVersion the package was authored in before any conversion.
-func (d DefinedPackage) OriginalAPIVersion() string {
-	return d.pkg.Build.OriginalAPIVersion
+	PackageDefinition api.PackageDefinition
+	ImportedSchemas   []string
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
@@ -154,7 +135,7 @@ func v1alpha1PackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, pk
 	if err := validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation); err != nil {
 		return DefinedPackage{}, err
 	}
-	return DefinedPackage{pkg: internalv1alpha1.ConvertToGeneric(pkg), ImportedSchemas: importedSchemas}, nil
+	return DefinedPackage{PackageDefinition: api.NewPackageDefinitionFromV1alpha1(pkg), ImportedSchemas: importedSchemas}, nil
 }
 
 func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
@@ -169,7 +150,7 @@ func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath 
 		return DefinedPackage{}, err
 	}
 
-	return DefinedPackage{pkg: internalv1beta1.ConvertToGeneric(pkg), ImportedSchemas: importedSchemas}, nil
+	return DefinedPackage{PackageDefinition: api.NewPackageDefinitionFromV1beta1(pkg), ImportedSchemas: importedSchemas}, nil
 }
 
 func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool) error {

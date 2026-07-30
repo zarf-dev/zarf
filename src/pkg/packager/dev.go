@@ -84,7 +84,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if err != nil {
 		return err
 	}
-	pkg := defined.AsV1alpha1()
+	pkg := defined.PackageDefinition.AsV1alpha1()
 
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),

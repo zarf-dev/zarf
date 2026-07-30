@@ -139,7 +139,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	if err != nil {
 		return err
 	}
-	pkg := defined.AsV1alpha1()
+	pkg := defined.PackageDefinition.AsV1alpha1()
 
 	// Step 1: Merge default values.files to create initial set of default Zarf values
 	valuesPaths := make([]string, len(pkg.Values.Files))
@@ -309,12 +309,12 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	}
 
 	// The definition is printed in the apiVersion it was authored in.
-	if defined.OriginalAPIVersion() == v1beta1.APIVersion {
-		pkg := defined.AsV1beta1()
+	if defined.PackageDefinition.OriginalAPIVersion() == v1beta1.APIVersion {
+		pkg := defined.PackageDefinition.AsV1beta1()
 		pkg.Build = v1beta1.BuildData{}
 		return utils.ColorPrintYAML(pkg, nil, false)
 	}
-	pkg := defined.AsV1alpha1()
+	pkg := defined.PackageDefinition.AsV1alpha1()
 	pkg.Build = v1alpha1.ZarfBuildData{}
 	return utils.ColorPrintYAML(pkg, nil, false)
 }

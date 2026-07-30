@@ -45,6 +45,11 @@ func (p PackageDefinition) AsV1beta1() v1beta1.Package {
 	return internalv1beta1.ConvertFromGeneric(p.pkg)
 }
 
+// OriginalAPIVersion returns the apiVersion the package was authored in before any conversion.
+func (p PackageDefinition) OriginalAPIVersion() string {
+	return p.pkg.Build.OriginalAPIVersion
+}
+
 // SetName sets the package metadata name.
 func (p *PackageDefinition) SetName(name string) {
 	p.pkg.Metadata.Name = name

@@ -113,7 +113,7 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 	if err != nil {
 		return nil, err
 	}
-	pkg := defined.AsV1alpha1()
+	pkg := defined.PackageDefinition.AsV1alpha1()
 	imageScans, err := findImages(ctx, pkg, packagePath, opts)
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if err != nil {
 		return nil, err
 	}
-	pkg := defined.AsV1alpha1()
+	pkg := defined.PackageDefinition.AsV1alpha1()
 
 	return findImages(ctx, pkg, packagePath, opts)
 }
