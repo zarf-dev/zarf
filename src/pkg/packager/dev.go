@@ -10,6 +10,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -111,7 +112,11 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		OCIConcurrency:    opts.OCIConcurrency,
 		CachePath:         opts.CachePath,
 	}
-	pkgLayout, err := assemble.AssemblePackage(ctx, pkg, packagePath, defined.ImportedSchemas, createOpts)
+	resolvedPackage := load.ResolvedPackage{
+		PackageDefinition: api.NewPackageDefinitionFromV1alpha1(pkg),
+		ImportedSchemas:   defined.ImportedSchemas,
+	}
+	pkgLayout, err := assemble.AssemblePackage(ctx, resolvedPackage, packagePath, createOpts)
 	if err != nil {
 		return err
 	}

@@ -40,6 +40,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -66,11 +67,13 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
-// AssemblePackage takes a package definition and returns a package layout with all the resources collected
-func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, importedSchemas []string, opts AssembleOptions) (*layout.PackageLayout, error) {
+// AssemblePackage takes a resolved package and returns a package layout with all the resources collected.
+func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, packagePath string, opts AssembleOptions) (*layout.PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
+	pkg := resolvedPackage.PackageDefinition.AsV1alpha1()
+	importedSchemas := resolvedPackage.ImportedSchemas
 	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
 		return nil, err
 	}

@@ -701,9 +701,7 @@ func TestGetSBOM(t *testing.T) {
 	writePackageToDisk(t, pkg, tmpdir)
 	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
-	loadedPkg := defined.PackageDefinition.AsV1alpha1()
-
-	pkgLayout, err := AssemblePackage(ctx, loadedPkg, tmpdir, nil, AssembleOptions{})
+	pkgLayout, err := AssemblePackage(ctx, defined, tmpdir, AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
@@ -800,7 +798,7 @@ func TestCreateAbsoluteSources(t *testing.T) {
 				pkgLayout, err = AssembleSkeleton(ctx, loadedPkg, tmpdir, defined.ImportedSchemas, AssembleSkeletonOptions{})
 				require.NoError(t, err)
 			} else {
-				pkgLayout, err = AssemblePackage(ctx, loadedPkg, tmpdir, nil, AssembleOptions{SkipSBOM: true})
+				pkgLayout, err = AssemblePackage(ctx, defined, tmpdir, AssembleOptions{SkipSBOM: true})
 				require.NoError(t, err)
 			}
 			docsDir := filepath.Join(tmpdir, "docs-dir")
@@ -880,9 +878,8 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	writePackageToDisk(t, childPkg, childDir)
 	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
-	loadedPkg := defined.PackageDefinition.AsV1alpha1()
 	// create the package
-	pkgLayout, err := AssemblePackage(context.Background(), loadedPkg, tmpdir, nil, AssembleOptions{})
+	pkgLayout, err := AssemblePackage(context.Background(), defined, tmpdir, AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the component has the correct file
