@@ -1,0 +1,11 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: child
+component:
+  files:
+    - source: child.txt
+      destination: /etc/child.txt
+values:
+  files:
+    - child-values.yaml

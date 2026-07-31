@@ -99,7 +99,12 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		require.Equal(t, "components/app-chart", comp.Charts[0].Local.Path)
 
 		require.Len(t, comp.Files, 1)
-		require.Equal(t, "components/base/base.txt", comp.Files[0].Source)
+		require.Equal(t, "components/child/child.txt", comp.Files[0].Source)
+
+		require.Equal(t, []string{
+			"components/child/child-values.yaml",
+			"components/app-values.yaml",
+		}, resolved.Values.Files)
 	})
 
 	t.Run("cyclic imports error", func(t *testing.T) {

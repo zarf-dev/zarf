@@ -83,14 +83,14 @@ func resolveComponentSpecImports(ctx context.Context, spec v1beta1.ComponentSpec
 	baseSpec = fixPathsV1Beta1(baseSpec, relDir)
 
 	vals := importedValues{}
+	for _, f := range baseVals.files {
+		vals.files = append(vals.files, makePathRelativeTo(f, relDir))
+	}
 	for _, f := range selected.config.Values.Files {
 		vals.files = append(vals.files, makePathRelativeTo(f, relDir))
 	}
 	if selected.config.Values.Schema != "" {
 		vals.schemas = append(vals.schemas, makePathRelativeTo(selected.config.Values.Schema, relDir))
-	}
-	for _, f := range baseVals.files {
-		vals.files = append(vals.files, makePathRelativeTo(f, relDir))
 	}
 	for _, s := range baseVals.schemas {
 		vals.schemas = append(vals.schemas, makePathRelativeTo(s, relDir))
