@@ -76,10 +76,6 @@ values-bearing skeleton from OCI, Zarf materializes its values and schema and ap
 the same precedence as local imports: imported values are merged before the parent
 package's values, and a parent schema takes precedence over imported schemas.
 
-Values-bearing skeletons require a Zarf CLI that supports this format. Package authors
-should verify the required minimum CLI version before publishing packages for older
-consumers.
-
 ## Using Values
 
 Values are accessed in templates through the `.Values` template object. See the [Templating](#templating) section for details on the other available template objects (`.State`, `.Pkg`) and functions.

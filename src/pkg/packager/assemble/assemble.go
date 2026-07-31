@@ -897,6 +897,7 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alpha1.VersionRequirement {
 	var reqs []v1alpha1.VersionRequirement
 	var hasImageArchives, hasTemplatedValuesFiles, hasVersionlessChart bool
+	hasSkeletonValues := pkg.Metadata.Architecture == v1alpha1.SkeletonArch && (len(pkg.Values.Files) > 0 || pkg.Values.Schema != "")
 	for _, comp := range pkg.Components {
 		if !hasImageArchives && len(comp.ImageArchives) > 0 {
 			hasImageArchives = true
@@ -935,6 +936,12 @@ func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alp
 		reqs = append(reqs, v1alpha1.VersionRequirement{
 			Version: "v0.77.0",
 			Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
+		})
+	}
+	if hasSkeletonValues {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.83.0",
+			Reason:  "This skeleton package contains package values or a values schema, which require v0.83.0+",
 		})
 	}
 	return reqs

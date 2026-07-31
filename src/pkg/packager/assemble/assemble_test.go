@@ -241,6 +241,10 @@ func TestCollectVersionRequirements(t *testing.T) {
 		Version: "v0.65.0",
 		Reason:  "This package contains a chart without a version, which is only supported on v0.65.0+",
 	}
+	skeletonValuesReq := v1alpha1.VersionRequirement{
+		Version: "v0.83.0",
+		Reason:  "This skeleton package contains package values or a values schema, which require v0.83.0+",
+	}
 
 	tests := []struct {
 		name     string
@@ -252,6 +256,22 @@ func TestCollectVersionRequirements(t *testing.T) {
 			name:     "no requirements for a plain package",
 			pkg:      v1alpha1.ZarfPackage{},
 			expected: nil,
+		},
+		{
+			name: "skeleton values require v0.83.0",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Architecture: v1alpha1.SkeletonArch},
+				Values:   v1alpha1.ZarfValues{Files: []string{layout.ValuesYAML}},
+			},
+			expected: []v1alpha1.VersionRequirement{skeletonValuesReq},
+		},
+		{
+			name: "skeleton values schema requires v0.83.0",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Architecture: v1alpha1.SkeletonArch},
+				Values:   v1alpha1.ZarfValues{Schema: layout.ValuesSchema},
+			},
+			expected: []v1alpha1.VersionRequirement{skeletonValuesReq},
 		},
 		{
 			name: "image archives trigger v0.68.0",
@@ -695,6 +715,10 @@ func TestAssembleSkeletonWithValues(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []string{layout.ValuesYAML}, pkgLayout.Pkg.Values.Files)
 	require.Equal(t, layout.ValuesSchema, pkgLayout.Pkg.Values.Schema)
+	require.Equal(t, []v1alpha1.VersionRequirement{{
+		Version: "v0.83.0",
+		Reason:  "This skeleton package contains package values or a values schema, which require v0.83.0+",
+	}}, pkgLayout.Pkg.Build.VersionRequirements)
 
 	values, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML))
 	require.NoError(t, err)

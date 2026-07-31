@@ -169,17 +169,17 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
 
+			if !skipVersionCheck {
+				// Validate skeleton package compatibility before pulling its component or values layers.
+				if err := pkgvalidate.ValidateVersionRequirements(importedPkg); err != nil {
+					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("package %s has unmet requirements: %w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", component.Import.URL, err)
+				}
+			}
+
 			if len(importedPkg.Values.Files) > 0 || importedPkg.Values.Schema != "" {
 				packageValuesPath, err = fetchOCISkeletonValues(ctx, remote, root, rootDesc, component.Import.URL, pkgPath.BaseDir, cachePath, importedPkg)
 				if err != nil {
 					return v1alpha1.ZarfPackage{}, nil, err
-				}
-			}
-
-			if !skipVersionCheck {
-				// Validate skeleton package is compatible with new package
-				if err := pkgvalidate.ValidateVersionRequirements(importedPkg); err != nil {
-					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("package %s has unmet requirements: %w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", component.Import.URL, err)
 				}
 			}
 		}
