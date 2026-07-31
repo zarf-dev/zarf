@@ -399,7 +399,9 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 	}
 
 	if hasBundleInfo {
-		opts.TempDir = config.CommonOptions.TempDirectory
+		if opts.TempDir == "" {
+			opts.TempDir = config.CommonOptions.TempDirectory
+		}
 		opts.BundlePath = bundlePath
 		// Auto-enable UseSignedTimestamps when the bundle contains timestamps.
 		// The bundle was signed with a TSA; using those timestamps is required to
@@ -434,7 +436,9 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 
 	// Legacy signature found
 	l.Warn("bundle format signature not found: legacy signature is being deprecated.")
-	opts.TempDir = config.CommonOptions.TempDirectory
+	if opts.TempDir == "" {
+		opts.TempDir = config.CommonOptions.TempDirectory
+	}
 	opts.Signature = signaturePath
 
 	opts.CommonVerifyOptions.NewBundleFormat = false
