@@ -41,12 +41,13 @@ func TestLoadPackageWithFlavors(t *testing.T) {
 			opts := DefinitionOptions{
 				Flavor: tt.flavor,
 			}
-			_, err := PackageDefinition(context.Background(), filepath.Join("testdata", "package-with-flavors"), opts)
+			defined, err := PackageDefinition(context.Background(), filepath.Join("testdata", "package-with-flavors"), opts)
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
 				return
 			}
 			require.NoError(t, err)
+			require.NoError(t, defined.Cleanup())
 		})
 	}
 }
@@ -146,12 +147,13 @@ func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
 			opts := DefinitionOptions{}
-			_, err := PackageDefinition(ctx, tt.packagePath, opts)
+			defined, err := PackageDefinition(ctx, tt.packagePath, opts)
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
 				return
 			}
 			require.NoError(t, err)
+			require.NoError(t, defined.Cleanup())
 		})
 	}
 }

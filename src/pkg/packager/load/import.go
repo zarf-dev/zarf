@@ -178,9 +178,6 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			}
 
 			if len(importedPkg.Values.Files) > 0 || importedPkg.Values.Schema != "" {
-				if tempDir == "" {
-					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("a temporary directory is required to stage values from imported skeleton %s", component.Import.URL)
-				}
 				packageValuesPath, err = fetchOCISkeletonValues(ctx, remote, root, rootDesc, component.Import.URL, pkgPath.BaseDir, cachePath, tempDir, importedPkg)
 				if err != nil {
 					return v1alpha1.ZarfPackage{}, nil, err
@@ -229,7 +226,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
 		if packageValuesPath != "" {
-			// OCI package values are projected to canonical staging paths, so remote
+			// OCI package values are projected to canonical temporary paths, so remote
 			// metadata must never select an arbitrary path on the local filesystem.
 			if len(importedPkg.Values.Files) > 0 {
 				valuesFiles = append(valuesFiles, makePathRelativeTo(layout.ValuesYAML, packageValuesPath))
@@ -302,15 +299,15 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 }
 
 // fetchOCISkeletonValues projects package-scoped values layers from an imported
-// skeleton into an operation-scoped staging directory. OCI blobs remain in the cache.
-func fetchOCISkeletonValues(ctx context.Context, remote *zoci.Remote, root *oci.Manifest, rootDesc ocispec.Descriptor, importURL, packagePath, cachePath, stagingPath string, pkg v1alpha1.ZarfPackage) (string, error) {
+// skeleton into an operation-scoped temporary directory. OCI blobs remain in the cache.
+func fetchOCISkeletonValues(ctx context.Context, remote *zoci.Remote, root *oci.Manifest, rootDesc ocispec.Descriptor, importURL, packagePath, cachePath, tempDir string, pkg v1alpha1.ZarfPackage) (string, error) {
 	cache := filepath.Join(cachePath, "oci")
 	store, err := ocistore.New(cache)
 	if err != nil {
 		return "", err
 	}
 
-	valuesDir := filepath.Join(stagingPath, rootDesc.Digest.Algorithm().String(), rootDesc.Digest.Encoded())
+	valuesDir := filepath.Join(tempDir, rootDesc.Digest.Algorithm().String(), rootDesc.Digest.Encoded())
 	if err := helpers.CreateDirectory(valuesDir, helpers.ReadWriteExecuteUser); err != nil {
 		return "", err
 	}

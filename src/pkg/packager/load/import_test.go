@@ -195,7 +195,7 @@ func TestFetchOCISkeletonValuesMissingDeclaredLayer(t *testing.T) {
 	}
 }
 
-func TestFetchOCISkeletonValuesUsesOperationStaging(t *testing.T) {
+func TestFetchOCISkeletonValuesUsesOperationTempDir(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
@@ -216,11 +216,11 @@ func TestFetchOCISkeletonValuesUsesOperationStaging(t *testing.T) {
 	pkg := v1alpha1.ZarfPackage{Values: v1alpha1.ZarfValues{Files: []string{layout.ValuesYAML}}}
 	manifest := &pkgoci.Manifest{Manifest: ocispec.Manifest{Layers: []ocispec.Descriptor{desc}}}
 	packagePath := t.TempDir()
-	stagingPath := t.TempDir()
-	got, err := fetchOCISkeletonValues(ctx, nil, manifest, rootDesc, "oci://example.com/skeleton", packagePath, cachePath, stagingPath, pkg)
+	tempDir := t.TempDir()
+	got, err := fetchOCISkeletonValues(ctx, nil, manifest, rootDesc, "oci://example.com/skeleton", packagePath, cachePath, tempDir, pkg)
 	require.NoError(t, err)
 
-	valuesDir := filepath.Join(stagingPath, rootDesc.Digest.Algorithm().String(), rootDesc.Digest.Encoded())
+	valuesDir := filepath.Join(tempDir, rootDesc.Digest.Algorithm().String(), rootDesc.Digest.Encoded())
 	require.FileExists(t, filepath.Join(valuesDir, layout.ValuesYAML))
 	info, err := os.Lstat(filepath.Join(valuesDir, layout.ValuesYAML))
 	require.NoError(t, err)

@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -226,19 +225,10 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if path == "" {
 		return registry.Reference{}, fmt.Errorf("path must be specified")
 	}
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return registry.Reference{}, err
-	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(tmpDir))
-	}()
-
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
 	defined, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
 		CachePath:          opts.CachePath,
-		TempDir:            tmpDir,
 		Flavor:             opts.Flavor,
 		SkipVersionCheck:   opts.SkipVersionCheck,
 		SkipRequiredValues: true,
@@ -247,6 +237,9 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return registry.Reference{}, err
 	}
+	defer func() {
+		err = errors.Join(err, defined.Cleanup())
+	}()
 	for _, comp := range defined.Pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")

@@ -123,14 +123,6 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) (err 
 	if err != nil {
 		return err
 	}
-	definitionTmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(definitionTmpDir))
-	}()
-
 	loadOpts := load.DefinitionOptions{
 		Flavor:                     o.flavor,
 		SetVariables:               o.setPkgTmpl,
@@ -138,7 +130,6 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) (err 
 		SkipVersionCheck:           true,
 		SkipValuesSchemaValidation: true,
 		CachePath:                  cachePath,
-		TempDir:                    definitionTmpDir,
 		RemoteOptions:              defaultRemoteOptions(),
 	}
 
@@ -146,6 +137,9 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) (err 
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = errors.Join(err, defined.Cleanup())
+	}()
 	// Step 1: Merge default values.files to create initial set of default Zarf values
 	valuesPaths := make([]string, len(defined.Pkg.Values.Files))
 	for i, file := range defined.Pkg.Values.Files {
@@ -296,18 +290,10 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) (er
 	if err != nil {
 		return err
 	}
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(tmpDir))
-	}()
 	loadOpts := load.DefinitionOptions{
 		Flavor:           o.flavor,
 		SetVariables:     o.setPkgTmpl,
 		CachePath:        cachePath,
-		TempDir:          tmpDir,
 		IsInteractive:    true,
 		SkipVersionCheck: true,
 		RemoteOptions:    defaultRemoteOptions(),
@@ -320,6 +306,9 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) (er
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = errors.Join(err, defined.Cleanup())
+	}()
 	defined.Pkg.Build = v1alpha1.ZarfBuildData{}
 	err = utils.ColorPrintYAML(defined.Pkg, nil, false)
 	if err != nil {

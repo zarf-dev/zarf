@@ -6,6 +6,7 @@ package load
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -37,8 +38,8 @@ type DefinitionOptions struct {
 	SkipValuesSchemaValidation bool
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
-	// TempDir is a caller-created workspace used to stage OCI skeleton values.
-	// The caller is responsible for removing it after consuming the definition.
+	// TempDir is the parent directory for operation-scoped import temporary files. When
+	// empty, config.CommonOptions.TempDirectory is used.
 	TempDir string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
@@ -49,14 +50,37 @@ type DefinitionOptions struct {
 
 // DefinedPackage is the result of loading and resolving a package definition.
 // ImportedSchemas is transient assembly state — child schema paths collected during
-// import resolution that must be passed to AssemblePackage for merging.
+// import resolution that must be passed to AssemblePackage for merging. Call Cleanup
+// after consuming the definition.
 type DefinedPackage struct {
 	Pkg             v1alpha1.ZarfPackage
 	ImportedSchemas []string
+	tempDir         string
+}
+
+// Cleanup removes operation-scoped files created while resolving imports.
+func (p DefinedPackage) Cleanup() error {
+	if p.tempDir == "" {
+		return nil
+	}
+	return os.RemoveAll(p.tempDir)
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
-func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (DefinedPackage, error) {
+func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (_ DefinedPackage, retErr error) {
+	if opts.TempDir == "" {
+		opts.TempDir = config.CommonOptions.TempDirectory
+	}
+	tempDir, err := utils.MakeTempDir(opts.TempDir)
+	if err != nil {
+		return DefinedPackage{}, err
+	}
+	defer func() {
+		if retErr != nil {
+			retErr = errors.Join(retErr, os.RemoveAll(tempDir))
+		}
+	}()
+
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
@@ -84,7 +108,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return DefinedPackage{}, err
 	}
 	var importedSchemas []string
-	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions, opts.TempDir)
+	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions, tempDir)
 	if err != nil {
 		return DefinedPackage{}, err
 	}
@@ -105,7 +129,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return DefinedPackage{}, err
 	}
 	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
-	return DefinedPackage{Pkg: pkg, ImportedSchemas: importedSchemas}, nil
+	return DefinedPackage{Pkg: pkg, ImportedSchemas: importedSchemas, tempDir: tempDir}, nil
 }
 
 func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool) error {

@@ -6,9 +6,7 @@ package packager
 import (
 	"context"
 	"errors"
-	"os"
 
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -33,19 +31,10 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) (err error)
 	if err != nil {
 		return err
 	}
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(tmpDir))
-	}()
-
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.SetVariables,
 		CachePath:        opts.CachePath,
-		TempDir:          tmpDir,
 		IsInteractive:    false,
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
@@ -54,6 +43,9 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) (err error)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = errors.Join(err, defined.Cleanup())
+	}()
 	findings := []lint.PackageFinding{}
 	for i, component := range defined.Pkg.Components {
 		findings = append(findings, lint.CheckComponentValues(component, i)...)

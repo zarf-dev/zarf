@@ -101,18 +101,10 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 	if err != nil {
 		return nil, err
 	}
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(tmpDir))
-	}()
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.CreateSetVariables,
 		CachePath:        cachePath,
-		TempDir:          tmpDir,
 		IsInteractive:    opts.IsInteractive,
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
@@ -121,6 +113,9 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		err = errors.Join(err, defined.Cleanup())
+	}()
 	imageScans, err := findImages(ctx, defined.Pkg, packagePath, opts)
 	if err != nil {
 		return nil, err
@@ -136,19 +131,10 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if err != nil {
 		return nil, err
 	}
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(tmpDir))
-	}()
-
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.CreateSetVariables,
 		CachePath:        opts.CachePath,
-		TempDir:          tmpDir,
 		IsInteractive:    opts.IsInteractive,
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
@@ -157,6 +143,9 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		err = errors.Join(err, defined.Cleanup())
+	}()
 	return findImages(ctx, defined.Pkg, packagePath, opts)
 }
 

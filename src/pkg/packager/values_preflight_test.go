@@ -355,6 +355,7 @@ func assembleLayout(t *testing.T, srcDir string) *layout.PackageLayout {
 	ctx := testutil.TestContext(t)
 	defined, err := load.PackageDefinition(ctx, srcDir, load.DefinitionOptions{})
 	require.NoError(t, err)
+	defer func() { require.NoError(t, defined.Cleanup()) }()
 	pkgLayout, err := assemble.AssemblePackage(ctx, defined.Pkg, srcDir, nil, assemble.AssembleOptions{SkipSBOM: true})
 	require.NoError(t, err)
 	return pkgLayout
