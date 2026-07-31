@@ -161,3 +161,42 @@ func TestComponentActions(t *testing.T) {
 		require.NotContains(t, stdErr, "timed out")
 	})
 }
+
+func TestComponentActionVariables(t *testing.T) {
+	t.Log("E2E: Testing component action variables")
+
+	outPath := t.TempDir()
+	tarPath := filepath.Join(outPath, fmt.Sprintf("zarf-package-component-action-variables-%s.tar.zst", e2e.Arch))
+	workingDir := t.TempDir()
+	templatedArtifact := filepath.Join(workingDir, "test-variable-templated.txt")
+
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/02-component-action-variables", "-o", outPath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.ZarfInDir(t, workingDir, "package", "deploy", tarPath, "--components=on-deploy-with-variable", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdOut, "the dog says ruff")
+
+	stdOut, stdErr, err = e2e.ZarfInDir(t, workingDir, "package", "deploy", tarPath, "--components=on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdOut, "the cat says meow")
+	require.Contains(t, stdOut, "the dog says ruff")
+	require.Contains(t, stdOut, "the snake says hiss")
+
+	stdOut, stdErr, err = e2e.ZarfInDir(t, workingDir, "package", "deploy", tarPath, "--components=on-deploy-with-template-use-of-variable", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	outTemplated, err := os.ReadFile(templatedArtifact)
+	require.NoError(t, err)
+	require.Contains(t, string(outTemplated), "The dog says ruff")
+	require.Contains(t, string(outTemplated), "The cat says ###ZARF_VAR_CAT_SOUND###")
+	require.Contains(t, string(outTemplated), "The snake says ###ZARF_VAR_SNAKE_SOUND###")
+	require.NoError(t, os.Remove(templatedArtifact))
+
+	stdOut, stdErr, err = e2e.ZarfInDir(t, workingDir, "package", "deploy", tarPath, "--components=on-deploy-with-template-use-of-variable,on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	outTemplated, err = os.ReadFile(templatedArtifact)
+	require.NoError(t, err)
+	require.Contains(t, string(outTemplated), "The dog says ruff")
+	require.Contains(t, string(outTemplated), "The cat says meow")
+	require.Contains(t, string(outTemplated), "The snake says hiss")
+}
