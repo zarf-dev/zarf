@@ -51,6 +51,20 @@ const (
 	RootCmdDeprecatedDeploy = "Deprecated: Please use \"zarf package deploy %s\" to deploy this package.  This warning will be removed in Zarf v1.0.0."
 	RootCmdDeprecatedCreate = "Deprecated: Please use \"zarf package create\" to create this package.  This warning will be removed in Zarf v1.0.0."
 
+	// zarf component
+	CmdComponentShort = "Manages standalone Zarf components"
+
+	CmdComponentPublishShort   = "Publishes a Zarf component to a remote registry"
+	CmdComponentPublishExample = `
+# Publish a component config to a remote registry namespace
+$ zarf component publish component.yaml oci://my-registry.com/my-namespace
+
+# Publish a component with a specific flavor and tag
+$ zarf component publish component.yaml oci://my-registry.com/my-namespace --flavor upstream --tag v0.0.1
+`
+	CmdComponentPublishFlagFlavor = "The flavor of resources to include in the component"
+	CmdComponentPublishFlagTag    = "The tag to be used in the OCI reference for the component in the registry"
+
 	// zarf connect
 	CmdConnectShort = "Accesses services or pods deployed in the cluster"
 	CmdConnectLong  = "Uses a k8s port-forward to connect to resources within the cluster.\n" +

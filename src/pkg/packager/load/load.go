@@ -140,8 +140,13 @@ func v1alpha1PackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, pk
 
 func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, opts DefinitionOptions) (ResolvedPackage, error) {
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	var err error
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return ResolvedPackage{}, err
+	}
 
-	pkg, importedSchemas, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor)
+	pkg, importedSchemas, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor, opts.CachePath, opts.RemoteOptions)
 	if err != nil {
 		return ResolvedPackage{}, err
 	}

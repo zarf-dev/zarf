@@ -53,6 +53,15 @@ func ValidatePackageSchemaAtPathV1Beta1(path string) ([]PackageFinding, error) {
 	return getSchemaFindings(schema.GetV1Beta1Schema(), untypedZarfPackage)
 }
 
+// ValidateComponentSchemaAtPathV1Beta1 checks a v1beta1 Zarf component config against the v1beta1 component schema.
+func ValidateComponentSchemaAtPathV1Beta1(path string) ([]PackageFinding, error) {
+	var untypedComponentConfig interface{}
+	if err := utils.ReadYaml(path, &untypedComponentConfig); err != nil {
+		return nil, err
+	}
+	return getSchemaFindings(schema.GetV1Beta1ComponentSchema(), untypedComponentConfig)
+}
+
 func makeFieldPathYqCompat(field string) string {
 	if field == "(root)" {
 		return field
