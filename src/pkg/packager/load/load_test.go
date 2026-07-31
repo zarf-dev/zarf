@@ -199,6 +199,42 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 	})
 }
 
+func TestV1Beta1PackageDefinitionValuesSchemaValidation(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-values-schema
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
+components:
+  - name: app
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "values.yaml"), []byte(`replicas: wrong
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "values.schema.json"), []byte(`{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "replicas": {
+      "type": "integer"
+    }
+  },
+  "required": ["replicas"]
+}`), 0o600))
+
+	_, err := PackageDefinition(ctx, dir, DefinitionOptions{})
+	require.ErrorContains(t, err, "values validation failed")
+
+	_, err = PackageDefinition(ctx, dir, DefinitionOptions{SkipValuesSchemaValidation: true})
+	require.NoError(t, err)
+}
+
 func TestPackageDefinitionErrors(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)

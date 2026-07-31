@@ -132,7 +132,7 @@ func v1alpha1PackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, pk
 			return ResolvedPackage{}, err
 		}
 	}
-	if err := validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation); err != nil {
+	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation); err != nil {
 		return ResolvedPackage{}, err
 	}
 	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1alpha1(pkg), ImportedSchemas: importedSchemas}, nil
@@ -146,14 +146,14 @@ func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath 
 		return ResolvedPackage{}, err
 	}
 
-	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
+	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation); err != nil {
 		return ResolvedPackage{}, err
 	}
 
 	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1beta1(pkg), ImportedSchemas: importedSchemas}, nil
 }
 
-func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool) error {
+func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -198,7 +198,7 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 }
 
 // validateV1Beta1 validates a v1beta1 package before it is converted down to v1alpha1.
-func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath string, flavor string) error {
+func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath string, flavor string, skipRequiredValues bool, skipSchemaValidation bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start v1beta1 validate",
@@ -222,6 +222,13 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 		return &lint.LintError{
 			PackageName: pkg.Metadata.Name,
 			Findings:    findings,
+		}
+	}
+
+	if !skipSchemaValidation {
+		alphaPkg := api.NewPackageDefinitionFromV1beta1(pkg).AsV1alpha1()
+		if err := validateValuesSchema(ctx, alphaPkg, packagePath, validateValuesSchemaOptions{skipRequired: skipRequiredValues}); err != nil {
+			return err
 		}
 	}
 
