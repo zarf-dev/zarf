@@ -13,6 +13,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
@@ -172,10 +173,27 @@ func readComponentConfig(path string) (v1beta1.ComponentConfig, error) {
 	if err := goyaml.Unmarshal(b, &config); err != nil {
 		return v1beta1.ComponentConfig{}, fmt.Errorf("unable to parse imported component config %q: %w", path, err)
 	}
-	if config.Kind != "" && config.Kind != v1beta1.ZarfComponentConfig {
-		return v1beta1.ComponentConfig{}, fmt.Errorf("imported file %q is not a %s", path, v1beta1.ZarfComponentConfig)
+	if config.APIVersion != v1beta1.APIVersion {
+		return v1beta1.ComponentConfig{}, fmt.Errorf("imported file %q must use apiVersion %s", path, v1beta1.APIVersion)
+	}
+	if config.Kind != v1beta1.ZarfComponentConfig {
+		return v1beta1.ComponentConfig{}, fmt.Errorf("imported file %q must be kind %s", path, v1beta1.ZarfComponentConfig)
+	}
+	if err := validateComponentConfigSchemaV1Beta1(path, b); err != nil {
+		return v1beta1.ComponentConfig{}, err
 	}
 	return config, nil
+}
+
+func validateComponentConfigSchemaV1Beta1(path string, b []byte) error {
+	findings, err := lint.ValidateComponentConfigSchemaBytesV1Beta1(b)
+	if err != nil {
+		return fmt.Errorf("unable to check imported component config schema %q: %w", path, err)
+	}
+	if len(findings) == 0 {
+		return nil
+	}
+	return fmt.Errorf("imported component config %q failed schema validation: %s", path, findings[0].ItemizedDescription())
 }
 
 func validateComponentImportV1Beta1(imp v1beta1.ComponentImport) error {
