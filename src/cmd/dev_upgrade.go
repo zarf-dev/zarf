@@ -99,19 +99,6 @@ func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func detectAPIVersion(b []byte) (string, error) {
-	var header struct {
-		APIVersion string `yaml:"apiVersion"`
-	}
-	if err := goyaml.Unmarshal(b, &header); err != nil {
-		return "", fmt.Errorf("reading apiVersion: %w", err)
-	}
-	if header.APIVersion == "" {
-		return v1alpha1.APIVersion, nil
-	}
-	return header.APIVersion, nil
-}
-
 func validateVersionUpgrade(from, to string) error {
 	fromIdx := -1
 	toIdx := -1
