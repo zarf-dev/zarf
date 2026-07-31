@@ -33,6 +33,7 @@ Collection of additional tools to make airgap easier
 ### SEE ALSO
 
 * [zarf](/commands/zarf/)	 - The Airgap Native Packager Manager for Kubernetes
+* [zarf tools aliases](/commands/zarf_tools_aliases/)	 - Print POSIX shell aliases for bundled tools
 * [zarf tools archiver](/commands/zarf_tools_archiver/)	 - Compresses/Decompresses generic archives, including Zarf packages
 * [zarf tools clear-cache](/commands/zarf_tools_clear-cache/)	 - Clears the configured git and image cache directory
 * [zarf tools download-init](/commands/zarf_tools_download-init/)	 - Downloads the init package for the current Zarf version into the specified directory
