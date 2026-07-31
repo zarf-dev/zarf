@@ -309,6 +309,46 @@ func TestValidateComponentActions(t *testing.T) {
 			expectedErrs: []string{PkgValidateErrActionSetValueOnDeploy},
 		},
 		{
+			name: "setValues in onRemove",
+			actions: v1beta1.ComponentActions{
+				OnRemove: v1beta1.ComponentActionSet{
+					Before: []v1beta1.ComponentAction{
+						{
+							Cmd:       "echo 'valid remove setValue'",
+							SetValues: []v1beta1.SetValue{{Key: "key"}},
+						},
+					},
+				},
+			},
+			expectedErrs: nil,
+		},
+		{
+			name: "setValues in onDeploy",
+			actions: v1beta1.ComponentActions{
+				OnDeploy: v1beta1.ComponentActionSet{
+					Before: []v1beta1.ComponentAction{
+						{
+							Cmd:       "echo 'valid deploy setValue'",
+							SetValues: []v1beta1.SetValue{{Key: "before"}},
+						},
+					},
+					OnSuccess: []v1beta1.ComponentAction{
+						{
+							Cmd:       "echo 'valid deploy success setValue'",
+							SetValues: []v1beta1.SetValue{{Key: "success"}},
+						},
+					},
+					OnFailure: []v1beta1.ComponentAction{
+						{
+							Cmd:       "echo 'valid deploy failure setValue'",
+							SetValues: []v1beta1.SetValue{{Key: "failure"}},
+						},
+					},
+				},
+			},
+			expectedErrs: nil,
+		},
+		{
 			name: "templating in onCreate",
 			actions: v1beta1.ComponentActions{
 				OnCreate: v1beta1.ComponentActionSet{

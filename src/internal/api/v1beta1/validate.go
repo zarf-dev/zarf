@@ -28,7 +28,7 @@ const (
 	PkgValidateErrAction                  = "invalid action: %w"
 	PkgValidateErrActionCmdWait           = "action %q cannot be both a command and wait action"
 	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
-	PkgValidateErrActionSetValueOnDeploy  = "cannot contain setValues outside of onDeploy in actions"
+	PkgValidateErrActionSetValueOnDeploy  = "setValues is not supported in onCreate actions"
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
 	PkgValidateErrChartName               = "chart %q exceed the maximum length of %d characters"
 	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
