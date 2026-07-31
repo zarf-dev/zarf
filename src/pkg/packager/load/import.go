@@ -224,15 +224,22 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		components = append(components, composed)
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
-		valuesAnchorPath := importPath
 		if packageValuesPath != "" {
-			valuesAnchorPath = packageValuesPath
-		}
-		for _, v := range importedPkg.Values.Files {
-			valuesFiles = append(valuesFiles, makePathRelativeTo(v, valuesAnchorPath))
-		}
-		if importedPkg.Values.Schema != "" {
-			importedSchemas = append(importedSchemas, makePathRelativeTo(importedPkg.Values.Schema, valuesAnchorPath))
+			// OCI package values are materialized to canonical cache paths, so remote
+			// metadata must never select an arbitrary path on the local filesystem.
+			if len(importedPkg.Values.Files) > 0 {
+				valuesFiles = append(valuesFiles, makePathRelativeTo(layout.ValuesYAML, packageValuesPath))
+			}
+			if importedPkg.Values.Schema != "" {
+				importedSchemas = append(importedSchemas, makePathRelativeTo(layout.ValuesSchema, packageValuesPath))
+			}
+		} else {
+			for _, valueFile := range importedPkg.Values.Files {
+				valuesFiles = append(valuesFiles, makePathRelativeTo(valueFile, importPath))
+			}
+			if importedPkg.Values.Schema != "" {
+				importedSchemas = append(importedSchemas, makePathRelativeTo(importedPkg.Values.Schema, importPath))
+			}
 		}
 		for _, s := range innerSchemas {
 			importedSchemas = append(importedSchemas, makePathRelativeTo(s, importPath))
