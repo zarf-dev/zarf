@@ -142,7 +142,7 @@ Below are the transformations that Zarf will make on an action before it is ran:
 
 Within `onDeploy` action lists, you can use the `setValues` action configuration to set a list of values that can be used in other actions or components during `zarf package deploy`. Use `template: true` on action commands that read values with Go template syntax such as `{{ .Values.example.key }}`. These values will be available in subsequent actions and for the remainder of the deploy.
 
-::::note
+:::note
 
 Keys populated through `setValues` do not need to be defined before deploy.
 
