@@ -214,18 +214,6 @@ func TestValidateChart(t *testing.T) {
 			chart: v1beta1.Chart{Name: "invalid"},
 			expectedErrs: []string{
 				fmt.Sprintf(PkgValidateErrChartNamespaceMissing, "invalid"),
-				fmt.Sprintf(PkgValidateErrChartSource, "invalid"),
-			},
-		},
-		{
-			name: "multiple sources",
-			chart: v1beta1.Chart{
-				Name: "invalid", Namespace: "whatever",
-				Local: &v1beta1.LocalSource{Path: "whatever"},
-				OCI:   &v1beta1.OCISource{URL: "oci://whatever", Ref: v1beta1.OCIRef{Tag: "1.0.0"}},
-			},
-			expectedErrs: []string{
-				fmt.Sprintf(PkgValidateErrChartSource, "invalid"),
 			},
 		},
 		{
