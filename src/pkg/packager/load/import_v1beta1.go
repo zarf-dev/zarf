@@ -58,47 +58,53 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 	return pkg, dedupePaths(vals.schemas), nil
 }
 
-// resolveComponentSpecImports merges any imported component configs into spec. spec is the override
-// (head); the selected imported config is the base. Returned paths are relative to specDir.
+// resolveComponentSpecImports merges component configs imported by spec. The returned spec and
+// values paths are relative to specDir.
 func resolveComponentSpecImports(ctx context.Context, spec v1beta1.ComponentSpec, specDir, arch, flavor string, importStack []string) (v1beta1.ComponentSpec, importedValues, error) {
 	if err := validateComponentImportV1Beta1(spec.Import); err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, err
 	}
 	if len(spec.Import.Local) == 0 {
+		// End of this import chain: there are no deeper imported values to inherit.
 		return spec, importedValues{}, nil
 	}
 
-	selected, err := selectImportVariant(spec.Import.Local, specDir, arch, flavor, importStack)
+	directImport, err := selectImportVariant(spec.Import.Local, specDir, arch, flavor, importStack)
 	if err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, err
 	}
 
-	// Recurse into the selected config's own imports, then rebase its resolved spec to specDir.
-	baseSpec, baseVals, err := resolveComponentSpecImports(ctx, selected.config.Component, selected.dir, arch, flavor, append(importStack, selected.path))
+	resolvedImportSpec, inheritedValues, err := resolveComponentSpecImports(ctx, directImport.config.Component, directImport.dir, arch, flavor, append(importStack, directImport.path))
 	if err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, err
 	}
 
-	relDir := filepath.Dir(selected.entry.Path)
-	baseSpec = fixPathsV1Beta1(baseSpec, relDir)
+	relDir := filepath.Dir(directImport.entry.Path)
+	resolvedImportSpec = fixPathsV1Beta1(resolvedImportSpec, relDir)
 
-	vals := importedValues{}
-	for _, f := range baseVals.files {
-		vals.files = append(vals.files, makePathRelativeTo(f, relDir))
-	}
-	for _, f := range selected.config.Values.Files {
-		vals.files = append(vals.files, makePathRelativeTo(f, relDir))
-	}
-	if selected.config.Values.Schema != "" {
-		vals.schemas = append(vals.schemas, makePathRelativeTo(selected.config.Values.Schema, relDir))
-	}
-	for _, s := range baseVals.schemas {
-		vals.schemas = append(vals.schemas, makePathRelativeTo(s, relDir))
-	}
+	vals := mergeImportedValues(directImport.config.Values, inheritedValues, relDir)
 
-	merged := mergeComponentSpec(baseSpec, spec)
+	merged := mergeComponentSpec(resolvedImportSpec, spec)
 	merged.Import = v1beta1.ComponentImport{}
 	return merged, vals, nil
+}
+
+// mergeImportedValues preserves each merge contract: values files are later-wins, schemas are earlier-wins.
+func mergeImportedValues(directValues v1beta1.Values, inherited importedValues, relDir string) importedValues {
+	vals := importedValues{}
+	for _, f := range inherited.files {
+		vals.files = append(vals.files, makePathRelativeTo(f, relDir))
+	}
+	for _, f := range directValues.Files {
+		vals.files = append(vals.files, makePathRelativeTo(f, relDir))
+	}
+	if directValues.Schema != "" {
+		vals.schemas = append(vals.schemas, makePathRelativeTo(directValues.Schema, relDir))
+	}
+	for _, s := range inherited.schemas {
+		vals.schemas = append(vals.schemas, makePathRelativeTo(s, relDir))
+	}
+	return vals
 }
 
 // loadedComponentConfig pairs a parsed component config with where it was read from.

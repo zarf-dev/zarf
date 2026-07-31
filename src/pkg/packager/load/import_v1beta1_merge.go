@@ -5,33 +5,32 @@ package load
 
 import "github.com/zarf-dev/zarf/src/api/v1beta1"
 
-// mergeComponentSpec overlays the head spec onto the base spec. The base is the imported component
-// config; the head is the importing package component, which is authoritative on conflicts.
-func mergeComponentSpec(base, head v1beta1.ComponentSpec) v1beta1.ComponentSpec {
-	merged := base
+// mergeComponentSpec overlays override onto imported.
+func mergeComponentSpec(imported, override v1beta1.ComponentSpec) v1beta1.ComponentSpec {
+	merged := imported
 
-	if head.Target.OS != "" {
-		merged.Target.OS = head.Target.OS
+	if override.Target.OS != "" {
+		merged.Target.OS = override.Target.OS
 	}
-	if head.Selector.Architecture != "" {
-		merged.Selector.Architecture = head.Selector.Architecture
+	if override.Selector.Architecture != "" {
+		merged.Selector.Architecture = override.Selector.Architecture
 	}
-	if head.Selector.Flavor != "" {
-		merged.Selector.Flavor = head.Selector.Flavor
+	if override.Selector.Flavor != "" {
+		merged.Selector.Flavor = override.Selector.Flavor
 	}
-	if head.Service != "" {
-		merged.Service = head.Service
+	if override.Service != "" {
+		merged.Service = override.Service
 	}
 
-	merged.Files = append(merged.Files, head.Files...)
-	merged.ImageArchives = append(merged.ImageArchives, head.ImageArchives...)
-	merged.Repositories = append(merged.Repositories, head.Repositories...)
-	merged.StateAccess = append(merged.StateAccess, head.StateAccess...)
+	merged.Files = append(merged.Files, override.Files...)
+	merged.ImageArchives = append(merged.ImageArchives, override.ImageArchives...)
+	merged.Repositories = append(merged.Repositories, override.Repositories...)
+	merged.StateAccess = append(merged.StateAccess, override.StateAccess...)
 
-	merged.Images = mergeImages(merged.Images, head.Images)
-	merged.Charts = mergeCharts(merged.Charts, head.Charts)
-	merged.Manifests = mergeManifests(merged.Manifests, head.Manifests)
-	merged.Actions = mergeActions(merged.Actions, head.Actions)
+	merged.Images = mergeImages(merged.Images, override.Images)
+	merged.Charts = mergeCharts(merged.Charts, override.Charts)
+	merged.Manifests = mergeManifests(merged.Manifests, override.Manifests)
+	merged.Actions = mergeActions(merged.Actions, override.Actions)
 
 	return merged
 }
