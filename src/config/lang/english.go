@@ -523,7 +523,10 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 
 	CmdDevFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests."
 	CmdDevFindImagesLong  = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.\n\n" +
-		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
+		"Images defined as part of Helm test hooks are excluded. Images explicitly defined in the helm.sh/images\n" +
+		"annotation in a component Helm chart's Chart.yaml are included regardless of their presence in the rendered\n" +
+		"chart. Components that have git repositories that host helm charts can be processed by providing the\n" +
+		"--repo-chart-path."
 
 	CmdDevGenerateConfigShort = "Generates a config file for Zarf"
 	CmdDevGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +

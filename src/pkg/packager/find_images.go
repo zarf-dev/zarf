@@ -296,6 +296,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 			if err != nil {
 				return nil, err
 			}
+			yamls = slices.DeleteFunc(yamls, isHelmTestResource)
 			resources = append(resources, yamls...)
 			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
 			chartTarball := filepath.Join(chartPath, layout.ChartArchiveName(zarfChart.Name, zarfChart.Version))
@@ -339,6 +340,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 				if err != nil {
 					return nil, err
 				}
+				yamls = slices.DeleteFunc(yamls, isHelmTestResource)
 				resources = append(resources, yamls...)
 
 				// Check if the --why flag is set and if it is process the manifests
@@ -466,6 +468,10 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 	}
 
 	return componentImageScans, nil
+}
+
+func isHelmTestResource(resource *unstructured.Unstructured) bool {
+	return resource.GetAnnotations()["helm.sh/hook"] == "test"
 }
 
 // processUnstructuredImages processes a Kubernetes resource and extracts container images
