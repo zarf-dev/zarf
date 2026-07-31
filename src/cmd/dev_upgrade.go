@@ -41,12 +41,12 @@ func newDevUpgradeSchemaCommand() *cobra.Command {
 }
 
 func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
-	dir := "."
-	if len(args) > 0 {
-		dir = args[0]
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
 	}
 
-	pkgPath, err := layout.ResolvePackagePath(dir)
+	pkgPath, err := layout.ResolvePackagePath(basePath)
 	if err != nil {
 		return err
 	}
