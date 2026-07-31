@@ -173,6 +173,9 @@ func readComponentConfig(path string) (v1beta1.ComponentConfig, error) {
 	if err := goyaml.Unmarshal(b, &config); err != nil {
 		return v1beta1.ComponentConfig{}, fmt.Errorf("unable to parse imported component config %q: %w", path, err)
 	}
+	if config.Kind != v1beta1.ZarfComponentConfig {
+		return v1beta1.ComponentConfig{}, fmt.Errorf("v1beta1 import %q must be a %s; components cannot be imported from packages", path, v1beta1.ZarfComponentConfig)
+	}
 	if err := validateComponentConfigSchemaV1Beta1(path, b); err != nil {
 		return v1beta1.ComponentConfig{}, err
 	}

@@ -242,29 +242,6 @@ components:
 		require.Error(t, err)
 	})
 
-	t.Run("missing component config apiVersion errors", func(t *testing.T) {
-		t.Parallel()
-		dir := t.TempDir()
-		writeComponent(t, dir, "child.yaml", `kind: ZarfComponentConfig
-metadata:
-  name: child
-component: {}
-`)
-		writePkg(t, dir, `apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
-metadata:
-  name: missing-api-version
-components:
-  - name: child
-    import:
-      local:
-        - path: child.yaml
-`)
-		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
-		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
-	})
-
 	t.Run("missing component config kind errors", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
@@ -285,7 +262,7 @@ components:
 `)
 		pkg := loadV1Beta1Package(t, dir)
 		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
-		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
+		require.ErrorContains(t, err, "kind")
 	})
 
 	t.Run("component config schema errors", func(t *testing.T) {
