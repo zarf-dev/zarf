@@ -9,3 +9,4 @@ component:
 values:
   files:
     - child-values.yaml
+  schema: child.schema.json

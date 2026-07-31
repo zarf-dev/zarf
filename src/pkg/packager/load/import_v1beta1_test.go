@@ -87,7 +87,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "nested")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		resolved, schemas, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.NoError(t, err)
 
 		require.Len(t, resolved.Components, 1)
@@ -105,6 +105,10 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 			"components/child/child-values.yaml",
 			"components/app-values.yaml",
 		}, resolved.Values.Files)
+		require.Equal(t, []string{
+			"components/app.schema.json",
+			"components/child/child.schema.json",
+		}, schemas)
 	})
 
 	t.Run("cyclic imports error", func(t *testing.T) {
