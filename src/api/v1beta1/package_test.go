@@ -9,6 +9,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestGetOriginalAPIVersion(t *testing.T) {
+	t.Parallel()
+
+	var unset BuildData
+	require.Equal(t, APIVersion, unset.GetOriginalAPIVersion())
+
+	var recorded BuildData
+	recorded.SetOriginalAPIVersion("zarf.dev/v1alpha1")
+	require.Equal(t, "zarf.dev/v1alpha1", recorded.GetOriginalAPIVersion())
+}
+
 func TestPackageHasImages(t *testing.T) {
 	t.Parallel()
 
