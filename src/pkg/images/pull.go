@@ -47,11 +47,37 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
+// PullSource selects where Pull reads images from.
+type PullSource string
+
+const (
+	// PullSourceRegistry pulls images from registries and does not fall back to the Docker daemon.
+	PullSourceRegistry PullSource = "registry"
+	// PullSourceDaemon pulls images from the Docker daemon without fetching registry metadata.
+	PullSourceDaemon PullSource = "daemon"
+	// PullSourceDaemonFallback pulls images from registries and falls back to the Docker daemon on registry failures.
+	PullSourceDaemonFallback PullSource = "daemonFallback"
+)
+
+func (s PullSource) withDefault() (PullSource, error) {
+	if s == "" {
+		return PullSourceDaemonFallback, nil
+	}
+	switch s {
+	case PullSourceRegistry, PullSourceDaemon, PullSourceDaemonFallback:
+		return s, nil
+	default:
+		return "", fmt.Errorf("invalid image pull source %q", s)
+	}
+}
+
 // PullOptions is the configuration for pulling images.
 type PullOptions struct {
-	OCIConcurrency        int
-	Arch                  string
-	RegistryOverrides     []RegistryOverride
+	OCIConcurrency    int
+	Arch              string
+	RegistryOverrides []RegistryOverride
+	// Source selects the image source. The zero value preserves registry pulls with Docker daemon fallback.
+	Source                PullSource
 	CacheDirectory        string
 	InsecureSkipTLSVerify bool
 	ResponseHeaderTimeout time.Duration
@@ -87,6 +113,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		return nil, fmt.Errorf("destination directory is required")
 	}
 	imageList = helpers.Unique(imageList)
+	source, err := opts.Source.withDefault()
+	if err != nil {
+		return nil, err
+	}
 	l := logger.From(ctx)
 	pullStart := time.Now()
 
@@ -122,6 +152,20 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		})
 	}
 
+	if source == PullSourceDaemon {
+		l.Info("pulling images from Docker daemon", "count", imageCount)
+		dst, err := oci.NewWithContext(ctx, destinationDirectory)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create oci layout: %w", err)
+		}
+		pulledImages, err := pullFromDockerDaemon(ctx, imagesWithOverride, dst, opts.Arch, opts.OCIConcurrency)
+		if err != nil {
+			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
+		}
+		l.Info("done pulling images", "count", imageCount, "duration", time.Since(pullStart).Round(time.Millisecond*100))
+		return pulledImages, nil
+	}
+
 	imageFetchStart := time.Now()
 	l.Info("fetching info for images", "count", imageCount, "destination", destinationDirectory)
 
@@ -144,9 +188,8 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	dockerFallBackImages := []imageWithOverride{}
 	var imageListLock sync.Mutex
 
-	// This loop pulls the metadata from images with three goals
-	// - Get all the manifests from images that will be pulled so they can be returned to the function
-	// - Mark any images that don't resolve so we can attempt to pull them from the daemon
+	// This loop pulls registry metadata so manifests can be returned and, for the
+	// daemonFallback source, failed registry resolutions can be retried from the Docker daemon.
 	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 	for _, image := range imagesWithOverride {
@@ -167,12 +210,15 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			if opts.PlainHTTP || dns.IsLocalOrPrivate(repo.Reference.Host()) {
 				plainHTTP, err = ocischeme.From(ctx).UsePlainHTTP(ctx, repo.Reference.Host(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify})
 				if err != nil {
-					// It could be an image on the daemon instead of a registry.
-					l.Warn("unable to reach registry, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
-					imageListLock.Lock()
-					defer imageListLock.Unlock()
-					dockerFallBackImages = append(dockerFallBackImages, image)
-					return nil
+					if source == PullSourceDaemonFallback {
+						// It could be an image on the daemon instead of a registry.
+						l.Warn("unable to reach registry, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
+						imageListLock.Lock()
+						defer imageListLock.Unlock()
+						dockerFallBackImages = append(dockerFallBackImages, image)
+						return nil
+					}
+					return fmt.Errorf("failed to determine transport for registry %s: %w", repo.Reference.Host(), err)
 				}
 			}
 			repo.PlainHTTP = plainHTTP
@@ -184,11 +230,14 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				if strings.Contains(err.Error(), "toomanyrequests") {
 					return fmt.Errorf("rate limited by registry: %w", err)
 				}
-				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
-				imageListLock.Lock()
-				defer imageListLock.Unlock()
-				dockerFallBackImages = append(dockerFallBackImages, image)
-				return nil
+				if source == PullSourceDaemonFallback {
+					l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
+					imageListLock.Lock()
+					defer imageListLock.Unlock()
+					dockerFallBackImages = append(dockerFallBackImages, image)
+					return nil
+				}
+				return fmt.Errorf("failed to fetch image %s from registry: %w", image.overridden.Reference, err)
 			}
 
 			isIndexSha := image.original.Digest != "" && IsIndex(desc.MediaType)

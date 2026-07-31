@@ -282,6 +282,54 @@ func TestPull(t *testing.T) {
 	}
 }
 
+func TestPull_DefaultSourcePullsFromRegistry(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+
+	repo := testutil.NewRepo(t, upstream+"/fixtures/default-source")
+	config := testutil.PushBlob(ctx, t, repo, ocispec.MediaTypeImageConfig, []byte(`{"architecture":"amd64"}`))
+	manifest := testutil.PushManifest(ctx, t, repo, config, nil)
+	require.NoError(t, repo.Tag(ctx, manifest, "v1"))
+
+	ref, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/default-source:v1", upstream))
+	require.NoError(t, err)
+
+	source, err := (PullSource("")).withDefault()
+	require.NoError(t, err)
+	require.Equal(t, PullSourceDaemonFallback, source)
+
+	destDir := t.TempDir()
+	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+		CacheDirectory: t.TempDir(),
+		Arch:           "amd64",
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+	require.Equal(t, []PulledImage{{Image: ref}}, pulled)
+	requireManifestBlobs(t, destDir, manifest.Digest.String())
+}
+
+func TestPull_RegistrySourceDoesNotFallbackToDockerDaemon(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+
+	ref, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/missing:does-not-exist", upstream))
+	require.NoError(t, err)
+
+	_, err = Pull(ctx, []transform.Image{ref}, t.TempDir(), PullOptions{
+		Source:         PullSourceRegistry,
+		CacheDirectory: t.TempDir(),
+		Arch:           "amd64",
+		PlainHTTP:      true,
+	})
+	require.Error(t, err)
+	require.ErrorContains(t, err, "failed to fetch image")
+	require.NotContains(t, strings.ToLower(err.Error()), "docker")
+	require.NotContains(t, strings.ToLower(err.Error()), "daemon")
+}
+
 func TestPull_LocalhostAutoDetectsPlainHTTPWithoutFlag(t *testing.T) {
 	// A localhost registry must be reachable over plain HTTP even when the caller
 	// never set PlainHTTP, matching Push's long-standing localhost auto-detection.

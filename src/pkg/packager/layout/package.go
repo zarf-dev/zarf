@@ -4,6 +4,7 @@
 package layout
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -17,8 +18,9 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 
-	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/split"
@@ -31,15 +33,26 @@ import (
 
 // PackageLayout manages the layout for a package.
 type PackageLayout struct {
-	dirPath string
-	Pkg     v1alpha1.ZarfPackage
-	digest  string
-	cache   *manifestCache
+	dirPath           string
+	Pkg               v1alpha1.ZarfPackage
+	packageDefinition *api.PackageDefinition
+	digest            string
+	cache             *manifestCache
 }
 
 // Digest returns the OCI manifest digest for this package layout.
 func (p *PackageLayout) Digest() string {
 	return p.digest
+}
+
+// AsV1alpha1 returns the package definition as a v1alpha1 ZarfPackage.
+func (p *PackageLayout) AsV1alpha1() v1alpha1.ZarfPackage {
+	return p.Pkg
+}
+
+// AsV1beta1 returns the package definition as a v1beta1 Package.
+func (p *PackageLayout) AsV1beta1() v1beta1.Package {
+	return p.definition().AsV1beta1()
 }
 
 // PackageLayoutOptions are the options used when loading a package.
@@ -66,6 +79,41 @@ const (
 	// VerifyNever will skip all verification of a package.
 	VerifyNever
 )
+
+func (p *PackageLayout) definition() api.PackageDefinition {
+	if p.packageDefinition != nil {
+		return *p.packageDefinition
+	}
+	return api.NewPackageDefinitionFromV1alpha1(p.Pkg)
+}
+
+// MarshalPackageDefinition returns deterministic zarf.yaml bytes for a package definition.
+func MarshalPackageDefinition(definition api.PackageDefinition) ([]byte, error) {
+	alpha, err := goyaml.Marshal(definition.AsV1alpha1())
+	if err != nil {
+		return nil, err
+	}
+	if definition.OriginalAPIVersion() != v1beta1.APIVersion {
+		return alpha, nil
+	}
+	beta, err := goyaml.Marshal(definition.AsV1beta1())
+	if err != nil {
+		return nil, err
+	}
+	out := append(bytes.TrimRight(alpha, "\n"), '\n')
+	out = append(out, []byte("---\n")...)
+	out = append(out, beta...)
+	return out, nil
+}
+
+// WritePackageDefinition writes a deterministic zarf.yaml file for a package definition.
+func WritePackageDefinition(path string, definition api.PackageDefinition) error {
+	b, err := MarshalPackageDefinition(definition)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, b, helpers.ReadWriteUser)
+}
 
 // ErrNoVerificationMaterial is returned when there is nothing to verify against.
 // VerifyIfPossible tolerates this; all other verification errors are always fatal.
@@ -111,18 +159,24 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	if err != nil {
 		return nil, err
 	}
-	generic, err := pkgcfg.ParseMultiDoc(ctx, b)
+	definition, err := pkgcfg.ParsePackageDefinition(ctx, b)
 	if err != nil {
 		return nil, err
 	}
-	pkg := convert.GenericToCanonicalAPIVersion(generic)
+	pkg := definition.AsV1alpha1()
 	pkg.Components, err = opts.Filter.Apply(pkg)
 	if err != nil {
 		return nil, err
 	}
+	componentNames := make([]string, 0, len(pkg.Components))
+	for _, component := range pkg.Components {
+		componentNames = append(componentNames, component.Name)
+	}
+	definition.SelectComponents(componentNames)
 	pkgLayout := &PackageLayout{
-		dirPath: dirPath,
-		Pkg:     pkg,
+		dirPath:           dirPath,
+		Pkg:               pkg,
+		packageDefinition: &definition,
 	}
 	err = validatePackageIntegrity(pkgLayout, opts.IsPartial)
 	if err != nil {
@@ -223,12 +277,8 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		return fmt.Errorf("cannot access %s for signing: %w", ZarfYAML, err)
 	}
 
-	// Save the original signed state in case we need to rollback
-	var originalSigned *bool
-	if p.Pkg.Build.Signed != nil {
-		val := *p.Pkg.Build.Signed
-		originalSigned = &val
-	}
+	originalPkg := p.Pkg
+	originalDefinition := p.packageDefinition
 
 	// Create temporary directory for signing
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -242,35 +292,25 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 	tmpZarfYAMLPath := filepath.Join(tmpDir, ZarfYAML)
 	tmpBundlePath := filepath.Join(tmpDir, Bundle)
 
-	// Update in-memory state
-	signed := true
-	p.Pkg.Build.Signed = &signed
-
-	// Save original fields for rollback
-	originalProvenanceFiles := slices.Clone(p.Pkg.Build.ProvenanceFiles)
-	originalVersionRequirements := slices.Clone(p.Pkg.Build.VersionRequirements)
+	definition := p.definition()
+	definition.SetSignedProvenance(
+		Bundle,
+		"v0.71.0",
+		"This package contains a bundle format signature which requires Zarf v0.71.0 or later",
+	)
+	p.packageDefinition = &definition
+	p.Pkg = definition.AsV1alpha1()
 
 	// Consolidated in-memory rollback — fires on any error exit via named return.
 	defer func() {
 		if err != nil {
-			p.Pkg.Build.Signed = originalSigned
-			p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
-			p.Pkg.Build.VersionRequirements = originalVersionRequirements
+			p.Pkg = originalPkg
+			p.packageDefinition = originalDefinition
 		}
 	}()
 
-	// Append the bundle to the provenance files list so integrity validation can
-	// dynamically exclude it from checksum enforcement.
-	if !slices.Contains(p.Pkg.Build.ProvenanceFiles, Bundle) {
-		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Bundle)
-		p.Pkg.Build.VersionRequirements = append(p.Pkg.Build.VersionRequirements, v1alpha1.VersionRequirement{
-			Version: "v0.71.0",
-			Reason:  "This package contains a bundle format signature which requires Zarf v0.71.0 or later",
-		})
-	}
-
 	// Marshal package with signed:true
-	b, err := goyaml.Marshal(p.Pkg)
+	b, err := MarshalPackageDefinition(definition)
 	if err != nil {
 		return fmt.Errorf("failed to marshal package for signing: %w", err)
 	}

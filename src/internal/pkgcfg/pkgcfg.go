@@ -12,6 +12,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
@@ -125,6 +126,34 @@ func ParseMultiDoc(ctx context.Context, b []byte) (types.Package, error) {
 		return types.Package{}, err
 	}
 	return d.decode(ctx, node)
+}
+
+// ParsePackageDefinition parses a zarf.yaml file into the highest-priority package definition it contains.
+func ParsePackageDefinition(ctx context.Context, b []byte) (api.PackageDefinition, error) {
+	docs, err := parseZarfYAMLDocs(b)
+	if err != nil {
+		return api.PackageDefinition{}, err
+	}
+	d, node, err := selectDecoder(ctx, docs)
+	if err != nil {
+		return api.PackageDefinition{}, err
+	}
+	switch d.version {
+	case v1alpha1.APIVersion:
+		pkg, err := decodeV1Alpha1(ctx, node)
+		if err != nil {
+			return api.PackageDefinition{}, err
+		}
+		return api.NewPackageDefinitionFromV1alpha1(pkg), nil
+	case v1beta1.APIVersion:
+		pkg, err := decodeV1Beta1(ctx, node)
+		if err != nil {
+			return api.PackageDefinition{}, err
+		}
+		return api.NewPackageDefinitionFromV1beta1(pkg), nil
+	default:
+		return api.PackageDefinition{}, fmt.Errorf("unsupported apiVersion %q", d.version)
+	}
 }
 
 func decodeV1Alpha1(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, error) {

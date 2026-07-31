@@ -28,6 +28,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
@@ -72,7 +73,8 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
-	pkg := resolvedPackage.PackageDefinition.AsV1alpha1()
+	definition := resolvedPackage.PackageDefinition
+	pkg := definition.AsV1alpha1()
 	importedSchemas := resolvedPackage.ImportedSchemas
 	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
 		return nil, err
@@ -102,12 +104,14 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		if noVersionSet {
 			return nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
+		// FIXME: this should not be a filter, but instead a custom part of assemble
 		filter := filters.ByDifferentialData(allIncludedImagesMap, allIncludedReposMap)
 		var err error
 		pkg.Components, err = filter.Apply(pkg)
 		if err != nil {
 			return nil, err
 		}
+		definition.SetV1alpha1Components(pkg.Components)
 	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -121,7 +125,8 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		}
 	}
 
-	componentImages := []transform.Image{}
+	imageSources := imageSourcesByComponent(definition.AsV1beta1())
+	componentImages := map[images.PullSource][]transform.Image{}
 	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
@@ -140,23 +145,33 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 			if err != nil {
 				return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
 			}
-			if slices.Contains(componentImages, refInfo) {
+			source, err := imagePullSource(imageSources[component.Name][src])
+			if err != nil {
+				return nil, fmt.Errorf("component %q image %q: %w", component.Name, src, err)
+			}
+			if slices.Contains(componentImages[source], refInfo) {
 				continue
 			}
-			componentImages = append(componentImages, refInfo)
+			componentImages[source] = append(componentImages[source], refInfo)
 		}
 	}
 	sbomImageList := []transform.Image{}
-	if len(componentImages) > 0 {
+	// FIXME: worth considering if this is the shape we want this in
+	for _, source := range []images.PullSource{images.PullSourceRegistry, images.PullSourceDaemon, images.PullSourceDaemonFallback} {
+		refs := componentImages[source]
+		if len(refs) == 0 {
+			continue
+		}
 		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opts.RegistryOverrides,
+			Source:                source,
 			CacheDirectory:        filepath.Join(opts.CachePath, layout.ImagesDir),
 			InsecureSkipTLSVerify: opts.RemoteOptions.InsecureSkipTLSVerify,
 			PlainHTTP:             opts.RemoteOptions.PlainHTTP,
 		}
-		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, layout.ImagesDir), pullOpts)
+		imageManifests, err := images.Pull(ctx, refs, filepath.Join(buildPath, layout.ImagesDir), pullOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -206,17 +221,16 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		return nil, err
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
+	definition.SetAggregateChecksum(checksumSha)
 
 	pkg, err = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo, buildPath)
 	if err != nil {
 		return nil, err
 	}
+	definition.SetBuildMetadataFromV1alpha1(pkg)
+	definition.SetAggregateChecksum(checksumSha)
 
-	b, err := goyaml.Marshal(pkg)
-	if err != nil {
-		return nil, err
-	}
-	err = os.WriteFile(filepath.Join(buildPath, layout.ZarfYAML), b, helpers.ReadWriteUser)
+	err = layout.WritePackageDefinition(filepath.Join(buildPath, layout.ZarfYAML), definition)
 	if err != nil {
 		return nil, err
 	}
@@ -238,6 +252,31 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	}
 
 	return pkgLayout, nil
+}
+
+func imageSourcesByComponent(pkg v1beta1.Package) map[string]map[string]string {
+	sources := make(map[string]map[string]string, len(pkg.Components))
+	for _, component := range pkg.Components {
+		byImage := make(map[string]string, len(component.Images))
+		for _, image := range component.Images {
+			byImage[image.Name] = image.Source
+		}
+		sources[component.Name] = byImage
+	}
+	return sources
+}
+
+func imagePullSource(source string) (images.PullSource, error) {
+	switch source {
+	case "", string(images.PullSourceDaemonFallback):
+		return images.PullSourceDaemonFallback, nil
+	case string(images.PullSourceRegistry):
+		return images.PullSourceRegistry, nil
+	case string(images.PullSourceDaemon):
+		return images.PullSourceDaemon, nil
+	default:
+		return "", fmt.Errorf("invalid image source %q", source)
+	}
 }
 
 // AssembleSkeletonOptions are the options for creating a skeleton package
@@ -465,7 +504,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
+			if err := validateFileChecksum(dst, file.Shasum); err != nil {
 				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
@@ -547,6 +586,17 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		return err
 	}
 	return nil
+}
+
+func validateFileChecksum(path, expected string) error {
+	algorithm, checksum, hasAlgorithm := strings.Cut(expected, ":")
+	if !hasAlgorithm {
+		return helpers.SHAsMatch(path, expected)
+	}
+	if algorithm != "sha256" {
+		return fmt.Errorf("unsupported checksum algorithm %q", algorithm)
+	}
+	return helpers.SHAsMatch(path, checksum)
 }
 
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
@@ -727,7 +777,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
+			if err := validateFileChecksum(dst, file.Shasum); err != nil {
 				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}

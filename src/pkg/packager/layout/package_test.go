@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -16,6 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -77,6 +80,112 @@ func TestPackageLayout(t *testing.T) {
 		name := files[path]
 		require.Equal(t, expectedName, name)
 	}
+}
+
+func TestPackageLayoutLoadFromDirPreservesMultiDocDefinition(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	tmpDir := t.TempDir()
+	aggregate := writeEmptyChecksums(t, tmpDir)
+	writeMultiDocZarfYAML(t, tmpDir, aggregate)
+
+	pkgLayout, err := LoadFromDir(ctx, tmpDir, PackageLayoutOptions{VerificationStrategy: VerifyNever})
+	require.NoError(t, err)
+
+	require.Equal(t, v1alpha1.APIVersion, pkgLayout.Pkg.APIVersion)
+	require.Equal(t, "beta-package", pkgLayout.Pkg.Metadata.Name)
+	require.Len(t, pkgLayout.Pkg.Components, 1)
+	require.Equal(t, "./components/first.yaml", pkgLayout.Pkg.Components[0].Import.Path)
+
+	betaPkg := pkgLayout.AsV1beta1()
+	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
+	require.Equal(t, "beta-package", betaPkg.Metadata.Name)
+	require.Len(t, betaPkg.Components, 1)
+	require.Len(t, betaPkg.Components[0].Import.Local, 2)
+	require.Equal(t, "./components/second.yaml", betaPkg.Components[0].Import.Local[1].Path)
+}
+
+func TestPackageLayoutSignPackagePreservesMultiDocZarfYAML(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	tmpDir := t.TempDir()
+	aggregate := writeEmptyChecksums(t, tmpDir)
+	writeMultiDocZarfYAML(t, tmpDir, aggregate)
+
+	pkgLayout, err := LoadFromDir(ctx, tmpDir, PackageLayoutOptions{VerificationStrategy: VerifyNever})
+	require.NoError(t, err)
+
+	opts := signing.DefaultSignBlobOptions()
+	opts.Key = "./testdata/cosign.key"
+	opts.Password = "test"
+
+	require.NoError(t, pkgLayout.SignPackage(ctx, opts))
+
+	updated, err := os.ReadFile(filepath.Join(tmpDir, ZarfYAML))
+	require.NoError(t, err)
+	require.Equal(t, 2, strings.Count(string(updated), "apiVersion:"))
+
+	alphaPkg, err := pkgcfg.ParseAs(ctx, updated, pkgcfg.V1Alpha1)
+	require.NoError(t, err)
+	betaPkg, err := pkgcfg.ParseAs(ctx, updated, pkgcfg.V1Beta1)
+	require.NoError(t, err)
+
+	require.NotNil(t, alphaPkg.Build.Signed)
+	require.True(t, *alphaPkg.Build.Signed)
+	require.Contains(t, alphaPkg.Build.ProvenanceFiles, Bundle)
+	require.Contains(t, alphaPkg.Build.VersionRequirements, v1alpha1.VersionRequirement{
+		Version: "v0.71.0",
+		Reason:  "This package contains a bundle format signature which requires Zarf v0.71.0 or later",
+	})
+
+	require.NotNil(t, betaPkg.Build.Signed)
+	require.True(t, *betaPkg.Build.Signed)
+	require.Contains(t, betaPkg.Build.ProvenanceFiles, Bundle)
+	require.Contains(t, betaPkg.Build.VersionRequirements, v1beta1.VersionRequirement{
+		Version: "v0.71.0",
+		Reason:  "This package contains a bundle format signature which requires Zarf v0.71.0 or later",
+	})
+	require.Len(t, betaPkg.Components, 1)
+	require.Len(t, betaPkg.Components[0].Import.Local, 2)
+}
+
+func writeEmptyChecksums(t *testing.T, dir string) string {
+	t.Helper()
+	checksums := []byte("")
+	sum := sha256.Sum256(checksums)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, Checksums), checksums, 0o644))
+	return hex.EncodeToString(sum[:])
+}
+
+func writeMultiDocZarfYAML(t *testing.T, dir, aggregate string) {
+	t.Helper()
+	zarfYAML := "apiVersion: zarf.dev/v1alpha1\n" +
+		"kind: ZarfPackageConfig\n" +
+		"metadata:\n" +
+		"  name: alpha-package\n" +
+		"  aggregateChecksum: " + aggregate + "\n" +
+		"build:\n" +
+		"  architecture: amd64\n" +
+		"components:\n" +
+		"  - name: alpha-component\n" +
+		"---\n" +
+		"apiVersion: zarf.dev/v1beta1\n" +
+		"kind: ZarfPackageConfig\n" +
+		"metadata:\n" +
+		"  name: beta-package\n" +
+		"build:\n" +
+		"  architecture: amd64\n" +
+		"  version: v0.0.0\n" +
+		"  aggregateChecksum: " + aggregate + "\n" +
+		"components:\n" +
+		"  - name: beta-component\n" +
+		"    import:\n" +
+		"      local:\n" +
+		"        - path: ./components/first.yaml\n" +
+		"        - path: ./components/second.yaml\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ZarfYAML), []byte(zarfYAML), 0o644))
 }
 
 func TestPackageFileName(t *testing.T) {
@@ -568,6 +677,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		// Read the zarf.yaml from disk
 		updatedBytes, err := os.ReadFile(yamlPath)
 		require.NoError(t, err)
+		require.Equal(t, 1, strings.Count(string(updatedBytes), "apiVersion:"))
 
 		// Parse it back
 		var updatedPkg v1alpha1.ZarfPackage
