@@ -2,4 +2,4 @@ animals:
   scorpion: ""
   camelSpider: ""
 tls:
-  key: ""
+  ca: ""

@@ -10,5 +10,5 @@ data:
     scorpion={{ .Values.animals.scorpion }}
     camel_spider={{ .Values.animals.camelSpider }}
     cow=moo
-  tls-key: |-
-{{ .Values.tls.key | indent 4 }}
+  tls-ca: |-
+{{ .Values.tls.ca | indent 4 }}
