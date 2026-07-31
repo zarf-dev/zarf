@@ -1,0 +1,17 @@
+kind: ZarfPackageConfig
+
+metadata:
+  name: multi-arch-source
+
+components:
+  - name: injector
+    description: amd64 variant
+    only:
+      cluster:
+        architecture: amd64
+
+  - name: injector
+    description: arm64 variant
+    only:
+      cluster:
+        architecture: arm64

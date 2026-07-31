@@ -41,6 +41,10 @@ type DefinitionOptions struct {
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// ForSkeleton disables architecture filtering during import resolution so that all
+	// architecture variants of a component are included in the resolved package. This is
+	// required when publishing skeleton packages which must carry every arch variant.
+	ForSkeleton bool
 	types.RemoteOptions
 }
 
@@ -80,8 +84,15 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return DefinedPackage{}, err
 	}
+	// When building a skeleton all arch variants must be preserved; use SkeletonArch as
+	// a sentinel so compatibleComponent treats every architecture as compatible.
+	resolveArch := pkg.Metadata.Architecture
+	if opts.ForSkeleton {
+		resolveArch = v1alpha1.SkeletonArch
+		pkg.Metadata.Architecture = v1alpha1.SkeletonArch
+	}
 	var importedSchemas []string
-	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, resolveArch, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
 		return DefinedPackage{}, err
 	}
