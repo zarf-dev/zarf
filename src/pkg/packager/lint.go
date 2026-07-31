@@ -6,7 +6,9 @@ package packager
 import (
 	"context"
 	"errors"
+	"os"
 
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -22,21 +24,28 @@ type LintOptions struct {
 }
 
 // Lint lints the given Zarf package
-func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
+func Lint(ctx context.Context, packagePath string, opts LintOptions) (err error) {
 	if packagePath == "" {
 		return errors.New("package path is required")
 	}
 
-	var err error
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return err
 	}
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.SetVariables,
 		CachePath:        opts.CachePath,
+		TempDir:          tmpDir,
 		IsInteractive:    false,
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,

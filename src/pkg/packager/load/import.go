@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,7 +56,7 @@ func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	return component.Name
 }
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, []string, error) {
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions, tempDir string) (v1alpha1.ZarfPackage, []string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -133,7 +134,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				}
 			}
 			importedPkg.Components = relevantComponents
-			importedPkg, innerSchemas, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck, remoteOptions)
+			importedPkg, innerSchemas, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck, remoteOptions, tempDir)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
@@ -177,7 +178,10 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			}
 
 			if len(importedPkg.Values.Files) > 0 || importedPkg.Values.Schema != "" {
-				packageValuesPath, err = fetchOCISkeletonValues(ctx, remote, root, rootDesc, component.Import.URL, pkgPath.BaseDir, cachePath, importedPkg)
+				if tempDir == "" {
+					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("a temporary directory is required to stage values from imported skeleton %s", component.Import.URL)
+				}
+				packageValuesPath, err = fetchOCISkeletonValues(ctx, remote, root, rootDesc, component.Import.URL, pkgPath.BaseDir, cachePath, tempDir, importedPkg)
 				if err != nil {
 					return v1alpha1.ZarfPackage{}, nil, err
 				}
@@ -225,7 +229,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
 		if packageValuesPath != "" {
-			// OCI package values are materialized to canonical cache paths, so remote
+			// OCI package values are projected to canonical staging paths, so remote
 			// metadata must never select an arbitrary path on the local filesystem.
 			if len(importedPkg.Values.Files) > 0 {
 				valuesFiles = append(valuesFiles, makePathRelativeTo(layout.ValuesYAML, packageValuesPath))
@@ -297,17 +301,16 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	return pkg, deduplicatedSchemas, nil
 }
 
-// fetchOCISkeletonValues materializes package-scoped values layers from an imported
-// skeleton. The directory is keyed by the resolved root descriptor so repeat imports
-// share both the cached blobs and the stable paths used during values merging.
-func fetchOCISkeletonValues(ctx context.Context, remote *zoci.Remote, root *oci.Manifest, rootDesc ocispec.Descriptor, importURL, packagePath, cachePath string, pkg v1alpha1.ZarfPackage) (string, error) {
+// fetchOCISkeletonValues projects package-scoped values layers from an imported
+// skeleton into an operation-scoped staging directory. OCI blobs remain in the cache.
+func fetchOCISkeletonValues(ctx context.Context, remote *zoci.Remote, root *oci.Manifest, rootDesc ocispec.Descriptor, importURL, packagePath, cachePath, stagingPath string, pkg v1alpha1.ZarfPackage) (string, error) {
 	cache := filepath.Join(cachePath, "oci")
 	store, err := ocistore.New(cache)
 	if err != nil {
 		return "", err
 	}
 
-	valuesDir := filepath.Join(cache, "packages", rootDesc.Digest.Encoded())
+	valuesDir := filepath.Join(stagingPath, rootDesc.Digest.Algorithm().String(), rootDesc.Digest.Encoded())
 	if err := helpers.CreateDirectory(valuesDir, helpers.ReadWriteExecuteUser); err != nil {
 		return "", err
 	}
@@ -338,13 +341,19 @@ func fetchOCISkeletonValues(ctx context.Context, remote *zoci.Remote, root *oci.
 				return "", err
 			}
 		}
-		src := filepath.Join(cache, "blobs", "sha256", desc.Digest.Encoded())
-		dst := filepath.Join(valuesDir, layer.path)
-		contents, err := os.ReadFile(src)
+		src, err := store.Fetch(ctx, desc)
 		if err != nil {
-			return "", fmt.Errorf("unable to read %s for imported skeleton %s: %w", layer.path, importURL, err)
+			return "", fmt.Errorf("unable to fetch %s for imported skeleton %s: %w", layer.path, importURL, err)
 		}
-		if err := os.WriteFile(dst, contents, helpers.ReadWriteUser); err != nil {
+		dst := filepath.Join(valuesDir, layer.path)
+		if err := func() error {
+			out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, helpers.ReadWriteUser)
+			if err != nil {
+				return errors.Join(err, src.Close())
+			}
+			_, copyErr := io.Copy(out, src)
+			return errors.Join(copyErr, out.Close(), src.Close())
+		}(); err != nil {
 			return "", fmt.Errorf("unable to materialize %s for imported skeleton %s: %w", layer.path, importURL, err)
 		}
 	}

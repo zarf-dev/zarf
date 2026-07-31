@@ -111,7 +111,7 @@ func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error {
+func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) (err error) {
 	l := logger.From(ctx)
 
 	basePath, err := setBaseDirectory(args)
@@ -123,6 +123,13 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	if err != nil {
 		return err
 	}
+	definitionTmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(definitionTmpDir))
+	}()
 
 	loadOpts := load.DefinitionOptions{
 		Flavor:                     o.flavor,
@@ -131,6 +138,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 		SkipVersionCheck:           true,
 		SkipValuesSchemaValidation: true,
 		CachePath:                  cachePath,
+		TempDir:                    definitionTmpDir,
 		RemoteOptions:              defaultRemoteOptions(),
 	}
 
@@ -138,7 +146,6 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	if err != nil {
 		return err
 	}
-
 	// Step 1: Merge default values.files to create initial set of default Zarf values
 	valuesPaths := make([]string, len(defined.Pkg.Values.Files))
 	for i, file := range defined.Pkg.Values.Files {
@@ -280,7 +287,7 @@ func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) error {
+func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
 	v := getViper()
 	o.setPkgTmpl = helpers.TransformAndMergeMap(
@@ -289,10 +296,18 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	if err != nil {
 		return err
 	}
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 	loadOpts := load.DefinitionOptions{
 		Flavor:           o.flavor,
 		SetVariables:     o.setPkgTmpl,
 		CachePath:        cachePath,
+		TempDir:          tmpDir,
 		IsInteractive:    true,
 		SkipVersionCheck: true,
 		RemoteOptions:    defaultRemoteOptions(),

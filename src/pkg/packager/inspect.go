@@ -284,10 +284,18 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if err != nil {
 		return nil, err
 	}
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.CreateSetVariables,
 		CachePath:        opts.CachePath,
+		TempDir:          tmpDir,
 		IsInteractive:    opts.IsInteractive,
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,

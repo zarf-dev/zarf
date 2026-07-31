@@ -96,15 +96,23 @@ type DefinitionImageResult struct {
 // FindDefinitionImages finds all images contained in a component and filters them according to images discovered in
 // imageArchives.
 // It returns []DefinitionImageResult
-func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImagesOptions) ([]DefinitionImageResult, error) {
+func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []DefinitionImageResult, err error) {
 	cachePath, err := utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return nil, err
 	}
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.CreateSetVariables,
 		CachePath:        cachePath,
+		TempDir:          tmpDir,
 		IsInteractive:    opts.IsInteractive,
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
@@ -128,11 +136,19 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if err != nil {
 		return nil, err
 	}
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.CreateSetVariables,
 		CachePath:        opts.CachePath,
+		TempDir:          tmpDir,
 		IsInteractive:    opts.IsInteractive,
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
@@ -141,7 +157,6 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if err != nil {
 		return nil, err
 	}
-
 	return findImages(ctx, defined.Pkg, packagePath, opts)
 }
 

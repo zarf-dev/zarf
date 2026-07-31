@@ -37,6 +37,9 @@ type DefinitionOptions struct {
 	SkipValuesSchemaValidation bool
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
+	// TempDir is a caller-created workspace used to stage OCI skeleton values.
+	// The caller is responsible for removing it after consuming the definition.
+	TempDir string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
@@ -81,7 +84,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return DefinedPackage{}, err
 	}
 	var importedSchemas []string
-	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions, opts.TempDir)
 	if err != nil {
 		return DefinedPackage{}, err
 	}

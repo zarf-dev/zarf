@@ -6,6 +6,7 @@ package packager
 import (
 	"context"
 	"errors"
+	"os"
 	"runtime"
 	"slices"
 	"time"
@@ -71,11 +72,19 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if err != nil {
 		return err
 	}
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.CreateSetVariables,
 		CachePath:        opts.CachePath,
+		TempDir:          tmpDir,
 		IsInteractive:    false,
 		SkipVersionCheck: opts.SkipVersionCheck,
 		RemoteOptions:    opts.RemoteOptions,
@@ -84,7 +93,6 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if err != nil {
 		return err
 	}
-
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.ForDeploy(opts.OptionalComponents, false),

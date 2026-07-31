@@ -4,6 +4,7 @@
 package load
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	ocistore "oras.land/oras-go/v2/content/oci"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
@@ -32,7 +34,7 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := pkgcfg.Parse(ctx, b)
 	require.NoError(t, err)
 
-	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
+	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{}, "")
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
@@ -118,7 +120,7 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
+			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{}, "")
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
@@ -153,7 +155,7 @@ func TestResolveImportsDedupNormalization(t *testing.T) {
 	// Reuse an existing fixture's directory only as the on-disk anchor — resolveImports
 	// stats the path but does not re-parse zarf.yaml when pkg is passed in.
 	resolved, _, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
-		"", "", []string{}, "", false, types.RemoteOptions{})
+		"", "", []string{}, "", false, types.RemoteOptions{}, "")
 	require.NoError(t, err)
 	require.Equal(t, []string{"parent-values.yaml"}, resolved.Values.Files)
 }
@@ -187,10 +189,50 @@ func TestFetchOCISkeletonValuesMissingDeclaredLayer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			rootDesc := ocispec.Descriptor{Digest: digest.FromString(tt.name)}
-			_, err := fetchOCISkeletonValues(ctx, nil, &pkgoci.Manifest{}, rootDesc, "oci://example.com/skeleton", t.TempDir(), t.TempDir(), tt.pkg)
+			_, err := fetchOCISkeletonValues(ctx, nil, &pkgoci.Manifest{}, rootDesc, "oci://example.com/skeleton", t.TempDir(), t.TempDir(), t.TempDir(), tt.pkg)
 			require.ErrorContains(t, err, tt.expectedErr)
 		})
 	}
+}
+
+func TestFetchOCISkeletonValuesUsesOperationStaging(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	cachePath := t.TempDir()
+	cache := filepath.Join(cachePath, "oci")
+	store, err := ocistore.New(cache)
+	require.NoError(t, err)
+
+	contents := []byte("from: skeleton\n")
+	desc := ocispec.Descriptor{
+		Digest:      digest.FromBytes(contents),
+		Size:        int64(len(contents)),
+		Annotations: map[string]string{ocispec.AnnotationTitle: layout.ValuesYAML},
+	}
+	require.NoError(t, store.Push(ctx, desc, bytes.NewReader(contents)))
+
+	rootDesc := ocispec.Descriptor{Digest: digest.FromString("skeleton-root")}
+	pkg := v1alpha1.ZarfPackage{Values: v1alpha1.ZarfValues{Files: []string{layout.ValuesYAML}}}
+	manifest := &pkgoci.Manifest{Manifest: ocispec.Manifest{Layers: []ocispec.Descriptor{desc}}}
+	packagePath := t.TempDir()
+	stagingPath := t.TempDir()
+	got, err := fetchOCISkeletonValues(ctx, nil, manifest, rootDesc, "oci://example.com/skeleton", packagePath, cachePath, stagingPath, pkg)
+	require.NoError(t, err)
+
+	valuesDir := filepath.Join(stagingPath, rootDesc.Digest.Algorithm().String(), rootDesc.Digest.Encoded())
+	require.FileExists(t, filepath.Join(valuesDir, layout.ValuesYAML))
+	info, err := os.Lstat(filepath.Join(valuesDir, layout.ValuesYAML))
+	require.NoError(t, err)
+	require.True(t, info.Mode().IsRegular())
+	materialized, err := os.ReadFile(filepath.Join(valuesDir, layout.ValuesYAML))
+	require.NoError(t, err)
+	require.Equal(t, contents, materialized)
+
+	expected, err := filepath.Rel(packagePath, valuesDir)
+	require.NoError(t, err)
+	require.Equal(t, filepath.ToSlash(expected), got)
+	require.NoDirExists(t, filepath.Join(cache, "packages"))
 }
 
 func TestMakePathRelativeTo(t *testing.T) {
@@ -283,7 +325,7 @@ func TestResolveImportsValueMerge(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{}, "")
 			require.NoError(t, err)
 
 			absPaths := make([]string, len(resolved.Values.Files))
@@ -341,7 +383,7 @@ func TestResolveImportsSchemaCollection(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{}, "")
 			require.NoError(t, err)
 
 			require.Equal(t, tc.expectedSchemas, importedSchemas)

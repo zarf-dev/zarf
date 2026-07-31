@@ -7,11 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
@@ -54,11 +56,19 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	if err != nil {
 		return "", err
 	}
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 
 	loadOpts := load.DefinitionOptions{
 		Flavor:             opts.Flavor,
 		SetVariables:       opts.SetVariables,
 		CachePath:          opts.CachePath,
+		TempDir:            tmpDir,
 		IsInteractive:      opts.IsInteractive,
 		SkipRequiredValues: true,
 		SkipVersionCheck:   opts.SkipVersionCheck,
@@ -68,7 +78,6 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	if err != nil {
 		return "", err
 	}
-
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
 		return "", fmt.Errorf("unable to access package path %q: %w", packagePath, err)

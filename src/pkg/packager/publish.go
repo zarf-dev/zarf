@@ -5,7 +5,9 @@ package packager
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -198,7 +200,7 @@ type PublishSkeletonOptions struct {
 
 // PublishSkeleton takes a Path to the package definition and uploads a skeleton package to the given a registry.
 // dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
-func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (registry.Reference, error) {
+func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (_ registry.Reference, err error) {
 	l := logger.From(ctx)
 
 	// disallow infinite or negative
@@ -224,11 +226,19 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if path == "" {
 		return registry.Reference{}, fmt.Errorf("path must be specified")
 	}
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return registry.Reference{}, err
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
 	defined, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
 		CachePath:          opts.CachePath,
+		TempDir:            tmpDir,
 		Flavor:             opts.Flavor,
 		SkipVersionCheck:   opts.SkipVersionCheck,
 		SkipRequiredValues: true,

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -75,8 +76,16 @@ components:
 `, skeletonRef.String(), skeletonRef.String())
 	require.NoError(t, os.WriteFile(filepath.Join(parentPath, layout.ZarfYAML), []byte(parentManifest), 0o600))
 
+	_, err = load.PackageDefinition(ctx, parentPath, load.DefinitionOptions{
+		CachePath:     cachePath,
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.ErrorContains(t, err, "a temporary directory is required to stage values from imported skeleton")
+
+	tmpDir := t.TempDir()
 	defined, err := load.PackageDefinition(ctx, parentPath, load.DefinitionOptions{
 		CachePath:     cachePath,
+		TempDir:       tmpDir,
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
@@ -84,6 +93,10 @@ components:
 	require.Len(t, defined.ImportedSchemas, 1, "repeated imports must contribute schemas once")
 	require.FileExists(t, filepath.Join(parentPath, defined.Pkg.Values.Files[0]))
 	require.FileExists(t, filepath.Join(parentPath, defined.ImportedSchemas[0]))
+	stagedValuesPath := filepath.Join(parentPath, defined.Pkg.Values.Files[0])
+	relativeStagedPath, err := filepath.Rel(tmpDir, stagedValuesPath)
+	require.NoError(t, err)
+	require.False(t, strings.HasPrefix(relativeStagedPath, ".."), "values must be staged in the caller-provided workspace")
 
 	pkgLayout, err := assemble.AssemblePackage(ctx, defined.Pkg, parentPath, defined.ImportedSchemas, assemble.AssembleOptions{
 		CachePath:     cachePath,
