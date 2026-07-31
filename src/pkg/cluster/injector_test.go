@@ -189,6 +189,74 @@ func TestBuildInjectionPod(t *testing.T) {
 	require.Equal(t, []string{"/zarf-init/zarf-injector", "shasum", "[::]:5000"}, ipv6Pod.Spec.Containers[0].Command)
 }
 
+func TestInjectionTemplate(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	template := `apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    example: configured
+spec:
+  nodeName: should-not-win
+  containers:
+    - name: injector
+      image: should-not-win
+      resources:
+        requests:
+          cpu: 100m
+          memory: 32Mi
+      env:
+        - name: FROM_TEMPLATE
+          value: configured
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    example: configured
+spec:
+  externalTrafficPolicy: Local
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, injectionTemplateFileName), []byte(template), 0o600))
+	podTemplate, serviceTemplate, err := loadInjectionTemplates(tmpDir)
+	require.NoError(t, err)
+	require.Equal(t, "configured", podTemplate.Labels["example"])
+	require.Equal(t, "configured", serviceTemplate.Annotations["example"])
+
+	fallback := v1ac.ResourceRequirements().WithRequests(corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse("500m"),
+		corev1.ResourceMemory: resource.MustParse("64Mi"),
+	})
+	resources := injectionTemplateResources(podTemplate, fallback)
+	require.Equal(t, resource.MustParse("100m"), (*resources.Requests)[corev1.ResourceCPU])
+
+	base := buildInjectionPod("selected-node", "selected-image", []string{"zarf-payload-000"}, "checksum", fallback, "test", state.IPFamilyIPv4)
+	merged, err := mergeInjectionPodTemplate(base, podTemplate)
+	require.NoError(t, err)
+	require.Equal(t, "selected-node", *merged.Spec.NodeName)
+	require.Equal(t, "configured", merged.Labels["example"])
+	require.Equal(t, "test", merged.Labels[PackageLabel])
+	require.Equal(t, "selected-image", *merged.Spec.Containers[0].Image)
+	require.Equal(t, []string{"/zarf-init/zarf-injector", "checksum", "0.0.0.0:5000"}, merged.Spec.Containers[0].Command)
+	require.Equal(t, "configured", *merged.Spec.Containers[0].Env[0].Value)
+
+	serviceBase := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
+		WithSpec(v1ac.ServiceSpec().WithType(corev1.ServiceTypeNodePort).WithPorts(v1ac.ServicePort().WithPort(5000)))
+	service, err := mergeInjectionServiceTemplate(serviceBase, serviceTemplate, ZarfInjectorOptions{}, "test")
+	require.NoError(t, err)
+	require.Equal(t, corev1.ServiceExternalTrafficPolicyLocal, *service.Spec.ExternalTrafficPolicy)
+	require.Equal(t, int32(5000), *service.Spec.Ports[0].Port)
+}
+
+func TestLoadInjectionTemplatesRequiresPodAndService(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, injectionTemplateFileName), []byte("apiVersion: v1\nkind: Pod\nspec:\n  containers:\n  - name: injector\n"), 0o600))
+	_, _, err := loadInjectionTemplates(tmpDir)
+	require.ErrorContains(t, err, "one Pod and one Service")
+}
+
 func setupCluster(t *testing.T, nodes []corev1.Node, pods []corev1.Pod) *Cluster {
 	t.Helper()
 	cs := fake.NewClientset()
@@ -273,7 +341,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, pods)
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64", nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no suitable injector image or node")
 	})
@@ -482,7 +550,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 			corev1.ResourceMemory: resource.MustParse("50Mi"), // fits in 100Mi left
 		})
 
-		image, node, err := c.getInjectorImageAndNode(ctx, smallReq, "amd64")
+		image, node, err := c.getInjectorImageAndNode(ctx, smallReq, "amd64", nil)
 		require.NoError(t, err)
 		require.Equal(t, "busybox", image)
 		require.Equal(t, "crowded", node)
@@ -687,4 +755,73 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 			require.Equal(t, tt.expectedImage, image)
 		})
 	}
+}
+
+func TestGetInjectorDaemonsetImageForPod(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	cs := fake.NewClientset()
+	c := &Cluster{Clientset: cs}
+	for _, node := range []corev1.Node{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "eligible-one", Labels: map[string]string{"pool": "injector"}},
+			Status: corev1.NodeStatus{Images: []corev1.ContainerImage{
+				{Names: []string{"registry.k8s.io/pause:3.10"}, SizeBytes: 500_000},
+				{Names: []string{"busybox:1.36"}, SizeBytes: 2_000_000},
+			}},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "eligible-two", Labels: map[string]string{"pool": "injector"}},
+			Spec:       corev1.NodeSpec{Taints: []corev1.Taint{{Key: "dedicated", Value: "injector", Effect: corev1.TaintEffectNoSchedule}}},
+			Status: corev1.NodeStatus{Images: []corev1.ContainerImage{
+				{Names: []string{"registry.k8s.io/pause:3.10"}, SizeBytes: 500_000},
+				{Names: []string{"busybox:1.36"}, SizeBytes: 2_000_000},
+			}},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "ineligible", Labels: map[string]string{"pool": "other"}},
+			Status:     corev1.NodeStatus{Images: []corev1.ContainerImage{{Names: []string{"alpine:3.20"}, SizeBytes: 3_000_000}}},
+		},
+	} {
+		_, err := cs.CoreV1().Nodes().Create(ctx, &node, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	podSpec := &corev1.PodSpec{
+		NodeSelector: map[string]string{"pool": "injector"},
+		Tolerations: []corev1.Toleration{{
+			Key:      "dedicated",
+			Operator: corev1.TolerationOpEqual,
+			Value:    "injector",
+			Effect:   corev1.TaintEffectNoSchedule,
+		}},
+	}
+	image, err := c.GetInjectorDaemonsetImageForPod(ctx, podSpec, "")
+	require.NoError(t, err)
+	require.Equal(t, "registry.k8s.io/pause:3.10", image)
+
+	image, err = c.GetInjectorDaemonsetImageForPod(ctx, podSpec, "busybox:1.36")
+	require.NoError(t, err)
+	require.Equal(t, "busybox:1.36", image)
+
+	_, err = c.GetInjectorDaemonsetImageForPod(ctx, podSpec, "alpine:3.20")
+	require.ErrorContains(t, err, "not resident on every eligible")
+}
+
+func TestGetInjectorDaemonsetImageForPodRequiresCommonImage(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(testutil.TestContext(t), time.Second)
+	t.Cleanup(cancel)
+	cs := fake.NewClientset()
+	c := &Cluster{Clientset: cs}
+	for _, node := range []corev1.Node{
+		{ObjectMeta: metav1.ObjectMeta{Name: "one"}, Status: corev1.NodeStatus{Images: []corev1.ContainerImage{{Names: []string{"busybox:1.36"}, SizeBytes: 2_000_000}}}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "two"}, Status: corev1.NodeStatus{Images: []corev1.ContainerImage{{Names: []string{"alpine:3.20"}, SizeBytes: 3_000_000}}}},
+	} {
+		_, err := cs.CoreV1().Nodes().Create(ctx, &node, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	_, err := c.GetInjectorDaemonsetImageForPod(ctx, &corev1.PodSpec{}, "")
+	require.ErrorContains(t, err, "no common resident image")
 }

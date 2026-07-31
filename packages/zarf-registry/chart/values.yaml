@@ -20,6 +20,16 @@ proxy:
     image: registry.k8s.io/pause:3.10
     payLoadConfigMapAmount: 0
     shasum: ""
+    daemonSet:
+      metadata:
+        annotations: {}
+        labels: {}
+      podTemplate:
+        metadata:
+          annotations: {}
+          labels: {}
+        spec: {}
+        container: {}
 
 # If this is enabled, then a secret zarf-registry-server-tls must exist with tls.cert, tls.key, and ca.cert set
 mtls:

@@ -1,0 +1,19 @@
+# injector-demo.yaml
+injector:
+  nodeport:
+    pod:
+      metadata:
+        annotations:
+          demo.zarf.dev/configured-by: values
+      container:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 96Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+    service:
+      metadata:
+        annotations:
+          demo.zarf.dev/configured-by: values

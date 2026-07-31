@@ -2,6 +2,10 @@ kind: ZarfPackageConfig
 metadata:
   name: init-package-zarf-registry
 
+values:
+  files:
+    - values.yaml
+
 variables:
   - name: REGISTRY_EXISTING_PVC
     description: "Optional: Use an existing PVC for the registry instead of creating a new one. If this is set, the REGISTRY_PVC_SIZE variable will be ignored."
@@ -146,6 +150,9 @@ components:
       cluster:
         architecture: amd64
     files:
+      - source: injector-nodeport.yaml
+        target: "###ZARF_TEMP###/injector-nodeport.yaml"
+        template: true
       # Rust Injector Binary
       - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.3.0/zarf-injector-amd64
         target: "###ZARF_TEMP###/zarf-injector"
@@ -161,6 +168,9 @@ components:
       cluster:
         architecture: arm64
     files:
+      - source: injector-nodeport.yaml
+        target: "###ZARF_TEMP###/injector-nodeport.yaml"
+        template: true
       # Rust Injector Binary
       - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.3.0/zarf-injector-arm64
         target: "###ZARF_TEMP###/zarf-injector"
@@ -179,6 +189,9 @@ components:
         valuesFiles:
           - registry-values.yaml
           - registry-values-seed.yaml
+        values:
+          - sourcePath: .injector.proxy.daemonSet
+            targetPath: .proxy.injector.daemonSet
     images:
       # The seed image (or images) that will be injected (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
@@ -205,6 +218,9 @@ components:
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
+        values:
+          - sourcePath: .injector.proxy.daemonSet
+            targetPath: .proxy.injector.daemonSet
     images:
       # This image (or images) must match that used for injection (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"

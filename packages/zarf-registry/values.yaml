@@ -1,0 +1,26 @@
+# Configuration for the temporary NodePort injector and the proxy-mode injector DaemonSet.
+# Runtime-owned fields (image, node, command, payload mounts, and exposed port) are supplied by Zarf.
+injector:
+  nodeport:
+    pod:
+      metadata:
+        annotations: {}
+        labels: {}
+      spec: {}
+      container: {}
+    service:
+      metadata:
+        annotations: {}
+        labels: {}
+      spec: {}
+  proxy:
+    daemonSet:
+      metadata:
+        annotations: {}
+        labels: {}
+      podTemplate:
+        metadata:
+          annotations: {}
+          labels: {}
+        spec: {}
+        container: {}

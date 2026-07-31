@@ -41,6 +41,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 // DeployOptions are optional parameters to packager.Deploy
@@ -393,8 +394,11 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	if isSeedRegistry {
 		switch d.s.RegistryInfo.RegistryMode {
 		case state.RegistryModeProxy:
-			var err error
-			d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImage(ctx)
+			podSpec, imageOverride, err := d.proxyInjectorPodSpec()
+			if err != nil {
+				return nil, err
+			}
+			d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImageForPod(ctx, podSpec, imageOverride)
 			if err != nil {
 				return nil, err
 			}
@@ -438,6 +442,31 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	}
 
 	return charts, nil
+}
+
+func (d *deployer) proxyInjectorPodSpec() (*corev1.PodSpec, string, error) {
+	rawPodSpec, err := d.vals.Extract(value.Path(".injector.proxy.daemonSet.podTemplate.spec"))
+	if err != nil {
+		return nil, "", fmt.Errorf("unable to read proxy injector PodSpec values: %w", err)
+	}
+	data, err := yaml.Marshal(rawPodSpec)
+	if err != nil {
+		return nil, "", fmt.Errorf("unable to encode proxy injector PodSpec values: %w", err)
+	}
+	podSpec := &corev1.PodSpec{}
+	if err := yaml.Unmarshal(data, podSpec); err != nil {
+		return nil, "", fmt.Errorf("unable to decode proxy injector PodSpec values: %w", err)
+	}
+
+	override := ""
+	if rawOverride, err := d.vals.Extract(value.Path(".injector.proxy.daemonSet.podTemplate.container.image")); err == nil {
+		var ok bool
+		override, ok = rawOverride.(string)
+		if !ok {
+			return nil, "", fmt.Errorf("proxy injector image override must be a string, got %T", rawOverride)
+		}
+	}
+	return podSpec, override, nil
 }
 
 func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {

@@ -13,6 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -115,4 +116,31 @@ func TestVerifyPackageIsDeployableSkipsAgentCertCheckWhenAgentIsNotConfigured(t 
 	d := deployer{c: c}
 	err = d.verifyPackageIsDeployable(ctx, &layout.PackageLayout{})
 	require.NoError(t, err)
+}
+
+func TestProxyInjectorPodSpec(t *testing.T) {
+	t.Parallel()
+	d := deployer{vals: value.Values{
+		"injector": map[string]any{
+			"proxy": map[string]any{
+				"daemonSet": map[string]any{
+					"podTemplate": map[string]any{
+						"spec": map[string]any{
+							"nodeSelector": map[string]any{"pool": "injector"},
+							"tolerations": []any{map[string]any{
+								"key":      "dedicated",
+								"operator": "Exists",
+							}},
+						},
+						"container": map[string]any{"image": "registry.k8s.io/pause:3.10"},
+					}},
+			},
+		},
+	}}
+
+	podSpec, override, err := d.proxyInjectorPodSpec()
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"pool": "injector"}, podSpec.NodeSelector)
+	require.Len(t, podSpec.Tolerations, 1)
+	require.Equal(t, "registry.k8s.io/pause:3.10", override)
 }

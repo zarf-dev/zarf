@@ -5,12 +5,17 @@
 package cluster
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -34,11 +40,15 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 	componenthelpers "k8s.io/component-helpers/resource"
+	"sigs.k8s.io/yaml"
 )
 
 var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
+
+const injectionTemplateFileName = "injector-nodeport.yaml"
 
 // ZarfInjectorOptions represents the options used by injector pod
 type ZarfInjectorOptions struct {
@@ -66,8 +76,12 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	}
 
 	l.Info("creating Zarf injector resources")
+	podTemplate, serviceTemplate, err := loadInjectionTemplates(tmpDir)
+	if err != nil {
+		return "", 0, err
+	}
 
-	svc, err := c.createInjectorNodeportService(ctx, pkgName, opts)
+	svc, err := c.createInjectorNodeportService(ctx, pkgName, opts, serviceTemplate)
 	if err != nil {
 		return "", 0, err
 	}
@@ -86,12 +100,25 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
-	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq, architecture)
+	if podTemplate != nil {
+		resReq = injectionTemplateResources(podTemplate, resReq)
+	}
+	var scheduling *corev1.PodSpec
+	if podTemplate != nil {
+		scheduling = &podTemplate.Spec
+	}
+	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq, architecture, scheduling)
 	if err != nil {
 		return "", 0, err
 	}
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily)
+	if podTemplate != nil {
+		pod, err = mergeInjectionPodTemplate(pod, podTemplate)
+		if err != nil {
+			return "", 0, err
+		}
+	}
 	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return "", 0, fmt.Errorf("error creating pod in cluster: %w", err)
@@ -263,8 +290,12 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 }
 
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
-func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration, architecture string) (string, string, error) {
+func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration, architecture string, schedulingOpts ...*corev1.PodSpec) (string, string, error) {
 	l := logger.From(ctx)
+	var scheduling *corev1.PodSpec
+	if len(schedulingOpts) > 0 {
+		scheduling = schedulingOpts[0]
+	}
 
 	// List all nodes and running pods once
 	nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
@@ -296,8 +327,8 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 	var fallback *nodeFallback
 
 	for _, node := range nodeList.Items {
-		if hasBlockingTaints(node.Spec.Taints) {
-			l.Debug("skipping node: blocking taints", "node", node.Name)
+		if !nodeMatchesPodScheduling(node, scheduling) {
+			l.Debug("skipping node: pod scheduling constraints", "node", node.Name)
 			continue
 		}
 
@@ -392,6 +423,126 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 	return "", "", fmt.Errorf("no suitable injector image or node exists")
 }
 
+// nodeMatchesPodScheduling implements the scheduling constraints that influence whether an
+// injector workload can run on a node. Preferred affinity is intentionally excluded because it
+// does not make a node ineligible.
+func nodeMatchesPodScheduling(node corev1.Node, podSpec *corev1.PodSpec) bool {
+	if node.Spec.Unschedulable {
+		return false
+	}
+	if podSpec == nil {
+		return !hasBlockingTaints(node.Spec.Taints)
+	}
+	for key, value := range podSpec.NodeSelector {
+		if node.Labels[key] != value {
+			return false
+		}
+	}
+	if podSpec.Affinity != nil && podSpec.Affinity.NodeAffinity != nil {
+		required := podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+		if required != nil && !nodeMatchesSelector(node, required) {
+			return false
+		}
+	}
+	return taintsTolerated(node.Spec.Taints, podSpec.Tolerations)
+}
+
+func nodeMatchesSelector(node corev1.Node, selector *corev1.NodeSelector) bool {
+	for _, term := range selector.NodeSelectorTerms {
+		matches := true
+		for _, requirement := range term.MatchExpressions {
+			if !nodeMatchesRequirement(node.Labels, requirement) {
+				matches = false
+				break
+			}
+		}
+		if matches {
+			for _, requirement := range term.MatchFields {
+				if requirement.Key != "metadata.name" || !nodeMatchesRequirement(map[string]string{"metadata.name": node.Name}, requirement) {
+					matches = false
+					break
+				}
+			}
+		}
+		if matches {
+			return true
+		}
+	}
+	return false
+}
+
+func nodeMatchesRequirement(labels map[string]string, requirement corev1.NodeSelectorRequirement) bool {
+	value, exists := labels[requirement.Key]
+	switch requirement.Operator {
+	case corev1.NodeSelectorOpIn:
+		return exists && containsString(requirement.Values, value)
+	case corev1.NodeSelectorOpNotIn:
+		return !exists || !containsString(requirement.Values, value)
+	case corev1.NodeSelectorOpExists:
+		return exists
+	case corev1.NodeSelectorOpDoesNotExist:
+		return !exists
+	case corev1.NodeSelectorOpGt, corev1.NodeSelectorOpLt:
+		if !exists || len(requirement.Values) != 1 {
+			return false
+		}
+		actual, actualErr := strconv.ParseInt(value, 10, 64)
+		expected, expectedErr := strconv.ParseInt(requirement.Values[0], 10, 64)
+		if actualErr != nil || expectedErr != nil {
+			return false
+		}
+		return (requirement.Operator == corev1.NodeSelectorOpGt && actual > expected) ||
+			(requirement.Operator == corev1.NodeSelectorOpLt && actual < expected)
+	default:
+		return false
+	}
+}
+
+func taintsTolerated(taints []corev1.Taint, tolerations []corev1.Toleration) bool {
+	for _, taint := range taints {
+		if taint.Effect != corev1.TaintEffectNoSchedule && taint.Effect != corev1.TaintEffectNoExecute {
+			continue
+		}
+		tolerated := false
+		for _, toleration := range tolerations {
+			if tolerationMatchesTaint(toleration, taint) {
+				tolerated = true
+				break
+			}
+		}
+		if !tolerated {
+			return false
+		}
+	}
+	return true
+}
+
+func tolerationMatchesTaint(toleration corev1.Toleration, taint corev1.Taint) bool {
+	if toleration.Effect != "" && toleration.Effect != taint.Effect {
+		return false
+	}
+	if toleration.Key != "" && toleration.Key != taint.Key {
+		return false
+	}
+	switch toleration.Operator {
+	case "", corev1.TolerationOpEqual:
+		return toleration.Value == taint.Value
+	case corev1.TolerationOpExists:
+		return true
+	default:
+		return false
+	}
+}
+
+func containsString(values []string, value string) bool {
+	for _, candidate := range values {
+		if candidate == value {
+			return true
+		}
+	}
+	return false
+}
+
 // GetInjectorDaemonsetImage gets the image that is most likely to be accessible from all nodes
 // It first grabs the latest version pause image with semver 3 or 4, under 1MiB, and with pause in the name.
 // If there are no valid pause images then it grabs the smallest image.
@@ -467,6 +618,102 @@ func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error)
 	l.Info("selected image for injector DaemonSet", "name", injectorImage)
 
 	return injectorImage, nil
+}
+
+// GetInjectorDaemonsetImageForPod selects an image that is resident on every node
+// eligible for the DaemonSet's PodSpec. An optional override must satisfy the same
+// requirement so that a DaemonSet cannot strand an injector pod on a node.
+func (c *Cluster) GetInjectorDaemonsetImageForPod(ctx context.Context, podSpec *corev1.PodSpec, override string) (string, error) {
+	l := logger.From(ctx)
+	var injectorImage string
+	err := retry.Do(func() error {
+		nodes, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		common := map[string]int64{}
+		eligibleNodes := 0
+		for _, node := range nodes.Items {
+			if !nodeMatchesPodScheduling(node, podSpec) {
+				continue
+			}
+			eligibleNodes++
+			nodeImages := residentImages(node.Status.Images)
+			if eligibleNodes == 1 {
+				common = nodeImages
+				continue
+			}
+			for name, size := range common {
+				nodeSize, found := nodeImages[name]
+				if !found {
+					delete(common, name)
+					continue
+				}
+				if nodeSize > size {
+					common[name] = nodeSize
+				}
+			}
+		}
+
+		if eligibleNodes == 0 {
+			return retry.Unrecoverable(errors.New("no nodes are eligible for the injector DaemonSet"))
+		}
+		if len(common) == 0 {
+			return retry.Unrecoverable(fmt.Errorf("no common resident image exists across %d eligible injector DaemonSet nodes", eligibleNodes))
+		}
+		if override != "" {
+			if _, found := common[override]; !found {
+				return retry.Unrecoverable(fmt.Errorf("requested injector image %q is not resident on every eligible injector DaemonSet node", override))
+			}
+			injectorImage = override
+			return nil
+		}
+
+		var latestPause *pauseImageInfo
+		var smallestName string
+		var smallestSize int64
+		for name, size := range common {
+			if pause := determinePauseImage(name, size); pause != nil && (latestPause == nil || pause.version.GreaterThan(latestPause.version)) {
+				latestPause = pause
+			}
+			if smallestName == "" || size < smallestSize {
+				smallestName = name
+				smallestSize = size
+			}
+		}
+		if latestPause != nil {
+			injectorImage = latestPause.name
+			return nil
+		}
+		injectorImage = smallestName
+		return nil
+	}, retry.Attempts(15), retry.Delay(5*time.Second), retry.Context(ctx), retry.DelayType(retry.FixedDelay))
+	if err != nil {
+		return "", err
+	}
+	l.Info("selected common image for injector DaemonSet", "name", injectorImage)
+	return injectorImage, nil
+}
+
+func residentImages(images []corev1.ContainerImage) map[string]int64 {
+	result := map[string]int64{}
+	for _, image := range images {
+		isZarfImage := false
+		for _, name := range image.Names {
+			if zarfImageRegex.MatchString(name) {
+				isZarfImage = true
+				break
+			}
+		}
+		if isZarfImage {
+			continue
+		}
+		for _, name := range image.Names {
+			result[name] = image.SizeBytes
+		}
+	}
+	return result
 }
 
 type pauseImageInfo struct {
@@ -624,8 +871,207 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 	return pod
 }
 
+// loadInjectionTemplates reads the optional staged injector resources. The template is deliberately
+// package-owned: older packages omit it and continue through the programmatic fallback.
+func loadInjectionTemplates(tmpDir string) (*corev1.Pod, *corev1.Service, error) {
+	path := filepath.Join(tmpDir, injectionTemplateFileName)
+	b, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil, nil
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to read injector template %s: %w", path, err)
+	}
+
+	reader := kubeyaml.NewYAMLReader(bufio.NewReader(bytes.NewReader(b)))
+	var pod *corev1.Pod
+	var service *corev1.Service
+	for {
+		doc, readErr := reader.Read()
+		if errors.Is(readErr, io.EOF) {
+			break
+		}
+		if readErr != nil {
+			return nil, nil, fmt.Errorf("unable to read injector template document: %w", readErr)
+		}
+		if len(bytes.TrimSpace(doc)) == 0 {
+			continue
+		}
+		jsonDoc, err := yaml.YAMLToJSON(doc)
+		if err != nil {
+			return nil, nil, fmt.Errorf("unable to parse injector template document: %w", err)
+		}
+		var kind metav1.TypeMeta
+		if err := json.Unmarshal(jsonDoc, &kind); err != nil {
+			return nil, nil, fmt.Errorf("unable to identify injector template resource: %w", err)
+		}
+		switch kind.Kind {
+		case "Pod":
+			if pod != nil {
+				return nil, nil, fmt.Errorf("injector template must contain exactly one Pod")
+			}
+			pod = &corev1.Pod{}
+			if err := json.Unmarshal(jsonDoc, pod); err != nil {
+				return nil, nil, fmt.Errorf("unable to decode injector Pod template: %w", err)
+			}
+		case "Service":
+			if service != nil {
+				return nil, nil, fmt.Errorf("injector template must contain exactly one Service")
+			}
+			service = &corev1.Service{}
+			if err := json.Unmarshal(jsonDoc, service); err != nil {
+				return nil, nil, fmt.Errorf("unable to decode injector Service template: %w", err)
+			}
+		default:
+			return nil, nil, fmt.Errorf("injector template contains unsupported kind %q", kind.Kind)
+		}
+	}
+	if pod == nil || service == nil {
+		return nil, nil, fmt.Errorf("injector template must contain one Pod and one Service")
+	}
+	foundInjector := false
+	for _, container := range pod.Spec.Containers {
+		if container.Name == "injector" {
+			foundInjector = true
+			break
+		}
+	}
+	if !foundInjector {
+		return nil, nil, fmt.Errorf("injector Pod template must contain a container named %q", "injector")
+	}
+	return pod, service, nil
+}
+
+func injectionTemplateResources(pod *corev1.Pod, fallback *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.ResourceRequirementsApplyConfiguration {
+	for _, container := range pod.Spec.Containers {
+		if container.Name == "injector" && (len(container.Resources.Requests) > 0 || len(container.Resources.Limits) > 0) {
+			requests := corev1.ResourceList{}
+			limits := corev1.ResourceList{}
+			if fallback.Requests != nil {
+				requests = fallback.Requests.DeepCopy()
+			}
+			if fallback.Limits != nil {
+				limits = fallback.Limits.DeepCopy()
+			}
+			for name, quantity := range container.Resources.Requests {
+				requests[name] = quantity
+			}
+			for name, quantity := range container.Resources.Limits {
+				limits[name] = quantity
+			}
+			return v1ac.ResourceRequirements().WithRequests(requests).WithLimits(limits)
+		}
+	}
+	return fallback
+}
+
+func mergeInjectionPodTemplate(base *v1ac.PodApplyConfiguration, template *corev1.Pod) (*v1ac.PodApplyConfiguration, error) {
+	baseJSON, err := json.Marshal(base)
+	if err != nil {
+		return nil, err
+	}
+	templateJSON, err := json.Marshal(template)
+	if err != nil {
+		return nil, err
+	}
+	mergedJSON, err := strategicpatch.StrategicMergePatch(baseJSON, templateJSON, corev1.Pod{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to merge injector Pod template: %w", err)
+	}
+	merged := &v1ac.PodApplyConfiguration{}
+	if err := json.Unmarshal(mergedJSON, merged); err != nil {
+		return nil, fmt.Errorf("unable to decode merged injector Pod template: %w", err)
+	}
+	mergeInjectorRuntimePodFields(merged, base)
+	mergedJSON, err = json.Marshal(merged)
+	if err != nil {
+		return nil, err
+	}
+	result := &v1ac.PodApplyConfiguration{}
+	if err := json.Unmarshal(mergedJSON, result); err != nil {
+		return nil, fmt.Errorf("unable to encode merged injector Pod template: %w", err)
+	}
+	return result, nil
+}
+
+func mergeInjectorRuntimePodFields(pod, runtimePod *v1ac.PodApplyConfiguration) {
+	pod.Name = runtimePod.Name
+	pod.Namespace = runtimePod.Namespace
+	if pod.Labels == nil {
+		pod.Labels = map[string]string{}
+	}
+	for key, value := range runtimePod.Labels {
+		pod.Labels[key] = value
+	}
+	if pod.Spec == nil {
+		pod.Spec = v1ac.PodSpec()
+	}
+	pod.Spec.NodeName = runtimePod.Spec.NodeName
+	pod.Spec.RestartPolicy = runtimePod.Spec.RestartPolicy
+	pod.Spec.Volumes = mergeRuntimeVolumes(pod.Spec.Volumes, runtimePod.Spec.Volumes)
+
+	for _, runtimeContainer := range runtimePod.Spec.Containers {
+		for i := range pod.Spec.Containers {
+			container := &pod.Spec.Containers[i]
+			if container.Name == nil || runtimeContainer.Name == nil || *container.Name != *runtimeContainer.Name {
+				continue
+			}
+			container.Image = runtimeContainer.Image
+			container.ImagePullPolicy = runtimeContainer.ImagePullPolicy
+			container.WorkingDir = runtimeContainer.WorkingDir
+			container.Command = append([]string(nil), runtimeContainer.Command...)
+			container.VolumeMounts = mergeRuntimeVolumeMounts(container.VolumeMounts, runtimeContainer.VolumeMounts)
+			break
+		}
+	}
+}
+
+func mergeRuntimeVolumes(template, runtime []v1ac.VolumeApplyConfiguration) []v1ac.VolumeApplyConfiguration {
+	result := make([]v1ac.VolumeApplyConfiguration, 0, len(template)+len(runtime))
+	for _, volume := range template {
+		if volume.Name == nil || !containsVolume(runtime, *volume.Name) {
+			result = append(result, volume)
+		}
+	}
+	for _, volume := range runtime {
+		result = append(result, volume)
+	}
+	return result
+}
+
+func containsVolume(volumes []v1ac.VolumeApplyConfiguration, name string) bool {
+	for _, volume := range volumes {
+		if volume.Name != nil && *volume.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func mergeRuntimeVolumeMounts(template, runtime []v1ac.VolumeMountApplyConfiguration) []v1ac.VolumeMountApplyConfiguration {
+	result := make([]v1ac.VolumeMountApplyConfiguration, 0, len(template)+len(runtime))
+	for _, mount := range template {
+		if mount.Name != nil && !containsVolumeMount(runtime, *mount.Name, mount.MountPath) {
+			result = append(result, mount)
+		}
+	}
+	for _, mount := range runtime {
+		result = append(result, mount)
+	}
+	return result
+}
+
+func containsVolumeMount(mounts []v1ac.VolumeMountApplyConfiguration, name string, mountPath *string) bool {
+	for _, mount := range mounts {
+		if (mount.Name != nil && *mount.Name == name) || (mountPath != nil && mount.MountPath != nil && *mount.MountPath == *mountPath) {
+			return true
+		}
+	}
+	return false
+}
+
 // createInjectorNodeportService creates the injector service on an available port different than the registryNodePort service
-func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName string, opts ZarfInjectorOptions) (*corev1.Service, error) {
+func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName string, opts ZarfInjectorOptions, template *corev1.Service) (*corev1.Service, error) {
 	l := logger.From(ctx)
 	var svc *corev1.Service
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*30)
@@ -645,6 +1091,13 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName str
 			})).WithLabels(map[string]string{
 			PackageLabel: pkgName,
 		})
+		if template != nil {
+			var mergeErr error
+			svcAc, mergeErr = mergeInjectionServiceTemplate(svcAc, template, opts, pkgName)
+			if mergeErr != nil {
+				return mergeErr
+			}
+		}
 
 		var err error
 		svc, err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
@@ -667,6 +1120,54 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName str
 		return nil, fmt.Errorf("failed to create the injector nodeport service: %w", err)
 	}
 	return svc, nil
+}
+
+func mergeInjectionServiceTemplate(base *v1ac.ServiceApplyConfiguration, template *corev1.Service, opts ZarfInjectorOptions, pkgName string) (*v1ac.ServiceApplyConfiguration, error) {
+	baseJSON, err := json.Marshal(base)
+	if err != nil {
+		return nil, err
+	}
+	templateJSON, err := json.Marshal(template)
+	if err != nil {
+		return nil, err
+	}
+	mergedJSON, err := strategicpatch.StrategicMergePatch(baseJSON, templateJSON, corev1.Service{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to merge injector Service template: %w", err)
+	}
+	merged := &corev1.Service{}
+	if err := json.Unmarshal(mergedJSON, merged); err != nil {
+		return nil, fmt.Errorf("unable to decode merged injector Service template: %w", err)
+	}
+	merged.Name = "zarf-injector"
+	merged.Namespace = state.ZarfNamespaceName
+	if merged.Labels == nil {
+		merged.Labels = map[string]string{}
+	}
+	merged.Labels[PackageLabel] = pkgName
+	merged.Spec.Type = corev1.ServiceTypeNodePort
+	if merged.Spec.Selector == nil {
+		merged.Spec.Selector = map[string]string{}
+	}
+	merged.Spec.Selector["app"] = "zarf-injector"
+	if len(merged.Spec.Ports) == 0 {
+		merged.Spec.Ports = []corev1.ServicePort{{Port: 5000}}
+	}
+	merged.Spec.Ports[0].Port = 5000
+	if opts.InjectorNodePort != 0 {
+		merged.Spec.Ports[0].NodePort = int32(opts.InjectorNodePort)
+	} else {
+		merged.Spec.Ports[0].NodePort = 0
+	}
+	mergedJSON, err = json.Marshal(merged)
+	if err != nil {
+		return nil, err
+	}
+	result := &v1ac.ServiceApplyConfiguration{}
+	if err := json.Unmarshal(mergedJSON, result); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // retryInjectorRequest retries headerless transient Kubernetes API throttles for injector payload cleanup.

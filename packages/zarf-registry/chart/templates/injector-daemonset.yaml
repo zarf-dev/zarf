@@ -1,8 +1,18 @@
 {{ if .Values.proxy.enabled }}
+{{- $hostNetwork := or (eq (include "proxy.hostNetwork" .) "true") .Values.proxy.injector.daemonSet.podTemplate.spec.hostNetwork .Values.ipv6Only }}
+{{- $podSpec := omit .Values.proxy.injector.daemonSet.podTemplate.spec "containers" "volumes" "hostNetwork" "dnsPolicy" "restartPolicy" "priorityClassName" "tolerations" "securityContext" "terminationGracePeriodSeconds" }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: zarf-injector
+  {{- with .Values.proxy.injector.daemonSet.metadata.labels }}
+  labels:
+{{ toYaml . | indent 4 }}
+  {{- end }}
+  {{- with .Values.proxy.injector.daemonSet.metadata.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+  {{- end }}
 spec:
   selector:
     matchLabels:
@@ -13,8 +23,18 @@ spec:
         app: zarf-daemonset-injector
         # Don't mutate this pod
         zarf.dev/agent: ignore
+        {{- with .Values.proxy.injector.daemonSet.podTemplate.metadata.labels }}
+{{ toYaml . | indent 8 }}
+        {{- end }}
+      {{- with .Values.proxy.injector.daemonSet.podTemplate.metadata.annotations }}
+      annotations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
     spec:
-      priorityClassName: system-node-critical
+    {{- with $podSpec }}
+{{ toYaml . | indent 6 }}
+    {{- end }}
+      priorityClassName: {{ default "system-node-critical" .Values.proxy.injector.daemonSet.podTemplate.spec.priorityClassName }}
       containers:
         - name: injector
           image: "{{ .Values.proxy.injector.image }}"
@@ -23,12 +43,20 @@ spec:
             - "/zarf-init/zarf-injector"
             - "{{ .Values.proxy.injector.shasum }}"
             - "{{ if .Values.ipv6Only }}[::]:{{ .Values.proxy.injector.hostPort }}{{ else }}0.0.0.0:{{ .Values.proxy.injector.hostPort }}{{ end }}"
+          {{- $containerExtras := omit .Values.proxy.injector.daemonSet.podTemplate.container "name" "image" "workingDir" "command" "ports" "volumeMounts" "readinessProbe" "resources" "securityContext" }}
+          {{- with $containerExtras }}
+{{ toYaml . | indent 10 }}
+          {{- end }}
           ports:
             - containerPort: {{ .Values.proxy.injector.hostPort }}
-            {{- if eq (include "proxy.hostNetwork" .) "false" }}
+            {{- if not $hostNetwork }}
               hostPort: {{ .Values.proxy.injector.hostPort }}
               hostIP: "127.0.0.1"
             {{- end }}
+          {{- if .Values.proxy.injector.daemonSet.podTemplate.container.readinessProbe }}
+          readinessProbe:
+{{ toYaml .Values.proxy.injector.daemonSet.podTemplate.container.readinessProbe | indent 12 }}
+          {{- else }}
           readinessProbe:
             failureThreshold: 10
             httpGet:
@@ -38,6 +66,11 @@ spec:
             periodSeconds: 2
             successThreshold: 1
             timeoutSeconds: 1
+          {{- end }}
+          {{- if .Values.proxy.injector.daemonSet.podTemplate.container.resources }}
+          resources:
+{{ toYaml .Values.proxy.injector.daemonSet.podTemplate.container.resources | indent 12 }}
+          {{- else }}
           resources:
             limits:
               cpu: 200m
@@ -45,6 +78,7 @@ spec:
             requests:
               cpu: 100m
               memory: 256Mi
+          {{- end }}
           volumeMounts:
             - mountPath: /zarf-init/zarf-injector
               name: init
@@ -56,6 +90,10 @@ spec:
               name: zarf-payload-{{ printf "%03d" $i }}
               subPath: zarf-payload-{{ printf "%03d" $i }}
             {{- end }}
+          {{- if .Values.proxy.injector.daemonSet.podTemplate.container.securityContext }}
+          securityContext:
+{{ toYaml .Values.proxy.injector.daemonSet.podTemplate.container.securityContext | indent 12 }}
+          {{- else }}
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -63,21 +101,31 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
             runAsNonRoot: true
-    {{- if eq (include "proxy.hostNetwork" .) "true" }}
+          {{- end }}
+    {{- if $hostNetwork }}
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
     {{- end }}
-    {{- with .Values.proxy.tolerations }}
+    {{- $tolerations := .Values.proxy.tolerations }}
+    {{- if hasKey .Values.proxy.injector.daemonSet.podTemplate.spec "tolerations" }}
+    {{- $tolerations = .Values.proxy.injector.daemonSet.podTemplate.spec.tolerations }}
+    {{- end }}
+    {{- with $tolerations }}
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
-      terminationGracePeriodSeconds: 1
+      terminationGracePeriodSeconds: {{ default 1 .Values.proxy.injector.daemonSet.podTemplate.spec.terminationGracePeriodSeconds }}
+      {{- if .Values.proxy.injector.daemonSet.podTemplate.spec.securityContext }}
+      securityContext:
+{{ toYaml .Values.proxy.injector.daemonSet.podTemplate.spec.securityContext | indent 8 }}
+      {{- else }}
       securityContext:
         fsGroup: 2000
         runAsGroup: 2000
         runAsUser: 1000
         seccompProfile:
           type: RuntimeDefault
+      {{- end }}
       volumes:
         - configMap:
             defaultMode: 511
