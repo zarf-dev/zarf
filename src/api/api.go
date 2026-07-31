@@ -25,6 +25,11 @@ type PackageDefinition struct {
 
 var _ PackageAccessor = PackageDefinition{}
 
+// NewDefinition creates a PackageDefinition from the internal type
+func NewDefinition(pkg internalTypes.Package) PackageDefinition {
+	return PackageDefinition{pkg: pkg}
+}
+
 // NewPackageDefinitionFromV1alpha1 creates a PackageDefinition from a v1alpha1 package definition.
 func NewPackageDefinitionFromV1alpha1(pkg v1alpha1.ZarfPackage) PackageDefinition {
 	return PackageDefinition{pkg: internalv1alpha1.ConvertToGeneric(pkg)}

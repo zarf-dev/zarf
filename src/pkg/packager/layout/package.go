@@ -17,7 +17,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 
-	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
@@ -115,7 +115,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	if err != nil {
 		return nil, err
 	}
-	pkg := convert.GenericToCanonicalAPIVersion(generic)
+	pkg := api.NewDefinition(generic).AsV1alpha1()
 	pkg.Components, err = opts.Filter.Apply(pkg)
 	if err != nil {
 		return nil, err

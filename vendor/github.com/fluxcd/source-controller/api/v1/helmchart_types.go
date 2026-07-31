@@ -86,7 +86,7 @@ type HelmChartSpec struct {
 	// This field is only supported when using HelmRepository source with spec.type 'oci'.
 	// Chart dependencies, which are not bundled in the umbrella chart artifact, are not verified.
 	// +optional
-	Verify *OCIRepositoryVerification `json:"verify,omitempty"`
+	Verify *HelmChartVerification `json:"verify,omitempty"`
 }
 
 const (
@@ -144,7 +144,7 @@ type HelmChartStatus struct {
 
 	// URL is the dynamic fetch link for the latest Artifact.
 	// It is provided on a "best effort" basis, and using the precise
-	// BucketStatus.Artifact data is recommended.
+	// HelmChartStatus.Artifact data is recommended.
 	// +optional
 	URL string `json:"url,omitempty"`
 
@@ -195,7 +195,7 @@ func (in *HelmChart) GetValuesFiles() []string {
 // +genclient
 // +kubebuilder:storageversion
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=hc
+// +kubebuilder:resource:shortName=hc,categories=all;fluxcd;fluxcd-sources
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Chart",type=string,JSONPath=`.spec.chart`
 // +kubebuilder:printcolumn:name="Version",type=string,JSONPath=`.spec.version`
@@ -204,6 +204,7 @@ func (in *HelmChart) GetValuesFiles() []string {
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description=""
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status",description=""
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message",description=""
+// +kubebuilder:metadata:annotations="kustomize.toolkit.fluxcd.io/substitute=disabled"
 
 // HelmChart is the Schema for the helmcharts API.
 type HelmChart struct {

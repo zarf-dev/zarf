@@ -21,7 +21,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -184,7 +184,7 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
 	}
-	zarfPkg := convert.GenericToCanonicalAPIVersion(generic)
+	zarfPkg := api.NewDefinition(generic).AsV1alpha1()
 	configBytes, err := json.Marshal(zarfPkg)
 	if err != nil {
 		return err
