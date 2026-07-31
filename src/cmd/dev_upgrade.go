@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
@@ -57,7 +58,7 @@ func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	sourceVersion, err := detectAPIVersion(b)
+	sourceVersion, err := pkgcfg.SelectVersion(cmd.Context(), b)
 	if err != nil {
 		return err
 	}
