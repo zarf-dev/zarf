@@ -12,6 +12,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
@@ -113,18 +114,22 @@ func SelectVersion(ctx context.Context, b []byte) (string, error) {
 	return d.version, nil
 }
 
-// ParseMultiDoc parses a multi doc zarf.yaml file, into the internal generic representation
+// ParseMultiDoc parses a multi doc zarf.yaml file into a PackageDefinition.
 // Multi doc definitions may contain one document per apiVersion; the highest-priority known version wins.
-func ParseMultiDoc(ctx context.Context, b []byte) (types.Package, error) {
+func ParseMultiDoc(ctx context.Context, b []byte) (api.PackageDefinition, error) {
 	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
-		return types.Package{}, err
+		return api.PackageDefinition{}, err
 	}
 	d, node, err := selectDecoder(ctx, docs)
 	if err != nil {
-		return types.Package{}, err
+		return api.PackageDefinition{}, err
 	}
-	return d.decode(ctx, node)
+	pkg, err := d.decode(ctx, node)
+	if err != nil {
+		return api.PackageDefinition{}, err
+	}
+	return api.NewDefinition(pkg), nil
 }
 
 func decodeV1Alpha1(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, error) {

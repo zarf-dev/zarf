@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	"github.com/zarf-dev/zarf/src/internal/api/types"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 )
 
@@ -116,11 +116,11 @@ metadata:
 			pkg, err := ParseMultiDoc(context.Background(), []byte(tt.yaml))
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
-				require.Equal(t, types.Package{}, pkg)
+				require.Equal(t, api.PackageDefinition{}, pkg)
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tt.wantName, pkg.Metadata.Name)
+			require.Equal(t, tt.wantName, pkg.AsV1alpha1().Metadata.Name)
 		})
 	}
 }
@@ -206,7 +206,7 @@ func TestParseAsErrors(t *testing.T) {
 	require.ErrorContains(t, err, `no "zarf.dev/v1beta1" document found`)
 }
 
-func TestParseDecodesV1Beta1ToGeneric(t *testing.T) {
+func TestParseMultiDocReturnsPackageDefinition(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
@@ -215,14 +215,14 @@ func TestParseDecodesV1Beta1ToGeneric(t *testing.T) {
 	mixed := beta + "---\napiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\ncomponents:\n  - name: c\n"
 	pkg, err := ParseMultiDoc(ctx, []byte(mixed))
 	require.NoError(t, err)
-	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
-	require.Equal(t, "beta", pkg.Metadata.Name)
+	require.Equal(t, v1beta1.APIVersion, pkg.OriginalAPIVersion())
+	require.Equal(t, "beta", pkg.AsV1beta1().Metadata.Name)
 
-	// With only a v1beta1 document, ParseMultiDoc decodes it into the generic representation.
+	// With only a v1beta1 document, ParseMultiDoc returns a PackageDefinition.
 	pkg, err = ParseMultiDoc(ctx, []byte(beta))
 	require.NoError(t, err)
-	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
-	require.Equal(t, "beta", pkg.Metadata.Name)
+	require.Equal(t, v1beta1.APIVersion, pkg.OriginalAPIVersion())
+	require.Equal(t, "beta", pkg.AsV1beta1().Metadata.Name)
 }
 
 func TestDecoderFor(t *testing.T) {
