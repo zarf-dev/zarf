@@ -304,6 +304,10 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 	defined, err := load.PackageDefinition(ctx, basePath, loadOpts)
+	var lintErr *lint.LintError
+	if errors.As(err, &lintErr) {
+		PrintFindings(ctx, lintErr)
+	}
 	if err != nil {
 		return err
 	}
