@@ -27,7 +27,7 @@ func newDevUpgradeSchemaCommand() *cobra.Command {
 	o := &devUpgradeSchemaOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "upgrade-schema [ DIRECTORY ]",
+		Use:     "upgrade-schema [ PATH ]",
 		Short:   "Converts and outputs the existing zarf package config to the given API version. Defaults to latest API version.",
 		Example: "zarf dev upgrade-schema . > zarf.yaml",
 		Hidden:  true,
