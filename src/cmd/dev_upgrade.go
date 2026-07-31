@@ -29,9 +29,9 @@ func newDevUpgradeSchemaCommand() *cobra.Command {
 	o := &devUpgradeSchemaOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "upgrade-schema [ PATH ]",
+		Use:     "upgrade [ PATH ]",
 		Short:   "Converts and outputs the existing zarf package config to the given API version. Defaults to latest API version.",
-		Example: "zarf dev upgrade-schema . > zarf.yaml",
+		Example: "zarf dev upgrade . > zarf-v1beta1.yaml",
 		Hidden:  true,
 		Args:    cobra.MaximumNArgs(1),
 		RunE:    o.run,
@@ -79,7 +79,7 @@ func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
 		if err := goyaml.Unmarshal(b, &pkg); err != nil {
 			return err
 		}
-		warnComponentImports(cmd.Context(), pkg)
+		componentImportLog(cmd.Context(), pkg)
 		if err := checkRemovedFields(pkg); err != nil {
 			return err
 		}
@@ -134,10 +134,10 @@ func validateVersionUpgrade(from, to string) error {
 	return nil
 }
 
-func warnComponentImports(ctx context.Context, pkg v1alpha1.ZarfPackage) {
+func componentImportLog(ctx context.Context, pkg v1alpha1.ZarfPackage) {
 	l := logger.From(ctx)
 	for _, c := range pkg.Components {
-		if c.Import.Name == "" && c.Import.Path == "" && c.Import.URL == "" {
+		if c.Import.Path == "" && c.Import.URL == "" {
 			continue
 		}
 		l.Info(fmt.Sprintf("component %q uses .components.import; the imported component must become a v1beta1 component config", c.Name))
