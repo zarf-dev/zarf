@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
+	goyaml "github.com/goccy/go-yaml"
+
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -211,15 +213,22 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 		return fmt.Errorf("package validation failed: %w", err)
 	}
 
-	findings, err := lint.ValidatePackageSchemaAtPathV1Beta1(packagePath)
+	diskPackage, err := os.ReadFile(packagePath)
 	if err != nil {
-		return fmt.Errorf("unable to check schema: %w", err)
+		return err
 	}
-	if len(findings) != 0 {
-		return &lint.LintError{
-			PackageName: pkg.Metadata.Name,
-			Findings:    findings,
-		}
+	// Validate the on disk zarf.yaml so extra fields aren't dropped
+	if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, diskPackage); err != nil {
+		return err
+	}
+
+	// Validate after import just in case
+	resolvedPackage, err := goyaml.Marshal(pkg)
+	if err != nil {
+		return fmt.Errorf("unable to marshal resolved package: %w", err)
+	}
+	if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, resolvedPackage); err != nil {
+		return err
 	}
 
 	if !skipSchemaValidation {
@@ -232,10 +241,23 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 	l.Debug("done v1beta1 validate",
 		"pkg", pkg.Metadata.Name,
 		"path", packagePath,
-		"findings", findings,
 		"duration", time.Since(start),
 	)
 	return nil
+}
+
+func validatePackageSchemaV1Beta1(pkgName string, b []byte) error {
+	findings, err := lint.ValidatePackageSchemaBytesV1Beta1(b)
+	if err != nil {
+		return fmt.Errorf("unable to check schema: %w", err)
+	}
+	if len(findings) == 0 {
+		return nil
+	}
+	return &lint.LintError{
+		PackageName: pkgName,
+		Findings:    findings,
+	}
 }
 
 type validateValuesSchemaOptions struct {

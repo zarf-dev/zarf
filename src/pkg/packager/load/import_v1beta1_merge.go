@@ -51,47 +51,56 @@ func mergeImages(base, head []v1beta1.Image) []v1beta1.Image {
 	return out
 }
 
-func mergeCharts(base, head []v1beta1.Chart) []v1beta1.Chart {
+func mergeCharts(base, headCharts []v1beta1.Chart) []v1beta1.Chart {
 	out := append([]v1beta1.Chart{}, base...)
-	for _, h := range head {
-		idx := indexByName(len(out), func(i int) string { return out[i].Name }, h.Name)
+	for _, headChart := range headCharts {
+		idx := indexByName(len(out), func(i int) string { return out[i].Name }, headChart.Name)
 		if idx == -1 {
-			out = append(out, h)
+			out = append(out, headChart)
 			continue
 		}
-		c := out[idx]
-		if h.Namespace != "" {
-			c.Namespace = h.Namespace
+		importedChart := out[idx]
+		if headChart.Namespace != "" {
+			importedChart.Namespace = headChart.Namespace
 		}
-		if h.ReleaseName != "" {
-			c.ReleaseName = h.ReleaseName
+		if headChart.ReleaseName != "" {
+			importedChart.ReleaseName = headChart.ReleaseName
 		}
-		if h.HelmRepository != nil {
-			c.HelmRepository = h.HelmRepository
+		if hasChartSource(headChart) {
+			importedChart.HelmRepository = nil
+			importedChart.Git = nil
+			importedChart.Local = nil
+			importedChart.OCI = nil
 		}
-		if h.Git != nil {
-			c.Git = h.Git
+		if headChart.HelmRepository != nil {
+			importedChart.HelmRepository = headChart.HelmRepository
 		}
-		if h.Local != nil {
-			c.Local = h.Local
+		if headChart.Git != nil {
+			importedChart.Git = headChart.Git
 		}
-		if h.OCI != nil {
-			c.OCI = h.OCI
+		if headChart.Local != nil {
+			importedChart.Local = headChart.Local
 		}
-		if h.ServerSideApply != "" {
-			c.ServerSideApply = h.ServerSideApply
+		if headChart.OCI != nil {
+			importedChart.OCI = headChart.OCI
 		}
-		if h.SkipWait {
-			c.SkipWait = true
+		if headChart.ServerSideApply != "" {
+			importedChart.ServerSideApply = headChart.ServerSideApply
 		}
-		if h.SkipSchemaValidation {
-			c.SkipSchemaValidation = true
+		if headChart.SkipWait {
+			importedChart.SkipWait = true
 		}
-		c.ValuesFiles = append(c.ValuesFiles, h.ValuesFiles...)
-		c.Values = append(c.Values, h.Values...)
-		out[idx] = c
+		if headChart.SkipSchemaValidation {
+			importedChart.SkipSchemaValidation = true
+		}
+		importedChart.ValuesFiles = append(importedChart.ValuesFiles, headChart.ValuesFiles...)
+		importedChart.Values = append(importedChart.Values, headChart.Values...)
+		out[idx] = importedChart
 	}
 	return out
+}
+func hasChartSource(chart v1beta1.Chart) bool {
+	return chart.HelmRepository != nil || chart.Git != nil || chart.Local != nil || chart.OCI != nil
 }
 
 func mergeManifests(base, head []v1beta1.Manifest) []v1beta1.Manifest {
