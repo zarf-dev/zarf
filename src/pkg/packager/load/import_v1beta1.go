@@ -173,12 +173,6 @@ func readComponentConfig(path string) (v1beta1.ComponentConfig, error) {
 	if err := goyaml.Unmarshal(b, &config); err != nil {
 		return v1beta1.ComponentConfig{}, fmt.Errorf("unable to parse imported component config %q: %w", path, err)
 	}
-	if config.APIVersion != v1beta1.APIVersion {
-		return v1beta1.ComponentConfig{}, fmt.Errorf("imported file %q must use apiVersion %s", path, v1beta1.APIVersion)
-	}
-	if config.Kind != v1beta1.ZarfComponentConfig {
-		return v1beta1.ComponentConfig{}, fmt.Errorf("imported file %q must be kind %s", path, v1beta1.ZarfComponentConfig)
-	}
 	if err := validateComponentConfigSchemaV1Beta1(path, b); err != nil {
 		return v1beta1.ComponentConfig{}, err
 	}
@@ -193,7 +187,10 @@ func validateComponentConfigSchemaV1Beta1(path string, b []byte) error {
 	if len(findings) == 0 {
 		return nil
 	}
-	return fmt.Errorf("imported component config %q failed schema validation: %s", path, findings[0].ItemizedDescription())
+	return &lint.LintError{
+		PackageName: path,
+		Findings:    findings,
+	}
 }
 
 func validateComponentImportV1Beta1(imp v1beta1.ComponentImport) error {

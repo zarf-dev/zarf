@@ -12,6 +12,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -178,6 +179,14 @@ func TestResolveImportsV1Beta1Errors(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600))
 	}
 
+	requireLintErr := func(t *testing.T, err error, path string) {
+		t.Helper()
+		var lintErr *lint.LintError
+		require.ErrorAs(t, err, &lintErr)
+		require.Equal(t, path, lintErr.PackageName)
+		require.NotEmpty(t, lintErr.Findings)
+	}
+
 	t.Run("remote imports are not yet supported", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
@@ -253,7 +262,7 @@ components:
 `)
 		pkg := loadV1Beta1Package(t, dir)
 		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
-		require.ErrorContains(t, err, "apiVersion")
+		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
 	})
 
 	t.Run("missing component config kind errors", func(t *testing.T) {
@@ -276,7 +285,7 @@ components:
 `)
 		pkg := loadV1Beta1Package(t, dir)
 		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
-		require.ErrorContains(t, err, "kind")
+		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
 	})
 
 	t.Run("component config schema errors", func(t *testing.T) {
@@ -301,7 +310,7 @@ components:
 `)
 		pkg := loadV1Beta1Package(t, dir)
 		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
-		require.ErrorContains(t, err, "schema")
+		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
 	})
 
 	t.Run("multiple compatible variants error", func(t *testing.T) {
