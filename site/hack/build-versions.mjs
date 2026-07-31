@@ -139,35 +139,6 @@ function apiSchemaSources(root) {
   return sources;
 }
 
-async function rewriteRawImports(root, slug) {
-  for (const entry of await fs.readdir(root, { withFileTypes: true })) {
-    const file = path.join(root, entry.name);
-    if (entry.isDirectory()) {
-      await rewriteRawImports(file, slug);
-      continue;
-    }
-    if (!/\.(md|mdx)$/.test(entry.name)) continue;
-
-    const original = await fs.readFile(file, "utf8");
-    const versionedRawImport = (sourceKind, sourcePath) =>
-      `/src/assets/versioned-raw/${slug}/${sourceKind}/${sourcePath}`;
-    const updated = original
-      .replace(
-        /import\s*\(\s*(["'])((?:\.\.\/)+)(examples|packages)\/([^"']+\?raw)\1\s*\)/g,
-        (_match, _quote, _prefix, sourceKind, sourcePath) =>
-          `import("${versionedRawImport(sourceKind, sourcePath)}")`,
-      )
-      .replace(
-        /from\s+(["'])((?:\.\.\/)+)(examples|packages)\/([^"']+\?raw)\1/g,
-        (_match, quote, _prefix, sourceKind, sourcePath) =>
-          `from ${quote}${versionedRawImport(sourceKind, sourcePath)}${quote}`,
-      );
-    if (updated !== original) {
-      await fs.writeFile(file, updated);
-    }
-  }
-}
-
 async function stageRawSources(worktree, slug) {
   const rawRoot = path.join(versionedRawDir, slug);
   await fs.rm(rawRoot, { recursive: true, force: true });
@@ -178,7 +149,6 @@ async function stageRawSources(worktree, slug) {
       await fs.cp(src, path.join(rawRoot, sourceKind), { recursive: true });
     }
   }
-  return rawRoot;
 }
 
 // Copy a tag's docs into `src/content/docs/<slug>/` and stage its generated
@@ -198,7 +168,6 @@ async function stageVersion({ ref, slug }) {
     await fs.rm(dst, { recursive: true, force: true });
     await fs.cp(path.join(worktree, "site/src/content/docs"), dst, { recursive: true });
     await stageRawSources(worktree, slug);
-    await rewriteRawImports(dst, slug);
     // Examples and schema are generated artifacts, absent from the checkout.
     await generateExamples({
       examplesDir: path.join(worktree, "examples"),

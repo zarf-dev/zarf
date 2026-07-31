@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
-import { rewriteUrl, fixEscapingRelative } from "./remark-link-rewrite.ts";
+import { rewriteUrl, fixEscapingRelative, rewriteVersionedRawImport } from "./remark-link-rewrite.ts";
 
 const sections = new Set(["commands", "ref", "tutorials", "getting-started", "faq"]);
 const prefix = "/v0-76";
@@ -45,12 +45,28 @@ test("adds one ../ to asset paths escaping the version subtree", () => {
   assert.equal(fixEscapingRelative("../../assets/x.svg", fileDir, versionRoot), "../../../assets/x.svg");
 });
 
-test("adds one ../ to escaping ESM/raw imports, preserving query", () => {
+test("adds one ../ to generic escaping imports, preserving query", () => {
   const fileDir = path.join(versionRoot, "ref");
   assert.equal(
     fixEscapingRelative("../../../../../examples/config-file/zarf.yaml?raw", fileDir, versionRoot),
     "../../../../../../examples/config-file/zarf.yaml?raw",
   );
+});
+
+test("maps versioned raw repo imports to staged assets", () => {
+  assert.equal(
+    rewriteVersionedRawImport("../../../../../examples/config-file/zarf.yaml?raw", "v0-76"),
+    "/src/assets/versioned-raw/v0-76/examples/config-file/zarf.yaml?raw",
+  );
+  assert.equal(
+    rewriteVersionedRawImport("../../../../../packages/distros/eks/zarf.yaml?raw", "v0-76"),
+    "/src/assets/versioned-raw/v0-76/packages/distros/eks/zarf.yaml?raw",
+  );
+});
+
+test("leaves non-versioned raw repo imports untouched", () => {
+  assert.equal(rewriteVersionedRawImport("../../assets/x.svg", "v0-76"), null);
+  assert.equal(rewriteVersionedRawImport("@components/ExampleYAML.astro", "v0-76"), null);
 });
 
 test("leaves relative paths that stay within the subtree untouched", () => {
