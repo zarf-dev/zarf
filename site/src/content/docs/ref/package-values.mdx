@@ -69,12 +69,6 @@ values:
 
 Generate a schema that includes each package value using `zarf dev generate-schema`.
 
-### Skeleton Packages
-
-Skeleton packages can include package values and schemas. When a package imports a
-values-bearing skeleton from OCI, Zarf materializes its values and schema. Parent
-values and schema definitions override imported skeletons.
-
 ## Using Values
 
 Values are accessed in templates through the `.Values` template object. See the [Templating](#templating) section for details on the other available template objects (`.State`, `.Pkg`) and functions.
