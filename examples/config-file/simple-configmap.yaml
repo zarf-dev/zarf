@@ -7,8 +7,8 @@ metadata:
     app: zarf
 data:
   templateme.properties: |
-    scorpion=###ZARF_VAR_SCORPION###
-    camel_spider=###ZARF_VAR_CAMEL_SPIDER###
+    scorpion={{ .Values.animals.scorpion }}
+    camel_spider={{ .Values.animals.camelSpider }}
     cow=moo
   tls-key: |-
-    ###ZARF_VAR_TLS_KEY###
+{{ .Values.tls.key | indent 4 }}

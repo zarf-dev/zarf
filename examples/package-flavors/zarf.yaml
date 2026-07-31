@@ -4,6 +4,10 @@ metadata:
   description: Simple example to show how to use the `only.flavor` key to build package variants.
   version: 1.0.0
 
+values:
+  files:
+    - values.yaml
+
 components:
   - name: image
     required: true
@@ -16,8 +20,8 @@ components:
       onDeploy:
         before:
           - cmd: echo "rockylinux:9-minimal"
-            setVariables:
-              - name: IMAGE
+            setValues:
+              - key: .image
 
   - name: image
     required: true
@@ -30,8 +34,8 @@ components:
       onDeploy:
         before:
           - cmd: echo "oraclelinux:9-slim"
-            setVariables:
-              - name: IMAGE
+            setValues:
+              - key: .image
 
   - name: image
     required: true
@@ -44,8 +48,8 @@ components:
       onDeploy:
         before:
           - cmd: echo "almalinux:9-minimal"
-            setVariables:
-              - name: IMAGE
+            setValues:
+              - key: .image
 
   - name: image
     required: true
@@ -58,14 +62,15 @@ components:
       onDeploy:
         before:
           - cmd: echo "opensuse/leap:15"
-            setVariables:
-              - name: IMAGE
+            setValues:
+              - key: .image
 
   - name: pod
     description: "The pod that runs the specified flavor of Enterprise Linux"
     required: true
     manifests:
       - name: enterprise-linux
+        template: true
         namespace: enterprise-linux
         files:
           - pod.yaml
