@@ -100,6 +100,36 @@ func TestInternalServicesFor(t *testing.T) {
 	}
 }
 
+func TestComponentRequiresCluster(t *testing.T) {
+	t.Parallel()
+
+	initPackage := v1alpha1.ZarfPackage{Kind: v1alpha1.ZarfInitConfig}
+	standardPackage := v1alpha1.ZarfPackage{Kind: v1alpha1.ZarfPackageConfig}
+	requiresCluster := v1alpha1.ZarfComponent{Charts: []v1alpha1.ZarfChart{{Name: "chart"}}}
+
+	require.True(t, componentRequiresCluster(initPackage, v1alpha1.ZarfComponent{Name: "zarf-injector"}))
+	require.False(t, componentRequiresCluster(standardPackage, v1alpha1.ZarfComponent{Name: "zarf-injector"}))
+	require.True(t, componentRequiresCluster(standardPackage, requiresCluster))
+}
+
+func TestInjectorPayloadSources(t *testing.T) {
+	t.Parallel()
+
+	pkg := v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{{
+		Name:   "zarf-seed-registry",
+		Images: []string{"registry:3", "proxy:1"},
+	}}}
+	images, err := injectorPayloadSources(pkg)
+	require.NoError(t, err)
+	require.Equal(t, []string{"registry:3", "proxy:1"}, images)
+
+	_, err = injectorPayloadSources(v1alpha1.ZarfPackage{})
+	require.ErrorContains(t, err, "requires a zarf-seed-registry component")
+
+	_, err = injectorPayloadSources(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{{Name: "zarf-seed-registry"}}})
+	require.ErrorContains(t, err, "at least one bootstrap image")
+}
+
 func TestVerifyPackageIsDeployableSkipsAgentCertCheckWhenAgentIsNotConfigured(t *testing.T) {
 	ctx := context.Background()
 	cs := fake.NewClientset()

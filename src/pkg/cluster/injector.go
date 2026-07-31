@@ -1033,10 +1033,7 @@ func mergeRuntimeVolumes(template, runtime []v1ac.VolumeApplyConfiguration) []v1
 			result = append(result, volume)
 		}
 	}
-	for _, volume := range runtime {
-		result = append(result, volume)
-	}
-	return result
+	return append(result, runtime...)
 }
 
 func containsVolume(volumes []v1ac.VolumeApplyConfiguration, name string) bool {
@@ -1055,10 +1052,7 @@ func mergeRuntimeVolumeMounts(template, runtime []v1ac.VolumeMountApplyConfigura
 			result = append(result, mount)
 		}
 	}
-	for _, mount := range runtime {
-		result = append(result, mount)
-	}
-	return result
+	return append(result, runtime...)
 }
 
 func containsVolumeMount(mounts []v1ac.VolumeMountApplyConfiguration, name string, mountPath *string) bool {

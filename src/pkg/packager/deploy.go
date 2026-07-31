@@ -228,7 +228,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 	for _, component := range pkgLayout.Pkg.Components {
 		packageGeneration := 1
 		// Connect to cluster if a component requires it.
-		if component.RequiresCluster() {
+		if componentRequiresCluster(pkgLayout.Pkg, component) {
 			if !d.isConnectedToCluster() {
 				timeout := cluster.DefaultTimeout
 				if pkgLayout.Pkg.IsInitConfig() {
@@ -331,6 +331,12 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 	return deployedComponents, nil
 }
 
+// componentRequiresCluster captures init lifecycle components that create cluster resources
+// without declaring ordinary charts, manifests, images, or repositories.
+func componentRequiresCluster(pkg v1alpha1.ZarfPackage, component v1alpha1.ZarfComponent) bool {
+	return component.RequiresCluster() || (pkg.IsInitConfig() && component.Name == "zarf-injector")
+}
+
 // internalServicesFor returns the state services Zarf will deploy internally in this init run.
 func internalServicesFor(components []v1alpha1.ZarfComponent, opts DeployOptions) state.ServiceSet {
 	services := state.NewServiceSet()
@@ -358,8 +364,8 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	isInjector := component.Name == "zarf-injector"
 	isAgent := component.Name == "zarf-agent"
 
-	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if component.RequiresCluster() && d.s == nil {
+	// Always init the state before the first component that requires the cluster.
+	if componentRequiresCluster(pkgLayout.Pkg, component) && d.s == nil {
 		applianceMode := false
 		for _, component := range pkgLayout.Pkg.Components {
 			if component.Name == "k3s" {
@@ -390,48 +396,20 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		}
 	}
 
-	// Before deploying the seed registry, start the injector
-	if isSeedRegistry {
-		switch d.s.RegistryInfo.RegistryMode {
-		case state.RegistryModeProxy:
-			podSpec, imageOverride, err := d.proxyInjectorPodSpec()
-			if err != nil {
-				return nil, err
-			}
-			d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImageForPod(ctx, podSpec, imageOverride)
-			if err != nil {
-				return nil, err
-			}
-
-			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name)
-			if err != nil {
-				return nil, err
-			}
-			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
-			d.s.InjectorInfo.PayLoadShaSum = shasum
-		case state.RegistryModeNodePort:
-			seedImage, seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name, pkgLayout.Pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
-				InjectorNodePort: uint16(d.s.InjectorInfo.Port),
-				RegistryNodePort: uint16(d.s.RegistryInfo.Port),
-				IPFamily:         d.s.IPFamily,
-			})
-			if err != nil {
-				return nil, err
-			}
-			d.s.InjectorInfo.Image = seedImage
-			d.s.InjectorInfo.Port = seedPort
-		}
-		// Save the injector updates to state
-		if err := d.c.SaveState(ctx, d.s); err != nil {
-			return nil, err
-		}
-	}
-
 	// Skip image checksum if component is agent.
-	// Skip image push if component is seed registry.
-	charts, err := d.deployComponent(ctx, pkgLayout, component, isAgent, isSeedRegistry, opts)
+	// Skip image push if component is seed registry or injector.
+	charts, err := d.deployComponent(ctx, pkgLayout, component, isAgent, isSeedRegistry || isInjector, opts)
 	if err != nil {
 		return nil, err
+	}
+	if isInjector {
+		payloadSources, err := injectorPayloadSources(pkgLayout.Pkg)
+		if err != nil {
+			return charts, err
+		}
+		if err := d.prepareInjector(ctx, pkgLayout, payloadSources); err != nil {
+			return charts, err
+		}
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
@@ -442,6 +420,53 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	}
 
 	return charts, nil
+}
+
+// injectorPayloadSources keeps seed images declared with the seed-registry component so
+// init packages created by newer CLIs remain deployable by older CLIs.
+func injectorPayloadSources(pkg v1alpha1.ZarfPackage) ([]string, error) {
+	seedRegistry, err := pkg.GetComponent("zarf-seed-registry")
+	if err != nil {
+		return nil, fmt.Errorf("zarf-injector requires a zarf-seed-registry component to provide bootstrap images: %w", err)
+	}
+	images := seedRegistry.GetImages()
+	if len(images) == 0 {
+		return nil, fmt.Errorf("zarf-injector requires zarf-seed-registry to provide at least one bootstrap image")
+	}
+	return images, nil
+}
+
+func (d *deployer) prepareInjector(ctx context.Context, pkgLayout *layout.PackageLayout, payloadSources []string) error {
+	switch d.s.RegistryInfo.RegistryMode {
+	case state.RegistryModeProxy:
+		podSpec, imageOverride, err := d.proxyInjectorPodSpec()
+		if err != nil {
+			return err
+		}
+		d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImageForPod(ctx, podSpec, imageOverride)
+		if err != nil {
+			return err
+		}
+
+		payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), payloadSources, pkgLayout.Pkg.Metadata.Name)
+		if err != nil {
+			return err
+		}
+		d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
+		d.s.InjectorInfo.PayLoadShaSum = shasum
+	case state.RegistryModeNodePort:
+		seedImage, seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), payloadSources, pkgLayout.Pkg.Metadata.Name, pkgLayout.Pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
+			InjectorNodePort: uint16(d.s.InjectorInfo.Port),
+			RegistryNodePort: uint16(d.s.RegistryInfo.Port),
+			IPFamily:         d.s.IPFamily,
+		})
+		if err != nil {
+			return err
+		}
+		d.s.InjectorInfo.Image = seedImage
+		d.s.InjectorInfo.Port = seedPort
+	}
+	return d.c.SaveState(ctx, d.s)
 }
 
 func (d *deployer) proxyInjectorPodSpec() (*corev1.PodSpec, string, error) {
