@@ -233,7 +233,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		SkipVersionCheck:   opts.SkipVersionCheck,
 		SkipRequiredValues: true,
 		RemoteOptions:      opts.RemoteOptions,
-		ForSkeleton:        true,
+		SkipVariantFilters: []load.VariantDimension{load.VariantArchitecture},
 	})
 	if err != nil {
 		return registry.Reference{}, err

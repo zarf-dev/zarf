@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -55,7 +56,7 @@ func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	return component.Name
 }
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, []string, error) {
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, skipVariantFilters []VariantDimension, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, []string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -86,7 +87,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	components := []v1alpha1.ZarfComponent{}
 
 	for _, component := range pkg.Components {
-		if !compatibleComponent(component, arch, flavor) {
+		if !compatibleComponent(component, arch, flavor, skipVariantFilters) {
 			continue
 		}
 
@@ -130,7 +131,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				}
 			}
 			importedPkg.Components = relevantComponents
-			importedPkg, innerSchemas, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck, remoteOptions)
+			importedPkg, innerSchemas, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, skipVariantFilters, importStack, cachePath, skipVersionCheck, remoteOptions)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
@@ -174,24 +175,17 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 		name := getComponentToImportName(component)
 
-		// When the importing component constrains an arch, use it for the search so that
-		// a skeleton-mode traversal (arch == SkeletonArch) still finds the right variant.
-		searchArch := arch
-		if component.Only.Cluster.Architecture != "" {
-			searchArch = component.Only.Cluster.Architecture
-		}
-
 		found := []v1alpha1.ZarfComponent{}
 		for _, importedComp := range importedPkg.Components {
-			if importedComp.Name == name && compatibleComponent(importedComp, searchArch, flavor) {
+			if importedComp.Name == name && compatibleComponent(importedComp, arch, flavor, skipVariantFilters) {
 				found = append(found, importedComp)
 			}
 		}
 		if len(found) == 0 {
 			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("no compatible component named %s found", name)
 		}
-		// In skeleton mode multiple arch variants are expected; outside skeleton mode only one is valid.
-		if len(found) > 1 && arch != v1alpha1.SkeletonArch {
+		// Multiple arch variants are expected when VariantArchitecture filtering is skipped; otherwise only one is valid.
+		if len(found) > 1 && !slices.Contains(skipVariantFilters, VariantArchitecture) {
 			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("multiple components named %s found", name)
 		}
 
@@ -313,9 +307,9 @@ func validateComponentCompose(c v1alpha1.ZarfComponent) error {
 	return errors.Join(errs...)
 }
 
-func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
-	satisfiesArch := arch == v1alpha1.SkeletonArch || c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
-	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
+func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string, skipVariantFilters []VariantDimension) bool {
+	satisfiesArch := slices.Contains(skipVariantFilters, VariantArchitecture) || c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
+	satisfiesFlavor := slices.Contains(skipVariantFilters, VariantFlavor) || c.Only.Flavor == "" || c.Only.Flavor == flavor
 	return satisfiesArch && satisfiesFlavor
 }
 

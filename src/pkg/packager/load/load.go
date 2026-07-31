@@ -26,6 +26,16 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+// VariantDimension is a dimension along which components of the same name may vary.
+type VariantDimension string
+
+const (
+	// VariantArchitecture is the only.cluster.architecture dimension of a component.
+	VariantArchitecture VariantDimension = "architecture"
+	// VariantFlavor is the only.flavor dimension of a component.
+	VariantFlavor VariantDimension = "flavor"
+)
+
 // DefinitionOptions are the optional parameters to load.PackageDefinition
 type DefinitionOptions struct {
 	Flavor       string
@@ -41,10 +51,10 @@ type DefinitionOptions struct {
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
-	// ForSkeleton disables architecture filtering during import resolution so that all
-	// architecture variants of a component are included in the resolved package. This is
-	// required when publishing skeleton packages which must carry every arch variant.
-	ForSkeleton bool
+	// SkipVariantFilters lists dimensions to retain instead of filtering out.
+	// e.g. VariantArchitecture retains every only.cluster.architecture variant of a
+	// component, as used when publishing skeletons.
+	SkipVariantFilters []VariantDimension
 	types.RemoteOptions
 }
 
@@ -54,6 +64,11 @@ type DefinitionOptions struct {
 type DefinedPackage struct {
 	Pkg             v1alpha1.ZarfPackage
 	ImportedSchemas []string
+}
+
+// AllVariantDimension returns every variant dimension.
+func AllVariantDimension() []VariantDimension {
+	return []VariantDimension{VariantArchitecture, VariantFlavor}
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
@@ -92,7 +107,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 	}
 	var importedSchemas []string
-	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, resolveArch, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, opts.SkipVariantFilters, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
 		return DefinedPackage{}, err
 	}
