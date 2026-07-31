@@ -9,6 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	pkgoci "github.com/defenseunicorns/pkg/oci"
+	"github.com/opencontainers/go-digest"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -153,6 +156,41 @@ func TestResolveImportsDedupNormalization(t *testing.T) {
 		"", "", []string{}, "", false, types.RemoteOptions{})
 	require.NoError(t, err)
 	require.Equal(t, []string{"parent-values.yaml"}, resolved.Values.Files)
+}
+
+func TestFetchOCISkeletonValuesMissingDeclaredLayer(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	tests := []struct {
+		name        string
+		pkg         v1alpha1.ZarfPackage
+		expectedErr string
+	}{
+		{
+			name: "values",
+			pkg: v1alpha1.ZarfPackage{Values: v1alpha1.ZarfValues{
+				Files: []string{layout.ValuesYAML},
+			}},
+			expectedErr: "declares values but does not contain \"values.yaml\"",
+		},
+		{
+			name: "schema",
+			pkg: v1alpha1.ZarfPackage{Values: v1alpha1.ZarfValues{
+				Schema: layout.ValuesSchema,
+			}},
+			expectedErr: "declares values schema but does not contain \"values.schema.json\"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			rootDesc := ocispec.Descriptor{Digest: digest.FromString(tt.name)}
+			_, err := fetchOCISkeletonValues(ctx, nil, &pkgoci.Manifest{}, rootDesc, "oci://example.com/skeleton", t.TempDir(), t.TempDir(), tt.pkg)
+			require.ErrorContains(t, err, tt.expectedErr)
+		})
+	}
 }
 
 func TestMakePathRelativeTo(t *testing.T) {

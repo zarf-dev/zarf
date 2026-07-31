@@ -102,6 +102,9 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 		var importedPkg v1alpha1.ZarfPackage
 		var innerSchemas []string
+		var packageValuesPath string
+		var importedRemote *zoci.Remote
+		var importedRoot *oci.Manifest
 		if component.Import.Path != "" {
 			importPath := filepath.Join(pkgPath.BaseDir, component.Import.Path)
 			for _, sp := range importStack {
@@ -148,20 +151,29 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
-			_, err = remote.ResolveRoot(ctx)
+			rootDesc, err := remote.ResolveRoot(ctx)
 			if err != nil {
 				if strings.Contains(err.Error(), "no matching manifest was found in the manifest list") {
 					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", component.Import.URL, err)
 				}
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
-			importedPkg, err = remote.FetchZarfYAML(ctx)
+			root, err := remote.FetchManifest(ctx, rootDesc)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, nil, err
+			}
+			importedRemote = remote
+			importedRoot = root
+			importedPkg, err = zoci.FetchZarfYAML(ctx, root, remote)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
 
 			if len(importedPkg.Values.Files) > 0 || importedPkg.Values.Schema != "" {
-				return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("imported skeleton %s declares values which are not yet supported", component.Import.URL)
+				packageValuesPath, err = fetchOCISkeletonValues(ctx, remote, root, rootDesc, component.Import.URL, pkgPath.BaseDir, cachePath, importedPkg)
+				if err != nil {
+					return v1alpha1.ZarfPackage{}, nil, err
+				}
 			}
 
 			if !skipVersionCheck {
@@ -186,7 +198,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 		importedComponent := found[0]
 
-		importPath, err := fetchOCISkeleton(ctx, component, pkgPath.BaseDir, cachePath, remoteOptions)
+		importPath, err := fetchOCISkeleton(ctx, component, pkgPath.BaseDir, cachePath, importedRemote, importedRoot)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, nil, err
 		}
@@ -212,11 +224,15 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		components = append(components, composed)
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
+		valuesAnchorPath := importPath
+		if packageValuesPath != "" {
+			valuesAnchorPath = packageValuesPath
+		}
 		for _, v := range importedPkg.Values.Files {
-			valuesFiles = append(valuesFiles, makePathRelativeTo(v, importPath))
+			valuesFiles = append(valuesFiles, makePathRelativeTo(v, valuesAnchorPath))
 		}
 		if importedPkg.Values.Schema != "" {
-			importedSchemas = append(importedSchemas, makePathRelativeTo(importedPkg.Values.Schema, importPath))
+			importedSchemas = append(importedSchemas, makePathRelativeTo(importedPkg.Values.Schema, valuesAnchorPath))
 		}
 		for _, s := range innerSchemas {
 			importedSchemas = append(importedSchemas, makePathRelativeTo(s, importPath))
@@ -274,6 +290,69 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	return pkg, deduplicatedSchemas, nil
 }
 
+// fetchOCISkeletonValues materializes package-scoped values layers from an imported
+// skeleton. The directory is keyed by the resolved root descriptor so repeat imports
+// share both the cached blobs and the stable paths used during values merging.
+func fetchOCISkeletonValues(ctx context.Context, remote *zoci.Remote, root *oci.Manifest, rootDesc ocispec.Descriptor, importURL, packagePath, cachePath string, pkg v1alpha1.ZarfPackage) (string, error) {
+	cache := filepath.Join(cachePath, "oci")
+	store, err := ocistore.New(cache)
+	if err != nil {
+		return "", err
+	}
+
+	valuesDir := filepath.Join(cache, "packages", rootDesc.Digest.Encoded())
+	if err := helpers.CreateDirectory(valuesDir, helpers.ReadWriteExecuteUser); err != nil {
+		return "", err
+	}
+
+	type layer struct {
+		declared bool
+		path     string
+		name     string
+	}
+	layers := []layer{
+		{declared: len(pkg.Values.Files) > 0, path: layout.ValuesYAML, name: "values"},
+		{declared: pkg.Values.Schema != "", path: layout.ValuesSchema, name: "values schema"},
+	}
+	for _, layer := range layers {
+		if !layer.declared {
+			continue
+		}
+		desc := root.Locate(layer.path)
+		if oci.IsEmptyDescriptor(desc) {
+			return "", fmt.Errorf("imported skeleton %s declares %s but does not contain %q", importURL, layer.name, layer.path)
+		}
+		exists, err := store.Exists(ctx, desc)
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			if err := remote.CopyToTarget(ctx, []ocispec.Descriptor{desc}, store, remote.GetDefaultCopyOpts()); err != nil {
+				return "", err
+			}
+		}
+		src := filepath.Join(cache, "blobs", "sha256", desc.Digest.Encoded())
+		dst := filepath.Join(valuesDir, layer.path)
+		contents, err := os.ReadFile(src)
+		if err != nil {
+			return "", fmt.Errorf("unable to read %s for imported skeleton %s: %w", layer.path, importURL, err)
+		}
+		if err := os.WriteFile(dst, contents, helpers.ReadWriteUser); err != nil {
+			return "", fmt.Errorf("unable to materialize %s for imported skeleton %s: %w", layer.path, importURL, err)
+		}
+	}
+
+	absPackagePath, err := filepath.Abs(packagePath)
+	if err != nil {
+		return "", err
+	}
+	rel, err := filepath.Rel(absPackagePath, valuesDir)
+	if err != nil {
+		return "", err
+	}
+	return filepath.ToSlash(rel), nil
+}
+
 func validateComponentCompose(c v1alpha1.ZarfComponent) error {
 	errs := []error{}
 	if strings.Contains(c.Import.Path, v1alpha1.ZarfPackageTemplatePrefix) || strings.Contains(c.Import.URL, v1alpha1.ZarfPackageTemplatePrefix) {
@@ -305,10 +384,14 @@ func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
 	return satisfiesArch && satisfiesFlavor
 }
 
-// TODO (phillebaba): Refactor package structure so that pullOCI can be used instead.
-func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string, remoteOptions types.RemoteOptions) (string, error) {
+// TODO: Extract descriptor-pinned selected-layer materialization into zoci so this
+// component-import path and pullOCI can share it without introducing a package cycle.
+func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string, remote *zoci.Remote, manifest *oci.Manifest) (string, error) {
 	if component.Import.URL == "" {
 		return component.Import.Path, nil
+	}
+	if remote == nil || manifest == nil {
+		return "", fmt.Errorf("missing resolved remote manifest for skeleton %s", component.Import.URL)
 	}
 
 	name := component.Name
@@ -321,29 +404,9 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		return "", err
 	}
 
-	// Get the descriptor for the component.
-	plainHTTP, err := negotiateImportPlainHTTP(ctx, component.Import.URL, remoteOptions)
-	if err != nil {
-		return "", err
-	}
-	remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(),
-		oci.WithPlainHTTP(plainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify))
-	if err != nil {
-		return "", err
-	}
-	_, err = remote.ResolveRoot(ctx)
-	if err != nil {
-		// This error likely won't occur as the root has been resolved before this function is invoked.
-		// This serves as a secondary mechanism to highlight the potential for the package existing without a published skeleton.
-		if strings.Contains(err.Error(), "no matching manifest was found in the manifest list") {
-			return "", fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", component.Import.URL, err)
-		}
-		return "", fmt.Errorf("published skeleton package for %s does not exist: %w", component.Import.URL, err)
-	}
-	manifest, err := remote.FetchRoot(ctx)
-	if err != nil {
-		return "", err
-	}
+	// The caller resolves the OCI reference once and passes its manifest through so
+	// component layers remain pinned to the same immutable descriptor as zarf.yaml
+	// and package-level values.
 	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", name)))
 	var tarball, dir string
 	// If the descriptor for the component tarball was not found then all resources in the component are remote

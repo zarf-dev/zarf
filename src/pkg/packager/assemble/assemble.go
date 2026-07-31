@@ -249,14 +249,22 @@ type AssembleSkeletonOptions struct {
 func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, importedSchemas []string, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
 	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
-	// Creating skeleton packages with the values feature is not yet supported
-	if len(pkg.Values.Files) > 0 || pkg.Values.Schema != "" || len(importedSchemas) > 0 {
-		return nil, errors.New("creating skeleton packages with the values feature is not yet supported")
-	}
-
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(pkg.Values.Files) > 0 {
+		if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, packagePath, buildPath); err != nil {
+			return nil, err
+		}
+		pkg.Values.Files = []string{layout.ValuesYAML}
+	}
+	if pkg.Values.Schema != "" || len(importedSchemas) > 0 {
+		if err = mergeAndWriteValuesSchema(ctx, pkg.Values.Schema, importedSchemas, packagePath, buildPath); err != nil {
+			return nil, err
+		}
+		pkg.Values.Schema = layout.ValuesSchema
 	}
 
 	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {

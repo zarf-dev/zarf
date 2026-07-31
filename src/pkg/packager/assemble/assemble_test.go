@@ -671,6 +671,44 @@ fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm
 	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.Pkg), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
 }
 
+func TestAssembleSkeletonWithValues(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	packagePath := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(packagePath, "values.yaml"), []byte("setting: skeleton\n"), helpers.ReadWriteUser))
+	require.NoError(t, os.WriteFile(filepath.Join(packagePath, "values.schema.json"), []byte(`{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"setting":{"type":"string"}}}`), helpers.ReadWriteUser))
+
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name:    "skeleton-with-values",
+			Version: "0.0.1",
+		},
+		Values: v1alpha1.ZarfValues{
+			Files:  []string{"values.yaml"},
+			Schema: "values.schema.json",
+		},
+	}
+
+	pkgLayout, err := AssembleSkeleton(ctx, pkg, packagePath, nil, AssembleSkeletonOptions{})
+	require.NoError(t, err)
+	require.Equal(t, []string{layout.ValuesYAML}, pkgLayout.Pkg.Values.Files)
+	require.Equal(t, layout.ValuesSchema, pkgLayout.Pkg.Values.Schema)
+
+	values, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML))
+	require.NoError(t, err)
+	require.YAMLEq(t, "setting: skeleton\n", string(values))
+	schema, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema))
+	require.NoError(t, err)
+	require.JSONEq(t, `{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"setting":{"type":"string"}}}`, string(schema))
+
+	checksums, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.Checksums))
+	require.NoError(t, err)
+	require.Contains(t, string(checksums), " "+layout.ValuesYAML)
+	require.Contains(t, string(checksums), " "+layout.ValuesSchema)
+}
+
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	t.Helper()
 	b, err := goyaml.Marshal(pkg)
