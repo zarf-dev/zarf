@@ -1,0 +1,10 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: remote-component-import
+  version: 1.0.0
+components:
+  - name: remote-component
+    import:
+      remote:
+        - url: oci://localhost:31888/components/published-remote-component:1.0.0

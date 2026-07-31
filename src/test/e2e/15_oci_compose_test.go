@@ -243,6 +243,50 @@ func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	}
 }
 
+func (suite *PublishCopySkeletonSuite) Test_4_Remote_Component_Import_V1Beta1() {
+	t := suite.T()
+	t.Log("E2E: v1beta1 remote component import oci://")
+
+	remoteComponentPackage := filepath.Join("src", "test", "packages", "15-remote-component")
+	componentPath := filepath.Join(remoteComponentPackage, "remote-component.yaml")
+	for _, rel := range []string{
+		"files/remote.txt",
+		"archives/images.tar",
+		"charts/remote-chart/Chart.yaml",
+		"charts/remote-chart/templates/configmap.yaml",
+		"values/chart-values.yaml",
+		"manifests/raw-configmap.yaml",
+		"kustomize/kustomization.yaml",
+		"kustomize/configmap.yaml",
+		"values/global.yaml",
+		"values/schema.json",
+	} {
+		suite.FileExists(filepath.Join(remoteComponentPackage, rel))
+	}
+
+	componentRepo := "oci://" + suite.Reference.Registry + "/components"
+	stdOut, stdErr, err := e2e.Zarf(t, "component", "publish", componentPath, componentRepo, "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+	remoteComponentRef := componentRepo + "/published-remote-component:1.0.0"
+	suite.Contains(stdOut, remoteComponentRef)
+
+	stdOut, stdErr, err = e2e.Zarf(t, "dev", "inspect", "definition", remoteComponentPackage, "--plain-http", "--architecture=amd64")
+	suite.NoError(err, stdOut, stdErr)
+
+	for _, expected := range []string{
+		"name: remote-component",
+		"remote.txt",
+		"images.tar",
+		"remote-chart",
+		"chart-values.yaml",
+		"raw-configmap.yaml",
+		"kustomize",
+		"global.yaml",
+	} {
+		suite.Contains(stdOut, expected)
+	}
+}
+
 func (suite *PublishCopySkeletonSuite) DirOrFileExists(path string) {
 	suite.T().Helper()
 

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: remote-chart
+  namespace: remote-component
+data:
+  source: chart

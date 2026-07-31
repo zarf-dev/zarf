@@ -41,7 +41,14 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 	start := time.Now()
 	l.Debug("start resolveImportsV1Beta1", "pkg", pkg.Metadata.Name, "arch", arch, "flavor", flavor)
 
-	baseDir := pkgPath.BaseDir
+	baseDir, err := filepath.Abs(pkgPath.BaseDir)
+	if err != nil {
+		return v1beta1.Package{}, nil, err
+	}
+	manifestFile, err := filepath.Abs(pkgPath.ManifestFile)
+	if err != nil {
+		return v1beta1.Package{}, nil, err
+	}
 
 	var components []v1beta1.Component
 	var vals importedValues
@@ -49,7 +56,7 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 		if !compatibleComponentV1Beta1(component.Selector, arch, flavor) {
 			continue
 		}
-		mergedSpec, compVals, err := resolveComponentSpecImports(ctx, component.ComponentSpec, baseDir, arch, flavor, []string{filepath.Clean(pkgPath.ManifestFile)}, cachePath, remoteOptions)
+		mergedSpec, compVals, err := resolveComponentSpecImports(ctx, component.ComponentSpec, baseDir, arch, flavor, []string{filepath.Clean(manifestFile)}, cachePath, remoteOptions)
 		if err != nil {
 			return v1beta1.Package{}, nil, fmt.Errorf("component %q: %w", component.Name, err)
 		}

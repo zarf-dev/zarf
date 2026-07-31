@@ -1,0 +1,32 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: published-remote-component
+  version: 1.0.0
+values:
+  files:
+    - values/global.yaml
+  schema: values/schema.json
+component:
+  files:
+    - source: files/remote.txt
+      destination: /tmp/remote.txt
+  imageArchives:
+    - path: archives/images.tar
+      images:
+        - example.com/remote/component:1.0.0
+  charts:
+    - name: remote-chart
+      namespace: remote-component
+      local:
+        path: charts/remote-chart
+      valuesFiles:
+        - path: values/chart-values.yaml
+  manifests:
+    - name: remote-manifests
+      namespace: remote-component
+      files:
+        - manifests/raw-configmap.yaml
+      kustomize:
+        files:
+          - kustomize
