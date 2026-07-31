@@ -398,10 +398,12 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 		return fmt.Errorf("package is signed but no verification material was provided (--key, --certificate-identity + --certificate-oidc-issuer): %w", ErrNoVerificationMaterial)
 	}
 
+	// Preserve a caller-provided staging directory while retaining Zarf's default.
+	if opts.TempDir == "" {
+		opts.TempDir = config.CommonOptions.TempDirectory
+	}
+
 	if hasBundleInfo {
-		if opts.TempDir == "" {
-			opts.TempDir = config.CommonOptions.TempDirectory
-		}
 		opts.BundlePath = bundlePath
 		// Auto-enable UseSignedTimestamps when the bundle contains timestamps.
 		// The bundle was signed with a TSA; using those timestamps is required to
@@ -436,9 +438,6 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 
 	// Legacy signature found
 	l.Warn("bundle format signature not found: legacy signature is being deprecated.")
-	if opts.TempDir == "" {
-		opts.TempDir = config.CommonOptions.TempDirectory
-	}
 	opts.Signature = signaturePath
 
 	opts.CommonVerifyOptions.NewBundleFormat = false
