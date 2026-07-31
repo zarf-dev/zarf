@@ -78,27 +78,26 @@ func (p *PackageDefinition) SelectComponents(names []string) {
 	p.pkg.Components = components
 }
 
-// SetV1alpha1Components updates component membership and differential-filtered resources from a v1alpha1 view.
-func (p *PackageDefinition) SetV1alpha1Components(components []v1alpha1.ZarfComponent) {
-	byName := make(map[string][]internalTypes.Component, len(p.pkg.Components))
-	for _, component := range p.pkg.Components {
-		byName[component.Name] = append(byName[component.Name], component)
-	}
-	updated := make([]internalTypes.Component, 0, len(components))
-	for _, component := range components {
-		matches := byName[component.Name]
-		var generic internalTypes.Component
-		if len(matches) > 0 {
-			generic = matches[0]
-			byName[component.Name] = matches[1:]
-		} else {
-			generic = internalTypes.Component{Name: component.Name}
+// SetComponentImages updates the image list for the named component.
+func (p *PackageDefinition) SetComponentImages(componentName string, images []string) {
+	for i := range p.pkg.Components {
+		if p.pkg.Components[i].Name != componentName {
+			continue
 		}
-		generic.Images = mergeImageSources(generic.Images, component.Images)
-		generic.Repositories = repositoriesFromV1alpha1(component.Repos)
-		updated = append(updated, generic)
+		p.pkg.Components[i].Images = mergeImageSources(p.pkg.Components[i].Images, images)
+		return
 	}
-	p.pkg.Components = updated
+}
+
+// SetComponentRepositories updates the git repository list for the named component.
+func (p *PackageDefinition) SetComponentRepositories(componentName string, repos []string) {
+	for i := range p.pkg.Components {
+		if p.pkg.Components[i].Name != componentName {
+			continue
+		}
+		p.pkg.Components[i].Repositories = repositoriesFromV1alpha1(repos)
+		return
+	}
 }
 
 func mergeImageSources(existing []internalTypes.Image, names []string) []internalTypes.Image {

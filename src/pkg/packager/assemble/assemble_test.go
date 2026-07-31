@@ -242,6 +242,58 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 	}
 }
 
+func TestDifferentialComponentResources(t *testing.T) {
+	t.Parallel()
+
+	component := v1alpha1.ZarfComponent{
+		Images: []string{
+			"example.com/include-image-tag:latest",
+			"example.com/image-with-tag:v1",
+			"example.com/diff-image-with-tag:v1",
+			"example.com/image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			"example.com/diff-image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			"example.com/image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			"example.com/diff-image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+		},
+		Repos: []string{
+			"https://example.com/no-ref.git",
+			"https://example.com/branch.git@refs/heads/main",
+			"https://example.com/tag.git@v1",
+			"https://example.com/diff-tag.git@v1",
+			"https://example.com/commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
+			"https://example.com/diff-commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
+		},
+	}
+	differentialImages := map[string]bool{
+		"example.com/include-image-tag:latest": true,
+		"example.com/diff-image-with-tag:v1":   true,
+		"example.com/diff-image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855":            true,
+		"example.com/diff-image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": true,
+	}
+	differentialRepos := map[string]bool{
+		"https://example.com/no-ref.git":                                               true,
+		"https://example.com/branch.git@refs/heads/main":                               true,
+		"https://example.com/diff-tag.git@v1":                                          true,
+		"https://example.com/diff-commit.git@524980951ff16e19dc25232e9aea8fd693989ba6": true,
+	}
+
+	images, repos, err := differentialComponentResources(component, differentialImages, differentialRepos)
+	require.NoError(t, err)
+
+	require.ElementsMatch(t, []string{
+		"example.com/include-image-tag:latest",
+		"example.com/image-with-tag:v1",
+		"example.com/image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+		"example.com/image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+	}, images)
+	require.ElementsMatch(t, []string{
+		"https://example.com/no-ref.git",
+		"https://example.com/branch.git@refs/heads/main",
+		"https://example.com/tag.git@v1",
+		"https://example.com/commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
+	}, repos)
+}
+
 func TestCollectVersionRequirements(t *testing.T) {
 	t.Parallel()
 

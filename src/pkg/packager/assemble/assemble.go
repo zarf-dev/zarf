@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/go-git/go-git/v5/plumbing"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -39,7 +40,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -104,14 +104,16 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		if noVersionSet {
 			return nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
-		// FIXME: this should not be a filter, but instead a custom part of assemble
-		filter := filters.ByDifferentialData(allIncludedImagesMap, allIncludedReposMap)
-		var err error
-		pkg.Components, err = filter.Apply(pkg)
-		if err != nil {
-			return nil, err
+		for componentIdx, component := range pkg.Components {
+			images, repos, err := differentialComponentResources(component, allIncludedImagesMap, allIncludedReposMap)
+			if err != nil {
+				return nil, err
+			}
+			pkg.Components[componentIdx].Images = images
+			pkg.Components[componentIdx].Repos = repos
+			definition.SetComponentImages(component.Name, images)
+			definition.SetComponentRepositories(component.Name, repos)
 		}
-		definition.SetV1alpha1Components(pkg.Components)
 	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -252,6 +254,39 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	}
 
 	return pkgLayout, nil
+}
+
+func differentialComponentResources(component v1alpha1.ZarfComponent, differentialImages map[string]bool, differentialRepos map[string]bool) ([]string, []string, error) {
+	images := make([]string, 0, len(component.Images))
+	for _, img := range component.Images {
+		imgRef, err := transform.ParseImageRef(img)
+		if err != nil {
+			return nil, nil, fmt.Errorf("unable to parse image ref %s: %w", img, err)
+		}
+		imgTag := imgRef.TagOrDigest
+		includeImage := imgTag == ":latest" || imgTag == ":stable" || imgTag == ":nightly"
+		if includeImage || !differentialImages[img] {
+			images = append(images, img)
+		}
+	}
+
+	repos := make([]string, 0, len(component.Repos))
+	for _, repoURL := range component.Repos {
+		_, refPlain, err := transform.GitURLSplitRef(repoURL)
+		if err != nil {
+			return nil, nil, err
+		}
+		var ref plumbing.ReferenceName
+		if refPlain != "" {
+			ref = git.ParseRef(refPlain)
+		}
+		includeRepo := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
+		if includeRepo || !differentialRepos[repoURL] {
+			repos = append(repos, repoURL)
+		}
+	}
+
+	return images, repos, nil
 }
 
 func imageSourcesByComponent(pkg v1beta1.Package) map[string]map[string]string {
