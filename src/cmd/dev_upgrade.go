@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
@@ -27,9 +29,9 @@ func newDevUpgradeSchemaCommand() *cobra.Command {
 	o := &devUpgradeSchemaOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "upgrade-schema [ DIRECTORY ]",
+		Use:     "upgrade [ PATH ]",
 		Short:   "Converts and outputs the existing zarf package config to the given API version. Defaults to latest API version.",
-		Example: "zarf dev upgrade-schema . > zarf.yaml",
+		Example: "zarf dev upgrade . > zarf-v1beta1.yaml",
 		Hidden:  true,
 		Args:    cobra.MaximumNArgs(1),
 		RunE:    o.run,
@@ -41,12 +43,12 @@ func newDevUpgradeSchemaCommand() *cobra.Command {
 }
 
 func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
-	dir := "."
-	if len(args) > 0 {
-		dir = args[0]
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
 	}
 
-	pkgPath, err := layout.ResolvePackagePath(dir)
+	pkgPath, err := layout.ResolvePackagePath(basePath)
 	if err != nil {
 		return err
 	}
@@ -77,6 +79,7 @@ func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
 		if err := goyaml.Unmarshal(b, &pkg); err != nil {
 			return err
 		}
+		componentImportLog(cmd.Context(), pkg)
 		if err := checkRemovedFields(pkg); err != nil {
 			return err
 		}
@@ -131,18 +134,27 @@ func validateVersionUpgrade(from, to string) error {
 	return nil
 }
 
+func componentImportLog(ctx context.Context, pkg v1alpha1.ZarfPackage) {
+	l := logger.From(ctx)
+	for _, c := range pkg.Components {
+		if c.Import.Path == "" && c.Import.URL == "" {
+			continue
+		}
+		l.Info(fmt.Sprintf("component %q uses .components.import; the imported component must become a v1beta1 component config", c.Name))
+	}
+}
+
 func checkRemovedFields(pkg v1alpha1.ZarfPackage) error {
 	var errs []error
 	if pkg.Metadata.YOLO {
 		// TODO, add link to connected docs when available
 		errs = append(errs, fmt.Errorf(".metadata.yolo is removed without replacement in v1beta1 — replace it with connected deployments"))
 	}
-	// TODO link to values docs
 	if len(pkg.Variables) > 0 {
-		errs = append(errs, fmt.Errorf(".variables is removed in v1beta1 — consider using Zarf values instead"))
+		errs = append(errs, fmt.Errorf(".variables is removed in v1beta1 — use Zarf values instead https://docs.zarf.dev/best-practices/variables-to-values/"))
 	}
 	if len(pkg.Constants) > 0 {
-		errs = append(errs, fmt.Errorf(".constants is removed in v1beta1 — consider using Zarf values instead"))
+		errs = append(errs, fmt.Errorf(".constants is removed in v1beta1 — use Zarf values instead https://docs.zarf.dev/best-practices/variables-to-values/"))
 	}
 	for _, c := range pkg.Components {
 		if c.DeprecatedGroup != "" {
@@ -162,9 +174,8 @@ func checkRemovedFields(pkg v1alpha1.ZarfPackage) error {
 			errs = append(errs, fmt.Errorf("can't convert component %s, .components.import.name is removed without replacement in v1beta1", c.Name))
 		}
 		for _, ch := range c.Charts {
-			// TODO link to values docs
 			if len(ch.Variables) > 0 {
-				errs = append(errs, fmt.Errorf("can't convert chart %s in component %s, .components.charts.variables is removed without replacement in v1beta1 — consider using Zarf values instead", ch.Name, c.Name))
+				errs = append(errs, fmt.Errorf("can't convert chart %s in component %s, .components.charts.variables is removed without replacement in v1beta1 — use Zarf values instead ", ch.Name, c.Name))
 			}
 		}
 		errs = append(errs, checkRemovedActionFields(c)...)
