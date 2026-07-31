@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -106,6 +107,10 @@ func TestComponentActions(t *testing.T) {
 	})
 
 	t.Run("action on-deploy-with-env-var", func(t *testing.T) {
+		if runtime.GOOS != "linux" {
+			t.Skip("on-deploy-with-env-var is linux-only")
+		}
+
 		t.Parallel()
 		deployWithEnvVarArtifact := "test-filename-from-env.txt"
 

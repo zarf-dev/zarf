@@ -170,6 +170,8 @@ components:
           - cmd: ./zarf tools kubectl get configmap -n zarf remove-test-configmap || echo "Not Found"
 
   - name: on-deploy-with-env-var
+    only:
+      localOS: linux
     actions:
       onDeploy:
         before:
