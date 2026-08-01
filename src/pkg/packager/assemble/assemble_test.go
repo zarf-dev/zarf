@@ -671,10 +671,9 @@ func TestAssembleSkeleton(t *testing.T) {
 
 	defined, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOptions{})
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, defined.Cleanup()) })
 
 	opt := AssembleSkeletonOptions{}
-	pkgLayout, err := AssembleSkeleton(ctx, defined.Pkg, "./testdata/zarf-skeleton-package", defined.ImportedSchemas, opt)
+	pkgLayout, err := AssembleDefinedSkeleton(ctx, defined, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
@@ -763,9 +762,8 @@ func TestGetSBOM(t *testing.T) {
 	writePackageToDisk(t, pkg, tmpdir)
 	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, defined.Cleanup()) })
 
-	pkgLayout, err := AssemblePackage(ctx, defined.Pkg, tmpdir, nil, AssembleOptions{})
+	pkgLayout, err := AssembleDefinedPackage(ctx, defined, tmpdir, AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
@@ -855,14 +853,13 @@ func TestCreateAbsoluteSources(t *testing.T) {
 
 			defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 			require.NoError(t, err)
-			t.Cleanup(func() { require.NoError(t, defined.Cleanup()) })
 
 			var pkgLayout *layout.PackageLayout
 			if tt.isSkeleton {
-				pkgLayout, err = AssembleSkeleton(ctx, defined.Pkg, tmpdir, defined.ImportedSchemas, AssembleSkeletonOptions{})
+				pkgLayout, err = AssembleDefinedSkeleton(ctx, defined, tmpdir, AssembleSkeletonOptions{})
 				require.NoError(t, err)
 			} else {
-				pkgLayout, err = AssemblePackage(ctx, defined.Pkg, tmpdir, nil, AssembleOptions{SkipSBOM: true})
+				pkgLayout, err = AssembleDefinedPackage(ctx, defined, tmpdir, AssembleOptions{SkipSBOM: true})
 				require.NoError(t, err)
 			}
 			docsDir := filepath.Join(tmpdir, "docs-dir")
@@ -942,9 +939,8 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	writePackageToDisk(t, childPkg, childDir)
 	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, defined.Cleanup()) })
 	// create the package
-	pkgLayout, err := AssemblePackage(context.Background(), defined.Pkg, tmpdir, nil, AssembleOptions{})
+	pkgLayout, err := AssembleDefinedPackage(context.Background(), defined, tmpdir, AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the component has the correct file

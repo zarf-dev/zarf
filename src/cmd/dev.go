@@ -137,18 +137,8 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) (err 
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err = errors.Join(err, defined.Cleanup())
-	}()
-	// Step 1: Merge default values.files to create initial set of default Zarf values
-	valuesPaths := make([]string, len(defined.Pkg.Values.Files))
-	for i, file := range defined.Pkg.Values.Files {
-		valuesPaths[i] = filepath.Join(basePath, file)
-	}
-	zarfValues, err := value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
-	if err != nil {
-		return fmt.Errorf("unable to parse package values files: %w", err)
-	}
+	// Step 1: Start with the values resolved while loading the definition.
+	zarfValues := defined.ResolvedValues.Values.DeepCopy()
 
 	// Step 2: Discover source target mappings and load defaults from chart values where Zarf Value defaults aren't specified
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -206,12 +196,11 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) (err 
 	generatedSchema := value.GenerateJSONSchema(zarfValues)
 
 	// Step 4: Merge and reconcile any existing schema
-	existingSchema, mergeErr := value.MergeSchemaFiles(defined.Pkg.Values.Schema, defined.ImportedSchemas, basePath)
-	if mergeErr != nil {
-		return fmt.Errorf("unable to merge imported schemas for schema generation: %w", mergeErr)
-	}
-
-	if existingSchema != nil {
+	if len(defined.ResolvedValues.Schema) > 0 {
+		existingSchema, schemaErr := value.LoadValidatedSchemaSource(value.Source{Name: "resolved values schema", Data: defined.ResolvedValues.Schema})
+		if schemaErr != nil {
+			return fmt.Errorf("unable to load resolved schema for schema generation: %w", schemaErr)
+		}
 		generatedSchema = value.ReconcileJSONSchema(existingSchema, generatedSchema, o.deleteNotFound)
 	}
 
@@ -225,11 +214,11 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) (err 
 
 	if o.update {
 		outputFileName := filepath.Join(basePath, "values.schema.json")
-		if defined.Pkg.Values.Schema != "" {
-			if !filepath.IsAbs(defined.Pkg.Values.Schema) {
-				outputFileName = filepath.Join(basePath, defined.Pkg.Values.Schema)
+		if defined.ResolvedValues.SchemaOutputPath != "" {
+			if !filepath.IsAbs(defined.ResolvedValues.SchemaOutputPath) {
+				outputFileName = filepath.Join(basePath, defined.ResolvedValues.SchemaOutputPath)
 			} else {
-				outputFileName = defined.Pkg.Values.Schema
+				outputFileName = defined.ResolvedValues.SchemaOutputPath
 			}
 		} else {
 			if err := packager.UpdateSchema(ctx, basePath, "values.schema.json"); err != nil {
@@ -306,9 +295,6 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) (er
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err = errors.Join(err, defined.Cleanup())
-	}()
 	defined.Pkg.Build = v1alpha1.ZarfBuildData{}
 	err = utils.ColorPrintYAML(defined.Pkg, nil, false)
 	if err != nil {

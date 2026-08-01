@@ -80,18 +80,12 @@ components:
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
-	require.Len(t, defined.Pkg.Values.Files, 2, "repeated imports must contribute values once")
-	require.Len(t, defined.ImportedSchemas, 1, "repeated imports must contribute schemas once")
-	require.FileExists(t, filepath.Join(parentPath, defined.Pkg.Values.Files[0]))
-	require.FileExists(t, filepath.Join(parentPath, defined.ImportedSchemas[0]))
-	stagedValuesPath := filepath.Join(parentPath, defined.Pkg.Values.Files[0])
-	tempDir := filepath.Dir(filepath.Dir(filepath.Dir(stagedValuesPath)))
-	defer func() {
-		require.NoError(t, defined.Cleanup())
-		require.NoDirExists(t, tempDir)
-	}()
+	require.Equal(t, []string{layout.ValuesYAML}, defined.Pkg.Values.Files)
+	require.Equal(t, layout.ValuesSchema, defined.Pkg.Values.Schema)
+	require.True(t, defined.ResolvedValues.HasValues)
+	require.NotEmpty(t, defined.ResolvedValues.Schema)
 
-	pkgLayout, err := assemble.AssemblePackage(ctx, defined.Pkg, parentPath, defined.ImportedSchemas, assemble.AssembleOptions{
+	pkgLayout, err := assemble.AssembleDefinedPackage(ctx, defined, parentPath, assemble.AssembleOptions{
 		CachePath:     cachePath,
 		SkipSBOM:      true,
 		RemoteOptions: defaultTestRemoteOptions(),

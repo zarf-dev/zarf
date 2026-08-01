@@ -296,9 +296,6 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err = errors.Join(err, defined.Cleanup())
-	}()
 	pkg := defined.Pkg
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, opts.IsInteractive)
 	if err != nil {
@@ -310,14 +307,10 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		return nil, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
 	}
 
-	vals, err := loadPackageValues(ctx, pkg, pkgPath.BaseDir, opts.Values)
-	if err != nil {
-		return nil, err
-	}
+	vals := mergePackageValues(defined.ResolvedValues.Values, opts.Values)
 
-	if pkg.Values.Schema != "" {
-		schemaPath := filepath.Join(pkgPath.BaseDir, pkg.Values.Schema)
-		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: true}); err != nil {
+	if len(defined.ResolvedValues.Schema) > 0 {
+		if err := vals.ValidateDocument(ctx, defined.ResolvedValues.Schema, value.ValidateOptions{SkipRequired: true}); err != nil {
 			return nil, fmt.Errorf("inspect values validation failed: %w", err)
 		}
 	}

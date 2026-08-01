@@ -6,10 +6,9 @@ package load
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -38,9 +37,6 @@ type DefinitionOptions struct {
 	SkipValuesSchemaValidation bool
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
-	// TempDir is the parent directory for operation-scoped import temporary files. When
-	// empty, config.CommonOptions.TempDirectory is used.
-	TempDir string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
@@ -48,39 +44,22 @@ type DefinitionOptions struct {
 	types.RemoteOptions
 }
 
-// DefinedPackage is the result of loading and resolving a package definition.
-// ImportedSchemas is transient assembly state — child schema paths collected during
-// import resolution that must be passed to AssemblePackage for merging. Call Cleanup
-// after consuming the definition.
-type DefinedPackage struct {
-	Pkg             v1alpha1.ZarfPackage
-	ImportedSchemas []string
-	tempDir         string
+// ResolvedValues contains the values and schema resolved from the package and its imports.
+type ResolvedValues struct {
+	Values           value.Values
+	HasValues        bool
+	Schema           json.RawMessage
+	SchemaOutputPath string
 }
 
-// Cleanup removes operation-scoped files created while resolving imports.
-func (p DefinedPackage) Cleanup() error {
-	if p.tempDir == "" {
-		return nil
-	}
-	return os.RemoveAll(p.tempDir)
+// DefinedPackage is the result of loading and resolving a package definition.
+type DefinedPackage struct {
+	Pkg            v1alpha1.ZarfPackage
+	ResolvedValues ResolvedValues
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
-func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (_ DefinedPackage, retErr error) {
-	if opts.TempDir == "" {
-		opts.TempDir = config.CommonOptions.TempDirectory
-	}
-	tempDir, err := utils.MakeTempDir(opts.TempDir)
-	if err != nil {
-		return DefinedPackage{}, err
-	}
-	defer func() {
-		if retErr != nil {
-			retErr = errors.Join(retErr, os.RemoveAll(tempDir))
-		}
-	}()
-
+func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (DefinedPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
@@ -107,13 +86,27 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return DefinedPackage{}, err
 	}
-	var importedSchemas []string
-	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions, tempDir)
+	resources := importResources{}
+	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions, &resources)
 	if err != nil {
 		return DefinedPackage{}, err
 	}
+	resolvedValues, err := resources.resolve(ctx, pkg.Values.Schema)
+	if err != nil {
+		return DefinedPackage{}, err
+	}
+	if resolvedValues.HasValues {
+		pkg.Values.Files = []string{layout.ValuesYAML}
+	} else {
+		pkg.Values.Files = nil
+	}
+	if len(resolvedValues.Schema) > 0 {
+		pkg.Values.Schema = layout.ValuesSchema
+	} else {
+		pkg.Values.Schema = ""
+	}
 
-	if len(pkg.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
+	if resolvedValues.HasValues && !feature.IsEnabled(feature.Values) {
 		return DefinedPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
@@ -124,15 +117,15 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return DefinedPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation)
+	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation, resolvedValues)
 	if err != nil {
 		return DefinedPackage{}, err
 	}
 	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
-	return DefinedPackage{Pkg: pkg, ImportedSchemas: importedSchemas, tempDir: tempDir}, nil
+	return DefinedPackage{Pkg: pkg, ResolvedValues: resolvedValues}, nil
 }
 
-func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool, resolvedValues ResolvedValues) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -161,7 +154,7 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	}
 
 	if !skipSchemaValidation {
-		if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: skipRequiredValues}); err != nil {
+		if err := validateValuesSchema(ctx, resolvedValues, validateValuesSchemaOptions{skipRequired: skipRequiredValues}); err != nil {
 			return err
 		}
 	}
@@ -180,37 +173,18 @@ type validateValuesSchemaOptions struct {
 	skipRequired bool
 }
 
-func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts validateValuesSchemaOptions) error {
-	// Skip validation if no schema or values files are provided
-	if pkg.Values.Schema == "" || len(pkg.Values.Files) == 0 {
+func validateValuesSchema(ctx context.Context, resolvedValues ResolvedValues, opts validateValuesSchemaOptions) error {
+	if len(resolvedValues.Schema) == 0 || !resolvedValues.HasValues {
 		return nil
 	}
 
 	l := logger.From(ctx)
 
-	pkgPath, err := layout.ResolvePackagePath(packagePath)
-	if err != nil {
-		return err
-	}
-
-	// Resolve values file paths relative to the package directory
-	valueFilePaths := make([]string, len(pkg.Values.Files))
-	for i, vf := range pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(pkgPath.BaseDir, vf)
-	}
-
-	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to parse values files for validation: %w", err)
-	}
-
-	// Resolve declared schema path relative to package root
-	schemaPath := filepath.Join(pkgPath.BaseDir, pkg.Values.Schema)
-	if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
+	if err := resolvedValues.Values.ValidateDocument(ctx, resolvedValues.Schema, value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
 		return fmt.Errorf("values validation failed: %w", err)
 	}
 
-	l.Debug("values validated against schema", "schemaPath", schemaPath)
+	l.Debug("values validated against schema", "schema", "in-memory")
 	return nil
 }
 

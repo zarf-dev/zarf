@@ -113,10 +113,7 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err = errors.Join(err, defined.Cleanup())
-	}()
-	imageScans, err := findImages(ctx, defined.Pkg, packagePath, opts)
+	imageScans, err := findImages(ctx, defined.Pkg, defined.ResolvedValues.Values, packagePath, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -143,10 +140,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err = errors.Join(err, defined.Cleanup())
-	}()
-	return findImages(ctx, defined.Pkg, packagePath, opts)
+	return findImages(ctx, defined.Pkg, defined.ResolvedValues.Values, packagePath, opts)
 }
 
 // filterImagesFoundInArchives merges scan results with each component's imageArchives.
@@ -217,7 +211,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, 
 	return definitionImageResults, nil
 }
 
-func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
+func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resolvedValues value.Values, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
 	s, err := state.Default()
 	if err != nil {
@@ -235,10 +229,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 	if err != nil {
 		return nil, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
 	}
-	vals, err := loadPackageValues(ctx, pkg, pkgPath.BaseDir, opts.Values)
-	if err != nil {
-		return nil, err
-	}
+	vals := mergePackageValues(resolvedValues, opts.Values)
 
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {

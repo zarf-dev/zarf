@@ -5,6 +5,7 @@
 package value
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -57,6 +58,49 @@ type ParseFilesOptions struct {
 	// FileSizeLimit
 	// MaximumYAMLDepth
 	// Timeout
+}
+
+// Source is an in-memory values or schema source. Name is used for diagnostics
+// and file extension validation.
+type Source struct {
+	Name string
+	Data []byte
+	Key  string
+}
+
+// ParseSources parses values sources in order, overwriting previous values
+// with later values.
+func ParseSources(ctx context.Context, sources []Source) (_ Values, err error) {
+	if len(sources) == 0 {
+		return Values{}, nil
+	}
+
+	values := make(Values)
+	for _, source := range sources {
+		ext := strings.ToLower(filepath.Ext(source.Name))
+		if ext != ".yaml" && ext != ".yml" {
+			return nil, &InvalidFileExtError{FilePath: source.Name, Ext: ext}
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		parsed := make(Values)
+		if err := yaml.NewDecoder(bytes.NewReader(source.Data)).DecodeContext(ctx, &parsed); err != nil {
+			if errors.Is(err, io.EOF) {
+				continue
+			}
+			return nil, &YAMLDecodeError{
+				FilePath: source.Name,
+				Err:      fmt.Errorf("%s", yaml.FormatError(err, true, true)),
+			}
+		}
+		values.DeepMerge(parsed)
+	}
+	return values, nil
 }
 
 // ParseFiles parses the given files in order, overwriting previous values with later values, and returns a merged
@@ -383,31 +427,42 @@ func (v Values) Validate(ctx context.Context, schemaPath string, opts ValidateOp
 		return fmt.Errorf("failed to load or parse schema at %s: %w", schemaPath, err)
 	}
 
-	// Check if validation passed
-	if !result.Valid() {
-		errs := result.Errors()
+	return validationError(result, opts, schemaPath)
+}
 
-		// Filter out "required" errors if SkipRequired is true
-		if opts.SkipRequired {
-			var filteredErrors []gojsonschema.ResultError
-			for _, err := range errs {
-				if err.Type() != "required" {
-					filteredErrors = append(filteredErrors, err)
-				}
-			}
-			errs = filteredErrors
-		}
+// ValidateDocument validates Values against an in-memory JSON schema document.
+func (v Values) ValidateDocument(ctx context.Context, schema []byte, opts ValidateOptions) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	defer func() {
+		l.Debug("schema validation complete", "duration", time.Since(start), "schema", "in-memory")
+	}()
 
-		// Only return error if there are validation errors after filtering
-		if len(errs) > 0 {
-			return &SchemaValidationError{
-				SchemaPath: schemaPath,
-				Errors:     errs,
-			}
-		}
+	result, err := gojsonschema.Validate(gojsonschema.NewStringLoader(string(schema)), gojsonschema.NewGoLoader(v))
+	if err != nil {
+		return fmt.Errorf("failed to load or parse in-memory schema: %w", err)
 	}
+	return validationError(result, opts, "in-memory schema")
+}
 
-	return nil
+func validationError(result *gojsonschema.Result, opts ValidateOptions, schemaPath string) error {
+	if result.Valid() {
+		return nil
+	}
+	errs := result.Errors()
+	if opts.SkipRequired {
+		filteredErrors := errs[:0]
+		for _, err := range errs {
+			if err.Type() != "required" {
+				filteredErrors = append(filteredErrors, err)
+			}
+		}
+		errs = filteredErrors
+	}
+	if len(errs) == 0 {
+		return nil
+	}
+	return &SchemaValidationError{SchemaPath: schemaPath, Errors: errs}
 }
 
 // SchemaValidationError represents an error when JSON schema validation fails

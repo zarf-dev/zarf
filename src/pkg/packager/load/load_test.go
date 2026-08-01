@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -41,13 +42,12 @@ func TestLoadPackageWithFlavors(t *testing.T) {
 			opts := DefinitionOptions{
 				Flavor: tt.flavor,
 			}
-			defined, err := PackageDefinition(context.Background(), filepath.Join("testdata", "package-with-flavors"), opts)
+			_, err := PackageDefinition(context.Background(), filepath.Join("testdata", "package-with-flavors"), opts)
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
 				return
 			}
 			require.NoError(t, err)
-			require.NoError(t, defined.Cleanup())
 		})
 	}
 }
@@ -153,7 +153,14 @@ func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.NoError(t, defined.Cleanup())
+			require.Equal(t, []string{"values.yaml"}, defined.Pkg.Values.Files)
+			require.Equal(t, "values.schema.json", defined.Pkg.Values.Schema)
+			require.True(t, defined.ResolvedValues.HasValues)
+			require.Equal(t, "values.schema.json", defined.ResolvedValues.SchemaOutputPath)
+			require.Equal(t, value.Values{"appName": "test-app", "replicas": uint64(3), "enabled": true}, defined.ResolvedValues.Values)
+			expectedSchema, err := os.ReadFile(filepath.Join(tt.packagePath, "values.schema.json"))
+			require.NoError(t, err)
+			require.Equal(t, expectedSchema, []byte(defined.ResolvedValues.Schema))
 		})
 	}
 }

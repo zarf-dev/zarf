@@ -24,18 +24,26 @@ func LoadValidatedSchema(packagePath, path string) (map[string]any, string, erro
 	if err != nil {
 		return nil, path, fmt.Errorf("reading %q schema file: %w", path, err)
 	}
-
-	var schema map[string]any
-	if err := json.Unmarshal(b, &schema); err != nil {
-		return nil, path, fmt.Errorf("parsing %q schema file: %w", path, err)
-	}
-	if err := CheckNoExternalRefs(schema); err != nil {
-		return nil, path, fmt.Errorf("%q schema: %w", path, err)
-	}
-	if err := ValidateSchemaDocument(schema); err != nil {
-		return nil, path, fmt.Errorf("%q schema validation failed: %w", path, err)
+	schema, err := LoadValidatedSchemaSource(Source{Name: path, Data: b})
+	if err != nil {
+		return nil, path, err
 	}
 	return schema, path, nil
+}
+
+// LoadValidatedSchemaSource loads, parses, and validates an in-memory JSON schema source.
+func LoadValidatedSchemaSource(source Source) (map[string]any, error) {
+	var schema map[string]any
+	if err := json.Unmarshal(source.Data, &schema); err != nil {
+		return nil, fmt.Errorf("parsing %q schema: %w", source.Name, err)
+	}
+	if err := CheckNoExternalRefs(schema); err != nil {
+		return nil, fmt.Errorf("%q schema: %w", source.Name, err)
+	}
+	if err := ValidateSchemaDocument(schema); err != nil {
+		return nil, fmt.Errorf("%q schema validation failed: %w", source.Name, err)
+	}
+	return schema, nil
 }
 
 // MergeSchemaFiles loads, validates, and merges the given schema file paths.
@@ -64,6 +72,34 @@ func MergeSchemaFiles(parentPath string, importedPaths []string, packagePath str
 			expectedVersion = ver
 		} else if ver != expectedVersion {
 			return nil, fmt.Errorf("cannot merge schemas with different versions: accumulated schema uses %q but %s declares %q", expectedVersion, absPath, ver)
+		}
+		if merged == nil {
+			merged = schema
+		} else {
+			merged = MergeSchemas(merged, schema)
+		}
+	}
+	return merged, nil
+}
+
+// MergeSchemaSources merges schema sources in priority order. Earlier sources
+// win over later sources.
+func MergeSchemaSources(sources []Source) (map[string]any, error) {
+	var merged map[string]any
+	var expectedVersion string
+	for _, source := range sources {
+		schema, err := LoadValidatedSchemaSource(source)
+		if err != nil {
+			return nil, err
+		}
+		ver := schemaVersion(schema)
+		if ver == "" {
+			return nil, fmt.Errorf("schema %s: missing \"$schema\" version declaration; all schemas being merged must specify a version", source.Name)
+		}
+		if expectedVersion == "" {
+			expectedVersion = ver
+		} else if ver != expectedVersion {
+			return nil, fmt.Errorf("cannot merge schemas with different versions: accumulated schema uses %q but %s declares %q", expectedVersion, source.Name, ver)
 		}
 		if merged == nil {
 			merged = schema

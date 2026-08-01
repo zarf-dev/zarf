@@ -5,7 +5,6 @@ package packager
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -237,9 +236,6 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	defer func() {
-		err = errors.Join(err, defined.Cleanup())
-	}()
 	for _, comp := range defined.Pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")
@@ -252,7 +248,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		Flavor:               opts.Flavor,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
-	pkgLayout, err := assemble.AssembleSkeleton(ctx, defined.Pkg, path, defined.ImportedSchemas, createOpts)
+	pkgLayout, err := assemble.AssembleDefinedSkeleton(ctx, defined, path, createOpts)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
 	}

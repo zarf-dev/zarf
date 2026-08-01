@@ -7,7 +7,6 @@ package packager
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -27,22 +26,14 @@ func getPopulatedVariableConfig(ctx context.Context, pkg v1alpha1.ZarfPackage, s
 	return variableConfig, nil
 }
 
-// loadPackageValues loads values from the package definition's value files and merges CLI-provided overrides on top.
-func loadPackageValues(ctx context.Context, pkg v1alpha1.ZarfPackage, baseDir string, overrides value.Values) (value.Values, error) {
-	vals := value.Values{}
-	if len(pkg.Values.Files) > 0 {
-		valuesPaths := make([]string, len(pkg.Values.Files))
-		for i, file := range pkg.Values.Files {
-			valuesPaths[i] = filepath.Join(baseDir, file)
-		}
-		var err error
-		vals, err = value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse package values files: %w", err)
-		}
+// mergePackageValues applies CLI-provided overrides to already resolved package values.
+func mergePackageValues(resolved, overrides value.Values) value.Values {
+	vals := resolved.DeepCopy()
+	if vals == nil {
+		vals = value.Values{}
 	}
 	vals.DeepMerge(overrides)
-	return vals, nil
+	return vals
 }
 
 type overrideOpts struct {

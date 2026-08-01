@@ -43,9 +43,6 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) (err error)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err = errors.Join(err, defined.Cleanup())
-	}()
 	findings := []lint.PackageFinding{}
 	for i, component := range defined.Pkg.Components {
 		findings = append(findings, lint.CheckComponentValues(component, i)...)

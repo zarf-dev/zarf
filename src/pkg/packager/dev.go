@@ -83,9 +83,6 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err = errors.Join(err, defined.Cleanup())
-	}()
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.ForDeploy(opts.OptionalComponents, false),
@@ -111,7 +108,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		OCIConcurrency:    opts.OCIConcurrency,
 		CachePath:         opts.CachePath,
 	}
-	pkgLayout, err := assemble.AssemblePackage(ctx, defined.Pkg, packagePath, defined.ImportedSchemas, createOpts)
+	pkgLayout, err := assemble.AssembleDefinedPackage(ctx, defined, packagePath, createOpts)
 	if err != nil {
 		return err
 	}

@@ -34,7 +34,7 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := pkgcfg.Parse(ctx, b)
 	require.NoError(t, err)
 
-	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{}, "")
+	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{}, &importResources{})
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
@@ -43,71 +43,58 @@ func TestResolveImports(t *testing.T) {
 	ctx := testutil.TestContext(t)
 
 	testCases := []struct {
-		name             string
-		path             string
-		flavor           string
-		expectedChecksum string
+		name   string
+		path   string
+		flavor string
 	}{
 		{
-			name:             "two zarf.yaml files import each other",
-			path:             "./testdata/import/import-each-other",
-			expectedChecksum: "1ba733591d28761e89f6a576593cb3a09000f3d6a699212214a5aceaf74455c0",
+			name: "two zarf.yaml files import each other",
+			path: "./testdata/import/import-each-other",
 		},
 		{
-			name:             "variables and constants are resolved correctly",
-			path:             "./testdata/import/variables",
-			expectedChecksum: "41e3bdf823769eb2c13079191179ee723a6b8550c5492a8668233de8b77e03da",
+			name: "variables and constants are resolved correctly",
+			path: "./testdata/import/variables",
 		},
 		{
-			name:             "values files from nested imports preserve deepest-first precedence order",
-			path:             "./testdata/import/values/precedence-order",
-			expectedChecksum: "1269606562ec5f7065169f601f0c3d7dff4707ec613216050f513b4ea0161849",
+			name: "values files from nested imports preserve deepest-first precedence order",
+			path: "./testdata/import/values/precedence-order",
 		},
 		{
-			name:             "values files from multiple sibling imports preserve left-to-right order",
-			path:             "./testdata/import/values/multiple-imports",
-			expectedChecksum: "06b9e2cbc17034b371efd57f75bb299e4849b8644f4fdde257f778ff2c48fb01",
+			name: "values files from multiple sibling imports preserve left-to-right order",
+			path: "./testdata/import/values/multiple-imports",
 		},
 		{
-			name:             "duplicate values file paths from consecutive imports are deduplicated",
-			path:             "./testdata/import/values/duplicate-consecutive",
-			expectedChecksum: "9698b8c12900a862f370d12bf240c721a62b5508fc26a34af33cd787261eaca3",
+			name: "duplicate values file paths from consecutive imports are deduplicated",
+			path: "./testdata/import/values/duplicate-consecutive",
 		},
 		{
-			name:             "duplicate values file paths from non-consecutive imports are deduplicated",
-			path:             "./testdata/import/values/duplicate-interleaved",
-			expectedChecksum: "23c92f2941e30e5717546a0f4d3cd76ced28787346d4681936d0acb1df204255",
+			name: "duplicate values file paths from non-consecutive imports are deduplicated",
+			path: "./testdata/import/values/duplicate-interleaved",
 		},
 		{
-			name:             "an empty parent schema is kept even when an imported package has one",
-			path:             "./testdata/import/values/schema-parent-empty",
-			expectedChecksum: "63135e84455ebf25324cbe847d2c778da2adecee477d7c0172744b9825e8615f",
+			name: "an empty parent schema is kept even when an imported package has one",
+			path: "./testdata/import/values/schema-parent-empty",
 		},
 		{
-			name:             "a parent schema takes precedence over an imported package's schema",
-			path:             "./testdata/import/values/schema-parent-wins",
-			expectedChecksum: "e43e13f0f064be03780d69f2772caed374e9f4c30ddfd8c0f09dcb0461a6e53d",
+			name: "a parent schema takes precedence over an imported package's schema",
+			path: "./testdata/import/values/schema-parent-wins",
 		},
 		{
-			name:             "two separate chains of imports importing a common file",
-			path:             "./testdata/import/branch",
-			expectedChecksum: "5213106f8fb4a752a44fc2fd370c06335c31069113d9148ad627082510e9a4ef",
+			name: "two separate chains of imports importing a common file",
+			path: "./testdata/import/branch",
 		},
 		{
-			name:             "flavor is preserved when importing",
-			path:             "./testdata/import/flavor",
-			flavor:           "pistachio",
-			expectedChecksum: "9c60125954b1b38a5947401411b87cde3d586e5ff8eef03bcc37dae1e24ab08e",
+			name:   "flavor is preserved when importing",
+			path:   "./testdata/import/flavor",
+			flavor: "pistachio",
 		},
 		{
-			name:             "chart version and url properties are not overridden",
-			path:             "./testdata/import/chart",
-			expectedChecksum: "ec6553c389314a5853259c58c073a8d214dc807f709f4ac9cad4099f25144ffe",
+			name: "chart version and url properties are not overridden",
+			path: "./testdata/import/chart",
 		},
 		{
-			name:             "archives work as expected",
-			path:             "./testdata/import/archives",
-			expectedChecksum: "9601cb578d72727bba116d008a23f63ac6dd40c3a685e1d790d376469792db5a",
+			name: "archives work as expected",
+			path: "./testdata/import/archives",
 		},
 	}
 
@@ -120,7 +107,8 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{}, "")
+			resources := importResources{}
+			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{}, &resources)
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
@@ -128,9 +116,11 @@ func TestResolveImports(t *testing.T) {
 			expectedPkg, err := pkgcfg.Parse(ctx, b)
 
 			require.NoError(t, err)
+			// Values are resolved separately from the package object; their artifact
+			// paths are canonicalized only by PackageDefinition.
+			expectedPkg.Values = resolvedPkg.Values
 			require.Equal(t, expectedPkg, resolvedPkg)
 			testutil.RequireNoBackslashInPackagePaths(t, resolvedPkg)
-			require.Equal(t, tc.expectedChecksum, testutil.ChecksumZarfYAMLContent(t, resolvedPkg), "resolved zarf.yaml checksum drift — package would differ across build hosts")
 		})
 	}
 }
@@ -154,10 +144,14 @@ func TestResolveImportsDedupNormalization(t *testing.T) {
 
 	// Reuse an existing fixture's directory only as the on-disk anchor — resolveImports
 	// stats the path but does not re-parse zarf.yaml when pkg is passed in.
-	resolved, _, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
-		"", "", []string{}, "", false, types.RemoteOptions{}, "")
+	resources := importResources{}
+	_, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
+		"", "", []string{}, "", false, types.RemoteOptions{}, &resources)
 	require.NoError(t, err)
-	require.Equal(t, []string{"parent-values.yaml"}, resolved.Values.Files)
+	resolved, err := resources.resolve(ctx, "")
+	require.NoError(t, err)
+	require.False(t, resolved.HasValues)
+	require.Empty(t, deduplicateSources(resources.values))
 }
 
 func TestFetchOCISkeletonValuesMissingDeclaredLayer(t *testing.T) {
@@ -189,13 +183,13 @@ func TestFetchOCISkeletonValuesMissingDeclaredLayer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			rootDesc := ocispec.Descriptor{Digest: digest.FromString(tt.name)}
-			_, err := fetchOCISkeletonValues(ctx, nil, &pkgoci.Manifest{}, rootDesc, "oci://example.com/skeleton", t.TempDir(), t.TempDir(), t.TempDir(), tt.pkg)
+			_, err := fetchOCISkeletonValues(ctx, nil, &pkgoci.Manifest{}, rootDesc, "oci://example.com/skeleton", t.TempDir(), tt.pkg)
 			require.ErrorContains(t, err, tt.expectedErr)
 		})
 	}
 }
 
-func TestFetchOCISkeletonValuesUsesOperationTempDir(t *testing.T) {
+func TestFetchOCISkeletonValuesReadsSources(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
@@ -215,24 +209,58 @@ func TestFetchOCISkeletonValuesUsesOperationTempDir(t *testing.T) {
 	rootDesc := ocispec.Descriptor{Digest: digest.FromString("skeleton-root")}
 	pkg := v1alpha1.ZarfPackage{Values: v1alpha1.ZarfValues{Files: []string{layout.ValuesYAML}}}
 	manifest := &pkgoci.Manifest{Manifest: ocispec.Manifest{Layers: []ocispec.Descriptor{desc}}}
-	packagePath := t.TempDir()
-	tempDir := t.TempDir()
-	got, err := fetchOCISkeletonValues(ctx, nil, manifest, rootDesc, "oci://example.com/skeleton", packagePath, cachePath, tempDir, pkg)
+	got, err := fetchOCISkeletonValues(ctx, nil, manifest, rootDesc, "oci://example.com/skeleton", cachePath, pkg)
 	require.NoError(t, err)
 
-	valuesDir := filepath.Join(tempDir, rootDesc.Digest.Algorithm().String(), rootDesc.Digest.Encoded())
-	require.FileExists(t, filepath.Join(valuesDir, layout.ValuesYAML))
-	info, err := os.Lstat(filepath.Join(valuesDir, layout.ValuesYAML))
-	require.NoError(t, err)
-	require.True(t, info.Mode().IsRegular())
-	materialized, err := os.ReadFile(filepath.Join(valuesDir, layout.ValuesYAML))
-	require.NoError(t, err)
-	require.Equal(t, contents, materialized)
-
-	expected, err := filepath.Rel(packagePath, valuesDir)
-	require.NoError(t, err)
-	require.Equal(t, filepath.ToSlash(expected), got)
+	require.Len(t, got.values, 1)
+	require.Equal(t, layout.ValuesYAML, got.values[0].Name)
+	require.Equal(t, contents, got.values[0].Data)
 	require.NoDirExists(t, filepath.Join(cache, "packages"))
+}
+
+func TestFetchOCISkeletonValuesLayerSizeLimit(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	cachePath := t.TempDir()
+	cache := filepath.Join(cachePath, "oci")
+	store, err := ocistore.New(cache)
+	require.NoError(t, err)
+
+	contents := bytes.Repeat([]byte("a"), maxOCISkeletonValuesLayerSize)
+	desc := ocispec.Descriptor{
+		Digest:      digest.FromBytes(contents),
+		Size:        int64(len(contents)),
+		Annotations: map[string]string{ocispec.AnnotationTitle: layout.ValuesYAML},
+	}
+	require.NoError(t, store.Push(ctx, desc, bytes.NewReader(contents)))
+
+	pkg := v1alpha1.ZarfPackage{Values: v1alpha1.ZarfValues{Files: []string{layout.ValuesYAML}}}
+	manifest := &pkgoci.Manifest{Manifest: ocispec.Manifest{Layers: []ocispec.Descriptor{desc}}}
+	resolved, err := fetchOCISkeletonValues(ctx, nil, manifest, ocispec.Descriptor{Digest: digest.FromString("limit")}, "oci://example.com/skeleton", cachePath, pkg)
+	require.NoError(t, err)
+	require.Len(t, resolved.values, 1)
+	require.Len(t, resolved.values[0].Data, maxOCISkeletonValuesLayerSize)
+
+	overLimit := desc
+	overLimit.Size++
+	manifest = &pkgoci.Manifest{Manifest: ocispec.Manifest{Layers: []ocispec.Descriptor{overLimit}}}
+	_, err = fetchOCISkeletonValues(ctx, nil, manifest, ocispec.Descriptor{Digest: digest.FromString("over-limit")}, "oci://example.com/skeleton", cachePath, pkg)
+	require.ErrorContains(t, err, "exceeds the 1048576 byte limit")
+
+	inconsistent := desc
+	inconsistent.Size--
+	manifest = &pkgoci.Manifest{Manifest: ocispec.Manifest{Layers: []ocispec.Descriptor{inconsistent}}}
+	_, err = fetchOCISkeletonValues(ctx, nil, manifest, ocispec.Descriptor{Digest: digest.FromString("inconsistent")}, "oci://example.com/skeleton", cachePath, pkg)
+	require.ErrorContains(t, err, "inconsistent descriptor size")
+}
+
+func sourceNames(sources []value.Source) []string {
+	names := make([]string, len(sources))
+	for i, source := range sources {
+		names[i] = source.Name
+	}
+	return names
 }
 
 func TestMakePathRelativeTo(t *testing.T) {
@@ -325,17 +353,13 @@ func TestResolveImportsValueMerge(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{}, "")
+			resources := importResources{}
+			resolved, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{}, &resources)
 			require.NoError(t, err)
 
-			absPaths := make([]string, len(resolved.Values.Files))
-			for i, f := range resolved.Values.Files {
-				absPaths[i] = filepath.Join(tc.path, f)
-			}
-
-			merged, err := value.ParseFiles(ctx, absPaths, value.ParseFilesOptions{})
+			merged, err := resources.resolve(ctx, resolved.Values.Schema)
 			require.NoError(t, err)
-			require.Equal(t, tc.expected, merged)
+			require.Equal(t, tc.expected, merged.Values)
 		})
 	}
 }
@@ -353,13 +377,13 @@ func TestResolveImportsSchemaCollection(t *testing.T) {
 		{
 			name:            "child schema is collected when parent has no schema",
 			path:            "./testdata/import/values/schema-parent-empty",
-			expectedSchemas: []string{"import/child-values.schema.json"},
+			expectedSchemas: []string{"child-values.schema.json"},
 			expectedParent:  "",
 		},
 		{
 			name:            "child schema is collected when parent also has a schema",
 			path:            "./testdata/import/values/schema-parent-wins",
-			expectedSchemas: []string{"import/child-values.schema.json"},
+			expectedSchemas: []string{"parent-values.schema.json", "child-values.schema.json"},
 			expectedParent:  "parent-values.schema.json",
 		},
 		{
@@ -367,8 +391,8 @@ func TestResolveImportsSchemaCollection(t *testing.T) {
 			path: "./testdata/import/values/schema-deep",
 			// middle's own schema comes first; bottom's schema (from middle's imports) comes second
 			expectedSchemas: []string{
-				"middle/middle-values.schema.json",
-				"middle/bottom/bottom-values.schema.json",
+				"middle-values.schema.json",
+				"bottom-values.schema.json",
 			},
 			expectedParent: "",
 		},
@@ -383,10 +407,11 @@ func TestResolveImportsSchemaCollection(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{}, "")
+			resources := importResources{}
+			resolved, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{}, &resources)
 			require.NoError(t, err)
 
-			require.Equal(t, tc.expectedSchemas, importedSchemas)
+			require.Equal(t, tc.expectedSchemas, sourceNames(resources.schemas))
 			require.Equal(t, tc.expectedParent, resolved.Values.Schema)
 		})
 	}

@@ -40,6 +40,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -68,6 +69,16 @@ type AssembleOptions struct {
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
 func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, importedSchemas []string, opts AssembleOptions) (*layout.PackageLayout, error) {
+	return assemblePackage(ctx, pkg, packagePath, importedSchemas, nil, opts)
+}
+
+// AssembleDefinedPackage assembles a resolved package definition without rereading
+// its values or schema files from the filesystem.
+func AssembleDefinedPackage(ctx context.Context, defined load.DefinedPackage, packagePath string, opts AssembleOptions) (*layout.PackageLayout, error) {
+	return assemblePackage(ctx, defined.Pkg, packagePath, nil, &defined.ResolvedValues, opts)
+}
+
+func assemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, importedSchemas []string, resolvedValues *load.ResolvedValues, opts AssembleOptions) (*layout.PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
@@ -180,12 +191,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 	}
 
-	l.Debug("merging values files to package", "files", pkg.Values.Files)
-	if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, packagePath, buildPath); err != nil {
-		return nil, err
-	}
-
-	if err = mergeAndWriteValuesSchema(ctx, pkg.Values.Schema, importedSchemas, packagePath, buildPath); err != nil {
+	if err = writePackageValues(ctx, pkg, packagePath, buildPath, importedSchemas, resolvedValues); err != nil {
 		return nil, err
 	}
 
@@ -247,6 +253,16 @@ type AssembleSkeletonOptions struct {
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
 func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, importedSchemas []string, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
+	return assembleSkeleton(ctx, pkg, packagePath, importedSchemas, nil, opts)
+}
+
+// AssembleDefinedSkeleton assembles a resolved skeleton definition without
+// rereading its values or schema files from the filesystem.
+func AssembleDefinedSkeleton(ctx context.Context, defined load.DefinedPackage, packagePath string, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
+	return assembleSkeleton(ctx, defined.Pkg, packagePath, nil, &defined.ResolvedValues, opts)
+}
+
+func assembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, importedSchemas []string, resolvedValues *load.ResolvedValues, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
 	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -254,17 +270,8 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		return nil, err
 	}
 
-	if len(pkg.Values.Files) > 0 {
-		if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, packagePath, buildPath); err != nil {
-			return nil, err
-		}
-		pkg.Values.Files = []string{layout.ValuesYAML}
-	}
-	if pkg.Values.Schema != "" || len(importedSchemas) > 0 {
-		if err = mergeAndWriteValuesSchema(ctx, pkg.Values.Schema, importedSchemas, packagePath, buildPath); err != nil {
-			return nil, err
-		}
-		pkg.Values.Schema = layout.ValuesSchema
+	if err = writePackageValues(ctx, pkg, packagePath, buildPath, importedSchemas, resolvedValues); err != nil {
+		return nil, err
 	}
 
 	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
@@ -328,6 +335,27 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 
 	return pkgLayout, nil
+}
+
+func writePackageValues(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, buildPath string, importedSchemas []string, resolvedValues *load.ResolvedValues) error {
+	if resolvedValues == nil {
+		logger.From(ctx).Debug("merging values files to package", "files", pkg.Values.Files)
+		if err := mergeAndWriteValuesFile(ctx, pkg.Values.Files, packagePath, buildPath); err != nil {
+			return err
+		}
+		return mergeAndWriteValuesSchema(ctx, pkg.Values.Schema, importedSchemas, packagePath, buildPath)
+	}
+	if resolvedValues.HasValues {
+		if err := utils.WriteYaml(filepath.Join(buildPath, layout.ValuesYAML), resolvedValues.Values, helpers.ReadWriteUser); err != nil {
+			return err
+		}
+	}
+	if len(resolvedValues.Schema) > 0 {
+		if err := os.WriteFile(filepath.Join(buildPath, layout.ValuesSchema), resolvedValues.Schema, helpers.ReadWriteUser); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // validateImageArchivesNoDuplicates ensures no image appears in multiple image archives

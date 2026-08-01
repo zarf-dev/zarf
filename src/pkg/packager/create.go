@@ -67,9 +67,6 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	if err != nil {
 		return "", err
 	}
-	defer func() {
-		err = errors.Join(err, defined.Cleanup())
-	}()
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
 		return "", fmt.Errorf("unable to access package path %q: %w", packagePath, err)
@@ -105,7 +102,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,
 	}
-	pkgLayout, err := assemble.AssemblePackage(ctx, defined.Pkg, pkgPath.BaseDir, defined.ImportedSchemas, assembleOpt)
+	pkgLayout, err := assemble.AssembleDefinedPackage(ctx, defined, pkgPath.BaseDir, assembleOpt)
 	if err != nil {
 		return "", err
 	}
