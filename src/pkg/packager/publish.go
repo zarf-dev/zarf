@@ -249,7 +249,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		Flavor:               opts.Flavor,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
-	pkgLayout, err := assemble.AssembleSkeleton(ctx, pkg, path, defined.ImportedSchemas, createOpts)
+	pkgLayout, err := assemble.AssembleSkeleton(ctx, defined, path, createOpts)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
 	}

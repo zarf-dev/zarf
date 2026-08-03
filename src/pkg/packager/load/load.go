@@ -48,7 +48,7 @@ type DefinitionOptions struct {
 
 // ResolvedPackage is the result of loading and resolving a package definition.
 // ImportedSchemas is transient assembly state — child schema paths collected during
-// import resolution that must be passed to AssemblePackage for merging.
+// import resolution that must be passed to package assembly for merging.
 type ResolvedPackage struct {
 	PackageDefinition api.PackageDefinition
 	ImportedSchemas   []string
