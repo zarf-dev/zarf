@@ -6,7 +6,6 @@ package wait
 
 import (
 	"context"
-	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -125,7 +123,7 @@ func TestForNetwork(t *testing.T) {
 		},
 		{
 			name:      "Wait for success, non-existent server",
-			host:      "localhost:1",
+			host:      "127.0.0.1:1",
 			condition: "success",
 			timeout:   time.Millisecond * 500,
 			interval:  100 * time.Millisecond,
@@ -186,7 +184,6 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 		makeCtx   func(t *testing.T) context.Context
 		timeout   time.Duration
 		interval  time.Duration
-		probe     networkProbe
 		wantErr   string
 		wantIs    error
 		wantNotIs []error
@@ -194,7 +191,7 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 		{
 			name:     "http context cancelled",
 			protocol: "http",
-			address:  "localhost:1",
+			address:  "127.0.0.1:1",
 			makeCtx: func(t *testing.T) context.Context {
 				ctx, cancel := context.WithCancel(t.Context())
 				t.Cleanup(cancel)
@@ -206,7 +203,6 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 			},
 			timeout:   time.Second,
 			interval:  time.Second,
-			probe:     neverReadyProbe,
 			wantErr:   "wait cancelled: context canceled",
 			wantIs:    context.Canceled,
 			wantNotIs: []error{context.DeadlineExceeded},
@@ -214,7 +210,7 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 		{
 			name:     "http context deadline exceeded",
 			protocol: "http",
-			address:  "localhost:1",
+			address:  "127.0.0.1:1",
 			makeCtx: func(t *testing.T) context.Context {
 				ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
 				t.Cleanup(cancel)
@@ -222,7 +218,6 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 			},
 			timeout:   time.Second,
 			interval:  time.Second,
-			probe:     neverReadyProbe,
 			wantErr:   "wait cancelled: context deadline exceeded",
 			wantIs:    context.DeadlineExceeded,
 			wantNotIs: []error{context.Canceled},
@@ -230,18 +225,17 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 		{
 			name:      "http internal timeout",
 			protocol:  "http",
-			address:   "localhost:1",
+			address:   "127.0.0.1:1",
 			makeCtx:   func(t *testing.T) context.Context { return t.Context() },
 			timeout:   100 * time.Millisecond,
 			interval:  10 * time.Millisecond,
-			probe:     neverReadyProbe,
 			wantErr:   "wait timed out",
 			wantNotIs: []error{context.DeadlineExceeded, context.Canceled},
 		},
 		{
 			name:     "tcp context cancelled",
 			protocol: "tcp",
-			address:  "localhost:1",
+			address:  "127.0.0.1:1",
 			makeCtx: func(t *testing.T) context.Context {
 				ctx, cancel := context.WithCancel(t.Context())
 				t.Cleanup(cancel)
@@ -253,7 +247,6 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 			},
 			timeout:   time.Second,
 			interval:  time.Second,
-			probe:     neverReadyProbe,
 			wantErr:   "wait cancelled: context canceled",
 			wantIs:    context.Canceled,
 			wantNotIs: []error{context.DeadlineExceeded},
@@ -261,7 +254,7 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 		{
 			name:     "tcp context deadline exceeded",
 			protocol: "tcp",
-			address:  "localhost:1",
+			address:  "127.0.0.1:1",
 			makeCtx: func(t *testing.T) context.Context {
 				ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
 				t.Cleanup(cancel)
@@ -269,7 +262,6 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 			},
 			timeout:   time.Second,
 			interval:  time.Second,
-			probe:     neverReadyProbe,
 			wantErr:   "wait cancelled: context deadline exceeded",
 			wantIs:    context.DeadlineExceeded,
 			wantNotIs: []error{context.Canceled},
@@ -277,11 +269,10 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 		{
 			name:      "tcp internal timeout",
 			protocol:  "tcp",
-			address:   "localhost:1",
+			address:   "127.0.0.1:1",
 			makeCtx:   func(t *testing.T) context.Context { return t.Context() },
 			timeout:   100 * time.Millisecond,
 			interval:  10 * time.Millisecond,
-			probe:     neverReadyProbe,
 			wantErr:   "wait timed out",
 			wantNotIs: []error{context.DeadlineExceeded, context.Canceled},
 		},
@@ -293,7 +284,7 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 			ctx := tt.makeCtx(t)
 
 			start := time.Now()
-			err := waitForNetwork(ctx, tt.protocol, tt.address, "", tt.timeout, tt.interval, tt.probe)
+			err := forNetwork(ctx, tt.protocol, tt.address, "", tt.timeout, tt.interval)
 			elapsed := time.Since(start)
 
 			require.EqualError(t, err, tt.wantErr)
@@ -306,37 +297,4 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 			require.Less(t, elapsed, time.Second, "forNetwork should return promptly")
 		})
 	}
-}
-
-func TestWaitForNetworkRetriesRetryableProbeErrors(t *testing.T) {
-	t.Parallel()
-
-	attempts := 0
-	probe := func(_ context.Context, _ string, _ string, _ string, _ time.Duration) (bool, error) {
-		attempts++
-		if attempts < 2 {
-			return false, errors.New("not ready")
-		}
-		return true, nil
-	}
-
-	err := waitForNetwork(t.Context(), "tcp", "unused", "", 500*time.Millisecond, 10*time.Millisecond, probe)
-	require.NoError(t, err)
-	require.Equal(t, 2, attempts)
-}
-
-func TestWaitForNetworkReturnsFatalProbeErrors(t *testing.T) {
-	t.Parallel()
-
-	errFatal := errors.New("invalid condition")
-	probe := func(_ context.Context, _ string, _ string, _ string, _ time.Duration) (bool, error) {
-		return false, retry.Unrecoverable(errFatal)
-	}
-
-	err := waitForNetwork(t.Context(), "http", "unused", "", 500*time.Millisecond, 10*time.Millisecond, probe)
-	require.ErrorIs(t, err, errFatal)
-}
-
-func neverReadyProbe(_ context.Context, _ string, _ string, _ string, _ time.Duration) (bool, error) {
-	return false, nil
 }

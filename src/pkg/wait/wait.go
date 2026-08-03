@@ -398,15 +398,9 @@ func ForNetwork(ctx context.Context, protocol, address, condition string, timeou
 	return forNetwork(ctx, protocol, address, condition, timeout, waitInterval)
 }
 
-type networkProbe func(ctx context.Context, protocol string, address string, condition string, waitInterval time.Duration) (bool, error)
-
 var errNetworkNotReady = errors.New("network endpoint not ready")
 
 func forNetwork(ctx context.Context, protocol string, address string, condition string, timeout time.Duration, waitInterval time.Duration) error {
-	return waitForNetwork(ctx, protocol, address, condition, timeout, waitInterval, probeNetwork)
-}
-
-func waitForNetwork(ctx context.Context, protocol string, address string, condition string, timeout time.Duration, waitInterval time.Duration, probe networkProbe) error {
 	l := logger.From(ctx)
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -417,7 +411,7 @@ func waitForNetwork(ctx context.Context, protocol string, address string, condit
 	}
 
 	err := retry.Do(func() error {
-		ok, err := probe(timeoutCtx, protocol, address, condition, waitInterval)
+		ok, err := probeNetwork(timeoutCtx, protocol, address, condition, waitInterval)
 		if err != nil {
 			l.Debug(err.Error())
 			return err
