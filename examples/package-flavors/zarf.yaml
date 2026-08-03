@@ -4,10 +4,6 @@ metadata:
   description: Simple example to show how to use the `only.flavor` key to build package variants.
   version: 1.0.0
 
-values:
-  files:
-    - values.yaml
-
 components:
   - name: image
     required: true
