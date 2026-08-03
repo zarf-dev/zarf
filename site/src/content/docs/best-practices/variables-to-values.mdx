@@ -224,6 +224,42 @@ spec:
         {{- toYaml .Values.tolerations | nindent 8 }}
 ```
 
+## Migrating Variable Validation
+
+Legacy variables use `pattern` on the variable definition to validate deploy-time input. With values, move that regex into the values schema and point `values.schema` at the schema file.
+
+### Before (Legacy)
+
+```yaml
+# zarf.yaml
+variables:
+  - name: DATABASE_USERNAME
+    default: "postgres"
+    pattern: "^[a-z][a-z0-9_]{2,31}$"
+```
+
+### After (Package Values)
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "database": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,31}$"
+        }
+      },
+      "required": ["username"]
+    }
+  },
+  "required": ["database"]
+}
+```
+
 
 ## Migrating Constants
 
