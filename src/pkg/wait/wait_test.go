@@ -88,6 +88,7 @@ func TestForNetwork(t *testing.T) {
 	successServerURL := strings.TrimPrefix(successServer.URL, "http://")
 	notFoundServerURL := strings.TrimPrefix(notFoundServer.URL, "http://")
 	hangingServerURL := strings.TrimPrefix(hangingServer.URL, "http://")
+	closedTCPAddress := closedLocalTCPAddress(t)
 
 	tests := []struct {
 		name      string
@@ -123,7 +124,7 @@ func TestForNetwork(t *testing.T) {
 		},
 		{
 			name:      "Wait for success, non-existent server",
-			host:      "127.0.0.1:1",
+			host:      closedTCPAddress,
 			condition: "success",
 			timeout:   time.Millisecond * 500,
 			interval:  100 * time.Millisecond,
@@ -155,27 +156,20 @@ func TestForNetwork(t *testing.T) {
 func TestForNetworkTCP(t *testing.T) {
 	t.Parallel()
 
-	ln, err := net.Listen("tcp4", "127.0.0.1:0")
-	require.NoError(t, err)
-	t.Cleanup(func() { ln.Close() }) //nolint:errcheck
-
-	go func() {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				return
-			}
-			conn.Close() //nolint:errcheck
-		}
-	}()
-
-	addr := ln.Addr().String()
-	err = forNetwork(t.Context(), "tcp", addr, "", time.Second, 100*time.Millisecond)
+	addr := startFakeTCPServer(t)
+	err := forNetwork(t.Context(), "tcp", addr, "", time.Second, 100*time.Millisecond)
 	require.NoError(t, err)
 }
 
 func TestForNetworkCancellationAndTimeout(t *testing.T) {
 	t.Parallel()
+
+	hangingServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	t.Cleanup(hangingServer.Close)
+	hangingServerURL := strings.TrimPrefix(hangingServer.URL, "http://")
+	closedTCPAddress := closedLocalTCPAddress(t)
 
 	tests := []struct {
 		name      string
@@ -191,7 +185,7 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 		{
 			name:     "http context cancelled",
 			protocol: "http",
-			address:  "127.0.0.1:1",
+			address:  hangingServerURL,
 			makeCtx: func(t *testing.T) context.Context {
 				ctx, cancel := context.WithCancel(t.Context())
 				t.Cleanup(cancel)
@@ -210,7 +204,7 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 		{
 			name:     "http context deadline exceeded",
 			protocol: "http",
-			address:  "127.0.0.1:1",
+			address:  hangingServerURL,
 			makeCtx: func(t *testing.T) context.Context {
 				ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
 				t.Cleanup(cancel)
@@ -225,7 +219,7 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 		{
 			name:      "http internal timeout",
 			protocol:  "http",
-			address:   "127.0.0.1:1",
+			address:   hangingServerURL,
 			makeCtx:   func(t *testing.T) context.Context { return t.Context() },
 			timeout:   100 * time.Millisecond,
 			interval:  10 * time.Millisecond,
@@ -235,7 +229,7 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 		{
 			name:     "tcp context cancelled",
 			protocol: "tcp",
-			address:  "127.0.0.1:1",
+			address:  closedTCPAddress,
 			makeCtx: func(t *testing.T) context.Context {
 				ctx, cancel := context.WithCancel(t.Context())
 				t.Cleanup(cancel)
@@ -254,7 +248,7 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 		{
 			name:     "tcp context deadline exceeded",
 			protocol: "tcp",
-			address:  "127.0.0.1:1",
+			address:  closedTCPAddress,
 			makeCtx: func(t *testing.T) context.Context {
 				ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
 				t.Cleanup(cancel)
@@ -269,7 +263,7 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 		{
 			name:      "tcp internal timeout",
 			protocol:  "tcp",
-			address:   "127.0.0.1:1",
+			address:   closedTCPAddress,
 			makeCtx:   func(t *testing.T) context.Context { return t.Context() },
 			timeout:   100 * time.Millisecond,
 			interval:  10 * time.Millisecond,
@@ -297,4 +291,34 @@ func TestForNetworkCancellationAndTimeout(t *testing.T) {
 			require.Less(t, elapsed, time.Second, "forNetwork should return promptly")
 		})
 	}
+}
+
+func startFakeTCPServer(t *testing.T) string {
+	t.Helper()
+
+	ln, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { ln.Close() }) //nolint:errcheck
+
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			conn.Close() //nolint:errcheck
+		}
+	}()
+
+	return ln.Addr().String()
+}
+
+func closedLocalTCPAddress(t *testing.T) string {
+	t.Helper()
+
+	ln, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+	addr := ln.Addr().String()
+	require.NoError(t, ln.Close())
+	return addr
 }
