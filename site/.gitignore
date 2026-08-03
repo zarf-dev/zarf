@@ -25,5 +25,5 @@ src/assets/schema/
 src/content/docs/ref/Examples
 # archived version subtrees staged by hack/build-versions.mjs
 src/content/docs/v[0-9]*-[0-9]*/
-src/assets/versioned-raw/
+src/assets/versioned-assets/
 versions.json
