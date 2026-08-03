@@ -98,7 +98,7 @@ components:
         before:
           # setValues can be used to set a value for use in other actions or components
           - cmd: echo "meow"
-            # the key to set with the output of the action (only useable onDeploy)
+            # the key to set with the output of the action (only useable onDeploy and onRemove)
             setValues:
               - key: .sounds.cat
           # this action will have access to the value set in the previous action
