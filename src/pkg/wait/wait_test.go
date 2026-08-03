@@ -6,6 +6,7 @@ package wait
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,6 +62,7 @@ func TestIsJSONPathWaitType(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			result := isJSONPathWaitType(tt.waitType)
@@ -68,7 +71,7 @@ func TestIsJSONPathWaitType(t *testing.T) {
 	}
 }
 
-func TestForNetwork(t *testing.T) {
+func TestProbeNetworkHTTP(t *testing.T) {
 	t.Parallel()
 	successServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -94,199 +97,214 @@ func TestForNetwork(t *testing.T) {
 		name      string
 		host      string
 		condition string
-		timeout   time.Duration
-		interval  time.Duration
+		wantOK    bool
 		expectErr bool
 	}{
 		{
-			name:      "Wait for success, get success",
+			name:      "success condition accepts 2xx",
 			host:      successServerURL,
 			condition: "success",
-			timeout:   time.Second,
-			interval:  100 * time.Millisecond,
+			wantOK:    true,
 			expectErr: false,
 		},
 		{
-			name:      "Wait for success, get not found",
+			name:      "success condition rejects 404",
 			host:      notFoundServerURL,
 			condition: "success",
-			timeout:   500 * time.Millisecond,
-			interval:  100 * time.Millisecond,
-			expectErr: true,
+			wantOK:    false,
+			expectErr: false,
 		},
 		{
-			name:      "Wait for not found, get not found",
+			name:      "status code condition accepts matching code",
 			host:      notFoundServerURL,
 			condition: "404",
-			timeout:   time.Second,
-			interval:  100 * time.Millisecond,
+			wantOK:    true,
 			expectErr: false,
 		},
 		{
-			name:      "Wait for success, non-existent server",
+			name:      "status code condition rejects non-matching code",
+			host:      notFoundServerURL,
+			condition: "200",
+			wantOK:    false,
+			expectErr: false,
+		},
+		{
+			name:      "closed port returns error",
 			host:      closedTCPAddress,
 			condition: "success",
-			timeout:   time.Millisecond * 500,
-			interval:  100 * time.Millisecond,
+			wantOK:    false,
 			expectErr: true,
 		},
 		{
-			name:      "Wait for success, hanging server should timeout not hang",
+			name:      "hanging server returns error",
 			host:      hangingServerURL,
 			condition: "success",
-			timeout:   time.Millisecond * 500,
-			interval:  time.Millisecond * 100,
+			wantOK:    false,
 			expectErr: true,
 		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := forNetwork(t.Context(), "http", tt.host, tt.condition, tt.timeout, tt.interval)
+			ok, err := probeNetwork(t.Context(), "http", tt.host, tt.condition, 100*time.Millisecond)
 			if tt.expectErr {
 				require.Error(t, err)
+				require.False(t, ok)
 				return
 			}
 			require.NoError(t, err)
+			require.Equal(t, tt.wantOK, ok)
 		})
 	}
 }
 
-func TestForNetworkTCP(t *testing.T) {
+func TestProbeNetworkTCP(t *testing.T) {
 	t.Parallel()
 
 	addr := startFakeTCPServer(t)
-	err := forNetwork(t.Context(), "tcp", addr, "", time.Second, 100*time.Millisecond)
+	ok, err := probeNetwork(t.Context(), "tcp", addr, "", 100*time.Millisecond)
 	require.NoError(t, err)
+	require.True(t, ok)
+
+	ok, err = probeNetwork(t.Context(), "tcp", closedLocalTCPAddress(t), "", 100*time.Millisecond)
+	require.Error(t, err)
+	require.False(t, ok)
 }
 
-func TestForNetworkCancellationAndTimeout(t *testing.T) {
+func TestWaitForNetwork(t *testing.T) {
 	t.Parallel()
 
-	hangingServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-		<-r.Context().Done()
-	}))
-	t.Cleanup(hangingServer.Close)
-	hangingServerURL := strings.TrimPrefix(hangingServer.URL, "http://")
-	closedTCPAddress := closedLocalTCPAddress(t)
-
 	tests := []struct {
-		name      string
-		protocol  string
-		address   string
-		makeCtx   func(t *testing.T) context.Context
-		timeout   time.Duration
-		interval  time.Duration
-		wantErr   string
-		wantIs    error
-		wantNotIs []error
+		name           string
+		cancelContext  bool
+		contextTimeout time.Duration
+		probe          func(context.Context, string, string, string, time.Duration) (bool, error)
+		timeout        time.Duration
+		interval       time.Duration
+		wantErr        string
+		wantIs         error
+		wantNotIs      []error
+		attempts       int
 	}{
 		{
-			name:     "http context cancelled",
-			protocol: "http",
-			address:  hangingServerURL,
-			makeCtx: func(t *testing.T) context.Context {
-				ctx, cancel := context.WithCancel(t.Context())
-				t.Cleanup(cancel)
-				go func() {
-					time.Sleep(50 * time.Millisecond)
-					cancel()
-				}()
-				return ctx
+			name: "success on first probe",
+			probe: func(context.Context, string, string, string, time.Duration) (bool, error) {
+				return true, nil
 			},
-			timeout:   time.Second,
-			interval:  time.Second,
-			wantErr:   "wait cancelled: context canceled",
-			wantIs:    context.Canceled,
-			wantNotIs: []error{context.DeadlineExceeded},
+			timeout:  time.Second,
+			interval: 10 * time.Millisecond,
+			attempts: 1,
 		},
 		{
-			name:     "http context deadline exceeded",
-			protocol: "http",
-			address:  hangingServerURL,
-			makeCtx: func(t *testing.T) context.Context {
-				ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
-				t.Cleanup(cancel)
-				return ctx
-			},
-			timeout:   time.Second,
-			interval:  time.Second,
-			wantErr:   "wait cancelled: context deadline exceeded",
-			wantIs:    context.DeadlineExceeded,
-			wantNotIs: []error{context.Canceled},
+			name: "success after retry",
+			probe: func() func(context.Context, string, string, string, time.Duration) (bool, error) {
+				attempts := 0
+				return func(context.Context, string, string, string, time.Duration) (bool, error) {
+					attempts++
+					return attempts == 2, nil
+				}
+			}(),
+			timeout:  time.Second,
+			interval: 10 * time.Millisecond,
+			attempts: 2,
 		},
 		{
-			name:      "http internal timeout",
-			protocol:  "http",
-			address:   hangingServerURL,
-			makeCtx:   func(t *testing.T) context.Context { return t.Context() },
+			name:          "context cancelled",
+			cancelContext: true,
+			probe:         neverReadyProbe,
+			timeout:       time.Second,
+			interval:      time.Second,
+			wantErr:       "wait cancelled: context canceled",
+			wantIs:        context.Canceled,
+			wantNotIs:     []error{context.DeadlineExceeded},
+		},
+		{
+			name:           "context deadline exceeded",
+			contextTimeout: 100 * time.Millisecond,
+			probe:          neverReadyProbe,
+			timeout:        time.Second,
+			interval:       time.Second,
+			wantErr:        "wait cancelled: context deadline exceeded",
+			wantIs:         context.DeadlineExceeded,
+			wantNotIs:      []error{context.Canceled},
+		},
+		{
+			name:      "internal timeout",
+			probe:     neverReadyProbe,
 			timeout:   100 * time.Millisecond,
 			interval:  10 * time.Millisecond,
 			wantErr:   "wait timed out",
 			wantNotIs: []error{context.DeadlineExceeded, context.Canceled},
 		},
 		{
-			name:     "tcp context cancelled",
-			protocol: "tcp",
-			address:  closedTCPAddress,
-			makeCtx: func(t *testing.T) context.Context {
-				ctx, cancel := context.WithCancel(t.Context())
-				t.Cleanup(cancel)
-				go func() {
-					time.Sleep(50 * time.Millisecond)
-					cancel()
-				}()
-				return ctx
-			},
-			timeout:   time.Second,
-			interval:  time.Second,
-			wantErr:   "wait cancelled: context canceled",
-			wantIs:    context.Canceled,
-			wantNotIs: []error{context.DeadlineExceeded},
+			name: "retryable probe errors are retried",
+			probe: func() func(context.Context, string, string, string, time.Duration) (bool, error) {
+				attempts := 0
+				return func(context.Context, string, string, string, time.Duration) (bool, error) {
+					attempts++
+					if attempts < 2 {
+						return false, errors.New("not ready")
+					}
+					return true, nil
+				}
+			}(),
+			timeout:  time.Second,
+			interval: 10 * time.Millisecond,
+			attempts: 2,
 		},
 		{
-			name:     "tcp context deadline exceeded",
-			protocol: "tcp",
-			address:  closedTCPAddress,
-			makeCtx: func(t *testing.T) context.Context {
-				ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
-				t.Cleanup(cancel)
-				return ctx
+			name: "unrecoverable probe errors return immediately",
+			probe: func(context.Context, string, string, string, time.Duration) (bool, error) {
+				return false, retry.Unrecoverable(errors.New("invalid condition"))
 			},
-			timeout:   time.Second,
-			interval:  time.Second,
-			wantErr:   "wait cancelled: context deadline exceeded",
-			wantIs:    context.DeadlineExceeded,
-			wantNotIs: []error{context.Canceled},
-		},
-		{
-			name:      "tcp internal timeout",
-			protocol:  "tcp",
-			address:   closedTCPAddress,
-			makeCtx:   func(t *testing.T) context.Context { return t.Context() },
-			timeout:   100 * time.Millisecond,
-			interval:  10 * time.Millisecond,
-			wantErr:   "wait timed out",
-			wantNotIs: []error{context.DeadlineExceeded, context.Canceled},
+			timeout:  time.Second,
+			interval: 10 * time.Millisecond,
+			wantErr:  "invalid condition",
+			attempts: 1,
 		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ctx := tt.makeCtx(t)
+			ctx := t.Context()
+			if tt.contextTimeout > 0 {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(ctx, tt.contextTimeout)
+				t.Cleanup(cancel)
+			}
+			if tt.cancelContext {
+				cancelCtx, cancel := context.WithCancel(ctx)
+				cancel()
+				ctx = cancelCtx
+				t.Cleanup(cancel)
+			}
+			attempts := 0
+			probe := func(ctx context.Context, protocol string, address string, condition string, waitInterval time.Duration) (bool, error) {
+				attempts++
+				return tt.probe(ctx, protocol, address, condition, waitInterval)
+			}
 
 			start := time.Now()
-			err := forNetwork(ctx, tt.protocol, tt.address, "", tt.timeout, tt.interval)
+			err := waitForNetwork(ctx, "test", "unused", "", tt.timeout, tt.interval, probe)
 			elapsed := time.Since(start)
 
-			require.EqualError(t, err, tt.wantErr)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tt.wantErr)
+			}
 			if tt.wantIs != nil {
 				require.ErrorIs(t, err, tt.wantIs)
 			}
 			for _, notIs := range tt.wantNotIs {
 				require.NotErrorIs(t, err, notIs)
+			}
+			if tt.attempts > 0 {
+				require.Equal(t, tt.attempts, attempts)
 			}
 			require.Less(t, elapsed, time.Second, "forNetwork should return promptly")
 		})
@@ -321,4 +339,8 @@ func closedLocalTCPAddress(t *testing.T) string {
 	addr := ln.Addr().String()
 	require.NoError(t, ln.Close())
 	return addr
+}
+
+func neverReadyProbe(context.Context, string, string, string, time.Duration) (bool, error) {
+	return false, nil
 }
