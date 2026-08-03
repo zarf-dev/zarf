@@ -50,12 +50,12 @@ export function fixEscapingRelative(spec: string, fileDir: string, versionRoot: 
   return escapes ? "../" + spec : spec;
 }
 
-export function rewriteVersionedRawImport(spec: string, versionSlug: string): string | null {
+export function rewriteVersionedAssetImport(spec: string, versionSlug: string): string | null {
   const match = spec.match(/^(?:\.\.\/)+(examples|packages)\/(.+\?raw)$/);
   if (!match) return null;
 
   const [, sourceKind, sourcePath] = match;
-  return `/src/assets/versioned-raw/${versionSlug}/${sourceKind}/${sourcePath}`;
+  return `/src/assets/versioned-assets/${versionSlug}/${sourceKind}/${sourcePath}`;
 }
 
 const SOURCE_NODES = new Set([
@@ -103,7 +103,7 @@ export function remarkLinkRewrite(options: Options) {
     const fileDir = path.dirname(file.path);
 
     const fixRelative = (spec: string) =>
-      rewriteVersionedRawImport(spec, versionSlug) ?? fixEscapingRelative(spec, fileDir, versionRoot);
+      rewriteVersionedAssetImport(spec, versionSlug) ?? fixEscapingRelative(spec, fileDir, versionRoot);
     const fixUrl = (url: string) => (url.startsWith("/") ? rewriteUrl(url, prefix, sections) : fixRelative(url));
 
     // Markdown links, link reference definitions, and images.

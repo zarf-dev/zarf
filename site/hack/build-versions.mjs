@@ -12,7 +12,7 @@ const siteDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const repoDir = path.resolve(siteDir, "..");
 const docsDir = path.join(siteDir, "src/content/docs");
 const schemaDir = path.join(siteDir, "src/assets/schema");
-const versionedRawDir = path.join(siteDir, "src/assets/versioned-raw");
+const versionedAssetsDir = path.join(siteDir, "src/assets/versioned-assets");
 const worktreeRoot = path.join(repoDir, ".docs-version-builds");
 const zarfGitRepo = "https://github.com/zarf-dev/zarf.git";
 
@@ -122,7 +122,7 @@ async function cleanStaged() {
     }
   }
   await fs.rm(schemaDir, { recursive: true, force: true });
-  await fs.rm(versionedRawDir, { recursive: true, force: true });
+  await fs.rm(versionedAssetsDir, { recursive: true, force: true });
 }
 
 // Renderable per-API-version schemas a release ships, keyed by the slug its docs
@@ -139,14 +139,14 @@ function apiSchemaSources(root) {
   return sources;
 }
 
-async function stageRawSources(worktree, slug) {
-  const rawRoot = path.join(versionedRawDir, slug);
-  await fs.rm(rawRoot, { recursive: true, force: true });
-  await fs.mkdir(rawRoot, { recursive: true });
+async function stageVersionedAssets(worktree, slug) {
+  const assetRoot = path.join(versionedAssetsDir, slug);
+  await fs.rm(assetRoot, { recursive: true, force: true });
+  await fs.mkdir(assetRoot, { recursive: true });
   for (const sourceKind of ["examples", "packages"]) {
     const src = path.join(worktree, sourceKind);
     if (existsSync(src)) {
-      await fs.cp(src, path.join(rawRoot, sourceKind), { recursive: true });
+      await fs.cp(src, path.join(assetRoot, sourceKind), { recursive: true });
     }
   }
 }
@@ -167,7 +167,7 @@ async function stageVersion({ ref, slug }) {
     const dst = path.join(docsDir, slug);
     await fs.rm(dst, { recursive: true, force: true });
     await fs.cp(path.join(worktree, "site/src/content/docs"), dst, { recursive: true });
-    await stageRawSources(worktree, slug);
+    await stageVersionedAssets(worktree, slug);
     // Examples and schema are generated artifacts, absent from the checkout.
     await generateExamples({
       examplesDir: path.join(worktree, "examples"),
