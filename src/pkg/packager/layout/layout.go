@@ -72,3 +72,43 @@ func KustomizationFileName(manifestName string, idx int) string {
 func ComponentFileRelPath(idx int, target string) string {
 	return filepath.Join(strconv.Itoa(idx), filepath.Base(target))
 }
+
+// chartStem is the name both of a chart's packaged artifacts are built from:
+// "<name>" when the version is empty, otherwise "<name>-<version>".
+func chartStem(name, version string) string {
+	if version == "" {
+		return name
+	}
+	return name + "-" + version
+}
+
+// ChartArchiveName returns the file name of a chart's packaged tarball, within a
+// component's charts directory.
+func ChartArchiveName(name, version string) string {
+	return chartStem(name, version) + ".tgz"
+}
+
+// ChartValuesFileName returns the file name of the idx-th values file of the named
+// chart, within a component's values directory.
+func ChartValuesFileName(name, version string, idx int) string {
+	return chartStem(name, version) + "-" + strconv.Itoa(idx)
+}
+
+// ChartPaths resolves the on-disk locations of a chart's packaged artifacts
+// within a component's charts and values directories.
+type ChartPaths struct {
+	// ChartsDir is the directory holding chart tarballs.
+	ChartsDir string
+	// ValuesDir is the directory holding chart values files.
+	ValuesDir string
+}
+
+// Archive returns the full path to the named chart's packaged tarball.
+func (p ChartPaths) Archive(name, version string) string {
+	return filepath.Join(p.ChartsDir, ChartArchiveName(name, version))
+}
+
+// ValuesFile returns the full path to the idx-th values file for the named chart.
+func (p ChartPaths) ValuesFile(name, version string, idx int) string {
+	return filepath.Join(p.ValuesDir, ChartValuesFileName(name, version, idx))
+}

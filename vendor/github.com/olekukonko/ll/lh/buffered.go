@@ -158,16 +158,25 @@ func NewBuffered[H lx.Handler](handler H, opts ...BufferingOpt) *Buffered[H] {
 //	buffered.Handle(&lx.Entry{Message: "test"}) // Buffers entry or triggers flush
 func (b *Buffered[H]) Handle(e *lx.Entry) error {
 	select {
-	case b.entries <- e: // Buffer entry if channel has space
+	case b.entries <- e:
 		return nil
-	default: // Handle buffer overflow
+	default:
+		// Notify overflow handler if configured
 		if b.config.OnOverflow != nil {
-			b.config.OnOverflow(len(b.entries)) // Call overflow handler
+			b.config.OnOverflow(len(b.entries))
 		}
+
+		// Try to trigger a flush to make space
 		select {
-		case b.flushSignal <- struct{}{}: // Trigger flush if possible
-			return fmt.Errorf("log buffer overflow, triggering flush")
-		default: // Flush already in progress
+		case b.flushSignal <- struct{}{}:
+			select {
+			case b.entries <- e:
+				return nil
+			default:
+				return fmt.Errorf("log buffer overflow, flush triggered but still full")
+			}
+		default:
+			// Flush already in progress
 			return fmt.Errorf("log buffer overflow and flush already in progress")
 		}
 	}

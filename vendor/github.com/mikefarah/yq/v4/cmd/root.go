@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/mikefarah/yq/v4/pkg/yqlib"
 	"github.com/spf13/cobra"
-	logging "gopkg.in/op/go-logging.v1"
 )
 
 type runeValue rune
@@ -68,30 +68,21 @@ yq -P -oy sample.json
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			cmd.SetOut(cmd.OutOrStdout())
-			level := logging.WARNING
-			stringFormat := `[%{level}] %{color}%{time:15:04:05}%{color:reset} %{message}`
 
 			// when NO_COLOR environment variable presents and not an empty string the coloured output should be disabled;
 			// refer to no-color.org
 			forceNoColor = forceNoColor || os.Getenv("NO_COLOR") != ""
 
-			if verbose && forceNoColor {
-				level = logging.DEBUG
-				stringFormat = `[%{level:5.5s}] %{time:15:04:05} %{shortfile:-33s} %{shortfunc:-25s} %{message}`
-			} else if verbose {
-				level = logging.DEBUG
-				stringFormat = `[%{level:5.5s}] %{color}%{time:15:04:05}%{color:bold} %{shortfile:-33s} %{shortfunc:-25s}%{color:reset} %{message}`
-			} else if forceNoColor {
-				stringFormat = `[%{level}] %{time:15:04:05} %{message}`
+			level := slog.LevelWarn
+			if verbose {
+				level = slog.LevelDebug
 			}
 
-			var format = logging.MustStringFormatter(stringFormat)
-			var backend = logging.AddModuleLevel(
-				logging.NewBackendFormatter(logging.NewLogBackend(os.Stderr, "", 0), format))
+			yqlib.GetLogger().SetLevel(level)
+			opts := &slog.HandlerOptions{Level: level, AddSource: verbose}
+			handler := slog.NewTextHandler(os.Stderr, opts)
+			yqlib.GetLogger().SetSlogger(slog.New(handler))
 
-			backend.SetLevel(level, "")
-
-			logging.SetBackend(backend)
 			yqlib.InitExpressionParser()
 
 			return nil
@@ -165,6 +156,8 @@ yq -P -oy sample.json
 	rootCmd.PersistentFlags().BoolVar(&yqlib.ConfiguredLuaPreferences.UnquotedKeys, "lua-unquoted", yqlib.ConfiguredLuaPreferences.UnquotedKeys, "output unquoted string keys (e.g. {foo=\"bar\"})")
 	rootCmd.PersistentFlags().BoolVar(&yqlib.ConfiguredLuaPreferences.Globals, "lua-globals", yqlib.ConfiguredLuaPreferences.Globals, "output keys as top-level global variables")
 
+	rootCmd.PersistentFlags().BoolVar(&yqlib.ConfiguredINIPreferences.PreserveSurroundedQuote, "ini-preserve-quotes", yqlib.ConfiguredINIPreferences.PreserveSurroundedQuote, "preserve surrounding quotes on INI values during round-trip")
+
 	rootCmd.PersistentFlags().StringVar(&yqlib.ConfiguredPropertiesPreferences.KeyValueSeparator, "properties-separator", yqlib.ConfiguredPropertiesPreferences.KeyValueSeparator, "separator to use between keys and values")
 	rootCmd.PersistentFlags().BoolVar(&yqlib.ConfiguredPropertiesPreferences.UseArrayBrackets, "properties-array-brackets", yqlib.ConfiguredPropertiesPreferences.UseArrayBrackets, "use [x] in array paths (e.g. for SpringBoot)")
 
@@ -221,6 +214,7 @@ yq -P -oy sample.json
 
 	rootCmd.PersistentFlags().BoolVarP(&yqlib.ConfiguredSecurityPreferences.DisableEnvOps, "security-disable-env-ops", "", false, "Disable env related operations.")
 	rootCmd.PersistentFlags().BoolVarP(&yqlib.ConfiguredSecurityPreferences.DisableFileOps, "security-disable-file-ops", "", false, "Disable file related operations (e.g. load)")
+	rootCmd.PersistentFlags().BoolVarP(&yqlib.ConfiguredSecurityPreferences.EnableSystemOps, "security-enable-system-operator", "", false, "Enable system operator to allow execution of external commands.")
 
 	rootCmd.AddCommand(
 		createEvaluateSequenceCommand(),

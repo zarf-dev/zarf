@@ -13,14 +13,15 @@ const repoDir = path.resolve(siteDir, "..");
 const docsDir = path.join(siteDir, "src/content/docs");
 const schemaDir = path.join(siteDir, "src/assets/schema");
 const worktreeRoot = path.join(repoDir, ".docs-version-builds");
+const zarfGitRepo = "https://github.com/zarf-dev/zarf.git";
 
-const REPO = "zarf-dev/zarf";
 // Minors kept in the switcher, from the current major and the one before it.
 // Majors older than the previous one are dropped entirely.
 const KEEP_CURRENT_MAJOR = 10;
 const KEEP_PREVIOUS_MAJOR = 3;
 
 const VERSION_SLUG = /^v\d+-\d+$/;
+const SEMVER_TAG = /^v?\d+\.\d+\.\d+$/;
 
 function git(args, opts = {}) {
   return execFileSync("git", args, { cwd: repoDir, stdio: "inherit", ...opts });
@@ -67,21 +68,11 @@ function toVersion(tag) {
   return { ref: tag, slug: slugOf(minorKey(tag)) };
 }
 
-// Released minors, newest first, capped per major.
-async function discoverVersions() {
-  const headers = { Accept: "application/vnd.github+json" };
-  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-  const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100`, { headers });
-  if (!res.ok) {
-    throw new Error(`GitHub API returned ${res.status} ${res.statusText} for ${REPO} releases`);
-  }
-  const releases = await res.json();
-  const tags = releases.filter((r) => !r.prerelease && !r.draft).map((r) => r.tag_name);
-
+function versionsFromTags(tags) {
   // Keep only the newest patch per minor.
   const newestByMinor = new Map();
   for (const tag of tags) {
-    if (!/^v?\d+\.\d+\.\d+$/.test(tag)) continue;
+    if (!SEMVER_TAG.test(tag)) continue;
     const minor = minorKey(tag);
     const current = newestByMinor.get(minor);
     if (!current || parseSemver(tag)[2] > parseSemver(current)[2]) {
@@ -92,6 +83,29 @@ async function discoverVersions() {
   const minorsDesc = [...newestByMinor.keys()].sort(cmpMinorDesc);
   const archived = limitByMajor(minorsDesc).map((m) => toVersion(newestByMinor.get(m)));
   return { latest: minorsDesc[0], archived };
+}
+
+function discoverGitTags() {
+  const output = git(["ls-remote", "--tags", zarfGitRepo, "v*.*.*"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+
+  return [
+    ...new Set(
+      output
+        .split("\n")
+        .map((line) => line.trim().split(/\s+/)[1])
+        .filter(Boolean)
+        .map((ref) => ref.replace(/^refs\/tags\//, "").replace(/\^\{\}$/, ""))
+        .filter((tag) => SEMVER_TAG.test(tag)),
+    ),
+  ];
+}
+
+// Released version tags, newest minor first, capped per major.
+async function discoverVersions() {
+  return versionsFromTags(discoverGitTags());
 }
 
 // ---------------------------------------------------------------------------
@@ -130,7 +144,7 @@ async function stageVersion({ ref, slug }) {
   console.log(`\n=== Staging ${slug} from ${ref} ===`);
   // CI often uses a shallow clone without tag commits; fetch the tag's commit.
   try {
-    git(["fetch", "--depth=1", "origin", "tag", ref, "--no-tags"]);
+    git(["fetch", "--depth=1", zarfGitRepo, "tag", ref, "--no-tags"]);
   } catch {
     console.warn(`git fetch of tag ${ref} failed; assuming it is already present`);
   }

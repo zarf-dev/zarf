@@ -15,8 +15,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
-	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -103,14 +103,14 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		}
 	}
 
-	createOpts := layout.AssembleOptions{
+	createOpts := assemble.AssembleOptions{
 		Flavor:            opts.Flavor,
 		RegistryOverrides: opts.RegistryOverrides,
 		SkipSBOM:          true,
 		OCIConcurrency:    opts.OCIConcurrency,
 		CachePath:         opts.CachePath,
 	}
-	pkgLayout, err := layout.AssemblePackage(ctx, defined.Pkg, packagePath, defined.ImportedSchemas, createOpts)
+	pkgLayout, err := assemble.AssemblePackage(ctx, defined.Pkg, packagePath, defined.ImportedSchemas, createOpts)
 	if err != nil {
 		return err
 	}
