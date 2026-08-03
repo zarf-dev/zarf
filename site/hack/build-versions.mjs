@@ -141,11 +141,18 @@ async function stageVersionedAssets(worktree, slug) {
   const assetRoot = path.join(versionedAssetsDir, slug);
   await fs.rm(assetRoot, { recursive: true, force: true });
   await fs.mkdir(assetRoot, { recursive: true });
+
   for (const sourceKind of ["examples", "packages"]) {
     const src = path.join(worktree, sourceKind);
     if (existsSync(src)) {
       await fs.cp(src, path.join(assetRoot, sourceKind), { recursive: true });
     }
+  }
+
+  const schemaRoot = path.join(assetRoot, "schema");
+  await fs.mkdir(schemaRoot, { recursive: true });
+  for (const [api, src] of Object.entries(apiSchemaSources(worktree))) {
+    await fs.cp(src, path.join(schemaRoot, `${api}.json`));
   }
 }
 
@@ -172,11 +179,6 @@ async function stageVersion({ ref, slug }) {
       dstDir: path.join(dst, "ref/Examples"),
       ref,
     });
-    const versionSchemaDir = path.join(versionedAssetsDir, slug, "schema");
-    await fs.mkdir(versionSchemaDir, { recursive: true });
-    for (const [api, src] of Object.entries(apiSchemaSources(worktree))) {
-      await fs.cp(src, path.join(versionSchemaDir, `${api}.json`));
-    }
   } finally {
     git(["worktree", "remove", "--force", worktree]);
   }
