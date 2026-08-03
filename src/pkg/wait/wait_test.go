@@ -62,7 +62,6 @@ func TestIsJSONPathWaitType(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			result := isJSONPathWaitType(tt.waitType)
@@ -145,7 +144,6 @@ func TestProbeNetworkHTTP(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ok, err := probeNetwork(t.Context(), "http", tt.host, tt.condition, 100*time.Millisecond)
@@ -260,7 +258,6 @@ func TestWaitForNetwork(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := t.Context()
