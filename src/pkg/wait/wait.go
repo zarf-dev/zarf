@@ -459,7 +459,7 @@ func probeNetwork(ctx context.Context, protocol string, address string, conditio
 	}
 }
 
-func probeHTTP(ctx context.Context, protocol string, address string, condition string, waitInterval time.Duration) (bool, error) {
+func probeHTTP(ctx context.Context, protocol string, address string, condition string, waitInterval time.Duration) (ok bool, err error) {
 	// Create an HTTP client with a per-request timeout that is slightly shorter than our wait-interval to prevent
 	// hanging on slow or unresponsive servers.
 	requestTimeout := waitInterval - (time.Millisecond * 5)
@@ -480,7 +480,7 @@ func probeHTTP(ctx context.Context, protocol string, address string, condition s
 		return false, err
 	}
 	defer func() {
-		_ = resp.Body.Close()
+		err = errors.Join(err, resp.Body.Close())
 	}()
 
 	// Default to checking for a 2xx response.
