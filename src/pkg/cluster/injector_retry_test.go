@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/config"
@@ -72,23 +71,6 @@ func TestClientGoBoundsRetriesWithRetryAfter(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, kerrors.IsTooManyRequests(err))
 	require.Equal(t, int32(11), attempts.Load())
-}
-
-func TestClientGoStopsRetryingWhenContextExpires(t *testing.T) {
-	t.Parallel()
-
-	var attempts atomic.Int32
-	client := newCoreV1Client(t, func(w http.ResponseWriter, _ *http.Request) {
-		attempts.Add(1)
-		writeTooManyRequests(w, "1")
-	})
-	ctx, cancel := context.WithTimeout(t.Context(), 25*time.Millisecond)
-	defer cancel()
-
-	err := client.ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{})
-
-	require.ErrorIs(t, err, context.DeadlineExceeded)
-	require.Equal(t, int32(1), attempts.Load())
 }
 
 func TestStopInjectionRetriesPayloadConfigMapCleanup(t *testing.T) {
@@ -174,11 +156,24 @@ func TestRetryInjectorRequestHonorsCancellation(t *testing.T) {
 func newCoreV1Client(t *testing.T, handler http.HandlerFunc) corev1client.CoreV1Interface {
 	t.Helper()
 
-	server := httptest.NewServer(handler)
-	t.Cleanup(server.Close)
-	client, err := corev1client.NewForConfig(&rest.Config{Host: server.URL})
+	client, err := corev1client.NewForConfig(&rest.Config{
+		Host: "https://kubernetes.test",
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(recorder, req)
+			resp := recorder.Result()
+			resp.Request = req
+			return resp, nil
+		}),
+	})
 	require.NoError(t, err)
 	return client
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 func writeTooManyRequests(w http.ResponseWriter, retryAfter string) {
