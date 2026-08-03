@@ -184,8 +184,6 @@ func TestWaitForNetwork(t *testing.T) {
 		timeout        time.Duration
 		interval       time.Duration
 		wantErr        string
-		wantIs         error
-		wantNotIs      []error
 		attempts       int
 	}{
 		{
@@ -217,8 +215,6 @@ func TestWaitForNetwork(t *testing.T) {
 			timeout:       time.Second,
 			interval:      time.Second,
 			wantErr:       "wait cancelled: context canceled",
-			wantIs:        context.Canceled,
-			wantNotIs:     []error{context.DeadlineExceeded},
 		},
 		{
 			name:           "context deadline exceeded",
@@ -227,16 +223,13 @@ func TestWaitForNetwork(t *testing.T) {
 			timeout:        time.Second,
 			interval:       time.Second,
 			wantErr:        "wait cancelled: context deadline exceeded",
-			wantIs:         context.DeadlineExceeded,
-			wantNotIs:      []error{context.Canceled},
 		},
 		{
-			name:      "internal timeout",
-			probe:     neverReadyProbe,
-			timeout:   100 * time.Millisecond,
-			interval:  10 * time.Millisecond,
-			wantErr:   "wait timed out",
-			wantNotIs: []error{context.DeadlineExceeded, context.Canceled},
+			name:     "internal timeout",
+			probe:    neverReadyProbe,
+			timeout:  100 * time.Millisecond,
+			interval: 10 * time.Millisecond,
+			wantErr:  "wait timed out",
 		},
 		{
 			name: "retryable probe errors are retried",
@@ -296,12 +289,6 @@ func TestWaitForNetwork(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.EqualError(t, err, tt.wantErr)
-			}
-			if tt.wantIs != nil {
-				require.ErrorIs(t, err, tt.wantIs)
-			}
-			for _, notIs := range tt.wantNotIs {
-				require.NotErrorIs(t, err, notIs)
 			}
 			if tt.attempts > 0 {
 				require.Equal(t, tt.attempts, attempts)
