@@ -6,10 +6,10 @@
   "scripts": {
     "lint": "markdownlint-cli2 . --config ../.markdownlint-cli2.jsonc",
     "lint:fix": "markdownlint-cli2 --fix . --config ../.markdownlint-cli2.jsonc",
-    "predev": "rm -rf src/assets/schema src/assets/versioned-assets/latest/schema && mkdir -p src/assets/versioned-assets/latest/schema && cp ../src/pkg/schema/zarf-v1alpha1-schema.json src/assets/versioned-assets/latest/schema/v1alpha1.json && cp ../src/pkg/schema/zarf-v1beta1-package-schema.json src/assets/versioned-assets/latest/schema/v1beta1.json && node hack/copy-examples.js",
+    "predev": "rm -rf src/assets/versioned-assets/latest/schema && mkdir -p src/assets/versioned-assets/latest/schema && cp ../src/pkg/schema/zarf-v1alpha1-schema.json src/assets/versioned-assets/latest/schema/v1alpha1.json && cp ../src/pkg/schema/zarf-v1beta1-package-schema.json src/assets/versioned-assets/latest/schema/v1beta1.json && node hack/copy-examples.js",
     "dev": "astro dev",
     "start": "astro dev",
-    "prebuild": "rm -rf src/assets/schema src/assets/versioned-assets/latest/schema && mkdir -p src/assets/versioned-assets/latest/schema && cp ../src/pkg/schema/zarf-v1alpha1-schema.json src/assets/versioned-assets/latest/schema/v1alpha1.json && cp ../src/pkg/schema/zarf-v1beta1-package-schema.json src/assets/versioned-assets/latest/schema/v1beta1.json && node hack/copy-examples.js",
+    "prebuild": "rm -rf src/assets/versioned-assets/latest/schema && mkdir -p src/assets/versioned-assets/latest/schema && cp ../src/pkg/schema/zarf-v1alpha1-schema.json src/assets/versioned-assets/latest/schema/v1alpha1.json && cp ../src/pkg/schema/zarf-v1beta1-package-schema.json src/assets/versioned-assets/latest/schema/v1beta1.json && node hack/copy-examples.js",
     "build": "rm -rf dist && astro check && astro build",
     "check": "npm run prebuild && astro check",
     "build:versions": "node hack/build-versions.mjs",

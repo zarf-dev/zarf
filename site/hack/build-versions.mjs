@@ -12,7 +12,6 @@ const siteDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const repoDir = path.resolve(siteDir, "..");
 const docsDir = path.join(siteDir, "src/content/docs");
 const versionedAssetsDir = path.join(siteDir, "src/assets/versioned-assets");
-const legacySchemaDir = path.join(siteDir, "src/assets/schema");
 const worktreeRoot = path.join(repoDir, ".docs-version-builds");
 const zarfGitRepo = "https://github.com/zarf-dev/zarf.git";
 
@@ -122,7 +121,6 @@ async function cleanStaged() {
     }
   }
   await fs.rm(versionedAssetsDir, { recursive: true, force: true });
-  await fs.rm(legacySchemaDir, { recursive: true, force: true });
 }
 
 // Renderable per-API-version schemas a release ships, keyed by the slug its docs
