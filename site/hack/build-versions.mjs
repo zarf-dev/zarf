@@ -11,8 +11,8 @@ import { generateExamples } from "./copy-examples.js";
 const siteDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoDir = path.resolve(siteDir, "..");
 const docsDir = path.join(siteDir, "src/content/docs");
-const schemaDir = path.join(siteDir, "src/assets/schema");
 const versionedAssetsDir = path.join(siteDir, "src/assets/versioned-assets");
+const legacySchemaDir = path.join(siteDir, "src/assets/schema");
 const worktreeRoot = path.join(repoDir, ".docs-version-builds");
 const zarfGitRepo = "https://github.com/zarf-dev/zarf.git";
 
@@ -121,8 +121,8 @@ async function cleanStaged() {
       await fs.rm(path.join(docsDir, entry.name), { recursive: true, force: true });
     }
   }
-  await fs.rm(schemaDir, { recursive: true, force: true });
   await fs.rm(versionedAssetsDir, { recursive: true, force: true });
+  await fs.rm(legacySchemaDir, { recursive: true, force: true });
 }
 
 // Renderable per-API-version schemas a release ships, keyed by the slug its docs
@@ -174,7 +174,7 @@ async function stageVersion({ ref, slug }) {
       dstDir: path.join(dst, "ref/Examples"),
       ref,
     });
-    const versionSchemaDir = path.join(schemaDir, slug);
+    const versionSchemaDir = path.join(versionedAssetsDir, slug, "schema");
     await fs.mkdir(versionSchemaDir, { recursive: true });
     for (const [api, src] of Object.entries(apiSchemaSources(worktree))) {
       await fs.cp(src, path.join(versionSchemaDir, `${api}.json`));
