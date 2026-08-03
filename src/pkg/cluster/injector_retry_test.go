@@ -156,24 +156,11 @@ func TestRetryInjectorRequestHonorsCancellation(t *testing.T) {
 func newCoreV1Client(t *testing.T, handler http.HandlerFunc) corev1client.CoreV1Interface {
 	t.Helper()
 
-	client, err := corev1client.NewForConfig(&rest.Config{
-		Host: "https://kubernetes.test",
-		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-			recorder := httptest.NewRecorder()
-			handler.ServeHTTP(recorder, req)
-			resp := recorder.Result()
-			resp.Request = req
-			return resp, nil
-		}),
-	})
+	server := httptest.NewServer(handler)
+	t.Cleanup(server.Close)
+	client, err := corev1client.NewForConfig(&rest.Config{Host: server.URL})
 	require.NoError(t, err)
 	return client
-}
-
-type roundTripFunc func(*http.Request) (*http.Response, error)
-
-func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return f(req)
 }
 
 func writeTooManyRequests(w http.ResponseWriter, retryAfter string) {
