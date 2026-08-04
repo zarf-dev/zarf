@@ -1,0 +1,43 @@
+kind: ZarfPackageConfig
+metadata:
+  name: component-action-variables
+  description: Minimal component action variable coverage
+
+variables:
+  - name: DOG_SOUND
+    default: ruff
+
+components:
+  - name: on-deploy-with-variable
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
+
+  - name: on-deploy-with-dynamic-variable
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "meow"
+            setVariables:
+              - name: CAT_SOUND
+          - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
+
+  - name: on-deploy-with-multiple-variables
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "hiss"
+            setVariables:
+              - name: SNAKE_SOUND
+                sensitive: true
+                autoIndent: true
+        onSuccess:
+          - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
+          - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
+          - cmd: echo "the snake says ${ZARF_VAR_SNAKE_SOUND}"
+
+  - name: on-deploy-with-template-use-of-variable
+    files:
+      - source: test.txt
+        target: test-variable-templated.txt
