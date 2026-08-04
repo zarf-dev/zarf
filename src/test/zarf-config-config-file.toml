@@ -1,4 +1,3 @@
-# Example config file, use "zarf prepare generate-config" to generate a new one
 log_level = 'info'
 
 [package]
@@ -11,4 +10,4 @@ leopard = 'spots'
 
 [package.deploy]
 components = 'lion'
-values = ['deploy-values.yaml']
+values = ['examples/config-file/deploy-values.yaml']
