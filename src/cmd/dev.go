@@ -264,6 +264,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	if mergeErr != nil {
 		return fmt.Errorf("unable to merge imported schemas for schema generation: %w", mergeErr)
 	}
+
 	if existingSchema != nil {
 		generatedSchema = value.ReconcileJSONSchema(existingSchema, generatedSchema, o.deleteNotFound)
 	}
