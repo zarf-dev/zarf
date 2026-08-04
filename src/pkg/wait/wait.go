@@ -466,6 +466,18 @@ func probeNetwork(ctx context.Context, protocol string, address string, conditio
 }
 
 func probeHTTP(ctx context.Context, protocol string, address string, condition string, waitInterval time.Duration) (ok bool, err error) {
+	expectedStatusCode := 0
+	if condition != "success" {
+		var err error
+		expectedStatusCode, err = strconv.Atoi(condition)
+		if err != nil {
+			return false, retry.Unrecoverable(fmt.Errorf("http status code %s is not an integer: %w", condition, err))
+		}
+		if http.StatusText(expectedStatusCode) == "" {
+			return false, retry.Unrecoverable(errors.New("http status code is unknown"))
+		}
+	}
+
 	// Create an HTTP client with a per-request timeout that is slightly shorter than our wait-interval to prevent
 	// hanging on slow or unresponsive servers.
 	requestTimeout := waitInterval - (time.Millisecond * 5)
@@ -494,16 +506,7 @@ func probeHTTP(ctx context.Context, protocol string, address string, condition s
 		return resp.StatusCode >= 200 && resp.StatusCode <= 299, nil
 	}
 
-	// Convert the condition to an int and check if it's a valid HTTP status code.
-	code, err := strconv.Atoi(condition)
-	if err != nil {
-		return false, retry.Unrecoverable(fmt.Errorf("http status code %s is not an integer: %w", condition, err))
-	}
-	if http.StatusText(code) == "" {
-		return false, retry.Unrecoverable(errors.New("http status code is unknown"))
-	}
-
-	return resp.StatusCode == code, nil
+	return resp.StatusCode == expectedStatusCode, nil
 }
 
 func probeTCP(ctx context.Context, protocol string, address string) (bool, error) {

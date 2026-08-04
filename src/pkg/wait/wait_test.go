@@ -93,53 +93,56 @@ func TestProbeNetworkHTTP(t *testing.T) {
 	closedTCPAddress := closedLocalTCPAddress(t)
 
 	tests := []struct {
-		name      string
-		host      string
-		condition string
-		wantOK    bool
-		expectErr bool
+		name        string
+		host        string
+		condition   string
+		wantOK      bool
+		errContains string
 	}{
 		{
 			name:      "success condition accepts 2xx",
 			host:      successServerURL,
 			condition: "success",
 			wantOK:    true,
-			expectErr: false,
 		},
 		{
 			name:      "success condition rejects 404",
 			host:      notFoundServerURL,
 			condition: "success",
 			wantOK:    false,
-			expectErr: false,
 		},
 		{
 			name:      "status code condition accepts matching code",
 			host:      notFoundServerURL,
 			condition: "404",
 			wantOK:    true,
-			expectErr: false,
 		},
 		{
 			name:      "status code condition rejects non-matching code",
 			host:      notFoundServerURL,
 			condition: "200",
 			wantOK:    false,
-			expectErr: false,
 		},
 		{
-			name:      "closed port returns error",
-			host:      closedTCPAddress,
-			condition: "success",
-			wantOK:    false,
-			expectErr: true,
+			name:        "closed port returns error",
+			host:        closedTCPAddress,
+			condition:   "success",
+			wantOK:      false,
+			errContains: "connection refused",
 		},
 		{
-			name:      "hanging server returns error",
-			host:      hangingServerURL,
-			condition: "success",
-			wantOK:    false,
-			expectErr: true,
+			name:        "hanging server returns error",
+			host:        hangingServerURL,
+			condition:   "success",
+			wantOK:      false,
+			errContains: "Client.Timeout exceeded",
+		},
+		{
+			name:        "invalid status code returns before network probe",
+			host:        closedTCPAddress,
+			condition:   "not-a-code",
+			wantOK:      false,
+			errContains: "http status code not-a-code is not an integer",
 		},
 	}
 
@@ -147,8 +150,9 @@ func TestProbeNetworkHTTP(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ok, err := probeNetwork(t.Context(), "http", tt.host, tt.condition, 100*time.Millisecond)
-			if tt.expectErr {
+			if tt.errContains != "" {
 				require.Error(t, err)
+				require.ErrorContains(t, err, tt.errContains)
 				require.False(t, ok)
 				return
 			}
