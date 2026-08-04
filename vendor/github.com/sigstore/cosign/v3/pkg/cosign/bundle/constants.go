@@ -1,4 +1,4 @@
-// Copyright 2022 The Sigstore Authors.
+// Copyright 2026 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package policy
+package bundle
 
-type EvaluationFailure struct {
-	err error
-}
-
-func (e *EvaluationFailure) Error() string {
-	return e.err.Error()
-}
-
-func (e *EvaluationFailure) Unwrap() error {
-	return e.err
-}
+const BundleV03MediaType = "application/vnd.dev.sigstore.bundle.v0.3+json"
