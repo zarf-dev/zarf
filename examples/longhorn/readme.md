@@ -1,6 +1,6 @@
 This example shows you how to deploy [Longhorn](https://longhorn.io/) using Zarf.
 
-Before deploying Longhorn, make sure your nodes are configured with the [Longhorn Installation Requirements](https://longhorn.io/docs/latest/deploy/install/#installation-requirements). Note that the automated `longhornctl` preflight environment checker is not included in this package to support multi-architecture compatibility, so node readiness must be verified manually.
+Before deploying Longhorn, make sure your nodes are configured with the [Longhorn Installation Requirements](https://longhorn.io/docs/latest/deploy/install/#installation-requirements). You can verify this automatically with Longhorn's own [preflight checker](https://github.com/longhorn/cli): install `longhornctl` and run `longhornctl check preflight --kubeconfig=<path-to-your-kubeconfig>` against the target cluster before deploying this package. It requires a real kubeconfig (it self-deploys its own short-lived DaemonSet across the cluster to run the checks), so it isn't included as a Zarf component here — run it from your workstation as a pre-deploy step instead.
 
 You will need [open-iscsi](https://longhorn.io/docs/latest/deploy/install/#installing-open-iscsi) installed.
 
@@ -11,3 +11,5 @@ If you're working with K3s, there is extra setup required. See [Longhorn CSI on 
 The values file from this example was pulled using the directions at [Customizing Default Settings](https://longhorn.io/docs/latest/advanced-resources/deploy/customizing-default-settings/#using-helm) as the path for kubelet needs to be set for K3s as per [Longhorn CSI on K3s](https://longhorn.io/docs/latest/advanced-resources/os-distro-specific/csi-on-k3s/)
 
 You do not need to use the values file and can remove it from the Zarf package configuration if you're not using K3s and don't need that variable set.
+
+The `global.imageRegistry` value in `values.yaml` is set to Zarf's `###ZARF_REGISTRY###` template variable. Longhorn's chart templates prefix every image reference they render internally (CSI sidecars, engine, UI, webhooks, etc.) with `global.imageRegistry`, so this line redirects those images to Zarf's registry instead of the public `docker.io` registry. This is required for Longhorn's images to resolve in an airgapped environment and should not be removed.
