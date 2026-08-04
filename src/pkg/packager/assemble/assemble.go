@@ -29,7 +29,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
@@ -127,8 +126,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		}
 	}
 
-	imageSources := imageSourcesByComponent(definition.AsV1beta1())
-	componentImages := map[images.PullSource][]transform.Image{}
+	componentImages := []transform.Image{}
 	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
@@ -147,33 +145,23 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 			if err != nil {
 				return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
 			}
-			source, err := imagePullSource(imageSources[component.Name][src])
-			if err != nil {
-				return nil, fmt.Errorf("component %q image %q: %w", component.Name, src, err)
-			}
-			if slices.Contains(componentImages[source], refInfo) {
+			if slices.Contains(componentImages, refInfo) {
 				continue
 			}
-			componentImages[source] = append(componentImages[source], refInfo)
+			componentImages = append(componentImages, refInfo)
 		}
 	}
 	sbomImageList := []transform.Image{}
-	// FIXME: worth considering if this is the shape we want this in
-	for _, source := range []images.PullSource{images.PullSourceRegistry, images.PullSourceDaemon, images.PullSourceDaemonFallback} {
-		refs := componentImages[source]
-		if len(refs) == 0 {
-			continue
-		}
+	if len(componentImages) > 0 {
 		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opts.RegistryOverrides,
-			Source:                source,
 			CacheDirectory:        filepath.Join(opts.CachePath, layout.ImagesDir),
 			InsecureSkipTLSVerify: opts.RemoteOptions.InsecureSkipTLSVerify,
 			PlainHTTP:             opts.RemoteOptions.PlainHTTP,
 		}
-		imageManifests, err := images.Pull(ctx, refs, filepath.Join(buildPath, layout.ImagesDir), pullOpts)
+		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, layout.ImagesDir), pullOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -287,31 +275,6 @@ func differentialComponentResources(component v1alpha1.ZarfComponent, differenti
 	}
 
 	return images, repos, nil
-}
-
-func imageSourcesByComponent(pkg v1beta1.Package) map[string]map[string]string {
-	sources := make(map[string]map[string]string, len(pkg.Components))
-	for _, component := range pkg.Components {
-		byImage := make(map[string]string, len(component.Images))
-		for _, image := range component.Images {
-			byImage[image.Name] = image.Source
-		}
-		sources[component.Name] = byImage
-	}
-	return sources
-}
-
-func imagePullSource(source string) (images.PullSource, error) {
-	switch source {
-	case "", string(images.PullSourceDaemonFallback):
-		return images.PullSourceDaemonFallback, nil
-	case string(images.PullSourceRegistry):
-		return images.PullSourceRegistry, nil
-	case string(images.PullSourceDaemon):
-		return images.PullSourceDaemon, nil
-	default:
-		return "", fmt.Errorf("invalid image source %q", source)
-	}
 }
 
 // AssembleSkeletonOptions are the options for creating a skeleton package
