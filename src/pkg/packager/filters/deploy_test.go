@@ -207,13 +207,14 @@ func TestDeployFilter_Apply(t *testing.T) {
 			isInteractive := false
 			filter := ForDeploy(tt.optionalComponents, isInteractive)
 
-			result, err := filter.Apply(tt.pkg)
+			indices, err := filter.Apply(packageViewFromV1alpha1(tt.pkg))
+			result := selectV1alpha1Components(tt.pkg, indices)
 			if tt.expectedErr != nil {
 				require.ErrorIs(t, err, tt.expectedErr)
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tt.want, result)
 			}
-			require.Equal(t, tt.want, result)
 		})
 	}
 }

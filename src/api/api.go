@@ -5,11 +5,14 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	internalTypes "github.com/zarf-dev/zarf/src/internal/api/types"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 )
 
 // PackageAccessor is the read contract for a package source, exposing a per-version definition.
@@ -76,6 +79,119 @@ func (p *PackageDefinition) SelectComponents(names []string) {
 		byName[name] = matches[1:]
 	}
 	p.pkg.Components = components
+}
+
+// FilterComponents applies a component filter to the package definition.
+func (p *PackageDefinition) FilterComponents(filter filters.ComponentFilterStrategy) error {
+	if filter == nil {
+		filter = filters.Empty()
+	}
+	indices, err := filter.Apply(p.filterView())
+	if err != nil {
+		return err
+	}
+	components := make([]internalTypes.Component, 0, len(indices))
+	for _, idx := range indices {
+		if idx < 0 || idx >= len(p.pkg.Components) {
+			return fmt.Errorf("filter returned index %d out of range", idx)
+		}
+		components = append(components, p.pkg.Components[idx])
+	}
+	p.pkg.Components = components
+	return nil
+}
+
+// OverrideNamespace overrides component namespaces when the definition permits it.
+func (p *PackageDefinition) OverrideNamespace(namespace string) error {
+	if !p.allowsNamespaceOverride() {
+		return fmt.Errorf("cannot override package namespace, metadata.allowNamespaceOverride is false")
+	}
+	if p.pkg.Kind != string(v1alpha1.ZarfPackageConfig) {
+		return fmt.Errorf("package kind is not a ZarfPackageConfig, cannot override namespace")
+	}
+	namespaces := p.uniqueNamespaces()
+	if len(namespaces) > 1 {
+		return fmt.Errorf("package contains %d unique namespaces, cannot override namespace", len(namespaces))
+	}
+	originalNamespace := ""
+	if len(namespaces) == 1 {
+		originalNamespace = namespaces[0]
+	}
+	p.overrideComponentNamespaces(originalNamespace, namespace)
+	return nil
+}
+
+func (p PackageDefinition) allowsNamespaceOverride() bool {
+	if p.pkg.Metadata.AllowNamespaceOverride != nil {
+		return *p.pkg.Metadata.AllowNamespaceOverride
+	}
+	return !p.pkg.Metadata.PreventNamespaceOverride
+}
+
+func (p PackageDefinition) uniqueNamespaces() []string {
+	seen := map[string]struct{}{}
+	for _, component := range p.pkg.Components {
+		for _, chart := range component.Charts {
+			seen[chart.Namespace] = struct{}{}
+		}
+		for _, manifest := range component.Manifests {
+			seen[manifest.Namespace] = struct{}{}
+		}
+	}
+	namespaces := make([]string, 0, len(seen))
+	for namespace := range seen {
+		namespaces = append(namespaces, namespace)
+	}
+	return namespaces
+}
+
+func (p *PackageDefinition) overrideComponentNamespaces(original, target string) {
+	for i := range p.pkg.Components {
+		component := &p.pkg.Components[i]
+		for j := range component.Charts {
+			if component.Charts[j].Namespace == original {
+				component.Charts[j].Namespace = target
+			}
+		}
+		for j := range component.Manifests {
+			if component.Manifests[j].Namespace == original {
+				component.Manifests[j].Namespace = target
+			}
+		}
+		overrideActionSetWaitNamespaces(&component.Actions.OnCreate, original, target)
+		overrideActionSetWaitNamespaces(&component.Actions.OnDeploy, original, target)
+		overrideActionSetWaitNamespaces(&component.Actions.OnRemove, original, target)
+	}
+}
+
+func overrideActionSetWaitNamespaces(set *internalTypes.ComponentActionSet, original, target string) {
+	overrideActionWaitNamespaces(set.Before, original, target)
+	overrideActionWaitNamespaces(set.After, original, target)
+	overrideActionWaitNamespaces(set.OnSuccess, original, target)
+	overrideActionWaitNamespaces(set.OnFailure, original, target)
+}
+
+func overrideActionWaitNamespaces(actions []internalTypes.ComponentAction, original, target string) {
+	for i := range actions {
+		if actions[i].Wait != nil && actions[i].Wait.Cluster != nil && actions[i].Wait.Cluster.Namespace == original {
+			actions[i].Wait.Cluster.Namespace = target
+		}
+	}
+}
+
+func (p PackageDefinition) filterView() filters.PackageView {
+	components := make([]filters.ComponentView, 0, len(p.pkg.Components))
+	for _, component := range p.pkg.Components {
+		components = append(components, filters.ComponentView{
+			Name:        component.Name,
+			Description: component.Description,
+			Optional:    component.Optional,
+			Default:     component.Default,
+			Group:       component.Group,
+			OnlyLocalOS: component.Target.OS,
+		})
+	}
+	return filters.PackageView{Components: components}
 }
 
 // SetComponentImages updates the image list for the named component.

@@ -49,7 +49,7 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 	err = retry.Do(
 		func() error {
 			l.Info("pushing package to registry", "destination", r.Repo().Reference.String(),
-				"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
+				"architecture", pkgLayout.AsV1alpha1().Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
 
 			trackedRemote := images.NewTrackedTarget(
 				r.Repo(),

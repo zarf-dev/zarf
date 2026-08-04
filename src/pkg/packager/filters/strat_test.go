@@ -44,7 +44,8 @@ func TestCombine(t *testing.T) {
 		},
 	}
 
-	result, err := combo.Apply(pkg)
+	indices, err := combo.Apply(packageViewFromV1alpha1(pkg))
+	result := selectV1alpha1Components(pkg, indices)
 	require.NoError(t, err)
 	require.Equal(t, expected, result)
 
@@ -54,6 +55,6 @@ func TestCombine(t *testing.T) {
 		Name:            "group with no default",
 		DeprecatedGroup: "g1",
 	})
-	_, err = combo.Apply(pkg)
+	_, err = combo.Apply(packageViewFromV1alpha1(pkg))
 	require.Error(t, err)
 }

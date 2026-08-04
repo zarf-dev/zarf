@@ -26,11 +26,12 @@ import (
 // already-known values, or if any setValues action anywhere in the package declares it. This turns
 // the late, mid-deploy missingkey errors from template.Apply into a single up-front failure so a
 // package never half-deploys.
+// FIXME: should accept a package definition
 func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, vals value.Values) error {
 	if pkgLayout == nil {
 		return fmt.Errorf("pkg layout is required")
 	}
-	components := pkgLayout.Pkg.Components
+	components := pkgLayout.AsV1alpha1().Components
 	defined := newDefinedValues(vals)
 
 	var errs []error

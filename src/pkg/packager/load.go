@@ -15,6 +15,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/split"
@@ -223,10 +224,11 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
-		depPkg.Data.Components, err = opts.Filter.Apply(depPkg.Data)
-		if err != nil {
+		definition := api.NewPackageDefinitionFromV1alpha1(depPkg.Data)
+		if err := definition.FilterComponents(opts.Filter); err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
+		depPkg.Data = definition.AsV1alpha1()
 		return depPkg.Data, nil
 	}
 	// This function only returns the ZarfPackageConfig so we only need the metadata
@@ -238,5 +240,5 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	return pkgLayout.Pkg, nil
+	return pkgLayout.AsV1alpha1(), nil
 }

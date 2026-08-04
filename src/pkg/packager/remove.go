@@ -12,6 +12,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/internal/template"
@@ -49,11 +50,11 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		}
 	}
 
-	var err error
-	pkg.Components, err = filters.ByLocalOS(runtime.GOOS).Apply(pkg)
-	if err != nil {
+	definition := api.NewPackageDefinitionFromV1alpha1(pkg)
+	if err := definition.FilterComponents(filters.ByLocalOS(runtime.GOOS)); err != nil {
 		return err
 	}
+	pkg = definition.AsV1alpha1()
 
 	if len(pkg.Components) == 0 {
 		return fmt.Errorf("package to remove contains no components")

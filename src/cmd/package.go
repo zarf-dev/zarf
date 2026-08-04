@@ -411,7 +411,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		return err
 	}
 
-	if pkgLayout.Pkg.IsInitConfig() {
+	if pkgLayout.AsV1alpha1().IsInitConfig() {
 		return nil
 	}
 	connectStrings := state.ConnectStrings{}
@@ -429,7 +429,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
 	if opts.NamespaceOverride != "" {
-		if err := packager.OverridePackageNamespace(&pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
+		if err := pkgLayout.PackageDefinition.OverrideNamespace(opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
@@ -444,8 +444,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 			filters.ByLocalOS(runtime.GOOS),
 			filters.ForDeploy(optionalComponents, true),
 		)
-		pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
-		if err != nil {
+		if err := pkgLayout.PackageDefinition.FilterComponents(filter); err != nil {
 			return nil, err
 		}
 	}
@@ -460,17 +459,18 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 
 func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, isInteractive bool) (err error) {
 	l := logger.From(ctx)
+	pkg := pkgLayout.AsV1alpha1()
 
-	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), false)
+	err = utils.ColorPrintYAML(pkg, getPackageYAMLHints(pkg, setVariables), false)
 	if err != nil {
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
 
-	if len(pkgLayout.Pkg.Documentation) > 0 {
+	if len(pkg.Documentation) > 0 {
 		l.Info("documentation available for this package - use 'zarf package inspect documentation' to view")
 	}
 
-	if pkgLayout.Pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
+	if pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
 		l.Warn("this package does NOT contain an SBOM. If you require an SBOM, the package must be built without the --skip-sbom flag")
 	}
 	if pkgLayout.ContainsSBOM() && isInteractive {
@@ -638,7 +638,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 
 	images, repos := 0, 0
 	// Let's count the images and repos in the package
-	for _, component := range pkgLayout.Pkg.Components {
+	for _, component := range pkgLayout.AsV1alpha1().Components {
 		images += len(component.GetImages())
 		repos += len(component.Repos)
 	}
@@ -1069,7 +1069,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
-	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.Pkg.Metadata.Name))
+	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.AsV1alpha1().Metadata.Name))
 	err = pkgLayout.GetSBOM(ctx, outputPath)
 	if err != nil {
 		return fmt.Errorf("could not get SBOM: %w", err)
@@ -1213,7 +1213,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
-	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", filepath.Base(pkgLayout.Pkg.Metadata.Name)))
+	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", filepath.Base(pkgLayout.AsV1alpha1().Metadata.Name)))
 	return pkgLayout.GetDocumentation(ctx, outputPath, o.keys)
 }
 

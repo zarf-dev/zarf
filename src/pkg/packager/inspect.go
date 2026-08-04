@@ -62,13 +62,14 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	if err != nil {
 		return nil, err
 	}
+	pkg := pkgLayout.AsV1alpha1()
 
-	if !feature.IsEnabled(feature.Values) && (len(pkgLayout.Pkg.Values.Files) > 0 || len(opts.Values) > 0) {
+	if !feature.IsEnabled(feature.Values) && (len(pkg.Values.Files) > 0 || len(opts.Values) > 0) {
 		return nil, fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables, opts.IsInteractive)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +98,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	}(tmpPackagePath)
 
 	var resources []Resource
-	for _, component := range pkgLayout.Pkg.Components {
+	for _, component := range pkg.Components {
 		tmpComponentPath := filepath.Join(tmpPackagePath, component.Name)
 		err := os.MkdirAll(tmpComponentPath, helpers.ReadWriteExecuteUser)
 		if err != nil {
@@ -130,7 +131,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 				}
 				if err := templateValuesFiles(ctx, chart, valuesDir, templateValuesFilesOpts{
 					variableConfig: variableConfig,
-					pkg:            pkgLayout.Pkg,
+					pkg:            pkg,
 					vals:           vals,
 					s:              s,
 					stateAccess:    component.StateAccess,
@@ -183,7 +184,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 					}
 					if manifest.IsTemplate() {
 						objs, err := tmpl.NewObjects(vals).
-							WithPackage(pkgLayout.Pkg).
+							WithPackage(pkg).
 							WithVariables(variableConfig.GetSetVariableMap()).
 							WithConstants(variableConfig.GetConstants()).
 							WithState(tmpl.StateAccess{State: s, AccessKeys: component.StateAccess})

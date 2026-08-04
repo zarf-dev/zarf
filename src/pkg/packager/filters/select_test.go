@@ -81,9 +81,11 @@ func Test_selectStateFilter_Apply(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			filter := BySelectState(tc.requestedComponents)
 
-			result, err := filter.Apply(v1alpha1.ZarfPackage{
+			pkg := v1alpha1.ZarfPackage{
 				Components: tc.components,
-			})
+			}
+			indices, err := filter.Apply(packageViewFromV1alpha1(pkg))
+			result := selectV1alpha1Components(pkg, indices)
 
 			require.Equal(t, tc.expectedResult, result)
 			require.Equal(t, tc.expectedError, err)
