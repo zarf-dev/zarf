@@ -323,7 +323,9 @@ type AssembleSkeletonOptions struct {
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
-func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, importedSchemas []string, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
+func AssembleSkeleton(ctx context.Context, resolvedPackage load.ResolvedPackage, packagePath string, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
+	pkg := resolvedPackage.PackageDefinition.AsV1alpha1()
+	importedSchemas := resolvedPackage.ImportedSchemas
 	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
 	// Creating skeleton packages with the values feature is not yet supported

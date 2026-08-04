@@ -721,6 +721,26 @@
     "GitRef": {
       "additionalProperties": false,
       "description": "GitRef selects a single Git reference.",
+      "oneOf": [
+        {
+          "required": [
+            "tag"
+          ],
+          "title": "tag"
+        },
+        {
+          "required": [
+            "branch"
+          ],
+          "title": "branch"
+        },
+        {
+          "required": [
+            "commit"
+          ],
+          "title": "commit"
+        }
+      ],
       "patternProperties": {
         "^x-": {}
       },
@@ -939,6 +959,20 @@
     "OCIRef": {
       "additionalProperties": false,
       "description": "OCIRef selects a single OCI reference.",
+      "oneOf": [
+        {
+          "required": [
+            "tag"
+          ],
+          "title": "tag"
+        },
+        {
+          "required": [
+            "digest"
+          ],
+          "title": "digest"
+        }
+      ],
       "patternProperties": {
         "^x-": {}
       },

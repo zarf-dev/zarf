@@ -11,7 +11,6 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"oras.land/oras-go/v2/content"
@@ -27,11 +26,11 @@ func FetchZarfYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetc
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	generic, err := pkgcfg.ParseMultiDoc(ctx, b)
+	defined, err := pkgcfg.ParseMultiDoc(ctx, b)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	return internalv1alpha1.ConvertFromGeneric(generic), nil
+	return defined.AsV1alpha1(), nil
 }
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.

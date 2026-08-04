@@ -214,18 +214,6 @@ func TestValidateChart(t *testing.T) {
 			chart: v1beta1.Chart{Name: "invalid"},
 			expectedErrs: []string{
 				fmt.Sprintf(PkgValidateErrChartNamespaceMissing, "invalid"),
-				fmt.Sprintf(PkgValidateErrChartSource, "invalid"),
-			},
-		},
-		{
-			name: "multiple sources",
-			chart: v1beta1.Chart{
-				Name: "invalid", Namespace: "whatever",
-				Local: &v1beta1.LocalSource{Path: "whatever"},
-				OCI:   &v1beta1.OCISource{URL: "oci://whatever", Ref: v1beta1.OCIRef{Tag: "1.0.0"}},
-			},
-			expectedErrs: []string{
-				fmt.Sprintf(PkgValidateErrChartSource, "invalid"),
 			},
 		},
 		{
@@ -307,6 +295,46 @@ func TestValidateComponentActions(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{PkgValidateErrActionSetValueOnDeploy},
+		},
+		{
+			name: "setValues in onRemove",
+			actions: v1beta1.ComponentActions{
+				OnRemove: v1beta1.ComponentActionSet{
+					Before: []v1beta1.ComponentAction{
+						{
+							Cmd:       "echo 'valid remove setValue'",
+							SetValues: []v1beta1.SetValue{{Key: "key"}},
+						},
+					},
+				},
+			},
+			expectedErrs: nil,
+		},
+		{
+			name: "setValues in onDeploy",
+			actions: v1beta1.ComponentActions{
+				OnDeploy: v1beta1.ComponentActionSet{
+					Before: []v1beta1.ComponentAction{
+						{
+							Cmd:       "echo 'valid deploy setValue'",
+							SetValues: []v1beta1.SetValue{{Key: "before"}},
+						},
+					},
+					OnSuccess: []v1beta1.ComponentAction{
+						{
+							Cmd:       "echo 'valid deploy success setValue'",
+							SetValues: []v1beta1.SetValue{{Key: "success"}},
+						},
+					},
+					OnFailure: []v1beta1.ComponentAction{
+						{
+							Cmd:       "echo 'valid deploy failure setValue'",
+							SetValues: []v1beta1.SetValue{{Key: "failure"}},
+						},
+					},
+				},
+			},
+			expectedErrs: nil,
 		},
 		{
 			name: "templating in onCreate",

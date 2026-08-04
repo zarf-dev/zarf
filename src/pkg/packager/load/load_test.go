@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -197,6 +198,58 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		require.Equal(t, "imported", pkg.Components[0].Name)
 		require.Equal(t, []string{"nginx:1.27.0"}, pkg.Components[0].Images)
 	})
+}
+
+func TestV1Beta1PackageDefinitionValuesSchemaValidation(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	dir := filepath.Join("testdata", "v1beta1-invalid-values")
+
+	_, err := PackageDefinition(ctx, dir, DefinitionOptions{})
+	require.ErrorContains(t, err, "values validation failed")
+
+	_, err = PackageDefinition(ctx, dir, DefinitionOptions{SkipValuesSchemaValidation: true})
+	require.NoError(t, err)
+}
+
+func TestV1Beta1PackageDefinitionParentChartSourceTakesPriority(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "child.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: child
+component:
+  charts:
+    - name: app
+      namespace: app
+      local:
+        path: chart
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: source-replacement
+components:
+  - name: app
+    import:
+      local:
+        - path: child.yaml
+    charts:
+      - name: app
+        namespace: app
+        oci:
+          url: oci://example.com/chart
+          ref:
+            tag: 1.0.0
+`), 0o600))
+
+	defined, err := PackageDefinition(ctx, dir, DefinitionOptions{})
+	require.NoError(t, err)
+	chart := defined.PackageDefinition.AsV1beta1().Components[0].Charts[0]
+	require.Nil(t, chart.Local)
+	require.NotNil(t, chart.OCI)
 }
 
 func TestPackageDefinitionErrors(t *testing.T) {

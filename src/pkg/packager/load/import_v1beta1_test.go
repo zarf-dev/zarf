@@ -12,6 +12,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -87,7 +88,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "nested")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		resolved, schemas, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.NoError(t, err)
 
 		require.Len(t, resolved.Components, 1)
@@ -99,7 +100,16 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		require.Equal(t, "components/app-chart", comp.Charts[0].Local.Path)
 
 		require.Len(t, comp.Files, 1)
-		require.Equal(t, "components/base/base.txt", comp.Files[0].Source)
+		require.Equal(t, "components/child/child.txt", comp.Files[0].Source)
+
+		require.Equal(t, []string{
+			"components/child/child-values.yaml",
+			"components/app-values.yaml",
+		}, resolved.Values.Files)
+		require.Equal(t, []string{
+			"components/app.schema.json",
+			"components/child/child.schema.json",
+		}, schemas)
 	})
 
 	t.Run("cyclic imports error", func(t *testing.T) {
@@ -164,6 +174,19 @@ func TestResolveImportsV1Beta1Errors(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(body), 0o600))
 	}
 
+	writeComponent := func(t *testing.T, dir, name, body string) {
+		t.Helper()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600))
+	}
+
+	requireLintErr := func(t *testing.T, err error, path string) {
+		t.Helper()
+		var lintErr *lint.LintError
+		require.ErrorAs(t, err, &lintErr)
+		require.Equal(t, path, lintErr.PackageName)
+		require.NotEmpty(t, lintErr.Findings)
+	}
+
 	t.Run("remote imports are not yet supported", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
@@ -217,6 +240,54 @@ components:
 		pkg := loadV1Beta1Package(t, dir)
 		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.Error(t, err)
+	})
+
+	t.Run("missing component config kind errors", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		writeComponent(t, dir, "child.yaml", `apiVersion: zarf.dev/v1beta1
+metadata:
+  name: child
+component: {}
+`)
+		writePkg(t, dir, `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: missing-kind
+components:
+  - name: child
+    import:
+      local:
+        - path: child.yaml
+`)
+		pkg := loadV1Beta1Package(t, dir)
+		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		require.ErrorContains(t, err, "kind")
+	})
+
+	t.Run("component config schema errors", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		writeComponent(t, dir, "child.yaml", `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: child
+component: {}
+unknown: value
+`)
+		writePkg(t, dir, `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: schema-error
+components:
+  - name: child
+    import:
+      local:
+        - path: child.yaml
+`)
+		pkg := loadV1Beta1Package(t, dir)
+		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
 	})
 
 	t.Run("multiple compatible variants error", func(t *testing.T) {

@@ -180,11 +180,11 @@ type HelmRepositorySource struct {
 // GitRef selects a single Git reference. Exactly one of Tag, Branch, or Commit must be set.
 type GitRef struct {
 	// The Git tag.
-	Tag string `json:"tag,omitempty"`
+	Tag string `json:"tag,omitempty" jsonschema:"oneof_required=tag"`
 	// The Git branch.
-	Branch string `json:"branch,omitempty"`
+	Branch string `json:"branch,omitempty" jsonschema:"oneof_required=branch"`
 	// The Git commit SHA.
-	Commit string `json:"commit,omitempty"`
+	Commit string `json:"commit,omitempty" jsonschema:"oneof_required=commit"`
 }
 
 // GitSource represents a Helm chart stored in a Git repository.
@@ -206,9 +206,9 @@ type LocalSource struct {
 // OCIRef selects a single OCI reference. Exactly one of Tag or Digest must be set.
 type OCIRef struct {
 	// The OCI tag.
-	Tag string `json:"tag,omitempty"`
+	Tag string `json:"tag,omitempty" jsonschema:"oneof_required=tag"`
 	// The OCI digest, in the form sha256:<sha>.
-	Digest string `json:"digest,omitempty"`
+	Digest string `json:"digest,omitempty" jsonschema:"oneof_required=digest"`
 }
 
 // OCISource represents a Helm chart stored in an OCI registry.

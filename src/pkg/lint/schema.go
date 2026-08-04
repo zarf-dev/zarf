@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/xeipuuv/gojsonschema"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -36,21 +37,22 @@ func ValidatePackageSchemaAtPath(path string, setVariables map[string]string) ([
 	return getSchemaFindings(jsonSchema, untypedZarfPackage)
 }
 
-// ValidatePackageSchemaAtPathV1Beta1 checks a v1beta1 Zarf package against the v1beta1 schema.
-// If path is a directory, it will look for layout.ZarfYAML within it.
-// If path is a file, it will use that file directly.
-func ValidatePackageSchemaAtPathV1Beta1(path string) ([]PackageFinding, error) {
+// ValidatePackageSchemaBytesV1Beta1 checks v1beta1 Zarf package bytes against the v1beta1 package schema.
+func ValidatePackageSchemaBytesV1Beta1(b []byte) ([]PackageFinding, error) {
 	var untypedZarfPackage interface{}
-
-	pkgPath, err := layout.ResolvePackagePath(path)
-	if err != nil {
-		return nil, fmt.Errorf("unable to access path %q: %w", path, err)
-	}
-
-	if err := utils.ReadYaml(pkgPath.ManifestFile, &untypedZarfPackage); err != nil {
+	if err := goyaml.Unmarshal(b, &untypedZarfPackage); err != nil {
 		return nil, err
 	}
 	return getSchemaFindings(schema.GetV1Beta1Schema(), untypedZarfPackage)
+}
+
+// ValidateComponentConfigSchemaBytesV1Beta1 checks a v1beta1 Zarf component config against the v1beta1 component schema.
+func ValidateComponentConfigSchemaBytesV1Beta1(b []byte) ([]PackageFinding, error) {
+	var untypedComponentConfig interface{}
+	if err := goyaml.Unmarshal(b, &untypedComponentConfig); err != nil {
+		return nil, err
+	}
+	return getSchemaFindings(schema.GetV1Beta1ComponentSchema(), untypedComponentConfig)
 }
 
 func makeFieldPathYqCompat(field string) string {

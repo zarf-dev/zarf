@@ -719,10 +719,9 @@ func TestAssembleSkeleton(t *testing.T) {
 
 	defined, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOptions{})
 	require.NoError(t, err)
-	pkg := defined.PackageDefinition.AsV1alpha1()
 
 	opt := AssembleSkeletonOptions{}
-	pkgLayout, err := AssembleSkeleton(ctx, pkg, "./testdata/zarf-skeleton-package", defined.ImportedSchemas, opt)
+	pkgLayout, err := AssembleSkeleton(ctx, defined, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
@@ -933,11 +932,9 @@ func TestCreateAbsoluteSources(t *testing.T) {
 
 			defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 			require.NoError(t, err)
-			loadedPkg := defined.PackageDefinition.AsV1alpha1()
-
 			var pkgLayout *layout.PackageLayout
 			if tt.isSkeleton {
-				pkgLayout, err = AssembleSkeleton(ctx, loadedPkg, tmpdir, defined.ImportedSchemas, AssembleSkeletonOptions{})
+				pkgLayout, err = AssembleSkeleton(ctx, defined, tmpdir, AssembleSkeletonOptions{})
 				require.NoError(t, err)
 			} else {
 				pkgLayout, err = AssemblePackage(ctx, defined, tmpdir, AssembleOptions{SkipSBOM: true})

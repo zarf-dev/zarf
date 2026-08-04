@@ -56,13 +56,12 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}
 
 	loadOpts := load.DefinitionOptions{
-		Flavor:             opts.Flavor,
-		SetVariables:       opts.SetVariables,
-		CachePath:          opts.CachePath,
-		IsInteractive:      opts.IsInteractive,
-		SkipRequiredValues: true,
-		SkipVersionCheck:   opts.SkipVersionCheck,
-		RemoteOptions:      opts.RemoteOptions,
+		Flavor:           opts.Flavor,
+		SetVariables:     opts.SetVariables,
+		CachePath:        opts.CachePath,
+		IsInteractive:    opts.IsInteractive,
+		SkipVersionCheck: opts.SkipVersionCheck,
+		RemoteOptions:    opts.RemoteOptions,
 	}
 	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {

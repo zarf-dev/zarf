@@ -5,9 +5,13 @@ metadata:
 component:
   import:
     local:
-      - path: base/base.yaml
+      - path: child/child.yaml
   charts:
     - name: app-chart
       namespace: app
       local:
         path: app-chart
+values:
+  files:
+    - app-values.yaml
+  schema: app.schema.json
