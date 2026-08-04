@@ -111,6 +111,21 @@ func TestZarfDevGenerate(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, "number", port["type"])
 
+		configMap, ok := props["configMap"].(map[string]any)
+		require.True(t, ok)
+		configMapProps, ok := configMap["properties"].(map[string]any)
+		require.True(t, ok)
+		for _, field := range []string{"annotations", "labels"} {
+			fieldSchema, ok := configMapProps[field].(map[string]any)
+			require.True(t, ok)
+			require.Equal(t, []any{"object", "null"}, fieldSchema["type"])
+			require.NotContains(t, fieldSchema, "properties")
+			require.NotContains(t, fieldSchema, "minProperties")
+			additionalProperties, ok := fieldSchema["additionalProperties"].(map[string]any)
+			require.True(t, ok)
+			require.Equal(t, "string", additionalProperties["type"])
+		}
+
 		// .oldField should be dropped from the values.schema.json
 		_, hasOldField := props["oldField"]
 		require.False(t, hasOldField)

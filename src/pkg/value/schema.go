@@ -92,7 +92,37 @@ func CheckNoExternalRefs(schema map[string]any) error {
 	return checkNoExternalRefsInObject(schema)
 }
 
+// ValidateJSONSchemaForMapping ensures a chart subschema can be copied below
+// a Zarf value path without relocating reference targets.
+func ValidateJSONSchemaForMapping(schema map[string]any) error {
+	if hasJSONSchemaReference(schema) {
+		return fmt.Errorf("schema contains a reference that cannot be copied to a mapped Zarf value path")
+	}
+	return nil
+}
+
 var externalRefKeywords = []string{"$ref", "$dynamicRef", "$recursiveRef"}
+
+func hasJSONSchemaReference(value any) bool {
+	switch value := value.(type) {
+	case map[string]any:
+		for key, child := range value {
+			if key == "$ref" || key == "$dynamicRef" || key == "$recursiveRef" {
+				return true
+			}
+			if hasJSONSchemaReference(child) {
+				return true
+			}
+		}
+	case []any:
+		for _, child := range value {
+			if hasJSONSchemaReference(child) {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 func checkNoExternalRefsInObject(node map[string]any) error {
 	for _, kw := range externalRefKeywords {

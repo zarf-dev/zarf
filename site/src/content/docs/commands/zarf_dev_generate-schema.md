@@ -8,7 +8,7 @@ tableOfContents: false
 
 ## zarf dev generate-schema
 
-Generates a JSON schema for Zarf values based on the package definition and chart defaults
+Generates a JSON schema for Zarf values based on the package definition, chart defaults, and chart schemas
 
 ```
 zarf dev generate-schema [ DIRECTORY ] [flags]

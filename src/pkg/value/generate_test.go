@@ -60,6 +60,154 @@ func TestGenerateJSONSchema(t *testing.T) {
 	})
 }
 
+func TestMergeJSONSchemaAtPathPreservesNullableObjects(t *testing.T) {
+	schema := GenerateJSONSchema(Values{
+		"serviceAccount": map[string]any{
+			"server": map[string]any{
+				"annotations": nil,
+			},
+		},
+	})
+
+	err := MergeJSONSchemaAtPath(schema, Path(".serviceAccount.server.annotations"), map[string]any{
+		"type":       []any{"object", "null"},
+		"properties": map[string]any{},
+		"required":   []any{"not-imported"},
+	})
+	require.NoError(t, err)
+
+	annotations, found, err := ExtractJSONSchema(schema, Path(".serviceAccount.server.annotations"))
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.Equal(t, []any{"object", "null"}, annotations["type"])
+	assert.NotContains(t, annotations, "properties")
+	assert.NotContains(t, annotations, "required")
+
+	existing := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"serviceAccount": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"server": map[string]any{
+						"type": "object",
+						"properties": map[string]any{
+							"annotations": map[string]any{
+								"type":        "string",
+								"description": "preserve this",
+								"required":    []any{"package-owned"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	result := ReconcileJSONSchema(existing, schema, false)
+	annotations, found, err = ExtractJSONSchema(result, Path(".serviceAccount.server.annotations"))
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.Equal(t, []any{"object", "null"}, annotations["type"])
+	assert.Equal(t, "preserve this", annotations["description"])
+	assert.Equal(t, []any{"package-owned"}, annotations["required"])
+}
+
+func TestMergeJSONSchemaAtPathAtMappedObject(t *testing.T) {
+	schema := GenerateJSONSchema(Values{
+		"backend": map[string]any{
+			"configMap": map[string]any{
+				"annotations": nil,
+			},
+		},
+	})
+
+	err := MergeJSONSchemaAtPath(schema, Path(".backend"), map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"configMap": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"annotations": map[string]any{
+						"type": []any{"object", "null"},
+					},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	annotations, found, err := ExtractJSONSchema(schema, Path(".backend.configMap.annotations"))
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.Equal(t, []any{"object", "null"}, annotations["type"])
+}
+
+func TestExtractJSONSchemaUsesAdditionalProperties(t *testing.T) {
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"config": map[string]any{
+				"type": "object",
+				"additionalProperties": map[string]any{
+					"type": "string",
+				},
+			},
+		},
+	}
+
+	result, found, err := ExtractJSONSchema(schema, Path(".config.database"))
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.Equal(t, "string", result["type"])
+}
+
+func TestMergeJSONSchemaAtPathCopiesValidationFields(t *testing.T) {
+	schema := GenerateJSONSchema(Values{
+		"config": map[string]any{
+			"database": "postgres",
+			"ports":    []any{"http"},
+		},
+	})
+
+	err := MergeJSONSchemaAtPath(schema, Path(".config.database"), map[string]any{
+		"type":      "string",
+		"minLength": float64(3),
+		"enum":      []any{"postgres", "mysql"},
+	})
+	require.NoError(t, err)
+
+	database, found, err := ExtractJSONSchema(schema, Path(".config.database"))
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.Equal(t, float64(3), database["minLength"])
+	assert.Equal(t, []any{"postgres", "mysql"}, database["enum"])
+
+	err = MergeJSONSchemaAtPath(schema, Path(".config.ports"), map[string]any{
+		"type":     "array",
+		"minItems": float64(1),
+		"maxItems": float64(3),
+	})
+	require.NoError(t, err)
+	ports, found, err := ExtractJSONSchema(schema, Path(".config.ports"))
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.Equal(t, float64(1), ports["minItems"])
+	assert.Equal(t, float64(3), ports["maxItems"])
+
+	err = MergeJSONSchemaAtPath(schema, Path(".config"), map[string]any{
+		"minProperties": float64(1),
+		"required":      []any{"database"},
+		"allOf":         []any{map[string]any{"const": "postgres"}},
+	})
+	require.NoError(t, err)
+	config, found, err := ExtractJSONSchema(schema, Path(".config"))
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.NotContains(t, config, "minProperties")
+	assert.NotContains(t, config, "required")
+	assert.NotContains(t, config, "allOf")
+}
+
 func TestReconcileJSONSchema(t *testing.T) {
 	tests := []struct {
 		name           string
