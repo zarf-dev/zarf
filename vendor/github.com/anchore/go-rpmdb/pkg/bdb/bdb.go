@@ -1,10 +1,9 @@
 package bdb
 
 import (
+	"fmt"
 	"io"
 	"os"
-
-	"golang.org/x/xerrors"
 
 	dbi "github.com/anchore/go-rpmdb/pkg/db"
 )
@@ -35,12 +34,12 @@ func Open(path string) (*BerkeleyDB, error) {
 	metadataBuff := make([]byte, 512)
 	_, err = file.Read(metadataBuff)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to read metadata: %w", err)
+		return nil, fmt.Errorf("failed to read metadata: %w", err)
 	}
 
 	_, err = file.Seek(0, io.SeekStart)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to seek db file: %w", err)
+		return nil, fmt.Errorf("failed to seek db file: %w", err)
 	}
 
 	hashMetadata, err := ParseHashMetadataPage(metadataBuff)
@@ -49,7 +48,7 @@ func Open(path string) (*BerkeleyDB, error) {
 	}
 
 	if _, ok := validPageSizes[hashMetadata.PageSize]; !ok {
-		return nil, xerrors.Errorf("unexpected page size: %+v", hashMetadata.PageSize)
+		return nil, fmt.Errorf("unexpected page size: %+v", hashMetadata.PageSize)
 	}
 
 	return &BerkeleyDB{
