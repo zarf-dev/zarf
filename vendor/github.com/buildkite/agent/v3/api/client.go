@@ -166,7 +166,12 @@ func (c *Client) FromAgentRegisterResponse(reg *AgentRegisterResponse) *Client {
 		conf.Endpoint = reg.Endpoint
 	}
 
-	return c.New(conf)
+	newClient := c.New(conf)
+
+	// If Buildkite told us to use Buildkite-* request headers, store those
+	newClient.setRequestHeaders(reg.RequestHeaders)
+
+	return newClient
 }
 
 func (c *Client) setRequestHeaders(headers map[string]string) {
