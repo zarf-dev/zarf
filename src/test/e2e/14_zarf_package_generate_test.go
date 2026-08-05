@@ -126,6 +126,10 @@ func TestZarfDevGenerate(t *testing.T) {
 			require.Equal(t, "string", additionalProperties["type"])
 		}
 
+		// .backend.image should be dropped because it is excluded from the chart mapping.
+		_, hasExcludedImage := backendProps["image"]
+		require.False(t, hasExcludedImage)
+
 		// .oldField should be dropped from the values.schema.json
 		_, hasOldField := props["oldField"]
 		require.False(t, hasOldField)

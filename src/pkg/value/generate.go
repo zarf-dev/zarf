@@ -256,7 +256,11 @@ func filterChartSchemaValue(key string, value any) any {
 			filtered := make(map[string]any, len(schemas))
 			for name, schema := range schemas {
 				if schemaMap, ok := schema.(map[string]any); ok {
-					filtered[name] = filterChartSchema(schemaMap)
+					filteredSchema := filterChartSchema(schemaMap)
+					if len(filteredSchema) == 0 {
+						continue
+					}
+					filtered[name] = filteredSchema
 				} else {
 					filtered[name] = copyValue(schema)
 				}

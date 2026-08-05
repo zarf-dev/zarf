@@ -208,6 +208,25 @@ func TestMergeJSONSchemaAtPathCopiesValidationFields(t *testing.T) {
 	assert.NotContains(t, config, "allOf")
 }
 
+func TestFilterChartSchemaDropsUnsupportedChildSchemas(t *testing.T) {
+	filtered := filterChartSchema(map[string]any{
+		"properties": map[string]any{
+			"descriptionOnly": map[string]any{
+				"description": "unsupported chart metadata",
+			},
+			"name": map[string]any{
+				"type":        "string",
+				"description": "application name",
+			},
+		},
+	})
+
+	properties, ok := filtered["properties"].(map[string]any)
+	require.True(t, ok)
+	assert.NotContains(t, properties, "descriptionOnly")
+	assert.Equal(t, map[string]any{"type": "string"}, properties["name"])
+}
+
 func TestReconcileJSONSchema(t *testing.T) {
 	tests := []struct {
 		name           string
