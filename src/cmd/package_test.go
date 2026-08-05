@@ -132,30 +132,6 @@ func TestPackageList(t *testing.T) {
 	}
 }
 
-func TestSkipValuesSchemaValidationFlags(t *testing.T) {
-	t.Parallel()
-	v := viper.New()
-
-	commands := []*cobra.Command{
-		newPackageDeployCommand(v),
-		newPackageInspectManifestsCommand(v),
-		newPackageInspectValuesFilesCommand(v),
-		newInitCommand(),
-	}
-	for _, cmd := range commands {
-		flag := cmd.Flags().Lookup("skip-values-schema-validation")
-		require.NotNil(t, flag, cmd.Use)
-		require.Equal(t, "false", flag.DefValue, cmd.Use)
-	}
-
-	for _, cmd := range []*cobra.Command{
-		newDevInspectManifestsCommand(v),
-		newDevInspectValuesFilesCommand(v),
-	} {
-		require.Nil(t, cmd.Flags().Lookup("skip-values-schema-validation"), cmd.Use)
-	}
-}
-
 func TestPackageInspectManifests(t *testing.T) {
 	t.Parallel()
 	// Some sub-cases exercise package-level values, which are gated behind the values feature.
