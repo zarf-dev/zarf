@@ -36,7 +36,7 @@ zarf dev find-images [ DIRECTORY ] [flags]
       --set-values stringToString             Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
       --skip-cosign                           Skip searching for cosign artifacts related to discovered images
   -u, --update                                Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change.
-      --values strings                        [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
+      --values strings                        [beta] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
       --why string                            Prints the source manifest for the specified image
 ```
 
