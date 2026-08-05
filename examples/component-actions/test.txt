@@ -1,3 +1,3 @@
-The cat says ###ZARF_VAR_CAT_SOUND###.
-The dog says ###ZARF_VAR_DOG_SOUND###.
-The snake says ###ZARF_VAR_SNAKE_SOUND###.
+The cat says {{ .Values.sounds.cat }}.
+The dog says {{ .Values.sounds.dog }}.
+The snake says {{ .Values.sounds.snake }}.

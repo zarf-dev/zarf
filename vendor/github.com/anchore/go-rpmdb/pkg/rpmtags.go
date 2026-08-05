@@ -23,6 +23,8 @@ const (
 	RPMTAG_SIZE           = 1009 /* i */
 	RPMTAG_VENDOR         = 1011 /* s */
 	RPMTAG_LICENSE        = 1014 /* s */
+	RPMTAG_PACKAGER       = 1015 /* s */
+	RPMTAG_URL            = 1020 /* s */
 	RPMTAG_ARCH           = 1022 /* s */
 	RPMTAG_FILESIZES      = 1028 /* i[] */
 	RPMTAG_FILEMODES      = 1030 /* h[] , specifically []uint16 (ref https://github.com/rpm-software-management/rpm/blob/2153fa4ae51a84547129b8ebb3bb396e1737020e/lib/rpmtypes.h#L53 )*/

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -85,19 +86,19 @@ func TestComponentActions(t *testing.T) {
 		require.Contains(t, stdOut, "😭😭😭 this action failed because it took too long to run 😭😭😭")
 	})
 
-	t.Run("action on-deploy-with-variable", func(t *testing.T) {
+	t.Run("action on-deploy-with-value", func(t *testing.T) {
 		t.Parallel()
 
-		// Test using a Zarf Variable within the action
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-variable", "--confirm")
+		// Test using a Zarf Value within the action
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-value", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "the dog says ruff")
 	})
 
-	t.Run("action on-deploy-with-dynamic-variable", func(t *testing.T) {
+	t.Run("action on-deploy-with-dynamic-value", func(t *testing.T) {
 		t.Parallel()
-		// Test using dynamic and multiple-variables
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "--confirm")
+		// Test using dynamic and multiple values
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-dynamic-value,on-deploy-with-multiple-values", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "the cat says meow")
 		require.Contains(t, stdOut, "the dog says ruff")
@@ -105,6 +106,10 @@ func TestComponentActions(t *testing.T) {
 	})
 
 	t.Run("action on-deploy-with-env-var", func(t *testing.T) {
+		if runtime.GOOS != "linux" {
+			t.Skip("on-deploy-with-env-var is linux-only")
+		}
+
 		t.Parallel()
 		deployWithEnvVarArtifact := "test-filename-from-env.txt"
 
@@ -121,20 +126,20 @@ func TestComponentActions(t *testing.T) {
 		t.Parallel()
 		deployTemplatedArtifact := "test-templated.txt"
 
-		// Test using a templated file but without dynamic variables
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-template-use-of-variable", "--confirm")
+		// Test using a templated file but without dynamic values
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-template-use-of-value", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		outTemplated, err := os.ReadFile(deployTemplatedArtifact)
 		require.NoError(t, err)
 		require.Contains(t, string(outTemplated), "The dog says ruff")
-		require.Contains(t, string(outTemplated), "The cat says ###ZARF_VAR_CAT_SOUND###")
-		require.Contains(t, string(outTemplated), "The snake says ###ZARF_VAR_SNAKE_SOUND###")
+		require.Contains(t, string(outTemplated), "The cat says .")
+		require.Contains(t, string(outTemplated), "The snake says .")
 
-		// Remove the templated file so we can test with dynamic variables
+		// Remove the templated file so we can test with dynamic values
 		e2e.CleanFiles(t, deployTemplatedArtifact)
 
-		// Test using a templated file with dynamic variables
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-template-use-of-variable,on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "--confirm")
+		// Test using a templated file with dynamic values
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-template-use-of-value,on-deploy-with-dynamic-value,on-deploy-with-multiple-values", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		outTemplated, err = os.ReadFile(deployTemplatedArtifact)
 		require.NoError(t, err)
@@ -154,4 +159,43 @@ func TestComponentActions(t *testing.T) {
 		// regression test to ensure that failed commands are not erroneously flagged as a timeout
 		require.NotContains(t, stdErr, "timed out")
 	})
+}
+
+func TestComponentActionVariables(t *testing.T) {
+	t.Log("E2E: Testing component action variables")
+
+	outPath := t.TempDir()
+	tarPath := filepath.Join(outPath, fmt.Sprintf("zarf-package-component-action-variables-%s.tar.zst", e2e.Arch))
+	workingDir := t.TempDir()
+	templatedArtifact := filepath.Join(workingDir, "test-variable-templated.txt")
+
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/02-component-action-variables", "-o", outPath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.ZarfInDir(t, workingDir, "package", "deploy", tarPath, "--components=on-deploy-with-variable", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdOut, "the dog says ruff")
+
+	stdOut, stdErr, err = e2e.ZarfInDir(t, workingDir, "package", "deploy", tarPath, "--components=on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Contains(t, stdOut, "the cat says meow")
+	require.Contains(t, stdOut, "the dog says ruff")
+	require.Contains(t, stdOut, "the snake says hiss")
+
+	stdOut, stdErr, err = e2e.ZarfInDir(t, workingDir, "package", "deploy", tarPath, "--components=on-deploy-with-template-use-of-variable", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	outTemplated, err := os.ReadFile(templatedArtifact)
+	require.NoError(t, err)
+	require.Contains(t, string(outTemplated), "The dog says ruff")
+	require.Contains(t, string(outTemplated), "The cat says ###ZARF_VAR_CAT_SOUND###")
+	require.Contains(t, string(outTemplated), "The snake says ###ZARF_VAR_SNAKE_SOUND###")
+	require.NoError(t, os.Remove(templatedArtifact))
+
+	stdOut, stdErr, err = e2e.ZarfInDir(t, workingDir, "package", "deploy", tarPath, "--components=on-deploy-with-template-use-of-variable,on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	outTemplated, err = os.ReadFile(templatedArtifact)
+	require.NoError(t, err)
+	require.Contains(t, string(outTemplated), "The dog says ruff")
+	require.Contains(t, string(outTemplated), "The cat says meow")
+	require.Contains(t, string(outTemplated), "The snake says hiss")
 }

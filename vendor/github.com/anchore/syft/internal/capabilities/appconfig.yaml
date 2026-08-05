@@ -2,6 +2,8 @@
 # This file is partially auto-generated. Run 'go generate ./internal/capabilities' to regenerate.
 
 application: # AUTO-GENERATED - application-level config keys
+  - key: cpp.vcpkg-allow-git-clone
+    description: enables Syft to use clone remote repositories for vcpkg custom git registries. (also useful if the builtin vcpkg registry is not cloned locally)
   - key: dotnet.dep-packages-must-claim-dll
     description: only keep dep.json packages which have a runtime/resource DLL claimed in the deps.json targets section (but not necessarily found on disk). The package is also included if any child package claims a DLL, even if the package itself does not claim a DLL.
   - key: dotnet.dep-packages-must-have-dll
@@ -12,6 +14,8 @@ application: # AUTO-GENERATED - application-level config keys
     description: treat DLL claims or on-disk evidence for child packages as DLL claims or on-disk evidence for any parent package
   - key: dotnet.relax-dll-claims-when-bundling-detected
     description: show all packages from the deps.json if bundling tooling is present as a dependency (e.g. ILRepack)
+  - key: golang.capture-symbols
+    description: 'capture function symbols from the binary symbol table (pclntab). valid values are: "none" (disabled), "stdlib" (only the synthetic stdlib package), and "all" (all module packages plus stdlib)'
   - key: golang.local-mod-cache-dir
     description: specify an explicit go mod cache directory, if unset this defaults to $GOPATH/pkg/mod or $HOME/go/pkg/mod
   - key: golang.local-vendor-dir

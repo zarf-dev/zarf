@@ -49,7 +49,8 @@ func (p Path) IsDirWhiteout() bool {
 
 // IsWhiteout indicates if the file basename has a whiteout prefix (which means that the file should be removed during squashing)
 func (p Path) IsWhiteout() bool {
-	return strings.HasPrefix(p.Basename(), WhiteoutPrefix)
+	basename := p.Basename()
+	return strings.HasPrefix(basename, WhiteoutPrefix) && basename != WhiteoutPrefix
 }
 
 // UnWhiteoutPath is a representation of the current path with no whiteout prefixes
