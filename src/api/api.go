@@ -208,48 +208,6 @@ func (p PackageDefinition) filterView() filters.PackageView {
 	return filters.PackageView{Components: components}
 }
 
-// SetComponentImages updates the image list for the named component.
-func (p *PackageDefinition) SetComponentImages(componentName string, images []string) {
-	for i := range p.pkg.Components {
-		if p.pkg.Components[i].Name != componentName {
-			continue
-		}
-		p.pkg.Components[i].Images = mergeImageSources(p.pkg.Components[i].Images, images)
-		return
-	}
-}
-
-// SetComponentRepositories updates the git repository list for the named component.
-func (p *PackageDefinition) SetComponentRepositories(componentName string, repos []string) {
-	for i := range p.pkg.Components {
-		if p.pkg.Components[i].Name != componentName {
-			continue
-		}
-		p.pkg.Components[i].Repositories = repositoriesFromV1alpha1(repos)
-		return
-	}
-}
-
-func mergeImageSources(existing []internalTypes.Image, names []string) []internalTypes.Image {
-	sourceByName := make(map[string]string, len(existing))
-	for _, image := range existing {
-		sourceByName[image.Name] = image.Source
-	}
-	images := make([]internalTypes.Image, 0, len(names))
-	for _, name := range names {
-		images = append(images, internalTypes.Image{Name: name, Source: sourceByName[name]})
-	}
-	return images
-}
-
-func repositoriesFromV1alpha1(repos []string) []internalTypes.Repository {
-	out := make([]internalTypes.Repository, 0, len(repos))
-	for _, repo := range repos {
-		out = append(out, internalTypes.Repository{URL: repo})
-	}
-	return out
-}
-
 // SetAggregateChecksum records the generated checksums.txt aggregate checksum in every API location.
 func (p *PackageDefinition) SetAggregateChecksum(checksum string) {
 	p.pkg.Metadata.AggregateChecksum = checksum

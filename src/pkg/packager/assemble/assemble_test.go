@@ -14,6 +14,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
@@ -242,56 +243,128 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 	}
 }
 
-func TestDifferentialComponentResources(t *testing.T) {
+func TestApplyDifferentialResourcesV1alpha1(t *testing.T) {
 	t.Parallel()
 
-	component := v1alpha1.ZarfComponent{
-		Images: []string{
-			"example.com/include-image-tag:latest",
-			"example.com/image-with-tag:v1",
-			"example.com/diff-image-with-tag:v1",
-			"example.com/image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-			"example.com/diff-image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-			"example.com/image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-			"example.com/diff-image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+	current := api.NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Images: []string{
+					"example.com/include-image-tag:latest",
+					"example.com/image-with-tag:v1",
+					"example.com/diff-image-with-tag:v1",
+					"example.com/image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+					"example.com/diff-image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+					"example.com/image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+					"example.com/diff-image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+				},
+				Repos: []string{
+					"https://example.com/no-ref.git",
+					"https://example.com/branch.git@refs/heads/main",
+					"https://example.com/tag.git@v1",
+					"https://example.com/diff-tag.git@v1",
+					"https://example.com/commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
+					"https://example.com/diff-commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
+				},
+			},
 		},
-		Repos: []string{
-			"https://example.com/no-ref.git",
-			"https://example.com/branch.git@refs/heads/main",
-			"https://example.com/tag.git@v1",
-			"https://example.com/diff-tag.git@v1",
-			"https://example.com/commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
-			"https://example.com/diff-commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
+	})
+	previous := api.NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Images: []string{
+					"example.com/include-image-tag:latest",
+					"example.com/diff-image-with-tag:v1",
+					"example.com/diff-image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+					"example.com/diff-image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+				},
+				Repos: []string{
+					"https://example.com/no-ref.git",
+					"https://example.com/branch.git@refs/heads/main",
+					"https://example.com/diff-tag.git@v1",
+					"https://example.com/diff-commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
+				},
+			},
 		},
-	}
-	differentialImages := map[string]bool{
-		"example.com/include-image-tag:latest": true,
-		"example.com/diff-image-with-tag:v1":   true,
-		"example.com/diff-image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855":            true,
-		"example.com/diff-image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": true,
-	}
-	differentialRepos := map[string]bool{
-		"https://example.com/no-ref.git":                                               true,
-		"https://example.com/branch.git@refs/heads/main":                               true,
-		"https://example.com/diff-tag.git@v1":                                          true,
-		"https://example.com/diff-commit.git@524980951ff16e19dc25232e9aea8fd693989ba6": true,
-	}
+	})
 
-	images, repos, err := differentialComponentResources(component, differentialImages, differentialRepos)
+	result, err := applyDifferentialResources(current, previous)
 	require.NoError(t, err)
 
+	pkg := result.AsV1alpha1()
 	require.ElementsMatch(t, []string{
 		"example.com/include-image-tag:latest",
 		"example.com/image-with-tag:v1",
 		"example.com/image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		"example.com/image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-	}, images)
+	}, pkg.Components[0].Images)
 	require.ElementsMatch(t, []string{
 		"https://example.com/no-ref.git",
 		"https://example.com/branch.git@refs/heads/main",
 		"https://example.com/tag.git@v1",
 		"https://example.com/commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
-	}, repos)
+	}, pkg.Components[0].Repos)
+}
+
+func TestApplyDifferentialResourcesV1beta1PreservesResourceFields(t *testing.T) {
+	t.Parallel()
+
+	current := api.NewPackageDefinitionFromV1beta1(v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
+		Components: []v1beta1.Component{
+			{
+				Name: "component",
+				ComponentSpec: v1beta1.ComponentSpec{
+					Images: []v1beta1.Image{
+						{Name: "registry.example.com/mutable:latest", Source: "daemon"},
+						{Name: "registry.example.com/new:v1", Source: "daemon"},
+						{Name: "registry.example.com/removed:v1", Source: "registry"},
+					},
+					Repositories: []v1beta1.Repository{
+						{URL: "https://example.com/no-ref.git"},
+						{URL: "https://example.com/branch.git", Ref: &v1beta1.GitRef{Branch: "main"}},
+						{URL: "https://example.com/new-tag.git", Ref: &v1beta1.GitRef{Tag: "v1"}},
+						{URL: "https://example.com/removed-tag.git", Ref: &v1beta1.GitRef{Tag: "v1"}},
+					},
+				},
+			},
+		},
+	})
+	previous := api.NewPackageDefinitionFromV1beta1(v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
+		Components: []v1beta1.Component{
+			{
+				Name: "component",
+				ComponentSpec: v1beta1.ComponentSpec{
+					Images: []v1beta1.Image{
+						{Name: "registry.example.com/mutable:latest", Source: "daemon"},
+						{Name: "registry.example.com/removed:v1", Source: "registry"},
+					},
+					Repositories: []v1beta1.Repository{
+						{URL: "https://example.com/no-ref.git"},
+						{URL: "https://example.com/branch.git", Ref: &v1beta1.GitRef{Branch: "main"}},
+						{URL: "https://example.com/removed-tag.git", Ref: &v1beta1.GitRef{Tag: "v1"}},
+					},
+				},
+			},
+		},
+	})
+
+	result, err := applyDifferentialResources(current, previous)
+	require.NoError(t, err)
+
+	pkg := result.AsV1beta1()
+	require.Equal(t, []v1beta1.Image{
+		{Name: "registry.example.com/mutable:latest", Source: "daemon"},
+		{Name: "registry.example.com/new:v1", Source: "daemon"},
+	}, pkg.Components[0].Images)
+	require.Equal(t, []v1beta1.Repository{
+		{URL: "https://example.com/no-ref.git"},
+		{URL: "https://example.com/branch.git", Ref: &v1beta1.GitRef{Branch: "main"}},
+		{URL: "https://example.com/new-tag.git", Ref: &v1beta1.GitRef{Tag: "v1"}},
+	}, pkg.Components[0].Repositories)
 }
 
 func TestCollectVersionRequirements(t *testing.T) {

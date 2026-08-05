@@ -28,7 +28,9 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/go-git/go-git/v5/plumbing"
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
@@ -81,20 +83,6 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 
 	if opts.DifferentialPackage.Metadata.Name != "" {
 		l.Debug("creating differential package", "differential", opts.DifferentialPackage)
-		allIncludedImagesMap := map[string]bool{}
-		allIncludedReposMap := map[string]bool{}
-		for _, component := range opts.DifferentialPackage.Components {
-			for _, image := range component.Images {
-				allIncludedImagesMap[image] = true
-			}
-			for _, repo := range component.Repos {
-				allIncludedReposMap[repo] = true
-			}
-		}
-
-		pkg.Build.Differential = true
-		pkg.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
-
 		versionsMatch := opts.DifferentialPackage.Metadata.Version == pkg.Metadata.Version
 		if versionsMatch {
 			return nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
@@ -103,16 +91,14 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		if noVersionSet {
 			return nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
-		for componentIdx, component := range pkg.Components {
-			images, repos, err := differentialComponentResources(component, allIncludedImagesMap, allIncludedReposMap)
-			if err != nil {
-				return nil, err
-			}
-			pkg.Components[componentIdx].Images = images
-			pkg.Components[componentIdx].Repos = repos
-			definition.SetComponentImages(component.Name, images)
-			definition.SetComponentRepositories(component.Name, repos)
+		updatedDefinition, err := applyDifferentialResources(definition, api.NewPackageDefinitionFromV1alpha1(opts.DifferentialPackage))
+		if err != nil {
+			return nil, err
 		}
+		definition = updatedDefinition
+		pkg = definition.AsV1alpha1()
+		pkg.Build.Differential = true
+		pkg.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
 	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -260,37 +246,135 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	return pkgLayout, nil
 }
 
-func differentialComponentResources(component v1alpha1.ZarfComponent, differentialImages map[string]bool, differentialRepos map[string]bool) ([]string, []string, error) {
-	images := make([]string, 0, len(component.Images))
-	for _, img := range component.Images {
-		imgRef, err := transform.ParseImageRef(img)
-		if err != nil {
-			return nil, nil, fmt.Errorf("unable to parse image ref %s: %w", img, err)
+func applyDifferentialResources(definition, previous api.PackageDefinition) (api.PackageDefinition, error) {
+	previousImages, previousRepos := differentialResourceSets(previous.AsV1alpha1().Components)
+
+	if definition.OriginalAPIVersion() == v1beta1.APIVersion {
+		pkg := definition.AsV1beta1()
+		for componentIdx, component := range pkg.Components {
+			images := make([]v1beta1.Image, 0, len(component.Images))
+			for _, img := range component.Images {
+				includeImage, err := includeDifferentialImage(img.Name, previousImages)
+				if err != nil {
+					return api.PackageDefinition{}, err
+				}
+				if includeImage {
+					images = append(images, img)
+				}
+			}
+			pkg.Components[componentIdx].Images = images
+
+			repos := make([]v1beta1.Repository, 0, len(component.Repositories))
+			for _, repo := range component.Repositories {
+				includeRepo, err := includeDifferentialRepository(v1beta1RepositoryIdentifier(repo), previousRepos)
+				if err != nil {
+					return api.PackageDefinition{}, err
+				}
+				if includeRepo {
+					repos = append(repos, repo)
+				}
+			}
+			pkg.Components[componentIdx].Repositories = repos
 		}
-		imgTag := imgRef.TagOrDigest
-		includeImage := imgTag == ":latest" || imgTag == ":stable" || imgTag == ":nightly"
-		if includeImage || !differentialImages[img] {
-			images = append(images, img)
-		}
+		return api.NewPackageDefinitionFromV1beta1(pkg), nil
 	}
 
-	repos := make([]string, 0, len(component.Repos))
-	for _, repoURL := range component.Repos {
-		_, refPlain, err := transform.GitURLSplitRef(repoURL)
-		if err != nil {
-			return nil, nil, err
+	pkg := definition.AsV1alpha1()
+	for componentIdx, component := range pkg.Components {
+		images := make([]string, 0, len(component.Images))
+		for _, img := range component.Images {
+			includeImage, err := includeDifferentialImage(img, previousImages)
+			if err != nil {
+				return api.PackageDefinition{}, err
+			}
+			if includeImage {
+				images = append(images, img)
+			}
 		}
-		var ref plumbing.ReferenceName
-		if refPlain != "" {
-			ref = git.ParseRef(refPlain)
+		pkg.Components[componentIdx].Images = images
+
+		repos := make([]string, 0, len(component.Repos))
+		for _, repo := range component.Repos {
+			includeRepo, err := includeDifferentialRepository(repo, previousRepos)
+			if err != nil {
+				return api.PackageDefinition{}, err
+			}
+			if includeRepo {
+				repos = append(repos, repo)
+			}
 		}
-		includeRepo := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
-		if includeRepo || !differentialRepos[repoURL] {
-			repos = append(repos, repoURL)
+		pkg.Components[componentIdx].Repos = repos
+	}
+	return api.NewPackageDefinitionFromV1alpha1(pkg), nil
+}
+
+func differentialResourceSets(components []v1alpha1.ZarfComponent) (map[string]struct{}, map[string]struct{}) {
+	images := map[string]struct{}{}
+	repos := map[string]struct{}{}
+	for _, component := range components {
+		for _, image := range component.Images {
+			images[image] = struct{}{}
+		}
+		for _, repo := range component.Repos {
+			repos[repo] = struct{}{}
 		}
 	}
+	return images, repos
+}
 
-	return images, repos, nil
+func includeDifferentialImage(img string, previousImages map[string]struct{}) (bool, error) {
+	imgRef, err := transform.ParseImageRef(img)
+	if err != nil {
+		return false, fmt.Errorf("unable to parse image ref %s: %w", img, err)
+	}
+	imgTag := imgRef.TagOrDigest
+	includeImage := imgTag == ":latest" || imgTag == ":stable" || imgTag == ":nightly"
+	_, inPrevious := previousImages[img]
+	return includeImage || !inPrevious, nil
+}
+
+func includeDifferentialRepository(repoURL string, previousRepos map[string]struct{}) (bool, error) {
+	_, refPlain, err := transform.GitURLSplitRef(repoURL)
+	if err != nil {
+		return false, err
+	}
+	var ref plumbing.ReferenceName
+	if refPlain != "" {
+		ref = git.ParseRef(refPlain)
+	}
+	includeRepo := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
+	_, inPrevious := previousRepos[repoURL]
+	return includeRepo || !inPrevious, nil
+}
+
+func v1beta1RepositoryIdentifier(repo v1beta1.Repository) string {
+	url := repo.URL
+	if repo.Ref == nil {
+		return url
+	}
+	refStr := flattenV1beta1GitRef(repo.Ref)
+	if refStr == "" {
+		return url
+	}
+	if urlNoRef, _, err := transform.GitURLSplitRef(url); err == nil {
+		url = urlNoRef
+	}
+	return url + "@" + refStr
+}
+
+func flattenV1beta1GitRef(ref *v1beta1.GitRef) string {
+	if ref == nil {
+		return ""
+	}
+	switch {
+	case ref.Tag != "":
+		return ref.Tag
+	case ref.Commit != "":
+		return ref.Commit
+	case ref.Branch != "":
+		return "refs/heads/" + ref.Branch
+	}
+	return ""
 }
 
 // AssembleSkeletonOptions are the options for creating a skeleton package
