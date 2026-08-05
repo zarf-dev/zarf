@@ -65,6 +65,21 @@ func (p *PackageDefinition) SetAnnotations(annotations map[string]string) {
 	p.pkg.Metadata.Annotations = annotations
 }
 
+// RemoveImages removes images and image archives from every component.
+func (p *PackageDefinition) RemoveImages() {
+	for i := range p.pkg.Components {
+		p.pkg.Components[i].Images = nil
+		p.pkg.Components[i].ImageArchives = nil
+	}
+}
+
+// RemoveRepositories removes git repositories from every component.
+func (p *PackageDefinition) RemoveRepositories() {
+	for i := range p.pkg.Components {
+		p.pkg.Components[i].Repositories = nil
+	}
+}
+
 // FilterComponents applies a component filter to the package definition.
 func (p *PackageDefinition) FilterComponents(filter filters.ComponentFilterStrategy) error {
 	if filter == nil {
@@ -103,6 +118,31 @@ func (p *PackageDefinition) OverrideNamespace(namespace string) error {
 	}
 	p.overrideComponentNamespaces(originalNamespace, namespace)
 	return nil
+}
+
+// SetChartNamespace sets the namespace for charts matching the given component and chart name.
+func (p *PackageDefinition) SetChartNamespace(componentName, chartName, namespace string) {
+	for i := range p.pkg.Components {
+		component := &p.pkg.Components[i]
+		if component.Name != componentName {
+			continue
+		}
+		for j := range component.Charts {
+			if component.Charts[j].Name == chartName {
+				component.Charts[j].Namespace = namespace
+			}
+		}
+	}
+}
+
+// SetChartNamespaces applies component-to-chart namespace overrides.
+// FIXME: overrides is a bad thing to accept
+func (p *PackageDefinition) SetChartNamespaces(overrides map[string]map[string]string) {
+	for componentName, chartOverrides := range overrides {
+		for chartName, namespace := range chartOverrides {
+			p.SetChartNamespace(componentName, chartName, namespace)
+		}
+	}
 }
 
 func (p PackageDefinition) allowsNamespaceOverride() bool {
