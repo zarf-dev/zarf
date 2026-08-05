@@ -277,11 +277,12 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 	tmpBundlePath := filepath.Join(tmpDir, Bundle)
 
 	definition := p.PackageDefinition
-	definition.SetSignedProvenance(
-		Bundle,
-		"v0.71.0",
-		"This package contains a bundle format signature which requires Zarf v0.71.0 or later",
-	)
+	definition.SetBuildSigned(true)
+	definition.AddProvenanceFile(Bundle)
+	definition.AddVersionRequirement(v1alpha1.VersionRequirement{
+		Version: "v0.71.0",
+		Reason:  "This package contains a bundle format signature which requires Zarf v0.71.0 or later",
+	})
 	p.PackageDefinition = definition
 
 	// Consolidated in-memory rollback — fires on any error exit via named return.

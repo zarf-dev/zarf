@@ -217,7 +217,23 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	if err != nil {
 		return nil, err
 	}
-	definition.SetBuildMetadataFromV1alpha1(pkg)
+	definition.SetMetadataVersion(pkg.Metadata.Version)
+	definition.SetBuildHostname(pkg.Build.Terminal)
+	definition.SetBuildUser(pkg.Build.User)
+	definition.SetBuildArchitecture(pkg.Build.Architecture)
+	definition.SetBuildTimestamp(pkg.Build.Timestamp)
+	definition.SetBuildVersion(pkg.Build.Version)
+	definition.SetBuildMigrations(pkg.Build.Migrations)
+	definition.SetBuildRegistryOverrides(pkg.Build.RegistryOverrides)
+	definition.SetBuildDifferential(pkg.Build.Differential, pkg.Build.DifferentialPackageVersion, pkg.Build.DifferentialMissing)
+	definition.SetBuildFlavor(pkg.Build.Flavor)
+	if pkg.Build.Signed != nil {
+		definition.SetBuildSigned(*pkg.Build.Signed)
+	}
+	definition.SetProvenanceFiles(pkg.Build.ProvenanceFiles)
+	for _, requirement := range pkg.Build.VersionRequirements {
+		definition.AddVersionRequirement(requirement)
+	}
 	definition.SetAggregateChecksum(checksumSha)
 
 	err = layout.WritePackageDefinition(filepath.Join(buildPath, layout.ZarfYAML), definition)

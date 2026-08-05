@@ -6,6 +6,8 @@ package api
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -61,24 +63,6 @@ func (p *PackageDefinition) SetName(name string) {
 // SetAnnotations sets the package metadata annotations.
 func (p *PackageDefinition) SetAnnotations(annotations map[string]string) {
 	p.pkg.Metadata.Annotations = annotations
-}
-
-// SelectComponents keeps only components with the given names.
-func (p *PackageDefinition) SelectComponents(names []string) {
-	byName := make(map[string][]internalTypes.Component, len(p.pkg.Components))
-	for _, component := range p.pkg.Components {
-		byName[component.Name] = append(byName[component.Name], component)
-	}
-	components := p.pkg.Components[:0]
-	for _, name := range names {
-		matches := byName[name]
-		if len(matches) == 0 {
-			continue
-		}
-		components = append(components, matches[0])
-		byName[name] = matches[1:]
-	}
-	p.pkg.Components = components
 }
 
 // FilterComponents applies a component filter to the package definition.
@@ -242,52 +226,87 @@ func (p *PackageDefinition) SetAggregateChecksum(checksum string) {
 	p.pkg.Build.AggregateChecksum = checksum
 }
 
-// SetBuildMetadataFromV1alpha1 records generated build fields from the canonical v1alpha1 view.
-func (p *PackageDefinition) SetBuildMetadataFromV1alpha1(pkg v1alpha1.ZarfPackage) {
-	p.pkg.Metadata.Version = pkg.Metadata.Version
-	p.pkg.Build.Hostname = pkg.Build.Terminal
-	p.pkg.Build.User = pkg.Build.User
-	p.pkg.Build.Architecture = pkg.Build.Architecture
-	p.pkg.Build.Timestamp = pkg.Build.Timestamp
-	p.pkg.Build.Version = pkg.Build.Version
-	p.pkg.Build.Migrations = pkg.Build.Migrations
-	p.pkg.Build.RegistryOverrides = pkg.Build.RegistryOverrides
-	p.pkg.Build.Differential = pkg.Build.Differential
-	p.pkg.Build.DifferentialPackageVersion = pkg.Build.DifferentialPackageVersion
-	p.pkg.Build.DifferentialMissing = pkg.Build.DifferentialMissing
-	p.pkg.Build.Flavor = pkg.Build.Flavor
-	p.pkg.Build.Signed = pkg.Build.Signed
-	p.pkg.Build.ProvenanceFiles = pkg.Build.ProvenanceFiles
-	p.pkg.Build.VersionRequirements = p.pkg.Build.VersionRequirements[:0]
-	for _, requirement := range pkg.Build.VersionRequirements {
-		p.pkg.Build.VersionRequirements = append(p.pkg.Build.VersionRequirements, internalTypes.VersionRequirement{
-			Version: requirement.Version,
-			Reason:  requirement.Reason,
-		})
-	}
+// SetMetadataVersion sets the package metadata version.
+func (p *PackageDefinition) SetMetadataVersion(version string) {
+	p.pkg.Metadata.Version = version
 }
 
-// SetSignedProvenance marks the package as signed and records a generated provenance file.
-func (p *PackageDefinition) SetSignedProvenance(file, version, reason string) {
-	signed := true
+// SetBuildHostname sets the host that created the package.
+func (p *PackageDefinition) SetBuildHostname(hostname string) {
+	p.pkg.Build.Hostname = hostname
+}
+
+// SetBuildUser sets the user that created the package.
+func (p *PackageDefinition) SetBuildUser(user string) {
+	p.pkg.Build.User = user
+}
+
+// SetBuildArchitecture sets the package build architecture.
+func (p *PackageDefinition) SetBuildArchitecture(architecture string) {
+	p.pkg.Build.Architecture = architecture
+}
+
+// SetBuildTimestamp sets the package build timestamp.
+func (p *PackageDefinition) SetBuildTimestamp(timestamp string) {
+	p.pkg.Build.Timestamp = timestamp
+}
+
+// SetBuildVersion sets the Zarf CLI version used to build the package.
+func (p *PackageDefinition) SetBuildVersion(version string) {
+	p.pkg.Build.Version = version
+}
+
+// SetBuildMigrations sets the package build migrations.
+func (p *PackageDefinition) SetBuildMigrations(migrations []string) {
+	p.pkg.Build.Migrations = slices.Clone(migrations)
+}
+
+// SetBuildRegistryOverrides sets the package build registry overrides.
+func (p *PackageDefinition) SetBuildRegistryOverrides(registryOverrides map[string]string) {
+	p.pkg.Build.RegistryOverrides = maps.Clone(registryOverrides)
+}
+
+// SetBuildDifferential sets the package differential build data.
+func (p *PackageDefinition) SetBuildDifferential(differential bool, packageVersion string, missing []string) {
+	p.pkg.Build.Differential = differential
+	p.pkg.Build.DifferentialPackageVersion = packageVersion
+	p.pkg.Build.DifferentialMissing = slices.Clone(missing)
+}
+
+// SetBuildFlavor sets the package build flavor.
+func (p *PackageDefinition) SetBuildFlavor(flavor string) {
+	p.pkg.Build.Flavor = flavor
+}
+
+// SetBuildSigned sets whether the package build is signed.
+func (p *PackageDefinition) SetBuildSigned(signed bool) {
 	p.pkg.Build.Signed = &signed
-	foundFile := false
+}
+
+// SetProvenanceFiles sets the package build provenance files.
+func (p *PackageDefinition) SetProvenanceFiles(files []string) {
+	p.pkg.Build.ProvenanceFiles = slices.Clone(files)
+}
+
+// AddProvenanceFile records a package build provenance file once.
+func (p *PackageDefinition) AddProvenanceFile(file string) {
 	for _, existing := range p.pkg.Build.ProvenanceFiles {
 		if existing == file {
-			foundFile = true
-			break
+			return
 		}
 	}
-	if !foundFile {
-		p.pkg.Build.ProvenanceFiles = append(p.pkg.Build.ProvenanceFiles, file)
-	}
+	p.pkg.Build.ProvenanceFiles = append(p.pkg.Build.ProvenanceFiles, file)
+}
+
+// AddVersionRequirement records a package build version requirement once.
+func (p *PackageDefinition) AddVersionRequirement(requirement v1alpha1.VersionRequirement) {
 	for _, existing := range p.pkg.Build.VersionRequirements {
-		if existing.Version == version && existing.Reason == reason {
+		if existing.Version == requirement.Version && existing.Reason == requirement.Reason {
 			return
 		}
 	}
 	p.pkg.Build.VersionRequirements = append(p.pkg.Build.VersionRequirements, internalTypes.VersionRequirement{
-		Version: version,
-		Reason:  reason,
+		Version: requirement.Version,
+		Reason:  requirement.Reason,
 	})
 }
