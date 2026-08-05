@@ -47,7 +47,7 @@ $ zarf package inspect values-files oci://ghcr.io/my-org/my-package:1.0.0
       --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
-  -v, --values strings                          [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
+  -v, --values strings                          [beta] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
       --verify verifyMode[=always]              Signature verification mode (always|if-possible|never). (default if-possible)
 ```
 
