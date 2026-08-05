@@ -90,7 +90,7 @@ Zarf provides a few options that can provide control over how a deployment of a 
 
 Zarf normally expects to operate against a Kubernetes cluster that has been [Zarf initialized](/tutorials/1-initializing-a-k8s-cluster/), but there are additional modes that can be configured by package creators including:
 
-- **Connected Mode** - Deploying with the `--connected` flag skips the publishing of Git repositories and container images. Deploying directly from an OCI source also skips pulling the package's container images. Connected mode does not require `zarf init` to be run, if cluster is already initialized then mutations will be prevented by labeling resources with `zarf.dev/agent: ignore`.
+- **Connected Mode** - Deploying with the `--connected` flag skips the publishing of Git repositories and container images. Deploying directly from an OCI source also skips pulling the package's container images. Connected mode does not require `zarf init` to be run; resources will be labeled with `zarf.dev/agent: ignore` to prevent mutations when the cluster is initialized.
 
 - **Cluster-less** - Zarf normally interacts with clusters and kubernetes resources, but it is possible to have Zarf perform actions before a cluster exists (including [deploying the cluster itself](/tutorials/4-creating-a-k8s-cluster-with-zarf)).  These packages generally have more dependencies on the host or environment that they run within.
 
