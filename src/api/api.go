@@ -135,16 +135,6 @@ func (p *PackageDefinition) SetChartNamespace(componentName, chartName, namespac
 	}
 }
 
-// SetChartNamespaces applies component-to-chart namespace overrides.
-// FIXME: overrides is a bad thing to accept
-func (p *PackageDefinition) SetChartNamespaces(overrides map[string]map[string]string) {
-	for componentName, chartOverrides := range overrides {
-		for chartName, namespace := range chartOverrides {
-			p.SetChartNamespace(componentName, chartName, namespace)
-		}
-	}
-}
-
 func (p PackageDefinition) allowsNamespaceOverride() bool {
 	if p.pkg.Metadata.AllowNamespaceOverride != nil {
 		return *p.pkg.Metadata.AllowNamespaceOverride

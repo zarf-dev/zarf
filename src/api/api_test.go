@@ -50,7 +50,7 @@ func TestPackageDefinitionSetComponentResources(t *testing.T) {
 	require.Equal(t, []string{"https://example.com/new.git@v1"}, alpha.Components[0].Repos)
 }
 
-func TestPackageDefinitionSetChartNamespaces(t *testing.T) {
+func TestPackageDefinitionSetChartNamespace(t *testing.T) {
 	t.Parallel()
 
 	definition := NewPackageDefinitionFromV1beta1(v1beta1.Package{
@@ -76,9 +76,7 @@ func TestPackageDefinitionSetChartNamespaces(t *testing.T) {
 		},
 	})
 
-	definition.SetChartNamespaces(map[string]map[string]string{
-		"component": {"app": "new"},
-	})
+	definition.SetChartNamespace("component", "app", "new")
 
 	beta := definition.AsV1beta1()
 	require.Equal(t, "new", beta.Components[0].Charts[0].Namespace)
