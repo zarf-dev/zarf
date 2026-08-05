@@ -144,8 +144,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	dockerFallBackImages := []imageWithOverride{}
 	var imageListLock sync.Mutex
 
-	// This loop pulls registry metadata so manifests can be returned and, for the
-	// daemonFallback source, failed registry resolutions can be retried from the Docker daemon.
+	// This loop pulls the metadata from images with three goals
+	// - Get all the manifests from images that will be pulled so they can be returned to the function
+	// - Mark any images that don't resolve so we can attempt to pull them from the daemon
 	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 	for _, image := range imagesWithOverride {
