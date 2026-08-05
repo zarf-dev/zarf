@@ -14,13 +14,26 @@ components:
           - cmd: './zarf tools kubectl -n longhorn-system patch -p ''{"value": "true"}'' --type=merge lhs deleting-confirmation-flag'
       onDeploy:
         after:
+          # The Helm release succeeding only means the chart's own Deployments/DaemonSets are
+          # ready. Longhorn's manager then asynchronously creates an EngineImage, and once that
+          # is deployed, an InstanceManager per node - either of which can still fail after that
+          # point - so wait for both before considering the component healthy.
           - description: Longhorn EngineImages to finish deploying on every node
             maxTotalSeconds: 300
-            maxRetries: 60
-            cmd: |
-              sleep 5
-              states=$(./zarf tools kubectl get engineimages.longhorn.io -n longhorn-system -o jsonpath='{range .items[*]}{.status.state}{"\n"}{end}')
-              [ -n "$states" ] && ! echo "$states" | grep -qv '^deployed$'
+            wait:
+              cluster:
+                kind: engineimages.longhorn.io
+                name: longhorn.io/component=engine-image
+                namespace: longhorn-system
+                condition: "{.status.state}=deployed"
+          - description: Longhorn InstanceManagers to finish starting on every node
+            maxTotalSeconds: 300
+            wait:
+              cluster:
+                kind: instancemanagers.longhorn.io
+                name: longhorn.io/component=instance-manager
+                namespace: longhorn-system
+                condition: "{.status.currentState}=running"
     manifests:
       - name: longhorn-connect
         namespace: longhorn-system
