@@ -46,18 +46,15 @@ components:
     description: "local-chart-import == ###ZARF_COMPONENT_NAME###"
     required: false
     charts:
-      - name: podinfo
-        localPath: ../../../../examples/helm-charts/chart
+      - name: local-configmap
+        localPath: ../15-helm-charts/chart
         namespace: local-chart
-        version: 6.4.0
-    images:
-      - ghcr.io/stefanprodan/podinfo:6.4.0
+        version: 0.1.0
     actions:
       onDeploy:
         after:
           - wait:
               cluster:
-                kind: deployment
-                name: podinfo
+                kind: ConfigMap
+                name: local-configmap
                 namespace: local-chart
-                condition: available

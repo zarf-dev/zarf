@@ -44,6 +44,7 @@ var (
 	importception         = filepath.Join("src", "test", "packages", "15-import-everything", "inception")
 	importceptionPath     string
 	importRemoteResources = filepath.Join("src", "test", "packages", "15-import-everything", "remote-resources")
+	helmCharts            = filepath.Join("src", "test", "packages", "15-helm-charts")
 )
 
 func (suite *PublishCopySkeletonSuite) SetupSuite() {
@@ -70,7 +71,6 @@ func (suite *PublishCopySkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.T().Log("E2E: Skeleton Package Publish oci://")
 	ref := suite.Reference.String()
 
-	helmCharts := filepath.Join("examples", "helm-charts")
 	_, _, err := e2e.Zarf(suite.T(), "package", "publish", helmCharts, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
 
@@ -190,7 +190,7 @@ func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	t := suite.T()
 	tmpdir := t.TempDir()
 
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/helm-charts", "-o", tmpdir, "--skip-sbom")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", helmCharts, "-o", tmpdir, "--skip-sbom")
 	suite.NoError(err, stdOut, stdErr)
 	example := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "publish", example, "oci://"+suite.Reference.Registry, "--plain-http")
