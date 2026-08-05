@@ -1,0 +1,13 @@
+log_level = 'info'
+
+[package]
+[package.create]
+skip_sbom = false
+
+[package.create.set]
+zebra = 'stripes'
+leopard = 'spots'
+
+[package.deploy]
+components = 'lion'
+values = ['examples/config-file/deploy-values.yaml']
