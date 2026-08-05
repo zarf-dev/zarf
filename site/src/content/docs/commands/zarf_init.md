@@ -88,6 +88,7 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --registry-url string                     External registry url address to use for this Zarf cluster
       --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
+      --skip-values-schema-validation           Skip validation of package values against the values schema.
       --storage-class string                    Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
       --take-ownership                          Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --timeout duration                        Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
