@@ -252,10 +252,10 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 }
 
 func applyDifferentialResources(definition, previous api.PackageDefinition) (api.PackageDefinition, error) {
-	previousImages, previousRepos := differentialResourceSets(previous.AsV1alpha1().Components)
-
-	if definition.OriginalAPIVersion() == v1beta1.APIVersion {
+	switch definition.OriginalAPIVersion() {
+	case v1beta1.APIVersion:
 		pkg := definition.AsV1beta1()
+		previousImages, previousRepos := v1beta1DifferentialResources(previous.AsV1beta1().Components)
 		for componentIdx, component := range pkg.Components {
 			images := make([]v1beta1.Image, 0, len(component.Images))
 			for _, img := range component.Images {
@@ -271,7 +271,32 @@ func applyDifferentialResources(definition, previous api.PackageDefinition) (api
 
 			repos := make([]v1beta1.Repository, 0, len(component.Repositories))
 			for _, repo := range component.Repositories {
-				includeRepo, err := includeDifferentialRepository(v1beta1RepositoryIdentifier(repo), previousRepos)
+				if includeDifferentialV1beta1Repository(repo, previousRepos) {
+					repos = append(repos, repo)
+				}
+			}
+			pkg.Components[componentIdx].Repositories = repos
+		}
+		return api.NewPackageDefinitionFromV1beta1(pkg), nil
+	case v1alpha1.APIVersion:
+		pkg := definition.AsV1alpha1()
+		previousImages, previousRepos := v1alpha1DifferentialResources(previous.AsV1alpha1().Components)
+		for componentIdx, component := range pkg.Components {
+			images := make([]string, 0, len(component.Images))
+			for _, img := range component.Images {
+				includeImage, err := includeDifferentialImage(img, previousImages)
+				if err != nil {
+					return api.PackageDefinition{}, err
+				}
+				if includeImage {
+					images = append(images, img)
+				}
+			}
+			pkg.Components[componentIdx].Images = images
+
+			repos := make([]string, 0, len(component.Repos))
+			for _, repo := range component.Repos {
+				includeRepo, err := includeDifferentialRepository(repo, previousRepos)
 				if err != nil {
 					return api.PackageDefinition{}, err
 				}
@@ -279,41 +304,15 @@ func applyDifferentialResources(definition, previous api.PackageDefinition) (api
 					repos = append(repos, repo)
 				}
 			}
-			pkg.Components[componentIdx].Repositories = repos
+			pkg.Components[componentIdx].Repos = repos
 		}
-		return api.NewPackageDefinitionFromV1beta1(pkg), nil
+		return api.NewPackageDefinitionFromV1alpha1(pkg), nil
+	default:
+		return api.PackageDefinition{}, fmt.Errorf("unsupported original apiVersion %q", definition.OriginalAPIVersion())
 	}
-
-	pkg := definition.AsV1alpha1()
-	for componentIdx, component := range pkg.Components {
-		images := make([]string, 0, len(component.Images))
-		for _, img := range component.Images {
-			includeImage, err := includeDifferentialImage(img, previousImages)
-			if err != nil {
-				return api.PackageDefinition{}, err
-			}
-			if includeImage {
-				images = append(images, img)
-			}
-		}
-		pkg.Components[componentIdx].Images = images
-
-		repos := make([]string, 0, len(component.Repos))
-		for _, repo := range component.Repos {
-			includeRepo, err := includeDifferentialRepository(repo, previousRepos)
-			if err != nil {
-				return api.PackageDefinition{}, err
-			}
-			if includeRepo {
-				repos = append(repos, repo)
-			}
-		}
-		pkg.Components[componentIdx].Repos = repos
-	}
-	return api.NewPackageDefinitionFromV1alpha1(pkg), nil
 }
 
-func differentialResourceSets(components []v1alpha1.ZarfComponent) (map[string]struct{}, map[string]struct{}) {
+func v1alpha1DifferentialResources(components []v1alpha1.ZarfComponent) (map[string]struct{}, map[string]struct{}) {
 	images := map[string]struct{}{}
 	repos := map[string]struct{}{}
 	for _, component := range components {
@@ -323,6 +322,18 @@ func differentialResourceSets(components []v1alpha1.ZarfComponent) (map[string]s
 		for _, repo := range component.Repos {
 			repos[repo] = struct{}{}
 		}
+	}
+	return images, repos
+}
+
+func v1beta1DifferentialResources(components []v1beta1.Component) (map[string]struct{}, []v1beta1.Repository) {
+	images := map[string]struct{}{}
+	var repos []v1beta1.Repository
+	for _, component := range components {
+		for _, image := range component.Images {
+			images[image.Name] = struct{}{}
+		}
+		repos = append(repos, component.Repositories...)
 	}
 	return images, repos
 }
@@ -352,34 +363,23 @@ func includeDifferentialRepository(repoURL string, previousRepos map[string]stru
 	return includeRepo || !inPrevious, nil
 }
 
-func v1beta1RepositoryIdentifier(repo v1beta1.Repository) string {
-	url := repo.URL
-	if repo.Ref == nil {
-		return url
+func includeDifferentialV1beta1Repository(repo v1beta1.Repository, previousRepos []v1beta1.Repository) bool {
+	if repo.Ref == nil || *repo.Ref == (v1beta1.GitRef{}) || repo.Ref.Branch != "" {
+		return true
 	}
-	refStr := flattenV1beta1GitRef(repo.Ref)
-	if refStr == "" {
-		return url
-	}
-	if urlNoRef, _, err := transform.GitURLSplitRef(url); err == nil {
-		url = urlNoRef
-	}
-	return url + "@" + refStr
+	return !slices.ContainsFunc(previousRepos, func(previousRepo v1beta1.Repository) bool {
+		return v1beta1RepositoriesEqual(repo, previousRepo)
+	})
 }
 
-func flattenV1beta1GitRef(ref *v1beta1.GitRef) string {
-	if ref == nil {
-		return ""
+func v1beta1RepositoriesEqual(a, b v1beta1.Repository) bool {
+	if a.URL != b.URL {
+		return false
 	}
-	switch {
-	case ref.Tag != "":
-		return ref.Tag
-	case ref.Commit != "":
-		return ref.Commit
-	case ref.Branch != "":
-		return "refs/heads/" + ref.Branch
+	if a.Ref == nil || b.Ref == nil {
+		return a.Ref == nil && b.Ref == nil
 	}
-	return ""
+	return *a.Ref == *b.Ref
 }
 
 // AssembleSkeletonOptions are the options for creating a skeleton package

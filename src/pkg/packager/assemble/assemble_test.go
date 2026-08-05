@@ -368,6 +368,38 @@ func TestApplyDifferentialResourcesV1beta1PreservesResourceFields(t *testing.T) 
 	}, pkg.Components[0].Repositories)
 }
 
+func TestApplyDifferentialResourcesRequiresOriginalAPIVersion(t *testing.T) {
+	t.Parallel()
+
+	unsupported := v1alpha1.ZarfPackage{}
+	unsupported.Build.SetOriginalAPIVersion("zarf.dev/v0")
+
+	tests := []struct {
+		name       string
+		definition api.PackageDefinition
+	}{
+		{
+			name:       "missing original api version",
+			definition: api.PackageDefinition{},
+		},
+		{
+			name:       "unsupported original api version",
+			definition: api.NewPackageDefinitionFromV1alpha1(unsupported),
+		},
+	}
+	previous := api.NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{})
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := applyDifferentialResources(tt.definition, previous)
+
+			require.Error(t, err)
+		})
+	}
+}
+
 func TestAssemblePackageDifferentialRequiresSameAPIVersion(t *testing.T) {
 	t.Parallel()
 
