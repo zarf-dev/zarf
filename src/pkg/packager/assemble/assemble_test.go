@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -365,6 +366,37 @@ func TestApplyDifferentialResourcesV1beta1PreservesResourceFields(t *testing.T) 
 		{URL: "https://example.com/branch.git", Ref: &v1beta1.GitRef{Branch: "main"}},
 		{URL: "https://example.com/new-tag.git", Ref: &v1beta1.GitRef{Tag: "v1"}},
 	}, pkg.Components[0].Repositories)
+}
+
+func TestAssemblePackageDifferentialRequiresSameAPIVersion(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	current := api.NewPackageDefinitionFromV1beta1(v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
+		Metadata: v1beta1.PackageMetadata{
+			Name:    "differential-test",
+			Version: "0.0.2",
+		},
+	})
+	previous := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name:    "differential-test",
+			Version: "0.0.1",
+		},
+	}
+
+	_, err := AssemblePackage(ctx, load.ResolvedPackage{PackageDefinition: current}, t.TempDir(), AssembleOptions{
+		DifferentialPackage: previous,
+		SkipSBOM:            true,
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), lang.PkgCreateErrDifferentialAPIVersion)
+	require.Contains(t, err.Error(), "package apiVersion "+v1beta1.APIVersion)
+	require.Contains(t, err.Error(), "differential package apiVersion "+v1alpha1.APIVersion)
 }
 
 func TestCollectVersionRequirements(t *testing.T) {

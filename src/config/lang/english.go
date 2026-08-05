@@ -918,6 +918,7 @@ const (
 const (
 	PkgCreateErrDifferentialSameVersion = "unable to create differential package. Please ensure the differential package version and reference package version are not the same. The package version must be incremented"
 	PkgCreateErrDifferentialNoVersion   = "unable to create differential package. Please ensure both package versions are set"
+	PkgCreateErrDifferentialAPIVersion  = "unable to create differential package. Please ensure the differential package API version and reference package API version are the same"
 )
 
 // Collection of reusable error messages.
