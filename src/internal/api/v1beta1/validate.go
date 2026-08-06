@@ -145,21 +145,23 @@ func validateActionSet(as v1beta1.ComponentActionSet) error {
 func validateAction(action v1beta1.ComponentAction) error {
 	var err error
 
-	if action.Wait != nil {
-		// Validate only cmd or wait, not both
-		if action.Cmd != "" {
-			err = errors.Join(err, fmt.Errorf(PkgValidateErrActionCmdWait, action.Cmd))
-		}
+	if action.Wait == nil {
+		return nil
+	}
 
-		// Validate only cluster or network, not both
-		if action.Wait.Cluster != nil && action.Wait.Network != nil {
-			err = errors.Join(err, errors.New(PkgValidateErrActionClusterNetwork))
-		}
+	// Validate only cmd or wait, not both
+	if action.Cmd != "" {
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrActionCmdWait, action.Cmd))
+	}
 
-		// Validate at least one of cluster or network
-		if action.Wait.Cluster == nil && action.Wait.Network == nil {
-			err = errors.Join(err, errors.New(PkgValidateErrActionClusterNetwork))
-		}
+	// Validate only cluster or network, not both
+	if action.Wait.Cluster != nil && action.Wait.Network != nil {
+		err = errors.Join(err, errors.New(PkgValidateErrActionClusterNetwork))
+	}
+
+	// Validate at least one of cluster or network
+	if action.Wait.Cluster == nil && action.Wait.Network == nil {
+		err = errors.Join(err, errors.New(PkgValidateErrActionClusterNetwork))
 	}
 
 	return err
