@@ -121,6 +121,7 @@ func (p *PackageDefinition) OverrideNamespace(namespace string) error {
 }
 
 // SetChartNamespace sets the namespace for charts matching the given component and chart name.
+// FIXME: Can uds-cli get by without this and use Override namespace or do they need to override specific components
 func (p *PackageDefinition) SetChartNamespace(componentName, chartName, namespace string) {
 	for i := range p.pkg.Components {
 		component := &p.pkg.Components[i]
