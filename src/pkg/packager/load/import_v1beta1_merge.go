@@ -121,6 +121,12 @@ func mergeManifests(base, head []v1beta1.Manifest) []v1beta1.Manifest {
 				m.Kustomize = h.Kustomize
 			} else {
 				m.Kustomize.Files = append(m.Kustomize.Files, h.Kustomize.Files...)
+				if h.Kustomize.AllowAnyDirectory {
+					m.Kustomize.AllowAnyDirectory = true
+				}
+				if h.Kustomize.EnablePlugins {
+					m.Kustomize.EnablePlugins = true
+				}
 			}
 		}
 		if h.ServerSideApply != "" {

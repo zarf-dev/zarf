@@ -12,3 +12,9 @@ component:
       namespace: app
       local:
         path: app-chart
+  manifests:
+    - name: app
+      kustomize:
+        files:
+          - base-kustomization
+        allowAnyDirectory: true
