@@ -131,7 +131,7 @@ func v1alpha1PackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, pk
 			return ResolvedPackage{}, err
 		}
 	}
-	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipValuesSchemaValidation); err != nil {
+	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipValuesSchemaValidation, importedSchemas); err != nil {
 		return ResolvedPackage{}, err
 	}
 	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1alpha1(pkg), ImportedSchemas: importedSchemas}, nil
@@ -145,14 +145,14 @@ func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath 
 		return ResolvedPackage{}, err
 	}
 
-	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor, opts.SkipValuesSchemaValidation); err != nil {
+	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor, opts.SkipValuesSchemaValidation, importedSchemas); err != nil {
 		return ResolvedPackage{}, err
 	}
 
 	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1beta1(pkg), ImportedSchemas: importedSchemas}, nil
 }
 
-func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipSchemaValidation bool) error {
+func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipSchemaValidation bool, importedSchemas []string) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -181,7 +181,7 @@ func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 
 	if !skipSchemaValidation {
-		if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: true}); err != nil {
+		if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: true, importedSchemas: importedSchemas}); err != nil {
 			return err
 		}
 	}
@@ -197,7 +197,7 @@ func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 }
 
 // validateV1Beta1 validates a v1beta1 package before it is converted down to v1alpha1.
-func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath string, flavor string, skipSchemaValidation bool) error {
+func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath string, flavor string, skipSchemaValidation bool, importedSchemas []string) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start v1beta1 validate",
@@ -233,7 +233,7 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 
 	if !skipSchemaValidation {
 		alphaPkg := api.NewPackageDefinitionFromV1beta1(pkg).AsV1alpha1()
-		if err := validateValuesSchema(ctx, alphaPkg, packagePath, validateValuesSchemaOptions{skipRequired: true}); err != nil {
+		if err := validateValuesSchema(ctx, alphaPkg, packagePath, validateValuesSchemaOptions{skipRequired: true, importedSchemas: importedSchemas}); err != nil {
 			return err
 		}
 	}
@@ -261,12 +261,13 @@ func validatePackageSchemaV1Beta1(pkgName string, b []byte) error {
 }
 
 type validateValuesSchemaOptions struct {
-	skipRequired bool
+	skipRequired    bool
+	importedSchemas []string
 }
 
 func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts validateValuesSchemaOptions) error {
 	// Skip validation if no schema or values files are provided
-	if pkg.Values.Schema == "" || len(pkg.Values.Files) == 0 {
+	if (pkg.Values.Schema == "" && len(opts.importedSchemas) == 0) || len(pkg.Values.Files) == 0 {
 		return nil
 	}
 
@@ -288,7 +289,18 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 		return fmt.Errorf("failed to parse values files for validation: %w", err)
 	}
 
-	// Resolve declared schema path relative to package root
+	if len(opts.importedSchemas) > 0 {
+		mergedSchema, err := value.MergeSchemaFiles(pkg.Values.Schema, opts.importedSchemas, pkgPath.BaseDir)
+		if err != nil {
+			return fmt.Errorf("merging schemas for values validation: %w", err)
+		}
+		if err := vals.ValidateAgainstSchema(ctx, mergedSchema, "merged values schema", value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
+			return fmt.Errorf("values validation failed: %w", err)
+		}
+		l.Debug("values validated against merged schema", "parentSchema", pkg.Values.Schema, "importedSchemas", len(opts.importedSchemas))
+		return nil
+	}
+
 	schemaPath := filepath.Join(pkgPath.BaseDir, pkg.Values.Schema)
 	if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
 		return fmt.Errorf("values validation failed: %w", err)

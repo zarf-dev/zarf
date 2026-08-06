@@ -383,31 +383,49 @@ func (v Values) Validate(ctx context.Context, schemaPath string, opts ValidateOp
 		return fmt.Errorf("failed to load or parse schema at %s: %w", schemaPath, err)
 	}
 
-	// Check if validation passed
-	if !result.Valid() {
-		errs := result.Errors()
+	return validationResultError(result, schemaPath, opts)
+}
 
-		// Filter out "required" errors if SkipRequired is true
-		if opts.SkipRequired {
-			var filteredErrors []gojsonschema.ResultError
-			for _, err := range errs {
-				if err.Type() != "required" {
-					filteredErrors = append(filteredErrors, err)
-				}
-			}
-			errs = filteredErrors
-		}
+// ValidateAgainstSchema validates the Values against an already-loaded JSON schema document.
+func (v Values) ValidateAgainstSchema(ctx context.Context, schema map[string]any, schemaName string, opts ValidateOptions) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	defer func() {
+		l.Debug("schema validation complete",
+			"duration", time.Since(start),
+			"schemaPath", schemaName)
+	}()
 
-		// Only return error if there are validation errors after filtering
-		if len(errs) > 0 {
-			return &SchemaValidationError{
-				SchemaPath: schemaPath,
-				Errors:     errs,
-			}
-		}
+	result, err := gojsonschema.Validate(gojsonschema.NewGoLoader(schema), gojsonschema.NewGoLoader(v))
+	if err != nil {
+		return fmt.Errorf("failed to load or parse schema at %s: %w", schemaName, err)
+	}
+	return validationResultError(result, schemaName, opts)
+}
+
+func validationResultError(result *gojsonschema.Result, schemaPath string, opts ValidateOptions) error {
+	if result.Valid() {
+		return nil
 	}
 
-	return nil
+	errs := result.Errors()
+	if opts.SkipRequired {
+		var filteredErrors []gojsonschema.ResultError
+		for _, err := range errs {
+			if err.Type() != "required" {
+				filteredErrors = append(filteredErrors, err)
+			}
+		}
+		errs = filteredErrors
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return &SchemaValidationError{
+		SchemaPath: schemaPath,
+		Errors:     errs,
+	}
 }
 
 // SchemaValidationError represents an error when JSON schema validation fails

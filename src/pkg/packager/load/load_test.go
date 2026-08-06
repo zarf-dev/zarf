@@ -142,6 +142,11 @@ func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 			packagePath: filepath.Join("testdata", "package-with-invalid-values"),
 			expectedErr: "values validation failed",
 		},
+		{
+			name:        "v1beta1 imported values fail imported schema validation",
+			packagePath: filepath.Join("testdata", "v1beta1-imported-values-schema-invalid"),
+			expectedErr: "values validation failed",
+		},
 	}
 
 	for _, tt := range tests {
