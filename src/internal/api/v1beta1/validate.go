@@ -6,6 +6,7 @@ package v1beta1
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -103,30 +104,24 @@ func validateActions(a v1beta1.ComponentActions) error {
 
 // hasSetValues returns true if any of the actions contain setValues.
 func hasSetValues(as v1beta1.ComponentActionSet) bool {
-	check := func(actions []v1beta1.ComponentAction) bool {
-		for _, action := range actions {
-			if len(action.SetValues) > 0 {
-				return true
-			}
-		}
-		return false
-	}
-
-	return check(as.Before) || check(as.OnSuccess) || check(as.OnFailure)
+	return slices.ContainsFunc(as.Before, hasActionSetValues) ||
+		slices.ContainsFunc(as.OnSuccess, hasActionSetValues) ||
+		slices.ContainsFunc(as.OnFailure, hasActionSetValues)
 }
 
 // hasTemplating returns true if any of the actions have templating enabled.
 func hasTemplating(as v1beta1.ComponentActionSet) bool {
-	check := func(actions []v1beta1.ComponentAction) bool {
-		for _, action := range actions {
-			if action.EnableTemplating {
-				return true
-			}
-		}
-		return false
-	}
+	return slices.ContainsFunc(as.Before, hasActionTemplating) ||
+		slices.ContainsFunc(as.OnSuccess, hasActionTemplating) ||
+		slices.ContainsFunc(as.OnFailure, hasActionTemplating)
+}
 
-	return check(as.Before) || check(as.OnSuccess) || check(as.OnFailure)
+func hasActionSetValues(action v1beta1.ComponentAction) bool {
+	return len(action.SetValues) > 0
+}
+
+func hasActionTemplating(action v1beta1.ComponentAction) bool {
+	return action.EnableTemplating
 }
 
 // validateActionSet runs all validation checks on component action sets.

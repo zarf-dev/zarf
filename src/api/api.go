@@ -20,7 +20,7 @@ type PackageAccessor interface {
 
 // PackageDefinition is a concrete package source backed by the internal generic package representation.
 type PackageDefinition struct {
-	pkg internalTypes.Package
+	pkg internaltypes.Package
 }
 
 var _ PackageAccessor = PackageDefinition{}
