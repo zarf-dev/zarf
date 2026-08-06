@@ -4,6 +4,7 @@
 package signing
 
 import (
+	"crypto"
 	"crypto/sha256"
 	"encoding/hex"
 	"net"
@@ -146,6 +147,21 @@ func TestSigstoreVerifyBundleWithOptions(t *testing.T) {
 		material, err := trustedMaterialForBundle(opts, nil, false)
 		require.NoError(t, err)
 		require.NotEmpty(t, material.FulcioCertificateAuthorities())
+	})
+
+	t.Run("uses embedded trusted root for keyed tlog verification", func(t *testing.T) {
+		publicKey, err := os.ReadFile(pubPath)
+		require.NoError(t, err)
+		keyVerifier, closeVerifier, err := verifierFromPEM(publicKey, crypto.SHA256)
+		require.NoError(t, err)
+		defer closeVerifier()
+
+		opts := DefaultVerifyBlobOptions()
+		opts.CommonVerifyOptions.IgnoreTlog = false
+		material, err := trustedMaterialForBundle(opts, keyVerifier, false)
+		require.NoError(t, err)
+		require.NotEmpty(t, material.RekorLogs())
+		require.NotEmpty(t, material.TimestampingAuthorities())
 	})
 
 	t.Run("verifies keyless public-good bundle", func(t *testing.T) {

@@ -203,12 +203,8 @@ func trustedMaterialForBundle(opts VerifyBlobOptions, keyVerifier signature.Veri
 		var err error
 		if path := opts.CommonVerifyOptions.TrustedRootPath; path != "" {
 			material, err = root.NewTrustedRootFromPath(path)
-		} else if keyVerifier == nil {
-			material, err = root.NewTrustedRootFromJSON(embeddedTrustedRoot)
 		} else {
-			// Cosign fetches TUF material for key verification when the caller
-			// asks to verify a tlog entry or TSA timestamp.
-			material, err = configuredLiveTrustedRoot()
+			material, err = root.NewTrustedRootFromJSON(embeddedTrustedRoot)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("loading trusted root: %w", err)
