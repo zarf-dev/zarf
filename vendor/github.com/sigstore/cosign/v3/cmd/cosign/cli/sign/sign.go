@@ -208,7 +208,7 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		}
 	}
 
-	bundleBytes, _, _, _, err := signcommon.NewAttestationBundle(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
+	bundleBytes, _, _, err := signcommon.NewAttestationBundle(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
 	if err != nil {
 		return err
 	}
@@ -266,7 +266,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		}
 	}
 
-	keypair, certBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, signOpts.Cert, signOpts.CertChain)
+	keypair, certBytes, chainBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, signOpts.Cert, signOpts.CertChain)
 	if err != nil {
 		return fmt.Errorf("getting keypair and token: %w", err)
 	}
@@ -304,7 +304,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			Data: payload,
 		}
 
-		bundleBytes, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, ko.SigningConfig, ko.TrustedMaterial, cbundleOpts)
+		bundleBytes, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, chainBytes, ko.SigningConfig, ko.TrustedMaterial, cbundleOpts)
 		if err != nil {
 			return fmt.Errorf("signing bundle: %w", err)
 		}
@@ -467,8 +467,6 @@ func fetchLocalSignedPayload(sig oci.Signature) (*cosign.LocalSignedPayload, err
 	}
 	if sigCert != nil {
 		signedPayload.Cert = base64.StdEncoding.EncodeToString(sigCert.Raw)
-	} else {
-		signedPayload.Cert = ""
 	}
 
 	signedPayload.Bundle, err = sig.Bundle()
