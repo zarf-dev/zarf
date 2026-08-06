@@ -16,7 +16,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -207,38 +206,37 @@ func identifySource(src string) (string, error) {
 	return "", fmt.Errorf("unknown source %s. Did you forget the scheme (e.g. (oci://) or file extension (e.g. .tar.zst)?", src)
 }
 
-// GetPackageFromSourceOrCluster retrieves a Zarf package from a source or cluster.
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, namespaceOverride string, opts LoadOptions) (_ v1alpha1.ZarfPackage, err error) {
+// GetPackageFromSourceOrCluster retrieves a package definition from a source or cluster.
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, namespaceOverride string, opts LoadOptions) (_ api.PackageDefinition, err error) {
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
 	srcType, err := identifySource(src)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return api.PackageDefinition{}, err
 	}
 	if srcType == "cluster" {
 		if cluster == nil {
-			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
+			return api.PackageDefinition{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
 		}
 		depPkg, err := cluster.GetDeployedPackage(ctx, src, state.WithPackageNamespaceOverride(namespaceOverride))
 		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
+			return api.PackageDefinition{}, err
 		}
 		definition := api.NewPackageDefinitionFromV1alpha1(depPkg.Data)
 		if err := definition.FilterComponents(opts.Filter); err != nil {
-			return v1alpha1.ZarfPackage{}, err
+			return api.PackageDefinition{}, err
 		}
-		depPkg.Data = definition.AsV1alpha1()
-		return depPkg.Data, nil
+		return definition, nil
 	}
 	// This function only returns the ZarfPackageConfig so we only need the metadata
 	opts.LayerTypes = []zoci.LayerType{zoci.MetadataLayers}
 	pkgLayout, err := LoadPackage(ctx, src, opts)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return api.PackageDefinition{}, err
 	}
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	return pkgLayout.AsV1alpha1(), nil
+	return pkgLayout.PackageDefinition, nil
 }

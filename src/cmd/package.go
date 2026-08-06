@@ -1149,7 +1149,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	}
 
 	images := make([]string, 0)
-	for _, component := range pkg.Components {
+	for _, component := range pkg.AsV1alpha1().Components {
 		images = append(images, component.GetImages()...)
 	}
 	images = helpers.Unique(images)
@@ -1282,7 +1282,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	err = utils.ColorPrintYAML(pkg, nil, false)
+	err = utils.ColorPrintYAML(pkg.AsV1alpha1(), nil, false)
 	if err != nil {
 		return err
 	}
@@ -1476,8 +1476,9 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		SkipVersionCheck:  o.skipVersionCheck,
 		Values:            vals,
 	}
-	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
-	err = utils.ColorPrintYAML(pkg, nil, false)
+	legacyPkg := pkg.AsV1alpha1()
+	logger.From(ctx).Info("loaded package for removal", "name", legacyPkg.Metadata.Name)
+	err = utils.ColorPrintYAML(legacyPkg, nil, false)
 	if err != nil {
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}

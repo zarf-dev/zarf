@@ -40,8 +40,9 @@ type RemoveOptions struct {
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
-func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) error {
+func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOptions) error {
 	l := logger.From(ctx)
+	pkg := definition.AsV1alpha1()
 
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
@@ -50,7 +51,6 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		}
 	}
 
-	definition := api.NewPackageDefinitionFromV1alpha1(pkg)
 	if err := definition.FilterComponents(filters.ByLocalOS(runtime.GOOS)); err != nil {
 		return err
 	}

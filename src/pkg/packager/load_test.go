@@ -230,14 +230,14 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	pkgPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
 	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, pkgPath, "", LoadOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "test", pkg.Metadata.Name)
+	require.Equal(t, "test", pkg.AsV1alpha1().Metadata.Name)
 
 	c := &cluster.Cluster{
 		Clientset: fake.NewClientset(),
 	}
-	_, err = c.RecordPackageDeployment(ctx, pkg, "sha256:abcdeadbeef", nil, 1)
+	_, err = c.RecordPackageDeployment(ctx, pkg.AsV1alpha1(), "sha256:abcdeadbeef", nil, 1)
 	require.NoError(t, err)
 	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", "", LoadOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "test", pkg.Metadata.Name)
+	require.Equal(t, "test", pkg.AsV1alpha1().Metadata.Name)
 }
