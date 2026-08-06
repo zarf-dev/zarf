@@ -51,19 +51,22 @@ func MergeSchemaFiles(parentPath string, importedPaths []string, packagePath str
 
 	var merged map[string]any
 	var expectedVersion string
+	requireVersion := len(totalPaths) > 1
 	for _, p := range totalPaths {
 		schema, absPath, err := LoadValidatedSchema(packagePath, p)
 		if err != nil {
 			return nil, err
 		}
-		ver := schemaVersion(schema)
-		if ver == "" {
-			return nil, fmt.Errorf("schema %s: missing \"$schema\" version declaration; all schemas being merged must specify a version", absPath)
-		}
-		if expectedVersion == "" {
-			expectedVersion = ver
-		} else if ver != expectedVersion {
-			return nil, fmt.Errorf("cannot merge schemas with different versions: accumulated schema uses %q but %s declares %q", expectedVersion, absPath, ver)
+		if requireVersion {
+			ver := schemaVersion(schema)
+			if ver == "" {
+				return nil, fmt.Errorf("schema %s: missing \"$schema\" version declaration; all schemas being merged must specify a version", absPath)
+			}
+			if expectedVersion == "" {
+				expectedVersion = ver
+			} else if ver != expectedVersion {
+				return nil, fmt.Errorf("cannot merge schemas with different versions: accumulated schema uses %q but %s declares %q", expectedVersion, absPath, ver)
+			}
 		}
 		if merged == nil {
 			merged = schema

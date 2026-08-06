@@ -289,24 +289,18 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 		return fmt.Errorf("failed to parse values files for validation: %w", err)
 	}
 
-	if len(opts.importedSchemas) > 0 {
-		mergedSchema, err := value.MergeSchemaFiles(pkg.Values.Schema, opts.importedSchemas, pkgPath.BaseDir)
-		if err != nil {
-			return fmt.Errorf("merging schemas for values validation: %w", err)
-		}
-		if err := vals.ValidateAgainstSchema(ctx, mergedSchema, "merged values schema", value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
-			return fmt.Errorf("values validation failed: %w", err)
-		}
-		l.Debug("values validated against merged schema", "parentSchema", pkg.Values.Schema, "importedSchemas", len(opts.importedSchemas))
+	mergedSchema, err := value.MergeSchemaFiles(pkg.Values.Schema, opts.importedSchemas, pkgPath.BaseDir)
+	if err != nil {
+		return fmt.Errorf("merging schemas for values validation: %w", err)
+	}
+	if mergedSchema == nil {
 		return nil
 	}
-
-	schemaPath := filepath.Join(pkgPath.BaseDir, pkg.Values.Schema)
-	if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
+	if err := vals.ValidateAgainstSchema(ctx, mergedSchema, "merged values schema", value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
 		return fmt.Errorf("values validation failed: %w", err)
 	}
 
-	l.Debug("values validated against schema", "schemaPath", schemaPath)
+	l.Debug("values validated against merged schema", "parentSchema", pkg.Values.Schema, "importedSchemas", len(opts.importedSchemas))
 	return nil
 }
 
