@@ -242,7 +242,7 @@ func init() {
 				"alternative to Variables .",
 			Enabled: true,
 			Since:   "v0.64.0",
-			Stage:   Alpha,
+			Stage:   Beta,
 		},
 		{
 			Name: DockerDaemonDirectPull,

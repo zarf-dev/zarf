@@ -31,6 +31,10 @@ func ApplyMigrations(ctx context.Context, pkg v1alpha1.ZarfPackage) v1alpha1.Zar
 func migrateDeprecated(pkg v1alpha1.ZarfPackage) (v1alpha1.ZarfPackage, []string) {
 	warnings := []string{}
 
+	if pkg.Metadata.YOLO {
+		warnings = append(warnings, "metadata.yolo is deprecated and will be removed in the next schema version. Use --connected when running zarf package deploy instead.")
+	}
+
 	migratedComponents := []v1alpha1.ZarfComponent{}
 	for _, comp := range pkg.Components {
 		if slices.Contains(pkg.Build.Migrations, ScriptsToActionsMigrated) {

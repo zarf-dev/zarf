@@ -14,7 +14,10 @@ Evaluates components in a Zarf file to identify images specified in their helm c
 
 Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.
 
-Components that have repos that host helm charts can be processed by providing the --repo-chart-path.
+Images defined as part of Helm test hooks are excluded. Images explicitly defined in the helm.sh/images
+annotation in a component Helm chart's Chart.yaml are included regardless of their presence in the rendered
+chart. Components that have git repositories that host helm charts can be processed by providing the
+--repo-chart-path.
 
 ```
 zarf dev find-images [ DIRECTORY ] [flags]
@@ -33,7 +36,7 @@ zarf dev find-images [ DIRECTORY ] [flags]
       --set-values stringToString             Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
       --skip-cosign                           Skip searching for cosign artifacts related to discovered images
   -u, --update                                Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change.
-      --values strings                        [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
+      --values strings                        [beta] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
       --why string                            Prints the source manifest for the specified image
 ```
 

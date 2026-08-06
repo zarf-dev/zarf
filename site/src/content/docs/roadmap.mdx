@@ -41,7 +41,6 @@ Zarf Values and Go templating ([#3946](https://github.com/zarf-dev/zarf/issues/3
 **Schema and composability:**
 
 - **Merge values schema during component import** ([#4877](https://github.com/zarf-dev/zarf/issues/4877)): When a parent package imports a child component, the child’s `values-schema.json` should be merged into the parent’s schema (with the parent winning on conflicts), mirroring how `values.yaml` files are already merged.
-- **Skeleton package support** ([#4869](https://github.com/zarf-dev/zarf/issues/4869)): Ensuring skeleton packages correctly copy and resolve values files and schemas, so that packages importing skeletons can use the values feature end-to-end.
 
 **Init package and migration:**
 

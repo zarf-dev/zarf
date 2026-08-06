@@ -93,6 +93,7 @@
               "ALL"
             ]
           },
+          "privileged": false,
           "runAsNonRoot": true,
           "readOnlyRootFilesystem": true,
           "allowPrivilegeEscalation": false
@@ -101,6 +102,7 @@
     ],
     "restartPolicy": "Never",
     "terminationGracePeriodSeconds": 1,
+    "automountServiceAccountToken": false,
     "nodeName": "injection-node",
     "securityContext": {
       "runAsUser": 1000,

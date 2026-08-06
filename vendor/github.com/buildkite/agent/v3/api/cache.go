@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/buildkite/agent/v3/internal/agenthttp"
-	"github.com/google/go-querystring/query"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -32,75 +31,81 @@ var ErrCacheEntryNotFound = errors.New("cache entry not found")
 
 var cacheTracer = otel.Tracer("github.com/buildkite/agent/v3/api/cache")
 
-// CacheEntryCreateReq is the request body for creating a cache entry.
+// CacheKeyPart is one element of the structured cache_key sent on the wire.
+// Mandatory parts must match for a cache hit.
+type CacheKeyPart struct {
+	Value     string `json:"value"`
+	Mandatory bool   `json:"mandatory"`
+}
+
+// CacheDigest is a typed content digest, so the algorithm can change without
+// a wire break.
+type CacheDigest struct {
+	Algorithm string `json:"algorithm"` // "sha256"
+	Value     string `json:"value"`
+}
+
+// CacheBlob describes one content-addressed blob backing a cache entry. The
+// digest doubles as the storage object name. Length-1 array in M1; the array
+// shape is future-proofing for content-defined chunking.
+type CacheBlob struct {
+	Digest      CacheDigest `json:"digest"`
+	FileSize    int64       `json:"file_size"`
+	Compression string      `json:"compression"` // "zstd" | "zip"
+}
+
+// CacheEntryCreateReq is the request body for creating (storing) a cache entry.
 type CacheEntryCreateReq struct {
-	Store        string   `json:"store"`
-	Key          string   `json:"key"`
-	FallbackKeys []string `json:"fallback_keys"`
-	Compression  string   `json:"compression"`
-	FileSize     int      `json:"file_size"`
-	Digest       string   `json:"digest"`
-	Paths        []string `json:"paths"`
-	Platform     string   `json:"platform"`
-	Pipeline     string   `json:"pipeline"`
-	Branch       string   `json:"branch"`
-	Organization string   `json:"owner"`
+	TargetPaths  []string       `json:"target_paths"`
+	CacheKey     []CacheKeyPart `json:"cache_key"`
+	Blobs        []CacheBlob    `json:"blobs"`
+	Pipeline     string         `json:"pipeline"`
+	Branch       string         `json:"branch"`
+	Organization string         `json:"owner"`
+	Platform     string         `json:"platform"`
 }
 
-// CacheEntryRetrieveReq is the query for retrieving a cache entry.
-type CacheEntryRetrieveReq struct {
-	Key          string `url:"key"`
-	Branch       string `url:"branch"`
-	FallbackKeys string `url:"fallback_keys"`
-}
-
-// CacheEntryRetrieveResp describes the cache entry to download.
-type CacheEntryRetrieveResp struct {
-	Store                string    `json:"store"`
-	Key                  string    `json:"key"`
-	Fallback             bool      `json:"fallback"`
-	StoreObjectName      string    `json:"store_object_name"`
-	ExpiresAt            time.Time `json:"expires_at"`
-	CompressionType      string    `json:"compression_type"`
-	Multipart            bool      `json:"multipart"`
-	DownloadInstructions []string  `json:"download_instructions"`
-	Message              string    `json:"message"`
-}
-
-// CacheEntryCreateResp describes where and how to upload the new cache entry.
+// CacheEntryCreateResp describes how to upload the new cache entry. The storage
+// object name is not echoed back — the agent derives it from the blob digest.
 type CacheEntryCreateResp struct {
 	UploadID           string   `json:"upload_id"`
-	StoreObjectName    string   `json:"store_object_name"`
 	Multipart          bool     `json:"multipart"`
 	UploadInstructions []string `json:"upload_instructions"`
 	Message            string   `json:"message"`
 }
 
-// CacheEntryPeekReq is the query for checking whether a cache entry exists.
+// CacheEntryRetrieveReq is the request body for retrieving a cache entry.
+type CacheEntryRetrieveReq struct {
+	TargetPaths []string       `json:"target_paths"`
+	CacheKey    []CacheKeyPart `json:"cache_key"`
+}
+
+// CacheEntryRetrieveResp describes the cache entry to download.
+type CacheEntryRetrieveResp struct {
+	TargetPaths          []string       `json:"target_paths"`
+	CacheKey             []CacheKeyPart `json:"cache_key"`
+	Blobs                []CacheBlob    `json:"blobs"`
+	ExpiresAt            time.Time      `json:"expires_at"`
+	Store                string         `json:"store"`
+	Fallback             bool           `json:"fallback"`
+	Multipart            bool           `json:"multipart"`
+	DownloadInstructions []string       `json:"download_instructions"`
+	Message              string         `json:"message"`
+}
+
+// CacheEntryPeekReq is the request body for checking whether an entry exists.
 type CacheEntryPeekReq struct {
-	Key    string `url:"key"`
-	Branch string `url:"branch"`
+	TargetPaths []string       `json:"target_paths"`
+	CacheKey    []CacheKeyPart `json:"cache_key"`
 }
 
 // CacheEntryPeekResp describes the cache entry returned by a peek.
 type CacheEntryPeekResp struct {
-	Store        string    `json:"store"`
-	Digest       string    `json:"digest"`
-	ExpiresAt    time.Time `json:"expires_at"`
-	Compression  string    `json:"compression"`
-	Message      string    `json:"message"`
-	FileSize     int       `json:"file_size"`
-	Paths        []string  `json:"paths"`
-	Pipeline     string    `json:"pipeline"`
-	Branch       string    `json:"branch"`
-	Owner        string    `json:"owner"`
-	Platform     string    `json:"platform"`
-	Key          string    `json:"key"`
-	FallbackKeys []string  `json:"fallback_keys"`
-	CreatedAt    time.Time `json:"created_at"`
-	AgentID      string    `json:"agent_id"`
-	JobID        string    `json:"job_id"`
-	BuildID      string    `json:"build_id"`
+	TargetPaths []string       `json:"target_paths"`
+	CacheKey    []CacheKeyPart `json:"cache_key"`
+	Blobs       []CacheBlob    `json:"blobs"`
+	Store       string         `json:"store"`
+	Message     string         `json:"message"`
 }
 
 // CacheRegistryResp describes a configured cache registry.
@@ -110,9 +115,11 @@ type CacheRegistryResp struct {
 	Store string `json:"store"`
 }
 
-// CacheEntryCommitReq is the request body for committing a previously created cache entry.
+// CacheEntryCommitReq is the request body for committing a created cache entry.
+// e_tags is required for non-local store adapters and ignored for local ones.
 type CacheEntryCommitReq struct {
-	UploadID string `json:"upload_id"`
+	UploadID string   `json:"upload_id"`
+	ETags    []string `json:"e_tags,omitempty"`
 }
 
 // CacheEntryCommitResp acknowledges a commit.
@@ -151,12 +158,7 @@ func (c *Client) CacheEntryPeekExists(ctx context.Context, registry string, peek
 
 	var cacheResp CacheEntryPeekResp
 
-	path, err := cacheQueryPath("/cache_registries/%s/peek", registry, peek)
-	if err != nil {
-		return cacheResp, false, nil, cacheSpanErr(span, "%w", err)
-	}
-
-	req, err := c.newRequest(ctx, http.MethodGet, path, nil)
+	req, err := c.newRequest(ctx, http.MethodPost, cachePath("/cache_registries/%s/peek", registry), &peek)
 	if err != nil {
 		return cacheResp, false, nil, cacheSpanErr(span, "failed to create request: %w", err)
 	}
@@ -222,12 +224,7 @@ func (c *Client) CacheEntryRetrieve(ctx context.Context, registry string, retrie
 
 	var cacheResp CacheEntryRetrieveResp
 
-	path, err := cacheQueryPath("/cache_registries/%s/retrieve", registry, retrieve)
-	if err != nil {
-		return cacheResp, false, nil, cacheSpanErr(span, "%w", err)
-	}
-
-	req, err := c.newRequest(ctx, http.MethodGet, path, nil)
+	req, err := c.newRequest(ctx, http.MethodPost, cachePath("/cache_registries/%s/retrieve", registry), &retrieve)
 	if err != nil {
 		return cacheResp, false, nil, cacheSpanErr(span, "failed to create request: %w", err)
 	}
@@ -248,15 +245,6 @@ func cachePath(format string, args ...any) string {
 		escaped[i] = url.PathEscape(fmt.Sprint(a))
 	}
 	return fmt.Sprintf(format, escaped...)
-}
-
-// cacheQueryPath formats a cache API path and appends url-tagged query params.
-func cacheQueryPath(format, registry string, params any) (string, error) {
-	q, err := query.Values(params)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal query params: %w", err)
-	}
-	return cachePath(format, registry) + "?" + q.Encode(), nil
 }
 
 // cacheDo dispatches req through the agent HTTP stack (debug-HTTP, trace-HTTP)

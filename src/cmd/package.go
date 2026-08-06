@@ -278,20 +278,21 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 }
 
 type packageDeployOptions struct {
-	valuesFiles        []string
-	namespaceOverride  string
-	confirm            bool
-	takeOwnership      bool
-	connected          bool
-	forceConflicts     bool
-	timeout            time.Duration
-	retries            int
-	setVariables       map[string]string
-	setValues          map[string]string
-	optionalComponents string
-	shasum             string
-	skipVersionCheck   bool
-	ociConcurrency     int
+	valuesFiles                []string
+	namespaceOverride          string
+	confirm                    bool
+	takeOwnership              bool
+	connected                  bool
+	forceConflicts             bool
+	timeout                    time.Duration
+	retries                    int
+	setVariables               map[string]string
+	setValues                  map[string]string
+	optionalComponents         string
+	shasum                     string
+	skipValuesSchemaValidation bool
+	skipVersionCheck           bool
+	ociConcurrency             int
 	packageVerifyFlags
 }
 
@@ -330,6 +331,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	cmd.Flags().StringVar(&o.shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
+	cmd.Flags().BoolVar(&o.skipValuesSchemaValidation, "skip-values-schema-validation", false, lang.CmdPackageDeployFlagSkipValuesSchema)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
@@ -392,18 +394,19 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}()
 
 	deployOpts := packager.DeployOptions{
-		Values:            values,
-		TakeOwnership:     o.takeOwnership,
-		Connected:         o.connected,
-		ForceConflicts:    o.forceConflicts,
-		Timeout:           o.timeout,
-		Retries:           o.retries,
-		OCIConcurrency:    o.ociConcurrency,
-		SetVariables:      o.setVariables,
-		NamespaceOverride: o.namespaceOverride,
-		RemoteOptions:     defaultRemoteOptions(),
-		IsInteractive:     !o.confirm,
-		SkipVersionCheck:  o.skipVersionCheck,
+		Values:                     values,
+		TakeOwnership:              o.takeOwnership,
+		Connected:                  o.connected,
+		ForceConflicts:             o.forceConflicts,
+		Timeout:                    o.timeout,
+		Retries:                    o.retries,
+		OCIConcurrency:             o.ociConcurrency,
+		SetVariables:               o.setVariables,
+		NamespaceOverride:          o.namespaceOverride,
+		RemoteOptions:              defaultRemoteOptions(),
+		IsInteractive:              !o.confirm,
+		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
+		SkipVersionCheck:           o.skipVersionCheck,
 	}
 
 	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)
@@ -788,13 +791,14 @@ func (o *packageInspectDigestOptions) run(ctx context.Context, args []string) er
 }
 
 type packageInspectValuesFilesOptions struct {
-	components     string
-	kubeVersion    string
-	setVariables   map[string]string
-	valuesFiles    []string
-	setValues      map[string]string
-	outputWriter   io.Writer
-	ociConcurrency int
+	components                 string
+	kubeVersion                string
+	setVariables               map[string]string
+	valuesFiles                []string
+	setValues                  map[string]string
+	skipValuesSchemaValidation bool
+	outputWriter               io.Writer
+	ociConcurrency             int
 	packageVerifyFlags
 }
 
@@ -826,6 +830,7 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().BoolVar(&o.skipValuesSchemaValidation, "skip-values-schema-validation", false, lang.CmdPackageDeployFlagSkipValuesSchema)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
@@ -871,11 +876,12 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 	}()
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
-		SetVariables:  o.setVariables,
-		Values:        values,
-		KubeVersion:   o.kubeVersion,
-		IsInteractive: true,
-		RemoteOptions: defaultRemoteOptions(),
+		SetVariables:               o.setVariables,
+		Values:                     values,
+		KubeVersion:                o.kubeVersion,
+		IsInteractive:              true,
+		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
+		RemoteOptions:              defaultRemoteOptions(),
 	}
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
 	if err != nil {
@@ -895,13 +901,14 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 }
 
 type packageInspectManifestsOptions struct {
-	components     string
-	kubeVersion    string
-	setVariables   map[string]string
-	valuesFiles    []string
-	setValues      map[string]string
-	outputWriter   io.Writer
-	ociConcurrency int
+	components                 string
+	kubeVersion                string
+	setVariables               map[string]string
+	valuesFiles                []string
+	setValues                  map[string]string
+	skipValuesSchemaValidation bool
+	outputWriter               io.Writer
+	ociConcurrency             int
 	packageVerifyFlags
 }
 
@@ -932,6 +939,7 @@ func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().BoolVar(&o.skipValuesSchemaValidation, "skip-values-schema-validation", false, lang.CmdPackageDeployFlagSkipValuesSchema)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
@@ -977,11 +985,12 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 	}()
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
-		SetVariables:  o.setVariables,
-		Values:        values,
-		KubeVersion:   o.kubeVersion,
-		IsInteractive: true,
-		RemoteOptions: defaultRemoteOptions(),
+		SetVariables:               o.setVariables,
+		Values:                     values,
+		KubeVersion:                o.kubeVersion,
+		IsInteractive:              true,
+		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
+		RemoteOptions:              defaultRemoteOptions(),
 	}
 
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)

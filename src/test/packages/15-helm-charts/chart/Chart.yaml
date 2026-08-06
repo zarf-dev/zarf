@@ -1,0 +1,4 @@
+apiVersion: v2
+name: local-configmap
+version: 0.1.0
+description: Minimal local chart for skeleton OCI compose tests

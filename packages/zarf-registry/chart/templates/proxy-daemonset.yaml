@@ -19,6 +19,7 @@ spec:
         checksum/tls-secret: {{ $tlsSecret.data | toJson | sha256sum }}
 {{- end }}
     spec:
+      automountServiceAccountToken: false
       priorityClassName: system-node-critical
       containers:
         - args:
@@ -54,6 +55,7 @@ spec:
             capabilities:
               drop:
               - ALL
+            privileged: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
       volumes:

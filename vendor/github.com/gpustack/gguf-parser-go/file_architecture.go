@@ -588,13 +588,17 @@ func (gf *GGUFFile) diffuserArchitecture() (ga GGUFArchitecture) {
 
 func (gf *GGUFFile) clipArchitecture() (ga GGUFArchitecture) {
 	const (
-		projectorTypeKey     = "clip.projector_type"
-		hasLLaVAProjectorKey = "clip.has_llava_projector"
-		hasMiniCPMVProjector = "clip.has_minicpmv_projector"
-		miniCPMVVersionKey   = "clip.minicpmv_version"
-		miniCPMVQueryNumKey  = "clip.minicpmv_query_num"
-		hasGLMProjectorKey   = "clip.has_glm_projector"
-		hasQwen2VLMergerKey  = "clip.has_qwen2vl_merger"
+		projectorTypeKey = "clip.projector_type"
+		// Mixed-modality projectors declare their type per modality instead,
+		// see https://github.com/ggml-org/llama.cpp/blob/e3546c7948e3af463d0b401e6421d5a4c2faf565/tools/mtmd/clip-impl.h#L48-L76.
+		visionProjectorTypeKey = "clip.vision.projector_type"
+		audioProjectorTypeKey  = "clip.audio.projector_type"
+		hasLLaVAProjectorKey   = "clip.has_llava_projector"
+		hasMiniCPMVProjector   = "clip.has_minicpmv_projector"
+		miniCPMVVersionKey     = "clip.minicpmv_version"
+		miniCPMVQueryNumKey    = "clip.minicpmv_query_num"
+		hasGLMProjectorKey     = "clip.has_glm_projector"
+		hasQwen2VLMergerKey    = "clip.has_qwen2vl_merger"
 
 		hasVisionEncoderKey                   = "clip.has_vision_encoder"
 		visionEmbeddingLengthKey              = "clip.vision.embedding_length"
@@ -626,6 +630,8 @@ func (gf *GGUFFile) clipArchitecture() (ga GGUFArchitecture) {
 
 	m, _ := gf.Header.MetadataKV.Index([]string{
 		projectorTypeKey,
+		visionProjectorTypeKey,
+		audioProjectorTypeKey,
 		hasLLaVAProjectorKey,
 		hasMiniCPMVProjector,
 		miniCPMVVersionKey,
@@ -659,6 +665,10 @@ func (gf *GGUFFile) clipArchitecture() (ga GGUFArchitecture) {
 	})
 
 	if v, ok := m[projectorTypeKey]; ok {
+		ga.ClipProjectorType = v.ValueString()
+	} else if v, ok := m[visionProjectorTypeKey]; ok {
+		ga.ClipProjectorType = v.ValueString()
+	} else if v, ok := m[audioProjectorTypeKey]; ok {
 		ga.ClipProjectorType = v.ValueString()
 	} else {
 		ga.ClipProjectorType = "mlp"
