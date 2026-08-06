@@ -286,7 +286,7 @@ type ComponentActions struct {
 // ComponentActionSet is a set of actions to run during a Zarf package operation.
 type ComponentActionSet struct {
 	// Default configuration for all actions in this set.
-	Defaults ComponentActionDefaults `json:"defaults,omitempty"`
+	Defaults *ComponentActionDefaults `json:"defaults,omitempty"`
 	// Actions to run at the start of an operation.
 	Before []ComponentAction `json:"before,omitempty"`
 	// Actions to run at the end of an operation if it succeeds.

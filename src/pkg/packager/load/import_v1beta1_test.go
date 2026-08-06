@@ -142,6 +142,15 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		require.ErrorContains(t, err, "no imported component")
 	})
 
+	t.Run("single import errors when component config is incompatible", func(t *testing.T) {
+		t.Parallel()
+		dir := filepath.Join("testdata", "import-v1beta1", "single-incompatible")
+		pkg := loadV1Beta1Package(t, dir)
+
+		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "nginx")
+		require.ErrorContains(t, err, "no imported component")
+	})
+
 	t.Run("package component overrides imported component", func(t *testing.T) {
 		t.Parallel()
 		dir := filepath.Join("testdata", "import-v1beta1", "merge")
@@ -162,6 +171,22 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		require.Equal(t, "custom-release", comp.Charts[0].ReleaseName)
 		require.NotNil(t, comp.Charts[0].Local)
 		require.Equal(t, "components/app-chart", comp.Charts[0].Local.Path)
+
+		require.Len(t, comp.Manifests, 1)
+		require.Equal(t, "app", comp.Manifests[0].Name)
+		require.NotNil(t, comp.Manifests[0].Kustomize)
+		require.Equal(t, []string{"components/base-kustomization", "override-kustomization"}, comp.Manifests[0].Kustomize.Files)
+		require.True(t, comp.Manifests[0].Kustomize.AllowAnyDirectory)
+		require.True(t, comp.Manifests[0].Kustomize.EnablePlugins)
+
+		require.NotNil(t, comp.Actions.OnDeploy.Defaults)
+		require.Equal(t, int32(0), comp.Actions.OnDeploy.Defaults.MaxTotalSeconds)
+		require.Equal(t, int32(0), comp.Actions.OnDeploy.Defaults.Retries)
+		require.Empty(t, comp.Actions.OnDeploy.Defaults.Env)
+		require.Equal(t, []v1beta1.ComponentAction{
+			{Cmd: "echo base"},
+			{Cmd: "echo override"},
+		}, comp.Actions.OnDeploy.Before)
 	})
 }
 

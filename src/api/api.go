@@ -11,7 +11,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	internalTypes "github.com/zarf-dev/zarf/src/internal/api/types"
+	internaltypes "github.com/zarf-dev/zarf/src/internal/api/types"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -25,7 +25,7 @@ type PackageAccessor interface {
 
 // PackageDefinition is a concrete package source backed by the internal generic package representation.
 type PackageDefinition struct {
-	pkg internalTypes.Package
+	pkg internaltypes.Package
 }
 
 var _ PackageAccessor = PackageDefinition{}

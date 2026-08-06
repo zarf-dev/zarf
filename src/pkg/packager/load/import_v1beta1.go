@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -117,26 +118,19 @@ type loadedComponentConfig struct {
 }
 
 // selectImportVariant loads every local import entry and selects the single one compatible with the
-// active target. A single entry is always selected. When more than one entry is given they are treated
-// as variants: exactly one must be compatible with the target.
+// active target. Entries are treated as variants: exactly one must be compatible with the target.
 func selectImportVariant(entries []v1beta1.ComponentImportLocal, specDir, arch, flavor string, importStack []string) (loadedComponentConfig, error) {
 	var loaded []loadedComponentConfig
 	for _, entry := range entries {
 		path := filepath.Clean(filepath.Join(specDir, entry.Path))
-		for _, seen := range importStack {
-			if seen == path {
-				return loadedComponentConfig{}, fmt.Errorf("component config %s imported in cycle", filepath.ToSlash(path))
-			}
+		if slices.Contains(importStack, path) {
+			return loadedComponentConfig{}, fmt.Errorf("component config %s imported in cycle", filepath.ToSlash(path))
 		}
 		config, err := readComponentConfig(path)
 		if err != nil {
 			return loadedComponentConfig{}, err
 		}
 		loaded = append(loaded, loadedComponentConfig{config: config, entry: entry, dir: filepath.Dir(path), path: path})
-	}
-
-	if len(loaded) == 1 {
-		return loaded[0], nil
 	}
 
 	var compatible []loadedComponentConfig

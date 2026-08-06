@@ -12,3 +12,18 @@ component:
       namespace: app
       local:
         path: app-chart
+  manifests:
+    - name: app
+      kustomize:
+        files:
+          - base-kustomization
+        allowAnyDirectory: true
+  actions:
+    onDeploy:
+      defaults:
+        maxTotalSeconds: 30
+        retries: 2
+        env:
+          - APP_ENV=base
+      before:
+        - cmd: echo base

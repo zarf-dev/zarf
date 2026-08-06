@@ -6,7 +6,6 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
-	"math"
 	"slices"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -17,6 +16,8 @@ import (
 const (
 	ScriptsToActionsMigrated = "scripts-to-actions"
 	PluralizeSetVariable     = "pluralize-set-variable"
+
+	legacyScriptsMaxRetries = 10000
 )
 
 // ApplyMigrations applies all v1alpha1 schema migrations to pkg, logging any warnings to ctx.
@@ -30,6 +31,10 @@ func ApplyMigrations(ctx context.Context, pkg v1alpha1.ZarfPackage) v1alpha1.Zar
 
 func migrateDeprecated(pkg v1alpha1.ZarfPackage) (v1alpha1.ZarfPackage, []string) {
 	warnings := []string{}
+
+	if pkg.Metadata.YOLO {
+		warnings = append(warnings, "metadata.yolo is deprecated and will be removed in the next schema version. Use --connected when running zarf package deploy instead.")
+	}
 
 	migratedComponents := []v1alpha1.ZarfComponent{}
 	for _, comp := range pkg.Components {
@@ -73,7 +78,7 @@ func migrateDeprecated(pkg v1alpha1.ZarfPackage) (v1alpha1.ZarfPackage, []string
 	return pkg, warnings
 }
 
-// migrateScriptsToActions coverts the deprecated scripts to the new actions
+// migrateScriptsToActions converts the deprecated scripts to the new actions
 // The following have no migration:
 // - Actions.Create.After
 // - Actions.Remove.*
@@ -91,9 +96,9 @@ func migrateScriptsToActions(c v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, 
 		MaxTotalSeconds: c.DeprecatedScripts.TimeoutSeconds,
 	}
 
-	// Retry is now an integer vs a boolean (implicit infinite retries), so set to an absurdly high number
+	// Retry is now an integer vs a boolean (implicit infinite retries), so cap the migrated value.
 	if c.DeprecatedScripts.Retry {
-		defaults.MaxRetries = math.MaxInt
+		defaults.MaxRetries = legacyScriptsMaxRetries
 	}
 
 	// Scripts.Prepare -> Actions.Create.Before
@@ -134,39 +139,23 @@ func migrateScriptsToActions(c v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, 
 func migrateSetVariableToSetVariables(c v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, string) {
 	hasSetVariable := false
 
-	migrate := func(actions []v1alpha1.ZarfComponentAction) []v1alpha1.ZarfComponentAction {
-		for i := range actions {
-			if actions[i].DeprecatedSetVariable != "" && len(actions[i].SetVariables) < 1 {
-				hasSetVariable = true
-				actions[i].SetVariables = []v1alpha1.Variable{
-					{
-						Name:      actions[i].DeprecatedSetVariable,
-						Sensitive: false,
-					},
-				}
-			}
-		}
-
-		return actions
-	}
-
 	// Migrate OnCreate SetVariables
-	c.Actions.OnCreate.After = migrate(c.Actions.OnCreate.After)
-	c.Actions.OnCreate.Before = migrate(c.Actions.OnCreate.Before)
-	c.Actions.OnCreate.OnSuccess = migrate(c.Actions.OnCreate.OnSuccess)
-	c.Actions.OnCreate.OnFailure = migrate(c.Actions.OnCreate.OnFailure)
+	c.Actions.OnCreate.After, hasSetVariable = migrateComponentActions(c.Actions.OnCreate.After, hasSetVariable)
+	c.Actions.OnCreate.Before, hasSetVariable = migrateComponentActions(c.Actions.OnCreate.Before, hasSetVariable)
+	c.Actions.OnCreate.OnSuccess, hasSetVariable = migrateComponentActions(c.Actions.OnCreate.OnSuccess, hasSetVariable)
+	c.Actions.OnCreate.OnFailure, hasSetVariable = migrateComponentActions(c.Actions.OnCreate.OnFailure, hasSetVariable)
 
 	// Migrate OnDeploy SetVariables
-	c.Actions.OnDeploy.After = migrate(c.Actions.OnDeploy.After)
-	c.Actions.OnDeploy.Before = migrate(c.Actions.OnDeploy.Before)
-	c.Actions.OnDeploy.OnSuccess = migrate(c.Actions.OnDeploy.OnSuccess)
-	c.Actions.OnDeploy.OnFailure = migrate(c.Actions.OnDeploy.OnFailure)
+	c.Actions.OnDeploy.After, hasSetVariable = migrateComponentActions(c.Actions.OnDeploy.After, hasSetVariable)
+	c.Actions.OnDeploy.Before, hasSetVariable = migrateComponentActions(c.Actions.OnDeploy.Before, hasSetVariable)
+	c.Actions.OnDeploy.OnSuccess, hasSetVariable = migrateComponentActions(c.Actions.OnDeploy.OnSuccess, hasSetVariable)
+	c.Actions.OnDeploy.OnFailure, hasSetVariable = migrateComponentActions(c.Actions.OnDeploy.OnFailure, hasSetVariable)
 
 	// Migrate OnRemove SetVariables
-	c.Actions.OnRemove.After = migrate(c.Actions.OnRemove.After)
-	c.Actions.OnRemove.Before = migrate(c.Actions.OnRemove.Before)
-	c.Actions.OnRemove.OnSuccess = migrate(c.Actions.OnRemove.OnSuccess)
-	c.Actions.OnRemove.OnFailure = migrate(c.Actions.OnRemove.OnFailure)
+	c.Actions.OnRemove.After, hasSetVariable = migrateComponentActions(c.Actions.OnRemove.After, hasSetVariable)
+	c.Actions.OnRemove.Before, hasSetVariable = migrateComponentActions(c.Actions.OnRemove.Before, hasSetVariable)
+	c.Actions.OnRemove.OnSuccess, hasSetVariable = migrateComponentActions(c.Actions.OnRemove.OnSuccess, hasSetVariable)
+	c.Actions.OnRemove.OnFailure, hasSetVariable = migrateComponentActions(c.Actions.OnRemove.OnFailure, hasSetVariable)
 
 	// Leave deprecated setVariable in place, but warn users
 	if hasSetVariable {
@@ -174,6 +163,30 @@ func migrateSetVariableToSetVariables(c v1alpha1.ZarfComponent) (v1alpha1.ZarfCo
 	}
 
 	return c, ""
+}
+
+func migrateComponentActions(actions []v1alpha1.ZarfComponentAction, hasSetVariable bool) ([]v1alpha1.ZarfComponentAction, bool) {
+	for i := range actions {
+		var migrated bool
+		actions[i], migrated = migrateComponentAction(actions[i])
+		hasSetVariable = hasSetVariable || migrated
+	}
+
+	return actions, hasSetVariable
+}
+
+func migrateComponentAction(action v1alpha1.ZarfComponentAction) (v1alpha1.ZarfComponentAction, bool) {
+	if action.DeprecatedSetVariable == "" || len(action.SetVariables) > 0 {
+		return action, false
+	}
+
+	action.SetVariables = []v1alpha1.Variable{
+		{
+			Name:      action.DeprecatedSetVariable,
+			Sensitive: false,
+		},
+	}
+	return action, true
 }
 
 func clearSetVariables(c v1alpha1.ZarfComponent) v1alpha1.ZarfComponent {

@@ -46,9 +46,10 @@ All commands are run from the root of the project, from a terminal:
 
 For each release tag, `hack/build-versions.mjs` checks out a throwaway git
 worktree and stages that tag's docs content into `src/content/docs/<slug>/`,
-regenerating its examples and schema (`src/assets/schema/<slug>.json`) from the
-tag's `examples/` and `zarf.schema.json`. Archived content therefore renders with
-the **current** toolchain and components, never its own.
+regenerating its examples and schema under
+`src/assets/versioned-assets/<slug>/` from the tag's `examples/` and
+`zarf.schema.json`. Archived content therefore renders with the **current**
+toolchain and components, never its own.
 
 Versions are discovered from git tags and reduced to the newest patch per
 minor. Only the current major and the one before it are kept — the current major shows

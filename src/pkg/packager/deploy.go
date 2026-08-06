@@ -85,6 +85,8 @@ type DeployOptions struct {
 	ValuesOverridesMap ValuesOverrides
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
+	// SkipValuesSchemaValidation skips validation of the merged package values against the package schema.
+	SkipValuesSchemaValidation bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
 }
@@ -176,7 +178,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	vals.DeepMerge(opts.Values)
 
 	// Validate merged values against schema if provided
-	if pkgLayout.HasValuesSchema() {
+	if pkgLayout.HasValuesSchema() && !opts.SkipValuesSchemaValidation {
 		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema)
 		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{}); err != nil {
 			return DeployResult{}, fmt.Errorf("values validation failed: %w", err)

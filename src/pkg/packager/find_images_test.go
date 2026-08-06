@@ -45,7 +45,7 @@ func TestFindImages(t *testing.T) {
 			},
 		},
 		{
-			name:        "helm chart",
+			name:        "helm chart excludes test resources by default",
 			packagePath: "./testdata/find-images/helm-chart",
 			opts: FindImagesOptions{
 				SkipCosign: true,
@@ -55,7 +55,7 @@ func TestFindImages(t *testing.T) {
 					ComponentName: "baseline",
 					Matches: []string{
 						"docker.io/library/nginx:1.16.0",
-						"docker.io/library/busybox:latest",
+						"docker.io/library/alpine:latest",
 					},
 				},
 			},
@@ -297,7 +297,7 @@ func TestFindDefinitionImages(t *testing.T) {
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "baseline",
 						Matches: []string{
-							"docker.io/library/busybox:latest",
+							"docker.io/library/alpine:latest",
 							"docker.io/library/nginx:1.16.0",
 						},
 					},
@@ -398,6 +398,16 @@ func TestFindDefinitionImages(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFindImagesWhyExcludesHelmTestResources(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	packagePath := "./testdata/find-images/helm-chart"
+
+	_, err := FindImages(ctx, packagePath, FindImagesOptions{Why: "busybox", SkipCosign: true})
+	require.EqualError(t, err, "image busybox not found in any charts or manifests")
 }
 
 func TestBuildImageMap(t *testing.T) {

@@ -3,7 +3,11 @@
 
 package load
 
-import "github.com/zarf-dev/zarf/src/api/v1beta1"
+import (
+	"slices"
+
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
+)
 
 // mergeComponentSpec overlays override onto imported.
 func mergeComponentSpec(imported, override v1beta1.ComponentSpec) v1beta1.ComponentSpec {
@@ -39,7 +43,7 @@ func mergeComponentSpec(imported, override v1beta1.ComponentSpec) v1beta1.Compon
 func mergeImages(base, head []v1beta1.Image) []v1beta1.Image {
 	out := append([]v1beta1.Image{}, base...)
 	for _, h := range head {
-		idx := indexByName(len(out), func(i int) string { return out[i].Name }, h.Name)
+		idx := slices.IndexFunc(out, func(img v1beta1.Image) bool { return img.Name == h.Name })
 		if idx == -1 {
 			out = append(out, h)
 			continue
@@ -54,7 +58,7 @@ func mergeImages(base, head []v1beta1.Image) []v1beta1.Image {
 func mergeCharts(base, headCharts []v1beta1.Chart) []v1beta1.Chart {
 	out := append([]v1beta1.Chart{}, base...)
 	for _, headChart := range headCharts {
-		idx := indexByName(len(out), func(i int) string { return out[i].Name }, headChart.Name)
+		idx := slices.IndexFunc(out, func(chart v1beta1.Chart) bool { return chart.Name == headChart.Name })
 		if idx == -1 {
 			out = append(out, headChart)
 			continue
@@ -106,7 +110,7 @@ func hasChartSource(chart v1beta1.Chart) bool {
 func mergeManifests(base, head []v1beta1.Manifest) []v1beta1.Manifest {
 	out := append([]v1beta1.Manifest{}, base...)
 	for _, h := range head {
-		idx := indexByName(len(out), func(i int) string { return out[i].Name }, h.Name)
+		idx := slices.IndexFunc(out, func(manifest v1beta1.Manifest) bool { return manifest.Name == h.Name })
 		if idx == -1 {
 			out = append(out, h)
 			continue
@@ -121,6 +125,12 @@ func mergeManifests(base, head []v1beta1.Manifest) []v1beta1.Manifest {
 				m.Kustomize = h.Kustomize
 			} else {
 				m.Kustomize.Files = append(m.Kustomize.Files, h.Kustomize.Files...)
+				if h.Kustomize.AllowAnyDirectory {
+					m.Kustomize.AllowAnyDirectory = true
+				}
+				if h.Kustomize.EnablePlugins {
+					m.Kustomize.EnablePlugins = true
+				}
 			}
 		}
 		if h.ServerSideApply != "" {
@@ -146,20 +156,13 @@ func mergeActions(base, head v1beta1.ComponentActions) v1beta1.ComponentActions 
 }
 
 func mergeActionSet(base, head v1beta1.ComponentActionSet) v1beta1.ComponentActionSet {
-	base.Defaults = head.Defaults
+	if head.Defaults != nil {
+		base.Defaults = head.Defaults
+	}
 	base.Before = append(base.Before, head.Before...)
 	base.OnSuccess = append(base.OnSuccess, head.OnSuccess...)
 	base.OnFailure = append(base.OnFailure, head.OnFailure...)
 	return base
-}
-
-func indexByName(n int, nameAt func(int) string, name string) int {
-	for i := 0; i < n; i++ {
-		if nameAt(i) == name {
-			return i
-		}
-	}
-	return -1
 }
 
 // fixPathsV1Beta1 rebases a component spec's relative resource paths to be relative to the head node,
@@ -190,7 +193,10 @@ func fixPathsV1Beta1(spec v1beta1.ComponentSpec, relativeToHead string) v1beta1.
 		}
 	}
 
-	defaultDir := spec.Actions.OnCreate.Defaults.Dir
+	var defaultDir string
+	if spec.Actions.OnCreate.Defaults != nil {
+		defaultDir = spec.Actions.OnCreate.Defaults.Dir
+	}
 	spec.Actions.OnCreate.Before = fixActionPathsV1Beta1(spec.Actions.OnCreate.Before, defaultDir, relativeToHead)
 	spec.Actions.OnCreate.OnSuccess = fixActionPathsV1Beta1(spec.Actions.OnCreate.OnSuccess, defaultDir, relativeToHead)
 	spec.Actions.OnCreate.OnFailure = fixActionPathsV1Beta1(spec.Actions.OnCreate.OnFailure, defaultDir, relativeToHead)
