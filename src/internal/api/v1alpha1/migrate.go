@@ -77,7 +77,7 @@ func migrateDeprecated(pkg v1alpha1.ZarfPackage) (v1alpha1.ZarfPackage, []string
 	return pkg, warnings
 }
 
-// migrateScriptsToActions coverts the deprecated scripts to the new actions
+// migrateScriptsToActions converts the deprecated scripts to the new actions
 // The following have no migration:
 // - Actions.Create.After
 // - Actions.Remove.*
