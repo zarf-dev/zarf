@@ -92,6 +92,57 @@ func TestLintPackageWithImports(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "all-variants test",
+			path: filepath.Join("testdata", "lint-with-imports", "all-variants"),
+			opts: LintOptions{
+				AllVariants: true,
+			},
+			findings: []lint.PackageFinding{
+				{
+					YqPath:      ".components.[0].images.[0]",
+					Description: "Image not pinned with digest",
+					Item:        "image-in-first-flavor-component:1.0.0",
+					Severity:    lint.SevWarn,
+				},
+				{
+					YqPath:      ".components.[1].images.[0]",
+					Description: "Image not pinned with digest",
+					Item:        "image-in-second-flavor-component:1.0.0",
+					Severity:    lint.SevWarn,
+				},
+				{
+					YqPath:      ".components.[2].images.[0]",
+					Description: "Image not pinned with digest",
+					Item:        "busybox:0.0.1",
+					Severity:    lint.SevWarn,
+				},
+				{
+					YqPath:      ".components.[0].images.[0]",
+					Description: "Image reference does not specify a registry domain",
+					Item:        "image-in-first-flavor-component:1.0.0",
+					Severity:    lint.SevWarn,
+				},
+				{
+					YqPath:      ".components.[1].images.[0]",
+					Description: "Image reference does not specify a registry domain",
+					Item:        "image-in-second-flavor-component:1.0.0",
+					Severity:    lint.SevWarn,
+				},
+				{
+					YqPath:      ".components.[2].images.[0]",
+					Description: "Image reference does not specify a registry domain",
+					Item:        "busybox:0.0.1",
+					Severity:    lint.SevWarn,
+				},
+				{
+					YqPath:      ".components.[2].images.[1]",
+					Description: "Image reference does not specify a registry domain",
+					Item:        "busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
+					Severity:    lint.SevWarn,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
