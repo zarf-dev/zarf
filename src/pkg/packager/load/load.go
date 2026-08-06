@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -305,21 +306,15 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 }
 
 func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
-	for _, comp := range pkg.Components {
-		if comp.Only.Flavor == flavor {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(pkg.Components, func(comp v1alpha1.ZarfComponent) bool {
+		return comp.Only.Flavor == flavor
+	})
 }
 
 func hasFlavoredComponentV1Beta1(pkg v1beta1.Package, flavor string) bool {
-	for _, comp := range pkg.Components {
-		if comp.Selector.Flavor == flavor {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(pkg.Components, func(comp v1beta1.Component) bool {
+		return comp.Selector.Flavor == flavor
+	})
 }
 
 func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string, isInteractive bool) (v1alpha1.ZarfPackage, []string, error) {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -122,10 +123,8 @@ func selectImportVariant(entries []v1beta1.ComponentImportLocal, specDir, arch, 
 	var loaded []loadedComponentConfig
 	for _, entry := range entries {
 		path := filepath.Clean(filepath.Join(specDir, entry.Path))
-		for _, seen := range importStack {
-			if seen == path {
-				return loadedComponentConfig{}, fmt.Errorf("component config %s imported in cycle", filepath.ToSlash(path))
-			}
+		if slices.Contains(importStack, path) {
+			return loadedComponentConfig{}, fmt.Errorf("component config %s imported in cycle", filepath.ToSlash(path))
 		}
 		config, err := readComponentConfig(path)
 		if err != nil {

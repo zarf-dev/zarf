@@ -3,7 +3,11 @@
 
 package load
 
-import "github.com/zarf-dev/zarf/src/api/v1beta1"
+import (
+	"slices"
+
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
+)
 
 // mergeComponentSpec overlays override onto imported.
 func mergeComponentSpec(imported, override v1beta1.ComponentSpec) v1beta1.ComponentSpec {
@@ -39,7 +43,7 @@ func mergeComponentSpec(imported, override v1beta1.ComponentSpec) v1beta1.Compon
 func mergeImages(base, head []v1beta1.Image) []v1beta1.Image {
 	out := append([]v1beta1.Image{}, base...)
 	for _, h := range head {
-		idx := indexByName(len(out), func(i int) string { return out[i].Name }, h.Name)
+		idx := slices.IndexFunc(out, func(img v1beta1.Image) bool { return img.Name == h.Name })
 		if idx == -1 {
 			out = append(out, h)
 			continue
@@ -54,7 +58,7 @@ func mergeImages(base, head []v1beta1.Image) []v1beta1.Image {
 func mergeCharts(base, headCharts []v1beta1.Chart) []v1beta1.Chart {
 	out := append([]v1beta1.Chart{}, base...)
 	for _, headChart := range headCharts {
-		idx := indexByName(len(out), func(i int) string { return out[i].Name }, headChart.Name)
+		idx := slices.IndexFunc(out, func(chart v1beta1.Chart) bool { return chart.Name == headChart.Name })
 		if idx == -1 {
 			out = append(out, headChart)
 			continue
@@ -106,7 +110,7 @@ func hasChartSource(chart v1beta1.Chart) bool {
 func mergeManifests(base, head []v1beta1.Manifest) []v1beta1.Manifest {
 	out := append([]v1beta1.Manifest{}, base...)
 	for _, h := range head {
-		idx := indexByName(len(out), func(i int) string { return out[i].Name }, h.Name)
+		idx := slices.IndexFunc(out, func(manifest v1beta1.Manifest) bool { return manifest.Name == h.Name })
 		if idx == -1 {
 			out = append(out, h)
 			continue
@@ -159,15 +163,6 @@ func mergeActionSet(base, head v1beta1.ComponentActionSet) v1beta1.ComponentActi
 	base.OnSuccess = append(base.OnSuccess, head.OnSuccess...)
 	base.OnFailure = append(base.OnFailure, head.OnFailure...)
 	return base
-}
-
-func indexByName(n int, nameAt func(int) string, name string) int {
-	for i := 0; i < n; i++ {
-		if nameAt(i) == name {
-			return i
-		}
-	}
-	return -1
 }
 
 // fixPathsV1Beta1 rebases a component spec's relative resource paths to be relative to the head node,
