@@ -89,7 +89,7 @@ func (p *PackageDefinition) FilterComponents(filter filters.ComponentFilterStrat
 	if err != nil {
 		return err
 	}
-	components := make([]internalTypes.Component, 0, len(indices))
+	components := make([]internaltypes.Component, 0, len(indices))
 	for _, idx := range indices {
 		if idx < 0 || idx >= len(p.pkg.Components) {
 			return fmt.Errorf("filter returned index %d out of range", idx)
@@ -178,14 +178,14 @@ func (p *PackageDefinition) overrideComponentNamespaces(original, target string)
 	}
 }
 
-func overrideActionSetWaitNamespaces(set *internalTypes.ComponentActionSet, original, target string) {
+func overrideActionSetWaitNamespaces(set *internaltypes.ComponentActionSet, original, target string) {
 	overrideActionWaitNamespaces(set.Before, original, target)
 	overrideActionWaitNamespaces(set.After, original, target)
 	overrideActionWaitNamespaces(set.OnSuccess, original, target)
 	overrideActionWaitNamespaces(set.OnFailure, original, target)
 }
 
-func overrideActionWaitNamespaces(actions []internalTypes.ComponentAction, original, target string) {
+func overrideActionWaitNamespaces(actions []internaltypes.ComponentAction, original, target string) {
 	for i := range actions {
 		if actions[i].Wait != nil && actions[i].Wait.Cluster != nil && actions[i].Wait.Cluster.Namespace == original {
 			actions[i].Wait.Cluster.Namespace = target
@@ -293,7 +293,7 @@ func (p *PackageDefinition) AddVersionRequirement(requirement v1alpha1.VersionRe
 			return
 		}
 	}
-	p.pkg.Build.VersionRequirements = append(p.pkg.Build.VersionRequirements, internalTypes.VersionRequirement{
+	p.pkg.Build.VersionRequirements = append(p.pkg.Build.VersionRequirements, internaltypes.VersionRequirement{
 		Version: requirement.Version,
 		Reason:  requirement.Reason,
 	})
