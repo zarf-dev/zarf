@@ -152,11 +152,7 @@ func (p PackageDefinition) uniqueNamespaces() []string {
 			seen[manifest.Namespace] = struct{}{}
 		}
 	}
-	namespaces := make([]string, 0, len(seen))
-	for namespace := range seen {
-		namespaces = append(namespaces, namespace)
-	}
-	return namespaces
+	return slices.Collect(maps.Keys(seen))
 }
 
 func (p *PackageDefinition) overrideComponentNamespaces(original, target string) {
@@ -278,20 +274,18 @@ func (p *PackageDefinition) SetProvenanceFiles(files []string) {
 
 // AddProvenanceFile records a package build provenance file once.
 func (p *PackageDefinition) AddProvenanceFile(file string) {
-	for _, existing := range p.pkg.Build.ProvenanceFiles {
-		if existing == file {
-			return
-		}
+	if slices.Contains(p.pkg.Build.ProvenanceFiles, file) {
+		return
 	}
 	p.pkg.Build.ProvenanceFiles = append(p.pkg.Build.ProvenanceFiles, file)
 }
 
 // AddVersionRequirement records a package build version requirement once.
 func (p *PackageDefinition) AddVersionRequirement(requirement v1alpha1.VersionRequirement) {
-	for _, existing := range p.pkg.Build.VersionRequirements {
-		if existing.Version == requirement.Version && existing.Reason == requirement.Reason {
-			return
-		}
+	if slices.ContainsFunc(p.pkg.Build.VersionRequirements, func(existing internaltypes.VersionRequirement) bool {
+		return existing.Version == requirement.Version && existing.Reason == requirement.Reason
+	}) {
+		return
 	}
 	p.pkg.Build.VersionRequirements = append(p.pkg.Build.VersionRequirements, internaltypes.VersionRequirement{
 		Version: requirement.Version,
