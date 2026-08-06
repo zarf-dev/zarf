@@ -117,8 +117,7 @@ type loadedComponentConfig struct {
 }
 
 // selectImportVariant loads every local import entry and selects the single one compatible with the
-// active target. A single entry is always selected. When more than one entry is given they are treated
-// as variants: exactly one must be compatible with the target.
+// active target. Entries are treated as variants: exactly one must be compatible with the target.
 func selectImportVariant(entries []v1beta1.ComponentImportLocal, specDir, arch, flavor string, importStack []string) (loadedComponentConfig, error) {
 	var loaded []loadedComponentConfig
 	for _, entry := range entries {
@@ -133,10 +132,6 @@ func selectImportVariant(entries []v1beta1.ComponentImportLocal, specDir, arch, 
 			return loadedComponentConfig{}, err
 		}
 		loaded = append(loaded, loadedComponentConfig{config: config, entry: entry, dir: filepath.Dir(path), path: path})
-	}
-
-	if len(loaded) == 1 {
-		return loaded[0], nil
 	}
 
 	var compatible []loadedComponentConfig

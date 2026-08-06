@@ -142,6 +142,15 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		require.ErrorContains(t, err, "no imported component")
 	})
 
+	t.Run("single import errors when component config is incompatible", func(t *testing.T) {
+		t.Parallel()
+		dir := filepath.Join("testdata", "import-v1beta1", "single-incompatible")
+		pkg := loadV1Beta1Package(t, dir)
+
+		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "nginx")
+		require.ErrorContains(t, err, "no imported component")
+	})
+
 	t.Run("package component overrides imported component", func(t *testing.T) {
 		t.Parallel()
 		dir := filepath.Join("testdata", "import-v1beta1", "merge")
