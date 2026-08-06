@@ -152,7 +152,9 @@ func mergeActions(base, head v1beta1.ComponentActions) v1beta1.ComponentActions 
 }
 
 func mergeActionSet(base, head v1beta1.ComponentActionSet) v1beta1.ComponentActionSet {
-	base.Defaults = head.Defaults
+	if head.Defaults != nil {
+		base.Defaults = head.Defaults
+	}
 	base.Before = append(base.Before, head.Before...)
 	base.OnSuccess = append(base.OnSuccess, head.OnSuccess...)
 	base.OnFailure = append(base.OnFailure, head.OnFailure...)
@@ -196,7 +198,10 @@ func fixPathsV1Beta1(spec v1beta1.ComponentSpec, relativeToHead string) v1beta1.
 		}
 	}
 
-	defaultDir := spec.Actions.OnCreate.Defaults.Dir
+	var defaultDir string
+	if spec.Actions.OnCreate.Defaults != nil {
+		defaultDir = spec.Actions.OnCreate.Defaults.Dir
+	}
 	spec.Actions.OnCreate.Before = fixActionPathsV1Beta1(spec.Actions.OnCreate.Before, defaultDir, relativeToHead)
 	spec.Actions.OnCreate.OnSuccess = fixActionPathsV1Beta1(spec.Actions.OnCreate.OnSuccess, defaultDir, relativeToHead)
 	spec.Actions.OnCreate.OnFailure = fixActionPathsV1Beta1(spec.Actions.OnCreate.OnFailure, defaultDir, relativeToHead)

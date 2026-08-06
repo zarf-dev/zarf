@@ -16,6 +16,12 @@ components:
           files:
             - override-kustomization
           enablePlugins: true
+    actions:
+      onDeploy:
+        defaults:
+          maxTotalSeconds: 0
+        before:
+          - cmd: echo override
     import:
       local:
         - path: components/app.yaml

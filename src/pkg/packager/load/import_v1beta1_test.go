@@ -178,6 +178,15 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		require.Equal(t, []string{"components/base-kustomization", "override-kustomization"}, comp.Manifests[0].Kustomize.Files)
 		require.True(t, comp.Manifests[0].Kustomize.AllowAnyDirectory)
 		require.True(t, comp.Manifests[0].Kustomize.EnablePlugins)
+
+		require.NotNil(t, comp.Actions.OnDeploy.Defaults)
+		require.Equal(t, int32(0), comp.Actions.OnDeploy.Defaults.MaxTotalSeconds)
+		require.Equal(t, int32(0), comp.Actions.OnDeploy.Defaults.Retries)
+		require.Empty(t, comp.Actions.OnDeploy.Defaults.Env)
+		require.Equal(t, []v1beta1.ComponentAction{
+			{Cmd: "echo base"},
+			{Cmd: "echo override"},
+		}, comp.Actions.OnDeploy.Before)
 	})
 }
 
