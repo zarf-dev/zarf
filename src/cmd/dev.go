@@ -825,7 +825,8 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 		extractedFile := filepath.Join(tmp, o.extractPath)
 
 		decompressOpts := archive.DecompressOpts{
-			Files: []string{extractedFile},
+			// We want to extract the file relative to the tar ball
+			Files: []string{o.extractPath},
 		}
 		err = archive.Decompress(ctx, fileName, tmp, decompressOpts)
 		if err != nil {
