@@ -53,7 +53,7 @@ func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts 
 		return err
 	}
 	if opts.BundlePath == "" {
-		return errors.New("provide a bundle with --bundle")
+		return errors.New("bundle path is required")
 	}
 	if opts.Timeout > 0 {
 		var cancel context.CancelFunc
@@ -116,10 +116,10 @@ func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts 
 
 func validateSigstoreBundleOptions(opts VerifyBlobOptions) error {
 	if opts.Key != "" && (opts.CertVerify.CertIdentity != "" || opts.CertVerify.CertIdentityRegexp != "") {
-		return errors.New("--key cannot be used with certificate identity verification")
+		return errors.New("key cannot be combined with certificate identity verification")
 	}
 	if opts.Key != "" && opts.SecurityKey.Use {
-		return errors.New("--key and --sk cannot be used together")
+		return errors.New("key cannot be combined with security-key verification")
 	}
 	// These options are rejected by cosign for protobuf bundles. Keeping that
 	// contract prevents detached material from silently weakening verification.
@@ -127,17 +127,17 @@ func validateSigstoreBundleOptions(opts VerifyBlobOptions) error {
 		value string
 		name  string
 	}{
-		{opts.Signature, "--signature"},
-		{opts.CertVerify.Cert, "--certificate"},
-		{opts.CertVerify.CertChain, "--certificate-chain"},
-		{opts.CertVerify.CARoots, "--ca-roots"},
-		{opts.CertVerify.CAIntermediates, "--ca-intermediates"},
-		{opts.CommonVerifyOptions.TSACertChainPath, "--timestamp-certificate-chain"},
-		{opts.CertVerify.SCT, "--sct"},
+		{opts.Signature, "detached signature"},
+		{opts.CertVerify.Cert, "certificate"},
+		{opts.CertVerify.CertChain, "certificate chain"},
+		{opts.CertVerify.CARoots, "certificate authority roots"},
+		{opts.CertVerify.CAIntermediates, "certificate authority intermediates"},
+		{opts.CommonVerifyOptions.TSACertChainPath, "timestamp certificate chain"},
+		{opts.CertVerify.SCT, "signed certificate timestamp"},
 	}
 	for _, option := range unsupported {
 		if option.value != "" {
-			return fmt.Errorf("unsupported: %s when using bundle format", option.name)
+			return fmt.Errorf("unsupported verification material for Sigstore bundles: %s", option.name)
 		}
 	}
 	return nil
@@ -208,7 +208,7 @@ func trustedMaterialForBundle(opts VerifyBlobOptions, keyVerifier signature.Veri
 		} else {
 			// Cosign fetches TUF material for key verification when the caller
 			// asks to verify a tlog entry or TSA timestamp.
-			material, err = root.FetchTrustedRoot()
+			material, err = configuredLiveTrustedRoot()
 		}
 		if err != nil {
 			return nil, fmt.Errorf("loading trusted root: %w", err)

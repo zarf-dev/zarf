@@ -5,9 +5,15 @@ package signing
 
 import (
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
+
+	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore-go/pkg/tuf"
 )
 
 // embeddedTrustedRoot is the Sigstore TrustedRoot JSON shipped with the binary.
@@ -15,6 +21,69 @@ import (
 //
 //go:embed embedded_trusted_root.json
 var embeddedTrustedRoot []byte
+
+// configuredLiveTrustedRoot loads trusted material using the TUF configuration
+// contract shared with Cosign without coupling direct verification to Cosign.
+func configuredLiveTrustedRoot() (root.TrustedMaterial, error) {
+	opts, err := configuredTUFOptions()
+	if err != nil {
+		return nil, fmt.Errorf("loading configured trusted root: %w", err)
+	}
+	material, err := root.NewLiveTrustedRoot(opts)
+	if err != nil {
+		return nil, fmt.Errorf("loading configured trusted root: %w", err)
+	}
+	return material, nil
+}
+
+// configuredTUFOptions resolves TUF_ROOT, TUF_MIRROR, and TUF_ROOT_JSON with
+// the same precedence as Cosign's configured trusted root.
+func configuredTUFOptions() (*tuf.Options, error) {
+	opts := tuf.DefaultOptions()
+	if cachePath := os.Getenv("TUF_ROOT"); cachePath != "" {
+		opts.CachePath = cachePath
+	}
+
+	if mirror := os.Getenv("TUF_MIRROR"); mirror != "" {
+		opts.RepositoryBaseURL = mirror
+	} else {
+		remotePath := filepath.Join(opts.CachePath, "remote.json")
+		remoteJSON, err := os.ReadFile(remotePath)
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("reading configured TUF remote file %q: %w", remotePath, err)
+		}
+		if err == nil {
+			var remote struct {
+				Mirror string `json:"mirror"`
+			}
+			if err := json.Unmarshal(remoteJSON, &remote); err != nil {
+				return nil, fmt.Errorf("decoding configured TUF remote file %q: %w", remotePath, err)
+			}
+			opts.RepositoryBaseURL = remote.Mirror
+		}
+	}
+
+	if opts.RepositoryBaseURL == tuf.DefaultMirror {
+		return opts, nil
+	}
+
+	if rootPath := os.Getenv("TUF_ROOT_JSON"); rootPath != "" {
+		rootJSON, err := os.ReadFile(rootPath)
+		if err != nil {
+			return nil, fmt.Errorf("reading configured TUF root JSON %q: %w", rootPath, err)
+		}
+		opts.Root = rootJSON
+		return opts, nil
+	}
+
+	cachedRootPath := filepath.Join(opts.CachePath, tuf.URLToPath(opts.RepositoryBaseURL), "root.json")
+	rootJSON, err := os.ReadFile(cachedRootPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading configured TUF cached root %q: %w", cachedRootPath, err)
+	}
+	opts.Root = rootJSON
+	return opts, nil
+}
 
 // writeEmbeddedTrustedRoot stages the embedded TrustedRoot JSON to a tempfile so
 // cosign's VerifyBlobCmd (which only accepts file paths) can consume it.
