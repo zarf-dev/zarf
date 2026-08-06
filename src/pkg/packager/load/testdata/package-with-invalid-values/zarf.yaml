@@ -11,7 +11,3 @@ values:
 components:
   - name: test-component
     required: true
-    manifests:
-      - name: test-manifest
-        files:
-          - manifest.yaml
