@@ -178,7 +178,7 @@ type ZarfFile struct {
 	Symlinks []string `json:"symlinks,omitempty"`
 	// Local folder or file to be extracted from a 'source' archive.
 	ExtractPath string `json:"extractPath,omitempty"`
-	// [alpha]
+	// [beta]
 	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
 	// known at deploy-time. See documentation for Zarf Values for how to set these values.
 	Template *bool `json:"template,omitempty"`
@@ -216,11 +216,11 @@ type ZarfChart struct {
 	NoWait bool `json:"noWait,omitempty"`
 	// List of local values file paths or remote URLs to include in the package; these will be merged together when deployed.
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
-	// [alpha] List of local values file paths or remote URLs that will have Go templates applied at deploy time
+	// [beta] List of local values file paths or remote URLs that will have Go templates applied at deploy time
 	TemplatedValuesFiles []string `json:"templatedValuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
-	// [alpha] List of values sources to their Helm override target
+	// [beta] List of values sources to their Helm override target
 	Values []ZarfChartValue `json:"values,omitempty"`
 	// Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.
 	SchemaValidation *bool `json:"schemaValidation,omitempty"`
@@ -292,7 +292,7 @@ type ZarfManifest struct {
 	//              was used when the chart was first installed
 	// Defaults to "auto" when omitted.
 	ServerSideApply string `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
-	// [alpha]
+	// [beta]
 	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
 	// known at deploy-time. See documentation for Zarf Values for how to set these values.
 	Template *bool `json:"template,omitempty"`

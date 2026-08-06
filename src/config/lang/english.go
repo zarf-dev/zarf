@@ -302,7 +302,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 	CmdPackageCreateFlagDifferential          = "Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
 	CmdPackageCreateFlagRegistryOverride      = "Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)"
 	CmdPackageCreateFlagFlavor                = "The flavor of components to include in the resulting package (i.e. have a matching or empty \"only.flavor\" key)"
-	CmdPackageCreateFlagValuesFiles           = "[alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times."
+	CmdPackageCreateFlagValuesFiles           = "[beta] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times."
 	CmdPackageCreateFlagWithBuildMachineInfo  = "Include build machine information (hostname and username) in the package metadata"
 	CmdPackageCreateCleanPathErr              = "Invalid characters in Zarf cache path, defaulting to %s"
 
@@ -320,6 +320,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 	CmdPackageDeployInvalidCLIVersionWarn      = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
 	CmdPackageDeployFlagNamespace              = "[Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined."
 	CmdPackageDeployFlagValuesFiles            = CmdPackageCreateFlagValuesFiles
+	CmdPackageDeployFlagSkipValuesSchema       = "Skip validation of package values against the values schema."
 
 	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."

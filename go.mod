@@ -26,7 +26,7 @@ require (
 	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/pkg/apis/meta v1.31.0
 	github.com/fluxcd/source-controller/api v1.9.3
-	github.com/go-git/go-git/v5 v5.19.1
+	github.com/go-git/go-git/v5 v5.19.2
 	github.com/goccy/go-yaml v1.19.2
 	github.com/golang-cz/devslog v0.0.17
 	github.com/google/go-containerregistry v0.21.7
@@ -38,8 +38,8 @@ require (
 	github.com/prometheus/client_golang v1.24.1
 	github.com/pterm/pterm v0.12.83
 	github.com/sergi/go-diff v1.4.0
-	github.com/sigstore/cosign/v3 v3.1.2
-	github.com/sigstore/sigstore-go v1.2.1
+	github.com/sigstore/cosign/v3 v3.1.3
+	github.com/sigstore/sigstore-go v1.2.2
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.8
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.8
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.8

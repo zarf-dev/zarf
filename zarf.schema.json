@@ -6484,7 +6484,7 @@
                     "type": "string"
                   },
                   "templatedValuesFiles": {
-                    "description": "[alpha] List of local values file paths or remote URLs that will have Go templates applied at deploy time",
+                    "description": "[beta] List of local values file paths or remote URLs that will have Go templates applied at deploy time",
                     "items": {
                       "type": "string"
                     },
@@ -6500,7 +6500,7 @@
                     "type": "string"
                   },
                   "values": {
-                    "description": "[alpha] List of values sources to their Helm override target",
+                    "description": "[beta] List of values sources to their Helm override target",
                     "items": {
                       "additionalProperties": false,
                       "description": "ZarfChartValue maps a Zarf Value key to a Helm Value.",
@@ -6702,7 +6702,7 @@
                     "type": "string"
                   },
                   "template": {
-                    "description": "[alpha]\nTemplate enables go-templates inside manifests. This is useful for parameterizing fields that the value will be\nknown at deploy-time. See documentation for Zarf Values for how to set these values.",
+                    "description": "[beta]\nTemplate enables go-templates inside manifests. This is useful for parameterizing fields that the value will be\nknown at deploy-time. See documentation for Zarf Values for how to set these values.",
                     "type": "boolean"
                   }
                 },
@@ -6867,7 +6867,7 @@
                     "type": "string"
                   },
                   "template": {
-                    "description": "[alpha]\nTemplate enables go-templates inside manifests. This is useful for parameterizing fields that the value will be\nknown at deploy-time. See documentation for Zarf Values for how to set these values.",
+                    "description": "[beta]\nTemplate enables go-templates inside manifests. This is useful for parameterizing fields that the value will be\nknown at deploy-time. See documentation for Zarf Values for how to set these values.",
                     "type": "boolean"
                   }
                 },
