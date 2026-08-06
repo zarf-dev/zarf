@@ -7,7 +7,7 @@ package api
 import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	internalTypes "github.com/zarf-dev/zarf/src/internal/api/types"
+	internaltypes "github.com/zarf-dev/zarf/src/internal/api/types"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 )
