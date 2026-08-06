@@ -4,7 +4,6 @@
 package v1alpha1
 
 import (
-	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -115,7 +114,7 @@ func TestMigrateDeprecated(t *testing.T) {
 					OnCreate: v1alpha1.ZarfComponentActionSet{
 						Defaults: v1alpha1.ZarfComponentActionDefaults{
 							Mute:       true,
-							MaxRetries: math.MaxInt,
+							MaxRetries: legacyScriptsMaxRetries,
 						},
 						Before: []v1alpha1.ZarfComponentAction{
 							{
@@ -164,7 +163,7 @@ func TestMigrateDeprecated(t *testing.T) {
 					OnDeploy: v1alpha1.ZarfComponentActionSet{
 						Defaults: v1alpha1.ZarfComponentActionDefaults{
 							Mute:       true,
-							MaxRetries: math.MaxInt,
+							MaxRetries: legacyScriptsMaxRetries,
 						},
 						Before: []v1alpha1.ZarfComponentAction{
 							{
