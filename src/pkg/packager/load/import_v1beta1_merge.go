@@ -41,7 +41,7 @@ func mergeComponentSpec(imported, override v1beta1.ComponentSpec) v1beta1.Compon
 
 // mergeImages merges images by name. The head value of source (and future fields) wins when set.
 func mergeImages(base, head []v1beta1.Image) []v1beta1.Image {
-	out := append([]v1beta1.Image{}, base...)
+	out := slices.Clone(base)
 	for _, h := range head {
 		idx := slices.IndexFunc(out, func(img v1beta1.Image) bool { return img.Name == h.Name })
 		if idx == -1 {
@@ -56,7 +56,7 @@ func mergeImages(base, head []v1beta1.Image) []v1beta1.Image {
 }
 
 func mergeCharts(base, headCharts []v1beta1.Chart) []v1beta1.Chart {
-	out := append([]v1beta1.Chart{}, base...)
+	out := slices.Clone(base)
 	for _, headChart := range headCharts {
 		idx := slices.IndexFunc(out, func(chart v1beta1.Chart) bool { return chart.Name == headChart.Name })
 		if idx == -1 {
@@ -108,7 +108,7 @@ func hasChartSource(chart v1beta1.Chart) bool {
 }
 
 func mergeManifests(base, head []v1beta1.Manifest) []v1beta1.Manifest {
-	out := append([]v1beta1.Manifest{}, base...)
+	out := slices.Clone(base)
 	for _, h := range head {
 		idx := slices.IndexFunc(out, func(manifest v1beta1.Manifest) bool { return manifest.Name == h.Name })
 		if idx == -1 {
