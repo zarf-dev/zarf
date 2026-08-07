@@ -2824,7 +2824,7 @@ github.com/shibumi/go-pathspec
 # github.com/shopspring/decimal v1.4.0
 ## explicit; go 1.10
 github.com/shopspring/decimal
-# github.com/sigstore/cosign/v3 v3.1.2
+# github.com/sigstore/cosign/v3 v3.1.3
 ## explicit; go 1.26.0
 github.com/sigstore/cosign/v3/cmd/cosign/cli/fulcio
 github.com/sigstore/cosign/v3/cmd/cosign/cli/options
@@ -2951,8 +2951,9 @@ github.com/sigstore/sigstore/pkg/signature/kms/cliplugin/internal/signerverifier
 github.com/sigstore/sigstore/pkg/signature/options
 github.com/sigstore/sigstore/pkg/signature/payload
 github.com/sigstore/sigstore/pkg/tuf
-# github.com/sigstore/sigstore-go v1.2.1
-## explicit; go 1.25.0
+# github.com/sigstore/sigstore-go v1.2.2
+## explicit; go 1.25.8
+github.com/sigstore/sigstore-go/internal/certificate
 github.com/sigstore/sigstore-go/internal/limits
 github.com/sigstore/sigstore-go/pkg/bundle
 github.com/sigstore/sigstore-go/pkg/fulcio/certificate
