@@ -121,6 +121,7 @@ func SetupInMemoryRegistryTLSAuth(ctx context.Context, t *testing.T, username, p
 	config.HTTP.Addr = fmt.Sprintf(":%d", port)
 	config.HTTP.TLS.Certificate = certPath
 	config.HTTP.TLS.Key = keyPath
+	config.HTTP.HTTP2.Disabled = true
 	config.Log.AccessLog.Disabled = true
 	config.Log.Level = "error"
 	config.HTTP.DrainTimeout = 10 * time.Second
