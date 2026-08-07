@@ -360,7 +360,7 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 		opts.Key = opts.KeyRef //nolint:staticcheck // intentional read of deprecated alias for migration sync
 	}
 
-	hasKey := opts.Key != ""
+	hasKey := opts.Key != "" || opts.SecurityKey.Use
 	hasKeylessIdentity := opts.CertVerify.CertIdentity != "" || opts.CertVerify.CertIdentityRegexp != ""
 	hasCert := opts.CertVerify.Cert != ""
 	hasVerificationMaterial := hasKey || hasKeylessIdentity || hasCert
@@ -413,7 +413,8 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 			opts.CommonVerifyOptions.UseSignedTimestamps = true
 		}
 		ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
-		return signing.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
+		_, err := signing.SigstoreVerifyBundleWithOptions(ctx, ZarfYAMLPath, opts)
+		return err
 	}
 	if !errors.Is(bundleErr, os.ErrNotExist) {
 		return fmt.Errorf("error checking bundle signature: %w", bundleErr)
