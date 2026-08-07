@@ -22,7 +22,7 @@ type ZarfComponent struct {
 	Only ZarfComponentOnlyTarget `json:"only,omitempty"`
 
 	// [Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.
-	DeprecatedGroup string `json:"group,omitempty" jsonschema:"deprecated=true"`
+	DeprecatedGroup string `json:"group,omitempty" jsonschema_extras:"deprecated=true"`
 
 	// Import a component from another Zarf package.
 	Import ZarfComponentImport `json:"import,omitempty"`
@@ -34,7 +34,7 @@ type ZarfComponent struct {
 	Charts []ZarfChart `json:"charts,omitempty"`
 
 	// [Deprecated] Datasets to inject into a container in the target cluster.
-	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"deprecated=true"`
+	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema_extras:"deprecated=true"`
 
 	// Files or folders to place on disk during package deployment.
 	Files []ZarfFile `json:"files,omitempty"`
@@ -49,7 +49,7 @@ type ZarfComponent struct {
 	Repos []string `json:"repos,omitempty"`
 
 	// [Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0.
-	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"deprecated=true"`
+	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema_extras:"deprecated=true"`
 
 	// Custom commands to run at various stages of a package lifecycle.
 	Actions ZarfComponentActions `json:"actions,omitempty"`
@@ -389,7 +389,7 @@ type ZarfComponentAction struct {
 	// (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.
 	Shell *Shell `json:"shell,omitempty"`
 	// [Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.
-	DeprecatedSetVariable string `json:"setVariable,omitempty" jsonschema:"pattern=^[A-Z0-9_]+$"`
+	DeprecatedSetVariable string `json:"setVariable,omitempty" jsonschema:"pattern=^[A-Z0-9_]+$" jsonschema_extras:"deprecated=true"`
 	// (onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
 	SetVariables []Variable `json:"setVariables,omitempty"`
 	// (onDeploy/onRemove/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.

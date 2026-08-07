@@ -232,8 +232,8 @@ type ZarfMetadata struct {
 	Uncompressed bool `json:"uncompressed,omitempty"`
 	// The target cluster architecture for this package.
 	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64"`
-	// Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
-	YOLO bool `json:"yolo,omitempty"`
+	// [Deprecated] Yaml OnLy Online (YOLO) enables deploying a Zarf package without first running zarf init against the cluster. Use --connected when deploying instead.
+	YOLO bool `json:"yolo,omitempty" jsonschema_extras:"deprecated=true"`
 	// Comma-separated list of package authors (including contact info).
 	Authors string `json:"authors,omitempty" jsonschema:"example=Zarf <zarf@zarf-dev.com>"`
 	// Link to package documentation when online.
