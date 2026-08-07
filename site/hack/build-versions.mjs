@@ -27,6 +27,15 @@ function git(args, opts = {}) {
   return execFileSync("git", args, { cwd: repoDir, stdio: "inherit", ...opts });
 }
 
+function hasCommit(ref) {
+  try {
+    git(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function npm(args, cwd) {
   execFileSync("npm", args, { cwd, stdio: "inherit", env: process.env });
 }
@@ -161,11 +170,18 @@ async function stageVersionedAssets(worktree, slug) {
 async function stageVersion({ ref, slug }) {
   const worktree = path.join(worktreeRoot, slug);
   console.log(`\n=== Staging ${slug} from ${ref} ===`);
-  // CI often uses a shallow clone without tag commits; fetch the tag's commit.
-  try {
-    git(["fetch", "--depth=1", zarfGitRepo, "tag", ref, "--no-tags"]);
-  } catch {
-    console.warn(`git fetch of tag ${ref} failed; assuming it is already present`);
+  // Tags are already available in CI's full checkout; shallow local clones fetch on demand.
+  if (!hasCommit(ref)) {
+    try {
+      git(["fetch", "--depth=1", zarfGitRepo, "tag", ref, "--no-tags"]);
+    } catch (error) {
+      if (!hasCommit(ref)) {
+        throw new Error(`git fetch of tag ${ref} failed and the tag is not available locally`, {
+          cause: error,
+        });
+      }
+      console.warn(`git fetch of tag ${ref} failed; using the locally available tag`);
+    }
   }
   git(["worktree", "add", "--detach", worktree, ref]);
   try {
