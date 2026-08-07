@@ -5,13 +5,17 @@ package git
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,8 +26,12 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
@@ -105,7 +113,7 @@ func TestCloneAllRefs(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	fixture := newGitFixture(t, "all-refs.git")
 
-	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address, false)
+	repository, err := cloneWithoutHostGit(ctx, t, t.TempDir(), fixture.address, false)
 	require.NoError(t, err)
 
 	localRepo := openClonedRepository(t, repository)
@@ -126,7 +134,7 @@ func TestCloneBranchRefShallow(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	fixture := newGitFixture(t, "branch-ref.git")
 
-	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address+"@refs/heads/feature", true)
+	repository, err := cloneWithoutHostGit(ctx, t, t.TempDir(), fixture.address+"@refs/heads/feature", true)
 	require.NoError(t, err)
 
 	localRepo := openClonedRepository(t, repository)
@@ -143,7 +151,7 @@ func TestCloneLightweightTagRef(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	fixture := newGitFixture(t, "lightweight-tag.git")
 
-	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address+"@lightweight-v1", true)
+	repository, err := cloneWithoutHostGit(ctx, t, t.TempDir(), fixture.address+"@lightweight-v1", true)
 	require.NoError(t, err)
 
 	localRepo := openClonedRepository(t, repository)
@@ -158,7 +166,7 @@ func TestCloneAnnotatedTagRef(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	fixture := newGitFixture(t, "annotated-tag.git")
 
-	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address+"@annotated-v1", true)
+	repository, err := cloneWithoutHostGit(ctx, t, t.TempDir(), fixture.address+"@annotated-v1", true)
 	require.NoError(t, err)
 
 	localRepo := openClonedRepository(t, repository)
@@ -174,7 +182,7 @@ func TestCloneCommitSHARef(t *testing.T) {
 	fixture := newGitFixture(t, "commit-sha.git")
 	ref := fixture.refs.main.String()
 
-	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address+"@"+ref, false)
+	repository, err := cloneWithoutHostGit(ctx, t, t.TempDir(), fixture.address+"@"+ref, false)
 	require.NoError(t, err)
 
 	localRepo := openClonedRepository(t, repository)
@@ -189,7 +197,7 @@ func TestCloneAzureStyleURL(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	fixture := newAzureGitFixture(t)
 
-	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address, false)
+	repository, err := cloneWithoutHostGit(ctx, t, t.TempDir(), fixture.address, false)
 	require.NoError(t, err)
 
 	localRepo := openClonedRepository(t, repository)
@@ -204,9 +212,88 @@ func TestCloneDoesNotInvokeHostGit(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	fixture := newGitFixture(t, "no-host-git.git")
 
-	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address, false)
+	repository, err := cloneWithoutHostGit(ctx, t, t.TempDir(), fixture.address, false)
 	require.NoError(t, err)
 	require.NotEmpty(t, repository.Path())
+}
+
+// TestCloneHTTPURLUserinfoAuth locks down HTTP Basic auth sourced from URL userinfo.
+func TestCloneHTTPURLUserinfoAuth(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	cred := testHTTPCredential()
+	fixture := newAuthenticatedHTTPGitFixture(t, "url-userinfo.git", cred, func(serverURL string) string {
+		u, err := url.Parse(serverURL)
+		require.NoError(t, err)
+		u.User = url.UserPassword(cred.username, cred.password)
+		u.Path = "/url-userinfo.git"
+		return u.String()
+	})
+
+	repository, err := cloneWithoutHostGit(ctx, t, t.TempDir(), fixture.address, false)
+	require.NoError(t, err)
+
+	localRepo := openClonedRepository(t, repository)
+	assertHeadHash(t, localRepo, fixture.refs.main)
+}
+
+// TestCloneHTTPGitCredentialsAuth locks down HTTP Basic auth sourced from ~/.git-credentials.
+func TestCloneHTTPGitCredentialsAuth(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	cred := testHTTPCredential()
+	fixture := newAuthenticatedHTTPGitFixture(t, "git-credentials.git", cred, func(serverURL string) string {
+		return serverURL + "/git-credentials.git"
+	})
+	homePath := t.TempDir()
+	t.Setenv("HOME", homePath)
+	u, err := url.Parse(fixture.address)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(homePath, ".git-credentials"), []byte(fmt.Sprintf("https://%s:%s@%s\n", url.QueryEscape(cred.username), url.QueryEscape(cred.password), u.Host)), 0o600)
+	require.NoError(t, err)
+
+	repository, err := cloneWithoutHostGit(ctx, t, t.TempDir(), fixture.address, false)
+	require.NoError(t, err)
+
+	localRepo := openClonedRepository(t, repository)
+	assertHeadHash(t, localRepo, fixture.refs.main)
+}
+
+// TestCloneHTTPNetrcAuth locks down HTTP Basic auth sourced from ~/.netrc.
+func TestCloneHTTPNetrcAuth(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	cred := testHTTPCredential()
+	fixture := newAuthenticatedHTTPGitFixture(t, "netrc.git", cred, func(serverURL string) string {
+		return serverURL + "/netrc.git"
+	})
+	homePath := t.TempDir()
+	t.Setenv("HOME", homePath)
+	u, err := url.Parse(fixture.address)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(homePath, ".netrc"), []byte(fmt.Sprintf("machine %s login %s password %s\n", u.Host, cred.username, cred.password)), 0o600)
+	require.NoError(t, err)
+
+	repository, err := cloneWithoutHostGit(ctx, t, t.TempDir(), fixture.address, false)
+	require.NoError(t, err)
+
+	localRepo := openClonedRepository(t, repository)
+	assertHeadHash(t, localRepo, fixture.refs.main)
+}
+
+// TestCloneSSHAgentAuth locks down SSH public key auth sourced from SSH_AUTH_SOCK and verified by known_hosts.
+func TestCloneSSHAgentAuth(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	privateKey := newTestPrivateKey(t)
+	fixture := newSSHGitFixture(t, "ssh-agent.git", privateKey)
+	homePath := t.TempDir()
+	t.Setenv("HOME", homePath)
+	t.Setenv("SSH_KNOWN_HOSTS", "")
+	writeKnownHosts(t, fixture)
+	startTestSSHAgent(t, privateKey)
+
+	repository, err := cloneWithoutHostGit(ctx, t, t.TempDir(), fixture.address, false)
+	require.NoError(t, err)
+
+	localRepo := openClonedRepository(t, repository)
+	assertHeadHash(t, localRepo, fixture.refs.main)
 }
 
 func TestOpenLegacyRepoPath(t *testing.T) {
@@ -224,9 +311,11 @@ func TestOpenLegacyRepoPath(t *testing.T) {
 }
 
 type gitFixture struct {
-	cfg     gitkit.Config
-	address string
-	refs    gitFixtureRefs
+	cfg       gitkit.Config
+	address   string
+	repoPath  string
+	sshKeyDir string
+	refs      gitFixtureRefs
 }
 
 type gitFixtureRefs struct {
@@ -234,11 +323,23 @@ type gitFixtureRefs struct {
 	feature plumbing.Hash
 }
 
+type httpCredential struct {
+	username string
+	password string
+}
+
+func testHTTPCredential() httpCredential {
+	return httpCredential{
+		username: "zarf-user",
+		password: "zarf-password",
+	}
+}
+
 func newGitFixture(t *testing.T, repoPath string) gitFixture {
 	t.Helper()
 	return newGitFixtureWithAddress(t, repoPath, func(serverURL string) string {
 		return fmt.Sprintf("%s/%s", serverURL, repoPath)
-	})
+	}, nil)
 }
 
 func newAzureGitFixture(t *testing.T) gitFixture {
@@ -250,10 +351,23 @@ func newAzureGitFixture(t *testing.T) gitFixture {
 		u.User = url.User("me0515")
 		u.Path = "/" + repoPath
 		return u.String()
+	}, nil)
+}
+
+func newAuthenticatedHTTPGitFixture(t *testing.T, repoPath string, cred httpCredential, address func(string) string) gitFixture {
+	t.Helper()
+	auth := &githttp.BasicAuth{
+		Username: cred.username,
+		Password: cred.password,
+	}
+	return newGitFixtureWithAddress(t, repoPath, address, auth, func(gitSrv *gitkit.Server) {
+		gitSrv.AuthFunc = func(candidate gitkit.Credential, _ *gitkit.Request) (bool, error) {
+			return candidate.Username == cred.username && candidate.Password == cred.password, nil
+		}
 	})
 }
 
-func newGitFixtureWithAddress(t *testing.T, repoPath string, address func(string) string) gitFixture {
+func newGitFixtureWithAddress(t *testing.T, repoPath string, address func(string) string, auth transport.AuthMethod, configure ...func(*gitkit.Server)) gitFixture {
 	t.Helper()
 	gitPath, err := exec.LookPath("git")
 	require.NoError(t, err)
@@ -262,25 +376,62 @@ func newGitFixtureWithAddress(t *testing.T, repoPath string, address func(string
 		Dir:        t.TempDir(),
 		AutoCreate: true,
 		GitPath:    gitPath,
+		Auth:       len(configure) > 0,
 	}
 	gitSrv := gitkit.New(cfg)
+	for _, configureServer := range configure {
+		configureServer(gitSrv)
+	}
 	err = gitSrv.Setup()
 	require.NoError(t, err)
 	srv := httptest.NewServer(http.HandlerFunc(gitSrv.ServeHTTP))
 	t.Cleanup(srv.Close)
 
 	repoAddress := address(srv.URL)
-	refs := pushFixtureRepository(t, repoAddress)
+	refs := pushFixtureRepository(t, repoAddress, auth)
 	writeRemoteHEAD(t, cfg.Dir, repoPath, "main")
 
 	return gitFixture{
-		cfg:     cfg,
-		address: repoAddress,
-		refs:    refs,
+		cfg:      cfg,
+		address:  repoAddress,
+		repoPath: repoPath,
+		refs:     refs,
 	}
 }
 
-func pushFixtureRepository(t *testing.T, repoAddress string) gitFixtureRefs {
+func newSSHGitFixture(t *testing.T, repoPath string, privateKey *rsa.PrivateKey) gitFixture {
+	t.Helper()
+	fixture := newGitFixture(t, repoPath)
+	keyDir := t.TempDir()
+	server := gitkit.NewSSH(gitkit.Config{
+		Dir:     fixture.cfg.Dir,
+		KeyDir:  keyDir,
+		GitPath: fixture.cfg.GitPath,
+		Auth:    true,
+		GitUser: "git",
+	})
+	authorizedKey := testAuthorizedKey(t, privateKey)
+	server.PublicKeyLookupFunc = func(candidate string) (*gitkit.PublicKey, error) {
+		if candidate != authorizedKey {
+			return nil, nil
+		}
+		return &gitkit.PublicKey{Id: "test-key"}, nil
+	}
+	err := server.Listen("127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, server.Stop())
+	})
+	go func() {
+		_ = server.Serve()
+	}()
+
+	fixture.address = fmt.Sprintf("ssh://git@%s/%s", server.Address(), repoPath)
+	fixture.sshKeyDir = keyDir
+	return fixture
+}
+
+func pushFixtureRepository(t *testing.T, repoAddress string, auth transport.AuthMethod) gitFixtureRefs {
 	t.Helper()
 
 	storer := memory.NewStorage()
@@ -315,6 +466,7 @@ func pushFixtureRepository(t *testing.T, repoAddress string) gitFixtureRefs {
 	require.NoError(t, err)
 	err = initRepo.Push(&git.PushOptions{
 		RemoteName: "origin",
+		Auth:       auth,
 		RefSpecs: []config.RefSpec{
 			"refs/heads/*:refs/heads/*",
 			"refs/tags/*:refs/tags/*",
@@ -362,7 +514,71 @@ func writeRemoteHEAD(t *testing.T, repoRoot, repoPath, branch string) {
 	require.NoError(t, err)
 }
 
-func cloneWithoutHostGit(t *testing.T, ctx context.Context, rootPath, address string, shallow bool) (*Repository, error) {
+func newTestPrivateKey(t *testing.T) *rsa.PrivateKey {
+	t.Helper()
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	return privateKey
+}
+
+func testAuthorizedKey(t *testing.T, privateKey *rsa.PrivateKey) string {
+	t.Helper()
+
+	publicKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	require.NoError(t, err)
+	return strings.TrimSpace(string(ssh.MarshalAuthorizedKey(publicKey)))
+}
+
+func writeKnownHosts(t *testing.T, fixture gitFixture) {
+	t.Helper()
+
+	homePath, err := os.UserHomeDir()
+	require.NoError(t, err)
+	sshPath := filepath.Join(homePath, ".ssh")
+	err = os.MkdirAll(sshPath, 0o700)
+	require.NoError(t, err)
+
+	u, err := url.Parse(fixture.address)
+	require.NoError(t, err)
+	host, port, err := net.SplitHostPort(u.Host)
+	require.NoError(t, err)
+	publicKey, err := os.ReadFile(filepath.Join(fixture.sshKeyDir, "gitkit.rsa.pub"))
+	require.NoError(t, err)
+	entry := fmt.Sprintf("[%s]:%s %s\n", host, port, strings.TrimSpace(string(publicKey)))
+	err = os.WriteFile(filepath.Join(sshPath, "known_hosts"), []byte(entry), 0o600)
+	require.NoError(t, err)
+}
+
+func startTestSSHAgent(t *testing.T, privateKey *rsa.PrivateKey) {
+	t.Helper()
+
+	keyring := agent.NewKeyring()
+	err := keyring.Add(agent.AddedKey{PrivateKey: privateKey})
+	require.NoError(t, err)
+
+	socketPath := filepath.Join(t.TempDir(), "agent.sock")
+	listener, err := net.Listen("unix", socketPath)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, listener.Close())
+	})
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				_ = agent.ServeAgent(keyring, conn)
+				_ = conn.Close()
+			}()
+		}
+	}()
+	t.Setenv("SSH_AUTH_SOCK", socketPath)
+}
+
+func cloneWithoutHostGit(ctx context.Context, t *testing.T, rootPath, address string, shallow bool) (*Repository, error) {
 	t.Helper()
 
 	fakeBin := t.TempDir()
@@ -370,7 +586,8 @@ func cloneWithoutHostGit(t *testing.T, ctx context.Context, rootPath, address st
 	fakeGit := filepath.Join(fakeBin, "git")
 	err := os.WriteFile(fakeGit, []byte(fmt.Sprintf("#!/bin/sh\necho called > %q\nexit 1\n", marker)), 0o700)
 	require.NoError(t, err)
-	t.Setenv("PATH", fakeBin)
+	originalPath := os.Getenv("PATH")
+	t.Setenv("PATH", fakeBin+string(os.PathListSeparator)+originalPath)
 
 	repository, cloneErr := Clone(ctx, rootPath, address, shallow)
 	_, err = os.Stat(marker)
