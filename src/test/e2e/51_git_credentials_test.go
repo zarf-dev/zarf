@@ -110,14 +110,18 @@ func newE2ESSHGitServer(t *testing.T, repoPath string, privateKey *rsa.PrivateKe
 		require.NoError(t, sshSrv.Stop())
 	})
 	go func() {
-		_ = sshSrv.Serve()
+		if err := sshSrv.Serve(); err != nil {
+			t.Logf("ssh git server stopped: %v", err)
+		}
 	}()
 	require.Eventually(t, func() bool {
 		conn, err := net.Dial("tcp", sshSrv.Address())
 		if err != nil {
 			return false
 		}
-		_ = conn.Close()
+		if err := conn.Close(); err != nil {
+			return false
+		}
 		return true
 	}, 5*time.Second, 100*time.Millisecond)
 

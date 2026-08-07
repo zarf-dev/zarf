@@ -423,7 +423,9 @@ func newSSHGitFixture(t *testing.T, repoPath string, privateKey *rsa.PrivateKey)
 		require.NoError(t, server.Stop())
 	})
 	go func() {
-		_ = server.Serve()
+		if err := server.Serve(); err != nil {
+			t.Logf("ssh git server stopped: %v", err)
+		}
 	}()
 
 	fixture.address = fmt.Sprintf("ssh://git@%s/%s", server.Address(), repoPath)
@@ -570,8 +572,14 @@ func startTestSSHAgent(t *testing.T, privateKey *rsa.PrivateKey) {
 				return
 			}
 			go func() {
-				_ = agent.ServeAgent(keyring, conn)
-				_ = conn.Close()
+				defer func() {
+					if err := conn.Close(); err != nil {
+						t.Logf("ssh agent connection close failed: %v", err)
+					}
+				}()
+				if err := agent.ServeAgent(keyring, conn); err != nil {
+					t.Logf("ssh agent serve failed: %v", err)
+				}
 			}()
 		}
 	}()
