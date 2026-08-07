@@ -33,8 +33,7 @@ import (
 )
 
 // SigstoreVerifyBundleWithOptions verifies a Sigstore bundle directly with
-// sigstore-go and returns the verified bundle contents. Callers must use
-// CosignVerifyBlobWithOptions for legacy .sig files.
+// sigstore-go and returns the verified bundle contents.
 func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) (*verify.VerificationResult, error) {
 	l := logger.From(ctx)
 
