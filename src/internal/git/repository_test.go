@@ -4,6 +4,7 @@
 package git
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -104,7 +105,7 @@ func TestCloneAllRefs(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	fixture := newGitFixture(t, "all-refs.git")
 
-	repository, err := Clone(ctx, t.TempDir(), fixture.address, false)
+	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address, false)
 	require.NoError(t, err)
 
 	localRepo := openClonedRepository(t, repository)
@@ -125,7 +126,7 @@ func TestCloneBranchRefShallow(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	fixture := newGitFixture(t, "branch-ref.git")
 
-	repository, err := Clone(ctx, t.TempDir(), fixture.address+"@refs/heads/feature", true)
+	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address+"@refs/heads/feature", true)
 	require.NoError(t, err)
 
 	localRepo := openClonedRepository(t, repository)
@@ -142,7 +143,7 @@ func TestCloneLightweightTagRef(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	fixture := newGitFixture(t, "lightweight-tag.git")
 
-	repository, err := Clone(ctx, t.TempDir(), fixture.address+"@lightweight-v1", true)
+	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address+"@lightweight-v1", true)
 	require.NoError(t, err)
 
 	localRepo := openClonedRepository(t, repository)
@@ -157,7 +158,7 @@ func TestCloneAnnotatedTagRef(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	fixture := newGitFixture(t, "annotated-tag.git")
 
-	repository, err := Clone(ctx, t.TempDir(), fixture.address+"@annotated-v1", true)
+	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address+"@annotated-v1", true)
 	require.NoError(t, err)
 
 	localRepo := openClonedRepository(t, repository)
@@ -173,7 +174,7 @@ func TestCloneCommitSHARef(t *testing.T) {
 	fixture := newGitFixture(t, "commit-sha.git")
 	ref := fixture.refs.main.String()
 
-	repository, err := Clone(ctx, t.TempDir(), fixture.address+"@"+ref, false)
+	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address+"@"+ref, false)
 	require.NoError(t, err)
 
 	localRepo := openClonedRepository(t, repository)
@@ -188,7 +189,7 @@ func TestCloneAzureStyleURL(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	fixture := newAzureGitFixture(t)
 
-	repository, err := Clone(ctx, t.TempDir(), fixture.address, false)
+	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address, false)
 	require.NoError(t, err)
 
 	localRepo := openClonedRepository(t, repository)
@@ -203,18 +204,9 @@ func TestCloneDoesNotInvokeHostGit(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	fixture := newGitFixture(t, "no-host-git.git")
 
-	fakeBin := t.TempDir()
-	marker := filepath.Join(fakeBin, "git-called")
-	fakeGit := filepath.Join(fakeBin, "git")
-	err := os.WriteFile(fakeGit, []byte(fmt.Sprintf("#!/bin/sh\necho called > %q\nexit 1\n", marker)), 0o700)
+	repository, err := cloneWithoutHostGit(t, ctx, t.TempDir(), fixture.address, false)
 	require.NoError(t, err)
-	t.Setenv("PATH", fakeBin)
-
-	_, err = Clone(ctx, t.TempDir(), fixture.address, false)
-	require.NoError(t, err)
-
-	_, err = os.Stat(marker)
-	require.ErrorIs(t, err, os.ErrNotExist)
+	require.NotEmpty(t, repository.Path())
 }
 
 func TestOpenLegacyRepoPath(t *testing.T) {
@@ -368,6 +360,22 @@ func writeRemoteHEAD(t *testing.T, repoRoot, repoPath, branch string) {
 	headFile := filepath.Join(repoRoot, filepath.FromSlash(repoPath), "HEAD")
 	err := os.WriteFile(headFile, []byte(fmt.Sprintf("ref: refs/heads/%s\n", branch)), 0o600)
 	require.NoError(t, err)
+}
+
+func cloneWithoutHostGit(t *testing.T, ctx context.Context, rootPath, address string, shallow bool) (*Repository, error) {
+	t.Helper()
+
+	fakeBin := t.TempDir()
+	marker := filepath.Join(fakeBin, "git-called")
+	fakeGit := filepath.Join(fakeBin, "git")
+	err := os.WriteFile(fakeGit, []byte(fmt.Sprintf("#!/bin/sh\necho called > %q\nexit 1\n", marker)), 0o700)
+	require.NoError(t, err)
+	t.Setenv("PATH", fakeBin)
+
+	repository, cloneErr := Clone(ctx, rootPath, address, shallow)
+	_, err = os.Stat(marker)
+	require.ErrorIs(t, err, os.ErrNotExist)
+	return repository, cloneErr
 }
 
 func openClonedRepository(t *testing.T, repository *Repository) *git.Repository {
