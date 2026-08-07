@@ -5,6 +5,8 @@ package packager
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -35,6 +37,11 @@ func defaultTestRemoteOptions() types.RemoteOptions {
 
 func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string) *layout.PackageLayout {
 	t.Helper()
+	return pullFromRemoteWithOptions(ctx, t, packageRef, architecture, publicKeyPath, cachePath, defaultTestRemoteOptions())
+}
+
+func pullFromRemoteWithOptions(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string, remoteOptions types.RemoteOptions) *layout.PackageLayout {
+	t.Helper()
 
 	verifyOpts := signing.DefaultVerifyBlobOptions()
 	verifyOpts.Key = publicKeyPath
@@ -44,7 +51,7 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 		Source:            packageRef,
 		Architecture:      architecture,
 		Filter:            filters.Empty(),
-		RemoteOptions:     defaultTestRemoteOptions(),
+		RemoteOptions:     remoteOptions,
 		VerifyBlobOptions: &verifyOpts,
 		CachePath:         cachePath,
 	}
@@ -464,6 +471,122 @@ func TestPublishCopySHA(t *testing.T) {
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
 	}
+}
+
+func TestPublishFromOCITransportNegotiation(t *testing.T) {
+	const (
+		username = "source-user"
+		password = "source-password"
+	)
+
+	tt := []struct {
+		name            string
+		sourceTLS       bool
+		destinationTLS  bool
+		plainHTTP       bool
+		expectCopyError bool
+	}{
+		{
+			name:      "copies an authenticated HTTPS source to an HTTP destination",
+			sourceTLS: true,
+			plainHTTP: true,
+		},
+		{
+			name:           "keeps HTTPS source and destination on HTTPS",
+			sourceTLS:      true,
+			destinationTLS: true,
+			plainHTTP:      true,
+		},
+		{
+			name:      "copies an HTTP source to an HTTP destination",
+			plainHTTP: true,
+		},
+		{
+			name:            "does not downgrade an HTTP destination without opt in",
+			sourceTLS:       true,
+			expectCopyError: true,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := testutil.TestContext(t)
+
+			var sourceAddress string
+			if tc.sourceTLS {
+				sourceAddress = testutil.SetupInMemoryRegistryTLSAuth(ctx, t, username, password)
+			} else {
+				sourceAddress = testutil.SetupInMemoryRegistryDynamic(ctx, t)
+			}
+
+			var destinationAddress string
+			if tc.destinationTLS {
+				destinationAddress = testutil.SetupInMemoryRegistryTLSAuth(ctx, t, username, password)
+			} else {
+				destinationAddress = testutil.SetupInMemoryRegistryDynamic(ctx, t)
+			}
+
+			setDockerConfig(t, map[string]bool{
+				sourceAddress:      tc.sourceTLS,
+				destinationAddress: tc.destinationTLS,
+			}, username, password)
+
+			layoutExpected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
+			require.NoError(t, err)
+
+			sourceRef, err := PublishPackage(ctx, layoutExpected, registry.Reference{
+				Registry:   sourceAddress,
+				Repository: "my-namespace",
+			}, PublishPackageOptions{
+				RemoteOptions: types.RemoteOptions{
+					PlainHTTP:             !tc.sourceTLS,
+					InsecureSkipTLSVerify: tc.sourceTLS,
+				},
+			})
+			require.NoError(t, err)
+
+			destinationRef := registry.Reference{
+				Registry:   destinationAddress,
+				Repository: sourceRef.Repository,
+				Reference:  sourceRef.Reference,
+			}
+			remoteOptions := types.RemoteOptions{
+				PlainHTTP:             tc.plainHTTP,
+				InsecureSkipTLSVerify: tc.sourceTLS || tc.destinationTLS,
+			}
+			err = PublishFromOCI(ctx, sourceRef, destinationRef, PublishFromOCIOptions{
+				Architecture:  layoutExpected.Pkg.Build.Architecture,
+				RemoteOptions: remoteOptions,
+			})
+			if tc.expectCopyError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			layoutActual := pullFromRemoteWithOptions(ctx, t, destinationRef.String(), layoutExpected.Pkg.Build.Architecture, "", t.TempDir(), remoteOptions)
+			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "copied package must retain metadata and layers")
+		})
+	}
+}
+
+func setDockerConfig(t *testing.T, registryAddresses map[string]bool, username, password string) {
+	t.Helper()
+
+	auths := map[string]map[string]string{}
+	for registryAddress, includeCredentials := range registryAddresses {
+		if includeCredentials {
+			auths[registryAddress] = map[string]string{
+				"auth": base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password))),
+			}
+		}
+	}
+	config, err := json.Marshal(map[string]any{"auths": auths})
+	require.NoError(t, err)
+
+	dockerConfig := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dockerConfig, "config.json"), config, 0o600))
+	t.Setenv("DOCKER_CONFIG", dockerConfig)
 }
 
 func TestPullOCIConnectedExcludesImages(t *testing.T) {
