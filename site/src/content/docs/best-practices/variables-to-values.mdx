@@ -224,10 +224,56 @@ spec:
         {{- toYaml .Values.tolerations | nindent 8 }}
 ```
 
+## Variable Validation
+
+Legacy variables use `pattern` on the variable definition to validate deploy-time input. With values, move that regex into the values schema and point `values.schema` at the schema file.
+
+### Before (Legacy)
+
+```yaml
+# zarf.yaml
+variables:
+  - name: DATABASE_USERNAME
+    default: "postgres"
+    pattern: "^[a-z][a-z0-9_]{2,31}$"
+```
+
+### After (Package Values)
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - package-values.yaml
+  schema: values.schema.json
+```
+
+
+```json
+# values.schema.json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "database": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,31}$"
+        }
+      },
+      "required": ["username"]
+    }
+  },
+  "required": ["database"]
+}
+```
+
 
 ## Migrating Constants
 
-Constants have no direct replacement. A constant is a fixed value a deployer cannot override, whereas any package value can be overridden at deploy time with `--set-values` or `-v`. Depending on why the constant existed, replace it one of these ways:
+Constants have no direct replacement. A constant is a fixed value a deployer cannot override, whereas any package value can be overridden at deploy time with `--set-values` or `--values`. Depending on why the constant existed, replace it one of these ways:
 
 - **Pin it in the schema.** Give the value a fixed `const` in the [values schema](/ref/package-values/#schema-validation) so validation rejects any deploy-time override.
 - **Hardcode the value.** For values consumed by a Helm chart, place the fixed value directly in the chart's static `valuesFiles` rather than mapping it from package values.

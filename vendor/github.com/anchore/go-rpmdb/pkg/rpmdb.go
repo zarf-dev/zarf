@@ -1,7 +1,8 @@
 package rpmdb
 
 import (
-	"golang.org/x/xerrors"
+	"errors"
+	"fmt"
 
 	"github.com/anchore/go-rpmdb/pkg/bdb"
 	dbi "github.com/anchore/go-rpmdb/pkg/db"
@@ -16,7 +17,7 @@ type RpmDB struct {
 func Open(path string) (*RpmDB, error) {
 	// SQLite3 Open() returns nil, nil in case of DB format other than SQLite3
 	sqldb, err := sqlite3.Open(path)
-	if err != nil && !xerrors.Is(err, sqlite3.ErrorInvalidSQLite3) {
+	if err != nil && !errors.Is(err, sqlite3.ErrorInvalidSQLite3) {
 		return nil, err
 	}
 	if sqldb != nil {
@@ -25,7 +26,7 @@ func Open(path string) (*RpmDB, error) {
 
 	// NDB Open() returns nil, nil in case of DB format other than NDB
 	ndbh, err := ndb.Open(path)
-	if err != nil && !xerrors.Is(err, ndb.ErrorInvalidNDB) {
+	if err != nil && !errors.Is(err, ndb.ErrorInvalidNDB) {
 		return nil, err
 	}
 	if ndbh != nil {
@@ -49,7 +50,7 @@ func (d *RpmDB) Close() error {
 func (d *RpmDB) Package(name string) (*PackageInfo, error) {
 	pkgs, err := d.ListPackages()
 	if err != nil {
-		return nil, xerrors.Errorf("unable to list packages: %w", err)
+		return nil, fmt.Errorf("unable to list packages: %w", err)
 	}
 
 	for _, pkg := range pkgs {
@@ -57,7 +58,7 @@ func (d *RpmDB) Package(name string) (*PackageInfo, error) {
 			return pkg, nil
 		}
 	}
-	return nil, xerrors.Errorf("%s is not installed", name)
+	return nil, fmt.Errorf("%s is not installed", name)
 }
 
 func (d *RpmDB) ListPackages() ([]*PackageInfo, error) {
@@ -70,11 +71,11 @@ func (d *RpmDB) ListPackages() ([]*PackageInfo, error) {
 
 		indexEntries, err := headerImport(entry.Value)
 		if err != nil {
-			return nil, xerrors.Errorf("error during importing header: %w", err)
+			return nil, fmt.Errorf("error during importing header: %w", err)
 		}
 		pkg, err := getNEVRA(indexEntries)
 		if err != nil {
-			return nil, xerrors.Errorf("invalid package info: %w", err)
+			return nil, fmt.Errorf("invalid package info: %w", err)
 		}
 		pkgList = append(pkgList, pkg)
 	}

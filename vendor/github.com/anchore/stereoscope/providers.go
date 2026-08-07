@@ -31,8 +31,8 @@ func ImageProviders(cfg ImageProviderConfig) []collections.TaggedValue[image.Pro
 	return []collections.TaggedValue[image.Provider]{
 		// file providers
 		taggedProvider(docker.NewArchiveProvider(tempDirGenerator, cfg.UserInput), FileTag),
-		taggedProvider(oci.NewArchiveProvider(tempDirGenerator, cfg.UserInput), FileTag),
-		taggedProvider(oci.NewDirectoryProvider(tempDirGenerator, cfg.UserInput), FileTag, DirTag),
+		taggedProvider(oci.NewArchiveProviderWithPlatform(tempDirGenerator, cfg.UserInput, cfg.Platform), FileTag),
+		taggedProvider(oci.NewDirectoryProviderWithPlatform(tempDirGenerator, cfg.UserInput, cfg.Platform), FileTag, DirTag),
 		taggedProvider(sif.NewArchiveProvider(tempDirGenerator, cfg.UserInput), FileTag),
 
 		// daemon providers

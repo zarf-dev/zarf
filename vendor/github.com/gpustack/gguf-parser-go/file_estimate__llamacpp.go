@@ -971,6 +971,9 @@ func (gf *GGUFFile) estimateLLaMACppRunInProjector(o *_GGUFRunEstimateOptions, a
 		e.OffloadLayers = 0
 	}
 
+	// Flash attention.
+	e.FlashAttention = o.FlashAttention
+
 	// Footprint.
 	{
 		// Bootstrap.
@@ -1011,6 +1014,12 @@ func (gf *GGUFFile) estimateLLaMACppRunInProjector(o *_GGUFRunEstimateOptions, a
 			// See https://github.com/ggml-org/llama.cpp/blob/6385b843a8dc8e15b8362196039720c58dd79fa2/tools/mtmd/clip.cpp#L3462.
 			nPatches       uint64
 			patchesMaxSize uint64
+			// nPatchesMerged is how many patches the projector merges into one output token.
+			//
+			// The vision encoder attends over the patches before the merge,
+			// so nPatches counts the projector's output tokens while the encoder's positions
+			// are nPatches scaled back up by this factor.
+			nPatchesMerged uint64 = 1
 			// See https://github.com/ggml-org/llama.cpp/blob/6385b843a8dc8e15b8362196039720c58dd79fa2/tools/mtmd/clip.cpp#L4016.
 			projectionDim uint64 // NB(thxCode): do not sure if there is the correct name.
 		)
@@ -1130,6 +1139,57 @@ func (gf *GGUFFile) estimateLLaMACppRunInProjector(o *_GGUFRunEstimateOptions, a
 			if ti, ok := gf.TensorInfos.Get("mm.model.mlp.3.weight"); ok {
 				projectionDim = ti.Dimensions[1]
 			}
+		case "gemma3nv":
+			// MobileNetV5 is a convolutional encoder that always outputs a fixed 16x16 token grid
+			// regardless of the input size; its patch size is a convolution stride,
+			// not a transformer patch. image_size/patch_size is llama.cpp's own expression for
+			// the TOTAL token count of that grid (768/3 = 256 = 16x16), not a per-side count,
+			// see https://github.com/ggml-org/llama.cpp/blob/e3546c7948e3af463d0b401e6421d5a4c2faf565/tools/mtmd/clip.cpp#L3389-L3394.
+			nPatches = uint64(a.ClipVisionImageSize) / nPatchSize
+			projectionDim = uint64(a.ClipVisionProjectionDim)
+		default:
+			if !a.ClipHasQwen2VLMerger && !a.ClipHasLLaVAProjector && !a.ClipHasMiniCPMVProjector {
+				// Approximate a projector type without a special case above from what the GGUF declares,
+				// so that new llama.cpp projector types (lightonocr, paddleocr, dots_ocr, kimivl, ...)
+				// degrade to a rough estimate rather than an inflated one,
+				// see https://github.com/gpustack/gguf-parser-go/issues/21.
+				//
+				// Cap the image size like the known dynamic-resolution projector types,
+				// without inflating a smaller native image size by default.
+				// A projector declaring no image size at all is dynamic resolution
+				// (dots_ocr does this); assume the default cap rather than zero-pixel images,
+				// which would charge nothing for the encoder.
+				ms := uint64(ptr.Deref(o.LMCVisualMaxImageSize, 1024))
+				if o.LMCVisualMaxImageSize == nil && heightMaxSize > 0 && heightMaxSize < ms {
+					ms = heightMaxSize
+				}
+				heightMaxSize = ms
+				widthMaxSize = ms
+				heightPatchSize := (heightMaxSize + nPatchSize - 1) / nPatchSize
+				widthPatchSize := (widthMaxSize + nPatchSize - 1) / nPatchSize
+				// Honor the patch reduction the metadata declares,
+				// like llama.cpp does for every projector type carrying it,
+				// rounding up so the estimate never undercounts.
+				//
+				// This reduces the projector's output tokens, not the encoder's positions:
+				// the merge happens after the vision transformer.
+				merge := uint64(1)
+				if a.ClipVisionSpatialMergeSize > 1 {
+					merge = uint64(a.ClipVisionSpatialMergeSize)
+				} else if a.ClipVisionProjectorScaleFactor > 1 {
+					merge = uint64(a.ClipVisionProjectorScaleFactor)
+				}
+				if merge > 1 {
+					heightPatchSize = (heightPatchSize + merge - 1) / merge
+					widthPatchSize = (widthPatchSize + merge - 1) / merge
+					nPatchesMerged = merge * merge
+				}
+				nPatches = heightPatchSize * widthPatchSize
+				if _, ok := gf.TensorInfos.Get("v.token_embd.img_break"); ok && heightPatchSize > 0 {
+					nPatches += heightPatchSize - 1 /* [IMG_BREAK] per row */
+				}
+				projectionDim = uint64(a.ClipVisionProjectionDim)
+			}
 		}
 
 		// Footprint
@@ -1176,6 +1236,14 @@ func (gf *GGUFFile) estimateLLaMACppRunInProjector(o *_GGUFRunEstimateOptions, a
 					a.ClipProjectorType == "qwen2.5vl_merger" ||
 					a.ClipProjectorType == "qwen2.5o" {
 					nPositions *= 4
+				} else if nPatchesMerged > 1 {
+					// The merged patch count is what the projector emits;
+					// the encoder attends over the patches before the merge.
+					// The class embedding, if any, is a single position and is not merged.
+					nPositions = nPatches * nPatchesMerged
+					if hasClassEmbd {
+						nPositions += 1
+					}
 				}
 				nBatch = 1
 				nEmbd = a.ClipVisionEmbeddingLength
@@ -1213,6 +1281,15 @@ func (gf *GGUFFile) estimateLLaMACppRunInProjector(o *_GGUFRunEstimateOptions, a
 				compVcur := GGMLTypeF32.RowSizeOf([]uint64{nEmbd, nPositions})
 				compKcur := GGMLTypeF32.RowSizeOf([]uint64{nEmbd, nPositions})
 				compKQcur := GGMLTypeF32.RowSizeOf([]uint64{nPositions, nPositions, nHead})
+				if o.FlashAttention && nHead > 0 {
+					// The attention score matrix is not materialized with flash attention,
+					// the largest quadratic tensor left is the F16-cast mask,
+					// see https://github.com/ggml-org/llama.cpp/blob/e3546c7948e3af463d0b401e6421d5a4c2faf565/tools/mtmd/clip.cpp#L690-L700.
+					//
+					// A projector declaring no attention head count is not charged for attention at all,
+					// so flash attention must not add a buffer here either.
+					compKQcur = GGMLTypeF16.RowSizeOf([]uint64{nPositions, nPositions})
+				}
 				e.Devices[idx].Computation.Compute += GGUFBytesScalar(compNorm + compVcur + compKcur + compKQcur)
 			}
 		}
@@ -1254,6 +1331,20 @@ func (gf *GGUFFile) estimateLLaMACppRunInProjector(o *_GGUFRunEstimateOptions, a
 			)
 			{
 				nPositions = projectionDim
+				// The encoder attends over one audio chunk, not the position table's whole
+				// capacity; the two coincide for the whisper family (30s chunks, 1500-row
+				// tables) but not for conformer projectors with 1-second chunks,
+				// see https://github.com/ggml-org/llama.cpp/blob/e3546c7948e3af463d0b401e6421d5a4c2faf565/tools/mtmd/clip.cpp#L1557,
+				//     https://github.com/ggml-org/llama.cpp/blob/e3546c7948e3af463d0b401e6421d5a4c2faf565/tools/mtmd/clip.cpp#L1611-L1618,
+				//     https://github.com/gpustack/gguf-parser-go/issues/26.
+				audioChunkSeconds := uint64(30)
+				if a.ClipProjectorType == "lfm2a" {
+					audioChunkSeconds = 1
+				}
+				// One second of 16 kHz audio at hop length 160 is 100 mel frames.
+				if chunkPositions := audioChunkSeconds * 100; nPositions > chunkPositions {
+					nPositions = chunkPositions
+				}
 				nBatch = 1
 				nEmbd = a.ClipAudioEmbeddingLength
 				nHead = a.ClipAudioAttentionHeadCount
@@ -1271,6 +1362,11 @@ func (gf *GGUFFile) estimateLLaMACppRunInProjector(o *_GGUFRunEstimateOptions, a
 				compVcur := GGMLTypeF32.RowSizeOf([]uint64{nEmbd, nPositions})
 				compKcur := GGMLTypeF32.RowSizeOf([]uint64{nEmbd, nPositions})
 				compKQcur := GGMLTypeF32.RowSizeOf([]uint64{nPositions, nPositions, nHead})
+				if o.FlashAttention && nHead > 0 {
+					// The audio encoder shares the clip attention graph,
+					// see https://github.com/ggml-org/llama.cpp/blob/e3546c7948e3af463d0b401e6421d5a4c2faf565/tools/mtmd/clip.cpp#L690-L700.
+					compKQcur = GGMLTypeF16.RowSizeOf([]uint64{nPositions, nPositions})
+				}
 				e.Devices[idx].Computation.Compute += GGUFBytesScalar(compNorm + compVcur + compKcur + compKQcur)
 			}
 		}

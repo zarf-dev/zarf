@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
     - name: enterprise-linux-container
-      image: "###ZARF_VAR_IMAGE###"
+      image: "{{ .Values.image }}"
       command: [ "sh", "-c", "while true; do ls; sleep 1; done"]
       resources:
         requests:

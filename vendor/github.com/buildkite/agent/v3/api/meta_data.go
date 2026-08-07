@@ -18,11 +18,29 @@ type MetaDataExists struct {
 	Exists bool `json:"exists"`
 }
 
+// MetaDataBatch represents a batch of key/value pairs for the set-batch endpoint.
+type MetaDataBatch struct {
+	Items []MetaData `json:"items"`
+}
+
 // Sets the meta data value
 func (c *Client) SetMetaData(ctx context.Context, jobId string, metaData *MetaData) (*Response, error) {
 	u := fmt.Sprintf("jobs/%s/data/set", railsPathEscape(jobId))
 
 	req, err := c.newRequest(ctx, "POST", u, metaData)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.doRequest(req, nil)
+}
+
+// SetMetaDataBatch sets multiple meta data key/value pairs in a single request.
+// The operation is transactional: all items succeed or none do.
+func (c *Client) SetMetaDataBatch(ctx context.Context, jobId string, batch *MetaDataBatch) (*Response, error) {
+	u := fmt.Sprintf("jobs/%s/data/set-batch", railsPathEscape(jobId))
+
+	req, err := c.newRequest(ctx, "POST", u, batch)
 	if err != nil {
 		return nil, err
 	}
