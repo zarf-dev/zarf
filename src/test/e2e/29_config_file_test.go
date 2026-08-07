@@ -69,7 +69,7 @@ func TestConfigFileDefault(t *testing.T) {
 		"architecture: 509a38f0",
 		"log_level: 6a845a41",
 		"zarf_cache: 978499a5",
-		"Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.",
+		"Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.",
 		"Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.",
 		"tmp_dir: c457359e",
 	}
