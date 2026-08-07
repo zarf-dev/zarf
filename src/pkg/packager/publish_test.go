@@ -564,7 +564,11 @@ func TestPublishFromOCITransportNegotiation(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			layoutActual := pullFromRemoteWithOptions(ctx, t, destinationRef.String(), layoutExpected.Pkg.Build.Architecture, "", t.TempDir(), remoteOptions)
+			destinationRemoteOptions := types.RemoteOptions{
+				PlainHTTP:             !tc.destinationTLS,
+				InsecureSkipTLSVerify: tc.destinationTLS,
+			}
+			layoutActual := pullFromRemoteWithOptions(ctx, t, destinationRef.String(), layoutExpected.Pkg.Build.Architecture, "", t.TempDir(), destinationRemoteOptions)
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "copied package must retain metadata and layers")
 		})
 	}

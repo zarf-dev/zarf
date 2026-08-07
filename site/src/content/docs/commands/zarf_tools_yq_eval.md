@@ -79,7 +79,7 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
   -0, --nul-output                        Use NUL char to separate values. If unwrap scalar is also set, fail if unwrapped scalar contains NUL char.
   -n, --null-input                        Don't read input, simply evaluate the expression given. Useful for creating docs from scratch.
   -o, --output-format string              [auto|a|yaml|y|kyaml|ky|json|j|props|p|csv|c|tsv|t|xml|x|base64|uri|toml|hcl|h|shell|s|lua|l|ini|i] output format type. (default "auto")
-      --plain-http                        Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                        Allow connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -P, --prettyPrint                       pretty print, shorthand for '... style = ""'
       --properties-array-brackets         use [x] in array paths (e.g. for SpringBoot)
       --properties-separator string       separator to use between keys and values (default " = ")

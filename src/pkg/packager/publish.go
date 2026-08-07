@@ -12,6 +12,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -76,12 +77,29 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	arch := config.GetArch(opts.Architecture)
 	p := oci.PlatformForArch(arch)
 
-	// Set up remote repo client
-	srcRemote, err := zoci.NewRemote(ctx, src.String(), p, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+	srcPlainHTTP := false
+	dstPlainHTTP := false
+	if opts.PlainHTTP {
+		srcPlainHTTP, err = ocischeme.From(ctx).UsePlainHTTP(ctx, src.Registry, ocischeme.ProbeOptions{
+			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		})
+		if err != nil {
+			return fmt.Errorf("could not resolve source registry transport: %w", err)
+		}
+		dstPlainHTTP, err = ocischeme.From(ctx).UsePlainHTTP(ctx, dst.Registry, ocischeme.ProbeOptions{
+			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		})
+		if err != nil {
+			return fmt.Errorf("could not resolve destination registry transport: %w", err)
+		}
+	}
+
+	// Set up remote repo clients.
+	srcRemote, err := zoci.NewRemote(ctx, src.String(), p, oci.WithPlainHTTP(srcPlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
-	dstRemote, err := zoci.NewRemote(ctx, dst.String(), p, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+	dstRemote, err := zoci.NewRemote(ctx, dst.String(), p, oci.WithPlainHTTP(dstPlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}

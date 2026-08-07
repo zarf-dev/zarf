@@ -45,7 +45,7 @@ const (
 	RootCmdFlagArch                  = "Architecture for OCI images and Zarf packages"
 	RootCmdFlagCachePath             = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir               = "Specify the temporary directory to use for intermediate files"
-	RootCmdFlagPlainHTTP             = "Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagPlainHTTP             = "Allow connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture."
 	RootCmdFlagInsecureSkipTLSVerify = "Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
 	RootCmdDeprecatedDeploy = "Deprecated: Please use \"zarf package deploy %s\" to deploy this package.  This warning will be removed in Zarf v1.0.0."
