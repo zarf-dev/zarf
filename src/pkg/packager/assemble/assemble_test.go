@@ -653,7 +653,7 @@ func TestAssembleSkeleton(t *testing.T) {
 	require.NoError(t, err)
 
 	opt := AssembleSkeletonOptions{}
-	pkgLayout, err := AssembleSkeleton(ctx, defined.Pkg, "./testdata/zarf-skeleton-package", defined.ImportedSchemas, opt)
+	pkgLayout, err := AssembleSkeleton(ctx, defined, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
@@ -700,8 +700,7 @@ func TestGetSBOM(t *testing.T) {
 	writePackageToDisk(t, pkg, tmpdir)
 	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
-
-	pkgLayout, err := AssemblePackage(ctx, defined.Pkg, tmpdir, nil, AssembleOptions{})
+	pkgLayout, err := AssemblePackage(ctx, defined, tmpdir, AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
@@ -791,13 +790,12 @@ func TestCreateAbsoluteSources(t *testing.T) {
 
 			defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 			require.NoError(t, err)
-
 			var pkgLayout *layout.PackageLayout
 			if tt.isSkeleton {
-				pkgLayout, err = AssembleSkeleton(ctx, defined.Pkg, tmpdir, defined.ImportedSchemas, AssembleSkeletonOptions{})
+				pkgLayout, err = AssembleSkeleton(ctx, defined, tmpdir, AssembleSkeletonOptions{})
 				require.NoError(t, err)
 			} else {
-				pkgLayout, err = AssemblePackage(ctx, defined.Pkg, tmpdir, nil, AssembleOptions{SkipSBOM: true})
+				pkgLayout, err = AssemblePackage(ctx, defined, tmpdir, AssembleOptions{SkipSBOM: true})
 				require.NoError(t, err)
 			}
 			docsDir := filepath.Join(tmpdir, "docs-dir")
@@ -878,7 +876,7 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
 	// create the package
-	pkgLayout, err := AssemblePackage(context.Background(), defined.Pkg, tmpdir, nil, AssembleOptions{})
+	pkgLayout, err := AssemblePackage(context.Background(), defined, tmpdir, AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the component has the correct file

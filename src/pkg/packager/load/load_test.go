@@ -12,7 +12,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -140,6 +142,11 @@ func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 			packagePath: filepath.Join("testdata", "package-with-invalid-values"),
 			expectedErr: "values validation failed",
 		},
+		{
+			name:        "v1beta1 imported values fail imported schema validation",
+			packagePath: filepath.Join("testdata", "v1beta1-imported-values-schema-invalid"),
+			expectedErr: "values validation failed",
+		},
 	}
 
 	for _, tt := range tests {
@@ -154,6 +161,100 @@ func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestV1Beta1PackageDefinition(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	t.Run("loads and validates, exposing both a v1alpha1 and a faithful v1beta1 view", func(t *testing.T) {
+		t.Parallel()
+		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-package"), DefinitionOptions{})
+		require.NoError(t, err)
+		require.Equal(t, v1beta1.APIVersion, defined.PackageDefinition.OriginalAPIVersion())
+
+		pkg := defined.PackageDefinition.AsV1alpha1()
+		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
+		require.Equal(t, "beta-package", pkg.Metadata.Name)
+		require.NotEmpty(t, pkg.Metadata.Architecture)
+		require.Len(t, pkg.Components, 1)
+		require.Equal(t, "first", pkg.Components[0].Name)
+		require.Equal(t, []string{"nginx:1.27.0"}, pkg.Components[0].Images)
+		require.Equal(t, []string{"https://github.com/zarf-dev/zarf.git"}, pkg.Components[0].Repos)
+		require.Empty(t, defined.ImportedSchemas)
+
+		// The v1beta1 view preserves fields with no v1alpha1 representation — here an image's source.
+		// Collapsing to v1alpha1 on load (the previous approach) dropped these.
+		betaPkg := defined.PackageDefinition.AsV1beta1()
+		require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
+		require.Len(t, betaPkg.Components, 1)
+		require.Equal(t, "nginx:1.27.0", betaPkg.Components[0].Images[0].Name)
+		require.Equal(t, "daemon", betaPkg.Components[0].Images[0].Source)
+	})
+
+	t.Run("resolves a local component config import", func(t *testing.T) {
+		t.Parallel()
+		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-with-import"), DefinitionOptions{})
+		require.NoError(t, err)
+
+		pkg := defined.PackageDefinition.AsV1alpha1()
+		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
+		require.Len(t, pkg.Components, 1)
+		require.Equal(t, "imported", pkg.Components[0].Name)
+		require.Equal(t, []string{"nginx:1.27.0"}, pkg.Components[0].Images)
+	})
+}
+
+func TestV1Beta1PackageDefinitionValuesSchemaValidation(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	dir := filepath.Join("testdata", "v1beta1-invalid-values")
+
+	_, err := PackageDefinition(ctx, dir, DefinitionOptions{})
+	require.ErrorContains(t, err, "values validation failed")
+
+	_, err = PackageDefinition(ctx, dir, DefinitionOptions{SkipValuesSchemaValidation: true})
+	require.NoError(t, err)
+}
+
+func TestV1Beta1PackageDefinitionParentChartSourceTakesPriority(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "child.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: child
+component:
+  charts:
+    - name: app
+      namespace: app
+      local:
+        path: chart
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: source-replacement
+components:
+  - name: app
+    import:
+      local:
+        - path: child.yaml
+    charts:
+      - name: app
+        namespace: app
+        oci:
+          url: oci://example.com/chart
+          ref:
+            tag: 1.0.0
+`), 0o600))
+
+	defined, err := PackageDefinition(ctx, dir, DefinitionOptions{})
+	require.NoError(t, err)
+	chart := defined.PackageDefinition.AsV1beta1().Components[0].Charts[0]
+	require.Nil(t, chart.Local)
+	require.NotNil(t, chart.OCI)
 }
 
 func TestPackageDefinitionErrors(t *testing.T) {

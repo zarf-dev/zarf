@@ -2275,6 +2275,26 @@
                         "ref": {
                           "additionalProperties": false,
                           "description": "The Git reference to check out. Required for charts.",
+                          "oneOf": [
+                            {
+                              "required": [
+                                "tag"
+                              ],
+                              "title": "tag"
+                            },
+                            {
+                              "required": [
+                                "branch"
+                              ],
+                              "title": "branch"
+                            },
+                            {
+                              "required": [
+                                "commit"
+                              ],
+                              "title": "commit"
+                            }
+                          ],
                           "patternProperties": {
                             "^x-": {}
                           },
@@ -2366,6 +2386,20 @@
                         "ref": {
                           "additionalProperties": false,
                           "description": "The OCI reference to pull. Exactly one of Ref.Tag or Ref.Digest must be set.",
+                          "oneOf": [
+                            {
+                              "required": [
+                                "tag"
+                              ],
+                              "title": "tag"
+                            },
+                            {
+                              "required": [
+                                "digest"
+                              ],
+                              "title": "digest"
+                            }
+                          ],
                           "patternProperties": {
                             "^x-": {}
                           },
@@ -2745,6 +2779,26 @@
                     "ref": {
                       "additionalProperties": false,
                       "description": "The Git reference to mirror. Optional; when unset, all branches and tags are mirrored.",
+                      "oneOf": [
+                        {
+                          "required": [
+                            "tag"
+                          ],
+                          "title": "tag"
+                        },
+                        {
+                          "required": [
+                            "branch"
+                          ],
+                          "title": "branch"
+                        },
+                        {
+                          "required": [
+                            "commit"
+                          ],
+                          "title": "commit"
+                        }
+                      ],
                       "patternProperties": {
                         "^x-": {}
                       },

@@ -1,0 +1,10 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-values-schema
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
+components:
+  - name: app

@@ -45,15 +45,16 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	if err != nil {
 		return err
 	}
+	pkg := defined.PackageDefinition.AsV1alpha1()
 	findings := []lint.PackageFinding{}
-	for i, component := range defined.Pkg.Components {
+	for i, component := range pkg.Components {
 		findings = append(findings, lint.CheckComponentValues(component, i)...)
 	}
 	if len(findings) == 0 {
 		return nil
 	}
 	return &lint.LintError{
-		PackageName: defined.Pkg.Metadata.Name,
+		PackageName: pkg.Metadata.Name,
 		Findings:    findings,
 	}
 }
