@@ -3166,6 +3166,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -3422,6 +3423,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -3755,6 +3757,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -4011,6 +4014,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -4277,6 +4281,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -4533,6 +4538,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -4866,6 +4872,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -5122,6 +5129,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -5388,6 +5396,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -5644,6 +5653,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -5977,6 +5987,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -6233,6 +6244,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -6597,6 +6609,7 @@
               "type": "array"
             },
             "dataInjections": {
+              "deprecated": true,
               "description": "[Deprecated] Datasets to inject into a container in the target cluster.",
               "items": {
                 "additionalProperties": false,
@@ -6715,6 +6728,7 @@
               "type": "array"
             },
             "group": {
+              "deprecated": true,
               "description": "[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.",
               "type": "string"
             },
@@ -6948,6 +6962,7 @@
             },
             "scripts": {
               "additionalProperties": false,
+              "deprecated": true,
               "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0.",
               "patternProperties": {
                 "^x-": {}
@@ -7136,7 +7151,8 @@
             "type": "string"
           },
           "yolo": {
-            "description": "Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.",
+            "deprecated": true,
+            "description": "[Deprecated] Yaml OnLy Online (YOLO) enables deploying a Zarf package without first running zarf init against the cluster. Use --connected when deploying instead.",
             "type": "boolean"
           }
         },
