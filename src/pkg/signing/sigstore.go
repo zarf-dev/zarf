@@ -33,8 +33,9 @@ import (
 )
 
 // SigstoreVerifyBundleWithOptions verifies a Sigstore bundle directly with
-// sigstore-go. Callers must use CosignVerifyBlobWithOptions for legacy .sig files.
-func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) error {
+// sigstore-go and returns the verified bundle contents. Callers must use
+// CosignVerifyBlobWithOptions for legacy .sig files.
+func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) (*verify.VerificationResult, error) {
 	l := logger.From(ctx)
 
 	if opts.KeyRef != "" {
@@ -50,10 +51,10 @@ func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts 
 		}
 	}
 	if err := validateSigstoreBundleOptions(opts); err != nil {
-		return err
+		return nil, err
 	}
 	if opts.BundlePath == "" {
-		return errors.New("bundle path is required")
+		return nil, errors.New("bundle path is required")
 	}
 	if opts.Timeout > 0 {
 		var cancel context.CancelFunc
@@ -63,16 +64,16 @@ func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts 
 
 	b, err := bundle.LoadJSONFromPath(opts.BundlePath)
 	if err != nil {
-		return fmt.Errorf("loading Sigstore bundle: %w", err)
+		return nil, fmt.Errorf("loading Sigstore bundle: %w", err)
 	}
 
 	hashAlgorithm, err := opts.SignatureDigest.HashAlgorithm()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	keyVerifier, closeKey, err := resolveBundleVerifier(ctx, opts, hashAlgorithm)
 	if err != nil {
-		return fmt.Errorf("loading verifier from key options: %w", err)
+		return nil, fmt.Errorf("loading verifier from key options: %w", err)
 	}
 	defer closeKey()
 
@@ -80,7 +81,7 @@ func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts 
 	if !opts.CommonVerifyOptions.IgnoreTlog && keyVerifier == nil {
 		v1, v2, err := rekorBundleVersions(b)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// Rekor v2 does not provide an integrated timestamp. This mirrors
 		// cosign's new-bundle verifier, which enables TSA validation for a
@@ -92,26 +93,27 @@ func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts 
 
 	trustedMaterial, err := trustedMaterialForBundle(opts, keyVerifier, useSignedTimestamps)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	verifierOptions, policyOptions, err := sigstoreVerificationOptions(opts, keyVerifier != nil, useSignedTimestamps)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	sev, err := verify.NewVerifier(trustedMaterial, verifierOptions...)
 	if err != nil {
-		return fmt.Errorf("creating Sigstore verifier: %w", err)
+		return nil, fmt.Errorf("creating Sigstore verifier: %w", err)
 	}
 
 	artifactPolicy, err := bundleArtifactPolicy(blobPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if _, err := sev.Verify(b, verify.NewPolicy(artifactPolicy, policyOptions...)); err != nil {
-		return err
+	result, err := sev.Verify(b, verify.NewPolicy(artifactPolicy, policyOptions...))
+	if err != nil {
+		return nil, err
 	}
 	l.Debug("blob signature verified successfully with sigstore-go")
-	return nil
+	return result, nil
 }
 
 func validateSigstoreBundleOptions(opts VerifyBlobOptions) error {

@@ -56,7 +56,8 @@ func TestSigstoreVerifyBundleWithOptions(t *testing.T) {
 		opts := DefaultVerifyBlobOptions()
 		opts.Key = key
 		opts.BundlePath = bundlePath
-		return SigstoreVerifyBundleWithOptions(ctx, blobPath, opts)
+		_, err := SigstoreVerifyBundleWithOptions(ctx, blobPath, opts)
+		return err
 	}
 
 	t.Run("matches cosign for valid and tampered local-key bundles", func(t *testing.T) {
@@ -83,7 +84,8 @@ func TestSigstoreVerifyBundleWithOptions(t *testing.T) {
 		directOpts := DefaultVerifyBlobOptions()
 		directOpts.Key = pubPath
 		directOpts.BundlePath = bundlePath
-		require.NoError(t, SigstoreVerifyBundleWithOptions(ctx, artifactRef, directOpts))
+		_, err = SigstoreVerifyBundleWithOptions(ctx, artifactRef, directOpts)
+		require.NoError(t, err)
 
 		cosignOpts := directOpts
 		require.NoError(t, CosignVerifyBlobWithOptions(ctx, artifactRef, cosignOpts))
@@ -129,7 +131,7 @@ func TestSigstoreVerifyBundleWithOptions(t *testing.T) {
 		opts.Key = pubPath
 		opts.BundlePath = bundlePath
 		opts.Signature = "detached.sig"
-		err := SigstoreVerifyBundleWithOptions(ctx, blobPath, opts)
+		_, err := SigstoreVerifyBundleWithOptions(ctx, blobPath, opts)
 		require.ErrorContains(t, err, "detached signature")
 		require.NotContains(t, err.Error(), "--")
 	})
@@ -139,7 +141,8 @@ func TestSigstoreVerifyBundleWithOptions(t *testing.T) {
 		opts := DefaultVerifyBlobOptions()
 		opts.KeyRef = pubPath
 		opts.BundlePath = bundlePath
-		require.NoError(t, SigstoreVerifyBundleWithOptions(ctx, blobPath, opts))
+		_, err := SigstoreVerifyBundleWithOptions(ctx, blobPath, opts)
+		require.NoError(t, err)
 	})
 
 	t.Run("uses embedded trusted root for keyless verification", func(t *testing.T) {
@@ -172,11 +175,15 @@ func TestSigstoreVerifyBundleWithOptions(t *testing.T) {
 		opts.CommonVerifyOptions.IgnoreTlog = false
 
 		const digestReference = "sha512:46d4e2f74c4877316640000a6fdf8a8b59f1e0847667973e9859f774dd31b8f1e0937813b777fb66a2ac67d50540fe34640966eee9fc2ccca387082b4c85cd3c"
-		require.NoError(t, SigstoreVerifyBundleWithOptions(ctx, digestReference, opts))
+		result, err := SigstoreVerifyBundleWithOptions(ctx, digestReference, opts)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.NotNil(t, result.VerifiedIdentity)
 
 		invalidOpts := opts
 		invalidOpts.CertVerify.CertIdentityRegexp = "^https://github.com/sigstore/other-project/"
-		require.Error(t, SigstoreVerifyBundleWithOptions(ctx, digestReference, invalidOpts))
+		_, err = SigstoreVerifyBundleWithOptions(ctx, digestReference, invalidOpts)
+		require.Error(t, err)
 	})
 }
 
@@ -268,7 +275,7 @@ func TestSigstoreBundleValidationErrorsUseLibraryTerms(t *testing.T) {
 
 			var err error
 			if opts.BundlePath == "" {
-				err = SigstoreVerifyBundleWithOptions(testutil.TestContext(t), "", opts)
+				_, err = SigstoreVerifyBundleWithOptions(testutil.TestContext(t), "", opts)
 			} else {
 				err = validateSigstoreBundleOptions(opts)
 			}

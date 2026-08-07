@@ -413,7 +413,8 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 			opts.CommonVerifyOptions.UseSignedTimestamps = true
 		}
 		ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
-		return signing.SigstoreVerifyBundleWithOptions(ctx, ZarfYAMLPath, opts)
+		_, err := signing.SigstoreVerifyBundleWithOptions(ctx, ZarfYAMLPath, opts)
+		return err
 	}
 	if !errors.Is(bundleErr, os.ErrNotExist) {
 		return fmt.Errorf("error checking bundle signature: %w", bundleErr)
