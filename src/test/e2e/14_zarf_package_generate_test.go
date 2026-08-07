@@ -5,6 +5,8 @@
 package test
 
 import (
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -133,5 +135,48 @@ func TestZarfDevGenerate(t *testing.T) {
 		// .oldField should be dropped from the values.schema.json
 		_, hasOldField := props["oldField"]
 		require.False(t, hasOldField)
+	})
+
+	t.Run("Test generate-schema keeps usable chart fields when another field has an external ref", func(t *testing.T) {
+		packagePath := t.TempDir()
+		err := helpers.CreatePathAndCopy("src/test/packages/14-generate-schema", packagePath)
+		require.NoError(t, err)
+
+		chartSchemaPath := filepath.Join(packagePath, "chart", "values.schema.json")
+		chartSchemaBytes, err := os.ReadFile(chartSchemaPath)
+		require.NoError(t, err)
+
+		var chartSchema map[string]any
+		require.NoError(t, json.Unmarshal(chartSchemaBytes, &chartSchema))
+		chartProperties, ok := chartSchema["properties"].(map[string]any)
+		require.True(t, ok)
+		// This field is not mapped and should be ignored without affecting the
+		// usable configMap schema below it.
+		chartProperties["unmapped"] = map[string]any{
+			"$ref": "schemas/external.json#/definitions/Unmapped",
+		}
+		chartSchemaBytes, err = json.MarshalIndent(chartSchema, "", "  ")
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(chartSchemaPath, chartSchemaBytes, 0o644))
+
+		stdOut, stdErr, err := e2e.ZarfInDir(t, packagePath, "dev", "generate-schema", ".", "-u", "--delete-not-found", "--features=values=true")
+		require.NoError(t, err, stdOut, stdErr)
+
+		schemaPath := filepath.Join(packagePath, "values.schema.json")
+		schema, _, err := value.LoadValidatedSchema(packagePath, schemaPath)
+		require.NoError(t, err)
+
+		props, ok := schema["properties"].(map[string]any)
+		require.True(t, ok)
+		configMap, ok := props["configMap"].(map[string]any)
+		require.True(t, ok)
+		configMapProps, ok := configMap["properties"].(map[string]any)
+		require.True(t, ok)
+		annotations, ok := configMapProps["annotations"].(map[string]any)
+		require.True(t, ok)
+		additionalProperties, ok := annotations["additionalProperties"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, "string", additionalProperties["type"])
+		require.NotContains(t, props, "unmapped")
 	})
 }

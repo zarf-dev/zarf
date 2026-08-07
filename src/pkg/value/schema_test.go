@@ -73,18 +73,6 @@ func TestCheckNoExternalRefs(t *testing.T) {
 	})
 }
 
-func TestValidateJSONSchemaForMapping(t *testing.T) {
-	require.NoError(t, ValidateJSONSchemaForMapping(map[string]any{
-		"type": "string",
-	}))
-
-	err := ValidateJSONSchemaForMapping(map[string]any{
-		"$ref": "#/definitions/Name",
-	})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "reference")
-}
-
 func TestLoadValidatedSchema(t *testing.T) {
 	base := filepath.Join("testdata", "schema")
 

@@ -177,7 +177,7 @@ func schemaChild(schema map[string]any, part string) (map[string]any, bool) {
 }
 
 func mergeChartSchema(destination, source map[string]any) {
-	for key, sourceValue := range filterChartSchema(source) {
+	for key, sourceValue := range FilterChartSchema(source) {
 		switch key {
 		case "properties":
 			sourceProperties, ok := sourceValue.(map[string]any)
@@ -215,12 +215,17 @@ func mergeChartSchema(destination, source map[string]any) {
 	}
 }
 
-// filterChartSchema retains schema keywords that describe value types or
+// FilterChartSchema retains schema keywords that describe value types or
 // validation rules, while dropping annotations such as description, title,
-// default, and examples from the chart schema. Presence and lower-bound
-// map constraints are intentionally excluded because Helm applies chart
-// defaults before validating the final values object.
-func filterChartSchema(schema map[string]any) map[string]any {
+// default, and examples from the chart schema. Reference-dependent schema
+// nodes are dropped while independent child properties are retained. Presence
+// and lower-bound map constraints are intentionally excluded because Helm
+// applies chart defaults before validating the final values object.
+func FilterChartSchema(schema map[string]any) map[string]any {
+	if hasUnsupportedChartSchemaReference(schema) {
+		return nil
+	}
+
 	filtered := make(map[string]any)
 	for key, value := range schema {
 		if !isChartSchemaKeyword(key) {
@@ -230,9 +235,15 @@ func filterChartSchema(schema map[string]any) map[string]any {
 			filtered[key] = copyValue(value)
 			continue
 		}
+		// Strip default `additionalProperties=true` to prevent schema bloat
+		if key == "additionalProperties" {
+			if allowed, ok := value.(bool); ok && allowed {
+				continue
+			}
+		}
 
-		filteredValue := filterChartSchemaValue(key, value)
-		if isEmptyChartSchemaFragment(key, filteredValue) {
+		filteredValue, keep := filterChartSchemaValue(key, value)
+		if !keep || isEmptyChartSchemaFragment(key, filteredValue) {
 			continue
 		}
 		filtered[key] = filteredValue
@@ -250,13 +261,13 @@ func isEmptyChartSchemaFragment(key string, value any) bool {
 	return ok && len(schema) == 0
 }
 
-func filterChartSchemaValue(key string, value any) any {
+func filterChartSchemaValue(key string, value any) (any, bool) {
 	if key == "properties" {
 		if schemas, ok := value.(map[string]any); ok {
 			filtered := make(map[string]any, len(schemas))
 			for name, schema := range schemas {
 				if schemaMap, ok := schema.(map[string]any); ok {
-					filteredSchema := filterChartSchema(schemaMap)
+					filteredSchema := FilterChartSchema(schemaMap)
 					if len(filteredSchema) == 0 {
 						continue
 					}
@@ -265,22 +276,53 @@ func filterChartSchemaValue(key string, value any) any {
 					filtered[name] = copyValue(schema)
 				}
 			}
-			return filtered
+			return filtered, true
 		}
 	}
 
 	switch value := value.(type) {
 	case map[string]any:
-		return filterChartSchema(value)
+		filtered := FilterChartSchema(value)
+		return filtered, len(filtered) > 0
 	case []any:
 		filtered := make([]any, len(value))
 		for i, item := range value {
-			filtered[i] = filterChartSchemaValue("", item)
+			filteredItem, keep := filterChartSchemaValue("", item)
+			if !keep {
+				return nil, false
+			}
+			filtered[i] = filteredItem
 		}
-		return filtered
+		return filtered, true
 	default:
-		return copyValue(value)
+		return copyValue(value), true
 	}
+}
+
+// hasUnsupportedChartSchemaReference reports whether a schema node contains a
+// reference that cannot be retained while filtering that node. Child schemas
+// under properties, items, and additionalProperties are handled independently.
+// Definitions are intentionally ignored because they are not copied into the
+// generated schema; a field that uses one still has its own reference.
+func hasUnsupportedChartSchemaReference(schema map[string]any) bool {
+	for key, value := range schema {
+		if isReferenceKeyword(key) {
+			return true
+		}
+
+		switch key {
+		case "properties", "items", "additionalProperties", "definitions", "$defs":
+			continue
+		case "additionalItems", "allOf", "anyOf", "oneOf", "not",
+			"if", "then", "else", "contains", "propertyNames",
+			"patternProperties", "dependencies", "dependentSchemas",
+			"prefixItems", "unevaluatedItems", "unevaluatedProperties", "contentSchema":
+			if hasJSONSchemaReference(value) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // isChartSchemaKeyword keeps the imported Helm schema surface deliberately

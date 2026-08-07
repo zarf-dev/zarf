@@ -191,12 +191,14 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 				if err := json.Unmarshal(helmChart.Schema, &chartSchema); err != nil {
 					l.Warn("unable to parse Helm chart values schema; falling back to inferred types", "chart", chart.Name, "error", err)
 					chartSchema = nil
-				} else if err := value.CheckNoExternalRefs(chartSchema); err != nil {
-					l.Warn("unable to use Helm chart values schema; falling back to inferred types", "chart", chart.Name, "error", err)
-					chartSchema = nil
-				} else if err := value.ValidateSchemaDocument(chartSchema); err != nil {
-					l.Warn("unable to validate Helm chart values schema; falling back to inferred types", "chart", chart.Name, "error", err)
-					chartSchema = nil
+				} else {
+					chartSchema = value.FilterChartSchema(chartSchema)
+					if chartSchema != nil {
+						if err := value.ValidateSchemaDocument(chartSchema); err != nil {
+							l.Warn("unable to validate Helm chart values schema; falling back to inferred types", "chart", chart.Name, "error", err)
+							chartSchema = nil
+						}
+					}
 				}
 			}
 
@@ -220,19 +222,15 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 						return fmt.Errorf("unable to inspect chart %q schema at targetPath %q: %w", chart.Name, cv.TargetPath, err)
 					}
 					if found {
-						if err := value.ValidateJSONSchemaForMapping(targetSchema); err != nil {
-							l.Warn("unable to safely apply Helm chart values schema; falling back to inferred types", "chart", chart.Name, "targetPath", cv.TargetPath, "error", err)
-						} else {
-							excludes := make([]value.Path, len(cv.ExcludePaths))
-							for i, excludePath := range cv.ExcludePaths {
-								excludes[i] = value.Path(excludePath)
-							}
-							mappedSchemas = append(mappedSchemas, mappedChartSchema{
-								sourcePath:  value.Path(cv.SourcePath),
-								schema:      targetSchema,
-								excludePath: excludes,
-							})
+						excludes := make([]value.Path, len(cv.ExcludePaths))
+						for i, excludePath := range cv.ExcludePaths {
+							excludes[i] = value.Path(excludePath)
 						}
+						mappedSchemas = append(mappedSchemas, mappedChartSchema{
+							sourcePath:  value.Path(cv.SourcePath),
+							schema:      targetSchema,
+							excludePath: excludes,
+						})
 					} else {
 						l.Warn("chart values schema does not define mapped target; falling back to inferred types", "chart", chart.Name, "targetPath", cv.TargetPath)
 					}

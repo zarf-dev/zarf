@@ -208,8 +208,39 @@ func TestMergeJSONSchemaAtPathCopiesValidationFields(t *testing.T) {
 	assert.NotContains(t, config, "allOf")
 }
 
+func TestMergeJSONSchemaAtPathKeepsInferredFieldWhenChartRefIsDropped(t *testing.T) {
+	schema := GenerateJSONSchema(Values{
+		"bad": map[string]any{
+			"value": "inferred",
+		},
+	})
+
+	err := MergeJSONSchemaAtPath(schema, Path("."), map[string]any{
+		"type":                 "object",
+		"additionalProperties": false,
+		"properties": map[string]any{
+			"good": map[string]any{
+				"type":      "string",
+				"minLength": float64(3),
+			},
+			"bad": map[string]any{
+				"type": "object",
+				"$ref": "schemas/external.json",
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	properties, ok := schema["properties"].(map[string]any)
+	require.True(t, ok)
+	assert.Contains(t, properties, "good")
+	assert.Contains(t, properties, "bad", "the inferred field must remain available")
+	assert.Equal(t, "object", properties["bad"].(map[string]any)["type"])
+	assert.Equal(t, false, schema["additionalProperties"])
+}
+
 func TestFilterChartSchemaDropsUnsupportedChildSchemas(t *testing.T) {
-	filtered := filterChartSchema(map[string]any{
+	filtered := FilterChartSchema(map[string]any{
 		"properties": map[string]any{
 			"descriptionOnly": map[string]any{
 				"description": "unsupported chart metadata",
@@ -225,6 +256,51 @@ func TestFilterChartSchemaDropsUnsupportedChildSchemas(t *testing.T) {
 	require.True(t, ok)
 	assert.NotContains(t, properties, "descriptionOnly")
 	assert.Equal(t, map[string]any{"type": "string"}, properties["name"])
+}
+
+func TestFilterChartSchemaDropsReferenceDependentChildSchemas(t *testing.T) {
+	filtered := FilterChartSchema(map[string]any{
+		"properties": map[string]any{
+			"good": map[string]any{
+				"type":      "string",
+				"minLength": float64(3),
+			},
+			"external": map[string]any{
+				"type": "object",
+				"$ref": "schemas/external.json",
+			},
+			"local": map[string]any{
+				"$ref": "#/$defs/Shared",
+			},
+			"composed": map[string]any{
+				"type": "object",
+				"allOf": []any{
+					map[string]any{"$ref": "https://example.com/schema.json"},
+				},
+			},
+			"nested": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"goodChild": map[string]any{"type": "boolean"},
+					"badChild":  map[string]any{"$ref": "#/$defs/Child"},
+				},
+			},
+		},
+	})
+
+	properties, ok := filtered["properties"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, map[string]any{"type": "string", "minLength": float64(3)}, properties["good"])
+	assert.NotContains(t, properties, "external")
+	assert.NotContains(t, properties, "local")
+	assert.NotContains(t, properties, "composed")
+
+	nested, ok := properties["nested"].(map[string]any)
+	require.True(t, ok)
+	nestedProperties, ok := nested["properties"].(map[string]any)
+	require.True(t, ok)
+	assert.Contains(t, nestedProperties, "goodChild")
+	assert.NotContains(t, nestedProperties, "badChild")
 }
 
 func TestReconcileJSONSchema(t *testing.T) {
