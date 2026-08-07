@@ -103,7 +103,7 @@ func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts 
 		return nil, fmt.Errorf("creating Sigstore verifier: %w", err)
 	}
 
-	artifactPolicy, err := bundleArtifactPolicy(blobPath)
+	artifactPolicy, err := bundleArtifactPolicy(ctx, blobPath)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts 
 	if err != nil {
 		return nil, err
 	}
-	l.Debug("blob signature verified successfully with sigstore-go")
+	l.Debug("blob signature verified successfully")
 	return result, nil
 }
 
@@ -299,7 +299,7 @@ func resolveBundleVerifier(ctx context.Context, opts VerifyBlobOptions, hashAlgo
 	if !errors.As(err, &providerNotFound) {
 		return nil, func() {}, fmt.Errorf("kms get: %w", err)
 	}
-	raw, err := loadPublicKeyReference(opts.Key)
+	raw, err := loadPublicKeyReference(ctx, opts.Key)
 	if err != nil {
 		return nil, func() {}, err
 	}
@@ -315,7 +315,7 @@ func verifierFromPEM(raw []byte, hashAlgorithm crypto.Hash) (signature.Verifier,
 	return verifier, func() {}, err
 }
 
-func loadPublicKeyReference(reference string) ([]byte, error) {
+func loadPublicKeyReference(ctx context.Context, reference string) ([]byte, error) {
 	switch {
 	case strings.HasPrefix(reference, "env://"):
 		value, ok := os.LookupEnv(strings.TrimPrefix(reference, "env://"))
@@ -325,7 +325,11 @@ func loadPublicKeyReference(reference string) ([]byte, error) {
 		return []byte(value), nil
 	case strings.HasPrefix(reference, "http://") || strings.HasPrefix(reference, "https://"):
 		// #nosec G107 -- the public key location is an explicit user input.
-		response, err := http.Get(reference)
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, reference, nil)
+		if err != nil {
+			return nil, err
+		}
+		response, err := http.DefaultClient.Do(request)
 		if err != nil {
 			return nil, err
 		}
@@ -347,17 +351,17 @@ func loadPublicKeyReference(reference string) ([]byte, error) {
 	}
 }
 
-func readBundleArtifact(reference string) ([]byte, error) {
+func readBundleArtifact(ctx context.Context, reference string) ([]byte, error) {
 	if reference == "-" {
 		return io.ReadAll(os.Stdin)
 	}
-	return loadPublicKeyReference(reference)
+	return loadPublicKeyReference(ctx, reference)
 }
 
 // bundleArtifactPolicy mirrors cosign's blob verifier: an unreadable artifact
 // may instead be an explicitly supplied algorithm:hex-digest reference.
-func bundleArtifactPolicy(reference string) (verify.ArtifactPolicyOption, error) {
-	artifact, readErr := readBundleArtifact(reference)
+func bundleArtifactPolicy(ctx context.Context, reference string) (verify.ArtifactPolicyOption, error) {
+	artifact, readErr := readBundleArtifact(ctx, reference)
 	if readErr == nil {
 		return verify.WithArtifact(bytes.NewReader(artifact)), nil
 	}

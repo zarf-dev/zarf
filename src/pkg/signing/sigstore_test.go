@@ -4,19 +4,24 @@
 package signing
 
 import (
+	"context"
 	"crypto"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestSigstoreVerifyBundleWithOptions(t *testing.T) {
@@ -89,6 +94,44 @@ func TestSigstoreVerifyBundleWithOptions(t *testing.T) {
 		require.NoError(t, verify(t, blobPath, bundlePath, "env://ZARF_TEST_COSIGN_PUBLIC_KEY"))
 	})
 
+	t.Run("accepts Kubernetes public-key references", func(t *testing.T) {
+		blobPath, bundlePath := newBundle(t)
+		publicKey, err := os.ReadFile(pubPath)
+		require.NoError(t, err)
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			if request.URL.Path != "/api/v1/namespaces/signature-test/secrets/signing-public-key" {
+				http.NotFound(w, request)
+				return
+			}
+			if err := json.NewEncoder(w).Encode(corev1.Secret{
+				Data: map[string][]byte{"cosign.pub": publicKey},
+			}); err != nil {
+				t.Errorf("writing Kubernetes Secret response: %v", err)
+			}
+		}))
+		t.Cleanup(server.Close)
+
+		kubeconfigPath := filepath.Join(t.TempDir(), "kubeconfig")
+		kubeconfig := fmt.Sprintf(`apiVersion: v1
+clusters:
+- cluster:
+    server: %s
+  name: signing-test
+contexts:
+- context:
+    cluster: signing-test
+    namespace: signature-test
+  name: signing-test
+current-context: signing-test
+`, server.URL)
+		require.NoError(t, os.WriteFile(kubeconfigPath, []byte(kubeconfig), 0o600))
+		t.Setenv("KUBECONFIG", kubeconfigPath)
+
+		require.NoError(t, verify(t, blobPath, bundlePath, "k8s://signature-test/signing-public-key"))
+	})
+
 	t.Run("accepts URL public-key references", func(t *testing.T) {
 		listener, err := net.Listen("tcp", "127.0.0.1:0")
 		if err != nil {
@@ -106,6 +149,29 @@ func TestSigstoreVerifyBundleWithOptions(t *testing.T) {
 		server.Start()
 		defer server.Close()
 		require.NoError(t, verify(t, blobPath, bundlePath, server.URL))
+	})
+
+	t.Run("URL public-key retrieval honors verification timeout", func(t *testing.T) {
+		blobPath, bundlePath := newBundle(t)
+		requestStarted := make(chan struct{})
+		server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, request *http.Request) {
+			close(requestStarted)
+			<-request.Context().Done()
+		}))
+		t.Cleanup(server.Close)
+
+		opts := DefaultVerifyBlobOptions()
+		opts.Key = server.URL
+		opts.BundlePath = bundlePath
+		opts.Timeout = 100 * time.Millisecond
+		_, err := SigstoreVerifyBundleWithOptions(ctx, blobPath, opts)
+
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		select {
+		case <-requestStarted:
+		default:
+			t.Fatal("expected public-key request")
+		}
 	})
 
 	t.Run("rejects wrong keys and corrupt bundles without cosign fallback", func(t *testing.T) {
