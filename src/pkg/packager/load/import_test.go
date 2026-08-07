@@ -521,3 +521,52 @@ func TestCompatibleComponent(t *testing.T) {
 		})
 	}
 }
+
+func TestCompatibleComponentSkeletonArch(t *testing.T) {
+	t.Parallel()
+
+	for _, arch := range []string{"amd64", "arm64"} {
+		c := v1alpha1.ZarfComponent{
+			Only: v1alpha1.ZarfComponentOnlyTarget{
+				Cluster: v1alpha1.ZarfComponentOnlyCluster{Architecture: arch},
+			},
+		}
+		require.True(t, compatibleComponent(c, v1alpha1.SkeletonArch, ""),
+			"skeleton compose must retain %s component", arch)
+	}
+}
+
+func TestResolveImportsSkeletonRetainsAllArches(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	dir := t.TempDir()
+	zarfYAML := `kind: ZarfPackageConfig
+metadata:
+  name: arch-skeleton
+components:
+  - name: injector
+    only:
+      cluster:
+        architecture: amd64
+  - name: injector
+    only:
+      cluster:
+        architecture: arm64
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(zarfYAML), 0o644))
+	b, err := os.ReadFile(filepath.Join(dir, layout.ZarfYAML))
+	require.NoError(t, err)
+	pkg, err := pkgcfg.Parse(ctx, b)
+	require.NoError(t, err)
+
+	resolved, _, err := resolveImports(ctx, pkg, dir, v1alpha1.SkeletonArch, "", []string{}, "", false, types.RemoteOptions{})
+	require.NoError(t, err)
+
+	archs := []string{}
+	for _, c := range resolved.Components {
+		archs = append(archs, c.Only.Cluster.Architecture)
+	}
+	require.ElementsMatch(t, []string{"amd64", "arm64"}, archs,
+		"skeleton must retain all only.cluster.architecture variants")
+}
