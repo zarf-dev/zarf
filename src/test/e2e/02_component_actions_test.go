@@ -59,7 +59,7 @@ func TestComponentActions(t *testing.T) {
 		t.Parallel()
 
 		// Deploy the simple script that should pass.
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-and-remove", "--confirm")
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-and-remove", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
 		// Check that the deploy artifacts were created.
@@ -80,7 +80,7 @@ func TestComponentActions(t *testing.T) {
 	t.Run("action on-deploy-with-timeout", func(t *testing.T) {
 		t.Parallel()
 		// Deploy the simple action that should fail the timeout.
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-timeout", "--confirm")
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-timeout", "--confirm")
 		require.Error(t, err, stdOut, stdErr)
 		require.Contains(t, stdErr, "after 1 second")
 		require.Contains(t, stdOut, "😭😭😭 this action failed because it took too long to run 😭😭😭")
@@ -90,8 +90,7 @@ func TestComponentActions(t *testing.T) {
 		t.Parallel()
 
 		// Test using a Zarf Value within the action
-		// FIXME: variable example should still be tested
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-value", "--confirm")
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-value", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "the dog says ruff")
 	})
@@ -99,7 +98,7 @@ func TestComponentActions(t *testing.T) {
 	t.Run("action on-deploy-with-dynamic-value", func(t *testing.T) {
 		t.Parallel()
 		// Test using dynamic and multiple values
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-dynamic-value,on-deploy-with-multiple-values", "--confirm")
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-dynamic-value,on-deploy-with-multiple-values", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "the cat says meow")
 		require.Contains(t, stdOut, "the dog says ruff")
@@ -115,7 +114,7 @@ func TestComponentActions(t *testing.T) {
 		deployWithEnvVarArtifact := "test-filename-from-env.txt"
 
 		// Test using environment variables
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-env-var", "--confirm")
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-env-var", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		require.FileExists(t, deployWithEnvVarArtifact)
 
@@ -128,7 +127,7 @@ func TestComponentActions(t *testing.T) {
 		deployTemplatedArtifact := "test-templated.txt"
 
 		// Test using a templated file but without dynamic values
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-template-use-of-value", "--confirm")
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-template-use-of-value", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		outTemplated, err := os.ReadFile(deployTemplatedArtifact)
 		require.NoError(t, err)
@@ -154,7 +153,7 @@ func TestComponentActions(t *testing.T) {
 
 	t.Run("action on-deploy-immediate-failure", func(t *testing.T) {
 		t.Parallel()
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-immediate-failure", "--confirm")
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-immediate-failure", "--confirm")
 		require.Error(t, err, stdOut, stdErr)
 		require.Contains(t, stdErr, "failed to deploy package")
 		// regression test to ensure that failed commands are not erroneously flagged as a timeout

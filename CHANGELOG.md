@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.83.0](https://github.com/zarf-dev/zarf/compare/v0.82.0...v0.83.0) (2026-08-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* chart naming and expose other useful library functions ([#5107](https://github.com/zarf-dev/zarf/issues/5107))
+
+### Features
+
+* add option to skip values schema validation ([#5179](https://github.com/zarf-dev/zarf/issues/5179)) ([300af24](https://github.com/zarf-dev/zarf/commit/300af245bc5b11ae9af8ce2dd843768e0dd915c3))
+* deprecate yolo mode ([#5180](https://github.com/zarf-dev/zarf/issues/5180)) ([fe4cf8d](https://github.com/zarf-dev/zarf/commit/fe4cf8d269ae0f7dbaf485e6949d7749d238ad31))
+* **find-images:** exclude images from Helm tests ([#5128](https://github.com/zarf-dev/zarf/issues/5128)) ([bae3a8c](https://github.com/zarf-dev/zarf/commit/bae3a8c09932c40e39d3d6307e9c56d1c110f96d))
+* **init:** more secure pod defaults ([#5119](https://github.com/zarf-dev/zarf/issues/5119)) ([0351733](https://github.com/zarf-dev/zarf/commit/03517333550907af7be1e36c740b7ca6c7b2fdf3))
+* introduce conversions between API versions ([#4823](https://github.com/zarf-dev/zarf/issues/4823)) ([af9779e](https://github.com/zarf-dev/zarf/commit/af9779e34a77762a0fc01604aae7b891a435d366))
+* **security:** support project vulnerability scanning and VEX statements ([#5029](https://github.com/zarf-dev/zarf/issues/5029)) ([45ba4f1](https://github.com/zarf-dev/zarf/commit/45ba4f175e154ad59bcca4927954411c54c881f3))
+* **update-creds:** separate commands for each service ([#5106](https://github.com/zarf-dev/zarf/issues/5106)) ([37e071f](https://github.com/zarf-dev/zarf/commit/37e071f43c86bd3801d284cb6ad293b5601ff2da))
+
+
+### Bug Fixes
+
+* proper binary scan location for nightly cve scan ([#5120](https://github.com/zarf-dev/zarf/issues/5120)) ([10a199d](https://github.com/zarf-dev/zarf/commit/10a199da3ee37a5a64ad21e82b5f220baf3c3819))
+* state access in OnRemove actions ([#5156](https://github.com/zarf-dev/zarf/issues/5156)) ([8ea4a58](https://github.com/zarf-dev/zarf/commit/8ea4a5884ec5dc98e64751fac1d364d1b59923b8))
+* **verify:** honor configured temp dir for embedded trusted root ([#5144](https://github.com/zarf-dev/zarf/issues/5144)) ([95dcdbe](https://github.com/zarf-dev/zarf/commit/95dcdbe72d1cd4dcc40b1f5f551b18f4feb9721e))
+* version aware topic assignments for hidden pages ([#5108](https://github.com/zarf-dev/zarf/issues/5108)) ([79c8ecf](https://github.com/zarf-dev/zarf/commit/79c8ecf2ca20b19d32651f0964f9523e7922f81c))
+
+
+### Refactoring
+
+* chart naming and expose other useful library functions ([#5107](https://github.com/zarf-dev/zarf/issues/5107)) ([d50162d](https://github.com/zarf-dev/zarf/commit/d50162d26b4badb410c20a0778e20d7be86dfd3f))
+* fix flakey tests ([#5155](https://github.com/zarf-dev/zarf/issues/5155)) ([348fda4](https://github.com/zarf-dev/zarf/commit/348fda4697618d06fc137564a87dafb87889518e))
+
 ## [0.82.0](https://github.com/zarf-dev/zarf/compare/v0.81.1...v0.82.0) (2026-07-23)
 
 
