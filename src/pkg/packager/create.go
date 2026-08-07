@@ -118,8 +118,12 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err != nil {
 			return "", err
 		}
+		plainHTTP, err := resolveOCIPlainHTTP(ctx, ref.Registry, opts.RemoteOptions)
+		if err != nil {
+			return "", fmt.Errorf("could not resolve destination registry transport: %w", err)
+		}
 		remote, err := zoci.NewRemote(ctx, ref.String(), oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture),
-			oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+			oci.WithPlainHTTP(plainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
 		if err != nil {
 			return "", err
 		}

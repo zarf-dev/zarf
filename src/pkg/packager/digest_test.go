@@ -15,6 +15,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
+	"oras.land/oras-go/v2/registry"
 )
 
 const testTarball = "testdata/load-package/compressed/zarf-package-test-amd64-0.0.1.tar.zst"
@@ -65,6 +67,43 @@ func TestPackageDigestOCI(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, expectedDigest, digest, "the OCI digest should match the expected digest after publishing and lookup with PackageDigest")
+}
+
+func TestPackageDigestOCITransportNegotiation(t *testing.T) {
+	const (
+		username = "registry-user"
+		password = "registry-password"
+	)
+
+	ctx := testutil.TestContext(t)
+	registryAddress := testutil.SetupInMemoryRegistryTLSAuth(ctx, t, username, password)
+	setDockerConfig(t, map[string]bool{registryAddress: true}, username, password)
+
+	pkgLayout, err := layout.LoadFromTar(ctx, testTarball, layout.PackageLayoutOptions{Filter: filters.Empty()})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, pkgLayout.Cleanup())
+	})
+
+	packageRef, err := PublishPackage(ctx, pkgLayout, registry.Reference{
+		Registry:   registryAddress,
+		Repository: "my-namespace",
+	}, PublishPackageOptions{
+		RemoteOptions: types.RemoteOptions{
+			InsecureSkipTLSVerify: true,
+		},
+	})
+	require.NoError(t, err)
+
+	digest, err := PackageDigest(ctx, fmt.Sprintf("oci://%s", packageRef.String()), PackageDigestOptions{
+		Architecture: pkgLayout.Pkg.Build.Architecture,
+		RemoteOptions: types.RemoteOptions{
+			PlainHTTP:             true,
+			InsecureSkipTLSVerify: true,
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, pkgLayout.Digest(), digest)
 }
 
 func testSignOpts() signing.SignBlobOptions {
