@@ -179,7 +179,7 @@ func TestMergeJSONSchemaAtPathCopiesValidationFields(t *testing.T) {
 	database, found, err := ExtractJSONSchema(schema, Path(".config.database"))
 	require.NoError(t, err)
 	require.True(t, found)
-	assert.Equal(t, float64(3), database["minLength"])
+	assert.InDelta(t, float64(3), database["minLength"], 0)
 	assert.Equal(t, []any{"postgres", "mysql"}, database["enum"])
 
 	err = MergeJSONSchemaAtPath(schema, Path(".config.ports"), map[string]any{
@@ -191,8 +191,8 @@ func TestMergeJSONSchemaAtPathCopiesValidationFields(t *testing.T) {
 	ports, found, err := ExtractJSONSchema(schema, Path(".config.ports"))
 	require.NoError(t, err)
 	require.True(t, found)
-	assert.Equal(t, float64(1), ports["minItems"])
-	assert.Equal(t, float64(3), ports["maxItems"])
+	assert.InDelta(t, float64(1), ports["minItems"], 0)
+	assert.InDelta(t, float64(3), ports["maxItems"], 0)
 
 	err = MergeJSONSchemaAtPath(schema, Path(".config"), map[string]any{
 		"minProperties": float64(1),
@@ -235,7 +235,9 @@ func TestMergeJSONSchemaAtPathKeepsInferredFieldWhenChartRefIsDropped(t *testing
 	require.True(t, ok)
 	assert.Contains(t, properties, "good")
 	assert.Contains(t, properties, "bad", "the inferred field must remain available")
-	assert.Equal(t, "object", properties["bad"].(map[string]any)["type"])
+	bad, ok := properties["bad"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "object", bad["type"])
 	assert.Equal(t, false, schema["additionalProperties"])
 }
 
