@@ -92,18 +92,45 @@ func CheckNoExternalRefs(schema map[string]any) error {
 	return checkNoExternalRefsInObject(schema)
 }
 
-var externalRefKeywords = []string{"$ref", "$dynamicRef", "$recursiveRef"}
+func isReferenceKeyword(key string) bool {
+	switch key {
+	case "$ref", "$dynamicRef", "$recursiveRef":
+		return true
+	default:
+		return false
+	}
+}
 
-func checkNoExternalRefsInObject(node map[string]any) error {
-	for _, kw := range externalRefKeywords {
-		if val, has := node[kw]; has {
-			if ref, ok := val.(string); ok && !strings.HasPrefix(ref, "#") {
-				return fmt.Errorf("schema contains an external %q pointer %q; only internal references (\"#/...\") are supported — external files are not bundled into the assembled package", kw, ref)
+func hasJSONSchemaReference(value any) bool {
+	switch value := value.(type) {
+	case map[string]any:
+		for key, child := range value {
+			if isReferenceKeyword(key) {
+				return true
+			}
+			if hasJSONSchemaReference(child) {
+				return true
+			}
+		}
+	case []any:
+		for _, child := range value {
+			if hasJSONSchemaReference(child) {
+				return true
 			}
 		}
 	}
+	return false
+}
+
+func checkNoExternalRefsInObject(node map[string]any) error {
 	for _, key := range slices.Sorted(maps.Keys(node)) {
-		if err := checkNoExternalRefsInValue(key, node[key]); err != nil {
+		value := node[key]
+		if isReferenceKeyword(key) {
+			if ref, ok := value.(string); ok && !strings.HasPrefix(ref, "#") {
+				return fmt.Errorf("schema contains an external %q pointer %q; only internal references (\"#/...\") are supported — external files are not bundled into the assembled package", key, ref)
+			}
+		}
+		if err := checkNoExternalRefsInValue(key, value); err != nil {
 			return err
 		}
 	}
