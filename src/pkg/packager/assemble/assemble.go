@@ -27,6 +27,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -38,7 +39,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -72,7 +72,8 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
-	pkg := resolvedPackage.PackageDefinition.AsV1alpha1()
+	definition := resolvedPackage.PackageDefinition
+	pkg := definition.AsV1alpha1()
 	importedSchemas := resolvedPackage.ImportedSchemas
 	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
 		return nil, err
@@ -80,20 +81,6 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 
 	if opts.DifferentialPackage.Metadata.Name != "" {
 		l.Debug("creating differential package", "differential", opts.DifferentialPackage)
-		allIncludedImagesMap := map[string]bool{}
-		allIncludedReposMap := map[string]bool{}
-		for _, component := range opts.DifferentialPackage.Components {
-			for _, image := range component.Images {
-				allIncludedImagesMap[image] = true
-			}
-			for _, repo := range component.Repos {
-				allIncludedReposMap[repo] = true
-			}
-		}
-
-		pkg.Build.Differential = true
-		pkg.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
-
 		versionsMatch := opts.DifferentialPackage.Metadata.Version == pkg.Metadata.Version
 		if versionsMatch {
 			return nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
@@ -102,12 +89,19 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		if noVersionSet {
 			return nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
-		filter := filters.ByDifferentialData(allIncludedImagesMap, allIncludedReposMap)
-		var err error
-		pkg.Components, err = filter.Apply(pkg)
+		originalAPIVersion := definition.OriginalAPIVersion()
+		differentialAPIVersion := opts.DifferentialPackage.Build.GetOriginalAPIVersion()
+		if originalAPIVersion != differentialAPIVersion {
+			return nil, fmt.Errorf("%s: package apiVersion %s, differential package apiVersion %s", lang.PkgCreateErrDifferentialAPIVersion, originalAPIVersion, differentialAPIVersion)
+		}
+		updatedDefinition, err := applyDifferentialResources(definition, api.NewPackageDefinitionFromV1alpha1(opts.DifferentialPackage))
 		if err != nil {
 			return nil, err
 		}
+		definition = updatedDefinition
+		pkg = definition.AsV1alpha1()
+		pkg.Build.Differential = true
+		pkg.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
 	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -206,17 +200,32 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		return nil, err
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
+	definition.SetAggregateChecksum(checksumSha)
 
 	pkg, err = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo, buildPath)
 	if err != nil {
 		return nil, err
 	}
-
-	b, err := goyaml.Marshal(pkg)
-	if err != nil {
-		return nil, err
+	definition.SetMetadataVersion(pkg.Metadata.Version)
+	definition.SetBuildHostname(pkg.Build.Terminal)
+	definition.SetBuildUser(pkg.Build.User)
+	definition.SetBuildArchitecture(pkg.Build.Architecture)
+	definition.SetBuildTimestamp(pkg.Build.Timestamp)
+	definition.SetBuildVersion(pkg.Build.Version)
+	definition.SetBuildMigrations(pkg.Build.Migrations)
+	definition.SetBuildRegistryOverrides(pkg.Build.RegistryOverrides)
+	definition.SetBuildDifferential(pkg.Build.Differential, pkg.Build.DifferentialPackageVersion, pkg.Build.DifferentialMissing)
+	definition.SetBuildFlavor(pkg.Build.Flavor)
+	if pkg.Build.Signed != nil {
+		definition.SetBuildSigned(*pkg.Build.Signed)
 	}
-	err = os.WriteFile(filepath.Join(buildPath, layout.ZarfYAML), b, helpers.ReadWriteUser)
+	definition.SetProvenanceFiles(pkg.Build.ProvenanceFiles)
+	for _, requirement := range pkg.Build.VersionRequirements {
+		definition.AddVersionRequirement(requirement)
+	}
+	definition.SetAggregateChecksum(checksumSha)
+
+	err = layout.WritePackageDefinition(filepath.Join(buildPath, layout.ZarfYAML), definition)
 	if err != nil {
 		return nil, err
 	}
@@ -467,7 +476,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
+			if err := validateFileChecksum(dst, file.Shasum); err != nil {
 				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
@@ -549,6 +558,17 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		return err
 	}
 	return nil
+}
+
+func validateFileChecksum(path, expected string) error {
+	algorithm, checksum, hasAlgorithm := strings.Cut(expected, ":")
+	if !hasAlgorithm {
+		return helpers.SHAsMatch(path, expected)
+	}
+	if algorithm != "sha256" {
+		return fmt.Errorf("unsupported checksum algorithm %q", algorithm)
+	}
+	return helpers.SHAsMatch(path, checksum)
 }
 
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
@@ -729,7 +749,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
+			if err := validateFileChecksum(dst, file.Shasum); err != nil {
 				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}

@@ -6,13 +6,27 @@ package filters
 
 import (
 	"fmt"
-
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
+
+// ComponentView is the stable projection a filter sees.
+type ComponentView struct {
+	Name        string
+	Description string
+	Optional    bool
+	Default     bool
+	Group       string
+	OnlyLocalOS string
+}
+
+// PackageView is the stable package projection a filter sees.
+type PackageView struct {
+	Components []ComponentView
+}
 
 // ComponentFilterStrategy is a strategy interface for filtering components.
 type ComponentFilterStrategy interface {
-	Apply(v1alpha1.ZarfPackage) ([]v1alpha1.ZarfComponent, error)
+	// Apply returns the indices of the components to keep, in order.
+	Apply(PackageView) ([]int, error)
 }
 
 // comboFilter is a filter that applies a sequence of filters.
@@ -21,18 +35,33 @@ type comboFilter struct {
 }
 
 // Apply applies the filter.
-func (f *comboFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.ZarfComponent, error) {
+func (f *comboFilter) Apply(pkg PackageView) ([]int, error) {
 	result := pkg
+	resultIndices := make([]int, len(pkg.Components))
+	for idx := range pkg.Components {
+		resultIndices[idx] = idx
+	}
 
 	for _, filter := range f.filters {
-		components, err := filter.Apply(result)
+		indices, err := filter.Apply(result)
 		if err != nil {
 			return nil, fmt.Errorf("error applying filter %T: %w", filter, err)
 		}
+
+		components := make([]ComponentView, 0, len(indices))
+		nextIndices := make([]int, 0, len(indices))
+		for _, idx := range indices {
+			if idx < 0 || idx >= len(result.Components) {
+				return nil, fmt.Errorf("error applying filter %T: index %d out of range", filter, idx)
+			}
+			components = append(components, result.Components[idx])
+			nextIndices = append(nextIndices, resultIndices[idx])
+		}
 		result.Components = components
+		resultIndices = nextIndices
 	}
 
-	return result.Components, nil
+	return resultIndices, nil
 }
 
 // Combine creates a new filter that applies a sequence of filters.

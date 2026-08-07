@@ -110,13 +110,14 @@ type DeployResult struct {
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	start := time.Now()
-	if opts.Connected && pkgLayout.Pkg.IsInitConfig() {
+	pkg := pkgLayout.AsV1alpha1()
+	if opts.Connected && pkg.IsInitConfig() {
 		return DeployResult{}, fmt.Errorf("--connected is not supported for init packages")
 	}
 
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
-		if err := requirements.ValidateVersionRequirements(pkgLayout.Pkg); err != nil {
+		if err := requirements.ValidateVersionRequirements(pkg); err != nil {
 			return DeployResult{}, fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", err)
 		}
 	}
@@ -126,20 +127,21 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	l := logger.From(ctx)
-	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
+	l.Info("starting deploy", "package", pkg.Metadata.Name)
 
 	if opts.InjectorPort == 0 && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 		opts.InjectorPort = state.ZarfInjectorDefaultHostPort
 	}
 
-	if pkgLayout.Pkg.Metadata.YOLO {
+	if pkg.Metadata.YOLO {
 		opts.Connected = true
 	}
 
 	if opts.NamespaceOverride != "" {
-		if err := OverridePackageNamespace(&pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
+		if err := pkgLayout.PackageDefinition.OverrideNamespace(opts.NamespaceOverride); err != nil {
 			return DeployResult{}, err
 		}
+		pkg = pkgLayout.AsV1alpha1()
 	}
 
 	if opts.Retries == 0 {
@@ -150,12 +152,12 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	var err error
-	pkgLayout.Pkg.Components, err = filters.ByLocalOS(runtime.GOOS).Apply(pkgLayout.Pkg)
-	if err != nil {
+	if err := pkgLayout.PackageDefinition.FilterComponents(filters.ByLocalOS(runtime.GOOS)); err != nil {
 		return DeployResult{}, err
 	}
+	pkg = pkgLayout.AsV1alpha1()
 
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables, opts.IsInteractive)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 	if err != nil {
 		return DeployResult{}, err
 	}
@@ -220,19 +222,20 @@ func (d *deployer) isConnectedToCluster() bool {
 
 func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]state.DeployedComponent, error) {
 	l := logger.From(ctx)
+	pkg := pkgLayout.AsV1alpha1()
 	deployedComponents := []state.DeployedComponent{}
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory: %w", err)
 	}
 
-	for _, component := range pkgLayout.Pkg.Components {
+	for _, component := range pkg.Components {
 		packageGeneration := 1
 		// Connect to cluster if a component requires it.
 		if component.RequiresCluster() {
 			if !d.isConnectedToCluster() {
 				timeout := cluster.DefaultTimeout
-				if pkgLayout.Pkg.IsInitConfig() {
+				if pkg.IsInitConfig() {
 					timeout = 5 * time.Minute
 				}
 				connectCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -248,7 +251,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 			// If this package has been deployed before, increment the package generation within the secret
 			//nolint: errcheck // this may be the first time deploying the package therefore it will not exist
-			if existingDeployedPackage, _ := d.c.GetDeployedPackage(ctx, pkgLayout.Pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); existingDeployedPackage != nil {
+			if existingDeployedPackage, _ := d.c.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); existingDeployedPackage != nil {
 				packageGeneration = existingDeployedPackage.Generation + 1
 			}
 		}
@@ -261,7 +264,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 		// Ensure we don't overwrite any installedCharts data when updating the package secret
 		if d.isConnectedToCluster() {
-			installedCharts, err := d.c.GetInstalledChartsForComponent(ctx, pkgLayout.Pkg.Metadata.Name, component, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
+			installedCharts, err := d.c.GetInstalledChartsForComponent(ctx, pkg.Metadata.Name, component, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 			if err != nil {
 				l.Debug("unable to fetch installed Helm charts", "component", component.Name, "error", err.Error())
 			}
@@ -271,13 +274,13 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
 		if d.isConnectedToCluster() {
-			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
+			if _, err := d.c.RecordPackageDeployment(ctx, pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}
 		var charts []state.InstalledChart
 		var deployErr error
-		if pkgLayout.Pkg.IsInitConfig() {
+		if pkg.IsInitConfig() {
 			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
 		} else {
 			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
@@ -298,7 +301,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				deployedComponents[idx].Status = state.ComponentStatusFailed
 				deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, true)
 				if d.isConnectedToCluster() {
-					if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
+					if _, err := d.c.RecordPackageDeployment(ctx, pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 						l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 					}
 				}
@@ -318,7 +321,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, false)
 		deployedComponents[idx].Status = state.ComponentStatusSucceeded
 		if d.isConnectedToCluster() {
-			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
+			if _, err := d.c.RecordPackageDeployment(ctx, pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}
@@ -354,6 +357,7 @@ func internalServicesFor(components []v1alpha1.ZarfComponent, opts DeployOptions
 
 func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
+	pkg := pkgLayout.AsV1alpha1()
 	isSeedRegistry := component.Name == "zarf-seed-registry"
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
@@ -362,7 +366,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if component.RequiresCluster() && d.s == nil {
 		applianceMode := false
-		for _, component := range pkgLayout.Pkg.Components {
+		for _, component := range pkg.Components {
 			if component.Name == "k3s" {
 				applianceMode = true
 			}
@@ -377,7 +381,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			InjectorPort:        opts.InjectorPort,
 			AgentTLS:            opts.AgentTLS,
 			AgentMutationPolicy: opts.AgentMutationPolicy,
-			InternalServices:    internalServicesFor(pkgLayout.Pkg.Components, opts),
+			InternalServices:    internalServicesFor(pkg.Components, opts),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -401,14 +405,14 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 				return nil, err
 			}
 
-			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name)
+			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkg.Metadata.Name)
 			if err != nil {
 				return nil, err
 			}
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
 		case state.RegistryModeNodePort:
-			seedImage, seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name, pkgLayout.Pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
+			seedImage, seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkg.Metadata.Name, pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
 				InjectorNodePort: uint16(d.s.InjectorInfo.Port),
 				RegistryNodePort: uint16(d.s.RegistryInfo.Port),
 				IPFamily:         d.s.IPFamily,
@@ -575,6 +579,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
+	pkg := pkgLayout.AsV1alpha1()
 	installedCharts := []state.InstalledChart{}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -602,7 +607,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 
 		if err := templateValuesFiles(ctx, chart, valuesDir, templateValuesFilesOpts{
 			variableConfig: d.vc,
-			pkg:            pkgLayout.Pkg,
+			pkg:            pkg,
 			vals:           d.vals,
 			s:              d.s,
 			stateAccess:    component.StateAccess,
@@ -627,7 +632,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			Cluster:           d.c,
 			ConnectedDeploy:   opts.Connected,
 			Timeout:           opts.Timeout,
-			PkgName:           pkgLayout.Pkg.Metadata.Name,
+			PkgName:           pkg.Metadata.Name,
 			NamespaceOverride: opts.NamespaceOverride,
 			IsInteractive:     opts.IsInteractive,
 		}
@@ -650,6 +655,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 
 func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
+	pkg := pkgLayout.AsV1alpha1()
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -677,7 +683,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			if manifest.IsTemplate() {
 				l.Debug("start manifest template", "manifest", manifest.Name, "path", path)
 				objs, err := template.NewObjects(d.vals).
-					WithPackage(pkgLayout.Pkg).
+					WithPackage(pkg).
 					WithVariables(d.vc.GetSetVariableMap()).
 					WithConstants(d.vc.GetConstants()).
 					WithState(template.StateAccess{State: d.s, AccessKeys: component.StateAccess})
@@ -705,7 +711,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 		}
 
 		// Create a helmChart and helm cfg from a given Zarf Manifest.
-		chart, helmChart, err := helm.ChartFromZarfManifest(manifest, manifestDir, pkgLayout.Pkg.Metadata.Name, component.Name)
+		chart, helmChart, err := helm.ChartFromZarfManifest(manifest, manifestDir, pkg.Metadata.Name, component.Name)
 		if err != nil {
 			return installedCharts, err
 		}
@@ -717,7 +723,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			Cluster:           d.c,
 			ConnectedDeploy:   opts.Connected,
 			Timeout:           opts.Timeout,
-			PkgName:           pkgLayout.Pkg.Metadata.Name,
+			PkgName:           pkg.Metadata.Name,
 			NamespaceOverride: opts.NamespaceOverride,
 			IsInteractive:     opts.IsInteractive,
 		}
@@ -781,7 +787,7 @@ func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state
 }
 
 func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout) error {
-	pkg := pkgLayout.Pkg
+	pkg := pkgLayout.AsV1alpha1()
 	// Ignore this check if the package contains no images
 	if !pkg.HasImages() {
 		return nil
@@ -822,6 +828,7 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayo
 
 func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) (err error) {
 	l := logger.From(ctx)
+	pkg := pkgLayout.AsV1alpha1()
 	start := time.Now()
 	l.Info("copying files", "count", len(component.Files))
 
@@ -887,7 +894,7 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 			if file.IsTemplate() {
 				l.Debug("templates enabled, processing file", "name", file.Target)
 				objs, err := template.NewObjects(values).
-					WithPackage(pkgLayout.Pkg).
+					WithPackage(pkg).
 					WithVariables(variableConfig.GetSetVariableMap()).
 					WithConstants(variableConfig.GetConstants()).
 					WithState(stateAccess)

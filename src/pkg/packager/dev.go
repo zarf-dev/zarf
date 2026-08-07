@@ -85,16 +85,15 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if err != nil {
 		return err
 	}
-	pkg := defined.PackageDefinition.AsV1alpha1()
 
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.ForDeploy(opts.OptionalComponents, false),
 	)
-	pkg.Components, err = filter.Apply(pkg)
-	if err != nil {
+	if err := defined.PackageDefinition.FilterComponents(filter); err != nil {
 		return err
 	}
+	pkg := defined.PackageDefinition.AsV1alpha1()
 
 	// If not building for airgap, strip out all images and repos
 	if !opts.AirgapMode {
@@ -123,13 +122,14 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
+	pkg = pkgLayout.AsV1alpha1()
 
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.DeploySetVariables, false)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, false)
 	if err != nil {
 		return err
 	}
 
-	l.Info("starting package dev deploy", "name", pkgLayout.Pkg.Metadata.Name)
+	l.Info("starting package dev deploy", "name", pkg.Metadata.Name)
 
 	var d deployer
 	d.vc = variableConfig
@@ -140,7 +140,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 			return err
 		}
 
-		requiresCluster := slices.ContainsFunc(pkgLayout.Pkg.Components, func(c v1alpha1.ZarfComponent) bool {
+		requiresCluster := slices.ContainsFunc(pkg.Components, func(c v1alpha1.ZarfComponent) bool {
 			return c.RequiresCluster()
 		})
 		if requiresCluster {
@@ -183,7 +183,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 
 	// Notify all the things about the successful deployment
-	l.Debug("dev deployment complete", "package", pkgLayout.Pkg.Metadata.Name, "duration", time.Since(start))
+	l.Debug("dev deployment complete", "package", pkg.Metadata.Name, "duration", time.Since(start))
 
 	return nil
 }

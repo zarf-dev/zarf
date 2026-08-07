@@ -5,6 +5,7 @@ package assemble
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,6 +15,8 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -48,6 +51,19 @@ fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9 foo
 `
 	require.Equal(t, expectedContent, checksumContent)
 	require.Equal(t, "7c554cf67e1c2b50a1b728299c368cd56d53588300c37479623f29a52812ca3f", checksumHash)
+}
+
+func TestValidateFileChecksum(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "file.txt")
+	require.NoError(t, os.WriteFile(path, []byte("content"), 0o600))
+	sha, err := helpers.GetSHA256OfFile(path)
+	require.NoError(t, err)
+
+	require.NoError(t, validateFileChecksum(path, sha))
+	require.NoError(t, validateFileChecksum(path, "sha256:"+sha))
+	require.ErrorContains(t, validateFileChecksum(path, "sha512:"+sha), `unsupported checksum algorithm "sha512"`)
 }
 
 func TestCreateReproducibleTarballFromDir(t *testing.T) {
@@ -667,8 +683,8 @@ fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm
 `
 
 	require.Equal(t, expectedChecksum, string(b))
-	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.Pkg)
-	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.Pkg), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
+	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.AsV1alpha1())
+	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.AsV1alpha1()), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
@@ -678,6 +694,80 @@ func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	path := filepath.Join(dir, layout.ZarfYAML)
 	err = os.WriteFile(path, b, 0700)
 	require.NoError(t, err)
+}
+
+func TestAssemblePackageV1Beta1WritesMultiDocDefinition(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	tmpdir := t.TempDir()
+	fixture := filepath.Join("testdata", "zarf-package")
+	dataPath, err := filepath.Abs(filepath.Join(fixture, "data.txt"))
+	require.NoError(t, err)
+	chartPath, err := filepath.Abs(filepath.Join(fixture, "chart"))
+	require.NoError(t, err)
+	kustomizePath, err := filepath.Abs(filepath.Join(fixture, "kustomize"))
+	require.NoError(t, err)
+	valuesPath, err := filepath.Abs(filepath.Join(fixture, "values.yaml"))
+	require.NoError(t, err)
+	docPath, err := filepath.Abs(filepath.Join(fixture, "doc.md"))
+	require.NoError(t, err)
+
+	zarfYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-local
+  version: 0.0.1
+  architecture: amd64
+documentation:
+  docs: %q
+components:
+  - name: beta-component
+    files:
+      - source: %q
+        destination: data.txt
+    manifests:
+      - name: beta-manifest
+        files:
+          - %q
+        kustomize:
+          files:
+            - %q
+    charts:
+      - name: beta-chart
+        namespace: beta
+        local:
+          path: %q
+        valuesFiles:
+          - path: %q
+        skipWait: true
+`, docPath, dataPath, dataPath, kustomizePath, chartPath, valuesPath)
+	require.NoError(t, os.WriteFile(filepath.Join(tmpdir, layout.ZarfYAML), []byte(zarfYAML), 0o600))
+
+	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+	require.NoError(t, err)
+	pkgLayout, err := AssemblePackage(ctx, defined, tmpdir, AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+
+	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
+	require.NoError(t, err)
+	alphaPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
+	require.NoError(t, err)
+	betaPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
+	require.NoError(t, err)
+	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
+	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
+	require.Equal(t, "beta-local", betaPkg.Metadata.Name)
+	require.NotEmpty(t, alphaPkg.Metadata.AggregateChecksum)
+	require.Equal(t, alphaPkg.Metadata.AggregateChecksum, betaPkg.Build.AggregateChecksum)
+	require.Len(t, betaPkg.Components, 1)
+	require.Len(t, betaPkg.Components[0].Charts, 1)
+	require.NotNil(t, betaPkg.Components[0].Charts[0].Local)
+	require.Equal(t, chartPath, betaPkg.Components[0].Charts[0].Local.Path)
+
+	chartComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, "beta-component", layout.ChartsComponentDir)
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(chartComponent, "beta-chart.tgz"))
 }
 
 func TestGetSBOM(t *testing.T) {
