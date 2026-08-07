@@ -33,7 +33,7 @@ type SubjectAlternativeNameMatcher struct {
 	//
 	// Note: regexp matching is not anchored by default; use ^...$ if you intend
 	// to match the entire SAN value.
-	Regexp regexp.Regexp `json:"regexp,omitempty"`
+	Regexp regexp.Regexp `json:"regexp"`
 }
 
 // IssuerMatcher specifies how to match a certificate's issuer identity.
@@ -45,7 +45,7 @@ type IssuerMatcher struct {
 	//
 	// Note: regexp matching is not anchored by default; use ^...$ if you intend
 	// to match the entire issuer value.
-	Regexp regexp.Regexp `json:"regexp,omitempty"`
+	Regexp regexp.Regexp `json:"regexp"`
 }
 
 type CertificateIdentity struct {
