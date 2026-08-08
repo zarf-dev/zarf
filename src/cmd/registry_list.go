@@ -1,0 +1,176 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package cmd contains the CLI commands for Zarf.
+package cmd
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"strings"
+	"time"
+
+	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/dns"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/images"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
+	"oras.land/oras-go/v2/registry"
+	orasRemote "oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/auth"
+)
+
+// registryListResponseHeaderTimeout matches the default used by images.PushOptions/PullOptions.
+const registryListResponseHeaderTimeout = 10 * time.Second
+
+func newRegistryListCommand(o *registryOptions) *cobra.Command {
+	var fullRef, omitDigestTags bool
+
+	cmd := &cobra.Command{
+		Use:     "ls REPO",
+		Short:   "List the tags in a repo",
+		Args:    cobra.ExactArgs(1),
+		Example: lang.CmdToolsRegistryListExample,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runRegistryList(cmd.Context(), cmd.OutOrStdout(), args[0], o.insecure, fullRef, omitDigestTags)
+		},
+	}
+	cmd.Flags().BoolVar(&fullRef, "full-ref", false, "(Optional) if true, print the full image reference")
+	cmd.Flags().BoolVarP(&omitDigestTags, "omit-digest-tags", "O", false, "(Optional), if true, omit digest tags (e.g., ':sha256-...')")
+	return cmd
+}
+
+func runRegistryList(ctx context.Context, out io.Writer, repoRef string, insecure, fullRef, omitDigestTags bool) error {
+	conn, err := setupRegistryAuth(ctx, repoRef, insecure)
+	if err != nil {
+		return err
+	}
+	listFn := func() error {
+		return listRegistryTags(ctx, out, conn, insecure, fullRef, omitDigestTags)
+	}
+	if conn.tunnel == nil {
+		return listFn()
+	}
+	defer conn.tunnel.Close()
+	return conn.tunnel.Wrap(listFn)
+}
+
+// registryConnection bundles the reference, auth client, tunnel, and resolved scheme needed to list a repo's tags.
+type registryConnection struct {
+	ref            string
+	client         *auth.Client
+	tunnel         *cluster.Tunnel
+	plainHTTP      bool
+	plainHTTPKnown bool
+}
+
+// setupRegistryAuth builds an ORAS auth client for repoRef, transparently tunneling to and authenticating with a Zarf-managed registry when repoRef targets one, and otherwise falling back to the default Docker credential store.
+func setupRegistryAuth(ctx context.Context, repoRef string, insecure bool) (registryConnection, error) {
+	l := logger.From(ctx)
+
+	client, err := images.NewAuthClientFromDocker(ctx, insecure, registryListResponseHeaderTimeout, nil)
+	if err != nil {
+		return registryConnection{}, err
+	}
+	conn := registryConnection{ref: repoRef, client: client}
+
+	c, err := cluster.New(ctx)
+	if err != nil {
+		// Not connected to a Zarf-managed cluster; use the default Docker credentials.
+		return conn, nil
+	}
+
+	l.Info("retrieving registry information from Zarf state")
+
+	s, err := c.LoadState(ctx)
+	if err != nil {
+		l.Warn("could not get Zarf state from Kubernetes cluster, continuing without state information", "error", err.Error())
+		return conn, nil
+	}
+
+	// Check to see if it matches the existing internal address.
+	if !strings.HasPrefix(repoRef, s.RegistryInfo.Address) {
+		return conn, nil
+	}
+
+	endpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, s.RegistryInfo)
+	if err != nil {
+		return registryConnection{}, err
+	}
+	conn.tunnel = tunnel
+
+	// Credential must be keyed to the host ORAS actually connects to: the tunnel when tunneling, otherwise the registry's own address.
+	credentialHost := s.RegistryInfo.Address
+	if tunnel != nil {
+		credentialHost = endpoint
+		l.Info("opening a tunnel to the Zarf registry", "localEndpoint", endpoint, "clusterAddress", s.RegistryInfo.Address)
+		givenAddress := fmt.Sprintf("%s/", s.RegistryInfo.Address)
+		tunnelAddress := fmt.Sprintf("%s/", endpoint)
+		conn.ref = strings.Replace(repoRef, givenAddress, tunnelAddress, 1)
+	}
+
+	client.Credential = auth.StaticCredential(credentialHost, auth.Credential{
+		Username: s.RegistryInfo.PushUsername,
+		Password: s.RegistryInfo.PushPassword,
+	})
+
+	if s.RegistryInfo.ShouldUseMTLS() {
+		t, err := getZarfRegistryMTLSTransport(ctx, c)
+		if err != nil {
+			return registryConnection{}, err
+		}
+		client.Client.Transport = t
+	}
+
+	plainHTTP, err := s.RegistryInfo.ResolvePlainHTTP(ctx, credentialHost, false, ocischeme.ProbeOptions{InsecureSkipTLSVerify: insecure})
+	if err != nil {
+		return registryConnection{}, err
+	}
+	conn.plainHTTP = plainHTTP
+	conn.plainHTTPKnown = true
+
+	return conn, nil
+}
+
+func listRegistryTags(ctx context.Context, out io.Writer, conn registryConnection, insecure, fullRef, omitDigestTags bool) error {
+	ref, err := registry.ParseReference(conn.ref)
+	if err != nil {
+		return fmt.Errorf("parsing repo %q: %w", conn.ref, err)
+	}
+
+	repo := &orasRemote.Repository{
+		Reference: ref,
+		Client:    conn.client,
+	}
+
+	switch {
+	case conn.plainHTTPKnown:
+		repo.PlainHTTP = conn.plainHTTP
+	case dns.IsLocalOrPrivate(ref.Host()):
+		plainHTTP, err := ocischeme.From(ctx).UsePlainHTTP(ctx, ref.Host(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: insecure})
+		if err != nil {
+			return fmt.Errorf("probing scheme for %s: %w", ref.Host(), err)
+		}
+		repo.PlainHTTP = plainHTTP
+	}
+
+	tags, err := registry.Tags(ctx, repo)
+	if err != nil {
+		return fmt.Errorf("reading tags for %s: %w", conn.ref, err)
+	}
+
+	for _, tag := range tags {
+		if omitDigestTags && strings.HasPrefix(tag, "sha256-") {
+			continue
+		}
+		if fullRef {
+			fmt.Fprintf(out, "%s/%s:%s\n", ref.Registry, ref.Repository, tag)
+		} else {
+			fmt.Fprintln(out, tag)
+		}
+	}
+	return nil
+}
