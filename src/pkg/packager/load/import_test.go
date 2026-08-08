@@ -19,6 +19,45 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+// TestResolveImportsMultiArch verifies that skeleton-mode resolution (arch == SkeletonArch)
+// includes all architecture variants of a component, while regular-mode resolution only
+// includes the variant matching the specified architecture.
+func TestResolveImportsMultiArch(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	path := "./testdata/import/multi-arch"
+	b, err := os.ReadFile(filepath.Join(path, layout.ZarfYAML))
+	require.NoError(t, err)
+	pkg, err := pkgcfg.Parse(ctx, b)
+	require.NoError(t, err)
+
+	t.Run("skeleton mode includes both arch variants", func(t *testing.T) {
+		t.Parallel()
+		resolved, _, err := resolveImports(ctx, pkg, path, v1alpha1.SkeletonArch, "", []string{}, "", false, types.RemoteOptions{})
+		require.NoError(t, err)
+		require.Len(t, resolved.Components, 2)
+		archs := []string{resolved.Components[0].Only.Cluster.Architecture, resolved.Components[1].Only.Cluster.Architecture}
+		require.ElementsMatch(t, []string{"amd64", "arm64"}, archs)
+	})
+
+	t.Run("amd64 mode includes only amd64 variant", func(t *testing.T) {
+		t.Parallel()
+		resolved, _, err := resolveImports(ctx, pkg, path, "amd64", "", []string{}, "", false, types.RemoteOptions{})
+		require.NoError(t, err)
+		require.Len(t, resolved.Components, 1)
+		require.Equal(t, "amd64", resolved.Components[0].Only.Cluster.Architecture)
+	})
+
+	t.Run("arm64 mode includes only arm64 variant", func(t *testing.T) {
+		t.Parallel()
+		resolved, _, err := resolveImports(ctx, pkg, path, "arm64", "", []string{}, "", false, types.RemoteOptions{})
+		require.NoError(t, err)
+		require.Len(t, resolved.Components, 1)
+		require.Equal(t, "arm64", resolved.Components[0].Only.Cluster.Architecture)
+	})
+}
+
 func TestResolveImportsCircular(t *testing.T) {
 	t.Parallel()
 
@@ -510,6 +549,24 @@ func TestCompatibleComponent(t *testing.T) {
 			arch:           "amd64",
 			flavor:         "foo",
 			expectedResult: false,
+		},
+		{
+			name: "skeleton arch matches arch-specific component",
+			component: v1alpha1.ZarfComponent{
+				Only: v1alpha1.ZarfComponentOnlyTarget{
+					Cluster: v1alpha1.ZarfComponentOnlyCluster{
+						Architecture: "arm64",
+					},
+				},
+			},
+			arch:           v1alpha1.SkeletonArch,
+			expectedResult: true,
+		},
+		{
+			name:           "skeleton arch matches arch-neutral component",
+			component:      v1alpha1.ZarfComponent{},
+			arch:           v1alpha1.SkeletonArch,
+			expectedResult: true,
 		},
 	}
 	for _, tt := range tests {
