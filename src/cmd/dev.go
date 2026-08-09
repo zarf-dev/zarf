@@ -807,6 +807,10 @@ func (o *devSha256SumOptions) compute(ctx context.Context, args []string) (outpu
 		if err != nil {
 			return "", errors.Join(hashErr, err)
 		}
+		defer func(path string) {
+			errRemove := os.RemoveAll(path)
+			err = errors.Join(err, errRemove)
+		}(tmp)
 
 		downloadPath := filepath.Join(tmp, fileBase)
 		err = utils.DownloadToFile(ctx, fileName, downloadPath)
@@ -815,24 +819,17 @@ func (o *devSha256SumOptions) compute(ctx context.Context, args []string) (outpu
 		}
 
 		fileName = downloadPath
+	}
 
+	if o.extractPath != "" {
+		tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return "", errors.Join(hashErr, err)
+		}
 		defer func(path string) {
 			errRemove := os.RemoveAll(path)
 			err = errors.Join(err, errRemove)
 		}(tmp)
-	}
-
-	if o.extractPath != "" {
-		if tmp == "" {
-			tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
-			if err != nil {
-				return "", errors.Join(hashErr, err)
-			}
-			defer func(path string) {
-				errRemove := os.RemoveAll(path)
-				err = errors.Join(err, errRemove)
-			}(tmp)
-		}
 
 		extractedFile := filepath.Join(tmp, o.extractPath)
 
