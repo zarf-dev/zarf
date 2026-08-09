@@ -663,10 +663,13 @@ func (v *Verifier) Verify(entity SignedEntity, pb PolicyBuilder) (*VerificationR
 			leafCert.UnhandledCriticalExtensions = unhandledExts
 		}
 
+		// If the bundle verification material contains an X509CertificateChain,
+		// extract the Intermediate CA certificates to use during certificate path validation.
+		intermediates := verificationContent.Intermediates()
+
 		var chains [][]*x509.Certificate
 		for _, verifiedTs := range verifiedTimestamps {
-			// verify the leaf certificate against the root
-			chains, err = VerifyLeafCertificate(verifiedTs.Timestamp, leafCert, v.trustedMaterial)
+			chains, err = verifyLeafCertificate(verifiedTs.Timestamp, leafCert, v.trustedMaterial, intermediates)
 			if err != nil {
 				return nil, fmt.Errorf("failed to verify leaf certificate: %w", err)
 			}
@@ -679,6 +682,13 @@ func (v *Verifier) Verify(entity SignedEntity, pb PolicyBuilder) (*VerificationR
 			err = VerifySignedCertificateTimestamp(chains, v.config.ctlogEntriesThreshold, v.trustedMaterial)
 			if err != nil {
 				return nil, fmt.Errorf("failed to verify signed certificate timestamp: %w", err)
+			}
+		}
+	} else if verificationContent.PublicKey() != nil {
+		// If the bundle was signed by a long-lived key, we need to check the signature time against the key's validity window.
+		for _, verifiedTs := range verifiedTimestamps {
+			if !verificationContent.ValidAtTime(verifiedTs.Timestamp, v.trustedMaterial) {
+				return nil, errors.New("signature time outside of public key validity window")
 			}
 		}
 	}

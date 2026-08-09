@@ -77,6 +77,10 @@ components:
           # if the string is empty, failing the action.
           - cmd: "test -n \"{{ .State.Registry.PushPassword }}\""
             template: true
+      onRemove:
+        before:
+          - cmd: "test -n \"{{ .State.Registry.PushPassword }}\""
+            template: true
 
   - name: test-templated-values-files
     required: true
