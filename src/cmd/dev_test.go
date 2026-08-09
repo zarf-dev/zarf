@@ -274,3 +274,68 @@ func TestDevInspectValuesFiles(t *testing.T) {
 		})
 	}
 }
+
+func TestDevSha256Sum(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		sourceURL   string
+		extractPath string
+		sha256sum   string
+		expectedErr string
+	}{
+		{
+			// this is the version before we vendored the go depends, and is a lot quicker to download
+			name:      "dev sha tarball source v0.80.0",
+			sourceURL: "https://github.com/zarf-dev/zarf/archive/refs/tags/v0.80.0.tar.gz",
+			sha256sum: "67b5d5a2801db7dcce5f7d8ef46e36515a56a9b5f952f39cbe36166018167410",
+		},
+		{
+			// this is the version before we vendored the go depends, and is a lot quicker to download
+			name:        "dev sha tarball source v0.80.0 with extract path",
+			sourceURL:   "https://github.com/zarf-dev/zarf/archive/refs/tags/v0.80.0.tar.gz",
+			extractPath: "zarf-0.80.0/cosign.pub",
+			sha256sum:   "8361bdbf3fb0c5d2980c5cb2192536b81ba439466d85b8328f7bf5de6fce58eb",
+		},
+		{
+			name:      "dev sha tarball source v0.30.0",
+			sourceURL: "https://github.com/zarf-dev/zarf/archive/refs/tags/v0.30.0.tar.gz",
+			sha256sum: "a042c9ffec7907101b58dd5b1aee6e54d08d17d91e7e2572da22e4180e02decd",
+		},
+		{
+			name:        "dev sha tarball source v0.30.0 with extract path",
+			sourceURL:   "https://github.com/zarf-dev/zarf/archive/refs/tags/v0.30.0.tar.gz",
+			extractPath: "zarf-0.30.0/cosign.pub",
+			sha256sum:   "2aac6a3c85d8513545fa85c11ee0d58ea5125095052f77e8d33f22402dbe6e4e",
+		},
+		{
+			name:        "dev sha no url",
+			sourceURL:   "",
+			expectedErr: "accepts 1 arg(s), received 0",
+		},
+		{
+			name:      "dev sha url does not exist",
+			sourceURL: "https://github.com/zarf-dev/zarf/archive/refs/tags/v99.99.99.tar.gz",
+			expectedErr: `unable to compute the SHA256SUM hash
+bad HTTP status: 404 Not Found`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			opts := devSha256SumOptions{
+				extractPath: tc.extractPath,
+			}
+			out, err := opts.compute(context.Background(), []string{tc.sourceURL})
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.sha256sum, out)
+		})
+	}
+}
