@@ -101,6 +101,52 @@ component:
 	require.Contains(t, string(grandchild), "name: registry.example/nested:v1")
 }
 
+func TestDevTemplateTraversesImportsGeneratedByBlockTemplate(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"zarf.tpl.yaml": `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: app
+components:
+[[ block "components" . ]]
+  - name: app
+    import:
+      local:
+        - path: components/[[ .component ]].tpl.yaml
+[[ end ]]
+`,
+		"components/app.tpl.yaml": `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component:
+  images:
+    - name: [[ .image ]]
+`,
+	}
+	for path, contents := range files {
+		path = filepath.Join(dir, path)
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+	}
+
+	o := devTemplateOptions{set: map[string]string{
+		"component": "app",
+		"image":     "registry.example/nested:v1",
+	}}
+	require.NoError(t, o.run(context.Background(), []string{dir}))
+
+	root, err := os.ReadFile(filepath.Join(dir, "zarf.gen.yaml"))
+	require.NoError(t, err)
+	require.Contains(t, string(root), "path: components/app.gen.yaml")
+	require.NotContains(t, string(root), "[[")
+
+	component, err := os.ReadFile(filepath.Join(dir, "components", "app.gen.yaml"))
+	require.NoError(t, err)
+	require.Contains(t, string(component), "name: registry.example/nested:v1")
+}
+
 func TestDevTemplateRequiresAllValues(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, packageTemplateFilename)
