@@ -210,8 +210,8 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 	if !hasFlavoredComponentV1Beta1(pkg, flavor) {
 		l.Warn("flavor not used in package", "flavor", flavor)
 	}
-	if err := internalv1beta1.ValidatePackage(pkg); err != nil {
-		return fmt.Errorf("package validation failed: %w", err)
+	if validationErrs := internalv1beta1.ValidatePackage(pkg); len(validationErrs) > 0 {
+		return fmt.Errorf("package validation failed:\n%w", validationErrs)
 	}
 
 	diskPackage, err := os.ReadFile(packagePath)
