@@ -64,7 +64,7 @@ func TestResolveImportsCircular(t *testing.T) {
 
 	b, err := os.ReadFile(filepath.Join("./testdata/import/circular/first", layout.ZarfYAML))
 	require.NoError(t, err)
-	pkg, err := pkgcfg.Parse(ctx, b)
+	pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 	require.NoError(t, err)
 
 	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", nil, []string{}, "", false, types.RemoteOptions{})
@@ -150,7 +150,7 @@ func TestResolveImports(t *testing.T) {
 
 			b, err := os.ReadFile(filepath.Join(tc.path, layout.ZarfYAML))
 			require.NoError(t, err)
-			pkg, err := pkgcfg.Parse(ctx, b)
+			pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			require.NoError(t, err)
 
 			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, nil, []string{}, "", false, types.RemoteOptions{})
@@ -158,7 +158,7 @@ func TestResolveImports(t *testing.T) {
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
 			require.NoError(t, err)
-			expectedPkg, err := pkgcfg.Parse(ctx, b)
+			expectedPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 
 			require.NoError(t, err)
 			require.Equal(t, expectedPkg, resolvedPkg)
@@ -280,7 +280,7 @@ func TestResolveImportsValueMerge(t *testing.T) {
 
 			b, err := os.ReadFile(filepath.Join(tc.path, layout.ZarfYAML))
 			require.NoError(t, err)
-			pkg, err := pkgcfg.Parse(ctx, b)
+			pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			require.NoError(t, err)
 
 			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", nil, []string{}, "", false, types.RemoteOptions{})
@@ -338,7 +338,7 @@ func TestResolveImportsSchemaCollection(t *testing.T) {
 
 			b, err := os.ReadFile(filepath.Join(tc.path, layout.ZarfYAML))
 			require.NoError(t, err)
-			pkg, err := pkgcfg.Parse(ctx, b)
+			pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			require.NoError(t, err)
 
 			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", nil, []string{}, "", false, types.RemoteOptions{})

@@ -48,6 +48,26 @@ image:
   fullOverride: "###ZARF_CONST_GITEA_IMAGE###"
   rootless: true
 
+podSecurityContext:
+  fsGroup: ###ZARF_VAR_GIT_SERVER_SECURITY_CONTEXT_FS_GROUP###
+  runAsGroup: ###ZARF_VAR_GIT_SERVER_SECURITY_CONTEXT_RUN_AS_GROUP###
+  runAsNonRoot: true
+  runAsUser: ###ZARF_VAR_GIT_SERVER_SECURITY_CONTEXT_RUN_AS_USER###
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+
+serviceAccount:
+  create: true
+  automountServiceAccountToken: false
+
 postgresql-ha:
   enabled: false
 

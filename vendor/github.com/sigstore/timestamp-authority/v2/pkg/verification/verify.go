@@ -111,6 +111,14 @@ func verifyLeafCert(leafCert *x509.Certificate, verifiedChains [][]*x509.Certifi
 
 	errMsg := "failed to verify TSA certificate"
 
+	// The TSA certificate must be an end-entity certificate, per RFC 3161 2.3.
+	// crypto/x509 chain verification does not reject a CA certificate used as
+	// the leaf, so a certificate that asserts the CA bit yet carries the
+	// timestamping EKU would otherwise be accepted as a signer.
+	if leafCert.IsCA {
+		return fmt.Errorf("%s: %w", errMsg, errors.New("TSA certificate must be an end-entity certificate, not a CA"))
+	}
+
 	err := verifyLeafCertCriticalEKU(leafCert)
 	if err != nil {
 		return fmt.Errorf("%s: %w", errMsg, err)
@@ -137,12 +145,15 @@ func verifyLeafCert(leafCert *x509.Certificate, verifiedChains [][]*x509.Certifi
 }
 
 func verifyLeafExtendedKeyUsage(cert *x509.Certificate) error {
-	certEKULen := len(cert.ExtKeyUsage)
+	// crypto/x509 sorts key purposes it does not recognise into
+	// UnknownExtKeyUsage, so a leaf carrying id-kp-timeStamping alongside an
+	// unknown OID would otherwise pass the single-EKU requirement of RFC 3161 2.3.
+	certEKULen := len(cert.ExtKeyUsage) + len(cert.UnknownExtKeyUsage)
 	if certEKULen != 1 {
 		return fmt.Errorf("certificate has %d extended key usages, expected only one", certEKULen)
 	}
 
-	if cert.ExtKeyUsage[0] != x509.ExtKeyUsageTimeStamping {
+	if len(cert.ExtKeyUsage) != 1 || cert.ExtKeyUsage[0] != x509.ExtKeyUsageTimeStamping {
 		return fmt.Errorf("leaf certificate EKU is not set to TimeStamping as required")
 	}
 	return nil
@@ -223,6 +234,14 @@ func verifyOID(oid []int, opts VerifyOpts) error {
 func verifyNonce(requestNonce *big.Int, opts VerifyOpts) error {
 	if opts.Nonce == nil {
 		return nil
+	}
+	// A nonce was requested, so per RFC 3161 2.4.2 the response must carry the
+	// same nonce. The nonce is optional in the response structure, so a
+	// (genuinely signed) response that drops it must be rejected rather than
+	// dereferenced, otherwise a replayed timestamp lacking the nonce trips a
+	// nil pointer in the comparison below.
+	if requestNonce == nil {
+		return fmt.Errorf("expected nonce %d but response does not contain a nonce", opts.Nonce)
 	}
 	if opts.Nonce.Cmp(requestNonce) != 0 {
 		return fmt.Errorf("incoming nonce %d does not match TSR nonce %d", requestNonce, opts.Nonce)

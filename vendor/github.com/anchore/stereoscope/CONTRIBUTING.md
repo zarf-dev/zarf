@@ -84,13 +84,9 @@ Date:   Mon Aug 1 11:27:13 2020 -0400
 
 ## Test your changes
 
-This project has a `Makefile` which includes many helpers running both unit and integration tests. Although PRs will have automatic checks for these, it is useful to run them locally, ensuring they pass before submitting changes. Ensure you've bootstrapped once before running tests:
+This project has a `Makefile` (managed in [./.make/main.go](./.make/main.go) by [go-make](https://github.com/anchore/go-make)) which includes many helpers running both unit and integration tests. Run `make help` to see all the current make tasks.
 
-```text
-$ make bootstrap
-```
-
-You only need to bootstrap once. After the bootstrap process, you can run the tests as many times as needed:
+Although PRs will have automatic checks for these, it is useful to run them locally, ensuring they pass before submitting changes.
 
 ```text
 $ make unit

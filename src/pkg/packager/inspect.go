@@ -51,6 +51,8 @@ type InspectPackageResourcesOptions struct {
 	// Values merge on top of the package's values.yaml and feed chart overrides and manifest Go-templates.
 	Values      value.Values
 	KubeVersion string
+	// SkipValuesSchemaValidation skips validation of the merged package values against the package schema.
+	SkipValuesSchemaValidation bool
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	types.RemoteOptions
@@ -80,7 +82,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	}
 	vals.DeepMerge(opts.Values)
 
-	if pkgLayout.HasValuesSchema() {
+	if pkgLayout.HasValuesSchema() && !opts.SkipValuesSchemaValidation {
 		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema)
 		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: true}); err != nil {
 			return nil, fmt.Errorf("inspect values validation failed: %w", err)
@@ -296,7 +298,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if err != nil {
 		return nil, err
 	}
-	pkg := defined.Pkg
+	pkg := defined.PackageDefinition.AsV1alpha1()
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, opts.IsInteractive)
 	if err != nil {
 		return nil, err

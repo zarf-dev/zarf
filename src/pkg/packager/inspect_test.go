@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -35,6 +37,25 @@ func assertContainsAll(t *testing.T, resources []Resource, expectedContent []str
 	for _, expected := range expectedContent {
 		require.Contains(t, allContent, expected)
 	}
+}
+
+func TestInspectPackageResourcesSkipsValuesSchemaValidationWhenConfigured(t *testing.T) {
+	setupInspectTests(t)
+	ctx := testutil.TestContext(t)
+	srcDir := filepath.Join("load", "testdata", "package-with-invalid-values")
+	defined, err := load.PackageDefinition(ctx, srcDir, load.DefinitionOptions{SkipValuesSchemaValidation: true})
+	require.NoError(t, err)
+	pkgLayout, err := assemble.AssemblePackage(ctx, defined, srcDir, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	_, err = InspectPackageResources(ctx, pkgLayout, InspectPackageResourcesOptions{})
+	require.ErrorContains(t, err, "inspect values validation failed")
+
+	_, err = InspectPackageResources(ctx, pkgLayout, InspectPackageResourcesOptions{
+		SkipValuesSchemaValidation: true,
+	})
+	require.NoError(t, err)
 }
 
 func TestInspectDefinitionResources(t *testing.T) {

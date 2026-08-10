@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -138,10 +139,11 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	if err != nil {
 		return err
 	}
+	pkg := defined.PackageDefinition.AsV1alpha1()
 
 	// Step 1: Merge default values.files to create initial set of default Zarf values
-	valuesPaths := make([]string, len(defined.Pkg.Values.Files))
-	for i, file := range defined.Pkg.Values.Files {
+	valuesPaths := make([]string, len(pkg.Values.Files))
+	for i, file := range pkg.Values.Files {
 		valuesPaths[i] = filepath.Join(basePath, file)
 	}
 	zarfValues, err := value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
@@ -160,7 +162,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 		}
 	}()
 
-	for _, component := range defined.Pkg.Components {
+	for _, component := range pkg.Components {
 		for _, chart := range component.Charts {
 			chartPaths := layout.ChartPaths{
 				ChartsDir: filepath.Join(tmpDir, "charts", chart.Name),
@@ -205,7 +207,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	generatedSchema := value.GenerateJSONSchema(zarfValues)
 
 	// Step 4: Merge and reconcile any existing schema
-	existingSchema, mergeErr := value.MergeSchemaFiles(defined.Pkg.Values.Schema, defined.ImportedSchemas, basePath)
+	existingSchema, mergeErr := value.MergeSchemaFiles(pkg.Values.Schema, defined.ImportedSchemas, basePath)
 	if mergeErr != nil {
 		return fmt.Errorf("unable to merge imported schemas for schema generation: %w", mergeErr)
 	}
@@ -224,11 +226,11 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 
 	if o.update {
 		outputFileName := filepath.Join(basePath, "values.schema.json")
-		if defined.Pkg.Values.Schema != "" {
-			if !filepath.IsAbs(defined.Pkg.Values.Schema) {
-				outputFileName = filepath.Join(basePath, defined.Pkg.Values.Schema)
+		if pkg.Values.Schema != "" {
+			if !filepath.IsAbs(pkg.Values.Schema) {
+				outputFileName = filepath.Join(basePath, pkg.Values.Schema)
 			} else {
-				outputFileName = defined.Pkg.Values.Schema
+				outputFileName = pkg.Values.Schema
 			}
 		} else {
 			if err := packager.UpdateSchema(ctx, basePath, "values.schema.json"); err != nil {
@@ -302,15 +304,23 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 	defined, err := load.PackageDefinition(ctx, basePath, loadOpts)
+	var lintErr *lint.LintError
+	if errors.As(err, &lintErr) {
+		PrintFindings(ctx, lintErr)
+	}
 	if err != nil {
 		return err
 	}
-	defined.Pkg.Build = v1alpha1.ZarfBuildData{}
-	err = utils.ColorPrintYAML(defined.Pkg, nil, false)
-	if err != nil {
-		return err
+
+	// The definition is printed in the apiVersion it was authored in.
+	if defined.PackageDefinition.OriginalAPIVersion() == v1beta1.APIVersion {
+		pkg := defined.PackageDefinition.AsV1beta1()
+		pkg.Build = v1beta1.BuildData{}
+		return utils.ColorPrintYAML(pkg, nil, false)
 	}
-	return nil
+	pkg := defined.PackageDefinition.AsV1alpha1()
+	pkg.Build = v1alpha1.ZarfBuildData{}
+	return utils.ColorPrintYAML(pkg, nil, false)
 }
 
 type devInspectManifestsOptions struct {
