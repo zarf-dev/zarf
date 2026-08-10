@@ -1,0 +1,29 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component:
+  images:
+    - name: redis:7
+      source: registry
+    - name: nginx:1.27
+  charts:
+    - name: app
+      namespace: app
+      local:
+        path: app-chart
+  manifests:
+    - name: app
+      kustomize:
+        files:
+          - base-kustomization
+        allowAnyDirectory: true
+  actions:
+    onDeploy:
+      defaults:
+        maxTotalSeconds: 30
+        retries: 2
+        env:
+          - APP_ENV=base
+      before:
+        - cmd: echo base

@@ -122,7 +122,7 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 					},
 					Actions: v1beta1.ComponentActions{
 						OnDeploy: v1beta1.ComponentActionSet{
-							Defaults: v1beta1.ComponentActionDefaults{
+							Defaults: &v1beta1.ComponentActionDefaults{
 								Silent:          true,
 								MaxTotalSeconds: 60,
 								Retries:         2,
@@ -203,10 +203,31 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 			for chi := range pkg.Components[ci].Charts {
 				keepOneChartSource(&pkg.Components[ci].Charts[chi])
 			}
+			normalizeActionPresenceForGenericRoundTrip(&pkg.Components[ci].Actions)
 		}
 
 		roundTripped := ConvertFromGeneric(ConvertToGeneric(pkg))
 		require.Equalf(t, pkg, roundTripped, "round-trip diverged on iteration %d", i)
+	}
+}
+
+func normalizeActionPresenceForGenericRoundTrip(actions *v1beta1.ComponentActions) {
+	normalizeActionSetPresenceForGenericRoundTrip(&actions.OnCreate)
+	normalizeActionSetPresenceForGenericRoundTrip(&actions.OnDeploy)
+	normalizeActionSetPresenceForGenericRoundTrip(&actions.OnRemove)
+}
+
+func normalizeActionSetPresenceForGenericRoundTrip(actionSet *v1beta1.ComponentActionSet) {
+	if actionSet.Defaults != nil &&
+		!actionSet.Defaults.Silent &&
+		actionSet.Defaults.MaxTotalSeconds == 0 &&
+		actionSet.Defaults.Retries == 0 &&
+		actionSet.Defaults.Dir == "" &&
+		len(actionSet.Defaults.Env) == 0 &&
+		actionSet.Defaults.Shell.Windows == "" &&
+		actionSet.Defaults.Shell.Linux == "" &&
+		actionSet.Defaults.Shell.Darwin == "" {
+		actionSet.Defaults = nil
 	}
 }
 

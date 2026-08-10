@@ -120,6 +120,13 @@ func TestMergeSchemaFiles(t *testing.T) {
 		assert.Contains(t, props, "replicas")
 	})
 
+	t.Run("single schema without dialect is returned as-is", func(t *testing.T) {
+		merged, err := MergeSchemaFiles("no-dialect.schema.json", nil, base)
+		require.NoError(t, err)
+		require.NotNil(t, merged)
+		assert.Equal(t, "object", merged["type"])
+	})
+
 	t.Run("earlier schema wins on conflict", func(t *testing.T) {
 		// simple.schema.json has replicas as integer; second.schema.json has replicas as number
 		merged, err := MergeSchemaFiles("simple.schema.json", []string{"second.schema.json"}, base)
