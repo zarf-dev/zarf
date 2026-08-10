@@ -67,6 +67,7 @@ func newDevTemplateCommand() *cobra.Command {
 		Use:     "template [ TEMPLATE_FILE | DIRECTORY ]",
 		Short:   "Renders a package template into a generated package definition",
 		Example: "zarf dev template --set ENVIRONMENT=personal --set MY_IMAGE=ghcr.io/my-org/my-image:0.0.1",
+		Hidden:  true,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd.Context(), args)
