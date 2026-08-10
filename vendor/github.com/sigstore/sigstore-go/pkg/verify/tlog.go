@@ -48,7 +48,7 @@ import (
 func VerifyTlogEntry(entity SignedEntity, trustedMaterial root.TrustedMaterial, logThreshold int, trustIntegratedTime bool) ([]root.Timestamp, error) { //nolint:revive
 	entries, err := entity.TlogEntries()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to retrieve transparency log entries: %w", err)
 	}
 
 	// limit the number of tlog entries to prevent DoS

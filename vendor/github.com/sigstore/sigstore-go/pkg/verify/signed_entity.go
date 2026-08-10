@@ -65,6 +65,9 @@ type VerifierConfig struct { // nolint: revive
 	tlogEntriesThreshold int
 	// requireSCTs requires SCTs in Fulcio certificates
 	requireSCTs bool
+	// omitStatementPredicate builds VerificationResult.Statement without
+	// parsing the predicate (Predicate is nil)
+	omitStatementPredicate bool
 	// ctlogEntriesThreshold is the minimum number of verified SCTs in
 	// a Fulcio certificate
 	ctlogEntriesThreshold int
@@ -118,6 +121,24 @@ type SignedEntityVerifier = Verifier
 // Deprecated: Use NewVerifier instead
 func NewSignedEntityVerifier(trustedMaterial root.TrustedMaterial, options ...VerifierOption) (*Verifier, error) {
 	return NewVerifier(trustedMaterial, options...)
+}
+
+// WithoutStatementPredicate configures the Verifier to omit the in-toto
+// statement's predicate from the VerificationResult: Statement carries
+// the statement type, subjects, and predicate type, but Predicate is
+// left nil.
+//
+// Parsing a predicate materializes it as a structpb tree — one heap
+// object per JSON node — which for large predicates (SBOMs,
+// vulnerability reports, build provenance) allocates a large multiple of
+// the payload size. Callers that read the predicate from the verified
+// DSSE payload directly, or do not need it at all, can use this option
+// to avoid that cost.
+func WithoutStatementPredicate() VerifierOption {
+	return func(c *VerifierConfig) error {
+		c.omitStatementPredicate = true
+		return nil
+	}
 }
 
 // WithSignedTimestamps configures the Verifier to expect RFC 3161
@@ -771,7 +792,16 @@ func (v *Verifier) Verify(entity SignedEntity, pb PolicyBuilder) (*VerificationR
 	// SignatureContent can be either an Envelope or a MessageSignature.
 	// If it's an Envelope, let's pop the Statement for our results:
 	if envelope := sigContent.EnvelopeContent(); envelope != nil {
-		stmt, err := envelope.Statement()
+		var stmt *in_toto.Statement
+		var err error
+		if v.config.omitStatementPredicate {
+			// The caller opted out of predicate materialization: the
+			// summary carries the statement type, subjects, and
+			// predicate type, with Predicate left nil.
+			stmt, err = summarizeStatement(envelope)
+		} else {
+			stmt, err = envelope.Statement()
+		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch envelope statement: %w", err)
 		}
