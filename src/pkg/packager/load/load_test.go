@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -59,6 +60,44 @@ func TestValidateV1Beta1_FormatsValidationErrors(t *testing.T) {
 	err := validateV1Beta1(context.Background(), v1beta1.Package{}, "", "", true, nil)
 
 	require.EqualError(t, err, "package validation failed:\npackage does not contain any compatible components")
+}
+
+func TestPackageDefinitionRejectsUnsupportedRawFields(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		apiVersion string
+	}{
+		{
+			name: "v1alpha1",
+		},
+		{
+			name:       "v1beta1",
+			apiVersion: "apiVersion: zarf.dev/v1beta1\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			packageYAML := tt.apiVersion + `kind: ZarfPackageConfig
+metadata:
+  name: raw-schema-error
+components:
+  - name: component
+documenttaion:
+  zarf.cli.openvex.json: .vex/zarf.cli.openvex.json
+`
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(packageYAML), 0o600))
+
+			_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+
+			var lintErr *lint.LintError
+			require.ErrorAs(t, err, &lintErr)
+			require.NotEmpty(t, lintErr.Findings)
+		})
+	}
 }
 
 func TestPackageUsesFlavor(t *testing.T) {

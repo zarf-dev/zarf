@@ -87,6 +87,9 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		if err != nil {
 			return ResolvedPackage{}, err
 		}
+		if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, b); err != nil {
+			return ResolvedPackage{}, err
+		}
 		defined, err = v1beta1PackageDefinition(ctx, pkg, pkgPath, opts)
 		if err != nil {
 			return ResolvedPackage{}, err
@@ -94,6 +97,9 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	case v1alpha1.APIVersion:
 		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 		if err != nil {
+			return ResolvedPackage{}, err
+		}
+		if err := validatePackageSchemaV1Alpha1(pkg.Metadata.Name, b, opts.SetVariables); err != nil {
 			return ResolvedPackage{}, err
 		}
 		defined, err = v1alpha1PackageDefinition(ctx, pkg, pkgPath, opts)
@@ -132,7 +138,7 @@ func v1alpha1PackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, pk
 			return ResolvedPackage{}, err
 		}
 	}
-	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipValuesSchemaValidation, importedSchemas); err != nil {
+	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor, opts.SkipValuesSchemaValidation, importedSchemas); err != nil {
 		return ResolvedPackage{}, err
 	}
 	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1alpha1(pkg), ImportedSchemas: importedSchemas}, nil
@@ -153,14 +159,13 @@ func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath 
 	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1beta1(pkg), ImportedSchemas: importedSchemas}, nil
 }
 
-func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipSchemaValidation bool, importedSchemas []string) error {
+func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, flavor string, skipSchemaValidation bool, importedSchemas []string) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
 		"pkg", pkg.Metadata.Name,
 		"packagePath", packagePath,
 		"flavor", flavor,
-		"setVariables", setVariables,
 	)
 
 	if !hasFlavoredComponent(pkg, flavor) {
@@ -168,17 +173,6 @@ func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
-	}
-	findings, err := lint.ValidatePackageSchemaAtPath(packagePath, setVariables)
-	if err != nil {
-		return fmt.Errorf("unable to check schema: %w", err)
-	}
-
-	if len(findings) != 0 {
-		return &lint.LintError{
-			PackageName: pkg.Metadata.Name,
-			Findings:    findings,
-		}
 	}
 
 	if !skipSchemaValidation {
@@ -190,7 +184,6 @@ func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	l.Debug("done layout.Validate",
 		"pkg", pkg.Metadata.Name,
 		"path", packagePath,
-		"findings", findings,
 		"duration", time.Since(start),
 	)
 
@@ -212,15 +205,6 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 	}
 	if validationErrs := internalv1beta1.ValidatePackage(pkg); len(validationErrs) > 0 {
 		return fmt.Errorf("package validation failed:\n%w", validationErrs)
-	}
-
-	diskPackage, err := os.ReadFile(packagePath)
-	if err != nil {
-		return err
-	}
-	// Validate the on disk zarf.yaml so extra fields aren't dropped
-	if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, diskPackage); err != nil {
-		return err
 	}
 
 	// Validate after import just in case
@@ -245,6 +229,20 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 		"duration", time.Since(start),
 	)
 	return nil
+}
+
+func validatePackageSchemaV1Alpha1(pkgName string, b []byte, setVariables map[string]string) error {
+	findings, err := lint.ValidatePackageSchemaBytesV1Alpha1(b, setVariables)
+	if err != nil {
+		return fmt.Errorf("unable to check schema: %w", err)
+	}
+	if len(findings) == 0 {
+		return nil
+	}
+	return &lint.LintError{
+		PackageName: pkgName,
+		Findings:    findings,
+	}
 }
 
 func validatePackageSchemaV1Beta1(pkgName string, b []byte) error {
