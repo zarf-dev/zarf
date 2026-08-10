@@ -84,12 +84,17 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 			}
 		}
 	}
+	// A skeleton retains one component per architecture/flavor, so names need only be unique per variant there.
+	isSkeleton := pkg.Metadata.Architecture == v1alpha1.SkeletonArch
 	for _, component := range pkg.Components {
-		// ensure component name is unique
-		if _, ok := uniqueComponentNames[component.Name]; ok {
+		nameKey := component.Name
+		if isSkeleton {
+			nameKey = strings.Join([]string{component.Name, component.Only.Cluster.Architecture, component.Only.Flavor}, "\x00")
+		}
+		if _, ok := uniqueComponentNames[nameKey]; ok {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
 		}
-		uniqueComponentNames[component.Name] = true
+		uniqueComponentNames[nameKey] = true
 		if component.IsRequired() {
 			if component.Default {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentReqDefault, component.Name))
