@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -99,13 +100,6 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return DefinedPackage{}, err
 	}
-	// When building a skeleton all arch variants must be preserved; use SkeletonArch as
-	// a sentinel so compatibleComponent treats every architecture as compatible.
-	resolveArch := pkg.Metadata.Architecture
-	if opts.ForSkeleton {
-		resolveArch = v1alpha1.SkeletonArch
-		pkg.Metadata.Architecture = v1alpha1.SkeletonArch
-	}
 	var importedSchemas []string
 	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, opts.SkipVariantFilters, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
@@ -123,7 +117,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return DefinedPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation)
+	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation, opts.SkipVariantFilters)
 	if err != nil {
 		return DefinedPackage{}, err
 	}
@@ -131,7 +125,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	return DefinedPackage{Pkg: pkg, ImportedSchemas: importedSchemas}, nil
 }
 
-func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool, skipVariantFilters []VariantDimension) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -144,7 +138,13 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	if !hasFlavoredComponent(pkg, flavor) {
 		l.Warn("flavor not used in package", "flavor", flavor)
 	}
-	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
+	// ValidatePackage uses pkg.Metadata.Architecture == SkeletonArch to allow same-named components
+	// with distinct architectures. Pass a copy with that sentinel set when arch variants are retained.
+	validatePkg := pkg
+	if slices.Contains(skipVariantFilters, VariantArchitecture) {
+		validatePkg.Metadata.Architecture = v1alpha1.SkeletonArch
+	}
+	if err := internalv1alpha1.ValidatePackage(validatePkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
 	findings, err := lint.ValidatePackageSchemaAtPath(packagePath, setVariables)
