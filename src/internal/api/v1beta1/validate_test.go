@@ -4,6 +4,7 @@
 package v1beta1
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -11,6 +12,25 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
+
+func validationErrorMessages(errs ValidationErrors) []string {
+	messages := make([]string, len(errs))
+	for i, err := range errs {
+		messages[i] = err.Error()
+	}
+	return messages
+}
+
+func TestValidationErrors(t *testing.T) {
+	t.Parallel()
+	first := errors.New("first")
+	second := errors.New("second")
+	errs := ValidationErrors{first, second}
+
+	require.Equal(t, "first\nsecond", errs.Error())
+	require.ErrorIs(t, errs, first)
+	require.ErrorIs(t, errs, second)
+}
 
 func TestValidatePackage(t *testing.T) {
 	t.Parallel()
@@ -84,13 +104,12 @@ func TestValidatePackage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := ValidatePackage(tt.pkg)
+			errs := ValidatePackage(tt.pkg)
 			if tt.expectedErrs == nil {
-				require.NoError(t, err)
+				require.Empty(t, errs)
 				return
 			}
-			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, errs, tt.expectedErrs)
+			require.ElementsMatch(t, tt.expectedErrs, validationErrorMessages(errs))
 		})
 	}
 }
@@ -127,13 +146,12 @@ func TestValidateManifest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := validateManifest(tt.manifest)
+			errs := validateManifest(tt.manifest)
 			if tt.expectedErrs == nil {
-				require.NoError(t, err)
+				require.Empty(t, errs)
 				return
 			}
-			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, errs, tt.expectedErrs)
+			require.ElementsMatch(t, tt.expectedErrs, validationErrorMessages(errs))
 		})
 	}
 }
@@ -236,20 +254,17 @@ func TestValidateChart(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := validateChart(tt.chart)
+			errs := validateChart(tt.chart)
 			if tt.expectedErrs == nil {
-				require.NoError(t, err)
+				require.Empty(t, errs)
 				return
 			}
-			require.Error(t, err)
-			errString := err.Error()
 			if tt.partialMatch {
 				for _, expectedErr := range tt.expectedErrs {
-					require.Contains(t, errString, expectedErr)
+					require.Contains(t, strings.Join(validationErrorMessages(errs), "\n"), expectedErr)
 				}
 			} else {
-				errs := strings.Split(errString, "\n")
-				require.ElementsMatch(t, tt.expectedErrs, errs)
+				require.ElementsMatch(t, tt.expectedErrs, validationErrorMessages(errs))
 			}
 		})
 	}
@@ -387,13 +402,12 @@ func TestValidateComponentActions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := validateActions(tt.actions)
+			errs := validateActions(tt.actions)
 			if tt.expectedErrs == nil {
-				require.NoError(t, err)
+				require.Empty(t, errs)
 				return
 			}
-			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, tt.expectedErrs, errs)
+			require.ElementsMatch(t, tt.expectedErrs, validationErrorMessages(errs))
 		})
 	}
 }
@@ -432,13 +446,12 @@ func TestValidateComponentAction(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := validateAction(tt.action)
+			errs := validateAction(tt.action)
 			if tt.expectedErrs == nil {
-				require.NoError(t, err)
+				require.Empty(t, errs)
 				return
 			}
-			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, tt.expectedErrs, errs)
+			require.ElementsMatch(t, tt.expectedErrs, validationErrorMessages(errs))
 		})
 	}
 }

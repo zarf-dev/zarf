@@ -38,17 +38,40 @@ const (
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 )
 
+// ValidationErrors contains all errors found during package validation.
+type ValidationErrors []error
+
+// Error returns the validation errors separated by newlines.
+func (errs ValidationErrors) Error() string {
+	var builder strings.Builder
+	for _, err := range errs {
+		if err == nil {
+			continue
+		}
+		if builder.Len() > 0 {
+			builder.WriteByte('\n')
+		}
+		builder.WriteString(err.Error())
+	}
+	return builder.String()
+}
+
+// Unwrap returns the individual validation errors.
+func (errs ValidationErrors) Unwrap() []error {
+	return errs
+}
+
 // ValidatePackage runs all validation checks on the package.
-func ValidatePackage(pkg v1beta1.Package) error {
-	var err error
+func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
+	var errs ValidationErrors
 	if len(pkg.Components) == 0 {
-		err = errors.Join(err, errors.New(PkgValidateErrNoComponents))
+		errs = append(errs, errors.New(PkgValidateErrNoComponents))
 	}
 	uniqueComponentNames := make(map[string]bool)
 	for _, component := range pkg.Components {
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
-			err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
+			errs = append(errs, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
 		}
 		uniqueComponentNames[component.Name] = true
 
@@ -56,50 +79,50 @@ func ValidatePackage(pkg v1beta1.Package) error {
 		for _, chart := range component.Charts {
 			// ensure chart name is unique
 			if _, ok := uniqueChartNames[chart.Name]; ok {
-				err = errors.Join(err, fmt.Errorf(PkgValidateErrChartNameNotUnique, chart.Name))
+				errs = append(errs, fmt.Errorf(PkgValidateErrChartNameNotUnique, chart.Name))
 			}
 			uniqueChartNames[chart.Name] = true
-			if chartErr := validateChart(chart); chartErr != nil {
-				err = errors.Join(err, fmt.Errorf(PkgValidateErrChart, chartErr))
+			for _, chartErr := range validateChart(chart) {
+				errs = append(errs, fmt.Errorf(PkgValidateErrChart, chartErr))
 			}
 		}
 		uniqueManifestNames := make(map[string]bool)
 		for _, manifest := range component.Manifests {
 			// ensure manifest name is unique
 			if _, ok := uniqueManifestNames[manifest.Name]; ok {
-				err = errors.Join(err, fmt.Errorf(PkgValidateErrManifestNameNotUnique, manifest.Name))
+				errs = append(errs, fmt.Errorf(PkgValidateErrManifestNameNotUnique, manifest.Name))
 			}
 			uniqueManifestNames[manifest.Name] = true
-			if manifestErr := validateManifest(manifest); manifestErr != nil {
-				err = errors.Join(err, fmt.Errorf(PkgValidateErrManifest, manifestErr))
+			for _, manifestErr := range validateManifest(manifest) {
+				errs = append(errs, fmt.Errorf(PkgValidateErrManifest, manifestErr))
 			}
 		}
-		if actionsErr := validateActions(component.Actions); actionsErr != nil {
-			err = errors.Join(err, fmt.Errorf("%q: %w", component.Name, actionsErr))
+		for _, actionsErr := range validateActions(component.Actions) {
+			errs = append(errs, fmt.Errorf("%q: %w", component.Name, actionsErr))
 		}
 	}
 
-	return err
+	return errs
 }
 
 // validateActions validates the actions of a component.
-func validateActions(a v1beta1.ComponentActions) error {
-	var err error
+func validateActions(a v1beta1.ComponentActions) ValidationErrors {
+	var errs ValidationErrors
 
-	err = errors.Join(err, validateActionSet(a.OnCreate))
+	errs = append(errs, validateActionSet(a.OnCreate)...)
 
 	if hasSetValues(a.OnCreate) {
-		err = errors.Join(err, errors.New(PkgValidateErrActionSetValueOnDeploy))
+		errs = append(errs, errors.New(PkgValidateErrActionSetValueOnDeploy))
 	}
 
 	if hasTemplating(a.OnCreate) {
-		err = errors.Join(err, errors.New(PkgValidateErrActionTemplateOnCreate))
+		errs = append(errs, errors.New(PkgValidateErrActionTemplateOnCreate))
 	}
 
-	err = errors.Join(err, validateActionSet(a.OnDeploy))
-	err = errors.Join(err, validateActionSet(a.OnRemove))
+	errs = append(errs, validateActionSet(a.OnDeploy)...)
+	errs = append(errs, validateActionSet(a.OnRemove)...)
 
-	return err
+	return errs
 }
 
 // hasSetValues returns true if any of the actions contain setValues.
@@ -125,12 +148,12 @@ func hasActionTemplating(action v1beta1.ComponentAction) bool {
 }
 
 // validateActionSet runs all validation checks on component action sets.
-func validateActionSet(as v1beta1.ComponentActionSet) error {
-	var err error
+func validateActionSet(as v1beta1.ComponentActionSet) ValidationErrors {
+	var errs ValidationErrors
 	validate := func(actions []v1beta1.ComponentAction) {
 		for _, action := range actions {
-			if actionErr := validateAction(action); actionErr != nil {
-				err = errors.Join(err, fmt.Errorf(PkgValidateErrAction, actionErr))
+			for _, actionErr := range validateAction(action) {
+				errs = append(errs, fmt.Errorf(PkgValidateErrAction, actionErr))
 			}
 		}
 	}
@@ -138,33 +161,33 @@ func validateActionSet(as v1beta1.ComponentActionSet) error {
 	validate(as.Before)
 	validate(as.OnFailure)
 	validate(as.OnSuccess)
-	return err
+	return errs
 }
 
 // validateAction runs all validation checks on an action.
-func validateAction(action v1beta1.ComponentAction) error {
-	var err error
-
+func validateAction(action v1beta1.ComponentAction) ValidationErrors {
 	if action.Wait == nil {
 		return nil
 	}
 
+	var errs ValidationErrors
+
 	// Validate only cmd or wait, not both
 	if action.Cmd != "" {
-		err = errors.Join(err, fmt.Errorf(PkgValidateErrActionCmdWait, action.Cmd))
+		errs = append(errs, fmt.Errorf(PkgValidateErrActionCmdWait, action.Cmd))
 	}
 
 	// Validate only cluster or network, not both
 	if action.Wait.Cluster != nil && action.Wait.Network != nil {
-		err = errors.Join(err, errors.New(PkgValidateErrActionClusterNetwork))
+		errs = append(errs, errors.New(PkgValidateErrActionClusterNetwork))
 	}
 
 	// Validate at least one of cluster or network
 	if action.Wait.Cluster == nil && action.Wait.Network == nil {
-		err = errors.Join(err, errors.New(PkgValidateErrActionClusterNetwork))
+		errs = append(errs, errors.New(PkgValidateErrActionClusterNetwork))
 	}
 
-	return err
+	return errs
 }
 
 // validateReleaseName validates a release name against DNS 1035 spec, using chartName as fallback.
@@ -190,35 +213,35 @@ func validateReleaseName(chartName, releaseName string) error {
 }
 
 // validateChart runs all validation checks on a chart.
-func validateChart(chart v1beta1.Chart) error {
-	var err error
+func validateChart(chart v1beta1.Chart) ValidationErrors {
+	var errs ValidationErrors
 
 	if len(chart.Name) > ZarfMaxChartNameLength {
-		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))
+		errs = append(errs, fmt.Errorf(PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))
 	}
 
 	if chart.Namespace == "" {
-		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartNamespaceMissing, chart.Name))
+		errs = append(errs, fmt.Errorf(PkgValidateErrChartNamespaceMissing, chart.Name))
 	}
 
 	if nameErr := validateReleaseName(chart.Name, chart.ReleaseName); nameErr != nil {
-		err = errors.Join(err, nameErr)
+		errs = append(errs, nameErr)
 	}
 
-	return err
+	return errs
 }
 
 // validateManifest runs all validation checks on a manifest.
-func validateManifest(manifest v1beta1.Manifest) error {
-	var err error
+func validateManifest(manifest v1beta1.Manifest) ValidationErrors {
+	var errs ValidationErrors
 
 	if len(manifest.Name) > ZarfMaxChartNameLength {
-		err = errors.Join(err, fmt.Errorf(PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
+		errs = append(errs, fmt.Errorf(PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
 	}
 
 	if len(manifest.Files) < 1 && manifest.Kustomize == nil {
-		err = errors.Join(err, fmt.Errorf(PkgValidateErrManifestFileOrKustomize, manifest.Name))
+		errs = append(errs, fmt.Errorf(PkgValidateErrManifestFileOrKustomize, manifest.Name))
 	}
 
-	return err
+	return errs
 }
