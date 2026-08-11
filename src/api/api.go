@@ -230,11 +230,10 @@ func (p *PackageDefinition) SetBuildData(buildData BuildData) {
 	p.pkg.Build.AggregateChecksum = buildData.AggregateChecksum
 }
 
-// SetDifferentialBuild records the base package version and missing components for a differential build.
-func (p *PackageDefinition) SetDifferentialBuild(packageVersion string, missing []string) {
+// SetDifferentialBuild records the base package version for a differential build.
+func (p *PackageDefinition) SetDifferentialBuild(packageVersion string) {
 	p.pkg.Build.Differential = true
 	p.pkg.Build.DifferentialPackageVersion = packageVersion
-	p.pkg.Build.DifferentialMissing = slices.Clone(missing)
 }
 
 // SetBuildSigned sets whether the package build is signed.

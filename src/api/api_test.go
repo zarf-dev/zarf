@@ -172,14 +172,12 @@ func TestPackageDefinitionSetDifferentialBuild(t *testing.T) {
 	t.Parallel()
 
 	definition := NewPackageDefinitionFromV1beta1(v1beta1.Package{})
-	missing := []string{"component"}
-	definition.SetDifferentialBuild("v1.0.0", missing)
-	missing[0] = "changed"
+	definition.SetDifferentialBuild("v1.0.0")
 
 	alpha := definition.AsV1alpha1()
 	require.True(t, alpha.Build.Differential)
 	require.Equal(t, "v1.0.0", alpha.Build.DifferentialPackageVersion)
-	require.Equal(t, []string{"component"}, alpha.Build.DifferentialMissing)
+	require.Empty(t, alpha.Build.DifferentialMissing)
 }
 
 func TestPackageDefinitionSetMetadata(t *testing.T) {

@@ -99,7 +99,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		}
 		definition = updatedDefinition
 		pkg = definition.AsV1alpha1()
-		definition.SetDifferentialBuild(opts.DifferentialPackage.Metadata.Version, nil)
+		definition.SetDifferentialBuild(opts.DifferentialPackage.Metadata.Version)
 	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
