@@ -50,10 +50,10 @@ components:
 `, string(generated))
 }
 
-func TestDevTemplateFollowsAndRewritesLocalTemplateImports(t *testing.T) {
+func TestDevTemplateDoesNotRenderLocalImports(t *testing.T) {
 	dir := t.TempDir()
-	files := map[string]string{
-		"zarf.tpl.yaml": `apiVersion: zarf.dev/v1beta1
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "components"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, packageTemplateFilename), []byte(`apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: app
@@ -62,89 +62,20 @@ components:
     import:
       local:
         - path: components/app.tpl.yaml
-`,
-		"components/app.tpl.yaml": `apiVersion: zarf.dev/v1beta1
+`), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "components", "app.tpl.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
 kind: ZarfComponentConfig
 metadata:
-  name: app
-component:
-  import:
-    local:
-      - path: nested.tpl.yaml
-`,
-		"components/nested.tpl.yaml": `apiVersion: zarf.dev/v1beta1
-kind: ZarfComponentConfig
-metadata:
-  name: nested
-component:
-  images:
-    - name: [[ .image ]]
-`,
-	}
-	for path, contents := range files {
-		path = filepath.Join(dir, path)
-		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
-		require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
-	}
+  name: [[ .name ]]
+`), 0o644))
 
-	o := devTemplateOptions{set: map[string]string{"image": "registry.example/nested:v1"}}
-	require.NoError(t, o.run(context.Background(), []string{dir}))
+	require.NoError(t, (&devTemplateOptions{}).run(context.Background(), []string{dir}))
 
-	root, err := os.ReadFile(filepath.Join(dir, "zarf.gen.yaml"))
+	generated, err := os.ReadFile(filepath.Join(dir, "zarf.gen.yaml"))
 	require.NoError(t, err)
-	require.Contains(t, string(root), "path: components/app.gen.yaml")
-	child, err := os.ReadFile(filepath.Join(dir, "components", "app.gen.yaml"))
-	require.NoError(t, err)
-	require.Contains(t, string(child), "path: nested.gen.yaml")
-	grandchild, err := os.ReadFile(filepath.Join(dir, "components", "nested.gen.yaml"))
-	require.NoError(t, err)
-	require.Contains(t, string(grandchild), "name: registry.example/nested:v1")
-}
-
-func TestDevTemplateTraversesImportsGeneratedByBlockTemplate(t *testing.T) {
-	dir := t.TempDir()
-	files := map[string]string{
-		"zarf.tpl.yaml": `apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
-metadata:
-  name: app
-components:
-[[ block "components" . ]]
-  - name: app
-    import:
-      local:
-        - path: components/[[ .component ]].tpl.yaml
-[[ end ]]
-`,
-		"components/app.tpl.yaml": `apiVersion: zarf.dev/v1beta1
-kind: ZarfComponentConfig
-metadata:
-  name: app
-component:
-  images:
-    - name: [[ .image ]]
-`,
-	}
-	for path, contents := range files {
-		path = filepath.Join(dir, path)
-		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
-		require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
-	}
-
-	o := devTemplateOptions{set: map[string]string{
-		"component": "app",
-		"image":     "registry.example/nested:v1",
-	}}
-	require.NoError(t, o.run(context.Background(), []string{dir}))
-
-	root, err := os.ReadFile(filepath.Join(dir, "zarf.gen.yaml"))
-	require.NoError(t, err)
-	require.Contains(t, string(root), "path: components/app.gen.yaml")
-	require.NotContains(t, string(root), "[[")
-
-	component, err := os.ReadFile(filepath.Join(dir, "components", "app.gen.yaml"))
-	require.NoError(t, err)
-	require.Contains(t, string(component), "name: registry.example/nested:v1")
+	require.Contains(t, string(generated), "path: components/app.tpl.yaml")
+	_, err = os.Stat(filepath.Join(dir, "components", "app.gen.yaml"))
+	require.ErrorIs(t, err, os.ErrNotExist)
 }
 
 func TestDevTemplateRequiresAllValues(t *testing.T) {
