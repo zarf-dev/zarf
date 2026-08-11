@@ -50,6 +50,55 @@ components:
 `, string(generated))
 }
 
+func TestDevTemplateRendersComponentConfig(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "component.tpl.yaml")
+	require.NoError(t, os.WriteFile(source, []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: [[ .componentName ]]
+component: {}
+`), 0o644))
+
+	o := devTemplateOptions{set: map[string]string{"componentName": "app"}}
+	require.NoError(t, o.run(context.Background(), []string{source}))
+
+	generated, err := os.ReadFile(filepath.Join(dir, "component.gen.yaml"))
+	require.NoError(t, err)
+	require.Equal(t, `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component: {}
+`, string(generated))
+}
+
+func TestDevTemplateRendersAnnotation(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, packageTemplateFilename), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: app
+  annotations:
+    [[ .annotation ]]
+`), 0o644))
+
+	o := devTemplateOptions{set: map[string]string{
+		"annotation": "example.com/owner: platform-team",
+	}}
+	require.NoError(t, o.run(context.Background(), []string{dir}))
+
+	generated, err := os.ReadFile(filepath.Join(dir, "zarf.gen.yaml"))
+	require.NoError(t, err)
+	require.Equal(t, `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: app
+  annotations:
+    example.com/owner: platform-team
+`, string(generated))
+}
+
 func TestDevTemplateRequiresAllValues(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, packageTemplateFilename)
