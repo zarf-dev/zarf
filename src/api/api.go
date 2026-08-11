@@ -35,7 +35,6 @@ type BuildData struct {
 	Architecture        string
 	Timestamp           string
 	Version             string
-	Migrations          []string
 	RegistryOverrides   map[string]string
 	Flavor              string
 	Signed              *bool
@@ -213,7 +212,6 @@ func (p *PackageDefinition) SetBuildData(buildData BuildData) {
 	p.pkg.Build.Architecture = buildData.Architecture
 	p.pkg.Build.Timestamp = buildData.Timestamp
 	p.pkg.Build.Version = buildData.Version
-	p.pkg.Build.Migrations = slices.Clone(buildData.Migrations)
 	p.pkg.Build.RegistryOverrides = maps.Clone(buildData.RegistryOverrides)
 	p.pkg.Build.Flavor = buildData.Flavor
 	p.pkg.Build.Signed = cloneBool(buildData.Signed)

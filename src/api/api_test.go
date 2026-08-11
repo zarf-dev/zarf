@@ -129,7 +129,6 @@ func TestPackageDefinitionSetBuildData(t *testing.T) {
 		Architecture:        "amd64",
 		Timestamp:           "timestamp",
 		Version:             "v1.0.0",
-		Migrations:          []string{"migration"},
 		RegistryOverrides:   map[string]string{"registry.example.com": "registry.internal"},
 		Flavor:              "fips",
 		Signed:              &signed,
@@ -138,7 +137,6 @@ func TestPackageDefinitionSetBuildData(t *testing.T) {
 		AggregateChecksum:   "checksum",
 	}
 	definition.SetBuildData(buildData)
-	buildData.Migrations[0] = "changed"
 	buildData.RegistryOverrides["registry.example.com"] = "changed"
 	signed = true
 	definition.AddVersionRequirement(VersionRequirement{Version: "v2.0.0", Reason: "another feature"})
@@ -150,7 +148,6 @@ func TestPackageDefinitionSetBuildData(t *testing.T) {
 	require.Equal(t, "amd64", beta.Build.Architecture)
 	require.Equal(t, "timestamp", beta.Build.Timestamp)
 	require.Equal(t, "v1.0.0", beta.Build.Version)
-	require.Equal(t, []string{"migration"}, beta.Build.Migrations)
 	require.Equal(t, map[string]string{"registry.example.com": "registry.internal"}, beta.Build.RegistryOverrides)
 	require.Equal(t, "fips", beta.Build.Flavor)
 	require.False(t, *beta.Build.Signed)
