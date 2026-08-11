@@ -53,7 +53,7 @@ func (o *devTemplateOptions) run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	valuesFiles := []string(nil)
+	valuesFiles := []string{}
 	if o.setFile != "" {
 		if _, err := os.Stat(o.setFile); err != nil {
 			return fmt.Errorf("unable to access template values file %q: %w", o.setFile, err)
