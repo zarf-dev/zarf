@@ -21,7 +21,7 @@ require (
 	github.com/derailed/k9s v0.51.0
 	github.com/distribution/distribution/v3 v3.1.1
 	github.com/distribution/reference v0.6.0
-	github.com/fairwindsops/pluto/v5 v5.24.1
+	github.com/fairwindsops/pluto/v5 v5.24.2
 	github.com/fatih/color v1.19.0
 	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/pkg/apis/meta v1.31.0
