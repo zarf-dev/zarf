@@ -115,10 +115,10 @@ func (p *PackageDefinition) RetainComponents(indices []int) error {
 
 // OverrideNamespace overrides component namespaces when the definition permits it.
 func (p *PackageDefinition) OverrideNamespace(namespace string) error {
-	if !p.pkg.Metadata.PreventNamespaceOverride {
-		return fmt.Errorf("cannot override package namespace, metadata.allowNamespaceOverride is false")
+	if p.pkg.Metadata.PreventNamespaceOverride {
+		return fmt.Errorf("package explicitly prevents namespace overrides")
 	}
-	if p.pkg.Kind != string(v1alpha1.ZarfPackageConfig) {
+	if p.AsV1alpha1().IsInitConfig() {
 		return fmt.Errorf("package kind is not a ZarfPackageConfig, cannot override namespace")
 	}
 	namespaces := p.uniqueNamespaces()
