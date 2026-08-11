@@ -23,7 +23,7 @@ func ResolvePackagePath(path string) (PackagePath, error) {
 	}
 
 	if fileInfo.IsDir() {
-		// Prefer zarf.yaml for backwards compatibility, but use a generated definition when it is absent.
+		//  Backward compatible: directory -> zarf.yaml -> zarf.gen.yaml
 		manifestFile := filepath.Join(path, ZarfYAML)
 		if _, err := os.Stat(manifestFile); os.IsNotExist(err) {
 			generatedFile := filepath.Join(path, ZarfGeneratedYAML)
