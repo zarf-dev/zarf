@@ -48,7 +48,12 @@ func newDevTemplateCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *devTemplateOptions) run(ctx context.Context, args []string) error {
-	source, err := templateSourcePath(args)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
+
+	source, err := templateSourcePath(basePath)
 	if err != nil {
 		return err
 	}
@@ -95,11 +100,7 @@ func (o *devTemplateOptions) run(ctx context.Context, args []string) error {
 	return nil
 }
 
-func templateSourcePath(args []string) (string, error) {
-	path := packageTemplateFilename
-	if len(args) == 1 {
-		path = args[0]
-	}
+func templateSourcePath(path string) (string, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return "", fmt.Errorf("unable to access package template %q: %w", path, err)
