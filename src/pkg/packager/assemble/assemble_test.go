@@ -14,6 +14,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
@@ -232,15 +233,15 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 func TestCollectVersionRequirements(t *testing.T) {
 	t.Parallel()
 
-	imageArchivesReq := v1alpha1.VersionRequirement{
+	imageArchivesReq := api.VersionRequirement{
 		Version: "v0.68.0",
 		Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
 	}
-	indexReq := v1alpha1.VersionRequirement{
+	indexReq := api.VersionRequirement{
 		Version: "v0.77.0",
 		Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
 	}
-	versionlessChartReq := v1alpha1.VersionRequirement{
+	versionlessChartReq := api.VersionRequirement{
 		Version: "v0.65.0",
 		Reason:  "This package contains a chart without a version, which is only supported on v0.65.0+",
 	}
@@ -249,7 +250,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 		name     string
 		pkg      v1alpha1.ZarfPackage
 		hasIndex bool
-		expected []v1alpha1.VersionRequirement
+		expected []api.VersionRequirement
 	}{
 		{
 			name:     "no requirements for a plain package",
@@ -268,13 +269,13 @@ func TestCollectVersionRequirements(t *testing.T) {
 					},
 				},
 			},
-			expected: []v1alpha1.VersionRequirement{imageArchivesReq},
+			expected: []api.VersionRequirement{imageArchivesReq},
 		},
 		{
 			name:     "preserved index triggers v0.76.0",
 			pkg:      v1alpha1.ZarfPackage{},
 			hasIndex: true,
-			expected: []v1alpha1.VersionRequirement{indexReq},
+			expected: []api.VersionRequirement{indexReq},
 		},
 		{
 			name: "image archives and preserved index trigger both",
@@ -287,7 +288,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 				},
 			},
 			hasIndex: true,
-			expected: []v1alpha1.VersionRequirement{imageArchivesReq, indexReq},
+			expected: []api.VersionRequirement{imageArchivesReq, indexReq},
 		},
 		{
 			name: "image archives requirement is only emitted once across components",
@@ -297,7 +298,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 					{Name: "c2", ImageArchives: []v1alpha1.ImageArchive{{Path: "/tmp/b.tar", Images: []string{"p:q"}}}},
 				},
 			},
-			expected: []v1alpha1.VersionRequirement{imageArchivesReq},
+			expected: []api.VersionRequirement{imageArchivesReq},
 		},
 		{
 			name: "chart without a version triggers v0.65.0",
@@ -309,7 +310,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 					},
 				},
 			},
-			expected: []v1alpha1.VersionRequirement{versionlessChartReq},
+			expected: []api.VersionRequirement{versionlessChartReq},
 		},
 		{
 			name: "versionless chart requirement is only emitted once across charts",
@@ -319,7 +320,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 					{Name: "c2", Charts: []v1alpha1.ZarfChart{{Name: "b", LocalPath: "./b"}}},
 				},
 			},
-			expected: []v1alpha1.VersionRequirement{versionlessChartReq},
+			expected: []api.VersionRequirement{versionlessChartReq},
 		},
 		{
 			name: "chart with a version has no requirement",

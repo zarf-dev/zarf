@@ -118,6 +118,24 @@ func TestPackageDefinitionRetainComponents_invalidIndexDoesNotModifyDefinition(t
 	require.Equal(t, []v1alpha1.ZarfComponent{{Name: "first"}, {Name: "second"}}, definition.AsV1alpha1().Components)
 }
 
+func TestPackageDefinitionVersionRequirements(t *testing.T) {
+	t.Parallel()
+
+	definition := NewPackageDefinitionFromV1beta1(v1beta1.Package{})
+	definition.SetBuildVersionRequirements([]VersionRequirement{{Version: "v1.0.0", Reason: "feature"}})
+	definition.AddVersionRequirement(VersionRequirement{Version: "v2.0.0", Reason: "another feature"})
+	definition.AddVersionRequirement(VersionRequirement{Version: "v1.0.0", Reason: "feature"})
+
+	require.Equal(t, []v1alpha1.VersionRequirement{
+		{Version: "v1.0.0", Reason: "feature"},
+		{Version: "v2.0.0", Reason: "another feature"},
+	}, definition.AsV1alpha1().Build.VersionRequirements)
+	require.Equal(t, []v1beta1.VersionRequirement{
+		{Version: "v1.0.0", Reason: "feature"},
+		{Version: "v2.0.0", Reason: "another feature"},
+	}, definition.AsV1beta1().Build.VersionRequirements)
+}
+
 func TestPackageDefinitionSetMetadata(t *testing.T) {
 	t.Parallel()
 

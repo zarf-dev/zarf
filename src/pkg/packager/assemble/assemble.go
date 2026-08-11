@@ -876,8 +876,8 @@ func recordPackageMetadata(definition *api.PackageDefinition, flavor string, reg
 	return nil
 }
 
-func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alpha1.VersionRequirement {
-	var reqs []v1alpha1.VersionRequirement
+func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []api.VersionRequirement {
+	var reqs []api.VersionRequirement
 	var hasImageArchives, hasTemplatedValuesFiles, hasVersionlessChart bool
 	for _, comp := range pkg.Components {
 		if !hasImageArchives && len(comp.ImageArchives) > 0 {
@@ -896,25 +896,25 @@ func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alp
 		}
 	}
 	if hasVersionlessChart {
-		reqs = append(reqs, v1alpha1.VersionRequirement{
+		reqs = append(reqs, api.VersionRequirement{
 			Version: "v0.65.0",
 			Reason:  "This package contains a chart without a version, which is only supported on v0.65.0+",
 		})
 	}
 	if hasImageArchives {
-		reqs = append(reqs, v1alpha1.VersionRequirement{
+		reqs = append(reqs, api.VersionRequirement{
 			Version: "v0.68.0",
 			Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
 		})
 	}
 	if hasTemplatedValuesFiles {
-		reqs = append(reqs, v1alpha1.VersionRequirement{
+		reqs = append(reqs, api.VersionRequirement{
 			Version: "v0.78.0",
 			Reason:  "This package uses templatedValuesFiles which require v0.78.0+",
 		})
 	}
 	if hasIndex {
-		reqs = append(reqs, v1alpha1.VersionRequirement{
+		reqs = append(reqs, api.VersionRequirement{
 			Version: "v0.77.0",
 			Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
 		})

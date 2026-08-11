@@ -22,6 +22,12 @@ type PackageAccessor interface {
 	AsV1beta1() v1beta1.Package
 }
 
+// VersionRequirement specifies a minimum Zarf version needed and the reason for the requirement.
+type VersionRequirement struct {
+	Version string
+	Reason  string
+}
+
 // PackageDefinition is a concrete package source backed by the generic package representation.
 type PackageDefinition struct {
 	// pkg is the canonical representation used by Zarf's internal package-processing code.
@@ -265,7 +271,7 @@ func (p *PackageDefinition) AddProvenanceFile(file string) {
 }
 
 // SetBuildVersionRequirements sets the package build version requirements.
-func (p *PackageDefinition) SetBuildVersionRequirements(requirements []v1alpha1.VersionRequirement) {
+func (p *PackageDefinition) SetBuildVersionRequirements(requirements []VersionRequirement) {
 	if len(requirements) == 0 {
 		p.pkg.Build.VersionRequirements = nil
 		return
@@ -280,7 +286,7 @@ func (p *PackageDefinition) SetBuildVersionRequirements(requirements []v1alpha1.
 }
 
 // AddVersionRequirement records a package build version requirement once.
-func (p *PackageDefinition) AddVersionRequirement(requirement v1alpha1.VersionRequirement) {
+func (p *PackageDefinition) AddVersionRequirement(requirement VersionRequirement) {
 	if slices.ContainsFunc(p.pkg.Build.VersionRequirements, func(existing internaltypes.VersionRequirement) bool {
 		return existing.Version == requirement.Version && existing.Reason == requirement.Reason
 	}) {

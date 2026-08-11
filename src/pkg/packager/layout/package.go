@@ -280,7 +280,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 	definition := p.PackageDefinition
 	definition.SetBuildSigned(true)
 	definition.AddProvenanceFile(Bundle)
-	definition.AddVersionRequirement(v1alpha1.VersionRequirement{
+	definition.AddVersionRequirement(api.VersionRequirement{
 		Version: "v0.71.0",
 		Reason:  "This package contains a bundle format signature which requires Zarf v0.71.0 or later",
 	})
