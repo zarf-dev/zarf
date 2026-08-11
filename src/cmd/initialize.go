@@ -217,7 +217,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
 	}
-	if pkgLayout.Pkg.Kind != v1alpha1.ZarfInitConfig {
+	if pkgLayout.AsV1alpha1().Kind != v1alpha1.ZarfInitConfig {
 		return fmt.Errorf("zarf init can only deploy packages of kind \"%s\"", v1alpha1.ZarfInitConfig)
 	}
 	defer func() {

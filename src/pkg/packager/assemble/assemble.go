@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	goyaml "github.com/goccy/go-yaml"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -38,7 +38,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -72,7 +71,8 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
-	pkg := resolvedPackage.PackageDefinition.AsV1alpha1()
+	definition := resolvedPackage.PackageDefinition
+	pkg := definition.AsV1alpha1()
 	importedSchemas := resolvedPackage.ImportedSchemas
 	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
 		return nil, err
@@ -80,20 +80,6 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 
 	if opts.DifferentialPackage.Metadata.Name != "" {
 		l.Debug("creating differential package", "differential", opts.DifferentialPackage)
-		allIncludedImagesMap := map[string]bool{}
-		allIncludedReposMap := map[string]bool{}
-		for _, component := range opts.DifferentialPackage.Components {
-			for _, image := range component.Images {
-				allIncludedImagesMap[image] = true
-			}
-			for _, repo := range component.Repos {
-				allIncludedReposMap[repo] = true
-			}
-		}
-
-		pkg.Build.Differential = true
-		pkg.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
-
 		versionsMatch := opts.DifferentialPackage.Metadata.Version == pkg.Metadata.Version
 		if versionsMatch {
 			return nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
@@ -102,12 +88,18 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		if noVersionSet {
 			return nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
-		filter := filters.ByDifferentialData(allIncludedImagesMap, allIncludedReposMap)
-		var err error
-		pkg.Components, err = filter.Apply(pkg)
+		originalAPIVersion := definition.OriginalAPIVersion()
+		differentialAPIVersion := opts.DifferentialPackage.Build.GetOriginalAPIVersion()
+		if originalAPIVersion != differentialAPIVersion {
+			return nil, fmt.Errorf("%s: package apiVersion %s, differential package apiVersion %s", lang.PkgCreateErrDifferentialAPIVersion, originalAPIVersion, differentialAPIVersion)
+		}
+		updatedDefinition, err := applyDifferentialResources(definition, api.NewPackageDefinitionFromV1alpha1(opts.DifferentialPackage))
 		if err != nil {
 			return nil, err
 		}
+		definition = updatedDefinition
+		pkg = definition.AsV1alpha1()
+		definition.SetBuildDifferential(true, opts.DifferentialPackage.Metadata.Version, nil)
 	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -205,18 +197,13 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	if err != nil {
 		return nil, err
 	}
-	pkg.Metadata.AggregateChecksum = checksumSha
+	definition.SetAggregateChecksum(checksumSha)
 
-	pkg, err = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo, buildPath)
-	if err != nil {
+	if err = recordPackageMetadata(&definition, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo, buildPath); err != nil {
 		return nil, err
 	}
 
-	b, err := goyaml.Marshal(pkg)
-	if err != nil {
-		return nil, err
-	}
-	err = os.WriteFile(filepath.Join(buildPath, layout.ZarfYAML), b, helpers.ReadWriteUser)
+	err = layout.WritePackageDefinition(filepath.Join(buildPath, layout.ZarfYAML), definition)
 	if err != nil {
 		return nil, err
 	}
@@ -250,9 +237,10 @@ type AssembleSkeletonOptions struct {
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
 func AssembleSkeleton(ctx context.Context, resolvedPackage load.ResolvedPackage, packagePath string, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
-	pkg := resolvedPackage.PackageDefinition.AsV1alpha1()
+	definition := resolvedPackage.PackageDefinition
+	definition.SetMetadataArchitecture(v1alpha1.SkeletonArch)
+	pkg := definition.AsV1alpha1()
 	importedSchemas := resolvedPackage.ImportedSchemas
-	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
 	// Creating skeleton packages with the values feature is not yet supported
 	if len(pkg.Values.Files) > 0 || pkg.Values.Schema != "" || len(importedSchemas) > 0 {
@@ -289,19 +277,16 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage load.ResolvedPackage,
 	if err != nil {
 		return nil, err
 	}
-	pkg.Metadata.AggregateChecksum = checksumSha
+	// PackageDefinition does not expose component flavor mutations, so retain them
+	// while moving package metadata updates to the generic definition.
+	definition = api.NewPackageDefinitionFromV1alpha1(pkg)
+	definition.SetAggregateChecksum(checksumSha)
 
-	pkg, err = recordPackageMetadata(pkg, opts.Flavor, nil, opts.WithBuildMachineInfo, buildPath)
-	if err != nil {
+	if err = recordPackageMetadata(&definition, opts.Flavor, nil, opts.WithBuildMachineInfo, buildPath); err != nil {
 		return nil, err
 	}
 
-	b, err := goyaml.Marshal(pkg)
-	if err != nil {
-		return nil, err
-	}
-	err = os.WriteFile(filepath.Join(buildPath, layout.ZarfYAML), b, helpers.ReadWriteUser)
-	if err != nil {
+	if err = layout.WritePackageDefinition(filepath.Join(buildPath, layout.ZarfYAML), definition); err != nil {
 		return nil, err
 	}
 
@@ -829,48 +814,49 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath string) (v1alpha1.ZarfPackage, error) {
+func recordPackageMetadata(definition *api.PackageDefinition, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath string) error {
+	pkg := definition.AsV1alpha1()
 	now := time.Now()
 	if withBuildMachineInfo {
 		// Just use $USER env variable to avoid CGO issue.
 		// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
 		// Record the name of the user creating the package.
 		if runtime.GOOS == "windows" {
-			pkg.Build.User = os.Getenv("USERNAME")
+			definition.SetBuildUser(os.Getenv("USERNAME"))
 		} else {
-			pkg.Build.User = os.Getenv("USER")
+			definition.SetBuildUser(os.Getenv("USER"))
 		}
 
 		// Record the hostname of the package creation terminal.
 		//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
 		hostname, _ := os.Hostname()
-		pkg.Build.Terminal = hostname
+		definition.SetBuildHostname(hostname)
 	}
 
 	if pkg.IsInitConfig() && pkg.Metadata.Version == "" {
-		pkg.Metadata.Version = config.CLIVersion
+		definition.SetMetadataVersion(config.CLIVersion)
 	}
 
-	pkg.Build.Architecture = pkg.Metadata.Architecture
+	definition.SetBuildArchitecture(pkg.Metadata.Architecture)
 
 	// Record the Zarf Version the CLI was built with.
-	pkg.Build.Version = config.CLIVersion
+	definition.SetBuildVersion(config.CLIVersion)
 
 	// Record the time of package creation.
-	pkg.Build.Timestamp = now.Format(v1alpha1.BuildTimestampFormat)
+	definition.SetBuildTimestamp(now.Format(v1alpha1.BuildTimestampFormat))
 
 	// Record the flavor of Zarf used to build this package (if any).
-	pkg.Build.Flavor = flavor
+	definition.SetBuildFlavor(flavor)
 
 	hasIndex := false
 	if buildPath != "" {
 		var err error
 		hasIndex, err = layout.HasImageIndex(filepath.Join(buildPath, layout.ImagesDir))
 		if err != nil {
-			return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to inspect image layout: %w", err)
+			return fmt.Errorf("failed to inspect image layout: %w", err)
 		}
 	}
-	pkg.Build.VersionRequirements = collectVersionRequirements(pkg, hasIndex)
+	definition.SetBuildVersionRequirements(collectVersionRequirements(pkg, hasIndex))
 
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
@@ -878,17 +864,16 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 		overrides[registryOverrides[i].Source] = registryOverrides[i].Override
 	}
 
-	pkg.Build.RegistryOverrides = overrides
+	definition.SetBuildRegistryOverrides(overrides)
 
-	// set signed to false by default - this is updated if signing occurs.
-	signed := false
-	pkg.Build.Signed = &signed
+	// Set signed to false by default; this is updated if signing occurs.
+	definition.SetBuildSigned(false)
 
 	// Record checksums.txt as a supplemental file — it cannot checksum itself.
 	// Signature files are appended by SignPackage() if signing occurs.
-	pkg.Build.ProvenanceFiles = []string{layout.Checksums}
+	definition.SetProvenanceFiles([]string{layout.Checksums})
 
-	return pkg, nil
+	return nil
 }
 
 func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alpha1.VersionRequirement {
