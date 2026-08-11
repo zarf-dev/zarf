@@ -11,6 +11,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
@@ -207,7 +208,7 @@ func TestDeployFilter_Apply(t *testing.T) {
 			isInteractive := false
 			filter := ForDeploy(tt.optionalComponents, isInteractive)
 
-			indices, err := filter.Apply(packageViewFromV1alpha1(tt.pkg))
+			indices, err := filter.Apply(packageView(api.NewPackageDefinitionFromV1alpha1(tt.pkg)))
 			result := selectV1alpha1Components(tt.pkg, indices)
 			if tt.expectedErr != nil {
 				require.ErrorIs(t, err, tt.expectedErr)

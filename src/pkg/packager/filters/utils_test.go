@@ -12,21 +12,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
-func packageViewFromV1alpha1(pkg v1alpha1.ZarfPackage) PackageView {
-	components := make([]ComponentView, 0, len(pkg.Components))
-	for _, component := range pkg.Components {
-		components = append(components, ComponentView{
-			Name:        component.Name,
-			Description: component.Description,
-			Optional:    !component.IsRequired(),
-			Default:     component.Default,
-			Group:       component.DeprecatedGroup,
-			OnlyLocalOS: component.Only.LocalOS,
-		})
-	}
-	return PackageView{Components: components}
-}
-
 func selectV1alpha1Components(pkg v1alpha1.ZarfPackage, indices []int) []v1alpha1.ZarfComponent {
 	components := make([]v1alpha1.ZarfComponent, 0, len(indices))
 	for _, idx := range indices {
