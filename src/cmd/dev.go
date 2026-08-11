@@ -81,7 +81,7 @@ func newDevCommand() *cobra.Command {
 	cmd.AddCommand(newDevGenerateSchemaCommand(v))
 	cmd.AddCommand(newDevLintCommand(v))
 	cmd.AddCommand(newDevUpgradeSchemaCommand())
-	cmd.AddCommand(newDevTemplateCommand())
+	cmd.AddCommand(newDevTemplateCommand(v))
 
 	return cmd
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -29,7 +30,7 @@ type devTemplateOptions struct {
 	skipValidation bool
 }
 
-func newDevTemplateCommand() *cobra.Command {
+func newDevTemplateCommand(v *viper.Viper) *cobra.Command {
 	o := &devTemplateOptions{}
 	cmd := &cobra.Command{
 		Use:    "template [ TEMPLATE_FILE | DIRECTORY ]",
@@ -40,9 +41,9 @@ func newDevTemplateCommand() *cobra.Command {
 			return o.run(cmd.Context(), args)
 		},
 	}
-	cmd.Flags().StringToStringVar(&o.set, "set", nil, "Set a package template value (key=value)")
-	cmd.Flags().StringVar(&o.setFile, "set-file", "", "YAML file containing package template values")
-	cmd.Flags().BoolVar(&o.skipValidation, "skip-validation", false, "Skip schema validation of the rendered definition")
+	cmd.Flags().StringToStringVar(&o.set, "set", v.GetStringMapString(VDevTemplateSet), "Set a package template value (key=value)")
+	cmd.Flags().StringVar(&o.setFile, "set-file", v.GetString(VDevTemplateSetFile), "YAML file containing package template values")
+	cmd.Flags().BoolVar(&o.skipValidation, "skip-validation", v.GetBool(VDevTemplateSkipValidation), "Skip schema validation of the rendered definition")
 	return cmd
 }
 
