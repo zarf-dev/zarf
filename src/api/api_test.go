@@ -135,6 +135,7 @@ func TestPackageDefinitionSetBuildData(t *testing.T) {
 		Signed:              &signed,
 		VersionRequirements: []VersionRequirement{{Version: "v1.0.0", Reason: "feature"}},
 		ProvenanceFiles:     []string{"checksums.txt"},
+		AggregateChecksum:   "checksum",
 	}
 	definition.SetBuildData(buildData)
 	buildData.Migrations[0] = "changed"
@@ -154,11 +155,13 @@ func TestPackageDefinitionSetBuildData(t *testing.T) {
 	require.Equal(t, "fips", beta.Build.Flavor)
 	require.False(t, *beta.Build.Signed)
 	require.Equal(t, []string{"checksums.txt"}, beta.Build.ProvenanceFiles)
+	require.Equal(t, "checksum", beta.Build.AggregateChecksum)
 
 	require.Equal(t, []v1alpha1.VersionRequirement{
 		{Version: "v1.0.0", Reason: "feature"},
 		{Version: "v2.0.0", Reason: "another feature"},
 	}, definition.AsV1alpha1().Build.VersionRequirements)
+	require.Equal(t, "checksum", definition.AsV1alpha1().Metadata.AggregateChecksum)
 	require.Equal(t, []v1beta1.VersionRequirement{
 		{Version: "v1.0.0", Reason: "feature"},
 		{Version: "v2.0.0", Reason: "another feature"},

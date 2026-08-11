@@ -197,9 +197,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	if err != nil {
 		return nil, err
 	}
-	definition.SetAggregateChecksum(checksumSha)
-
-	if err = recordPackageMetadata(&definition, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo, buildPath); err != nil {
+	if err = recordPackageMetadata(&definition, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo, buildPath, checksumSha); err != nil {
 		return nil, err
 	}
 
@@ -280,9 +278,8 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage load.ResolvedPackage,
 	// PackageDefinition does not expose component flavor mutations, so retain them
 	// while moving package metadata updates to the generic definition.
 	definition = api.NewPackageDefinitionFromV1alpha1(pkg)
-	definition.SetAggregateChecksum(checksumSha)
 
-	if err = recordPackageMetadata(&definition, opts.Flavor, nil, opts.WithBuildMachineInfo, buildPath); err != nil {
+	if err = recordPackageMetadata(&definition, opts.Flavor, nil, opts.WithBuildMachineInfo, buildPath, checksumSha); err != nil {
 		return nil, err
 	}
 
@@ -814,15 +811,16 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(definition *api.PackageDefinition, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath string) error {
+func recordPackageMetadata(definition *api.PackageDefinition, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath, aggregateChecksum string) error {
 	pkg := definition.AsV1alpha1()
 	now := time.Now()
 	buildData := api.BuildData{
-		Architecture:    pkg.Metadata.Architecture,
-		Timestamp:       now.Format(v1alpha1.BuildTimestampFormat),
-		Version:         config.CLIVersion,
-		Flavor:          flavor,
-		ProvenanceFiles: []string{layout.Checksums},
+		Architecture:      pkg.Metadata.Architecture,
+		Timestamp:         now.Format(v1alpha1.BuildTimestampFormat),
+		Version:           config.CLIVersion,
+		Flavor:            flavor,
+		ProvenanceFiles:   []string{layout.Checksums},
+		AggregateChecksum: aggregateChecksum,
 	}
 	if withBuildMachineInfo {
 		// Just use $USER env variable to avoid CGO issue.

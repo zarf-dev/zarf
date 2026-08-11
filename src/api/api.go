@@ -41,6 +41,7 @@ type BuildData struct {
 	Signed              *bool
 	VersionRequirements []VersionRequirement
 	ProvenanceFiles     []string
+	AggregateChecksum   string
 }
 
 // PackageDefinition is a concrete package source backed by the generic package representation.
@@ -202,12 +203,6 @@ func overrideActionWaitNamespaces(actions []internaltypes.ComponentAction, origi
 	}
 }
 
-// SetAggregateChecksum records the generated checksums.txt aggregate checksum in every API location.
-func (p *PackageDefinition) SetAggregateChecksum(checksum string) {
-	p.pkg.Metadata.AggregateChecksum = checksum
-	p.pkg.Build.AggregateChecksum = checksum
-}
-
 // SetMetadataVersion sets the package metadata version.
 func (p *PackageDefinition) SetMetadataVersion(version string) {
 	p.pkg.Metadata.Version = version
@@ -231,6 +226,8 @@ func (p *PackageDefinition) SetBuildData(buildData BuildData) {
 	p.pkg.Build.Signed = cloneBool(buildData.Signed)
 	p.pkg.Build.ProvenanceFiles = slices.Clone(buildData.ProvenanceFiles)
 	p.pkg.Build.VersionRequirements = versionRequirementsToInternal(buildData.VersionRequirements)
+	p.pkg.Metadata.AggregateChecksum = buildData.AggregateChecksum
+	p.pkg.Build.AggregateChecksum = buildData.AggregateChecksum
 }
 
 // SetDifferentialBuild records the base package version and missing components for a differential build.
@@ -253,6 +250,19 @@ func (p *PackageDefinition) AddProvenanceFile(file string) {
 	p.pkg.Build.ProvenanceFiles = append(p.pkg.Build.ProvenanceFiles, file)
 }
 
+// AddVersionRequirement records a package build version requirement once.
+func (p *PackageDefinition) AddVersionRequirement(requirement VersionRequirement) {
+	if slices.ContainsFunc(p.pkg.Build.VersionRequirements, func(existing internaltypes.VersionRequirement) bool {
+		return existing.Version == requirement.Version && existing.Reason == requirement.Reason
+	}) {
+		return
+	}
+	p.pkg.Build.VersionRequirements = append(p.pkg.Build.VersionRequirements, internaltypes.VersionRequirement{
+		Version: requirement.Version,
+		Reason:  requirement.Reason,
+	})
+}
+
 func versionRequirementsToInternal(requirements []VersionRequirement) []internaltypes.VersionRequirement {
 	if len(requirements) == 0 {
 		return nil
@@ -273,17 +283,4 @@ func cloneBool(value *bool) *bool {
 	}
 	cloned := *value
 	return &cloned
-}
-
-// AddVersionRequirement records a package build version requirement once.
-func (p *PackageDefinition) AddVersionRequirement(requirement VersionRequirement) {
-	if slices.ContainsFunc(p.pkg.Build.VersionRequirements, func(existing internaltypes.VersionRequirement) bool {
-		return existing.Version == requirement.Version && existing.Reason == requirement.Reason
-	}) {
-		return
-	}
-	p.pkg.Build.VersionRequirements = append(p.pkg.Build.VersionRequirements, internaltypes.VersionRequirement{
-		Version: requirement.Version,
-		Reason:  requirement.Reason,
-	})
 }
