@@ -34,6 +34,23 @@ func TestResolvePackagePath(t *testing.T) {
 			wantBaseDir:  "",
 		},
 		{
+			name:         "directory path falls back to generated zarf.yaml",
+			setupPath:    "",
+			createFiles:  map[string]string{layout.ZarfGeneratedYAML: "test"},
+			wantManifest: layout.ZarfGeneratedYAML,
+			wantBaseDir:  "",
+		},
+		{
+			name:      "directory path prefers zarf.yaml over generated zarf.yaml",
+			setupPath: "",
+			createFiles: map[string]string{
+				layout.ZarfYAML:          "source",
+				layout.ZarfGeneratedYAML: "generated",
+			},
+			wantManifest: layout.ZarfYAML,
+			wantBaseDir:  "",
+		},
+		{
 			name:         "direct file path",
 			setupPath:    "custom-package.yaml",
 			createFiles:  map[string]string{"custom-package.yaml": "test"},
