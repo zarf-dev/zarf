@@ -73,6 +73,21 @@ component: {}
 `, string(generated))
 }
 
+func TestDevTemplateRequiresV1Beta1API(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, packageTemplateFilename)
+	require.NoError(t, os.WriteFile(source, []byte(`apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: app
+`), 0o644))
+
+	err := (&devTemplateOptions{}).run(context.Background(), []string{source})
+	require.ErrorContains(t, err, `must use apiVersion "zarf.dev/v1beta1"`)
+	_, statErr := os.Stat(filepath.Join(dir, "zarf.gen.yaml"))
+	require.ErrorIs(t, statErr, os.ErrNotExist)
+}
+
 func TestDevTemplateRendersAnnotation(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, packageTemplateFilename), []byte(`apiVersion: zarf.dev/v1beta1

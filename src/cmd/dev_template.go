@@ -12,7 +12,9 @@ import (
 	"strings"
 	gotemplate "text/template"
 
+	"github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 )
@@ -68,6 +70,9 @@ func (o *devTemplateOptions) run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	if err := validateTemplateAPIVersion(source, rendered); err != nil {
+		return err
+	}
 	output := generatedTemplatePath(source)
 	if err := os.WriteFile(output, rendered, 0o644); err != nil {
 		return fmt.Errorf("writing generated template %q: %w", output, err)
@@ -95,6 +100,19 @@ func templateSourcePath(args []string) (string, error) {
 
 func generatedTemplatePath(source string) string {
 	return strings.TrimSuffix(source, ".tpl.yaml") + ".gen.yaml"
+}
+
+func validateTemplateAPIVersion(path string, rendered []byte) error {
+	var definition struct {
+		APIVersion string `yaml:"apiVersion"`
+	}
+	if err := yaml.Unmarshal(rendered, &definition); err != nil {
+		return fmt.Errorf("parsing rendered package template %q: %w", path, err)
+	}
+	if definition.APIVersion != v1beta1.APIVersion {
+		return fmt.Errorf("package template %q must use apiVersion %q", path, v1beta1.APIVersion)
+	}
+	return nil
 }
 
 func executePackageTemplate(path string, contents []byte, values value.Values) ([]byte, error) {
