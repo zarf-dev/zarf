@@ -111,7 +111,7 @@ func templateSourcePath(path string) (string, error) {
 	if !strings.HasSuffix(path, ".tpl.yaml") {
 		return "", fmt.Errorf("package template %q must end in .tpl.yaml", path)
 	}
-	return filepath.Abs(path)
+	return path, nil
 }
 
 func generatedTemplatePath(source string) string {
