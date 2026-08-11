@@ -447,9 +447,11 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 			filters.ByLocalOS(runtime.GOOS),
 			filters.ForDeploy(optionalComponents, true),
 		)
-		if err := pkgLayout.PackageDefinition.FilterComponents(filter); err != nil {
+		definition, err := filters.Apply(pkgLayout.PackageDefinition, filter)
+		if err != nil {
 			return nil, err
 		}
+		pkgLayout.PackageDefinition = definition
 	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)

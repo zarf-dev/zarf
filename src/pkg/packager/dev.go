@@ -88,9 +88,11 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		filters.ByLocalOS(runtime.GOOS),
 		filters.ForDeploy(opts.OptionalComponents, false),
 	)
-	if err := defined.PackageDefinition.FilterComponents(filter); err != nil {
+	definition, err := filters.Apply(defined.PackageDefinition, filter)
+	if err != nil {
 		return err
 	}
+	defined.PackageDefinition = definition
 
 	// If not building for airgap, strip out all images and repos.
 	if !opts.AirgapMode {

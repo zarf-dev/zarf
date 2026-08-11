@@ -51,7 +51,8 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 		}
 	}
 
-	if err := definition.FilterComponents(filters.ByLocalOS(runtime.GOOS)); err != nil {
+	definition, err := filters.Apply(definition, filters.ByLocalOS(runtime.GOOS))
+	if err != nil {
 		return err
 	}
 	pkg = definition.AsV1alpha1()

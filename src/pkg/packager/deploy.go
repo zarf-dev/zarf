@@ -152,9 +152,11 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	var err error
-	if err := pkgLayout.PackageDefinition.FilterComponents(filters.ByLocalOS(runtime.GOOS)); err != nil {
+	definition, err := filters.Apply(pkgLayout.PackageDefinition, filters.ByLocalOS(runtime.GOOS))
+	if err != nil {
 		return DeployResult{}, err
 	}
+	pkgLayout.PackageDefinition = definition
 	pkg = pkgLayout.AsV1alpha1()
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.SetVariables, opts.IsInteractive)

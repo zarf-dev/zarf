@@ -151,7 +151,8 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	}
 	if supportsFiltering(desc.Platform) {
 		definition := api.NewPackageDefinitionFromV1alpha1(pkg)
-		if err := definition.FilterComponents(opts.Filter); err != nil {
+		definition, err = filters.Apply(definition, opts.Filter)
+		if err != nil {
 			return nil, err
 		}
 		pkg = definition.AsV1alpha1()

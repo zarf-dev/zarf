@@ -88,56 +88,6 @@ func TestPackageDefinitionRemoveImagesAndRepositories(t *testing.T) {
 	require.Empty(t, beta.Components[0].Repositories)
 }
 
-func TestPackageDefinitionFilterViewIncludesFullComponentDefinition(t *testing.T) {
-	t.Parallel()
-
-	alphaComponent := v1alpha1.ZarfComponent{
-		Name:        "component",
-		Description: "a complete component",
-		Images:      []string{"registry.example.com/app:v1"},
-		Files: []v1alpha1.ZarfFile{
-			{Source: "app.yaml", Target: "/tmp/app.yaml"},
-		},
-	}
-	betaComponent := v1beta1.Component{
-		Name:        "component",
-		Description: "a complete component",
-		ComponentSpec: v1beta1.ComponentSpec{
-			Images: []v1beta1.Image{{Name: "registry.example.com/app:v1"}},
-			Files:  []v1beta1.File{{Source: "app.yaml", Destination: "/tmp/app.yaml"}},
-		},
-	}
-	tests := []struct {
-		name       string
-		definition PackageDefinition
-		want       any
-	}{
-		{
-			name: "v1alpha1",
-			definition: NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{
-				Components: []v1alpha1.ZarfComponent{alphaComponent},
-			}),
-			want: alphaComponent,
-		},
-		{
-			name: "v1beta1",
-			definition: NewPackageDefinitionFromV1beta1(v1beta1.Package{
-				Components: []v1beta1.Component{betaComponent},
-			}),
-			want: betaComponent,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			view := tt.definition.filterView()
-
-			require.Len(t, view.Components, 1)
-			require.Equal(t, tt.want, view.Components[0].Definition)
-		})
-	}
-}
-
 func TestPackageDefinitionSetMetadata(t *testing.T) {
 	t.Parallel()
 

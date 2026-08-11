@@ -156,7 +156,8 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	if err != nil {
 		return nil, err
 	}
-	if err := definition.FilterComponents(opts.Filter); err != nil {
+	definition, err = filters.Apply(definition, opts.Filter)
+	if err != nil {
 		return nil, err
 	}
 	pkgLayout := &PackageLayout{

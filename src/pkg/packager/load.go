@@ -224,7 +224,8 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 			return api.PackageDefinition{}, err
 		}
 		definition := api.NewPackageDefinitionFromV1alpha1(depPkg.Data)
-		if err := definition.FilterComponents(opts.Filter); err != nil {
+		definition, err = filters.Apply(definition, opts.Filter)
+		if err != nil {
 			return api.PackageDefinition{}, err
 		}
 		return definition, nil
