@@ -116,7 +116,7 @@ func (p *PackageDefinition) RetainComponents(indices []int) error {
 
 // OverrideNamespace overrides component namespaces when the definition permits it.
 func (p *PackageDefinition) OverrideNamespace(namespace string) error {
-	if !p.allowsNamespaceOverride() {
+	if !p.pkg.Metadata.PreventNamespaceOverride {
 		return fmt.Errorf("cannot override package namespace, metadata.allowNamespaceOverride is false")
 	}
 	if p.pkg.Kind != string(v1alpha1.ZarfPackageConfig) {
@@ -147,13 +147,6 @@ func (p *PackageDefinition) SetChartNamespace(componentName, chartName, namespac
 			}
 		}
 	}
-}
-
-func (p PackageDefinition) allowsNamespaceOverride() bool {
-	if p.pkg.Metadata.AllowNamespaceOverride != nil {
-		return *p.pkg.Metadata.AllowNamespaceOverride
-	}
-	return !p.pkg.Metadata.PreventNamespaceOverride
 }
 
 func (p PackageDefinition) uniqueNamespaces() []string {

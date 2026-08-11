@@ -180,6 +180,62 @@ func TestPackageDefinitionSetDifferentialBuild(t *testing.T) {
 	require.Empty(t, alpha.Build.DifferentialMissing)
 }
 
+func TestPackageDefinitionNamespaceOverrideConversions(t *testing.T) {
+	t.Parallel()
+
+	boolPtr := func(value bool) *bool { return &value }
+	tests := []struct {
+		name                    string
+		definition              PackageDefinition
+		allowsNamespaceOverride bool
+		explicitAlphaValue      bool
+	}{
+		{
+			name:                    "v1alpha1 default allows namespace override",
+			definition:              NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{}),
+			allowsNamespaceOverride: true,
+		},
+		{
+			name: "v1alpha1 explicitly prevents namespace override",
+			definition: NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{AllowNamespaceOverride: boolPtr(false)},
+			}),
+			allowsNamespaceOverride: false,
+			explicitAlphaValue:      true,
+		},
+		{
+			name:                    "v1beta1 allows namespace override",
+			definition:              NewPackageDefinitionFromV1beta1(v1beta1.Package{}),
+			allowsNamespaceOverride: true,
+			explicitAlphaValue:      true,
+		},
+		{
+			name: "v1beta1 prevents namespace override",
+			definition: NewPackageDefinitionFromV1beta1(v1beta1.Package{
+				Metadata: v1beta1.PackageMetadata{PreventNamespaceOverride: true},
+			}),
+			allowsNamespaceOverride: false,
+			explicitAlphaValue:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			alpha := tt.definition.AsV1alpha1()
+			beta := tt.definition.AsV1beta1()
+
+			require.Equal(t, tt.allowsNamespaceOverride, alpha.AllowsNamespaceOverride())
+			require.Equal(t, !tt.allowsNamespaceOverride, beta.Metadata.PreventNamespaceOverride)
+			if tt.explicitAlphaValue {
+				require.NotNil(t, alpha.Metadata.AllowNamespaceOverride)
+				require.Equal(t, tt.allowsNamespaceOverride, *alpha.Metadata.AllowNamespaceOverride)
+			} else {
+				require.Nil(t, alpha.Metadata.AllowNamespaceOverride)
+			}
+		})
+	}
+}
+
 func TestPackageDefinitionSetMetadata(t *testing.T) {
 	t.Parallel()
 
