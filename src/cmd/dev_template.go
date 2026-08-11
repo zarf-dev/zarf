@@ -6,6 +6,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,14 +17,16 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
 const packageTemplateFilename = "zarf.tpl.yaml"
 
 type devTemplateOptions struct {
-	set     map[string]string
-	setFile string
+	set            map[string]string
+	setFile        string
+	skipValidation bool
 }
 
 func newDevTemplateCommand() *cobra.Command {
@@ -39,6 +42,7 @@ func newDevTemplateCommand() *cobra.Command {
 	}
 	cmd.Flags().StringToStringVar(&o.set, "set", nil, "Set a package template value (key=value)")
 	cmd.Flags().StringVar(&o.setFile, "set-file", "", "YAML file containing package template values")
+	cmd.Flags().BoolVar(&o.skipValidation, "skip-validation", false, "Skip schema validation of the rendered definition")
 	return cmd
 }
 
@@ -70,8 +74,18 @@ func (o *devTemplateOptions) run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := validateTemplateAPIVersion(source, rendered); err != nil {
+	kind, err := validateTemplateAPIVersion(source, rendered)
+	if err != nil {
 		return err
+	}
+	if !o.skipValidation {
+		if err := validateTemplateSchema(source, rendered, kind); err != nil {
+			var lintErr *lint.LintError
+			if errors.As(err, &lintErr) {
+				PrintFindings(ctx, lintErr)
+			}
+			return err
+		}
 	}
 	output := generatedTemplatePath(source)
 	if err := os.WriteFile(output, rendered, 0o644); err != nil {
@@ -102,15 +116,38 @@ func generatedTemplatePath(source string) string {
 	return strings.TrimSuffix(source, ".tpl.yaml") + ".gen.yaml"
 }
 
-func validateTemplateAPIVersion(path string, rendered []byte) error {
+func validateTemplateAPIVersion(path string, rendered []byte) (v1beta1.PackageKind, error) {
 	var definition struct {
-		APIVersion string `yaml:"apiVersion"`
+		APIVersion string              `yaml:"apiVersion"`
+		Kind       v1beta1.PackageKind `yaml:"kind"`
 	}
 	if err := yaml.Unmarshal(rendered, &definition); err != nil {
-		return fmt.Errorf("parsing rendered package template %q: %w", path, err)
+		return "", fmt.Errorf("parsing rendered package template %q: %w", path, err)
 	}
 	if definition.APIVersion != v1beta1.APIVersion {
-		return fmt.Errorf("package template %q must use apiVersion %q", path, v1beta1.APIVersion)
+		return "", fmt.Errorf("package template %q must use apiVersion %q", path, v1beta1.APIVersion)
+	}
+	return definition.Kind, nil
+}
+
+func validateTemplateSchema(path string, rendered []byte, kind v1beta1.PackageKind) error {
+	var (
+		findings []lint.PackageFinding
+		err      error
+	)
+	switch kind {
+	case "", v1beta1.ZarfPackageConfig:
+		findings, err = lint.ValidatePackageSchemaBytesV1Beta1(rendered)
+	case v1beta1.ZarfComponentConfig:
+		findings, err = lint.ValidateComponentConfigSchemaBytesV1Beta1(rendered)
+	default:
+		return fmt.Errorf("package template %q has unsupported kind %q", path, kind)
+	}
+	if err != nil {
+		return fmt.Errorf("validating rendered package template %q: %w", path, err)
+	}
+	if len(findings) > 0 {
+		return &lint.LintError{PackageName: path, Findings: findings}
 	}
 	return nil
 }

@@ -96,6 +96,8 @@ metadata:
   name: app
   annotations:
     [[ .annotation ]]
+components:
+  - name: app
 `), 0o644))
 
 	o := devTemplateOptions{set: map[string]string{
@@ -111,7 +113,39 @@ metadata:
   name: app
   annotations:
     example.com/owner: platform-team
+components:
+  - name: app
 `, string(generated))
+}
+
+func TestDevTemplateRejectsInvalidSchema(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, packageTemplateFilename)
+	require.NoError(t, os.WriteFile(source, []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: app
+`), 0o644))
+
+	err := (&devTemplateOptions{}).run(context.Background(), []string{source})
+	require.ErrorContains(t, err, "linting error found")
+	_, statErr := os.Stat(filepath.Join(dir, "zarf.gen.yaml"))
+	require.ErrorIs(t, statErr, os.ErrNotExist)
+}
+
+func TestDevTemplateSkipsSchemaValidation(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, packageTemplateFilename)
+	require.NoError(t, os.WriteFile(source, []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: app
+`), 0o644))
+
+	o := devTemplateOptions{skipValidation: true}
+	require.NoError(t, o.run(context.Background(), []string{source}))
+	_, err := os.Stat(filepath.Join(dir, "zarf.gen.yaml"))
+	require.NoError(t, err)
 }
 
 func TestDevTemplateRequiresAllValues(t *testing.T) {
