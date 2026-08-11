@@ -30,8 +30,6 @@ type VersionRequirement struct {
 
 // PackageDefinition is a concrete package source backed by the generic package representation.
 type PackageDefinition struct {
-	// pkg is the canonical representation used by Zarf's internal package-processing code.
-	// Intentionally unavailable to SDK consumers who can either use targeted setters or get the package as a specific API version
 	pkg internaltypes.Package
 }
 
