@@ -99,7 +99,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		}
 		definition = updatedDefinition
 		pkg = definition.AsV1alpha1()
-		definition.SetBuildDifferential(true, opts.DifferentialPackage.Metadata.Version, nil)
+		definition.SetDifferentialBuild(opts.DifferentialPackage.Metadata.Version, nil)
 	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -817,36 +817,32 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 func recordPackageMetadata(definition *api.PackageDefinition, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath string) error {
 	pkg := definition.AsV1alpha1()
 	now := time.Now()
+	buildData := api.BuildData{
+		Architecture:    pkg.Metadata.Architecture,
+		Timestamp:       now.Format(v1alpha1.BuildTimestampFormat),
+		Version:         config.CLIVersion,
+		Flavor:          flavor,
+		ProvenanceFiles: []string{layout.Checksums},
+	}
 	if withBuildMachineInfo {
 		// Just use $USER env variable to avoid CGO issue.
 		// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
 		// Record the name of the user creating the package.
 		if runtime.GOOS == "windows" {
-			definition.SetBuildUser(os.Getenv("USERNAME"))
+			buildData.User = os.Getenv("USERNAME")
 		} else {
-			definition.SetBuildUser(os.Getenv("USER"))
+			buildData.User = os.Getenv("USER")
 		}
 
 		// Record the hostname of the package creation terminal.
 		//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
 		hostname, _ := os.Hostname()
-		definition.SetBuildHostname(hostname)
+		buildData.Hostname = hostname
 	}
 
 	if pkg.IsInitConfig() && pkg.Metadata.Version == "" {
 		definition.SetMetadataVersion(config.CLIVersion)
 	}
-
-	definition.SetBuildArchitecture(pkg.Metadata.Architecture)
-
-	// Record the Zarf Version the CLI was built with.
-	definition.SetBuildVersion(config.CLIVersion)
-
-	// Record the time of package creation.
-	definition.SetBuildTimestamp(now.Format(v1alpha1.BuildTimestampFormat))
-
-	// Record the flavor of Zarf used to build this package (if any).
-	definition.SetBuildFlavor(flavor)
 
 	hasIndex := false
 	if buildPath != "" {
@@ -856,7 +852,7 @@ func recordPackageMetadata(definition *api.PackageDefinition, flavor string, reg
 			return fmt.Errorf("failed to inspect image layout: %w", err)
 		}
 	}
-	definition.SetBuildVersionRequirements(collectVersionRequirements(pkg, hasIndex))
+	buildData.VersionRequirements = collectVersionRequirements(pkg, hasIndex)
 
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
@@ -864,14 +860,12 @@ func recordPackageMetadata(definition *api.PackageDefinition, flavor string, reg
 		overrides[registryOverrides[i].Source] = registryOverrides[i].Override
 	}
 
-	definition.SetBuildRegistryOverrides(overrides)
+	buildData.RegistryOverrides = overrides
 
 	// Set signed to false by default; this is updated if signing occurs.
-	definition.SetBuildSigned(false)
-
-	// Record checksums.txt as a supplemental file — it cannot checksum itself.
-	// Signature files are appended by SignPackage() if signing occurs.
-	definition.SetProvenanceFiles([]string{layout.Checksums})
+	signed := false
+	buildData.Signed = &signed
+	definition.SetBuildData(buildData)
 
 	return nil
 }

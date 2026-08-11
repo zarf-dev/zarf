@@ -118,13 +118,42 @@ func TestPackageDefinitionRetainComponents_invalidIndexDoesNotModifyDefinition(t
 	require.Equal(t, []v1alpha1.ZarfComponent{{Name: "first"}, {Name: "second"}}, definition.AsV1alpha1().Components)
 }
 
-func TestPackageDefinitionVersionRequirements(t *testing.T) {
+func TestPackageDefinitionSetBuildData(t *testing.T) {
 	t.Parallel()
 
 	definition := NewPackageDefinitionFromV1beta1(v1beta1.Package{})
-	definition.SetBuildVersionRequirements([]VersionRequirement{{Version: "v1.0.0", Reason: "feature"}})
+	signed := false
+	buildData := BuildData{
+		Hostname:            "build-host",
+		User:                "builder",
+		Architecture:        "amd64",
+		Timestamp:           "timestamp",
+		Version:             "v1.0.0",
+		Migrations:          []string{"migration"},
+		RegistryOverrides:   map[string]string{"registry.example.com": "registry.internal"},
+		Flavor:              "fips",
+		Signed:              &signed,
+		VersionRequirements: []VersionRequirement{{Version: "v1.0.0", Reason: "feature"}},
+		ProvenanceFiles:     []string{"checksums.txt"},
+	}
+	definition.SetBuildData(buildData)
+	buildData.Migrations[0] = "changed"
+	buildData.RegistryOverrides["registry.example.com"] = "changed"
+	signed = true
 	definition.AddVersionRequirement(VersionRequirement{Version: "v2.0.0", Reason: "another feature"})
 	definition.AddVersionRequirement(VersionRequirement{Version: "v1.0.0", Reason: "feature"})
+
+	beta := definition.AsV1beta1()
+	require.Equal(t, "build-host", beta.Build.Hostname)
+	require.Equal(t, "builder", beta.Build.User)
+	require.Equal(t, "amd64", beta.Build.Architecture)
+	require.Equal(t, "timestamp", beta.Build.Timestamp)
+	require.Equal(t, "v1.0.0", beta.Build.Version)
+	require.Equal(t, []string{"migration"}, beta.Build.Migrations)
+	require.Equal(t, map[string]string{"registry.example.com": "registry.internal"}, beta.Build.RegistryOverrides)
+	require.Equal(t, "fips", beta.Build.Flavor)
+	require.False(t, *beta.Build.Signed)
+	require.Equal(t, []string{"checksums.txt"}, beta.Build.ProvenanceFiles)
 
 	require.Equal(t, []v1alpha1.VersionRequirement{
 		{Version: "v1.0.0", Reason: "feature"},
@@ -133,7 +162,21 @@ func TestPackageDefinitionVersionRequirements(t *testing.T) {
 	require.Equal(t, []v1beta1.VersionRequirement{
 		{Version: "v1.0.0", Reason: "feature"},
 		{Version: "v2.0.0", Reason: "another feature"},
-	}, definition.AsV1beta1().Build.VersionRequirements)
+	}, beta.Build.VersionRequirements)
+}
+
+func TestPackageDefinitionSetDifferentialBuild(t *testing.T) {
+	t.Parallel()
+
+	definition := NewPackageDefinitionFromV1beta1(v1beta1.Package{})
+	missing := []string{"component"}
+	definition.SetDifferentialBuild("v1.0.0", missing)
+	missing[0] = "changed"
+
+	alpha := definition.AsV1alpha1()
+	require.True(t, alpha.Build.Differential)
+	require.Equal(t, "v1.0.0", alpha.Build.DifferentialPackageVersion)
+	require.Equal(t, []string{"component"}, alpha.Build.DifferentialMissing)
 }
 
 func TestPackageDefinitionSetMetadata(t *testing.T) {

@@ -28,6 +28,21 @@ type VersionRequirement struct {
 	Reason  string
 }
 
+// BuildData contains version-neutral build metadata recorded during package assembly.
+type BuildData struct {
+	Hostname            string
+	User                string
+	Architecture        string
+	Timestamp           string
+	Version             string
+	Migrations          []string
+	RegistryOverrides   map[string]string
+	Flavor              string
+	Signed              *bool
+	VersionRequirements []VersionRequirement
+	ProvenanceFiles     []string
+}
+
 // PackageDefinition is a concrete package source backed by the generic package representation.
 type PackageDefinition struct {
 	pkg internaltypes.Package
@@ -203,61 +218,31 @@ func (p *PackageDefinition) SetMetadataArchitecture(architecture string) {
 	p.pkg.Metadata.Architecture = architecture
 }
 
-// SetBuildHostname sets the host that created the package.
-func (p *PackageDefinition) SetBuildHostname(hostname string) {
-	p.pkg.Build.Hostname = hostname
+// SetBuildData records the version-neutral build metadata generated during package assembly.
+func (p *PackageDefinition) SetBuildData(buildData BuildData) {
+	p.pkg.Build.Hostname = buildData.Hostname
+	p.pkg.Build.User = buildData.User
+	p.pkg.Build.Architecture = buildData.Architecture
+	p.pkg.Build.Timestamp = buildData.Timestamp
+	p.pkg.Build.Version = buildData.Version
+	p.pkg.Build.Migrations = slices.Clone(buildData.Migrations)
+	p.pkg.Build.RegistryOverrides = maps.Clone(buildData.RegistryOverrides)
+	p.pkg.Build.Flavor = buildData.Flavor
+	p.pkg.Build.Signed = cloneBool(buildData.Signed)
+	p.pkg.Build.ProvenanceFiles = slices.Clone(buildData.ProvenanceFiles)
+	p.pkg.Build.VersionRequirements = versionRequirementsToInternal(buildData.VersionRequirements)
 }
 
-// SetBuildUser sets the user that created the package.
-func (p *PackageDefinition) SetBuildUser(user string) {
-	p.pkg.Build.User = user
-}
-
-// SetBuildArchitecture sets the package build architecture.
-func (p *PackageDefinition) SetBuildArchitecture(architecture string) {
-	p.pkg.Build.Architecture = architecture
-}
-
-// SetBuildTimestamp sets the package build timestamp.
-func (p *PackageDefinition) SetBuildTimestamp(timestamp string) {
-	p.pkg.Build.Timestamp = timestamp
-}
-
-// SetBuildVersion sets the Zarf CLI version used to build the package.
-func (p *PackageDefinition) SetBuildVersion(version string) {
-	p.pkg.Build.Version = version
-}
-
-// SetBuildMigrations sets the package build migrations.
-func (p *PackageDefinition) SetBuildMigrations(migrations []string) {
-	p.pkg.Build.Migrations = slices.Clone(migrations)
-}
-
-// SetBuildRegistryOverrides sets the package build registry overrides.
-func (p *PackageDefinition) SetBuildRegistryOverrides(registryOverrides map[string]string) {
-	p.pkg.Build.RegistryOverrides = maps.Clone(registryOverrides)
-}
-
-// SetBuildDifferential sets the package differential build data.
-func (p *PackageDefinition) SetBuildDifferential(differential bool, packageVersion string, missing []string) {
-	p.pkg.Build.Differential = differential
+// SetDifferentialBuild records the base package version and missing components for a differential build.
+func (p *PackageDefinition) SetDifferentialBuild(packageVersion string, missing []string) {
+	p.pkg.Build.Differential = true
 	p.pkg.Build.DifferentialPackageVersion = packageVersion
 	p.pkg.Build.DifferentialMissing = slices.Clone(missing)
-}
-
-// SetBuildFlavor sets the package build flavor.
-func (p *PackageDefinition) SetBuildFlavor(flavor string) {
-	p.pkg.Build.Flavor = flavor
 }
 
 // SetBuildSigned sets whether the package build is signed.
 func (p *PackageDefinition) SetBuildSigned(signed bool) {
 	p.pkg.Build.Signed = &signed
-}
-
-// SetProvenanceFiles sets the package build provenance files.
-func (p *PackageDefinition) SetProvenanceFiles(files []string) {
-	p.pkg.Build.ProvenanceFiles = slices.Clone(files)
 }
 
 // AddProvenanceFile records a package build provenance file once.
@@ -268,19 +253,26 @@ func (p *PackageDefinition) AddProvenanceFile(file string) {
 	p.pkg.Build.ProvenanceFiles = append(p.pkg.Build.ProvenanceFiles, file)
 }
 
-// SetBuildVersionRequirements sets the package build version requirements.
-func (p *PackageDefinition) SetBuildVersionRequirements(requirements []VersionRequirement) {
+func versionRequirementsToInternal(requirements []VersionRequirement) []internaltypes.VersionRequirement {
 	if len(requirements) == 0 {
-		p.pkg.Build.VersionRequirements = nil
-		return
+		return nil
 	}
-	p.pkg.Build.VersionRequirements = make([]internaltypes.VersionRequirement, len(requirements))
+	converted := make([]internaltypes.VersionRequirement, len(requirements))
 	for i, requirement := range requirements {
-		p.pkg.Build.VersionRequirements[i] = internaltypes.VersionRequirement{
+		converted[i] = internaltypes.VersionRequirement{
 			Version: requirement.Version,
 			Reason:  requirement.Reason,
 		}
 	}
+	return converted
+}
+
+func cloneBool(value *bool) *bool {
+	if value == nil {
+		return nil
+	}
+	cloned := *value
+	return &cloned
 }
 
 // AddVersionRequirement records a package build version requirement once.
