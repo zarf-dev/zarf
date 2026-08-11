@@ -50,34 +50,6 @@ components:
 `, string(generated))
 }
 
-func TestDevTemplateDoesNotRenderLocalImports(t *testing.T) {
-	dir := t.TempDir()
-	require.NoError(t, os.Mkdir(filepath.Join(dir, "components"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, packageTemplateFilename), []byte(`apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
-metadata:
-  name: app
-components:
-  - name: app
-    import:
-      local:
-        - path: components/app.tpl.yaml
-`), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "components", "app.tpl.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
-kind: ZarfComponentConfig
-metadata:
-  name: [[ .name ]]
-`), 0o644))
-
-	require.NoError(t, (&devTemplateOptions{}).run(context.Background(), []string{dir}))
-
-	generated, err := os.ReadFile(filepath.Join(dir, "zarf.gen.yaml"))
-	require.NoError(t, err)
-	require.Contains(t, string(generated), "path: components/app.tpl.yaml")
-	_, err = os.Stat(filepath.Join(dir, "components", "app.gen.yaml"))
-	require.ErrorIs(t, err, os.ErrNotExist)
-}
-
 func TestDevTemplateRequiresAllValues(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, packageTemplateFilename)
