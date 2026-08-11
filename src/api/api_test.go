@@ -88,6 +88,36 @@ func TestPackageDefinitionRemoveImagesAndRepositories(t *testing.T) {
 	require.Empty(t, beta.Components[0].Repositories)
 }
 
+func TestPackageDefinitionRetainComponents(t *testing.T) {
+	t.Parallel()
+
+	definition := NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{
+		Components: []v1alpha1.ZarfComponent{
+			{Name: "first"},
+			{Name: "second"},
+			{Name: "third"},
+		},
+	})
+
+	err := definition.RetainComponents([]int{2, 0})
+
+	require.NoError(t, err)
+	require.Equal(t, []v1alpha1.ZarfComponent{{Name: "third"}, {Name: "first"}}, definition.AsV1alpha1().Components)
+}
+
+func TestPackageDefinitionRetainComponents_invalidIndexDoesNotModifyDefinition(t *testing.T) {
+	t.Parallel()
+
+	definition := NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{
+		Components: []v1alpha1.ZarfComponent{{Name: "first"}, {Name: "second"}},
+	})
+
+	err := definition.RetainComponents([]int{0, 2})
+
+	require.EqualError(t, err, "component index 2 out of range")
+	require.Equal(t, []v1alpha1.ZarfComponent{{Name: "first"}, {Name: "second"}}, definition.AsV1alpha1().Components)
+}
+
 func TestPackageDefinitionSetMetadata(t *testing.T) {
 	t.Parallel()
 

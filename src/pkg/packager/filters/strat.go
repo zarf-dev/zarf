@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	internaltypes "github.com/zarf-dev/zarf/src/internal/api/types"
 )
 
 // ComponentView is the stable projection a filter sees.
@@ -47,46 +47,36 @@ func Apply(definition api.PackageDefinition, filter ComponentFilterStrategy) (ap
 		return api.PackageDefinition{}, err
 	}
 
-	components := make([]internaltypes.Component, 0, len(indices))
-	for _, idx := range indices {
-		if idx < 0 || idx >= len(definition.Pkg.Components) {
-			return api.PackageDefinition{}, fmt.Errorf("filter returned index %d out of range", idx)
-		}
-		components = append(components, definition.Pkg.Components[idx])
+	if err := definition.RetainComponents(indices); err != nil {
+		return api.PackageDefinition{}, fmt.Errorf("filter returned invalid component index: %w", err)
 	}
-	definition.Pkg.Components = components
 	return definition, nil
 }
 
 func packageView(definition api.PackageDefinition) PackageView {
-	definitions := componentDefinitionsForDisplay(definition)
-	components := make([]ComponentView, 0, len(definition.Pkg.Components))
-	for idx, component := range definition.Pkg.Components {
+	v1alpha1Definition := definition.AsV1alpha1()
+	v1beta1Definition := definition.AsV1beta1()
+	components := make([]ComponentView, 0, len(v1alpha1Definition.Components))
+	for idx, alphaComponent := range v1alpha1Definition.Components {
+		betaComponent := v1beta1Definition.Components[idx]
 		components = append(components, ComponentView{
-			Name:        component.Name,
-			Description: component.Description,
-			Optional:    component.Optional,
-			Default:     component.Default,
-			Group:       component.Group,
-			OnlyLocalOS: component.Target.OS,
-			Definition:  definitions[idx],
+			Name:        alphaComponent.Name,
+			Description: alphaComponent.Description,
+			Optional:    betaComponent.Optional,
+			Default:     alphaComponent.Default,
+			Group:       alphaComponent.DeprecatedGroup,
+			OnlyLocalOS: betaComponent.Target.OS,
+			Definition:  componentDefinitionForDisplay(definition, alphaComponent, betaComponent),
 		})
 	}
 	return PackageView{Components: components}
 }
 
-func componentDefinitionsForDisplay(definition api.PackageDefinition) []any {
-	definitions := make([]any, len(definition.Pkg.Components))
+func componentDefinitionForDisplay(definition api.PackageDefinition, v1alpha1Component v1alpha1.ZarfComponent, v1beta1Component v1beta1.Component) any {
 	if definition.OriginalAPIVersion() == v1beta1.APIVersion {
-		for idx, component := range definition.AsV1beta1().Components {
-			definitions[idx] = component
-		}
-		return definitions
+		return v1beta1Component
 	}
-	for idx, component := range definition.AsV1alpha1().Components {
-		definitions[idx] = component
-	}
-	return definitions
+	return v1alpha1Component
 }
 
 // comboFilter is a filter that applies a sequence of filters.

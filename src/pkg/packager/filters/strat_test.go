@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	internaltypes "github.com/zarf-dev/zarf/src/internal/api/types"
 )
 
 func TestCombine(t *testing.T) {
@@ -64,14 +63,14 @@ func TestCombine(t *testing.T) {
 func TestApply(t *testing.T) {
 	t.Parallel()
 
-	definition := api.PackageDefinition{Pkg: internaltypes.Package{Components: []internaltypes.Component{
+	definition := api.NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{
 		{Name: "keep"},
-		{Name: "discard", Target: internaltypes.ComponentTarget{OS: "windows"}},
-	}}}
+		{Name: "discard", Only: v1alpha1.ZarfComponentOnlyTarget{LocalOS: "windows"}},
+	}})
 
 	filtered, err := Apply(definition, ByLocalOS("linux"))
 
 	require.NoError(t, err)
-	require.Len(t, definition.Pkg.Components, 2)
-	require.Equal(t, []internaltypes.Component{{Name: "keep"}}, filtered.Pkg.Components)
+	require.Len(t, definition.AsV1alpha1().Components, 2)
+	require.Equal(t, []v1alpha1.ZarfComponent{{Name: "keep"}}, filtered.AsV1alpha1().Components)
 }
