@@ -6,13 +6,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func TestOverridePackageNamespace(t *testing.T) {
+func TestPackageDefinitionOverrideNamespace(t *testing.T) {
 	t.Parallel()
 
 	allow := false
@@ -230,17 +231,18 @@ func TestOverridePackageNamespace(t *testing.T) {
 				},
 			},
 			namespace:   "test-override",
-			expectedErr: "cannot override package namespace, metadata.allowNamespaceOverride is false",
+			expectedErr: "package explicitly prevents namespace overrides",
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			err := OverridePackageNamespace(&tc.pkg, tc.namespace)
+			definition := api.NewPackageDefinitionFromV1alpha1(tc.pkg)
+			err := definition.OverrideNamespace(tc.namespace)
 			if tc.expectedErr == "" {
 				require.NoError(t, err)
-				validateNamespaceUpdates(t, tc.pkg, tc.namespace, tc.expectedWaitNamespaces)
+				validateNamespaceUpdates(t, definition.AsV1alpha1(), tc.namespace, tc.expectedWaitNamespaces)
 			} else {
 				require.ErrorContains(t, err, tc.expectedErr)
 			}
@@ -280,7 +282,7 @@ func collectWaitNamespaces(actions v1alpha1.ZarfComponentActions) []string {
 	return ns
 }
 
-func TestOverrideComponentNamespacesActions(t *testing.T) {
+func TestPackageDefinitionOverrideNamespaceUpdatesAllActionSets(t *testing.T) {
 	t.Parallel()
 
 	makeWaitAction := func(ns string) v1alpha1.ZarfComponentAction {
@@ -392,7 +394,13 @@ func TestOverrideComponentNamespacesActions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			overrideComponentNamespaces(&tt.pkg, tt.original, tt.target)
+			tt.pkg.Kind = v1alpha1.ZarfPackageConfig
+			tt.pkg.Components = append(tt.pkg.Components, v1alpha1.ZarfComponent{
+				Charts: []v1alpha1.ZarfChart{{Name: "namespace-source", Namespace: tt.original}},
+			})
+			definition := api.NewPackageDefinitionFromV1alpha1(tt.pkg)
+			require.NoError(t, definition.OverrideNamespace(tt.target))
+			tt.pkg = definition.AsV1alpha1()
 			var actual []string
 			for _, comp := range tt.pkg.Components {
 				actual = append(actual, collectWaitNamespaces(comp.Actions)...)
