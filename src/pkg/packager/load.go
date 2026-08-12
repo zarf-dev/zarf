@@ -207,7 +207,7 @@ func identifySource(src string) (string, error) {
 }
 
 // GetPackageFromSourceOrCluster retrieves a package definition from a source or cluster.
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, namespaceOverride string, opts LoadOptions) (_ api.PackageDefinition, err error) {
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, namespaceOverride string, opts LoadOptions) (api.PackageDefinition, error) {
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
