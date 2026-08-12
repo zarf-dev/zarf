@@ -23,6 +23,14 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
 
+func TestInjectorDaemonsetImageUsesRequestedImage(t *testing.T) {
+	t.Parallel()
+
+	image, err := injectorDaemonsetImage(t.Context(), nil, "registry.example.com/zarf/injector:latest")
+	require.NoError(t, err)
+	require.Equal(t, "registry.example.com/zarf/injector:latest", image)
+}
+
 func TestInternalServicesFor(t *testing.T) {
 	t.Parallel()
 

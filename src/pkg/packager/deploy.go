@@ -76,6 +76,7 @@ type DeployOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	StorageClass   string
 	InjectorPort   int
+	InjectorImage  string
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
@@ -395,11 +396,11 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	if isSeedRegistry {
 		switch d.s.RegistryInfo.RegistryMode {
 		case state.RegistryModeProxy:
-			var err error
-			d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImage(ctx)
+			injectorImage, err := injectorDaemonsetImage(ctx, d.c, opts.InjectorImage)
 			if err != nil {
 				return nil, err
 			}
+			d.s.InjectorInfo.Image = injectorImage
 
 			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name)
 			if err != nil {
@@ -412,6 +413,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 				InjectorNodePort: uint16(d.s.InjectorInfo.Port),
 				RegistryNodePort: uint16(d.s.RegistryInfo.Port),
 				IPFamily:         d.s.IPFamily,
+				Image:            opts.InjectorImage,
 			})
 			if err != nil {
 				return nil, err
@@ -440,6 +442,13 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	}
 
 	return charts, nil
+}
+
+func injectorDaemonsetImage(ctx context.Context, c *cluster.Cluster, requestedImage string) (string, error) {
+	if requestedImage != "" {
+		return requestedImage, nil
+	}
+	return c.GetInjectorDaemonsetImage(ctx)
 }
 
 func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {
