@@ -22,7 +22,10 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
-const packageTemplateFilename = "zarf.tpl.yaml"
+const (
+	packageTemplateExtension = ".tpl.yaml"
+	packageTemplateFilename  = "zarf" + packageTemplateExtension
+)
 
 type devTemplateOptions struct {
 	set            map[string]string
@@ -108,14 +111,14 @@ func templateSourcePath(path string) (string, error) {
 	if info.IsDir() {
 		path = filepath.Join(path, packageTemplateFilename)
 	}
-	if !strings.HasSuffix(path, ".tpl.yaml") {
-		return "", fmt.Errorf("package template %q must end in .tpl.yaml", path)
+	if !strings.HasSuffix(path, packageTemplateExtension) {
+		return "", fmt.Errorf("package template %q must end in %s", path, packageTemplateExtension)
 	}
 	return path, nil
 }
 
 func generatedTemplatePath(source string) string {
-	return strings.TrimSuffix(source, ".tpl.yaml") + ".gen.yaml"
+	return strings.TrimSuffix(source, packageTemplateExtension) + ".gen.yaml"
 }
 
 func validateTemplateAPIVersion(path string, rendered []byte) (v1beta1.PackageKind, error) {
