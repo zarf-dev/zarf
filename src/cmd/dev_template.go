@@ -70,7 +70,7 @@ func (o *devTemplateOptions) run(ctx context.Context, args []string) error {
 		return fmt.Errorf("unable to parse package template values: %w", err)
 	}
 	// cli is reserved so templates can reliably use [[ .cli.version ]] to create versioned init packages.
-	values["cli"] = map[string]any{"version": config.CLIVersion}
+	values["cli"] = new(value.Values{"version": config.CLIVersion})
 
 	contents, err := os.ReadFile(source)
 	if err != nil {
@@ -86,8 +86,7 @@ func (o *devTemplateOptions) run(ctx context.Context, args []string) error {
 	}
 	if !o.skipValidation {
 		if err := validateTemplateSchema(source, rendered, kind); err != nil {
-			var lintErr *lint.LintError
-			if errors.As(err, &lintErr) {
+			if lintErr, ok := errors.AsType[*lint.LintError](err); ok{
 				PrintFindings(ctx, lintErr)
 			}
 			return err
