@@ -87,7 +87,7 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(newRegistryLogoutCommand())
 	cmd.AddCommand(newRegistryCopyCommand(&craneOptions))
 	cmd.AddCommand(newRegistryCatalogCommand(&craneOptions))
-	cmd.AddCommand(newRegistryListCommand(o))
+	cmd.AddCommand(newRegistryListCommand())
 
 	// TODO(soltysh): consider splitting craneOptions to be per command
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPush, &craneOptions, lang.CmdToolsRegistryPushExample, 1))
