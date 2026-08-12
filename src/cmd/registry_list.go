@@ -35,7 +35,7 @@ func newRegistryListCommand() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Example: lang.CmdToolsRegistryListExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// --insecure used to mean both of these at once; keep that behavior for anyone still using it.
+			// --insecure used to mean both of these at once; keeping this behavior for anyone still using it.
 			if deprecatedInsecure {
 				plainHTTP = true
 				insecureSkipTLSVerify = true
