@@ -33,8 +33,9 @@ type devTemplateOptions struct {
 func newDevTemplateCommand(v *viper.Viper) *cobra.Command {
 	o := &devTemplateOptions{}
 	cmd := &cobra.Command{
-		Use:    "template [ TEMPLATE_FILE | DIRECTORY ]",
-		Short:  "Renders a template into a generated definition",
+		Use:   "template [ TEMPLATE_FILE | DIRECTORY ]",
+		Short: "Renders a template into a generated definition",
+		// Once v1beta1 is released this command should be unhidden
 		Hidden: true,
 		Args:   cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -86,7 +87,7 @@ func (o *devTemplateOptions) run(ctx context.Context, args []string) error {
 	}
 	if !o.skipValidation {
 		if err := validateTemplateSchema(source, rendered, kind); err != nil {
-			if lintErr, ok := errors.AsType[*lint.LintError](err); ok{
+			if lintErr, ok := errors.AsType[*lint.LintError](err); ok {
 				PrintFindings(ctx, lintErr)
 			}
 			return err
