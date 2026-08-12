@@ -259,3 +259,157 @@ func TestPackageDefinitionSetMetadata(t *testing.T) {
 	require.Equal(t, map[string]string{"new": "value"}, alpha.Metadata.Annotations)
 	require.Equal(t, "arm64", alpha.Metadata.Architecture)
 }
+
+func TestPackageDefinitionOverrideNamespace(t *testing.T) {
+	t.Parallel()
+
+	falsePtr := func() *bool { value := false; return &value }
+	newDefinition := func(pkg v1alpha1.ZarfPackage) PackageDefinition {
+		return NewPackageDefinitionFromV1alpha1(pkg)
+	}
+	tests := []struct {
+		name        string
+		definition  PackageDefinition
+		namespace   string
+		expectedErr string
+		verify      func(*testing.T, v1alpha1.ZarfPackage)
+	}{
+		{
+			name: "updates charts manifests and matching wait actions",
+			definition: newDefinition(v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{{
+					Charts:    []v1alpha1.ZarfChart{{Name: "chart", Namespace: "original"}},
+					Manifests: []v1alpha1.ZarfManifest{{Name: "manifest", Namespace: "original"}},
+					Actions: v1alpha1.ZarfComponentActions{OnDeploy: v1alpha1.ZarfComponentActionSet{
+						After: []v1alpha1.ZarfComponentAction{namespaceWaitAction("original"), namespaceWaitAction("other")},
+					}},
+				}},
+			}),
+			namespace: "target",
+			verify: func(t *testing.T, pkg v1alpha1.ZarfPackage) {
+				t.Helper()
+				require.Equal(t, "target", pkg.Components[0].Charts[0].Namespace)
+				require.Equal(t, "target", pkg.Components[0].Manifests[0].Namespace)
+				require.Equal(t, []string{"target", "other"}, namespaceWaitNamespaces(pkg.Components[0].Actions))
+			},
+		},
+		{
+			name: "updates every action lifecycle and timing slot",
+			definition: newDefinition(v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{{
+					Charts:  []v1alpha1.ZarfChart{{Name: "chart", Namespace: "original"}},
+					Actions: allNamespaceWaitActions("original"),
+				}},
+			}),
+			namespace: "target",
+			verify: func(t *testing.T, pkg v1alpha1.ZarfPackage) {
+				t.Helper()
+				require.ElementsMatch(t, []string{"target", "target", "target", "target", "target", "target", "target", "target", "target", "target", "target", "target"}, namespaceWaitNamespaces(pkg.Components[0].Actions))
+			},
+		},
+		{
+			name: "updates an empty namespace",
+			definition: newDefinition(v1alpha1.ZarfPackage{
+				Kind:       v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{{Charts: []v1alpha1.ZarfChart{{Name: "chart"}}}},
+			}),
+			namespace: "target",
+			verify: func(t *testing.T, pkg v1alpha1.ZarfPackage) {
+				t.Helper()
+				require.Equal(t, "target", pkg.Components[0].Charts[0].Namespace)
+			},
+		},
+		{
+			name: "handles nil wait actions",
+			definition: newDefinition(v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{{
+					Charts: []v1alpha1.ZarfChart{{Name: "chart", Namespace: "original"}},
+					Actions: v1alpha1.ZarfComponentActions{OnDeploy: v1alpha1.ZarfComponentActionSet{
+						After: []v1alpha1.ZarfComponentAction{{}, {Wait: &v1alpha1.ZarfComponentActionWait{}}},
+					}},
+				}},
+			}),
+			namespace: "target",
+			verify: func(t *testing.T, pkg v1alpha1.ZarfPackage) {
+				t.Helper()
+				require.Equal(t, "target", pkg.Components[0].Charts[0].Namespace)
+			},
+		},
+		{
+			name: "rejects multiple namespaces",
+			definition: newDefinition(v1alpha1.ZarfPackage{
+				Kind:       v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{{Charts: []v1alpha1.ZarfChart{{Name: "one", Namespace: "one"}, {Name: "two", Namespace: "two"}}}},
+			}),
+			namespace:   "target",
+			expectedErr: "package contains 2 unique namespaces, cannot override namespace",
+		},
+		{
+			name: "rejects init packages",
+			definition: newDefinition(v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfInitConfig,
+			}),
+			namespace:   "target",
+			expectedErr: "package kind is not a ZarfPackageConfig, cannot override namespace",
+		},
+		{
+			name: "honors prevent namespace override",
+			definition: newDefinition(v1alpha1.ZarfPackage{
+				Kind:     v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{AllowNamespaceOverride: falsePtr()},
+			}),
+			namespace:   "target",
+			expectedErr: "package explicitly prevents namespace overrides",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.definition.OverrideNamespace(tt.namespace)
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			tt.verify(t, tt.definition.AsV1alpha1())
+		})
+	}
+}
+
+func namespaceWaitAction(namespace string) v1alpha1.ZarfComponentAction {
+	return v1alpha1.ZarfComponentAction{
+		Wait: &v1alpha1.ZarfComponentActionWait{
+			Cluster: &v1alpha1.ZarfComponentActionWaitCluster{Namespace: namespace},
+		},
+	}
+}
+
+func allNamespaceWaitActions(namespace string) v1alpha1.ZarfComponentActions {
+	newActions := func() []v1alpha1.ZarfComponentAction {
+		return []v1alpha1.ZarfComponentAction{namespaceWaitAction(namespace)}
+	}
+	return v1alpha1.ZarfComponentActions{
+		OnCreate: v1alpha1.ZarfComponentActionSet{Before: newActions(), After: newActions(), OnSuccess: newActions(), OnFailure: newActions()},
+		OnDeploy: v1alpha1.ZarfComponentActionSet{Before: newActions(), After: newActions(), OnSuccess: newActions(), OnFailure: newActions()},
+		OnRemove: v1alpha1.ZarfComponentActionSet{Before: newActions(), After: newActions(), OnSuccess: newActions(), OnFailure: newActions()},
+	}
+}
+
+func namespaceWaitNamespaces(actions v1alpha1.ZarfComponentActions) []string {
+	var namespaces []string
+	for _, actionSet := range [][]v1alpha1.ZarfComponentAction{
+		actions.OnCreate.Before, actions.OnCreate.After, actions.OnCreate.OnSuccess, actions.OnCreate.OnFailure,
+		actions.OnDeploy.Before, actions.OnDeploy.After, actions.OnDeploy.OnSuccess, actions.OnDeploy.OnFailure,
+		actions.OnRemove.Before, actions.OnRemove.After, actions.OnRemove.OnSuccess, actions.OnRemove.OnFailure,
+	} {
+		for _, action := range actionSet {
+			if action.Wait != nil && action.Wait.Cluster != nil {
+				namespaces = append(namespaces, action.Wait.Cluster.Namespace)
+			}
+		}
+	}
+	return namespaces
+}
