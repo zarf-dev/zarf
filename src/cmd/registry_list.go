@@ -26,8 +26,8 @@ import (
 // registryListResponseHeaderTimeout matches the default used by images.PushOptions/PullOptions.
 const registryListResponseHeaderTimeout = 10 * time.Second
 
-func newRegistryListCommand(o *registryOptions) *cobra.Command {
-	var fullRef, omitDigestTags bool
+func newRegistryListCommand() *cobra.Command {
+	var fullRef, omitDigestTags, plainHTTP, insecureSkipTLSVerify, deprecatedInsecure bool
 
 	cmd := &cobra.Command{
 		Use:     "ls REPO",
@@ -35,21 +35,33 @@ func newRegistryListCommand(o *registryOptions) *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Example: lang.CmdToolsRegistryListExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRegistryList(cmd.Context(), cmd.OutOrStdout(), args[0], o.insecure, fullRef, omitDigestTags)
+			// --insecure used to mean both of these at once; keep that behavior for anyone still using it.
+			if deprecatedInsecure {
+				plainHTTP = true
+				insecureSkipTLSVerify = true
+			}
+			return runRegistryList(cmd.Context(), cmd.OutOrStdout(), args[0], plainHTTP, insecureSkipTLSVerify, fullRef, omitDigestTags)
 		},
 	}
 	cmd.Flags().BoolVar(&fullRef, "full-ref", false, "(Optional) if true, print the full image reference")
 	cmd.Flags().BoolVarP(&omitDigestTags, "omit-digest-tags", "O", false, "(Optional), if true, omit digest tags (e.g., ':sha256-...')")
+	cmd.Flags().BoolVar(&plainHTTP, "plain-http", false, "(Optional) if true, use plain HTTP instead of HTTPS")
+	cmd.Flags().BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", false, "(Optional) if true, skip TLS certificate verification")
+	// Shadows the parent registry command's persistent --insecure flag for this command only.
+	cmd.Flags().BoolVar(&deprecatedInsecure, "insecure", false, "(Optional) if true, use plain HTTP and skip TLS certificate verification")
+	if err := cmd.Flags().MarkDeprecated("insecure", "use --plain-http and --insecure-skip-tls-verify instead"); err != nil {
+		panic(fmt.Errorf("marking --insecure deprecated: %w", err))
+	}
 	return cmd
 }
 
-func runRegistryList(ctx context.Context, out io.Writer, repoRef string, insecure, fullRef, omitDigestTags bool) error {
-	conn, err := setupRegistryAuth(ctx, repoRef, insecure)
+func runRegistryList(ctx context.Context, out io.Writer, repoRef string, plainHTTP, insecureSkipTLSVerify, fullRef, omitDigestTags bool) error {
+	conn, err := setupRegistryAuth(ctx, repoRef, plainHTTP, insecureSkipTLSVerify)
 	if err != nil {
 		return err
 	}
 	listFn := func() error {
-		return listRegistryTags(ctx, out, conn, insecure, fullRef, omitDigestTags)
+		return listRegistryTags(ctx, out, conn, plainHTTP, insecureSkipTLSVerify, fullRef, omitDigestTags)
 	}
 	if conn.tunnel == nil {
 		return listFn()
@@ -67,11 +79,20 @@ type registryConnection struct {
 	plainHTTPKnown bool
 }
 
+// registryHost returns the registry host:port for repoRef.
+func registryHost(repoRef string) (string, error) {
+	ref, err := registry.ParseReference(repoRef)
+	if err != nil {
+		return "", fmt.Errorf("parsing repo %q: %w", repoRef, err)
+	}
+	return ref.Host(), nil
+}
+
 // setupRegistryAuth builds an ORAS auth client for repoRef, transparently tunneling to and authenticating with a Zarf-managed registry when repoRef targets one, and otherwise falling back to the default Docker credential store.
-func setupRegistryAuth(ctx context.Context, repoRef string, insecure bool) (registryConnection, error) {
+func setupRegistryAuth(ctx context.Context, repoRef string, plainHTTP, insecureSkipTLSVerify bool) (registryConnection, error) {
 	l := logger.From(ctx)
 
-	client, err := images.NewAuthClientFromDocker(ctx, insecure, registryListResponseHeaderTimeout, nil)
+	client, err := images.NewAuthClientFromDocker(ctx, insecureSkipTLSVerify, registryListResponseHeaderTimeout, nil)
 	if err != nil {
 		return registryConnection{}, err
 	}
@@ -102,14 +123,18 @@ func setupRegistryAuth(ctx context.Context, repoRef string, insecure bool) (regi
 	}
 	conn.tunnel = tunnel
 
-	// Credential must be keyed to the host ORAS actually connects to: the tunnel when tunneling, otherwise the registry's own address.
-	credentialHost := s.RegistryInfo.Address
 	if tunnel != nil {
-		credentialHost = endpoint
 		l.Info("opening a tunnel to the Zarf registry", "localEndpoint", endpoint, "clusterAddress", s.RegistryInfo.Address)
 		givenAddress := fmt.Sprintf("%s/", s.RegistryInfo.Address)
 		tunnelAddress := fmt.Sprintf("%s/", endpoint)
 		conn.ref = strings.Replace(repoRef, givenAddress, tunnelAddress, 1)
+	}
+
+	// Credential must be keyed to the host ORAS actually connects to, which is conn.ref's host
+	// now that any tunnel rewriting above has happened.
+	credentialHost, err := registryHost(conn.ref)
+	if err != nil {
+		return registryConnection{}, err
 	}
 
 	client.Credential = auth.StaticCredential(credentialHost, auth.Credential{
@@ -125,17 +150,17 @@ func setupRegistryAuth(ctx context.Context, repoRef string, insecure bool) (regi
 		client.Client.Transport = t
 	}
 
-	plainHTTP, err := s.RegistryInfo.ResolvePlainHTTP(ctx, credentialHost, false, ocischeme.ProbeOptions{InsecureSkipTLSVerify: insecure})
+	resolvedPlainHTTP, err := s.RegistryInfo.ResolvePlainHTTP(ctx, credentialHost, plainHTTP, ocischeme.ProbeOptions{InsecureSkipTLSVerify: insecureSkipTLSVerify})
 	if err != nil {
 		return registryConnection{}, err
 	}
-	conn.plainHTTP = plainHTTP
+	conn.plainHTTP = resolvedPlainHTTP
 	conn.plainHTTPKnown = true
 
 	return conn, nil
 }
 
-func listRegistryTags(ctx context.Context, out io.Writer, conn registryConnection, insecure, fullRef, omitDigestTags bool) error {
+func listRegistryTags(ctx context.Context, out io.Writer, conn registryConnection, plainHTTP, insecureSkipTLSVerify, fullRef, omitDigestTags bool) error {
 	ref, err := registry.ParseReference(conn.ref)
 	if err != nil {
 		return fmt.Errorf("parsing repo %q: %w", conn.ref, err)
@@ -149,12 +174,14 @@ func listRegistryTags(ctx context.Context, out io.Writer, conn registryConnectio
 	switch {
 	case conn.plainHTTPKnown:
 		repo.PlainHTTP = conn.plainHTTP
+	case plainHTTP:
+		repo.PlainHTTP = true
 	case dns.IsLocalOrPrivate(ref.Host()):
-		plainHTTP, err := ocischeme.From(ctx).UsePlainHTTP(ctx, ref.Host(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: insecure})
+		resolved, err := ocischeme.From(ctx).UsePlainHTTP(ctx, ref.Host(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: insecureSkipTLSVerify})
 		if err != nil {
 			return fmt.Errorf("probing scheme for %s: %w", ref.Host(), err)
 		}
-		repo.PlainHTTP = plainHTTP
+		repo.PlainHTTP = resolved
 	}
 
 	tags, err := registry.Tags(ctx, repo)

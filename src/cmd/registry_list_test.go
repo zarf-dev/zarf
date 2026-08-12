@@ -74,7 +74,7 @@ func TestListRegistryTags(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			conn := registryConnection{ref: repoRef, client: client}
 			var buf bytes.Buffer
-			err := listRegistryTags(ctx, &buf, conn, true, tt.fullRef, tt.omitDigestTags)
+			err := listRegistryTags(ctx, &buf, conn, false, false, tt.fullRef, tt.omitDigestTags)
 			require.NoError(t, err)
 			got := strings.Split(strings.TrimSpace(buf.String()), "\n")
 			require.Equal(t, tt.want, got)
@@ -87,7 +87,7 @@ func TestListRegistryTagsInvalidRepo(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	conn := registryConnection{ref: "not a valid repo ref", client: &auth.Client{Client: http.DefaultClient}}
 	var buf bytes.Buffer
-	err := listRegistryTags(ctx, &buf, conn, false, false, false)
+	err := listRegistryTags(ctx, &buf, conn, false, false, false, false)
 	require.Error(t, err)
 }
 
@@ -116,6 +116,6 @@ func TestListRegistryTagsUsesKnownPlainHTTP(t *testing.T) {
 		plainHTTP:      false,
 	}
 	var buf bytes.Buffer
-	err = listRegistryTags(ctx, &buf, conn, false, false, false)
+	err = listRegistryTags(ctx, &buf, conn, false, false, false, false)
 	require.Error(t, err)
 }
