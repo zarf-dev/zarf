@@ -47,7 +47,6 @@ func newRegistryListCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&omitDigestTags, "omit-digest-tags", "O", false, "(Optional), if true, omit digest tags (e.g., ':sha256-...')")
 	cmd.Flags().BoolVar(&plainHTTP, "plain-http", false, "(Optional) if true, use plain HTTP instead of HTTPS")
 	cmd.Flags().BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", false, "(Optional) if true, skip TLS certificate verification")
-	// Shadows the parent registry command's persistent --insecure flag for this command only.
 	cmd.Flags().BoolVar(&deprecatedInsecure, "insecure", false, "(Optional) if true, use plain HTTP and skip TLS certificate verification")
 	if err := cmd.Flags().MarkDeprecated("insecure", "use --plain-http and --insecure-skip-tls-verify instead"); err != nil {
 		panic(fmt.Errorf("marking --insecure deprecated: %w", err))
@@ -130,8 +129,6 @@ func setupRegistryAuth(ctx context.Context, repoRef string, plainHTTP, insecureS
 		conn.ref = strings.Replace(repoRef, givenAddress, tunnelAddress, 1)
 	}
 
-	// Credential must be keyed to the host ORAS actually connects to, which is conn.ref's host
-	// now that any tunnel rewriting above has happened.
 	credentialHost, err := registryHost(conn.ref)
 	if err != nil {
 		return registryConnection{}, err
