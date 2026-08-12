@@ -98,7 +98,7 @@ func TestInjector(t *testing.T) {
 	err = c.StopInjection(ctx)
 	require.NoError(t, err)
 
-	for i := range 2 {
+	for range 2 {
 		tmpDir := t.TempDir()
 		binData := []byte("foobar")
 		err := os.WriteFile(filepath.Join(tmpDir, "zarf-injector"), binData, 0o644)
@@ -109,28 +109,19 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		opts := ZarfInjectorOptions{
+		selectedImage, _, err := c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test", "amd64", ZarfInjectorOptions{
 			InjectorNodePort: 0,
 			RegistryNodePort: 31999,
-		}
-		expectedImage := "ubuntu:latest"
-		if i == 0 {
-			opts.Image = "registry.example.com/zarf/injector:latest"
-			expectedImage = opts.Image
-		}
-
-		selectedImage, _, err := c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test", "amd64", opts)
+		})
 
 		require.NoError(t, err)
-		require.Equal(t, expectedImage, selectedImage)
+		require.Equal(t, "ubuntu:latest", selectedImage)
+
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, podList.Items, 1)
 		require.Equal(t, "injector", podList.Items[0].Name)
 		require.Equal(t, "test", podList.Items[0].Labels["zarf.dev/package"])
-		if i == 0 {
-			require.Empty(t, podList.Items[0].Spec.NodeName)
-		}
 
 		svcList, err := cs.CoreV1().Services(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
@@ -167,6 +158,37 @@ func TestInjector(t *testing.T) {
 	cmList, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
 	require.Empty(t, cmList.Items)
+}
+
+func TestStartInjectionUsesRequestedImage(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cs := fake.NewClientset()
+	c := &Cluster{
+		Clientset: cs,
+		Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
+	}
+	tmpDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "zarf-injector"), []byte("foobar"), 0o644))
+
+	idx, err := random.Index(1, 1, 1)
+	require.NoError(t, err)
+	_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
+	require.NoError(t, err)
+
+	image := "registry.example.com/zarf/injector:latest"
+	selectedImage, _, err := c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test", "amd64", ZarfInjectorOptions{
+		RegistryNodePort: 31999,
+		Image:            image,
+	})
+	require.NoError(t, err)
+	require.Equal(t, image, selectedImage)
+
+	pod, err := cs.CoreV1().Pods(state.ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, image, pod.Spec.Containers[0].Image)
+	require.Empty(t, pod.Spec.NodeName)
 }
 
 func TestBuildInjectionPod(t *testing.T) {
