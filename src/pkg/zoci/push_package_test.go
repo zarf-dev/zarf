@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 	_ "modernc.org/sqlite"
 )
 
@@ -26,7 +27,9 @@ func TestPushPackage(t *testing.T) {
 	require.NoError(t, err)
 
 	platform := oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture)
-	remote, err := zoci.NewRemote(ctx, pkg.registryAddr+"/"+pkgLayout.Pkg.Metadata.Name+":"+pkgLayout.Pkg.Metadata.Version, platform, oci.WithPlainHTTP(true))
+	remote, err := zoci.NewRemoteWithOptions(ctx, pkg.registryAddr+"/"+pkgLayout.Pkg.Metadata.Name+":"+pkgLayout.Pkg.Metadata.Version, platform, zoci.RemoteClientOptions{
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+	})
 	require.NoError(t, err)
 
 	desc, err := remote.PushPackage(ctx, pkgLayout, zoci.PublishOptions{

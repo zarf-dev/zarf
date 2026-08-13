@@ -76,23 +76,17 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	arch := config.GetArch(opts.Architecture)
 	p := oci.PlatformForArch(arch)
 
-	srcPlainHTTP, err := resolveOCIPlainHTTP(ctx, src.Registry, opts.RemoteOptions)
-	if err != nil {
-		return fmt.Errorf("could not resolve source registry transport: %w", err)
-	}
-	dstPlainHTTP, err := resolveOCIPlainHTTP(ctx, dst.Registry, opts.RemoteOptions)
-	if err != nil {
-		return fmt.Errorf("could not resolve destination registry transport: %w", err)
-	}
-
 	// Set up remote repo clients.
-	srcRemote, err := zoci.NewRemote(ctx, src.String(), p, oci.WithPlainHTTP(srcPlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
-	if err != nil {
-		return fmt.Errorf("could not instantiate remote: %w", err)
+	remoteOptions := zoci.RemoteClientOptions{
+		RemoteOptions: opts.RemoteOptions,
 	}
-	dstRemote, err := zoci.NewRemote(ctx, dst.String(), p, oci.WithPlainHTTP(dstPlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+	srcRemote, err := zoci.NewRemoteWithOptions(ctx, src.String(), p, remoteOptions)
 	if err != nil {
-		return fmt.Errorf("could not instantiate remote: %w", err)
+		return fmt.Errorf("could not instantiate source remote: %w", err)
+	}
+	dstRemote, err := zoci.NewRemoteWithOptions(ctx, dst.String(), p, remoteOptions)
+	if err != nil {
+		return fmt.Errorf("could not instantiate destination remote: %w", err)
 	}
 
 	publishOptions := zoci.PublishOptions{
@@ -299,11 +293,9 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 	// Set platform
 	platform := oci.PlatformForArch(arch)
 
-	plainHTTP, err := resolveOCIPlainHTTP(ctx, ref.Registry, remoteOpts)
-	if err != nil {
-		return fmt.Errorf("could not resolve destination registry transport: %w", err)
-	}
-	remote, err := zoci.NewRemote(ctx, ref.String(), platform, oci.WithPlainHTTP(plainHTTP), oci.WithInsecureSkipVerify(remoteOpts.InsecureSkipTLSVerify))
+	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), platform, zoci.RemoteClientOptions{
+		RemoteOptions: remoteOpts,
+	})
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}

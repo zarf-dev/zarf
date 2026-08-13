@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/split"
@@ -22,7 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
-	"oras.land/oras-go/v2/registry"
 )
 
 // PackageDigestOptions are the options for PackageDigest.
@@ -63,20 +60,9 @@ func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions
 
 	case "oci":
 		platform := oci.PlatformForArch(config.GetArch(opts.Architecture))
-		plainHTTP := false
-		if opts.RemoteOptions.PlainHTTP {
-			ref, err := registry.ParseReference(strings.TrimPrefix(source, helpers.OCIURLPrefix))
-			if err != nil {
-				return "", fmt.Errorf("unable to parse OCI source: %w", err)
-			}
-			plainHTTP, err = resolveOCIPlainHTTP(ctx, ref.Registry, opts.RemoteOptions)
-			if err != nil {
-				return "", fmt.Errorf("could not resolve source registry transport: %w", err)
-			}
-		}
-		remote, err := zoci.NewRemote(ctx, source, platform,
-			oci.WithPlainHTTP(plainHTTP),
-			oci.WithInsecureSkipVerify(opts.RemoteOptions.InsecureSkipTLSVerify))
+		remote, err := zoci.NewRemoteWithOptions(ctx, source, platform, zoci.RemoteClientOptions{
+			RemoteOptions: opts.RemoteOptions,
+		})
 		if err != nil {
 			return "", fmt.Errorf("unable to connect to OCI registry: %w", err)
 		}

@@ -14,11 +14,9 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -27,7 +25,6 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/gabriel-vasile/mimetype"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -129,34 +126,16 @@ type pullOCIOptions struct {
 	layout.VerificationStrategy
 }
 
-func resolveOCIPlainHTTP(ctx context.Context, host string, opts types.RemoteOptions) (bool, error) {
-	if !opts.PlainHTTP {
-		return false, nil
-	}
-	return ocischeme.From(ctx).UsePlainHTTP(ctx, host, ocischeme.ProbeOptions{
-		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
-	})
-}
-
 func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, error) {
-	sourceRef, err := registry.ParseReference(strings.TrimPrefix(opts.Source, helpers.OCIURLPrefix))
-	if err != nil {
-		return nil, fmt.Errorf("could not parse source OCI reference: %w", err)
-	}
 	if opts.Shasum != "" {
 		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
-	plainHTTP, err := resolveOCIPlainHTTP(ctx, sourceRef.Registry, opts.RemoteOptions)
-	if err != nil {
-		return nil, fmt.Errorf("could not resolve source registry transport: %w", err)
-	}
 
-	cacheMod, err := zoci.GetOCICacheModifier(ctx, opts.CachePath)
-	if err != nil {
-		return nil, err
-	}
 	platform := oci.PlatformForArch(opts.Architecture)
-	remote, err := zoci.NewRemote(ctx, opts.Source, platform, oci.WithPlainHTTP(plainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod)
+	remote, err := zoci.NewRemoteWithOptions(ctx, opts.Source, platform, zoci.RemoteClientOptions{
+		CachePath:     opts.CachePath,
+		RemoteOptions: opts.RemoteOptions,
+	})
 	if err != nil {
 		return nil, err
 	}
