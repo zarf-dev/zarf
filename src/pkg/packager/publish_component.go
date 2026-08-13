@@ -16,7 +16,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -151,19 +150,11 @@ func pushComponentArtifact(ctx context.Context, store *memory.Store, sourceRef s
 	if opts.OCIConcurrency == 0 {
 		opts.OCIConcurrency = zoci.DefaultConcurrency
 	}
-	if opts.Retries <= 0 {
-		if opts.Retries < 0 {
-			return ocispec.Descriptor{}, errors.New("retries cannot be negative")
-		}
-		l.Debug("retries set to default", "retries", zoci.DefaultRetries)
-		opts.Retries = zoci.DefaultRetries
-	}
-
 	copyOpts := remote.GetDefaultCopyOpts()
 	copyOpts.Concurrency = opts.OCIConcurrency
 
 	var published ocispec.Descriptor
-	err = retry.Do(
+	err = zoci.Retry(ctx, opts.Retries,
 		func() error {
 			l.Info("pushing component to registry", "destination", componentRef.String(), "size", utils.ByteFormat(float64(totalSize), 2))
 			trackedRemote := images.NewTrackedTarget(
@@ -178,17 +169,6 @@ func pushComponentArtifact(ctx context.Context, store *memory.Store, sourceRef s
 			published, copyErr = oras.Copy(ctx, store, sourceRef, trackedRemote, componentRef.Reference, copyOpts)
 			return copyErr
 		},
-		retry.Attempts(uint(opts.Retries)),
-		retry.Delay(500*time.Millisecond),
-		retry.MaxDelay(8*time.Second),
-		retry.DelayType(retry.BackOffDelay),
-		retry.LastErrorOnly(true),
-		retry.Context(ctx),
-		retry.OnRetry(func(n uint, retryErr error) {
-			if opts.Retries > 1 && n+1 < uint(opts.Retries) {
-				l.Warn("retrying component push", "attempt", n+1, "maxAttempts", opts.Retries, "error", retryErr)
-			}
-		}),
 	)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("component publish failed: %w", err)

@@ -112,7 +112,7 @@ func TestPublishComponentRejectsNegativeRetries(t *testing.T) {
 		Retries:       -1,
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
-	require.EqualError(t, err, "retries cannot be negative")
+	require.EqualError(t, err, "component publish failed: retries cannot be negative")
 }
 
 func TestPublishComponentImageArchivesUseOCILayout(t *testing.T) {
