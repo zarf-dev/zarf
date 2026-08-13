@@ -30,7 +30,7 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if pkgLayout == nil {
 		return fmt.Errorf("pkg layout is required")
 	}
-	components := pkgLayout.Pkg.Components
+	components := pkgLayout.AsV1alpha1().Components
 	defined := newDefinedValues(vals)
 
 	var errs []error

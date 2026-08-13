@@ -5,6 +5,7 @@ package assemble
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,7 +14,10 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -229,15 +233,15 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 func TestCollectVersionRequirements(t *testing.T) {
 	t.Parallel()
 
-	imageArchivesReq := v1alpha1.VersionRequirement{
+	imageArchivesReq := api.VersionRequirement{
 		Version: "v0.68.0",
 		Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
 	}
-	indexReq := v1alpha1.VersionRequirement{
+	indexReq := api.VersionRequirement{
 		Version: "v0.77.0",
 		Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
 	}
-	versionlessChartReq := v1alpha1.VersionRequirement{
+	versionlessChartReq := api.VersionRequirement{
 		Version: "v0.65.0",
 		Reason:  "This package contains a chart without a version, which is only supported on v0.65.0+",
 	}
@@ -246,7 +250,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 		name     string
 		pkg      v1alpha1.ZarfPackage
 		hasIndex bool
-		expected []v1alpha1.VersionRequirement
+		expected []api.VersionRequirement
 	}{
 		{
 			name:     "no requirements for a plain package",
@@ -265,13 +269,13 @@ func TestCollectVersionRequirements(t *testing.T) {
 					},
 				},
 			},
-			expected: []v1alpha1.VersionRequirement{imageArchivesReq},
+			expected: []api.VersionRequirement{imageArchivesReq},
 		},
 		{
 			name:     "preserved index triggers v0.76.0",
 			pkg:      v1alpha1.ZarfPackage{},
 			hasIndex: true,
-			expected: []v1alpha1.VersionRequirement{indexReq},
+			expected: []api.VersionRequirement{indexReq},
 		},
 		{
 			name: "image archives and preserved index trigger both",
@@ -284,7 +288,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 				},
 			},
 			hasIndex: true,
-			expected: []v1alpha1.VersionRequirement{imageArchivesReq, indexReq},
+			expected: []api.VersionRequirement{imageArchivesReq, indexReq},
 		},
 		{
 			name: "image archives requirement is only emitted once across components",
@@ -294,7 +298,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 					{Name: "c2", ImageArchives: []v1alpha1.ImageArchive{{Path: "/tmp/b.tar", Images: []string{"p:q"}}}},
 				},
 			},
-			expected: []v1alpha1.VersionRequirement{imageArchivesReq},
+			expected: []api.VersionRequirement{imageArchivesReq},
 		},
 		{
 			name: "chart without a version triggers v0.65.0",
@@ -306,7 +310,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 					},
 				},
 			},
-			expected: []v1alpha1.VersionRequirement{versionlessChartReq},
+			expected: []api.VersionRequirement{versionlessChartReq},
 		},
 		{
 			name: "versionless chart requirement is only emitted once across charts",
@@ -316,7 +320,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 					{Name: "c2", Charts: []v1alpha1.ZarfChart{{Name: "b", LocalPath: "./b"}}},
 				},
 			},
-			expected: []v1alpha1.VersionRequirement{versionlessChartReq},
+			expected: []api.VersionRequirement{versionlessChartReq},
 		},
 		{
 			name: "chart with a version has no requirement",
@@ -667,8 +671,8 @@ fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm
 `
 
 	require.Equal(t, expectedChecksum, string(b))
-	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.Pkg)
-	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.Pkg), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
+	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.AsV1alpha1())
+	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.AsV1alpha1()), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
@@ -678,6 +682,75 @@ func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	path := filepath.Join(dir, layout.ZarfYAML)
 	err = os.WriteFile(path, b, 0700)
 	require.NoError(t, err)
+}
+
+func TestAssemblePackageV1Beta1WritesMultiDocDefinition(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	tmpdir := t.TempDir()
+	dataPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
+	require.NoError(t, err)
+
+	zarfYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-local
+components:
+  - name: beta-component
+    files:
+      - source: %q
+        destination: data.txt
+`, dataPath)
+	require.NoError(t, os.WriteFile(filepath.Join(tmpdir, layout.ZarfYAML), []byte(zarfYAML), 0o600))
+
+	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+	require.NoError(t, err)
+	pkgLayout, err := AssemblePackage(ctx, defined, tmpdir, AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+
+	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
+	require.NoError(t, err)
+	alphaPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
+	require.NoError(t, err)
+	betaPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
+	require.NoError(t, err)
+	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
+	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
+}
+
+func TestAssemblePackageV1Alpha1DoesNotWriteV1Beta1Definition(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	tmpdir := t.TempDir()
+	dataPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
+	require.NoError(t, err)
+	writePackageToDisk(t, v1alpha1.ZarfPackage{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       v1alpha1.ZarfPackageConfig,
+		Metadata:   v1alpha1.ZarfMetadata{Name: "alpha-local"},
+		Components: []v1alpha1.ZarfComponent{{
+			Name: "alpha-component",
+			Files: []v1alpha1.ZarfFile{{
+				Source: dataPath,
+				Target: "data.txt",
+			}},
+		}},
+	}, tmpdir)
+
+	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+	require.NoError(t, err)
+	pkgLayout, err := AssemblePackage(ctx, defined, tmpdir, AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+
+	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
+	require.NoError(t, err)
+	alphaPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
+	require.NoError(t, err)
+	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
+	_, err = pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
+	require.Error(t, err)
 }
 
 func TestGetSBOM(t *testing.T) {

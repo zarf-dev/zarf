@@ -67,10 +67,10 @@ func newTestLayout(t *testing.T) (*PackageLayout, []byte) {
 
 	p := &PackageLayout{
 		dirPath: dir,
-		Pkg: v1alpha1.ZarfPackage{
+		PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
 			Metadata: v1alpha1.ZarfMetadata{Name: "test-pkg", Version: "1.0.0"},
 			Build:    v1alpha1.ZarfBuildData{Architecture: "amd64"},
-		},
+		}),
 	}
 	require.NoError(t, p.computeManifest(context.Background()))
 	return p, blobContent
@@ -115,7 +115,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("by package name", func(t *testing.T) {
-		desc, err := p.Resolve(ctx, p.Pkg.Metadata.Name)
+		desc, err := p.Resolve(ctx, p.AsV1alpha1().Metadata.Name)
 		require.NoError(t, err)
 		assert.Equal(t, p.Digest(), desc.Digest.String())
 	})
