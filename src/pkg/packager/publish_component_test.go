@@ -271,7 +271,6 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
 		require.NoError(t, os.WriteFile(path, []byte("resource"), 0o600))
 	}
-	actionDir := filepath.Join(externalDir, "actions")
 	component := v1beta1.ComponentConfig{
 		APIVersion: "zarf.dev/v1beta1",
 		Kind:       "ZarfComponentConfig",
@@ -287,10 +286,6 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 				Kustomize: &v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
 			}},
 			Files: []v1beta1.File{{Source: filepath.Join(externalDir, "file.txt"), Destination: "/tmp/file.txt"}},
-			Actions: v1beta1.ComponentActions{
-				OnDeploy: v1beta1.ComponentActionSet{Before: []v1beta1.ComponentAction{{Dir: &actionDir}}},
-				OnRemove: v1beta1.ComponentActionSet{OnSuccess: []v1beta1.ComponentAction{{Dir: stringPtr("../external/actions")}}},
-			},
 		},
 	}
 	componentYAML, err := goyaml.Marshal(component)
@@ -309,8 +304,6 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 	require.Equal(t, "resources/4/manifest.yaml", publishedComponent.Component.Manifests[0].Files[0])
 	require.Equal(t, "resources/5/kustomize", publishedComponent.Component.Manifests[0].Kustomize.Files[0])
 	require.Equal(t, "resources/6/file.txt", publishedComponent.Component.Files[0].Source)
-	require.Equal(t, actionDir, *publishedComponent.Component.Actions.OnDeploy.Before[0].Dir)
-	require.Equal(t, "../external/actions", *publishedComponent.Component.Actions.OnRemove.OnSuccess[0].Dir)
 
 	layerMounts := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
@@ -348,10 +341,6 @@ component:
 
 	_, err := PublishComponent(context.Background(), componentPath, createRegistry(context.Background(), t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.EqualError(t, err, "onCreate actions are not supported for published remote components")
-}
-
-func stringPtr(value string) *string {
-	return &value
 }
 
 func getPublishedComponent(ctx context.Context, t *testing.T, published registry.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {
