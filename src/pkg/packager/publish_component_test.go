@@ -172,6 +172,81 @@ func TestPublishComponentImageArchivesUseOCILayout(t *testing.T) {
 	require.Contains(t, layerTitles, "images/blobs/sha256/03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c")
 }
 
+func TestPublishComponentResolvesLocalImports(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	childDir := filepath.Join(root, "child")
+	require.NoError(t, os.Mkdir(childDir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(childDir, "child-file.txt"), []byte("child file"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(childDir, "child-values.yaml"), []byte("child: value"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(root, "root-values.yaml"), []byte("root: value"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(childDir, "component.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: imported-component
+  version: 0.0.1
+values:
+  files:
+    - child-values.yaml
+component:
+  files:
+    - source: child-file.txt
+      destination: /tmp/child-file.txt
+`), 0o600))
+	componentPath := filepath.Join(root, "component.yaml")
+	require.NoError(t, os.WriteFile(componentPath, []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: importing-component
+  version: 0.0.1
+values:
+  files:
+    - root-values.yaml
+component:
+  import:
+    local:
+      - path: child/component.yaml
+`), 0o600))
+
+	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+
+	repo, err := remote.NewRepository(published.Registry + "/" + published.Repository)
+	require.NoError(t, err)
+	repo.PlainHTTP = true
+	descriptor, err := repo.Resolve(ctx, published.Reference)
+	require.NoError(t, err)
+	manifestReader, err := repo.Manifests().Fetch(ctx, descriptor)
+	require.NoError(t, err)
+	// FIXME: need a test helper to get the component config
+	defer func() { require.NoError(t, manifestReader.Close()) }()
+	manifestBytes, err := io.ReadAll(manifestReader)
+	require.NoError(t, err)
+	var manifest ocispec.Manifest
+	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
+	componentReader, err := repo.Blobs().Fetch(ctx, manifest.Config)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, componentReader.Close()) }()
+	componentBytes, err := io.ReadAll(componentReader)
+	require.NoError(t, err)
+	var component v1beta1.ComponentConfig
+	require.NoError(t, goyaml.Unmarshal(componentBytes, &component))
+	require.Empty(t, component.Component.Import)
+	require.Equal(t, []string{"child/child-values.yaml", "root-values.yaml"}, component.Values.Files)
+	require.Equal(t, []v1beta1.File{{Source: "child/child-file.txt", Destination: "/tmp/child-file.txt"}}, component.Component.Files)
+
+	layerTitles := make([]string, 0, len(manifest.Layers))
+	for _, layer := range manifest.Layers {
+		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
+	}
+	require.Contains(t, layerTitles, "child/child-file.txt")
+	require.Contains(t, layerTitles, "child/child-values.yaml")
+	require.Contains(t, layerTitles, "root-values.yaml")
+	require.NotContains(t, layerTitles, "child/component.yaml")
+}
+
 func verifyPublishedComponentSignature(ctx context.Context, componentRef, publicKeyPath string) error {
 	cmd := &verify.VerifyCommand{
 		RegistryOptions: options.RegistryOptions{AllowHTTPRegistry: true},

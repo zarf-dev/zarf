@@ -60,6 +60,21 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 	return pkg, dedupePaths(vals.schemas), nil
 }
 
+// ResolveComponentConfigImports resolves local imports in a v1beta1 component config.
+func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath, arch, flavor string) (v1beta1.ComponentConfig, error) {
+	componentPath = filepath.Clean(componentPath)
+	resolvedSpec, importedVals, err := resolveComponentSpecImports(ctx, component.Component, filepath.Dir(componentPath), arch, flavor, []string{componentPath})
+	if err != nil {
+		return v1beta1.ComponentConfig{}, err
+	}
+	component.Component = resolvedSpec
+	component.Values.Files = dedupePaths(append(importedVals.files, component.Values.Files...))
+	if component.Values.Schema == "" && len(importedVals.schemas) > 0 {
+		component.Values.Schema = importedVals.schemas[0]
+	}
+	return component, nil
+}
+
 // resolveComponentSpecImports merges component configs imported by spec. The returned spec and
 // values paths are relative to specDir.
 func resolveComponentSpecImports(ctx context.Context, spec v1beta1.ComponentSpec, specDir, arch, flavor string, importStack []string) (v1beta1.ComponentSpec, importedValues, error) {
