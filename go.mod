@@ -8,6 +8,10 @@ replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonsche
 // Once https://github.com/glebarez/go-sqlite updates to handle breaking changes in modernc.org/sqlite v1.33.0 this can be removed
 replace modernc.org/sqlite => modernc.org/sqlite v1.32.0
 
+// Prevents a panic in `zarf tools sbom config` (https://github.com/anchore/fangs/pull/161).
+// Remove once Syft depends on a fangs release that includes this fix.
+replace github.com/anchore/fangs => github.com/anchore/fangs v0.1.2-0.20260930202951-ed81d30884a0
+
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.5.0
