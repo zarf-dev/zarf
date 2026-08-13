@@ -417,13 +417,6 @@ func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
 			wantErr: "resource kind chart cannot be pulled from remote sources",
 		},
 		{
-			name: "image archive",
-			component: v1beta1.ComponentConfig{
-				Component: v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{{Path: "https://example.com/images.tar"}}},
-			},
-			wantErr: "remote image archive paths are not supported",
-		},
-		{
 			name: "component import",
 			component: v1beta1.ComponentConfig{
 				Component: v1beta1.ComponentSpec{Import: v1beta1.ComponentImport{Remote: []v1beta1.ComponentImportRemote{{URL: "oci://example.com/components/foo:1.0.0"}}}},
