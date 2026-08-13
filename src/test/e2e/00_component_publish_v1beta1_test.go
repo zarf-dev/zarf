@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2/registry/remote"
@@ -40,10 +42,51 @@ func TestPublishV1Beta1Component(t *testing.T) {
 	manifestBytes, err := io.ReadAll(manifestReader)
 	require.NoError(t, err)
 	var manifest ocispec.Manifest
-	// FIXME: We should verify that the manifest has all the paths we expect. It should have one of each resource
-	// and the remote version of that resource
 	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
 	require.Equal(t, packager.ComponentConfigMediaType, manifest.Config.MediaType)
 	require.NotEmpty(t, manifest.Layers)
-	require.Contains(t, manifest.Layers[0].Annotations["org.opencontainers.image.title"], "manifest.yaml")
+
+	componentReader, err := repo.Blobs().Fetch(testutil.TestContext(t), manifest.Config)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, componentReader.Close()) }()
+	componentBytes, err := io.ReadAll(componentReader)
+	require.NoError(t, err)
+	var component v1beta1.ComponentConfig
+	require.NoError(t, goyaml.Unmarshal(componentBytes, &component))
+	require.Equal(t, []string{"component-values.yaml"}, component.Values.Files)
+	require.Equal(t, "component-values.schema.json", component.Values.Schema)
+	require.Equal(t, "local-manifest.yaml", component.Component.Manifests[0].Files[0])
+	require.Equal(t, "https://example.com/remote-manifest.yaml", component.Component.Manifests[1].Files[0])
+	require.NotNil(t, component.Component.Charts[0].Local)
+	require.NotNil(t, component.Component.Charts[1].HelmRepository)
+	require.Equal(t, "local-chart-values.yaml", component.Component.Charts[0].ValuesFiles[0].Path)
+	require.Equal(t, "https://example.com/remote-chart-values.yaml", component.Component.Charts[0].ValuesFiles[1].Path)
+	require.Equal(t, "local-file.txt", component.Component.Files[0].Source)
+	require.Equal(t, "https://example.com/remote-file.txt", component.Component.Files[1].Source)
+	require.Equal(t, "daemon", component.Component.Images[0].Source)
+	require.Equal(t, "registry", component.Component.Images[1].Source)
+	require.Equal(t, "https://github.com/zarf-dev/zarf.git", component.Component.Repositories[0].URL)
+
+	layerTitles := make([]string, 0, len(manifest.Layers))
+	for _, layer := range manifest.Layers {
+		layerTitles = append(layerTitles, layer.Annotations["org.opencontainers.image.title"])
+	}
+	for _, localPath := range []string{
+		"component-values.yaml",
+		"component-values.schema.json",
+		"local-chart-values.yaml",
+		"local-chart/Chart.yaml",
+		"local-chart/templates/configmap.yaml",
+		"local-file.txt",
+		"local-manifest.yaml",
+	} {
+		require.Contains(t, layerTitles, localPath)
+	}
+	for _, remotePath := range []string{
+		"https://example.com/remote-chart-values.yaml",
+		"https://example.com/remote-file.txt",
+		"https://example.com/remote-manifest.yaml",
+	} {
+		require.NotContains(t, layerTitles, remotePath)
+	}
 }
