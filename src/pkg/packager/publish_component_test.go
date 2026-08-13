@@ -4,12 +4,68 @@
 package packager
 
 import (
+	"context"
+	"encoding/json"
+	"io"
 	"path/filepath"
 	"testing"
 
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"oras.land/oras-go/v2/registry/remote"
 )
+
+func TestPublishComponent(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	published, err := PublishComponent(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishComponentOptions{
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+
+	repo, err := remote.NewRepository(published.Registry + "/" + published.Repository)
+	require.NoError(t, err)
+	repo.PlainHTTP = true
+	descriptor, err := repo.Resolve(ctx, published.Reference)
+	require.NoError(t, err)
+	require.Equal(t, ocispec.MediaTypeImageManifest, descriptor.MediaType)
+	require.NotZero(t, descriptor.Size)
+
+	manifestReader, err := repo.Manifests().Fetch(ctx, descriptor)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, manifestReader.Close()) }()
+	manifestBytes, err := io.ReadAll(manifestReader)
+	require.NoError(t, err)
+	var manifest ocispec.Manifest
+	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
+	require.Equal(t, ComponentConfigMediaType, manifest.Config.MediaType)
+	require.NotEmpty(t, manifest.Layers)
+
+	layerTitles := make([]string, 0, len(manifest.Layers))
+	for _, layer := range manifest.Layers {
+		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
+	}
+	for _, localPath := range []string{
+		"component-values.yaml",
+		"component-values.schema.json",
+		"local-chart-values.yaml",
+		"local-chart/Chart.yaml",
+		"local-chart/templates/configmap.yaml",
+		"local-file.txt",
+		"local-manifest.yaml",
+	} {
+		require.Contains(t, layerTitles, localPath)
+	}
+	for _, remotePath := range []string{
+		"https://example.com/remote-chart-values.yaml",
+		"https://example.com/remote-file.txt",
+		"https://example.com/remote-manifest.yaml",
+	} {
+		require.NotContains(t, layerTitles, remotePath)
+	}
+}
 
 func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
 	t.Parallel()

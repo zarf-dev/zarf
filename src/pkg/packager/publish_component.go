@@ -161,6 +161,7 @@ func componentResources(componentPath string, component v1beta1.ComponentConfig,
 	return resources, nil
 }
 
+// FIXME: not sure I love passing around resource maps
 func collectComponentResources(componentPath string, component v1beta1.ComponentConfig, root string, seen map[string]bool, resources map[string]string) error {
 	componentPath = filepath.Clean(componentPath)
 	if seen[componentPath] {
