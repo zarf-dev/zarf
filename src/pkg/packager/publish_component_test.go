@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -65,6 +66,39 @@ func TestPublishComponent(t *testing.T) {
 	} {
 		require.NotContains(t, layerTitles, remotePath)
 	}
+}
+
+func TestPublishComponentFlavor(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	published, err := PublishComponent(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishComponentOptions{
+		Flavor:        "test",
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+	require.Equal(t, "0.0.1-test", published.Reference)
+
+	repo, err := remote.NewRepository(published.Registry + "/" + published.Repository)
+	require.NoError(t, err)
+	repo.PlainHTTP = true
+	descriptor, err := repo.Resolve(ctx, published.Reference)
+	require.NoError(t, err)
+	manifestReader, err := repo.Manifests().Fetch(ctx, descriptor)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, manifestReader.Close()) }()
+	manifestBytes, err := io.ReadAll(manifestReader)
+	require.NoError(t, err)
+	var manifest ocispec.Manifest
+	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
+	componentReader, err := repo.Blobs().Fetch(ctx, manifest.Config)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, componentReader.Close()) }()
+	componentBytes, err := io.ReadAll(componentReader)
+	require.NoError(t, err)
+	var component v1beta1.ComponentConfig
+	require.NoError(t, goyaml.Unmarshal(componentBytes, &component))
+	require.Empty(t, component.Component.Selector.Flavor)
 }
 
 func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {

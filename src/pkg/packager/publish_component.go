@@ -64,16 +64,19 @@ func PublishComponent(ctx context.Context, componentPath string, destination reg
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
 
+	componentRef, err := componentReference(destination, component)
+	if err != nil {
+		return registry.Reference{}, err
+	}
+	// The flavor is selected by this publish operation and represented by the artifact tag.
+	// Do not require the same selection again when the published component is imported.
+	component.Component.Selector.Flavor = ""
 	component.PublishData.ZarfVersion = config.CLIVersion
 	componentYAML, err := goyaml.Marshal(component)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to marshal component config: %w", err)
 	}
 
-	componentRef, err := componentReference(destination, component)
-	if err != nil {
-		return registry.Reference{}, err
-	}
 	store := memory.New()
 	configDescriptor := content.NewDescriptorFromBytes(ComponentConfigMediaType, componentYAML)
 	if err := store.Push(ctx, configDescriptor, bytes.NewReader(componentYAML)); err != nil {
