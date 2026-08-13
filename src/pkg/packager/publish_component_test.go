@@ -19,7 +19,8 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
-	"oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry"
+	registryremote "oras.land/oras-go/v2/registry/remote"
 )
 
 func TestPublishComponent(t *testing.T) {
@@ -31,21 +32,7 @@ func TestPublishComponent(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	repo, err := remote.NewRepository(published.Registry + "/" + published.Repository)
-	require.NoError(t, err)
-	repo.PlainHTTP = true
-	descriptor, err := repo.Resolve(ctx, published.Reference)
-	require.NoError(t, err)
-	require.Equal(t, ocispec.MediaTypeImageManifest, descriptor.MediaType)
-	require.NotZero(t, descriptor.Size)
-
-	manifestReader, err := repo.Manifests().Fetch(ctx, descriptor)
-	require.NoError(t, err)
-	defer func() { require.NoError(t, manifestReader.Close()) }()
-	manifestBytes, err := io.ReadAll(manifestReader)
-	require.NoError(t, err)
-	var manifest ocispec.Manifest
-	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
+	_, manifest := getPublishedComponent(ctx, t, published)
 	require.Equal(t, ComponentConfigMediaType, manifest.Config.MediaType)
 	require.NotEmpty(t, manifest.Layers)
 
@@ -84,25 +71,7 @@ func TestPublishComponentFlavor(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "0.0.1-test", published.Reference)
 
-	repo, err := remote.NewRepository(published.Registry + "/" + published.Repository)
-	require.NoError(t, err)
-	repo.PlainHTTP = true
-	descriptor, err := repo.Resolve(ctx, published.Reference)
-	require.NoError(t, err)
-	manifestReader, err := repo.Manifests().Fetch(ctx, descriptor)
-	require.NoError(t, err)
-	defer func() { require.NoError(t, manifestReader.Close()) }()
-	manifestBytes, err := io.ReadAll(manifestReader)
-	require.NoError(t, err)
-	var manifest ocispec.Manifest
-	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
-	componentReader, err := repo.Blobs().Fetch(ctx, manifest.Config)
-	require.NoError(t, err)
-	defer func() { require.NoError(t, componentReader.Close()) }()
-	componentBytes, err := io.ReadAll(componentReader)
-	require.NoError(t, err)
-	var component v1beta1.ComponentConfig
-	require.NoError(t, goyaml.Unmarshal(componentBytes, &component))
+	component, _ := getPublishedComponent(ctx, t, published)
 	require.Empty(t, component.Component.Selector.Flavor)
 }
 
@@ -149,18 +118,7 @@ func TestPublishComponentImageArchivesUseOCILayout(t *testing.T) {
 	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
-	repo, err := remote.NewRepository(published.Registry + "/" + published.Repository)
-	require.NoError(t, err)
-	repo.PlainHTTP = true
-	descriptor, err := repo.Resolve(ctx, published.Reference)
-	require.NoError(t, err)
-	manifestReader, err := repo.Manifests().Fetch(ctx, descriptor)
-	require.NoError(t, err)
-	defer func() { require.NoError(t, manifestReader.Close()) }()
-	manifestBytes, err := io.ReadAll(manifestReader)
-	require.NoError(t, err)
-	var manifest ocispec.Manifest
-	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
+	_, manifest := getPublishedComponent(ctx, t, published)
 
 	layerTitles := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
@@ -213,26 +171,7 @@ component:
 	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
-	repo, err := remote.NewRepository(published.Registry + "/" + published.Repository)
-	require.NoError(t, err)
-	repo.PlainHTTP = true
-	descriptor, err := repo.Resolve(ctx, published.Reference)
-	require.NoError(t, err)
-	manifestReader, err := repo.Manifests().Fetch(ctx, descriptor)
-	require.NoError(t, err)
-	// FIXME: need a test helper to get the component config
-	defer func() { require.NoError(t, manifestReader.Close()) }()
-	manifestBytes, err := io.ReadAll(manifestReader)
-	require.NoError(t, err)
-	var manifest ocispec.Manifest
-	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
-	componentReader, err := repo.Blobs().Fetch(ctx, manifest.Config)
-	require.NoError(t, err)
-	defer func() { require.NoError(t, componentReader.Close()) }()
-	componentBytes, err := io.ReadAll(componentReader)
-	require.NoError(t, err)
-	var component v1beta1.ComponentConfig
-	require.NoError(t, goyaml.Unmarshal(componentBytes, &component))
+	component, manifest := getPublishedComponent(ctx, t, published)
 	require.Empty(t, component.Component.Import)
 	require.Equal(t, []string{"child/child-values.yaml", "root-values.yaml"}, component.Values.Files)
 	require.Equal(t, []v1beta1.File{{Source: "child/child-file.txt", Destination: "/tmp/child-file.txt"}}, component.Component.Files)
@@ -245,6 +184,35 @@ component:
 	require.Contains(t, layerTitles, "child/child-values.yaml")
 	require.Contains(t, layerTitles, "root-values.yaml")
 	require.NotContains(t, layerTitles, "child/component.yaml")
+}
+
+func getPublishedComponent(ctx context.Context, t *testing.T, published registry.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {
+	t.Helper()
+
+	repo, err := registryremote.NewRepository(published.Registry + "/" + published.Repository)
+	require.NoError(t, err)
+	repo.PlainHTTP = true
+	descriptor, err := repo.Resolve(ctx, published.Reference)
+	require.NoError(t, err)
+	require.Equal(t, ocispec.MediaTypeImageManifest, descriptor.MediaType)
+	require.NotZero(t, descriptor.Size)
+
+	manifestReader, err := repo.Manifests().Fetch(ctx, descriptor)
+	require.NoError(t, err)
+	manifestBytes, err := io.ReadAll(manifestReader)
+	require.NoError(t, err)
+	require.NoError(t, manifestReader.Close())
+	var manifest ocispec.Manifest
+	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
+
+	componentReader, err := repo.Blobs().Fetch(ctx, manifest.Config)
+	require.NoError(t, err)
+	componentBytes, err := io.ReadAll(componentReader)
+	require.NoError(t, err)
+	require.NoError(t, componentReader.Close())
+	var component v1beta1.ComponentConfig
+	require.NoError(t, goyaml.Unmarshal(componentBytes, &component))
+	return component, manifest
 }
 
 func verifyPublishedComponentSignature(ctx context.Context, componentRef, publicKeyPath string) error {
