@@ -313,66 +313,6 @@ func CosignSignImageWithOptions(ctx context.Context, image string, opts SignBlob
 	return nil
 }
 
-// CosignVerifyImageWithOptions verifies an OCI artifact signature stored in its registry.
-func CosignVerifyImageWithOptions(ctx context.Context, image string, opts VerifyBlobOptions, plainHTTP, insecureSkipTLSVerify bool) error {
-	l := logger.From(ctx)
-
-	if opts.KeyRef != "" {
-		l.Warn("VerifyBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
-		if opts.Key == "" {
-			opts.Key = opts.KeyRef
-		}
-	}
-
-	trustedRootPath := opts.CommonVerifyOptions.TrustedRootPath
-	if trustedRootPath == "" && opts.Key == "" && opts.CertVerify.Cert == "" {
-		path, cleanup, err := writeEmbeddedTrustedRoot(opts.TempDir)
-		if err != nil {
-			return fmt.Errorf("preparing embedded trusted root: %w", err)
-		}
-		defer func() {
-			if err := cleanup(); err != nil {
-				l.Debug("failed to remove embedded trusted root tempfile", "error", err)
-			}
-		}()
-		trustedRootPath = path
-	}
-
-	commonVerifyOpts := opts.CommonVerifyOptions
-	commonVerifyOpts.TrustedRootPath = trustedRootPath
-	cmd := &verify.VerifyCommand{
-		RegistryOptions: options.RegistryOptions{
-			AllowHTTPRegistry: plainHTTP,
-			AllowInsecure:     insecureSkipTLSVerify,
-		},
-		CertVerifyOptions:   opts.CertVerify,
-		CommonVerifyOptions: commonVerifyOpts,
-		CheckClaims:         true,
-		KeyRef:              opts.Key,
-		CertRef:             opts.CertVerify.Cert,
-		CertChain:           opts.CertVerify.CertChain,
-		CARoots:             opts.CertVerify.CARoots,
-		CAIntermediates:     opts.CertVerify.CAIntermediates,
-		IgnoreSCT:           opts.CertVerify.IgnoreSCT,
-		SCTRef:              opts.CertVerify.SCT,
-		Sk:                  opts.SecurityKey.Use,
-		Slot:                opts.SecurityKey.Slot,
-		RekorURL:            opts.Rekor.URL,
-		Offline:             commonVerifyOpts.Offline,
-		TSACertChainPath:    commonVerifyOpts.TSACertChainPath,
-		UseSignedTimestamps: commonVerifyOpts.UseSignedTimestamps,
-		IgnoreTlog:          commonVerifyOpts.IgnoreTlog,
-		NewBundleFormat:     commonVerifyOpts.NewBundleFormat,
-	}
-
-	l.Debug("verifying OCI artifact with cosign", "reference", image)
-	if err := cmd.Exec(ctx, []string{image}); err != nil {
-		return err
-	}
-	l.Debug("OCI artifact signature verified successfully", "reference", image)
-	return nil
-}
-
 // CosignVerifyBlobWithOptions verifies a blob via cosign's VerifyBlobCmd.
 // Mirrors cmd/cosign/cli/verify.go (v3.0.6) VerifyBlob().RunE.
 func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) error {

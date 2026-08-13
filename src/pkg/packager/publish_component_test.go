@@ -12,6 +12,8 @@ import (
 
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -117,9 +119,22 @@ func TestPublishComponentSigning(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	verifyOpts := signing.DefaultVerifyBlobOptions()
-	verifyOpts.Key = filepath.Join("testdata", "publish", "cosign.pub")
-	require.NoError(t, signing.CosignVerifyImageWithOptions(ctx, published.String(), verifyOpts, true, false))
+	require.NoError(t, verifyPublishedComponentSignature(ctx, published.String(), filepath.Join("testdata", "publish", "cosign.pub")))
+}
+
+func verifyPublishedComponentSignature(ctx context.Context, componentRef, publicKeyPath string) error {
+	cmd := &verify.VerifyCommand{
+		RegistryOptions: options.RegistryOptions{AllowHTTPRegistry: true},
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			IgnoreTlog:      true,
+			NewBundleFormat: true,
+		},
+		CheckClaims:     true,
+		KeyRef:          publicKeyPath,
+		IgnoreTlog:      true,
+		NewBundleFormat: true,
+	}
+	return cmd.Exec(ctx, []string{componentRef})
 }
 
 func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
