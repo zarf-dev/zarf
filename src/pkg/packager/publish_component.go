@@ -169,59 +169,47 @@ func collectComponentResources(componentPath string, component v1beta1.Component
 	seen[componentPath] = true
 	baseDir := filepath.Dir(componentPath)
 
-	add := func(resourcePath, field string, remoteAllowed bool) error {
-		if resourcePath == "" {
-			return nil
-		}
-		if helpers.IsURL(resourcePath) {
-			if remoteAllowed {
-				return nil
-			}
-			return fmt.Errorf("remote %s are not supported", field)
-		}
-		return addComponentResource(root, baseDir, resourcePath, resources)
-	}
 	for _, file := range component.Values.Files {
-		if err := add(file, "values files", false); err != nil {
+		if err := addLocalResource(root, baseDir, file, "values files", resources); err != nil {
 			return err
 		}
 	}
-	if err := add(component.Values.Schema, "values schemas", false); err != nil {
+	if err := addLocalResource(root, baseDir, component.Values.Schema, "values schemas", resources); err != nil {
 		return err
 	}
 	for _, chart := range component.Component.Charts {
 		if chart.Local != nil {
-			if err := add(chart.Local.Path, "local chart paths", false); err != nil {
+			if err := addLocalResource(root, baseDir, chart.Local.Path, "local chart paths", resources); err != nil {
 				return err
 			}
 		}
 		for _, values := range chart.ValuesFiles {
-			if err := add(values.Path, "chart values files", true); err != nil {
+			if err := addResource(root, baseDir, values.Path, resources); err != nil {
 				return err
 			}
 		}
 	}
 	for _, manifest := range component.Component.Manifests {
 		for _, file := range manifest.Files {
-			if err := add(file, "manifest files", true); err != nil {
+			if err := addResource(root, baseDir, file, resources); err != nil {
 				return err
 			}
 		}
 		if manifest.Kustomize != nil {
 			for _, file := range manifest.Kustomize.Files {
-				if err := add(file, "kustomize files", true); err != nil {
+				if err := addResource(root, baseDir, file, resources); err != nil {
 					return err
 				}
 			}
 		}
 	}
 	for _, file := range component.Component.Files {
-		if err := add(file.Source, "component files", true); err != nil {
+		if err := addResource(root, baseDir, file.Source, resources); err != nil {
 			return err
 		}
 	}
 	for _, archive := range component.Component.ImageArchives {
-		if err := add(archive.Path, "image archive paths", false); err != nil {
+		if err := addLocalResource(root, baseDir, archive.Path, "image archive paths", resources); err != nil {
 			return err
 		}
 	}
@@ -229,13 +217,10 @@ func collectComponentResources(componentPath string, component v1beta1.Component
 		return fmt.Errorf("remote component imports are not yet supported for v1beta1 packages")
 	}
 	for _, imported := range component.Component.Import.Local {
-		if helpers.IsURL(imported.Path) {
-			return fmt.Errorf("remote local import paths are not supported")
-		}
-		importPath := filepath.Join(baseDir, imported.Path)
-		if err := addComponentResource(root, baseDir, imported.Path, resources); err != nil {
+		if err := addLocalResource(root, baseDir, imported.Path, "local import paths", resources); err != nil {
 			return err
 		}
+		importPath := filepath.Join(baseDir, imported.Path)
 		importedComponent, err := load.ComponentConfig(importPath)
 		if err != nil {
 			return err
@@ -245,6 +230,22 @@ func collectComponentResources(componentPath string, component v1beta1.Component
 		}
 	}
 	return nil
+}
+
+// addResource stages a local resource and leaves a remote URL for package creation to fetch.
+func addResource(root, baseDir, resourcePath string, resources map[string]string) error {
+	if resourcePath == "" || helpers.IsURL(resourcePath) {
+		return nil
+	}
+	return addComponentResource(root, baseDir, resourcePath, resources)
+}
+
+// addLocalResource stages a resource that regular package assembly only supports from the local filesystem.
+func addLocalResource(root, baseDir, resourcePath, field string, resources map[string]string) error {
+	if helpers.IsURL(resourcePath) {
+		return fmt.Errorf("remote %s are not supported", field)
+	}
+	return addResource(root, baseDir, resourcePath, resources)
 }
 
 func addComponentResource(root, baseDir, resourcePath string, resources map[string]string) error {
