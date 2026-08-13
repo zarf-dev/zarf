@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"oras.land/oras-go/v2/registry/remote"
 )
@@ -130,6 +132,44 @@ func TestPublishComponentRejectsNegativeRetries(t *testing.T) {
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.EqualError(t, err, "retries cannot be negative")
+}
+
+func TestPublishComponentImageArchivesUseOCILayout(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	archivePath := filepath.Join(t.TempDir(), "images.tar")
+	imageLayout := filepath.Join("..", "images", "testdata", "oras-oci-layout", "images")
+	require.NoError(t, archive.Compress(ctx, []string{imageLayout}, archivePath, archive.CompressOpts{}))
+	componentPath := filepath.Join(t.TempDir(), "component.yaml")
+	// FIXME: make this readable
+	componentYAML := []byte("apiVersion: zarf.dev/v1beta1\nkind: ZarfComponentConfig\nmetadata:\n  name: image-archive-component\n  version: 0.0.1\ncomponent:\n  imageArchives:\n    - path: " + archivePath + "\n      images:\n        - ghcr.io/zarf-dev/images/hello-world:latest\n")
+	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
+
+	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+
+	repo, err := remote.NewRepository(published.Registry + "/" + published.Repository)
+	require.NoError(t, err)
+	repo.PlainHTTP = true
+	descriptor, err := repo.Resolve(ctx, published.Reference)
+	require.NoError(t, err)
+	manifestReader, err := repo.Manifests().Fetch(ctx, descriptor)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, manifestReader.Close()) }()
+	manifestBytes, err := io.ReadAll(manifestReader)
+	require.NoError(t, err)
+	var manifest ocispec.Manifest
+	require.NoError(t, json.Unmarshal(manifestBytes, &manifest))
+
+	layerTitles := make([]string, 0, len(manifest.Layers))
+	for _, layer := range manifest.Layers {
+		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
+	}
+	require.Contains(t, layerTitles, "images/oci-layout")
+	require.Contains(t, layerTitles, "images/index.json")
+	require.NotContains(t, layerTitles, "images.tar")
+	require.Contains(t, layerTitles, "images/blobs/sha256/03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c")
 }
 
 func verifyPublishedComponentSignature(ctx context.Context, componentRef, publicKeyPath string) error {

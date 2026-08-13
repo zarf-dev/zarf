@@ -21,10 +21,12 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -198,6 +200,11 @@ func stageComponentResources(ctx context.Context, store *memory.Store, component
 	if err != nil {
 		return nil, err
 	}
+	cleanupImageLayout, err := addComponentImageLayout(ctx, componentPath, component, resources)
+	if err != nil {
+		return nil, err
+	}
+	defer cleanupImageLayout()
 	paths := make([]string, 0, len(resources))
 	for rel := range resources {
 		paths = append(paths, rel)
@@ -225,6 +232,107 @@ func stageComponentResources(ctx context.Context, store *memory.Store, component
 		layers = append(layers, descriptor)
 	}
 	return layers, nil
+}
+
+// addComponentImageLayout expands image archives into the OCI layout used by regular packages.
+// The layout is included as artifact layers rather than preserving the source archive itself.
+func addComponentImageLayout(ctx context.Context, componentPath string, component v1beta1.ComponentConfig, resources map[string]string) (func(), error) {
+	archives, err := componentImageArchives(componentPath, component, map[string]bool{})
+	if err != nil {
+		return nil, err
+	}
+	if len(archives) == 0 {
+		return func() {}, nil
+	}
+
+	tempDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create image layout: %w", err)
+	}
+	cleanup := func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			logger.From(ctx).Warn("unable to remove component image layout", "path", tempDir, "error", err)
+		}
+	}
+
+	imageDir := filepath.Join(tempDir, layout.ImagesDir)
+	for _, archive := range archives {
+		_, err := images.Unpack(ctx, v1alpha1.ImageArchive{Path: archive.path, Images: archive.images}, imageDir, config.GetArch(component.Component.Selector.Architecture))
+		if err != nil {
+			cleanup()
+			return nil, fmt.Errorf("unable to unpack image archive %q: %w", archive.path, err)
+		}
+	}
+	if err := utils.SortImagesIndex(imageDir); err != nil {
+		cleanup()
+		return nil, fmt.Errorf("unable to sort component image layout: %w", err)
+	}
+
+	err = filepath.WalkDir(imageDir, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(tempDir, path)
+		if err != nil {
+			return err
+		}
+		resources[rel] = path
+		return nil
+	})
+	if err != nil {
+		cleanup()
+		return nil, err
+	}
+	return cleanup, nil
+}
+
+type componentImageArchive struct {
+	path   string
+	images []string
+}
+
+func componentImageArchives(componentPath string, component v1beta1.ComponentConfig, seen map[string]bool) ([]componentImageArchive, error) {
+	componentPath = filepath.Clean(componentPath)
+	if seen[componentPath] {
+		return nil, nil
+	}
+	seen[componentPath] = true
+	baseDir := filepath.Dir(componentPath)
+
+	archives := make([]componentImageArchive, 0, len(component.Component.ImageArchives))
+	for _, archive := range component.Component.ImageArchives {
+		if helpers.IsURL(archive.Path) {
+			return nil, fmt.Errorf("remote image archive paths are not supported")
+		}
+		archivePath := archive.Path
+		if !filepath.IsAbs(archivePath) {
+			archivePath = filepath.Join(baseDir, archivePath)
+		}
+		archives = append(archives, componentImageArchive{path: archivePath, images: archive.Images})
+	}
+	if len(component.Component.Import.Remote) > 0 {
+		return nil, fmt.Errorf("remote component imports are not yet supported for v1beta1 packages")
+	}
+	for _, imported := range component.Component.Import.Local {
+		if helpers.IsURL(imported.Path) {
+			return nil, fmt.Errorf("remote local import paths are not supported")
+		}
+		importPath := filepath.Join(baseDir, imported.Path)
+		importedComponent, err := load.ComponentConfig(importPath)
+		if err != nil {
+			return nil, err
+		}
+		// FIXME: should probably have a separate stage at the beginning where we import before publish
+		importedArchives, err := componentImageArchives(importPath, importedComponent, seen)
+		if err != nil {
+			return nil, err
+		}
+		archives = append(archives, importedArchives...)
+	}
+	return archives, nil
 }
 
 func componentResources(componentPath string, component v1beta1.ComponentConfig, root string, seen map[string]bool) (map[string]string, error) {
@@ -284,8 +392,8 @@ func collectComponentResources(componentPath string, component v1beta1.Component
 		}
 	}
 	for _, archive := range component.Component.ImageArchives {
-		if err := addLocalResource(root, baseDir, archive.Path, "image archive paths", resources); err != nil {
-			return err
+		if helpers.IsURL(archive.Path) {
+			return fmt.Errorf("remote image archive paths are not supported")
 		}
 	}
 	if len(component.Component.Import.Remote) > 0 {
