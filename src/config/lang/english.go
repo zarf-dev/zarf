@@ -25,6 +25,7 @@ const (
 	ErrUnarchive                    = "failed to unarchive %s: %w"
 	ErrFileExtract                  = "failed to extract filename %s from archive %s: %w"
 	ErrFileNameExtract              = "failed to extract filename from URL %s: %w"
+	ErrManifestCopy                 = "unable to copy manifest %s: %w"
 	ErrUnableToGenerateRandomSecret = "unable to generate a random secret"
 )
 

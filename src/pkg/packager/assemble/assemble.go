@@ -550,7 +550,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 				src = filepath.Join(packagePath, src)
 			}
 			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-				return fmt.Errorf("unable to copy manifest %s: %w", src, err)
+				return fmt.Errorf(lang.ErrManifestCopy, src, err)
 			}
 		}
 	}
@@ -756,12 +756,18 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			dst := filepath.Join(compBuildPath, rel)
 
 			// Copy manifests without any processing.
-			src := path
-			if !filepath.IsAbs(src) {
-				src = filepath.Join(packagePath, src)
-			}
-			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-				return fmt.Errorf("unable to copy manifest %s: %w", src, err)
+			if helpers.IsURL(path) {
+				if err := utils.DownloadToFile(ctx, path, dst); err != nil {
+					return fmt.Errorf(lang.ErrDownloading, path, err)
+				}
+			} else {
+				src := path
+				if !filepath.IsAbs(src) {
+					src = filepath.Join(packagePath, src)
+				}
+				if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+					return fmt.Errorf(lang.ErrManifestCopy, src, err)
+				}
 			}
 
 			component.Manifests[manifestIdx].Files[fileIdx] = rel
@@ -773,7 +779,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
 			dst := filepath.Join(compBuildPath, rel)
 
-			if !filepath.IsAbs(path) {
+			if !helpers.IsURL(path) && !filepath.IsAbs(path) {
 				path = filepath.Join(packagePath, path)
 			}
 
@@ -783,7 +789,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			}
 		}
 
-		// remove kustomizations
+		// Remove kustomizations after rendering them into the package.
 		component.Manifests[manifestIdx].Kustomizations = nil
 	}
 

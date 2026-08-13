@@ -6,7 +6,11 @@ package assemble
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/cgi"
+	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -673,6 +677,126 @@ fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm
 	require.Equal(t, expectedChecksum, string(b))
 	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.AsV1alpha1())
 	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.AsV1alpha1()), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
+}
+
+func TestAssembleSkeletonRemoteManifestResources(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	packagePath := t.TempDir()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/manifest.yaml" {
+			http.NotFound(w, r)
+			return
+		}
+		_, err := w.Write([]byte("apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: remote\n"))
+		if err != nil {
+			t.Fatalf("failed to write response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	remoteKustomizationURL := createRemoteKustomization(t)
+
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name: "remote-manifests",
+		},
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name: "remote-resources",
+				Manifests: []v1alpha1.ZarfManifest{
+					{
+						Name: "remote",
+						Files: []string{
+							server.URL + "/manifest.yaml",
+						},
+						Kustomizations: []string{
+							remoteKustomizationURL,
+						},
+					},
+				},
+			},
+		},
+	}
+	writePackageToDisk(t, pkg, packagePath)
+
+	defined, err := load.PackageDefinition(ctx, packagePath, load.DefinitionOptions{})
+	require.NoError(t, err)
+
+	pkgLayout, err := AssembleSkeleton(ctx, defined, packagePath, AssembleSkeletonOptions{})
+	require.NoError(t, err)
+
+	manifest := pkgLayout.AsV1alpha1().Components[0].Manifests[0]
+	require.Equal(t, []string{"manifests/remote-0.yaml"}, manifest.Files)
+	require.Empty(t, manifest.Kustomizations)
+
+	manifestDir, err := pkgLayout.GetComponentDir(ctx, t.TempDir(), "remote-resources", layout.ManifestsComponentDir)
+	require.NoError(t, err)
+
+	contents, err := os.ReadFile(filepath.Join(manifestDir, "remote-0.yaml"))
+	require.NoError(t, err)
+	require.Equal(t, "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: remote\n", string(contents))
+
+	kustomizationContents, err := os.ReadFile(filepath.Join(manifestDir, "kustomization-remote-0.yaml"))
+	require.NoError(t, err)
+	require.Contains(t, string(kustomizationContents), "name: remote-kustomization")
+}
+
+func createRemoteKustomization(t *testing.T) string {
+	t.Helper()
+
+	gitRoot := t.TempDir()
+
+	worktree := filepath.Join(gitRoot, "worktree")
+	bareRepo := filepath.Join(gitRoot, "remote-kustomization.git")
+
+	require.NoError(t, os.MkdirAll(worktree, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(worktree, "kustomization.yaml"), []byte("resources:\n- configmap.yaml\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(worktree, "configmap.yaml"), []byte("apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: remote-kustomization\n"), 0o600))
+
+	runGit(t, gitRoot, "init", "--bare", bareRepo)
+
+	runGit(t, worktree, "init")
+	runGit(t, worktree, "add", ".")
+	runGit(t, worktree, "-c", "user.name=Zarf Test", "-c", "user.email=zarf@example.com", "commit", "-m", "fixture")
+	runGit(t, worktree, "remote", "add", "origin", bareRepo)
+	runGit(t, worktree, "push", "origin", "HEAD:main")
+
+	gitServer := httptest.NewServer(gitHTTPHandler(t, gitRoot))
+
+	t.Cleanup(gitServer.Close)
+
+	return gitServer.URL + "/remote-kustomization.git"
+}
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+
+	output, err := cmd.CombinedOutput()
+	require.NoErrorf(t, err, "git %s failed: %s", fmt.Sprint(args), output)
+}
+
+func gitHTTPHandler(t *testing.T, gitRoot string) http.Handler {
+	t.Helper()
+	gitPath, err := exec.LookPath("git")
+	if err != nil {
+		t.Fatalf("git not found in PATH: %v", err)
+	}
+
+	return &cgi.Handler{
+		Path: gitPath,
+		Args: []string{"http-backend"},
+		Env: []string{
+			"GIT_HTTP_EXPORT_ALL=1",
+			"GIT_PROJECT_ROOT=" + gitRoot,
+		},
+	}
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
