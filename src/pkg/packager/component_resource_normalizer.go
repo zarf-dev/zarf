@@ -127,9 +127,6 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	imageArchives := make([]v1beta1.ImageArchive, len(component.Component.ImageArchives))
 	for i := range component.Component.ImageArchives {
 		archive := component.Component.ImageArchives[i]
-		if helpers.IsURL(archive.Path) {
-			return component, normalizedComponentResources{}, fmt.Errorf("remote image archive paths are not supported")
-		}
 		archive.Path = normalizer.absolutePath(archive.Path)
 		imageArchives[i] = archive
 		component.Component.ImageArchives[i].Path = filepath.ToSlash(string(layout.ImagesDir))
