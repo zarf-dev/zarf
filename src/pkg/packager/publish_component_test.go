@@ -122,6 +122,16 @@ func TestPublishComponentSigning(t *testing.T) {
 	require.NoError(t, verifyPublishedComponentSignature(ctx, published.String(), filepath.Join("testdata", "publish", "cosign.pub")))
 }
 
+func TestPublishComponentRejectsNegativeRetries(t *testing.T) {
+	t.Parallel()
+
+	_, err := PublishComponent(context.Background(), filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(context.Background(), t), PublishComponentOptions{
+		Retries:       -1,
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.EqualError(t, err, "retries cannot be negative")
+}
+
 func verifyPublishedComponentSignature(ctx context.Context, componentRef, publicKeyPath string) error {
 	cmd := &verify.VerifyCommand{
 		RegistryOptions: options.RegistryOptions{AllowHTTPRegistry: true},

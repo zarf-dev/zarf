@@ -14,16 +14,20 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
@@ -45,6 +49,8 @@ type PublishComponentOptions struct {
 	SignBlobOptions signing.SignBlobOptions
 	// OCIConcurrency configures the number of blobs pushed in parallel.
 	OCIConcurrency int
+	// Retries is the number of attempts to make when publishing fails.
+	Retries int
 	types.RemoteOptions
 }
 
@@ -111,15 +117,14 @@ func PublishComponent(ctx context.Context, componentPath string, destination reg
 		return registry.Reference{}, fmt.Errorf("unable to connect to component registry: %w", err)
 	}
 
-	copyOpts := remote.GetDefaultCopyOpts()
-	if opts.OCIConcurrency > 0 {
-		copyOpts.Concurrency = opts.OCIConcurrency
+	totalSize := configDescriptor.Size + manifest.Size
+	for _, layer := range layers {
+		totalSize += layer.Size
 	}
-	published, err := oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), componentRef.Reference, copyOpts)
+	published, err := pushComponentArtifact(ctx, store, manifest.Digest.String(), remote, componentRef, totalSize, opts)
 	if err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to publish component: %w", err)
+		return registry.Reference{}, err
 	}
-	// FIXME: consider referrs API?
 	if opts.SignBlobOptions.ShouldSign() {
 		artifactRef := fmt.Sprintf("%s/%s@%s", componentRef.Registry, componentRef.Repository, published.Digest)
 		logger.From(ctx).Info("signing published component", "reference", artifactRef)
@@ -129,6 +134,60 @@ func PublishComponent(ctx context.Context, componentPath string, destination reg
 	}
 	logger.From(ctx).Info("published component", "destination", helpers.OCIURLPrefix+componentRef.String())
 	return componentRef, nil
+}
+
+func pushComponentArtifact(ctx context.Context, store *memory.Store, sourceRef string, remote *zoci.Remote, componentRef registry.Reference, totalSize int64, opts PublishComponentOptions) (_ ocispec.Descriptor, err error) {
+	l := logger.From(ctx)
+	start := time.Now()
+
+	if opts.OCIConcurrency == 0 {
+		opts.OCIConcurrency = zoci.DefaultConcurrency
+	}
+	if opts.Retries <= 0 {
+		if opts.Retries < 0 {
+			return ocispec.Descriptor{}, errors.New("retries cannot be negative")
+		}
+		l.Debug("retries set to default", "retries", zoci.DefaultRetries)
+		opts.Retries = zoci.DefaultRetries
+	}
+
+	copyOpts := remote.GetDefaultCopyOpts()
+	copyOpts.Concurrency = opts.OCIConcurrency
+
+	var published ocispec.Descriptor
+	err = retry.Do(
+		func() error {
+			l.Info("pushing component to registry", "destination", componentRef.String(), "size", utils.ByteFormat(float64(totalSize), 2))
+			trackedRemote := images.NewTrackedTarget(
+				remote.Repo(),
+				totalSize,
+				images.DefaultReport(l, "component publish in progress", componentRef.String()),
+			)
+			trackedRemote.StartReporting(ctx)
+			defer trackedRemote.StopReporting()
+
+			var copyErr error
+			published, copyErr = oras.Copy(ctx, store, sourceRef, trackedRemote, componentRef.Reference, copyOpts)
+			return copyErr
+		},
+		retry.Attempts(uint(opts.Retries)),
+		retry.Delay(500*time.Millisecond),
+		retry.MaxDelay(8*time.Second),
+		retry.DelayType(retry.BackOffDelay),
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+		retry.OnRetry(func(n uint, retryErr error) {
+			if opts.Retries > 1 && n+1 < uint(opts.Retries) {
+				l.Warn("retrying component push", "attempt", n+1, "maxAttempts", opts.Retries, "error", retryErr)
+			}
+		}),
+	)
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("component publish failed: %w", err)
+	}
+
+	l.Info("completed component publish", "destination", componentRef.String(), "duration", time.Since(start).Round(100*time.Millisecond))
+	return published, nil
 }
 
 // stageComponentResources includes local component resources while leaving remote resources to
