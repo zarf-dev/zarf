@@ -431,6 +431,14 @@ $ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry
 	CmdPackagePublishFlagFlavor             = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
 	CmdPackagePublishFlagTag                = "The tag to be used in the OCI reference for the package in the registry"
 
+	CmdComponentShort          = "Commands for reusable Zarf components"
+	CmdComponentPublishShort   = "Publishes a v1beta1 Zarf component to a remote registry"
+	CmdComponentPublishExample = `
+# Publish a v1beta1 component config to a remote registry
+$ zarf component publish monitoring.yaml oci://ghcr.io/my-org/components
+`
+	CmdComponentPublishFlagFlavor = "Publish the component variant with this flavor"
+
 	CmdPackageSignShort   = "Signs an existing Zarf package"
 	CmdPackageSignLong    = "Signs an existing Zarf package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the zarf.yaml file and does not modify the package checksums."
 	CmdPackageSignExample = `

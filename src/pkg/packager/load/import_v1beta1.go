@@ -152,6 +152,12 @@ func selectImportVariant(entries []v1beta1.ComponentImportLocal, specDir, arch, 
 // readComponentConfig reads a ZarfComponentConfig file directly. v1beta1 packages only ever import
 // v1beta1 component configs, so the bytes are decoded into the native type without conversion.
 func readComponentConfig(path string) (v1beta1.ComponentConfig, error) {
+	return ComponentConfig(path)
+}
+
+// ComponentConfig reads and schema-validates a v1beta1 ZarfComponentConfig file.
+// FIXME: this should be a generic function in load
+func ComponentConfig(path string) (v1beta1.ComponentConfig, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return v1beta1.ComponentConfig{}, fmt.Errorf("unable to access imported component config %q: %w", path, err)

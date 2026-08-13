@@ -1,0 +1,11 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: published-component
+  version: 0.0.1
+component:
+  manifests:
+    - name: sample
+      namespace: default
+      files:
+        - manifest.yaml
