@@ -108,10 +108,9 @@ func PublishComponent(ctx context.Context, componentPath string, destination reg
 		ConfigDescriptor: &configDescriptor,
 		Layers:           layers,
 		ManifestAnnotations: map[string]string{
-			ocispec.AnnotationTitle:          component.Metadata.Name,
-			ocispec.AnnotationDescription:    component.Metadata.Description,
-			ocispec.AnnotationVersion:        component.Metadata.Version,
-			"zarf.dev/component-config-path": filepath.ToSlash(filepath.Base(componentPath)),
+			ocispec.AnnotationTitle:       component.Metadata.Name,
+			ocispec.AnnotationDescription: component.Metadata.Description,
+			ocispec.AnnotationVersion:     component.Metadata.Version,
 		},
 	})
 	if err != nil {
