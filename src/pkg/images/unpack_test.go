@@ -434,3 +434,57 @@ func TestUnpackTaggedIndexFiltersToPlatform(t *testing.T) {
 	require.NoError(t, json.Unmarshal(cfgBytes, &cfg))
 	require.Equal(t, "amd64", cfg.Architecture)
 }
+
+func TestUnpackTaggedIndexPreservesAllPlatformsWithoutArchitecture(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	digest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi", "v1", platforms)
+	digestRef := fmt.Sprintf("%s/fixtures/multi@%s", upstream, digest)
+	tagRef := fmt.Sprintf("%s/fixtures/multi:v1", upstream)
+
+	digestRefInfo, err := transform.ParseImageRef(digestRef)
+	require.NoError(t, err)
+
+	layoutDir := t.TempDir()
+	_, err = Pull(ctx, []transform.Image{digestRefInfo}, layoutDir, PullOptions{
+		Arch:           "amd64",
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+
+	store, err := oci.NewWithContext(ctx, layoutDir)
+	require.NoError(t, err)
+	desc, err := store.Resolve(ctx, digestRef)
+	require.NoError(t, err)
+	require.NoError(t, store.Untag(ctx, digestRef))
+	require.NoError(t, store.Tag(ctx, desc, tagRef))
+
+	tarFile := filepath.Join(t.TempDir(), "images.tar")
+	require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
+
+	dstDir := t.TempDir()
+	_, err = Unpack(ctx, v1alpha1.ImageArchive{Path: tarFile, Images: []string{tagRef}}, dstDir, "")
+	require.NoError(t, err)
+
+	dstIdx, err := getIndexFromOCILayout(dstDir)
+	require.NoError(t, err)
+	var top *ocispec.Descriptor
+	for i := range dstIdx.Manifests {
+		if dstIdx.Manifests[i].Annotations[ocispec.AnnotationRefName] == tagRef {
+			top = &dstIdx.Manifests[i]
+			break
+		}
+	}
+	require.NotNil(t, top, "no manifest tagged with ref %s in %v", tagRef, dstIdx.Manifests)
+	require.True(t, IsIndex(top.MediaType), "expected preserved index, got %s", top.MediaType)
+	index := requireIndexBlobs(t, dstDir, top.Digest.String())
+	require.Len(t, index.Manifests, 2)
+	require.ElementsMatch(t, []string{"amd64", "arm64"}, []string{index.Manifests[0].Platform.Architecture, index.Manifests[1].Platform.Architecture})
+}

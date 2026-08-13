@@ -59,9 +59,6 @@ type PublishComponentOptions struct {
 // The component config is stored as the artifact's config blob; later remote-import support can
 // retrieve it without treating it as a Zarf package.
 func PublishComponent(ctx context.Context, componentPath string, destination registry.Reference, opts PublishComponentOptions) (registry.Reference, error) {
-	// FIXME: not sure if we should have flavors or architectures
-	// Flavors should work as they are expected
-	// Architectures should probably be - pull all the image platforms for an archive, if an architecture selector is given then pull just that one.
 	if err := destination.ValidateRegistry(); err != nil {
 		return registry.Reference{}, fmt.Errorf("invalid registry: %w", err)
 	}
@@ -76,8 +73,7 @@ func PublishComponent(ctx context.Context, componentPath string, destination reg
 	if component.Metadata.Version == "" {
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
-	// FIXME: we shouldn't use config.GetArch, only use architecture as a selector if the component declares component.selector.architecture
-	component, err = load.ResolveComponentConfigImports(ctx, component, componentPath, config.GetArch(component.Component.Selector.Architecture), opts.Flavor)
+	component, err = load.ResolveComponentConfigImports(ctx, component, componentPath, component.Component.Selector.Architecture, opts.Flavor)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to resolve component imports: %w", err)
 	}
@@ -246,7 +242,8 @@ func stageComponentResources(ctx context.Context, store *memory.Store, resources
 }
 
 // addComponentImageLayout expands image archives into the OCI layout used by regular packages.
-// The layout is included as artifact layers rather than preserving the source archive itself.
+// The layout is included as artifact layers rather than preserving the source archive itself. An
+// empty architecture preserves every image platform; a selector architecture retains only that platform.
 func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchive, architecture string, resources map[string]componentResource) (func(), error) {
 	if len(archives) == 0 {
 		return func() {}, nil
@@ -264,8 +261,7 @@ func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchiv
 
 	imageDir := filepath.Join(tempDir, layout.ImagesDir)
 	for _, archive := range archives {
-		// FIXME: we have to decide one architecture
-		_, err := images.Unpack(ctx, v1alpha1.ImageArchive{Path: archive.Path, Images: archive.Images}, imageDir, config.GetArch(architecture))
+		_, err := images.Unpack(ctx, v1alpha1.ImageArchive{Path: archive.Path, Images: archive.Images}, imageDir, architecture)
 		if err != nil {
 			cleanup()
 			return nil, fmt.Errorf("unable to unpack image archive %q: %w", archive.Path, err)

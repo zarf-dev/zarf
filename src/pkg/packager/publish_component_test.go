@@ -198,6 +198,38 @@ component:
 	require.NotContains(t, layerTitles, "child/component.yaml")
 }
 
+func TestPublishComponentSelectsImportsForComponentArchitecture(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	for architecture := range map[string]struct{}{"amd64": {}, "arm64": {}} {
+		componentYAML := []byte("apiVersion: zarf.dev/v1beta1\nkind: ZarfComponentConfig\nmetadata:\n  name: " + architecture + "-component\n  version: 0.0.1\ncomponent:\n  selector:\n    architecture: " + architecture + "\n  images:\n    - name: example.com/" + architecture + ":latest\n")
+		require.NoError(t, os.WriteFile(filepath.Join(root, architecture+".yaml"), componentYAML, 0o600))
+	}
+	componentPath := filepath.Join(root, "component.yaml")
+	require.NoError(t, os.WriteFile(componentPath, []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: architecture-component
+  version: 0.0.1
+component:
+  selector:
+    architecture: arm64
+  import:
+    local:
+      - path: amd64.yaml
+      - path: arm64.yaml
+`), 0o600))
+
+	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+
+	component, _ := getPublishedComponent(ctx, t, published)
+	require.Equal(t, "arm64", component.Component.Selector.Architecture)
+	require.Equal(t, []v1beta1.Image{{Name: "example.com/arm64:latest"}}, component.Component.Images)
+}
+
 func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 	t.Parallel()
 
@@ -359,21 +391,21 @@ func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
 			component: v1beta1.ComponentConfig{
 				Values: v1beta1.Values{Files: []string{"https://example.com/values.yaml"}},
 			},
-			wantErr: "remote values-file are not supported",
+			wantErr: "resource kind values-file cannot be pulled from remote sources",
 		},
 		{
 			name: "values schema",
 			component: v1beta1.ComponentConfig{
 				Values: v1beta1.Values{Schema: "https://example.com/values.schema.json"},
 			},
-			wantErr: "remote values-schema are not supported",
+			wantErr: "resource kind values-schema cannot be pulled from remote sources",
 		},
 		{
 			name: "local chart",
 			component: v1beta1.ComponentConfig{
 				Component: v1beta1.ComponentSpec{Charts: []v1beta1.Chart{{Local: &v1beta1.LocalSource{Path: "https://example.com/chart.tgz"}}}},
 			},
-			wantErr: "remote chart are not supported",
+			wantErr: "resource kind chart cannot be pulled from remote sources",
 		},
 		{
 			name: "image archive",

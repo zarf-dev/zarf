@@ -174,7 +174,7 @@ func copyImageFromOCILayout(ctx context.Context, src oras.ReadOnlyTarget, dst *o
 	// manifest-digest reference is filtered down to a single platform manifest by oras.Copy.
 	var platform *ocispec.Platform
 	isIndexSha := destImage.Digest != "" && IsIndex(desc.MediaType)
-	if IsIndex(desc.MediaType) && !isIndexSha {
+	if IsIndex(desc.MediaType) && !isIndexSha && arch != "" {
 		platform = &ocispec.Platform{Architecture: arch, OS: "linux"}
 	}
 	copyOpts := oras.DefaultCopyOptions
