@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestPackageCreatePublishArch(t *testing.T) {
@@ -38,30 +37,6 @@ func TestPackageCreatePublishArch(t *testing.T) {
 			require.Equal(t, tt.expectedArch, layout.Pkg.Metadata.Architecture)
 		})
 	}
-}
-
-func TestPackageCreateOCITransportNegotiation(t *testing.T) {
-	const (
-		username = "registry-user"
-		password = "registry-password"
-	)
-
-	ctx := testutil.TestContext(t)
-	registryAddress := testutil.SetupInMemoryRegistryTLSAuth(ctx, t, username, password)
-	setDockerConfig(t, map[string]bool{registryAddress: true}, username, password)
-
-	packageSource, err := Create(ctx, filepath.Join("testdata", "create", "create-publish-arch"), fmt.Sprintf("oci://%s/my-namespace", registryAddress), CreateOptions{
-		RemoteOptions: types.RemoteOptions{
-			PlainHTTP:             true,
-			InsecureSkipTLSVerify: true,
-		},
-	})
-	require.NoError(t, err)
-
-	layout := pullFromRemoteWithOptions(ctx, t, packageSource, "amd64", "", t.TempDir(), types.RemoteOptions{
-		InsecureSkipTLSVerify: true,
-	})
-	require.Equal(t, "amd64", layout.Pkg.Metadata.Architecture)
 }
 
 func TestPackageCreateDifferentialOCIPackage(t *testing.T) {

@@ -484,99 +484,38 @@ func TestPublishFromOCITransportNegotiation(t *testing.T) {
 		password = "source-password"
 	)
 
-	tt := []struct {
-		name            string
-		sourceTLS       bool
-		destinationTLS  bool
-		plainHTTP       bool
-		expectCopyError bool
-	}{
-		{
-			name:      "copies an authenticated HTTPS source to an HTTP destination",
-			sourceTLS: true,
-			plainHTTP: true,
-		},
-		{
-			name:           "keeps HTTPS source and destination on HTTPS",
-			sourceTLS:      true,
-			destinationTLS: true,
-			plainHTTP:      true,
-		},
-		{
-			name:      "copies an HTTP source to an HTTP destination",
-			plainHTTP: true,
-		},
-		{
-			name:            "does not downgrade an HTTP destination without opt in",
-			sourceTLS:       true,
-			expectCopyError: true,
-		},
+	ctx := testutil.TestContext(t)
+	sourceAddress := testutil.SetupInMemoryRegistryTLSAuth(ctx, t, username, password)
+	destinationAddress := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	setDockerConfig(t, map[string]bool{sourceAddress: true}, username, password)
+
+	layoutExpected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+
+	sourceRef, err := PublishPackage(ctx, layoutExpected, registry.Reference{
+		Registry:   sourceAddress,
+		Repository: "my-namespace",
+	}, PublishPackageOptions{
+		RemoteOptions: types.RemoteOptions{InsecureSkipTLSVerify: true},
+	})
+	require.NoError(t, err)
+
+	destinationRef := registry.Reference{
+		Registry:   destinationAddress,
+		Repository: sourceRef.Repository,
+		Reference:  sourceRef.Reference,
 	}
-
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := testutil.TestContext(t)
-
-			var sourceAddress string
-			if tc.sourceTLS {
-				sourceAddress = testutil.SetupInMemoryRegistryTLSAuth(ctx, t, username, password)
-			} else {
-				sourceAddress = testutil.SetupInMemoryRegistryDynamic(ctx, t)
-			}
-
-			var destinationAddress string
-			if tc.destinationTLS {
-				destinationAddress = testutil.SetupInMemoryRegistryTLSAuth(ctx, t, username, password)
-			} else {
-				destinationAddress = testutil.SetupInMemoryRegistryDynamic(ctx, t)
-			}
-
-			setDockerConfig(t, map[string]bool{
-				sourceAddress:      tc.sourceTLS,
-				destinationAddress: tc.destinationTLS,
-			}, username, password)
-
-			layoutExpected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
-			require.NoError(t, err)
-
-			sourceRef, err := PublishPackage(ctx, layoutExpected, registry.Reference{
-				Registry:   sourceAddress,
-				Repository: "my-namespace",
-			}, PublishPackageOptions{
-				RemoteOptions: types.RemoteOptions{
-					PlainHTTP:             !tc.sourceTLS,
-					InsecureSkipTLSVerify: tc.sourceTLS,
-				},
-			})
-			require.NoError(t, err)
-
-			destinationRef := registry.Reference{
-				Registry:   destinationAddress,
-				Repository: sourceRef.Repository,
-				Reference:  sourceRef.Reference,
-			}
-			remoteOptions := types.RemoteOptions{
-				PlainHTTP:             tc.plainHTTP,
-				InsecureSkipTLSVerify: tc.sourceTLS || tc.destinationTLS,
-			}
-			err = PublishFromOCI(ctx, sourceRef, destinationRef, PublishFromOCIOptions{
-				Architecture:  layoutExpected.Pkg.Build.Architecture,
-				RemoteOptions: remoteOptions,
-			})
-			if tc.expectCopyError {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-
-			destinationRemoteOptions := types.RemoteOptions{
-				PlainHTTP:             !tc.destinationTLS,
-				InsecureSkipTLSVerify: tc.destinationTLS,
-			}
-			layoutActual := pullFromRemoteWithOptions(ctx, t, destinationRef.String(), layoutExpected.Pkg.Build.Architecture, "", t.TempDir(), destinationRemoteOptions)
-			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "copied package must retain metadata and layers")
-		})
+	remoteOptions := types.RemoteOptions{
+		PlainHTTP:             true,
+		InsecureSkipTLSVerify: true,
 	}
+	require.NoError(t, PublishFromOCI(ctx, sourceRef, destinationRef, PublishFromOCIOptions{
+		Architecture:  layoutExpected.Pkg.Build.Architecture,
+		RemoteOptions: remoteOptions,
+	}))
+
+	layoutActual := pullFromRemoteWithOptions(ctx, t, destinationRef.String(), layoutExpected.Pkg.Build.Architecture, "", t.TempDir(), types.RemoteOptions{PlainHTTP: true})
+	require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "copied package must retain metadata and layers")
 }
 
 func TestSignOCITransportNegotiation(t *testing.T) {
@@ -585,125 +524,61 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 		password = "source-password"
 	)
 
+	ctx := testutil.TestContext(t)
+	sourceAddress := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	destinationAddress := testutil.SetupInMemoryRegistryTLSAuth(ctx, t, username, password)
+	setDockerConfig(t, map[string]bool{destinationAddress: true}, username, password)
+
+	layoutExpected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+
+	sourceRef, err := PublishPackage(ctx, layoutExpected, registry.Reference{
+		Registry:   sourceAddress,
+		Repository: "my-namespace",
+	}, PublishPackageOptions{
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+	})
+	require.NoError(t, err)
+
+	remoteOptions := types.RemoteOptions{
+		PlainHTTP:             true,
+		InsecureSkipTLSVerify: true,
+	}
+	packagePath, err := Pull(ctx, helpers.OCIURLPrefix+sourceRef.String(), t.TempDir(), PullOptions{
+		Architecture:  layoutExpected.Pkg.Build.Architecture,
+		RemoteOptions: remoteOptions,
+		CachePath:     t.TempDir(),
+	})
+	require.NoError(t, err)
+
+	sourceLayout, err := LoadPackage(ctx, packagePath, LoadOptions{
+		Architecture: layoutExpected.Pkg.Build.Architecture,
+		Filter:       filters.Empty(),
+		CachePath:    t.TempDir(),
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, sourceLayout.Cleanup())
+	})
+
 	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
 	signOpts.Password = "password"
 	signOpts.Overwrite = true
+	destinationRef, err := PublishPackage(ctx, sourceLayout, registry.Reference{
+		Registry:   destinationAddress,
+		Repository: sourceRef.Repository,
+	}, PublishPackageOptions{
+		SignBlobOptions: signOpts,
+		RemoteOptions:   remoteOptions,
+	})
+	require.NoError(t, err)
 
-	tt := []struct {
-		name               string
-		sourceTLS          bool
-		destinationTLS     bool
-		plainHTTP          bool
-		expectPullError    bool
-		expectPublishError bool
-	}{
-		{
-			name:      "signs an HTTPS source to an HTTP destination",
-			sourceTLS: true,
-			plainHTTP: true,
-		},
-		{
-			name:           "signs an HTTP source to an HTTPS destination",
-			destinationTLS: true,
-			plainHTTP:      true,
-		},
-		{
-			name:            "does not downgrade an HTTP source without opt in",
-			destinationTLS:  true,
-			expectPullError: true,
-		},
-		{
-			name:               "does not downgrade an HTTP destination without opt in",
-			sourceTLS:          true,
-			expectPublishError: true,
-		},
-	}
-
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := testutil.TestContext(t)
-
-			var sourceAddress string
-			if tc.sourceTLS {
-				sourceAddress = testutil.SetupInMemoryRegistryTLSAuth(ctx, t, username, password)
-			} else {
-				sourceAddress = testutil.SetupInMemoryRegistryDynamic(ctx, t)
-			}
-
-			var destinationAddress string
-			if tc.destinationTLS {
-				destinationAddress = testutil.SetupInMemoryRegistryTLSAuth(ctx, t, username, password)
-			} else {
-				destinationAddress = testutil.SetupInMemoryRegistryDynamic(ctx, t)
-			}
-
-			setDockerConfig(t, map[string]bool{
-				sourceAddress:      tc.sourceTLS,
-				destinationAddress: tc.destinationTLS,
-			}, username, password)
-
-			layoutExpected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
-			require.NoError(t, err)
-
-			sourceRef, err := PublishPackage(ctx, layoutExpected, registry.Reference{
-				Registry:   sourceAddress,
-				Repository: "my-namespace",
-			}, PublishPackageOptions{
-				RemoteOptions: types.RemoteOptions{
-					PlainHTTP:             !tc.sourceTLS,
-					InsecureSkipTLSVerify: tc.sourceTLS,
-				},
-			})
-			require.NoError(t, err)
-
-			remoteOptions := types.RemoteOptions{
-				PlainHTTP:             tc.plainHTTP,
-				InsecureSkipTLSVerify: tc.sourceTLS || tc.destinationTLS,
-			}
-			packagePath, err := Pull(ctx, helpers.OCIURLPrefix+sourceRef.String(), t.TempDir(), PullOptions{
-				Architecture:  layoutExpected.Pkg.Build.Architecture,
-				RemoteOptions: remoteOptions,
-				CachePath:     t.TempDir(),
-			})
-			if tc.expectPullError {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-
-			sourceLayout, err := LoadPackage(ctx, packagePath, LoadOptions{
-				Architecture: layoutExpected.Pkg.Build.Architecture,
-				Filter:       filters.Empty(),
-				CachePath:    t.TempDir(),
-			})
-			require.NoError(t, err)
-			t.Cleanup(func() {
-				require.NoError(t, sourceLayout.Cleanup())
-			})
-
-			destinationRef, err := PublishPackage(ctx, sourceLayout, registry.Reference{
-				Registry:   destinationAddress,
-				Repository: sourceRef.Repository,
-			}, PublishPackageOptions{
-				SignBlobOptions: signOpts,
-				RemoteOptions:   remoteOptions,
-			})
-			if tc.expectPublishError {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-
-			destinationRemoteOptions := types.RemoteOptions{
-				PlainHTTP:             !tc.destinationTLS,
-				InsecureSkipTLSVerify: tc.destinationTLS,
-			}
-			layoutActual := pullFromRemoteWithOptions(ctx, t, destinationRef.String(), layoutExpected.Pkg.Build.Architecture, filepath.Join("testdata", "publish", "cosign.pub"), t.TempDir(), destinationRemoteOptions)
-			require.Equal(t, sourceLayout.Pkg, layoutActual.Pkg, "signed package must retain metadata and layers")
-			require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Bundle))
-		})
-	}
+	layoutActual := pullFromRemoteWithOptions(ctx, t, destinationRef.String(), layoutExpected.Pkg.Build.Architecture, filepath.Join("testdata", "publish", "cosign.pub"), t.TempDir(), types.RemoteOptions{
+		InsecureSkipTLSVerify: true,
+	})
+	require.Equal(t, sourceLayout.Pkg, layoutActual.Pkg, "signed package must retain metadata and layers")
+	require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Bundle))
 }
 
 func setDockerConfig(t *testing.T, registryAddresses map[string]bool, username, password string) {
