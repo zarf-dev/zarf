@@ -6,6 +6,7 @@ package packager
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -122,8 +123,17 @@ func TestPublishComponentImageArchivesUseOCILayout(t *testing.T) {
 	imageLayout := filepath.Join("..", "images", "testdata", "oras-oci-layout", "images")
 	require.NoError(t, archive.Compress(ctx, []string{imageLayout}, archivePath, archive.CompressOpts{}))
 	componentPath := filepath.Join(t.TempDir(), "component.yaml")
-	// FIXME: make this readable
-	componentYAML := []byte("apiVersion: zarf.dev/v1beta1\nkind: ZarfComponentConfig\nmetadata:\n  name: image-archive-component\n  version: 0.0.1\ncomponent:\n  imageArchives:\n    - path: " + archivePath + "\n      images:\n        - ghcr.io/zarf-dev/images/hello-world:latest\n")
+	componentYAML := []byte(fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: image-archive-component
+  version: 0.0.1
+component:
+  imageArchives:
+    - path: %q
+      images:
+        - ghcr.io/zarf-dev/images/hello-world:latest
+`, archivePath))
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
 	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
@@ -204,7 +214,17 @@ func TestPublishComponentSelectsImportsForComponentArchitecture(t *testing.T) {
 	ctx := context.Background()
 	root := t.TempDir()
 	for architecture := range map[string]struct{}{"amd64": {}, "arm64": {}} {
-		componentYAML := []byte("apiVersion: zarf.dev/v1beta1\nkind: ZarfComponentConfig\nmetadata:\n  name: " + architecture + "-component\n  version: 0.0.1\ncomponent:\n  selector:\n    architecture: " + architecture + "\n  images:\n    - name: example.com/" + architecture + ":latest\n")
+		componentYAML := []byte(fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: %s-component
+  version: 0.0.1
+component:
+  selector:
+    architecture: %s
+  images:
+    - name: example.com/%s:latest
+`, architecture, architecture, architecture))
 		require.NoError(t, os.WriteFile(filepath.Join(root, architecture+".yaml"), componentYAML, 0o600))
 	}
 	componentPath := filepath.Join(root, "component.yaml")
