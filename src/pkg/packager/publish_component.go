@@ -169,57 +169,69 @@ func collectComponentResources(componentPath string, component v1beta1.Component
 	seen[componentPath] = true
 	baseDir := filepath.Dir(componentPath)
 
-	add := func(resourcePath string) error {
-		if resourcePath == "" || helpers.IsURL(resourcePath) {
+	add := func(resourcePath, field string, remoteAllowed bool) error {
+		if resourcePath == "" {
 			return nil
+		}
+		if helpers.IsURL(resourcePath) {
+			if remoteAllowed {
+				return nil
+			}
+			return fmt.Errorf("remote %s are not supported", field)
 		}
 		return addComponentResource(root, baseDir, resourcePath, resources)
 	}
 	for _, file := range component.Values.Files {
-		if err := add(file); err != nil {
+		if err := add(file, "values files", false); err != nil {
 			return err
 		}
 	}
-	if err := add(component.Values.Schema); err != nil {
+	if err := add(component.Values.Schema, "values schemas", false); err != nil {
 		return err
 	}
 	for _, chart := range component.Component.Charts {
 		if chart.Local != nil {
-			if err := add(chart.Local.Path); err != nil {
+			if err := add(chart.Local.Path, "local chart paths", false); err != nil {
 				return err
 			}
 		}
 		for _, values := range chart.ValuesFiles {
-			if err := add(values.Path); err != nil {
+			if err := add(values.Path, "chart values files", true); err != nil {
 				return err
 			}
 		}
 	}
 	for _, manifest := range component.Component.Manifests {
 		for _, file := range manifest.Files {
-			if err := add(file); err != nil {
+			if err := add(file, "manifest files", true); err != nil {
 				return err
 			}
 		}
 		if manifest.Kustomize != nil {
 			for _, file := range manifest.Kustomize.Files {
-				if err := add(file); err != nil {
+				if err := add(file, "kustomize files", true); err != nil {
 					return err
 				}
 			}
 		}
 	}
 	for _, file := range component.Component.Files {
-		if err := add(file.Source); err != nil {
+		if err := add(file.Source, "component files", true); err != nil {
 			return err
 		}
 	}
 	for _, archive := range component.Component.ImageArchives {
-		if err := add(archive.Path); err != nil {
+		if err := add(archive.Path, "image archive paths", false); err != nil {
 			return err
 		}
 	}
+	if len(component.Component.Import.Remote) > 0 {
+		return fmt.Errorf("remote component imports are not yet supported for v1beta1 packages")
+	}
 	for _, imported := range component.Component.Import.Local {
+		if helpers.IsURL(imported.Path) {
+			return fmt.Errorf("remote local import paths are not supported")
+		}
 		importPath := filepath.Join(baseDir, imported.Path)
 		if err := addComponentResource(root, baseDir, imported.Path, resources); err != nil {
 			return err
