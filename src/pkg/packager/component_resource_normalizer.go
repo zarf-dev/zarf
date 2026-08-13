@@ -1,0 +1,211 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+package packager
+
+import (
+	"fmt"
+	"io/fs"
+	"os"
+	"path"
+	"path/filepath"
+	"strconv"
+
+	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+)
+
+const (
+	componentResourceMountPathAnnotation = "dev.zarf.mountPath"
+	componentResourceKindAnnotation      = "dev.zarf.resourceKind"
+	componentResourceKindImageLayout     = "image-layout"
+)
+
+// componentResource describes a single file staged in a published component artifact.
+type componentResource struct {
+	sourcePath string
+	// FIXME: this should be its own type
+	kind string
+}
+
+type normalizedComponentResources struct {
+	resources     map[string]componentResource
+	imageArchives []v1beta1.ImageArchive
+	architecture  string
+}
+
+type componentResourceNormalizer struct {
+	baseDir      string
+	resources    map[string]componentResource
+	sourceMounts map[string]string
+	nextID       int
+}
+
+// normalizeComponentResources makes every local source path artifact-relative. This keeps the
+// published config independent of the directory in which it was built and gives remote imports a
+// stable mount contract.
+func normalizeComponentResources(componentPath string, component v1beta1.ComponentConfig) (v1beta1.ComponentConfig, normalizedComponentResources, error) {
+	normalizer := componentResourceNormalizer{
+		baseDir:      filepath.Dir(componentPath),
+		resources:    map[string]componentResource{},
+		sourceMounts: map[string]string{},
+	}
+
+	for i := range component.Values.Files {
+		resourcePath, err := addLocalResource(&normalizer, component.Values.Files[i], "values files", "values")
+		if err != nil {
+			return component, normalizedComponentResources{}, err
+		}
+		component.Values.Files[i] = resourcePath
+	}
+	var err error
+	component.Values.Schema, err = addLocalResource(&normalizer, component.Values.Schema, "values schemas", "values-schema")
+	if err != nil {
+		return component, normalizedComponentResources{}, err
+	}
+
+	for i := range component.Component.Charts {
+		chart := &component.Component.Charts[i]
+		if chart.Local != nil {
+			chart.Local.Path, err = addLocalResource(&normalizer, chart.Local.Path, "local chart paths", "chart")
+			if err != nil {
+				return component, normalizedComponentResources{}, err
+			}
+		}
+		for j := range chart.ValuesFiles {
+			chart.ValuesFiles[j].Path, err = addResource(&normalizer, chart.ValuesFiles[j].Path, "chart-values")
+			if err != nil {
+				return component, normalizedComponentResources{}, err
+			}
+		}
+	}
+
+	for i := range component.Component.Manifests {
+		manifest := &component.Component.Manifests[i]
+		for j := range manifest.Files {
+			manifest.Files[j], err = addResource(&normalizer, manifest.Files[j], "manifest")
+			if err != nil {
+				return component, normalizedComponentResources{}, err
+			}
+		}
+		if manifest.Kustomize != nil {
+			for j := range manifest.Kustomize.Files {
+				manifest.Kustomize.Files[j], err = addResource(&normalizer, manifest.Kustomize.Files[j], "kustomize")
+				if err != nil {
+					return component, normalizedComponentResources{}, err
+				}
+			}
+		}
+	}
+
+	for i := range component.Component.Files {
+		component.Component.Files[i].Source, err = addResource(&normalizer, component.Component.Files[i].Source, "file")
+		if err != nil {
+			return component, normalizedComponentResources{}, err
+		}
+	}
+
+	if hasActions(component.Component.Actions.OnCreate) {
+		return component, normalizedComponentResources{}, fmt.Errorf("onCreate actions are not supported for published remote components")
+	}
+	if len(component.Component.Import.Remote) > 0 {
+		return component, normalizedComponentResources{}, fmt.Errorf("remote component imports are not yet supported for v1beta1 packages")
+	}
+
+	imageArchives := make([]v1beta1.ImageArchive, len(component.Component.ImageArchives))
+	for i := range component.Component.ImageArchives {
+		archive := component.Component.ImageArchives[i]
+		if helpers.IsURL(archive.Path) {
+			return component, normalizedComponentResources{}, fmt.Errorf("remote image archive paths are not supported")
+		}
+		archive.Path = normalizer.absolutePath(archive.Path)
+		imageArchives[i] = archive
+		component.Component.ImageArchives[i].Path = filepath.ToSlash(string(layout.ImagesDir))
+	}
+
+	return component, normalizedComponentResources{
+		resources:     normalizer.resources,
+		imageArchives: imageArchives,
+		architecture:  component.Component.Selector.Architecture,
+	}, nil
+}
+
+func hasActions(actionSet v1beta1.ComponentActionSet) bool {
+	return actionSet.Defaults != nil || len(actionSet.Before) > 0 || len(actionSet.OnSuccess) > 0 || len(actionSet.OnFailure) > 0
+}
+
+// addResource stages a local resource and leaves a remote URL for package creation to fetch.
+func addResource(normalizer *componentResourceNormalizer, resourcePath, kind string) (string, error) {
+	if resourcePath == "" || helpers.IsURL(resourcePath) {
+		return resourcePath, nil
+	}
+	return normalizer.add(resourcePath, kind)
+}
+
+// addLocalResource stages a resource that regular package assembly only supports from the local filesystem.
+// FIXME: no reason to have field and kind
+func addLocalResource(normalizer *componentResourceNormalizer, resourcePath, field, kind string) (string, error) {
+	if helpers.IsURL(resourcePath) {
+		return "", fmt.Errorf("remote %s are not supported", field)
+	}
+	return addResource(normalizer, resourcePath, kind)
+}
+
+func (n *componentResourceNormalizer) add(resourcePath, kind string) (string, error) {
+	absPath := n.absolutePath(resourcePath)
+	if mountPath, ok := n.sourceMounts[absPath]; ok {
+		return mountPath, nil
+	}
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return "", fmt.Errorf("unable to access local component resource %q: %w", resourcePath, err)
+	}
+
+	mountPath := path.Join("resources", strconv.Itoa(n.nextID), filepath.Base(absPath))
+	n.nextID++
+	n.sourceMounts[absPath] = mountPath
+	if !info.IsDir() {
+		n.resources[mountPath] = componentResource{sourcePath: absPath, kind: kind}
+		return mountPath, nil
+	}
+
+	err = filepath.WalkDir(absPath, func(filePath string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(absPath, filePath)
+		if err != nil {
+			return err
+		}
+		n.resources[path.Join(mountPath, filepath.ToSlash(rel))] = componentResource{sourcePath: filePath, kind: kind}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return mountPath, nil
+}
+
+func (n *componentResourceNormalizer) absolutePath(resourcePath string) string {
+	if filepath.IsAbs(resourcePath) {
+		return filepath.Clean(resourcePath)
+	}
+	return filepath.Clean(filepath.Join(n.baseDir, resourcePath))
+}
+
+// componentResources is retained for focused resource validation tests.
+func componentResources(componentPath string, component v1beta1.ComponentConfig, _ string, _ map[string]bool) (map[string]string, error) {
+	_, normalized, err := normalizeComponentResources(componentPath, component)
+	if err != nil {
+		return nil, err
+	}
+	resources := make(map[string]string, len(normalized.resources))
+	for mountPath, resource := range normalized.resources {
+		resources[mountPath] = resource.sourcePath
+	}
+	return resources, nil
+}

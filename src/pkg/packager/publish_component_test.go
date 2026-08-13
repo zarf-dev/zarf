@@ -32,22 +32,33 @@ func TestPublishComponent(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, manifest := getPublishedComponent(ctx, t, published)
+	component, manifest := getPublishedComponent(ctx, t, published)
 	require.Equal(t, ComponentConfigMediaType, manifest.Config.MediaType)
 	require.NotEmpty(t, manifest.Layers)
+	require.Equal(t, []string{"resources/0/component-values.yaml"}, component.Values.Files)
+	require.Equal(t, "resources/1/component-values.schema.json", component.Values.Schema)
+	require.Equal(t, "resources/2/local-chart", component.Component.Charts[0].Local.Path)
+	require.Equal(t, "resources/3/local-chart-values.yaml", component.Component.Charts[0].ValuesFiles[0].Path)
+	require.Equal(t, "https://example.com/remote-chart-values.yaml", component.Component.Charts[0].ValuesFiles[1].Path)
+	require.Equal(t, "resources/4/local-manifest.yaml", component.Component.Manifests[0].Files[0])
+	require.Equal(t, "https://example.com/remote-manifest.yaml", component.Component.Manifests[1].Files[0])
+	require.Equal(t, "resources/5/local-file.txt", component.Component.Files[0].Source)
+	require.Equal(t, "https://example.com/remote-file.txt", component.Component.Files[1].Source)
 
 	layerTitles := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
 		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
+		require.Equal(t, layer.Annotations[ocispec.AnnotationTitle], layer.Annotations[componentResourceMountPathAnnotation])
+		require.NotEmpty(t, layer.Annotations[componentResourceKindAnnotation])
 	}
 	for _, localPath := range []string{
-		"component-values.yaml",
-		"component-values.schema.json",
-		"local-chart-values.yaml",
-		"local-chart/Chart.yaml",
-		"local-chart/templates/configmap.yaml",
-		"local-file.txt",
-		"local-manifest.yaml",
+		"resources/0/component-values.yaml",
+		"resources/1/component-values.schema.json",
+		"resources/2/local-chart/Chart.yaml",
+		"resources/2/local-chart/templates/configmap.yaml",
+		"resources/3/local-chart-values.yaml",
+		"resources/4/local-manifest.yaml",
+		"resources/5/local-file.txt",
 	} {
 		require.Contains(t, layerTitles, localPath)
 	}
@@ -118,7 +129,8 @@ func TestPublishComponentImageArchivesUseOCILayout(t *testing.T) {
 	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
-	_, manifest := getPublishedComponent(ctx, t, published)
+	component, manifest := getPublishedComponent(ctx, t, published)
+	require.Equal(t, "images", component.Component.ImageArchives[0].Path)
 
 	layerTitles := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
@@ -173,17 +185,121 @@ component:
 
 	component, manifest := getPublishedComponent(ctx, t, published)
 	require.Empty(t, component.Component.Import)
-	require.Equal(t, []string{"child/child-values.yaml", "root-values.yaml"}, component.Values.Files)
-	require.Equal(t, []v1beta1.File{{Source: "child/child-file.txt", Destination: "/tmp/child-file.txt"}}, component.Component.Files)
+	require.Equal(t, []string{"resources/0/child-values.yaml", "resources/1/root-values.yaml"}, component.Values.Files)
+	require.Equal(t, []v1beta1.File{{Source: "resources/2/child-file.txt", Destination: "/tmp/child-file.txt"}}, component.Component.Files)
 
 	layerTitles := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
 		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
 	}
-	require.Contains(t, layerTitles, "child/child-file.txt")
-	require.Contains(t, layerTitles, "child/child-values.yaml")
-	require.Contains(t, layerTitles, "root-values.yaml")
+	require.Contains(t, layerTitles, "resources/0/child-values.yaml")
+	require.Contains(t, layerTitles, "resources/1/root-values.yaml")
+	require.Contains(t, layerTitles, "resources/2/child-file.txt")
 	require.NotContains(t, layerTitles, "child/component.yaml")
+}
+
+func TestPublishComponentNormalizesExternalResources(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	componentDir := filepath.Join(root, "component")
+	externalDir := filepath.Join(root, "external")
+	require.NoError(t, os.MkdirAll(componentDir, 0o700))
+	for relativePath := range map[string]string{
+		"values.yaml":                  "values: true",
+		"schema.json":                  `{}`,
+		"chart/Chart.yaml":             "apiVersion: v2\nname: test\nversion: 0.1.0",
+		"chart-values.yaml":            "chart: true",
+		"manifest.yaml":                "apiVersion: v1\nkind: ConfigMap",
+		"kustomize/kustomization.yaml": "resources: []",
+		"file.txt":                     "file",
+	} {
+		path := filepath.Join(externalDir, relativePath)
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+		require.NoError(t, os.WriteFile(path, []byte("resource"), 0o600))
+	}
+	actionDir := filepath.Join(externalDir, "actions")
+	component := v1beta1.ComponentConfig{
+		APIVersion: "zarf.dev/v1beta1",
+		Kind:       "ZarfComponentConfig",
+		Metadata:   v1beta1.ComponentMetadata{Name: "external-resources", Version: "0.0.1"},
+		Values:     v1beta1.Values{Files: []string{"../external/values.yaml"}, Schema: filepath.Join(externalDir, "schema.json")},
+		Component: v1beta1.ComponentSpec{
+			Charts: []v1beta1.Chart{{
+				Local:       &v1beta1.LocalSource{Path: filepath.Join(externalDir, "chart")},
+				ValuesFiles: []v1beta1.ValuesFile{{Path: "../external/chart-values.yaml"}},
+			}},
+			Manifests: []v1beta1.Manifest{{
+				Files:     []string{filepath.Join(externalDir, "manifest.yaml")},
+				Kustomize: &v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
+			}},
+			Files: []v1beta1.File{{Source: filepath.Join(externalDir, "file.txt"), Destination: "/tmp/file.txt"}},
+			Actions: v1beta1.ComponentActions{
+				OnDeploy: v1beta1.ComponentActionSet{Before: []v1beta1.ComponentAction{{Dir: &actionDir}}},
+				OnRemove: v1beta1.ComponentActionSet{OnSuccess: []v1beta1.ComponentAction{{Dir: stringPtr("../external/actions")}}},
+			},
+		},
+	}
+	componentYAML, err := goyaml.Marshal(component)
+	require.NoError(t, err)
+	componentPath := filepath.Join(componentDir, "component.yaml")
+	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
+
+	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+
+	publishedComponent, manifest := getPublishedComponent(ctx, t, published)
+	require.Equal(t, "resources/0/values.yaml", publishedComponent.Values.Files[0])
+	require.Equal(t, "resources/1/schema.json", publishedComponent.Values.Schema)
+	require.Equal(t, "resources/2/chart", publishedComponent.Component.Charts[0].Local.Path)
+	require.Equal(t, "resources/3/chart-values.yaml", publishedComponent.Component.Charts[0].ValuesFiles[0].Path)
+	require.Equal(t, "resources/4/manifest.yaml", publishedComponent.Component.Manifests[0].Files[0])
+	require.Equal(t, "resources/5/kustomize", publishedComponent.Component.Manifests[0].Kustomize.Files[0])
+	require.Equal(t, "resources/6/file.txt", publishedComponent.Component.Files[0].Source)
+	require.Equal(t, actionDir, *publishedComponent.Component.Actions.OnDeploy.Before[0].Dir)
+	require.Equal(t, "../external/actions", *publishedComponent.Component.Actions.OnRemove.OnSuccess[0].Dir)
+
+	layerMounts := make([]string, 0, len(manifest.Layers))
+	for _, layer := range manifest.Layers {
+		layerMounts = append(layerMounts, layer.Annotations[componentResourceMountPathAnnotation])
+	}
+	for _, mountPath := range []string{
+		"resources/0/values.yaml",
+		"resources/1/schema.json",
+		"resources/2/chart/Chart.yaml",
+		"resources/3/chart-values.yaml",
+		"resources/4/manifest.yaml",
+		"resources/5/kustomize/kustomization.yaml",
+		"resources/6/file.txt",
+	} {
+		require.Contains(t, layerMounts, mountPath)
+	}
+}
+
+func TestPublishComponentRejectsOnCreateActions(t *testing.T) {
+	t.Parallel()
+
+	componentPath := filepath.Join(t.TempDir(), "component.yaml")
+	componentYAML := []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: on-create-component
+  version: 0.0.1
+component:
+  actions:
+    onCreate:
+      before:
+        - cmd: echo prepare
+`)
+	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
+
+	_, err := PublishComponent(context.Background(), componentPath, createRegistry(context.Background(), t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.EqualError(t, err, "onCreate actions are not supported for published remote components")
+}
+
+func stringPtr(value string) *string {
+	return &value
 }
 
 func getPublishedComponent(ctx context.Context, t *testing.T, published registry.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {

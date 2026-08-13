@@ -13,7 +13,6 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -60,6 +59,9 @@ type PublishComponentOptions struct {
 // The component config is stored as the artifact's config blob; later remote-import support can
 // retrieve it without treating it as a Zarf package.
 func PublishComponent(ctx context.Context, componentPath string, destination registry.Reference, opts PublishComponentOptions) (registry.Reference, error) {
+	// FIXME: not sure if we should have flavors or architectures
+	// Flavors should work as they are expected
+	// Architectures should probably be - pull all the image platforms for an archive, if an architecture selector is given then pull just that one.
 	if err := destination.ValidateRegistry(); err != nil {
 		return registry.Reference{}, fmt.Errorf("invalid registry: %w", err)
 	}
@@ -74,6 +76,7 @@ func PublishComponent(ctx context.Context, componentPath string, destination reg
 	if component.Metadata.Version == "" {
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
+	// FIXME: we shouldn't use config.GetArch, only use architecture as a selector if the component declares component.selector.architecture
 	component, err = load.ResolveComponentConfigImports(ctx, component, componentPath, config.GetArch(component.Component.Selector.Architecture), opts.Flavor)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to resolve component imports: %w", err)
@@ -87,6 +90,10 @@ func PublishComponent(ctx context.Context, componentPath string, destination reg
 	// Do not require the same selection again when the published component is imported.
 	component.Component.Selector.Flavor = ""
 	component.PublishData.ZarfVersion = config.CLIVersion
+	component, resources, err := normalizeComponentResources(componentPath, component)
+	if err != nil {
+		return registry.Reference{}, err
+	}
 	componentYAML, err := goyaml.Marshal(component)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to marshal component config: %w", err)
@@ -97,7 +104,7 @@ func PublishComponent(ctx context.Context, componentPath string, destination reg
 	if err := store.Push(ctx, configDescriptor, bytes.NewReader(componentYAML)); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to stage component config: %w", err)
 	}
-	layers, err := stageComponentResources(ctx, store, componentPath, component)
+	layers, err := stageComponentResources(ctx, store, resources)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -198,31 +205,31 @@ func pushComponentArtifact(ctx context.Context, store *memory.Store, sourceRef s
 
 // stageComponentResources includes local component resources while leaving remote resources to
 // be fetched when the component is imported during package creation.
-func stageComponentResources(ctx context.Context, store *memory.Store, componentPath string, component v1beta1.ComponentConfig) ([]ocispec.Descriptor, error) {
-	root := filepath.Dir(componentPath)
-	resources, err := componentResources(componentPath, component, root, map[string]bool{})
-	if err != nil {
-		return nil, err
-	}
-	cleanupImageLayout, err := addComponentImageLayout(ctx, componentPath, component, resources)
+func stageComponentResources(ctx context.Context, store *memory.Store, resources normalizedComponentResources) ([]ocispec.Descriptor, error) {
+	cleanupImageLayout, err := addComponentImageLayout(ctx, resources.imageArchives, resources.architecture, resources.resources)
 	if err != nil {
 		return nil, err
 	}
 	defer cleanupImageLayout()
-	paths := make([]string, 0, len(resources))
-	for rel := range resources {
+	paths := make([]string, 0, len(resources.resources))
+	for rel := range resources.resources {
 		paths = append(paths, rel)
 	}
 	sort.Strings(paths)
 
 	layers := make([]ocispec.Descriptor, 0, len(paths))
 	for _, rel := range paths {
-		contents, err := os.ReadFile(resources[rel])
+		resource := resources.resources[rel]
+		contents, err := os.ReadFile(resource.sourcePath)
 		if err != nil {
 			return nil, fmt.Errorf("unable to read component resource %q: %w", rel, err)
 		}
 		descriptor := content.NewDescriptorFromBytes(componentLayerMediaType, contents)
-		descriptor.Annotations = map[string]string{ocispec.AnnotationTitle: filepath.ToSlash(rel)}
+		descriptor.Annotations = map[string]string{
+			ocispec.AnnotationTitle:              rel,
+			componentResourceMountPathAnnotation: rel,
+			componentResourceKindAnnotation:      resource.kind,
+		}
 		exists, err := store.Exists(ctx, descriptor)
 		if err != nil {
 			return nil, fmt.Errorf("unable to check component resource %q: %w", rel, err)
@@ -240,8 +247,8 @@ func stageComponentResources(ctx context.Context, store *memory.Store, component
 
 // addComponentImageLayout expands image archives into the OCI layout used by regular packages.
 // The layout is included as artifact layers rather than preserving the source archive itself.
-func addComponentImageLayout(ctx context.Context, componentPath string, component v1beta1.ComponentConfig, resources map[string]string) (func(), error) {
-	if len(component.Component.ImageArchives) == 0 {
+func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchive, architecture string, resources map[string]componentResource) (func(), error) {
+	if len(archives) == 0 {
 		return func() {}, nil
 	}
 
@@ -256,15 +263,12 @@ func addComponentImageLayout(ctx context.Context, componentPath string, componen
 	}
 
 	imageDir := filepath.Join(tempDir, layout.ImagesDir)
-	for _, archive := range component.Component.ImageArchives {
-		archivePath := archive.Path
-		if !filepath.IsAbs(archivePath) {
-			archivePath = filepath.Join(filepath.Dir(componentPath), archivePath)
-		}
-		_, err := images.Unpack(ctx, v1alpha1.ImageArchive{Path: archivePath, Images: archive.Images}, imageDir, config.GetArch(component.Component.Selector.Architecture))
+	for _, archive := range archives {
+		// FIXME: we have to decide one architecture
+		_, err := images.Unpack(ctx, v1alpha1.ImageArchive{Path: archive.Path, Images: archive.Images}, imageDir, config.GetArch(architecture))
 		if err != nil {
 			cleanup()
-			return nil, fmt.Errorf("unable to unpack image archive %q: %w", archivePath, err)
+			return nil, fmt.Errorf("unable to unpack image archive %q: %w", archive.Path, err)
 		}
 	}
 	if err := utils.SortImagesIndex(imageDir); err != nil {
@@ -283,7 +287,7 @@ func addComponentImageLayout(ctx context.Context, componentPath string, componen
 		if err != nil {
 			return err
 		}
-		resources[rel] = path
+		resources[filepath.ToSlash(rel)] = componentResource{sourcePath: path, kind: componentResourceKindImageLayout}
 		return nil
 	})
 	if err != nil {
@@ -291,126 +295,6 @@ func addComponentImageLayout(ctx context.Context, componentPath string, componen
 		return nil, err
 	}
 	return cleanup, nil
-}
-
-func componentResources(componentPath string, component v1beta1.ComponentConfig, root string, seen map[string]bool) (map[string]string, error) {
-	resources := map[string]string{}
-	if err := collectComponentResources(componentPath, component, root, seen, resources); err != nil {
-		return nil, err
-	}
-	return resources, nil
-}
-
-// FIXME: not sure I love passing around resource maps
-func collectComponentResources(componentPath string, component v1beta1.ComponentConfig, root string, seen map[string]bool, resources map[string]string) error {
-	componentPath = filepath.Clean(componentPath)
-	if seen[componentPath] {
-		return nil
-	}
-	seen[componentPath] = true
-	baseDir := filepath.Dir(componentPath)
-
-	for _, file := range component.Values.Files {
-		if err := addLocalResource(root, baseDir, file, "values files", resources); err != nil {
-			return err
-		}
-	}
-	if err := addLocalResource(root, baseDir, component.Values.Schema, "values schemas", resources); err != nil {
-		return err
-	}
-	for _, chart := range component.Component.Charts {
-		if chart.Local != nil {
-			if err := addLocalResource(root, baseDir, chart.Local.Path, "local chart paths", resources); err != nil {
-				return err
-			}
-		}
-		for _, values := range chart.ValuesFiles {
-			if err := addResource(root, baseDir, values.Path, resources); err != nil {
-				return err
-			}
-		}
-	}
-	for _, manifest := range component.Component.Manifests {
-		for _, file := range manifest.Files {
-			if err := addResource(root, baseDir, file, resources); err != nil {
-				return err
-			}
-		}
-		if manifest.Kustomize != nil {
-			for _, file := range manifest.Kustomize.Files {
-				if err := addResource(root, baseDir, file, resources); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	for _, file := range component.Component.Files {
-		if err := addResource(root, baseDir, file.Source, resources); err != nil {
-			return err
-		}
-	}
-	for _, archive := range component.Component.ImageArchives {
-		if helpers.IsURL(archive.Path) {
-			return fmt.Errorf("remote image archive paths are not supported")
-		}
-	}
-	if len(component.Component.Import.Remote) > 0 {
-		return fmt.Errorf("remote component imports are not yet supported for v1beta1 packages")
-	}
-	return nil
-}
-
-// addResource stages a local resource and leaves a remote URL for package creation to fetch.
-func addResource(root, baseDir, resourcePath string, resources map[string]string) error {
-	if resourcePath == "" || helpers.IsURL(resourcePath) {
-		return nil
-	}
-	return addComponentResource(root, baseDir, resourcePath, resources)
-}
-
-// addLocalResource stages a resource that regular package assembly only supports from the local filesystem.
-func addLocalResource(root, baseDir, resourcePath, field string, resources map[string]string) error {
-	if helpers.IsURL(resourcePath) {
-		return fmt.Errorf("remote %s are not supported", field)
-	}
-	return addResource(root, baseDir, resourcePath, resources)
-}
-
-func addComponentResource(root, baseDir, resourcePath string, resources map[string]string) error {
-	absPath := resourcePath
-	if !filepath.IsAbs(absPath) {
-		absPath = filepath.Join(baseDir, resourcePath)
-	}
-	absPath = filepath.Clean(absPath)
-	rel, err := filepath.Rel(root, absPath)
-	if err != nil {
-		return err
-	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return fmt.Errorf("local component resource %q must be within %q", resourcePath, root)
-	}
-	info, err := os.Stat(absPath)
-	if err != nil {
-		return fmt.Errorf("unable to access local component resource %q: %w", resourcePath, err)
-	}
-	if !info.IsDir() {
-		resources[rel] = absPath
-		return nil
-	}
-	return filepath.WalkDir(absPath, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			return nil
-		}
-		fileRel, err := filepath.Rel(root, path)
-		if err != nil {
-			return err
-		}
-		resources[fileRel] = path
-		return nil
-	})
 }
 
 func componentReference(destination registry.Reference, component v1beta1.ComponentConfig) (registry.Reference, error) {
