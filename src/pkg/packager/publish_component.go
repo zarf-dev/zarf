@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
@@ -40,6 +41,8 @@ const componentLayerMediaType = "application/vnd.zarf.component.layer.v1.blob"
 type PublishComponentOptions struct {
 	// Flavor selects the component config variant to publish.
 	Flavor string
+	// SignBlobOptions configures OCI artifact signing for the published component.
+	SignBlobOptions signing.SignBlobOptions
 	// OCIConcurrency configures the number of blobs pushed in parallel.
 	OCIConcurrency int
 	types.RemoteOptions
@@ -112,8 +115,17 @@ func PublishComponent(ctx context.Context, componentPath string, destination reg
 	if opts.OCIConcurrency > 0 {
 		copyOpts.Concurrency = opts.OCIConcurrency
 	}
-	if _, err := oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), componentRef.Reference, copyOpts); err != nil {
+	published, err := oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), componentRef.Reference, copyOpts)
+	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to publish component: %w", err)
+	}
+	// FIXME: consider referrs API?
+	if opts.SignBlobOptions.ShouldSign() {
+		artifactRef := fmt.Sprintf("%s/%s@%s", componentRef.Registry, componentRef.Repository, published.Digest)
+		logger.From(ctx).Info("signing published component", "reference", artifactRef)
+		if err := signing.CosignSignImageWithOptions(ctx, artifactRef, opts.SignBlobOptions, opts.PlainHTTP, opts.InsecureSkipTLSVerify); err != nil {
+			return registry.Reference{}, fmt.Errorf("component was published but signing artifact %q failed: %w", artifactRef, err)
+		}
 	}
 	logger.From(ctx).Info("published component", "destination", helpers.OCIURLPrefix+componentRef.String())
 	return componentRef, nil

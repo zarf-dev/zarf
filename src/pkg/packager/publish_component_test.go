@@ -14,6 +14,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"oras.land/oras-go/v2/registry/remote"
 )
 
@@ -99,6 +100,26 @@ func TestPublishComponentFlavor(t *testing.T) {
 	var component v1beta1.ComponentConfig
 	require.NoError(t, goyaml.Unmarshal(componentBytes, &component))
 	require.Empty(t, component.Component.Selector.Flavor)
+}
+
+func TestPublishComponentSigning(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
+	signOpts.Password = "password"
+	signOpts.SkipConfirmation = true
+	published, err := PublishComponent(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishComponentOptions{
+		Flavor:          "test",
+		SignBlobOptions: signOpts,
+		RemoteOptions:   defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+
+	verifyOpts := signing.DefaultVerifyBlobOptions()
+	verifyOpts.Key = filepath.Join("testdata", "publish", "cosign.pub")
+	require.NoError(t, signing.CosignVerifyImageWithOptions(ctx, published.String(), verifyOpts, true, false))
 }
 
 func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
