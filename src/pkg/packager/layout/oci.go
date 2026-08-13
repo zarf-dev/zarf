@@ -179,10 +179,11 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("reading %s for manifest: %w", ZarfYAML, err)
 	}
-	zarfPkg, err := pkgcfg.ParseMultiDoc(ctx, zarfYAMLBytes)
+	defined, err := pkgcfg.ParseMultiDoc(ctx, zarfYAMLBytes)
 	if err != nil {
 		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
 	}
+	zarfPkg := defined.AsV1alpha1()
 	configBytes, err := json.Marshal(zarfPkg)
 	if err != nil {
 		return err

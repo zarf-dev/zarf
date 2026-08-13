@@ -1,0 +1,9 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: nested-import
+components:
+  - name: app
+    import:
+      local:
+        - path: components/app.yaml

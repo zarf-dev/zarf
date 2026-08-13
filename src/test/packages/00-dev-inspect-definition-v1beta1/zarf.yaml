@@ -1,0 +1,15 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: test-inspect-definition-v1beta1
+  description: a v1beta1 package with a local v1beta1 import
+components:
+  - name: import-test
+    description: imports a local v1beta1 component config
+    import:
+      local:
+        - path: imported-component.yaml
+
+  - name: image-test
+    images:
+      - name: nginx:1.27.0

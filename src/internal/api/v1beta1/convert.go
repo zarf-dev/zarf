@@ -211,21 +211,28 @@ func actionsToGeneric(a v1beta1.ComponentActions) types.ComponentActions {
 
 func actionSetToGeneric(s v1beta1.ComponentActionSet) types.ComponentActionSet {
 	return types.ComponentActionSet{
-		Defaults: types.ComponentActionDefaults{
-			Silent:          s.Defaults.Silent,
-			MaxTotalSeconds: s.Defaults.MaxTotalSeconds,
-			Retries:         s.Defaults.Retries,
-			Dir:             s.Defaults.Dir,
-			Env:             s.Defaults.Env,
-			Shell: types.Shell{
-				Windows: s.Defaults.Shell.Windows,
-				Linux:   s.Defaults.Shell.Linux,
-				Darwin:  s.Defaults.Shell.Darwin,
-			},
-		},
+		Defaults:  actionDefaultsToGeneric(s.Defaults),
 		Before:    actionSliceToGeneric(s.Before),
 		OnSuccess: actionSliceToGeneric(s.OnSuccess),
 		OnFailure: actionSliceToGeneric(s.OnFailure),
+	}
+}
+
+func actionDefaultsToGeneric(d *v1beta1.ComponentActionDefaults) types.ComponentActionDefaults {
+	if d == nil {
+		return types.ComponentActionDefaults{}
+	}
+	return types.ComponentActionDefaults{
+		Silent:          d.Silent,
+		MaxTotalSeconds: d.MaxTotalSeconds,
+		Retries:         d.Retries,
+		Dir:             d.Dir,
+		Env:             d.Env,
+		Shell: types.Shell{
+			Windows: d.Shell.Windows,
+			Linux:   d.Shell.Linux,
+			Darwin:  d.Shell.Darwin,
+		},
 	}
 }
 
@@ -666,23 +673,42 @@ func actionsFromGeneric(a types.ComponentActions) v1beta1.ComponentActions {
 
 func actionSetFromGeneric(s types.ComponentActionSet) v1beta1.ComponentActionSet {
 	return v1beta1.ComponentActionSet{
-		Defaults: v1beta1.ComponentActionDefaults{
-			Silent:          s.Defaults.Silent,
-			MaxTotalSeconds: s.Defaults.MaxTotalSeconds,
-			Retries:         s.Defaults.Retries,
-			Dir:             s.Defaults.Dir,
-			Env:             s.Defaults.Env,
-			Shell: v1beta1.Shell{
-				Windows: s.Defaults.Shell.Windows,
-				Linux:   s.Defaults.Shell.Linux,
-				Darwin:  s.Defaults.Shell.Darwin,
-			},
-		},
-		Before: actionSliceFromGeneric(s.Before),
+		Defaults: actionDefaultsFromGeneric(s.Defaults),
+		Before:   actionSliceFromGeneric(s.Before),
 		// v1beta1 has no After hook; fold the v1alpha1-preserved After actions into OnSuccess.
 		OnSuccess: append(actionSliceFromGeneric(s.After), actionSliceFromGeneric(s.OnSuccess)...),
 		OnFailure: actionSliceFromGeneric(s.OnFailure),
 	}
+}
+
+func actionDefaultsFromGeneric(d types.ComponentActionDefaults) *v1beta1.ComponentActionDefaults {
+	if !hasGenericActionDefaults(d) {
+		return nil
+	}
+	defaults := &v1beta1.ComponentActionDefaults{
+		Silent:          d.Silent,
+		MaxTotalSeconds: d.MaxTotalSeconds,
+		Retries:         d.Retries,
+		Dir:             d.Dir,
+		Env:             d.Env,
+		Shell: v1beta1.Shell{
+			Windows: d.Shell.Windows,
+			Linux:   d.Shell.Linux,
+			Darwin:  d.Shell.Darwin,
+		},
+	}
+	return defaults
+}
+
+func hasGenericActionDefaults(d types.ComponentActionDefaults) bool {
+	return d.Silent ||
+		d.MaxTotalSeconds != 0 ||
+		d.Retries != 0 ||
+		d.Dir != "" ||
+		len(d.Env) > 0 ||
+		d.Shell.Windows != "" ||
+		d.Shell.Linux != "" ||
+		d.Shell.Darwin != ""
 }
 
 func actionSliceFromGeneric(actions []types.ComponentAction) []v1beta1.ComponentAction {

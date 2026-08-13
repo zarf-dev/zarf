@@ -23,6 +23,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"path"
 	"time"
 
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -58,6 +59,7 @@ const (
 
 type RekorClient interface {
 	CreateLogEntry(params *entries.CreateLogEntryParams, opts ...entries.ClientOption) (*entries.CreateLogEntryCreated, error)
+	GetLogEntryByUUID(params *entries.GetLogEntryByUUIDParams, opts ...entries.ClientOption) (*entries.GetLogEntryByUUIDOK, error)
 }
 
 type RekorV2Client interface {
@@ -217,6 +219,19 @@ func (r *Rekor) getRekorV2TLE(ctx context.Context, keyOrCertPEM []byte, b *proto
 	}
 	tle, err := r.options.ClientV2.Add(ctx, req)
 	if err != nil {
+		// Note: A 409 Conflict from Rekor v2 is currently not handled. The simplest
+		// solution is to sign again to generate a different signature.
+		// If someone wants to gracefully handle a 409 Conflict (e.g. from CI retries),
+		// they would need to:
+		// 1. Extract the log index from the error string (e.g. "an equivalent entry already exists... with index <idx>")
+		//    or from the x-log-index response header.
+		// 2. Fetch the checkpoint from the log's base URL and parse its size and root hash.
+		// 3. Use the tessera HTTP fetcher and ProofBuilder to fetch the inclusion proof for that index.
+		// 4. Fetch the entry bundle for the index, decode it, and extract the matching entry.
+		// 5. Construct the TransparencyLogEntry manually.
+		// However, doing so requires the log's public key (to compute the LogId field), which is
+		// only available from the trusted root, making it impossible to correctly populate the bundle here
+		// without access to the Verifier or TrustedRoot. Thus, we return the error.
 		return nil, fmt.Errorf("adding rekor v2 entry: %w", err)
 	}
 	return tle, nil
@@ -284,11 +299,28 @@ func (r *Rekor) getRekorV1TLE(ctx context.Context, keyOrCertPEM []byte, b *proto
 	}
 
 	resp, err := r.options.Client.CreateLogEntry(params)
+	var entry models.LogEntryAnon
 	if err != nil {
-		return nil, err
+		var conflictErr *entries.CreateLogEntryConflict
+		if errors.As(err, &conflictErr) {
+			uuid := path.Base(conflictErr.Location.String())
+			getParams := entries.NewGetLogEntryByUUIDParamsWithContext(ctx)
+			getParams.SetEntryUUID(uuid)
+			getResp, getErr := r.options.Client.GetLogEntryByUUID(getParams)
+			if getErr != nil {
+				return nil, fmt.Errorf("failed to fetch conflicting entry: %w", getErr)
+			}
+			for _, v := range getResp.Payload {
+				entry = v
+				break
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		entry = resp.Payload[resp.ETag]
 	}
 
-	entry := resp.Payload[resp.ETag]
 	tlogEntry, err := tle.GenerateTransparencyLogEntry(entry)
 	if err != nil {
 		return nil, err

@@ -56,18 +56,18 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}
 
 	loadOpts := load.DefinitionOptions{
-		Flavor:             opts.Flavor,
-		SetVariables:       opts.SetVariables,
-		CachePath:          opts.CachePath,
-		IsInteractive:      opts.IsInteractive,
-		SkipRequiredValues: true,
-		SkipVersionCheck:   opts.SkipVersionCheck,
-		RemoteOptions:      opts.RemoteOptions,
+		Flavor:           opts.Flavor,
+		SetVariables:     opts.SetVariables,
+		CachePath:        opts.CachePath,
+		IsInteractive:    opts.IsInteractive,
+		SkipVersionCheck: opts.SkipVersionCheck,
+		RemoteOptions:    opts.RemoteOptions,
 	}
 	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return "", err
 	}
+	pkg := defined.PackageDefinition.AsV1alpha1()
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
@@ -77,7 +77,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	var differentialPkg v1alpha1.ZarfPackage
 	if opts.DifferentialPackagePath != "" {
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
-			Architecture:   defined.Pkg.Metadata.Architecture,
+			Architecture:   pkg.Metadata.Architecture,
 			RemoteOptions:  opts.RemoteOptions,
 			LayerTypes:     []zoci.LayerType{zoci.MetadataLayers},
 			OCIConcurrency: opts.OCIConcurrency,
@@ -104,7 +104,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,
 	}
-	pkgLayout, err := assemble.AssemblePackage(ctx, defined.Pkg, pkgPath.BaseDir, defined.ImportedSchemas, assembleOpt)
+	pkgLayout, err := assemble.AssemblePackage(ctx, defined, pkgPath.BaseDir, assembleOpt)
 	if err != nil {
 		return "", err
 	}
