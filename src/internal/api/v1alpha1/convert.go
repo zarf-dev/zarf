@@ -613,7 +613,7 @@ func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 				if ch.OCI.Ref.Tag != "" {
 					ac.Version = ch.OCI.Ref.Tag
 				} else if ch.OCI.Ref.Digest != "" {
-					ac.Version = ch.OCI.Ref.Digest
+					ac.URL = strings.TrimSuffix(ch.OCI.URL, "/") + "@" + ch.OCI.Ref.Digest
 				}
 			} else if ac.Version == "" {
 				ac.Version = ch.OCI.Version

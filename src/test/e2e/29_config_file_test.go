@@ -26,8 +26,8 @@ func TestConfigFileCreate(t *testing.T) {
 	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch))
 	pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "This is a zebra and they have stripes", pkgLayout.Pkg.Components[1].Description)
-	require.Equal(t, "This is a leopard and they have spots", pkgLayout.Pkg.Components[2].Description)
+	require.Equal(t, "This is a zebra and they have stripes", pkgLayout.AsV1alpha1().Components[1].Description)
+	require.Equal(t, "This is a leopard and they have spots", pkgLayout.AsV1alpha1().Components[2].Description)
 
 	_, _, err = e2e.Zarf(t, "package", "deploy", tarPath, "--confirm")
 	require.NoError(t, err)
