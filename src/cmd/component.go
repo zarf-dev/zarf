@@ -32,7 +32,7 @@ type componentPublishOptions struct {
 	ociConcurrency     int
 	signingKeyPath     string
 	signingKeyPassword string
-	// FIXME: add confirm flag
+	confirm            bool
 }
 
 func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
@@ -51,6 +51,7 @@ func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdComponentPublishFlagConfirm)
 	return cmd
 }
 
@@ -71,7 +72,7 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = o.signingKeyPath
 	signOpts.Password = o.signingKeyPassword
-	signOpts.SkipConfirmation = true
+	signOpts.SkipConfirmation = o.confirm
 	_, err := packager.PublishComponent(cmd.Context(), args[0], destination, packager.PublishComponentOptions{
 		Flavor:          o.flavor,
 		SignBlobOptions: signOpts,
