@@ -141,7 +141,7 @@ func selectImportVariant(entries []v1beta1.ComponentImportLocal, specDir, arch, 
 		if slices.Contains(importStack, path) {
 			return loadedComponentConfig{}, fmt.Errorf("component config %s imported in cycle", filepath.ToSlash(path))
 		}
-		config, err := readComponentConfig(path)
+		config, err := ComponentConfig(path)
 		if err != nil {
 			return loadedComponentConfig{}, err
 		}
@@ -162,12 +162,6 @@ func selectImportVariant(entries []v1beta1.ComponentImportLocal, specDir, arch, 
 	default:
 		return loadedComponentConfig{}, fmt.Errorf("multiple imported component variants are compatible with the package target")
 	}
-}
-
-// readComponentConfig reads a ZarfComponentConfig file directly. v1beta1 packages only ever import
-// v1beta1 component configs, so the bytes are decoded into the native type without conversion.
-func readComponentConfig(path string) (v1beta1.ComponentConfig, error) {
-	return ComponentConfig(path)
 }
 
 // ComponentConfig reads and schema-validates a v1beta1 ZarfComponentConfig file.
