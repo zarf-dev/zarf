@@ -160,6 +160,12 @@ const (
 
 	VDevDeployNoYolo    = "dev.deploy.no_yolo"
 	VDevDeployConnected = "dev.deploy.connected"
+
+	// Dev template config keys
+
+	VDevTemplateSet            = "dev.template.set"
+	VDevTemplateSetFile        = "dev.template.set_file"
+	VDevTemplateSkipValidation = "dev.template.skip_validation"
 )
 
 var (
