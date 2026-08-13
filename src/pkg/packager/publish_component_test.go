@@ -359,21 +359,21 @@ func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
 			component: v1beta1.ComponentConfig{
 				Values: v1beta1.Values{Files: []string{"https://example.com/values.yaml"}},
 			},
-			wantErr: "remote values files are not supported",
+			wantErr: "remote values-file are not supported",
 		},
 		{
 			name: "values schema",
 			component: v1beta1.ComponentConfig{
 				Values: v1beta1.Values{Schema: "https://example.com/values.schema.json"},
 			},
-			wantErr: "remote values schemas are not supported",
+			wantErr: "remote values-schema are not supported",
 		},
 		{
 			name: "local chart",
 			component: v1beta1.ComponentConfig{
 				Component: v1beta1.ComponentSpec{Charts: []v1beta1.Chart{{Local: &v1beta1.LocalSource{Path: "https://example.com/chart.tgz"}}}},
 			},
-			wantErr: "remote local chart paths are not supported",
+			wantErr: "remote chart are not supported",
 		},
 		{
 			name: "image archive",

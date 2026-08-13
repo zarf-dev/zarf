@@ -228,7 +228,7 @@ func stageComponentResources(ctx context.Context, store *memory.Store, resources
 		descriptor.Annotations = map[string]string{
 			ocispec.AnnotationTitle:              rel,
 			componentResourceMountPathAnnotation: rel,
-			componentResourceKindAnnotation:      resource.kind,
+			componentResourceKindAnnotation:      string(resource.kind),
 		}
 		exists, err := store.Exists(ctx, descriptor)
 		if err != nil {

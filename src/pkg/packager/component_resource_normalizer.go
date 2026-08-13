@@ -19,14 +19,25 @@ import (
 const (
 	componentResourceMountPathAnnotation = "dev.zarf.mountPath"
 	componentResourceKindAnnotation      = "dev.zarf.resourceKind"
-	componentResourceKindImageLayout     = "image-layout"
+)
+
+type componentResourceKind string
+
+const (
+	componentResourceKindValuesFile   componentResourceKind = "values-file"
+	componentResourceKindValuesSchema componentResourceKind = "values-schema"
+	componentResourceKindChart        componentResourceKind = "chart"
+	componentResourceKindChartValues  componentResourceKind = "chart-values"
+	componentResourceKindManifest     componentResourceKind = "manifest"
+	componentResourceKindKustomize    componentResourceKind = "kustomize"
+	componentResourceKindFile         componentResourceKind = "file"
+	componentResourceKindImageLayout  componentResourceKind = "image-layout"
 )
 
 // componentResource describes a single file staged in a published component artifact.
 type componentResource struct {
 	sourcePath string
-	// FIXME: this should be its own type
-	kind string
+	kind       componentResourceKind
 }
 
 type normalizedComponentResources struct {
@@ -53,14 +64,14 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	}
 
 	for i := range component.Values.Files {
-		resourcePath, err := addLocalResource(&normalizer, component.Values.Files[i], "values files", "values")
+		resourcePath, err := addLocalResource(&normalizer, component.Values.Files[i], componentResourceKindValuesFile)
 		if err != nil {
 			return component, normalizedComponentResources{}, err
 		}
 		component.Values.Files[i] = resourcePath
 	}
 	var err error
-	component.Values.Schema, err = addLocalResource(&normalizer, component.Values.Schema, "values schemas", "values-schema")
+	component.Values.Schema, err = addLocalResource(&normalizer, component.Values.Schema, componentResourceKindValuesSchema)
 	if err != nil {
 		return component, normalizedComponentResources{}, err
 	}
@@ -68,13 +79,13 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	for i := range component.Component.Charts {
 		chart := &component.Component.Charts[i]
 		if chart.Local != nil {
-			chart.Local.Path, err = addLocalResource(&normalizer, chart.Local.Path, "local chart paths", "chart")
+			chart.Local.Path, err = addLocalResource(&normalizer, chart.Local.Path, componentResourceKindChart)
 			if err != nil {
 				return component, normalizedComponentResources{}, err
 			}
 		}
 		for j := range chart.ValuesFiles {
-			chart.ValuesFiles[j].Path, err = addResource(&normalizer, chart.ValuesFiles[j].Path, "chart-values")
+			chart.ValuesFiles[j].Path, err = addResource(&normalizer, chart.ValuesFiles[j].Path, componentResourceKindChartValues)
 			if err != nil {
 				return component, normalizedComponentResources{}, err
 			}
@@ -84,14 +95,14 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	for i := range component.Component.Manifests {
 		manifest := &component.Component.Manifests[i]
 		for j := range manifest.Files {
-			manifest.Files[j], err = addResource(&normalizer, manifest.Files[j], "manifest")
+			manifest.Files[j], err = addResource(&normalizer, manifest.Files[j], componentResourceKindManifest)
 			if err != nil {
 				return component, normalizedComponentResources{}, err
 			}
 		}
 		if manifest.Kustomize != nil {
 			for j := range manifest.Kustomize.Files {
-				manifest.Kustomize.Files[j], err = addResource(&normalizer, manifest.Kustomize.Files[j], "kustomize")
+				manifest.Kustomize.Files[j], err = addResource(&normalizer, manifest.Kustomize.Files[j], componentResourceKindKustomize)
 				if err != nil {
 					return component, normalizedComponentResources{}, err
 				}
@@ -100,7 +111,7 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	}
 
 	for i := range component.Component.Files {
-		component.Component.Files[i].Source, err = addResource(&normalizer, component.Component.Files[i].Source, "file")
+		component.Component.Files[i].Source, err = addResource(&normalizer, component.Component.Files[i].Source, componentResourceKindFile)
 		if err != nil {
 			return component, normalizedComponentResources{}, err
 		}
@@ -136,7 +147,7 @@ func hasActions(actionSet v1beta1.ComponentActionSet) bool {
 }
 
 // addResource stages a local resource and leaves a remote URL for package creation to fetch.
-func addResource(normalizer *componentResourceNormalizer, resourcePath, kind string) (string, error) {
+func addResource(normalizer *componentResourceNormalizer, resourcePath string, kind componentResourceKind) (string, error) {
 	if resourcePath == "" || helpers.IsURL(resourcePath) {
 		return resourcePath, nil
 	}
@@ -144,15 +155,14 @@ func addResource(normalizer *componentResourceNormalizer, resourcePath, kind str
 }
 
 // addLocalResource stages a resource that regular package assembly only supports from the local filesystem.
-// FIXME: no reason to have field and kind
-func addLocalResource(normalizer *componentResourceNormalizer, resourcePath, field, kind string) (string, error) {
+func addLocalResource(normalizer *componentResourceNormalizer, resourcePath string, kind componentResourceKind) (string, error) {
 	if helpers.IsURL(resourcePath) {
-		return "", fmt.Errorf("remote %s are not supported", field)
+		return "", fmt.Errorf("resource kind %s cannot be pulled from remote sources", kind)
 	}
 	return addResource(normalizer, resourcePath, kind)
 }
 
-func (n *componentResourceNormalizer) add(resourcePath, kind string) (string, error) {
+func (n *componentResourceNormalizer) add(resourcePath string, kind componentResourceKind) (string, error) {
 	absPath := n.absolutePath(resourcePath)
 	if mountPath, ok := n.sourceMounts[absPath]; ok {
 		return mountPath, nil
