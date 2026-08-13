@@ -368,7 +368,7 @@ func getPublishedComponent(ctx context.Context, t *testing.T, published registry
 	require.NoError(t, err)
 	require.NoError(t, componentReader.Close())
 	var component v1beta1.ComponentConfig
-	require.NoError(t, goyaml.Unmarshal(componentBytes, &component))
+	require.NoError(t, json.Unmarshal(componentBytes, &component))
 	return component, manifest
 }
 

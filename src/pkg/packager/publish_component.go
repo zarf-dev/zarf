@@ -6,6 +6,7 @@ package packager
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -18,7 +19,6 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -38,7 +38,7 @@ import (
 )
 
 // ComponentConfigMediaType identifies a v1beta1 Zarf component config OCI artifact.
-const ComponentConfigMediaType = "application/vnd.zarf.component.config.v1+yaml"
+const ComponentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
 
 const componentLayerMediaType = "application/vnd.zarf.component.layer.v1.blob"
 
@@ -90,14 +90,14 @@ func PublishComponent(ctx context.Context, componentPath string, destination reg
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	componentYAML, err := goyaml.Marshal(component)
+	componentJSON, err := json.Marshal(component)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to marshal component config: %w", err)
 	}
 
 	store := memory.New()
-	configDescriptor := content.NewDescriptorFromBytes(ComponentConfigMediaType, componentYAML)
-	if err := store.Push(ctx, configDescriptor, bytes.NewReader(componentYAML)); err != nil {
+	configDescriptor := content.NewDescriptorFromBytes(ComponentConfigMediaType, componentJSON)
+	if err := store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to stage component config: %w", err)
 	}
 	layers, err := stageComponentResources(ctx, store, resources)

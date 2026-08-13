@@ -165,7 +165,6 @@ func selectImportVariant(entries []v1beta1.ComponentImportLocal, specDir, arch, 
 }
 
 // ComponentConfig reads and schema-validates a v1beta1 ZarfComponentConfig file.
-// FIXME: this should be a generic function in load
 func ComponentConfig(path string) (v1beta1.ComponentConfig, error) {
 	info, err := os.Stat(path)
 	if err != nil {
