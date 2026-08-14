@@ -154,7 +154,7 @@ func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath 
 	}
 
 	// FIXME: we should just run this here, and also run it during assemble if we find additional schema files
-	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor, opts.SkipValuesSchemaValidation, importedSchemas); err != nil {
+	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor, opts.SkipValuesSchemaValidation || len(remoteResources) > 0, importedSchemas); err != nil {
 		return ResolvedPackage{}, err
 	}
 
