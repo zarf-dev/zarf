@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,6 +19,8 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"oras.land/oras-go/v2/content"
 )
 
 // PackageOptions configures resource-ready package loading.
@@ -122,7 +125,7 @@ func Package(ctx context.Context, packagePath string, opts PackageOptions) (_ *L
 		return nil, err
 	}
 
-	resources, err := materializeResources(ctx, resolved.packageRoot, resolved.remoteResources)
+	resources, err := materializeResources(ctx, resolved.packageRoot, resolved.remoteResources, opts.CachePath)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +181,7 @@ func Package(ctx context.Context, packagePath string, opts PackageOptions) (_ *L
 	return loaded, nil
 }
 
-func materializeResources(ctx context.Context, packageRoot string, remoteResources []remoteResource) (*ResourceSet, error) {
+func materializeResources(ctx context.Context, packageRoot string, remoteResources []remoteResource, cachePath string) (*ResourceSet, error) {
 	resourceSet := &ResourceSet{
 		packageRoot: packageRoot,
 		remoteRoots: map[string]struct{}{},
@@ -186,8 +189,7 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 	if len(remoteResources) == 0 {
 		return resourceSet, nil
 	}
-	// FIXME: might need the cache
-	workspace, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	workspace, err := materializationWorkspace(cachePath)
 	if err != nil {
 		return nil, err
 	}
@@ -200,19 +202,76 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 			return fail(fmt.Errorf("remote component has an invalid resource path"))
 		}
 		resourceSet.remoteRoots[resource.importRoot] = struct{}{}
-		contents, err := resource.remote.FetchLayer(ctx, resource.descriptor)
-		if err != nil {
-			return fail(err)
-		}
 		destination := filepath.Join(workspace, filepath.FromSlash(resource.importRoot), filepath.FromSlash(resource.mountPath))
 		if err := os.MkdirAll(filepath.Dir(destination), helpers.ReadWriteExecuteUser); err != nil {
 			return fail(err)
 		}
-		if err := os.WriteFile(destination, contents, helpers.ReadWriteUser); err != nil {
+		// FIXME: it should be unnecessary to do this if zoci.NewRemote was given a cache
+		if cachePath != "" {
+			cachedPath, err := cacheRemoteResource(ctx, resource, cachePath)
+			if err != nil {
+				return fail(err)
+			}
+			if err := os.Link(cachedPath, destination); err != nil {
+				return fail(fmt.Errorf("linking cached remote resource %q: %w", resource.mountPath, err))
+			}
+			continue
+		}
+		if err := fetchRemoteResource(ctx, resource, destination); err != nil {
 			return fail(err)
 		}
 	}
 	return resourceSet, nil
+}
+
+func cacheRemoteResource(ctx context.Context, resource remoteResource, cachePath string) (string, error) {
+	cachedPath, err := zoci.CacheBlobPath(cachePath, resource.descriptor)
+	if err != nil {
+		return "", err
+	}
+	if err := fetchRemoteResource(ctx, resource, ""); err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(cachedPath); err != nil {
+		return "", fmt.Errorf("cached remote resource %q is unavailable: %w", resource.mountPath, err)
+	}
+	return cachedPath, nil
+}
+
+func fetchRemoteResource(ctx context.Context, resource remoteResource, destination string) error {
+	source, err := resource.remote.Fetch(ctx, resource.descriptor)
+	if err != nil {
+		return err
+	}
+	reader := content.NewVerifyReader(source, resource.descriptor)
+	if destination == "" {
+		_, err = io.Copy(io.Discard, reader)
+	} else {
+		file, createErr := os.OpenFile(destination, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, helpers.ReadWriteUser)
+		if createErr != nil {
+			_ = source.Close()
+			return createErr
+		}
+		_, err = io.Copy(file, reader)
+		closeErr := file.Close()
+		if err == nil {
+			err = closeErr
+		}
+	}
+	if err == nil {
+		err = reader.Verify()
+	}
+	if closeErr := source.Close(); err == nil {
+		err = closeErr
+	}
+	return err
+}
+
+func materializationWorkspace(cachePath string) (string, error) {
+	if cachePath != "" {
+		return utils.MakeTempDir(cachePath)
+	}
+	return utils.MakeTempDir(config.CommonOptions.TempDirectory)
 }
 
 func validResourcePath(value string) bool {

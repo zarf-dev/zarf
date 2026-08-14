@@ -303,6 +303,21 @@ func TestUnpackMultipleImages(t *testing.T) {
 	}
 }
 
+func TestUnpackOCILayoutDirectory(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	destination := t.TempDir()
+	_, err := Unpack(ctx, v1alpha1.ImageArchive{
+		Path: filepath.Join("testdata", "oras-oci-layout", "images"),
+		Images: []string{
+			"ghcr.io/zarf-dev/images/hello-world:latest",
+		},
+	}, destination, "amd64")
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(destination, "index.json"))
+}
+
 func TestUnpackImageIndexes(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)

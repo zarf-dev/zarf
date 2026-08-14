@@ -6,6 +6,7 @@ package zoci
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -86,6 +87,15 @@ func GetOCICacheModifier(ctx context.Context, cachePath string) (oci.Modifier, e
 		return nil, err
 	}
 	return oci.WithCache(ociCache), nil
+}
+
+// CacheBlobPath returns the path where an OCI descriptor is stored in Zarf's
+// local OCI cache.
+func CacheBlobPath(cachePath string, descriptor ocispec.Descriptor) (string, error) {
+	if err := descriptor.Digest.Validate(); err != nil {
+		return "", fmt.Errorf("invalid OCI descriptor digest: %w", err)
+	}
+	return filepath.Join(cachePath, ImageCacheDirectory, ocispec.ImageBlobsDir, descriptor.Digest.Algorithm().String(), descriptor.Digest.Encoded()), nil
 }
 
 // PlatformForSkeleton sets the target architecture for the remote to skeleton

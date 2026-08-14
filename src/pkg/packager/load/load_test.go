@@ -302,6 +302,19 @@ func TestLoadedPackageCloseInvalidatesResources(t *testing.T) {
 	require.ErrorContains(t, err, "package resources are closed")
 }
 
+func TestMaterializationWorkspaceUsesConfiguredCache(t *testing.T) {
+	cachePath := t.TempDir()
+
+	workspace, err := materializationWorkspace(cachePath)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, os.RemoveAll(workspace)) })
+
+	rel, err := filepath.Rel(cachePath, workspace)
+	require.NoError(t, err)
+	require.NotEqual(t, ".", rel)
+	require.NotContains(t, rel, "..")
+}
+
 func TestV1Beta1PackageDefinitionParentChartSourceTakesPriority(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)

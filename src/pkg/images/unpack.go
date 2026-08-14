@@ -77,28 +77,36 @@ func FindImagesInOCIManifests(manifests []ocispec.Descriptor) ([]string, error) 
 	return foundImages, nil
 }
 
-// Unpack extracts an image tar and loads it into an OCI layout directory.
-// It returns a list of PulledImage for all images in the tar.
+// Unpack loads images from an image archive or OCI layout directory into destDir.
+// It returns a list of PulledImage for all images in the source.
+// FIXME: should we allow unpack to be an oci-layout? Is it now
 func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []PulledImage, err error) {
 	if len(imageArchive.Images) == 0 {
 		return nil, fmt.Errorf("images must be defined")
 	}
-	// Create a temporary directory for extraction
-	extractionDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	imageDir := imageArchive.Path
+	info, err := os.Stat(imageDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create temp directory: %w", err)
+		return nil, fmt.Errorf("failed to access image archive: %w", err)
 	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(extractionDir))
-	}()
+	if !info.IsDir() {
+		// Create a temporary directory for extraction.
+		extractionDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create temp directory: %w", err)
+		}
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(extractionDir))
+		}()
 
-	if err := archive.Decompress(ctx, imageArchive.Path, extractionDir, archive.DecompressOpts{}); err != nil {
-		return nil, fmt.Errorf("failed to extract tar: %w", err)
-	}
+		if err := archive.Decompress(ctx, imageArchive.Path, extractionDir, archive.DecompressOpts{}); err != nil {
+			return nil, fmt.Errorf("failed to extract tar: %w", err)
+		}
 
-	imageDir, err := determineImageDirectory(extractionDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to determine image directory: %w", err)
+		imageDir, err = determineImageDirectory(extractionDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to determine image directory: %w", err)
+		}
 	}
 
 	manifests, err := getManifestsFromOCILayout(imageDir)
@@ -111,7 +119,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		return nil, fmt.Errorf("failed to create OCI store: %w", err)
 	}
 
-	// imageDir is the directory into which the archive was decompressed
+	// imageDir is the OCI layout containing the source images.
 	srcStore, err := oci.NewWithContext(ctx, imageDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create source OCI store: %w", err)
