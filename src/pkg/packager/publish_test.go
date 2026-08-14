@@ -36,12 +36,7 @@ func defaultTestRemoteOptions() types.RemoteOptions {
 	}
 }
 
-func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string) *layout.PackageLayout {
-	t.Helper()
-	return pullFromRemoteWithOptions(ctx, t, packageRef, architecture, publicKeyPath, cachePath, defaultTestRemoteOptions())
-}
-
-func pullFromRemoteWithOptions(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string, remoteOptions types.RemoteOptions) *layout.PackageLayout {
+func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string, remoteOptions types.RemoteOptions) *layout.PackageLayout {
 	t.Helper()
 
 	verifyOpts := signing.DefaultVerifyBlobOptions()
@@ -288,7 +283,7 @@ func TestPublishPackage(t *testing.T) {
 			expectedPkg := layoutExpected.AsV1alpha1()
 			expectedPkg.Build = v1alpha1.ZarfBuildData{}
 
-			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir())
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
 			actualPkg := layoutActual.AsV1alpha1()
 			actualPkg.Build = v1alpha1.ZarfBuildData{}
 			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")
@@ -352,7 +347,7 @@ func TestPublishPackageDirectoryNameCollision(t *testing.T) {
 			expectedPkg := layoutExpected.AsV1alpha1()
 			expectedPkg.Build = v1alpha1.ZarfBuildData{}
 
-			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir())
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
 			actualPkg := layoutActual.AsV1alpha1()
 			actualPkg.Build = v1alpha1.ZarfBuildData{}
 			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")
@@ -472,7 +467,7 @@ func TestPublishCopySHA(t *testing.T) {
 
 			pkgRefSha := fmt.Sprintf("%s@%s", dstRef.String(), indexDesc.Digest)
 
-			layoutActual := pullFromRemote(ctx, t, pkgRefSha, layoutExpected.AsV1alpha1().Build.Architecture, "", t.TempDir())
+			layoutActual := pullFromRemote(ctx, t, pkgRefSha, layoutExpected.AsV1alpha1().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
 			require.Equal(t, layoutExpected.AsV1alpha1(), layoutActual.AsV1alpha1(), "Uploaded package is not identical to downloaded package")
 		})
 	}
@@ -514,7 +509,7 @@ func TestPublishFromOCITransportNegotiation(t *testing.T) {
 		RemoteOptions: remoteOptions,
 	}))
 
-	layoutActual := pullFromRemoteWithOptions(ctx, t, destinationRef.String(), layoutExpected.AsV1alpha1().Build.Architecture, "", t.TempDir(), types.RemoteOptions{PlainHTTP: true})
+	layoutActual := pullFromRemote(ctx, t, destinationRef.String(), layoutExpected.AsV1alpha1().Build.Architecture, "", t.TempDir(), types.RemoteOptions{PlainHTTP: true})
 	require.Equal(t, layoutExpected.AsV1alpha1(), layoutActual.AsV1alpha1(), "copied package must retain metadata and layers")
 }
 
@@ -574,7 +569,7 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	layoutActual := pullFromRemoteWithOptions(ctx, t, destinationRef.String(), layoutExpected.AsV1alpha1().Build.Architecture, filepath.Join("testdata", "publish", "cosign.pub"), t.TempDir(), types.RemoteOptions{
+	layoutActual := pullFromRemote(ctx, t, destinationRef.String(), layoutExpected.AsV1alpha1().Build.Architecture, filepath.Join("testdata", "publish", "cosign.pub"), t.TempDir(), types.RemoteOptions{
 		InsecureSkipTLSVerify: true,
 	})
 	require.Equal(t, sourceLayout.AsV1alpha1(), layoutActual.AsV1alpha1(), "signed package must retain metadata and layers")
@@ -709,7 +704,7 @@ func TestPublishCopyTag(t *testing.T) {
 
 			require.Equal(t, tc.dstTag, dstRegistry.Reference)
 
-			layoutActual := pullFromRemote(ctx, t, dstRegistry.String(), layoutExpected.AsV1alpha1().Build.Architecture, "", t.TempDir())
+			layoutActual := pullFromRemote(ctx, t, dstRegistry.String(), layoutExpected.AsV1alpha1().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
 
 			require.Equal(t, layoutExpected.AsV1alpha1(), layoutActual.AsV1alpha1(), "Uploaded package is not identical to downloaded package")
 		})
