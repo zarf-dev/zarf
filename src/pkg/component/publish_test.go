@@ -4,7 +4,6 @@
 package component
 
 import (
-	"archive/tar"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -105,29 +104,23 @@ components:
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 	require.NoFileExists(t, resourcePath)
 
-	tarFile, err := os.Open(filepath.Join(pkgLayout.DirPath(), "components", "imported.tar"))
+	assembledComponentDir := t.TempDir()
+	chartsDir, err := pkgLayout.GetComponentDir(ctx, assembledComponentDir, "imported", layout.ChartsComponentDir)
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, tarFile.Close()) })
-	entries := map[string]bool{}
-	// FIXME: is there a helper we can use here ?
-	reader := tar.NewReader(tarFile)
-	for {
-		header, err := reader.Next()
-		if err == io.EOF {
-			break
-		}
-		require.NoError(t, err)
-		entries[header.Name] = true
-	}
-	for _, entry := range []string{
-		"imported/charts/test.tgz",
-		"imported/values/test-0",
-		"imported/files/0/file.txt",
-		"imported/manifests/manifest-0.yaml",
-		"imported/manifests/kustomization-kustomize-0.yaml",
-	} {
-		require.Truef(t, entries[entry], "missing assembled resource %s", entry)
-	}
+	require.FileExists(t, filepath.Join(chartsDir, "test.tgz"))
+
+	valuesDir, err := pkgLayout.GetComponentDir(ctx, assembledComponentDir, "imported", layout.ValuesComponentDir)
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(valuesDir, "test-0"))
+
+	filesDir, err := pkgLayout.GetComponentDir(ctx, assembledComponentDir, "imported", layout.FilesComponentDir)
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(filesDir, "0", "file.txt"))
+
+	manifestsDir, err := pkgLayout.GetComponentDir(ctx, assembledComponentDir, "imported", layout.ManifestsComponentDir)
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(manifestsDir, "manifest-0.yaml"))
+	require.FileExists(t, filepath.Join(manifestsDir, "kustomization-kustomize-0.yaml"))
 }
 
 func TestPublishComponent(t *testing.T) {

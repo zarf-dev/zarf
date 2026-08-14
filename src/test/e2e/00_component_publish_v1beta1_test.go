@@ -196,7 +196,9 @@ metadata:
 			http.NotFound(w, r)
 			return
 		}
-		_, _ = w.Write(resource)
+		if _, err := w.Write(resource); err != nil {
+			t.Errorf("writing test resource %q: %v", r.URL.Path, err)
+		}
 	}))
 }
 
