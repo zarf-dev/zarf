@@ -50,14 +50,8 @@ type importedValues struct {
 }
 
 // resolveImportsV1Beta1 resolves component config imports into a v1beta1 package definition.
-// Each package component may import one or more ZarfComponentConfig files; filtering compatible components also happens here
-// FIXME: no point to this separation
-func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, arch, flavor string) (v1beta1.Package, []string, error) {
-	pkg, schemas, _, err := resolveImportsV1Beta1WithRemote(ctx, pkg, pkgPath, arch, flavor, types.RemoteOptions{}, "")
-	return pkg, schemas, err
-}
-
-func resolveImportsV1Beta1WithRemote(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, arch, flavor string, remoteOptions types.RemoteOptions, cachePath string) (v1beta1.Package, []string, []remoteResource, error) {
+// Each package component may import one or more ZarfComponentConfig files; filtering compatible components also happens here.
+func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, arch, flavor string, remoteOptions types.RemoteOptions, cachePath string) (v1beta1.Package, []string, []remoteResource, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start resolveImportsV1Beta1", "pkg", pkg.Metadata.Name, "arch", arch, "flavor", flavor)

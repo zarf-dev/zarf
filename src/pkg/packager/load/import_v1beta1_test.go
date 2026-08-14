@@ -4,6 +4,7 @@
 package load
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func mustPackagePath(t *testing.T, dir string) layout.PackagePath {
@@ -34,6 +36,11 @@ func loadV1Beta1Package(t *testing.T, dir string) v1beta1.Package {
 	return pkg
 }
 
+func resolveImportsV1Beta1ForTest(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, arch, flavor string) (v1beta1.Package, []string, error) {
+	pkg, schemas, _, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, arch, flavor, types.RemoteOptions{}, "")
+	return pkg, schemas, err
+}
+
 func TestResolveImportsV1Beta1(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
@@ -43,7 +50,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "single")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, schemas, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		resolved, schemas, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.NoError(t, err)
 
 		require.Len(t, resolved.Components, 1)
@@ -70,7 +77,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "mixed")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		resolved, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.NoError(t, err)
 
 		require.Len(t, resolved.Components, 3)
@@ -88,7 +95,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "nested")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, schemas, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		resolved, schemas, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.NoError(t, err)
 
 		require.Len(t, resolved.Components, 1)
@@ -117,7 +124,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "cycle")
 		pkg := loadV1Beta1Package(t, dir)
 
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.ErrorContains(t, err, "cycle")
 	})
 
@@ -126,7 +133,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "variants")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "apache")
+		resolved, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "apache")
 		require.NoError(t, err)
 
 		require.Len(t, resolved.Components, 1)
@@ -138,7 +145,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "variants")
 		pkg := loadV1Beta1Package(t, dir)
 
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.ErrorContains(t, err, "no imported component")
 	})
 
@@ -147,7 +154,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "single-incompatible")
 		pkg := loadV1Beta1Package(t, dir)
 
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "nginx")
+		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "nginx")
 		require.ErrorContains(t, err, "no imported component")
 	})
 
@@ -156,7 +163,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "merge")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		resolved, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.NoError(t, err)
 
 		comp := resolved.Components[0]
@@ -226,7 +233,7 @@ components:
         - url: oci://example.com/component:1.0.0
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.ErrorContains(t, err, "remote")
 	})
 
@@ -244,7 +251,7 @@ components:
         - path: does-not-exist.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.ErrorContains(t, err, "does-not-exist.yaml")
 	})
 
@@ -263,7 +270,7 @@ components:
         - path: child
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.Error(t, err)
 	})
 
@@ -286,7 +293,7 @@ components:
         - path: child.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.ErrorContains(t, err, "kind")
 	})
 
@@ -311,7 +318,7 @@ components:
         - path: child.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
 	})
 
@@ -342,7 +349,7 @@ components:
         - path: b.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
 		require.ErrorContains(t, err, "multiple")
 	})
 }

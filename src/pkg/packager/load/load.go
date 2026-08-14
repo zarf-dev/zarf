@@ -172,7 +172,7 @@ func v1beta1Resolution(ctx context.Context, pkg v1beta1.Package, pkgPath layout.
 		return resolution{}, err
 	}
 
-	pkg, importedSchemas, remoteResources, err := resolveImportsV1Beta1WithRemote(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor, opts.RemoteOptions, cachePath)
+	pkg, importedSchemas, remoteResources, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor, opts.RemoteOptions, cachePath)
 	if err != nil {
 		return resolution{}, err
 	}
