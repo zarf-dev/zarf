@@ -230,7 +230,9 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVe
 		return "", err
 	}
 	defer func() {
-		err = errors.Join(err, file.Close())
+		if file != nil {
+			err = errors.Join(err, file.Close())
+		}
 	}()
 
 	format, _, err := archives.Identify(ctx, "data", file)
@@ -253,6 +255,11 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVe
 	default:
 		return "", fmt.Errorf("unsupported archive format: %s", format.MediaType())
 	}
+
+	if closeErr := file.Close(); closeErr != nil {
+		return "", closeErr
+	}
+	file = nil
 
 	if err := os.Rename(tarPath, newPath); err != nil {
 		return "", err
