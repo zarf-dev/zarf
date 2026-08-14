@@ -29,7 +29,7 @@ require (
 	github.com/go-git/go-git/v5 v5.19.2
 	github.com/goccy/go-yaml v1.19.2
 	github.com/golang-cz/devslog v0.0.17
-	github.com/google/go-containerregistry v0.21.8
+	github.com/google/go-containerregistry v0.21.9
 	github.com/invopop/jsonschema v0.14.0
 	github.com/mholt/archives v0.1.5
 	github.com/moby/moby/client v0.5.1
