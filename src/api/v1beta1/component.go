@@ -28,7 +28,22 @@ func (c Component) GetImages() []string {
 
 // RequiresCluster returns true if the component requires a cluster connection to deploy.
 func (c Component) RequiresCluster() bool {
-	return len(c.Images) > 0 || len(c.Charts) > 0 || len(c.Manifests) > 0 || len(c.Repositories) > 0
+	return len(c.Images) > 0 || len(c.Charts) > 0 || len(c.Manifests) > 0 || len(c.Repositories) > 0 || c.Actions.hasClusterWait()
+}
+
+func (a ComponentActions) hasClusterWait() bool {
+	return a.OnDeploy.hasClusterWait() || a.OnRemove.hasClusterWait()
+}
+
+func (a ComponentActionSet) hasClusterWait() bool {
+	for _, actions := range [][]ComponentAction{a.Before, a.OnSuccess, a.OnFailure} {
+		for _, action := range actions {
+			if action.Wait != nil && action.Wait.Cluster != nil {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // ComponentTarget filters a component to only apply for a given local OS at deploy time.

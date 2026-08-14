@@ -103,11 +103,27 @@ func (c ZarfComponent) RequiresCluster() bool {
 	hasRepos := len(c.Repos) > 0
 	hasDataInjections := len(c.DataInjections) > 0
 	hasHealthChecks := len(c.HealthChecks) > 0
+	hasClusterWait := c.Actions.hasClusterWait()
 
-	if hasImageArchives || hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasHealthChecks {
+	if hasImageArchives || hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasHealthChecks || hasClusterWait {
 		return true
 	}
 
+	return false
+}
+
+func (a ZarfComponentActions) hasClusterWait() bool {
+	return a.OnDeploy.hasClusterWait() || a.OnRemove.hasClusterWait()
+}
+
+func (a ZarfComponentActionSet) hasClusterWait() bool {
+	for _, actions := range [][]ZarfComponentAction{a.Before, a.After, a.OnSuccess, a.OnFailure} {
+		for _, action := range actions {
+			if action.Wait != nil && action.Wait.Cluster != nil {
+				return true
+			}
+		}
+	}
 	return false
 }
 
