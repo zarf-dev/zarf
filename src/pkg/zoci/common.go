@@ -108,7 +108,7 @@ func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Plat
 		if err != nil {
 			return nil, fmt.Errorf("could not resolve registry transport: %w", err)
 		}
-		oci.WithPlainHTTP(plainHTTP)(remote.OrasRemote)
+		remote.Repo().PlainHTTP = plainHTTP
 	}
 
 	return remote, nil
