@@ -39,7 +39,7 @@ type DefinitionOptions struct {
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
-	// FIXME: also need the version requirement check for v1beta1 component configs
+	// TODO: implement version requirements for v1beta1
 	SkipVersionCheck bool
 	types.RemoteOptions
 }
