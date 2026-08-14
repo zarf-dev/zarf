@@ -59,12 +59,12 @@ func publishAndConnect(ctx context.Context, t *testing.T, srcPath string) (*zoci
 		OCIConcurrency: 3,
 	})
 	require.NoError(t, err)
-	t.Cleanup(func() { os.Remove(pkgLayout.Pkg.Metadata.Name) }) //nolint:errcheck
+	t.Cleanup(func() { os.Remove(pkgLayout.AsV1alpha1().Metadata.Name) }) //nolint:errcheck
 
 	cacheModifier, err := zoci.GetOCICacheModifier(ctx, tmpdir)
 	require.NoError(t, err)
 
-	platform := oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture)
+	platform := oci.PlatformForArch(pkgLayout.AsV1alpha1().Build.Architecture)
 	remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, append([]oci.Modifier{oci.WithPlainHTTP(true)}, cacheModifier)...)
 	require.NoError(t, err)
 
@@ -76,7 +76,7 @@ func TestAllLayersRespectsRequestedComponents(t *testing.T) {
 	remote, pkgLayout := publishAndConnect(ctx, t, "testdata/multi-component")
 
 	alpineOnly := []v1alpha1.ZarfComponent{{Name: "alpine"}}
-	bothComponents := pkgLayout.Pkg.Components
+	bothComponents := pkgLayout.AsV1alpha1().Components
 
 	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents, zoci.GetAllLayerTypes()...)
 	require.NoError(t, err)
@@ -142,7 +142,7 @@ func publishPackage(ctx context.Context, t *testing.T, packagePath, upstream str
 	t.Helper()
 	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
-	t.Cleanup(func() { os.Remove(pkgLayout.Pkg.Metadata.Name) }) //nolint:errcheck
+	t.Cleanup(func() { os.Remove(pkgLayout.AsV1alpha1().Metadata.Name) }) //nolint:errcheck
 
 	dstRef := registry.Reference{Registry: upstream, Repository: "zarf-packages"}
 	packageRef, err := packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
@@ -151,10 +151,10 @@ func publishPackage(ctx context.Context, t *testing.T, packagePath, upstream str
 	})
 	require.NoError(t, err)
 
-	platform := oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture)
+	platform := oci.PlatformForArch(pkgLayout.AsV1alpha1().Build.Architecture)
 	r, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(true))
 	require.NoError(t, err)
-	return r, pkgLayout.Pkg.Components
+	return r, pkgLayout.AsV1alpha1().Components
 }
 
 // buildVirtualPackage pushes a virtual image to a fresh in-memory registry and builds a zarf
