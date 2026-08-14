@@ -6,7 +6,6 @@ package zoci
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"time"
 
@@ -63,7 +62,6 @@ type PublishOptions struct {
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
 type Remote struct {
 	*oci.OrasRemote
-	cachePath string
 }
 
 // NewRemote returns an oras remote repository client and context for the given url
@@ -79,24 +77,6 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 		return nil, err
 	}
 	return &Remote{OrasRemote: remote}, nil
-}
-
-// NewRemoteWithCache creates a remote client backed by Zarf's shared OCI cache.
-// FIXME: I'd rather not have a separate function for this, since it already has it's own modifier
-func NewRemoteWithCache(ctx context.Context, url string, platform ocispec.Platform, cachePath string, mods ...oci.Modifier) (*Remote, error) {
-	if cachePath == "" {
-		return nil, fmt.Errorf("OCI cache path is required")
-	}
-	cacheModifier, err := GetOCICacheModifier(ctx, cachePath)
-	if err != nil {
-		return nil, err
-	}
-	remote, err := NewRemote(ctx, url, platform, append(mods, cacheModifier)...)
-	if err != nil {
-		return nil, err
-	}
-	remote.cachePath = cachePath
-	return remote, nil
 }
 
 // GetOCICacheModifier takes in a Zarf cachePath and uses it to return an oci.WithCache modifier

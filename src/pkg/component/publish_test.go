@@ -99,24 +99,11 @@ components:
 	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 	resourcePath, err := loaded.Resources.Path(loaded.Definition.AsV1alpha1().Components[0].Files[0].Source)
 	require.NoError(t, err)
-	resourceInfo, err := os.Stat(resourcePath)
-	require.NoError(t, err)
-	cached := false
-	err = filepath.Walk(filepath.Join(cachePath, "images", "blobs"), func(_ string, info os.FileInfo, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if !info.IsDir() && os.SameFile(resourceInfo, info) {
-			cached = true
-		}
-		return nil
-	})
-	require.NoError(t, err)
-	require.True(t, cached, "remote resource should be linked to its OCI cache blob")
 
 	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{CachePath: cachePath, SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+	require.NoFileExists(t, resourcePath)
 
 	tarFile, err := os.Open(filepath.Join(pkgLayout.DirPath(), "components", "imported.tar"))
 	require.NoError(t, err)

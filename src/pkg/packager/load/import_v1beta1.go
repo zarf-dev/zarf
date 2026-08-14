@@ -218,8 +218,15 @@ func remoteComponentConfig(ctx context.Context, importURL string, remoteOptions 
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
-	remote, err := zoci.NewRemoteWithCache(ctx, importURL, ocispec.Platform{}, cachePath,
-		oci.WithPlainHTTP(plainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify))
+	mods := []oci.Modifier{oci.WithPlainHTTP(plainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify)}
+	if cachePath != "" {
+		cacheModifier, err := zoci.GetOCICacheModifier(ctx, cachePath)
+		if err != nil {
+			return loadedComponentConfig{}, err
+		}
+		mods = append(mods, cacheModifier)
+	}
+	remote, err := zoci.NewRemote(ctx, importURL, ocispec.Platform{}, mods...)
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}

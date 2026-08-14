@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 )
@@ -185,11 +186,7 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 	if len(remoteResources) == 0 {
 		return resourceSet, nil
 	}
-	cachePath, err := remoteResources[0].remote.CachePath()
-	if err != nil {
-		return nil, err
-	}
-	workspace, err := utils.MakeTempDir(cachePath)
+	workspace, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
 	}
@@ -202,23 +199,16 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 			return fail(fmt.Errorf("remote component has an invalid resource path"))
 		}
 		resourceSet.remoteRoots[resource.importRoot] = struct{}{}
-		resourceCachePath, err := resource.remote.CachePath()
-		if err != nil {
-			return fail(err)
-		}
-		if resourceCachePath != cachePath {
-			return fail(fmt.Errorf("remote component resources use different OCI caches"))
-		}
 		destination := filepath.Join(workspace, filepath.FromSlash(resource.importRoot), filepath.FromSlash(resource.mountPath))
 		if err := os.MkdirAll(filepath.Dir(destination), helpers.ReadWriteExecuteUser); err != nil {
 			return fail(err)
 		}
-		cachedPath, err := resource.remote.CachedLayerPath(ctx, resource.descriptor)
+		contents, err := resource.remote.FetchLayer(ctx, resource.descriptor)
 		if err != nil {
 			return fail(err)
 		}
-		if err := os.Link(cachedPath, destination); err != nil {
-			return fail(fmt.Errorf("linking cached remote resource %q: %w", resource.mountPath, err))
+		if err := os.WriteFile(destination, contents, helpers.ReadWriteUser); err != nil {
+			return fail(err)
 		}
 	}
 	return resourceSet, nil

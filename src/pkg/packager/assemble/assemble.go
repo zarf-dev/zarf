@@ -66,8 +66,13 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
-// AssemblePackage takes a resource-ready package and returns a package layout with all the resources collected.
-func AssemblePackage(ctx context.Context, loadedPackage *load.LoadedPackage, opts AssembleOptions) (*layout.PackageLayout, error) {
+// AssemblePackage consumes a resource-ready package and returns a package layout with all the resources collected.
+// It closes the loaded package before returning.
+func AssemblePackage(ctx context.Context, loadedPackage *load.LoadedPackage, opts AssembleOptions) (_ *layout.PackageLayout, err error) {
+	defer func() {
+		err = errors.Join(err, loadedPackage.Close())
+	}()
+
 	l := logger.From(ctx)
 	packagePath, err := loadedPackage.Resources.Root()
 	if err != nil {
