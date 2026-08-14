@@ -250,10 +250,7 @@ func remoteComponentConfig(ctx context.Context, importURL string, remoteOptions 
 		return loadedComponentConfig{}, err
 	}
 	if len(config.Component.Import.Local) > 0 || len(config.Component.Import.Remote) > 0 {
-		return loadedComponentConfig{}, fmt.Errorf("remote component imports are not yet supported")
-	}
-	if len(config.Component.ImageArchives) > 0 {
-		return loadedComponentConfig{}, fmt.Errorf("remote component image archives are not yet supported")
+		return loadedComponentConfig{}, fmt.Errorf("remote component imports are not supported")
 	}
 	importRoot := path.Join(".zarf", "remote-components", strings.ReplaceAll(root.Digest.String(), ":", "-"))
 	resources := make([]remoteResource, 0, len(manifest.Layers))
