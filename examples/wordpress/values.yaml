@@ -1,0 +1,7 @@
+wordpress:
+  username: zarf
+  password: ""
+  email: hello@defenseunicorns.com
+  firstName: Zarf
+  lastName: The Axolotl
+  blogName: The Zarf Blog

@@ -113,12 +113,13 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 	if err != nil {
 		return nil, err
 	}
-	imageScans, err := findImages(ctx, defined.Pkg, packagePath, opts)
+	pkg := defined.PackageDefinition.AsV1alpha1()
+	imageScans, err := findImages(ctx, pkg, packagePath, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	return filterImagesFoundInArchives(ctx, defined.Pkg, packagePath, imageScans)
+	return filterImagesFoundInArchives(ctx, pkg, packagePath, imageScans)
 }
 
 // FindImages iterates over the manifests and charts within each component to find any container images
@@ -141,8 +142,9 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if err != nil {
 		return nil, err
 	}
+	pkg := defined.PackageDefinition.AsV1alpha1()
 
-	return findImages(ctx, defined.Pkg, packagePath, opts)
+	return findImages(ctx, pkg, packagePath, opts)
 }
 
 // filterImagesFoundInArchives merges scan results with each component's imageArchives.
@@ -296,6 +298,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 			if err != nil {
 				return nil, err
 			}
+			yamls = slices.DeleteFunc(yamls, isHelmTestResource)
 			resources = append(resources, yamls...)
 			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
 			chartTarball := filepath.Join(chartPath, layout.ChartArchiveName(zarfChart.Name, zarfChart.Version))
@@ -339,6 +342,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 				if err != nil {
 					return nil, err
 				}
+				yamls = slices.DeleteFunc(yamls, isHelmTestResource)
 				resources = append(resources, yamls...)
 
 				// Check if the --why flag is set and if it is process the manifests
@@ -466,6 +470,10 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 	}
 
 	return componentImageScans, nil
+}
+
+func isHelmTestResource(resource *unstructured.Unstructured) bool {
+	return resource.GetAnnotations()["helm.sh/hook"] == "test"
 }
 
 // processUnstructuredImages processes a Kubernetes resource and extracts container images

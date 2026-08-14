@@ -124,11 +124,14 @@ var jsonTypes = makeJSONTypes(
 	jsonNames(pkg.SnapEntry{}, "snap-entry"),
 	jsonNames(pkg.WordpressPluginEntry{}, "wordpress-plugin-entry", "WordpressMetadata"),
 	jsonNames(pkg.HomebrewFormula{}, "homebrew-formula"),
+	jsonNames(pkg.AppleAppBundleEntry{}, "apple-app-bundle-entry"),
 	jsonNames(pkg.LuaRocksPackage{}, "luarocks-package"),
 	jsonNames(pkg.TerraformLockProviderEntry{}, "terraform-lock-provider-entry"),
 	jsonNames(pkg.DotnetPackagesLockEntry{}, "dotnet-packages-lock-entry"),
 	jsonNames(pkg.CondaMetaPackage{}, "conda-metadata-entry", "CondaPackageMetadata"),
 	jsonNames(pkg.GGUFFileHeader{}, "gguf-file-header"),
+	jsonNames(pkg.SafeTensorsModelInfo{}, "safetensors-model-info"),
+	jsonNames(pkg.VcpkgManifest{}, "vcpkg-manifest"),
 )
 
 func expandLegacyNameVariants(names ...string) []string {

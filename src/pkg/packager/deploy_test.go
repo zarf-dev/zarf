@@ -5,14 +5,18 @@ package packager
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -114,5 +118,21 @@ func TestVerifyPackageIsDeployableSkipsAgentCertCheckWhenAgentIsNotConfigured(t 
 
 	d := deployer{c: c}
 	err = d.verifyPackageIsDeployable(ctx, &layout.PackageLayout{})
+	require.NoError(t, err)
+}
+
+func TestDeploySkipsValuesSchemaValidationWhenConfigured(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	srcDir := filepath.Join("load", "testdata", "package-with-invalid-values")
+	defined, err := load.PackageDefinition(ctx, srcDir, load.DefinitionOptions{SkipValuesSchemaValidation: true})
+	require.NoError(t, err)
+	pkgLayout, err := assemble.AssemblePackage(ctx, defined, srcDir, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	_, err = Deploy(ctx, pkgLayout, DeployOptions{})
+	require.ErrorContains(t, err, "values validation failed")
+
+	_, err = Deploy(ctx, pkgLayout, DeployOptions{SkipValuesSchemaValidation: true})
 	require.NoError(t, err)
 }

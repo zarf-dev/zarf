@@ -9,7 +9,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
+
+func selectV1alpha1Components(pkg v1alpha1.ZarfPackage, indices []int) []v1alpha1.ZarfComponent {
+	components := make([]v1alpha1.ZarfComponent, 0, len(indices))
+	for _, idx := range indices {
+		components = append(components, pkg.Components[idx])
+	}
+	return components
+}
 
 func Test_includedOrExcluded(t *testing.T) {
 	tests := []struct {

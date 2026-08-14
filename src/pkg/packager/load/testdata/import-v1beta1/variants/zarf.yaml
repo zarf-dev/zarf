@@ -1,0 +1,10 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: variants-import
+components:
+  - name: web
+    import:
+      local:
+        - path: components/web-apache.yaml
+        - path: components/web-nginx.yaml

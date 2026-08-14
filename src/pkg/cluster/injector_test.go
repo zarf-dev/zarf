@@ -160,6 +160,37 @@ func TestInjector(t *testing.T) {
 	require.Empty(t, cmList.Items)
 }
 
+func TestStartInjectionUsesRequestedImage(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cs := fake.NewClientset()
+	c := &Cluster{
+		Clientset: cs,
+		Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
+	}
+	tmpDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "zarf-injector"), []byte("foobar"), 0o644))
+
+	idx, err := random.Index(1, 1, 1)
+	require.NoError(t, err)
+	_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
+	require.NoError(t, err)
+
+	image := "registry.example.com/zarf/injector:latest"
+	selectedImage, _, err := c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test", "amd64", ZarfInjectorOptions{
+		RegistryNodePort: 31999,
+		Image:            image,
+	})
+	require.NoError(t, err)
+	require.Equal(t, image, selectedImage)
+
+	pod, err := cs.CoreV1().Pods(state.ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, image, pod.Spec.Containers[0].Image)
+	require.Empty(t, pod.Spec.NodeName)
+}
+
 func TestBuildInjectionPod(t *testing.T) {
 	t.Parallel()
 

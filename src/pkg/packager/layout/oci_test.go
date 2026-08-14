@@ -67,10 +67,10 @@ func newTestLayout(t *testing.T) (*PackageLayout, []byte) {
 
 	p := &PackageLayout{
 		dirPath: dir,
-		Pkg: v1alpha1.ZarfPackage{
+		PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
 			Metadata: v1alpha1.ZarfMetadata{Name: "test-pkg", Version: "1.0.0"},
 			Build:    v1alpha1.ZarfBuildData{Architecture: "amd64"},
-		},
+		}),
 	}
 	require.NoError(t, p.computeManifest(context.Background()))
 	return p, blobContent
@@ -81,7 +81,7 @@ func TestDigest(t *testing.T) {
 	p, _ := newTestLayout(t)
 
 	d := p.Digest()
-	assert.Equal(t, "sha256:25242bc565875477a9f691d8ce135b433bb014340a46b87113d977f0c08bd728", d, "digest should match expected precomputed digest")
+	assert.Equal(t, "sha256:28999b2812b62c2df92f9eb90e48b0a467ba3f0aeeaae10702e438387aa12bd3", d, "digest should match expected precomputed digest")
 }
 
 func TestTotalSize(t *testing.T) {
@@ -115,7 +115,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("by package name", func(t *testing.T) {
-		desc, err := p.Resolve(ctx, p.Pkg.Metadata.Name)
+		desc, err := p.Resolve(ctx, p.AsV1alpha1().Metadata.Name)
 		require.NoError(t, err)
 		assert.Equal(t, p.Digest(), desc.Digest.String())
 	})

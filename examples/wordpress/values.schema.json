@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["wordpress"],
+  "properties": {
+    "wordpress": {
+      "type": "object",
+      "description": "WordPress admin account settings",
+      "required": [
+        "username",
+        "password",
+        "email",
+        "firstName",
+        "lastName",
+        "blogName"
+      ],
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "The username used to log in to the WordPress admin account",
+          "minLength": 1
+        },
+        "password": {
+          "type": "string",
+          "description": "The password used to log in to the WordPress admin account"
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address used for the WordPress admin account",
+          "format": "email",
+          "minLength": 1
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name used for the WordPress admin account",
+          "minLength": 1
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name used for the WordPress admin account",
+          "minLength": 1
+        },
+        "blogName": {
+          "type": "string",
+          "description": "The WordPress blog name",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

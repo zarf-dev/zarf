@@ -302,7 +302,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 	CmdPackageCreateFlagDifferential          = "Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
 	CmdPackageCreateFlagRegistryOverride      = "Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)"
 	CmdPackageCreateFlagFlavor                = "The flavor of components to include in the resulting package (i.e. have a matching or empty \"only.flavor\" key)"
-	CmdPackageCreateFlagValuesFiles           = "[alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times."
+	CmdPackageCreateFlagValuesFiles           = "[beta] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times."
 	CmdPackageCreateFlagWithBuildMachineInfo  = "Include build machine information (hostname and username) in the package metadata"
 	CmdPackageCreateCleanPathErr              = "Invalid characters in Zarf cache path, defaulting to %s"
 
@@ -320,6 +320,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 	CmdPackageDeployInvalidCLIVersionWarn      = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
 	CmdPackageDeployFlagNamespace              = "[Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined."
 	CmdPackageDeployFlagValuesFiles            = CmdPackageCreateFlagValuesFiles
+	CmdPackageDeployFlagSkipValuesSchema       = "Skip validation of package values against the values schema."
 
 	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
@@ -523,7 +524,10 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 
 	CmdDevFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests."
 	CmdDevFindImagesLong  = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.\n\n" +
-		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
+		"Images defined as part of Helm test hooks are excluded. Images explicitly defined in the helm.sh/images\n" +
+		"annotation in a component Helm chart's Chart.yaml are included regardless of their presence in the rendered\n" +
+		"chart. Components that have git repositories that host helm charts can be processed by providing the\n" +
+		"--repo-chart-path."
 
 	CmdDevGenerateConfigShort = "Generates a config file for Zarf"
 	CmdDevGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
@@ -918,6 +922,7 @@ const (
 const (
 	PkgCreateErrDifferentialSameVersion = "unable to create differential package. Please ensure the differential package version and reference package version are not the same. The package version must be incremented"
 	PkgCreateErrDifferentialNoVersion   = "unable to create differential package. Please ensure both package versions are set"
+	PkgCreateErrDifferentialAPIVersion  = "unable to create differential package. Please ensure the differential package API version and reference package API version are the same"
 )
 
 // Collection of reusable error messages.

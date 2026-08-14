@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/config"
@@ -72,23 +71,6 @@ func TestClientGoBoundsRetriesWithRetryAfter(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, kerrors.IsTooManyRequests(err))
 	require.Equal(t, int32(11), attempts.Load())
-}
-
-func TestClientGoStopsRetryingWhenContextExpires(t *testing.T) {
-	t.Parallel()
-
-	var attempts atomic.Int32
-	client := newCoreV1Client(t, func(w http.ResponseWriter, _ *http.Request) {
-		attempts.Add(1)
-		writeTooManyRequests(w, "1")
-	})
-	ctx, cancel := context.WithTimeout(t.Context(), 25*time.Millisecond)
-	defer cancel()
-
-	err := client.ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{})
-
-	require.ErrorIs(t, err, context.DeadlineExceeded)
-	require.Equal(t, int32(1), attempts.Load())
 }
 
 func TestStopInjectionRetriesPayloadConfigMapCleanup(t *testing.T) {

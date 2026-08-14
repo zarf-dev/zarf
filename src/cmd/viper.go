@@ -60,7 +60,8 @@ const (
 	VInitRegistryURL      = "init.registry.url"
 	VInitRegistryNodeport = "init.registry.nodeport"
 	VInitRegistryPort     = "init.registry.port"
-	InjectorPort          = "init.registry.injector_port"
+	VInitInjectorPort     = "init.registry.injector_port"
+	VInitInjectorImage    = "init.registry.injector_image"
 	VInitRegistrySecret   = "init.registry.secret"
 	VInitRegistryPushUser = "init.registry.push_username"
 	VInitRegistryPushPass = "init.registry.push_password"
@@ -159,6 +160,12 @@ const (
 
 	VDevDeployNoYolo    = "dev.deploy.no_yolo"
 	VDevDeployConnected = "dev.deploy.connected"
+
+	// Dev template config keys
+
+	VDevTemplateSet            = "dev.template.set"
+	VDevTemplateSetFile        = "dev.template.set_file"
+	VDevTemplateSkipValidation = "dev.template.skip_validation"
 )
 
 var (

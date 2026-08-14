@@ -1,0 +1,13 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "chart.fullname" . }}-post-install-or-test"
+  annotations:
+    "helm.sh/hook": post-install,test
+spec:
+  template:
+    spec:
+      containers:
+        - name: post-install-or-test
+          image: alpine
+      restartPolicy: Never

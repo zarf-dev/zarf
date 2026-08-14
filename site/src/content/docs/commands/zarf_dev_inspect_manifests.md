@@ -23,7 +23,7 @@ zarf dev inspect manifests [ DIRECTORY ] [flags]
   -h, --help                                  help for manifests
       --kube-version string                   Override the default helm template KubeVersion when performing a package chart template
       --set-values stringToString             Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
-      --values strings                        [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
+      --values strings                        [beta] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
 ```
 
 ### Options inherited from parent commands

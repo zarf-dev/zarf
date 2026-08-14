@@ -37,23 +37,25 @@ import (
 )
 
 type initOptions struct {
-	setVariables        map[string]string
-	optionalComponents  string
-	storageClass        string
-	gitServer           state.GitServerInfo
-	registryInfo        state.RegistryInfo
-	artifactServer      state.ArtifactServerInfo
-	injectorPort        int
-	takeOwnership       bool
-	forceConflicts      bool
-	timeout             time.Duration
-	retries             int
-	confirm             bool
-	ociConcurrency      int
-	agentTLSCAPath      string
-	agentTLSCertPath    string
-	agentTLSKeyPath     string
-	agentMutationPolicy string
+	setVariables               map[string]string
+	optionalComponents         string
+	skipValuesSchemaValidation bool
+	storageClass               string
+	gitServer                  state.GitServerInfo
+	registryInfo               state.RegistryInfo
+	artifactServer             state.ArtifactServerInfo
+	injectorPort               int
+	injectorImage              string
+	takeOwnership              bool
+	forceConflicts             bool
+	timeout                    time.Duration
+	retries                    int
+	confirm                    bool
+	ociConcurrency             int
+	agentTLSCAPath             string
+	agentTLSCertPath           string
+	agentTLSKeyPath            string
+	agentMutationPolicy        string
 	packageVerifyFlags
 }
 
@@ -85,8 +87,10 @@ func newInitCommand() *cobra.Command {
 
 	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
 		fmt.Sprintf("How to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
-	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(InjectorPort),
+	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(VInitInjectorPort),
 		"The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
+	cmd.Flags().StringVar(&o.injectorImage, "injector-image", v.GetString(VInitInjectorImage),
+		"Image for the injector. This image must be available on every node")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -127,6 +131,7 @@ func newInitCommand() *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
+	cmd.Flags().BoolVar(&o.skipValuesSchemaValidation, "skip-values-schema-validation", false, lang.CmdPackageDeployFlagSkipValuesSchema)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
@@ -137,6 +142,7 @@ func newInitCommand() *cobra.Command {
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-port")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-image")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-port")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-secret")
@@ -215,7 +221,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
 	}
-	if pkgLayout.Pkg.Kind != v1alpha1.ZarfInitConfig {
+	if pkgLayout.AsV1alpha1().Kind != v1alpha1.ZarfInitConfig {
 		return fmt.Errorf("zarf init can only deploy packages of kind \"%s\"", v1alpha1.ZarfInitConfig)
 	}
 	defer func() {
@@ -223,21 +229,23 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}()
 
 	opts := packager.DeployOptions{
-		GitServer:           o.gitServer,
-		RegistryInfo:        o.registryInfo,
-		ArtifactServer:      o.artifactServer,
-		TakeOwnership:       o.takeOwnership,
-		ForceConflicts:      o.forceConflicts,
-		Timeout:             o.timeout,
-		Retries:             o.retries,
-		OCIConcurrency:      o.ociConcurrency,
-		SetVariables:        o.setVariables,
-		StorageClass:        o.storageClass,
-		InjectorPort:        o.injectorPort,
-		RemoteOptions:       defaultRemoteOptions(),
-		IsInteractive:       !o.confirm,
-		AgentTLS:            agentTLS,
-		AgentMutationPolicy: state.MutationPolicy(o.agentMutationPolicy),
+		GitServer:                  o.gitServer,
+		RegistryInfo:               o.registryInfo,
+		ArtifactServer:             o.artifactServer,
+		TakeOwnership:              o.takeOwnership,
+		ForceConflicts:             o.forceConflicts,
+		Timeout:                    o.timeout,
+		Retries:                    o.retries,
+		OCIConcurrency:             o.ociConcurrency,
+		SetVariables:               o.setVariables,
+		StorageClass:               o.storageClass,
+		InjectorPort:               o.injectorPort,
+		InjectorImage:              o.injectorImage,
+		RemoteOptions:              defaultRemoteOptions(),
+		IsInteractive:              !o.confirm,
+		AgentTLS:                   agentTLS,
+		AgentMutationPolicy:        state.MutationPolicy(o.agentMutationPolicy),
+		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
 	}
 	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {

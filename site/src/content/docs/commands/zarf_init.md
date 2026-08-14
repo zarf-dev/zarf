@@ -74,6 +74,7 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --git-push-username string                Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
       --git-url string                          External git server url to use for this Zarf cluster
   -h, --help                                    help for init
+      --injector-image string                   Image for the injector. This image must be available on every node
       --injector-port int                       The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
@@ -88,6 +89,7 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --registry-url string                     External registry url address to use for this Zarf cluster
       --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
+      --skip-values-schema-validation           Skip validation of package values against the values schema.
       --storage-class string                    Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
       --take-ownership                          Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --timeout duration                        Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
