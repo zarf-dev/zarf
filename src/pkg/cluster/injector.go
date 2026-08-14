@@ -46,6 +46,8 @@ type ZarfInjectorOptions struct {
 	RegistryNodePort uint16
 	// InjectorNodePort, using uint16 allows for only valid ports; 0 lets Kubernetes choose
 	InjectorNodePort uint16
+	// Image is the injector container image. When set, Kubernetes schedules the injector on any suitable node.
+	Image string
 	// IPFamily determines the injector listen address; defaults to IPv4 when unset
 	IPFamily state.IPFamily
 }
@@ -86,9 +88,14 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
-	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq, architecture)
-	if err != nil {
-		return "", 0, err
+	injectorImage := opts.Image
+	injectorNodeName := ""
+	if injectorImage == "" {
+		var err error
+		injectorImage, injectorNodeName, err = c.getInjectorImageAndNode(ctx, resReq, architecture)
+		if err != nil {
+			return "", 0, err
+		}
 	}
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily)

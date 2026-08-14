@@ -1,0 +1,27 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: merge-import
+components:
+  - name: app
+    images:
+      - name: redis:7
+        source: daemon
+    charts:
+      - name: app
+        releaseName: custom-release
+    manifests:
+      - name: app
+        kustomize:
+          files:
+            - override-kustomization
+          enablePlugins: true
+    actions:
+      onDeploy:
+        defaults:
+          maxTotalSeconds: 0
+        before:
+          - cmd: echo override
+    import:
+      local:
+        - path: components/app.yaml

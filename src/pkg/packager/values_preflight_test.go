@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -15,6 +16,10 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func packageDefinition(pkg v1alpha1.ZarfPackage) api.PackageDefinition {
+	return api.NewPackageDefinitionFromV1alpha1(pkg)
+}
 
 func tmplPtr() *bool {
 	b := true
@@ -323,7 +328,7 @@ func TestValidateTemplateRefs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pkgLayout := &layout.PackageLayout{Pkg: v1alpha1.ZarfPackage{Components: tt.components}}
+			pkgLayout := &layout.PackageLayout{PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{Components: tt.components})}
 			err := validateTemplateRefs(t.Context(), pkgLayout, tt.vals)
 			if tt.wantErr == "" {
 				require.NoError(t, err)
@@ -341,7 +346,7 @@ func TestValidateTemplateRefsAccumulatesErrors(t *testing.T) {
 		componentWithCmd("a", "echo {{ .Values.alpha }}"),
 		componentWithCmd("b", "echo {{ .Values.beta }}"),
 	}
-	pkgLayout := &layout.PackageLayout{Pkg: v1alpha1.ZarfPackage{Components: components}}
+	pkgLayout := &layout.PackageLayout{PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{Components: components})}
 	err := validateTemplateRefs(t.Context(), pkgLayout, nil)
 	require.Error(t, err)
 	require.ErrorContains(t, err, ".Values.alpha")
@@ -355,7 +360,7 @@ func assembleLayout(t *testing.T, srcDir string) *layout.PackageLayout {
 	ctx := testutil.TestContext(t)
 	defined, err := load.PackageDefinition(ctx, srcDir, load.DefinitionOptions{})
 	require.NoError(t, err)
-	pkgLayout, err := assemble.AssemblePackage(ctx, defined.Pkg, srcDir, nil, assemble.AssembleOptions{SkipSBOM: true})
+	pkgLayout, err := assemble.AssemblePackage(ctx, defined, srcDir, assemble.AssembleOptions{SkipSBOM: true})
 	require.NoError(t, err)
 	return pkgLayout
 }

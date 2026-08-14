@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
@@ -57,7 +58,7 @@ func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	sourceVersion, err := detectAPIVersion(b)
+	sourceVersion, err := pkgcfg.SelectVersion(cmd.Context(), b)
 	if err != nil {
 		return err
 	}
@@ -96,19 +97,6 @@ func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-func detectAPIVersion(b []byte) (string, error) {
-	var header struct {
-		APIVersion string `yaml:"apiVersion"`
-	}
-	if err := goyaml.Unmarshal(b, &header); err != nil {
-		return "", fmt.Errorf("reading apiVersion: %w", err)
-	}
-	if header.APIVersion == "" {
-		return v1alpha1.APIVersion, nil
-	}
-	return header.APIVersion, nil
 }
 
 func validateVersionUpgrade(from, to string) error {

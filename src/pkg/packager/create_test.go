@@ -34,7 +34,7 @@ func TestPackageCreatePublishArch(t *testing.T) {
 			})
 			require.NoError(t, err)
 			layout := pullFromRemote(ctx, t, packageSource, tt.expectedArch, "", t.TempDir())
-			require.Equal(t, tt.expectedArch, layout.Pkg.Metadata.Architecture)
+			require.Equal(t, tt.expectedArch, layout.AsV1alpha1().Metadata.Architecture)
 		})
 	}
 }
