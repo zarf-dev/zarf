@@ -4,6 +4,7 @@
 package packager
 
 import (
+	"archive/tar"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,10 +20,98 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"oras.land/oras-go/v2/registry"
 	registryremote "oras.land/oras-go/v2/registry/remote"
 )
+
+func TestPublishComponentAndAssembleRemoteImportResources(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	componentDir := t.TempDir()
+	for relativePath, contents := range map[string]string{
+		"values.yaml":                    "enabled: true\n",
+		"schema.json":                    `{"type":"object"}`,
+		"chart/Chart.yaml":               "apiVersion: v2\nname: test\nversion: 0.1.0\n",
+		"chart/templates/configmap.yaml": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: chart\n",
+		"chart-values.yaml":              "replicas: 1\n",
+		"manifest.yaml":                  "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: manifest\n",
+		"kustomize/kustomization.yaml":   "resources:\n  - resource.yaml\n",
+		"kustomize/resource.yaml":        "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: kustomize\n",
+		"file.txt":                       "file\n",
+	} {
+		resourcePath := filepath.Join(componentDir, relativePath)
+		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o600))
+	}
+	component := v1beta1.ComponentConfig{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfComponentConfig,
+		Metadata:   v1beta1.ComponentMetadata{Name: "all-resources", Version: "0.0.1"},
+		Values:     v1beta1.Values{Files: []string{"values.yaml"}, Schema: "schema.json"},
+		Component: v1beta1.ComponentSpec{
+			Charts:    []v1beta1.Chart{{Name: "test", Namespace: "default", Local: &v1beta1.LocalSource{Path: "chart"}, ValuesFiles: []v1beta1.ValuesFile{{Path: "chart-values.yaml"}}}},
+			Manifests: []v1beta1.Manifest{{Name: "manifest", Files: []string{"manifest.yaml"}}, {Name: "kustomize", Kustomize: &v1beta1.KustomizeManifest{Files: []string{"kustomize"}}}},
+			Files:     []v1beta1.File{{Source: "file.txt", Destination: "/tmp/file.txt"}},
+		},
+	}
+	componentYAML, err := goyaml.Marshal(component)
+	require.NoError(t, err)
+	componentPath := filepath.Join(componentDir, "component.yaml")
+	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
+
+	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+
+	packageDir := t.TempDir()
+	packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: remote-component-import
+components:
+  - name: imported
+    import:
+      remote:
+        - url: oci://%s
+`, published.String())
+	require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(packageYAML), 0o600))
+	cachePath := t.TempDir()
+	resolved, err := load.PackageDefinition(ctx, packageDir, load.DefinitionOptions{CachePath: cachePath, RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	require.NotEmpty(t, resolved.RemoteResources)
+
+	pkgLayout, err := assemble.AssemblePackage(ctx, resolved, packageDir, assemble.AssembleOptions{CachePath: cachePath, SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	tarFile, err := os.Open(filepath.Join(pkgLayout.DirPath(), "components", "imported.tar"))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, tarFile.Close()) })
+	entries := map[string]bool{}
+	// FIXME: is there a helper we can use here ?
+	reader := tar.NewReader(tarFile)
+	for {
+		header, err := reader.Next()
+		if err == io.EOF {
+			break
+		}
+		require.NoError(t, err)
+		entries[header.Name] = true
+	}
+	for _, entry := range []string{
+		"imported/charts/test.tgz",
+		"imported/values/test-0",
+		"imported/files/0/file.txt",
+		"imported/manifests/manifest-0.yaml",
+		"imported/manifests/kustomization-kustomize-0.yaml",
+	} {
+		require.Truef(t, entries[entry], "missing assembled resource %s", entry)
+	}
+}
 
 func TestPublishComponent(t *testing.T) {
 	t.Parallel()

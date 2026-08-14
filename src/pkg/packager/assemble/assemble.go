@@ -102,6 +102,20 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		definition.SetDifferentialBuild(opts.DifferentialPackage.Metadata.Version)
 	}
 
+	// FIXME: this should be a public function so dev inspect manifests | values-files can pick it up
+	remoteWorkspace, err := hydrateRemoteResources(ctx, resolvedPackage.RemoteResources, opts.CachePath)
+	if err != nil {
+		return nil, err
+	}
+	if remoteWorkspace != "" {
+		defer func() {
+			if err := os.RemoveAll(remoteWorkspace); err != nil {
+				l.Warn("unable to remove remote component workspace", "error", err)
+			}
+		}()
+		importedSchemas = rewriteRemoteComponentPaths(&pkg, importedSchemas, remoteWorkspace, resolvedPackage.RemoteResources)
+	}
+
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -180,6 +194,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		return nil, err
 	}
 
+	// FIXME: validate against the values schema
 	if err = mergeAndWriteValuesSchema(ctx, pkg.Values.Schema, importedSchemas, packagePath, buildPath); err != nil {
 		return nil, err
 	}

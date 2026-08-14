@@ -53,6 +53,7 @@ type DefinitionOptions struct {
 type ResolvedPackage struct {
 	PackageDefinition api.PackageDefinition
 	ImportedSchemas   []string
+	RemoteResources   []RemoteResource
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
@@ -147,16 +148,17 @@ func v1alpha1PackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, pk
 func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, opts DefinitionOptions) (ResolvedPackage, error) {
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 
-	pkg, importedSchemas, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor)
+	pkg, importedSchemas, remoteResources, err := resolveImportsV1Beta1WithRemote(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor, opts.RemoteOptions)
 	if err != nil {
 		return ResolvedPackage{}, err
 	}
 
+	// FIXME: we should just run this here, and also run it during assemble if we find additional schema files
 	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor, opts.SkipValuesSchemaValidation, importedSchemas); err != nil {
 		return ResolvedPackage{}, err
 	}
 
-	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1beta1(pkg), ImportedSchemas: importedSchemas}, nil
+	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1beta1(pkg), ImportedSchemas: importedSchemas, RemoteResources: remoteResources}, nil
 }
 
 func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, flavor string, skipSchemaValidation bool, importedSchemas []string) error {
