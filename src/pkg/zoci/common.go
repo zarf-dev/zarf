@@ -63,6 +63,7 @@ type PublishOptions struct {
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
 type Remote struct {
 	*oci.OrasRemote
+	cachePath string
 }
 
 // NewRemote returns an oras remote repository client and context for the given url
@@ -77,7 +78,25 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 	if err != nil {
 		return nil, err
 	}
-	return &Remote{remote}, nil
+	return &Remote{OrasRemote: remote}, nil
+}
+
+// NewRemoteWithCache creates a remote client backed by Zarf's shared OCI cache.
+// FIXME: I'd rather not have a separate function for this, since it already has it's own modifier
+func NewRemoteWithCache(ctx context.Context, url string, platform ocispec.Platform, cachePath string, mods ...oci.Modifier) (*Remote, error) {
+	if cachePath == "" {
+		return nil, fmt.Errorf("OCI cache path is required")
+	}
+	cacheModifier, err := GetOCICacheModifier(ctx, cachePath)
+	if err != nil {
+		return nil, err
+	}
+	remote, err := NewRemote(ctx, url, platform, append(mods, cacheModifier)...)
+	if err != nil {
+		return nil, err
+	}
+	remote.cachePath = cachePath
+	return remote, nil
 }
 
 // GetOCICacheModifier takes in a Zarf cachePath and uses it to return an oci.WithCache modifier
@@ -87,15 +106,6 @@ func GetOCICacheModifier(ctx context.Context, cachePath string) (oci.Modifier, e
 		return nil, err
 	}
 	return oci.WithCache(ociCache), nil
-}
-
-// CacheBlobPath returns the path where an OCI descriptor is stored in Zarf's
-// local OCI cache.
-func CacheBlobPath(cachePath string, descriptor ocispec.Descriptor) (string, error) {
-	if err := descriptor.Digest.Validate(); err != nil {
-		return "", fmt.Errorf("invalid OCI descriptor digest: %w", err)
-	}
-	return filepath.Join(cachePath, ImageCacheDirectory, ocispec.ImageBlobsDir, descriptor.Digest.Algorithm().String(), descriptor.Digest.Encoded()), nil
 }
 
 // PlatformForSkeleton sets the target architecture for the remote to skeleton
