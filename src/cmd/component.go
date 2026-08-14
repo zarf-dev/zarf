@@ -21,6 +21,8 @@ func newComponentCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "component",
 		Short: lang.CmdComponentShort,
+		// Once v1beta1 is available this should be unhidden
+		Hidden: true,
 	}
 
 	cmd.AddCommand(newComponentPublishCommand(getViper()))
@@ -43,9 +45,7 @@ func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
 		Short:   lang.CmdComponentPublishShort,
 		Example: lang.CmdComponentPublishExample,
 		Args:    cobra.ExactArgs(2),
-		// Once v1beta1 is available this should be unhidden
-		Hidden: true,
-		RunE:   o.run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdComponentPublishFlagFlavor)
