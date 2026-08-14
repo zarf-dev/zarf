@@ -126,31 +126,31 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 		return err
 	}
 
-	loadOpts := load.DefinitionOptions{
-		Flavor:                     o.flavor,
-		SetVariables:               o.setPkgTmpl,
-		IsInteractive:              true,
-		SkipVersionCheck:           true,
+	loadOpts := load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			Flavor:           o.flavor,
+			SetVariables:     o.setPkgTmpl,
+			IsInteractive:    true,
+			SkipVersionCheck: true,
+			CachePath:        cachePath,
+			RemoteOptions:    defaultRemoteOptions(),
+		},
 		SkipValuesSchemaValidation: true,
-		CachePath:                  cachePath,
-		RemoteOptions:              defaultRemoteOptions(),
 	}
 
-	defined, err := load.PackageDefinition(ctx, basePath, loadOpts)
+	loaded, err := load.Package(ctx, basePath, loadOpts)
 	if err != nil {
 		return err
 	}
-	pkg := defined.PackageDefinition.AsV1alpha1()
+	defer func() {
+		if closeErr := loaded.Close(); closeErr != nil {
+			l.Warn("unable to close loaded package", "error", closeErr)
+		}
+	}()
+	pkg := loaded.Definition.AsV1alpha1()
 
 	// Step 1: Merge default values.files to create initial set of default Zarf values
-	valuesPaths := make([]string, len(pkg.Values.Files))
-	for i, file := range pkg.Values.Files {
-		valuesPaths[i] = filepath.Join(basePath, file)
-	}
-	zarfValues, err := value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
-	if err != nil {
-		return fmt.Errorf("unable to parse package values files: %w", err)
-	}
+	zarfValues := loaded.Values.DeepCopy()
 
 	// Step 2: Discover source target mappings and load defaults from chart values where Zarf Value defaults aren't specified
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -170,7 +170,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 				ValuesDir: filepath.Join(tmpDir, "values"),
 			}
 
-			err := assemble.PackageChart(ctx, chart, basePath, chartPaths, cachePath, defaultRemoteOptions())
+			err := assemble.PackageChart(ctx, chart, loaded.Resources, chartPaths, cachePath, defaultRemoteOptions())
 			if err != nil {
 				return fmt.Errorf("unable to package chart %q for schema generation: %w", chart.Name, err)
 			}
@@ -208,10 +208,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	generatedSchema := value.GenerateJSONSchema(zarfValues)
 
 	// Step 4: Merge and reconcile any existing schema
-	existingSchema, mergeErr := value.MergeSchemaFiles(pkg.Values.Schema, defined.ImportedSchemas, basePath)
-	if mergeErr != nil {
-		return fmt.Errorf("unable to merge imported schemas for schema generation: %w", mergeErr)
-	}
+	existingSchema := loaded.ValuesSchema
 
 	if existingSchema != nil {
 		generatedSchema = value.ReconcileJSONSchema(existingSchema, generatedSchema, o.deleteNotFound)
@@ -304,7 +301,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	if err != nil {
 		return err
 	}
-	defined, err := load.PackageDefinition(ctx, basePath, loadOpts)
+	definition, err := load.PackageDefinition(ctx, basePath, loadOpts)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -314,12 +311,12 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	}
 
 	// The definition is printed in the apiVersion it was authored in.
-	if defined.PackageDefinition.OriginalAPIVersion() == v1beta1.APIVersion {
-		pkg := defined.PackageDefinition.AsV1beta1()
+	if definition.OriginalAPIVersion() == v1beta1.APIVersion {
+		pkg := definition.AsV1beta1()
 		pkg.Build = v1beta1.BuildData{}
 		return utils.ColorPrintYAML(pkg, nil, false)
 	}
-	pkg := defined.PackageDefinition.AsV1alpha1()
+	pkg := definition.AsV1alpha1()
 	pkg.Build = v1alpha1.ZarfBuildData{}
 	return utils.ColorPrintYAML(pkg, nil, false)
 }

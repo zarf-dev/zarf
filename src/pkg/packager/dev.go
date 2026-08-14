@@ -72,32 +72,37 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		return err
 	}
 
-	loadOpts := load.DefinitionOptions{
-		Flavor:           opts.Flavor,
-		SetVariables:     opts.CreateSetVariables,
-		CachePath:        opts.CachePath,
-		IsInteractive:    false,
-		SkipVersionCheck: opts.SkipVersionCheck,
-		RemoteOptions:    opts.RemoteOptions,
+	loadOpts := load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			Flavor:           opts.Flavor,
+			SetVariables:     opts.CreateSetVariables,
+			CachePath:        opts.CachePath,
+			IsInteractive:    false,
+			SkipVersionCheck: opts.SkipVersionCheck,
+			RemoteOptions:    opts.RemoteOptions,
+		},
 	}
-	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	loaded, err := load.Package(ctx, packagePath, loadOpts)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = errors.Join(err, loaded.Close())
+	}()
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.ForDeploy(opts.OptionalComponents, false),
 	)
-	definition, err := filters.Apply(defined.PackageDefinition, filter)
+	definition, err := filters.Apply(loaded.Definition, filter)
 	if err != nil {
 		return err
 	}
-	defined.PackageDefinition = definition
+	loaded.Definition = definition
 
 	// If not building for airgap, strip out all images and repos.
 	if !opts.AirgapMode {
-		defined.PackageDefinition.RemoveImages()
-		defined.PackageDefinition.RemoveRepositories()
+		loaded.Definition.RemoveImages()
+		loaded.Definition.RemoveRepositories()
 	}
 
 	createOpts := assemble.AssembleOptions{
@@ -107,7 +112,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		OCIConcurrency:    opts.OCIConcurrency,
 		CachePath:         opts.CachePath,
 	}
-	pkgLayout, err := assemble.AssemblePackage(ctx, defined, packagePath, createOpts)
+	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, createOpts)
 	if err != nil {
 		return err
 	}

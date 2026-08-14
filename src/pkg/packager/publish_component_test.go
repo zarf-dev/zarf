@@ -80,11 +80,11 @@ components:
 `, published.String())
 	require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(packageYAML), 0o600))
 	cachePath := t.TempDir()
-	resolved, err := load.PackageDefinition(ctx, packageDir, load.DefinitionOptions{CachePath: cachePath, RemoteOptions: defaultTestRemoteOptions()})
+	loaded, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{CachePath: cachePath, RemoteOptions: defaultTestRemoteOptions()}})
 	require.NoError(t, err)
-	require.NotEmpty(t, resolved.RemoteResources)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 
-	pkgLayout, err := assemble.AssemblePackage(ctx, resolved, packageDir, assemble.AssembleOptions{CachePath: cachePath, SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{CachePath: cachePath, SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 

@@ -653,11 +653,12 @@ func TestAssembleSkeleton(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	defined, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOptions{})
+	loaded, err := load.Package(ctx, "./testdata/zarf-skeleton-package", load.PackageOptions{})
 	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 
 	opt := AssembleSkeletonOptions{}
-	pkgLayout, err := AssembleSkeleton(ctx, defined, "./testdata/zarf-skeleton-package", opt)
+	pkgLayout, err := AssembleSkeleton(ctx, loaded, opt)
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
@@ -704,9 +705,10 @@ components:
 `, dataPath)
 	require.NoError(t, os.WriteFile(filepath.Join(tmpdir, layout.ZarfYAML), []byte(zarfYAML), 0o600))
 
-	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
 	require.NoError(t, err)
-	pkgLayout, err := AssemblePackage(ctx, defined, tmpdir, AssembleOptions{SkipSBOM: true})
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
@@ -739,9 +741,10 @@ func TestAssemblePackageV1Alpha1DoesNotWriteV1Beta1Definition(t *testing.T) {
 		}},
 	}, tmpdir)
 
-	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
 	require.NoError(t, err)
-	pkgLayout, err := AssemblePackage(ctx, defined, tmpdir, AssembleOptions{SkipSBOM: true})
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
@@ -771,9 +774,10 @@ func TestGetSBOM(t *testing.T) {
 		},
 	}
 	writePackageToDisk(t, pkg, tmpdir)
-	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
 	require.NoError(t, err)
-	pkgLayout, err := AssemblePackage(ctx, defined, tmpdir, AssembleOptions{})
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
@@ -861,14 +865,15 @@ func TestCreateAbsoluteSources(t *testing.T) {
 			// Create the zarf.yaml file in the tmpdir
 			writePackageToDisk(t, pkg, tmpdir)
 
-			defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+			loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
 			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 			var pkgLayout *layout.PackageLayout
 			if tt.isSkeleton {
-				pkgLayout, err = AssembleSkeleton(ctx, defined, tmpdir, AssembleSkeletonOptions{})
+				pkgLayout, err = AssembleSkeleton(ctx, loaded, AssembleSkeletonOptions{})
 				require.NoError(t, err)
 			} else {
-				pkgLayout, err = AssemblePackage(ctx, defined, tmpdir, AssembleOptions{SkipSBOM: true})
+				pkgLayout, err = AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
 				require.NoError(t, err)
 			}
 			docsDir := filepath.Join(tmpdir, "docs-dir")
@@ -946,10 +951,11 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	err = os.Mkdir(childDir, 0700)
 	require.NoError(t, err)
 	writePackageToDisk(t, childPkg, childDir)
-	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
 	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 	// create the package
-	pkgLayout, err := AssemblePackage(context.Background(), defined, tmpdir, AssembleOptions{})
+	pkgLayout, err := AssemblePackage(context.Background(), loaded, AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the component has the correct file

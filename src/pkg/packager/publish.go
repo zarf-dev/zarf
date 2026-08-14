@@ -5,6 +5,7 @@ package packager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -198,7 +199,7 @@ type PublishSkeletonOptions struct {
 
 // PublishSkeleton takes a Path to the package definition and uploads a skeleton package to the given a registry.
 // dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
-func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (registry.Reference, error) {
+func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (_ registry.Reference, err error) {
 	l := logger.From(ctx)
 
 	// disallow infinite or negative
@@ -227,16 +228,21 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
-	defined, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
-		CachePath:        opts.CachePath,
-		Flavor:           opts.Flavor,
-		SkipVersionCheck: opts.SkipVersionCheck,
-		RemoteOptions:    opts.RemoteOptions,
+	loaded, err := load.Package(ctx, path, load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			CachePath:        opts.CachePath,
+			Flavor:           opts.Flavor,
+			SkipVersionCheck: opts.SkipVersionCheck,
+			RemoteOptions:    opts.RemoteOptions,
+		},
 	})
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	pkg := defined.PackageDefinition.AsV1alpha1()
+	defer func() {
+		err = errors.Join(err, loaded.Close())
+	}()
+	pkg := loaded.Definition.AsV1alpha1()
 	for _, comp := range pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")
@@ -249,7 +255,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		Flavor:               opts.Flavor,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
-	pkgLayout, err := assemble.AssembleSkeleton(ctx, defined, path, createOpts)
+	pkgLayout, err := assemble.AssembleSkeleton(ctx, loaded, createOpts)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
 	}

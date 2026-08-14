@@ -57,7 +57,7 @@ func TestLoadPackageWithFlavors(t *testing.T) {
 func TestValidateV1Beta1_FormatsValidationErrors(t *testing.T) {
 	t.Parallel()
 
-	err := validateV1Beta1(context.Background(), v1beta1.Package{}, "", "", true, nil)
+	err := validateV1Beta1(context.Background(), v1beta1.Package{}, "", "")
 
 	require.EqualError(t, err, "package validation failed:\npackage does not contain any compatible components")
 }
@@ -199,8 +199,10 @@ func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
-			opts := DefinitionOptions{}
-			_, err := PackageDefinition(ctx, tt.packagePath, opts)
+			loaded, err := Package(ctx, tt.packagePath, PackageOptions{})
+			if loaded != nil {
+				t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+			}
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
 				return
@@ -218,9 +220,9 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		t.Parallel()
 		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-package"), DefinitionOptions{})
 		require.NoError(t, err)
-		require.Equal(t, v1beta1.APIVersion, defined.PackageDefinition.OriginalAPIVersion())
+		require.Equal(t, v1beta1.APIVersion, defined.OriginalAPIVersion())
 
-		pkg := defined.PackageDefinition.AsV1alpha1()
+		pkg := defined.AsV1alpha1()
 		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
 		require.Equal(t, "beta-package", pkg.Metadata.Name)
 		require.NotEmpty(t, pkg.Metadata.Architecture)
@@ -228,11 +230,10 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		require.Equal(t, "first", pkg.Components[0].Name)
 		require.Equal(t, []string{"nginx:1.27.0"}, pkg.Components[0].Images)
 		require.Equal(t, []string{"https://github.com/zarf-dev/zarf.git"}, pkg.Components[0].Repos)
-		require.Empty(t, defined.ImportedSchemas)
 
 		// The v1beta1 view preserves fields with no v1alpha1 representation — here an image's source.
 		// Collapsing to v1alpha1 on load (the previous approach) dropped these.
-		betaPkg := defined.PackageDefinition.AsV1beta1()
+		betaPkg := defined.AsV1beta1()
 		require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
 		require.Len(t, betaPkg.Components, 1)
 		require.Equal(t, "nginx:1.27.0", betaPkg.Components[0].Images[0].Name)
@@ -244,7 +245,7 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-with-import"), DefinitionOptions{})
 		require.NoError(t, err)
 
-		pkg := defined.PackageDefinition.AsV1alpha1()
+		pkg := defined.AsV1alpha1()
 		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
 		require.Len(t, pkg.Components, 1)
 		require.Equal(t, "imported", pkg.Components[0].Name)
@@ -258,10 +259,47 @@ func TestV1Beta1PackageDefinitionValuesSchemaValidation(t *testing.T) {
 	dir := filepath.Join("testdata", "v1beta1-invalid-values")
 
 	_, err := PackageDefinition(ctx, dir, DefinitionOptions{})
+	require.NoError(t, err)
+
+	_, err = Package(ctx, dir, PackageOptions{})
 	require.ErrorContains(t, err, "values validation failed")
 
-	_, err = PackageDefinition(ctx, dir, DefinitionOptions{SkipValuesSchemaValidation: true})
+	loaded, err := Package(ctx, dir, PackageOptions{SkipValuesSchemaValidation: true})
 	require.NoError(t, err)
+	require.NoError(t, loaded.Close())
+}
+
+func TestPackageDefinitionDoesNotAccessSourceResources(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: definition-only
+values:
+  files:
+    - missing-values.yaml
+components:
+  - name: component
+`), 0o600))
+
+	definition, err := PackageDefinition(ctx, dir, DefinitionOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "definition-only", definition.AsV1alpha1().Metadata.Name)
+
+	_, err = Package(ctx, dir, PackageOptions{})
+	require.ErrorContains(t, err, "unable to access local resource \"missing-values.yaml\"")
+}
+
+func TestLoadedPackageCloseInvalidatesResources(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	loaded, err := Package(ctx, filepath.Join("testdata", "v1beta1-package"), PackageOptions{})
+	require.NoError(t, err)
+	require.NoError(t, loaded.Close())
+	require.NoError(t, loaded.Close())
+
+	_, err = loaded.Resources.Root()
+	require.ErrorContains(t, err, "package resources are closed")
 }
 
 func TestV1Beta1PackageDefinitionParentChartSourceTakesPriority(t *testing.T) {
@@ -299,7 +337,7 @@ components:
 
 	defined, err := PackageDefinition(ctx, dir, DefinitionOptions{})
 	require.NoError(t, err)
-	chart := defined.PackageDefinition.AsV1beta1().Components[0].Charts[0]
+	chart := defined.AsV1beta1().Components[0].Charts[0]
 	require.Nil(t, chart.Local)
 	require.NotNil(t, chart.OCI)
 }
