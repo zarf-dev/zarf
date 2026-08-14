@@ -11,7 +11,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
@@ -54,14 +53,11 @@ type ResourceSet struct {
 	workspace   string
 	remoteRoots map[string]struct{}
 
-	mu     sync.RWMutex
 	closed bool
 }
 
 // Root returns the original package source directory.
 func (r *ResourceSet) Root() (string, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
 	if r.closed {
 		return "", errors.New("package resources are closed")
 	}
@@ -72,9 +68,6 @@ func (r *ResourceSet) Root() (string, error) {
 // URLs are intentionally not resource-set paths and must be handled by their
 // owning resource type.
 func (r *ResourceSet) Path(logicalPath string) (string, error) {
-	// FIXME: figure out why this is necessary
-	r.mu.RLock()
-	defer r.mu.RUnlock()
 	if r.closed {
 		return "", errors.New("package resources are closed")
 	}
@@ -111,8 +104,6 @@ func (r *ResourceSet) ReadFile(logicalPath string) ([]byte, error) {
 }
 
 func (r *ResourceSet) close() error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	if r.closed {
 		return nil
 	}
