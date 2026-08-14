@@ -57,6 +57,7 @@ type PublishComponentOptions struct {
 // PublishComponent validates a v1beta1 ZarfComponentConfig and publishes it as an OCI artifact.
 // The component config is stored as the artifact's config blob; later remote-import support can
 // retrieve it without treating it as a Zarf package.
+// FIXME: probably should be a component package
 func PublishComponent(ctx context.Context, componentPath string, destination registry.Reference, opts PublishComponentOptions) (registry.Reference, error) {
 	if err := destination.ValidateRegistry(); err != nil {
 		return registry.Reference{}, fmt.Errorf("invalid registry: %w", err)

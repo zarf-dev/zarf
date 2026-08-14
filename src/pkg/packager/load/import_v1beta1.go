@@ -112,6 +112,7 @@ func resolveComponentSpecImports(ctx context.Context, spec v1beta1.ComponentSpec
 	if err := validateComponentImportV1Beta1(spec.Import, allowRemote); err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
+	// TODO, when resolving a remote component make sure that any maliciously crafted absolute paths or relative links error
 	if len(spec.Import.Local) == 0 && len(spec.Import.Remote) == 0 {
 		// End of this import chain: there are no deeper imported values to inherit.
 		return spec, importedValues{}, nil, nil
