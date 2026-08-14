@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/pkg/component"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"oras.land/oras-go/v2/registry"
 )
@@ -75,7 +75,7 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 	signOpts.Key = o.signingKeyPath
 	signOpts.Password = o.signingKeyPassword
 	signOpts.SkipConfirmation = o.confirm
-	_, err := packager.PublishComponent(cmd.Context(), args[0], destination, packager.PublishComponentOptions{
+	_, err := component.Publish(cmd.Context(), args[0], destination, component.PublishOptions{
 		Flavor:          o.flavor,
 		SignBlobOptions: signOpts,
 		OCIConcurrency:  o.ociConcurrency,

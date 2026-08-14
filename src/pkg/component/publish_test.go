@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package packager
+package component
 
 import (
 	"archive/tar"
@@ -24,9 +24,23 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
+	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry"
 	registryremote "oras.land/oras-go/v2/registry/remote"
 )
+
+func defaultTestRemoteOptions() types.RemoteOptions {
+	return types.RemoteOptions{PlainHTTP: true}
+}
+
+func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
+	t.Helper()
+	return registry.Reference{
+		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+		Repository: "my-namespace",
+	}
+}
 
 func TestPublishComponentAndAssembleRemoteImportResources(t *testing.T) {
 	t.Parallel()
@@ -64,7 +78,7 @@ func TestPublishComponentAndAssembleRemoteImportResources(t *testing.T) {
 	componentPath := filepath.Join(componentDir, "component.yaml")
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
-	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	packageDir := t.TempDir()
@@ -117,7 +131,7 @@ func TestPublishComponent(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	published, err := PublishComponent(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishComponentOptions{
+	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
@@ -165,7 +179,7 @@ func TestPublishComponentFlavor(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	published, err := PublishComponent(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishComponentOptions{
+	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishOptions{
 		Flavor:        "test",
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
@@ -181,23 +195,23 @@ func TestPublishComponentSigning(t *testing.T) {
 
 	ctx := context.Background()
 	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
+	signOpts.Key = filepath.Join("..", "packager", "testdata", "publish", "cosign.key")
 	signOpts.Password = "password"
 	signOpts.SkipConfirmation = true
-	published, err := PublishComponent(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishComponentOptions{
+	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishOptions{
 		Flavor:          "test",
 		SignBlobOptions: signOpts,
 		RemoteOptions:   defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, verifyPublishedComponentSignature(ctx, published.String(), filepath.Join("testdata", "publish", "cosign.pub")))
+	require.NoError(t, verifyPublishedComponentSignature(ctx, published.String(), filepath.Join("..", "packager", "testdata", "publish", "cosign.pub")))
 }
 
 func TestPublishComponentRejectsNegativeRetries(t *testing.T) {
 	t.Parallel()
 
-	_, err := PublishComponent(context.Background(), filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(context.Background(), t), PublishComponentOptions{
+	_, err := Publish(context.Background(), filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(context.Background(), t), PublishOptions{
 		Retries:       -1,
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
@@ -225,7 +239,7 @@ component:
 `, archivePath))
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
-	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	component, manifest := getPublishedComponent(ctx, t, published)
@@ -279,7 +293,7 @@ component:
       - path: child/component.yaml
 `), 0o600))
 
-	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	component, manifest := getPublishedComponent(ctx, t, published)
@@ -331,7 +345,7 @@ component:
       - path: arm64.yaml
 `), 0o600))
 
-	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	component, _ := getPublishedComponent(ctx, t, published)
@@ -382,7 +396,7 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 	componentPath := filepath.Join(componentDir, "component.yaml")
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
-	published, err := PublishComponent(ctx, componentPath, createRegistry(ctx, t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
+	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
 	publishedComponent, manifest := getPublishedComponent(ctx, t, published)
@@ -428,7 +442,7 @@ component:
 `)
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
-	_, err := PublishComponent(context.Background(), componentPath, createRegistry(context.Background(), t), PublishComponentOptions{RemoteOptions: defaultTestRemoteOptions()})
+	_, err := Publish(context.Background(), componentPath, createRegistry(context.Background(), t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.EqualError(t, err, "onCreate actions are not supported for published remote components")
 }
 
@@ -518,7 +532,7 @@ func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := componentResources(filepath.Join(t.TempDir(), "component.yaml"), tt.component, t.TempDir(), map[string]bool{})
+			_, _, err := normalizeComponentResources(filepath.Join(t.TempDir(), "component.yaml"), tt.component)
 			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
@@ -537,7 +551,7 @@ func TestComponentResourcesAllowsSupportedRemoteSources(t *testing.T) {
 			Files: []v1beta1.File{{Source: "https://example.com/file.txt"}},
 		},
 	}
-	resources, err := componentResources(filepath.Join(t.TempDir(), "component.yaml"), component, t.TempDir(), map[string]bool{})
+	_, resources, err := normalizeComponentResources(filepath.Join(t.TempDir(), "component.yaml"), component)
 	require.NoError(t, err)
-	require.Empty(t, resources)
+	require.Empty(t, resources.resources)
 }

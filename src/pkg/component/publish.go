@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package packager
+// Package component handles publishing remote components
+package component
 
 import (
 	"bytes"
@@ -41,8 +42,8 @@ const ComponentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
 
 const componentLayerMediaType = "application/vnd.zarf.component.layer.v1.blob"
 
-// PublishComponentOptions declares parameters for publishing a v1beta1 component config.
-type PublishComponentOptions struct {
+// PublishOptions declares parameters for publishing a v1beta1 component config.
+type PublishOptions struct {
 	// Flavor selects the component config variant to publish.
 	Flavor string
 	// SignBlobOptions configures OCI artifact signing for the published component.
@@ -54,11 +55,10 @@ type PublishComponentOptions struct {
 	types.RemoteOptions
 }
 
-// PublishComponent validates a v1beta1 ZarfComponentConfig and publishes it as an OCI artifact.
+// Publish validates a v1beta1 ZarfComponentConfig and publishes it as an OCI artifact.
 // The component config is stored as the artifact's config blob; later remote-import support can
 // retrieve it without treating it as a Zarf package.
-// FIXME: probably should be a component package
-func PublishComponent(ctx context.Context, componentPath string, destination registry.Reference, opts PublishComponentOptions) (registry.Reference, error) {
+func Publish(ctx context.Context, componentPath string, destination registry.Reference, opts PublishOptions) (registry.Reference, error) {
 	if err := destination.ValidateRegistry(); err != nil {
 		return registry.Reference{}, fmt.Errorf("invalid registry: %w", err)
 	}
@@ -144,7 +144,7 @@ func PublishComponent(ctx context.Context, componentPath string, destination reg
 	return componentRef, nil
 }
 
-func pushComponentArtifact(ctx context.Context, store *memory.Store, sourceRef string, remote *zoci.Remote, componentRef registry.Reference, totalSize int64, opts PublishComponentOptions) (_ ocispec.Descriptor, err error) {
+func pushComponentArtifact(ctx context.Context, store *memory.Store, sourceRef string, remote *zoci.Remote, componentRef registry.Reference, totalSize int64, opts PublishOptions) (_ ocispec.Descriptor, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 

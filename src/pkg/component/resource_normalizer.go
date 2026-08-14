@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package packager
+package component
 
 import (
 	"fmt"
@@ -206,17 +206,4 @@ func (n *componentResourceNormalizer) absolutePath(resourcePath string) string {
 		return filepath.Clean(resourcePath)
 	}
 	return filepath.Clean(filepath.Join(n.baseDir, resourcePath))
-}
-
-// componentResources is retained for focused resource validation tests.
-func componentResources(componentPath string, component v1beta1.ComponentConfig, _ string, _ map[string]bool) (map[string]string, error) {
-	_, normalized, err := normalizeComponentResources(componentPath, component)
-	if err != nil {
-		return nil, err
-	}
-	resources := make(map[string]string, len(normalized.resources))
-	for mountPath, resource := range normalized.resources {
-		resources[mountPath] = resource.sourcePath
-	}
-	return resources, nil
 }
