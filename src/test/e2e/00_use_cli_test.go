@@ -400,13 +400,13 @@ func TestBuildMachineInfo(t *testing.T) {
 			require.NoError(t, err, stdOut, stdErr)
 
 			if tt.withBuildMachineInfo {
-				require.NotEmpty(t, pkgLayout.Pkg.Build.Terminal)
-				require.NotEmpty(t, pkgLayout.Pkg.Build.User)
+				require.NotEmpty(t, pkgLayout.AsV1alpha1().Build.Terminal)
+				require.NotEmpty(t, pkgLayout.AsV1alpha1().Build.User)
 				require.Contains(t, stdOut, "terminal:")
 				require.Contains(t, stdOut, "user:")
 			} else {
-				require.Empty(t, pkgLayout.Pkg.Build.Terminal)
-				require.Empty(t, pkgLayout.Pkg.Build.User)
+				require.Empty(t, pkgLayout.AsV1alpha1().Build.Terminal)
+				require.Empty(t, pkgLayout.AsV1alpha1().Build.User)
 				require.NotContains(t, stdOut, "terminal:")
 				require.NotContains(t, stdOut, "user:")
 			}

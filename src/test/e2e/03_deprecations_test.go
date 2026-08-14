@@ -74,7 +74,7 @@ func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 
 	pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
-	b, err := goyaml.Marshal(pkgLayout.Pkg.Components)
+	b, err := goyaml.Marshal(pkgLayout.AsV1alpha1().Components)
 	require.NoError(t, err)
 	expectedYaml := `- name: 1-test-deprecated-set-variable
   actions:

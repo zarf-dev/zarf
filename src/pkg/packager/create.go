@@ -89,7 +89,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err := pkgLayout.Cleanup(); err != nil {
 			return "", err
 		}
-		differentialPkg = pkgLayout.Pkg
+		differentialPkg = pkgLayout.AsV1alpha1()
 	}
 
 	assembleOpt := assemble.AssembleOptions{
@@ -114,11 +114,12 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 
 	var packageLocation string
 	if helpers.IsOCIURL(output) {
-		ref, err := zoci.ReferenceFromMetadata(output, pkgLayout.Pkg)
+		pkg := pkgLayout.AsV1alpha1()
+		ref, err := zoci.ReferenceFromMetadata(output, pkg)
 		if err != nil {
 			return "", err
 		}
-		remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture), zoci.RemoteClientOptions{
+		remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), oci.PlatformForArch(pkg.Build.Architecture), zoci.RemoteClientOptions{
 			RemoteOptions: opts.RemoteOptions,
 		})
 		if err != nil {
@@ -143,7 +144,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 
 	if opts.SBOMOut != "" {
 		// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
-		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, filepath.Base(pkgLayout.Pkg.Metadata.Name)))
+		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, filepath.Base(pkgLayout.AsV1alpha1().Metadata.Name)))
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {
