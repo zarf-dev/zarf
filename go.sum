@@ -559,8 +559,8 @@ github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6 h1:gw
 github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6/go.mod h1:StKLYMmPj1R5yIs6CK49EkcW1TvUYuw5Vri+LRk7Dy8=
 github.com/defenseunicorns/pkg/helpers/v2 v2.0.4 h1:niBIdhRUpJghWthzJJq/SKr/dYQHW9Mn97UJT5I/2SI=
 github.com/defenseunicorns/pkg/helpers/v2 v2.0.4/go.mod h1:7demM0eE/+nMqPT7PCKgO9/KVUmRSyi9UpDzb0KfYDM=
-github.com/defenseunicorns/pkg/oci v1.3.1 h1:hy5iKqK2Gdg8uVpEn3GA78m7JrOSQuMJ2p5sG0Da4Cs=
-github.com/defenseunicorns/pkg/oci v1.3.1/go.mod h1:iXzZXG7jNjkOIt5MqQp12iZH3c762zP0AOVwKTGhNhY=
+github.com/defenseunicorns/pkg/oci v1.3.2 h1:7Ph4DRwcccwGPKrEGDPZTkY4VJaJ1qqZVNmr3G1Hup0=
+github.com/defenseunicorns/pkg/oci v1.3.2/go.mod h1:iXzZXG7jNjkOIt5MqQp12iZH3c762zP0AOVwKTGhNhY=
 github.com/deitch/magic v0.0.0-20240306090643-c67ab88f10cb h1:4W/2rQ3wzEimF5s+J6OY3ODiQtJZ5W1sForSgogVXkY=
 github.com/deitch/magic v0.0.0-20240306090643-c67ab88f10cb/go.mod h1:B3tI9iGHi4imdLi4Asdha1Sc6feLMTfPLXh9IUYmysk=
 github.com/depcheck-test/depcheck-test v0.0.0-20220607135614-199033aaa936 h1:foGzavPWwtoyBvjWyKJYDYsyzy+23iBV7NKTwdk+LRY=
