@@ -325,9 +325,18 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		l.Warn(lang.ArtifactServerDeprecated)
 	}
 
+	registryInfo := o.registryInfo
+	registryURLChanged := services.Has(state.RegistryKey) && cmd.Flags().Changed("registry-url")
+	resolvedRegistryPort := 0
+	if registryURLChanged {
+		registryInfo.RegistryMode, resolvedRegistryPort, err = c.ResolveRegistryMode(ctx, registryInfo.Address)
+		if err != nil {
+			return fmt.Errorf("unable to resolve registry update: %w", err)
+		}
+	}
 	opts := state.MergeOptions{
 		GitServer:      o.gitServer,
-		RegistryInfo:   o.registryInfo,
+		RegistryInfo:   registryInfo,
 		ArtifactServer: o.artifactServer,
 		Services:       services,
 	}
@@ -348,6 +357,9 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	newState, err := state.Merge(oldState, opts)
 	if err != nil {
 		return fmt.Errorf("unable to update Zarf credentials: %w", err)
+	}
+	if registryURLChanged {
+		applyResolvedRegistryAccess(&newState.RegistryInfo, registryInfo.RegistryMode, resolvedRegistryPort)
 	}
 
 	printCredentialUpdates(ctx, oldState, newState, services)
@@ -451,6 +463,7 @@ func printCredentialUpdates(ctx context.Context, oldState *state.State, newState
 		oR := oldState.RegistryInfo
 		nR := newState.RegistryInfo
 		l.Info("registry URL address", "existing", oR.Address, "replacement", nR.Address)
+		l.Info("registry access mode", "existing", oR.RegistryMode, "replacement", nR.RegistryMode)
 		l.Info("registry push username", "existing", oR.PushUsername, "replacement", nR.PushUsername)
 		l.Info("registry push password", "changed", oR.PushPassword != nR.PushPassword)
 		l.Info("registry pull username", "existing", oR.PullUsername, "replacement", nR.PullUsername)
@@ -530,6 +543,15 @@ func runWithRollback(ctx context.Context, service string, forward, rollback func
 	return nil
 }
 
+func applyResolvedRegistryAccess(registryInfo *state.RegistryInfo, mode state.RegistryMode, port int) {
+	registryInfo.RegistryMode = mode
+	registryInfo.SetPort(port)
+	registryInfo.MTLSStrategy = state.MTLSStrategyNone
+	if mode == state.RegistryModeProxy {
+		registryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
+	}
+}
+
 type updateRegistryCredsOptions struct {
 	confirm        bool
 	forceConflicts bool
@@ -570,12 +592,25 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return errors.New("no registry is configured in the Zarf state; nothing to update")
 	}
 
+	registryInfo := o.registryInfo
+	registryURLChanged := cmd.Flags().Changed("registry-url")
+	resolvedRegistryPort := 0
+	if registryURLChanged {
+		registryInfo.RegistryMode, resolvedRegistryPort, err = c.ResolveRegistryMode(ctx, registryInfo.Address)
+		if err != nil {
+			return fmt.Errorf("unable to resolve registry update: %w", err)
+		}
+	}
+
 	newState, err := state.Merge(oldState, state.MergeOptions{
-		RegistryInfo: o.registryInfo,
+		RegistryInfo: registryInfo,
 		Services:     state.NewServiceSet(state.RegistryKey),
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update registry credentials: %w", err)
+	}
+	if registryURLChanged {
+		applyResolvedRegistryAccess(&newState.RegistryInfo, registryInfo.RegistryMode, resolvedRegistryPort)
 	}
 
 	confirm, err := confirmCredentialUpdate(ctx, oldState, newState, state.RegistryKey, o.confirm)
@@ -594,16 +629,18 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	return runWithRollback(ctx, "registry",
-		func() error { return o.applyState(ctx, c, newState) },
-		func() error { return o.applyState(ctx, c, oldState) },
+		func() error { return o.applyState(ctx, c, newState, newState.RegistryInfo.IsInternal()) },
+		func() error {
+			return o.applyState(ctx, c, oldState, oldState.RegistryInfo.IsInternal() && newState.RegistryInfo.IsInternal())
+		},
 	)
 }
 
 // applyState reconciles the cluster to the given registry credentials. The registry deployment is
 // updated first so the old pod keeps matching the not-yet-updated pull secrets throughout
 // the rollout, then the pull secrets are updated, then state is persisted as the final commit.
-func (o *updateRegistryCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, s *state.State) error {
-	if s.RegistryInfo.IsInternal() {
+func (o *updateRegistryCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, s *state.State, updateRegistry bool) error {
+	if updateRegistry {
 		helmOpts := helm.InstallUpgradeOptions{
 			VariableConfig: template.GetZarfVariableConfig(ctx, !o.confirm),
 			State:          s,

@@ -241,17 +241,25 @@ func externalRegistryState(pullPassword string) *state.State {
 	}
 }
 
-func loadRegistryPullPassword(ctx context.Context, t *testing.T, c *cluster.Cluster) string {
-	t.Helper()
-	s, err := c.LoadState(ctx)
-	require.NoError(t, err)
-	return s.RegistryInfo.PullPassword
+func internalRegistryState(pullPassword string) *state.State {
+	return &state.State{
+		RegistryInfo: state.RegistryInfo{
+			RegistryMode: state.RegistryModeNodePort,
+			Address:      "127.0.0.1:31999",
+			Port:         31999,
+			NodePort:     31999,
+			PullUsername: "pull-user",
+			PullPassword: pullPassword,
+			PushUsername: "push-user",
+			PushPassword: "push-password",
+		},
+	}
 }
 
 func TestUpdateRegistryCredsApplyState(t *testing.T) {
 	t.Parallel()
 
-	t.Run("external registry updates secrets and state", func(t *testing.T) {
+	t.Run("external to external updates secrets and state", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
 		oldState := externalRegistryState("old-pull-password")
@@ -259,29 +267,28 @@ func TestUpdateRegistryCredsApplyState(t *testing.T) {
 		c := seedCredsCluster(ctx, t, oldState, config.ZarfImagePullSecretName)
 
 		o := &updateRegistryCredsOptions{confirm: true}
-		require.NoError(t, o.applyState(ctx, c, newState))
+		require.NoError(t, o.applyState(ctx, c, newState, false))
 
 		imageSecret, err := c.Clientset.CoreV1().Secrets("test").Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Contains(t, string(imageSecret.Data[".dockerconfigjson"]), registryAuth("pull-user", "new-pull-password"))
-		require.Equal(t, "new-pull-password", loadRegistryPullPassword(ctx, t, c))
+		persistedState := loadRegistryState(ctx, t, c)
+		require.Equal(t, state.RegistryModeExternal, persistedState.RegistryInfo.RegistryMode)
+		require.Equal(t, "new-pull-password", persistedState.RegistryInfo.PullPassword)
 	})
 
-	t.Run("save failure rolls back to previous credentials", func(t *testing.T) {
+	t.Run("internal to external save failure rolls back without updating the internal registry", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
-		oldState := externalRegistryState("old-pull-password")
+		oldState := internalRegistryState("old-pull-password")
 		newState := externalRegistryState("new-pull-password")
 		c := seedCredsCluster(ctx, t, oldState, config.ZarfImagePullSecretName)
-
-		// Fail only the first attempt to persist state so the forward pass fails after the image
-		// pull secrets have already been rewritten, then let the rollback's save succeed.
 		failFirstStateSave(t, c)
 
 		o := &updateRegistryCredsOptions{confirm: true}
 		err := runWithRollback(ctx, "registry",
-			func() error { return o.applyState(ctx, c, newState) },
-			func() error { return o.applyState(ctx, c, oldState) },
+			func() error { return o.applyState(ctx, c, newState, false) },
+			func() error { return o.applyState(ctx, c, oldState, false) },
 		)
 		require.ErrorContains(t, err, "was rolled back to the previous credentials")
 
@@ -290,8 +297,43 @@ func TestUpdateRegistryCredsApplyState(t *testing.T) {
 		dockerConfig := string(imageSecret.Data[".dockerconfigjson"])
 		require.Contains(t, dockerConfig, registryAuth("pull-user", "old-pull-password"))
 		require.NotContains(t, dockerConfig, registryAuth("pull-user", "new-pull-password"))
-		require.Equal(t, "old-pull-password", loadRegistryPullPassword(ctx, t, c))
+		require.Equal(t, state.RegistryModeNodePort, loadRegistryState(ctx, t, c).RegistryInfo.RegistryMode)
 	})
+}
+
+func loadRegistryState(ctx context.Context, t *testing.T, c *cluster.Cluster) *state.State {
+	t.Helper()
+	s, err := c.LoadState(ctx)
+	require.NoError(t, err)
+	return s
+}
+
+func TestApplyResolvedRegistryAccess(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		mode         state.RegistryMode
+		port         int
+		expectedMTLS state.MTLSStrategy
+	}{
+		{name: "external clears internal transport fields", mode: state.RegistryModeExternal, port: 0, expectedMTLS: state.MTLSStrategyNone},
+		{name: "nodeport sets port without mTLS", mode: state.RegistryModeNodePort, port: 31999, expectedMTLS: state.MTLSStrategyNone},
+		{name: "proxy sets port and managed mTLS", mode: state.RegistryModeProxy, port: 5000, expectedMTLS: state.MTLSStrategyZarfManaged},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			registryInfo := state.RegistryInfo{
+				RegistryMode: state.RegistryModeNodePort,
+				Port:         31999,
+				MTLSStrategy: state.MTLSStrategyZarfManaged,
+			}
+			applyResolvedRegistryAccess(&registryInfo, tt.mode, tt.port)
+			require.Equal(t, tt.mode, registryInfo.RegistryMode)
+			require.Equal(t, tt.port, registryInfo.Port)
+			require.Equal(t, tt.expectedMTLS, registryInfo.MTLSStrategy)
+		})
+	}
 }
 
 func externalGitState(pullPassword string) *state.State {

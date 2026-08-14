@@ -229,6 +229,40 @@ func TestMergeStateRegistry(t *testing.T) {
 	}
 }
 
+func TestMergeStateRegistryUsesTargetModeForPasswordGeneration(t *testing.T) {
+	t.Parallel()
+
+	t.Run("external to internal generates omitted passwords", func(t *testing.T) {
+		oldState := &State{RegistryInfo: RegistryInfo{
+			RegistryMode: RegistryModeExternal,
+			PushPassword: "external-push-password",
+			PullPassword: "external-pull-password",
+		}}
+		newState, err := Merge(oldState, MergeOptions{
+			RegistryInfo: RegistryInfo{RegistryMode: RegistryModeNodePort},
+			Services:     NewServiceSet(RegistryKey),
+		})
+		require.NoError(t, err)
+		require.NotEqual(t, oldState.RegistryInfo.PushPassword, newState.RegistryInfo.PushPassword)
+		require.NotEqual(t, oldState.RegistryInfo.PullPassword, newState.RegistryInfo.PullPassword)
+	})
+
+	t.Run("internal to external preserves omitted passwords", func(t *testing.T) {
+		oldState := &State{RegistryInfo: RegistryInfo{
+			RegistryMode: RegistryModeNodePort,
+			PushPassword: "internal-push-password",
+			PullPassword: "internal-pull-password",
+		}}
+		newState, err := Merge(oldState, MergeOptions{
+			RegistryInfo: RegistryInfo{RegistryMode: RegistryModeExternal},
+			Services:     NewServiceSet(RegistryKey),
+		})
+		require.NoError(t, err)
+		require.Equal(t, oldState.RegistryInfo.PushPassword, newState.RegistryInfo.PushPassword)
+		require.Equal(t, oldState.RegistryInfo.PullPassword, newState.RegistryInfo.PullPassword)
+	})
+}
+
 // TODO: Change password gen method to make testing possible.
 func TestMergeStateGit(t *testing.T) {
 	t.Parallel()
