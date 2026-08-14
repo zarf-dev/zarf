@@ -315,6 +315,17 @@ func TestDevSha256Sum(t *testing.T) {
 			expectedErr: "accepts 1 arg(s), received 0",
 		},
 		{
+			name:      "dev sha of tar ball",
+			sourceURL: filepath.Join("..", "pkg", "packager", "assemble", "testdata", "zarf-package", "archive.tar"),
+			sha256sum: "69b50ad92da0d32398fe1e5950ab28991c2220603daa2bce1a470e9afde95687",
+		},
+		{
+			name:        "dev sha of tar ball with extract path",
+			sourceURL:   filepath.Join("..", "pkg", "packager", "assemble", "testdata", "zarf-package", "archive.tar"),
+			sha256sum:   "84ff92691f909a05b224e1c56abb4864f01b4f8e3c854e4bb4c7baf1d3f6d652",
+			extractPath: "archive-data.txt",
+		},
+		{
 			name:      "dev sha url does not exist",
 			sourceURL: "https://github.com/zarf-dev/zarf/archive/refs/tags/v99.99.99.tar.gz",
 			expectedErr: `unable to compute the SHA256SUM hash
