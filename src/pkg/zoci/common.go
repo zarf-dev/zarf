@@ -70,12 +70,12 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 	l := logger.From(ctx)
 	modifiers := append([]oci.Modifier{
 		oci.WithLogger(l),
-		oci.WithUserAgent("zarf/" + config.CLIVersion),
 	}, mods...)
 	remote, err := oci.NewOrasRemote(url, platform, modifiers...)
 	if err != nil {
 		return nil, err
 	}
+	oci.WithUserAgent("zarf/" + config.CLIVersion)(remote)
 	return &Remote{remote}, nil
 }
 
