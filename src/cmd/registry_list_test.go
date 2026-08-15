@@ -82,6 +82,45 @@ func TestListRegistryTags(t *testing.T) {
 	}
 }
 
+func TestNormalizeRepoRef(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		repoRef string
+		want    string
+	}{
+		{
+			name:    "bare org/repo defaults to docker.io",
+			repoRef: "stefanprodan/podinfo",
+			want:    "docker.io/stefanprodan/podinfo",
+		},
+		{
+			name:    "bare single-segment name defaults to docker.io/library",
+			repoRef: "alpine",
+			want:    "docker.io/library/alpine",
+		},
+		{
+			name:    "explicit docker.io is left unchanged",
+			repoRef: "docker.io/stefanprodan/podinfo",
+			want:    "docker.io/stefanprodan/podinfo",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := normalizeRepoRef(tt.repoRef)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestNormalizeRepoRefInvalid(t *testing.T) {
+	t.Parallel()
+	_, err := normalizeRepoRef("Not_A_Valid_Repo!!!")
+	require.Error(t, err)
+}
+
 func TestListRegistryTagsInvalidRepo(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
