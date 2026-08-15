@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/distribution/reference"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/dns"
@@ -18,7 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
-	"oras.land/oras-go/v2/registry"
+	orasRegistry "oras.land/oras-go/v2/registry"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
@@ -54,7 +55,19 @@ func newRegistryListCommand() *cobra.Command {
 	return cmd
 }
 
+func normalizeRepoRef(repoRef string) (string, error) {
+	named, err := reference.ParseNormalizedNamed(repoRef)
+	if err != nil {
+		return "", fmt.Errorf("parsing repo %q: %w", repoRef, err)
+	}
+	return named.Name(), nil
+}
+
 func runRegistryList(ctx context.Context, out io.Writer, repoRef string, plainHTTP, insecureSkipTLSVerify, fullRef, omitDigestTags bool) error {
+	repoRef, err := normalizeRepoRef(repoRef)
+	if err != nil {
+		return err
+	}
 	conn, err := setupRegistryAuth(ctx, repoRef, plainHTTP, insecureSkipTLSVerify)
 	if err != nil {
 		return err
@@ -80,7 +93,7 @@ type registryConnection struct {
 
 // registryHost returns the registry host:port for repoRef.
 func registryHost(repoRef string) (string, error) {
-	ref, err := registry.ParseReference(repoRef)
+	ref, err := orasRegistry.ParseReference(repoRef)
 	if err != nil {
 		return "", fmt.Errorf("parsing repo %q: %w", repoRef, err)
 	}
@@ -158,7 +171,7 @@ func setupRegistryAuth(ctx context.Context, repoRef string, plainHTTP, insecureS
 }
 
 func listRegistryTags(ctx context.Context, out io.Writer, conn registryConnection, plainHTTP, insecureSkipTLSVerify, fullRef, omitDigestTags bool) error {
-	ref, err := registry.ParseReference(conn.ref)
+	ref, err := orasRegistry.ParseReference(conn.ref)
 	if err != nil {
 		return fmt.Errorf("parsing repo %q: %w", conn.ref, err)
 	}
@@ -181,7 +194,7 @@ func listRegistryTags(ctx context.Context, out io.Writer, conn registryConnectio
 		repo.PlainHTTP = resolved
 	}
 
-	tags, err := registry.Tags(ctx, repo)
+	tags, err := orasRegistry.Tags(ctx, repo)
 	if err != nil {
 		return fmt.Errorf("reading tags for %s: %w", conn.ref, err)
 	}
