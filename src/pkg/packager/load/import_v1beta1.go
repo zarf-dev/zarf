@@ -70,7 +70,7 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 		if !compatibleComponentV1Beta1(component.Selector, arch, flavor) {
 			continue
 		}
-		mergedSpec, compVals, compResources, err := resolveComponentConfigSpecImports(ctx, component.ComponentSpec, baseDir, arch, flavor, []string{filepath.Clean(pkgPath.ManifestFile)}, true, remoteOptions, cachePath)
+		mergedSpec, compVals, compResources, err := resolveComponentConfigSpecImports(ctx, component.ComponentSpec, baseDir, arch, flavor, []string{filepath.Clean(pkgPath.ManifestFile)}, remoteOptions, cachePath)
 		if err != nil {
 			return v1beta1ImportResolution{}, fmt.Errorf("component %q: %w", component.Name, err)
 		}
@@ -94,10 +94,10 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 	}, nil
 }
 
-// ResolveComponentConfigImports resolves local imports in a v1beta1 component config.
+// ResolveComponentConfigImports resolves imports in a v1beta1 component config.
 func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath string) (ComponentConfigImportResolution, error) {
 	componentPath = filepath.Clean(componentPath)
-	resolvedSpec, importedVals, _, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Metadata.Architecture, component.Metadata.Flavor, []string{componentPath}, false, types.RemoteOptions{}, "")
+	resolvedSpec, importedVals, _, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Metadata.Architecture, component.Metadata.Flavor, []string{componentPath}, types.RemoteOptions{}, "")
 	if err != nil {
 		return ComponentConfigImportResolution{}, err
 	}
@@ -109,14 +109,13 @@ func ResolveComponentConfigImports(ctx context.Context, component v1beta1.Compon
 	}, nil
 }
 
-// resolveComponentConfigSpecImports merges local component-config imports. Its target always
+// resolveComponentConfigSpecImports merges component-config imports. Its target always
 // comes from the root component config metadata, never a package-create override.
-// FIXME: remove allowRemote
-func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.ComponentSpec, specDir, arch, flavor string, importStack []string, allowRemote bool, remoteOptions types.RemoteOptions, cachePath string) (v1beta1.ComponentSpec, importedValues, []remoteResource, error) {
-	if err := validateComponentImportV1Beta1(spec.Import, allowRemote); err != nil {
+func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.ComponentSpec, specDir, arch, flavor string, importStack []string, remoteOptions types.RemoteOptions, cachePath string) (v1beta1.ComponentSpec, importedValues, []remoteResource, error) {
+	if err := validateComponentImportV1Beta1(spec.Import); err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
-	// TODO, when resolving a remote component make sure that any maliciously crafted absolute paths or relative links error
+	// TODO, when resolving a remote component make sure that any maliciously crafted component configs will error
 	if len(spec.Import.Local) == 0 && len(spec.Import.Remote) == 0 {
 		// End of this import chain: there are no deeper imported values to inherit.
 		return spec, importedValues{}, nil, nil
@@ -126,7 +125,7 @@ func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.Compone
 	if err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
-	resolvedImportSpec, inheritedValues, inheritedResources, err := resolveComponentConfigSpecImports(ctx, directImport.config.Component, directImport.dir, arch, flavor, append(importStack, directImport.path), false, remoteOptions, cachePath)
+	resolvedImportSpec, inheritedValues, inheritedResources, err := resolveComponentConfigSpecImports(ctx, directImport.config.Component, directImport.dir, arch, flavor, append(importStack, directImport.path), remoteOptions, cachePath)
 	if err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
@@ -318,10 +317,7 @@ func validateComponentConfigSchemaV1Beta1(path string, b []byte) error {
 	}
 }
 
-func validateComponentImportV1Beta1(imp v1beta1.ComponentImport, allowRemote bool) error {
-	if !allowRemote && len(imp.Remote) > 0 {
-		return fmt.Errorf("remote component imports are not yet supported for v1beta1 packages")
-	}
+func validateComponentImportV1Beta1(imp v1beta1.ComponentImport) error {
 	for _, l := range imp.Local {
 		if l.Path == "" {
 			return fmt.Errorf("import entry is missing a path")

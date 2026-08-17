@@ -106,6 +106,57 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
+	t.Run("remote import", func(t *testing.T) {
+		t.Parallel()
+
+		ref := registry.Reference{
+			Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+			Repository: "components",
+			Reference:  "remote-import",
+		}
+		component := v1beta1.ComponentConfig{
+			APIVersion: v1beta1.APIVersion,
+			Kind:       v1beta1.ZarfComponentConfig,
+			Metadata:   v1beta1.ComponentMetadata{Name: "remote-import"},
+			Component: v1beta1.ComponentSpec{
+				Actions: v1beta1.ComponentActions{OnDeploy: v1beta1.ComponentActionSet{Before: []v1beta1.ComponentAction{{Cmd: "echo remote"}}}},
+			},
+		}
+		componentJSON, err := json.Marshal(component)
+		require.NoError(t, err)
+
+		store := memory.New()
+		configDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentConfigMediaType, componentJSON)
+		require.NoError(t, store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)))
+		manifest, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{ConfigDescriptor: &configDescriptor})
+		require.NoError(t, err)
+		require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
+
+		remote, err := zoci.NewRemote(ctx, ref.String(), ocispec.Platform{}, oci.WithPlainHTTP(true))
+		require.NoError(t, err)
+		_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
+		require.NoError(t, err)
+
+		dir := t.TempDir()
+		writePackage := []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: remote
+components:
+  - name: remote
+    import:
+      remote:
+        - url: oci://` + ref.String() + `
+`)
+		require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), writePackage, 0o600))
+
+		pkg := loadV1Beta1Package(t, dir)
+		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{PlainHTTP: true}, "")
+		require.NoError(t, err)
+		require.Len(t, resolution.pkg.Components, 1)
+		require.Equal(t, []v1beta1.ComponentAction{{Cmd: "echo remote"}}, resolution.pkg.Components[0].Actions.OnDeploy.Before)
+	})
+
 	t.Run("single local import rebases paths and collects values", func(t *testing.T) {
 		t.Parallel()
 		dir := filepath.Join("testdata", "import-v1beta1", "single")
@@ -279,24 +330,6 @@ func TestResolveImportsV1Beta1Errors(t *testing.T) {
 		require.Equal(t, path, lintErr.PackageName)
 		require.NotEmpty(t, lintErr.Findings)
 	}
-
-	t.Run("remote imports are not yet supported", func(t *testing.T) {
-		t.Parallel()
-		dir := t.TempDir()
-		writePkg(t, dir, `apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
-metadata:
-  name: remote
-components:
-  - name: remote
-    import:
-      remote:
-        - url: oci://example.com/component:1.0.0
-`)
-		pkg := loadV1Beta1Package(t, dir)
-		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
-		require.ErrorContains(t, err, "remote")
-	})
 
 	t.Run("missing import file errors", func(t *testing.T) {
 		t.Parallel()
