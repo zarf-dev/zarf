@@ -76,7 +76,7 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 	if err != nil {
 		return nil, err
 	}
-	return &Remote{OrasRemote: remote}, nil
+	return &Remote{remote}, nil
 }
 
 // GetOCICacheModifier takes in a Zarf cachePath and uses it to return an oci.WithCache modifier
