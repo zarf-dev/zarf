@@ -39,7 +39,7 @@ type DefinitionOptions struct {
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
-	// TODO: implement version requirements for v1beta1
+	// TODO: implement version requirements for v1beta1 remote resources
 	SkipVersionCheck bool
 	types.RemoteOptions
 }

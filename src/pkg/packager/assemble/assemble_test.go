@@ -455,7 +455,7 @@ func TestAssemblePackageWritesResolvedValues(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	loadPackage := func(t *testing.T) *load.LoadedPackage {
+	loadPackage := func(t *testing.T) *load.ResolvedPackage {
 		t.Helper()
 		dir := t.TempDir()
 		writePackageToDisk(t, v1alpha1.ZarfPackage{

@@ -28,10 +28,10 @@ type PackageOptions struct {
 	SkipValuesSchemaValidation bool
 }
 
-// LoadedPackage is a resolved package definition together with its source
-// resources and resolved package values. Call Close when resource access is no
+// ResolvedPackage is a package definition together with its source
+// resources and package values. Call Close when resource access is no
 // longer needed.
-type LoadedPackage struct {
+type ResolvedPackage struct {
 	Definition   api.PackageDefinition
 	Resources    *ResourceSet
 	Values       value.Values
@@ -39,7 +39,7 @@ type LoadedPackage struct {
 }
 
 // Close removes temporary resources materialized while loading the package.
-func (p *LoadedPackage) Close() error {
+func (p *ResolvedPackage) Close() error {
 	if p == nil || p.Resources == nil {
 		return nil
 	}
@@ -70,9 +70,6 @@ func (r *ResourceSet) Root() (string, error) {
 func (r *ResourceSet) Path(logicalPath string) (string, error) {
 	if r.closed {
 		return "", errors.New("package resources are closed")
-	}
-	if helpers.IsURL(logicalPath) {
-		return "", fmt.Errorf("%q is a URL, not a filesystem resource", logicalPath)
 	}
 	if filepath.IsAbs(logicalPath) {
 		return logicalPath, nil
@@ -116,7 +113,7 @@ func (r *ResourceSet) close() error {
 
 // Package resolves a package definition and makes imported component resources
 // available without assembling a Zarf package.
-func Package(ctx context.Context, packagePath string, opts PackageOptions) (_ *LoadedPackage, err error) {
+func Package(ctx context.Context, packagePath string, opts PackageOptions) (_ *ResolvedPackage, err error) {
 	resolved, err := resolve(ctx, packagePath, opts.DefinitionOptions)
 	if err != nil {
 		return nil, err
@@ -126,7 +123,7 @@ func Package(ctx context.Context, packagePath string, opts PackageOptions) (_ *L
 	if err != nil {
 		return nil, err
 	}
-	loaded := &LoadedPackage{
+	loaded := &ResolvedPackage{
 		Definition: resolved.definition,
 		Resources:  resources,
 	}

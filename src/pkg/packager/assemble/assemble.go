@@ -68,19 +68,19 @@ type AssembleOptions struct {
 
 // AssemblePackage consumes a resource-ready package and returns a package layout with all the resources collected.
 // It closes the loaded package before returning.
-func AssemblePackage(ctx context.Context, loadedPackage *load.LoadedPackage, opts AssembleOptions) (_ *layout.PackageLayout, err error) {
+func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage, opts AssembleOptions) (_ *layout.PackageLayout, err error) {
 	defer func() {
-		err = errors.Join(err, loadedPackage.Close())
+		err = errors.Join(err, resolvedPackage.Close())
 	}()
 
 	l := logger.From(ctx)
-	packagePath, err := loadedPackage.Resources.Root()
+	packagePath, err := resolvedPackage.Resources.Root()
 	if err != nil {
 		return nil, err
 	}
 	l.Info("assembling package", "path", packagePath)
 
-	definition := loadedPackage.Definition
+	definition := resolvedPackage.Definition
 	pkg := definition.AsV1alpha1()
 	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func AssemblePackage(ctx context.Context, loadedPackage *load.LoadedPackage, opt
 		return nil, err
 	}
 	for _, component := range pkg.Components {
-		err := assemblePackageComponent(ctx, component, loadedPackage.Resources, buildPath, opts.CachePath, opts.RemoteOptions)
+		err := assemblePackageComponent(ctx, component, resolvedPackage.Resources, buildPath, opts.CachePath, opts.RemoteOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +126,7 @@ func AssemblePackage(ctx context.Context, loadedPackage *load.LoadedPackage, opt
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
 			if !filepath.IsAbs(imageArchive.Path) {
-				imageArchive.Path, err = loadedPackage.Resources.Path(imageArchive.Path)
+				imageArchive.Path, err = resolvedPackage.Resources.Path(imageArchive.Path)
 				if err != nil {
 					return nil, err
 				}
@@ -187,15 +187,15 @@ func AssemblePackage(ctx context.Context, loadedPackage *load.LoadedPackage, opt
 	}
 
 	l.Debug("writing resolved values to package")
-	if err = writeValuesFile(buildPath, loadedPackage.Values); err != nil {
+	if err = writeValuesFile(buildPath, resolvedPackage.Values); err != nil {
 		return nil, err
 	}
 
-	if err = writeValuesSchema(buildPath, loadedPackage.ValuesSchema); err != nil {
+	if err = writeValuesSchema(buildPath, resolvedPackage.ValuesSchema); err != nil {
 		return nil, err
 	}
 
-	if err = createDocumentationTar(pkg, loadedPackage.Resources, buildPath); err != nil {
+	if err = createDocumentationTar(pkg, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -245,16 +245,16 @@ type AssembleSkeletonOptions struct {
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
-func AssembleSkeleton(ctx context.Context, loadedPackage *load.LoadedPackage, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
-	if _, err := loadedPackage.Resources.Root(); err != nil {
+func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
+	if _, err := resolvedPackage.Resources.Root(); err != nil {
 		return nil, err
 	}
-	definition := loadedPackage.Definition
+	definition := resolvedPackage.Definition
 	definition.SetMetadataArchitecture(v1alpha1.SkeletonArch)
 	pkg := definition.AsV1alpha1()
 
 	// Creating skeleton packages with the values feature is not yet supported
-	if len(pkg.Values.Files) > 0 || loadedPackage.ValuesSchema != nil {
+	if len(pkg.Values.Files) > 0 || resolvedPackage.ValuesSchema != nil {
 		return nil, errors.New("creating skeleton packages with the values feature is not yet supported")
 	}
 
@@ -263,7 +263,7 @@ func AssembleSkeleton(ctx context.Context, loadedPackage *load.LoadedPackage, op
 		return nil, err
 	}
 
-	if err = createDocumentationTar(pkg, loadedPackage.Resources, buildPath); err != nil {
+	if err = createDocumentationTar(pkg, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -273,7 +273,7 @@ func AssembleSkeleton(ctx context.Context, loadedPackage *load.LoadedPackage, op
 	//     is indicating that you are importing the "upstream" flavor of the zarf init package
 	for i := 0; i < len(pkg.Components); i++ {
 		pkg.Components[i].Only.Flavor = ""
-		err := assembleSkeletonComponent(ctx, pkg.Components[i], loadedPackage.Resources, buildPath)
+		err := assembleSkeletonComponent(ctx, pkg.Components[i], resolvedPackage.Resources, buildPath)
 		if err != nil {
 			return nil, err
 		}
