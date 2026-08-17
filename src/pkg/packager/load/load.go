@@ -58,10 +58,8 @@ type resolution struct {
 	remoteResources []remoteResource
 }
 
-// PackageDefinition returns a structurally validated package definition after
-// flavors, imports, and variables are applied. It deliberately does not read
-// package resource contents; callers that need values, schemas, charts, or
-// manifests must use Package.
+// PackageDefinition returns a structurally validated package definition after flavors, imports, and set variables are applied.
+// It does not read package resource contents; callers that need values, schemas, charts, or manifests must use load.Package.
 func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (api.PackageDefinition, error) {
 	resolved, err := resolve(ctx, packagePath, opts)
 	if err != nil {
