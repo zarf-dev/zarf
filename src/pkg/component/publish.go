@@ -70,10 +70,11 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if component.Metadata.Version == "" {
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
-	component, err = load.ResolveComponentConfigImports(ctx, component, componentPath, component.Component.Selector.Architecture, opts.Flavor)
+	resolved, err := load.ResolveComponentConfigImports(ctx, component, componentPath, component.Component.Selector.Architecture, opts.Flavor)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to resolve component imports: %w", err)
 	}
+	component = resolved.Component
 
 	componentRef, err := componentReference(destination, component)
 	if err != nil {
@@ -83,7 +84,7 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	// Do not require the same selection again when the published component is imported.
 	component.Component.Selector.Flavor = ""
 	component.PublishData.ZarfVersion = config.CLIVersion
-	component, resources, err := normalizeComponentResources(componentPath, component)
+	component, resources, err := normalizeComponentResources(componentPath, component, resolved.ImportedSchemas)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -193,9 +194,13 @@ func stageComponentResources(ctx context.Context, store *memory.Store, resources
 	layers := make([]ocispec.Descriptor, 0, len(paths))
 	for _, rel := range paths {
 		resource := resources.resources[rel]
-		contents, err := os.ReadFile(resource.sourcePath)
-		if err != nil {
-			return nil, fmt.Errorf("unable to read component resource %q: %w", rel, err)
+		contents := resource.contents
+		if contents == nil {
+			var err error
+			contents, err = os.ReadFile(resource.sourcePath)
+			if err != nil {
+				return nil, fmt.Errorf("unable to read component resource %q: %w", rel, err)
+			}
 		}
 		descriptor := content.NewDescriptorFromBytes(componentLayerMediaType, contents)
 		descriptor.Annotations = map[string]string{

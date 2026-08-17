@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry"
@@ -307,6 +308,101 @@ component:
 	require.NotContains(t, layerTitles, "child/component.yaml")
 }
 
+func TestPublishComponentMergesNestedImportedValuesSchemas(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	childDir := filepath.Join(root, "child")
+	grandchildDir := filepath.Join(childDir, "grandchild")
+	require.NoError(t, os.MkdirAll(grandchildDir, 0o700))
+
+	writeConfig := func(path, contents string) {
+		t.Helper()
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0o600))
+	}
+	writeConfig(filepath.Join(grandchildDir, "schema.json"), `{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "nested": {
+      "type": "string",
+      "minLength": 3
+    }
+  }
+}`)
+	writeConfig(filepath.Join(grandchildDir, "component.yaml"), `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: grandchild
+  version: 0.0.1
+values:
+  schema: schema.json
+component: {}
+`)
+	writeConfig(filepath.Join(childDir, "schema.json"), `{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "child": {
+      "type": "boolean"
+    }
+  }
+}`)
+	writeConfig(filepath.Join(childDir, "component.yaml"), `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: child
+  version: 0.0.1
+values:
+  schema: schema.json
+component:
+  import:
+    local:
+      - path: grandchild/component.yaml
+`)
+	componentPath := filepath.Join(root, "component.yaml")
+	writeConfig(componentPath, `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: root
+  version: 0.0.1
+component:
+  import:
+    local:
+      - path: child/component.yaml
+`)
+
+	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+
+	packageDir := t.TempDir()
+	writeConfig(filepath.Join(packageDir, layout.ZarfYAML), fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: schema-import
+components:
+  - name: imported
+    import:
+      remote:
+        - url: oci://%s
+`, published.String()))
+	loaded, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{
+		CachePath:     t.TempDir(),
+		RemoteOptions: defaultTestRemoteOptions(),
+	}})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+
+	properties, ok := loaded.ValuesSchema["properties"].(map[string]any)
+	require.True(t, ok)
+	nested, ok := properties["nested"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, float64(3), nested["minLength"])
+	require.NoError(t, value.Values{"nested": "abc"}.ValidateAgainstSchema(ctx, loaded.ValuesSchema, "remote component schema", value.ValidateOptions{}))
+	require.Error(t, value.Values{"nested": "no"}.ValidateAgainstSchema(ctx, loaded.ValuesSchema, "remote component schema", value.ValidateOptions{}))
+}
+
 func TestPublishComponentSelectsImportsForComponentArchitecture(t *testing.T) {
 	t.Parallel()
 
@@ -528,7 +624,7 @@ func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, err := normalizeComponentResources(filepath.Join(t.TempDir(), "component.yaml"), tt.component)
+			_, _, err := normalizeComponentResources(filepath.Join(t.TempDir(), "component.yaml"), tt.component, nil)
 			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
@@ -547,7 +643,7 @@ func TestComponentResourcesAllowsSupportedRemoteSources(t *testing.T) {
 			Files: []v1beta1.File{{Source: "https://example.com/file.txt"}},
 		},
 	}
-	_, resources, err := normalizeComponentResources(filepath.Join(t.TempDir(), "component.yaml"), component)
+	_, resources, err := normalizeComponentResources(filepath.Join(t.TempDir(), "component.yaml"), component, nil)
 	require.NoError(t, err)
 	require.Empty(t, resources.resources)
 }

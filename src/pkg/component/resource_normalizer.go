@@ -4,6 +4,7 @@
 package component
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
 type componentResourceKind string
@@ -32,6 +34,7 @@ const (
 // componentResource describes a single file staged in a published component artifact.
 type componentResource struct {
 	sourcePath string
+	contents   []byte
 	kind       componentResourceKind
 }
 
@@ -51,7 +54,7 @@ type componentResourceNormalizer struct {
 // normalizeComponentResources makes every local source path artifact-relative. This keeps the
 // published config independent of the directory in which it was built and gives remote imports a
 // stable mount contract.
-func normalizeComponentResources(componentPath string, component v1beta1.ComponentConfig) (v1beta1.ComponentConfig, normalizedComponentResources, error) {
+func normalizeComponentResources(componentPath string, component v1beta1.ComponentConfig, importedSchemas []string) (v1beta1.ComponentConfig, normalizedComponentResources, error) {
 	normalizer := componentResourceNormalizer{
 		baseDir:      filepath.Dir(componentPath),
 		resources:    map[string]componentResource{},
@@ -66,9 +69,21 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 		component.Values.Files[i] = resourcePath
 	}
 	var err error
-	component.Values.Schema, err = addLocalResource(&normalizer, component.Values.Schema, componentResourceKindValuesSchema)
-	if err != nil {
-		return component, normalizedComponentResources{}, err
+	if len(importedSchemas) > 0 {
+		merged, err := value.MergeSchemaFiles(component.Values.Schema, importedSchemas, normalizer.baseDir)
+		if err != nil {
+			return component, normalizedComponentResources{}, fmt.Errorf("merging imported values schemas: %w", err)
+		}
+		contents, err := json.MarshalIndent(merged, "", "  ")
+		if err != nil {
+			return component, normalizedComponentResources{}, fmt.Errorf("marshaling imported values schemas: %w", err)
+		}
+		component.Values.Schema = normalizer.addGeneratedResource(layout.ValuesSchema, contents, componentResourceKindValuesSchema)
+	} else {
+		component.Values.Schema, err = addLocalResource(&normalizer, component.Values.Schema, componentResourceKindValuesSchema)
+		if err != nil {
+			return component, normalizedComponentResources{}, err
+		}
 	}
 
 	for i := range component.Component.Charts {
@@ -190,6 +205,13 @@ func (n *componentResourceNormalizer) add(resourcePath string, kind componentRes
 		return "", err
 	}
 	return mountPath, nil
+}
+
+func (n *componentResourceNormalizer) addGeneratedResource(filename string, contents []byte, kind componentResourceKind) string {
+	mountPath := path.Join("resources", strconv.Itoa(n.nextID), filename)
+	n.nextID++
+	n.resources[mountPath] = componentResource{contents: contents, kind: kind}
+	return mountPath
 }
 
 func (n *componentResourceNormalizer) absolutePath(resourcePath string) string {

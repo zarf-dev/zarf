@@ -47,6 +47,13 @@ type v1beta1ImportResolution struct {
 	remoteResources []remoteResource
 }
 
+// ComponentConfigImportResolution contains a component config with local imports resolved and
+// the imported values schema paths needed to preserve schema precedence during publication.
+type ComponentConfigImportResolution struct {
+	Component       v1beta1.ComponentConfig
+	ImportedSchemas []string
+}
+
 // resolveImportsV1Beta1 resolves component config imports into a v1beta1 package definition.
 // Each package component may import one or more ZarfComponentConfig files; filtering compatible components also happens here.
 func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, arch, flavor string, remoteOptions types.RemoteOptions, cachePath string) (v1beta1ImportResolution, error) {
@@ -88,22 +95,23 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 }
 
 // ResolveComponentConfigImports resolves local imports in a v1beta1 component config.
-func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath, arch, flavor string) (v1beta1.ComponentConfig, error) {
+func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath, arch, flavor string) (ComponentConfigImportResolution, error) {
 	componentPath = filepath.Clean(componentPath)
 	resolvedSpec, importedVals, _, err := resolveComponentSpecImports(ctx, component.Component, filepath.Dir(componentPath), arch, component.Component.Selector.Architecture, flavor, []string{componentPath}, false, types.RemoteOptions{}, "")
 	if err != nil {
-		return v1beta1.ComponentConfig{}, err
+		return ComponentConfigImportResolution{}, err
 	}
 	component.Component = resolvedSpec
 	component.Values.Files = dedupePaths(append(importedVals.files, component.Values.Files...))
-	if component.Values.Schema == "" && len(importedVals.schemas) > 0 {
-		component.Values.Schema = importedVals.schemas[0]
-	}
-	return component, nil
+	return ComponentConfigImportResolution{
+		Component:       component,
+		ImportedSchemas: dedupePaths(importedVals.schemas),
+	}, nil
 }
 
 // resolveComponentSpecImports merges component configs imported by spec. The returned spec and
 // values paths are relative to specDir.
+// FIXME: need to figure out arch
 func resolveComponentSpecImports(ctx context.Context, spec v1beta1.ComponentSpec, specDir, arch, remoteArch, flavor string, importStack []string, allowRemote bool, remoteOptions types.RemoteOptions, cachePath string) (v1beta1.ComponentSpec, importedValues, []remoteResource, error) {
 	if err := validateComponentImportV1Beta1(spec.Import, allowRemote); err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
