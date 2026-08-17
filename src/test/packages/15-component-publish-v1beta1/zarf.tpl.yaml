@@ -6,4 +6,4 @@ components:
   - name: imported-component
     import:
       remote:
-        - url: oci://REGISTRY_URL/published-component:0.0.1
+        - url: oci://[[ .registryURL ]]/published-component:0.0.1

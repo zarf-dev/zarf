@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,11 +23,12 @@ func TestComponentPublishRemoteImport(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	packageDir := t.TempDir()
-	packageConfigPath := filepath.Join("src", "test", "packages", "15-component-publish-v1beta1", layout.ZarfYAML)
-	packageConfig, err := os.ReadFile(packageConfigPath)
+	packageTemplatePath := filepath.Join("src", "test", "packages", "15-component-publish-v1beta1", "zarf.tpl.yaml")
+	packageTemplate, err := os.ReadFile(packageTemplatePath)
 	require.NoError(t, err)
-	packageConfig = []byte(strings.ReplaceAll(string(packageConfig), "REGISTRY_URL", registryURL))
-	require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), packageConfig, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(packageDir, "zarf.tpl.yaml"), packageTemplate, 0o600))
+	stdOut, stdErr, err = e2e.ZarfInDir(t, packageDir, "dev", "template", "--set", "registryURL="+registryURL)
+	require.NoError(t, err, stdOut, stdErr)
 
 	packageOutput := t.TempDir()
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", packageDir, "-o", packageOutput, "--plain-http", "--skip-sbom", "--confirm")
