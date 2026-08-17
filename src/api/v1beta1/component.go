@@ -47,12 +47,12 @@ type ComponentSelector struct {
 	Flavor string `json:"flavor,omitempty"`
 }
 
-// ComponentImport is a reference to imported Zarf component configs.
+// ComponentImport is a reference to imported Zarf component configs. Exactly one source must be specified.
 type ComponentImport struct {
 	// Local file path references to component config files to import.
-	Local []ComponentImportLocal `json:"local,omitempty"`
+	Local []ComponentImportLocal `json:"local,omitempty" jsonschema:"oneof_required=local"`
 	// OCI URL references to remote component config files to import; pulled at create time.
-	Remote []ComponentImportRemote `json:"remote,omitempty"`
+	Remote []ComponentImportRemote `json:"remote,omitempty" jsonschema:"oneof_required=remote"`
 }
 
 // ComponentImportLocal is a local file path reference to a component config.

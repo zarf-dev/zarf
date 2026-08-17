@@ -387,6 +387,20 @@
     "ComponentImport": {
       "additionalProperties": false,
       "description": "ComponentImport is a reference to imported Zarf component configs.",
+      "oneOf": [
+        {
+          "required": [
+            "local"
+          ],
+          "title": "local"
+        },
+        {
+          "required": [
+            "remote"
+          ],
+          "title": "remote"
+        }
+      ],
       "patternProperties": {
         "^x-": {}
       },
