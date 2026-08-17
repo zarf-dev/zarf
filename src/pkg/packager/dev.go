@@ -56,8 +56,6 @@ type DevDeployOptions struct {
 	SkipVersionCheck bool
 	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
 	TakeOwnership bool
-	// SkipValuesSchemaValidation skips validation of the merged package values against the package schema.
-	SkipValuesSchemaValidation bool
 	types.RemoteOptions
 }
 
@@ -126,7 +124,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if err != nil {
 		return err
 	}
-	values, err := loadDeploymentValues(ctx, pkgLayout, opts.Values, opts.SkipValuesSchemaValidation)
+	values, err := loadDeploymentValues(ctx, pkgLayout, opts.Values, false)
 	if err != nil {
 		return err
 	}
@@ -173,15 +171,14 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOptions{
-		SetVariables:               opts.DeploySetVariables,
-		Values:                     opts.Values,
-		Timeout:                    opts.Timeout,
-		Retries:                    opts.Retries,
-		Connected:                  !opts.AirgapMode,
-		OCIConcurrency:             opts.OCIConcurrency,
-		RemoteOptions:              opts.RemoteOptions,
-		TakeOwnership:              opts.TakeOwnership,
-		SkipValuesSchemaValidation: opts.SkipValuesSchemaValidation,
+		SetVariables:   opts.DeploySetVariables,
+		Values:         opts.Values,
+		Timeout:        opts.Timeout,
+		Retries:        opts.Retries,
+		Connected:      !opts.AirgapMode,
+		OCIConcurrency: opts.OCIConcurrency,
+		RemoteOptions:  opts.RemoteOptions,
+		TakeOwnership:  opts.TakeOwnership,
 	})
 	if err != nil {
 		return err
