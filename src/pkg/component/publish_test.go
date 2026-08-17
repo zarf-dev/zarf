@@ -35,6 +35,10 @@ func defaultTestRemoteOptions() types.RemoteOptions {
 	return types.RemoteOptions{PlainHTTP: true}
 }
 
+func localComponentResourceSet(componentPath string) *load.ResourceSet {
+	return load.NewResourceSet(filepath.Dir(componentPath))
+}
+
 func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
 	t.Helper()
 	return registry.Reference{
@@ -766,7 +770,8 @@ func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, err := normalizeComponentResources(filepath.Join(t.TempDir(), "component.yaml"), tt.component, nil, nil)
+			componentPath := filepath.Join(t.TempDir(), "component.yaml")
+			_, _, err := normalizeComponentResources(componentPath, tt.component, nil, localComponentResourceSet(componentPath))
 			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
@@ -785,7 +790,8 @@ func TestComponentResourcesAllowsSupportedRemoteSources(t *testing.T) {
 			Files: []v1beta1.File{{Source: "https://example.com/file.txt"}},
 		},
 	}
-	_, resources, err := normalizeComponentResources(filepath.Join(t.TempDir(), "component.yaml"), component, nil, nil)
+	componentPath := filepath.Join(t.TempDir(), "component.yaml")
+	_, resources, err := normalizeComponentResources(componentPath, component, nil, localComponentResourceSet(componentPath))
 	require.NoError(t, err)
 	require.Empty(t, resources.resources)
 }

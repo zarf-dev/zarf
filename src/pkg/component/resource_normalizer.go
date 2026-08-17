@@ -60,7 +60,7 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	var err error
 	if len(importedSchemas) > 0 {
 		for i := range importedSchemas {
-			importedSchemas[i], err = normalizer.resourcePath(importedSchemas[i])
+			importedSchemas[i], err = normalizer.resourceSet.Path(importedSchemas[i])
 			if err != nil {
 				return component, normalizedComponentResources{}, err
 			}
@@ -129,7 +129,7 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	imageArchives := make([]v1beta1.ImageArchive, len(component.Component.ImageArchives))
 	for i := range component.Component.ImageArchives {
 		archive := component.Component.ImageArchives[i]
-		archive.Path, err = normalizer.resourcePath(archive.Path)
+		archive.Path, err = normalizer.resourceSet.Path(archive.Path)
 		if err != nil {
 			return component, normalizedComponentResources{}, err
 		}
@@ -165,7 +165,7 @@ func addLocalResource(normalizer *componentResourceNormalizer, resourcePath stri
 }
 
 func (n *componentResourceNormalizer) add(resourcePath string) (string, error) {
-	sourcePath, err := n.resourcePath(resourcePath)
+	sourcePath, err := n.resourceSet.Path(resourcePath)
 	if err != nil {
 		return "", err
 	}
@@ -210,18 +210,4 @@ func (n *componentResourceNormalizer) addGeneratedResource(filename string, cont
 	n.nextID++
 	n.resources[mountPath] = componentResource{contents: contents}
 	return mountPath
-}
-
-func (n *componentResourceNormalizer) absolutePath(resourcePath string) string {
-	if filepath.IsAbs(resourcePath) {
-		return filepath.Clean(resourcePath)
-	}
-	return filepath.Clean(filepath.Join(n.baseDir, resourcePath))
-}
-
-func (n *componentResourceNormalizer) resourcePath(resourcePath string) (string, error) {
-	if n.resourceSet != nil {
-		return n.resourceSet.Path(resourcePath)
-	}
-	return n.absolutePath(resourcePath), nil
 }

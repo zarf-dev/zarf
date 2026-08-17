@@ -56,6 +56,14 @@ type ResourceSet struct {
 	closed bool
 }
 
+// NewResourceSet creates a resource set rooted at a local component or package directory.
+func NewResourceSet(root string) *ResourceSet {
+	return &ResourceSet{
+		packageRoot: root,
+		remoteRoots: map[string]struct{}{},
+	}
+}
+
 // Root returns the original package source directory.
 func (r *ResourceSet) Root() (string, error) {
 	if r.closed {
@@ -177,10 +185,7 @@ func Package(ctx context.Context, packagePath string, opts PackageOptions) (_ *R
 }
 
 func materializeResources(ctx context.Context, packageRoot string, remoteResources []remoteResource) (*ResourceSet, error) {
-	resourceSet := &ResourceSet{
-		packageRoot: packageRoot,
-		remoteRoots: map[string]struct{}{},
-	}
+	resourceSet := NewResourceSet(packageRoot)
 	if len(remoteResources) == 0 {
 		return resourceSet, nil
 	}
