@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
@@ -32,6 +33,7 @@ type normalizedComponentResources struct {
 
 type componentResourceNormalizer struct {
 	baseDir      string
+	resourceSet  *load.ResourceSet
 	resources    map[string]componentResource
 	sourceMounts map[string]string
 	nextID       int
@@ -40,9 +42,10 @@ type componentResourceNormalizer struct {
 // normalizeComponentResources makes every local source path artifact-relative. This keeps the
 // published config independent of the directory in which it was built and gives remote imports a
 // stable mount contract.
-func normalizeComponentResources(componentPath string, component v1beta1.ComponentConfig, importedSchemas []string) (v1beta1.ComponentConfig, normalizedComponentResources, error) {
+func normalizeComponentResources(componentPath string, component v1beta1.ComponentConfig, importedSchemas []string, resourceSet *load.ResourceSet) (v1beta1.ComponentConfig, normalizedComponentResources, error) {
 	normalizer := componentResourceNormalizer{
 		baseDir:      filepath.Dir(componentPath),
+		resourceSet:  resourceSet,
 		resources:    map[string]componentResource{},
 		sourceMounts: map[string]string{},
 	}
@@ -56,6 +59,12 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	}
 	var err error
 	if len(importedSchemas) > 0 {
+		for i := range importedSchemas {
+			importedSchemas[i], err = normalizer.resourcePath(importedSchemas[i])
+			if err != nil {
+				return component, normalizedComponentResources{}, err
+			}
+		}
 		merged, err := value.MergeSchemaFiles(component.Values.Schema, importedSchemas, normalizer.baseDir)
 		if err != nil {
 			return component, normalizedComponentResources{}, fmt.Errorf("merging imported values schemas: %w", err)
@@ -120,7 +129,10 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	imageArchives := make([]v1beta1.ImageArchive, len(component.Component.ImageArchives))
 	for i := range component.Component.ImageArchives {
 		archive := component.Component.ImageArchives[i]
-		archive.Path = normalizer.absolutePath(archive.Path)
+		archive.Path, err = normalizer.resourcePath(archive.Path)
+		if err != nil {
+			return component, normalizedComponentResources{}, err
+		}
 		imageArchives[i] = archive
 		component.Component.ImageArchives[i].Path = filepath.ToSlash(string(layout.ImagesDir))
 	}
@@ -153,31 +165,34 @@ func addLocalResource(normalizer *componentResourceNormalizer, resourcePath stri
 }
 
 func (n *componentResourceNormalizer) add(resourcePath string) (string, error) {
-	absPath := n.absolutePath(resourcePath)
-	if mountPath, ok := n.sourceMounts[absPath]; ok {
+	sourcePath, err := n.resourcePath(resourcePath)
+	if err != nil {
+		return "", err
+	}
+	if mountPath, ok := n.sourceMounts[sourcePath]; ok {
 		return mountPath, nil
 	}
-	info, err := os.Stat(absPath)
+	info, err := os.Stat(sourcePath)
 	if err != nil {
 		return "", fmt.Errorf("unable to access local component resource %q: %w", resourcePath, err)
 	}
 
-	mountPath := path.Join("resources", strconv.Itoa(n.nextID), filepath.Base(absPath))
+	mountPath := path.Join("resources", strconv.Itoa(n.nextID), filepath.Base(sourcePath))
 	n.nextID++
-	n.sourceMounts[absPath] = mountPath
+	n.sourceMounts[sourcePath] = mountPath
 	if !info.IsDir() {
-		n.resources[mountPath] = componentResource{sourcePath: absPath}
+		n.resources[mountPath] = componentResource{sourcePath: sourcePath}
 		return mountPath, nil
 	}
 
-	err = filepath.WalkDir(absPath, func(filePath string, entry fs.DirEntry, walkErr error) error {
+	err = filepath.WalkDir(sourcePath, func(filePath string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
 		if entry.IsDir() {
 			return nil
 		}
-		rel, err := filepath.Rel(absPath, filePath)
+		rel, err := filepath.Rel(sourcePath, filePath)
 		if err != nil {
 			return err
 		}
@@ -202,4 +217,11 @@ func (n *componentResourceNormalizer) absolutePath(resourcePath string) string {
 		return filepath.Clean(resourcePath)
 	}
 	return filepath.Clean(filepath.Join(n.baseDir, resourcePath))
+}
+
+func (n *componentResourceNormalizer) resourcePath(resourcePath string) (string, error) {
+	if n.resourceSet != nil {
+		return n.resourceSet.Path(resourcePath)
+	}
+	return n.absolutePath(resourcePath), nil
 }

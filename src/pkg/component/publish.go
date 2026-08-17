@@ -66,21 +66,27 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if component.Metadata.Version == "" {
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
-	if len(component.Component.Import.Remote) > 0 {
-		return registry.Reference{}, errors.New("publishing a component that imports a remote component is not yet supported")
-	}
-	resolved, err := load.ResolveComponentConfigImports(ctx, component, componentPath)
+	resolved, err := load.ResolveComponentConfigImports(ctx, component, componentPath, opts.RemoteOptions)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to resolve component imports: %w", err)
 	}
 	component = resolved.Component
+	resourceSet, err := resolved.MaterializeResources(ctx, componentPath)
+	if err != nil {
+		return registry.Reference{}, fmt.Errorf("unable to materialize imported component resources: %w", err)
+	}
+	defer func() {
+		if err := resourceSet.Close(); err != nil {
+			logger.From(ctx).Warn("unable to clean up imported component resources", "error", err)
+		}
+	}()
 
 	componentRef, err := componentReference(destination, component)
 	if err != nil {
 		return registry.Reference{}, err
 	}
 	component.PublishData.ZarfVersion = config.CLIVersion
-	component, resources, err := normalizeComponentResources(componentPath, component, resolved.ImportedSchemas)
+	component, resources, err := normalizeComponentResources(componentPath, component, resolved.ImportedSchemas, resourceSet)
 	if err != nil {
 		return registry.Reference{}, err
 	}

@@ -47,11 +47,12 @@ type v1beta1ImportResolution struct {
 	remoteResources []remoteResource
 }
 
-// ComponentConfigImportResolution contains a component config with local imports resolved and
+// ComponentConfigImportResolution contains a component config with imports resolved and
 // the imported values schema paths needed to preserve schema precedence during publication.
 type ComponentConfigImportResolution struct {
 	Component       v1beta1.ComponentConfig
 	ImportedSchemas []string
+	remoteResources []remoteResource
 }
 
 // resolveImportsV1Beta1 resolves component config imports into a v1beta1 package definition.
@@ -94,10 +95,11 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 	}, nil
 }
 
-// ResolveComponentConfigImports resolves imports in a v1beta1 component config.
-func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath string) (ComponentConfigImportResolution, error) {
+// ResolveComponentConfigImports resolves imports in a v1beta1 component config using
+// the supplied registry options for remote component imports.
+func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath string, remoteOptions types.RemoteOptions) (ComponentConfigImportResolution, error) {
 	componentPath = filepath.Clean(componentPath)
-	resolvedSpec, importedVals, _, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Metadata.Architecture, component.Metadata.Flavor, []string{componentPath}, types.RemoteOptions{}, "")
+	resolvedSpec, importedVals, remoteResources, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Metadata.Architecture, component.Metadata.Flavor, []string{componentPath}, remoteOptions, "")
 	if err != nil {
 		return ComponentConfigImportResolution{}, err
 	}
@@ -106,7 +108,14 @@ func ResolveComponentConfigImports(ctx context.Context, component v1beta1.Compon
 	return ComponentConfigImportResolution{
 		Component:       component,
 		ImportedSchemas: dedupePaths(importedVals.schemas),
+		remoteResources: remoteResources,
 	}, nil
+}
+
+// MaterializeResources makes remote component resources available on the filesystem while
+// publishing a resolved component config. The caller must close the returned resource set.
+func (r ComponentConfigImportResolution) MaterializeResources(ctx context.Context, componentPath string) (*ResourceSet, error) {
+	return materializeResources(ctx, filepath.Dir(componentPath), r.remoteResources)
 }
 
 // resolveComponentConfigSpecImports merges component-config imports. Its target always
@@ -133,9 +142,13 @@ func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.Compone
 	relDir := directImport.relativeToParent
 	resolvedImportSpec = fixPathsV1Beta1(resolvedImportSpec, relDir)
 	vals := mergeImportedValues(directImport.config.Values, inheritedValues, relDir)
+	for i := range inheritedResources {
+		inheritedResources[i].importRoot = makePathRelativeTo(inheritedResources[i].importRoot, relDir)
+	}
+	resources := append(directImport.resources, inheritedResources...)
 	merged := mergeComponentConfigSpec(resolvedImportSpec, spec)
 	merged.Import = v1beta1.ComponentImport{}
-	return merged, vals, append(directImport.resources, inheritedResources...), nil
+	return merged, vals, resources, nil
 }
 
 // mergeImportedValues preserves each merge contract: values files are later-wins, schemas are earlier-wins.
@@ -242,9 +255,6 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	config, err := componentConfigFromBytes(importURL, configBytes)
 	if err != nil {
 		return loadedComponentConfig{}, err
-	}
-	if len(config.Component.Import.Local) > 0 || len(config.Component.Import.Remote) > 0 {
-		return loadedComponentConfig{}, fmt.Errorf("remote component imports are not supported")
 	}
 	if !metadataMatchesOCIPlatform(config.Metadata, root.Platform) {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q metadata architecture does not match its OCI platform", importURL)

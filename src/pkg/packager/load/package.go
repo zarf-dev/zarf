@@ -43,7 +43,7 @@ func (p *ResolvedPackage) Close() error {
 	if p == nil || p.Resources == nil {
 		return nil
 	}
-	return p.Resources.close()
+	return p.Resources.Close()
 }
 
 // ResourceSet maps logical paths in a package definition to filesystem paths.
@@ -100,7 +100,8 @@ func (r *ResourceSet) ReadFile(logicalPath string) ([]byte, error) {
 	return os.ReadFile(physical)
 }
 
-func (r *ResourceSet) close() error {
+// Close removes temporary remote-component resources.
+func (r *ResourceSet) Close() error {
 	if r.closed {
 		return nil
 	}
@@ -189,7 +190,7 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 	}
 	resourceSet.workspace = workspace
 	fail := func(cause error) (*ResourceSet, error) {
-		return nil, errors.Join(cause, resourceSet.close())
+		return nil, errors.Join(cause, resourceSet.Close())
 	}
 	for _, resource := range remoteResources {
 		if !validResourcePath(resource.importRoot) || !validResourcePath(resource.mountPath) {

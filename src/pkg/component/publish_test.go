@@ -211,23 +211,59 @@ func TestPublishComponentRejectsNegativeRetries(t *testing.T) {
 	require.EqualError(t, err, "component publish failed: retries cannot be negative")
 }
 
-func TestPublishComponentRejectsRemoteImports(t *testing.T) {
+func TestPublishComponentResolvesRemoteImportsFromLocalConfig(t *testing.T) {
 	t.Parallel()
 
-	componentPath := filepath.Join(t.TempDir(), "component.yaml")
-	require.NoError(t, os.WriteFile(componentPath, []byte(`apiVersion: zarf.dev/v1beta1
+	ctx := context.Background()
+	root := t.TempDir()
+	destination := createRegistry(ctx, t)
+	remoteComponentPath := filepath.Join(root, "remote-component.yaml")
+	require.NoError(t, os.WriteFile(filepath.Join(root, "remote-file.txt"), []byte("remote file"), 0o600))
+	require.NoError(t, os.WriteFile(remoteComponentPath, []byte(`apiVersion: zarf.dev/v1beta1
 kind: ZarfComponentConfig
 metadata:
-  name: remote-import
+  name: remote-component
+  version: 0.0.1
+component:
+  files:
+    - source: remote-file.txt
+      destination: /tmp/remote-file.txt
+`), 0o600))
+	remote, err := Publish(ctx, remoteComponentPath, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+
+	childDir := filepath.Join(root, "child")
+	require.NoError(t, os.Mkdir(childDir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(childDir, "component.yaml"), []byte(fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: local-import
   version: 0.0.1
 component:
   import:
     remote:
-      - url: oci://registry.example.com/components/child:0.0.1
+      - url: oci://%s
+`, remote.String())), 0o600))
+	componentPath := filepath.Join(root, "component.yaml")
+	require.NoError(t, os.WriteFile(componentPath, []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: publishing-component
+  version: 0.0.1
+component:
+  import:
+    local:
+      - path: child/component.yaml
 `), 0o600))
 
-	_, err := Publish(context.Background(), componentPath, createRegistry(context.Background(), t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
-	require.EqualError(t, err, "publishing a component that imports a remote component is not yet supported")
+	published, err := Publish(ctx, componentPath, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+
+	component, manifest := getPublishedComponent(ctx, t, published)
+	require.Empty(t, component.Component.Import)
+	require.Equal(t, []v1beta1.File{{Source: "resources/0/remote-file.txt", Destination: "/tmp/remote-file.txt"}}, component.Component.Files)
+	require.Len(t, manifest.Layers, 1)
+	require.Equal(t, "resources/0/remote-file.txt", manifest.Layers[0].Annotations[ocispec.AnnotationTitle])
 }
 
 func TestPublishComponentImageArchivesUseOCILayout(t *testing.T) {
@@ -724,20 +760,13 @@ func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
 			},
 			wantErr: `resource "https://example.com/chart.tgz" must be local`,
 		},
-		{
-			name: "component import",
-			component: v1beta1.ComponentConfig{
-				Component: v1beta1.ComponentSpec{Import: v1beta1.ComponentImport{Remote: []v1beta1.ComponentImportRemote{{URL: "oci://example.com/components/foo:1.0.0"}}}},
-			},
-			wantErr: "remote component imports are not yet supported for v1beta1 packages",
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, _, err := normalizeComponentResources(filepath.Join(t.TempDir(), "component.yaml"), tt.component, nil)
+			_, _, err := normalizeComponentResources(filepath.Join(t.TempDir(), "component.yaml"), tt.component, nil, nil)
 			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
@@ -756,7 +785,7 @@ func TestComponentResourcesAllowsSupportedRemoteSources(t *testing.T) {
 			Files: []v1beta1.File{{Source: "https://example.com/file.txt"}},
 		},
 	}
-	_, resources, err := normalizeComponentResources(filepath.Join(t.TempDir(), "component.yaml"), component, nil)
+	_, resources, err := normalizeComponentResources(filepath.Join(t.TempDir(), "component.yaml"), component, nil, nil)
 	require.NoError(t, err)
 	require.Empty(t, resources.resources)
 }
