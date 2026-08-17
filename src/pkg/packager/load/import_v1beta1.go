@@ -49,9 +49,15 @@ type importedValues struct {
 	schemas []string
 }
 
+type v1beta1ImportResolution struct {
+	pkg             v1beta1.Package
+	schemas         []string
+	remoteResources []remoteResource
+}
+
 // resolveImportsV1Beta1 resolves component config imports into a v1beta1 package definition.
 // Each package component may import one or more ZarfComponentConfig files; filtering compatible components also happens here.
-func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, arch, flavor string, remoteOptions types.RemoteOptions, cachePath string) (v1beta1.Package, []string, []remoteResource, error) {
+func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, arch, flavor string, remoteOptions types.RemoteOptions, cachePath string) (v1beta1ImportResolution, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start resolveImportsV1Beta1", "pkg", pkg.Metadata.Name, "arch", arch, "flavor", flavor)
@@ -67,7 +73,7 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 		}
 		mergedSpec, compVals, compResources, err := resolveComponentSpecImports(ctx, component.ComponentSpec, baseDir, arch, component.Selector.Architecture, flavor, []string{filepath.Clean(pkgPath.ManifestFile)}, true, remoteOptions, cachePath)
 		if err != nil {
-			return v1beta1.Package{}, nil, nil, fmt.Errorf("component %q: %w", component.Name, err)
+			return v1beta1ImportResolution{}, fmt.Errorf("component %q: %w", component.Name, err)
 		}
 		component.ComponentSpec = mergedSpec
 		components = append(components, component)
@@ -82,7 +88,11 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 	pkg.Values.Files = dedupePaths(valuesFiles)
 
 	l.Debug("done resolveImportsV1Beta1", "pkg", pkg.Metadata.Name, "components", len(pkg.Components), "duration", time.Since(start))
-	return pkg, dedupePaths(vals.schemas), resources, nil
+	return v1beta1ImportResolution{
+		pkg:             pkg,
+		schemas:         dedupePaths(vals.schemas),
+		remoteResources: resources,
+	}, nil
 }
 
 // ResolveComponentConfigImports resolves local imports in a v1beta1 component config.

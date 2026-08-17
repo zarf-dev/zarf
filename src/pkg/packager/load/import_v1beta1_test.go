@@ -4,7 +4,6 @@
 package load
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -36,11 +35,6 @@ func loadV1Beta1Package(t *testing.T, dir string) v1beta1.Package {
 	return pkg
 }
 
-func resolveImportsV1Beta1ForTest(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, arch, flavor string) (v1beta1.Package, []string, error) {
-	pkg, schemas, _, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, arch, flavor, types.RemoteOptions{}, "")
-	return pkg, schemas, err
-}
-
 func TestResolveImportsV1Beta1(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
@@ -50,11 +44,11 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "single")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, schemas, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
 		require.NoError(t, err)
 
-		require.Len(t, resolved.Components, 1)
-		comp := resolved.Components[0]
+		require.Len(t, resolution.pkg.Components, 1)
+		comp := resolution.pkg.Components[0]
 		require.Equal(t, "logging", comp.Name)
 		require.Empty(t, comp.Import.Local)
 
@@ -68,8 +62,8 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 
 		require.Equal(t, []v1beta1.Image{{Name: "grafana/loki:2.9.0"}}, comp.Images)
 
-		require.Equal(t, []string{"components/logging-values.yaml"}, resolved.Values.Files)
-		require.Equal(t, []string{"components/logging.schema.json"}, schemas)
+		require.Equal(t, []string{"components/logging-values.yaml"}, resolution.pkg.Values.Files)
+		require.Equal(t, []string{"components/logging.schema.json"}, resolution.schemas)
 	})
 
 	t.Run("non-importing components are preserved alongside an importing one", func(t *testing.T) {
@@ -77,17 +71,17 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "mixed")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
 		require.NoError(t, err)
 
-		require.Len(t, resolved.Components, 3)
-		require.Equal(t, "first", resolved.Components[0].Name)
-		require.Equal(t, []v1beta1.Image{{Name: "alpine:3.20"}}, resolved.Components[0].Images)
-		require.Equal(t, "middle", resolved.Components[1].Name)
-		require.Equal(t, []v1beta1.Image{{Name: "nginx:1.27"}}, resolved.Components[1].Images)
-		require.Empty(t, resolved.Components[1].Import.Local)
-		require.Equal(t, "last", resolved.Components[2].Name)
-		require.Equal(t, []v1beta1.Image{{Name: "busybox:1.36"}}, resolved.Components[2].Images)
+		require.Len(t, resolution.pkg.Components, 3)
+		require.Equal(t, "first", resolution.pkg.Components[0].Name)
+		require.Equal(t, []v1beta1.Image{{Name: "alpine:3.20"}}, resolution.pkg.Components[0].Images)
+		require.Equal(t, "middle", resolution.pkg.Components[1].Name)
+		require.Equal(t, []v1beta1.Image{{Name: "nginx:1.27"}}, resolution.pkg.Components[1].Images)
+		require.Empty(t, resolution.pkg.Components[1].Import.Local)
+		require.Equal(t, "last", resolution.pkg.Components[2].Name)
+		require.Equal(t, []v1beta1.Image{{Name: "busybox:1.36"}}, resolution.pkg.Components[2].Images)
 	})
 
 	t.Run("nested imports merge and rebase transitively", func(t *testing.T) {
@@ -95,11 +89,11 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "nested")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, schemas, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
 		require.NoError(t, err)
 
-		require.Len(t, resolved.Components, 1)
-		comp := resolved.Components[0]
+		require.Len(t, resolution.pkg.Components, 1)
+		comp := resolution.pkg.Components[0]
 		require.Equal(t, "app", comp.Name)
 
 		require.Len(t, comp.Charts, 1)
@@ -112,11 +106,11 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		require.Equal(t, []string{
 			"components/child/child-values.yaml",
 			"components/app-values.yaml",
-		}, resolved.Values.Files)
+		}, resolution.pkg.Values.Files)
 		require.Equal(t, []string{
 			"components/app.schema.json",
 			"components/child/child.schema.json",
-		}, schemas)
+		}, resolution.schemas)
 	})
 
 	t.Run("cyclic imports error", func(t *testing.T) {
@@ -124,7 +118,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "cycle")
 		pkg := loadV1Beta1Package(t, dir)
 
-		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "cycle")
 	})
 
@@ -133,11 +127,11 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "variants")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "apache")
+		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "apache", types.RemoteOptions{}, "")
 		require.NoError(t, err)
 
-		require.Len(t, resolved.Components, 1)
-		require.Equal(t, []v1beta1.Image{{Name: "httpd:2.4"}}, resolved.Components[0].Images)
+		require.Len(t, resolution.pkg.Components, 1)
+		require.Equal(t, []v1beta1.Image{{Name: "httpd:2.4"}}, resolution.pkg.Components[0].Images)
 	})
 
 	t.Run("variant selection errors when no variant is compatible", func(t *testing.T) {
@@ -145,7 +139,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "variants")
 		pkg := loadV1Beta1Package(t, dir)
 
-		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "no imported component")
 	})
 
@@ -154,7 +148,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "single-incompatible")
 		pkg := loadV1Beta1Package(t, dir)
 
-		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "nginx")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "nginx", types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "no imported component")
 	})
 
@@ -163,10 +157,10 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "merge")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolved, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
 		require.NoError(t, err)
 
-		comp := resolved.Components[0]
+		comp := resolution.pkg.Components[0]
 		require.Equal(t, []v1beta1.Image{
 			{Name: "redis:7", Source: "daemon"},
 			{Name: "nginx:1.27"},
@@ -233,7 +227,7 @@ components:
         - url: oci://example.com/component:1.0.0
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "remote")
 	})
 
@@ -251,7 +245,7 @@ components:
         - path: does-not-exist.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "does-not-exist.yaml")
 	})
 
@@ -270,7 +264,7 @@ components:
         - path: child
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
 		require.Error(t, err)
 	})
 
@@ -293,7 +287,7 @@ components:
         - path: child.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "kind")
 	})
 
@@ -318,7 +312,7 @@ components:
         - path: child.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
 		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
 	})
 
@@ -349,7 +343,7 @@ components:
         - path: b.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, _, err := resolveImportsV1Beta1ForTest(ctx, pkg, mustPackagePath(t, dir), "amd64", "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "multiple")
 	})
 }

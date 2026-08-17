@@ -172,10 +172,11 @@ func v1beta1Resolution(ctx context.Context, pkg v1beta1.Package, pkgPath layout.
 		return resolution{}, err
 	}
 
-	pkg, importedSchemas, remoteResources, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor, opts.RemoteOptions, cachePath)
+	imported, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor, opts.RemoteOptions, cachePath)
 	if err != nil {
 		return resolution{}, err
 	}
+	pkg = imported.pkg
 
 	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
 		return resolution{}, err
@@ -184,10 +185,10 @@ func v1beta1Resolution(ctx context.Context, pkg v1beta1.Package, pkgPath layout.
 	return resolution{
 		definition:      api.NewPackageDefinitionFromV1beta1(pkg),
 		packageRoot:     pkgPath.BaseDir,
-		remoteResources: remoteResources,
+		remoteResources: imported.remoteResources,
 		values: valuePlan{
 			files:   pkg.Values.Files,
-			schemas: schemaSources(pkg.Values.Schema, importedSchemas),
+			schemas: schemaSources(pkg.Values.Schema, imported.schemas),
 		},
 	}, nil
 }
