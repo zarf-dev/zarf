@@ -514,19 +514,22 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 }
 
 type devDeployOptions struct {
-	createSetPkgTmpl   map[string]string
-	deploySetVariables map[string]string
-	registryOverrides  []string
-	flavor             string
-	registryURL        string
-	takeOwnership      bool
-	timeout            time.Duration
-	retries            int
-	optionalComponents string
-	noYOLO             bool
-	connected          bool
-	ociConcurrency     int
-	skipVersionCheck   bool
+	createSetPkgTmpl           map[string]string
+	deploySetVariables         map[string]string
+	valuesFiles                []string
+	setValues                  map[string]string
+	registryOverrides          []string
+	flavor                     string
+	registryURL                string
+	takeOwnership              bool
+	timeout                    time.Duration
+	retries                    int
+	optionalComponents         string
+	noYOLO                     bool
+	connected                  bool
+	ociConcurrency             int
+	skipValuesSchemaValidation bool
+	skipVersionCheck           bool
 }
 
 func newDevDeployCommand(v *viper.Viper) *cobra.Command {
@@ -553,6 +556,8 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 
 	// Always require take-ownership flag (no viper)
 	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
@@ -568,6 +573,7 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkDeprecated("no-yolo", "Use --connected=false instead")
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().BoolVar(&o.skipValuesSchemaValidation, "skip-values-schema-validation", false, lang.CmdPackageDeployFlagSkipValuesSchema)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 
@@ -587,6 +593,11 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -598,20 +609,22 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	err = packager.DevDeploy(ctx, basePath, packager.DevDeployOptions{
-		AirgapMode:         o.noYOLO || !o.connected,
-		Flavor:             o.flavor,
-		RegistryURL:        o.registryURL,
-		RegistryOverrides:  overrides,
-		CreateSetVariables: o.createSetPkgTmpl,
-		DeploySetVariables: o.deploySetVariables,
-		OptionalComponents: o.optionalComponents,
-		Timeout:            o.timeout,
-		Retries:            o.retries,
-		OCIConcurrency:     o.ociConcurrency,
-		RemoteOptions:      defaultRemoteOptions(),
-		CachePath:          cachePath,
-		SkipVersionCheck:   o.skipVersionCheck,
-		TakeOwnership:      o.takeOwnership,
+		AirgapMode:                 o.noYOLO || !o.connected,
+		Flavor:                     o.flavor,
+		RegistryURL:                o.registryURL,
+		RegistryOverrides:          overrides,
+		CreateSetVariables:         o.createSetPkgTmpl,
+		DeploySetVariables:         o.deploySetVariables,
+		Values:                     values,
+		OptionalComponents:         o.optionalComponents,
+		Timeout:                    o.timeout,
+		Retries:                    o.retries,
+		OCIConcurrency:             o.ociConcurrency,
+		RemoteOptions:              defaultRemoteOptions(),
+		CachePath:                  cachePath,
+		SkipVersionCheck:           o.skipVersionCheck,
+		TakeOwnership:              o.takeOwnership,
+		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {

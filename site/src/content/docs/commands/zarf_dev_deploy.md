@@ -30,8 +30,11 @@ zarf dev deploy [flags]
       --oci-concurrency int                   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --registry-override stringArray         Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
       --retries int                           Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --set-values stringToString             Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
+      --skip-values-schema-validation         Skip validation of package values against the values schema.
       --take-ownership                        Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --timeout duration                      Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
+  -v, --values strings                        [beta] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
 ```
 
 ### Options inherited from parent commands
