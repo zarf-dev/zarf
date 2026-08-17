@@ -423,15 +423,15 @@ func componentFromGeneric(c types.Component, isInit, migrateFromV1alpha1 bool) v
 		Name:        c.Name,
 		Description: c.Description,
 		Optional:    optionalFromGeneric(c.Optional, c.Required),
+		Selector: v1beta1.ComponentSelector{
+			Architecture: c.Target.Architecture,
+			Flavor:       c.Target.Flavor,
+		},
 		ComponentSpec: v1beta1.ComponentSpec{
 			Repositories: repositoriesFromGeneric(c.Repositories),
 			StateAccess:  stateAccessFromGeneric(c.StateAccess),
 			Target: v1beta1.ComponentTarget{
 				OS: c.Target.OS,
-			},
-			Selector: v1beta1.ComponentSelector{
-				Architecture: c.Target.Architecture,
-				Flavor:       c.Target.Flavor,
 			},
 			Import:  importFromGeneric(c.Import),
 			Service: serviceFromGeneric(c, isInit),

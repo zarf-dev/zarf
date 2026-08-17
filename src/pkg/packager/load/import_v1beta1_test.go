@@ -4,19 +4,86 @@
 package load
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/defenseunicorns/pkg/oci"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content"
+	"oras.land/oras-go/v2/content/memory"
+	"oras.land/oras-go/v2/registry"
 )
+
+func TestMetadataMatchesOCIPlatform(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name     string
+		metadata v1beta1.ComponentMetadata
+		platform *ocispec.Platform
+		want     bool
+	}{
+		{name: "generic direct manifest", want: true},
+		{name: "specific index manifest", metadata: v1beta1.ComponentMetadata{Architecture: "arm64"}, platform: &ocispec.Platform{Architecture: "arm64"}, want: true},
+		{name: "specific metadata on direct manifest", metadata: v1beta1.ComponentMetadata{Architecture: "arm64"}, want: false},
+		{name: "generic metadata in index", platform: &ocispec.Platform{Architecture: "arm64"}, want: false},
+		{name: "architecture mismatch", metadata: v1beta1.ComponentMetadata{Architecture: "amd64"}, platform: &ocispec.Platform{Architecture: "arm64"}, want: false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.want, metadataMatchesOCIPlatform(tt.metadata, tt.platform))
+		})
+	}
+}
+
+func TestRemoteComponentConfigRejectsPlatformMetadataMismatch(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	ref := registry.Reference{
+		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+		Repository: "components",
+		Reference:  "mismatch",
+	}
+	component := v1beta1.ComponentConfig{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfComponentConfig,
+		Metadata: v1beta1.ComponentMetadata{
+			Name:         "mismatch",
+			Architecture: "arm64",
+		},
+	}
+	componentJSON, err := json.Marshal(component)
+	require.NoError(t, err)
+
+	store := memory.New()
+	configDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentConfigMediaType, componentJSON)
+	require.NoError(t, store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)))
+	manifest, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{ConfigDescriptor: &configDescriptor})
+	require.NoError(t, err)
+	require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
+
+	remote, err := zoci.NewRemote(ctx, ref.String(), ocispec.Platform{}, oci.WithPlainHTTP(true))
+	require.NoError(t, err)
+	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
+	require.NoError(t, err)
+
+	_, err = remoteComponentConfig(ctx, "oci://"+ref.String(), "arm64", types.RemoteOptions{PlainHTTP: true}, "")
+	require.ErrorContains(t, err, "metadata architecture does not match its OCI platform")
+}
 
 func mustPackagePath(t *testing.T, dir string) layout.PackagePath {
 	t.Helper()
@@ -305,6 +372,32 @@ unknown: value
 kind: ZarfPackageConfig
 metadata:
   name: schema-error
+components:
+  - name: child
+    import:
+      local:
+        - path: child.yaml
+`)
+		pkg := loadV1Beta1Package(t, dir)
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
+	})
+
+	t.Run("component config selector is rejected", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		writeComponent(t, dir, "child.yaml", `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: child
+component:
+  selector:
+    architecture: amd64
+`)
+		writePkg(t, dir, `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: selector
 components:
   - name: child
     import:

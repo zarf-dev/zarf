@@ -26,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
+	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	registryremote "oras.land/oras-go/v2/registry/remote"
 )
@@ -176,15 +177,12 @@ func TestPublishComponentFlavor(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishOptions{
-		Flavor:        "test",
-		RemoteOptions: defaultTestRemoteOptions(),
-	})
+	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 	require.Equal(t, "0.0.1-test", published.Reference)
 
 	component, _ := getPublishedComponent(ctx, t, published)
-	require.Empty(t, component.Component.Selector.Flavor)
+	require.Equal(t, "test", component.Metadata.Flavor)
 }
 
 func TestPublishComponentSigning(t *testing.T) {
@@ -196,7 +194,6 @@ func TestPublishComponentSigning(t *testing.T) {
 	signOpts.Password = "password"
 	signOpts.SkipConfirmation = true
 	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishOptions{
-		Flavor:          "test",
 		SignBlobOptions: signOpts,
 		RemoteOptions:   defaultTestRemoteOptions(),
 	})
@@ -414,9 +411,8 @@ kind: ZarfComponentConfig
 metadata:
   name: %s-component
   version: 0.0.1
+  architecture: %s
 component:
-  selector:
-    architecture: %s
   images:
     - name: example.com/%s:latest
 `, architecture, architecture, architecture))
@@ -428,9 +424,8 @@ kind: ZarfComponentConfig
 metadata:
   name: architecture-component
   version: 0.0.1
+  architecture: arm64
 component:
-  selector:
-    architecture: arm64
   import:
     local:
       - path: amd64.yaml
@@ -440,9 +435,90 @@ component:
 	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 
-	component, _ := getPublishedComponent(ctx, t, published)
-	require.Equal(t, "arm64", component.Component.Selector.Architecture)
+	component, _ := getPublishedComponentForArchitecture(ctx, t, published, "arm64")
+	require.Equal(t, "arm64", component.Metadata.Architecture)
 	require.Equal(t, []v1beta1.Image{{Name: "example.com/arm64:latest"}}, component.Component.Images)
+}
+
+func TestPublishComponentArchitectureVariantsResolveRemoteImports(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	destination := createRegistry(ctx, t)
+	for _, architecture := range []string{"amd64", "arm64"} {
+		componentPath := filepath.Join(root, architecture+".yaml")
+		componentYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: architecture-variant
+  version: 0.0.1
+  architecture: %s
+component:
+  images:
+    - name: example.com/%s:latest
+`, architecture, architecture)
+		require.NoError(t, os.WriteFile(componentPath, []byte(componentYAML), 0o600))
+		_, err := Publish(ctx, componentPath, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+		require.NoError(t, err)
+	}
+
+	published, err := registry.ParseReference(fmt.Sprintf("%s/%s/architecture-variant:0.0.1", destination.Registry, destination.Repository))
+	require.NoError(t, err)
+	amd64Component, _ := getPublishedComponentForArchitecture(ctx, t, published, "amd64")
+	require.Equal(t, []v1beta1.Image{{Name: "example.com/amd64:latest"}}, amd64Component.Component.Images)
+	component, _ := getPublishedComponentForArchitecture(ctx, t, published, "arm64")
+	require.Equal(t, "arm64", component.Metadata.Architecture)
+	require.Equal(t, []v1beta1.Image{{Name: "example.com/arm64:latest"}}, component.Component.Images)
+
+	packagePath := filepath.Join(root, "zarf.yaml")
+	packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: architecture-import
+  architecture: arm64
+components:
+  - name: imported
+    import:
+      remote:
+        - url: oci://%s
+`, published.String())
+	require.NoError(t, os.WriteFile(packagePath, []byte(packageYAML), 0o600))
+	definition, err := load.PackageDefinition(ctx, root, load.DefinitionOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	require.Equal(t, []v1beta1.Image{{Name: "example.com/arm64:latest"}}, definition.AsV1beta1().Components[0].Images)
+}
+
+func TestPublishComponentRejectsGenericAndArchitectureSpecificReferenceMixing(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	destination := createRegistry(ctx, t)
+	writeComponent := func(t *testing.T, filename, architecture string) string {
+		t.Helper()
+		componentPath := filepath.Join(root, filename)
+		metadataArchitecture := ""
+		if architecture != "" {
+			metadataArchitecture = "  architecture: " + architecture + "\n"
+		}
+		componentYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: mixed-variant
+  version: 0.0.1
+%scomponent: {}
+`, metadataArchitecture)
+		require.NoError(t, os.WriteFile(componentPath, []byte(componentYAML), 0o600))
+		return componentPath
+	}
+
+	generic := writeComponent(t, "generic.yaml", "")
+	arm64 := writeComponent(t, "arm64.yaml", "arm64")
+	_, err := Publish(ctx, generic, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	_, err = Publish(ctx, arm64, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.ErrorContains(t, err, "architecture-generic artifact")
 }
 
 func TestPublishComponentNormalizesExternalResources(t *testing.T) {
@@ -539,6 +615,10 @@ component:
 }
 
 func getPublishedComponent(ctx context.Context, t *testing.T, published registry.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {
+	return getPublishedComponentForArchitecture(ctx, t, published, "")
+}
+
+func getPublishedComponentForArchitecture(ctx context.Context, t *testing.T, published registry.Reference, architecture string) (v1beta1.ComponentConfig, ocispec.Manifest) {
 	t.Helper()
 
 	repo, err := registryremote.NewRepository(published.Registry + "/" + published.Repository)
@@ -546,6 +626,10 @@ func getPublishedComponent(ctx context.Context, t *testing.T, published registry
 	repo.PlainHTTP = true
 	descriptor, err := repo.Resolve(ctx, published.Reference)
 	require.NoError(t, err)
+	if descriptor.MediaType == ocispec.MediaTypeImageIndex {
+		descriptor, err = oras.Resolve(ctx, repo, published.Reference, oras.ResolveOptions{TargetPlatform: &ocispec.Platform{Architecture: architecture}})
+		require.NoError(t, err)
+	}
 	require.Equal(t, ocispec.MediaTypeImageManifest, descriptor.MediaType)
 	require.NotZero(t, descriptor.Size)
 

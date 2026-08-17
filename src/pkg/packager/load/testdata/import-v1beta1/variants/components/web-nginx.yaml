@@ -2,8 +2,7 @@ apiVersion: zarf.dev/v1beta1
 kind: ZarfComponentConfig
 metadata:
   name: web
+  flavor: nginx
 component:
-  selector:
-    flavor: nginx
   images:
     - name: nginx:1.27

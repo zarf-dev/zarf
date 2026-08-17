@@ -25,8 +25,6 @@ type ComponentSpec struct {
 	Import ComponentImport `json:"import,omitempty"`
 	// Filter when this component is deployed based on OS.
 	Target ComponentTarget `json:"target,omitempty"`
-	// Filter when this component is included during package creation based on architecture or flavor.
-	Selector ComponentSelector `json:"selector,omitempty"`
 	// Kubernetes manifests to be included in a generated Helm chart on package deploy.
 	Manifests []Manifest `json:"manifests,omitempty"`
 	// Helm charts to install during package deploy.
@@ -56,6 +54,10 @@ type ComponentMetadata struct {
 	Description string `json:"description,omitempty"`
 	// Generic string to track the component config version.
 	Version string `json:"version,omitempty"`
+	// Flavor identifies the component config variant.
+	Flavor string `json:"flavor,omitempty"`
+	// Architecture identifies the architecture-specific component artifact.
+	Architecture string `json:"architecture,omitempty" jsonschema:"enum=amd64,enum=arm64"`
 	// Annotations contains arbitrary metadata about the component config.
 	Annotations map[string]string `json:"annotations,omitempty"`
 }

@@ -456,8 +456,20 @@
           "description": "Annotations contains arbitrary metadata about the component config.",
           "type": "object"
         },
+        "architecture": {
+          "description": "Architecture identifies the architecture-specific component artifact.",
+          "enum": [
+            "amd64",
+            "arm64"
+          ],
+          "type": "string"
+        },
         "description": {
           "description": "Additional information about this component config.",
+          "type": "string"
+        },
+        "flavor": {
+          "description": "Flavor identifies the component config variant.",
           "type": "string"
         },
         "name": {
@@ -504,28 +516,6 @@
       "required": [
         "zarfVersion"
       ],
-      "type": "object"
-    },
-    "ComponentSelector": {
-      "additionalProperties": false,
-      "description": "ComponentSelector filters a component for inclusion at package create time.",
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "architecture": {
-          "description": "Only include component for the given package architecture.",
-          "enum": [
-            "amd64",
-            "arm64"
-          ],
-          "type": "string"
-        },
-        "flavor": {
-          "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'.",
-          "type": "string"
-        }
-      },
       "type": "object"
     },
     "ComponentSpec": {
@@ -584,10 +574,6 @@
             "$ref": "#/$defs/Repository"
           },
           "type": "array"
-        },
-        "selector": {
-          "$ref": "#/$defs/ComponentSelector",
-          "description": "Filter when this component is included during package creation based on architecture or flavor."
         },
         "service": {
           "description": "The Zarf CLI service this component provides, such as the registry, injector, or agent.",

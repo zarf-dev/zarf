@@ -437,7 +437,6 @@ $ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry
 # Publish a v1beta1 component config to a remote registry
 $ zarf component publish monitoring.yaml oci://ghcr.io/my-org/components
 `
-	CmdComponentPublishFlagFlavor  = "Publish the component variant with this flavor"
 	CmdComponentPublishFlagConfirm = "Skip the Cosign confirmation prompt when signing the component"
 
 	CmdPackageSignShort   = "Signs an existing Zarf package"

@@ -30,7 +30,6 @@ func newComponentCommand() *cobra.Command {
 }
 
 type componentPublishOptions struct {
-	flavor             string
 	ociConcurrency     int
 	retries            int
 	signingKeyPath     string
@@ -48,7 +47,6 @@ func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdComponentPublishFlagFlavor)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
@@ -76,7 +74,6 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 	signOpts.Password = o.signingKeyPassword
 	signOpts.SkipConfirmation = o.confirm
 	_, err := component.Publish(cmd.Context(), args[0], destination, component.PublishOptions{
-		Flavor:          o.flavor,
 		SignBlobOptions: signOpts,
 		OCIConcurrency:  o.ociConcurrency,
 		Retries:         o.retries,

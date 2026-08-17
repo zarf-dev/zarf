@@ -70,7 +70,7 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 		if !compatibleComponentV1Beta1(component.Selector, arch, flavor) {
 			continue
 		}
-		mergedSpec, compVals, compResources, err := resolveComponentSpecImports(ctx, component.ComponentSpec, baseDir, arch, component.Selector.Architecture, flavor, []string{filepath.Clean(pkgPath.ManifestFile)}, true, remoteOptions, cachePath)
+		mergedSpec, compVals, compResources, err := resolveComponentConfigSpecImports(ctx, component.ComponentSpec, baseDir, arch, flavor, []string{filepath.Clean(pkgPath.ManifestFile)}, true, remoteOptions, cachePath)
 		if err != nil {
 			return v1beta1ImportResolution{}, fmt.Errorf("component %q: %w", component.Name, err)
 		}
@@ -95,9 +95,9 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 }
 
 // ResolveComponentConfigImports resolves local imports in a v1beta1 component config.
-func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath, arch, flavor string) (ComponentConfigImportResolution, error) {
+func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath string) (ComponentConfigImportResolution, error) {
 	componentPath = filepath.Clean(componentPath)
-	resolvedSpec, importedVals, _, err := resolveComponentSpecImports(ctx, component.Component, filepath.Dir(componentPath), arch, component.Component.Selector.Architecture, flavor, []string{componentPath}, false, types.RemoteOptions{}, "")
+	resolvedSpec, importedVals, _, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Metadata.Architecture, component.Metadata.Flavor, []string{componentPath}, false, types.RemoteOptions{}, "")
 	if err != nil {
 		return ComponentConfigImportResolution{}, err
 	}
@@ -109,10 +109,10 @@ func ResolveComponentConfigImports(ctx context.Context, component v1beta1.Compon
 	}, nil
 }
 
-// resolveComponentSpecImports merges component configs imported by spec. The returned spec and
-// values paths are relative to specDir.
-// FIXME: need to figure out arch
-func resolveComponentSpecImports(ctx context.Context, spec v1beta1.ComponentSpec, specDir, arch, remoteArch, flavor string, importStack []string, allowRemote bool, remoteOptions types.RemoteOptions, cachePath string) (v1beta1.ComponentSpec, importedValues, []remoteResource, error) {
+// resolveComponentConfigSpecImports merges local component-config imports. Its target always
+// comes from the root component config metadata, never a package-create override.
+// FIXME: remove allowRemote
+func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.ComponentSpec, specDir, arch, flavor string, importStack []string, allowRemote bool, remoteOptions types.RemoteOptions, cachePath string) (v1beta1.ComponentSpec, importedValues, []remoteResource, error) {
 	if err := validateComponentImportV1Beta1(spec.Import, allowRemote); err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
@@ -122,22 +122,19 @@ func resolveComponentSpecImports(ctx context.Context, spec v1beta1.ComponentSpec
 		return spec, importedValues{}, nil, nil
 	}
 
-	directImport, err := selectImportVariant(ctx, spec.Import, specDir, arch, remoteArch, flavor, importStack, remoteOptions, cachePath)
+	directImport, err := selectImportVariant(ctx, spec.Import, specDir, arch, flavor, importStack, remoteOptions, cachePath)
 	if err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
-
-	resolvedImportSpec, inheritedValues, inheritedResources, err := resolveComponentSpecImports(ctx, directImport.config.Component, directImport.dir, arch, arch, flavor, append(importStack, directImport.path), false, remoteOptions, cachePath)
+	resolvedImportSpec, inheritedValues, inheritedResources, err := resolveComponentConfigSpecImports(ctx, directImport.config.Component, directImport.dir, arch, flavor, append(importStack, directImport.path), false, remoteOptions, cachePath)
 	if err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
 
 	relDir := directImport.relativeToParent
 	resolvedImportSpec = fixPathsV1Beta1(resolvedImportSpec, relDir)
-
 	vals := mergeImportedValues(directImport.config.Values, inheritedValues, relDir)
-
-	merged := mergeComponentSpec(resolvedImportSpec, spec)
+	merged := mergeComponentConfigSpec(resolvedImportSpec, spec)
 	merged.Import = v1beta1.ComponentImport{}
 	return merged, vals, append(directImport.resources, inheritedResources...), nil
 }
@@ -167,12 +164,11 @@ type loadedComponentConfig struct {
 	relativeToParent string
 	path             string
 	resources        []remoteResource
-	remote           bool
 }
 
 // selectImportVariant loads every local import entry and selects the single one compatible with the
 // active target. Entries are treated as variants: exactly one must be compatible with the target.
-func selectImportVariant(ctx context.Context, imp v1beta1.ComponentImport, specDir, arch, remoteArch, flavor string, importStack []string, remoteOptions types.RemoteOptions, cachePath string) (loadedComponentConfig, error) {
+func selectImportVariant(ctx context.Context, imp v1beta1.ComponentImport, specDir, arch, flavor string, importStack []string, remoteOptions types.RemoteOptions, cachePath string) (loadedComponentConfig, error) {
 	var loaded []loadedComponentConfig
 	for _, entry := range imp.Local {
 		path := filepath.Clean(filepath.Join(specDir, entry.Path))
@@ -186,24 +182,19 @@ func selectImportVariant(ctx context.Context, imp v1beta1.ComponentImport, specD
 		loaded = append(loaded, loadedComponentConfig{config: config, dir: filepath.Dir(path), relativeToParent: filepath.Dir(entry.Path), path: path})
 	}
 	for _, entry := range imp.Remote {
-		loadedComponent, err := remoteComponentConfig(ctx, entry.URL, remoteOptions, cachePath)
+		loadedComponent, err := remoteComponentConfig(ctx, entry.URL, arch, remoteOptions, cachePath)
 		if err != nil {
 			return loadedComponentConfig{}, err
 		}
 		if slices.Contains(importStack, loadedComponent.path) {
 			return loadedComponentConfig{}, fmt.Errorf("component config %s imported in cycle", loadedComponent.path)
 		}
-		loadedComponent.remote = true
 		loaded = append(loaded, loadedComponent)
 	}
 
 	var compatible []loadedComponentConfig
 	for _, lc := range loaded {
-		candidateArch := arch
-		if lc.remote {
-			candidateArch = remoteArch
-		}
-		if compatibleComponentV1Beta1(lc.config.Component.Selector, candidateArch, flavor) {
+		if compatibleComponentConfigV1Beta1(lc.config.Metadata, arch, flavor) {
 			compatible = append(compatible, lc)
 		}
 	}
@@ -217,7 +208,7 @@ func selectImportVariant(ctx context.Context, imp v1beta1.ComponentImport, specD
 	}
 }
 
-func remoteComponentConfig(ctx context.Context, importURL string, remoteOptions types.RemoteOptions, cachePath string) (loadedComponentConfig, error) {
+func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOptions types.RemoteOptions, cachePath string) (loadedComponentConfig, error) {
 	plainHTTP, err := negotiateImportPlainHTTP(ctx, importURL, remoteOptions)
 	if err != nil {
 		return loadedComponentConfig{}, err
@@ -230,7 +221,7 @@ func remoteComponentConfig(ctx context.Context, importURL string, remoteOptions 
 		}
 		mods = append(mods, cacheModifier)
 	}
-	remote, err := zoci.NewRemote(ctx, importURL, ocispec.Platform{}, mods...)
+	remote, err := zoci.NewRemote(ctx, importURL, ocispec.Platform{Architecture: arch}, mods...)
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
@@ -256,10 +247,16 @@ func remoteComponentConfig(ctx context.Context, importURL string, remoteOptions 
 	if len(config.Component.Import.Local) > 0 || len(config.Component.Import.Remote) > 0 {
 		return loadedComponentConfig{}, fmt.Errorf("remote component imports are not supported")
 	}
+	if !metadataMatchesOCIPlatform(config.Metadata, root.Platform) {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q metadata architecture does not match its OCI platform", importURL)
+	}
 	importRoot := path.Join(".zarf", "remote-components", strings.ReplaceAll(root.Digest.String(), ":", "-"))
 	resources := make([]remoteResource, 0, len(manifest.Layers))
 	seenMountPaths := make(map[string]struct{}, len(manifest.Layers))
 	for _, descriptor := range manifest.Layers {
+		if descriptor.MediaType == ocispec.MediaTypeEmptyJSON {
+			continue
+		}
 		mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
 		if !validRemoteMountPath(mountPath) || descriptor.Annotations[layout.ComponentResourceKindAnnotation] == "" {
 			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an invalid resource layer", importURL)
@@ -342,6 +339,19 @@ func compatibleComponentV1Beta1(selector v1beta1.ComponentSelector, arch, flavor
 	satisfiesArch := selector.Architecture == "" || selector.Architecture == arch
 	satisfiesFlavor := selector.Flavor == "" || selector.Flavor == flavor
 	return satisfiesArch && satisfiesFlavor
+}
+
+// compatibleComponentConfigV1Beta1 reports whether a component config's metadata target matches
+// the active package-create target. Empty metadata fields are generic variants.
+func compatibleComponentConfigV1Beta1(metadata v1beta1.ComponentMetadata, arch, flavor string) bool {
+	return (metadata.Architecture == "" || metadata.Architecture == arch) && (metadata.Flavor == "" || metadata.Flavor == flavor)
+}
+
+func metadataMatchesOCIPlatform(metadata v1beta1.ComponentMetadata, platform *ocispec.Platform) bool {
+	if platform == nil {
+		return metadata.Architecture == ""
+	}
+	return metadata.Architecture == platform.Architecture
 }
 
 func dedupePaths(paths []string) []string {
