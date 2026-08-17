@@ -125,11 +125,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
-			if !filepath.IsAbs(imageArchive.Path) {
-				imageArchive.Path, err = resolvedPackage.Resources.Path(imageArchive.Path)
-				if err != nil {
-					return nil, err
-				}
+			imageArchive.Path, err = resolvedPackage.Resources.Path(imageArchive.Path)
+			if err != nil {
+				return nil, err
 			}
 
 			archiveImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, layout.ImagesDir), pkg.Metadata.Architecture)
