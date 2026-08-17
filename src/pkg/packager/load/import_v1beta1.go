@@ -99,7 +99,7 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 // the supplied registry options for remote component imports.
 func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath string, remoteOptions types.RemoteOptions) (ComponentConfigImportResolution, error) {
 	componentPath = filepath.Clean(componentPath)
-	resolvedSpec, importedVals, remoteResources, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Metadata.Architecture, component.Metadata.Flavor, []string{componentPath}, remoteOptions, "")
+	resolvedSpec, importedVals, remoteResources, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Metadata.Variant.Architecture, component.Metadata.Variant.Flavor, []string{componentPath}, remoteOptions, "")
 	if err != nil {
 		return ComponentConfigImportResolution{}, err
 	}
@@ -348,17 +348,17 @@ func compatibleComponentV1Beta1(selector v1beta1.ComponentSelector, arch, flavor
 	return satisfiesArch && satisfiesFlavor
 }
 
-// compatibleComponentConfigV1Beta1 reports whether a component config's metadata target matches
-// the active package-create target. Empty metadata fields are generic variants.
+// compatibleComponentConfigV1Beta1 reports whether a component config's metadata variant matches
+// the active package-create target. Empty variant fields are generic.
 func compatibleComponentConfigV1Beta1(metadata v1beta1.ComponentMetadata, arch, flavor string) bool {
-	return (metadata.Architecture == "" || metadata.Architecture == arch) && (metadata.Flavor == "" || metadata.Flavor == flavor)
+	return (metadata.Variant.Architecture == "" || metadata.Variant.Architecture == arch) && (metadata.Variant.Flavor == "" || metadata.Variant.Flavor == flavor)
 }
 
 func metadataMatchesOCIPlatform(metadata v1beta1.ComponentMetadata, platform *ocispec.Platform) bool {
 	if platform == nil {
-		return metadata.Architecture == ""
+		return metadata.Variant.Architecture == ""
 	}
-	return metadata.Architecture == platform.Architecture
+	return metadata.Variant.Architecture == platform.Architecture
 }
 
 func dedupePaths(paths []string) []string {

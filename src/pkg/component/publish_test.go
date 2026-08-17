@@ -185,7 +185,7 @@ func TestPublishComponentFlavor(t *testing.T) {
 	require.Equal(t, "0.0.1-test", published.Reference)
 
 	component, _ := getPublishedComponent(ctx, t, published)
-	require.Equal(t, "test", component.Metadata.Flavor)
+	require.Equal(t, "test", component.Metadata.Variant.Flavor)
 }
 
 func TestPublishComponentSigning(t *testing.T) {
@@ -469,7 +469,8 @@ kind: ZarfComponentConfig
 metadata:
   name: %s-component
   version: 0.0.1
-  architecture: %s
+  variant:
+    architecture: %s
 component:
   images:
     - name: example.com/%s:latest
@@ -482,7 +483,8 @@ kind: ZarfComponentConfig
 metadata:
   name: architecture-component
   version: 0.0.1
-  architecture: arm64
+  variant:
+    architecture: arm64
 component:
   import:
     local:
@@ -494,7 +496,7 @@ component:
 	require.NoError(t, err)
 
 	component, _ := getPublishedComponentForArchitecture(ctx, t, published, "arm64")
-	require.Equal(t, "arm64", component.Metadata.Architecture)
+	require.Equal(t, "arm64", component.Metadata.Variant.Architecture)
 	require.Equal(t, []v1beta1.Image{{Name: "example.com/arm64:latest"}}, component.Component.Images)
 }
 
@@ -514,8 +516,9 @@ kind: ZarfComponentConfig
 metadata:
   name: architecture-variant
   version: 0.0.1
-  flavor: %s
-  architecture: %s
+  variant:
+    flavor: %s
+    architecture: %s
 component:
   files:
     - source: %s.txt
@@ -567,9 +570,9 @@ func TestPublishComponentRejectsGenericAndArchitectureSpecificReferenceMixing(t 
 	writeComponent := func(t *testing.T, filename, architecture string) string {
 		t.Helper()
 		componentPath := filepath.Join(root, filename)
-		metadataArchitecture := ""
+		metadataVariant := ""
 		if architecture != "" {
-			metadataArchitecture = "  architecture: " + architecture + "\n"
+			metadataVariant = "  variant:\n    architecture: " + architecture + "\n"
 		}
 		componentYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
 kind: ZarfComponentConfig
@@ -577,7 +580,7 @@ metadata:
   name: mixed-variant
   version: 0.0.1
 %scomponent: {}
-`, metadataArchitecture)
+`, metadataVariant)
 		require.NoError(t, os.WriteFile(componentPath, []byte(componentYAML), 0o600))
 		return componentPath
 	}

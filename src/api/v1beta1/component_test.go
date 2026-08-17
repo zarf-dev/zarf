@@ -4,10 +4,38 @@
 package v1beta1
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestComponentMetadataVariantJSON(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty variant is omitted", func(t *testing.T) {
+		t.Parallel()
+
+		contents, err := json.Marshal(ComponentMetadata{Name: "example"})
+		require.NoError(t, err)
+		require.JSONEq(t, `{"name":"example"}`, string(contents))
+	})
+
+	t.Run("variant fields are nested", func(t *testing.T) {
+		t.Parallel()
+
+		metadata := ComponentMetadata{
+			Name: "example",
+			Variant: ComponentVariant{
+				Flavor:       "hardened",
+				Architecture: "arm64",
+			},
+		}
+		contents, err := json.Marshal(metadata)
+		require.NoError(t, err)
+		require.JSONEq(t, `{"name":"example","variant":{"flavor":"hardened","architecture":"arm64"}}`, string(contents))
+	})
+}
 
 func TestGetImages(t *testing.T) {
 	t.Parallel()

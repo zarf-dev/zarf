@@ -38,10 +38,10 @@ func TestMetadataMatchesOCIPlatform(t *testing.T) {
 		want     bool
 	}{
 		{name: "generic direct manifest", want: true},
-		{name: "specific index manifest", metadata: v1beta1.ComponentMetadata{Architecture: "arm64"}, platform: &ocispec.Platform{Architecture: "arm64"}, want: true},
-		{name: "specific metadata on direct manifest", metadata: v1beta1.ComponentMetadata{Architecture: "arm64"}, want: false},
+		{name: "specific index manifest", metadata: v1beta1.ComponentMetadata{Variant: v1beta1.ComponentVariant{Architecture: "arm64"}}, platform: &ocispec.Platform{Architecture: "arm64"}, want: true},
+		{name: "specific metadata on direct manifest", metadata: v1beta1.ComponentMetadata{Variant: v1beta1.ComponentVariant{Architecture: "arm64"}}, want: false},
 		{name: "generic metadata in index", platform: &ocispec.Platform{Architecture: "arm64"}, want: false},
-		{name: "architecture mismatch", metadata: v1beta1.ComponentMetadata{Architecture: "amd64"}, platform: &ocispec.Platform{Architecture: "arm64"}, want: false},
+		{name: "architecture mismatch", metadata: v1beta1.ComponentMetadata{Variant: v1beta1.ComponentVariant{Architecture: "amd64"}}, platform: &ocispec.Platform{Architecture: "arm64"}, want: false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -63,8 +63,8 @@ func TestRemoteComponentConfigRejectsPlatformMetadataMismatch(t *testing.T) {
 		APIVersion: v1beta1.APIVersion,
 		Kind:       v1beta1.ZarfComponentConfig,
 		Metadata: v1beta1.ComponentMetadata{
-			Name:         "mismatch",
-			Architecture: "arm64",
+			Name:    "mismatch",
+			Variant: v1beta1.ComponentVariant{Architecture: "arm64"},
 		},
 	}
 	componentJSON, err := json.Marshal(component)

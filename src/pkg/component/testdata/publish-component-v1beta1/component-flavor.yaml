@@ -3,5 +3,6 @@ kind: ZarfComponentConfig
 metadata:
   name: published-component
   version: 0.0.1
-  flavor: test
+  variant:
+    flavor: test
 component: {}

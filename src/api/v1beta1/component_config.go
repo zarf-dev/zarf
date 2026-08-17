@@ -54,12 +54,18 @@ type ComponentMetadata struct {
 	Description string `json:"description,omitempty"`
 	// Generic string to track the component config version.
 	Version string `json:"version,omitempty"`
-	// Flavor identifies the component config variant.
+	// Variant identifies the flavor and architecture represented by this component config.
+	Variant ComponentVariant `json:"variant,omitzero"`
+	// Annotations contains arbitrary metadata about the component config.
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+// ComponentVariant identifies a component config variant.
+type ComponentVariant struct {
+	// Flavor identifies the component config flavor.
 	Flavor string `json:"flavor,omitempty"`
 	// Architecture identifies the architecture-specific component artifact.
 	Architecture string `json:"architecture,omitempty" jsonschema:"enum=amd64,enum=arm64"`
-	// Annotations contains arbitrary metadata about the component config.
-	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // ComponentPublishData is written during publish to track details of the component config.
