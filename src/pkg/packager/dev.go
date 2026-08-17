@@ -132,10 +132,10 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 			return err
 		}
 
-		requiresCluster := slices.ContainsFunc(pkg.Components, func(c v1alpha1.ZarfComponent) bool {
-			return c.RequiresCluster()
+		requiresRuntimeState := slices.ContainsFunc(pkg.Components, func(c v1alpha1.ZarfComponent) bool {
+			return c.RequiresState() || len(c.HealthChecks) > 0
 		})
-		if requiresCluster {
+		if requiresRuntimeState {
 			timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 			defer cancel()
 			d.c, err = cluster.NewWithWait(timeoutCtx)

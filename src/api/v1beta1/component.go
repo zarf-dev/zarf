@@ -26,13 +26,18 @@ func (c Component) GetImages() []string {
 	return images
 }
 
-// RequiresCluster returns true if the component requires a cluster connection to deploy.
+// RequiresCluster returns true if the component requires a cluster connection during deployment.
 func (c Component) RequiresCluster() bool {
-	return len(c.Images) > 0 || len(c.Charts) > 0 || len(c.Manifests) > 0 || len(c.Repositories) > 0 || c.Actions.hasClusterWait()
+	return c.RequiresState() || c.Actions.hasDeployClusterWait()
 }
 
-func (a ComponentActions) hasClusterWait() bool {
-	return a.OnDeploy.hasClusterWait() || a.OnRemove.hasClusterWait()
+// RequiresState returns true if the component requires Zarf state during deployment or removal.
+func (c Component) RequiresState() bool {
+	return len(c.Images) > 0 || len(c.Charts) > 0 || len(c.Manifests) > 0 || len(c.Repositories) > 0
+}
+
+func (a ComponentActions) hasDeployClusterWait() bool {
+	return a.OnDeploy.hasClusterWait()
 }
 
 func (a ComponentActionSet) hasClusterWait() bool {

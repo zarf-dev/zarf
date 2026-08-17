@@ -227,15 +227,34 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 	l := logger.From(ctx)
 	pkg := pkgLayout.AsV1alpha1()
 	deployedComponents := []state.DeployedComponent{}
+	packageRequiresState := slices.ContainsFunc(pkg.Components, func(component v1alpha1.ZarfComponent) bool {
+		return component.RequiresState()
+	})
+	packageGeneration := 1
+	generationLoaded := false
+	loadPackageGeneration := func() {
+		if !packageRequiresState || generationLoaded || !d.isConnectedToCluster() {
+			return
+		}
+		generationLoaded = true
+		//nolint: errcheck // this may be the first time deploying the package therefore it will not exist
+		if existingDeployedPackage, _ := d.c.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); existingDeployedPackage != nil {
+			packageGeneration = existingDeployedPackage.Generation + 1
+			for idx := range deployedComponents {
+				deployedComponents[idx].ObservedGeneration = packageGeneration
+			}
+		}
+	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory: %w", err)
 	}
 
 	for _, component := range pkg.Components {
-		packageGeneration := 1
-		// Connect to cluster if a component requires it.
-		if component.RequiresCluster() {
+		loadPackageGeneration()
+
+		// Cluster wait actions establish their own connection. The deployer only needs a client for stateful components and health checks.
+		if component.RequiresState() || len(component.HealthChecks) > 0 {
 			if !d.isConnectedToCluster() {
 				timeout := cluster.DefaultTimeout
 				if pkg.IsInitConfig() {
@@ -252,11 +271,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 					return nil, fmt.Errorf("package is not deployable to this system: %w", err)
 				}
 			}
-			// If this package has been deployed before, increment the package generation within the secret
-			//nolint: errcheck // this may be the first time deploying the package therefore it will not exist
-			if existingDeployedPackage, _ := d.c.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); existingDeployedPackage != nil {
-				packageGeneration = existingDeployedPackage.Generation + 1
-			}
+			loadPackageGeneration()
 		}
 
 		deployedComponent := state.DeployedComponent{
@@ -266,7 +281,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		}
 
 		// Ensure we don't overwrite any installedCharts data when updating the package secret
-		if d.isConnectedToCluster() {
+		if packageRequiresState && d.isConnectedToCluster() {
 			installedCharts, err := d.c.GetInstalledChartsForComponent(ctx, pkg.Metadata.Name, component, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 			if err != nil {
 				l.Debug("unable to fetch installed Helm charts", "component", component.Name, "error", err.Error())
@@ -276,7 +291,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
-		if d.isConnectedToCluster() {
+		if packageRequiresState && d.isConnectedToCluster() {
 			if _, err := d.c.RecordPackageDeployment(ctx, pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
@@ -303,7 +318,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				l.Debug("component deployment failed", "component", component.Name, "error", deployErr.Error())
 				deployedComponents[idx].Status = state.ComponentStatusFailed
 				deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, true)
-				if d.isConnectedToCluster() {
+				if packageRequiresState && d.isConnectedToCluster() {
 					if _, err := d.c.RecordPackageDeployment(ctx, pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 						l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 					}
@@ -323,7 +338,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		// Update the package secret to indicate that we successfully deployed this component
 		deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, false)
 		deployedComponents[idx].Status = state.ComponentStatusSucceeded
-		if d.isConnectedToCluster() {
+		if packageRequiresState && d.isConnectedToCluster() {
 			if _, err := d.c.RecordPackageDeployment(ctx, pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
@@ -366,8 +381,8 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	isInjector := component.Name == "zarf-injector"
 	isAgent := component.Name == "zarf-agent"
 
-	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if component.RequiresCluster() && d.s == nil {
+	// Always initialize state before the first component that requires it (on most deployments, the zarf-seed-registry).
+	if (component.RequiresState() || len(component.HealthChecks) > 0) && d.s == nil {
 		applianceMode := false
 		for _, component := range pkg.Components {
 			if component.Name == "k3s" {
@@ -475,14 +490,12 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		return nil, fmt.Errorf("failed to get working directory: %w", err)
 	}
 
-	if component.RequiresCluster() {
-		// Setup the state in the config
-		if d.s == nil {
-			var err error
-			d.s, err = setupState(ctx, d.c, opts.Connected)
-			if err != nil {
-				return nil, err
-			}
+	// Load state for templates whenever this deployment already has a cluster connection.
+	if d.c != nil && d.s == nil {
+		var err error
+		d.s, err = setupState(ctx, d.c, opts.Connected)
+		if err != nil {
+			return nil, err
 		}
 	}
 
