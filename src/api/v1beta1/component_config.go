@@ -22,7 +22,7 @@ type ComponentConfig struct {
 // ComponentSpec is a reduced component definition used in component configs.
 type ComponentSpec struct {
 	// Import a component from another Zarf component config.
-	Import ComponentImport `json:"import,omitempty"`
+	Import ComponentImport `json:"import,omitzero"`
 	// Filter when this component is deployed based on OS.
 	Target ComponentTarget `json:"target,omitempty"`
 	// Kubernetes manifests to be included in a generated Helm chart on package deploy.
