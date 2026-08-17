@@ -167,10 +167,16 @@ func TestGetManifestsFromArchive(t *testing.T) {
 		name          string
 		srcDir        string
 		expectedImage string
-		expectErr     error
+		archive       bool
 	}{
 		{
 			name:          "single archive",
+			srcDir:        filepath.Join("testdata", "docker-graph-driver-image-store"),
+			expectedImage: "docker.io/library/hello-world:linux",
+			archive:       true,
+		},
+		{
+			name:          "OCI layout directory",
 			srcDir:        filepath.Join("testdata", "docker-graph-driver-image-store"),
 			expectedImage: "docker.io/library/hello-world:linux",
 		},
@@ -181,14 +187,15 @@ func TestGetManifestsFromArchive(t *testing.T) {
 			t.Parallel()
 			ctx := testutil.TestContext(t)
 
-			// Create a tar from the source directory
-			tarFile := filepath.Join(t.TempDir(), "images.tar")
-			err := archive.Compress(ctx, []string{tc.srcDir}, tarFile, archive.CompressOpts{})
-			require.NoError(t, err)
-			manifests, err := GetManifestsFromArchive(ctx, tarFile)
-			if tc.expectErr != nil {
-				require.ErrorContains(t, err, tc.expectErr.Error())
+			source := tc.srcDir
+			if tc.archive {
+				tarFile := filepath.Join(t.TempDir(), "images.tar")
+				err := archive.Compress(ctx, []string{tc.srcDir}, tarFile, archive.CompressOpts{})
+				require.NoError(t, err)
+				source = tarFile
 			}
+
+			manifests, err := GetManifestsFromArchive(ctx, source)
 			require.NoError(t, err)
 
 			for _, manifest := range manifests {

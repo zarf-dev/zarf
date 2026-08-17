@@ -37,9 +37,8 @@ const (
 	containerdDistributionSourcePrefix = "containerd.io/distribution.source."
 )
 
-// GetManifestsFromArchive take an image archive and returns a list of image descriptors
+// GetManifestsFromArchive takes an image archive or OCI layout directory and returns its image descriptors.
 func GetManifestsFromArchive(ctx context.Context, imageArchive string) (_ []ocispec.Descriptor, err error) {
-	// Create a temporary directory for extraction
 	extractionDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
@@ -48,12 +47,9 @@ func GetManifestsFromArchive(ctx context.Context, imageArchive string) (_ []ocis
 		err = errors.Join(err, os.RemoveAll(extractionDir))
 	}()
 
-	if err := archive.Decompress(ctx, imageArchive, extractionDir, archive.DecompressOpts{}); err != nil {
-		return nil, fmt.Errorf("failed to extract tar: %w", err)
-	}
-	imageDir, err := determineImageDirectory(extractionDir)
+	imageDir, err := resolveImageLayout(ctx, imageArchive, extractionDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to determine image directory: %w", err)
+		return nil, err
 	}
 
 	return getManifestsFromOCILayout(imageDir)
@@ -83,29 +79,17 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 	if len(imageArchive.Images) == 0 {
 		return nil, fmt.Errorf("images must be defined")
 	}
-	imageDir := imageArchive.Path
-	info, err := os.Stat(imageDir)
+	extractionDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return nil, fmt.Errorf("failed to access image archive: %w", err)
+		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	if !info.IsDir() {
-		// Create a temporary directory for extraction.
-		extractionDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create temp directory: %w", err)
-		}
-		defer func() {
-			err = errors.Join(err, os.RemoveAll(extractionDir))
-		}()
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(extractionDir))
+	}()
 
-		if err := archive.Decompress(ctx, imageArchive.Path, extractionDir, archive.DecompressOpts{}); err != nil {
-			return nil, fmt.Errorf("failed to extract tar: %w", err)
-		}
-
-		imageDir, err = determineImageDirectory(extractionDir)
-		if err != nil {
-			return nil, fmt.Errorf("failed to determine image directory: %w", err)
-		}
+	imageDir, err := resolveImageLayout(ctx, imageArchive.Path, extractionDir)
+	if err != nil {
+		return nil, err
 	}
 
 	manifests, err := getManifestsFromOCILayout(imageDir)
@@ -169,6 +153,26 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 	}
 
 	return pulledImages, nil
+}
+
+// resolveImageLayout returns an OCI layout directory for an image archive or layout source.
+func resolveImageLayout(ctx context.Context, source, extractionDir string) (string, error) {
+	info, err := os.Stat(source)
+	if err != nil {
+		return "", fmt.Errorf("failed to access image archive: %w", err)
+	}
+	if info.IsDir() {
+		return source, nil
+	}
+	if err := archive.Decompress(ctx, source, extractionDir, archive.DecompressOpts{}); err != nil {
+		return "", fmt.Errorf("failed to extract tar: %w", err)
+	}
+
+	imageDir, err := determineImageDirectory(extractionDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to determine image directory: %w", err)
+	}
+	return imageDir, nil
 }
 
 func copyImageFromOCILayout(ctx context.Context, src oras.ReadOnlyTarget, dst *oci.Store, srcRef string, destImage transform.Image, arch string, concurrency int) (ocispec.Descriptor, error) {
