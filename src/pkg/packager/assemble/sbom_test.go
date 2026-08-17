@@ -7,7 +7,9 @@ import (
 	"archive/tar"
 	"bytes"
 	"encoding/json"
+	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 
@@ -76,7 +78,9 @@ func layerFromFiles(t *testing.T, files map[string]string) v1.Layer {
 		require.NoError(t, err)
 	}
 	require.NoError(t, tw.Close())
-	layer, err := tarball.LayerFromReader(bytes.NewReader(buf.Bytes()))
+	layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(buf.Bytes())), nil
+	})
 	require.NoError(t, err)
 	return layer
 }
@@ -146,7 +150,9 @@ func TestCreateFileSBOMContents(t *testing.T) {
 
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
-	entry := filepath.Join(component.Name, string(layout.FilesComponentDir), layout.ComponentFileRelPath(0, "requirements.txt"))
+	// tar entry names are always slash-separated, so filepath.Join would emit
+	// backslashes on Windows and the extractor would reject the entry.
+	entry := path.Join(component.Name, string(layout.FilesComponentDir), filepath.ToSlash(layout.ComponentFileRelPath(0, "requirements.txt")))
 	content := "flask==2.0.1\nrequests==2.31.0\n"
 	require.NoError(t, tw.WriteHeader(&tar.Header{Name: entry, Mode: 0o644, Size: int64(len(content))}))
 	_, err := tw.Write([]byte(content))
