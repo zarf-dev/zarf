@@ -37,9 +37,6 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
-// ComponentConfigMediaType identifies a v1beta1 Zarf component config OCI artifact.
-const ComponentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
-
 const componentLayerMediaType = "application/vnd.zarf.component.layer.v1.blob"
 
 // PublishOptions declares parameters for publishing a v1beta1 component config.
@@ -96,7 +93,7 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	}
 
 	store := memory.New()
-	configDescriptor := content.NewDescriptorFromBytes(ComponentConfigMediaType, componentJSON)
+	configDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentConfigMediaType, componentJSON)
 	if err := store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to stage component config: %w", err)
 	}
@@ -202,9 +199,9 @@ func stageComponentResources(ctx context.Context, store *memory.Store, resources
 		}
 		descriptor := content.NewDescriptorFromBytes(componentLayerMediaType, contents)
 		descriptor.Annotations = map[string]string{
-			ocispec.AnnotationTitle:              rel,
-			componentResourceMountPathAnnotation: rel,
-			componentResourceKindAnnotation:      string(resource.kind),
+			ocispec.AnnotationTitle:                     rel,
+			layout.ComponentResourceMountPathAnnotation: rel,
+			layout.ComponentResourceKindAnnotation:      string(resource.kind),
 		}
 		exists, err := store.Exists(ctx, descriptor)
 		if err != nil {

@@ -25,14 +25,6 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// FIXME: These constants should be shared
-const componentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
-
-const (
-	componentResourceMountPathAnnotation = "dev.zarf.mountPath"
-	componentResourceKindAnnotation      = "dev.zarf.resourceKind"
-)
-
 // remoteResource is a blob needed by a remotely imported component. Its import
 // and mount paths are artifact-relative, never source filesystem paths.
 type remoteResource struct {
@@ -242,7 +234,7 @@ func remoteComponentConfig(ctx context.Context, importURL string, remoteOptions 
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
-	if manifest.Config.MediaType != componentConfigMediaType {
+	if manifest.Config.MediaType != layout.ZarfComponentConfigMediaType {
 		return loadedComponentConfig{}, fmt.Errorf("remote import %q is not a v1beta1 component artifact", importURL)
 	}
 	configBytes, err := remote.FetchLayer(ctx, manifest.Config)
@@ -260,8 +252,8 @@ func remoteComponentConfig(ctx context.Context, importURL string, remoteOptions 
 	resources := make([]remoteResource, 0, len(manifest.Layers))
 	seenMountPaths := make(map[string]struct{}, len(manifest.Layers))
 	for _, descriptor := range manifest.Layers {
-		mountPath := descriptor.Annotations[componentResourceMountPathAnnotation]
-		if !validRemoteMountPath(mountPath) || descriptor.Annotations[componentResourceKindAnnotation] == "" {
+		mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
+		if !validRemoteMountPath(mountPath) || descriptor.Annotations[layout.ComponentResourceKindAnnotation] == "" {
 			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an invalid resource layer", importURL)
 		}
 		if _, exists := seenMountPaths[mountPath]; exists {

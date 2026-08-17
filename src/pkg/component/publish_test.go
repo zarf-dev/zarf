@@ -133,7 +133,7 @@ func TestPublishComponent(t *testing.T) {
 	require.NoError(t, err)
 
 	component, manifest := getPublishedComponent(ctx, t, published)
-	require.Equal(t, ComponentConfigMediaType, manifest.Config.MediaType)
+	require.Equal(t, layout.ZarfComponentConfigMediaType, manifest.Config.MediaType)
 	require.NotEmpty(t, manifest.Layers)
 	require.Equal(t, []string{"resources/0/component-values.yaml"}, component.Values.Files)
 	require.Equal(t, "resources/1/component-values.schema.json", component.Values.Schema)
@@ -148,8 +148,8 @@ func TestPublishComponent(t *testing.T) {
 	layerTitles := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
 		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
-		require.Equal(t, layer.Annotations[ocispec.AnnotationTitle], layer.Annotations[componentResourceMountPathAnnotation])
-		require.NotEmpty(t, layer.Annotations[componentResourceKindAnnotation])
+		require.Equal(t, layer.Annotations[ocispec.AnnotationTitle], layer.Annotations[layout.ComponentResourceMountPathAnnotation])
+		require.NotEmpty(t, layer.Annotations[layout.ComponentResourceKindAnnotation])
 	}
 	for _, localPath := range []string{
 		"resources/0/component-values.yaml",
@@ -406,7 +406,7 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 
 	layerMounts := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
-		layerMounts = append(layerMounts, layer.Annotations[componentResourceMountPathAnnotation])
+		layerMounts = append(layerMounts, layer.Annotations[layout.ComponentResourceMountPathAnnotation])
 	}
 	for _, mountPath := range []string{
 		"resources/0/values.yaml",

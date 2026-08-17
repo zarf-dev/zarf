@@ -16,11 +16,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
-const (
-	componentResourceMountPathAnnotation = "dev.zarf.mountPath"
-	componentResourceKindAnnotation      = "dev.zarf.resourceKind"
-)
-
 type componentResourceKind string
 
 const (
