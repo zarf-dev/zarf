@@ -689,8 +689,8 @@ github.com/fluxcd/pkg/apis/acl v0.10.0 h1:KPfAmELNvtvaz8wixnm/MYXqa+MJf7ntVVMUU9
 github.com/fluxcd/pkg/apis/acl v0.10.0/go.mod h1:a87i2A7AlFO5N2J8CxtzaUCCDmuLLWOHwkKu3eJF5fY=
 github.com/fluxcd/pkg/apis/meta v1.31.0 h1:5niQvTirK0wTE0TfRjnUSdmu6GTSbAFzrdnovtZ9rJ8=
 github.com/fluxcd/pkg/apis/meta v1.31.0/go.mod h1:Gx+YRq26a+mTbCjotSXC7/6kSSyo0zXQ8JnsEXf2vVk=
-github.com/fluxcd/source-controller/api v1.9.3 h1:Z5Id6iPV+n1OY/14dpC18PaHRATzAyZkjAzDNYxSl4E=
-github.com/fluxcd/source-controller/api v1.9.3/go.mod h1:qO98L20gw0MvLpSPapJKypyxHP7PejmJN5KxWXxDjCA=
+github.com/fluxcd/source-controller/api v1.9.4 h1:ZGV510DIWVh2QO1ppdME13J0bm/SMoshfJ+Fx/zScOY=
+github.com/fluxcd/source-controller/api v1.9.4/go.mod h1:qO98L20gw0MvLpSPapJKypyxHP7PejmJN5KxWXxDjCA=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/foxcpp/go-mockdns v1.2.0 h1:omK3OrHRD1IWJz1FuFBCFquhXslXoF17OvBS6JPzZF0=
