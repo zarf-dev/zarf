@@ -398,7 +398,7 @@ components:
 	require.True(t, ok)
 	nested, ok := properties["nested"].(map[string]any)
 	require.True(t, ok)
-	require.Equal(t, float64(3), nested["minLength"])
+	require.InDelta(t, float64(3), nested["minLength"], 0)
 	require.NoError(t, value.Values{"nested": "abc"}.ValidateAgainstSchema(ctx, loaded.ValuesSchema, "remote component schema", value.ValidateOptions{}))
 	require.Error(t, value.Values{"nested": "no"}.ValidateAgainstSchema(ctx, loaded.ValuesSchema, "remote component schema", value.ValidateOptions{}))
 }
