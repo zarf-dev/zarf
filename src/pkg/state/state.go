@@ -592,6 +592,10 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	if opts.Services.Has(RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, opts.RegistryInfo)
+		// A resolved mode makes the access fields authoritative, including a zero external port.
+		if opts.RegistryInfo.RegistryMode != "" {
+			newState.RegistryInfo.SetPort(opts.RegistryInfo.Port)
+		}
 
 		// Only autogenerate passwords if the user didn't provide one and the target registry is internal
 		if opts.RegistryInfo.PushPassword == "" && newState.RegistryInfo.IsInternal() {

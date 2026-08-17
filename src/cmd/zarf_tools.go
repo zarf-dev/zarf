@@ -325,14 +325,10 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		l.Warn(lang.ArtifactServerDeprecated)
 	}
 
-	registryInfo := o.registryInfo
 	registryURLChanged := services.Has(state.RegistryKey) && cmd.Flags().Changed("registry-url")
-	resolvedRegistryPort := 0
-	if registryURLChanged {
-		registryInfo.RegistryMode, resolvedRegistryPort, err = c.ResolveRegistryMode(ctx, registryInfo.Address)
-		if err != nil {
-			return fmt.Errorf("unable to resolve registry update: %w", err)
-		}
+	registryInfo, err := resolveRegistryUpdate(ctx, c, oldState.RegistryInfo, o.registryInfo, registryURLChanged)
+	if err != nil {
+		return err
 	}
 	opts := state.MergeOptions{
 		GitServer:      o.gitServer,
@@ -357,9 +353,6 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	newState, err := state.Merge(oldState, opts)
 	if err != nil {
 		return fmt.Errorf("unable to update Zarf credentials: %w", err)
-	}
-	if registryURLChanged {
-		applyResolvedRegistryAccess(&newState.RegistryInfo, registryInfo.RegistryMode, resolvedRegistryPort)
 	}
 
 	printCredentialUpdates(ctx, oldState, newState, services)
@@ -543,13 +536,42 @@ func runWithRollback(ctx context.Context, service string, forward, rollback func
 	return nil
 }
 
-func applyResolvedRegistryAccess(registryInfo *state.RegistryInfo, mode state.RegistryMode, port int) {
+// resolveRegistryUpdate resolves, sets and validates registry access fields when the URL changes.
+func resolveRegistryUpdate(ctx context.Context, c *cluster.Cluster, oldRegistryInfo, registryInfo state.RegistryInfo, registryURLChanged bool) (state.RegistryInfo, error) {
+	// validate provided options
+	if !registryURLChanged {
+		return registryInfo, nil
+	}
+	if registryInfo.Address == "" {
+		return registryInfo, errors.New("--registry-url cannot be explicitly empty")
+	}
+
+	// Resolve and set registry info
+	mode, port, err := c.ResolveRegistryMode(ctx, registryInfo.Address)
+	if err != nil {
+		return registryInfo, fmt.Errorf("unable to resolve registry update: %w", err)
+	}
 	registryInfo.RegistryMode = mode
 	registryInfo.SetPort(port)
 	registryInfo.MTLSStrategy = state.MTLSStrategyNone
 	if mode == state.RegistryModeProxy {
 		registryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
 	}
+
+	// validate mode changes and implications
+	if oldRegistryInfo.IsInternal() && mode == state.RegistryModeExternal {
+		if registryInfo.PushUsername == "" || registryInfo.PushPassword == "" {
+			return registryInfo, errors.New("--registry-push-username and --registry-push-password are required when switching to an external registry")
+		}
+		switch {
+		case registryInfo.PullUsername == "" && registryInfo.PullPassword == "":
+			registryInfo.PullUsername = registryInfo.PushUsername
+			registryInfo.PullPassword = registryInfo.PushPassword
+		case registryInfo.PullUsername == "" || registryInfo.PullPassword == "":
+			return registryInfo, errors.New("--registry-pull-username and --registry-pull-password must be provided together")
+		}
+	}
+	return registryInfo, nil
 }
 
 type updateRegistryCredsOptions struct {
@@ -592,14 +614,10 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return errors.New("no registry is configured in the Zarf state; nothing to update")
 	}
 
-	registryInfo := o.registryInfo
 	registryURLChanged := cmd.Flags().Changed("registry-url")
-	resolvedRegistryPort := 0
-	if registryURLChanged {
-		registryInfo.RegistryMode, resolvedRegistryPort, err = c.ResolveRegistryMode(ctx, registryInfo.Address)
-		if err != nil {
-			return fmt.Errorf("unable to resolve registry update: %w", err)
-		}
+	registryInfo, err := resolveRegistryUpdate(ctx, c, oldState.RegistryInfo, o.registryInfo, registryURLChanged)
+	if err != nil {
+		return err
 	}
 
 	newState, err := state.Merge(oldState, state.MergeOptions{
@@ -608,9 +626,6 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update registry credentials: %w", err)
-	}
-	if registryURLChanged {
-		applyResolvedRegistryAccess(&newState.RegistryInfo, registryInfo.RegistryMode, resolvedRegistryPort)
 	}
 
 	confirm, err := confirmCredentialUpdate(ctx, oldState, newState, state.RegistryKey, o.confirm)

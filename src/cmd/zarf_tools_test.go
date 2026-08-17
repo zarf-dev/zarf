@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -308,32 +309,119 @@ func loadRegistryState(ctx context.Context, t *testing.T, c *cluster.Cluster) *s
 	return s
 }
 
-func TestApplyResolvedRegistryAccess(t *testing.T) {
+func TestResolveRegistryUpdate(t *testing.T) {
 	t.Parallel()
+	ctx := context.Background()
+	registryService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: cluster.ZarfRegistryName, Namespace: state.ZarfNamespaceName},
+		Spec: corev1.ServiceSpec{
+			Type:  corev1.ServiceTypeNodePort,
+			Ports: []corev1.ServicePort{{Port: cluster.ZarfRegistryPort, NodePort: 31999}},
+		},
+	}
+	c := &cluster.Cluster{Clientset: fake.NewClientset(registryService)}
 
-	tests := []struct {
-		name         string
-		mode         state.RegistryMode
-		port         int
-		expectedMTLS state.MTLSStrategy
-	}{
-		{name: "external clears internal transport fields", mode: state.RegistryModeExternal, port: 0, expectedMTLS: state.MTLSStrategyNone},
-		{name: "nodeport sets port without mTLS", mode: state.RegistryModeNodePort, port: 31999, expectedMTLS: state.MTLSStrategyNone},
-		{name: "proxy sets port and managed mTLS", mode: state.RegistryModeProxy, port: 5000, expectedMTLS: state.MTLSStrategyZarfManaged},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			registryInfo := state.RegistryInfo{
-				RegistryMode: state.RegistryModeNodePort,
-				Port:         31999,
-				MTLSStrategy: state.MTLSStrategyZarfManaged,
-			}
-			applyResolvedRegistryAccess(&registryInfo, tt.mode, tt.port)
-			require.Equal(t, tt.mode, registryInfo.RegistryMode)
-			require.Equal(t, tt.port, registryInfo.Port)
-			require.Equal(t, tt.expectedMTLS, registryInfo.MTLSStrategy)
-		})
-	}
+	t.Run("does nothing when the URL is unchanged", func(t *testing.T) {
+		given := state.RegistryInfo{PullUsername: "pull-user"}
+		resolved, err := resolveRegistryUpdate(ctx, c, state.RegistryInfo{}, given, false)
+		require.NoError(t, err)
+		require.Equal(t, given, resolved)
+	})
+
+	t.Run("rejects an empty URL", func(t *testing.T) {
+		_, err := resolveRegistryUpdate(ctx, c, state.RegistryInfo{}, state.RegistryInfo{}, true)
+		require.EqualError(t, err, "--registry-url cannot be explicitly empty")
+	})
+
+	t.Run("resolves mode and port while preserving credentials", func(t *testing.T) {
+		given := state.RegistryInfo{
+			Address:      "localhost:31999",
+			PullUsername: "pull-user",
+			PullPassword: "pull-password",
+		}
+		resolved, err := resolveRegistryUpdate(ctx, c, state.RegistryInfo{RegistryMode: state.RegistryModeExternal}, given, true)
+		require.NoError(t, err)
+		require.Equal(t, state.RegistryModeNodePort, resolved.RegistryMode)
+		require.Equal(t, 31999, resolved.Port)
+		require.Equal(t, 31999, resolved.NodePort)
+		require.Equal(t, state.MTLSStrategyNone, resolved.MTLSStrategy)
+		require.Equal(t, given.PullUsername, resolved.PullUsername)
+		require.Equal(t, given.PullPassword, resolved.PullPassword)
+	})
+
+	t.Run("resolves proxy access with managed mTLS", func(t *testing.T) {
+		proxyService := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{Name: cluster.ZarfRegistryName, Namespace: state.ZarfNamespaceName},
+			Spec: corev1.ServiceSpec{
+				Type:  corev1.ServiceTypeClusterIP,
+				Ports: []corev1.ServicePort{{Port: cluster.ZarfRegistryPort}},
+			},
+		}
+		proxy := &appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{Name: "zarf-registry-proxy", Namespace: state.ZarfNamespaceName},
+			Spec: appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{
+				HostNetwork: true,
+				Containers: []corev1.Container{{Ports: []corev1.ContainerPort{{
+					ContainerPort: 5000,
+				}}}},
+			}}},
+		}
+		proxyCluster := &cluster.Cluster{Clientset: fake.NewClientset(proxyService, proxy)}
+
+		resolved, err := resolveRegistryUpdate(ctx, proxyCluster,
+			state.RegistryInfo{RegistryMode: state.RegistryModeExternal},
+			state.RegistryInfo{Address: "localhost:5000"},
+			true,
+		)
+		require.NoError(t, err)
+		require.Equal(t, state.RegistryModeProxy, resolved.RegistryMode)
+		require.Equal(t, 5000, resolved.Port)
+		require.Equal(t, 5000, resolved.NodePort)
+		require.Equal(t, state.MTLSStrategyZarfManaged, resolved.MTLSStrategy)
+	})
+
+	t.Run("internal to external requires push credentials", func(t *testing.T) {
+		_, err := resolveRegistryUpdate(ctx, c,
+			state.RegistryInfo{RegistryMode: state.RegistryModeNodePort},
+			state.RegistryInfo{Address: "localhost:31777"},
+			true,
+		)
+		require.EqualError(t, err, "--registry-push-username and --registry-push-password are required when switching to an external registry")
+	})
+
+	t.Run("internal to external defaults pull credentials to push credentials", func(t *testing.T) {
+		given := state.RegistryInfo{
+			Address:      "localhost:31777",
+			PushUsername: "external-user",
+			PushPassword: "external-password",
+		}
+		resolved, err := resolveRegistryUpdate(ctx, c,
+			state.RegistryInfo{RegistryMode: state.RegistryModeNodePort},
+			given,
+			true,
+		)
+		require.NoError(t, err)
+		require.Equal(t, state.RegistryModeExternal, resolved.RegistryMode)
+		require.Zero(t, resolved.Port)
+		require.Zero(t, resolved.NodePort)
+		require.Equal(t, state.MTLSStrategyNone, resolved.MTLSStrategy)
+		require.Equal(t, given.PushUsername, resolved.PullUsername)
+		require.Equal(t, given.PushPassword, resolved.PullPassword)
+	})
+
+	t.Run("internal to external rejects incomplete pull credentials", func(t *testing.T) {
+		_, err := resolveRegistryUpdate(ctx, c,
+			state.RegistryInfo{RegistryMode: state.RegistryModeNodePort},
+			state.RegistryInfo{
+				Address:      "localhost:31777",
+				PushUsername: "external-user",
+				PushPassword: "external-password",
+				PullUsername: "pull-user",
+			},
+			true,
+		)
+		require.EqualError(t, err, "--registry-pull-username and --registry-pull-password must be provided together")
+	})
 }
 
 func externalGitState(pullPassword string) *state.State {

@@ -246,20 +246,51 @@ func TestMergeStateRegistryUsesTargetModeForPasswordGeneration(t *testing.T) {
 		require.NotEqual(t, oldState.RegistryInfo.PushPassword, newState.RegistryInfo.PushPassword)
 		require.NotEqual(t, oldState.RegistryInfo.PullPassword, newState.RegistryInfo.PullPassword)
 	})
+}
 
-	t.Run("internal to external preserves omitted passwords", func(t *testing.T) {
+func TestMergeStateRegistryResolvedPort(t *testing.T) {
+	t.Parallel()
+
+	t.Run("preserves port when mode is omitted", func(t *testing.T) {
 		oldState := &State{RegistryInfo: RegistryInfo{
 			RegistryMode: RegistryModeNodePort,
-			PushPassword: "internal-push-password",
-			PullPassword: "internal-pull-password",
+			NodePort:     31999,
+			Port:         31999,
+			PushPassword: "push-password",
+			PullPassword: "pull-password",
 		}}
 		newState, err := Merge(oldState, MergeOptions{
-			RegistryInfo: RegistryInfo{RegistryMode: RegistryModeExternal},
-			Services:     NewServiceSet(RegistryKey),
+			RegistryInfo: RegistryInfo{
+				PushUsername: "new-user",
+				PushPassword: "push-password",
+				PullPassword: "pull-password",
+			},
+			Services: NewServiceSet(RegistryKey),
 		})
 		require.NoError(t, err)
-		require.Equal(t, oldState.RegistryInfo.PushPassword, newState.RegistryInfo.PushPassword)
-		require.Equal(t, oldState.RegistryInfo.PullPassword, newState.RegistryInfo.PullPassword)
+		require.Equal(t, 31999, newState.RegistryInfo.Port)
+		require.Equal(t, 31999, newState.RegistryInfo.NodePort)
+	})
+
+	t.Run("clears port for resolved explicit mode", func(t *testing.T) {
+		oldState := &State{RegistryInfo: RegistryInfo{
+			RegistryMode: RegistryModeProxy,
+			NodePort:     5000,
+			Port:         5000,
+			MTLSStrategy: MTLSStrategyZarfManaged,
+		}}
+		newState, err := Merge(oldState, MergeOptions{
+			RegistryInfo: RegistryInfo{
+				RegistryMode: RegistryModeExternal,
+				MTLSStrategy: MTLSStrategyNone,
+			},
+			Services: NewServiceSet(RegistryKey),
+		})
+		require.NoError(t, err)
+		require.Zero(t, newState.RegistryInfo.Port)
+		require.Zero(t, newState.RegistryInfo.NodePort)
+		require.Equal(t, RegistryModeExternal, newState.RegistryInfo.RegistryMode)
+		require.Equal(t, MTLSStrategyNone, newState.RegistryInfo.MTLSStrategy)
 	})
 }
 
