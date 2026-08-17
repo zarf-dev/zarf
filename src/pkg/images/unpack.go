@@ -79,7 +79,6 @@ func FindImagesInOCIManifests(manifests []ocispec.Descriptor) ([]string, error) 
 
 // Unpack loads images from an image archive or OCI layout directory into destDir.
 // It returns a list of PulledImage for all images in the source.
-// FIXME: should we allow unpack to be an oci-layout? Is it now
 func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []PulledImage, err error) {
 	if len(imageArchive.Images) == 0 {
 		return nil, fmt.Errorf("images must be defined")
