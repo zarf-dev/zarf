@@ -253,6 +253,7 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	resources := make([]remoteResource, 0, len(manifest.Layers))
 	seenMountPaths := make(map[string]struct{}, len(manifest.Layers))
 	for _, descriptor := range manifest.Layers {
+		// An import with only remote resources may have no layers and oras will then create this fake layer
 		if descriptor.MediaType == ocispec.MediaTypeEmptyJSON {
 			continue
 		}
