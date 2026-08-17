@@ -66,6 +66,9 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if component.Metadata.Version == "" {
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
+	if len(component.Component.Import.Remote) > 0 {
+		return registry.Reference{}, errors.New("publishing a component that imports a remote component is not yet supported")
+	}
 	resolved, err := load.ResolveComponentConfigImports(ctx, component, componentPath)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to resolve component imports: %w", err)

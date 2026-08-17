@@ -211,6 +211,25 @@ func TestPublishComponentRejectsNegativeRetries(t *testing.T) {
 	require.EqualError(t, err, "component publish failed: retries cannot be negative")
 }
 
+func TestPublishComponentRejectsRemoteImports(t *testing.T) {
+	t.Parallel()
+
+	componentPath := filepath.Join(t.TempDir(), "component.yaml")
+	require.NoError(t, os.WriteFile(componentPath, []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: remote-import
+  version: 0.0.1
+component:
+  import:
+    remote:
+      - url: oci://registry.example.com/components/child:0.0.1
+`), 0o600))
+
+	_, err := Publish(context.Background(), componentPath, createRegistry(context.Background(), t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.EqualError(t, err, "publishing a component that imports a remote component is not yet supported")
+}
+
 func TestPublishComponentImageArchivesUseOCILayout(t *testing.T) {
 	t.Parallel()
 

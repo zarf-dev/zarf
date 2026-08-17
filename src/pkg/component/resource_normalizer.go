@@ -116,9 +116,6 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	if hasActions(component.Component.Actions.OnCreate) {
 		return component, normalizedComponentResources{}, fmt.Errorf("onCreate actions are not supported for published remote components")
 	}
-	if len(component.Component.Import.Remote) > 0 {
-		return component, normalizedComponentResources{}, fmt.Errorf("remote component imports are not yet supported for v1beta1 packages")
-	}
 
 	imageArchives := make([]v1beta1.ImageArchive, len(component.Component.ImageArchives))
 	for i := range component.Component.ImageArchives {
