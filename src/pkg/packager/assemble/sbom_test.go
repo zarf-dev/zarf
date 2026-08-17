@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/anchore/syft/syft/format/syftjson/model"
+	"github.com/anchore/syft/syft/pkg"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -51,31 +53,12 @@ func TestCreateImageSBOMNonExistentCachePath(t *testing.T) {
 	require.NotEmpty(t, b)
 }
 
-// sbomDocument captures the syft-json fields the content tests assert on.
-type sbomDocument struct {
-	Artifacts []struct {
-		Name    string `json:"name"`
-		Version string `json:"version"`
-		Type    string `json:"type"`
-	} `json:"artifacts"`
-	ArtifactRelationships []struct {
-		Parent string `json:"parent"`
-		Child  string `json:"child"`
-		Type   string `json:"type"`
-	} `json:"artifactRelationships"`
-	Source struct {
-		Type string `json:"type"`
-	} `json:"source"`
-	Descriptor struct {
-		Name string `json:"name"`
-	} `json:"descriptor"`
-	Schema struct {
-		URL string `json:"url"`
-	} `json:"schema"`
-}
-
-func (d sbomDocument) findArtifact(name string) (version string, pkgType string, ok bool) {
-	for _, a := range d.Artifacts {
+// findArtifact looks a package up by name in a syft document. Decoding into
+// syft's own model rather than a local projection means a change to the
+// syft-json shape surfaces here, which is the point: the document is a zarf
+// output, so its schema is part of what these tests are guarding.
+func findArtifact(doc model.Document, name string) (version string, pkgType pkg.Type, ok bool) {
+	for _, a := range doc.Artifacts {
 		if a.Name == name {
 			return a.Version, a.Type, true
 		}
@@ -125,15 +108,15 @@ L:Zlib
 	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
 
-	var doc sbomDocument
+	var doc model.Document
 	require.NoError(t, json.Unmarshal(b, &doc))
 
-	version, pkgType, ok := doc.findArtifact("musl")
+	version, pkgType, ok := findArtifact(doc, "musl")
 	require.True(t, ok, "expected musl package in image SBOM artifacts")
 	require.Equal(t, "1.2.4-r2", version)
-	require.Equal(t, "apk", pkgType)
+	require.Equal(t, pkg.ApkPkg, pkgType)
 
-	version, _, ok = doc.findArtifact("zlib")
+	version, _, ok = findArtifact(doc, "zlib")
 	require.True(t, ok, "expected zlib package in image SBOM artifacts")
 	require.Equal(t, "1.3-r2", version)
 
@@ -175,15 +158,15 @@ func TestCreateFileSBOMContents(t *testing.T) {
 	b, err := createFileSBOM(ctx, component, outputPath, buildPath)
 	require.NoError(t, err)
 
-	var doc sbomDocument
+	var doc model.Document
 	require.NoError(t, json.Unmarshal(b, &doc))
 
-	version, pkgType, ok := doc.findArtifact("flask")
+	version, pkgType, ok := findArtifact(doc, "flask")
 	require.True(t, ok, "expected flask package in file SBOM artifacts")
 	require.Equal(t, "2.0.1", version)
-	require.Equal(t, "python", pkgType)
+	require.Equal(t, pkg.PythonPkg, pkgType)
 
-	_, _, ok = doc.findArtifact("requests")
+	_, _, ok = findArtifact(doc, "requests")
 	require.True(t, ok, "expected requests package in file SBOM artifacts")
 
 	require.Equal(t, "zarf", doc.Descriptor.Name)
