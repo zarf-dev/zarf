@@ -151,7 +151,6 @@ func TestPublishComponent(t *testing.T) {
 	for _, layer := range manifest.Layers {
 		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
 		require.Equal(t, layer.Annotations[ocispec.AnnotationTitle], layer.Annotations[layout.ComponentResourceMountPathAnnotation])
-		require.NotEmpty(t, layer.Annotations[layout.ComponentResourceKindAnnotation])
 	}
 	for _, localPath := range []string{
 		"resources/0/component-values.yaml",
@@ -690,21 +689,21 @@ func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
 			component: v1beta1.ComponentConfig{
 				Values: v1beta1.Values{Files: []string{"https://example.com/values.yaml"}},
 			},
-			wantErr: "resource kind values-file cannot be pulled from remote sources",
+			wantErr: `resource "https://example.com/values.yaml" must be local`,
 		},
 		{
 			name: "values schema",
 			component: v1beta1.ComponentConfig{
 				Values: v1beta1.Values{Schema: "https://example.com/values.schema.json"},
 			},
-			wantErr: "resource kind values-schema cannot be pulled from remote sources",
+			wantErr: `resource "https://example.com/values.schema.json" must be local`,
 		},
 		{
 			name: "local chart",
 			component: v1beta1.ComponentConfig{
 				Component: v1beta1.ComponentSpec{Charts: []v1beta1.Chart{{Local: &v1beta1.LocalSource{Path: "https://example.com/chart.tgz"}}}},
 			},
-			wantErr: "resource kind chart cannot be pulled from remote sources",
+			wantErr: `resource "https://example.com/chart.tgz" must be local`,
 		},
 		{
 			name: "component import",

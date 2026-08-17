@@ -258,7 +258,7 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 			continue
 		}
 		mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
-		if !validRemoteMountPath(mountPath) || descriptor.Annotations[layout.ComponentResourceKindAnnotation] == "" {
+		if !validRemoteMountPath(mountPath) {
 			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an invalid resource layer", importURL)
 		}
 		if _, exists := seenMountPaths[mountPath]; exists {

@@ -106,7 +106,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
-	t.Run("remote import", func(t *testing.T) {
+	t.Run("remote import with resources", func(t *testing.T) {
 		t.Parallel()
 
 		ref := registry.Reference{
@@ -128,7 +128,16 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		store := memory.New()
 		configDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentConfigMediaType, componentJSON)
 		require.NoError(t, store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)))
-		manifest, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{ConfigDescriptor: &configDescriptor})
+		resourceContents := []byte("remote resource")
+		resourceDescriptor := content.NewDescriptorFromBytes(layout.ZarfLayerMediaTypeBlob, resourceContents)
+		resourceDescriptor.Annotations = map[string]string{
+			layout.ComponentResourceMountPathAnnotation: "resources/0/resource.txt",
+		}
+		require.NoError(t, store.Push(ctx, resourceDescriptor, bytes.NewReader(resourceContents)))
+		manifest, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{
+			ConfigDescriptor: &configDescriptor,
+			Layers:           []ocispec.Descriptor{resourceDescriptor},
+		})
 		require.NoError(t, err)
 		require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
 
@@ -155,6 +164,60 @@ components:
 		require.NoError(t, err)
 		require.Len(t, resolution.pkg.Components, 1)
 		require.Equal(t, []v1beta1.ComponentAction{{Cmd: "echo remote"}}, resolution.pkg.Components[0].Actions.OnDeploy.Before)
+		require.Len(t, resolution.remoteResources, 1)
+		require.Equal(t, "resources/0/resource.txt", resolution.remoteResources[0].mountPath)
+	})
+
+	t.Run("remote import without resources", func(t *testing.T) {
+		t.Parallel()
+
+		ref := registry.Reference{
+			Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+			Repository: "components",
+			Reference:  "remote-import-no-resources",
+		}
+		component := v1beta1.ComponentConfig{
+			APIVersion: v1beta1.APIVersion,
+			Kind:       v1beta1.ZarfComponentConfig,
+			Metadata:   v1beta1.ComponentMetadata{Name: "remote-import-no-resources"},
+			Component: v1beta1.ComponentSpec{
+				Actions: v1beta1.ComponentActions{OnDeploy: v1beta1.ComponentActionSet{Before: []v1beta1.ComponentAction{{Cmd: "echo remote"}}}},
+			},
+		}
+		componentJSON, err := json.Marshal(component)
+		require.NoError(t, err)
+
+		store := memory.New()
+		configDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentConfigMediaType, componentJSON)
+		require.NoError(t, store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)))
+		manifest, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{ConfigDescriptor: &configDescriptor})
+		require.NoError(t, err)
+		require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
+
+		remote, err := zoci.NewRemote(ctx, ref.String(), ocispec.Platform{}, oci.WithPlainHTTP(true))
+		require.NoError(t, err)
+		_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
+		require.NoError(t, err)
+
+		dir := t.TempDir()
+		writePackage := []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: remote-no-resources
+components:
+  - name: remote
+    import:
+      remote:
+        - url: oci://` + ref.String() + `
+`)
+		require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), writePackage, 0o600))
+
+		pkg := loadV1Beta1Package(t, dir)
+		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{PlainHTTP: true}, "")
+		require.NoError(t, err)
+		require.Len(t, resolution.pkg.Components, 1)
+		require.Equal(t, []v1beta1.ComponentAction{{Cmd: "echo remote"}}, resolution.pkg.Components[0].Actions.OnDeploy.Before)
+		require.Empty(t, resolution.remoteResources)
 	})
 
 	t.Run("single local import rebases paths and collects values", func(t *testing.T) {

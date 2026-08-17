@@ -39,8 +39,6 @@ const (
 	ZarfComponentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
 	// ComponentResourceMountPathAnnotation identifies where a component resource is mounted in its OCI artifact.
 	ComponentResourceMountPathAnnotation = "dev.zarf.mountPath"
-	// ComponentResourceKindAnnotation identifies the kind of a component resource in its OCI artifact.
-	ComponentResourceKindAnnotation = "dev.zarf.resourceKind"
 	// OCITimestampFormat is the format used for the OCI timestamp annotation
 	OCITimestampFormat = time.RFC3339
 )

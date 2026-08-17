@@ -219,7 +219,6 @@ func stageComponentResources(ctx context.Context, store *memory.Store, resources
 		descriptor.Annotations = map[string]string{
 			ocispec.AnnotationTitle:                     rel,
 			layout.ComponentResourceMountPathAnnotation: rel,
-			layout.ComponentResourceKindAnnotation:      string(resource.kind),
 		}
 		exists, err := store.Exists(ctx, descriptor)
 		if err != nil {
@@ -278,7 +277,7 @@ func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchiv
 		if err != nil {
 			return err
 		}
-		resources[filepath.ToSlash(rel)] = componentResource{sourcePath: path, kind: componentResourceKindImageLayout}
+		resources[filepath.ToSlash(rel)] = componentResource{sourcePath: path}
 		return nil
 	})
 	if err != nil {
