@@ -215,20 +215,6 @@ Argo CD or Flux resources can be excluded from mutation as a group with the `AGE
 - `flux` — excludes GitRepository, OCIRepository, and HelmRepository resources.
 - `argocd` — excludes Application, ApplicationSet, repository and repo-creds Secrets, and AppProject resources.
 
-Excluding the Argo CD or Flux resource group does not disable Pod mutation for workloads created by that controller.
-
-For example, the following configuration leaves all Argo CD and Flux resources under the user's control while retaining Pod mutation:
-
-```yaml
-# zarf-config.yaml
-package:
-  deploy:
-    set:
-      AGENT_MUTATION_EXCLUSIONS: |
-        - argocd
-        - flux
-```
-
 Zarf will refuse to adopt the Kubernetes [initial namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces) (`default`, `kube-*`, etc...). This is because these namespaces are critical to the operation of the cluster and should not be managed by Zarf.
 
 When adopting resources, ensure that the namespaces specified are dedicated to Zarf, or add the `zarf.dev/agent: ignore` label to any non-Zarf managed resources in those namespaces (and ensure that updates to those resources do not strip that label) otherwise [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) errors may occur.
