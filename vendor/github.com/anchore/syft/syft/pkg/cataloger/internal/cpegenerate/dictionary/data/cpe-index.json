@@ -112,6 +112,9 @@
       "github.com/gookit/goutil": [
         "cpe:2.3:a:go_util_project:go_util:*:*:*:*:*:go:*:*"
       ],
+      "github.com/gopacket/gopacket": [
+        "cpe:2.3:a:gopacket:gopacket:*:*:*:*:*:go:*:*"
+      ],
       "github.com/hamba/avro/v2": [
         "cpe:2.3:a:avro_project:avro:*:*:*:*:*:go:*:*"
       ],
@@ -2333,6 +2336,9 @@
       "@ais-ltd/strategyen": [
         "cpe:2.3:a:ais-ltd:strategyen:*:*:*:*:*:node.js:*:*"
       ],
+      "@amoy/common": [
+        "cpe:2.3:a:amoyjs:common:*:*:*:*:*:node.js:*:*"
+      ],
       "@angular/core": [
         "cpe:2.3:a:angular:angular:*:*:*:*:*:node.js:*:*",
         "cpe:2.3:a:angularjs:angularjs:*:*:*:*:*:*:*:*"
@@ -2499,13 +2505,20 @@
       "@fastify/express": [
         "cpe:2.3:a:fastify:fastify\\/express:*:*:*:*:*:node.js:*:*"
       ],
+      "@fastify/forwarded": [
+        "cpe:2.3:a:fastify:fastify\\/forwarded:*:*:*:*:*:node.js:*:*"
+      ],
       "@fastify/http-proxy": [
         "cpe:2.3:a:fastify:fastify\\/http-proxy:*:*:*:*:*:node.js:*:*"
       ],
       "@fastify/middie": [
         "cpe:2.3:a:fastify:fastify\\/middie:*:*:*:*:*:node.js:*:*"
       ],
+      "@fastify/rate-limit": [
+        "cpe:2.3:a:fastify:fastify\\/rate-limit:*:*:*:*:*:node.js:*:*"
+      ],
       "@fastify/reply-from": [
+        "cpe:2.3:a:fastify:fastify\\/reply-from:*:*:*:*:*:node.js:*:*",
         "cpe:2.3:a:fastify:reply-from:*:*:*:*:*:node.js:*:*"
       ],
       "@fastly/js-compute": [
@@ -2645,6 +2658,9 @@
       ],
       "@openzeppelin/contracts-upgradeable": [
         "cpe:2.3:a:openzeppelin:contracts_upgradeable:*:*:*:*:*:node.js:*:*"
+      ],
+      "@paperclipai/server": [
+        "cpe:2.3:a:paperclip:paperclipai\\/server:*:*:*:*:*:node.js:*:*"
       ],
       "@parse/push-adapter": [
         "cpe:2.3:a:parseplatform:parse_server_push_adapter:*:*:*:*:*:node.js:*:*"
@@ -3097,6 +3113,9 @@
       ],
       "clawdbot": [
         "cpe:2.3:a:openclaw:openclaw:*:*:*:*:*:node.js:*:*"
+      ],
+      "clawvet": [
+        "cpe:2.3:a:mohibshaikh:clawvet:*:*:*:*:*:node.js:*:*"
       ],
       "cli": [
         "cpe:2.3:a:cli_project:cli:*:*:*:*:*:node.js:*:*"
@@ -4252,6 +4271,9 @@
       "json8-merge-patch": [
         "cpe:2.3:a:json8-merge-patch_project:json8-merge-patch:*:*:*:*:*:node.js:*:*"
       ],
+      "jsonpath": [
+        "cpe:2.3:a:dchester:jsonpath:*:*:*:*:*:node.js:*:*"
+      ],
       "jsonpointer": [
         "cpe:2.3:a:janl:jsonpointer:*:*:*:*:*:node.js:*:*"
       ],
@@ -5118,6 +5140,9 @@
       "pandora-doomsday": [
         "cpe:2.3:a:pandora-doomsday_project:pandora-doomsday:*:*:*:*:*:node.js:*:*"
       ],
+      "paperclipai": [
+        "cpe:2.3:a:paperclip:paperclipai:*:*:*:*:*:node.js:*:*"
+      ],
       "parse-dashboard": [
         "cpe:2.3:a:parseplatform:parse_dashboard:*:*:*:*:*:node.js:*:*"
       ],
@@ -5667,6 +5692,9 @@
       "shout": [
         "cpe:2.3:a:shout_project:shout:*:*:*:*:*:node.js:*:*"
       ],
+      "sigstore": [
+        "cpe:2.3:a:sigstore:sigstore:*:*:*:*:*:node.js:*:*"
+      ],
       "sillytavern": [
         "cpe:2.3:a:sillytavern:sillytavern:*:*:*:*:*:node.js:*:*"
       ],
@@ -6106,6 +6134,9 @@
       "vite": [
         "cpe:2.3:a:vitejs:vite:*:*:*:*:*:node.js:*:*"
       ],
+      "vitest": [
+        "cpe:2.3:a:vitest.dev:vitest:*:*:*:*:*:node.js:*:*"
+      ],
       "vm2": [
         "cpe:2.3:a:vm2_project:vm2:*:*:*:*:*:node.js:*:*"
       ],
@@ -6533,6 +6564,9 @@
       "dash-uploader": [
         "cpe:2.3:a:fohrloop:dash-uploader:*:*:*:*:*:python:*:*"
       ],
+      "datamodel-code-generator": [
+        "cpe:2.3:a:koxudaxi:datamodel-code-generator:*:*:*:*:*:python:*:*"
+      ],
       "datapizza-ai": [
         "cpe:2.3:a:datapizza:datapizza_ai:*:*:*:*:*:*:*:*"
       ],
@@ -6732,6 +6766,9 @@
       "mpxj": [
         "cpe:2.3:a:mpxj:mpxj:*:*:*:*:*:python:*:*"
       ],
+      "msgpack": [
+        "cpe:2.3:a:msgpack:messagepack:*:*:*:*:*:python:*:*"
+      ],
       "nanobot-ai": [
         "cpe:2.3:a:nanobot:nanobot:*:*:*:*:*:python:*:*"
       ],
@@ -6857,6 +6894,9 @@
       ],
       "pydantic-ai": [
         "cpe:2.3:a:pydantic:pydantic_ai:*:*:*:*:*:python:*:*"
+      ],
+      "pydantic-settings": [
+        "cpe:2.3:a:pydantic:pydantic-settings:*:*:*:*:*:*:*:*"
       ],
       "pydash": [
         "cpe:2.3:a:derrickgilland:pydash:*:*:*:*:*:python:*:*"
@@ -7208,6 +7248,9 @@
       "encoded_id-rails": [
         "cpe:2.3:a:diaconou:encodedid\\:\\:rails:*:*:*:*:*:ruby:*:*"
       ],
+      "excon": [
+        "cpe:2.3:a:excon_project:excon:*:*:*:*:*:ruby:*:*"
+      ],
       "faye": [
         "cpe:2.3:a:faye_project:faye:*:*:*:*:*:ruby:*:*"
       ],
@@ -7336,6 +7379,9 @@
       ],
       "mpxj": [
         "cpe:2.3:a:mpxj:mpxj:*:*:*:*:*:ruby:*:*"
+      ],
+      "msgpack": [
+        "cpe:2.3:a:msgpack:messagepack:*:*:*:*:*:ruby:*:*"
       ],
       "net-imap": [
         "cpe:2.3:a:ruby-lang:net\\:\\:imap:*:*:*:*:*:ruby:*:*"
@@ -7571,6 +7617,9 @@
       "webrick": [
         "cpe:2.3:a:ruby-lang:webrick:*:*:*:*:*:ruby:*:*"
       ],
+      "websocket-driver": [
+        "cpe:2.3:a:faye:websocket-driver:*:*:*:*:*:ruby:*:*"
+      ],
       "websocket-extensions": [
         "cpe:2.3:a:websocket-extensions_project:websocket-extensions:*:*:*:*:*:ruby:*:*"
       ],
@@ -7614,6 +7663,9 @@
       ],
       "ammonia": [
         "cpe:2.3:a:ammonia_project:ammonia:*:*:*:*:*:rust:*:*"
+      ],
+      "anchor-lang": [
+        "cpe:2.3:a:anchor-lang:anchor:*:*:*:*:*:rust:*:*"
       ],
       "anymap": [
         "cpe:2.3:a:anymap_project:anymap:*:*:*:*:*:rust:*:*"
@@ -7984,6 +8036,12 @@
       "one2html": [
         "cpe:2.3:a:msiemens:one2html:*:*:*:*:*:rust:*:*"
       ],
+      "openssl": [
+        "cpe:2.3:a:sfackler:openssl:*:*:*:*:*:rust:*:*"
+      ],
+      "opentelemetry": [
+        "cpe:2.3:a:opentelemetry:opentelemetry:*:*:*:*:*:rust:*:*"
+      ],
       "outer_cgi": [
         "cpe:2.3:a:outer_cgi_project:outer_cgi:*:*:*:*:*:rust:*:*"
       ],
@@ -8013,6 +8071,9 @@
       ],
       "postscript": [
         "cpe:2.3:a:postscript_project:postscript:*:*:*:*:*:rust:*:*"
+      ],
+      "quiche": [
+        "cpe:2.3:a:cloudflare:quiche:*:*:*:*:*:rust:*:*"
       ],
       "quinn": [
         "cpe:2.3:a:quinn_project:quinn:*:*:*:*:*:rust:*:*"
@@ -8883,6 +8944,9 @@
       "album-and-image-gallery-plus-lightbox": [
         "cpe:2.3:a:essentialplugin:album_and_image_gallery_plus_lightbox:*:*:*:*:free:wordpress:*:*"
       ],
+      "alemha-watermark": [
+        "cpe:2.3:a:mnbaa:alemha_watermark:*:*:*:*:*:wordpress:*:*"
+      ],
       "alfred-click-collect": [
         "cpe:2.3:a:alfred24_click_\\\u0026_collect_project:alfred24_click_\\\u0026_collect:*:*:*:*:*:wordpress:*:*"
       ],
@@ -9353,6 +9417,9 @@
       "autoptimize": [
         "cpe:2.3:a:autoptimize:autoptimize:*:*:*:*:*:wordpress:*:*"
       ],
+      "autoship-cloud": [
+        "cpe:2.3:a:patternsinthecloud:autoship_cloud_for_woocommerce:*:*:*:*:*:wordpress:*:*"
+      ],
       "autotitle-for-wordpress": [
         "cpe:2.3:a:unalignedcode:autotitle:*:*:*:*:*:wordpress:*:*"
       ],
@@ -9509,6 +9576,9 @@
       ],
       "barcode-scanner-lite-pos-to-manage-products-inventory-and-orders": [
         "cpe:2.3:a:ukrsolution:barcode_scanner_and_inventory_manager:*:*:*:*:*:wordpress:*:*"
+      ],
+      "base64-encoderdecoder": [
+        "cpe:2.3:a:mranderson:base64_encoder\\/decoder:*:*:*:*:*:wordpress:*:*"
       ],
       "basic-interactive-world-map": [
         "cpe:2.3:a:wpmapplugins:basic_interactive_world_map:*:*:*:*:*:wordpress:*:*"
@@ -9963,6 +10033,9 @@
       ],
       "bsuite": [
         "cpe:2.3:a:bsuite_project:bsuite:*:*:*:*:*:wordpress:*:*"
+      ],
+      "bu-section-editing": [
+        "cpe:2.3:a:bu:bu_section_editing:*:*:*:*:*:wordpress:*:*"
       ],
       "bubble-menu": [
         "cpe:2.3:a:wow-company:bubble_menu:*:*:*:*:free:wordpress:*:*"
@@ -11688,6 +11761,9 @@
       "donation-thermometer": [
         "cpe:2.3:a:donation_thermometer_project:donation_thermometer:*:*:*:*:*:wordpress:*:*"
       ],
+      "donations-block": [
+        "cpe:2.3:a:bharatkambariya:donation_block_for_paypal:*:*:*:*:*:wordpress:*:*"
+      ],
       "donations-for-woocommerce": [
         "cpe:2.3:a:wpzone:potent_donations_for_woocommerce:*:*:*:*:*:wordpress:*:*"
       ],
@@ -11774,6 +11850,9 @@
       ],
       "dtabs": [
         "cpe:2.3:a:dtabs_project:dtabs:*:*:*:*:*:wordpress:*:*"
+      ],
+      "dts-simple-share": [
+        "cpe:2.3:a:missionmike:simple_share:*:*:*:*:*:wordpress:*:*"
       ],
       "duitku-social-payment-gateway": [
         "cpe:2.3:a:duitku:duitku_payment_gateway:*:*:*:*:*:wordpress:*:*"
@@ -12763,6 +12842,9 @@
       "five-minute-webshop": [
         "cpe:2.3:a:five_minute_webshop_project:five_minute_webshop:*:*:*:*:*:wordpress:*:*"
       ],
+      "fl3r-accessibility-suite": [
+        "cpe:2.3:a:fl3r:fl3r_accessibility_suite:*:*:*:*:*:wordpress:*:*"
+      ],
       "fl3r-feelbox": [
         "cpe:2.3:a:armandofiore:fl3r_feelbox:*:*:*:*:*:wordpress:*:*",
         "cpe:2.3:a:fl3r-feelbox_project:fl3r-feelbox:*:*:*:*:*:wordpress:*:*"
@@ -13007,6 +13089,9 @@
       ],
       "fotobook": [
         "cpe:2.3:a:fotobook_project:fotobook:*:*:*:*:*:wordpress:*:*"
+      ],
+      "foxypress": [
+        "cpe:2.3:a:webmovementllc:foxypress:*:*:*:*:*:wordpress:*:*"
       ],
       "foxyshop": [
         "cpe:2.3:a:foxy:foxyshop:*:*:*:*:*:wordpress:*:*"
@@ -13279,6 +13364,9 @@
       ],
       "gf-block-ips": [
         "cpe:2.3:a:brightplugins:block_ips_for_gravity_forms:*:*:*:*:*:wordpress:*:*"
+      ],
+      "gf-constant-contact": [
+        "cpe:2.3:a:rocketgenius:constant_contact:*:*:*:*:*:wordpress:*:*"
       ],
       "gf-custom-style": [
         "cpe:2.3:a:alefypimentel:gf_custom_style:*:*:*:*:*:wordpress:*:*"
@@ -15469,6 +15557,9 @@
       "mihdan-index-now": [
         "cpe:2.3:a:kobzarev:index_now:*:*:*:*:*:wordpress:*:*"
       ],
+      "mini-course-generator": [
+        "cpe:2.3:a:minicoursegenerator:mini_course_generator:*:*:*:*:*:wordpress:*:*"
+      ],
       "mini-mail-dashboard-widget": [
         "cpe:2.3:a:mini_mail_dashboard_widget_project:mini_mail_dashboard_widget:*:*:*:*:*:wordpress:*:*"
       ],
@@ -15501,6 +15592,9 @@
       ],
       "ml-slider": [
         "cpe:2.3:a:metaslider:slider\\,_gallery\\,_and_carousel:*:*:*:*:*:wordpress:*:*"
+      ],
+      "mm-breaking-news": [
+        "cpe:2.3:a:mm-breaking_news_project:mm-breaking_news:*:*:*:*:*:wordpress:*:*"
       ],
       "mmm-file-list": [
         "cpe:2.3:a:mediamanifesto:mmm_simple_file_list:*:*:*:*:*:wordpress:*:*"
@@ -15587,6 +15681,9 @@
       ],
       "mortgage-calculators-wp": [
         "cpe:2.3:a:lenderd:mortgage_calculators_wp:*:*:*:*:*:wordpress:*:*"
+      ],
+      "mortgage-loan-calculator": [
+        "cpe:2.3:a:mlcalc:mortgage_loan_calculator:*:*:*:*:*:wordpress:*:*"
       ],
       "most-and-least-read-posts-widget": [
         "cpe:2.3:a:whiletrue:most_and_least_read_posts_widget:*:*:*:*:*:wordpress:*:*"
@@ -15748,6 +15845,9 @@
       ],
       "my-geo-posts-free": [
         "cpe:2.3:a:mindstien:my_geo_posts_free:*:*:*:*:*:wordpress:*:*"
+      ],
+      "my-quota": [
+        "cpe:2.3:a:dropstr:my_quota:*:*:*:*:*:wordpress:*:*"
       ],
       "my-tickets": [
         "cpe:2.3:a:my_tickets_project:my_tickets:*:*:*:*:*:wordpress:*:*"
@@ -16080,6 +16180,9 @@
       ],
       "official-sendle-shipping-method": [
         "cpe:2.3:a:joovii:sendle_shipping:*:*:*:*:*:wordpress:*:*"
+      ],
+      "offload-videos-bunny-netaws-s3": [
+        "cpe:2.3:a:webgarh:offload_videos:*:*:*:*:*:wordpress:*:*"
       ],
       "og-tags": [
         "cpe:2.3:a:og_tags_project:og_tags:*:*:*:*:*:wordpress:*:*"
@@ -17247,7 +17350,10 @@
         "cpe:2.3:a:wepupil:quiz_expert_-_easy_quiz_maker\\,_exam_and_test_manager:*:*:*:*:*:wordpress:*:*"
       ],
       "quiz-maker": [
-        "cpe:2.3:a:ays-pro:quiz_maker:*:*:*:*:*:wordpress:*:*"
+        "cpe:2.3:a:ays-pro:quiz_maker:*:*:*:*:*:wordpress:*:*",
+        "cpe:2.3:a:ays-pro:quiz_maker:*:*:*:*:agency:wordpress:*:*",
+        "cpe:2.3:a:ays-pro:quiz_maker:*:*:*:*:business:wordpress:*:*",
+        "cpe:2.3:a:ays-pro:quiz_maker:*:*:*:*:developer:wordpress:*:*"
       ],
       "quiz-master-next": [
         "cpe:2.3:a:expresstech:quiz_and_survey_master:*:*:*:*:*:wordpress:*:*",
@@ -17825,6 +17931,9 @@
       "schema-app-structured-data-for-schemaorg": [
         "cpe:2.3:a:schemaapp:schema_app_structured_data:*:*:*:*:*:wordpress:*:*"
       ],
+      "school-management": [
+        "cpe:2.3:a:dasinfomedia:school_management_system:*:*:*:*:*:wordpress:*:*"
+      ],
       "school-management-system": [
         "cpe:2.3:a:weblizar:school_management_-_education_\\\u0026_learning_management:*:*:*:*:*:wordpress:*:*"
       ],
@@ -18208,6 +18317,9 @@
       ],
       "simple-author-box": [
         "cpe:2.3:a:webfactoryltd:simple_author_box:*:*:*:*:*:wordpress:*:*"
+      ],
+      "simple-backup": [
+        "cpe:2.3:a:mywebsiteadvisor:simple_backup:*:*:*:*:*:wordpress:*:*"
       ],
       "simple-banner": [
         "cpe:2.3:a:simple_banner_project:simple_banner:*:*:*:*:*:wordpress:*:*"
@@ -18991,6 +19103,9 @@
       "srbtranslatin": [
         "cpe:2.3:a:srbtranslatin_project:srbtranslatin:*:*:*:*:*:wordpress:*:*"
       ],
+      "ssv-events": [
+        "cpe:2.3:a:moridrin:ssv_events:*:*:*:*:*:wordpress:*:*"
+      ],
       "st-daily-tip": [
         "cpe:2.3:a:sanskruti:st-daily-tip:*:*:*:*:*:wordpress:*:*"
       ],
@@ -19105,6 +19220,9 @@
       "strategery-migrations": [
         "cpe:2.3:a:strategery_migrations_project:strategery_migrations:*:*:*:*:*:wordpress:*:*"
       ],
+      "stratum": [
+        "cpe:2.3:a:motopress:stratum:*:*:*:*:*:wordpress:*:*"
+      ],
       "stray-quotes": [
         "cpe:2.3:a:unalignedcode:stray_random_quotes:*:*:*:*:*:wordpress:*:*"
       ],
@@ -19134,6 +19252,9 @@
       ],
       "subaccounts-for-woocommerce": [
         "cpe:2.3:a:mediaticus:subaccounts_for_woocommerce:*:*:*:*:*:wordpress:*:*"
+      ],
+      "sublanguage": [
+        "cpe:2.3:a:maximeschoeni:sublanguage:*:*:*:*:*:wordpress:*:*"
       ],
       "subscribe-sidebar": [
         "cpe:2.3:a:blubrry:subscribe_sidebar:*:*:*:*:*:wordpress:*:*"
@@ -19571,11 +19692,17 @@
       "timetics": [
         "cpe:2.3:a:arraytics:wp_timetics:*:*:*:*:*:wordpress:*:*"
       ],
+      "timezonecalculator": [
+        "cpe:2.3:a:bernhard-riedl:timezonecalculator:*:*:*:*:*:wordpress:*:*"
+      ],
       "timthumb-vulnerability-scanner": [
         "cpe:2.3:a:peterbutler:timthumb_vulnerability_scanner:*:*:*:*:*:wordpress:*:*"
       ],
       "tinychat-roomspy": [
         "cpe:2.3:a:tinychat:room_spy:*:*:*:*:*:wordpress:*:*"
+      ],
+      "tinymce-and-tinymce-advanced-professsional-formats-and-styles": [
+        "cpe:2.3:a:blackbam:tinymce_and_tinymce_advanced_professsional_formats_and_styles:*:*:*:*:*:wordpress:*:*"
       ],
       "tinymce-custom-styles": [
         "cpe:2.3:a:tinymce_custom_styles_project:tinymce_custom_styles:*:*:*:*:*:wordpress:*:*"
@@ -19644,6 +19771,9 @@
       ],
       "tournamatch": [
         "cpe:2.3:a:tournamatch:tournamatch:*:*:*:*:*:wordpress:*:*"
+      ],
+      "tournament-bracket-generator": [
+        "cpe:2.3:a:blakelong:tournament_bracket_generator:*:*:*:*:*:wordpress:*:*"
       ],
       "tp-education": [
         "cpe:2.3:a:themepalace:tp_education:*:*:*:*:*:wordpress:*:*"
@@ -20412,6 +20542,9 @@
       "weaverx-theme-support": [
         "cpe:2.3:a:weavertheme:weaver_xtreme_theme_support:*:*:*:*:*:wordpress:*:*"
       ],
+      "web-application-firewall": [
+        "cpe:2.3:a:miniorange:web_application_firewall:*:*:*:*:*:wordpress:*:*"
+      ],
       "web-directory-free": [
         "cpe:2.3:a:salephpscripts:web_directory_free:*:*:*:*:*:wordpress:*:*"
       ],
@@ -20761,6 +20894,9 @@
       "woo-related-products-refresh-on-reload": [
         "cpe:2.3:a:peachpay:related_products_for_woocommerce:*:*:*:*:*:wordpress:*:*"
       ],
+      "woo-rfq-for-woocommerce": [
+        "cpe:2.3:a:neahplugins:np_quote_request_for_woocommerce:*:*:*:*:*:wordpress:*:*"
+      ],
       "woo-save-abandoned-carts": [
         "cpe:2.3:a:majas-lapu-izstrade:cartbounty:*:*:*:*:*:wordpress:*:*"
       ],
@@ -20940,6 +21076,9 @@
       ],
       "wooemailreport": [
         "cpe:2.3:a:eggemplo:woocommerce_email_report:*:*:*:*:*:wordpress:*:*"
+      ],
+      "wooexim": [
+        "cpe:2.3:a:bulktheme:wooexim:*:*:*:*:*:wordpress:*:*"
       ],
       "wooframework-tweaks": [
         "cpe:2.3:a:woocommerce:wooframework_tweaks:*:*:*:*:*:wordpress:*:*"
@@ -21753,6 +21892,9 @@
       ],
       "wp-jobs": [
         "cpe:2.3:a:intensewp:wp_jobs:*:*:*:*:*:wordpress:*:*"
+      ],
+      "wp-jobs2careers": [
+        "cpe:2.3:a:skipthedrive:wp_talroo:*:*:*:*:*:wordpress:*:*"
       ],
       "wp-jquery-lightbox": [
         "cpe:2.3:a:lightpress:lightbox:*:*:*:*:*:wordpress:*:*"
@@ -22730,7 +22872,8 @@
         "cpe:2.3:a:maennchen1:wpshopgermany_-_protected_shops:*:*:*:*:*:wordpress:*:*"
       ],
       "wpshopify": [
-        "cpe:2.3:a:shopwp_project:shopwp:*:*:*:*:*:wordpress:*:*"
+        "cpe:2.3:a:shopwp_project:shopwp:*:*:*:*:*:wordpress:*:*",
+        "cpe:2.3:a:wpshop:shopwp:*:*:*:*:*:wordpress:*:*"
       ],
       "wpsimpletools-log-viewer": [
         "cpe:2.3:a:wpsimpletools:basic_log_viewer:*:*:*:*:*:wordpress:*:*"
@@ -22876,6 +23019,7 @@
         "cpe:2.3:a:ydesignservices:yds_support_ticket_system:*:*:*:*:*:wordpress:*:*"
       ],
       "yellow-pencil-visual-theme-customizer": [
+        "cpe:2.3:a:waspthemes:yellowpencil:*:*:*:*:*:wordpress:*:*",
         "cpe:2.3:a:yellowpencil:visual_css_style_editor:*:*:*:*:*:wordpress:*:*"
       ],
       "yellow-yard": [
@@ -23310,6 +23454,9 @@
       "hello-agency": [
         "cpe:2.3:a:cozythemes:hello_agency:*:*:*:*:*:wordpress:*:*"
       ],
+      "himalayas": [
+        "cpe:2.3:a:themegrill:himalayas:*:*:*:*:*:wordpress:*:*"
+      ],
       "homey": [
         "cpe:2.3:a:favethemes:homey:*:*:*:*:*:wordpress:*:*"
       ],
@@ -23503,6 +23650,9 @@
       ],
       "tijaji": [
         "cpe:2.3:a:tijaji:tijaji:*:*:*:*:*:wordpress:*:*"
+      ],
+      "total": [
+        "cpe:2.3:a:hashthemes:total:*:*:*:*:*:wordpress:*:*"
       ],
       "transcend": [
         "cpe:2.3:a:cpothemes:transcend:*:*:*:*:*:wordpress:*:*"

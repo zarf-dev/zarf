@@ -1,3 +1,4 @@
+{{- $mutationExclusions := .Values.mutationExclusions -}}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
@@ -42,6 +43,7 @@ webhooks:
       - "v1"
       - "v1beta1"
     sideEffects: None
+{{- if not (has "flux" $mutationExclusions) }}
   - name: agent-flux-ocirepo.zarf.dev
     namespaceSelector:
       matchExpressions:
@@ -152,6 +154,8 @@ webhooks:
       - "v1"
       - "v1beta1"
     sideEffects: None
+{{- end }}
+{{- if not (has "argocd" $mutationExclusions) }}
   - name: agent-argocd-application.zarf.dev
     namespaceSelector:
       matchExpressions:
@@ -297,3 +301,4 @@ webhooks:
       - "v1"
       - "v1beta1"
     sideEffects: None
+{{- end }}
