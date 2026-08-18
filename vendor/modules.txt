@@ -1569,7 +1569,7 @@ github.com/fluxcd/pkg/apis/acl
 # github.com/fluxcd/pkg/apis/meta v1.31.0
 ## explicit; go 1.26.0
 github.com/fluxcd/pkg/apis/meta
-# github.com/fluxcd/source-controller/api v1.9.3
+# github.com/fluxcd/source-controller/api v1.9.4
 ## explicit; go 1.26.0
 github.com/fluxcd/source-controller/api/v1
 # github.com/fsnotify/fsnotify v1.10.1
@@ -1894,7 +1894,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-containerregistry v0.21.8
+# github.com/google/go-containerregistry v0.21.9
 ## explicit; go 1.25.0
 github.com/google/go-containerregistry/cmd/crane/cmd
 github.com/google/go-containerregistry/internal/and
@@ -3051,10 +3051,12 @@ github.com/spiffe/go-spiffe/v2/spiffeid
 github.com/spiffe/go-spiffe/v2/svid/jwtsvid
 github.com/spiffe/go-spiffe/v2/svid/x509svid
 github.com/spiffe/go-spiffe/v2/workloadapi
-# github.com/stretchr/testify v1.11.1
+# github.com/stretchr/testify v1.12.0
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
+github.com/stretchr/testify/internal/difflib
+github.com/stretchr/testify/internal/spew
 github.com/stretchr/testify/require
 github.com/stretchr/testify/suite
 # github.com/subosito/gotenv v1.6.0
