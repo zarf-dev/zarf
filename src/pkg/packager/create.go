@@ -119,8 +119,9 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err != nil {
 			return "", err
 		}
-		remote, err := zoci.NewRemote(ctx, ref.String(), oci.PlatformForArch(pkg.Build.Architecture),
-			oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+		remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), oci.PlatformForArch(pkg.Build.Architecture), zoci.RemoteClientOptions{
+			RemoteOptions: opts.RemoteOptions,
+		})
 		if err != nil {
 			return "", err
 		}
