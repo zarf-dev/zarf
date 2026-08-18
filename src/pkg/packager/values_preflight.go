@@ -15,8 +15,8 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 )
@@ -30,7 +30,7 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if pkgLayout == nil {
 		return fmt.Errorf("pkg layout is required")
 	}
-	components := pkgLayout.Pkg.Components
+	components := pkgLayout.AsV1alpha1().Components
 	defined := newDefinedValues(vals)
 
 	var errs []error

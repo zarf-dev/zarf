@@ -23,9 +23,10 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	"github.com/gabriel-vasile/mimetype"
+	"github.com/mholt/archives"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -149,10 +150,12 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		return nil, err
 	}
 	if supportsFiltering(desc.Platform) {
-		pkg.Components, err = opts.Filter.Apply(pkg)
+		definition := api.NewPackageDefinitionFromV1alpha1(pkg)
+		definition, err = filters.Apply(definition, opts.Filter)
 		if err != nil {
 			return nil, err
 		}
+		pkg = definition.AsV1alpha1()
 	}
 
 	// Get all the layers for relevant components, exclude images if it's a skeleton or connected package
@@ -203,13 +206,13 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	return pkgLayout, nil
 }
 
-func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVerify bool) (string, error) {
+func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVerify bool) (_ string, err error) {
 	if shasum == "" {
 		return "", errors.New("shasum cannot be empty")
 	}
 	tarPath := filepath.Join(tarDir, "data")
 
-	err := pullHTTPFile(ctx, src, tarPath, insecureTLSSkipVerify)
+	err = pullHTTPFile(ctx, src, tarPath, insecureTLSSkipVerify)
 	if err != nil {
 		return "", err
 	}
@@ -222,28 +225,46 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVe
 		return "", fmt.Errorf("shasum mismatch for file %s, expected %s but got %s", tarPath, shasum, received)
 	}
 
-	mtype, err := mimetype.DetectFile(tarPath)
+	file, err := os.Open(tarPath)
 	if err != nil {
 		return "", err
 	}
+	defer func() {
+		if file != nil {
+			err = errors.Join(err, file.Close())
+		}
+	}()
+
+	format, _, err := archives.Identify(ctx, "data", file)
+	if errors.Is(err, archives.NoMatch) {
+		// A zstd filename lets archives identify streams that start with a skippable frame.
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			return "", fmt.Errorf("unsupported archive format: %w", err)
+		}
+		format, _, err = archives.Identify(ctx, "data.zst", file)
+	}
+	if err != nil {
+		return "", fmt.Errorf("unsupported archive format: %w", err)
+	}
 
 	newPath := filepath.Join(tarDir, "data.tar")
-
-	if mtype.Is("application/x-tar") {
-		err = os.Rename(tarPath, newPath)
-		if err != nil {
-			return "", err
-		}
-		return newPath, nil
-	} else if mtype.Is("application/zstd") {
-		newPath = fmt.Sprintf("%s.zst", newPath)
-		err = os.Rename(tarPath, newPath)
-		if err != nil {
-			return "", err
-		}
-		return newPath, nil
+	switch format.MediaType() {
+	case "application/x-tar":
+	case "application/zstd":
+		newPath += ".zst"
+	default:
+		return "", fmt.Errorf("unsupported archive format: %s", format.MediaType())
 	}
-	return "", fmt.Errorf("unsupported file type: %s", mtype.Extension())
+
+	if closeErr := file.Close(); closeErr != nil {
+		return "", closeErr
+	}
+	file = nil
+
+	if err := os.Rename(tarPath, newPath); err != nil {
+		return "", err
+	}
+	return newPath, nil
 }
 
 func pullHTTPFile(ctx context.Context, src, tarPath string, insecureTLSSkipVerify bool) (err error) {

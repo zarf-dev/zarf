@@ -38,6 +38,8 @@ import (
 
 type initOptions struct {
 	setVariables               map[string]string
+	valuesFiles                []string
+	setValues                  map[string]string
 	optionalComponents         string
 	skipValuesSchemaValidation bool
 	storageClass               string
@@ -45,6 +47,7 @@ type initOptions struct {
 	registryInfo               state.RegistryInfo
 	artifactServer             state.ArtifactServerInfo
 	injectorPort               int
+	injectorImage              string
 	takeOwnership              bool
 	forceConflicts             bool
 	timeout                    time.Duration
@@ -78,6 +81,8 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
 	_ = cmd.Flags().MarkDeprecated("set", "Use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSetVariables)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdInitFlagConfirm)
@@ -86,8 +91,10 @@ func newInitCommand() *cobra.Command {
 
 	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
 		fmt.Sprintf("How to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
-	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(InjectorPort),
+	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(VInitInjectorPort),
 		"The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
+	cmd.Flags().StringVar(&o.injectorImage, "injector-image", v.GetString(VInitInjectorImage),
+		"Image for the injector. This image must be available on every node")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -139,6 +146,7 @@ func newInitCommand() *cobra.Command {
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-port")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-image")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-port")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-secret")
@@ -192,6 +200,11 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -217,7 +230,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
 	}
-	if pkgLayout.Pkg.Kind != v1alpha1.ZarfInitConfig {
+	if pkgLayout.AsV1alpha1().Kind != v1alpha1.ZarfInitConfig {
 		return fmt.Errorf("zarf init can only deploy packages of kind \"%s\"", v1alpha1.ZarfInitConfig)
 	}
 	defer func() {
@@ -234,8 +247,10 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		Retries:                    o.retries,
 		OCIConcurrency:             o.ociConcurrency,
 		SetVariables:               o.setVariables,
+		Values:                     values,
 		StorageClass:               o.storageClass,
 		InjectorPort:               o.injectorPort,
+		InjectorImage:              o.injectorImage,
 		RemoteOptions:              defaultRemoteOptions(),
 		IsInteractive:              !o.confirm,
 		AgentTLS:                   agentTLS,

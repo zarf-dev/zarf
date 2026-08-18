@@ -12,12 +12,13 @@ import (
 	"slices"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
-	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 
 	"helm.sh/helm/v4/pkg/storage/driver"
@@ -39,8 +40,9 @@ type RemoveOptions struct {
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
-func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) error {
+func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOptions) error {
 	l := logger.From(ctx)
+	pkg := definition.AsV1alpha1()
 
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
@@ -49,11 +51,11 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		}
 	}
 
-	var err error
-	pkg.Components, err = filters.ByLocalOS(runtime.GOOS).Apply(pkg)
+	definition, err := filters.Apply(definition, filters.ByLocalOS(runtime.GOOS))
 	if err != nil {
 		return err
 	}
+	pkg = definition.AsV1alpha1()
 
 	if len(pkg.Components) == 0 {
 		return fmt.Errorf("package to remove contains no components")

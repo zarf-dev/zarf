@@ -81,6 +81,7 @@ func newDevCommand() *cobra.Command {
 	cmd.AddCommand(newDevGenerateSchemaCommand(v))
 	cmd.AddCommand(newDevLintCommand(v))
 	cmd.AddCommand(newDevUpgradeSchemaCommand())
+	cmd.AddCommand(newDevTemplateCommand(v))
 
 	return cmd
 }
@@ -515,6 +516,8 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 type devDeployOptions struct {
 	createSetPkgTmpl   map[string]string
 	deploySetVariables map[string]string
+	valuesFiles        []string
+	setValues          map[string]string
 	registryOverrides  []string
 	flavor             string
 	registryURL        string
@@ -552,6 +555,8 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 
 	// Always require take-ownership flag (no viper)
 	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
@@ -586,6 +591,11 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -603,6 +613,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		RegistryOverrides:  overrides,
 		CreateSetVariables: o.createSetPkgTmpl,
 		DeploySetVariables: o.deploySetVariables,
+		Values:             values,
 		OptionalComponents: o.optionalComponents,
 		Timeout:            o.timeout,
 		Retries:            o.retries,

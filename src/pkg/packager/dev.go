@@ -6,11 +6,11 @@ package packager
 import (
 	"context"
 	"errors"
+	"fmt"
 	"runtime"
 	"slices"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/types"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -40,6 +41,8 @@ type DevDeployOptions struct {
 	CreateSetVariables map[string]string
 	// DeploySetVariables are for package variables
 	DeploySetVariables map[string]string
+	// Values are values passed in at deploy time.
+	Values value.Values
 	// OptionalComponents to be deployed
 	OptionalComponents string
 	// Timeout for Helm operations
@@ -85,24 +88,20 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if err != nil {
 		return err
 	}
-	pkg := defined.PackageDefinition.AsV1alpha1()
-
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.ForDeploy(opts.OptionalComponents, false),
 	)
-	pkg.Components, err = filter.Apply(pkg)
+	definition, err := filters.Apply(defined.PackageDefinition, filter)
 	if err != nil {
 		return err
 	}
+	defined.PackageDefinition = definition
 
-	// If not building for airgap, strip out all images and repos
+	// If not building for airgap, strip out all images and repos.
 	if !opts.AirgapMode {
-		for idx := range pkg.Components {
-			pkg.Components[idx].Images = []string{}
-			pkg.Components[idx].ImageArchives = []v1alpha1.ImageArchive{}
-			pkg.Components[idx].Repos = []string{}
-		}
+		defined.PackageDefinition.RemoveImages()
+		defined.PackageDefinition.RemoveRepositories()
 	}
 
 	createOpts := assemble.AssembleOptions{
@@ -112,27 +111,29 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		OCIConcurrency:    opts.OCIConcurrency,
 		CachePath:         opts.CachePath,
 	}
-	resolvedPackage := load.ResolvedPackage{
-		PackageDefinition: api.NewPackageDefinitionFromV1alpha1(pkg),
-		ImportedSchemas:   defined.ImportedSchemas,
-	}
-	pkgLayout, err := assemble.AssemblePackage(ctx, resolvedPackage, packagePath, createOpts)
+	pkgLayout, err := assemble.AssemblePackage(ctx, defined, packagePath, createOpts)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
+	pkg := pkgLayout.AsV1alpha1()
 
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.DeploySetVariables, false)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, false)
+	if err != nil {
+		return err
+	}
+	values, err := loadDeploymentValues(ctx, pkgLayout, opts.Values, false)
 	if err != nil {
 		return err
 	}
 
-	l.Info("starting package dev deploy", "name", pkgLayout.Pkg.Metadata.Name)
+	l.Info("starting package dev deploy", "name", pkg.Metadata.Name)
 
 	var d deployer
 	d.vc = variableConfig
+	d.vals = values
 	if !opts.AirgapMode {
 		// Set default builtin values so they exist in case any helm charts rely on them
 		d.s, err = state.Default()
@@ -140,7 +141,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 			return err
 		}
 
-		requiresCluster := slices.ContainsFunc(pkgLayout.Pkg.Components, func(c v1alpha1.ZarfComponent) bool {
+		requiresCluster := slices.ContainsFunc(pkg.Components, func(c v1alpha1.ZarfComponent) bool {
 			return c.RequiresCluster()
 		})
 		if requiresCluster {
@@ -164,9 +165,14 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		}
 	}
 
+	if err := validateTemplateRefs(ctx, pkgLayout, values); err != nil {
+		return fmt.Errorf("package references values that cannot be resolved (value templates must be explicitly defined, even if empty): %w", err)
+	}
+
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOptions{
 		SetVariables:   opts.DeploySetVariables,
+		Values:         opts.Values,
 		Timeout:        opts.Timeout,
 		Retries:        opts.Retries,
 		Connected:      !opts.AirgapMode,
@@ -183,7 +189,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 
 	// Notify all the things about the successful deployment
-	l.Debug("dev deployment complete", "package", pkgLayout.Pkg.Metadata.Name, "duration", time.Since(start))
+	l.Debug("dev deployment complete", "package", pkg.Metadata.Name, "duration", time.Since(start))
 
 	return nil
 }
