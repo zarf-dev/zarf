@@ -1,6 +1,6 @@
-# [ALPHA] Values & Templates Example
+# [BETA] Values & Templates Example
 
-This example demonstrates the pre-release alpha version of Zarf's values templating system, including support for **Sprig functions** for advanced template processing, **Helm chart value overrides**, and **cluster state access** via `.State`.
+This example demonstrates the pre-release beta version of Zarf's values templating system, including support for **Sprig functions** for advanced template processing, **Helm chart value overrides**, and **cluster state access** via `.State`.
 
 ## Features Demonstrated
 
