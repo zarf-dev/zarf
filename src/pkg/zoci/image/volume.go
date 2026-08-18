@@ -5,6 +5,7 @@ package image
 
 import (
 	"archive/tar"
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/klauspost/compress/zstd"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content/file"
@@ -35,6 +37,9 @@ const (
 // ImageVolume builds an OCI image layer-by-layer from files on disk,
 // pushing each layer to an underlying OCI store and tracking config/history.
 type ImageVolume struct {
+	// Compression selects the tar compression format used for layers pushed
+	// via AddFile/AddDirectory. The zero value behaves as
+	// ImageVolumeCompressionUncompressed.
 	Compression ImageVolumeCompression
 	layers      []ocispec.Descriptor
 	tmp         string
@@ -52,19 +57,29 @@ func (iv *ImageVolume) Store() *file.Store {
 	return iv.store
 }
 
-// AddFile tars a single file, pushes it to the store as a layer, and
-// records it in the image's history and diff IDs. path must be inside dir.
+// AddFile tars a single file, compresses it per iv.Compression, pushes the
+// result to the store as a layer, and records it in the image's history and
+// diff IDs. path must be inside dir.
+//
+// The layer descriptor's digest identifies the pushed (possibly compressed)
+// blob, while the diff ID recorded in RootFS.DiffIDs always identifies the
+// uncompressed tar content, independent of iv.Compression.
 func (iv *ImageVolume) AddFile(ctx context.Context, dir, path string) (_ ocispec.Descriptor, err error) {
-	dgst, tarPath, size, err := iv.generateDiffID(dir, path)
+	diffID, tarPath, tarSize, err := iv.generateDiffID(dir, path)
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
 
-	tgz, err := os.Open(tarPath)
+	mediaType, blobPath, blobDigest, blobSize, err := iv.compressLayer(tarPath, diffID, tarSize)
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
-	defer func() { err = errors.Join(err, tgz.Close()) }()
+
+	blob, err := os.Open(blobPath)
+	if err != nil {
+		return ocispec.Descriptor{}, err
+	}
+	defer func() { err = errors.Join(err, blob.Close()) }()
 
 	fileName, err := filepath.Rel(dir, path)
 	if err != nil {
@@ -72,17 +87,17 @@ func (iv *ImageVolume) AddFile(ctx context.Context, dir, path string) (_ ocispec
 	}
 
 	layer := ocispec.Descriptor{
-		MediaType: ocispec.MediaTypeImageLayer,
-		Digest:    dgst,
-		Size:      size,
+		MediaType: mediaType,
+		Digest:    blobDigest,
+		Size:      blobSize,
 		Annotations: map[string]string{
 			ocispec.AnnotationTitle:   fileName,
 			ocispec.AnnotationCreated: format,
 		},
 	}
 
-	fmt.Printf("pushing %s (%s, %d bytes)\n", fileName, dgst, size)
-	if err := iv.store.Push(ctx, layer, tgz); err != nil {
+	fmt.Printf("pushing %s (%s, %d bytes)\n", fileName, blobDigest, blobSize)
+	if err := iv.store.Push(ctx, layer, blob); err != nil {
 		return ocispec.Descriptor{}, err
 	}
 
@@ -91,7 +106,7 @@ func (iv *ImageVolume) AddFile(ctx context.Context, dir, path string) (_ ocispec
 		Comment:   "dev.zarf.image.volume.v0",
 		CreatedBy: fmt.Sprintf("ADD %s /", fileName),
 	})
-	iv.config.RootFS.DiffIDs = append(iv.config.RootFS.DiffIDs, dgst)
+	iv.config.RootFS.DiffIDs = append(iv.config.RootFS.DiffIDs, diffID)
 	iv.layers = append(iv.layers, layer)
 
 	return layer, nil
@@ -169,4 +184,65 @@ func (iv *ImageVolume) generateDiffID(dir, file string) (dig digest.Digest, file
 	}
 
 	return digester.Digest(), temp, fi.Size(), nil
+}
+
+// compressLayer produces the on-disk blob that will be pushed to the store
+// for a tarred file, applying iv.Compression. tarDigest and tarSize describe
+// the uncompressed tar at tarPath (as returned by generateDiffID); for
+// ImageVolumeCompressionUncompressed they are returned unchanged alongside
+// tarPath, since the blob is the tar itself.
+func (iv *ImageVolume) compressLayer(tarPath string, tarDigest digest.Digest, tarSize int64) (mediaType, blobPath string, dgst digest.Digest, size int64, err error) {
+	switch iv.Compression {
+	case ImageVolumeCompressionUncompressed, "":
+		return ocispec.MediaTypeImageLayer, tarPath, tarDigest, tarSize, nil
+	case ImageVolumeCompressionGzip:
+		blobPath, dgst, size, err = iv.compressToFile(tarPath, func(w io.Writer) (io.WriteCloser, error) {
+			return gzip.NewWriter(w), nil
+		})
+		return ocispec.MediaTypeImageLayerGzip, blobPath, dgst, size, err
+	case ImageVolumeCompressionZstd:
+		blobPath, dgst, size, err = iv.compressToFile(tarPath, func(w io.Writer) (io.WriteCloser, error) {
+			return zstd.NewWriter(w)
+		})
+		return ocispec.MediaTypeImageLayerZstd, blobPath, dgst, size, err
+	default:
+		return "", "", "", 0, fmt.Errorf("unsupported image volume compression: %q", iv.Compression)
+	}
+}
+
+// compressToFile streams srcPath through the writer produced by
+// newCompressor into a new file in the builder's workspace, computing the
+// digest and size of the compressed output in a single pass.
+func (iv *ImageVolume) compressToFile(srcPath string, newCompressor func(io.Writer) (io.WriteCloser, error)) (path string, dgst digest.Digest, size int64, err error) {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return "", "", 0, err
+	}
+	defer func() { err = errors.Join(err, src.Close()) }()
+
+	out, err := os.CreateTemp(iv.tmp, "*.layer")
+	if err != nil {
+		return "", "", 0, err
+	}
+	defer func() { err = errors.Join(err, out.Close()) }()
+
+	digester := digest.Canonical.Digester()
+	cw, err := newCompressor(io.MultiWriter(out, digester.Hash()))
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	if _, err := io.Copy(cw, src); err != nil {
+		return "", "", 0, err
+	}
+	if err := cw.Close(); err != nil {
+		return "", "", 0, err
+	}
+
+	fi, err := out.Stat()
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	return out.Name(), digester.Digest(), fi.Size(), nil
 }

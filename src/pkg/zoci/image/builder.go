@@ -26,9 +26,10 @@ func NewImageVolume(ociDir, os, arch string) (*ImageVolume, error) {
 	}
 
 	return &ImageVolume{
-		store:  store,
-		tmp:    tmpDir,
-		layers: []ocispec.Descriptor{},
+		Compression: ImageVolumeCompressionUncompressed,
+		store:       store,
+		tmp:         tmpDir,
+		layers:      []ocispec.Descriptor{},
 		config: ocispec.Image{
 			Platform: ocispec.Platform{
 				OS:           os,

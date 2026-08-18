@@ -5,6 +5,7 @@ package image
 
 import (
 	"archive/tar"
+	"compress/gzip"
 	"context"
 	"io"
 	"io/fs"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/klauspost/compress/zstd"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
@@ -185,8 +187,99 @@ func TestImageVolumePushAfterCloseFails(t *testing.T) {
 	require.ErrorIs(t, err, file.ErrStoreClosed)
 }
 
-// assertLayerTarMatches fetches the pushed layer and verifies it is a
-// single-entry tar archive containing name with the given content.
+func TestImageVolumeAddFileCompression(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	content := []byte("hello world, this is a payload that is worth compressing")
+
+	type result struct {
+		desc   ocispec.Descriptor
+		diffID digest.Digest
+	}
+	results := make(map[ImageVolumeCompression]result)
+
+	for _, compression := range []ImageVolumeCompression{
+		ImageVolumeCompressionUncompressed,
+		ImageVolumeCompressionGzip,
+		ImageVolumeCompressionZstd,
+	} {
+		iv, err := NewImageVolume(t.TempDir(), "linux", "amd64")
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, iv.Clean()) })
+		iv.Compression = compression
+
+		srcDir := t.TempDir()
+		p := filepath.Join(srcDir, "hello.txt")
+		require.NoError(t, os.WriteFile(p, content, 0o644))
+
+		desc, err := iv.AddFile(ctx, srcDir, p)
+		require.NoError(t, err, "compression %s", compression)
+
+		exists, err := iv.Store().Exists(ctx, desc)
+		require.NoError(t, err)
+		require.True(t, exists)
+
+		assertLayerTarMatches(ctx, t, iv.Store(), desc, "hello.txt", content)
+
+		require.Len(t, iv.config.RootFS.DiffIDs, 1)
+		results[compression] = result{desc: desc, diffID: iv.config.RootFS.DiffIDs[0]}
+	}
+
+	require.Equal(t, ocispec.MediaTypeImageLayer, results[ImageVolumeCompressionUncompressed].desc.MediaType)
+	require.Equal(t, ocispec.MediaTypeImageLayerGzip, results[ImageVolumeCompressionGzip].desc.MediaType)
+	require.Equal(t, ocispec.MediaTypeImageLayerZstd, results[ImageVolumeCompressionZstd].desc.MediaType)
+
+	// The diff ID always identifies the uncompressed tar content, regardless
+	// of which compression produced the pushed blob.
+	require.Equal(t, results[ImageVolumeCompressionUncompressed].diffID, results[ImageVolumeCompressionGzip].diffID)
+	require.Equal(t, results[ImageVolumeCompressionUncompressed].diffID, results[ImageVolumeCompressionZstd].diffID)
+
+	// An uncompressed blob's digest equals its diff ID; compressed blob
+	// digests differ from the diff ID (and from each other).
+	require.Equal(t, results[ImageVolumeCompressionUncompressed].diffID, results[ImageVolumeCompressionUncompressed].desc.Digest)
+	require.NotEqual(t, results[ImageVolumeCompressionGzip].diffID, results[ImageVolumeCompressionGzip].desc.Digest)
+	require.NotEqual(t, results[ImageVolumeCompressionZstd].diffID, results[ImageVolumeCompressionZstd].desc.Digest)
+	require.NotEqual(t, results[ImageVolumeCompressionGzip].desc.Digest, results[ImageVolumeCompressionZstd].desc.Digest)
+}
+
+func TestImageVolumeAddFileUnsupportedCompression(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	iv := newTestVolume(t)
+	iv.Compression = ImageVolumeCompression("bogus")
+
+	srcDir := t.TempDir()
+	p := filepath.Join(srcDir, "a.txt")
+	require.NoError(t, os.WriteFile(p, []byte("a"), 0o644))
+
+	_, err := iv.AddFile(ctx, srcDir, p)
+	require.ErrorContains(t, err, "bogus")
+}
+
+func TestImageVolumeCompressionZeroValueIsUncompressed(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	store, err := file.New(t.TempDir())
+	require.NoError(t, err)
+
+	iv := &ImageVolume{store: store, tmp: t.TempDir()}
+	t.Cleanup(func() { require.NoError(t, iv.Clean()) })
+
+	srcDir := t.TempDir()
+	p := filepath.Join(srcDir, "a.txt")
+	require.NoError(t, os.WriteFile(p, []byte("a"), 0o644))
+
+	desc, err := iv.AddFile(ctx, srcDir, p)
+	require.NoError(t, err)
+	require.Equal(t, ocispec.MediaTypeImageLayer, desc.MediaType)
+}
+
+// assertLayerTarMatches fetches the pushed layer, decompresses it according
+// to its media type, and verifies it is a single-entry tar archive
+// containing name with the given content.
 func assertLayerTarMatches(ctx context.Context, t *testing.T, store *file.Store, desc ocispec.Descriptor, name string, content []byte) {
 	t.Helper()
 
@@ -194,7 +287,25 @@ func assertLayerTarMatches(ctx context.Context, t *testing.T, store *file.Store,
 	require.NoError(t, err)
 	defer func() { require.NoError(t, rc.Close()) }()
 
-	tr := tar.NewReader(rc)
+	var r io.Reader
+	switch desc.MediaType {
+	case ocispec.MediaTypeImageLayer:
+		r = rc
+	case ocispec.MediaTypeImageLayerGzip:
+		gr, err := gzip.NewReader(rc)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, gr.Close()) }()
+		r = gr
+	case ocispec.MediaTypeImageLayerZstd:
+		zr, err := zstd.NewReader(rc)
+		require.NoError(t, err)
+		defer zr.Close()
+		r = zr
+	default:
+		t.Fatalf("unexpected layer media type %q", desc.MediaType)
+	}
+
+	tr := tar.NewReader(r)
 	hdr, err := tr.Next()
 	require.NoError(t, err)
 	require.Equal(t, name, hdr.Name)
