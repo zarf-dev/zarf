@@ -1,6 +1,6 @@
 # [BETA] Values & Templates Example
 
-This example demonstrates the pre-release beta version of Zarf's values templating system, including support for **Sprig functions** for advanced template processing, **Helm chart value overrides**, and **cluster state access** via `.State`.
+This example demonstrates Zarf's beta values templating system, including support for **Sprig functions** for advanced template processing, **Helm chart value overrides**, and **cluster state access** via `.State`.
 
 ## Features Demonstrated
 
@@ -27,13 +27,13 @@ The example includes demonstrations of popular Sprig functions:
 Deploy this example to see values and templates in action:
 
 ```bash
-# Optional: Inspect the manifests and chart values-files (features="values=true" flag required until general release of values)
-zarf dev inspect manifests --features="values=true"
-zarf dev inspect values-files --features="values=true"
+# Optional: Inspect the manifests and chart values-files
+zarf dev inspect manifests
+zarf dev inspect values-files
 
 # Create and deploy the package
-zarf package create . --confirm --features="values=true"
-zarf package deploy zarf-package-values-templating-*.tar.zst --confirm --features="values=true"
+zarf package create . --confirm
+zarf package deploy zarf-package-values-templating-*.tar.zst --confirm
 
 # View the nginx results
 kubectl get configmap nginx-configmap -n nginx -o yaml
@@ -44,5 +44,5 @@ kubectl get configmap -n helm-overrides -o yaml
 
 # Remove the package with values templating in remove actions
 # Feel free to change --set-values to whatever you want!
-zarf package remove values-templating --confirm --features="values=true" --set-values="site.name=Example,app.environment=test,site.organization=ZarfDev"
+zarf package remove values-templating --confirm --set-values="site.name=Example,app.environment=test,site.organization=ZarfDev"
 ```
