@@ -9,9 +9,6 @@ import (
 	"github.com/diskfs/go-diskfs/filesystem"
 )
 
-// FileStat is the extended data underlying a single file, similar to https://golang.org/pkg/syscall/#Stat_t
-type FileStat = *directoryEntry
-
 // directoryEntry is a single directory entry
 // it combines information from inode and the actual entry
 // also fulfills os.FileInfo
@@ -125,24 +122,61 @@ func (d *directoryEntry) Mode() os.FileMode {
 	return mode
 }
 
-// Sys interface{}   // underlying data source (can return nil)
+// Sys returns *StatT with squashfs-specific metadata.
 func (d *directoryEntry) Sys() interface{} {
-	return d
+	return d.statT()
 }
 
-// UID get uid of file
-func (d *directoryEntry) UID() uint32 {
-	return d.uid
+func (d *directoryEntry) statT() *StatT {
+	s := &StatT{
+		UID:       d.uid,
+		GID:       d.gid,
+		Xattrs:    d.xattrs,
+		InodeType: "unknown",
+	}
+	if d.inode != nil {
+		s.Inode = d.inode.index()
+		s.InodeType = inodeTypeName(d.inode.inodeType())
+		if target, err := d.Readlink(); err == nil {
+			s.LinkTarget = target
+		}
+	}
+	return s
 }
 
-// GID get gid of file
-func (d *directoryEntry) GID() uint32 {
-	return d.gid
-}
-
-// Xattrs get extended attributes of file
-func (d *directoryEntry) Xattrs() map[string]string {
-	return d.xattrs
+func inodeTypeName(t inodeType) string {
+	switch t {
+	case inodeBasicDirectory:
+		return "basic-directory"
+	case inodeBasicFile:
+		return "basic-file"
+	case inodeBasicSymlink:
+		return "basic-symlink"
+	case inodeBasicBlock:
+		return "basic-block-device"
+	case inodeBasicChar:
+		return "basic-char-device"
+	case inodeBasicFifo:
+		return "basic-fifo"
+	case inodeBasicSocket:
+		return "basic-socket"
+	case inodeExtendedDirectory:
+		return "extended-directory"
+	case inodeExtendedFile:
+		return "extended-file"
+	case inodeExtendedSymlink:
+		return "extended-symlink"
+	case inodeExtendedBlock:
+		return "extended-block-device"
+	case inodeExtendedChar:
+		return "extended-char-device"
+	case inodeExtendedFifo:
+		return "extended-fifo"
+	case inodeExtendedSocket:
+		return "extended-socket"
+	default:
+		return "unknown"
+	}
 }
 
 // Readlink returns the destination of the symbolic link if this entry
