@@ -604,7 +604,13 @@ func chartFromGeneric(ch types.Chart) v1beta1.Chart {
 	case ch.URL != "":
 		switch {
 		case strings.HasPrefix(ch.URL, "oci://"):
-			bc.OCI = &v1beta1.OCISource{URL: ch.URL, Ref: v1beta1.OCIRef{Tag: ch.Version}}
+			ociURL := ch.URL
+			ref := v1beta1.OCIRef{Tag: ch.Version}
+			if url, digest, found := strings.Cut(ch.URL, "@sha256:"); found {
+				ociURL = url
+				ref = v1beta1.OCIRef{Digest: "sha256:" + digest}
+			}
+			bc.OCI = &v1beta1.OCISource{URL: ociURL, Ref: ref}
 		case ch.GitPath != "" || isGitURL(ch.URL):
 			gitURL := ch.URL
 			refStr := ""
