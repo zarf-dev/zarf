@@ -4,6 +4,7 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -149,10 +150,10 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 	require.Equal(t, original, roundTripped)
 }
 
-// TestConvertGenericRoundTripFuzz reflectively populates every field of a ZarfPackage with random,
-// non-zero values and asserts the generic round-trip reproduces it exactly. Walking the struct by
-// reflection means a newly added field is exercised automatically, so a field the conversion forgets
-// to carry is caught here rather than silently dropped.
+// TestConvertGenericRoundTripFuzz reflectively populates every field of a ZarfPackage with random
+// values and asserts the generic round-trip reproduces it exactly. Walking the struct by reflection
+// means a newly added field is exercised automatically, so a field the conversion forgets to carry
+// is caught here rather than silently dropped.
 func TestConvertGenericRoundTripFuzz(t *testing.T) {
 	t.Parallel()
 
@@ -182,6 +183,7 @@ func TestConvertV1alpha1V1beta1RoundTripFuzz(t *testing.T) {
 	for i := range 1000 {
 		var pkg v1alpha1.ZarfPackage
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
+		populateValidV1alpha1ChartSources(&pkg, rng, i)
 
 		v1beta1Pkg := internalv1beta1.ConvertFromGeneric(ConvertToGeneric(pkg))
 		roundTripped := ConvertFromGeneric(internalv1beta1.ConvertToGeneric(v1beta1Pkg))
@@ -189,8 +191,46 @@ func TestConvertV1alpha1V1beta1RoundTripFuzz(t *testing.T) {
 	}
 }
 
+func populateValidV1alpha1ChartSources(pkg *v1alpha1.ZarfPackage, rng *rand.Rand, iteration int) {
+	chartIndex := iteration
+	for ci := range pkg.Components {
+		for chi := range pkg.Components[ci].Charts {
+			chart := &pkg.Components[ci].Charts[chi]
+			chart.URL, chart.RepoName, chart.GitPath, chart.LocalPath, chart.Version = "", "", "", "", ""
+
+			switch rng.Intn(4) {
+			case 0:
+				chart.URL = fmt.Sprintf("https://charts%d.example.com", rng.Intn(1<<30))
+				chart.RepoName = fmt.Sprintf("chart-%d", chartIndex)
+				chart.Version = fmt.Sprintf("%d", rng.Intn(1<<30))
+			case 1:
+				chart.URL = fmt.Sprintf("https://git%d.example.com/chart-%d.git", rng.Intn(1<<30), chartIndex)
+				chart.GitPath = fmt.Sprintf("charts/chart-%d", chartIndex)
+				switch rng.Intn(3) {
+				case 0:
+					chart.Version = fmt.Sprintf("%d", rng.Intn(1<<30))
+				case 1:
+					chart.Version = fmt.Sprintf("%040x", rng.Uint64())
+				case 2:
+					chart.URL += fmt.Sprintf("@refs/heads/branch-%d", rng.Intn(1<<30))
+				}
+			case 2:
+				chart.LocalPath = fmt.Sprintf("charts/chart-%d", chartIndex)
+			case 3:
+				chart.URL = fmt.Sprintf("oci://registry%d.example.com/chart-%d", rng.Intn(1<<30), chartIndex)
+				if rng.Intn(2) == 0 {
+					chart.Version = fmt.Sprintf("%d", rng.Intn(1<<30))
+				} else {
+					chart.URL += fmt.Sprintf("@sha256:%064x", rng.Uint64())
+				}
+			}
+			chartIndex++
+		}
+	}
+}
+
 // v1alpha1V1beta1RoundTripExclusions lists the v1alpha1 fields that v1beta1 cannot represent.
-// The fuzz test intentionally converts an unmodified generated package and ignores only these
+// The fuzz test replaces chart sources with schema-valid generated values and ignores only these
 // fields when comparing the result.
 //
 //   - fields removed from v1beta1: package.constants, package.variables, metadata.yolo,
@@ -213,8 +253,6 @@ func TestConvertV1alpha1V1beta1RoundTripFuzz(t *testing.T) {
 //     action.deprecatedSetVariable and action.setVariables have no v1beta1 equivalents; and an
 //     action.template false pointer cannot be distinguished from nil after projection to
 //     EnableTemplating. action.wait.cluster.condition defaults from empty to "exists" in v1beta1.
-//   - chart.url, chart.repoName, chart.gitPath, chart.localPath, and chart.version are flattened
-//     source fields; v1beta1 instead uses a single structured Helm, Git, local, or OCI source.
 func v1alpha1V1beta1RoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1alpha1.ZarfPackage{}, "APIVersion", "Kind", "Constants", "Variables"),
@@ -235,7 +273,7 @@ func v1alpha1V1beta1RoundTripExclusions() cmp.Options {
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentActionSet{}, "After", "OnSuccess"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentAction{}, "DeprecatedSetVariable", "SetVariables", "Template"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentActionWaitCluster{}, "Condition"),
-		cmpopts.IgnoreFields(v1alpha1.ZarfChart{}, "URL", "RepoName", "GitPath", "LocalPath", "Version", "Variables", "SchemaValidation"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfChart{}, "Variables", "SchemaValidation"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfManifest{}, "Template"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfFile{}, "Template"),
 	}
