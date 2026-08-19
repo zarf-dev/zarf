@@ -32,7 +32,9 @@ func TestRecordPackageDefinitionDeployment(t *testing.T) {
 
 	recorded, err := c.RecordPackageDefinitionDeployment(ctx, definition, "sha256:abcdeadbeef", nil, 1)
 	require.NoError(t, err)
-	require.Equal(t, definition.AsV1alpha1(), recorded.Data)
+	recordedDefinition, err := recorded.PackageDefinition()
+	require.NoError(t, err)
+	require.Equal(t, definition.AsV1alpha1(), recordedDefinition.AsV1alpha1())
 	require.Contains(t, recorded.PackageData, v1alpha1.APIVersion)
 	require.Contains(t, recorded.PackageData, v1beta1.APIVersion)
 
