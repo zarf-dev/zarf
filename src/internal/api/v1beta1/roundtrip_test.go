@@ -259,6 +259,7 @@ func TestConvertV1beta1V1alpha1RoundTripFuzz(t *testing.T) {
 	for i := range 1000 {
 		var pkg v1beta1.Package
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
+		// Valid repository so that it can roundtrip
 		populateValidV1beta1Repositories(&pkg, rng, i)
 
 		v1alpha1Pkg := internalv1alpha1.ConvertFromGeneric(ConvertToGeneric(pkg))
@@ -277,29 +278,6 @@ func populateValidV1beta1Repositories(pkg *v1beta1.Package, rng *rand.Rand, iter
 	}
 }
 
-// TestConvertV1beta1V1alpha1RepositoryRoundTripFuzz isolates the schema-valid repository case,
-// verifying the v1beta1 structured URL/ref representation survives a v1alpha1 round-trip.
-func TestConvertV1beta1V1alpha1RepositoryRoundTripFuzz(t *testing.T) {
-	t.Parallel()
-
-	rng := rand.New(rand.NewSource(1))
-	for i := range 1000 {
-		original := v1beta1.Package{
-			APIVersion: v1beta1.APIVersion,
-			Kind:       v1beta1.ZarfPackageConfig,
-			Components: []v1beta1.Component{{
-				Name:          "component",
-				ComponentSpec: v1beta1.ComponentSpec{Repositories: []v1beta1.Repository{validV1beta1Repository(rng, i)}},
-			}},
-		}
-		original.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
-
-		v1alpha1Pkg := internalv1alpha1.ConvertFromGeneric(ConvertToGeneric(original))
-		roundTripped := ConvertFromGeneric(internalv1alpha1.ConvertToGeneric(v1alpha1Pkg))
-		require.Equalf(t, original, roundTripped, "repository round-trip diverged on iteration %d", i)
-	}
-}
-
 func validV1beta1Repository(rng *rand.Rand, iteration int) v1beta1.Repository {
 	repository := v1beta1.Repository{
 		URL: fmt.Sprintf("https://example%d.com/repository-%d.git", rng.Intn(1<<30), iteration),
@@ -308,9 +286,9 @@ func validV1beta1Repository(rng *rand.Rand, iteration int) v1beta1.Repository {
 
 	switch iteration % 3 {
 	case 0:
-		repository.Ref.Tag = fmt.Sprintf("v%d.%d.%d", rng.Intn(100), rng.Intn(100), rng.Intn(100))
+		repository.Ref.Tag = fmt.Sprintf("%d", rng.Intn(1<<30))
 	case 1:
-		repository.Ref.Branch = fmt.Sprintf("feature-%d", rng.Intn(1<<30))
+		repository.Ref.Branch = fmt.Sprintf("%d", rng.Intn(1<<30))
 	case 2:
 		repository.Ref.Commit = fmt.Sprintf("%040x", rng.Uint64())
 	}
