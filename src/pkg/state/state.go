@@ -6,11 +6,14 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -710,16 +713,74 @@ const (
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
-	Name                string               `json:"name"`
-	Digest              string               `json:"digest"`
-	Data                v1alpha1.ZarfPackage `json:"data"`
-	CLIVersion          string               `json:"cliVersion"`
-	Generation          int                  `json:"generation"`
-	DeployedComponents  []DeployedComponent  `json:"deployedComponents"`
-	ConnectStrings      ConnectStrings       `json:"connectStrings,omitempty"`
-	PackageConnectivity PackageConnectivity  `json:"packageConnectivity"`
+	Name   string `json:"name"`
+	Digest string `json:"digest"`
+	// Deprecated: kept so older clients can read package deployment state.
+	Data                v1alpha1.ZarfPackage       `json:"data"`
+	PackageData         map[string]json.RawMessage `json:"packageData"`
+	CLIVersion          string                     `json:"cliVersion"`
+	Generation          int                        `json:"generation"`
+	DeployedComponents  []DeployedComponent        `json:"deployedComponents"`
+	ConnectStrings      ConnectStrings             `json:"connectStrings,omitempty"`
+	PackageConnectivity PackageConnectivity        `json:"packageConnectivity"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
+}
+
+// SetPackageDefinition records every API version needed to read a deployed package.
+// Data always contains the v1alpha1 form to allow older Zarf clients to read the
+// deployed package secret.
+func (d *DeployedPackage) SetPackageDefinition(definition api.PackageDefinition) error {
+	alpha := definition.AsV1alpha1()
+	alphaData, err := json.Marshal(alpha)
+	if err != nil {
+		return fmt.Errorf("marshal %s package data: %w", v1alpha1.APIVersion, err)
+	}
+
+	d.Data = alpha
+	d.PackageData = map[string]json.RawMessage{
+		v1alpha1.APIVersion: alphaData,
+	}
+
+	switch definition.OriginalAPIVersion() {
+	case "", v1alpha1.APIVersion:
+		return nil
+	case v1beta1.APIVersion:
+		betaData, err := json.Marshal(definition.AsV1beta1())
+		if err != nil {
+			return fmt.Errorf("marshal %s package data: %w", v1beta1.APIVersion, err)
+		}
+		d.PackageData[v1beta1.APIVersion] = betaData
+		return nil
+	default:
+		return fmt.Errorf("unsupported package API version %q", definition.OriginalAPIVersion())
+	}
+}
+
+// PackageDefinition returns the latest package definition this Zarf version
+// understands. Deployed package secrets written before PackageData was added
+// fall back to their legacy v1alpha1 Data field.
+func (d DeployedPackage) PackageDefinition() (api.PackageDefinition, error) {
+	if len(d.PackageData) == 0 {
+		return api.NewPackageDefinitionFromV1alpha1(d.Data), nil
+	}
+
+	if data, found := d.PackageData[v1beta1.APIVersion]; found {
+		var pkg v1beta1.Package
+		if err := json.Unmarshal(data, &pkg); err != nil {
+			return api.PackageDefinition{}, fmt.Errorf("unmarshal %s package data: %w", v1beta1.APIVersion, err)
+		}
+		return api.NewPackageDefinitionFromV1beta1(pkg), nil
+	}
+	if data, found := d.PackageData[v1alpha1.APIVersion]; found {
+		var pkg v1alpha1.ZarfPackage
+		if err := json.Unmarshal(data, &pkg); err != nil {
+			return api.PackageDefinition{}, fmt.Errorf("unmarshal %s package data: %w", v1alpha1.APIVersion, err)
+		}
+		return api.NewPackageDefinitionFromV1alpha1(pkg), nil
+	}
+
+	return api.PackageDefinition{}, fmt.Errorf("deployed package has no supported package data")
 }
 
 // DeployedPackageNameRegex is a regex for lowercase, numbers and hyphens that cannot start with a hyphen.

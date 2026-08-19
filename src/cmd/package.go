@@ -28,6 +28,7 @@ import (
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -1284,11 +1285,10 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	err = utils.ColorPrintYAML(pkg.AsV1alpha1(), nil, false)
-	if err != nil {
-		return err
+	if pkg.OriginalAPIVersion() == v1beta1.APIVersion {
+		return utils.ColorPrintYAML(pkg.AsV1beta1(), nil, false)
 	}
-	return nil
+	return utils.ColorPrintYAML(pkg.AsV1alpha1(), nil, false)
 }
 
 type packageListOptions struct {

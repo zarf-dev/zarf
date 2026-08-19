@@ -14,9 +14,34 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
+
+func TestRecordPackageDefinitionDeployment(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	c := &Cluster{Clientset: fake.NewClientset()}
+	definition := api.NewPackageDefinitionFromV1beta1(v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Metadata:   v1beta1.PackageMetadata{Name: "beta-package", Version: "1.2.3"},
+	})
+
+	recorded, err := c.RecordPackageDefinitionDeployment(ctx, definition, "sha256:abcdeadbeef", nil, 1)
+	require.NoError(t, err)
+	require.Equal(t, definition.AsV1alpha1(), recorded.Data)
+	require.Contains(t, recorded.PackageData, v1alpha1.APIVersion)
+	require.Contains(t, recorded.PackageData, v1beta1.APIVersion)
+
+	loaded, err := c.GetDeployedPackage(ctx, "beta-package")
+	require.NoError(t, err)
+	loadedDefinition, err := loaded.PackageDefinition()
+	require.NoError(t, err)
+	require.Equal(t, definition.AsV1beta1(), loadedDefinition.AsV1beta1())
+}
 
 func TestGetInstalledChartsForComponentNamespaceOverride(t *testing.T) {
 	t.Parallel()
