@@ -8,6 +8,7 @@ package image
 import (
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2/content/file"
 )
@@ -20,7 +21,7 @@ func NewImageVolume(ociDir, os, arch string) (*ImageVolume, error) {
 		return nil, err
 	}
 
-	tmpDir, err := utils.MakeTempDir("/tmp")
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
 	}

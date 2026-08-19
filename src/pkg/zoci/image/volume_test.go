@@ -77,7 +77,7 @@ func TestImageVolumeAddFile(t *testing.T) {
 	require.Equal(t, []digest.Digest{desc.Digest}, iv.config.RootFS.DiffIDs)
 	require.Len(t, iv.config.History, 1)
 	require.Equal(t, "ADD sub/hello.txt /", iv.config.History[0].CreatedBy)
-	require.Equal(t, "dev.zarf.image.volume.v0", iv.config.History[0].Comment)
+	require.Equal(t, "dev.zarf.zoci.volume.v0", iv.config.History[0].Comment)
 
 	assertLayerTarMatches(ctx, t, iv.Store(), desc, "sub/hello.txt", content)
 }
@@ -122,12 +122,17 @@ func TestImageVolumeAddDirectory(t *testing.T) {
 		require.NoError(t, os.WriteFile(p, []byte(content), 0o644))
 	}
 
-	err := iv.AddDirectory(ctx, srcDir)
+	const ref = "test:latest"
+	err := iv.AddDirectory(ctx, srcDir, ref)
 	require.NoError(t, err)
 
 	require.Len(t, iv.layers, len(files))
 	require.Len(t, iv.config.RootFS.DiffIDs, len(files))
 	require.Len(t, iv.config.History, len(files))
+
+	manifestDesc, err := iv.Store().Resolve(ctx, ref)
+	require.NoError(t, err)
+	require.Equal(t, ocispec.MediaTypeImageManifest, manifestDesc.MediaType)
 
 	seen := map[string]bool{}
 	for _, desc := range iv.layers {
@@ -151,7 +156,7 @@ func TestImageVolumeAddDirectoryEmpty(t *testing.T) {
 	iv := newTestVolume(t)
 	srcDir := t.TempDir()
 
-	err := iv.AddDirectory(ctx, srcDir)
+	err := iv.AddDirectory(ctx, srcDir, "test:latest")
 	require.NoError(t, err)
 	require.Empty(t, iv.layers)
 	require.Empty(t, iv.config.RootFS.DiffIDs)

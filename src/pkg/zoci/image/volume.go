@@ -5,8 +5,10 @@ package image
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,7 +20,11 @@ import (
 	"github.com/klauspost/compress/zstd"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
+
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // ImageVolumeCompression names the tar compression format used for layers.
@@ -65,7 +71,12 @@ func (iv *ImageVolume) Store() *file.Store {
 // blob, while the diff ID recorded in RootFS.DiffIDs always identifies the
 // uncompressed tar content, independent of iv.Compression.
 func (iv *ImageVolume) AddFile(ctx context.Context, dir, path string) (_ ocispec.Descriptor, err error) {
-	diffID, tarPath, tarSize, err := iv.generateDiffID(dir, path)
+	fileName, err := filepath.Rel(dir, path)
+	if err != nil {
+		return ocispec.Descriptor{}, err
+	}
+
+	diffID, tarPath, tarSize, err := iv.generateDiffID(fileName, path)
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
@@ -81,11 +92,6 @@ func (iv *ImageVolume) AddFile(ctx context.Context, dir, path string) (_ ocispec
 	}
 	defer func() { err = errors.Join(err, blob.Close()) }()
 
-	fileName, err := filepath.Rel(dir, path)
-	if err != nil {
-		return ocispec.Descriptor{}, err
-	}
-
 	layer := ocispec.Descriptor{
 		MediaType: mediaType,
 		Digest:    blobDigest,
@@ -96,14 +102,14 @@ func (iv *ImageVolume) AddFile(ctx context.Context, dir, path string) (_ ocispec
 		},
 	}
 
-	fmt.Printf("pushing %s (%s, %d bytes)\n", fileName, blobDigest, blobSize)
+	logger.From(ctx).Debug("pushing image volume layer", "file", fileName, "digest", blobDigest, "size", blobSize)
 	if err := iv.store.Push(ctx, layer, blob); err != nil {
 		return ocispec.Descriptor{}, err
 	}
 
 	iv.config.History = append(iv.config.History, ocispec.History{
 		Created:   &static,
-		Comment:   "dev.zarf.image.volume.v0",
+		Comment:   "dev.zarf.zoci.volume.v0",
 		CreatedBy: fmt.Sprintf("ADD %s /", fileName),
 	})
 	iv.config.RootFS.DiffIDs = append(iv.config.RootFS.DiffIDs, diffID)
@@ -113,8 +119,9 @@ func (iv *ImageVolume) AddFile(ctx context.Context, dir, path string) (_ ocispec
 }
 
 // AddDirectory walks folder and adds each regular file as a layer via AddFile.
-func (iv *ImageVolume) AddDirectory(ctx context.Context, folder string) error {
-	fmt.Printf("walking %s\n", folder)
+func (iv *ImageVolume) AddDirectory(ctx context.Context, folder, ref string) error {
+	l := logger.From(ctx)
+	l.Debug("walking directory for image volume", "path", folder)
 
 	err := filepath.WalkDir(folder, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -131,21 +138,47 @@ func (iv *ImageVolume) AddDirectory(ctx context.Context, folder string) error {
 		return err
 	}
 
-	fmt.Printf("pushed %d files from %s\n", len(iv.layers), folder)
+	l.Debug("pushed files for image volume", "count", len(iv.layers), "path", folder)
 
-	return nil
+	configBytes, err := json.Marshal(iv.config)
+	if err != nil {
+		return err
+	}
+	configDesc := content.NewDescriptorFromBytes(ocispec.MediaTypeImageConfig, configBytes)
+	err = iv.store.Push(ctx, configDesc, bytes.NewBuffer(configBytes))
+	if err != nil {
+		return err
+	}
+
+	manifestDesc, err := oras.PackManifest(
+		ctx,
+		iv.store,
+		oras.PackManifestVersion1_1,
+		"application/vnd.oci.image.manifest.v1+json",
+		oras.PackManifestOptions{
+			Layers:           iv.layers,
+			ConfigDescriptor: &configDesc,
+			ManifestAnnotations: map[string]string{
+				ocispec.AnnotationCreated: format,
+			},
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	return iv.store.Tag(ctx, manifestDesc, ref)
 }
 
-// generateDiffID tars file into the builder's workspace and returns the
-// digest and size of the resulting tar stream, computed in a single pass
-// while it is written to disk.
-func (iv *ImageVolume) generateDiffID(dir, file string) (dig digest.Digest, filePath string, size int64, err error) {
+// generateDiffID tars file into the builder's workspace under tar entry name
+// rel and returns the digest and size of the resulting tar stream, computed
+// in a single pass while it is written to disk.
+func (iv *ImageVolume) generateDiffID(rel, file string) (dig digest.Digest, filePath string, size int64, err error) {
 	info, err := os.Stat(file)
 	if err != nil {
 		return "", "", 0, err
 	}
 
-	rel := strings.TrimPrefix(file, dir+"/")
 	temp := filepath.Join(iv.tmp, strings.ReplaceAll(rel, string(filepath.Separator), "_")+".tar")
 	out, err := os.Create(temp)
 	if err != nil {
