@@ -246,7 +246,9 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 		Example: lang.CmdToolsUpdateCredsExample,
 		Aliases: []string{"uc"},
 		Args:    cobra.MaximumNArgs(1),
-		RunE:    o.run,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(cmd, args, v)
+		},
 	}
 
 	// Always require confirm flag (no viper)
@@ -290,7 +292,7 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
+func (o *updateCredsOptions) run(cmd *cobra.Command, args []string, v *viper.Viper) error {
 	ctx := cmd.Context()
 	l := logger.From(ctx)
 	l.Warn(lang.CmdToolsUpdateCredsDeprecated)
@@ -325,7 +327,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		l.Warn(lang.ArtifactServerDeprecated)
 	}
 
-	registryURLChanged := services.Has(state.RegistryKey) && cmd.Flags().Changed("registry-url")
+	registryURLChanged := services.Has(state.RegistryKey) && optionIsExplicitlySet(cmd, v, "registry-url", VInitRegistryURL)
 	registryInfo, err := resolveRegistryUpdate(ctx, c, oldState.RegistryInfo, o.registryInfo, registryURLChanged)
 	if err != nil {
 		return err
@@ -589,7 +591,9 @@ func newUpdateRegistryCredsCommand(v *viper.Viper) *cobra.Command {
 		Long:    lang.CmdToolsUpdateCredsRegistryLong,
 		Example: lang.CmdToolsUpdateCredsRegistryExample,
 		Args:    cobra.NoArgs,
-		RunE:    o.run,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(cmd, args, v)
+		},
 	}
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsUpdateCredsConfirmFlag)
@@ -603,7 +607,7 @@ func newUpdateRegistryCredsCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
+func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string, v *viper.Viper) error {
 	ctx := cmd.Context()
 	c, oldState, err := loadClusterAndState(ctx)
 	if err != nil {
@@ -614,7 +618,7 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return errors.New("no registry is configured in the Zarf state; nothing to update")
 	}
 
-	registryURLChanged := cmd.Flags().Changed("registry-url")
+	registryURLChanged := optionIsExplicitlySet(cmd, v, "registry-url", VInitRegistryURL)
 	registryInfo, err := resolveRegistryUpdate(ctx, c, oldState.RegistryInfo, o.registryInfo, registryURLChanged)
 	if err != nil {
 		return err
