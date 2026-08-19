@@ -257,7 +257,7 @@ func TestConvertV1beta1V1alpha1RoundTripFuzz(t *testing.T) {
 		var pkg v1beta1.Package
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
 		// Valid repository url with only one source so that it can roundtrip
-		populateValidV1beta1Repositories(&pkg, rng, i)
+		populateValidV1beta1Repositories(&pkg, rng)
 		// Valid chart with one only source so it can round trip
 		populateValidV1beta1ChartSources(&pkg, rng, i)
 
@@ -305,7 +305,7 @@ func validV1beta1GitRef(rng *rand.Rand) v1beta1.GitRef {
 	case 0:
 		return v1beta1.GitRef{Tag: fmt.Sprintf("%d", rng.Intn(1<<30))}
 	case 1:
-		return v1beta1.GitRef{Branch: fmt.Sprintf("branch-%d", rng.Intn(1<<30))}
+		return v1beta1.GitRef{Branch: fmt.Sprintf("%d", rng.Intn(1<<30))}
 	default:
 		return v1beta1.GitRef{Commit: fmt.Sprintf("%040x", rng.Uint64())}
 	}
@@ -318,32 +318,20 @@ func validV1beta1OCIRef(rng *rand.Rand) v1beta1.OCIRef {
 	return v1beta1.OCIRef{Digest: fmt.Sprintf("sha256:%064x", rng.Uint64())}
 }
 
-func populateValidV1beta1Repositories(pkg *v1beta1.Package, rng *rand.Rand, iteration int) {
-	repositoryIndex := iteration
+func populateValidV1beta1Repositories(pkg *v1beta1.Package, rng *rand.Rand) {
 	for ci := range pkg.Components {
 		for ri := range pkg.Components[ci].Repositories {
-			pkg.Components[ci].Repositories[ri] = validV1beta1Repository(rng, repositoryIndex)
-			repositoryIndex++
+			pkg.Components[ci].Repositories[ri] = validV1beta1Repository(rng)
 		}
 	}
 }
 
-func validV1beta1Repository(rng *rand.Rand, iteration int) v1beta1.Repository {
-	repository := v1beta1.Repository{
-		URL: fmt.Sprintf("https://example%d.com/repository-%d.git", rng.Intn(1<<30), iteration),
-		Ref: &v1beta1.GitRef{},
+func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
+	ref := validV1beta1GitRef(rng)
+	return v1beta1.Repository{
+		URL: fmt.Sprintf("https://example%d.com/repository.git", rng.Intn(1<<30)),
+		Ref: &ref,
 	}
-
-	switch iteration % 3 {
-	case 0:
-		repository.Ref.Tag = fmt.Sprintf("%d", rng.Intn(1<<30))
-	case 1:
-		repository.Ref.Branch = fmt.Sprintf("%d", rng.Intn(1<<30))
-	case 2:
-		repository.Ref.Commit = fmt.Sprintf("%040x", rng.Uint64())
-	}
-
-	return repository
 }
 
 // v1beta1V1alpha1RoundTripExclusions lists the v1beta1 fields that v1alpha1 cannot represent.
