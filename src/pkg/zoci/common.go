@@ -6,6 +6,7 @@ package zoci
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
+	"github.com/zarf-dev/zarf/src/types"
 	ociDirectory "oras.land/oras-go/v2/content/oci"
 )
 
@@ -59,14 +62,59 @@ type PublishOptions struct {
 	Tag string
 }
 
+// RemoteClientOptions configures Zarf's OCI remote client.
+type RemoteClientOptions struct {
+	// CachePath stores OCI layers locally when non-empty.
+	CachePath string
+	types.RemoteOptions
+}
+
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
 type Remote struct {
 	*oci.OrasRemote
 }
 
-// NewRemote returns an oras remote repository client and context for the given url
-// with zarf opination embedded
+// NewRemote returns an ORAS remote repository client configured for the given URL.
+//
+// Deprecated: Use NewRemoteWithOptions so Zarf owns transport configuration.
 func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
+	return newRemote(ctx, url, platform, mods...)
+}
+
+// NewRemoteWithOptions returns an ORAS remote repository configured with Zarf's
+// cache and transport options.
+func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Platform, options RemoteClientOptions) (*Remote, error) {
+	modifiers := []oci.Modifier{
+		oci.WithInsecureSkipVerify(options.InsecureSkipTLSVerify),
+	}
+	if options.CachePath != "" {
+		cacheModifier, err := GetOCICacheModifier(ctx, options.CachePath)
+		if err != nil {
+			return nil, err
+		}
+		modifiers = append(modifiers, cacheModifier)
+	}
+
+	remote, err := newRemote(ctx, url, platform, modifiers...)
+	if err != nil {
+		return nil, err
+	}
+
+	// negotiate if required after the remote has been instantiated for any canonical updates (docker.io etc)
+	if options.PlainHTTP {
+		plainHTTP, err := ocischeme.From(ctx).UsePlainHTTP(ctx, remote.Repo().Reference.Registry, ocischeme.ProbeOptions{
+			InsecureSkipTLSVerify: options.InsecureSkipTLSVerify,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("could not resolve registry transport: %w", err)
+		}
+		remote.Repo().PlainHTTP = plainHTTP
+	}
+
+	return remote, nil
+}
+
+func newRemote(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
 	l := logger.From(ctx)
 	modifiers := append([]oci.Modifier{
 		oci.WithLogger(l),

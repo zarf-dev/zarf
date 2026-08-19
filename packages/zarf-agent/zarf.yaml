@@ -24,6 +24,11 @@ variables:
     default: ""
     autoIndent: true
 
+  - name: AGENT_MUTATION_EXCLUSIONS
+    description: YAML list of GitOps resource groups the zarf-agent should not mutate (valid values are argocd and flux)
+    default: "[]"
+    autoIndent: true
+
 constants:
   - name: AGENT_IMAGE
     value: "###ZARF_PKG_TMPL_AGENT_IMAGE###"
