@@ -16,9 +16,3 @@ proxy_image_tag = '1.8.0.3'
 
 # The image reference to use for the optional git-server Zarf deploys
 gitea_image = 'ghcr.io/go-gitea/gitea:1.24.6-rootless'
-
-[package.deploy.set]
-agent_webhook_annotations = '''
-admissions.enforcer/disabled: "true"
-example.com/zarf-test: "enabled"
-'''
