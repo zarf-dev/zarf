@@ -8,8 +8,11 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -242,5 +245,44 @@ func keepOneChartSource(c *v1beta1.Chart) {
 		c.Local, c.OCI = nil, nil
 	case c.Local != nil:
 		c.OCI = nil
+	}
+}
+
+// TestConvertV1beta1V1alpha1RoundTripFuzz verifies that fields shared by v1beta1 and v1alpha1
+// survive a conversion through v1alpha1. Reflection exercises newly added v1beta1 fields by
+// default; cross-version incompatibilities are deliberately excluded below.
+func TestConvertV1beta1V1alpha1RoundTripFuzz(t *testing.T) {
+	t.Parallel()
+
+	rng := rand.New(rand.NewSource(1))
+	for i := range 1000 {
+		var pkg v1beta1.Package
+		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
+
+		v1alpha1Pkg := internalv1alpha1.ConvertFromGeneric(ConvertToGeneric(pkg))
+		roundTripped := ConvertFromGeneric(internalv1alpha1.ConvertToGeneric(v1alpha1Pkg))
+		require.Emptyf(t, cmp.Diff(pkg, roundTripped, v1beta1V1alpha1RoundTripExclusions()...), "cross-version round-trip diverged on iteration %d", i)
+	}
+}
+
+// v1beta1V1alpha1RoundTripExclusions lists the v1beta1 fields that v1alpha1 cannot represent.
+// The fuzz test intentionally converts an unmodified generated package and ignores only these
+// fields when comparing the result.
+//
+//   - package apiVersion, kind, and internal originalAPIVersion tracking;
+//   - component import and service;
+//   - image.source;
+//   - all chart source fields and chart valuesFiles ordering;
+//   - repository URL/ref representation;
+//   - action defaults pointer presence.
+func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
+	return cmp.Options{
+		cmpopts.IgnoreFields(v1beta1.Package{}, "APIVersion", "Kind"),
+		cmpopts.IgnoreUnexported(v1beta1.BuildData{}),
+		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
+		cmpopts.IgnoreFields(v1beta1.Image{}, "Source"),
+		cmpopts.IgnoreFields(v1beta1.Chart{}, "HelmRepository", "Git", "Local", "OCI", "ValuesFiles"),
+		cmpopts.IgnoreFields(v1beta1.Repository{}, "URL", "Ref"),
+		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
 	}
 }

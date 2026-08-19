@@ -8,8 +8,11 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -166,5 +169,56 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 
 		roundTripped := ConvertFromGeneric(ConvertToGeneric(pkg))
 		require.Equalf(t, pkg, roundTripped, "round-trip diverged on iteration %d", i)
+	}
+}
+
+// TestConvertV1alpha1V1beta1RoundTripFuzz verifies that fields shared by v1alpha1 and v1beta1
+// survive a conversion through v1beta1. Reflection exercises newly added v1alpha1 fields by
+// default; cross-version incompatibilities are deliberately excluded below.
+func TestConvertV1alpha1V1beta1RoundTripFuzz(t *testing.T) {
+	t.Parallel()
+
+	rng := rand.New(rand.NewSource(1))
+	for i := range 1000 {
+		var pkg v1alpha1.ZarfPackage
+		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
+
+		v1beta1Pkg := internalv1beta1.ConvertFromGeneric(ConvertToGeneric(pkg))
+		roundTripped := ConvertFromGeneric(internalv1beta1.ConvertToGeneric(v1beta1Pkg))
+		require.Emptyf(t, cmp.Diff(pkg, roundTripped, v1alpha1V1beta1RoundTripExclusions()...), "cross-version round-trip diverged on iteration %d", i)
+	}
+}
+
+// v1alpha1V1beta1RoundTripExclusions lists the v1alpha1 fields that v1beta1 cannot represent.
+// The fuzz test intentionally converts an unmodified generated package and ignores only these
+// fields when comparing the result.
+//
+//   - package apiVersion, kind, constants, and variables;
+//   - metadata.yolo, metadata.allowNamespaceOverride, and colliding metadata.* annotations;
+//   - build.differentialMissing and internal originalAPIVersion tracking;
+//   - component default, required pointer presence, group, dataInjections, deprecated scripts,
+//     healthChecks, actions, only.cluster.distros, and import.name;
+//   - flat chart source fields, chart variables, and schemaValidation pointer presence;
+//   - manifest and file template pointer presence.
+func v1alpha1V1beta1RoundTripExclusions() cmp.Options {
+	return cmp.Options{
+		cmpopts.IgnoreFields(v1alpha1.ZarfPackage{}, "APIVersion", "Kind", "Constants", "Variables"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfMetadata{}, "YOLO", "AllowNamespaceOverride"),
+		cmpopts.IgnoreMapEntries(func(key, _ string) bool {
+			switch key {
+			case "metadata.url", "metadata.image", "metadata.authors", "metadata.documentation", "metadata.source", "metadata.vendor":
+				return true
+			default:
+				return false
+			}
+		}),
+		cmpopts.IgnoreFields(v1alpha1.ZarfBuildData{}, "DifferentialMissing"),
+		cmpopts.IgnoreUnexported(v1alpha1.ZarfBuildData{}),
+		cmpopts.IgnoreFields(v1alpha1.ZarfComponent{}, "Default", "Required", "DeprecatedGroup", "DataInjections", "DeprecatedScripts", "HealthChecks", "Actions"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfComponentOnlyCluster{}, "Distros"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfComponentImport{}, "Name"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfChart{}, "URL", "RepoName", "GitPath", "LocalPath", "Version", "Variables", "SchemaValidation"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfManifest{}, "Template"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfFile{}, "Template"),
 	}
 }
