@@ -7,5 +7,8 @@ tolerations:
 nodeSelector:
   ###ZARF_VAR_AGENT_NODE_SELECTOR###
 
+webhookAnnotations:
+  ###ZARF_VAR_AGENT_WEBHOOK_ANNOTATIONS###
+
 mutationExclusions:
   ###ZARF_VAR_AGENT_MUTATION_EXCLUSIONS###
