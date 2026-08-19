@@ -63,7 +63,7 @@ Members participate through Github teams and pre-submit tests run automatically 
 
 #### Promotion process
 
-- Meet the [Promotion approval baseline]. The sponsoring Maintainer must have interactions with the prospective Member, such as code, design, or proposal review, or coordinating on issues.
+- Meet the [Promotion approval baseline](#promotion-approval-baseline). The sponsoring Maintainer must have interactions with the prospective Member, such as code, design, or proposal review, or coordinating on issues.
 - Open an issue in the project's repository.
   - Ensure the sponsoring and approving Maintainers are `@mentioned`.
   - Describe and/or link to all relevant contributions to the project.
@@ -97,7 +97,7 @@ as measured by [Zarf Contributor Insights](https://github.com/zarf-dev/zarf/grap
 #### Promotion process
 
 - May self-nominate or be nominated by a Maintainer.
-- Meet the [Promotion approval baseline].
+- Meet the [Promotion approval baseline](#promotion-approval-baseline).
 - Completed by addition to Zarf Reviewer group.
 
 
@@ -148,7 +148,7 @@ approval is focused on holistic acceptance of a contribution including:
   - With no objections from other TSC members.
   - Done through pull request to update the CODEOWNERS file
 - May self-nominate or be nominated by a maintainer.
-- Meet the [Promotion approval baseline].
+- Meet the [Promotion approval baseline](#promotion-approval-baseline).
 
 Nominate by opening a PR against the Zarf repository, which adds their GitHub username to the OWNERS file for one or more directories.
 
