@@ -4,6 +4,7 @@
 package v1beta1
 
 import (
+	"fmt"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -258,6 +259,7 @@ func TestConvertV1beta1V1alpha1RoundTripFuzz(t *testing.T) {
 	for i := range 1000 {
 		var pkg v1beta1.Package
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
+		populateValidV1beta1Repositories(&pkg, rng, i)
 
 		v1alpha1Pkg := internalv1alpha1.ConvertFromGeneric(ConvertToGeneric(pkg))
 		roundTripped := ConvertFromGeneric(internalv1alpha1.ConvertToGeneric(v1alpha1Pkg))
@@ -265,15 +267,65 @@ func TestConvertV1beta1V1alpha1RoundTripFuzz(t *testing.T) {
 	}
 }
 
+func populateValidV1beta1Repositories(pkg *v1beta1.Package, rng *rand.Rand, iteration int) {
+	repositoryIndex := iteration
+	for ci := range pkg.Components {
+		for ri := range pkg.Components[ci].Repositories {
+			pkg.Components[ci].Repositories[ri] = validV1beta1Repository(rng, repositoryIndex)
+			repositoryIndex++
+		}
+	}
+}
+
+// TestConvertV1beta1V1alpha1RepositoryRoundTripFuzz isolates the schema-valid repository case,
+// verifying the v1beta1 structured URL/ref representation survives a v1alpha1 round-trip.
+func TestConvertV1beta1V1alpha1RepositoryRoundTripFuzz(t *testing.T) {
+	t.Parallel()
+
+	rng := rand.New(rand.NewSource(1))
+	for i := range 1000 {
+		original := v1beta1.Package{
+			APIVersion: v1beta1.APIVersion,
+			Kind:       v1beta1.ZarfPackageConfig,
+			Components: []v1beta1.Component{{
+				Name:          "component",
+				ComponentSpec: v1beta1.ComponentSpec{Repositories: []v1beta1.Repository{validV1beta1Repository(rng, i)}},
+			}},
+		}
+		original.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
+
+		v1alpha1Pkg := internalv1alpha1.ConvertFromGeneric(ConvertToGeneric(original))
+		roundTripped := ConvertFromGeneric(internalv1alpha1.ConvertToGeneric(v1alpha1Pkg))
+		require.Equalf(t, original, roundTripped, "repository round-trip diverged on iteration %d", i)
+	}
+}
+
+func validV1beta1Repository(rng *rand.Rand, iteration int) v1beta1.Repository {
+	repository := v1beta1.Repository{
+		URL: fmt.Sprintf("https://example%d.com/repository-%d.git", rng.Intn(1<<30), iteration),
+		Ref: &v1beta1.GitRef{},
+	}
+
+	switch iteration % 3 {
+	case 0:
+		repository.Ref.Tag = fmt.Sprintf("v%d.%d.%d", rng.Intn(100), rng.Intn(100), rng.Intn(100))
+	case 1:
+		repository.Ref.Branch = fmt.Sprintf("feature-%d", rng.Intn(1<<30))
+	case 2:
+		repository.Ref.Commit = fmt.Sprintf("%040x", rng.Uint64())
+	}
+
+	return repository
+}
+
 // v1beta1V1alpha1RoundTripExclusions lists the v1beta1 fields that v1alpha1 cannot represent.
-// The fuzz test intentionally converts an unmodified generated package and ignores only these
-// fields when comparing the result.
+// The fuzz test replaces only repositories with schema-valid generated values, then ignores only
+// these fields when comparing the result.
 //
 //   - package apiVersion, kind, and internal originalAPIVersion tracking;
 //   - component import and service;
 //   - image.source;
 //   - all chart source fields and chart valuesFiles ordering;
-//   - repository URL/ref representation;
 //   - action defaults pointer presence.
 func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 	return cmp.Options{
@@ -282,7 +334,6 @@ func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
 		cmpopts.IgnoreFields(v1beta1.Image{}, "Source"),
 		cmpopts.IgnoreFields(v1beta1.Chart{}, "HelmRepository", "Git", "Local", "OCI", "ValuesFiles"),
-		cmpopts.IgnoreFields(v1beta1.Repository{}, "URL", "Ref"),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
 	}
 }
