@@ -262,10 +262,10 @@ func TestConvertV1beta1V1alpha1ChartSourcesRoundTrip(t *testing.T) {
 	}
 }
 
-// TestConvertGenericRoundTripFuzz reflectively populates every field of a Package with random,
-// non-zero values and asserts the generic round-trip reproduces it exactly. Walking the struct by
-// reflection means a newly added field is exercised automatically, so a field the conversion forgets
-// to carry is caught here rather than silently dropped.
+// TestConvertGenericRoundTripFuzz reflectively populates every field of a Package with random
+// values and asserts the generic round-trip reproduces it exactly. Walking the struct by reflection
+// means a newly added field is exercised automatically, so a field the conversion forgets to carry
+// is caught here rather than silently dropped.
 func TestConvertGenericRoundTripFuzz(t *testing.T) {
 	t.Parallel()
 
@@ -429,6 +429,7 @@ func validV1beta1Repository(rng *rand.Rand, iteration int) v1beta1.Repository {
 //   - package apiVersion, kind, and internal originalAPIVersion tracking;
 //   - component import and service;
 //   - image.source;
+//   - manifest kustomize pointer presence;
 //   - chart valuesFiles ordering;
 //   - action defaults pointer presence.
 func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
@@ -437,6 +438,7 @@ func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 		cmpopts.IgnoreUnexported(v1beta1.BuildData{}),
 		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
 		cmpopts.IgnoreFields(v1beta1.Image{}, "Source"),
+		cmpopts.IgnoreFields(v1beta1.Manifest{}, "Kustomize"),
 		cmpopts.IgnoreFields(v1beta1.Chart{}, "ValuesFiles"),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
 	}

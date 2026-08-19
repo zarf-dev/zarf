@@ -218,11 +218,11 @@ func actionSetToGeneric(s v1beta1.ComponentActionSet) types.ComponentActionSet {
 	}
 }
 
-func actionDefaultsToGeneric(d *v1beta1.ComponentActionDefaults) types.ComponentActionDefaults {
+func actionDefaultsToGeneric(d *v1beta1.ComponentActionDefaults) *types.ComponentActionDefaults {
 	if d == nil {
-		return types.ComponentActionDefaults{}
+		return nil
 	}
-	return types.ComponentActionDefaults{
+	return &types.ComponentActionDefaults{
 		Silent:          d.Silent,
 		MaxTotalSeconds: d.MaxTotalSeconds,
 		Retries:         d.Retries,
@@ -687,8 +687,8 @@ func actionSetFromGeneric(s types.ComponentActionSet) v1beta1.ComponentActionSet
 	}
 }
 
-func actionDefaultsFromGeneric(d types.ComponentActionDefaults) *v1beta1.ComponentActionDefaults {
-	if !hasGenericActionDefaults(d) {
+func actionDefaultsFromGeneric(d *types.ComponentActionDefaults) *v1beta1.ComponentActionDefaults {
+	if d == nil {
 		return nil
 	}
 	defaults := &v1beta1.ComponentActionDefaults{
@@ -704,17 +704,6 @@ func actionDefaultsFromGeneric(d types.ComponentActionDefaults) *v1beta1.Compone
 		},
 	}
 	return defaults
-}
-
-func hasGenericActionDefaults(d types.ComponentActionDefaults) bool {
-	return d.Silent ||
-		d.MaxTotalSeconds != 0 ||
-		d.Retries != 0 ||
-		d.Dir != "" ||
-		len(d.Env) > 0 ||
-		d.Shell.Windows != "" ||
-		d.Shell.Linux != "" ||
-		d.Shell.Darwin != ""
 }
 
 func actionSliceFromGeneric(actions []types.ComponentAction) []v1beta1.ComponentAction {
