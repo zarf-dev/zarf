@@ -426,12 +426,17 @@ func validV1beta1Repository(rng *rand.Rand, iteration int) v1beta1.Repository {
 // The fuzz test replaces repositories and chart sources with schema-valid generated values, then
 // ignores only these fields when comparing the result.
 //
-//   - package apiVersion, kind, and internal originalAPIVersion tracking;
-//   - component import and service;
-//   - image.source;
-//   - manifest kustomize pointer presence;
-//   - chart valuesFiles ordering;
-//   - action defaults pointer presence.
+//   - package.apiVersion and package.kind are canonicalized to the target API. originalAPIVersion
+//     is internal build tracking and is set by the version that loads or creates the package
+//   - component.import has separate local and remote lists in v1beta1, while v1alpha1 has one
+//     import object; component.service has no v1alpha1 equivalent.
+//   - image.source distinguishes registry and daemon sources in v1beta1, v1alpha1 images always fallback
+//   - manifest.kustomize is a pointer in v1beta1 but flattened into v1alpha1 manifest fields. An
+//     empty Kustomize object therefore becomes nil on the return trip.
+//   - chart.valuesFiles is one ordered v1beta1 list. v1alpha1 separates plain and templated files,
+//     so their relative order is lost when the two kinds are interleaved.
+//   - actionSet.defaults is a pointer in v1beta1 but a value in v1alpha1, so nil and an explicitly
+//     empty defaults object cannot be distinguished.
 func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1beta1.Package{}, "APIVersion", "Kind"),
