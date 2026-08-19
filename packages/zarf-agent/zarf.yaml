@@ -21,7 +21,7 @@ variables:
 
   - name: AGENT_WEBHOOK_ANNOTATIONS
     description: Custom annotations map for the zarf-agent mutating webhook
-    default: ""
+    default: "{}"
     autoIndent: true
 
   - name: AGENT_MUTATION_EXCLUSIONS
