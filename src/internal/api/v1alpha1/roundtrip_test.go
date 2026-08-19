@@ -193,13 +193,28 @@ func TestConvertV1alpha1V1beta1RoundTripFuzz(t *testing.T) {
 // The fuzz test intentionally converts an unmodified generated package and ignores only these
 // fields when comparing the result.
 //
-//   - package apiVersion, kind, constants, and variables;
-//   - metadata.yolo, metadata.allowNamespaceOverride, and colliding metadata.* annotations;
-//   - build.differentialMissing and internal originalAPIVersion tracking;
-//   - component default, required pointer presence, group, dataInjections, deprecated scripts,
-//     healthChecks, actions, only.cluster.distros, and import.name;
-//   - flat chart source fields, chart variables, and schemaValidation pointer presence;
-//   - manifest and file template pointer presence.
+//   - fields removed from v1beta1: package.constants, package.variables, metadata.yolo,
+//     build.differentialMissing, component.default, component.group, component.dataInjections,
+//     component.deprecatedScripts, component.only.cluster.distros, component.import.name, and
+//     chart.variables.
+//   - boolean pointer presence is lost: metadata.allowNamespaceOverride is projected to the inverse
+//     PreventNamespaceOverride bool; component.required to optional; chart.schemaValidation to
+//     SkipSchemaValidation; and manifest.template and file.template to EnableTemplating. In each
+//     case, nil is indistinguishable from one of the boolean values.
+//   - package.apiVersion and package.kind are canonicalized to the target API.
+//   - metadata annotations using metadata.url, metadata.image, metadata.authors,
+//     metadata.documentation, metadata.source, or metadata.vendor collide with v1alpha1's
+//     dedicated metadata fields during projection.
+//   - originalAPIVersion is internal tracking and is set by the version that loads or creates the
+//     package.
+//   - component.healthChecks are projected to onDeploy/onSuccess wait actions and cannot be
+//     reconstructed as health checks.
+//   - actionSet.after is folded into v1beta1's actionSet.onSuccess, so both lists differ on return.
+//     action.deprecatedSetVariable and action.setVariables have no v1beta1 equivalents; and an
+//     action.template false pointer cannot be distinguished from nil after projection to
+//     EnableTemplating. action.wait.cluster.condition defaults from empty to "exists" in v1beta1.
+//   - chart.url, chart.repoName, chart.gitPath, chart.localPath, and chart.version are flattened
+//     source fields; v1beta1 instead uses a single structured Helm, Git, local, or OCI source.
 func v1alpha1V1beta1RoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1alpha1.ZarfPackage{}, "APIVersion", "Kind", "Constants", "Variables"),
@@ -214,9 +229,12 @@ func v1alpha1V1beta1RoundTripExclusions() cmp.Options {
 		}),
 		cmpopts.IgnoreFields(v1alpha1.ZarfBuildData{}, "DifferentialMissing"),
 		cmpopts.IgnoreUnexported(v1alpha1.ZarfBuildData{}),
-		cmpopts.IgnoreFields(v1alpha1.ZarfComponent{}, "Default", "Required", "DeprecatedGroup", "DataInjections", "DeprecatedScripts", "HealthChecks", "Actions"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfComponent{}, "Default", "Required", "DeprecatedGroup", "DataInjections", "DeprecatedScripts", "HealthChecks"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentOnlyCluster{}, "Distros"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentImport{}, "Name"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfComponentActionSet{}, "After", "OnSuccess"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfComponentAction{}, "DeprecatedSetVariable", "SetVariables", "Template"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfComponentActionWaitCluster{}, "Condition"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfChart{}, "URL", "RepoName", "GitPath", "LocalPath", "Version", "Variables", "SchemaValidation"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfManifest{}, "Template"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfFile{}, "Template"),
