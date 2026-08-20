@@ -242,7 +242,7 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 		APIVersion: v1beta1.APIVersion,
 		Metadata:   v1beta1.PackageMetadata{Name: "beta-test"},
 	})
-	_, err = c.RecordPackageDefinitionDeployment(ctx, beta, "sha256:beta", nil, 1)
+	_, err = c.RecordPackageDeployment(ctx, beta, "sha256:beta", nil, 1)
 	require.NoError(t, err)
 	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "beta-test", "", LoadOptions{})
 	require.NoError(t, err)

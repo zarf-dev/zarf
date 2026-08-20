@@ -153,8 +153,8 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 	l.Debug("done stripping zarf labels and secrets from namespaces", "duration", time.Since(start))
 }
 
-// RecordPackageDefinitionDeployment saves metadata about a package deployment to the cluster.
-func (c *Cluster) RecordPackageDefinitionDeployment(ctx context.Context, definition api.PackageDefinition, digest string, components []state.DeployedComponent, generation int, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
+// RecordPackageDeployment saves metadata about a package deployment to the cluster.
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, definition api.PackageDefinition, digest string, components []state.DeployedComponent, generation int, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
 	packageName := definition.AsV1alpha1().Metadata.Name
 
 	// TODO: This is done for backwards compatibility and could be removed in the future.

@@ -30,7 +30,7 @@ func TestRecordPackageDefinitionDeployment(t *testing.T) {
 		Metadata:   v1beta1.PackageMetadata{Name: "beta-package", Version: "1.2.3"},
 	})
 
-	recorded, err := c.RecordPackageDefinitionDeployment(ctx, definition, "sha256:abcdeadbeef", nil, 1)
+	recorded, err := c.RecordPackageDeployment(ctx, definition, "sha256:abcdeadbeef", nil, 1)
 	require.NoError(t, err)
 	recordedDefinition, err := recorded.PackageDefinition()
 	require.NoError(t, err)
