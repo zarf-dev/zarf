@@ -54,6 +54,7 @@ func (o *imageVolumeOptions) prerun(_ *cobra.Command, args []string) error {
 		o.output = archive.ImageRefToTar(args[1])
 	}
 	return errors.Join(
+		archive.ValidateFileEndsWithTar(o.output),
 		image.ValidateCompression(o.compression),
 		image.ValidatePlatformOS(o.os),
 		image.ValidatePlatformArch(image.PlatformArch(config.GetArch())),

@@ -62,3 +62,55 @@ func TestImageRefToTar(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateFileEndsWithTar(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name      string
+		file      string
+		expectErr error
+	}{
+		{
+			name: "ends with .tar",
+			file: "archive.tar",
+		},
+		{
+			name: "nested path ending with .tar",
+			file: "/tmp/out/rpm-latest.tar",
+		},
+		{
+			name:      "no extension",
+			file:      "archive",
+			expectErr: ErrNotTarBall,
+		},
+		{
+			name:      "wrong extension",
+			file:      "archive.tar.gz",
+			expectErr: ErrNotTarBall,
+		},
+		{
+			name:      ".tar not at the end",
+			file:      "archive.tarball",
+			expectErr: ErrNotTarBall,
+		},
+		{
+			name:      "empty file",
+			file:      "",
+			expectErr: ErrNotTarBall,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := ValidateFileEndsWithTar(tc.file)
+			if tc.expectErr != nil {
+				require.ErrorIs(t, err, tc.expectErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
