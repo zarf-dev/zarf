@@ -377,6 +377,12 @@ type RegistryInfo struct {
 	MTLSStrategy MTLSStrategy `json:"mtlsStrategy,omitempty"`
 }
 
+// SetPort updates the registry port and its deprecated compatibility field.
+func (ri *RegistryInfo) SetPort(port int) {
+	ri.Port = port
+	ri.NodePort = port
+}
+
 // ReconcilePort syncs the deprecated NodePort field with Port at serialization boundaries.
 // On read (LoadState): copies NodePort into Port when Port is unset, for state written by older Zarf.
 // On write (SaveState): copies Port into NodePort so older Zarf versions can read the state.
@@ -586,14 +592,18 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	if opts.Services.Has(RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, opts.RegistryInfo)
+		// A resolved mode makes the access fields authoritative, including a zero external port.
+		if opts.RegistryInfo.RegistryMode != "" {
+			newState.RegistryInfo.SetPort(opts.RegistryInfo.Port)
+		}
 
-		// Only autogenerate passwords if the user didn't provide one and the registry is internal
-		if opts.RegistryInfo.PushPassword == "" && oldState.RegistryInfo.IsInternal() {
+		// Only autogenerate passwords if the user didn't provide one and the target registry is internal
+		if opts.RegistryInfo.PushPassword == "" && newState.RegistryInfo.IsInternal() {
 			if newState.RegistryInfo.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		}
-		if opts.RegistryInfo.PullPassword == "" && oldState.RegistryInfo.IsInternal() {
+		if opts.RegistryInfo.PullPassword == "" && newState.RegistryInfo.IsInternal() {
 			if newState.RegistryInfo.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
