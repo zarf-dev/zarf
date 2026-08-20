@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -37,7 +38,7 @@ func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	return component.Name
 }
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, []string, error) {
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, skipVariantFilters []VariantDimension, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, []string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -68,7 +69,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	components := []v1alpha1.ZarfComponent{}
 
 	for _, component := range pkg.Components {
-		if !compatibleComponent(component, arch, flavor) {
+		if !compatibleComponent(component, arch, flavor, skipVariantFilters) {
 			continue
 		}
 
@@ -112,7 +113,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				}
 			}
 			importedPkg.Components = relevantComponents
-			importedPkg, innerSchemas, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck, remoteOptions)
+			importedPkg, innerSchemas, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, skipVariantFilters, importStack, cachePath, skipVersionCheck, remoteOptions)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
@@ -149,53 +150,60 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 
 		name := getComponentToImportName(component)
+
 		found := []v1alpha1.ZarfComponent{}
-		for _, component := range importedPkg.Components {
-			if component.Name == name && compatibleComponent(component, arch, flavor) {
-				found = append(found, component)
+		for _, importedComp := range importedPkg.Components {
+			if importedComp.Name == name && compatibleComponent(importedComp, arch, flavor, skipVariantFilters) {
+				found = append(found, importedComp)
 			}
 		}
 		if len(found) == 0 {
 			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("no compatible component named %s found", name)
-		} else if len(found) > 1 {
+		}
+		// Multiple arch variants are expected when VariantArchitecture filtering is skipped; otherwise only one is valid.
+		if len(found) > 1 && !slices.Contains(skipVariantFilters, VariantArchitecture) {
 			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("multiple components named %s found", name)
 		}
-		importedComponent := found[0]
 
-		importPath, err := fetchOCISkeleton(ctx, component, pkgPath.BaseDir, cachePath, remoteOptions)
-		if err != nil {
-			return v1alpha1.ZarfPackage{}, nil, err
+		var lastImportPath string
+		for _, importedComponent := range found {
+			componentArch := importedComponent.Only.Cluster.Architecture
+			importPath, err := fetchOCISkeleton(ctx, component, componentArch, pkgPath.BaseDir, cachePath, remoteOptions)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, nil, err
+			}
+			lastImportPath = importPath
+
+			// this is a special case for paths and imports where we do not want to join BaseDir and importPath
+			// we check that the path is valid but ensure the value remains relative for fixing
+			fileInfo, err := os.Stat(filepath.Join(pkgPath.BaseDir, importPath))
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("unable to access import path %q: %w", importPath, err)
+			}
+			if !fileInfo.IsDir() {
+				importPath = filepath.Dir(importPath)
+			}
+			importedComponent = fixPaths(importedComponent, importPath, pkgPath.BaseDir)
+			composed, err := overrideMetadata(importedComponent, component)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, nil, err
+			}
+			composed = overrideDeprecated(composed, component)
+			composed = overrideActions(composed, component)
+			composed = overrideResources(composed, component)
+			components = append(components, composed)
 		}
 
-		// this is a special case for paths and imports where we do not want to join BaseDir and importPath
-		// we check that the path is valid but ensure the value remains relative for fixing
-		fileInfo, err := os.Stat(filepath.Join(pkgPath.BaseDir, importPath))
-		if err != nil {
-			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("unable to access import path %q: %w", importPath, err)
-		}
-		if !fileInfo.IsDir() {
-			importPath = filepath.Dir(importPath)
-		}
-		importedComponent = fixPaths(importedComponent, importPath, pkgPath.BaseDir)
-		composed, err := overrideMetadata(importedComponent, component)
-		if err != nil {
-			return v1alpha1.ZarfPackage{}, nil, err
-		}
-		composed = overrideDeprecated(composed, component)
-		composed = overrideActions(composed, component)
-		composed = overrideResources(composed, component)
-
-		components = append(components, composed)
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
 		for _, v := range importedPkg.Values.Files {
-			valuesFiles = append(valuesFiles, makePathRelativeTo(v, importPath))
+			valuesFiles = append(valuesFiles, makePathRelativeTo(v, lastImportPath))
 		}
 		if importedPkg.Values.Schema != "" {
-			importedSchemas = append(importedSchemas, makePathRelativeTo(importedPkg.Values.Schema, importPath))
+			importedSchemas = append(importedSchemas, makePathRelativeTo(importedPkg.Values.Schema, lastImportPath))
 		}
 		for _, s := range innerSchemas {
-			importedSchemas = append(importedSchemas, makePathRelativeTo(s, importPath))
+			importedSchemas = append(importedSchemas, makePathRelativeTo(s, lastImportPath))
 		}
 	}
 
@@ -275,14 +283,17 @@ func validateComponentCompose(c v1alpha1.ZarfComponent) error {
 	return errors.Join(errs...)
 }
 
-func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
-	satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
-	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
+func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string, skipVariantFilters []VariantDimension) bool {
+	satisfiesArch := slices.Contains(skipVariantFilters, VariantArchitecture) || c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
+	satisfiesFlavor := slices.Contains(skipVariantFilters, VariantFlavor) || c.Only.Flavor == "" || c.Only.Flavor == flavor
 	return satisfiesArch && satisfiesFlavor
 }
 
 // TODO (phillebaba): Refactor package structure so that pullOCI can be used instead.
-func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string, remoteOptions types.RemoteOptions) (string, error) {
+// componentArch is the architecture of the specific component being fetched; when non-empty the
+// function looks for an arch-qualified tarball (<name>-<arch>.tar) and falls back to the generic
+// <name>.tar for backwards compatibility with skeletons published before this change.
+func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, componentArch string, packagePath string, cachePath string, remoteOptions types.RemoteOptions) (string, error) {
 	if component.Import.URL == "" {
 		return component.Import.Path, nil
 	}
@@ -317,7 +328,18 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	if err != nil {
 		return "", err
 	}
-	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", name)))
+
+	// Look for an arch-qualified tarball first; fall back to the generic name for backwards
+	// compatibility with skeletons published before per-arch tarball naming was introduced.
+	tarName := fmt.Sprintf("%s.tar", name)
+	if componentArch != "" {
+		archTarName := fmt.Sprintf("%s-%s.tar", name, componentArch)
+		archDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, archTarName))
+		if !oci.IsEmptyDescriptor(archDesc) {
+			tarName = archTarName
+		}
+	}
+	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, tarName))
 	var tarball, dir string
 	// If the descriptor for the component tarball was not found then all resources in the component are remote
 	// In this case, we represent the component with an empty directory

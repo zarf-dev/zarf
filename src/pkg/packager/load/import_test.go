@@ -19,6 +19,44 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+// TestResolveImportsVariantDimensions verifies that skipping VariantArchitecture includes all
+// architecture variants of a component, while filtering by arch includes only the matching variant.
+func TestResolveImportsVariantDimensions(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	path := "./testdata/import/multi-arch"
+	b, err := os.ReadFile(filepath.Join(path, layout.ZarfYAML))
+	require.NoError(t, err)
+	pkg, err := pkgcfg.Parse(ctx, b)
+	require.NoError(t, err)
+
+	t.Run("skip arch filter includes both arch variants", func(t *testing.T) {
+		t.Parallel()
+		resolved, _, err := resolveImports(ctx, pkg, path, "", "", []VariantDimension{VariantArchitecture}, []string{}, "", false, types.RemoteOptions{})
+		require.NoError(t, err)
+		require.Len(t, resolved.Components, 2)
+		archs := []string{resolved.Components[0].Only.Cluster.Architecture, resolved.Components[1].Only.Cluster.Architecture}
+		require.ElementsMatch(t, []string{"amd64", "arm64"}, archs)
+	})
+
+	t.Run("amd64 filter includes only amd64 variant", func(t *testing.T) {
+		t.Parallel()
+		resolved, _, err := resolveImports(ctx, pkg, path, "amd64", "", nil, []string{}, "", false, types.RemoteOptions{})
+		require.NoError(t, err)
+		require.Len(t, resolved.Components, 1)
+		require.Equal(t, "amd64", resolved.Components[0].Only.Cluster.Architecture)
+	})
+
+	t.Run("arm64 filter includes only arm64 variant", func(t *testing.T) {
+		t.Parallel()
+		resolved, _, err := resolveImports(ctx, pkg, path, "arm64", "", nil, []string{}, "", false, types.RemoteOptions{})
+		require.NoError(t, err)
+		require.Len(t, resolved.Components, 1)
+		require.Equal(t, "arm64", resolved.Components[0].Only.Cluster.Architecture)
+	})
+}
+
 func TestResolveImportsCircular(t *testing.T) {
 	t.Parallel()
 
@@ -29,7 +67,7 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 	require.NoError(t, err)
 
-	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
+	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", nil, []string{}, "", false, types.RemoteOptions{})
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
@@ -115,7 +153,7 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			require.NoError(t, err)
 
-			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
+			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, nil, []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
@@ -150,7 +188,7 @@ func TestResolveImportsDedupNormalization(t *testing.T) {
 	// Reuse an existing fixture's directory only as the on-disk anchor — resolveImports
 	// stats the path but does not re-parse zarf.yaml when pkg is passed in.
 	resolved, _, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
-		"", "", []string{}, "", false, types.RemoteOptions{})
+		"", "", nil, []string{}, "", false, types.RemoteOptions{})
 	require.NoError(t, err)
 	require.Equal(t, []string{"parent-values.yaml"}, resolved.Values.Files)
 }
@@ -245,7 +283,7 @@ func TestResolveImportsValueMerge(t *testing.T) {
 			pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			require.NoError(t, err)
 
-			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", nil, []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			absPaths := make([]string, len(resolved.Values.Files))
@@ -303,7 +341,7 @@ func TestResolveImportsSchemaCollection(t *testing.T) {
 			pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			require.NoError(t, err)
 
-			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", nil, []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			require.Equal(t, tc.expectedSchemas, importedSchemas)
@@ -435,11 +473,12 @@ func TestCompatibleComponent(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		component      v1alpha1.ZarfComponent
-		arch           string
-		flavor         string
-		expectedResult bool
+		name               string
+		component          v1alpha1.ZarfComponent
+		arch               string
+		flavor             string
+		skipVariantFilters []VariantDimension
+		expectedResult     bool
 	}{
 		{
 			name: "set architecture and set flavor",
@@ -511,12 +550,54 @@ func TestCompatibleComponent(t *testing.T) {
 			flavor:         "foo",
 			expectedResult: false,
 		},
+		{
+			name: "skip arch filter matches arch-specific component",
+			component: v1alpha1.ZarfComponent{
+				Only: v1alpha1.ZarfComponentOnlyTarget{
+					Cluster: v1alpha1.ZarfComponentOnlyCluster{
+						Architecture: "arm64",
+					},
+				},
+			},
+			skipVariantFilters: []VariantDimension{VariantArchitecture},
+			expectedResult:     true,
+		},
+		{
+			name:               "skip arch filter matches arch-neutral component",
+			component:          v1alpha1.ZarfComponent{},
+			skipVariantFilters: []VariantDimension{VariantArchitecture},
+			expectedResult:     true,
+		},
+		{
+			name: "skip flavor filter matches flavor-specific component",
+			component: v1alpha1.ZarfComponent{
+				Only: v1alpha1.ZarfComponentOnlyTarget{
+					Flavor: "bar",
+				},
+			},
+			flavor:             "foo",
+			skipVariantFilters: []VariantDimension{VariantFlavor},
+			expectedResult:     true,
+		},
+		{
+			name: "skip all filters matches any component",
+			component: v1alpha1.ZarfComponent{
+				Only: v1alpha1.ZarfComponentOnlyTarget{
+					Cluster: v1alpha1.ZarfComponentOnlyCluster{Architecture: "arm64"},
+					Flavor:  "bar",
+				},
+			},
+			arch:               "amd64",
+			flavor:             "foo",
+			skipVariantFilters: []VariantDimension{VariantArchitecture, VariantFlavor},
+			expectedResult:     true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := compatibleComponent(tt.component, tt.arch, tt.flavor)
+			result := compatibleComponent(tt.component, tt.arch, tt.flavor, tt.skipVariantFilters)
 			require.Equal(t, tt.expectedResult, result)
 		})
 	}

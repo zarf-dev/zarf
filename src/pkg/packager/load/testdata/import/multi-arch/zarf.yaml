@@ -1,0 +1,9 @@
+kind: ZarfPackageConfig
+
+metadata:
+  name: multi-arch-parent
+
+components:
+  - name: injector
+    import:
+      path: source

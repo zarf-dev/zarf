@@ -799,7 +799,13 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	if err != nil {
 		return err
 	}
-	tarPath := filepath.Join(buildPath, "components", fmt.Sprintf("%s.tar", component.Name))
+	// When a component is architecture-specific, include the arch in the tarball name so
+	// that multiple arch variants of the same component can coexist in a single skeleton.
+	tarName := fmt.Sprintf("%s.tar", component.Name)
+	if component.Only.Cluster.Architecture != "" {
+		tarName = fmt.Sprintf("%s-%s.tar", component.Name, component.Only.Cluster.Architecture)
+	}
+	tarPath := filepath.Join(buildPath, "components", tarName)
 	err = os.MkdirAll(filepath.Join(buildPath, "components"), 0o700)
 	if err != nil {
 		return err

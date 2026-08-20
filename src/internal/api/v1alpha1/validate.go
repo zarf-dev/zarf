@@ -66,6 +66,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		}
 	}
 	uniqueComponentNames := make(map[string]bool)
+	isSkeleton := pkg.Metadata.Architecture == v1alpha1.SkeletonArch
 	groupDefault := make(map[string]string)
 	groupedComponents := make(map[string][]string)
 	if pkg.Metadata.YOLO {
@@ -85,11 +86,16 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		}
 	}
 	for _, component := range pkg.Components {
-		// ensure component name is unique
-		if _, ok := uniqueComponentNames[component.Name]; ok {
+		// ensure component name is unique; in skeleton packages same-name components with distinct
+		// non-empty architectures are valid (multi-arch variants of the same component).
+		nameKey := component.Name
+		if isSkeleton && component.Only.Cluster.Architecture != "" {
+			nameKey = component.Name + ":" + component.Only.Cluster.Architecture
+		}
+		if _, ok := uniqueComponentNames[nameKey]; ok {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
 		}
-		uniqueComponentNames[component.Name] = true
+		uniqueComponentNames[nameKey] = true
 		if component.IsRequired() {
 			if component.Default {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentReqDefault, component.Name))

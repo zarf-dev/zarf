@@ -32,6 +32,16 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+// VariantDimension is a dimension along which components of the same name may vary.
+type VariantDimension string
+
+const (
+	// VariantArchitecture is the only.cluster.architecture dimension of a component.
+	VariantArchitecture VariantDimension = "architecture"
+	// VariantFlavor is the only.flavor dimension of a component.
+	VariantFlavor VariantDimension = "flavor"
+)
+
 // DefinitionOptions are the optional parameters to load.PackageDefinition
 type DefinitionOptions struct {
 	Flavor       string
@@ -44,6 +54,10 @@ type DefinitionOptions struct {
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// SkipVariantFilters lists dimensions to retain instead of filtering out.
+	// e.g. VariantArchitecture retains every only.cluster.architecture variant of a
+	// component, as used when publishing skeletons.
+	SkipVariantFilters []VariantDimension
 	types.RemoteOptions
 }
 
@@ -53,6 +67,11 @@ type DefinitionOptions struct {
 type ResolvedPackage struct {
 	PackageDefinition api.PackageDefinition
 	ImportedSchemas   []string
+}
+
+// AllVariantDimension returns every variant dimension.
+func AllVariantDimension() []VariantDimension {
+	return []VariantDimension{VariantArchitecture, VariantFlavor}
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
@@ -122,7 +141,7 @@ func v1alpha1PackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, pk
 		return ResolvedPackage{}, err
 	}
 	var importedSchemas []string
-	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, opts.SkipVariantFilters, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
 		return ResolvedPackage{}, err
 	}
@@ -138,16 +157,7 @@ func v1alpha1PackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, pk
 			return ResolvedPackage{}, err
 		}
 	}
-	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor, opts.SkipValuesSchemaValidation, importedSchemas); err != nil {
-		return ResolvedPackage{}, err
-	}
-	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1alpha1(pkg), ImportedSchemas: importedSchemas}, nil
-}
-
-func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, opts DefinitionOptions) (ResolvedPackage, error) {
-	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-
-	pkg, importedSchemas, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor)
+	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipValuesSchemaValidation, opts.SkipVariantFilters)
 	if err != nil {
 		return ResolvedPackage{}, err
 	}
@@ -159,7 +169,7 @@ func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath 
 	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1beta1(pkg), ImportedSchemas: importedSchemas}, nil
 }
 
-func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, flavor string, skipSchemaValidation bool, importedSchemas []string) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool, skipVariantFilters []VariantDimension) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -171,7 +181,13 @@ func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	if !hasFlavoredComponent(pkg, flavor) {
 		l.Warn("flavor not used in package", "flavor", flavor)
 	}
-	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
+	// ValidatePackage uses pkg.Metadata.Architecture == SkeletonArch to allow same-named components
+	// with distinct architectures. Pass a copy with that sentinel set when arch variants are retained.
+	validatePkg := pkg
+	if slices.Contains(skipVariantFilters, VariantArchitecture) {
+		validatePkg.Metadata.Architecture = v1alpha1.SkeletonArch
+	}
+	if err := internalv1alpha1.ValidatePackage(validatePkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
 
