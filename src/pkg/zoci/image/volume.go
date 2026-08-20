@@ -27,19 +27,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// ImageVolumeCompression names the tar compression format used for layers.
-type ImageVolumeCompression string
-
-// These are the 3 valid tar formats
-const (
-	// ImageVolumeCompressionGzip is the gzip compression format.
-	ImageVolumeCompressionGzip ImageVolumeCompression = "gzip"
-	// ImageVolumeCompressionZstd is the zstd compression format.
-	ImageVolumeCompressionZstd ImageVolumeCompression = "zstd"
-	// ImageVolumeCompressionUncompressed is the uncompressed compression format.
-	ImageVolumeCompressionUncompressed ImageVolumeCompression = "uncompressed"
-)
-
 // ImageVolume builds an OCI image layer-by-layer from files on disk,
 // pushing each layer to an underlying OCI store and tracking config/history.
 type ImageVolume struct {

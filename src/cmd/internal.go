@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 	"github.com/spf13/pflag"
+	"github.com/zarf-dev/zarf/src/cmd/inter"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
@@ -39,6 +40,7 @@ func newInternalCommand(rootCmd *cobra.Command) *cobra.Command {
 	cmd.AddCommand(newInternalUpdateGiteaPVCCommand())
 	cmd.AddCommand(newInternalIsValidHostnameCommand())
 	cmd.AddCommand(newInternalCrc32Command())
+	cmd.AddCommand(inter.NewInternalImageVolumeCommand())
 
 	return cmd
 }

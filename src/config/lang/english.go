@@ -220,6 +220,8 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
 
 	CmdInternalCrc32Short = "Generates a decimal CRC32 for the given text"
 
+	CmdInternalImageVolumeShort = "Creates an image archive from a given directory with a given image reference"
+
 	// zarf package
 	CmdPackageShort                       = "Zarf package commands for creating, deploying, and inspecting packages"
 	CmdPackageFlagConcurrency             = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
