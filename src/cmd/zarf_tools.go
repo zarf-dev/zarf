@@ -548,7 +548,7 @@ func resolveRegistryUpdate(ctx context.Context, c *cluster.Cluster, oldRegistryI
 		return registryInfo, errors.New("--registry-url cannot be explicitly empty")
 	}
 	if strings.Contains(registryInfo.Address, "://") {
-		return registryInfo, errors.New("--registry-url must not include a URL scheme")
+		return registryInfo, errors.New("--registry-url must be a valid OCI registry address without a URL scheme")
 	}
 
 	// Resolve and set registry info

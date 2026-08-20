@@ -336,7 +336,7 @@ func TestResolveRegistryUpdate(t *testing.T) {
 	for _, address := range []string{"http://localhost:31999", "https://registry.example.com"} {
 		t.Run("rejects URL scheme "+address, func(t *testing.T) {
 			_, err := resolveRegistryUpdate(ctx, c, state.RegistryInfo{}, state.RegistryInfo{Address: address}, true)
-			require.EqualError(t, err, "--registry-url must not include a URL scheme")
+			require.EqualError(t, err, "--registry-url must be a valid OCI registry address without a URL scheme")
 		})
 	}
 
