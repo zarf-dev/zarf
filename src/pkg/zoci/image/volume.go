@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/klauspost/compress/zstd"
 	digest "github.com/opencontainers/go-digest"
@@ -97,10 +98,19 @@ func (v *Volume) AddFile(ctx context.Context, dir, path string) (_ ocispec.Descr
 		},
 	}
 
-	logger.From(ctx).Debug("pushing image volume layer", "file", fileName, "digest", blobDigest, "size", blobSize)
 	if err := v.store.Push(ctx, layer, blob); err != nil {
 		return ocispec.Descriptor{}, err
 	}
+
+	logger.From(ctx).Debug("added image volume layer",
+		"file", fileName,
+		"mediaType", mediaType,
+		"digest", blobDigest,
+		"diffId", diffID,
+		"size", blobSize,
+		"uncompressedSize", tarSize,
+		"compression", v.Compression,
+	)
 
 	v.config.History = append(v.config.History, ocispec.History{
 		Created:   &static,
@@ -116,7 +126,8 @@ func (v *Volume) AddFile(ctx context.Context, dir, path string) (_ ocispec.Descr
 // AddDirectory walks folder and adds each regular file as a layer via AddFile.
 func (v *Volume) AddDirectory(ctx context.Context, folder, ref string) error {
 	l := logger.From(ctx)
-	l.Debug("walking directory for image volume", "path", folder)
+	start := time.Now()
+	l.Info("building image volume", "path", folder, "ref", ref, "compression", v.Compression)
 
 	err := filepath.WalkDir(folder, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -133,7 +144,7 @@ func (v *Volume) AddDirectory(ctx context.Context, folder, ref string) error {
 		return err
 	}
 
-	l.Debug("pushed files for image volume", "count", len(v.layers), "path", folder)
+	l.Debug("pushed image volume layers", "count", len(v.layers), "path", folder)
 
 	configBytes, err := json.Marshal(v.config)
 	if err != nil {
@@ -144,6 +155,7 @@ func (v *Volume) AddDirectory(ctx context.Context, folder, ref string) error {
 	if err != nil {
 		return err
 	}
+	l.Debug("pushed image volume config", "digest", configDesc.Digest, "size", configDesc.Size)
 
 	manifestDesc, err := oras.PackManifest(
 		ctx,
@@ -162,7 +174,13 @@ func (v *Volume) AddDirectory(ctx context.Context, folder, ref string) error {
 		return err
 	}
 
-	return v.store.Tag(ctx, manifestDesc, ref)
+	if err := v.store.Tag(ctx, manifestDesc, ref); err != nil {
+		return err
+	}
+
+	l.Info("built image volume", "ref", ref, "digest", manifestDesc.Digest,
+		"layers", len(v.layers), "duration", time.Since(start).Round(time.Millisecond))
+	return nil
 }
 
 // generateDiffID tars file into the builder's workspace under tar entry name

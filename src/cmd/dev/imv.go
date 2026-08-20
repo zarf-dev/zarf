@@ -34,7 +34,7 @@ func NewImageVolumeCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP((*string)(&o.compression), "layer-compression", "c", string(image.VolumeCompressionGzip), "Compression algorthm used on the individual layers of the image volume")
-	cmd.Flags().StringVarP((*string)(&o.os), "platform-os", "O", string(image.PlatformOSLinux), "Operating system of the image volume")
+	cmd.Flags().StringVarP((*string)(&o.os), "platform-os", "o", string(image.PlatformOSLinux), "Operating system of the image volume")
 
 	return cmd
 }
