@@ -204,7 +204,7 @@ func (v *Volume) generateDiffID(rel, file string) (dig digest.Digest, filePath s
 		return "", "", 0, err
 	}
 
-	temp := filepath.Join(v.tmp, strings.ReplaceAll(rel, string(filepath.Separator), "_")+".tar")
+	temp := filepath.Join(v.tmp, strings.ReplaceAll(rel, "/", "_")+".tar")
 	out, err := os.Create(temp)
 	if err != nil {
 		return "", "", 0, err
