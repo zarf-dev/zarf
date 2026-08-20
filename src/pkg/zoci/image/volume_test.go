@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"io"
 	"io/fs"
 	"os"
@@ -276,6 +277,65 @@ func TestVolumeAddFileCompression(t *testing.T) {
 	require.NotEqual(t, results[VolumeCompressionGzip].diffID, results[VolumeCompressionGzip].desc.Digest)
 	require.NotEqual(t, results[VolumeCompressionZstd].diffID, results[VolumeCompressionZstd].desc.Digest)
 	require.NotEqual(t, results[VolumeCompressionGzip].desc.Digest, results[VolumeCompressionZstd].desc.Digest)
+}
+
+func TestVolumeWriteTar(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	iv := newTestVolume(t)
+	srcDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("hello world"), 0o644))
+
+	const ref = "test:latest"
+	require.NoError(t, iv.AddDirectory(ctx, srcDir, ref))
+
+	var buf bytes.Buffer
+	require.NoError(t, iv.WriteTar(ctx, ref, &buf))
+
+	names := map[string]bool{}
+	tr := tar.NewReader(&buf)
+	for {
+		hdr, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		require.NoError(t, err)
+		names[hdr.Name] = true
+	}
+
+	require.True(t, names["oci-layout"], "expected oci-layout entry")
+	require.True(t, names["index.json"], "expected index.json entry")
+	require.True(t, names["manifest.json"], "expected manifest.json entry")
+}
+
+// TestVolumeWriteTarWithoutManifest documents that calling WriteTar before
+// AddDirectory does not error: the zero-value manifest descriptor has no
+// digest, so the containerd exporter silently drops it (after logging a
+// warning) and produces a valid but empty archive.
+func TestVolumeWriteTarWithoutManifest(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	iv := newTestVolume(t)
+
+	var buf bytes.Buffer
+	require.NoError(t, iv.WriteTar(ctx, "test:latest", &buf))
+
+	names := map[string]bool{}
+	tr := tar.NewReader(&buf)
+	for {
+		hdr, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		require.NoError(t, err)
+		names[hdr.Name] = true
+	}
+
+	require.True(t, names["oci-layout"])
+	require.True(t, names["index.json"])
+	require.False(t, names["manifest.json"], "no image was recorded, so no docker manifest.json should be written")
 }
 
 func TestVolumeAddFileUnsupportedCompression(t *testing.T) {
