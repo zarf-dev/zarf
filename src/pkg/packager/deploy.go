@@ -82,6 +82,10 @@ type DeployOptions struct {
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
 	AgentMutationPolicy state.MutationPolicy
 
+	// [Library Only] An existing cluster connection to deploy through. When nil, Zarf
+	// connects itself from the ambient kubeconfig the first time a component needs a
+	// cluster. RemoveOptions already takes one this way.
+	Cluster *cluster.Cluster
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap ValuesOverrides
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
@@ -99,6 +103,10 @@ type deployer struct {
 	c    *cluster.Cluster
 	vc   *variables.VariableConfig
 	vals value.Values
+	// verifiedDeployable records that the one-time cluster deployability check has
+	// run. It used to be implied by having just connected, which skipped the check
+	// entirely when the caller supplied the connection.
+	verifiedDeployable bool
 }
 
 // DeployResult is the result of a successful deploy
@@ -171,6 +179,10 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	d := deployer{
+		// A caller-supplied connection leaves isConnectedToCluster true from the
+		// start, so the lazy connect below is skipped and everything downstream runs
+		// against the cluster the caller already has.
+		c:    opts.Cluster,
 		vc:   variableConfig,
 		vals: vals,
 	}
@@ -255,9 +267,14 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				if err != nil {
 					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 				}
+			}
+			// Checked for the first component that needs a cluster, whether the
+			// connection was made just above or handed in by the caller.
+			if !d.verifiedDeployable {
 				if err := d.verifyPackageIsDeployable(ctx, pkgLayout); err != nil {
 					return nil, fmt.Errorf("package is not deployable to this system: %w", err)
 				}
+				d.verifiedDeployable = true
 			}
 			// If this package has been deployed before, increment the package generation within the secret
 			//nolint: errcheck // this may be the first time deploying the package therefore it will not exist
