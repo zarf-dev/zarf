@@ -26,7 +26,7 @@ Commands useful for developing packages
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
 ```
 
@@ -37,7 +37,7 @@ Commands useful for developing packages
 * [zarf dev find-images](/commands/zarf_dev_find-images/)	 - Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.
 * [zarf dev generate](/commands/zarf_dev_generate/)	 - Creates a zarf.yaml automatically from a given remote (git) Helm chart
 * [zarf dev generate-config](/commands/zarf_dev_generate-config/)	 - Generates a config file for Zarf
-* [zarf dev generate-schema](/commands/zarf_dev_generate-schema/)	 - Generates a JSON schema for Zarf values based on the package definition and chart defaults
+* [zarf dev generate-schema](/commands/zarf_dev_generate-schema/)	 - Generates a JSON schema for Zarf values based on the package definition, chart defaults, and chart schemas
 * [zarf dev image-volume-archive](/commands/zarf_dev_image-volume-archive/)	 - Creates an image archive from a given directory with a given image reference
 * [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to gather information about a Zarf package using its package definition
 * [zarf dev lint](/commands/zarf_dev_lint/)	 - Lints the given package for valid schema and recommended practices

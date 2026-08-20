@@ -229,6 +229,71 @@ func TestMergeStateRegistry(t *testing.T) {
 	}
 }
 
+func TestMergeStateRegistryUsesTargetModeForPasswordGeneration(t *testing.T) {
+	t.Parallel()
+
+	t.Run("external to internal generates omitted passwords", func(t *testing.T) {
+		oldState := &State{RegistryInfo: RegistryInfo{
+			RegistryMode: RegistryModeExternal,
+			PushPassword: "external-push-password",
+			PullPassword: "external-pull-password",
+		}}
+		newState, err := Merge(oldState, MergeOptions{
+			RegistryInfo: RegistryInfo{RegistryMode: RegistryModeNodePort},
+			Services:     NewServiceSet(RegistryKey),
+		})
+		require.NoError(t, err)
+		require.NotEqual(t, oldState.RegistryInfo.PushPassword, newState.RegistryInfo.PushPassword)
+		require.NotEqual(t, oldState.RegistryInfo.PullPassword, newState.RegistryInfo.PullPassword)
+	})
+}
+
+func TestMergeStateRegistryResolvedPort(t *testing.T) {
+	t.Parallel()
+
+	t.Run("preserves port when mode is omitted", func(t *testing.T) {
+		oldState := &State{RegistryInfo: RegistryInfo{
+			RegistryMode: RegistryModeNodePort,
+			NodePort:     31999,
+			Port:         31999,
+			PushPassword: "push-password",
+			PullPassword: "pull-password",
+		}}
+		newState, err := Merge(oldState, MergeOptions{
+			RegistryInfo: RegistryInfo{
+				PushUsername: "new-user",
+				PushPassword: "push-password",
+				PullPassword: "pull-password",
+			},
+			Services: NewServiceSet(RegistryKey),
+		})
+		require.NoError(t, err)
+		require.Equal(t, 31999, newState.RegistryInfo.Port)
+		require.Equal(t, 31999, newState.RegistryInfo.NodePort)
+	})
+
+	t.Run("clears port for resolved explicit mode", func(t *testing.T) {
+		oldState := &State{RegistryInfo: RegistryInfo{
+			RegistryMode: RegistryModeProxy,
+			NodePort:     5000,
+			Port:         5000,
+			MTLSStrategy: MTLSStrategyZarfManaged,
+		}}
+		newState, err := Merge(oldState, MergeOptions{
+			RegistryInfo: RegistryInfo{
+				RegistryMode: RegistryModeExternal,
+				MTLSStrategy: MTLSStrategyNone,
+			},
+			Services: NewServiceSet(RegistryKey),
+		})
+		require.NoError(t, err)
+		require.Zero(t, newState.RegistryInfo.Port)
+		require.Zero(t, newState.RegistryInfo.NodePort)
+		require.Equal(t, RegistryModeExternal, newState.RegistryInfo.RegistryMode)
+		require.Equal(t, MTLSStrategyNone, newState.RegistryInfo.MTLSStrategy)
+	})
+}
+
 // TODO: Change password gen method to make testing possible.
 func TestMergeStateGit(t *testing.T) {
 	t.Parallel()
