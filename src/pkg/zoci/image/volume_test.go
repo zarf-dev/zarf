@@ -5,6 +5,7 @@ package image
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
 	"io"
@@ -17,23 +18,23 @@ import (
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
-	"oras.land/oras-go/v2/content/file"
+	"oras.land/oras-go/v2/content/oci"
 
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func newTestVolume(t *testing.T) *ImageVolume {
+func newTestVolume(t *testing.T) *Volume {
 	t.Helper()
-	iv, err := NewImageVolume(t.TempDir(), "linux", "amd64")
+	iv, err := New(t.TempDir(), "linux", "amd64")
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, iv.Clean()) })
 	return iv
 }
 
-func TestNewImageVolume(t *testing.T) {
+func TestNew(t *testing.T) {
 	t.Parallel()
 
-	iv, err := NewImageVolume(t.TempDir(), "linux", "amd64")
+	iv, err := New(t.TempDir(), "linux", "amd64")
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, iv.Clean()) })
 
@@ -48,7 +49,7 @@ func TestNewImageVolume(t *testing.T) {
 	require.Empty(t, iv.layers)
 }
 
-func TestImageVolumeAddFile(t *testing.T) {
+func TestVolumeAddFile(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
@@ -82,7 +83,7 @@ func TestImageVolumeAddFile(t *testing.T) {
 	assertLayerTarMatches(ctx, t, iv.Store(), desc, "sub/hello.txt", content)
 }
 
-func TestImageVolumeAddFileAccumulatesLayers(t *testing.T) {
+func TestVolumeAddFileAccumulatesLayers(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
@@ -104,7 +105,7 @@ func TestImageVolumeAddFileAccumulatesLayers(t *testing.T) {
 	require.Len(t, iv.config.History, 2)
 }
 
-func TestImageVolumeAddDirectory(t *testing.T) {
+func TestVolumeAddDirectory(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
@@ -149,7 +150,7 @@ func TestImageVolumeAddDirectory(t *testing.T) {
 	require.Len(t, seen, len(files))
 }
 
-func TestImageVolumeAddDirectoryEmpty(t *testing.T) {
+func TestVolumeAddDirectoryEmpty(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
@@ -162,11 +163,11 @@ func TestImageVolumeAddDirectoryEmpty(t *testing.T) {
 	require.Empty(t, iv.config.RootFS.DiffIDs)
 }
 
-func TestImageVolumeClean(t *testing.T) {
+func TestVolumeClean(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
-	iv, err := NewImageVolume(t.TempDir(), "linux", "amd64")
+	iv, err := New(t.TempDir(), "linux", "amd64")
 	require.NoError(t, err)
 	require.DirExists(t, iv.tmp)
 
@@ -181,18 +182,47 @@ func TestImageVolumeClean(t *testing.T) {
 	require.ErrorIs(t, err, fs.ErrNotExist, "AddFile should fail once Clean has removed the temp workspace")
 }
 
-func TestImageVolumePushAfterCloseFails(t *testing.T) {
+func TestVolumeArchive(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
 	iv := newTestVolume(t)
-	require.NoError(t, iv.Store().Close())
 
-	err := iv.Store().Push(ctx, ocispec.Descriptor{}, nil)
-	require.ErrorIs(t, err, file.ErrStoreClosed)
+	srcDir := t.TempDir()
+	content := []byte("hello world")
+	filePath := filepath.Join(srcDir, "hello.txt")
+	require.NoError(t, os.WriteFile(filePath, content, 0o644))
+
+	desc, err := iv.AddFile(ctx, srcDir, filePath)
+	require.NoError(t, err)
+
+	a := iv.Archive()
+
+	info, err := a.Info(ctx, desc.Digest)
+	require.NoError(t, err)
+	require.Equal(t, desc.Digest, info.Digest)
+	require.Equal(t, desc.Size, info.Size)
+
+	ra, err := a.ReaderAt(ctx, desc)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, ra.Close()) })
+	require.Equal(t, desc.Size, ra.Size())
+
+	buf := make([]byte, ra.Size())
+	_, err = ra.ReadAt(buf, 0)
+	require.NoError(t, err)
+
+	tr := tar.NewReader(bytes.NewReader(buf))
+	hdr, err := tr.Next()
+	require.NoError(t, err)
+	require.Equal(t, "hello.txt", hdr.Name)
+
+	got, err := io.ReadAll(tr)
+	require.NoError(t, err)
+	require.Equal(t, content, got)
 }
 
-func TestImageVolumeAddFileCompression(t *testing.T) {
+func TestVolumeAddFileCompression(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
@@ -202,14 +232,14 @@ func TestImageVolumeAddFileCompression(t *testing.T) {
 		desc   ocispec.Descriptor
 		diffID digest.Digest
 	}
-	results := make(map[ImageVolumeCompression]result)
+	results := make(map[VolumeCompression]result)
 
-	for _, compression := range []ImageVolumeCompression{
-		ImageVolumeCompressionUncompressed,
-		ImageVolumeCompressionGzip,
-		ImageVolumeCompressionZstd,
+	for _, compression := range []VolumeCompression{
+		VolumeCompressionUncompressed,
+		VolumeCompressionGzip,
+		VolumeCompressionZstd,
 	} {
-		iv, err := NewImageVolume(t.TempDir(), "linux", "amd64")
+		iv, err := New(t.TempDir(), "linux", "amd64")
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, iv.Clean()) })
 		iv.Compression = compression
@@ -231,29 +261,29 @@ func TestImageVolumeAddFileCompression(t *testing.T) {
 		results[compression] = result{desc: desc, diffID: iv.config.RootFS.DiffIDs[0]}
 	}
 
-	require.Equal(t, ocispec.MediaTypeImageLayer, results[ImageVolumeCompressionUncompressed].desc.MediaType)
-	require.Equal(t, ocispec.MediaTypeImageLayerGzip, results[ImageVolumeCompressionGzip].desc.MediaType)
-	require.Equal(t, ocispec.MediaTypeImageLayerZstd, results[ImageVolumeCompressionZstd].desc.MediaType)
+	require.Equal(t, ocispec.MediaTypeImageLayer, results[VolumeCompressionUncompressed].desc.MediaType)
+	require.Equal(t, ocispec.MediaTypeImageLayerGzip, results[VolumeCompressionGzip].desc.MediaType)
+	require.Equal(t, ocispec.MediaTypeImageLayerZstd, results[VolumeCompressionZstd].desc.MediaType)
 
 	// The diff ID always identifies the uncompressed tar content, regardless
 	// of which compression produced the pushed blob.
-	require.Equal(t, results[ImageVolumeCompressionUncompressed].diffID, results[ImageVolumeCompressionGzip].diffID)
-	require.Equal(t, results[ImageVolumeCompressionUncompressed].diffID, results[ImageVolumeCompressionZstd].diffID)
+	require.Equal(t, results[VolumeCompressionUncompressed].diffID, results[VolumeCompressionGzip].diffID)
+	require.Equal(t, results[VolumeCompressionUncompressed].diffID, results[VolumeCompressionZstd].diffID)
 
 	// An uncompressed blob's digest equals its diff ID; compressed blob
 	// digests differ from the diff ID (and from each other).
-	require.Equal(t, results[ImageVolumeCompressionUncompressed].diffID, results[ImageVolumeCompressionUncompressed].desc.Digest)
-	require.NotEqual(t, results[ImageVolumeCompressionGzip].diffID, results[ImageVolumeCompressionGzip].desc.Digest)
-	require.NotEqual(t, results[ImageVolumeCompressionZstd].diffID, results[ImageVolumeCompressionZstd].desc.Digest)
-	require.NotEqual(t, results[ImageVolumeCompressionGzip].desc.Digest, results[ImageVolumeCompressionZstd].desc.Digest)
+	require.Equal(t, results[VolumeCompressionUncompressed].diffID, results[VolumeCompressionUncompressed].desc.Digest)
+	require.NotEqual(t, results[VolumeCompressionGzip].diffID, results[VolumeCompressionGzip].desc.Digest)
+	require.NotEqual(t, results[VolumeCompressionZstd].diffID, results[VolumeCompressionZstd].desc.Digest)
+	require.NotEqual(t, results[VolumeCompressionGzip].desc.Digest, results[VolumeCompressionZstd].desc.Digest)
 }
 
-func TestImageVolumeAddFileUnsupportedCompression(t *testing.T) {
+func TestVolumeAddFileUnsupportedCompression(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
 	iv := newTestVolume(t)
-	iv.Compression = ImageVolumeCompression("bogus")
+	iv.Compression = VolumeCompression("bogus")
 
 	srcDir := t.TempDir()
 	p := filepath.Join(srcDir, "a.txt")
@@ -263,14 +293,15 @@ func TestImageVolumeAddFileUnsupportedCompression(t *testing.T) {
 	require.ErrorContains(t, err, "bogus")
 }
 
-func TestImageVolumeCompressionZeroValueIsUncompressed(t *testing.T) {
+func TestVolumeCompressionZeroValueIsUncompressed(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
-	store, err := file.New(t.TempDir())
+	ociDir := t.TempDir()
+	store, err := oci.New(ociDir)
 	require.NoError(t, err)
 
-	iv := &ImageVolume{store: store, tmp: t.TempDir()}
+	iv := &Volume{store: store, tmp: t.TempDir(), root: ociDir}
 	t.Cleanup(func() { require.NoError(t, iv.Clean()) })
 
 	srcDir := t.TempDir()
@@ -285,7 +316,7 @@ func TestImageVolumeCompressionZeroValueIsUncompressed(t *testing.T) {
 // assertLayerTarMatches fetches the pushed layer, decompresses it according
 // to its media type, and verifies it is a single-entry tar archive
 // containing name with the given content.
-func assertLayerTarMatches(ctx context.Context, t *testing.T, store *file.Store, desc ocispec.Descriptor, name string, content []byte) {
+func assertLayerTarMatches(ctx context.Context, t *testing.T, store *oci.Store, desc ocispec.Descriptor, name string, content []byte) {
 	t.Helper()
 
 	rc, err := store.Fetch(ctx, desc)

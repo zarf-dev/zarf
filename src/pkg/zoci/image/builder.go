@@ -10,13 +10,13 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"oras.land/oras-go/v2/content/file"
+	"oras.land/oras-go/v2/content/oci"
 )
 
-// NewImageVolume creates an ImageVolume backed by an OCI store at ociDir,
-// with a fresh temp workspace and a config stub for the given os/arch.
-func NewImageVolume(ociDir, os, arch string) (*ImageVolume, error) {
-	store, err := file.New(ociDir)
+// New creates a Volume backed by an OCI store at ociDir, with a fresh temp
+// workspace and a config stub for the given platform OS/architecture.
+func New(ociDir, platformOS, platformArch string) (*Volume, error) {
+	store, err := oci.New(ociDir)
 	if err != nil {
 		return nil, err
 	}
@@ -26,15 +26,16 @@ func NewImageVolume(ociDir, os, arch string) (*ImageVolume, error) {
 		return nil, err
 	}
 
-	return &ImageVolume{
-		Compression: ImageVolumeCompressionUncompressed,
+	return &Volume{
+		Compression: VolumeCompressionUncompressed,
 		store:       store,
+		root:        ociDir,
 		tmp:         tmpDir,
 		layers:      []ocispec.Descriptor{},
 		config: ocispec.Image{
 			Platform: ocispec.Platform{
-				OS:           os,
-				Architecture: arch,
+				OS:           platformOS,
+				Architecture: platformArch,
 			},
 			Created: &static,
 			History: []ocispec.History{},
