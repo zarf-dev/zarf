@@ -333,6 +333,13 @@ func TestResolveRegistryUpdate(t *testing.T) {
 		require.EqualError(t, err, "--registry-url cannot be explicitly empty")
 	})
 
+	for _, address := range []string{"http://localhost:31999", "https://registry.example.com"} {
+		t.Run("rejects URL scheme "+address, func(t *testing.T) {
+			_, err := resolveRegistryUpdate(ctx, c, state.RegistryInfo{}, state.RegistryInfo{Address: address}, true)
+			require.EqualError(t, err, "--registry-url must not include a URL scheme")
+		})
+	}
+
 	t.Run("resolves mode and port while preserving credentials", func(t *testing.T) {
 		given := state.RegistryInfo{
 			Address:      "localhost:31999",

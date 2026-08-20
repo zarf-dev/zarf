@@ -327,8 +327,8 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string, v *viper.Vip
 		l.Warn(lang.ArtifactServerDeprecated)
 	}
 
-	registryURLChanged := services.Has(state.RegistryKey) && optionIsExplicitlySet(cmd, v, "registry-url", VInitRegistryURL)
-	registryInfo, err := resolveRegistryUpdate(ctx, c, oldState.RegistryInfo, o.registryInfo, registryURLChanged)
+	registryURLSet := services.Has(state.RegistryKey) && optionIsExplicitlySet(cmd, v, "registry-url", VInitRegistryURL)
+	registryInfo, err := resolveRegistryUpdate(ctx, c, oldState.RegistryInfo, o.registryInfo, registryURLSet)
 	if err != nil {
 		return err
 	}
@@ -539,13 +539,16 @@ func runWithRollback(ctx context.Context, service string, forward, rollback func
 }
 
 // resolveRegistryUpdate resolves, sets and validates registry access fields when the URL changes.
-func resolveRegistryUpdate(ctx context.Context, c *cluster.Cluster, oldRegistryInfo, registryInfo state.RegistryInfo, registryURLChanged bool) (state.RegistryInfo, error) {
+func resolveRegistryUpdate(ctx context.Context, c *cluster.Cluster, oldRegistryInfo, registryInfo state.RegistryInfo, registryURLSet bool) (state.RegistryInfo, error) {
 	// validate provided options
-	if !registryURLChanged {
+	if !registryURLSet {
 		return registryInfo, nil
 	}
 	if registryInfo.Address == "" {
 		return registryInfo, errors.New("--registry-url cannot be explicitly empty")
+	}
+	if strings.Contains(registryInfo.Address, "://") {
+		return registryInfo, errors.New("--registry-url must not include a URL scheme")
 	}
 
 	// Resolve and set registry info
@@ -618,8 +621,8 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string, v *vipe
 		return errors.New("no registry is configured in the Zarf state; nothing to update")
 	}
 
-	registryURLChanged := optionIsExplicitlySet(cmd, v, "registry-url", VInitRegistryURL)
-	registryInfo, err := resolveRegistryUpdate(ctx, c, oldState.RegistryInfo, o.registryInfo, registryURLChanged)
+	registryURLSet := optionIsExplicitlySet(cmd, v, "registry-url", VInitRegistryURL)
+	registryInfo, err := resolveRegistryUpdate(ctx, c, oldState.RegistryInfo, o.registryInfo, registryURLSet)
 	if err != nil {
 		return err
 	}

@@ -56,7 +56,7 @@ func TestResolveRegistryMode(t *testing.T) {
 		},
 		{
 			name:         "matching Zarf NodePort is internal",
-			address:      "http://localhost:28000",
+			address:      "localhost:28000",
 			objects:      []runtime.Object{registryService(corev1.ServiceTypeNodePort, 28000)},
 			expectedMode: state.RegistryModeNodePort,
 			expectedPort: 28000,
