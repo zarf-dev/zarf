@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.84.0](https://github.com/zarf-dev/zarf/compare/v0.83.0...v0.84.0) (2026-08-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **v1beta1:** use package definition across public packager functionality ([#5173](https://github.com/zarf-dev/zarf/issues/5173))
+
+### Features
+
+* **agent:** add variable for mutating webhook annotations ([#5243](https://github.com/zarf-dev/zarf/issues/5243)) ([1de2f08](https://github.com/zarf-dev/zarf/commit/1de2f0864e237bca8f08357b0b9f8321dc66ddcf))
+* allow excluding ArgoCD and Flux resources from Zarf Agent mutation ([#5224](https://github.com/zarf-dev/zarf/issues/5224)) ([804b22b](https://github.com/zarf-dev/zarf/commit/804b22b909a7943aab8ffacd5278c4242021373b))
+* **dev:** evaluate helm chart schemas in dev generate-schema ([#5176](https://github.com/zarf-dev/zarf/issues/5176)) ([e1ca156](https://github.com/zarf-dev/zarf/commit/e1ca1567e5ec8afca6a138be8f8cbd3a2d55c857))
+* injector image flag ([#5214](https://github.com/zarf-dev/zarf/issues/5214)) ([86d732a](https://github.com/zarf-dev/zarf/commit/86d732a18c53dd503afdc05c8d51fdfce3bc4ea6))
+* introduce zarf dev template ([#5206](https://github.com/zarf-dev/zarf/issues/5206)) ([826d2a0](https://github.com/zarf-dev/zarf/commit/826d2a0878f565fed4d4e4b4b3290c3bef343dae))
+* **v1beta1:** load v1beta1 packages ([#5048](https://github.com/zarf-dev/zarf/issues/5048)) ([f82e001](https://github.com/zarf-dev/zarf/commit/f82e0012456b7fda305bfabab20ea71b7c9ac45d))
+* **v1beta1:** use package definition across public packager functionality ([#5173](https://github.com/zarf-dev/zarf/issues/5173)) ([7a33a42](https://github.com/zarf-dev/zarf/commit/7a33a42a2e1759454f8f7b9b157c4b7f936b29ab))
+
+
+### Bug Fixes
+
+* add values flags to dev deploy and init ([#5234](https://github.com/zarf-dev/zarf/issues/5234)) ([fc9226f](https://github.com/zarf-dev/zarf/commit/fc9226fdd5df2c2db43aa01949e3bbb5630b37a3))
+* deprecated schema fields ([#5195](https://github.com/zarf-dev/zarf/issues/5195)) ([f21f80a](https://github.com/zarf-dev/zarf/commit/f21f80a9cc5f60d249d1a3306f1b1c3c3d30e181))
+* negotiate oci scheme for allowing plain http oci endpoints ([#5197](https://github.com/zarf-dev/zarf/issues/5197)) ([b5fbffa](https://github.com/zarf-dev/zarf/commit/b5fbffa6b6e19b188d1f47c67b0e7a64bb98cdf9))
+* packager.Remove() uses ZarfDefaultTimeout as default timeout ([#5253](https://github.com/zarf-dev/zarf/issues/5253)) ([11f82f3](https://github.com/zarf-dev/zarf/commit/11f82f339931b1c20ffac52111658ef3a3e78850))
+* registry mode not handled properly in update-creds ([#5230](https://github.com/zarf-dev/zarf/issues/5230)) ([b2a4132](https://github.com/zarf-dev/zarf/commit/b2a4132b60d64cad7f4ddf53897b75644ed9bbc8))
+* replace mimetype with archives ([#5228](https://github.com/zarf-dev/zarf/issues/5228)) ([a4bfd8a](https://github.com/zarf-dev/zarf/commit/a4bfd8ad47d10b54af37c8052b09efccd6c42dfa))
+
+
+### Refactoring
+
+* move template out of internal ([#5212](https://github.com/zarf-dev/zarf/issues/5212)) ([15e05ba](https://github.com/zarf-dev/zarf/commit/15e05ba30924933c97a528ed5666be0f390545ba))
+
 ## [0.83.0](https://github.com/zarf-dev/zarf/compare/v0.82.0...v0.83.0) (2026-08-07)
 
 
