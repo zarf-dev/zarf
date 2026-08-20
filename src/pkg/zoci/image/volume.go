@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	ctdarchive "github.com/containerd/containerd/v2/core/images/archive"
 	"github.com/klauspost/compress/zstd"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -41,6 +42,7 @@ type Volume struct {
 	root        string
 	store       *oci.Store
 	config      ocispec.Image
+	manifest    ocispec.Descriptor
 }
 
 // Clean removes the temp workspace used while building layers.
@@ -71,6 +73,7 @@ func (v *Volume) AddFile(ctx context.Context, dir, path string) (_ ocispec.Descr
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
+	fileName = filepath.ToSlash(fileName)
 
 	diffID, tarPath, tarSize, err := v.generateDiffID(fileName, path)
 	if err != nil {
@@ -177,10 +180,19 @@ func (v *Volume) AddDirectory(ctx context.Context, folder, ref string) error {
 	if err := v.store.Tag(ctx, manifestDesc, ref); err != nil {
 		return err
 	}
+	v.manifest = manifestDesc
 
 	l.Info("built image volume", "ref", ref, "digest", manifestDesc.Digest,
 		"layers", len(v.layers), "duration", time.Since(start).Round(time.Millisecond))
 	return nil
+}
+
+// WriteTar streams the image built by AddDirectory to w as a Docker/OCI
+// compatible tar archive (the same layout `docker save`/`docker load`
+// produce), tagging the exported manifest with ref. AddDirectory must be
+// called first.
+func (v *Volume) WriteTar(ctx context.Context, ref string, w io.Writer) error {
+	return ctdarchive.Export(ctx, v.Archive(), w, ctdarchive.WithManifest(v.manifest, ref))
 }
 
 // generateDiffID tars file into the builder's workspace under tar entry name

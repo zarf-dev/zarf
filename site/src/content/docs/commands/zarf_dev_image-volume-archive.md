@@ -11,7 +11,7 @@ tableOfContents: false
 Creates an image archive from a given directory with a given image reference
 
 ```
-zarf dev image-volume-archive [ DIRECTORY ] [ IMAGE REFERENCE ] [flags]
+zarf dev image-volume-archive [ DIRECTORY ] [ IMAGE-REFERENCE ] [flags]
 ```
 
 ### Options
@@ -19,6 +19,7 @@ zarf dev image-volume-archive [ DIRECTORY ] [ IMAGE REFERENCE ] [flags]
 ```
   -h, --help                       help for image-volume-archive
   -c, --layer-compression string   Compression algorthm used on the individual layers of the image volume (default "gzip")
+  -O, --output string              Path to write the resulting tar archive to (default derived from IMAGE-REFERENCE)
   -o, --platform-os string         Operating system of the image volume (default "linux")
 ```
 
