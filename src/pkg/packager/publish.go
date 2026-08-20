@@ -76,14 +76,17 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	arch := config.GetArch(opts.Architecture)
 	p := oci.PlatformForArch(arch)
 
-	// Set up remote repo client
-	srcRemote, err := zoci.NewRemote(ctx, src.String(), p, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
-	if err != nil {
-		return fmt.Errorf("could not instantiate remote: %w", err)
+	// Set up remote repo clients.
+	remoteOptions := zoci.RemoteClientOptions{
+		RemoteOptions: opts.RemoteOptions,
 	}
-	dstRemote, err := zoci.NewRemote(ctx, dst.String(), p, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+	srcRemote, err := zoci.NewRemoteWithOptions(ctx, src.String(), p, remoteOptions)
 	if err != nil {
-		return fmt.Errorf("could not instantiate remote: %w", err)
+		return fmt.Errorf("could not instantiate source remote: %w", err)
+	}
+	dstRemote, err := zoci.NewRemoteWithOptions(ctx, dst.String(), p, remoteOptions)
+	if err != nil {
+		return fmt.Errorf("could not instantiate destination remote: %w", err)
 	}
 
 	publishOptions := zoci.PublishOptions{
@@ -292,7 +295,9 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 	// Set platform
 	platform := oci.PlatformForArch(arch)
 
-	remote, err := zoci.NewRemote(ctx, ref.String(), platform, oci.WithPlainHTTP(remoteOpts.PlainHTTP), oci.WithInsecureSkipVerify(remoteOpts.InsecureSkipTLSVerify))
+	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), platform, zoci.RemoteClientOptions{
+		RemoteOptions: remoteOpts,
+	})
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}

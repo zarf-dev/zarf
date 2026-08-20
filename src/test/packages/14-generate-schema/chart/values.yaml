@@ -4,3 +4,7 @@ service:
 
 image:
   ref: nginx:latest
+
+configMap:
+  annotations:
+  labels:

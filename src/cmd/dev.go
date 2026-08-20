@@ -93,13 +93,19 @@ type devGenerateSchemaOptions struct {
 	deleteNotFound bool
 }
 
+type mappedChartSchema struct {
+	sourcePath  value.Path
+	schema      map[string]any
+	excludePath []value.Path
+}
+
 func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
 	o := &devGenerateSchemaOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "generate-schema [ DIRECTORY ]",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Generates a JSON schema for Zarf values based on the package definition and chart defaults",
+		Short: "Generates a JSON schema for Zarf values based on the package definition, chart defaults, and chart schemas",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd.Context(), args)
 		},
@@ -152,6 +158,8 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 		return fmt.Errorf("unable to parse package values files: %w", err)
 	}
 
+	var mappedSchemas []mappedChartSchema
+
 	// Step 2: Discover source target mappings and load defaults from chart values where Zarf Value defaults aren't specified
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -181,6 +189,21 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 			}
 
 			appliedValues := helpers.MergeMapRecursive(helmChart.Values, valuesFilesValues)
+			var chartSchema map[string]any
+			if len(helmChart.Schema) > 0 {
+				if err := json.Unmarshal(helmChart.Schema, &chartSchema); err != nil {
+					l.Warn("unable to parse Helm chart values schema; falling back to inferred types", "chart", chart.Name, "error", err)
+					chartSchema = nil
+				} else {
+					chartSchema = value.FilterChartSchema(chartSchema)
+					if chartSchema != nil {
+						if err := value.ValidateSchemaDocument(chartSchema); err != nil {
+							l.Warn("unable to validate Helm chart values schema; falling back to inferred types", "chart", chart.Name, "error", err)
+							chartSchema = nil
+						}
+					}
+				}
+			}
 
 			// Map ChartValues' Source to Target and merge into zarfValues if not already present
 			for _, cv := range chart.Values {
@@ -195,6 +218,26 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 				if err := zarfValues.Set(value.Path(cv.SourcePath), val); err != nil {
 					return fmt.Errorf("unable to set chart %q value at sourcePath %q: %w", chart.Name, cv.SourcePath, err)
 				}
+
+				if chartSchema != nil {
+					targetSchema, found, err := value.ExtractJSONSchema(chartSchema, value.Path(cv.TargetPath))
+					if err != nil {
+						return fmt.Errorf("unable to inspect chart %q schema at targetPath %q: %w", chart.Name, cv.TargetPath, err)
+					}
+					if found {
+						excludes := make([]value.Path, len(cv.ExcludePaths))
+						for i, excludePath := range cv.ExcludePaths {
+							excludes[i] = value.Path(excludePath)
+						}
+						mappedSchemas = append(mappedSchemas, mappedChartSchema{
+							sourcePath:  value.Path(cv.SourcePath),
+							schema:      targetSchema,
+							excludePath: excludes,
+						})
+					} else {
+						l.Warn("chart values schema does not define mapped target; falling back to inferred types", "chart", chart.Name, "targetPath", cv.TargetPath)
+					}
+				}
 				for _, excludePath := range cv.ExcludePaths {
 					if err := zarfValues.Delete(value.Path(excludePath)); err != nil {
 						return fmt.Errorf("unable to exclude path %q from schema for chart %q: %w", excludePath, chart.Name, err)
@@ -206,6 +249,16 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 
 	// Step 3: Generate JSON generatedSchema from the final map
 	generatedSchema := value.GenerateJSONSchema(zarfValues)
+	for _, mapped := range mappedSchemas {
+		if err := value.MergeJSONSchemaAtPath(generatedSchema, mapped.sourcePath, mapped.schema); err != nil {
+			return fmt.Errorf("unable to apply Helm schema at sourcePath %q: %w", mapped.sourcePath, err)
+		}
+		for _, excludePath := range mapped.excludePath {
+			if err := value.DeleteJSONSchemaAtPath(generatedSchema, excludePath); err != nil {
+				return fmt.Errorf("unable to exclude schema path %q: %w", excludePath, err)
+			}
+		}
+	}
 
 	// Step 4: Merge and reconcile any existing schema
 	existingSchema, mergeErr := value.MergeSchemaFiles(pkg.Values.Schema, defined.ImportedSchemas, basePath)

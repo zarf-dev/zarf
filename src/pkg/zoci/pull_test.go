@@ -61,11 +61,11 @@ func publishAndConnect(ctx context.Context, t *testing.T, srcPath string) (*zoci
 	require.NoError(t, err)
 	t.Cleanup(func() { os.Remove(pkgLayout.AsV1alpha1().Metadata.Name) }) //nolint:errcheck
 
-	cacheModifier, err := zoci.GetOCICacheModifier(ctx, tmpdir)
-	require.NoError(t, err)
-
 	platform := oci.PlatformForArch(pkgLayout.AsV1alpha1().Build.Architecture)
-	remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, append([]oci.Modifier{oci.WithPlainHTTP(true)}, cacheModifier)...)
+	remote, err := zoci.NewRemoteWithOptions(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
+		CachePath:     tmpdir,
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+	})
 	require.NoError(t, err)
 
 	return remote, pkgLayout
@@ -152,7 +152,9 @@ func publishPackage(ctx context.Context, t *testing.T, packagePath, upstream str
 	require.NoError(t, err)
 
 	platform := oci.PlatformForArch(pkgLayout.AsV1alpha1().Build.Architecture)
-	r, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(true))
+	r, err := zoci.NewRemoteWithOptions(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+	})
 	require.NoError(t, err)
 	return r, pkgLayout.AsV1alpha1().Components
 }
