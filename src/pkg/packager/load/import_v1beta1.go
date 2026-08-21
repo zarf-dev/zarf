@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/pkg/oci"
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
@@ -221,19 +220,10 @@ func selectImportVariant(ctx context.Context, imp v1beta1.ComponentImport, specD
 }
 
 func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOptions types.RemoteOptions, cachePath string) (loadedComponentConfig, error) {
-	plainHTTP, err := negotiateImportPlainHTTP(ctx, importURL, remoteOptions)
-	if err != nil {
-		return loadedComponentConfig{}, err
-	}
-	mods := []oci.Modifier{oci.WithPlainHTTP(plainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify)}
-	if cachePath != "" {
-		cacheModifier, err := zoci.GetOCICacheModifier(ctx, cachePath)
-		if err != nil {
-			return loadedComponentConfig{}, err
-		}
-		mods = append(mods, cacheModifier)
-	}
-	remote, err := zoci.NewRemote(ctx, importURL, ocispec.Platform{Architecture: arch}, mods...)
+	remote, err := zoci.NewRemoteWithOptions(ctx, importURL, ocispec.Platform{Architecture: arch}, zoci.RemoteClientOptions{
+		CachePath:     cachePath,
+		RemoteOptions: remoteOptions,
+	})
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}

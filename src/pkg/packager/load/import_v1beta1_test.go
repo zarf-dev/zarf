@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 
@@ -75,7 +74,9 @@ func TestRemoteComponentConfigRejectsPlatformVariantMismatch(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
 
-	remote, err := zoci.NewRemote(ctx, ref.String(), ocispec.Platform{}, oci.WithPlainHTTP(true))
+	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+	})
 	require.NoError(t, err)
 	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
 	require.NoError(t, err)
@@ -140,7 +141,9 @@ func publishRemoteComponent(ctx context.Context, t *testing.T, reference string,
 	require.NoError(t, err)
 	require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
 
-	remote, err := zoci.NewRemote(ctx, ref.String(), ocispec.Platform{}, oci.WithPlainHTTP(true))
+	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+	})
 	require.NoError(t, err)
 	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
 	require.NoError(t, err)

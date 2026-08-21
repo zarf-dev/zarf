@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -120,7 +119,9 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 		return registry.Reference{}, fmt.Errorf("unable to stage component artifact: %w", err)
 	}
 
-	remote, err := zoci.NewRemote(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Variant.Architecture}, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+	remote, err := zoci.NewRemoteWithOptions(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Variant.Architecture}, zoci.RemoteClientOptions{
+		RemoteOptions: opts.RemoteOptions,
+	})
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to connect to component registry: %w", err)
 	}
