@@ -151,7 +151,7 @@ retryCmd:
 		}
 
 		// Run the command on repeat until success or timeout.
-		l.Info("waiting for action", "cmd", cmdEscaped, "timeout", actionDefaults.Timeout.String())
+		l.Info("waiting for action", "cmd", cmdEscaped, "timeout", fmt.Sprintf("%d seconds", int(actionDefaults.Timeout.Seconds())))
 		select {
 		// On timeout break the loop to abort.
 		case <-timeout:
@@ -176,7 +176,7 @@ retryCmd:
 		if actionDefaults.Timeout <= 0 {
 			return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.Retries)
 		} else {
-			return fmt.Errorf("command %q timed out after %s", cmdEscaped, actionDefaults.Timeout)
+			return fmt.Errorf("command %q timed out after %d seconds", cmdEscaped, int(actionDefaults.Timeout.Seconds()))
 		}
 	default:
 		// If we reached this point, the retry limit was reached.
