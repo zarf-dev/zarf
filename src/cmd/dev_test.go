@@ -274,3 +274,49 @@ func TestDevInspectValuesFiles(t *testing.T) {
 		})
 	}
 }
+
+func TestDevSha256Sum(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		sourceURL   string
+		extractPath string
+		sha256sum   string
+		expectedErr string
+	}{
+		{
+			name:      "dev sha of tar ball",
+			sourceURL: filepath.Join("..", "pkg", "packager", "assemble", "testdata", "zarf-package", "archive.tar"),
+			sha256sum: "69b50ad92da0d32398fe1e5950ab28991c2220603daa2bce1a470e9afde95687",
+		},
+		{
+			name:        "dev sha of tar ball with extract path",
+			sourceURL:   filepath.Join("..", "pkg", "packager", "assemble", "testdata", "zarf-package", "archive.tar"),
+			sha256sum:   "84ff92691f909a05b224e1c56abb4864f01b4f8e3c854e4bb4c7baf1d3f6d652",
+			extractPath: "archive-data.txt",
+		},
+		{
+			name:        "dev sha file does not exist",
+			sourceURL:   filepath.Join("..", "pkg", "packager", "assemble", "testdata", "zarf-package", "archive.tar.zstd"),
+			expectedErr: "unable to compute the SHA256SUM hash",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			opts := devSha256SumOptions{
+				extractPath: tc.extractPath,
+			}
+			out, err := opts.compute(context.Background(), []string{tc.sourceURL})
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.sha256sum, out)
+		})
+	}
+}
