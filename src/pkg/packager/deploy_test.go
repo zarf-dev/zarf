@@ -136,3 +136,35 @@ func TestDeploySkipsValuesSchemaValidationWhenConfigured(t *testing.T) {
 	_, err = Deploy(ctx, pkgLayout, DeployOptions{SkipValuesSchemaValidation: true})
 	require.NoError(t, err)
 }
+
+func TestDeployUsesTheClusterTheCallerSupplies(t *testing.T) {
+	// A library caller that already holds a connection should not have Zarf reach for
+	// the ambient kubeconfig. The supplied cluster is seeded with Zarf state, so if
+	// the deploy reads state successfully it can only have used this connection: an
+	// ambient cluster would either be absent or not carry this state.
+	ctx := testutil.TestContext(t)
+	srcDir := filepath.Join("load", "testdata", "package-with-values-schema")
+	defined, err := load.PackageDefinition(ctx, srcDir, load.DefinitionOptions{})
+	require.NoError(t, err)
+	pkgLayout, err := assemble.AssemblePackage(ctx, defined, srcDir, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	cs := fake.NewClientset()
+	c := &cluster.Cluster{
+		Clientset: cs,
+		Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
+	}
+	_, err = cs.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: state.ZarfNamespaceName},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
+	require.NoError(t, c.SaveState(ctx, &state.State{}))
+
+	_, err = Deploy(ctx, pkgLayout, DeployOptions{Cluster: c})
+	// The deploy still fails further along against a fake clientset, but it must get
+	// past loading state, which only the supplied cluster has.
+	if err != nil {
+		require.NotContains(t, err.Error(), "failed to load the Zarf State from the cluster")
+	}
+}
