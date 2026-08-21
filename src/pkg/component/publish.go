@@ -120,7 +120,7 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 		return registry.Reference{}, fmt.Errorf("unable to stage component artifact: %w", err)
 	}
 
-	remote, err := zoci.NewRemote(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Metadata.Variant.Architecture}, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+	remote, err := zoci.NewRemote(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Variant.Architecture}, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to connect to component registry: %w", err)
 	}
@@ -129,7 +129,7 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	for _, layer := range layers {
 		totalSize += layer.Size
 	}
-	published, err := pushComponentArtifact(ctx, store, manifest.Digest.String(), remote, componentRef, component.Metadata.Variant.Architecture, totalSize, opts)
+	published, err := pushComponentArtifact(ctx, store, manifest.Digest.String(), remote, componentRef, component.Variant.Architecture, totalSize, opts)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -298,8 +298,8 @@ func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchiv
 
 func componentReference(destination registry.Reference, component v1beta1.ComponentConfig) (registry.Reference, error) {
 	tag := component.Metadata.Version
-	if component.Metadata.Variant.Flavor != "" {
-		tag += "-" + component.Metadata.Variant.Flavor
+	if component.Variant.Flavor != "" {
+		tag += "-" + component.Variant.Flavor
 	}
 	return registry.ParseReference(fmt.Sprintf("%s/%s:%s", destination.Registry, path.Join(destination.Repository, component.Metadata.Name), tag))
 }

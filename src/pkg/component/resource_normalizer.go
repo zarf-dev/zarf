@@ -140,7 +140,7 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	return component, normalizedComponentResources{
 		resources:     normalizer.resources,
 		imageArchives: imageArchives,
-		architecture:  component.Metadata.Variant.Architecture,
+		architecture:  component.Variant.Architecture,
 	}, nil
 }
 

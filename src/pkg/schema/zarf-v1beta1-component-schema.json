@@ -479,10 +479,6 @@
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
           "type": "string"
         },
-        "variant": {
-          "$ref": "#/$defs/ComponentVariant",
-          "description": "Variant identifies the flavor and architecture represented by this component config."
-        },
         "version": {
           "description": "Generic string to track the component config version.",
           "type": "string"
@@ -1174,6 +1170,10 @@
     "values": {
       "$ref": "#/$defs/Values",
       "description": "Values imports Zarf values files for templating and overriding Helm values."
+    },
+    "variant": {
+      "$ref": "#/$defs/ComponentVariant",
+      "description": "Variant identifies the flavor and architecture represented by this component config."
     }
   },
   "required": [

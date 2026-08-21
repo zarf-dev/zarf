@@ -99,7 +99,7 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 // the supplied registry options for remote component imports.
 func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath string, remoteOptions types.RemoteOptions) (ComponentConfigImportResolution, error) {
 	componentPath = filepath.Clean(componentPath)
-	resolvedSpec, importedVals, remoteResources, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Metadata.Variant.Architecture, component.Metadata.Variant.Flavor, []string{componentPath}, remoteOptions, "")
+	resolvedSpec, importedVals, remoteResources, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Variant.Architecture, component.Variant.Flavor, []string{componentPath}, remoteOptions, "")
 	if err != nil {
 		return ComponentConfigImportResolution{}, err
 	}
@@ -206,7 +206,7 @@ func selectImportVariant(ctx context.Context, imp v1beta1.ComponentImport, specD
 
 	var compatible []loadedComponentConfig
 	for _, lc := range loaded {
-		if compatibleComponentConfigV1Beta1(lc.config.Metadata, arch, flavor) {
+		if compatibleComponentConfigV1Beta1(lc.config.Variant, arch, flavor) {
 			compatible = append(compatible, lc)
 		}
 	}
@@ -256,8 +256,8 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
-	if !metadataMatchesOCIPlatform(config.Metadata, root.Platform) {
-		return loadedComponentConfig{}, fmt.Errorf("remote component %q metadata architecture does not match its OCI platform", importURL)
+	if !variantMatchesOCIPlatform(config.Variant, root.Platform) {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q variant architecture does not match its OCI platform", importURL)
 	}
 	importRoot := path.Join(".zarf", "remote-components", strings.ReplaceAll(root.Digest.String(), ":", "-"))
 	resources := make([]remoteResource, 0, len(manifest.Layers))
@@ -348,17 +348,17 @@ func compatibleComponentV1Beta1(selector v1beta1.ComponentSelector, arch, flavor
 	return satisfiesArch && satisfiesFlavor
 }
 
-// compatibleComponentConfigV1Beta1 reports whether a component config's metadata variant matches
+// compatibleComponentConfigV1Beta1 reports whether a component config's variant matches
 // the active package-create target. Empty variant fields are generic.
-func compatibleComponentConfigV1Beta1(metadata v1beta1.ComponentMetadata, arch, flavor string) bool {
-	return (metadata.Variant.Architecture == "" || metadata.Variant.Architecture == arch) && (metadata.Variant.Flavor == "" || metadata.Variant.Flavor == flavor)
+func compatibleComponentConfigV1Beta1(variant v1beta1.ComponentVariant, arch, flavor string) bool {
+	return (variant.Architecture == "" || variant.Architecture == arch) && (variant.Flavor == "" || variant.Flavor == flavor)
 }
 
-func metadataMatchesOCIPlatform(metadata v1beta1.ComponentMetadata, platform *ocispec.Platform) bool {
+func variantMatchesOCIPlatform(variant v1beta1.ComponentVariant, platform *ocispec.Platform) bool {
 	if platform == nil {
-		return metadata.Variant.Architecture == ""
+		return variant.Architecture == ""
 	}
-	return metadata.Variant.Architecture == platform.Architecture
+	return variant.Architecture == platform.Architecture
 }
 
 func dedupePaths(paths []string) []string {

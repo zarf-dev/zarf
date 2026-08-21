@@ -2,8 +2,8 @@ apiVersion: zarf.dev/v1beta1
 kind: ZarfComponentConfig
 metadata:
   name: web
-  variant:
-    flavor: apache
+variant:
+  flavor: apache
 component:
   images:
     - name: httpd:2.4

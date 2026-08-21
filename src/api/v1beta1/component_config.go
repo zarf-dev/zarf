@@ -11,6 +11,8 @@ type ComponentConfig struct {
 	Kind PackageKind `json:"kind" jsonschema:"enum=ZarfComponentConfig,default=ZarfComponentConfig"`
 	// Component metadata.
 	Metadata ComponentMetadata `json:"metadata"`
+	// Variant identifies the flavor and architecture represented by this component config.
+	Variant ComponentVariant `json:"variant,omitzero"`
 	// The single component this config defines.
 	Component ComponentSpec `json:"component"`
 	// Values imports Zarf values files for templating and overriding Helm values.
@@ -54,8 +56,6 @@ type ComponentMetadata struct {
 	Description string `json:"description,omitempty"`
 	// Generic string to track the component config version.
 	Version string `json:"version,omitempty"`
-	// Variant identifies the flavor and architecture represented by this component config.
-	Variant ComponentVariant `json:"variant,omitzero"`
 	// Annotations contains arbitrary metadata about the component config.
 	Annotations map[string]string `json:"annotations,omitempty"`
 }

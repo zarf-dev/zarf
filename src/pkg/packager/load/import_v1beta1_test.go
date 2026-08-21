@@ -28,29 +28,29 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
-func TestMetadataMatchesOCIPlatform(t *testing.T) {
+func TestVariantMatchesOCIPlatform(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct {
 		name     string
-		metadata v1beta1.ComponentMetadata
+		variant  v1beta1.ComponentVariant
 		platform *ocispec.Platform
 		want     bool
 	}{
 		{name: "generic direct manifest", want: true},
-		{name: "specific index manifest", metadata: v1beta1.ComponentMetadata{Variant: v1beta1.ComponentVariant{Architecture: "arm64"}}, platform: &ocispec.Platform{Architecture: "arm64"}, want: true},
-		{name: "specific metadata on direct manifest", metadata: v1beta1.ComponentMetadata{Variant: v1beta1.ComponentVariant{Architecture: "arm64"}}, want: false},
-		{name: "generic metadata in index", platform: &ocispec.Platform{Architecture: "arm64"}, want: false},
-		{name: "architecture mismatch", metadata: v1beta1.ComponentMetadata{Variant: v1beta1.ComponentVariant{Architecture: "amd64"}}, platform: &ocispec.Platform{Architecture: "arm64"}, want: false},
+		{name: "specific index manifest", variant: v1beta1.ComponentVariant{Architecture: "arm64"}, platform: &ocispec.Platform{Architecture: "arm64"}, want: true},
+		{name: "specific variant on direct manifest", variant: v1beta1.ComponentVariant{Architecture: "arm64"}, want: false},
+		{name: "generic variant in index", platform: &ocispec.Platform{Architecture: "arm64"}, want: false},
+		{name: "architecture mismatch", variant: v1beta1.ComponentVariant{Architecture: "amd64"}, platform: &ocispec.Platform{Architecture: "arm64"}, want: false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tt.want, metadataMatchesOCIPlatform(tt.metadata, tt.platform))
+			require.Equal(t, tt.want, variantMatchesOCIPlatform(tt.variant, tt.platform))
 		})
 	}
 }
 
-func TestRemoteComponentConfigRejectsPlatformMetadataMismatch(t *testing.T) {
+func TestRemoteComponentConfigRejectsPlatformVariantMismatch(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
@@ -62,10 +62,8 @@ func TestRemoteComponentConfigRejectsPlatformMetadataMismatch(t *testing.T) {
 	component := v1beta1.ComponentConfig{
 		APIVersion: v1beta1.APIVersion,
 		Kind:       v1beta1.ZarfComponentConfig,
-		Metadata: v1beta1.ComponentMetadata{
-			Name:    "mismatch",
-			Variant: v1beta1.ComponentVariant{Architecture: "arm64"},
-		},
+		Metadata:   v1beta1.ComponentMetadata{Name: "mismatch"},
+		Variant:    v1beta1.ComponentVariant{Architecture: "arm64"},
 	}
 	componentJSON, err := json.Marshal(component)
 	require.NoError(t, err)
@@ -83,7 +81,7 @@ func TestRemoteComponentConfigRejectsPlatformMetadataMismatch(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = remoteComponentConfig(ctx, "oci://"+ref.String(), "arm64", types.RemoteOptions{PlainHTTP: true}, "")
-	require.ErrorContains(t, err, "metadata architecture does not match its OCI platform")
+	require.ErrorContains(t, err, "variant architecture does not match its OCI platform")
 }
 
 func mustPackagePath(t *testing.T, dir string) layout.PackagePath {
