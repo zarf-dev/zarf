@@ -62,7 +62,7 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 		return err
 	}
 	pkg = definition.AsV1alpha1()
-	projectedComponents := execution.Components(definition)
+	components := execution.Components(definition)
 
 	if len(pkg.Components) == 0 {
 		return fmt.Errorf("package to remove contains no components")
@@ -82,7 +82,7 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 	// Check that cluster is configured if required.
 	requiresCluster := false
 	componentIdx := map[string]execution.Component{}
-	for _, component := range projectedComponents {
+	for _, component := range components {
 		componentIdx[component.Name] = component
 		if component.RequiresCluster() {
 			if opts.Cluster == nil {
