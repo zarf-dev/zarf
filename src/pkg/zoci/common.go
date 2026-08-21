@@ -6,7 +6,9 @@ package zoci
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"time"
 
@@ -66,6 +68,9 @@ type PublishOptions struct {
 type RemoteClientOptions struct {
 	// CachePath stores OCI layers locally when non-empty.
 	CachePath string
+	// Transport configures HTTP transport behavior such as proxies and mTLS.
+	// It is cloned before use and is never modified.
+	Transport *http.Transport
 	types.RemoteOptions
 }
 
@@ -87,6 +92,9 @@ func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Plat
 	modifiers := []oci.Modifier{
 		oci.WithInsecureSkipVerify(options.InsecureSkipTLSVerify),
 	}
+	if options.Transport != nil {
+		modifiers = append(modifiers, oci.WithTransport(options.Transport))
+	}
 	if options.CachePath != "" {
 		cacheModifier, err := GetOCICacheModifier(ctx, options.CachePath)
 		if err != nil {
@@ -102,9 +110,13 @@ func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Plat
 
 	// negotiate if required after the remote has been instantiated for any canonical updates (docker.io etc)
 	if options.PlainHTTP {
-		plainHTTP, err := ocischeme.From(ctx).UsePlainHTTP(ctx, remote.Repo().Reference.Registry, ocischeme.ProbeOptions{
+		probeOptions := ocischeme.ProbeOptions{
 			InsecureSkipTLSVerify: options.InsecureSkipTLSVerify,
-		})
+		}
+		if options.Transport != nil {
+			probeOptions.Transport = transportForProbe(options.Transport, options.InsecureSkipTLSVerify)
+		}
+		plainHTTP, err := ocischeme.From(ctx).UsePlainHTTP(ctx, remote.Repo().Reference.Registry, probeOptions)
 		if err != nil {
 			return nil, fmt.Errorf("could not resolve registry transport: %w", err)
 		}
@@ -112,6 +124,22 @@ func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Plat
 	}
 
 	return remote, nil
+}
+
+// transportForProbe returns a copy of transport with the same TLS verification
+// setting that oci.WithInsecureSkipVerify applies to the remote client.
+func transportForProbe(transport *http.Transport, insecureSkipTLSVerify bool) *http.Transport {
+	if transport == nil {
+		return nil
+	}
+	probeTransport := transport.Clone()
+	if probeTransport.TLSClientConfig == nil {
+		probeTransport.TLSClientConfig = &tls.Config{}
+	} else {
+		probeTransport.TLSClientConfig = probeTransport.TLSClientConfig.Clone()
+	}
+	probeTransport.TLSClientConfig.InsecureSkipVerify = insecureSkipTLSVerify //nolint:gosec // Controlled by --insecure-skip-tls-verify.
+	return probeTransport
 }
 
 func newRemote(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {

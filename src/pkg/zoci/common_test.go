@@ -75,3 +75,46 @@ func TestNewRemoteWithOptionsTransportNegotiation(t *testing.T) {
 		})
 	}
 }
+
+func TestNewRemoteWithOptionsUsesCustomTransportForNegotiation(t *testing.T) {
+	newServer := func(t *testing.T) *httptest.Server {
+		t.Helper()
+		server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		t.Cleanup(server.Close)
+		return server
+	}
+
+	t.Run("trusted TLS configuration", func(t *testing.T) {
+		server := newServer(t)
+		transport, ok := server.Client().Transport.(*http.Transport)
+		require.True(t, ok)
+
+		remote, err := NewRemoteWithOptions(context.Background(), "oci://"+strings.TrimPrefix(server.URL, "https://")+"/test:latest", oci.PlatformForArch("amd64"), RemoteClientOptions{
+			Transport: transport,
+			RemoteOptions: types.RemoteOptions{
+				PlainHTTP: true,
+			},
+		})
+		require.NoError(t, err)
+		require.False(t, remote.Repo().PlainHTTP)
+	})
+
+	t.Run("insecure TLS option", func(t *testing.T) {
+		server := newServer(t)
+		defaultTransport, ok := http.DefaultTransport.(*http.Transport)
+		require.True(t, ok)
+		transport := defaultTransport.Clone()
+
+		remote, err := NewRemoteWithOptions(context.Background(), "oci://"+strings.TrimPrefix(server.URL, "https://")+"/test:latest", oci.PlatformForArch("amd64"), RemoteClientOptions{
+			Transport: transport,
+			RemoteOptions: types.RemoteOptions{
+				PlainHTTP:             true,
+				InsecureSkipTLSVerify: true,
+			},
+		})
+		require.NoError(t, err)
+		require.False(t, remote.Repo().PlainHTTP)
+	})
+}
