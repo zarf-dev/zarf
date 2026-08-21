@@ -45,9 +45,8 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	return errors.Join(errs...)
 }
 
-func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, projected execution.Component, defined *definedValues) ([]error, error) {
-	component := projected
-	onDeploy := projected.Actions.OnDeploy
+func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component execution.Component, defined *definedValues) ([]error, error) {
+	onDeploy := component.Actions.OnDeploy
 	var errs []error
 
 	for _, action := range onDeploy.Before.Actions {
