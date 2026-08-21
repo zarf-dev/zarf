@@ -5,6 +5,7 @@
 package properties
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -156,6 +157,10 @@ func (l *Loader) LoadURL(url string) (*Properties, error) {
 }
 
 func (l *Loader) loadBytes(buf []byte, enc Encoding) (*Properties, error) {
+	// Strip a leading UTF-8 BOM so Windows-edited property files load cleanly.
+	if enc == UTF8 || enc == utf8Default {
+		buf = bytes.TrimPrefix(buf, []byte{0xEF, 0xBB, 0xBF})
+	}
 	p, err := parse(convert(buf, enc))
 	if err != nil {
 		return nil, err

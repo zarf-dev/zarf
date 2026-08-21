@@ -131,12 +131,12 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	if opts.Shasum != "" {
 		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
-	cacheMod, err := zoci.GetOCICacheModifier(ctx, opts.CachePath)
-	if err != nil {
-		return nil, err
-	}
+
 	platform := oci.PlatformForArch(opts.Architecture)
-	remote, err := zoci.NewRemote(ctx, opts.Source, platform, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod)
+	remote, err := zoci.NewRemoteWithOptions(ctx, opts.Source, platform, zoci.RemoteClientOptions{
+		CachePath:     opts.CachePath,
+		RemoteOptions: opts.RemoteOptions,
+	})
 	if err != nil {
 		return nil, err
 	}
