@@ -15,11 +15,6 @@ import (
 // SetVariableMap represents a map of variable names to their set values
 type SetVariableMap map[string]*v1alpha1.SetVariable
 
-// VariableType is the runtime type of a variable. It is kept here so execution
-// packages do not need to depend on a package-definition schema.
-// FIXME: don't need this to be separate
-type VariableType = v1alpha1.VariableType
-
 // GetSetVariable gets a variable set within a VariableConfig by its name
 func (vc *VariableConfig) GetSetVariable(name string) (*v1alpha1.SetVariable, bool) {
 	variable, ok := vc.setVariableMap[strings.ToUpper(name)]
@@ -53,7 +48,7 @@ func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVari
 		}
 
 		// First set default (may be overridden by prompt)
-		vc.SetVariable(variable.Name, variable.Default, variable.Sensitive, variable.AutoIndent, variable.Type)
+		vc.SetVariable(variable.Name, variable.Default, variable.Sensitive, variable.AutoIndent, string(variable.Type))
 
 		// Variable is set to prompt the user
 		if variable.Prompt {
@@ -64,7 +59,7 @@ func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVari
 				return err
 			}
 
-			vc.SetVariable(variable.Name, val, variable.Sensitive, variable.AutoIndent, variable.Type)
+			vc.SetVariable(variable.Name, val, variable.Sensitive, variable.AutoIndent, string(variable.Type))
 		}
 
 		if err := vc.CheckVariablePattern(variable.Name, variable.Pattern); err != nil {
@@ -76,14 +71,14 @@ func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVari
 }
 
 // SetVariable sets a variable in a VariableConfig's SetVariableMap
-func (vc *VariableConfig) SetVariable(name, value string, sensitive bool, autoIndent bool, varType v1alpha1.VariableType) {
+func (vc *VariableConfig) SetVariable(name, value string, sensitive bool, autoIndent bool, varType string) {
 	name = strings.ToUpper(name)
 	vc.setVariableMap[name] = &v1alpha1.SetVariable{
 		Variable: v1alpha1.Variable{
 			Name:       name,
 			Sensitive:  sensitive,
 			AutoIndent: autoIndent,
-			Type:       varType,
+			Type:       v1alpha1.VariableType(varType),
 		},
 		Value: value,
 	}

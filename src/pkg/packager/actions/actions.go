@@ -118,7 +118,7 @@ retryCmd:
 
 			// If an output variable is defined, set it.
 			for _, v := range action.SetVariables {
-				variableConfig.SetVariable(v.Name, outTrimmed, v.Sensitive, v.AutoIndent, variables.VariableType(v.Type))
+				variableConfig.SetVariable(v.Name, outTrimmed, v.Sensitive, v.AutoIndent, v.Type)
 				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
 					return err
 				}
@@ -282,10 +282,14 @@ func runWaitClusterAction(ctx context.Context, cluster *ClusterWait, timeout tim
 	}
 	l.Info("running wait action", "description", desc)
 
-	if cluster.DefaultReady {
+	switch cluster.DefaultCondition {
+	case DefaultConditionReady:
 		return wait.ForResourceDefaultReady(ctx, kind, identifier, condition, namespace, timeout)
+	case DefaultConditionExists, "":
+		return wait.ForResource(ctx, kind, identifier, condition, namespace, timeout)
+	default:
+		return fmt.Errorf("unsupported cluster wait default condition %q", cluster.DefaultCondition)
 	}
-	return wait.ForResource(ctx, kind, identifier, condition, namespace, timeout)
 }
 
 func runWaitNetworkAction(ctx context.Context, network *NetworkWait, timeout time.Duration) error {

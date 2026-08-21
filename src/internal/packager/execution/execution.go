@@ -171,11 +171,7 @@ func betaAction(action v1beta1.ComponentAction) actions.Action {
 func alphaWait(waitCfg *v1alpha1.ZarfComponentActionWait) *actions.Wait {
 	out := &actions.Wait{}
 	if waitCfg.Cluster != nil {
-		condition := waitCfg.Cluster.Condition
-		if condition == "" {
-			condition = "exists"
-		}
-		out.Cluster = &actions.ClusterWait{Kind: waitCfg.Cluster.Kind, Name: waitCfg.Cluster.Name, Namespace: waitCfg.Cluster.Namespace, Condition: condition}
+		out.Cluster = &actions.ClusterWait{Kind: waitCfg.Cluster.Kind, Name: waitCfg.Cluster.Name, Namespace: waitCfg.Cluster.Namespace, Condition: waitCfg.Cluster.Condition, DefaultCondition: actions.DefaultConditionExists}
 	}
 	if waitCfg.Network != nil {
 		out.Network = &actions.NetworkWait{Protocol: waitCfg.Network.Protocol, Address: waitCfg.Network.Address, Code: waitCfg.Network.Code}
@@ -186,7 +182,7 @@ func alphaWait(waitCfg *v1alpha1.ZarfComponentActionWait) *actions.Wait {
 func betaWait(waitCfg *v1beta1.ComponentActionWait) *actions.Wait {
 	out := &actions.Wait{}
 	if waitCfg.Cluster != nil {
-		out.Cluster = &actions.ClusterWait{Kind: waitCfg.Cluster.Kind, Name: waitCfg.Cluster.Name, Namespace: waitCfg.Cluster.Namespace, Condition: waitCfg.Cluster.Condition, DefaultReady: true}
+		out.Cluster = &actions.ClusterWait{Kind: waitCfg.Cluster.Kind, Name: waitCfg.Cluster.Name, Namespace: waitCfg.Cluster.Namespace, Condition: waitCfg.Cluster.Condition, DefaultCondition: actions.DefaultConditionReady}
 	}
 	if waitCfg.Network != nil {
 		out.Network = &actions.NetworkWait{Protocol: waitCfg.Network.Protocol, Address: waitCfg.Network.Address, Code: int(waitCfg.Network.Code)}

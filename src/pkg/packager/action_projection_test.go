@@ -75,9 +75,9 @@ func TestProjectDeploymentComponents_WaitDefaultsRemainVersionSpecific(t *testin
 
 	alphaWait := execution.Components(alpha)[0].Actions.OnDeploy.Before.Actions[0].Wait.Cluster
 	betaWait := execution.Components(beta)[0].Actions.OnDeploy.Before.Actions[0].Wait.Cluster
-	require.False(t, alphaWait.DefaultReady)
-	require.Equal(t, "exists", alphaWait.Condition)
-	require.True(t, betaWait.DefaultReady)
+	require.Equal(t, actions.DefaultConditionExists, alphaWait.DefaultCondition)
+	require.Empty(t, alphaWait.Condition)
+	require.Equal(t, actions.DefaultConditionReady, betaWait.DefaultCondition)
 	require.Empty(t, betaWait.Condition)
 }
 

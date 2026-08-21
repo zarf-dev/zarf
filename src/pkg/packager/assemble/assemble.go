@@ -108,7 +108,6 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		return nil, err
 	}
 	for _, projected := range execution.Components(definition) {
-		// FIXME: should just use one component
 		err := assemblePackageComponent(ctx, projected, packagePath, buildPath, opts.CachePath, opts.RemoteOptions)
 		if err != nil {
 			return nil, err

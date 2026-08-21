@@ -73,14 +73,22 @@ type Wait struct {
 
 // ClusterWait describes a Kubernetes resource condition.
 type ClusterWait struct {
-	Kind      string
-	Name      string
-	Namespace string
-	Condition string
-	// DefaultReady selects Kubernetes readiness when Condition is empty. Alpha
-	// packages leave this false because their empty condition means "exists".
-	DefaultReady bool
+	Kind             string
+	Name             string
+	Namespace        string
+	Condition        string
+	DefaultCondition DefaultCondition
 }
+
+// DefaultCondition determines how a cluster wait behaves when Condition is empty.
+type DefaultCondition string
+
+const (
+	// DefaultConditionExists waits for the resource to exist.
+	DefaultConditionExists DefaultCondition = "exists"
+	// DefaultConditionReady waits for the resource to become fully reconciled.
+	DefaultConditionReady DefaultCondition = "ready"
+)
 
 // NetworkWait describes a network condition.
 type NetworkWait struct {

@@ -31,8 +31,8 @@ func TestChartTemplate(t *testing.T) {
 	require.NoError(t, err)
 	kubeVersion := ""
 	vc := template.GetZarfVariableConfig(ctx, false)
-	vc.SetVariable("image", "nginx:1.0.0", false, false, v1alpha1.RawVariableType)
-	vc.SetVariable("port", "8080", false, false, v1alpha1.RawVariableType)
+	vc.SetVariable("image", "nginx:1.0.0", false, false, string(v1alpha1.RawVariableType))
+	vc.SetVariable("port", "8080", false, false, string(v1alpha1.RawVariableType))
 	helmChart, values, err := LoadChartData(chart, paths, nil)
 	require.NoError(t, err)
 	manifest, err := TemplateChart(ctx, chart, helmChart, values, kubeVersion, vc, false, types.RemoteOptions{})
