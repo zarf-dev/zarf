@@ -56,6 +56,10 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 				Name:        "comp",
 				Description: "comp desc",
 				Optional:    true,
+				Selector: v1beta1.ComponentSelector{
+					Architecture: "arm64",
+					Flavor:       "prod",
+				},
 				ComponentSpec: v1beta1.ComponentSpec{
 					Import: v1beta1.ComponentImport{
 						Local:  []v1beta1.ComponentImportLocal{{Path: "path"}},
@@ -63,10 +67,6 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 					},
 					Target: v1beta1.ComponentTarget{
 						OS: "linux",
-					},
-					Selector: v1beta1.ComponentSelector{
-						Architecture: "arm64",
-						Flavor:       "prod",
 					},
 					Service:      v1beta1.ServiceRegistry,
 					Repositories: []v1beta1.Repository{{URL: "https://github.com/example/repo"}},
