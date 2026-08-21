@@ -45,6 +45,8 @@ const (
 	DockerMediaTypeManifest = "application/vnd.docker.distribution.manifest.v2+json"
 	// DockerMediaTypeManifestList is the legacy Docker manifest list, replaced by OCI index
 	DockerMediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
+	// DockerMediaTypeConfig is the legacy Docker image configuration format.
+	DockerMediaTypeConfig = "application/vnd.docker.container.image.v1+json"
 )
 
 // Legacy Docker image layers
@@ -72,6 +74,16 @@ func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
 		}
 	}
 	return true
+}
+
+// IsContainerImage reports whether an OCI manifest describes a container image.
+func IsContainerImage(manifest ocispec.Manifest) bool {
+	switch manifest.Config.MediaType {
+	case ocispec.MediaTypeImageConfig, DockerMediaTypeConfig:
+		return OnlyHasImageLayers(manifest)
+	default:
+		return false
+	}
 }
 
 // IsManifest reports whether the media type represents an OCI manifest.
