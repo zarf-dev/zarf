@@ -43,11 +43,6 @@ func (c Component) GetImages() []string {
 	return images
 }
 
-// AsV1Alpha1 provides the legacy resource shape for helpers that have not yet been migrated.
-func (c Component) AsV1Alpha1() v1alpha1.ZarfComponent {
-	return v1alpha1.ZarfComponent{Name: c.Name, Manifests: c.Manifests, Charts: c.Charts, DataInjections: c.DataInjections, Files: c.Files, Images: c.Images, ImageArchives: c.ImageArchives, Repos: c.Repos, HealthChecks: c.HealthChecks, StateAccess: c.StateAccess}
-}
-
 // ComponentActions contains runtime action sets for package lifecycle operations.
 type ComponentActions struct {
 	OnCreate ActionSet

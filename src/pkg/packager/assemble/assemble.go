@@ -109,7 +109,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	}
 	for _, projected := range projection.Components(definition) {
 		// FIXME: should just use one component
-		err := assemblePackageComponent(ctx, projected.AsV1Alpha1(), projected.Actions.OnCreate, packagePath, buildPath, opts.CachePath, opts.RemoteOptions)
+		err := assemblePackageComponent(ctx, projected, packagePath, buildPath, opts.CachePath, opts.RemoteOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -351,7 +351,7 @@ func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) erro
 	return nil
 }
 
-func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, onCreate projection.ActionSet, packagePath, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
+func assemblePackageComponent(ctx context.Context, component projection.Component, packagePath, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -365,7 +365,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		return err
 	}
 
-	if err := actions.Run(ctx, onCreate.Before, actions.RunOptions{BasePath: packagePath, StateAccess: template.StateAccess{}}); err != nil {
+	if err := actions.Run(ctx, component.Actions.OnCreate.Before, actions.RunOptions{BasePath: packagePath, StateAccess: template.StateAccess{}}); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -510,7 +510,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 	}
 
-	if err := actions.Run(ctx, onCreate.After, actions.RunOptions{BasePath: packagePath, StateAccess: template.StateAccess{}}); err != nil {
+	if err := actions.Run(ctx, component.Actions.OnCreate.After, actions.RunOptions{BasePath: packagePath, StateAccess: template.StateAccess{}}); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 
