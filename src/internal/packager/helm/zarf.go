@@ -34,7 +34,10 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 	if err != nil {
 		return fmt.Errorf("error getting init package: %w", err)
 	}
-	initPkgName := findInitPackageWithComponent(pkgs, "zarf-registry")
+	initPkgName, err := findInitPackageWithComponent(pkgs, "zarf-registry")
+	if err != nil {
+		return fmt.Errorf("error finding init package with zarf-registry component: %w", err)
+	}
 	if initPkgName == "" {
 		return fmt.Errorf("error finding init package with zarf-registry component")
 	}
@@ -95,7 +98,10 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	if err != nil {
 		return fmt.Errorf("error getting init package: %w", err)
 	}
-	initPkgName := findInitPackageWithComponent(pkgs, "zarf-agent")
+	initPkgName, err := findInitPackageWithComponent(pkgs, "zarf-agent")
+	if err != nil {
+		return fmt.Errorf("error finding init package with zarf-agent component: %w", err)
+	}
 	if initPkgName == "" {
 		return fmt.Errorf("error finding init package with zarf-agent component")
 	}
@@ -216,15 +222,20 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	return nil
 }
 
-func findInitPackageWithComponent(pkgs []state.DeployedPackage, componentName string) string {
-	for _, pkg := range pkgs {
-		if pkg.Data.Kind == v1alpha1.ZarfInitConfig {
-			for _, c := range pkg.Data.Components {
+func findInitPackageWithComponent(pkgs []state.DeployedPackage, componentName string) (string, error) {
+	for _, deployedPackage := range pkgs {
+		definition, err := deployedPackage.PackageDefinition()
+		if err != nil {
+			return "", err
+		}
+		pkg := definition.AsV1alpha1()
+		if pkg.Kind == v1alpha1.ZarfInitConfig {
+			for _, c := range pkg.Components {
 				if c.Name == componentName {
-					return pkg.Name
+					return deployedPackage.Name, nil
 				}
 			}
 		}
 	}
-	return ""
+	return "", nil
 }
