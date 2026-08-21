@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.84.1](https://github.com/zarf-dev/zarf/compare/v0.84.0...v0.84.1) (2026-08-21)
+
+
+### Features
+
+* **zoci:** add transport parameter to NewRemoteWithOptions ([#5260](https://github.com/zarf-dev/zarf/issues/5260)) ([97a1b4d](https://github.com/zarf-dev/zarf/commit/97a1b4d0e9ca6095450f87a9c8690d5c76f71702))
+
 ## [0.84.0](https://github.com/zarf-dev/zarf/compare/v0.83.0...v0.84.0) (2026-08-20)
 
 
