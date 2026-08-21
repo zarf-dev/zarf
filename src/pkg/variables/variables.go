@@ -15,6 +15,11 @@ import (
 // SetVariableMap represents a map of variable names to their set values
 type SetVariableMap map[string]*v1alpha1.SetVariable
 
+// VariableType is the runtime type of a variable. It is kept here so execution
+// packages do not need to depend on a package-definition schema.
+// FIXME: don't need this to be separate
+type VariableType = v1alpha1.VariableType
+
 // GetSetVariable gets a variable set within a VariableConfig by its name
 func (vc *VariableConfig) GetSetVariable(name string) (*v1alpha1.SetVariable, bool) {
 	variable, ok := vc.setVariableMap[strings.ToUpper(name)]

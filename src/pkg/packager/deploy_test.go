@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/internal/packager/projection"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -28,7 +28,7 @@ func TestInternalServicesFor(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		components []v1alpha1.ZarfComponent
+		components []projection.Component
 		opts       DeployOptions
 		expected   state.ServiceSet
 	}{
@@ -39,7 +39,7 @@ func TestInternalServicesFor(t *testing.T) {
 		},
 		{
 			name: "full init package with no external URLs populates all four",
-			components: []v1alpha1.ZarfComponent{
+			components: []projection.Component{
 				{Name: "k3s"},
 				{Name: "zarf-injector"},
 				{Name: "zarf-seed-registry"},
@@ -51,7 +51,7 @@ func TestInternalServicesFor(t *testing.T) {
 		},
 		{
 			name: "external registry URL drops registry key even though registry components are present",
-			components: []v1alpha1.ZarfComponent{
+			components: []projection.Component{
 				{Name: "zarf-injector"},
 				{Name: "zarf-seed-registry"},
 				{Name: "zarf-registry"},
@@ -65,7 +65,7 @@ func TestInternalServicesFor(t *testing.T) {
 		},
 		{
 			name: "external git URL does not drop git or artifact keys — git-server deploys regardless",
-			components: []v1alpha1.ZarfComponent{
+			components: []projection.Component{
 				{Name: "zarf-registry"},
 				{Name: "git-server"},
 			},
@@ -77,7 +77,7 @@ func TestInternalServicesFor(t *testing.T) {
 		},
 		{
 			name: "registry components dedupe to registry key",
-			components: []v1alpha1.ZarfComponent{
+			components: []projection.Component{
 				{Name: "zarf-injector"},
 				{Name: "zarf-seed-registry"},
 				{Name: "zarf-registry"},
@@ -86,7 +86,7 @@ func TestInternalServicesFor(t *testing.T) {
 		},
 		{
 			name: "unknown components ignored",
-			components: []v1alpha1.ZarfComponent{
+			components: []projection.Component{
 				{Name: "k3s"},
 				{Name: "some-custom-component"},
 			},

@@ -33,6 +33,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/internal/packager/projection"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -106,8 +107,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	if err != nil {
 		return nil, err
 	}
-	for _, component := range pkg.Components {
-		err := assemblePackageComponent(ctx, component, packagePath, buildPath, opts.CachePath, opts.RemoteOptions)
+	for _, projected := range projection.Components(definition) {
+		// FIXME: should just use one component
+		err := assemblePackageComponent(ctx, projected.AsV1Alpha1(), projected.Actions.OnCreate, packagePath, buildPath, opts.CachePath, opts.RemoteOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -349,7 +351,7 @@ func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) erro
 	return nil
 }
 
-func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
+func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, onCreate projection.ActionSet, packagePath, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -363,8 +365,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		return err
 	}
 
-	onCreate := component.Actions.OnCreate
-	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil, nil, template.StateAccess{}); err != nil {
+	if err := actions.Run(ctx, onCreate.Before, actions.RunOptions{BasePath: packagePath, StateAccess: template.StateAccess{}}); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -509,7 +510,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 	}
 
-	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.After, nil, nil, template.StateAccess{}); err != nil {
+	if err := actions.Run(ctx, onCreate.After, actions.RunOptions{BasePath: packagePath, StateAccess: template.StateAccess{}}); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 

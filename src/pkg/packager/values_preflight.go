@@ -12,9 +12,10 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/projection"
+	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -30,7 +31,7 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if pkgLayout == nil {
 		return fmt.Errorf("pkg layout is required")
 	}
-	components := pkgLayout.AsV1alpha1().Components
+	components := projection.Components(pkgLayout.PackageDefinition)
 	defined := newDefinedValues(vals)
 
 	var errs []error
@@ -44,11 +45,12 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	return errors.Join(errs...)
 }
 
-func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, defined *definedValues) ([]error, error) {
-	onDeploy := component.Actions.OnDeploy
+func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, projected projection.Component, defined *definedValues) ([]error, error) {
+	component := projected
+	onDeploy := projected.Actions.OnDeploy
 	var errs []error
 
-	for _, action := range onDeploy.Before {
+	for _, action := range onDeploy.Before.Actions {
 		errs = append(errs, checkAction(component, action, defined)...)
 		defined.addAction(action)
 	}
@@ -70,15 +72,15 @@ func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, compon
 		}
 	}
 
-	for _, action := range onDeploy.After {
+	for _, action := range onDeploy.After.Actions {
 		errs = append(errs, checkAction(component, action, defined)...)
 		defined.addAction(action)
 	}
-	for _, action := range onDeploy.OnSuccess {
+	for _, action := range onDeploy.OnSuccess.Actions {
 		errs = append(errs, checkAction(component, action, defined)...)
 		defined.addAction(action)
 	}
-	for _, action := range onDeploy.OnFailure {
+	for _, action := range onDeploy.OnFailure.Actions {
 		errs = append(errs, checkAction(component, action, defined)...)
 		defined.addAction(action)
 	}
@@ -86,8 +88,8 @@ func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, compon
 	return errs, nil
 }
 
-func checkAction(component v1alpha1.ZarfComponent, action v1alpha1.ZarfComponentAction, defined *definedValues) []error {
-	if !action.ShouldTemplate() {
+func checkAction(component projection.Component, action actions.Action, defined *definedValues) []error {
+	if !action.ShouldTemplate {
 		return nil
 	}
 	location := fmt.Sprintf("component %q action %q", component.Name, actionLabel(action))
@@ -112,7 +114,7 @@ func newDefinedValues(vals value.Values) *definedValues {
 	return &definedValues{vals: vals}
 }
 
-func (d *definedValues) addAction(action v1alpha1.ZarfComponentAction) {
+func (d *definedValues) addAction(action actions.Action) {
 	for _, sv := range action.SetValues {
 		if sv.Key == "." {
 			d.setValueRoot = true
@@ -160,7 +162,7 @@ type templateSource struct {
 
 // componentFileSources extracts and reads the go-templated manifest, file, and chart values-file
 // contents for a component.
-func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent) (_ []templateSource, err error) {
+func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, component projection.Component) (_ []templateSource, err error) {
 	hasManifests := false
 	for _, m := range component.Manifests {
 		if m.IsTemplate() {
@@ -270,7 +272,7 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	return sources, nil
 }
 
-func actionTemplateStrings(a v1alpha1.ZarfComponentAction) []string {
+func actionTemplateStrings(a actions.Action) []string {
 	if a.Wait != nil {
 		var out []string
 		if c := a.Wait.Cluster; c != nil {
@@ -284,7 +286,7 @@ func actionTemplateStrings(a v1alpha1.ZarfComponentAction) []string {
 	return []string{a.Cmd}
 }
 
-func actionLabel(a v1alpha1.ZarfComponentAction) string {
+func actionLabel(a actions.Action) string {
 	if a.Description != "" {
 		return a.Description
 	}

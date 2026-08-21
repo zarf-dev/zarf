@@ -24,7 +24,7 @@ import (
 
 	"helm.sh/helm/v4/pkg/storage/driver"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/packager/projection"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -62,6 +62,7 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 		return err
 	}
 	pkg = definition.AsV1alpha1()
+	projectedComponents := projection.Components(definition)
 
 	if len(pkg.Components) == 0 {
 		return fmt.Errorf("package to remove contains no components")
@@ -80,8 +81,8 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 
 	// Check that cluster is configured if required.
 	requiresCluster := false
-	componentIdx := map[string]v1alpha1.ZarfComponent{}
-	for _, component := range pkg.Components {
+	componentIdx := map[string]projection.Component{}
+	for _, component := range projectedComponents {
 		componentIdx[component.Name] = component
 		if component.RequiresCluster() {
 			if opts.Cluster == nil {
@@ -129,10 +130,11 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 		if !ok {
 			continue
 		}
+		onRemove := comp.Actions.OnRemove
 
 		err := func() error {
 			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
-			err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil, vals, stateAccess)
+			err := actions.Run(ctx, onRemove.Before, actions.RunOptions{BasePath: cwd, Values: vals, StateAccess: stateAccess})
 			if err != nil {
 				return fmt.Errorf("unable to run the before action: %w", err)
 			}
@@ -162,11 +164,11 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 				}
 			}
 
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil, vals, stateAccess)
+			err = actions.Run(ctx, onRemove.After, actions.RunOptions{BasePath: cwd, Values: vals, StateAccess: stateAccess})
 			if err != nil {
 				return fmt.Errorf("unable to run the after action: %w", err)
 			}
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil, vals, stateAccess)
+			err = actions.Run(ctx, onRemove.OnSuccess, actions.RunOptions{BasePath: cwd, Values: vals, StateAccess: stateAccess})
 			if err != nil {
 				return fmt.Errorf("unable to run the success action: %w", err)
 			}
@@ -186,7 +188,7 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 		}()
 		if err != nil {
 			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
-			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil, vals, stateAccess)
+			removeErr := actions.Run(ctx, onRemove.OnFailure, actions.RunOptions{BasePath: cwd, Values: vals, StateAccess: stateAccess})
 			if removeErr != nil {
 				return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)
 			}

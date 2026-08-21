@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -22,7 +23,6 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -54,7 +54,7 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDat
 	}
 
 	// Get the OS shell to execute commands in
-	shell, shellArgs := exec.GetOSShell(v1alpha1.Shell{Windows: "cmd"})
+	shell, shellArgs := exec.GetOSShell(exec.Shell{Windows: "cmd"})
 
 	if _, _, err := exec.Cmd(shell, append(shellArgs, "tar --version")...); err != nil {
 		return fmt.Errorf("unable to execute tar, ensure it is installed in the $PATH: %w", err)
