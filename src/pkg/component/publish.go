@@ -248,7 +248,7 @@ func stageComponentResources(ctx context.Context, store *memory.Store, resources
 // addComponentImageLayout expands image archives into the OCI layout used by regular packages.
 // The layout is included as artifact layers rather than preserving the source archive itself. An
 // empty architecture preserves every image platform; a selector architecture retains only that platform.
-func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchive, architecture string, resources map[string]componentResource) (func(), error) {
+func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchive, architecture string, resources map[string]componentResource) (_ func(), err error) {
 	if len(archives) == 0 {
 		return func() {}, nil
 	}
@@ -262,17 +262,20 @@ func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchiv
 			logger.From(ctx).Warn("unable to remove component image layout", "path", tempDir, "error", err)
 		}
 	}
+	defer func() {
+		if err != nil {
+			cleanup()
+		}
+	}()
 
 	imageDir := filepath.Join(tempDir, layout.ImagesDir)
 	for _, archive := range archives {
 		_, err := images.Unpack(ctx, v1alpha1.ImageArchive{Path: archive.Path, Images: archive.Images}, imageDir, architecture)
 		if err != nil {
-			cleanup()
 			return nil, fmt.Errorf("unable to unpack image archive %q: %w", archive.Path, err)
 		}
 	}
 	if err := utils.SortImagesIndex(imageDir); err != nil {
-		cleanup()
 		return nil, fmt.Errorf("unable to sort component image layout: %w", err)
 	}
 
@@ -291,7 +294,6 @@ func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchiv
 		return nil
 	})
 	if err != nil {
-		cleanup()
 		return nil, err
 	}
 	return cleanup, nil

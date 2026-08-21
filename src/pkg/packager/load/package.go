@@ -184,7 +184,7 @@ func Package(ctx context.Context, packagePath string, opts PackageOptions) (_ *R
 	return loaded, nil
 }
 
-func materializeResources(ctx context.Context, packageRoot string, remoteResources []remoteResource) (*ResourceSet, error) {
+func materializeResources(ctx context.Context, packageRoot string, remoteResources []remoteResource) (_ *ResourceSet, err error) {
 	resourceSet := NewResourceSet(packageRoot)
 	if len(remoteResources) == 0 {
 		return resourceSet, nil
@@ -194,24 +194,27 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 		return nil, err
 	}
 	resourceSet.workspace = workspace
-	fail := func(cause error) (*ResourceSet, error) {
-		return nil, errors.Join(cause, resourceSet.Close())
-	}
+	defer func() {
+		if err != nil {
+			err = errors.Join(err, resourceSet.Close())
+		}
+	}()
+
 	for _, resource := range remoteResources {
 		if !validResourcePath(resource.importRoot) || !validResourcePath(resource.mountPath) {
-			return fail(fmt.Errorf("remote component has an invalid resource path"))
+			return nil, fmt.Errorf("remote component has an invalid resource path")
 		}
 		resourceSet.remoteRoots[resource.importRoot] = struct{}{}
 		destination := filepath.Join(workspace, filepath.FromSlash(resource.importRoot), filepath.FromSlash(resource.mountPath))
 		if err := os.MkdirAll(filepath.Dir(destination), helpers.ReadWriteExecuteUser); err != nil {
-			return fail(err)
+			return nil, err
 		}
 		contents, err := resource.remote.FetchLayer(ctx, resource.descriptor)
 		if err != nil {
-			return fail(err)
+			return nil, err
 		}
 		if err := os.WriteFile(destination, contents, helpers.ReadWriteUser); err != nil {
-			return fail(err)
+			return nil, err
 		}
 	}
 	return resourceSet, nil
