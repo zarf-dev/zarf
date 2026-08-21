@@ -248,6 +248,12 @@ func (v *Volume) generateDiffID(rel, file string) (dig digest.Digest, filePath s
 		return "", temp, 0, err
 	}
 	hdr.Name = rel
+	// Pin ModTime to the same fixed timestamp used elsewhere in this package
+	// (see time.go) rather than the file's real mtime: leaving the real
+	// mtime in the header makes the tar bytes - and thus this diff ID -
+	// depend on exactly when the file was written to disk, which is neither
+	// reproducible nor stable across runs of the same content.
+	hdr.ModTime = static
 	if err := tw.WriteHeader(hdr); err != nil {
 		return "", temp, 0, err
 	}
