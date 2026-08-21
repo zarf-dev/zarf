@@ -13,8 +13,8 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/execution"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/projection"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/template"
@@ -31,7 +31,7 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if pkgLayout == nil {
 		return fmt.Errorf("pkg layout is required")
 	}
-	components := projection.Components(pkgLayout.PackageDefinition)
+	components := execution.Components(pkgLayout.PackageDefinition)
 	defined := newDefinedValues(vals)
 
 	var errs []error
@@ -45,7 +45,7 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	return errors.Join(errs...)
 }
 
-func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, projected projection.Component, defined *definedValues) ([]error, error) {
+func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, projected execution.Component, defined *definedValues) ([]error, error) {
 	component := projected
 	onDeploy := projected.Actions.OnDeploy
 	var errs []error
@@ -88,7 +88,7 @@ func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, projec
 	return errs, nil
 }
 
-func checkAction(component projection.Component, action actions.Action, defined *definedValues) []error {
+func checkAction(component execution.Component, action actions.Action, defined *definedValues) []error {
 	if !action.ShouldTemplate {
 		return nil
 	}
@@ -162,7 +162,7 @@ type templateSource struct {
 
 // componentFileSources extracts and reads the go-templated manifest, file, and chart values-file
 // contents for a component.
-func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, component projection.Component) (_ []templateSource, err error) {
+func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, component execution.Component) (_ []templateSource, err error) {
 	hasManifests := false
 	for _, m := range component.Manifests {
 		if m.IsTemplate() {

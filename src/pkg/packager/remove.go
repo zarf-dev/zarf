@@ -24,7 +24,7 @@ import (
 
 	"helm.sh/helm/v4/pkg/storage/driver"
 
-	"github.com/zarf-dev/zarf/src/internal/packager/projection"
+	"github.com/zarf-dev/zarf/src/internal/packager/execution"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -62,7 +62,7 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 		return err
 	}
 	pkg = definition.AsV1alpha1()
-	projectedComponents := projection.Components(definition)
+	projectedComponents := execution.Components(definition)
 
 	if len(pkg.Components) == 0 {
 		return fmt.Errorf("package to remove contains no components")
@@ -81,7 +81,7 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 
 	// Check that cluster is configured if required.
 	requiresCluster := false
-	componentIdx := map[string]projection.Component{}
+	componentIdx := map[string]execution.Component{}
 	for _, component := range projectedComponents {
 		componentIdx[component.Name] = component
 		if component.RequiresCluster() {

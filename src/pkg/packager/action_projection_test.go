@@ -11,7 +11,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	"github.com/zarf-dev/zarf/src/internal/packager/projection"
+	"github.com/zarf-dev/zarf/src/internal/packager/execution"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 )
 
@@ -30,7 +30,7 @@ func TestProjectDeploymentComponents_AlphaActions(t *testing.T) {
 		}},
 	})
 
-	component := projection.Components(definition)[0]
+	component := execution.Components(definition)[0]
 	before := component.Actions.OnDeploy.Before
 	require.Equal(t, actions.Config{Silent: true, Timeout: 5 * time.Second, Retries: 1, Shell: actions.Shell{Linux: "bash"}}, before.Defaults)
 	require.Len(t, before.Actions, 1)
@@ -58,7 +58,7 @@ func TestProjectDeploymentComponents_BetaActions(t *testing.T) {
 		}},
 	})
 
-	component := projection.Components(definition)[0]
+	component := execution.Components(definition)[0]
 	before := component.Actions.OnDeploy.Before
 	require.Equal(t, actions.Config{}, before.Defaults, "nil beta defaults must be safe")
 	require.True(t, before.Actions[0].ShouldTemplate)
@@ -73,8 +73,8 @@ func TestProjectDeploymentComponents_WaitDefaultsRemainVersionSpecific(t *testin
 	alpha := api.NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{{Actions: v1alpha1.ZarfComponentActions{OnDeploy: v1alpha1.ZarfComponentActionSet{Before: []v1alpha1.ZarfComponentAction{{Wait: &v1alpha1.ZarfComponentActionWait{Cluster: &v1alpha1.ZarfComponentActionWaitCluster{Kind: "pod"}}}}}}}}})
 	beta := api.NewPackageDefinitionFromV1beta1(v1beta1.Package{Components: []v1beta1.Component{{ComponentSpec: v1beta1.ComponentSpec{Actions: v1beta1.ComponentActions{OnDeploy: v1beta1.ComponentActionSet{Before: []v1beta1.ComponentAction{{Wait: &v1beta1.ComponentActionWait{Cluster: &v1beta1.ComponentActionWaitCluster{Kind: "pod"}}}}}}}}}})
 
-	alphaWait := projection.Components(alpha)[0].Actions.OnDeploy.Before.Actions[0].Wait.Cluster
-	betaWait := projection.Components(beta)[0].Actions.OnDeploy.Before.Actions[0].Wait.Cluster
+	alphaWait := execution.Components(alpha)[0].Actions.OnDeploy.Before.Actions[0].Wait.Cluster
+	betaWait := execution.Components(beta)[0].Actions.OnDeploy.Before.Actions[0].Wait.Cluster
 	require.False(t, alphaWait.DefaultReady)
 	require.Equal(t, "exists", alphaWait.Condition)
 	require.True(t, betaWait.DefaultReady)
@@ -85,6 +85,6 @@ func TestProjectDeploymentComponents_PreservesExplicitWaitConditions(t *testing.
 	alpha := api.NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{{Actions: v1alpha1.ZarfComponentActions{OnDeploy: v1alpha1.ZarfComponentActionSet{Before: []v1alpha1.ZarfComponentAction{{Wait: &v1alpha1.ZarfComponentActionWait{Cluster: &v1alpha1.ZarfComponentActionWaitCluster{Kind: "pod", Condition: "Ready"}}}}}}}}})
 	beta := api.NewPackageDefinitionFromV1beta1(v1beta1.Package{Components: []v1beta1.Component{{ComponentSpec: v1beta1.ComponentSpec{Actions: v1beta1.ComponentActions{OnDeploy: v1beta1.ComponentActionSet{Before: []v1beta1.ComponentAction{{Wait: &v1beta1.ComponentActionWait{Cluster: &v1beta1.ComponentActionWaitCluster{Kind: "pod", Condition: "Ready"}}}}}}}}}})
 
-	require.Equal(t, "Ready", projection.Components(alpha)[0].Actions.OnDeploy.Before.Actions[0].Wait.Cluster.Condition)
-	require.Equal(t, "Ready", projection.Components(beta)[0].Actions.OnDeploy.Before.Actions[0].Wait.Cluster.Condition)
+	require.Equal(t, "Ready", execution.Components(alpha)[0].Actions.OnDeploy.Before.Actions[0].Wait.Cluster.Condition)
+	require.Equal(t, "Ready", execution.Components(beta)[0].Actions.OnDeploy.Before.Actions[0].Wait.Cluster.Condition)
 }

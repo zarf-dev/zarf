@@ -31,9 +31,9 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
+	"github.com/zarf-dev/zarf/src/internal/packager/execution"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
-	"github.com/zarf-dev/zarf/src/internal/packager/projection"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -107,7 +107,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	if err != nil {
 		return nil, err
 	}
-	for _, projected := range projection.Components(definition) {
+	for _, projected := range execution.Components(definition) {
 		// FIXME: should just use one component
 		err := assemblePackageComponent(ctx, projected, packagePath, buildPath, opts.CachePath, opts.RemoteOptions)
 		if err != nil {
@@ -351,7 +351,7 @@ func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) erro
 	return nil
 }
 
-func assemblePackageComponent(ctx context.Context, component projection.Component, packagePath, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
+func assemblePackageComponent(ctx context.Context, component execution.Component, packagePath, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err

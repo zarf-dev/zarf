@@ -18,8 +18,8 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/internal/packager/execution"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/projection"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -182,7 +182,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		return DeployResult{}, fmt.Errorf("package references values that cannot be resolved (value templates must be explicitly defined, even if empty): %w", err)
 	}
 
-	deployedComponents, err := d.deployComponents(ctx, pkgLayout, projection.Components(pkgLayout.PackageDefinition), opts)
+	deployedComponents, err := d.deployComponents(ctx, pkgLayout, execution.Components(pkgLayout.PackageDefinition), opts)
 	if err != nil {
 		return DeployResult{}, err
 	}
@@ -230,7 +230,7 @@ func (d *deployer) isConnectedToCluster() bool {
 	return d.c != nil
 }
 
-func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, components []projection.Component, opts DeployOptions) ([]state.DeployedComponent, error) {
+func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, components []execution.Component, opts DeployOptions) ([]state.DeployedComponent, error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.AsV1alpha1()
 	deployedComponents := []state.DeployedComponent{}
@@ -347,7 +347,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 }
 
 // internalServicesFor returns the state services Zarf will deploy internally in this init run.
-func internalServicesFor(components []projection.Component, opts DeployOptions) state.ServiceSet {
+func internalServicesFor(components []execution.Component, opts DeployOptions) state.ServiceSet {
 	services := state.NewServiceSet()
 	registryExternal := opts.RegistryInfo.Address != ""
 	for _, c := range components {
@@ -366,7 +366,7 @@ func internalServicesFor(components []projection.Component, opts DeployOptions) 
 	return services
 }
 
-func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component projection.Component, components []projection.Component, onDeploy projection.ActionSet, opts DeployOptions) ([]state.InstalledChart, error) {
+func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component execution.Component, components []execution.Component, onDeploy execution.ActionSet, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.AsV1alpha1()
 	isSeedRegistry := component.Name == "zarf-seed-registry"
@@ -465,7 +465,7 @@ func injectorDaemonsetImage(ctx context.Context, c *cluster.Cluster, requestedIm
 	return c.GetInjectorDaemonsetImage(ctx)
 }
 
-func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component projection.Component, onDeploy projection.ActionSet, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {
+func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component execution.Component, onDeploy execution.ActionSet, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -595,7 +595,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	return charts, nil
 }
 
-func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component projection.Component, opts DeployOptions) (_ []state.InstalledChart, err error) {
+func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component execution.Component, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.AsV1alpha1()
 	installedCharts := []state.InstalledChart{}
@@ -671,7 +671,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 	return installedCharts, nil
 }
 
-func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component projection.Component, opts DeployOptions) (_ []state.InstalledChart, err error) {
+func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component execution.Component, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.AsV1alpha1()
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -844,7 +844,7 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayo
 	return nil
 }
 
-func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component projection.Component, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) (err error) {
+func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component execution.Component, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) (err error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.AsV1alpha1()
 	start := time.Now()
