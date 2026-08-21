@@ -19,6 +19,7 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test"
@@ -356,6 +357,25 @@ components:
 		require.NoError(t, err)
 		require.Equal(t, "4\n", stdOut)
 	})
+}
+
+func TestToolsAliases(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip(lang.CmdToolsAliasesErrWindows)
+	}
+	t.Parallel()
+
+	stdOut, stdErr, err := e2e.Zarf(t, "tools", "aliases")
+
+	require.NoError(t, err, stdOut, stdErr)
+
+	expected := "" +
+		"alias kubectl='" + e2e.ZarfBinPath + " tools kubectl'\n" +
+		"alias helm='" + e2e.ZarfBinPath + " tools helm'\n" +
+		"alias yq='" + e2e.ZarfBinPath + " tools yq'\n" +
+		"alias k9s='" + e2e.ZarfBinPath + " tools monitor'\n" +
+		"alias syft='" + e2e.ZarfBinPath + " tools sbom'\n"
+	require.Equal(t, expected, stdOut)
 }
 
 func TestBuildMachineInfo(t *testing.T) {

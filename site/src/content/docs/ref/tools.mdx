@@ -17,6 +17,23 @@ TODO: finish this page for all embedded CLIs
 Zarf vendors in [`yq`](https://github.com/mikefarah/yq/) to provide a way to interact with YAML files.
 `yq` is a lightweight and portable command-line YAML processor. It can be used to extract specific parts of a YAML file, replace or delete values, and more.
 
+## Shell aliases
+
+> command: [`zarf tools aliases`](/commands/zarf_tools_aliases)
+
+Source the generated aliases to use Zarf's bundled `kubectl`, `helm`, `yq`, `k9s`, and `syft` as standalone commands:
+
+```sh
+source <(zarf tools aliases)
+```
+
+When using Bash, enable alias expansion before sourcing aliases from a package manifest or another noninteractive context:
+
+```sh
+shopt -s expand_aliases
+source <(zarf tools aliases)
+```
+
 ## archiver
 
 > command: [`zarf tools archiver`](/commands/zarf_tools_archiver)

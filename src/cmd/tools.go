@@ -21,6 +21,7 @@ func newToolsCommand() *cobra.Command {
 	v := getViper()
 
 	cmd.AddCommand(newArchiverCommand())
+	cmd.AddCommand(newToolsAliasesCommand())
 	cmd.AddCommand(newRegistryCommand())
 	cmd.AddCommand(newDeprecatedCraneCommand())
 	cmd.AddCommand(newHelmCommand())
