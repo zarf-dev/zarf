@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/cmd/dev"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -82,6 +83,7 @@ func newDevCommand() *cobra.Command {
 	cmd.AddCommand(newDevLintCommand(v))
 	cmd.AddCommand(newDevUpgradeSchemaCommand())
 	cmd.AddCommand(newDevTemplateCommand(v))
+	cmd.AddCommand(dev.NewImageVolumeCommand())
 
 	return cmd
 }
