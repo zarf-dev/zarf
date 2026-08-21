@@ -7,8 +7,7 @@ import "time"
 
 // ActionList contains a sequence of actions and their shared configuration.
 type ActionList struct {
-	Defaults Config
-	Actions  []Action
+	Actions []Action
 }
 
 // Config is the effective command configuration shared by actions in a list.

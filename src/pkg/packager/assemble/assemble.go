@@ -364,7 +364,12 @@ func assemblePackageComponent(ctx context.Context, component execution.Component
 		return err
 	}
 
-	if err := actions.Run(ctx, component.Actions.OnCreate.Before, actions.RunOptions{BasePath: packagePath, StateAccess: template.StateAccess{}}); err != nil {
+	onCreate := component.Actions.OnCreate
+	if err := actions.Run(ctx, onCreate.Before, actions.RunOptions{
+		BasePath:    packagePath,
+		Defaults:    onCreate.Defaults,
+		StateAccess: template.StateAccess{},
+	}); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -509,7 +514,11 @@ func assemblePackageComponent(ctx context.Context, component execution.Component
 		}
 	}
 
-	if err := actions.Run(ctx, component.Actions.OnCreate.After, actions.RunOptions{BasePath: packagePath, StateAccess: template.StateAccess{}}); err != nil {
+	if err := actions.Run(ctx, onCreate.After, actions.RunOptions{
+		BasePath:    packagePath,
+		Defaults:    onCreate.Defaults,
+		StateAccess: template.StateAccess{},
+	}); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 

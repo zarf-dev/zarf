@@ -58,13 +58,14 @@ type ComponentActions struct {
 
 // ActionSet owns lifecycle ordering; actions executes individual action lists.
 type ActionSet struct {
+	Defaults  actions.Config
 	Before    actions.ActionList
 	After     actions.ActionList
 	OnSuccess actions.ActionList
 	OnFailure actions.ActionList
 }
 
-// Components projects a definition using the schema it was authored in.
+// Components returns generic components for execution logic
 func Components(definition api.PackageDefinition) []Component {
 	alpha := definition.AsV1alpha1()
 	components := make([]Component, len(alpha.Components))
@@ -119,13 +120,14 @@ func actionSetFromV1Alpha1(set v1alpha1.ZarfComponentActionSet) ActionSet {
 		Shell:   alphaShell(set.Defaults.Shell),
 	}
 	list := func(in []v1alpha1.ZarfComponentAction) actions.ActionList {
-		out := actions.ActionList{Defaults: defaults}
+		out := actions.ActionList{}
 		for _, action := range in {
 			out.Actions = append(out.Actions, alphaAction(action))
 		}
 		return out
 	}
 	return ActionSet{
+		Defaults:  defaults,
 		Before:    list(set.Before),
 		After:     list(set.After),
 		OnSuccess: list(set.OnSuccess),
@@ -146,13 +148,14 @@ func actionSetFromV1Beta1(set v1beta1.ComponentActionSet) ActionSet {
 		}
 	}
 	list := func(in []v1beta1.ComponentAction) actions.ActionList {
-		out := actions.ActionList{Defaults: defaults}
+		out := actions.ActionList{}
 		for _, action := range in {
 			out.Actions = append(out.Actions, betaAction(action))
 		}
 		return out
 	}
 	return ActionSet{
+		Defaults:  defaults,
 		Before:    list(set.Before),
 		OnSuccess: list(set.OnSuccess),
 		OnFailure: list(set.OnFailure),

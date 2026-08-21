@@ -134,7 +134,12 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 
 		err := func() error {
 			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
-			err := actions.Run(ctx, onRemove.Before, actions.RunOptions{BasePath: cwd, Values: vals, StateAccess: stateAccess})
+			err := actions.Run(ctx, onRemove.Before, actions.RunOptions{
+				BasePath:    cwd,
+				Defaults:    onRemove.Defaults,
+				Values:      vals,
+				StateAccess: stateAccess,
+			})
 			if err != nil {
 				return fmt.Errorf("unable to run the before action: %w", err)
 			}
@@ -164,11 +169,21 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 				}
 			}
 
-			err = actions.Run(ctx, onRemove.After, actions.RunOptions{BasePath: cwd, Values: vals, StateAccess: stateAccess})
+			err = actions.Run(ctx, onRemove.After, actions.RunOptions{
+				BasePath:    cwd,
+				Defaults:    onRemove.Defaults,
+				Values:      vals,
+				StateAccess: stateAccess,
+			})
 			if err != nil {
 				return fmt.Errorf("unable to run the after action: %w", err)
 			}
-			err = actions.Run(ctx, onRemove.OnSuccess, actions.RunOptions{BasePath: cwd, Values: vals, StateAccess: stateAccess})
+			err = actions.Run(ctx, onRemove.OnSuccess, actions.RunOptions{
+				BasePath:    cwd,
+				Defaults:    onRemove.Defaults,
+				Values:      vals,
+				StateAccess: stateAccess,
+			})
 			if err != nil {
 				return fmt.Errorf("unable to run the success action: %w", err)
 			}
@@ -188,7 +203,12 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 		}()
 		if err != nil {
 			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
-			removeErr := actions.Run(ctx, onRemove.OnFailure, actions.RunOptions{BasePath: cwd, Values: vals, StateAccess: stateAccess})
+			removeErr := actions.Run(ctx, onRemove.OnFailure, actions.RunOptions{
+				BasePath:    cwd,
+				Defaults:    onRemove.Defaults,
+				Values:      vals,
+				StateAccess: stateAccess,
+			})
 			if removeErr != nil {
 				return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)
 			}

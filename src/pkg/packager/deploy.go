@@ -300,7 +300,13 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		onDeploy := projected.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := actions.Run(ctx, onDeploy.OnFailure, actions.RunOptions{BasePath: cwd, VariableConfig: d.vc, Values: d.vals, StateAccess: template.StateAccess{State: d.s, AccessKeys: component.StateAccess}}); err != nil {
+			if err := actions.Run(ctx, onDeploy.OnFailure, actions.RunOptions{
+				BasePath:       cwd,
+				Defaults:       onDeploy.Defaults,
+				VariableConfig: d.vc,
+				Values:         d.vals,
+				StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
+			}); err != nil {
 				l.Debug("unable to run component failure action", "error", err.Error())
 			}
 		}
@@ -337,7 +343,13 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 
-		if err := actions.Run(ctx, onDeploy.OnSuccess, actions.RunOptions{BasePath: cwd, VariableConfig: d.vc, Values: d.vals, StateAccess: template.StateAccess{State: d.s, AccessKeys: component.StateAccess}}); err != nil {
+		if err := actions.Run(ctx, onDeploy.OnSuccess, actions.RunOptions{
+			BasePath:       cwd,
+			Defaults:       onDeploy.Defaults,
+			VariableConfig: d.vc,
+			Values:         d.vals,
+			StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
+		}); err != nil {
 			onFailure()
 			return nil, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -500,7 +512,13 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	d.vc.SetApplicationTemplates(applicationTemplates)
 
 	// Populate objects available to templates in before actions
-	if err := actions.Run(ctx, onDeploy.Before, actions.RunOptions{BasePath: cwd, VariableConfig: d.vc, Values: d.vals, StateAccess: template.StateAccess{State: d.s, AccessKeys: component.StateAccess}}); err != nil {
+	if err := actions.Run(ctx, onDeploy.Before, actions.RunOptions{
+		BasePath:       cwd,
+		Defaults:       onDeploy.Defaults,
+		VariableConfig: d.vc,
+		Values:         d.vals,
+		StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
+	}); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -575,7 +593,13 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	// Populate objects available to templates in after actions
-	if err := actions.Run(ctx, onDeploy.After, actions.RunOptions{BasePath: cwd, VariableConfig: d.vc, Values: d.vals, StateAccess: template.StateAccess{State: d.s, AccessKeys: component.StateAccess}}); err != nil {
+	if err := actions.Run(ctx, onDeploy.After, actions.RunOptions{
+		BasePath:       cwd,
+		Defaults:       onDeploy.Defaults,
+		VariableConfig: d.vc,
+		Values:         d.vals,
+		StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
+	}); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 

@@ -30,8 +30,9 @@ func TestComponents_AlphaActions(t *testing.T) {
 	})
 
 	component := Components(definition)[0]
-	before := component.Actions.OnDeploy.Before
-	require.Equal(t, actions.Config{Silent: true, Timeout: 5 * time.Second, Retries: 1, Shell: actions.Shell{Linux: "bash"}}, before.Defaults)
+	onDeploy := component.Actions.OnDeploy
+	before := onDeploy.Before
+	require.Equal(t, actions.Config{Silent: true, Timeout: 5 * time.Second, Retries: 1, Shell: actions.Shell{Linux: "bash"}}, onDeploy.Defaults)
 	require.Len(t, before.Actions, 1)
 	require.True(t, before.Actions[0].ShouldTemplate)
 	require.Equal(t, 7*time.Second, *before.Actions[0].Timeout)
@@ -58,8 +59,9 @@ func TestComponents_BetaActions(t *testing.T) {
 	})
 
 	component := Components(definition)[0]
-	before := component.Actions.OnDeploy.Before
-	require.Equal(t, actions.Config{}, before.Defaults, "nil beta defaults must be safe")
+	onDeploy := component.Actions.OnDeploy
+	before := onDeploy.Before
+	require.Equal(t, actions.Config{}, onDeploy.Defaults, "nil beta defaults must be safe")
 	require.True(t, before.Actions[0].ShouldTemplate)
 	require.Equal(t, 7*time.Second, *before.Actions[0].Timeout)
 	require.Equal(t, 2, *before.Actions[0].Retries)

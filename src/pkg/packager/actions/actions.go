@@ -29,9 +29,10 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/wait"
 )
 
-// RunOptions supplies execution context that is independent of an action list.
+// RunOptions supplies execution context for an action list
 type RunOptions struct {
 	BasePath       string
+	Defaults       Config
 	VariableConfig *variables.VariableConfig
 	Values         value.Values
 	StateAccess    template.StateAccess
@@ -44,7 +45,7 @@ func Run(ctx context.Context, list ActionList, opts RunOptions) error {
 	}
 
 	for _, a := range list.Actions {
-		if err := runAction(ctx, opts.BasePath, list.Defaults, a, opts.VariableConfig, opts.Values, opts.StateAccess); err != nil {
+		if err := runAction(ctx, opts.BasePath, opts.Defaults, a, opts.VariableConfig, opts.Values, opts.StateAccess); err != nil {
 			return err
 		}
 	}
