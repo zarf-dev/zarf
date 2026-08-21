@@ -16,6 +16,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	ctdarchive "github.com/containerd/containerd/v2/core/images/archive"
@@ -126,11 +128,33 @@ func (v *Volume) AddFile(ctx context.Context, dir, path string) (_ ocispec.Descr
 	return layer, nil
 }
 
+// addDirectoryLogInterval is how often AddDirectory reports progress while
+// walking a large directory tree.
+const addDirectoryLogInterval = 2 * time.Second
+
 // AddDirectory walks folder and adds each regular file as a layer via AddFile.
 func (v *Volume) AddDirectory(ctx context.Context, folder, ref string) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Info("building image volume", "path", folder, "ref", ref, "compression", v.Compression)
+
+	var added atomic.Int64
+	stopTicker := make(chan struct{})
+	var tickerWG sync.WaitGroup
+	tickerWG.Add(1)
+	go func() {
+		defer tickerWG.Done()
+		ticker := time.NewTicker(addDirectoryLogInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				l.Info("adding image volume layers", "count", added.Load(), "path", folder)
+			case <-stopTicker:
+				return
+			}
+		}
+	}()
 
 	err := filepath.WalkDir(folder, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -140,9 +164,14 @@ func (v *Volume) AddDirectory(ctx context.Context, folder, ref string) error {
 			return nil
 		}
 
-		_, err = v.AddFile(ctx, folder, path)
-		return err
+		if _, err := v.AddFile(ctx, folder, path); err != nil {
+			return err
+		}
+		added.Add(1)
+		return nil
 	})
+	close(stopTicker)
+	tickerWG.Wait()
 	if err != nil {
 		return err
 	}
