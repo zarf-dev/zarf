@@ -29,14 +29,23 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/wait"
 )
 
-// Run runs all provided actions.
-func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error {
-	if variableConfig == nil {
-		variableConfig = ptmpl.GetZarfVariableConfig(ctx, false)
+// RunOptions supplies execution context for an action list
+type RunOptions struct {
+	BasePath       string
+	Defaults       Config
+	VariableConfig *variables.VariableConfig
+	Values         value.Values
+	StateAccess    template.StateAccess
+}
+
+// Run executes every action in list in order.
+func Run(ctx context.Context, list ActionList, opts RunOptions) error {
+	if opts.VariableConfig == nil {
+		opts.VariableConfig = ptmpl.GetZarfVariableConfig(ctx, false)
 	}
 
-	for _, a := range actions {
-		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig, values, stateAccess); err != nil {
+	for _, a := range list.Actions {
+		if err := runAction(ctx, opts.BasePath, opts.Defaults, a, opts.VariableConfig, opts.Values, opts.StateAccess); err != nil {
 			return err
 		}
 	}
@@ -44,7 +53,7 @@ func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponent
 }
 
 // Run commands that a component has provided.
-func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error {
+func runAction(ctx context.Context, basePath string, defaultCfg Config, action Action, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error {
 	var cmdEscaped string
 	var err error
 	cmd := action.Cmd
@@ -75,7 +84,7 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 	}
 
 	// Apply go-templates in cmds if templating is enabled
-	if action.ShouldTemplate() {
+	if action.ShouldTemplate {
 		cmd, err = template.Apply(ctx, cmd, tmplObjs)
 		if err != nil {
 			return fmt.Errorf("could not template cmd %s: %w", cmdEscaped, err)
@@ -91,13 +100,13 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 		l.Error("error mutating command", "cmd", cmdEscaped, "err", err.Error())
 	}
 
-	duration := time.Duration(actionDefaults.MaxTotalSeconds) * time.Second
+	duration := actionDefaults.Timeout
 	timeout := time.After(duration)
 
 	// Keep trying until the max retries is reached.
 	// TODO: Refactor using go-retry
 retryCmd:
-	for remaining := actionDefaults.MaxRetries + 1; remaining > 0; remaining-- {
+	for remaining := actionDefaults.Retries + 1; remaining > 0; remaining-- {
 		// Perform the action run.
 		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.
@@ -111,10 +120,13 @@ retryCmd:
 
 			// If an output variable is defined, set it.
 			for _, v := range action.SetVariables {
-				variableConfig.SetVariable(v.Name, outTrimmed, v.Sensitive, v.AutoIndent, v.Type)
+				variableConfig.SetVariable(v.Name, outTrimmed, v.Sensitive, v.AutoIndent, v1alpha1.VariableType(v.Type))
 				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
 					return err
 				}
+			}
+			if action.SetVariable != "" {
+				variableConfig.SetVariable(action.SetVariable, outTrimmed, false, false, "")
 			}
 
 			// If an output value is defined, parse the result and set it to values map.
@@ -131,7 +143,7 @@ retryCmd:
 		}
 
 		// If no timeout is set, run the command and return or continue retrying.
-		if actionDefaults.MaxTotalSeconds < 1 {
+		if actionDefaults.Timeout <= 0 {
 			l.Info("waiting for action (no timeout)", "cmd", cmdEscaped)
 			if err := tryCmd(ctx); err != nil {
 				continue retryCmd
@@ -141,7 +153,7 @@ retryCmd:
 		}
 
 		// Run the command on repeat until success or timeout.
-		l.Info("waiting for action", "cmd", cmdEscaped, "timeout", fmt.Sprintf("%d seconds", actionDefaults.MaxTotalSeconds))
+		l.Info("waiting for action", "cmd", cmdEscaped, "timeout", fmt.Sprintf("%d seconds", int(actionDefaults.Timeout.Seconds())))
 		select {
 		// On timeout break the loop to abort.
 		case <-timeout:
@@ -163,23 +175,23 @@ retryCmd:
 	select {
 	case <-timeout:
 		// If we reached this point, the timeout was reached or command failed with no retries.
-		if actionDefaults.MaxTotalSeconds < 1 {
-			return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
+		if actionDefaults.Timeout <= 0 {
+			return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.Retries)
 		} else {
-			return fmt.Errorf("command %q timed out after %d seconds", cmdEscaped, actionDefaults.MaxTotalSeconds)
+			return fmt.Errorf("command %q timed out after %d seconds", cmdEscaped, int(actionDefaults.Timeout.Seconds()))
 		}
 	default:
 		// If we reached this point, the retry limit was reached.
-		return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
+		return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.Retries)
 	}
 }
 
-func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, tmplObjs template.Objects) error {
+func runWaitAction(ctx context.Context, action Action, variableConfig *variables.VariableConfig, tmplObjs template.Objects) error {
 	waitCfg := action.Wait
 
 	timeout := 5 * time.Minute
-	if action.MaxTotalSeconds != nil && *action.MaxTotalSeconds > 0 {
-		timeout = time.Duration(*action.MaxTotalSeconds) * time.Second
+	if action.Timeout != nil && *action.Timeout > 0 {
+		timeout = *action.Timeout
 	}
 
 	// Apply variable substitution to wait action fields.
@@ -187,7 +199,7 @@ func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction, var
 
 	// Apply go-templates if templating is enabled, in the same way as regular actions.
 	var applyTemplates func(s string) (string, error)
-	if action.ShouldTemplate() {
+	if action.ShouldTemplate {
 		applyTemplates = func(s string) (string, error) {
 			return template.Apply(ctx, s, tmplObjs)
 		}
@@ -258,7 +270,7 @@ func templateString(s string, templates map[string]*variables.TextTemplate) stri
 	return s
 }
 
-func runWaitClusterAction(ctx context.Context, cluster *v1alpha1.ZarfComponentActionWaitCluster, timeout time.Duration) error {
+func runWaitClusterAction(ctx context.Context, cluster *ClusterWait, timeout time.Duration) error {
 	l := logger.From(ctx)
 
 	kind := cluster.Kind
@@ -272,10 +284,17 @@ func runWaitClusterAction(ctx context.Context, cluster *v1alpha1.ZarfComponentAc
 	}
 	l.Info("running wait action", "description", desc)
 
-	return wait.ForResource(ctx, kind, identifier, condition, namespace, timeout)
+	switch cluster.DefaultCondition {
+	case DefaultConditionReady:
+		return wait.ForResourceDefaultReady(ctx, kind, identifier, condition, namespace, timeout)
+	case DefaultConditionExists, "":
+		return wait.ForResource(ctx, kind, identifier, condition, namespace, timeout)
+	default:
+		return fmt.Errorf("unsupported cluster wait default condition %q", cluster.DefaultCondition)
+	}
 }
 
-func runWaitNetworkAction(ctx context.Context, network *v1alpha1.ZarfComponentActionWaitNetwork, timeout time.Duration) error {
+func runWaitNetworkAction(ctx context.Context, network *NetworkWait, timeout time.Duration) error {
 	l := logger.From(ctx)
 
 	kind := strings.ToLower(network.Protocol)
@@ -297,7 +316,7 @@ func runWaitNetworkAction(ctx context.Context, network *v1alpha1.ZarfComponentAc
 }
 
 // Perform some basic string mutations to make commands more useful.
-func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell, goos string) (string, error) {
+func actionCmdMutation(ctx context.Context, cmd string, shellPref Shell, goos string) (string, error) {
 	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {
 		return cmd, err
@@ -333,18 +352,18 @@ func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell
 }
 
 // Merge the ActionSet defaults with the action config.
-func actionGetCfg(_ context.Context, cfg v1alpha1.ZarfComponentActionDefaults, a v1alpha1.ZarfComponentAction, vars map[string]*variables.TextTemplate) v1alpha1.ZarfComponentActionDefaults {
-	if a.Mute != nil {
-		cfg.Mute = *a.Mute
+func actionGetCfg(_ context.Context, cfg Config, a Action, vars map[string]*variables.TextTemplate) Config {
+	if a.Silent != nil {
+		cfg.Silent = *a.Silent
 	}
 
 	// Default is no timeout, but add a timeout if one is provided.
-	if a.MaxTotalSeconds != nil {
-		cfg.MaxTotalSeconds = *a.MaxTotalSeconds
+	if a.Timeout != nil {
+		cfg.Timeout = *a.Timeout
 	}
 
-	if a.MaxRetries != nil {
-		cfg.MaxRetries = *a.MaxRetries
+	if a.Retries != nil {
+		cfg.Retries = *a.Retries
 	}
 
 	if a.Dir != nil {
@@ -372,22 +391,22 @@ func actionGetCfg(_ context.Context, cfg v1alpha1.ZarfComponentActionDefaults, a
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cmd string) (string, string, error) {
+func actionRun(ctx context.Context, cfg Config, cmd string) (string, string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
-	shell, shellArgs := exec.GetOSShell(cfg.Shell)
+	shell, shellArgs := exec.GetOSShell(exec.Shell(cfg.Shell))
 
 	l.Debug("running command", "shell", shell, "cmd", cmd)
 
 	execCfg := exec.Config{
 		Env:   cfg.Env,
 		Dir:   cfg.Dir,
-		Print: !cfg.Mute,
+		Print: !cfg.Silent,
 	}
 
 	stdout, stderr, err := exec.CmdWithContext(ctx, execCfg, shell, append(shellArgs, cmd)...)
 	// Dump final complete output (respect mute to prevent sensitive values from hitting the logs).
-	if !cfg.Mute {
+	if !cfg.Silent {
 		l.Debug("command complete", "stdout", stdout, "stderr", stderr, "duration", time.Since(start))
 	}
 	return stdout, stderr, err
@@ -409,23 +428,23 @@ func MatchAllRegex(regex *regexp.Regexp, str string) []func(string) string {
 }
 
 // parseAndSetValue parses the output string according to the setValue type and sets it in the values map.
-func parseAndSetValue(output string, setValue v1alpha1.SetValue, values value.Values) error {
+func parseAndSetValue(output string, setValue ValueOutput, values value.Values) error {
 	var val any
 	switch setValue.Type {
-	case v1alpha1.SetValueYAML:
+	case ValueOutputYAML:
 		var parsed any
 		if err := yaml.Unmarshal([]byte(output), &parsed); err != nil {
 			return fmt.Errorf("failed to parse YAML output for setValue %q: %w", setValue.Key, err)
 		}
 		val = parsed
-	case v1alpha1.SetValueJSON:
+	case ValueOutputJSON:
 		var parsed any
 		if err := json.Unmarshal([]byte(output), &parsed); err != nil {
 			return fmt.Errorf("failed to parse JSON output for setValue %q: %w", setValue.Key, err)
 		}
 		val = parsed
-	case v1alpha1.SetValueString, "":
-		// Empty Type behaves as v1alpha1.SetValueString
+	case ValueOutputString, "":
+		// Empty Type behaves as a string output.
 		val = output
 	default:
 		return fmt.Errorf("unknown setValue type %q for key %q", setValue.Type, setValue.Key)

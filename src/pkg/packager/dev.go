@@ -13,6 +13,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/execution"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -170,7 +171,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 
 	// Get a list of all the components we are deploying and actually deploy them
-	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOptions{
+	deployedComponents, err := d.deployComponents(ctx, pkgLayout, execution.Components(pkgLayout.PackageDefinition), DeployOptions{
 		SetVariables:   opts.DeploySetVariables,
 		Values:         opts.Values,
 		Timeout:        opts.Timeout,

@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
@@ -63,13 +62,11 @@ func TestGetInstalledChartsForComponentNamespaceOverride(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	component := v1alpha1.ZarfComponent{Name: componentName}
-
-	originalCharts, err := c.GetInstalledChartsForComponent(ctx, packageName, component)
+	originalCharts, err := c.GetInstalledChartsForComponent(ctx, packageName, componentName)
 	require.NoError(t, err)
 	require.Equal(t, []state.InstalledChart{{Namespace: "dos-games", ChartName: "zarf-original"}}, originalCharts)
 
-	overrideCharts, err := c.GetInstalledChartsForComponent(ctx, packageName, component, state.WithPackageNamespaceOverride("arcade-alt"))
+	overrideCharts, err := c.GetInstalledChartsForComponent(ctx, packageName, componentName, state.WithPackageNamespaceOverride("arcade-alt"))
 	require.NoError(t, err)
 	require.Equal(t, []state.InstalledChart{{Namespace: "arcade-alt", ChartName: "zarf-override"}}, overrideCharts)
 }
