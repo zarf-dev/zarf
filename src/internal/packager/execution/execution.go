@@ -13,8 +13,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 )
 
-// Component contains the resources for preforming actions on a component
-// TODO, convert charts, images, repos, and healthchecks into generic non-versioned types
+// Component contains the resources needed to deploy a component.
+// TODO: Convert charts, images, repos, and health checks into generic types.
 type Component struct {
 	Name           string
 	Manifests      []v1alpha1.ZarfManifest
@@ -31,7 +31,13 @@ type Component struct {
 
 // RequiresCluster reports whether this component needs Kubernetes access.
 func (c Component) RequiresCluster() bool {
-	return len(c.Images) > 0 || len(c.ImageArchives) > 0 || len(c.Charts) > 0 || len(c.Manifests) > 0 || len(c.Repos) > 0 || len(c.DataInjections) > 0 || len(c.HealthChecks) > 0
+	return len(c.Images) > 0 ||
+		len(c.ImageArchives) > 0 ||
+		len(c.Charts) > 0 ||
+		len(c.Manifests) > 0 ||
+		len(c.Repos) > 0 ||
+		len(c.DataInjections) > 0 ||
+		len(c.HealthChecks) > 0
 }
 
 // GetImages returns direct images and images included in archives.
@@ -89,11 +95,29 @@ func Components(definition api.PackageDefinition) []Component {
 }
 
 func componentFromAlpha(component v1alpha1.ZarfComponent) Component {
-	return Component{Name: component.Name, Manifests: component.Manifests, Charts: component.Charts, DataInjections: component.DataInjections, Files: component.Files, Images: component.Images, ImageArchives: component.ImageArchives, Repos: component.Repos, HealthChecks: component.HealthChecks, StateAccess: component.StateAccess}
+	return Component{
+		Name:           component.Name,
+		Manifests:      component.Manifests,
+		Charts:         component.Charts,
+		DataInjections: component.DataInjections,
+		Files:          component.Files,
+		Images:         component.Images,
+		ImageArchives:  component.ImageArchives,
+		Repos:          component.Repos,
+		HealthChecks:   component.HealthChecks,
+		StateAccess:    component.StateAccess,
+	}
 }
 
 func actionSetFromV1Alpha1(set v1alpha1.ZarfComponentActionSet) ActionSet {
-	defaults := actions.Config{Silent: set.Defaults.Mute, Timeout: time.Duration(set.Defaults.MaxTotalSeconds) * time.Second, Retries: set.Defaults.MaxRetries, Dir: set.Defaults.Dir, Env: set.Defaults.Env, Shell: alphaShell(set.Defaults.Shell)}
+	defaults := actions.Config{
+		Silent:  set.Defaults.Mute,
+		Timeout: time.Duration(set.Defaults.MaxTotalSeconds) * time.Second,
+		Retries: set.Defaults.MaxRetries,
+		Dir:     set.Defaults.Dir,
+		Env:     set.Defaults.Env,
+		Shell:   alphaShell(set.Defaults.Shell),
+	}
 	list := func(in []v1alpha1.ZarfComponentAction) actions.ActionList {
 		out := actions.ActionList{Defaults: defaults}
 		for _, action := range in {
@@ -101,13 +125,25 @@ func actionSetFromV1Alpha1(set v1alpha1.ZarfComponentActionSet) ActionSet {
 		}
 		return out
 	}
-	return ActionSet{Before: list(set.Before), After: list(set.After), OnSuccess: list(set.OnSuccess), OnFailure: list(set.OnFailure)}
+	return ActionSet{
+		Before:    list(set.Before),
+		After:     list(set.After),
+		OnSuccess: list(set.OnSuccess),
+		OnFailure: list(set.OnFailure),
+	}
 }
 
 func actionSetFromV1Beta1(set v1beta1.ComponentActionSet) ActionSet {
 	defaults := actions.Config{}
 	if set.Defaults != nil {
-		defaults = actions.Config{Silent: set.Defaults.Silent, Timeout: time.Duration(set.Defaults.MaxTotalSeconds) * time.Second, Retries: int(set.Defaults.Retries), Dir: set.Defaults.Dir, Env: set.Defaults.Env, Shell: betaShell(set.Defaults.Shell)}
+		defaults = actions.Config{
+			Silent:  set.Defaults.Silent,
+			Timeout: time.Duration(set.Defaults.MaxTotalSeconds) * time.Second,
+			Retries: int(set.Defaults.Retries),
+			Dir:     set.Defaults.Dir,
+			Env:     set.Defaults.Env,
+			Shell:   betaShell(set.Defaults.Shell),
+		}
 	}
 	list := func(in []v1beta1.ComponentAction) actions.ActionList {
 		out := actions.ActionList{Defaults: defaults}
@@ -116,11 +152,23 @@ func actionSetFromV1Beta1(set v1beta1.ComponentActionSet) ActionSet {
 		}
 		return out
 	}
-	return ActionSet{Before: list(set.Before), OnSuccess: list(set.OnSuccess), OnFailure: list(set.OnFailure)}
+	return ActionSet{
+		Before:    list(set.Before),
+		OnSuccess: list(set.OnSuccess),
+		OnFailure: list(set.OnFailure),
+	}
 }
 
 func alphaAction(action v1alpha1.ZarfComponentAction) actions.Action {
-	out := actions.Action{Silent: action.Mute, Dir: action.Dir, Env: action.Env, Cmd: action.Cmd, Description: action.Description, ShouldTemplate: action.ShouldTemplate(), SetVariable: action.DeprecatedSetVariable}
+	out := actions.Action{
+		Silent:         action.Mute,
+		Dir:            action.Dir,
+		Env:            action.Env,
+		Cmd:            action.Cmd,
+		Description:    action.Description,
+		ShouldTemplate: action.ShouldTemplate(),
+		SetVariable:    action.DeprecatedSetVariable,
+	}
 	if action.MaxTotalSeconds != nil {
 		timeout := time.Duration(*action.MaxTotalSeconds) * time.Second
 		out.Timeout = &timeout
@@ -134,10 +182,19 @@ func alphaAction(action v1alpha1.ZarfComponentAction) actions.Action {
 		out.Shell = &shell
 	}
 	for _, value := range action.SetValues {
-		out.SetValues = append(out.SetValues, actions.ValueOutput{Key: value.Key, Type: actions.ValueOutputType(value.Type)})
+		out.SetValues = append(out.SetValues, actions.ValueOutput{
+			Key:  value.Key,
+			Type: actions.ValueOutputType(value.Type),
+		})
 	}
 	for _, variable := range action.SetVariables {
-		out.SetVariables = append(out.SetVariables, actions.VariableOutput{Name: variable.Name, Sensitive: variable.Sensitive, AutoIndent: variable.AutoIndent, Pattern: variable.Pattern, Type: string(variable.Type)})
+		out.SetVariables = append(out.SetVariables, actions.VariableOutput{
+			Name:       variable.Name,
+			Sensitive:  variable.Sensitive,
+			AutoIndent: variable.AutoIndent,
+			Pattern:    variable.Pattern,
+			Type:       string(variable.Type),
+		})
 	}
 	if action.Wait != nil {
 		out.Wait = alphaWait(action.Wait)
@@ -146,7 +203,14 @@ func alphaAction(action v1alpha1.ZarfComponentAction) actions.Action {
 }
 
 func betaAction(action v1beta1.ComponentAction) actions.Action {
-	out := actions.Action{Silent: action.Silent, Dir: action.Dir, Env: action.Env, Cmd: action.Cmd, Description: action.Description, ShouldTemplate: action.EnableTemplating}
+	out := actions.Action{
+		Silent:         action.Silent,
+		Dir:            action.Dir,
+		Env:            action.Env,
+		Cmd:            action.Cmd,
+		Description:    action.Description,
+		ShouldTemplate: action.EnableTemplating,
+	}
 	if action.MaxTotalSeconds != nil {
 		timeout := time.Duration(*action.MaxTotalSeconds) * time.Second
 		out.Timeout = &timeout
@@ -160,7 +224,10 @@ func betaAction(action v1beta1.ComponentAction) actions.Action {
 		out.Shell = &shell
 	}
 	for _, value := range action.SetValues {
-		out.SetValues = append(out.SetValues, actions.ValueOutput{Key: value.Key, Type: actions.ValueOutputType(value.Type)})
+		out.SetValues = append(out.SetValues, actions.ValueOutput{
+			Key:  value.Key,
+			Type: actions.ValueOutputType(value.Type),
+		})
 	}
 	if action.Wait != nil {
 		out.Wait = betaWait(action.Wait)
@@ -171,10 +238,20 @@ func betaAction(action v1beta1.ComponentAction) actions.Action {
 func alphaWait(waitCfg *v1alpha1.ZarfComponentActionWait) *actions.Wait {
 	out := &actions.Wait{}
 	if waitCfg.Cluster != nil {
-		out.Cluster = &actions.ClusterWait{Kind: waitCfg.Cluster.Kind, Name: waitCfg.Cluster.Name, Namespace: waitCfg.Cluster.Namespace, Condition: waitCfg.Cluster.Condition, DefaultCondition: actions.DefaultConditionExists}
+		out.Cluster = &actions.ClusterWait{
+			Kind:             waitCfg.Cluster.Kind,
+			Name:             waitCfg.Cluster.Name,
+			Namespace:        waitCfg.Cluster.Namespace,
+			Condition:        waitCfg.Cluster.Condition,
+			DefaultCondition: actions.DefaultConditionExists,
+		}
 	}
 	if waitCfg.Network != nil {
-		out.Network = &actions.NetworkWait{Protocol: waitCfg.Network.Protocol, Address: waitCfg.Network.Address, Code: waitCfg.Network.Code}
+		out.Network = &actions.NetworkWait{
+			Protocol: waitCfg.Network.Protocol,
+			Address:  waitCfg.Network.Address,
+			Code:     waitCfg.Network.Code,
+		}
 	}
 	return out
 }
@@ -182,18 +259,36 @@ func alphaWait(waitCfg *v1alpha1.ZarfComponentActionWait) *actions.Wait {
 func betaWait(waitCfg *v1beta1.ComponentActionWait) *actions.Wait {
 	out := &actions.Wait{}
 	if waitCfg.Cluster != nil {
-		out.Cluster = &actions.ClusterWait{Kind: waitCfg.Cluster.Kind, Name: waitCfg.Cluster.Name, Namespace: waitCfg.Cluster.Namespace, Condition: waitCfg.Cluster.Condition, DefaultCondition: actions.DefaultConditionReady}
+		out.Cluster = &actions.ClusterWait{
+			Kind:             waitCfg.Cluster.Kind,
+			Name:             waitCfg.Cluster.Name,
+			Namespace:        waitCfg.Cluster.Namespace,
+			Condition:        waitCfg.Cluster.Condition,
+			DefaultCondition: actions.DefaultConditionReady,
+		}
 	}
 	if waitCfg.Network != nil {
-		out.Network = &actions.NetworkWait{Protocol: waitCfg.Network.Protocol, Address: waitCfg.Network.Address, Code: int(waitCfg.Network.Code)}
+		out.Network = &actions.NetworkWait{
+			Protocol: waitCfg.Network.Protocol,
+			Address:  waitCfg.Network.Address,
+			Code:     int(waitCfg.Network.Code),
+		}
 	}
 	return out
 }
 
 func alphaShell(shell v1alpha1.Shell) actions.Shell {
-	return actions.Shell{Windows: shell.Windows, Linux: shell.Linux, Darwin: shell.Darwin}
+	return actions.Shell{
+		Windows: shell.Windows,
+		Linux:   shell.Linux,
+		Darwin:  shell.Darwin,
+	}
 }
 
 func betaShell(shell v1beta1.Shell) actions.Shell {
-	return actions.Shell{Windows: shell.Windows, Linux: shell.Linux, Darwin: shell.Darwin}
+	return actions.Shell{
+		Windows: shell.Windows,
+		Linux:   shell.Linux,
+		Darwin:  shell.Darwin,
+	}
 }
