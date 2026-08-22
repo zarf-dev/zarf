@@ -197,8 +197,7 @@ func (v *Volume) AddDirectory(ctx context.Context, folder, ref string) error {
 	if v.MaxLayers > 0 && len(files) > int(v.MaxLayers) {
 		maxLayers := int(v.MaxLayers)
 		batchSize = (len(files) + maxLayers - 1) / maxLayers
-		fmt.Println("batching image volume layers to fit MaxLayers",
-			"files", len(files), "maxLayers", v.MaxLayers, "filesPerLayer", batchSize)
+		l.Debug("batching image volume layers to fit MaxLayers", "files", len(files), "maxLayers", v.MaxLayers, "filesPerLayer", batchSize)
 	}
 
 	var added atomic.Int64
