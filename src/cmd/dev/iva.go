@@ -17,6 +17,12 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci/image"
 )
 
+const (
+	flagLayerCompression = "layer-compression"
+	flagPlatformOS       = "platform-os"
+	flagMaxLayer         = "max-layers"
+)
+
 type imageVolumeOptions struct {
 	compression image.VolumeCompression
 	os          image.PlatformOS
@@ -38,10 +44,31 @@ func NewImageVolumeCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVarP((*string)(&o.compression), "layer-compression", "c", string(image.VolumeCompressionGzip), lang.CmdDevImageVolumeArchiveFlagCompression)
-	cmd.Flags().StringVarP((*string)(&o.os), "platform-os", "o", string(image.PlatformOSLinux), lang.CmdDevImageVolumeArchiveFlagPlatformOS)
+	cmd.Flags().StringVarP((*string)(&o.compression), flagLayerCompression, "c", string(image.VolumeCompressionGzip), lang.CmdDevImageVolumeArchiveFlagCompression)
+	cmd.Flags().StringVarP((*string)(&o.os), flagPlatformOS, "o", string(image.PlatformOSLinux), lang.CmdDevImageVolumeArchiveFlagPlatformOS)
 	cmd.Flags().StringVarP(&o.output, "output", "O", "", lang.CmdDevImageVolumeArchiveFlagOutput)
-	cmd.Flags().Uint8VarP(&o.maxLayers, "max-layers", "m", image.DefaultMaxLayers, lang.CmdDevImageVolumeArchiveFlagMaxLayer)
+	cmd.Flags().Uint8VarP(&o.maxLayers, flagMaxLayer, "m", image.DefaultMaxLayers, lang.CmdDevImageVolumeArchiveFlagMaxLayer)
+
+	if err := cmd.RegisterFlagCompletionFunc(flagLayerCompression, func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return image.GetCobraCompression(), cobra.ShellCompDirectiveNoFileComp
+	}); err != nil {
+		logger.From(cmd.Context()).Warn("failed to register out-complete", "error", err)
+		panic(err)
+	}
+
+	if err := cmd.RegisterFlagCompletionFunc(flagPlatformOS, func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return image.GetCobraPlatformOS(), cobra.ShellCompDirectiveNoFileComp
+	}); err != nil {
+		logger.From(cmd.Context()).Warn("failed to register out-complete", "error", err)
+		panic(err)
+	}
+
+	if err := cmd.RegisterFlagCompletionFunc(flagMaxLayer, func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return image.GetCobraMaxLayers(), cobra.ShellCompDirectiveNoFileComp
+	}); err != nil {
+		logger.From(cmd.Context()).Warn("failed to register out-complete", "error", err)
+		panic(err)
+	}
 
 	return cmd
 }
