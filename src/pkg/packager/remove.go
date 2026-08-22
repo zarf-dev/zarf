@@ -79,21 +79,21 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 	}
 
 	// Check that cluster is configured if required.
-	requiresCluster := false
+	requiresState := false
 	componentIdx := map[string]v1alpha1.ZarfComponent{}
 	for _, component := range pkg.Components {
 		componentIdx[component.Name] = component
-		if component.RequiresCluster() {
+		if component.RequiresState() {
 			if opts.Cluster == nil {
-				return fmt.Errorf("component %s requires cluster access but none was configured", component.Name)
+				return fmt.Errorf("component %s requires initialized Zarf state but no cluster was configured", component.Name)
 			}
-			requiresCluster = true
+			requiresState = true
 		}
 	}
 
 	// Get or build the secret for the deployed package
 	depPkg := &state.DeployedPackage{}
-	if requiresCluster {
+	if requiresState {
 		var err error
 		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 		if err != nil {
