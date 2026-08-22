@@ -12,7 +12,15 @@ var (
 	ErrPlatformOS = fmt.Errorf("invalid platform operating system")
 	// ErrPlatformArch is returned when a PlatformArch is not one of the supported architectures.
 	ErrPlatformArch = fmt.Errorf("invalid platform operating system architecture")
+	// ErrTooManyLayers is returned by AddFile when adding another layer would
+	// exceed the Volume's MaxLayers.
+	ErrTooManyLayers = fmt.Errorf("too many image volume layers")
 )
+
+// DefaultMaxLayers is the layer cap applied to a Volume unless overridden.
+// It matches the classic Docker/graphdriver layer limit that some
+// container runtimes still enforce.
+const DefaultMaxLayers uint8 = 127
 
 // VolumeCompression names the tar compression format used for layers.
 type VolumeCompression string

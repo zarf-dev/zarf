@@ -21,6 +21,7 @@ type imageVolumeOptions struct {
 	compression image.VolumeCompression
 	os          image.PlatformOS
 	output      string
+	maxLayers   uint8
 }
 
 // NewImageVolumeCommand creates the command to build an image volume
@@ -29,17 +30,18 @@ func NewImageVolumeCommand() *cobra.Command {
 	o := &imageVolumeOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "image-volume-archive [ DIRECTORY ] [ IMAGE-REFERENCE ]",
+		Use:     lang.CmdDevImageVolumeArchiveUsage,
 		Aliases: []string{"iva"},
-		Short:   lang.CmdInternalImageVolumeShort,
+		Short:   lang.CmdDevImageVolumeArchiveShort,
 		Args:    cobra.ExactArgs(2),
 		PreRunE: o.prerun,
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVarP((*string)(&o.compression), "layer-compression", "c", string(image.VolumeCompressionGzip), "Compression algorthm used on the individual layers of the image volume")
-	cmd.Flags().StringVarP((*string)(&o.os), "platform-os", "o", string(image.PlatformOSLinux), "Operating system of the image volume")
-	cmd.Flags().StringVarP(&o.output, "output", "O", "", "Path to write the resulting tar archive to (default derived from IMAGE-REFERENCE)")
+	cmd.Flags().StringVarP((*string)(&o.compression), "layer-compression", "c", string(image.VolumeCompressionGzip), lang.CmdDevImageVolumeArchiveFlagCompression)
+	cmd.Flags().StringVarP((*string)(&o.os), "platform-os", "o", string(image.PlatformOSLinux), lang.CmdDevImageVolumeArchiveFlagPlatformOS)
+	cmd.Flags().StringVarP(&o.output, "output", "O", "", lang.CmdDevImageVolumeArchiveFlagOutput)
+	cmd.Flags().Uint8VarP(&o.maxLayers, "max-layers", "m", image.DefaultMaxLayers, lang.CmdDevImageVolumeArchiveFlagMaxLayer)
 
 	return cmd
 }
@@ -61,6 +63,12 @@ func (o *imageVolumeOptions) prerun(_ *cobra.Command, args []string) error {
 	)
 }
 
+// run builds an image volume from args[0] (the source directory) tagged as
+// args[1] (the image reference), then writes it to o.output as a
+// Docker/OCI-compatible tar archive.
+//
+// cmd *cobra.Command, args []string.
+// error.
 func (o *imageVolumeOptions) run(cmd *cobra.Command, args []string) error {
 	dir := args[0]
 	ref := args[1]
@@ -84,6 +92,7 @@ func (o *imageVolumeOptions) run(cmd *cobra.Command, args []string) error {
 	}()
 
 	iv.Compression = o.compression
+	iv.MaxLayers = o.maxLayers
 
 	if err := iv.AddDirectory(cmd.Context(), dir, ref); err != nil {
 		return err

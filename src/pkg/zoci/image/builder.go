@@ -28,6 +28,8 @@ func New(ociDir, platformOS, platformArch string) (*Volume, error) {
 
 	return &Volume{
 		Compression: VolumeCompressionUncompressed,
+		MaxLayers:   DefaultMaxLayers,
+		Annotations: map[string]string{},
 		store:       store,
 		root:        ociDir,
 		tmp:         tmpDir,
