@@ -15,6 +15,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -121,14 +122,9 @@ func (v *Volume) AddFiles(ctx context.Context, dir string, paths []string) (_ oc
 	}
 	defer func() { err = errors.Join(err, blob.Close()) }()
 
-	// title identifies the layer in annotations/history: the lone file name
-	// for a single-file layer (unchanged from before batching existed), or
-	// the first file name plus a count for a batched layer, since packing
-	// every name in would make both unreadable for large batches.
-	title := fileNames[0]
-	if len(fileNames) > 1 {
-		title = fmt.Sprintf("%s (+%d more)", fileNames[0], len(fileNames)-1)
-	}
+	// Join every file name with a blank line: readable for a handful of
+	// files, and a single file collapses to its bare name unchanged.
+	title := strings.Join(fileNames, "\n")
 
 	layer := ocispec.Descriptor{
 		MediaType: mediaType,

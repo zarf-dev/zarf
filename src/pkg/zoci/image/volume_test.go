@@ -141,7 +141,7 @@ func TestVolumeAddFiles(t *testing.T) {
 	require.Len(t, iv.config.History, 1)
 
 	title := desc.Annotations[ocispec.AnnotationTitle]
-	require.Contains(t, title, "(+2 more)", "title should name the first file plus a count of the rest")
+	require.Equal(t, "a.txt\nb.txt\nc.txt", title, "title should join every file name in the batch with a blank line")
 
 	contents := layerTarContents(ctx, t, iv.Store(), desc)
 	require.Len(t, contents, len(files))

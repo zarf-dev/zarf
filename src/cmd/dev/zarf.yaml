@@ -1,0 +1,15 @@
+kind: ZarfPackageConfig
+metadata:
+  name: archive-docs
+components:
+  - name: docs-archive
+    actions:
+      onCreate:
+        before:
+          - description: create image archive
+            cmd: |-
+              ./zarf dev iva ../../../site ghcr.io/zarf-dev/zarf/iva/docs:latest
+    imageArchives:
+      - images:
+          - ghcr.io/zarf-dev/zarf/iva/docs:latest
+        path: ghcr.io_zarf-dev_zarf_iva_docs-latest.tar
