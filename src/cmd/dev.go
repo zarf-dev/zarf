@@ -782,7 +782,7 @@ func newDevSha256SumCommand() *cobra.Command {
 }
 
 func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
-	out, err := o.compute(cmd.Context(), args)
+	out, err := o.compute(cmd.Context(), args[0])
 	if err != nil {
 		return err
 	}
@@ -790,14 +790,12 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 	return nil
 }
 
-func (o *devSha256SumOptions) compute(ctx context.Context, args []string) (output string, err error) {
+// compute assumes source is non-empty; the command's cobra.ExactArgs(1)
+// guarantees that at the CLI boundary.
+func (o *devSha256SumOptions) compute(ctx context.Context, source string) (output string, err error) {
 	hashErr := errors.New("unable to compute the SHA256SUM hash")
 
-	if len(args) == 0 || args[0] == "" {
-		return "", errors.New("accepts 1 arg(s), received 0")
-	}
-
-	fileName := args[0]
+	fileName := source
 
 	var tmp string
 	var data io.ReadCloser
