@@ -121,6 +121,21 @@ func TestNormalizeRepoRefInvalid(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestNormalizeRepoRefRejectsTagOrDigest(t *testing.T) {
+	t.Parallel()
+	tests := []string{
+		"stefanprodan/podinfo:6.4.0",
+		"stefanprodan/podinfo@sha256:57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8",
+	}
+	for _, repoRef := range tests {
+		t.Run(repoRef, func(t *testing.T) {
+			t.Parallel()
+			_, err := normalizeRepoRef(repoRef)
+			require.Error(t, err)
+		})
+	}
+}
+
 func TestListRegistryTagsInvalidRepo(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)

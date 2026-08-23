@@ -60,6 +60,9 @@ func normalizeRepoRef(repoRef string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parsing repo %q: %w", repoRef, err)
 	}
+	if !reference.IsNameOnly(named) {
+		return "", fmt.Errorf("repo %q must not include a tag or digest", repoRef)
+	}
 	return named.Name(), nil
 }
 
