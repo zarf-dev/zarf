@@ -188,7 +188,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		return nil, err
 	}
 
-	checksumContent, checksumSha, err := GetChecksum(buildPath)
+	checksumContent, checksumSha, err := getChecksum(buildPath)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +266,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage load.ResolvedPackage,
 		}
 	}
 
-	checksumContent, checksumSha, err := GetChecksum(buildPath)
+	checksumContent, checksumSha, err := getChecksum(buildPath)
 	if err != nil {
 		return nil, err
 	}
@@ -914,9 +914,11 @@ func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []api.V
 	return reqs
 }
 
-// GetChecksum takes a directory then creates a sha256 check sum for each files in the
-// directory recursively, then creates a global checksum for all the files together.
-func GetChecksum(dirPath string) (string, string, error) {
+// getChecksum walks dirPath recursively, computing a sha256 checksum for each file
+// (skipping the zarf.yaml and checksums.txt files themselves), and returns:
+//   - the checksums.txt content: one "<sha256> <relative-path>" line per file
+//   - the sha256 checksum of that content, hex-encoded
+func getChecksum(dirPath string) (string, string, error) {
 	checksumData := []string{}
 	err := filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
