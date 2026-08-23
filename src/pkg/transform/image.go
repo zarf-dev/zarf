@@ -23,6 +23,12 @@ type Image struct {
 	TagOrDigest string
 }
 
+// CRCTag returns the airgap tag Zarf assigns to an image: the original tag with a
+// crc32 of the image name appended, matching the reference stored in the registry.
+func CRCTag(imageName, tag string) string {
+	return fmt.Sprintf("%s-zarf-%d", tag, helpers.GetCRCHash(imageName))
+}
+
 // ImageTransformHost replaces the base url for an image and adds a crc32 of the original url to the end of the src (note image refs are not full URLs).
 func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	image, err := ParseImageRef(srcReference)
@@ -35,15 +41,12 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 		return srcReference, nil
 	}
 
-	// Generate a crc32 hash of the image host + name
-	checksum := helpers.GetCRCHash(image.Name)
-
 	// If this image is specified by digest then don't add a checksum as it will already be a specific SHA
 	if image.Digest != "" {
 		return fmt.Sprintf("%s/%s@%s", targetHost, image.Path, image.Digest), nil
 	}
 
-	return fmt.Sprintf("%s/%s:%s-zarf-%d", targetHost, image.Path, image.Tag, checksum), nil
+	return fmt.Sprintf("%s/%s:%s", targetHost, image.Path, CRCTag(image.Name, image.Tag)), nil
 }
 
 // ImageTransformHostWithoutChecksum replaces the base url for an image but avoids adding a checksum of the original url (note image refs are not full URLs).

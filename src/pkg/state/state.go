@@ -12,8 +12,21 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+)
+
+// MutationPolicy controls the agent's default mutation behavior.
+type MutationPolicy string
+
+const (
+	// MutationPolicyAll mutates all resources unless they carry zarf.dev/agent: ignore/skip.
+	MutationPolicyAll MutationPolicy = "all"
+	// MutationPolicyLabeled mutates only resources (or namespaces) labeled zarf.dev/agent: mutate.
+	MutationPolicyLabeled MutationPolicy = "labeled"
 )
 
 // Declares secrets and metadata keys and values.
@@ -152,8 +165,10 @@ type State struct {
 	// PKI certificate information for the agent pods Zarf manages
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
 	// AgentTLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated
-	AgentTLSUserProvided bool         `json:"agentTLSUserProvided,omitempty"`
-	InjectorInfo         InjectorInfo `json:"injectorInfo"`
+	AgentTLSUserProvided bool `json:"agentTLSUserProvided,omitempty"`
+	// AgentMutationPolicy controls the conditions required for the agent to mutate resources
+	AgentMutationPolicy MutationPolicy `json:"agentMutationPolicy"`
+	InjectorInfo        InjectorInfo   `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -161,6 +176,11 @@ type State struct {
 	RegistryInfo RegistryInfo `json:"registryInfo"`
 	// Information about the artifact registry Zarf is configured to use
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
+}
+
+// AgentIsConfigured returns true when Zarf has agent TLS configured.
+func (s *State) AgentIsConfigured() bool {
+	return len(s.AgentTLS.Cert) > 0
 }
 
 // InjectorInfo contains information on how to run the long lived Daemonset Injector
@@ -284,6 +304,43 @@ const (
 	MTLSStrategyZarfManaged MTLSStrategy = "zarf-managed"
 )
 
+// Secrets holding the registry mTLS certificates, and the keys within them. The keys are
+// the standard kubernetes.io/tls format plus the conventional CA companion.
+const (
+	// RegistryServerTLSSecret holds the certificate the registry serves.
+	RegistryServerTLSSecret = "zarf-registry-server-tls"
+	// RegistryClientTLSSecret holds the certificate clients present to the registry.
+	RegistryClientTLSSecret = "zarf-registry-client-tls"
+
+	RegistrySecretCAPath   = "ca.crt"
+	RegistrySecretCertPath = "tls.crt"
+	RegistrySecretKeyPath  = "tls.key"
+)
+
+// RegistryCertFromSecretData reads a registry mTLS keypair out of the secret data Zarf
+// stores. It is the exact inverse of RegistryCertSecretData, and takes the data map
+// rather than the secret so that deciding *how* to read the secret stays with the caller.
+func RegistryCertFromSecretData(data map[string][]byte) (pki.GeneratedPKI, error) {
+	certs := pki.GeneratedPKI{
+		CA:   data[RegistrySecretCAPath],
+		Cert: data[RegistrySecretCertPath],
+		Key:  data[RegistrySecretKeyPath],
+	}
+	if len(certs.CA) == 0 || len(certs.Cert) == 0 || len(certs.Key) == 0 {
+		return pki.GeneratedPKI{}, fmt.Errorf("registry TLS secret is incomplete")
+	}
+	return certs, nil
+}
+
+// RegistryCertSecretData lays a registry mTLS keypair out as Kubernetes secret data.
+func RegistryCertSecretData(certs pki.GeneratedPKI) map[string][]byte {
+	return map[string][]byte{
+		RegistrySecretCAPath:   certs.CA,
+		RegistrySecretCertPath: certs.Cert,
+		RegistrySecretKeyPath:  certs.Key,
+	}
+}
+
 // RegistryMode defines how the registry is accessed
 type RegistryMode string
 
@@ -320,6 +377,12 @@ type RegistryInfo struct {
 	MTLSStrategy MTLSStrategy `json:"mtlsStrategy,omitempty"`
 }
 
+// SetPort updates the registry port and its deprecated compatibility field.
+func (ri *RegistryInfo) SetPort(port int) {
+	ri.Port = port
+	ri.NodePort = port
+}
+
 // ReconcilePort syncs the deprecated NodePort field with Port at serialization boundaries.
 // On read (LoadState): copies NodePort into Port when Port is unset, for state written by older Zarf.
 // On write (SaveState): copies Port into NodePort so older Zarf versions can read the state.
@@ -348,6 +411,54 @@ func (ri RegistryInfo) IsConfigured() bool {
 // ShouldUseMTLS returns true if mTLS should be used for the registry connection.
 func (ri RegistryInfo) ShouldUseMTLS() bool {
 	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
+}
+
+// KnownPlainHTTP reports whether the registry's scheme is already certain without
+// probing. Zarf-managed mTLS implies HTTPS, while Zarf's internal registry without
+// mTLS only serves plain HTTP. known is false when the caller must negotiate the
+// scheme.
+func (ri RegistryInfo) KnownPlainHTTP() (plainHTTP bool, known bool) {
+	switch {
+	case ri.ShouldUseMTLS():
+		return false, true
+	case ri.IsInternal():
+		return true, true
+	default:
+		return false, false
+	}
+}
+
+// ResolvePlainHTTP decides whether host should be reached over plain HTTP for this
+// registry. A scheme known from state (KnownPlainHTTP) wins outright; otherwise a
+// localhost registry is probed (unless forcePlainHTTP already forces plain HTTP),
+// and every other host defaults to forcePlainHTTP. This is also the authoritative
+// scheme resolver downstream consumers should call to determine scheme when pushing
+// to a Zarf-deployed registry.
+func (ri RegistryInfo) ResolvePlainHTTP(ctx context.Context, host string, forcePlainHTTP bool, probe ocischeme.ProbeOptions) (bool, error) {
+	if known, ok := ri.KnownPlainHTTP(); ok {
+		return known, nil
+	}
+	if !forcePlainHTTP && dns.IsLocalOrPrivate(host) {
+		return ocischeme.From(ctx).UsePlainHTTP(ctx, host, probe)
+	}
+	return forcePlainHTTP, nil
+}
+
+// Htpasswd returns an htpasswd-formatted string for the registry's push and pull users.
+// Returns an empty string for external registries.
+func (ri RegistryInfo) Htpasswd() (string, error) {
+	if !ri.IsInternal() {
+		return "", nil
+	}
+	pushUser, err := utils.GetHtpasswdString(ri.PushUsername, ri.PushPassword)
+	if err != nil {
+		return "", fmt.Errorf("generating htpasswd for push user: %w", err)
+	}
+	pullUser, err := utils.GetHtpasswdString(ri.PullUsername, ri.PullPassword)
+	if err != nil {
+		return "", fmt.Errorf("generating htpasswd for pull user: %w", err)
+	}
+	return fmt.Sprintf("%s\\n%s", pushUser, pullUser), nil
 }
 
 // CheckIfRegistryAddressOrCredsChanged compares two RegistryInfo structs and returns true if the creds or address changed
@@ -470,6 +581,8 @@ type MergeOptions struct {
 	Services       ServiceSet
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
+	AgentMutationPolicy MutationPolicy
 }
 
 // Merge merges init options for provided services into the provided state to create a new state struct
@@ -479,14 +592,18 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	if opts.Services.Has(RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, opts.RegistryInfo)
+		// A resolved mode makes the access fields authoritative, including a zero external port.
+		if opts.RegistryInfo.RegistryMode != "" {
+			newState.RegistryInfo.SetPort(opts.RegistryInfo.Port)
+		}
 
-		// Only autogenerate passwords if the user didn't provide one and the registry is internal
-		if opts.RegistryInfo.PushPassword == "" && oldState.RegistryInfo.IsInternal() {
+		// Only autogenerate passwords if the user didn't provide one and the target registry is internal
+		if opts.RegistryInfo.PushPassword == "" && newState.RegistryInfo.IsInternal() {
 			if newState.RegistryInfo.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		}
-		if opts.RegistryInfo.PullPassword == "" && oldState.RegistryInfo.IsInternal() {
+		if opts.RegistryInfo.PullPassword == "" && newState.RegistryInfo.IsInternal() {
 			if newState.RegistryInfo.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
@@ -528,6 +645,9 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			}
 			newState.AgentTLS = agentTLS
 			newState.AgentTLSUserProvided = false
+		}
+		if opts.AgentMutationPolicy != "" {
+			newState.AgentMutationPolicy = opts.AgentMutationPolicy
 		}
 	}
 
@@ -601,6 +721,7 @@ const (
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
 	Name                string               `json:"name"`
+	Digest              string               `json:"digest"`
 	Data                v1alpha1.ZarfPackage `json:"data"`
 	CLIVersion          string               `json:"cliVersion"`
 	Generation          int                  `json:"generation"`

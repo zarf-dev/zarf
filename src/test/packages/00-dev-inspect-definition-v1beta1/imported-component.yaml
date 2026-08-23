@@ -1,0 +1,8 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: test-inspect-definition-v1beta1-import
+  description: imported v1beta1 component config
+component:
+  images:
+    - name: busybox:1.36

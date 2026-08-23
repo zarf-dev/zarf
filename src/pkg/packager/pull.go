@@ -13,17 +13,20 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	"github.com/gabriel-vasile/mimetype"
+	"github.com/mholt/archives"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -39,7 +42,7 @@ type PullOptions struct {
 	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
 	PublicKeyPath string
 	// VerifyBlobOptions configures package signature verification.
-	VerifyBlobOptions *utils.VerifyBlobOptions
+	VerifyBlobOptions *signing.VerifyBlobOptions
 	// OCIConcurrency is the number of layers pulled in parallel
 	OCIConcurrency int
 	// CachePath is used to cache layers from OCI package pulls
@@ -80,8 +83,8 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	// Only applies when VerifyBlobOptions is not already set,
 	// ensuring the new API takes precedence over the deprecated field.
 	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
-		defaults := utils.DefaultVerifyBlobOptions()
-		defaults.KeyRef = opts.PublicKeyPath
+		defaults := signing.DefaultVerifyBlobOptions()
+		defaults.Key = opts.PublicKeyPath
 		opts.VerifyBlobOptions = &defaults
 	}
 
@@ -118,7 +121,7 @@ type pullOCIOptions struct {
 	Filter            filters.ComponentFilterStrategy
 	OCIConcurrency    int
 	CachePath         string
-	VerifyBlobOptions *utils.VerifyBlobOptions
+	VerifyBlobOptions *signing.VerifyBlobOptions
 	Connected         bool
 	types.RemoteOptions
 	layout.VerificationStrategy
@@ -128,12 +131,12 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	if opts.Shasum != "" {
 		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
-	cacheMod, err := zoci.GetOCICacheModifier(ctx, opts.CachePath)
-	if err != nil {
-		return nil, err
-	}
+
 	platform := oci.PlatformForArch(opts.Architecture)
-	remote, err := zoci.NewRemote(ctx, opts.Source, platform, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod)
+	remote, err := zoci.NewRemoteWithOptions(ctx, opts.Source, platform, zoci.RemoteClientOptions{
+		CachePath:     opts.CachePath,
+		RemoteOptions: opts.RemoteOptions,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -147,10 +150,12 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		return nil, err
 	}
 	if supportsFiltering(desc.Platform) {
-		pkg.Components, err = opts.Filter.Apply(pkg)
+		definition := api.NewPackageDefinitionFromV1alpha1(pkg)
+		definition, err = filters.Apply(definition, opts.Filter)
 		if err != nil {
 			return nil, err
 		}
+		pkg = definition.AsV1alpha1()
 	}
 
 	// Get all the layers for relevant components, exclude images if it's a skeleton or connected package
@@ -159,7 +164,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		if len(layerTypes) == 0 {
 			layerTypes = zoci.GetAllLayerTypes()
 		}
-		layerTypes = helpers.RemoveMatches(layerTypes, func(lt zoci.LayerType) bool {
+		layerTypes = slices.DeleteFunc(layerTypes, func(lt zoci.LayerType) bool {
 			return lt == zoci.ImageLayers
 		})
 	}
@@ -194,16 +199,20 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
+	// Use the digest resolved from the registry rather than recomputing from local
+	// files. This is cheaper and accurate even for partial pulls where file-based
+	// computation would produce a different (partial) digest.
+	pkgLayout.SetRegistryDigest(desc.Digest.String())
 	return pkgLayout, nil
 }
 
-func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVerify bool) (string, error) {
+func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVerify bool) (_ string, err error) {
 	if shasum == "" {
 		return "", errors.New("shasum cannot be empty")
 	}
 	tarPath := filepath.Join(tarDir, "data")
 
-	err := pullHTTPFile(ctx, src, tarPath, insecureTLSSkipVerify)
+	err = pullHTTPFile(ctx, src, tarPath, insecureTLSSkipVerify)
 	if err != nil {
 		return "", err
 	}
@@ -216,28 +225,46 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVe
 		return "", fmt.Errorf("shasum mismatch for file %s, expected %s but got %s", tarPath, shasum, received)
 	}
 
-	mtype, err := mimetype.DetectFile(tarPath)
+	file, err := os.Open(tarPath)
 	if err != nil {
 		return "", err
 	}
+	defer func() {
+		if file != nil {
+			err = errors.Join(err, file.Close())
+		}
+	}()
+
+	format, _, err := archives.Identify(ctx, "data", file)
+	if errors.Is(err, archives.NoMatch) {
+		// A zstd filename lets archives identify streams that start with a skippable frame.
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			return "", fmt.Errorf("unsupported archive format: %w", err)
+		}
+		format, _, err = archives.Identify(ctx, "data.zst", file)
+	}
+	if err != nil {
+		return "", fmt.Errorf("unsupported archive format: %w", err)
+	}
 
 	newPath := filepath.Join(tarDir, "data.tar")
-
-	if mtype.Is("application/x-tar") {
-		err = os.Rename(tarPath, newPath)
-		if err != nil {
-			return "", err
-		}
-		return newPath, nil
-	} else if mtype.Is("application/zstd") {
-		newPath = fmt.Sprintf("%s.zst", newPath)
-		err = os.Rename(tarPath, newPath)
-		if err != nil {
-			return "", err
-		}
-		return newPath, nil
+	switch format.MediaType() {
+	case "application/x-tar":
+	case "application/zstd":
+		newPath += ".zst"
+	default:
+		return "", fmt.Errorf("unsupported archive format: %s", format.MediaType())
 	}
-	return "", fmt.Errorf("unsupported file type: %s", mtype.Extension())
+
+	if closeErr := file.Close(); closeErr != nil {
+		return "", closeErr
+	}
+	file = nil
+
+	if err := os.Rename(tarPath, newPath); err != nil {
+		return "", err
+	}
+	return newPath, nil
 }
 
 func pullHTTPFile(ctx context.Context, src, tarPath string, insecureTLSSkipVerify bool) (err error) {

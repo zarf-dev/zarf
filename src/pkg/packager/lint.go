@@ -41,10 +41,11 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return err
 	}
+	pkg := defined.PackageDefinition.AsV1alpha1()
 	findings := []lint.PackageFinding{}
 	for i, component := range pkg.Components {
 		findings = append(findings, lint.CheckComponentValues(component, i)...)

@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["tier"],
+  "properties": {
+    "tier":   { "type": "string" },
+    "shared": { "type": "string", "description": "middle wins" }
+  }
+}

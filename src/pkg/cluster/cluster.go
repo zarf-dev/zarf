@@ -23,12 +23,16 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 const (
@@ -42,16 +46,6 @@ const (
 	PackageLabel string = "zarf.dev/package"
 	// NamespaceOverrideLabel is the label used to identify the namespace override.
 	NamespaceOverrideLabel string = "zarf.dev/namespace-override"
-)
-
-// Registry TLS secret and certificate names
-const (
-	RegistryServerTLSSecret = "zarf-registry-server-tls"
-	RegistryClientTLSSecret = "zarf-registry-client-tls"
-
-	RegistrySecretCAPath   = "ca.crt"
-	RegistrySecretCertPath = "tls.crt"
-	RegistrySecretKeyPath  = "tls.key"
 )
 
 // Cluster Zarf specific cluster management functions.
@@ -147,16 +141,27 @@ func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	httpClient, err := rest.HTTPClientFor(cfg)
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
-	restMapper, err := apiutil.NewDynamicRESTMapper(cfg, httpClient)
-	if err != nil {
-		return nil, err
-	}
+	discoveryCache := memory.NewMemCacheClient(discoveryClient)
+	restMapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryCache)
 	sw := watcher.NewDefaultStatusWatcher(dynamicClient, restMapper)
-	return sw, nil
+	return &invalidatingWatcher{StatusWatcher: sw, discoveryCache: discoveryCache}, nil
+}
+
+// invalidatingWatcher invalidates the discovery cache before each watch so that
+// CRDs registered since the previous watch resolve on the next mapping lookup.
+type invalidatingWatcher struct {
+	watcher.StatusWatcher
+	discoveryCache discovery.CachedDiscoveryInterface
+}
+
+// Watch the cluster for changes made to the specified objects.
+func (w *invalidatingWatcher) Watch(ctx context.Context, objs object.ObjMetadataSet, opts watcher.Options) <-chan event.Event {
+	w.discoveryCache.Invalidate()
+	return w.StatusWatcher.Watch(ctx, objs, opts)
 }
 
 // InitStateOptions tracks the user-defined options during cluster initialization.
@@ -175,6 +180,8 @@ type InitStateOptions struct {
 	InjectorPort int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
+	AgentMutationPolicy state.MutationPolicy
 	// InternalServices lists the state services that Zarf is deploying in this init run.
 	InternalServices state.ServiceSet
 }
@@ -232,41 +239,9 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			l.Debug("Detected K8s distro", "name", s.Distro)
 		}
 
-		// Setup zarf agent PKI when the agent is being deployed
 		if opts.InternalServices.Has(state.AgentKey) {
-			if opts.AgentTLS != nil {
-				s.AgentTLS = *opts.AgentTLS
-				s.AgentTLSUserProvided = true
-			} else {
-				agentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
-				if err != nil {
-					return nil, err
-				}
-				s.AgentTLS = agentTLS
-			}
-		}
-
-		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
-		}
-		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
-		for _, namespace := range namespaceList.Items {
-			if namespace.Name == "zarf" {
-				continue
-			}
-			l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
-
-			if namespace.Labels == nil {
-				// Ensure label map exists to avoid nil panic
-				namespace.Labels = make(map[string]string)
-			}
-			// This label will tell the Zarf Agent to ignore this namespace.
-			namespace.Labels[AgentLabel] = "ignore"
-			namespaceCopy := namespace
-			_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
-			if err != nil {
-				return nil, fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
+			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
+				return nil, err
 			}
 		}
 
@@ -317,6 +292,11 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 		if opts.InternalServices.Has(state.RegistryKey) && !s.RegistryInfo.IsConfigured() {
 			if err := s.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {
+				return nil, err
+			}
+		}
+		if opts.InternalServices.Has(state.AgentKey) && !s.AgentIsConfigured() {
+			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
 				return nil, err
 			}
 		}
@@ -382,6 +362,10 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.InjectorInfo.Port = opts.InjectorPort
 	}
 
+	if opts.AgentMutationPolicy != "" {
+		s.AgentMutationPolicy = opts.AgentMutationPolicy
+	}
+
 	// Save the state back to K8s
 	if err := c.SaveState(ctx, s); err != nil {
 		return nil, fmt.Errorf("unable to save the Zarf state: %w", err)
@@ -390,27 +374,55 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	return s, nil
 }
 
+func (c *Cluster) initAgent(ctx context.Context, s *state.State, agentTLS *pki.GeneratedPKI) error {
+	if agentTLS != nil {
+		s.AgentTLS = *agentTLS
+		s.AgentTLSUserProvided = true
+	} else {
+		generatedAgentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
+		if err != nil {
+			return err
+		}
+		s.AgentTLS = generatedAgentTLS
+		s.AgentTLSUserProvided = false
+	}
+	return c.ignoreExistingNamespacesForAgent(ctx)
+}
+
+func (c *Cluster) ignoreExistingNamespacesForAgent(ctx context.Context) error {
+	l := logger.From(ctx)
+	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
+	}
+	// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
+	for _, namespace := range namespaceList.Items {
+		if namespace.Name == "zarf" {
+			continue
+		}
+		l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
+
+		if namespace.Labels == nil {
+			namespace.Labels = make(map[string]string)
+		}
+		namespace.Labels[AgentLabel] = "ignore"
+		namespaceCopy := namespace
+		_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
+		}
+	}
+	return nil
+}
+
 // GetRegistryClientMTLSCert retrieves the client cert for interacting with the internal Zarf registry while in registry proxy mode.
 // Returns an error if the secret is not found or incomplete.
 func (c *Cluster) GetRegistryClientMTLSCert(ctx context.Context) (pki.GeneratedPKI, error) {
-	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryClientTLSSecret, metav1.GetOptions{})
+	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.RegistryClientTLSSecret, metav1.GetOptions{})
 	if err != nil {
 		return pki.GeneratedPKI{}, fmt.Errorf("failed to get client TLS secret: %w", err)
 	}
-
-	caCertPEM := clientSecret.Data[RegistrySecretCAPath]
-	clientCertPEM := clientSecret.Data[RegistrySecretCertPath]
-	clientKeyPEM := clientSecret.Data[RegistrySecretKeyPath]
-
-	if len(caCertPEM) == 0 || len(clientCertPEM) == 0 || len(clientKeyPEM) == 0 {
-		return pki.GeneratedPKI{}, fmt.Errorf("client TLS secret is incomplete")
-	}
-
-	return pki.GeneratedPKI{
-		CA:   caCertPEM,
-		Cert: clientCertPEM,
-		Key:  clientKeyPEM,
-	}, nil
+	return state.RegistryCertFromSecretData(clientSecret.Data)
 }
 
 // needsCertRenewal determines if a tls secret needs renewal by checking if it doesn't exist or has less than half of it's remaining life
@@ -441,17 +453,17 @@ func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath str
 // ShouldRenewRegistryCerts checks if any of the registry mTLS certificates (CA, server, or client) have less remaining life
 // than the threshold, and renews all certs if so
 func (c *Cluster) ShouldRenewRegistryCerts(ctx context.Context, renewalThresholdPercentage float64) (bool, error) {
-	needsCARenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCAPath, renewalThresholdPercentage)
+	needsCARenewal, err := c.needsCertRenewal(ctx, state.RegistryServerTLSSecret, state.RegistrySecretCAPath, renewalThresholdPercentage)
 	if err != nil {
 		return false, fmt.Errorf("failed to check CA certificate renewal: %w", err)
 	}
 
-	needsServerRenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCertPath, renewalThresholdPercentage)
+	needsServerRenewal, err := c.needsCertRenewal(ctx, state.RegistryServerTLSSecret, state.RegistrySecretCertPath, renewalThresholdPercentage)
 	if err != nil {
 		return false, fmt.Errorf("failed to check server certificate renewal: %w", err)
 	}
 
-	needsClientRenewal, err := c.needsCertRenewal(ctx, RegistryClientTLSSecret, RegistrySecretCertPath, renewalThresholdPercentage)
+	needsClientRenewal, err := c.needsCertRenewal(ctx, state.RegistryClientTLSSecret, state.RegistrySecretCertPath, renewalThresholdPercentage)
 	if err != nil {
 		return false, fmt.Errorf("failed to check client certificate renewal: %w", err)
 	}
@@ -462,16 +474,12 @@ func (c *Cluster) ShouldRenewRegistryCerts(ctx context.Context, renewalThreshold
 // ApplyRegistryClientCertSecret using the given pki to the given namespace.
 // Accepts a namespace so the secret can live in any namespace that requires interacting with the registry
 func (c *Cluster) ApplyRegistryClientCertSecret(ctx context.Context, clientPKI pki.GeneratedPKI, namespace string) error {
-	serverSecret := v1ac.Secret(RegistryClientTLSSecret, namespace).
+	serverSecret := v1ac.Secret(state.RegistryClientTLSSecret, namespace).
 		WithType(corev1.SecretTypeTLS).
 		WithLabels(map[string]string{
 			state.ZarfManagedByLabel: "zarf",
 		}).
-		WithData(map[string][]byte{
-			RegistrySecretCertPath: clientPKI.Cert,
-			RegistrySecretKeyPath:  clientPKI.Key,
-			RegistrySecretCAPath:   clientPKI.CA,
-		})
+		WithData(state.RegistryCertSecretData(clientPKI))
 	if _, err := c.Clientset.CoreV1().Secrets(namespace).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create client TLS secret: %w", err)
 	}
@@ -487,21 +495,17 @@ func (c *Cluster) ApplyZarfRegistryCertSecrets(ctx context.Context, serverPKI, c
 		return err
 	}
 
-	serverSecret := v1ac.Secret(RegistryServerTLSSecret, state.ZarfNamespaceName).
+	serverSecret := v1ac.Secret(state.RegistryServerTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithLabels(map[string]string{
 			state.ZarfManagedByLabel: "zarf",
 		}).
-		WithData(map[string][]byte{
-			RegistrySecretCertPath: serverPKI.Cert,
-			RegistrySecretKeyPath:  serverPKI.Key,
-			RegistrySecretCAPath:   serverPKI.CA,
-		})
+		WithData(state.RegistryCertSecretData(serverPKI))
 	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create server TLS secret: %w", err)
 	}
 
-	l.Info("applying secrets for registry mTLS in the Zarf namespace", "secrets", []string{RegistryServerTLSSecret, RegistryClientTLSSecret})
+	l.Info("applying secrets for registry mTLS in the Zarf namespace", "secrets", []string{state.RegistryServerTLSSecret, state.RegistryClientTLSSecret})
 	return nil
 }
 
@@ -529,7 +533,6 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 			s.RegistryInfo.RegistryMode = state.RegistryModeExternal
 		}
 	}
-	state.DebugPrint(ctx, s)
 	return s, nil
 }
 

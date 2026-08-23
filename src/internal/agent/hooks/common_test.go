@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -36,7 +35,7 @@ const (
 	maxAttemptsFactor = 2
 )
 
-func populateLocalRegistry(ctx context.Context, t *testing.T, localURL string, artifact transform.Image, copyOpts oras.CopyOptions) {
+func pushToRegistry(ctx context.Context, t *testing.T, localURL string, artifact transform.Image, copyOpts oras.CopyOptions) {
 	localReg, err := remote.NewRegistry(localURL)
 	require.NoError(t, err)
 
@@ -61,19 +60,16 @@ func populateLocalRegistry(ctx context.Context, t *testing.T, localURL string, a
 	require.NoError(t, err)
 }
 
-func setupRegistry(ctx context.Context, t *testing.T, port int, artifacts []transform.Image, copyOpts oras.CopyOptions) (string, error) {
-	localURL := testutil.SetupInMemoryRegistry(ctx, t, port)
-
+func populateRegistry(ctx context.Context, t *testing.T, registryURL string, artifacts []transform.Image, copyOpts oras.CopyOptions) {
+	t.Helper()
 	for _, art := range artifacts {
-		populateLocalRegistry(ctx, t, localURL, art, copyOpts)
+		pushToRegistry(ctx, t, registryURL, art, copyOpts)
 	}
-
-	return localURL, nil
 }
 
 type mediaTypeTest struct {
 	name     string
-	image    string
+	relRef   string
 	expected string
 	artifact []transform.Image
 	Opts     oras.CopyOptions
@@ -81,8 +77,6 @@ type mediaTypeTest struct {
 
 func TestConfigMediaTypes(t *testing.T) {
 	t.Parallel()
-	port, err := helpers.GetAvailablePort()
-	require.NoError(t, err)
 
 	linuxAmd64Opts := oras.DefaultCopyOptions
 	linuxAmd64Opts.WithTargetPlatform(&v1.Platform{
@@ -95,7 +89,7 @@ func TestConfigMediaTypes(t *testing.T) {
 			// https://oci.dag.dev/?image=ghcr.io%2Fstefanprodan%2Fmanifests%2Fpodinfo%3A6.9.0
 			name:     "flux manifest",
 			expected: "application/vnd.cncf.flux.config.v1+json",
-			image:    fmt.Sprintf("localhost:%d/stefanprodan/manifests/podinfo:6.9.0-zarf-2823281104", port),
+			relRef:   "stefanprodan/manifests/podinfo:6.9.0-zarf-2823281104",
 			Opts:     oras.DefaultCopyOptions,
 			artifact: []transform.Image{
 				{
@@ -109,7 +103,7 @@ func TestConfigMediaTypes(t *testing.T) {
 			// https://oci.dag.dev/?image=ghcr.io%2Fstefanprodan%2Fcharts%2Fpodinfo%3A6.9.0
 			name:     "helm chart manifest",
 			expected: "application/vnd.cncf.helm.config.v1+json",
-			image:    fmt.Sprintf("localhost:%d/stefanprodan/charts/podinfo:6.9.0", port),
+			relRef:   "stefanprodan/charts/podinfo:6.9.0",
 			Opts:     oras.DefaultCopyOptions,
 			artifact: []transform.Image{
 				{
@@ -120,10 +114,9 @@ func TestConfigMediaTypes(t *testing.T) {
 			},
 		},
 		{
-			//
 			name:     "docker image manifest",
 			expected: "application/vnd.oci.image.config.v1+json",
-			image:    fmt.Sprintf("localhost:%d/zarf-dev/images/hello-world:latest", port),
+			relRef:   "zarf-dev/images/hello-world:latest",
 			Opts:     linuxAmd64Opts,
 			artifact: []transform.Image{
 				{
@@ -139,11 +132,11 @@ func TestConfigMediaTypes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := testutil.TestContext(t)
-			url, err := setupRegistry(ctx, t, port, tt.artifact, tt.Opts)
-			require.NoError(t, err)
+			url := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+			populateRegistry(ctx, t, url, tt.artifact, tt.Opts)
 
 			s := &state.State{RegistryInfo: state.RegistryInfo{Address: url}}
-			mediaType, err := getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, tt.image)
+			mediaType, err := getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, fmt.Sprintf("%s/%s", url, tt.relRef))
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, mediaType)
 		})

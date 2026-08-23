@@ -10,17 +10,17 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+	"k8s.io/kubectl/pkg/util/podutils"
+	"k8s.io/streaming/pkg/httpstream"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -171,7 +171,7 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 		if err != nil {
 			return "", nil, err
 		}
-		svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
+		svc, port, err := ServiceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
 
 		// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
 		if err == nil {
@@ -278,29 +278,20 @@ func (c *Cluster) findPodContainerPort(ctx context.Context, svc corev1.Service) 
 	return 0, nil
 }
 
-// TODO: Refactor to use netip.AddrPort instead of a string for nodePortURL.
-// This functions assumes that the nodePortURL is in the form 127.0.0.1:<port>
-func serviceInfoFromNodePortURL(services []corev1.Service, nodePortURL string) (corev1.Service, int, error) {
-	// Attempt to parse as normal, if this fails add a scheme to the URL (docker registries don't use schemes)
-	parsedURL, err := url.Parse(nodePortURL)
-	if err != nil {
-		parsedURL, err = url.Parse("scheme://" + nodePortURL)
-		if err != nil {
-			return corev1.Service{}, 0, err
-		}
-	}
-
-	// Match hostname against localhost ip/hostnames
-	hostname := parsedURL.Hostname()
-	if hostname != helpers.IPV4Localhost && hostname != "localhost" {
-		return corev1.Service{}, 0, fmt.Errorf("node port services should be on localhost")
-	}
-
-	// Get the node port from the nodeportURL.
-	nodePort, err := strconv.Atoi(parsedURL.Port())
+// ServiceInfoFromNodePortURL returns the Kubernetes Service that corresponds to the given NodePort URL.
+// nodePortURL may be a bare host:port (e.g. "localhost:31999") or a full URL.
+func ServiceInfoFromNodePortURL(services []corev1.Service, nodePortURL string) (corev1.Service, int, error) {
+	hostname, nodePort, err := registryAddressHostPort(nodePortURL)
 	if err != nil {
 		return corev1.Service{}, 0, err
 	}
+
+	// NodePort services are served on loopback.
+	if !dns.IsLocalhost(hostname) {
+		return corev1.Service{}, 0, fmt.Errorf("node port services should be on localhost")
+	}
+
+	// NodePort services must have ports in the NodePort range
 	if nodePort < 30000 || nodePort > 32767 {
 		return corev1.Service{}, 0, fmt.Errorf("node port services should use the port range 30000-32767")
 	}
@@ -518,7 +509,7 @@ func (tunnel *Tunnel) establish(ctx context.Context) ([]string, error) {
 
 	// Construct a new PortForwarder struct that manages the instructed port forward tunnel.
 	ports := []string{fmt.Sprintf("%d:%d", localPort, tunnel.remotePort)}
-	portforwarder, err := portforward.NewOnAddresses(dialer, tunnel.listenAddress, ports, tunnel.stopChan, tunnel.readyChan, io.Discard, io.Discard)
+	portforwarder, err := portforward.NewOnAddressesForStreaming(dialer, tunnel.listenAddress, ports, tunnel.stopChan, tunnel.readyChan, io.Discard, io.Discard)
 	if err != nil {
 		return []string{}, fmt.Errorf("unable to create the port forward: %w", err)
 	}
@@ -584,23 +575,30 @@ func (tunnel *Tunnel) getAttachablePodForService(ctx context.Context) (string, e
 	if len(podList.Items) < 1 {
 		return "", fmt.Errorf("no pods found for service %s", tunnel.resourceName)
 	}
-	return podList.Items[0].Name, nil
+	// status.phase=Running alone isn't enough: a pod stays "Running" throughout its
+	// graceful termination (e.g. mid-rollout), so without also checking these, a
+	// port-forward can bind to a pod that's already on its way out.
+	for _, pod := range podList.Items {
+		if pod.DeletionTimestamp == nil && podutils.IsPodReady(&pod) {
+			return pod.Name, nil
+		}
+	}
+	return "", fmt.Errorf("no ready pods found for service %s", tunnel.resourceName)
 }
 
-// Inspired by https://github.com/kubernetes/kubernetes/blob/680ea07dbb2c6050d13b93660fa4d27d2d28d6eb/staging/src/k8s.io/kubectl/pkg/cmd/portforward/portforward.go#L139-L156
+// Inspired by https://github.com/kubernetes/kubernetes/blob/1ee1ff97fb7f9755a44d29bee0c80d2ccbed68dc/staging/src/k8s.io/kubectl/pkg/cmd/portforward/portforward.go#L139-L156
 func createDialer(method string, url *url.URL, config *rest.Config) (httpstream.Dialer, error) {
 	transport, upgrader, err := spdy.RoundTripperFor(config)
 	if err != nil {
 		return nil, err
 	}
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, method, url)
-	tunnelingDialer, err := portforward.NewSPDYOverWebsocketDialer(url, config)
+	dialer := spdy.NewDialerForStreaming(upgrader, &http.Client{Transport: transport}, method, url)
+	tunnelingDialer, err := portforward.NewSPDYOverWebsocketDialerForStreaming(url, config)
 	if err != nil {
 		return nil, err
 	}
 	// First attempt tunneling (websocket) dialer, then fallback to spdy dialer.
-	dialer = portforward.NewFallbackDialer(tunnelingDialer, dialer, func(err error) bool {
+	return portforward.NewFallbackDialerForStreaming(tunnelingDialer, dialer, func(err error) bool {
 		return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
-	})
-	return dialer, nil
+	}), nil
 }

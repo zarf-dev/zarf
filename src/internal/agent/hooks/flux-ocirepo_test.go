@@ -16,9 +16,9 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +32,7 @@ func createFluxOCIRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxOCIRep
 	require.NoError(t, err)
 	return &v1.AdmissionRequest{
 		Operation: op,
+		Namespace: testNamespace,
 		Object: runtime.RawExtension{
 			Raw: raw,
 		},
@@ -542,7 +543,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 				),
 				operations.AddPatchOperation(
 					"/spec/certSecretRef",
-					fluxmeta.LocalObjectReference{Name: cluster.RegistryClientTLSSecret},
+					fluxmeta.LocalObjectReference{Name: state.RegistryClientTLSSecret},
 				),
 				operations.ReplacePatchOperation(
 					"/spec/ref/tag",
@@ -596,15 +597,15 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, err = setupRegistry(ctx, t, port, artifacts, oras.DefaultCopyOptions)
-	require.NoError(t, err)
+	url := testutil.SetupInMemoryRegistry(ctx, t, port)
+	populateRegistry(ctx, t, url, artifacts, oras.DefaultCopyOptions)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// t.Parallel()
 			s := &state.State{RegistryInfo: tt.registryInfo}
 			c := createTestClientWithZarfState(ctx, t, s)
-			handler := admission.NewHandler().Serve(ctx, NewOCIRepositoryMutationHook(ctx, c))
+			handler := admission.NewHandler().Serve(ctx, NewOCIRepositoryMutationHook(c, state.MutationPolicyAll))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)

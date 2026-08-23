@@ -81,7 +81,7 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 			return nil, err
 		}
 		// Build zarf-docker-registry service address and internal dns string
-		svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
+		svc, port, err := ServiceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
 		if err == nil {
 			addRegistryAuthEntries(dockerConfigJSON.Auths, &svc, int32(port), authEncodedValue)
 		}
@@ -250,7 +250,7 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, registr
 	}
 
 	// If this is an internal service then we need to look it up and
-	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
+	svc, port, err := ServiceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
 	if err != nil {
 		logger.From(ctx).Debug("registry appears to not be a nodeport service, using original address", "address", registryInfo.Address)
 		return registryInfo.Address, "", nil

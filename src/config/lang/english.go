@@ -45,7 +45,7 @@ const (
 	RootCmdFlagArch                  = "Architecture for OCI images and Zarf packages"
 	RootCmdFlagCachePath             = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir               = "Specify the temporary directory to use for intermediate files"
-	RootCmdFlagPlainHTTP             = "Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagPlainHTTP             = "Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture."
 	RootCmdFlagInsecureSkipTLSVerify = "Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
 	RootCmdDeprecatedDeploy = "Deprecated: Please use \"zarf package deploy %s\" to deploy this package.  This warning will be removed in Zarf v1.0.0."
@@ -143,9 +143,6 @@ $ zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNA
 # Initializing w/ an external git server:
 $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 
-# Initializing w/ an external artifact server:
-$ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
-
 # NOTE: Not specifying a pull username/password will use the push user for pulling as well.
 `
 
@@ -182,6 +179,9 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInitFlagArtifactURL       = "[alpha] External artifact registry url to use for this Zarf cluster"
 	CmdInitFlagArtifactPushUser  = "[alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts."
 	CmdInitFlagArtifactPushToken = "[alpha] API Token for the push-user to access the artifact registry"
+
+	// The artifact server is deprecated across init and tools creds commands.
+	ArtifactServerDeprecated = "The artifact server is deprecated and will be removed in a future release"
 
 	// zarf internal
 	CmdInternalShort = "Internal tools used by zarf"
@@ -224,8 +224,8 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageShort                       = "Zarf package commands for creating, deploying, and inspecting packages"
 	CmdPackageFlagConcurrency             = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
 	CmdPackageFlagFlagPublicKey           = "Path to public key file for validating signed packages"
-	CmdPackageFlagVerify                  = "Verify the Zarf package signature"
-	CmdPackageFlagSkipSignatureValidation = "[Deprecated] Skip validating the signature of the Zarf package"
+	CmdPackageFlagVerify                  = "Signature verification mode (always|if-possible|never)."
+	CmdPackageFlagSkipSignatureValidation = "[Deprecated] Skip validating the signature of the Zarf package. Use --verify=never instead."
 	CmdPackageFlagRetries                 = "Number of retries to perform for Zarf operations like git/image pushes"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
@@ -236,16 +236,32 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageDeployShort = "Deploys a Zarf package from a local file or URL (runs offline)"
 	CmdPackageDeployLong  = "Unpacks resources and dependencies from a Zarf package archive and deploys them onto the target system.\n" +
 		"Kubernetes clusters are accessed via credentials in your current kubecontext defined in '~/.kube/config'"
+	CmdPackageDeployExample = `
+# Deploy a local package tarball
+$ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst --confirm
+
+# Deploy a package from an OCI registry (requires oci:// scheme)
+$ zarf package deploy oci://ghcr.io/my-org/my-package:1.0.0 --confirm
+
+# Deploy a package from an HTTPS URL (--shasum required for integrity verification)
+$ zarf package deploy https://example.com/zarf-package-my-app-amd64-1.0.0.tar.zst --shasum <sha256sum> --confirm
+
+# Deploy a split package (pass the .part000 file)
+$ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst.part000 --confirm
+`
 
 	CmdPackageMirrorShort = "Mirrors a Zarf package's internal resources to specified image registries and git repositories"
 	CmdPackageMirrorLong  = "Unpacks resources and dependencies from a Zarf package archive and mirrors them into the specified\n" +
 		"image registries and git repositories within the target environment"
 	CmdPackageMirrorExample = `
-# Mirror resources to internal Zarf resources - by default this will use Zarf state if available
-$ zarf package mirror-resources <your-package.tar.zst>
+# Mirror a local package to internal Zarf resources (uses Zarf state if available)
+$ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Mirror resources to external resources
-$ zarf package mirror-resources <your-package.tar.zst> \
+# Mirror a package from an OCI registry (requires oci:// scheme)
+$ zarf package mirror-resources oci://ghcr.io/my-org/my-package:1.0.0
+
+# Mirror a local package to external resources
+$ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst \
 	--registry-url registry.enterprise.corp \
 	--registry-push-username <registry-push-username> \
 	--registry-push-password <registry-push-password> \
@@ -253,14 +269,14 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	--git-push-username <git-push-username> \
 	--git-push-password <git-push-password>
 
-# Mirroring resources can be specified by artifact type - this will only mirror images
-$ zarf package mirror-resources <your-package.tar.zst> --images \
+# Mirror only images from a local package
+$ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --images \
 	--registry-url registry.enterprise.corp \
 	--registry-push-username <registry-push-username> \
 	--registry-push-password <registry-push-password>
 
-# Mirroring for repositories can be specified by artifact type - this will only mirror git repositories
-$ zarf package mirror-resources <your-package.tar.zst> --repos \
+# Mirror only git repositories from a local package
+$ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos \
 	--git-url https://git.enterprise.corp \
 	--git-push-username <git-push-username> \
 	--git-push-password <git-push-password>
@@ -286,16 +302,17 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageCreateFlagDifferential          = "Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
 	CmdPackageCreateFlagRegistryOverride      = "Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)"
 	CmdPackageCreateFlagFlavor                = "The flavor of components to include in the resulting package (i.e. have a matching or empty \"only.flavor\" key)"
-	CmdPackageCreateFlagValuesFiles           = "[alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times."
+	CmdPackageCreateFlagValuesFiles           = "[beta] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times."
 	CmdPackageCreateFlagWithBuildMachineInfo  = "Include build machine information (hostname and username) in the package metadata"
 	CmdPackageCreateCleanPathErr              = "Invalid characters in Zarf cache path, defaulting to %s"
 
 	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
-	CmdPackageDeployFlagAdoptExistingResources = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
+	CmdPackageDeployFlagTakeOwnership          = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
+	CmdPackageDeployFlagAdoptExistingResources = "Deprecated: use --take-ownership instead."
 	CmdPackageDeployFlagConnected              = "Deploy without pushing images/repos; label resources to bypass the Zarf agent"
 	CmdPackageDeployFlagForceConflicts         = "Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources."
 	CmdPackageDeployFlagSetVariables           = "Specify deployment variables to set on the command line (KEY=value)"
-	CmdPackageDeployFlagSetValues              = "Specify deployment package values to set on the command line (key.path=value)."
+	CmdPackageDeployFlagSetValues              = "Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string"
 	CmdPackageDeployFlagComponents             = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
 	CmdPackageDeployFlagShasum                 = "Shasum of the package to deploy. Required if deploying a remote https package."
 	CmdPackageDeployFlagTimeout                = "Timeout for health checks and Helm operations such as installs and rollbacks"
@@ -303,16 +320,92 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageDeployInvalidCLIVersionWarn      = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
 	CmdPackageDeployFlagNamespace              = "[Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined."
 	CmdPackageDeployFlagValuesFiles            = CmdPackageCreateFlagValuesFiles
+	CmdPackageDeployFlagSkipValuesSchema       = "Skip validation of package values against the values schema."
 
 	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
+
+	CmdPackageInspectDigestExample = `
+# Get the digest of a local package tarball
+$ zarf package inspect digest zarf-package-my-app-amd64-1.0.0.tar.zst
+
+# Get the digest of a package in an OCI registry (requires oci:// scheme; resolved directly from the registry)
+$ zarf package inspect digest oci://ghcr.io/my-org/my-package:1.0.0
+
+# Get the stored digest of a package already deployed to a cluster
+$ zarf package inspect digest my-package
+`
+
+	CmdPackageInspectDefinitionExample = `
+# Inspect the zarf.yaml of a local package tarball
+$ zarf package inspect definition zarf-package-my-app-amd64-1.0.0.tar.zst
+
+# Inspect the zarf.yaml of a package in an OCI registry (requires oci:// scheme)
+$ zarf package inspect definition oci://ghcr.io/my-org/my-package:1.0.0
+
+# Inspect the zarf.yaml of a package deployed to a cluster
+$ zarf package inspect definition my-package
+`
+
+	CmdPackageInspectImagesExample = `
+# List images in a local package tarball
+$ zarf package inspect images zarf-package-my-app-amd64-1.0.0.tar.zst
+
+# List images in a package from an OCI registry (requires oci:// scheme)
+$ zarf package inspect images oci://ghcr.io/my-org/my-package:1.0.0
+
+# List images in a package already deployed to a cluster
+$ zarf package inspect images my-package
+`
+
+	CmdPackageInspectSBOMExample = `
+# Extract the SBOM from a local package tarball
+$ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --output ./sbom
+
+# Extract the SBOM from a package in an OCI registry (requires oci:// scheme)
+$ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbom
+`
+
+	CmdPackageInspectManifestsExample = `
+# Show templated manifests for a local package tarball
+$ zarf package inspect manifests zarf-package-my-app-amd64-1.0.0.tar.zst
+
+# Show manifests for a package in an OCI registry (requires oci:// scheme)
+$ zarf package inspect manifests oci://ghcr.io/my-org/my-package:1.0.0
+`
+
+	CmdPackageInspectValuesFilesExample = `
+# Show values files for a local package tarball
+$ zarf package inspect values-files zarf-package-my-app-amd64-1.0.0.tar.zst
+
+# Show values files for a package in an OCI registry (requires oci:// scheme)
+$ zarf package inspect values-files oci://ghcr.io/my-org/my-package:1.0.0
+`
+
+	CmdPackageInspectDocumentationExample = `
+# Extract documentation from a local package tarball
+$ zarf package inspect documentation zarf-package-my-app-amd64-1.0.0.tar.zst
+
+# Extract documentation from a package in an OCI registry (requires oci:// scheme)
+$ zarf package inspect documentation oci://ghcr.io/my-org/my-package:1.0.0
+`
 
 	CmdPackageInspectFlagSbomOut    = "Specify an output directory for the SBOMs from the inspected Zarf package"
 	CmdPackageInspectFlagListImages = "List images in the package (prints to stdout)"
 	CmdPackageInspectFlagNamespace  = "[Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag."
 
-	CmdPackageRemoveShort           = "Removes a Zarf package that has been deployed already (runs offline)"
-	CmdPackageRemoveLong            = "Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first."
+	CmdPackageRemoveShort   = "Removes a Zarf package that has been deployed already (runs offline)"
+	CmdPackageRemoveLong    = "Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first."
+	CmdPackageRemoveExample = `
+# Remove a deployed package by its name (as listed by 'zarf package list')
+$ zarf package remove my-package --confirm
+
+# Remove using a local package tarball (package name is read from the tarball)
+$ zarf package remove zarf-package-my-app-amd64-1.0.0.tar.zst --confirm
+
+# Remove using a package from an OCI registry (requires oci:// scheme)
+$ zarf package remove oci://ghcr.io/my-org/my-package:1.0.0 --confirm
+`
 	CmdPackageRemoveFlagConfirm     = "Confirms the removal action"
 	CmdPackageRemoveFlagComponents  = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageRemoveFlagNamespace   = "[Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag."
@@ -320,14 +413,17 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 
 	CmdPackagePublishShort   = "Publishes a Zarf package to a remote registry"
 	CmdPackagePublishExample = `
-# Publish a package to a remote registry
-$ zarf package publish my-package.tar oci://my-registry.com/my-namespace
+# Publish a local package tarball to a remote registry
+$ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry.com/my-namespace
 
-# Publish a skeleton package to a remote registry
+# Publish a skeleton package (pre-'create' directory) to a remote registry
 $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 
+# Copy a package from one OCI registry to another (requires oci:// scheme on source)
+$ zarf package publish oci://source-registry.com/my-namespace/my-package:1.0.0 oci://my-registry.com/my-namespace
+
 # Publish a package with a specific tag different from the package metadata.version
-$ zarf package publish my-package.tar oci://my-registry.com/my-namespace --tag v0.0.1
+$ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry.com/my-namespace --tag v0.0.1
 `
 	CmdPackagePublishFlagSigningKey         = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider"
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key used for publishing packages"
@@ -353,22 +449,43 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key ./privat
 # Sign with a cloud KMS key
 $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key
 `
-	CmdPackageSignFlagSigningKey     = "Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)"
-	CmdPackageSignFlagSigningKeyPass = "Password for encrypted private key"
-	CmdPackageSignFlagOutput         = "Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources"
-	CmdPackageSignFlagOverwrite      = "Overwrite an existing signature if the package is already signed"
-	CmdPackageSignFlagKey            = "Public key to verify the existing signature before re-signing (optional)"
+	CmdPackageSignFlagSigningKey        = "Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)"
+	CmdPackageSignFlagSigningKeyPass    = "Password for encrypted private key"
+	CmdPackageSignFlagOutput            = "Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources"
+	CmdPackageSignFlagOverwrite         = "Overwrite an existing signature if the package is already signed"
+	CmdPackageSignFlagKey               = "Public key to verify the existing signature before re-signing (optional)"
+	CmdPackageSignFlagKeyless           = "Sign without a private key using Sigstore's keyless flow (Fulcio/OIDC)"
+	CmdPackageSignFlagIdentityToken     = "Pre-acquired OIDC identity token (or path to a file containing one) for non-interactive keyless signing"
+	CmdPackageSignFlagFulcioURL         = "Fulcio certificate authority URL. Override for private Sigstore deployments."
+	CmdPackageSignFlagFulcioAuthFlow    = "Fulcio OAuth flow: normal (browser), device (device code), token, client_credentials"
+	CmdPackageSignFlagOIDCIssuer        = "OIDC issuer URL used to obtain an identity token for keyless signing. Override for private Sigstore deployments."
+	CmdPackageSignFlagOIDCClientID      = "OIDC client ID used when requesting an identity token. Override for private Sigstore deployments."
+	CmdPackageSignFlagRekorURL          = "Rekor transparency log URL. Override for private Sigstore deployments."
+	CmdPackageSignFlagTlogUpload        = "Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (allows for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window)."
+	CmdPackageSignFlagConfirm           = "Skip the interactive confirmation prompt before uploading to the Rekor transparency log (equivalent to cosign --yes)."
+	CmdPackageSignFlagTSAServerURL      = "RFC3161 timestamp authority URL (e.g. https://timestamp.sigstore.dev/api/v1/timestamp). When set, a signed timestamp is embedded in the bundle as an alternative or complement to --tlog-upload for proving the signature was made while the Fulcio certificate was valid."
+	CmdPackageSignNoTimestampAnchorWarn = "Keyless signature has no timestamp anchor: --tlog-upload is disabled and --tsa-server-url is not set. The signature will be unverifiable after the Fulcio certificate expires (~10 minutes). Pass --tsa-server-url or remove --tlog-upload=false to retain long-term verifiability."
 
 	CmdPackageVerifyShort   = "Verify the signature and integrity of a Zarf package"
 	CmdPackageVerifyLong    = "Verify the cryptographic signature (if signed) and checksum integrity of a Zarf package. Returns exit code 0 if valid, non-zero if verification fails."
 	CmdPackageVerifyExample = `
-# Verify a signed package
+# Verify a signed local package tarball
 $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst --key ./public-key.pub
+
+# Verify a package in an OCI registry (requires oci:// scheme)
+$ zarf package verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./public-key.pub
 
 # Verify an unsigned package (checksums only)
 $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
 `
-	CmdPackageVerifyFlagKey = "Public key for signature verification"
+	CmdPackageVerifyFlagKey                         = "Public key for signature verification"
+	CmdPackageVerifyFlagCertificateIdentity         = "Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main"
+	CmdPackageVerifyFlagCertificateIdentityRegexp   = "Regex variant of --certificate-identity"
+	CmdPackageVerifyFlagCertificateOIDCIssuer       = "Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com"
+	CmdPackageVerifyFlagCertificateOIDCIssuerRegexp = "Regex variant of --certificate-oidc-issuer"
+	CmdPackageVerifyFlagTrustedRoot                 = "Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted."
+	CmdPackageVerifyFlagInsecureIgnoreTlog          = "Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry)."
+	CmdPackageVerifyFlagUseSignedTimestamps         = "Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used."
 
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `
@@ -405,9 +522,12 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdDevSha256sumShort         = "Generates a SHA256SUM for the given file"
 	CmdDevSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
 
-	CmdDevFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests"
+	CmdDevFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests."
 	CmdDevFindImagesLong  = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.\n\n" +
-		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
+		"Images defined as part of Helm test hooks are excluded. Images explicitly defined in the helm.sh/images\n" +
+		"annotation in a component Helm chart's Chart.yaml are included regardless of their presence in the rendered\n" +
+		"chart. Components that have git repositories that host helm charts can be processed by providing the\n" +
+		"--repo-chart-path."
 
 	CmdDevGenerateConfigShort = "Generates a config file for Zarf"
 	CmdDevGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
@@ -415,16 +535,18 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 		"Accepted extensions are json, toml, yaml.\n\n" +
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 
-	CmdDevFlagExtractPath          = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
-	CmdDevFlagSetPkgTmpl           = "Specify package templates to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
-	CmdDevFlagSetVariables         = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
-	CmdDevFlagRepoChartPath        = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
-	CmdDevFlagGitAccount           = "User or organization name for the git account that the repos are created under."
-	CmdDevFlagKubeVersion          = "Override the default helm template KubeVersion when performing a package chart template"
-	CmdDevFlagRegistry             = "Override the ###ZARF_REGISTRY### value"
-	CmdDevFlagFindImagesWhy        = "Prints the source manifest for the specified image"
-	CmdDevFlagFindImagesSkipCosign = "Skip searching for cosign artifacts related to discovered images"
-	CmdDevFlagFindImagesUpdate     = "Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change."
+	CmdDevFlagExtractPath                  = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
+	CmdDevFlagSetPkgTmpl                   = "Specify package templates to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
+	CmdDevFlagSetVariables                 = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
+	CmdDevFlagRepoChartPath                = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
+	CmdDevFlagGitAccount                   = "User or organization name for the git account that the repos are created under."
+	CmdDevFlagKubeVersion                  = "Override the default helm template KubeVersion when performing a package chart template"
+	CmdDevFlagRegistry                     = "Override the ###ZARF_REGISTRY### value"
+	CmdDevFlagFindImagesWhy                = "Prints the source manifest for the specified image"
+	CmdDevFlagFindImagesSkipCosign         = "Skip searching for cosign artifacts related to discovered images"
+	CmdDevFlagFindImagesUpdate             = "Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change."
+	CmdDevFlagGenerateSchemaUpdate         = "Update the existing schema. Formatting such as ordering and newlines may change."
+	CmdDevFlagGenerateSchemaDeleteNotFound = "Remove existing schema keys when they are not found in the mapped values"
 
 	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
 	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
@@ -497,6 +619,15 @@ $ zarf tools registry push image.tar reg.example.com/stefanprodan/podinfo:6.4.0
 
   # Login with password from stdin
   $ echo "mypassword" | zarf tools registry login --username myuser --password-stdin docker.io`
+
+	CmdToolsRegistryLogoutShort = "Log out from a registry"
+
+	CmdToolsRegistryLogoutExample = `
+  # Log out from a registry
+  $ zarf tools registry logout registry.example.com
+	`
+
+	CmdToolsRegistryLogoutPromptNoRegistryProvidedErr = "a registry address must be provided"
 
 	CmdToolsRegistryPullExample = `
 # Pull an image from an internal repo in Zarf to a local tarball
@@ -695,9 +826,10 @@ $ zarf tools get-creds git-readonly
 $ zarf tools get-creds artifact
 `
 
-	CmdToolsUpdateCredsShort   = "Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service"
-	CmdToolsUpdateCredsLong    = "Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service. i.e. 'zarf tools update-creds registry'"
-	CmdToolsUpdateCredsExample = `
+	CmdToolsUpdateCredsShort      = "Updates the credentials for deployed Zarf services (deprecated; prefer the per-service subcommands)"
+	CmdToolsUpdateCredsLong       = "Updates the credentials for deployed Zarf services. Deprecated: prefer the per-service subcommands, ('zarf tools update-creds registry|git|agent'), which update a single service"
+	CmdToolsUpdateCredsDeprecated = "This invocation of 'zarf tools update-creds' is deprecated. Use the per-service subcommands 'registry', 'git', or 'agent' instead, e.g. 'zarf tools update-creds registry'."
+	CmdToolsUpdateCredsExample    = `
 # Autogenerate all Zarf credentials at once:
 $ zarf tools update-creds
 
@@ -723,8 +855,41 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 
 # NOTE: Not specifying a pull username/password will keep the previous pull username/password.
 `
+	CmdToolsUpdateCredsRegistryShort   = "Updates the credentials for the deployed Zarf registry"
+	CmdToolsUpdateCredsRegistryLong    = "Updates the credentials for the deployed Zarf registry. Any credentials omitted from flags will be autogenerated - the registry URL only changes if specified."
+	CmdToolsUpdateCredsRegistryExample = `
+# Autogenerate new registry credentials:
+$ zarf tools update-creds registry
+
+# Set credentials for an external registry:
+$ zarf tools update-creds registry --registry-push-username={USERNAME} --registry-push-password={PASSWORD}
+
+# NOTE: Not specifying a pull username/password will keep the previous pull username/password.
+`
+
+	CmdToolsUpdateCredsGitShort   = "Updates the credentials for the deployed Zarf git server"
+	CmdToolsUpdateCredsGitLong    = "Updates the credentials for the deployed Zarf git server. Any credentials omitted from flags will be autogenerated - the git server URL only changes if specified."
+	CmdToolsUpdateCredsGitExample = `
+# Autogenerate new git server credentials:
+$ zarf tools update-creds git
+
+# Set credentials for an external git server:
+$ zarf tools update-creds git --git-push-username={USERNAME} --git-push-password={PASSWORD}
+
+# NOTE: Not specifying a pull username/password will keep the previous pull username/password.
+`
+
+	CmdToolsUpdateCredsAgentShort   = "Updates the TLS certificates for the deployed Zarf agent"
+	CmdToolsUpdateCredsAgentLong    = "Updates the TLS certificates for the deployed Zarf agent. Certificates are autogenerated unless the --agent-tls-ca, --agent-tls-cert, and --agent-tls-key flags are provided."
+	CmdToolsUpdateCredsAgentExample = `
+# Autogenerate new agent TLS certificates:
+$ zarf tools update-creds agent
+
+# Provide user-managed agent TLS certificates:
+$ zarf tools update-creds agent --agent-tls-ca={CA_PATH} --agent-tls-cert={CERT_PATH} --agent-tls-key={KEY_PATH}
+`
+
 	CmdToolsUpdateCredsConfirmFlag          = "Confirm updating credentials without prompting"
-	CmdToolsUpdateCredsConfirmProvided      = "Confirm flag specified, continuing without prompting."
 	CmdToolsUpdateCredsConfirmContinue      = "Continue with these changes?"
 	CmdToolsUpdateCredsUnableUpdateRegistry = "Unable to update Zarf Registry values: %s"
 	CmdToolsUpdateCredsUnableUpdateAgent    = "Unable to update Zarf Agent TLS secrets: %s"
@@ -757,6 +922,7 @@ const (
 const (
 	PkgCreateErrDifferentialSameVersion = "unable to create differential package. Please ensure the differential package version and reference package version are not the same. The package version must be incremented"
 	PkgCreateErrDifferentialNoVersion   = "unable to create differential package. Please ensure both package versions are set"
+	PkgCreateErrDifferentialAPIVersion  = "unable to create differential package. Please ensure the differential package API version and reference package API version are the same"
 )
 
 // Collection of reusable error messages.

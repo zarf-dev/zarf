@@ -1,0 +1,6 @@
+apiVersion: v2
+name: crd-chart
+description: Registers the ZarfRegression CRD via a chart crds/ directory, mirroring how charts ship CRDs
+type: application
+version: 0.1.0
+appVersion: "1.0"

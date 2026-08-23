@@ -12,396 +12,6 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func TestOverridePackageNamespace(t *testing.T) {
-	t.Parallel()
-
-	allow := false
-
-	tt := []struct {
-		name                   string
-		pkg                    v1alpha1.ZarfPackage
-		namespace              string
-		expectedWaitNamespaces []string
-		expectedErr            string
-	}{
-		{
-			name: "override namespace",
-			pkg: v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfPackageConfig,
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Charts: []v1alpha1.ZarfChart{
-							{
-								Name:      "test",
-								Namespace: "test",
-							},
-						},
-					},
-				},
-			},
-			namespace: "test-override",
-		},
-		{
-			name: "override namespace with wait action",
-			pkg: v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfPackageConfig,
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Charts: []v1alpha1.ZarfChart{
-							{
-								Name:      "test",
-								Namespace: "test",
-							},
-						},
-						Actions: v1alpha1.ZarfComponentActions{
-							OnDeploy: v1alpha1.ZarfComponentActionSet{
-								After: []v1alpha1.ZarfComponentAction{
-									{
-										Wait: &v1alpha1.ZarfComponentActionWait{
-											Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
-												Kind:      "Pod",
-												Name:      "test-pod",
-												Namespace: "test",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			namespace:              "test-override",
-			expectedWaitNamespaces: []string{"test-override"},
-		},
-		{
-			name: "multiple namespaces",
-			pkg: v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfPackageConfig,
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Charts: []v1alpha1.ZarfChart{
-							{
-								Name:      "test",
-								Namespace: "test",
-							},
-							{
-								Name:      "test-2",
-								Namespace: "test-2",
-							},
-						},
-					},
-				},
-			},
-			namespace:   "test-override",
-			expectedErr: "package contains 2 unique namespaces, cannot override namespace",
-		},
-		{
-			name: "wait action with different namespace is not updated when not matching override namespace",
-			pkg: v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfPackageConfig,
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Charts: []v1alpha1.ZarfChart{
-							{
-								Name:      "test",
-								Namespace: "test",
-							},
-						},
-						Actions: v1alpha1.ZarfComponentActions{
-							OnDeploy: v1alpha1.ZarfComponentActionSet{
-								After: []v1alpha1.ZarfComponentAction{
-									{
-										Wait: &v1alpha1.ZarfComponentActionWait{
-											Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
-												Kind:      "Pod",
-												Name:      "test-pod",
-												Namespace: "different-namespace",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			namespace: "test-override",
-			// wait action namespace "different-namespace" should NOT be updated since it doesn't match "test"
-			expectedWaitNamespaces: []string{"different-namespace"},
-		},
-		{
-			name: "override manifest namespace",
-			pkg: v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfPackageConfig,
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Manifests: []v1alpha1.ZarfManifest{
-							{Name: "test", Namespace: "test"},
-						},
-					},
-				},
-			},
-			namespace: "test-override",
-		},
-		{
-			name: "override namespace across multiple components",
-			pkg: v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfPackageConfig,
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Charts: []v1alpha1.ZarfChart{
-							{Name: "chart1", Namespace: "test"},
-						},
-					},
-					{
-						Charts: []v1alpha1.ZarfChart{
-							{Name: "chart2", Namespace: "test"},
-						},
-					},
-				},
-			},
-			namespace: "test-override",
-		},
-		{
-			name: "override empty chart namespace",
-			pkg: v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfPackageConfig,
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Charts: []v1alpha1.ZarfChart{
-							{Name: "test", Namespace: ""},
-						},
-					},
-				},
-			},
-			namespace: "test-override",
-		},
-		{
-			name: "mixed empty and non-empty namespaces blocks override",
-			pkg: v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfPackageConfig,
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Charts: []v1alpha1.ZarfChart{
-							{Name: "chart1", Namespace: ""},
-							{Name: "chart2", Namespace: "real-ns"},
-						},
-					},
-				},
-			},
-			namespace:   "test-override",
-			expectedErr: "package contains 2 unique namespaces, cannot override namespace",
-		},
-		{
-			name: "init package namespace override",
-			pkg: v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfInitConfig,
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Charts: []v1alpha1.ZarfChart{
-							{
-								Name:      "test",
-								Namespace: "test",
-							},
-						},
-					},
-				},
-			},
-			namespace:   "test-override",
-			expectedErr: "package kind is not a ZarfPackageConfig, cannot override namespace",
-		},
-		{
-			name: "namespace override not allowed",
-			pkg: v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfPackageConfig,
-				Metadata: v1alpha1.ZarfMetadata{
-					AllowNamespaceOverride: &allow,
-				},
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Charts: []v1alpha1.ZarfChart{
-							{
-								Name:      "test",
-								Namespace: "test",
-							},
-						},
-					},
-				},
-			},
-			namespace:   "test-override",
-			expectedErr: "cannot override package namespace, metadata.allowNamespaceOverride is false",
-		},
-	}
-
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			err := OverridePackageNamespace(&tc.pkg, tc.namespace)
-			if tc.expectedErr == "" {
-				require.NoError(t, err)
-				validateNamespaceUpdates(t, tc.pkg, tc.namespace, tc.expectedWaitNamespaces)
-			} else {
-				require.ErrorContains(t, err, tc.expectedErr)
-			}
-		})
-	}
-}
-
-func validateNamespaceUpdates(t *testing.T, pkg v1alpha1.ZarfPackage, targetNamespace string, expectedWaitNamespaces []string) {
-	t.Helper()
-	actualWaitNamespaces := make([]string, 0)
-	for _, component := range pkg.Components {
-		for _, chart := range component.Charts {
-			require.Equal(t, targetNamespace, chart.Namespace)
-		}
-		for _, manifest := range component.Manifests {
-			require.Equal(t, targetNamespace, manifest.Namespace)
-		}
-		actualWaitNamespaces = append(actualWaitNamespaces, collectWaitNamespaces(component.Actions)...)
-	}
-	require.ElementsMatch(t, expectedWaitNamespaces, actualWaitNamespaces)
-}
-
-func collectWaitNamespaces(actions v1alpha1.ZarfComponentActions) []string {
-	var ns []string
-	allSets := [][]v1alpha1.ZarfComponentAction{
-		actions.OnCreate.Before, actions.OnCreate.After, actions.OnCreate.OnSuccess, actions.OnCreate.OnFailure,
-		actions.OnDeploy.Before, actions.OnDeploy.After, actions.OnDeploy.OnSuccess, actions.OnDeploy.OnFailure,
-		actions.OnRemove.Before, actions.OnRemove.After, actions.OnRemove.OnSuccess, actions.OnRemove.OnFailure,
-	}
-	for _, set := range allSets {
-		for _, action := range set {
-			if action.Wait != nil && action.Wait.Cluster != nil {
-				ns = append(ns, action.Wait.Cluster.Namespace)
-			}
-		}
-	}
-	return ns
-}
-
-func TestOverrideComponentNamespacesActions(t *testing.T) {
-	t.Parallel()
-
-	makeWaitAction := func(ns string) v1alpha1.ZarfComponentAction {
-		return v1alpha1.ZarfComponentAction{
-			Wait: &v1alpha1.ZarfComponentActionWait{
-				Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
-					Kind:      "Pod",
-					Name:      "test",
-					Namespace: ns,
-				},
-			},
-		}
-	}
-
-	tests := []struct {
-		name     string
-		pkg      v1alpha1.ZarfPackage
-		original string
-		target   string
-		expected []string
-	}{
-		{
-			name: "all lifecycle sets and timing slots updated",
-			pkg: v1alpha1.ZarfPackage{
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Actions: v1alpha1.ZarfComponentActions{
-							OnCreate: v1alpha1.ZarfComponentActionSet{
-								Before:    []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
-								After:     []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
-								OnSuccess: []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
-								OnFailure: []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
-							},
-							OnDeploy: v1alpha1.ZarfComponentActionSet{
-								Before:    []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
-								After:     []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
-								OnSuccess: []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
-								OnFailure: []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
-							},
-							OnRemove: v1alpha1.ZarfComponentActionSet{
-								Before:    []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
-								After:     []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
-								OnSuccess: []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
-								OnFailure: []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
-							},
-						},
-					},
-				},
-			},
-			original: "original",
-			target:   "new",
-			expected: []string{"new", "new", "new", "new", "new", "new", "new", "new", "new", "new", "new", "new"},
-		},
-		{
-			name: "non-matching wait actions not updated",
-			pkg: v1alpha1.ZarfPackage{
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Actions: v1alpha1.ZarfComponentActions{
-							OnDeploy: v1alpha1.ZarfComponentActionSet{
-								After: []v1alpha1.ZarfComponentAction{makeWaitAction("other")},
-							},
-						},
-					},
-				},
-			},
-			original: "original",
-			target:   "new",
-			expected: []string{"other"},
-		},
-		{
-			name: "nil Wait does not panic",
-			pkg: v1alpha1.ZarfPackage{
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Actions: v1alpha1.ZarfComponentActions{
-							OnDeploy: v1alpha1.ZarfComponentActionSet{
-								After: []v1alpha1.ZarfComponentAction{{Wait: nil}},
-							},
-						},
-					},
-				},
-			},
-			original: "original",
-			target:   "new",
-			expected: []string{},
-		},
-		{
-			name: "nil Wait.Cluster does not panic",
-			pkg: v1alpha1.ZarfPackage{
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Actions: v1alpha1.ZarfComponentActions{
-							OnDeploy: v1alpha1.ZarfComponentActionSet{
-								After: []v1alpha1.ZarfComponentAction{
-									{Wait: &v1alpha1.ZarfComponentActionWait{Cluster: nil}},
-								},
-							},
-						},
-					},
-				},
-			},
-			original: "original",
-			target:   "new",
-			expected: []string{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			overrideComponentNamespaces(&tt.pkg, tt.original, tt.target)
-			var actual []string
-			for _, comp := range tt.pkg.Components {
-				actual = append(actual, collectWaitNamespaces(comp.Actions)...)
-			}
-			require.ElementsMatch(t, tt.expected, actual)
-		})
-	}
-}
-
 func Test_generateValuesOverrides(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -475,6 +85,97 @@ func Test_generateValuesOverrides(t *testing.T) {
 				"image": map[string]any{
 					"tag": "2.0.0",
 				},
+			},
+		},
+		{
+			name: "exclude paths are dropped when mapping source to target",
+			chart: v1alpha1.ZarfChart{
+				Name: "test-chart",
+				Values: []v1alpha1.ZarfChartValue{
+					{
+						SourcePath: ".loki",
+						TargetPath: ".",
+						ExcludePaths: []string{
+							".loki.image",
+						},
+					},
+				},
+			},
+			componentName: "test-component",
+			opts: overrideOpts{
+				variableConfig: variables.New("", nil, nil),
+				values: value.Values{
+					"loki": map[string]any{
+						"replicas": 3,
+						"image": map[string]any{
+							"repository": "grafana/loki",
+						},
+					},
+				},
+				valuesOverridesMap: ValuesOverrides{},
+			},
+			expect: map[string]any{
+				"replicas": 3,
+			},
+		},
+		{
+			name: "multiple exclude paths are all dropped",
+			chart: v1alpha1.ZarfChart{
+				Name: "test-chart",
+				Values: []v1alpha1.ZarfChartValue{
+					{
+						SourcePath: ".loki",
+						TargetPath: ".",
+						ExcludePaths: []string{
+							".loki.image",
+							".loki.secret",
+						},
+					},
+				},
+			},
+			componentName: "test-component",
+			opts: overrideOpts{
+				variableConfig: variables.New("", nil, nil),
+				values: value.Values{
+					"loki": map[string]any{
+						"replicas": 3,
+						"image":    map[string]any{"repository": "grafana/loki"},
+						"secret":   "do-not-map",
+					},
+				},
+				valuesOverridesMap: ValuesOverrides{},
+			},
+			expect: map[string]any{
+				"replicas": 3,
+			},
+		},
+		{
+			name: "exclude path pointing at a leaf scalar drops only that key",
+			chart: v1alpha1.ZarfChart{
+				Name: "test-chart",
+				Values: []v1alpha1.ZarfChartValue{
+					{
+						SourcePath: ".loki",
+						TargetPath: ".",
+						ExcludePaths: []string{
+							".loki.secret",
+						},
+					},
+				},
+			},
+			componentName: "test-component",
+			opts: overrideOpts{
+				variableConfig: variables.New("", nil, nil),
+				values: value.Values{
+					"loki": map[string]any{
+						"replicas": 3,
+						"secret":   "do-not-map",
+					},
+				},
+				valuesOverridesMap: ValuesOverrides{},
+			},
+			expect: map[string]any{
+				"replicas": 3,
 			},
 		},
 		{
@@ -675,6 +376,28 @@ func Test_generateValuesOverrides_Errors(t *testing.T) {
 			},
 			errSubstr: "must start with a dot",
 		},
+		{
+			name: "excluding the entire source path leaves nothing to extract",
+			chart: v1alpha1.ZarfChart{
+				Name: "test-chart",
+				Values: []v1alpha1.ZarfChartValue{
+					{
+						SourcePath:   ".loki",
+						TargetPath:   ".",
+						ExcludePaths: []string{".loki"},
+					},
+				},
+			},
+			componentName: "test-component",
+			opts: overrideOpts{
+				variableConfig: variables.New("", nil, nil),
+				values: value.Values{
+					"loki": map[string]any{"replicas": 3},
+				},
+				valuesOverridesMap: ValuesOverrides{},
+			},
+			errSubstr: "unable to extract value source",
+		},
 	}
 
 	for _, tt := range tests {
@@ -688,4 +411,81 @@ func Test_generateValuesOverrides_Errors(t *testing.T) {
 			require.Nil(t, result)
 		})
 	}
+}
+
+func Test_generateValuesOverrides_ExcludePathsDoNotMutateSource(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	vals := value.Values{
+		"loki": map[string]any{
+			"replicas": 3,
+			"image":    map[string]any{"repository": "grafana/loki"},
+		},
+	}
+	chart := v1alpha1.ZarfChart{
+		Name: "test-chart",
+		Values: []v1alpha1.ZarfChartValue{
+			{SourcePath: ".loki", TargetPath: ".", ExcludePaths: []string{".loki.image"}},
+		},
+	}
+	opts := overrideOpts{
+		variableConfig:     variables.New("", nil, nil),
+		values:             vals,
+		valuesOverridesMap: ValuesOverrides{},
+	}
+
+	_, err := generateValuesOverrides(ctx, chart, "test-component", opts)
+	require.NoError(t, err)
+
+	// The excluded key must still be present in the shared source values.
+	loki, ok := vals["loki"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, map[string]any{"repository": "grafana/loki"}, loki["image"])
+}
+
+// Two charts share one value.Values: the first excludes a path, the second maps the
+// same source without excluding it. The second must still receive the excluded subtree,
+// proving the first chart's exclusion does not leak into a sibling chart via shared state.
+func Test_generateValuesOverrides_ExcludeDoesNotAffectOtherCharts(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	vals := value.Values{
+		"loki": map[string]any{
+			"replicas": 3,
+			"image":    map[string]any{"repository": "grafana/loki"},
+		},
+	}
+	newOpts := func() overrideOpts {
+		return overrideOpts{
+			variableConfig:     variables.New("", nil, nil),
+			values:             vals,
+			valuesOverridesMap: ValuesOverrides{},
+		}
+	}
+
+	excludingChart := v1alpha1.ZarfChart{
+		Name: "chart-a",
+		Values: []v1alpha1.ZarfChartValue{
+			{SourcePath: ".loki", TargetPath: ".", ExcludePaths: []string{".loki.image"}},
+		},
+	}
+	mappingChart := v1alpha1.ZarfChart{
+		Name: "chart-b",
+		Values: []v1alpha1.ZarfChartValue{
+			{SourcePath: ".loki", TargetPath: "."},
+		},
+	}
+
+	aResult, err := generateValuesOverrides(ctx, excludingChart, "test-component", newOpts())
+	require.NoError(t, err)
+	require.Equal(t, map[string]any{"replicas": 3}, aResult)
+
+	bResult, err := generateValuesOverrides(ctx, mappingChart, "test-component", newOpts())
+	require.NoError(t, err)
+	require.Equal(t, map[string]any{
+		"replicas": 3,
+		"image":    map[string]any{"repository": "grafana/loki"},
+	}, bResult)
 }

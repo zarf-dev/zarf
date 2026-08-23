@@ -8,11 +8,11 @@ tableOfContents: false
 
 ## zarf tools update-creds
 
-Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service
+Updates the credentials for deployed Zarf services (deprecated; prefer the per-service subcommands)
 
 ### Synopsis
 
-Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service. i.e. 'zarf tools update-creds registry'
+Updates the credentials for deployed Zarf services. Deprecated: prefer the per-service subcommands, ('zarf tools update-creds registry|git|agent'), which update a single service
 
 ```
 zarf tools update-creds [flags]
@@ -55,9 +55,6 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
       --agent-tls-ca string             Path to a PEM-encoded CA certificate for the Zarf agent
       --agent-tls-cert string           Path to a PEM-encoded TLS certificate for the Zarf agent
       --agent-tls-key string            Path to a PEM-encoded TLS private key for the Zarf agent
-      --artifact-push-token string      [alpha] API Token for the push-user to access the artifact registry
-      --artifact-push-username string   [alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
-      --artifact-url string             [alpha] External artifact registry url to use for this Zarf cluster
   -c, --confirm                         Confirm updating credentials without prompting
       --force-conflicts                 Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources.
       --git-pull-password string        Password for the pull-only user to access the git server
@@ -77,17 +74,20 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
-      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --cache string               Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
 ### SEE ALSO
 
 * [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools update-creds agent](/commands/zarf_tools_update-creds_agent/)	 - Updates the TLS certificates for the deployed Zarf agent
+* [zarf tools update-creds git](/commands/zarf_tools_update-creds_git/)	 - Updates the credentials for the deployed Zarf git server
+* [zarf tools update-creds registry](/commands/zarf_tools_update-creds_registry/)	 - Updates the credentials for the deployed Zarf registry
 

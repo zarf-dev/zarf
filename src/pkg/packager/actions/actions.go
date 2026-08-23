@@ -20,8 +20,8 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
-	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -30,13 +30,13 @@ import (
 )
 
 // Run runs all provided actions.
-func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values) error {
+func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error {
 	if variableConfig == nil {
 		variableConfig = ptmpl.GetZarfVariableConfig(ctx, false)
 	}
 
 	for _, a := range actions {
-		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig, values); err != nil {
+		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig, values, stateAccess); err != nil {
 			return err
 		}
 	}
@@ -44,16 +44,20 @@ func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponent
 }
 
 // Run commands that a component has provided.
-func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values) error {
+func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error {
 	var cmdEscaped string
 	var err error
 	cmd := action.Cmd
 	l := logger.From(ctx)
 	start := time.Now()
 
-	tmplObjs := template.NewObjects(values).
+	tmplObjs, err := template.NewObjects(values).
 		WithConstants(variableConfig.GetConstants()).
-		WithVariables(variableConfig.GetSetVariableMap())
+		WithVariables(variableConfig.GetSetVariableMap()).
+		WithState(stateAccess)
+	if err != nil {
+		return err
+	}
 
 	if action.Wait != nil {
 		err := runWaitAction(ctx, action, variableConfig, tmplObjs)

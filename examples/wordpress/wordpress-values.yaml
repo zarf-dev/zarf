@@ -1,11 +1,3 @@
-# We are hard-coding these for now but will make them dynamic later.
-wordpressUsername: ###ZARF_VAR_WORDPRESS_USERNAME###
-wordpressPassword: ###ZARF_VAR_WORDPRESS_PASSWORD###
-wordpressEmail: ###ZARF_VAR_WORDPRESS_EMAIL###
-wordpressFirstName: ###ZARF_VAR_WORDPRESS_FIRST_NAME###
-wordpressLastName: ###ZARF_VAR_WORDPRESS_LAST_NAME###
-wordpressBlogName: ###ZARF_VAR_WORDPRESS_BLOG_NAME###
-
 # All images are temporarily using the legacy Bitnami repos due to:
 # https://github.com/bitnami/containers/issues/83267
 image:

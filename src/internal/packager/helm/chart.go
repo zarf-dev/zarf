@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 
@@ -55,8 +56,8 @@ func shouldForceConflicts(ssa string, lastRelease release.Accessor, forceConflic
 
 // InstallUpgradeOptions provide options for the Helm install/upgrade operation
 type InstallUpgradeOptions struct {
-	// AdoptExistingResources is true if the chart should adopt existing namespaces
-	AdoptExistingResources bool
+	// TakeOwnership is true if the chart should adopt existing resources and namespaces
+	TakeOwnership bool
 	// ForceConflicts causes Helm to take ownership of conflicting fields during Server-Side Apply
 	ForceConflicts bool
 	// VariableConfig is used to template the variables in the chart
@@ -100,7 +101,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
+	postRender, err := newRenderer(ctx, zarfChart, opts.TakeOwnership, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
 	if err != nil {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -220,7 +221,7 @@ func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, upda
 		opts.VariableConfig = template.GetZarfVariableConfig(ctx, opts.IsInteractive)
 	}
 
-	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
+	postRender, err := newRenderer(ctx, zarfChart, opts.TakeOwnership, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
 	if err != nil {
 		return fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -302,6 +303,9 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.ServerSideApply = zarfChart.GetServerSideApply() != "false"
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), nil, opts.ForceConflicts)
 
+	// Adopt pre-existing resources into the release instead of erroring on ownership conflicts.
+	client.TakeOwnership = opts.TakeOwnership
+
 	// Perform the loadedChart installation.
 	return client.RunWithContext(ctx, chart, chartValues)
 }
@@ -333,6 +337,9 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 		return nil, err
 	}
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), rel, opts.ForceConflicts)
+
+	// Adopt pre-existing resources into the release instead of erroring on ownership conflicts.
+	client.TakeOwnership = opts.TakeOwnership
 
 	client.SkipCRDs = true
 
@@ -371,13 +378,13 @@ func uninstallChart(name string, actionConfig *action.Configuration, timeout tim
 }
 
 // LoadChartData loads a chart from a tarball and returns the Helm SDK representation of the chart and it's values
-func LoadChartData(zarfChart v1alpha1.ZarfChart, chartPath string, valuesPath string, valuesOverrides map[string]any) (*chartv2.Chart, common.Values, error) {
-	loadedChart, err := loadChartFromTarball(zarfChart, chartPath)
+func LoadChartData(zarfChart v1alpha1.ZarfChart, paths layout.ChartPaths, valuesOverrides map[string]any) (*chartv2.Chart, common.Values, error) {
+	loadedChart, err := loadChartFromTarball(zarfChart, paths)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to load chart tarball: %w", err)
 	}
 
-	chartValues, err := parseChartValues(zarfChart, valuesPath, valuesOverrides)
+	chartValues, err := parseChartValues(zarfChart, paths, valuesOverrides)
 	if err != nil {
 		return loadedChart, nil, fmt.Errorf("unable to parse chart values: %w", err)
 	}

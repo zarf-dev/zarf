@@ -63,7 +63,13 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	eventCh := sw.Watch(cancelCtx, objs, watcher.Options{})
+	// Prefer namespace-scoped informers even when objects span multiple namespaces.
+	// The automatic cli-utils strategy switches to root-scoped informers when more
+	// than one namespace is present, which unnecessarily requires cluster-wide
+	// list/watch permissions for namespaced resources.
+	eventCh := sw.Watch(cancelCtx, objs, watcher.Options{
+		RESTScopeStrategy: watcher.RESTScopeNamespace,
+	})
 	statusCollector := collector.NewResourceStatusCollector(objs)
 	done := statusCollector.ListenWithObserver(eventCh, collector.ObserverFunc(
 		func(statusCollector *collector.ResourceStatusCollector, _ event.Event) {
