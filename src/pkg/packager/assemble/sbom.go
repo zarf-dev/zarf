@@ -97,15 +97,8 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		return err
 	}
 
-	// for index, refInfo := range images {
-	// 	img, err := utils.LoadOCIImage(filepath.Join(buildPath, string(ImagesDir)), refInfo)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to load OCI image: %w", err)
-	// 	}
-	// 	l.Info("creating image SBOM", "index", (index + 1), "count", len(images), "reference", refInfo.Reference)
-	// 	b, err := createImageSBOM(ctx, cachePath, outputPath, img, refInfo.Reference)
-	for _, t := range targets {
-		l.Info("creating image SBOM", "reference", t.identifier)
+	for index, t := range targets {
+		l.Info("creating image SBOM", "index", index+1, "count", len(targets), "reference", t.identifier)
 		b, err := createImageSBOM(ctx, cachePath, outputPath, t.img, t.identifier)
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)

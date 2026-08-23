@@ -253,8 +253,8 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		pulledImages = append(pulledImages, daemonImagesWithManifests...)
 	}
 
-	for _, imageInfo := range imagesInfo {
-		err = orasSave(ctx, imageInfo, opts, dst, client)
+	for index, imageInfo := range imagesInfo {
+		err = orasSave(ctx, imageInfo, index+1, len(imagesInfo), opts, dst, client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save images: %w", err)
 		}
@@ -489,7 +489,7 @@ func craneSaveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst
 	return nil
 }
 
-func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, dst *oci.Store, client *auth.Client) error {
+func orasSave(ctx context.Context, imageInfo imagePullInfo, index, count int, opts PullOptions, dst *oci.Store, client *auth.Client) error {
 	l := logger.From(ctx)
 	var pullSrc oras.ReadOnlyTarget
 	var err error
@@ -506,7 +506,7 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = opts.OCIConcurrency
 	copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
-	logArgs := []any{"name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2)}
+	logArgs := []any{"index", index, "count", count, "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2)}
 	if len(imageInfo.platforms) > 0 {
 		logArgs = append(logArgs, "platforms", strings.Join(imageInfo.platforms, ","))
 	}
