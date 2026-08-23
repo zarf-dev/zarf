@@ -1,0 +1,4 @@
+apiVersion: v2
+name: values-chart
+version: 1.0.0
+description: Test chart for templated values file preflight

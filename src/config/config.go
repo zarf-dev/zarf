@@ -53,9 +53,6 @@ var (
 	// CLIArch is the computer architecture of the device executing the CLI commands
 	CLIArch string
 
-	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
-	ZarfSeedPort string
-
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
 	dataInjectionMarker = ".zarf-injection-%d"
@@ -63,8 +60,10 @@ var (
 	ZarfDefaultCachePath = filepath.Join("~", ".zarf-cache")
 
 	// Default Time Vars
-	ZarfDefaultTimeout = 15 * time.Minute
-	ZarfDefaultRetries = 3
+	ZarfDefaultTimeout       = 15 * time.Minute
+	ZarfDefaultRetries       = 3
+	ZarfDefaultRetryDelay    = 500 * time.Millisecond
+	ZarfDefaultRetryMaxDelay = 8 * time.Second
 )
 
 // GetArch returns the arch based on a priority list with options for overriding.

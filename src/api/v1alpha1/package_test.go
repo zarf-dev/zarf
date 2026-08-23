@@ -10,6 +10,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestOriginalAPIVersion(t *testing.T) {
+	t.Parallel()
+
+	var unset ZarfBuildData
+	require.Equal(t, APIVersion, unset.GetOriginalAPIVersion())
+
+	var recorded ZarfBuildData
+	recorded.SetOriginalAPIVersion("zarf.dev/v1beta1")
+	require.Equal(t, "zarf.dev/v1beta1", recorded.GetOriginalAPIVersion())
+}
+
 func TestZarfPackageIsInitPackage(t *testing.T) {
 	t.Parallel()
 
@@ -45,12 +56,38 @@ func TestZarfPackageHasImages(t *testing.T) {
 	require.True(t, pkg.HasImages())
 }
 
+func TestGetComponent(t *testing.T) {
+	t.Parallel()
+
+	pkg := ZarfPackage{
+		Components: []ZarfComponent{
+			{Name: "first", Images: []string{"docker.io/library/nginx:latest"}},
+			{Name: "second"},
+		},
+	}
+
+	t.Run("returns matching component", func(t *testing.T) {
+		t.Parallel()
+		got, err := pkg.GetComponent("first")
+		require.NoError(t, err)
+		require.Equal(t, "first", got.Name)
+		require.Equal(t, []string{"docker.io/library/nginx:latest"}, got.Images)
+	})
+
+	t.Run("errors when component is absent", func(t *testing.T) {
+		t.Parallel()
+		_, err := pkg.GetComponent("missing")
+		require.Error(t, err)
+	})
+}
+
 func TestZarfPackageIsSBOMable(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name           string
 		images         []string
+		imageArchives  []ImageArchive
 		files          []ZarfFile
 		dataInjections []ZarfDataInjection
 		expected       bool
@@ -65,6 +102,11 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:          "only image tars",
+			imageArchives: []ImageArchive{{}},
+			expected:      true,
+		},
+		{
 			name:     "only files",
 			files:    []ZarfFile{{}},
 			expected: true,
@@ -75,9 +117,10 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 			expected:       true,
 		},
 		{
-			name:           "all three set",
+			name:           "all set",
 			images:         []string{""},
 			files:          []ZarfFile{{}},
+			imageArchives:  []ImageArchive{{}},
 			dataInjections: []ZarfDataInjection{{}},
 			expected:       true,
 		},
@@ -92,6 +135,7 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 						Name:           "without images",
 						Images:         tt.images,
 						Files:          tt.files,
+						ImageArchives:  tt.imageArchives,
 						DataInjections: tt.dataInjections,
 					},
 				},

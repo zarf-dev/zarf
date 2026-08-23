@@ -40,3 +40,8 @@ resources:
 
 affinity: {}
 tolerations: []
+nodeSelector: {}
+webhookAnnotations: {}
+
+mutationPolicy: "###ZARF_AGENT_MUTATION_POLICY###"
+mutationExclusions: []

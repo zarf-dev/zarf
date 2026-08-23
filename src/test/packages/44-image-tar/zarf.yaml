@@ -1,0 +1,20 @@
+kind: ZarfPackageConfig
+metadata:
+  name: image-tar
+
+components:
+  - name: test-component
+    required: true
+    imageArchives:
+    - path: image.tar
+      images:
+        - ghcr.io/zarf-dev/images/alpine:3.21.3
+    manifests:
+    - name: alpine-pod
+      files:
+      - pod.yaml
+    actions:
+      onCreate:
+        before:
+        - cmd: docker pull ghcr.io/zarf-dev/images/alpine:3.21.3
+        - cmd: docker save ghcr.io/zarf-dev/images/alpine:3.21.3 -o image.tar

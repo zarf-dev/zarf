@@ -2,7 +2,7 @@
 
 First off, thanks so much for wanting to help out! :tada:
 
-This document describes the steps and requirements for contributing a bug fix or feature in a Pull Request to Zarf!  If you have any questions about the process or the pull request you are working on feel free to reach out in the [Zarf Dev Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03BP9Z3CMA). The doc also details a bit about the governance structure of the project.
+This document describes the steps and requirements for contributing a bug fix or feature in a Pull Request to Zarf! If you have any questions about the process or the pull request you are working on feel free to reach out in the [Zarf Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03B6BJAUJ3). The doc also details a bit about the governance structure of the project.
 
 ## Developer Experience
 
@@ -17,40 +17,68 @@ Specifically:
 
 ### Pre-Commit Hooks and Linting
 
-We use [pre-commit](https://pre-commit.com/) to manage our pre-commit hooks. This ensures that all code is linted and formatted before it is committed. After `pre-commit` is [installed](https://pre-commit.com/#installation):
+We use [pre-commit](https://pre-commit.com/) to manage our pre-commit hooks, which lint and format code before it's committed.
+
+#### Prerequisites
+
+- **Go** matching the version in the project go.mod, available on your `PATH`. Our pre-commit hooks invoke `golangci-lint` directly from your `PATH` rather than managing a Go environment (see [Supply-chain notes](#supply-chain-notes) below).
+- **Python 3**, required by pre-commit itself and by several of our hooks.
+- **pre-commit**, installed per the [pre-commit installation guide](https://pre-commit.com/#installation).
+
+#### Setup
 
 ```bash
-# install hooks
+# install hooks into .git/hooks
 pre-commit install
 
-# install golang-ci-lint
+# install golangci-lint (used by the goimports and lint hooks)
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 ```
 
-Now every time you commit, the hooks will run and format your code, linting can be called via `make lint-go`.
+Every commit now runs the hooks; linting can also be invoked directly via `make lint-go`.
+
+#### Supply-chain notes
+
+`.pre-commit-config.yaml` is deliberately configured to reduce the attack surface of the contributor loop:
+
+- **External hook repos are pinned by commit SHA**, with the original tag in a trailing comment. Git tags are mutable on the server side; pinning by SHA ensures a fresh `pre-commit install` or `pre-commit autoupdate` cannot silently pull a retargeted tag. This matches the SHA-pinning convention we already use for GitHub Actions.
+- **Go-based hooks use `language: system`** so pre-commit invokes the `golangci-lint` already on your `PATH` rather than managing its own Go environment or fetching a toolchain from `go.dev`. This keeps lint/format behavior aligned with CI and avoids introducing a second trust root.
+
+When upgrading a pinned hook, run `pre-commit autoupdate --freeze` — the `--freeze` flag writes the resolved commit SHA (rather than the tag) back into `rev:`. Update the trailing tag comment to match, so the config stays auditable.
+
+### Go Version Policy
+
+Zarf is consumed as a Go library, so the `go` directive in `go.mod` sets the minimum Go version every downstream consumer must use to build zarf.
+
+- Keep the directive at the oldest currently-supported Go major version (see [Go's release policy](https://go.dev/doc/devel/release#policy)). Setting it higher forces every downstream consumer to upgrade alongside us.
+- Bump the directive only when zarf code adopts a language feature or stdlib API that requires it. Transitive dependencies can also force a bump if they raise their own `go` directive above ours.
+- Patch-version bumps are optional for library consumers (they patch via their own toolchain), but appropriate when fixes affect code paths zarf exercises, the shipped CLI binary, or trigger scanner/SBOM noise against the declared version.
+- Reassess on each Go major release.
+
+Bumping the directive raises the minimum for every consumer; call it out in the PR description and reference it in release notes.
 
 ### Contributing Guidelines
 
-Zarf is a tool used within the United States Government and as such security is our highest priority. Contributors external to Defense Unicorns or non-Zarf maintainers will require two (2) reviewers.
+Zarf is a tool used within the United States Government and as such security is our highest priority. Contributors will require two (2) core team reviews (Maintainers/Reviewers) on a Pull Request before merge.
+
+Zarf maintainers will require one (1) core team review before merge. See the (contributing ladder)[CONTRIBUTING_LADDER.md] for more information.
 
 ### Developer Workflow
 
 :key: == Required by automation
 
-1. Look at the next due [release milestone](https://github.com/zarf-dev/zarf/milestones) and pick an issue that you want to work on. If you don't see anything that interests you, create an issue and assign it to yourself.
-1. Drop a comment in the issue to let everyone know you're working on it and submit a Draft PR (step 4) as soon as you are able. If you have any questions as you work through the code, reach out in the [Zarf Dev Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03BP9Z3CMA).
+1. Review the issues list for `good-first-issue` or `help-wanted` labels. Issues with the `Triage` status in the project need to be triaged first before evaluation of implementation. Other issues with the `Ready` status may be of more complexity and can be worked by those familiar with the code base and other in-progress work.
+1. Drop a comment in the issue; request any additional questions with regards to scope and ask to be assigned. If you have any questions as you work through the code, reach out in the [Zarf Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03B6BJAUJ3).
 1. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
 1. In addition to signing your commits, you will also need to sign-off on commits stating you agree to the contribution terms.
    - This can be done by using `-s` with your git commit - adding "Signed-off-by" line automatically.
    - Example: `git commit -s -m "fix: add missing newline"`
 1. Create a Draft Pull Request as soon as you can, even if it is just 5 minutes after you started working on it. We lean towards working in the open as much as we can. If you're not sure what to put in the PR description, just put a link to the issue you're working on.
-
    - :key: We follow the [conventional commits spec](https://www.conventionalcommits.org/en/v1.0.0/) with the [commitlint conventional config](https://github.com/conventional-changelog/commitlint/tree/master/%40commitlint/config-conventional) as extended types for PR titles.
-
 1. :key: Automated tests will begin based on the paths you have edited in your Pull Request.
    > ⚠️ **NOTE:** _If you are an external third-party contributor, the pipelines won't run until a [CODEOWNER](https://github.com/zarf-dev/zarf/blob/main/CODEOWNERS) approves the pipeline run._
 1. :key: Be sure to use the [needs-adr,needs-docs,needs-tests](https://github.com/zarf-dev/zarf/labels?q=needs) labels as appropriate for the PR. Once you have addressed all of the needs, remove the label.
-1. Once the review is complete and approved, a core member of the zarf project will merge your PR. If you are an external third-party contributor, two core members of the zarf project will be required to approve the PR.
+1. Once the review is complete and approved, a core member of the zarf project will merge your PR. If you are a contributor, two core members of the zarf project will be required to approve the PR.
 1. Close the issue if it is fully resolved by your PR. _Hint: You can add "Fixes #XX" to the PR description to automatically close an issue when the PR is merged._
 
 ## Testing
@@ -67,51 +95,44 @@ The CLI docs (located at `site/src/content/docs/commands`), and [`zarf.schema.js
 
 We do this so that there is a git commit signature from a person on the commit for better traceability, rather than a non-person entity (e.g. GitHub CI token).
 
-## Architecture Decision Records (ADR)
+## Examples
 
-We've chosen to use ADRs to document architecturally significant decisions. We primarily use the guidance found in [this article by Michael Nygard](http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions) with a couple of tweaks:
+Zarf maintains a gallery of different examples to give users living documentation on real-life Zarf use cases.
+Contributions are highly welcome. When adding an example, be sure to also add it to the [make target](https://github.com/zarf-dev/zarf/blob/main/Makefile#L152) `build-examples`.
 
-- The criteria for when an ADR is needed is undefined. The team will decide when the team needs an ADR.
-- We will use the tool [adr-tools](https://github.com/npryce/adr-tools) to make it easier on us to create and maintain ADRs.
-- We will keep ADRs in the repository under `adr/NNNN-name-of-adr.md`. `adr-tools` is configured with a dotfile to automatically use this directory and format.
+## Zarf Enhancement Proposals (ZEP)
 
-### How to use `adr-tools`
+Zarf Enhancement Proposals (ZEP) provides a process to propose and document important decision points. Proposal topics includes large features, significant changes to the UX, and architecture re-designs requiring considerable effort. Anyone can create a ZEP by visiting the [zarf-dev/proposals repository](https://github.com/zarf-dev/proposals).
 
-```bash
-# Create a new ADR titled "Use Bisquick for all waffle making"
-adr new Use Bisquick for all waffle making
-
-# Create a new ADR that supersedes a previous one. Let's say, for example, that the previous ADR about Bisquick was ADR number 9.
-adr new -s 9 Use scratch ingredients for all waffle making
-
-# Create a new ADR that amends a previous one. Let's say the previous one was ADR number 15
-adr new -l "15:Amends:Amended by" Use store-bought butter for all waffle making
-
-# Get full help docs. There are all sorts of other helpful commands that help manage the decision log.
-adr help
-```
+ZEPs replace Architecture Decision Records (ADRs) which are kept at the base of the Zarf repository for historical purposes.
 
 ## Governance
 
 ### Technical Steering Committee
+
 The Technical Steering Committee (the "TSC") will be responsible for all technical oversight of the project. The TSC may elect a TSC Chair, who will preside over meetings of the TSC and will serve until their resignation or replacement by the TSC. Current members of the TSC include:
 
 #### Austin Abro
+
 Affiliation: Defense Unicorns
 GitHub: @AustinAbro321
 
+#### Brandt Keller
+
+Affiliation: Defense Unicorns
+GitHub: @brandtkeller
+
 #### Danny Gershman
+
 Affiliation: Radius Method
 GitHub: @dgershman
 
 #### Jeff McCoy (TSC Chair)
+
 Affiliation: Defense Unicorns
 GitHub: @jeff-mccoy
 
-#### Kit Patella
-Affiliation: Defense Unicorns
-GitHub: @mkcp
-
 #### Wayne Starr
+
 Affiliation: Defense Unicorns
 GitHub: @Racer159

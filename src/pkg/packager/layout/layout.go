@@ -5,21 +5,30 @@
 package layout
 
 import (
+	"fmt"
 	"path/filepath"
+	"strconv"
 )
 
 // Constants used in the default package layout.
 const (
-	ZarfYAML  = "zarf.yaml"
-	Signature = "zarf.yaml.sig"
-	Checksums = "checksums.txt"
+	ZarfYAML          = "zarf.yaml"
+	ZarfGeneratedYAML = "zarf.gen.yaml"
+	// Deprecated: legacy signature format superseded by Bundle (zarf.bundle.sig) since v0.71.0 and no longer produced as of v0.81.0.
+	// This field is retained to ensure backwards compatibility with verification of older packages.
+	Signature    = "zarf.yaml.sig"
+	Bundle       = "zarf.bundle.sig"
+	Checksums    = "checksums.txt"
+	ValuesYAML   = "values.yaml"
+	ValuesSchema = "values.schema.json"
 
 	ImagesDir     = "images"
 	ComponentsDir = "components"
-	ValuesDir     = "values"
 
 	SBOMDir = "zarf-sbom"
 	SBOMTar = "sboms.tar"
+
+	DocumentationTar = "documentation.tar"
 
 	IndexJSON = "index.json"
 	OCILayout = "oci-layout"
@@ -46,3 +55,61 @@ const (
 	DataComponentDir      ComponentDir = "data"
 	ValuesComponentDir    ComponentDir = "values"
 )
+
+// ManifestFileName returns the file name, within a component's manifests directory, that stores the
+// idx-th file of the named manifest.
+func ManifestFileName(manifestName string, idx int) string {
+	return fmt.Sprintf("%s-%d.yaml", manifestName, idx)
+}
+
+// KustomizationFileName returns the file name, within a component's manifests directory, that stores
+// the idx-th rendered kustomization of the named manifest.
+func KustomizationFileName(manifestName string, idx int) string {
+	return fmt.Sprintf("kustomization-%s-%d.yaml", manifestName, idx)
+}
+
+// ComponentFileRelPath returns the path, relative to a component's files directory, where the idx-th
+// file's contents are stored.
+func ComponentFileRelPath(idx int, target string) string {
+	return filepath.Join(strconv.Itoa(idx), filepath.Base(target))
+}
+
+// chartStem is the name both of a chart's packaged artifacts are built from:
+// "<name>" when the version is empty, otherwise "<name>-<version>".
+func chartStem(name, version string) string {
+	if version == "" {
+		return name
+	}
+	return name + "-" + version
+}
+
+// ChartArchiveName returns the file name of a chart's packaged tarball, within a
+// component's charts directory.
+func ChartArchiveName(name, version string) string {
+	return chartStem(name, version) + ".tgz"
+}
+
+// ChartValuesFileName returns the file name of the idx-th values file of the named
+// chart, within a component's values directory.
+func ChartValuesFileName(name, version string, idx int) string {
+	return chartStem(name, version) + "-" + strconv.Itoa(idx)
+}
+
+// ChartPaths resolves the on-disk locations of a chart's packaged artifacts
+// within a component's charts and values directories.
+type ChartPaths struct {
+	// ChartsDir is the directory holding chart tarballs.
+	ChartsDir string
+	// ValuesDir is the directory holding chart values files.
+	ValuesDir string
+}
+
+// Archive returns the full path to the named chart's packaged tarball.
+func (p ChartPaths) Archive(name, version string) string {
+	return filepath.Join(p.ChartsDir, ChartArchiveName(name, version))
+}
+
+// ValuesFile returns the full path to the idx-th values file for the named chart.
+func (p ChartPaths) ValuesFile(name, version string, idx int) string {
+	return filepath.Join(p.ValuesDir, ChartValuesFileName(name, version, idx))
+}

@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -16,11 +17,13 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
@@ -45,7 +48,7 @@ func newRegistryCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "registry",
-		Aliases: []string{"r", "crane"},
+		Aliases: []string{"r"},
 		Short:   lang.CmdToolsRegistryShort,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// TODO (@austinabro321) once the code in cmd is simplified, we should change this to respect
@@ -81,6 +84,7 @@ func newRegistryCommand() *cobra.Command {
 
 	cmd.AddCommand(newRegistryPruneCommand())
 	cmd.AddCommand(newRegistryLoginCommand())
+	cmd.AddCommand(newRegistryLogoutCommand())
 	cmd.AddCommand(newRegistryCopyCommand(&craneOptions))
 	cmd.AddCommand(newRegistryCatalogCommand(&craneOptions))
 
@@ -91,12 +95,28 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdManifest, &craneOptions, lang.CmdToolsRegistryManifestExample, 0))
-	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdExport, &craneOptions, lang.CmdToolsRegistryExportExample, 0))
+	registryExportCmd := zarfCraneInternalWrapper(craneCmd.NewCmdExport, &craneOptions, lang.CmdToolsRegistryExportExample, 0)
+	registryExportCmd.Deprecated = "zarf tools registry export is deprecated. Use the Crane CLI to keep this behavior"
+	cmd.AddCommand(registryExportCmd)
 	cmd.AddCommand(craneCmd.NewCmdVersion())
 	cmd.PersistentFlags().BoolVarP(&o.verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
 	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
 	cmd.PersistentFlags().BoolVar(&o.ndlayers, "allow-nondistributable-artifacts", false, lang.CmdToolsRegistryFlagNonDist)
 	cmd.PersistentFlags().StringVar(&o.platform, "platform", "all", lang.CmdToolsRegistryFlagPlatform)
+	return cmd
+}
+
+func newDeprecatedCraneCommand() *cobra.Command {
+	cmd := newRegistryCommand()
+	cmd.Use = "crane"
+	cmd.Aliases = nil
+	cmd.Short = lang.CmdToolsRegistryShort
+	cmd.Deprecated = "use 'zarf tools registry' instead"
+	originalPreRunE := cmd.PersistentPreRunE
+	cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		logger.Default().Warn("'zarf tools crane' is deprecated, use 'zarf tools registry' instead")
+		return originalPreRunE(cmd, args)
+	}
 	return cmd
 }
 
@@ -275,6 +295,14 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 	authOption := images.WithPullAuth(zarfState.RegistryInfo)
 	*o.craneOptions = append(*o.craneOptions, authOption)
 
+	if zarfState.RegistryInfo.ShouldUseMTLS() {
+		t, err := getZarfRegistryMTLSTransport(ctx, c)
+		if err != nil {
+			return err
+		}
+		*o.craneOptions = append(*o.craneOptions, crane.WithTransport(t))
+	}
+
 	if tunnel != nil {
 		defer tunnel.Close()
 		return tunnel.Wrap(func() error { return o.originalRunFn(cmd, []string{registryEndpoint}) })
@@ -283,9 +311,22 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 	return o.originalRunFn(cmd, []string{registryEndpoint})
 }
 
+func getZarfRegistryMTLSTransport(ctx context.Context, c *cluster.Cluster) (http.RoundTripper, error) {
+	certs, err := c.GetRegistryClientMTLSCert(ctx)
+	if err != nil {
+		return nil, err
+	}
+	t, err := pki.TransportWithKey(certs)
+	if err != nil {
+		return nil, err
+	}
+	return t, err
+}
+
 type registryPruneOptions struct {
-	confirm  bool
-	insecure bool
+	confirm       bool
+	insecure      bool
+	ignoreMissing bool
 }
 
 func newRegistryPruneCommand() *cobra.Command {
@@ -300,6 +341,7 @@ func newRegistryPruneCommand() *cobra.Command {
 
 	// Always require confirm flag (no viper)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsRegistryPruneFlagConfirm)
+	cmd.Flags().BoolVar(&o.ignoreMissing, "ignore-missing", false, lang.CmdToolsRegistryPruneFlagIgnoreMissing)
 	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
 
 	return cmd
@@ -334,19 +376,26 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	if zarfState.RegistryInfo.ShouldUseMTLS() {
+		t, err := getZarfRegistryMTLSTransport(ctx, c)
+		if err != nil {
+			return err
+		}
+		options = append(options, crane.WithTransport(t))
+	}
 
 	if tunnel != nil {
-		l.Info("opening a tunnel to the Zarf registry", "local-endpoint", registryEndpoint, "cluster-address", zarfState.RegistryInfo.Address)
+		l.Info("opening a tunnel to the Zarf registry", "localEndpoint", registryEndpoint, "clusterAddress", zarfState.RegistryInfo.Address)
 		defer tunnel.Close()
 		return tunnel.Wrap(func() error {
-			return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm)
+			return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm, o.ignoreMissing)
 		})
 	}
 
-	return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm)
+	return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm, o.ignoreMissing)
 }
 
-func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string, confirm bool) error {
+func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string, confirm bool, ignoreMissing bool) error {
 	l := logger.From(ctx)
 	options = append(options, images.WithPushAuth(s.RegistryInfo))
 
@@ -362,7 +411,7 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 
 		for _, component := range pkg.Data.Components {
 			if _, ok := deployedComponents[component.Name]; ok {
-				for _, image := range component.Images {
+				for _, image := range component.GetImages() {
 					// We use the no checksum image since it will always exist and will share the same digest with other tags
 					transformedImageNoCheck, err := transform.ImageTransformHostWithoutChecksum(registryEndpoint, image)
 					if err != nil {
@@ -371,6 +420,13 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 
 					digest, err := crane.Digest(transformedImageNoCheck, options...)
 					if err != nil {
+						if isManifestUnknownError(err) {
+							if ignoreMissing {
+								l.Warn("image manifest not found in registry, skipping", "image", transformedImageNoCheck)
+								continue
+							}
+							return fmt.Errorf("image manifest not found for %q (use --ignore-missing to skip): %w", transformedImageNoCheck, err)
+						}
 						return err
 					}
 					pkgImages[digest] = true
@@ -395,6 +451,13 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 			taggedImageRef := fmt.Sprintf("%s:%s", imageRef, tag)
 			digest, err := crane.Digest(taggedImageRef, options...)
 			if err != nil {
+				if isManifestUnknownError(err) {
+					if ignoreMissing {
+						l.Warn("image manifest not found in registry, skipping", "image", taggedImageRef)
+						continue
+					}
+					return fmt.Errorf("image manifest not found for %q (use --ignore-missing to skip): %w", taggedImageRef, err)
+				}
 				return err
 			}
 			referenceToDigest[taggedImageRef] = digest
@@ -447,6 +510,20 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 	return nil
 }
 
+// isManifestUnknownError checks if the error is a MANIFEST_UNKNOWN error from the registry.
+// This can happen when an image push partially failed and the manifest doesn't exist.
+func isManifestUnknownError(err error) bool {
+	var transportErr *transport.Error
+	if errors.As(err, &transportErr) {
+		for _, diagnostic := range transportErr.Errors {
+			if diagnostic.Code == transport.ManifestUnknownErrorCode {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Wrap the original crane list with a zarf specific version
 func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command, cranePlatformOptions *[]crane.Option, exampleText string, imageNameArgumentIndex int) *cobra.Command {
 	wrappedCommand := commandToWrap(cranePlatformOptions)
@@ -491,8 +568,16 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 		authOption := images.WithPushAuth(s.RegistryInfo)
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
 
+		if s.RegistryInfo.ShouldUseMTLS() {
+			t, err := getZarfRegistryMTLSTransport(ctx, c)
+			if err != nil {
+				return err
+			}
+			*cranePlatformOptions = append(*cranePlatformOptions, crane.WithTransport(t))
+		}
+
 		if tunnel != nil {
-			l.Info("opening a tunnel to the Zarf registry", "local-endpoint", endpoint, "cluster-address", s.RegistryInfo.Address)
+			l.Info("opening a tunnel to the Zarf registry", "localEndpoint", endpoint, "clusterAddress", s.RegistryInfo.Address)
 
 			defer tunnel.Close()
 
@@ -506,4 +591,31 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 	}
 
 	return wrappedCommand
+}
+
+type registryLogoutOptions struct {
+	originalRunFn func(cmd *cobra.Command, args []string) error
+}
+
+func newRegistryLogoutCommand() *cobra.Command {
+	o := &registryLogoutOptions{}
+	craneCmd := craneCmd.NewCmdAuthLogout()
+	o.originalRunFn = craneCmd.RunE
+	craneCmd.RunE = o.run
+
+	craneCmd.Short = lang.CmdToolsRegistryLogoutShort
+	craneCmd.Example = lang.CmdToolsRegistryLogoutExample
+
+	craneCmd.PreRunE = func(_ *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return errors.New(lang.CmdToolsRegistryLogoutPromptNoRegistryProvidedErr)
+		}
+		return nil
+	}
+
+	return craneCmd
+}
+
+func (o *registryLogoutOptions) run(cmd *cobra.Command, args []string) error {
+	return o.originalRunFn(cmd, args)
 }

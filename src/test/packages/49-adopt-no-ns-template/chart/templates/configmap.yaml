@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: adopt-no-ns-template-config
+  namespace: {{ .Release.Namespace }}
+data:
+  key: value

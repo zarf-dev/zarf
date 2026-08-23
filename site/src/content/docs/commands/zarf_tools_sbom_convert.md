@@ -18,6 +18,15 @@ Convert between SBOM formats
 zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
 ```
 
+### Examples
+
+```
+  zarf tools sbom convert img.zarf tools sbom.json -o spdx-json                      convert a zarf tools sbom SBOM to spdx-json, output goes to stdout
+  zarf tools sbom convert img.zarf tools sbom.json -o cyclonedx-json=img.cdx.json    convert a zarf tools sbom SBOM to CycloneDX, output is written to the file "img.cdx.json"
+  zarf tools sbom convert - -o spdx-json                                  convert an SBOM from STDIN to spdx-json
+
+```
+
 ### Options
 
 ```
@@ -31,9 +40,9 @@ zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
 
 ```
   -c, --config stringArray         syft configuration file(s) to use
-      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --profile stringArray        configuration profiles to use
   -q, --quiet                      suppress all logging output
   -v, --verbose count              increase verbosity (-v = info, -vv = debug)

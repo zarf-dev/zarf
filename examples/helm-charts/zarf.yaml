@@ -4,24 +4,29 @@ metadata:
   description: Example showcasing multiple ways to deploy helm charts
   version: 0.0.1
 
+values:
+  files:
+    - package-values.yaml
+
 components:
   - name: demo-helm-charts
     required: true
     charts:
       # Charts are organized in a list with unique chart names per component - note that a Zarf chart name does not need to match the chart name in a Chart.yaml
       - name: podinfo-local
-        version: 6.4.0
         namespace: podinfo-from-local-chart
         # In this case `localPath` will load the podinfo chart that is located in the `chart` directory
         localPath: chart
         valuesFiles:
           - values.yaml
-        # Variables are used to override the default values in the chart
-        # This can be overridden by the user at deployment time with the `--set` flag
-        variables:
-          - name: REPLICA_COUNT
-            description: "Override the number of pod replicas"
-            path: replicaCount
+        # serverSideApply is a new option in Helm 4
+        # Can be set to true, false, and "auto". Defaults to "auto" which uses SSA on new installs, and automatically selects the previously apply method on upgrade
+        serverSideApply: "true"
+        # Values are used to override the default values in the chart.
+        # This can be overridden by the user at deployment time with the `--set-values` flag.
+        values:
+          - sourcePath: ".podinfo.replicaCount"
+            targetPath: ".replicaCount"
 
       - name: podinfo-oci
         version: 6.4.0
@@ -57,7 +62,5 @@ components:
       # This is the cosign signature for the podinfo image for image signature verification
       - ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
 
-# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
-# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
-x-mdx: |
-  This example shows the many ways you can deploy Helm Charts with Zarf. To learn more about how `charts` work in Zarf, see the [Helm Charts section](/ref/components/#helm-charts) of the package components documentation.
+documentation:
+  readme: readme.md

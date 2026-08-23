@@ -9,20 +9,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -131,7 +134,8 @@ func TestPackageList(t *testing.T) {
 
 func TestPackageInspectManifests(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
+	// Some sub-cases exercise package-level values, which are gated behind the values feature.
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck
 
 	tests := []struct {
 		name           string
@@ -140,6 +144,8 @@ func TestPackageInspectManifests(t *testing.T) {
 		expectedOutput string
 		packageName    string
 		setVariables   map[string]string
+		valuesFiles    []string
+		setValues      map[string]string
 		kubeVersion    string
 		expectedErr    string
 	}{
@@ -181,6 +187,17 @@ func TestPackageInspectManifests(t *testing.T) {
 			},
 		},
 		{
+			name:           "manifest with values templating",
+			packageName:    "manifest-with-values",
+			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest-with-values"),
+			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest-with-values", "expected.yaml"),
+			valuesFiles:    []string{filepath.Join("testdata", "inspect-manifests", "manifest-with-values", "user-values.yaml")},
+			setValues: map[string]string{
+				"replicas": "5",
+				"imageTag": "latest",
+			},
+		},
+		{
 			name:          "empty inspect",
 			packageName:   "empty",
 			definitionDir: filepath.Join("testdata", "inspect-manifests", "empty"),
@@ -207,10 +224,14 @@ func TestPackageInspectManifests(t *testing.T) {
 				outputWriter: buf,
 				kubeVersion:  tc.kubeVersion,
 				setVariables: tc.setVariables,
+				valuesFiles:  tc.valuesFiles,
+				setValues:    tc.setValues,
 				components:   tc.components,
 			}
 			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
-			err = opts.run(context.Background(), []string{packagePath})
+			testCmd := &cobra.Command{}
+			testCmd.SetContext(context.Background())
+			err = opts.run(testCmd, []string{packagePath})
 			if tc.expectedErr != "" {
 				require.ErrorContains(t, err, tc.expectedErr)
 				return
@@ -229,21 +250,35 @@ func TestPackageInspectManifests(t *testing.T) {
 		})
 	}
 }
+func newYAMLFileServer(t *testing.T, path string) *httptest.Server {
+	t.Helper()
+	abs, err := filepath.Abs(path)
+	require.NoError(t, err)
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/x-yaml")
+		http.ServeFile(w, r, abs)
+	}))
+}
+
+type ValuesFilesTestData struct {
+	name           string
+	components     string
+	definitionDir  string
+	expectedOutput string
+	packageName    string
+	setVariables   map[string]string
+	valuesFiles    []string
+	setValues      map[string]string
+	kubeVersion    string
+	expectedErr    string
+}
 
 func TestPackageInspectValuesFiles(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
+	// Some sub-cases exercise package-level values, which are gated behind the values feature.
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck
 
-	tests := []struct {
-		name           string
-		components     string
-		definitionDir  string
-		expectedOutput string
-		packageName    string
-		setVariables   map[string]string
-		kubeVersion    string
-		expectedErr    string
-	}{
+	tests := []ValuesFilesTestData{
 		{
 			name:           "chart inspect",
 			packageName:    "chart",
@@ -275,48 +310,107 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 			definitionDir: filepath.Join("testdata", "inspect-manifests", "manifest"),
 			expectedErr:   "0 values files found",
 		},
+		{
+			name:           "chart with values mapping",
+			packageName:    "chart-with-values",
+			definitionDir:  filepath.Join("testdata", "inspect-values-files", "chart-with-values"),
+			expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart-with-values", "expected.yaml"),
+			setVariables: map[string]string{
+				"REPLICAS": "3",
+			},
+			valuesFiles: []string{filepath.Join("testdata", "inspect-values-files", "chart-with-values", "user-values.yaml")},
+			setValues: map[string]string{
+				"customField": "fromCLI",
+			},
+		},
+		{
+			// Same fixture as "chart with values mapping" but exercises a distinct precedence
+			// subset: with no --values and no --set-variables, baked-in pkg.values survive
+			// where --set-values does not override them.
+			name:           "package-baked values overridden by --set-values",
+			packageName:    "chart-with-values",
+			definitionDir:  filepath.Join("testdata", "inspect-values-files", "chart-with-values"),
+			expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart-with-values", "expected-baked.yaml"),
+			setValues: map[string]string{
+				"port": "9999",
+			},
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			tmpdir := t.TempDir()
 
-			// Create package
-			createOpts := packageCreateOptions{
-				confirm: true,
-				output:  tmpdir,
-			}
-			err := createOpts.run(context.Background(), []string{tc.definitionDir})
-			require.NoError(t, err)
-
-			// Inspect values files
-			buf := new(bytes.Buffer)
-			opts := packageInspectValuesFilesOptions{
-				outputWriter: buf,
-				kubeVersion:  tc.kubeVersion,
-				setVariables: tc.setVariables,
-				components:   tc.components,
-			}
-			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
-			err = opts.run(context.Background(), []string{packagePath})
-			if tc.expectedErr != "" {
-				require.ErrorContains(t, err, tc.expectedErr)
-				return
-			}
-			require.NoError(t, err)
-
-			// validate
-			expected, err := os.ReadFile(tc.expectedOutput)
-			require.NoError(t, err)
-			// Since we have multiple yamls split by the --- syntax we have to split them to accurately test
-			expectedYAMLs, err := utils.SplitYAMLToString(expected)
-			require.NoError(t, err)
-			actualYAMLs, err := utils.SplitYAMLToString(buf.Bytes())
-			require.NoError(t, err)
-			require.Equal(t, expectedYAMLs, actualYAMLs)
+			checkPackageValuesInspectFiles(t, tc)
 		})
 	}
+}
+
+func TestPackageInspectRemoteValuesFiles(t *testing.T) {
+	// set up a test http server that serves test values file:
+	remoteValuesFile := filepath.Join("testdata", "inspect-values-files", "chart-remote", "remote-values", "values.yaml")
+	fileServer := newYAMLFileServer(t, remoteValuesFile)
+	url := fileServer.URL + "/values.yaml"
+	defer fileServer.Close()
+
+	// Prepare zarf.yaml in-place in chart-remote by templating zarf-template.yaml
+	srcDir := filepath.Join("testdata", "inspect-values-files", "chart-remote")
+	tmplPath := filepath.Join(srcDir, "zarf-template.yaml")
+	b, err := os.ReadFile(tmplPath)
+	require.NoError(t, err)
+	zarfContent := strings.ReplaceAll(string(b), "VALUES_YAML_URL", url)
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "zarf.yaml"), []byte(zarfContent), 0o644))
+	test := ValuesFilesTestData{
+		name:           "chart inspect with remote values URL",
+		packageName:    "chart",
+		definitionDir:  srcDir,
+		expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart-remote", "expected.yaml"),
+		kubeVersion:    "1.25",
+		setVariables:   map[string]string{},
+	}
+
+	checkPackageValuesInspectFiles(t, test)
+}
+
+func checkPackageValuesInspectFiles(t *testing.T, tc ValuesFilesTestData) {
+	tmpdir := t.TempDir()
+	// Create package
+	createOpts := packageCreateOptions{
+		confirm: true,
+		output:  tmpdir,
+	}
+	err := createOpts.run(context.Background(), []string{tc.definitionDir})
+	require.NoError(t, err)
+
+	// Inspect values files
+	buf := new(bytes.Buffer)
+	opts := packageInspectValuesFilesOptions{
+		outputWriter: buf,
+		kubeVersion:  tc.kubeVersion,
+		setVariables: tc.setVariables,
+		valuesFiles:  tc.valuesFiles,
+		setValues:    tc.setValues,
+		components:   tc.components,
+	}
+	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
+	testCmd := &cobra.Command{}
+	testCmd.SetContext(context.Background())
+	err = opts.run(testCmd, []string{packagePath})
+	if tc.expectedErr != "" {
+		require.ErrorContains(t, err, tc.expectedErr)
+		return
+	}
+	require.NoError(t, err)
+
+	// validate
+	expected, err := os.ReadFile(tc.expectedOutput)
+	require.NoError(t, err)
+	// Since we have multiple yamls split by the --- syntax we have to split them to accurately test
+	expectedYAMLs, err := utils.SplitYAMLToString(expected)
+	require.NoError(t, err)
+	actualYAMLs, err := utils.SplitYAMLToString(buf.Bytes())
+	require.NoError(t, err)
+	require.Equal(t, expectedYAMLs, actualYAMLs)
 }
 
 // TestParseRegistryOverrides ensures that ordering is maintained for registry overrides.
@@ -437,6 +531,215 @@ func TestParseRegistryOverrides(t *testing.T) {
 			t.Parallel()
 			_, err := parseRegistryOverrides(tc.provided)
 			require.ErrorContains(t, err, tc.errorContents)
+		})
+	}
+}
+
+func TestPackageInspectDocumentation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		definitionDir string
+		packageName   string
+		keys          []string
+		expectedFiles []string
+		expectedErr   string
+	}{
+		{
+			name:          "documentation inspect - all files",
+			packageName:   "documentation",
+			definitionDir: filepath.Join("testdata", "inspect-documentation", "simple"),
+			keys:          []string{},
+			expectedFiles: []string{"README.md", "CONTRIBUTE.md"},
+		},
+		{
+			name:          "documentation inspect - specific key",
+			packageName:   "documentation",
+			definitionDir: filepath.Join("testdata", "inspect-documentation", "simple"),
+			keys:          []string{"readme"},
+			expectedFiles: []string{"README.md"},
+		},
+		{
+			name:          "documentation inspect - nonexistent key",
+			packageName:   "documentation",
+			definitionDir: filepath.Join("testdata", "inspect-documentation", "simple"),
+			keys:          []string{"nonexistent"},
+			expectedErr:   "not found in package documentation",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			tmpdir := t.TempDir()
+
+			// Create package
+			createOpts := packageCreateOptions{
+				confirm: true,
+				output:  tmpdir,
+			}
+			err := createOpts.run(ctx, []string{tc.definitionDir})
+			require.NoError(t, err)
+
+			// Inspect documentation
+			outputDir := filepath.Join(tmpdir, "extracted")
+			opts := packageInspectDocumentationOptions{
+				keys:      tc.keys,
+				outputDir: outputDir,
+			}
+			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
+
+			// Create a cobra command with context for the run method
+			cmd := &cobra.Command{}
+			cmd.SetContext(ctx)
+			err = opts.run(cmd, []string{packagePath})
+
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+
+			// Validate extracted files
+			extractedDir := filepath.Join(outputDir, fmt.Sprintf("%s-documentation", tc.packageName))
+			for _, file := range tc.expectedFiles {
+				require.FileExists(t, filepath.Join(extractedDir, file))
+			}
+		})
+	}
+}
+
+// newTestViper returns a viper instance configured the same way as initViper
+// but without reading any config file, suitable for unit tests.
+func newTestViper() *viper.Viper {
+	v := viper.New()
+	v.SetEnvPrefix("zarf")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+	setDefaults(v)
+	return v
+}
+
+func TestSignConfirmNotViperBound(t *testing.T) {
+	t.Parallel()
+	v := newTestViper()
+	cmd := newPackageSignCommand(v)
+	f := cmd.Flags().Lookup("confirm")
+	require.NotNil(t, f)
+	require.Equal(t, "false", f.DefValue, "--confirm must default to false and must not be bound to viper")
+}
+
+func TestSignTlogUploadNotDefaulted(t *testing.T) {
+	t.Parallel()
+	v := newTestViper()
+	// VPkgSignTlogUpload has no SetDefault, so IsSet must be false when no env/config
+	// is present. If it were true, the keyless safety guard (which checks IsSet) would
+	// always treat the user as having explicitly opted out.
+	require.False(t, v.IsSet(VPkgSignTlogUpload),
+		"VPkgSignTlogUpload must not have a viper default; the keyless safety guard relies on IsSet() being false when the user has not configured the key")
+}
+
+func TestSignTlogUploadEnvRespected(t *testing.T) {
+	t.Setenv("ZARF_PACKAGE_SIGN_TLOG_UPLOAD", "false")
+	v := newTestViper()
+	// With the env var set, IsSet must be true so the guard treats it as an explicit opt-out.
+	require.True(t, v.IsSet(VPkgSignTlogUpload))
+	require.False(t, v.GetBool(VPkgSignTlogUpload))
+
+	cmd := newPackageSignCommand(v)
+	f := cmd.Flags().Lookup("tlog-upload")
+	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
+}
+
+func TestVerifyInsecureIgnoreTlogDefaultTrue(t *testing.T) {
+	t.Parallel()
+	v := newTestViper()
+	// VPkgInsecureIgnoreTlog has no SetDefault (removed so that IsSet works correctly
+	// for the keyless guard). The flag must still default to true for air-gap compat.
+	require.False(t, v.IsSet(VPkgInsecureIgnoreTlog),
+		"VPkgInsecureIgnoreTlog must not have a viper default; the keyless guard relies on IsSet() being false when the user has not configured the key")
+
+	cmd := newPackageVerifyCommand(v)
+	f := cmd.Flags().Lookup("insecure-ignore-tlog")
+	require.Equal(t, "true", f.DefValue, "flag must still default to true for air-gap compat when no config is provided")
+}
+
+func TestVerifyInsecureIgnoreTlogEnvRespected(t *testing.T) {
+	t.Setenv("ZARF_PACKAGE_INSECURE_IGNORE_TLOG", "false")
+	v := newTestViper()
+	// With the env var set, IsSet must be true so the keyless guard treats it as explicit.
+	require.True(t, v.IsSet(VPkgInsecureIgnoreTlog))
+	require.False(t, v.GetBool(VPkgInsecureIgnoreTlog))
+
+	cmd := newPackageVerifyCommand(v)
+	f := cmd.Flags().Lookup("insecure-ignore-tlog")
+	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
+}
+
+func TestBuildVerifyBlobOptions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		identity        string
+		identityRegexp  string
+		flagTlogChanged bool // simulate --insecure-ignore-tlog being explicitly passed
+		viperTlogSet    bool // simulate ZARF_PACKAGE_INSECURE_IGNORE_TLOG env var
+		wantIgnoreTlog  bool
+	}{
+		{
+			name:           "no identity: IgnoreTlog stays at flag default (true)",
+			wantIgnoreTlog: true,
+		},
+		{
+			name:           "identity set, no explicit override: tlog forced on",
+			identity:       "user@example.com",
+			wantIgnoreTlog: false,
+		},
+		{
+			name:           "identity regexp set, no explicit override: tlog forced on",
+			identityRegexp: ".*@example\\.com",
+			wantIgnoreTlog: false,
+		},
+		{
+			name:            "identity set, flag explicitly changed: override honored",
+			identity:        "user@example.com",
+			flagTlogChanged: true,
+			wantIgnoreTlog:  true,
+		},
+		{
+			name:           "identity set, viper key set: override honored",
+			identity:       "user@example.com",
+			viperTlogSet:   true,
+			wantIgnoreTlog: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			v := newTestViper()
+			if tc.viperTlogSet {
+				v.Set(VPkgInsecureIgnoreTlog, true)
+			}
+
+			// Use a real command with the verify flag set registered so that
+			// cmd.Flags().Changed works correctly.
+			var f packageVerifyFlags
+			cmd := &cobra.Command{}
+			cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &f))
+
+			f.certificateIdentity = tc.identity
+			f.certificateIdentityRegexp = tc.identityRegexp
+
+			if tc.flagTlogChanged {
+				require.NoError(t, cmd.Flags().Set("insecure-ignore-tlog", "true"))
+			}
+
+			opts := f.buildVerifyBlobOptions(cmd, v)
+			require.Equal(t, tc.wantIgnoreTlog, opts.CommonVerifyOptions.IgnoreTlog)
 		})
 	}
 }

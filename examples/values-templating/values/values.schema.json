@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Schema for values-templating example package values",
+  "properties": {
+    "app": {
+      "description": "Application deployment configuration",
+      "properties": {
+        "config_data": {
+          "description": "Application configuration data",
+          "type": "string"
+        },
+        "version": {
+          "description": "Application version pinned with const so it cannot be overridden at deploy time",
+          "const": "1.0.0"
+        },
+        "environment": {
+          "description": "Deployment environment",
+          "enum": [
+            "development",
+            "staging",
+            "production"
+          ],
+          "type": "string"
+        },
+        "features": {
+          "description": "List of enabled features",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "image": {
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "pullPolicy": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "name": {
+          "description": "Application name for Helm overrides",
+          "type": "string"
+        },
+        "optional_setting": {
+          "description": "Optional configuration setting",
+          "type": "string"
+        },
+        "port1": {
+          "type": "number"
+        },
+        "port2": {
+          "type": "number"
+        },
+        "port3": {
+          "type": "number"
+        },
+        "ports": {
+          "description": "Network ports",
+          "items": {
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "replicas": {
+          "description": "Number of application replicas",
+          "maximum": 10,
+          "minimum": 1,
+          "type": "number"
+        },
+        "required_setting": {
+          "description": "Required configuration setting",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "environment",
+        "replicas",
+        "required_setting"
+      ],
+      "type": "object"
+    },
+    "database": {
+      "description": "Database configuration",
+      "properties": {
+        "host": {
+          "description": "Database host",
+          "type": "string"
+        },
+        "host2": {
+          "description": "Alternate database host",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "site": {
+      "description": "Site configuration and metadata",
+      "properties": {
+        "footer": {
+          "description": "Custom footer text",
+          "type": "string"
+        },
+        "message": {
+          "description": "Welcome message",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of the site you are deploying",
+          "minLength": 1,
+          "type": "string"
+        },
+        "organization": {
+          "description": "The organization providing the site",
+          "type": "string"
+        },
+        "styles": {
+          "description": "CSS styles for the site",
+          "type": "string"
+        },
+        "title": {
+          "description": "Site title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "organization"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "site",
+    "app"
+  ],
+  "type": "object"
+}

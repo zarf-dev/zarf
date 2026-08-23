@@ -1,0 +1,1 @@
+This example shows the many ways you can deploy Helm Charts with Zarf. To learn more about how `charts` work in Zarf, see the [Helm Charts section](/ref/components/#helm-charts) of the package components documentation.

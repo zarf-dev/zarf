@@ -44,10 +44,17 @@ func FindAuthForHost(baseURL string) (*Credential, error) {
 
 	// Combine the creds together (.netrc second because it could have a default)
 	creds := append(gitCreds, netrcCreds...)
+	return matchCredential(baseURL, creds)
+}
+
+func matchCredential(baseURL string, creds []Credential) (*Credential, error) {
+	parsedURL, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, err
+	}
 	for _, cred := range creds {
 		// An empty credPath means that we have reached the default from the .netrc
-		hasPath := strings.Contains(baseURL, cred.Path) || cred.Path == ""
-		if hasPath {
+		if parsedURL.Host == cred.Path || cred.Path == "" {
 			return &cred, nil
 		}
 	}

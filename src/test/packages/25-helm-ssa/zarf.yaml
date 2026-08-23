@@ -1,0 +1,31 @@
+kind: ZarfPackageConfig
+metadata:
+  name: helm-charts-ssa
+  description: "Test for Helm SSA behavior"
+
+components:
+  - name: ssa-test
+    required: true
+    charts:
+      - name: configmap-without-ssa
+        version: 0.1.0
+        namespace: configmap-without-ssa
+        localPath: chart
+        serverSideApply: "false"
+
+      - name: configmap-with-ssa
+        version: 0.1.0
+        namespace: configmap-with-ssa
+        localPath: chart
+        serverSideApply: "true"
+    manifests:
+      - name: test-with-ssa
+        files:
+          - configmap.yaml
+        namespace: "manifest-with-ssa"
+        serverSideApply: "true"
+      - name: test-without-ssa
+        files:
+          - configmap.yaml
+        serverSideApply: "false"
+        namespace: "manifest-without-ssa"

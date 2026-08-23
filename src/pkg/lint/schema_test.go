@@ -6,20 +6,18 @@ package lint
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/pkg/schema"
 )
 
 func TestZarfSchema(t *testing.T) {
 	t.Parallel()
-	zarfSchema, err := os.ReadFile("../../../zarf.schema.json")
-	require.NoError(t, err)
+	zarfSchema := schema.GetV1Alpha1Schema()
 
 	tests := []struct {
 		name                  string
@@ -53,6 +51,26 @@ func TestZarfSchema(t *testing.T) {
 			expectedSchemaStrings: []string{
 				"kind: kind must be one of the following: \"ZarfInitConfig\", \"ZarfPackageConfig\"",
 				"components: Array must have at least 1 items",
+			},
+		},
+		{
+			name: "path separators in dynamic path fields",
+			pkg: v1alpha1.ZarfPackage{
+				APIVersion: v1alpha1.APIVersion,
+				Kind:       v1alpha1.ZarfPackageConfig,
+				Metadata:   v1alpha1.ZarfMetadata{Name: "pkg", Version: "a/b"},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name:      "comp",
+						Charts:    []v1alpha1.ZarfChart{{Name: "a/b", Version: "1.0"}},
+						Manifests: []v1alpha1.ZarfManifest{{Name: `a\b`}},
+					},
+				},
+			},
+			expectedSchemaStrings: []string{
+				"metadata.version: Does not match pattern '^[^/\\\\]*$'",
+				"components.0.charts.0.name: Does not match pattern '^[^/\\\\]*$'",
+				"components.0.manifests.0.name: Does not match pattern '^[^/\\\\]*$'",
 			},
 		},
 		{
@@ -186,20 +204,115 @@ components:
 	})
 }
 
+func TestV1Beta1SourceOneOfSchema(t *testing.T) {
+	t.Parallel()
+
+	baseDoc := func(component map[string]any) map[string]any {
+		return map[string]any{
+			"apiVersion": "zarf.dev/v1beta1",
+			"kind":       "ZarfPackageConfig",
+			"metadata":   map[string]any{"name": "test"},
+			"components": []any{component},
+		}
+	}
+	chartComponent := func(chart map[string]any) map[string]any {
+		return map[string]any{
+			"name":   "component",
+			"charts": []any{chart},
+		}
+	}
+
+	tests := []struct {
+		name  string
+		doc   map[string]any
+		valid bool
+	}{
+		{
+			name: "chart has exactly one source",
+			doc: baseDoc(chartComponent(map[string]any{
+				"name": "chart",
+				"local": map[string]any{
+					"path": "chart",
+				},
+			})),
+			valid: true,
+		},
+		{
+			name: "chart rejects multiple sources",
+			doc: baseDoc(chartComponent(map[string]any{
+				"name": "chart",
+				"local": map[string]any{
+					"path": "chart",
+				},
+				"oci": map[string]any{
+					"url": "oci://example.com/chart",
+					"ref": map[string]any{"tag": "1.0.0"},
+				},
+			})),
+			valid: false,
+		},
+		{
+			name: "oci ref rejects tag and digest",
+			doc: baseDoc(chartComponent(map[string]any{
+				"name": "chart",
+				"oci": map[string]any{
+					"url": "oci://example.com/chart",
+					"ref": map[string]any{
+						"tag":    "1.0.0",
+						"digest": "sha256:abcdef",
+					},
+				},
+			})),
+			valid: false,
+		},
+		{
+			name: "git chart ref rejects tag and branch",
+			doc: baseDoc(chartComponent(map[string]any{
+				"name": "chart",
+				"git": map[string]any{
+					"url": "https://example.com/repo.git",
+					"ref": map[string]any{
+						"tag":    "1.0.0",
+						"branch": "main",
+					},
+				},
+			})),
+			valid: false,
+		},
+		{
+			name: "git repository ref rejects branch and commit",
+			doc: baseDoc(map[string]any{
+				"name": "component",
+				"repositories": []any{
+					map[string]any{
+						"url": "https://example.com/repo.git",
+						"ref": map[string]any{
+							"branch": "main",
+							"commit": "abc123",
+						},
+					},
+				},
+			}),
+			valid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			findings, err := getSchemaFindings(schema.GetV1Beta1Schema(), tt.doc)
+			require.NoError(t, err)
+			require.Equal(t, tt.valid, len(findings) == 0, findings)
+		})
+	}
+}
+
 func TestValidatePackageSchema(t *testing.T) {
-	ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 	setVariables := map[string]string{
 		"PACKAGE_NAME": "test-package",
 		"MY_COMP_NAME": "test-comp",
 	}
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-	err = os.Chdir(filepath.Join("testdata", "package-with-templates"))
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, os.Chdir(cwd))
-	}()
-	findings, err := ValidatePackageSchema(setVariables)
+	findings, err := ValidatePackageSchemaAtPath(filepath.Join("testdata", "package-with-templates"), setVariables)
 	require.Empty(t, findings)
 	require.NoError(t, err)
 }

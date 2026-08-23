@@ -1,0 +1,7 @@
+apiVersion: test.zarf.dev/v1
+kind: ZarfWaitTest
+metadata:
+  name: my-wait-test
+  namespace: wait-for-test
+spec:
+  name: test

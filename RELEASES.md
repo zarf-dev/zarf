@@ -2,7 +2,25 @@
 
 This document provides guidance on how to create Zarf releases, address release issues, and other helpful tips.
 
-This project uses [goreleaser](https://github.com/goreleaser/goreleaser-action) for releasing. Releases are defined in the [`.github/workflows/release.yml`](.github/workflows/release.yml) file and are triggered by pushing a signed tag starting with `v`.
+This project uses [Release Please](https://github.com/googleapis/release-please) to automate release management and [goreleaser](https://github.com/goreleaser/goreleaser-action) for building and publishing release artifacts.
+
+## How Releases Work
+
+### Automated Releases (Release Please)
+
+Release Please automatically:
+1. Monitors commits to `main` and creates/updates a release PR with changelog entries
+2. When the release PR is merged, it creates and pushes a version tag (e.g., `v0.71.0`)
+3. The tag push triggers the existing release workflow ([`.github/workflows/release.yml`](.github/workflows/release.yml))
+
+The release PR accumulates changes based on [Conventional Commits](https://www.conventionalcommits.org/):
+- `feat:` commits trigger a minor version bump
+- `fix:` commits trigger a patch version bump
+- `feat!:` or `fix!:` (breaking changes) trigger a major version bump
+
+### Manual Release Candidates
+
+Release candidates are still created manually by pushing signed tags with an `-rcX` suffix. This allows testing the release process before cutting a final release.
 
 ## Release Cadence
 
@@ -40,6 +58,67 @@ Once the prerelease artifacts are published, a Homebrew Tap PR is created. It is
 
 ## Release Checklist
 
+### Standard Releases (via Release Please)
+
+* [ ] Refresh the embedded Sigstore TrustedRoot used for keyless verification (see [Embedded TrustedRoot](#embedded-trustedroot))
+* [ ] Review and merge the open Release Please PR
+* [ ] The tag is automatically created and pushed, triggering the release workflow
+* [ ] Review the GitHub release:
+  * [ ] Add a summary of release updates and any required documentation around updates or breaking changes
+* [ ] Ensure goreleaser workflows execute successfully and review the release assets
+* [ ] Review, approve, and merge the [homebrew-tap](https://github.com/defenseunicorns/homebrew-tap) PR for the zarf release
+
+### Embedded TrustedRoot
+
+Zarf binaries embed a Sigstore TrustedRoot JSON used by `zarf package verify` for keyless verification when `--trusted-root` is not supplied. The TUF-fetched copy is committed at `src/pkg/signing/embedded_trusted_root.json` and must be refreshed before each release so binaries ship with current Sigstore trust material.
+
+```bash
+make build
+hack/refresh-trusted-root.sh
+git add src/pkg/signing/embedded_trusted_root.json
+git commit -m "chore: refresh embedded trusted root"
+```
+
+The script wraps `zarf tools trusted-root create --with-default-services`, which reaches `tuf-repo-cdn.sigstore.dev` and writes the verified TrustedRoot to the embed path. Users who run their own Sigstore infrastructure can bypass the embedded copy at runtime via `zarf package verify --trusted-root /path/to/custom.json`.
+
+After refreshing, verify the output before committing:
+
+```bash
+# Confirm the file is valid, non-empty JSON containing expected Sigstore CA entries
+jq '.certificateAuthorities | length' src/pkg/signing/embedded_trusted_root.json
+jq '.tlogs | length' src/pkg/signing/embedded_trusted_root.json
+
+# Optionally round-trip a keyless verify against the new root to confirm it functions
+zarf package verify <package.tar.zst> --trusted-root src/pkg/signing/embedded_trusted_root.json \
+  --certificate-identity <identity> --certificate-oidc-issuer <issuer>
+```
+
+If the refresh fails (network unavailable, TUF root mismatch), do not commit the file. The previous committed version remains valid until the next successful refresh.
+
+### Verifying the Init Package
+
+The init package is signed with keyless Sigstore signing during the release workflow. Consumers can verify offline using the embedded TrustedRoot:
+
+**Tagged release:**
+```bash
+zarf package verify zarf-init-amd64-vX.Y.Z.tar.zst \
+  --certificate-identity-regexp "https://github.com/zarf-dev/zarf/.github/workflows/release.yml@refs/tags/" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+**Nightly build:**
+```bash
+zarf package verify zarf-init-amd64-vX.Y.Z-nightly.tar.zst \
+  --certificate-identity-regexp "https://github.com/zarf-dev/zarf/.github/workflows/nightly-release.yaml@refs/heads/" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+The `--certificate-identity-regexp` pins the identity to the specific release workflow and ref type, preventing acceptance of packages signed by an unrelated workflow. The embedded TrustedRoot (refreshed before each release) validates the Fulcio certificate chain without network access.
+
+### Manual Releases (if needed)
+
+For cases where you need to manually create a release (e.g., release candidates):
+
 * [ ] Review open [Pull Requests](https://github.com/zarf-dev/zarf/pulls)
 * [ ] Cut the new release by tagging and pushing:
 
@@ -47,6 +126,7 @@ Once the prerelease artifacts are published, a Homebrew Tap PR is created. It is
   git tag -sa vX.Y.Z -m "vX.Y.Z"
   git push origin vX.Y.Z
   ```
+* [ ] Update `.release-please-manifest.json` to reflect the new version
 * [ ] Review the GitHub release:
   * [ ] Add a summary of release updates and any required documentation around updates or breaking changes
 * [ ] Ensure goreleaser workflows execute successfully and review the release assets

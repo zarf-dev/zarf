@@ -5,6 +5,8 @@ package packager
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -16,34 +18,38 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-func defaultTestRemoteOptions() RemoteOptions {
-	return RemoteOptions{
+func defaultTestRemoteOptions() types.RemoteOptions {
+	return types.RemoteOptions{
 		PlainHTTP: true,
 	}
 }
 
-func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string) *layout.PackageLayout {
+func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string, remoteOptions types.RemoteOptions) *layout.PackageLayout {
 	t.Helper()
+
+	verifyOpts := signing.DefaultVerifyBlobOptions()
+	verifyOpts.Key = publicKeyPath
 
 	// Generate tmpdir and pull published package from local registry
 	pullOCIOpts := pullOCIOptions{
-		Source:        packageRef,
-		Architecture:  architecture,
-		Filter:        filters.Empty(),
-		RemoteOptions: defaultTestRemoteOptions(),
-		PublicKeyPath: publicKeyPath,
-		CachePath:     cachePath,
+		Source:            packageRef,
+		Architecture:      architecture,
+		Filter:            filters.Empty(),
+		RemoteOptions:     remoteOptions,
+		VerifyBlobOptions: &verifyOpts,
+		CachePath:         cachePath,
 	}
 	pkgLayout, err := pullOCI(ctx, pullOCIOpts)
 	require.NoError(t, err)
@@ -52,23 +58,16 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 }
 
 func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
-	// Setup destination registry
-	dstPort, err := helpers.GetAvailablePort()
-	require.NoError(t, err)
-	dstRegistryURL := testutil.SetupInMemoryRegistry(ctx, t, dstPort)
-	dstRegistryRef := registry.Reference{
-		Registry:   dstRegistryURL,
+	return registry.Reference{
+		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "my-namespace",
 	}
-
-	return dstRegistryRef
 }
 
 func TestPublishError(t *testing.T) {
 	ctx := context.Background()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
-	registryURL := testutil.SetupInMemoryRegistry(ctx, t, 5000)
+	registryURL := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	defaultRef := registry.Reference{
 		Registry:   registryURL,
 		Repository: "my-namespace",
@@ -105,7 +104,6 @@ func TestPublishError(t *testing.T) {
 
 func TestPublishFromOCIValidation(t *testing.T) {
 	ctx := context.Background()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
 	tt := []struct {
 		name      string
@@ -162,12 +160,11 @@ func TestPublishFromOCIValidation(t *testing.T) {
 }
 
 func TestPublishSkeleton(t *testing.T) {
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
-
 	tt := []struct {
-		name string
-		path string
-		opts PublishSkeletonOptions
+		name        string
+		path        string
+		opts        PublishSkeletonOptions
+		expectedTag string
 	}{
 		{
 			name: "Publish skeleton package",
@@ -175,6 +172,16 @@ func TestPublishSkeleton(t *testing.T) {
 			opts: PublishSkeletonOptions{
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
+			expectedTag: "0.0.1",
+		},
+		{
+			name: "Publish skeleton package with tag",
+			path: "testdata/skeleton",
+			opts: PublishSkeletonOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
+				Tag:           "latest",
+			},
+			expectedTag: "latest",
 		},
 	}
 
@@ -186,6 +193,7 @@ func TestPublishSkeleton(t *testing.T) {
 			// Publish test package
 			ref, err := PublishSkeleton(ctx, tc.path, registryRef, tc.opts)
 			require.NoError(t, err)
+			require.Equal(t, tc.expectedTag, ref.Reference)
 
 			// Read and unmarshall expected
 			data, err := os.ReadFile(filepath.Join(tc.path, layout.ZarfYAML))
@@ -196,7 +204,9 @@ func TestPublishSkeleton(t *testing.T) {
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, expectedPkg.Metadata.Name)
 
-			rmt, err := zoci.NewRemote(ctx, ref.String(), zoci.PlatformForSkeleton(), oci.WithPlainHTTP(true))
+			rmt, err := zoci.NewRemoteWithOptions(ctx, ref.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
+				RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+			})
 			require.NoError(t, err)
 
 			// Fetch from remote and compare
@@ -216,11 +226,16 @@ func TestPublishSkeleton(t *testing.T) {
 }
 
 func TestPublishPackage(t *testing.T) {
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
+	signOpts.Password = "password"
+
 	tt := []struct {
 		name          string
 		path          string
 		opts          PublishPackageOptions
 		publicKeyPath string
+		expectedTag   string
 	}{
 		{
 			name: "Publish package",
@@ -228,16 +243,26 @@ func TestPublishPackage(t *testing.T) {
 			opts: PublishPackageOptions{
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
+			expectedTag: "0.0.1",
 		},
 		{
 			name: "Sign and publish package",
 			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOptions{
-				RemoteOptions:      defaultTestRemoteOptions(),
-				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
-				SigningKeyPassword: "password",
+				RemoteOptions:   defaultTestRemoteOptions(),
+				SignBlobOptions: signOpts,
 			},
 			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
+			expectedTag:   "0.0.1",
+		},
+		{
+			name: "Publish package with specified tag different from version",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
+				Tag:           "latest",
+			},
+			expectedTag: "latest",
 		},
 	}
 
@@ -253,12 +278,79 @@ func TestPublishPackage(t *testing.T) {
 			// Publish test package
 			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
+			require.Equal(t, tc.expectedTag, packageRef.Reference)
 
-			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir())
-			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
-			if tc.opts.SigningKeyPath != "" {
-				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Signature))
+			expectedPkg := layoutExpected.AsV1alpha1()
+			expectedPkg.Build = v1alpha1.ZarfBuildData{}
+
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
+			actualPkg := layoutActual.AsV1alpha1()
+			actualPkg.Build = v1alpha1.ZarfBuildData{}
+			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")
+			if tc.opts.SignBlobOptions.Key != "" {
+				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Bundle))
 			}
+		})
+	}
+}
+
+func TestPublishPackageDirectoryNameCollision(t *testing.T) {
+	tt := []struct {
+		name          string
+		path          string
+		opts          PublishPackageOptions
+		publicKeyPath string
+	}{
+		{
+			name: "Publish package from directory with subdir matching package name",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := testutil.TestContext(t)
+			registryRef := createRegistry(ctx, t)
+
+			// We want to pull the package and sure the content is the same as the local package
+			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
+			require.NoError(t, err)
+
+			// Create a temporary directory to use as working directory and
+			// create a subdir with same name as the package to test name collission
+			// https://github.com/zarf-dev/zarf/issues/4148
+			tmpDir := t.TempDir()
+			collisionDir := filepath.Join(tmpDir, "test")
+			err = os.Mkdir(collisionDir, 0o755)
+			require.NoError(t, err)
+
+			// Save original working directory to restore after test
+			origDir, err := os.Getwd()
+			require.NoError(t, err)
+
+			// Change to temp directory
+			err = os.Chdir(tmpDir)
+			require.NoError(t, err)
+
+			// Ensure we restore the original directory
+			t.Cleanup(func() {
+				require.NoError(t, os.Chdir(origDir))
+			})
+
+			// Publish test package
+			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			require.NoError(t, err)
+
+			expectedPkg := layoutExpected.AsV1alpha1()
+			expectedPkg.Build = v1alpha1.ZarfBuildData{}
+
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
+			actualPkg := layoutActual.AsV1alpha1()
+			actualPkg.Build = v1alpha1.ZarfBuildData{}
+			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")
 		})
 	}
 }
@@ -292,8 +384,10 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			require.NoError(t, err)
 
 			// Attempt to get the digest
-			platform := oci.PlatformForArch(layoutExpected.Pkg.Build.Architecture)
-			remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(tc.opts.PlainHTTP))
+			platform := oci.PlatformForArch(layoutExpected.AsV1alpha1().Build.Architecture)
+			remote, err := zoci.NewRemoteWithOptions(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
+				RemoteOptions: tc.opts.RemoteOptions,
+			})
 			require.NoError(t, err)
 			desc, err := remote.ResolveRoot(ctx)
 			require.NoError(t, err)
@@ -303,7 +397,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			_, err = PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 			// Publish creates a local oci manifest file using the package name, which gets deleted
-			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
+			require.NoFileExists(t, layoutExpected.AsV1alpha1().Metadata.Name)
 
 			latestDesc, err := remote.ResolveRoot(ctx)
 			require.NoError(t, err)
@@ -360,7 +454,7 @@ func TestPublishCopySHA(t *testing.T) {
 
 			opts := PublishFromOCIOptions{
 				RemoteOptions:  tc.opts.RemoteOptions,
-				Architecture:   layoutExpected.Pkg.Build.Architecture,
+				Architecture:   layoutExpected.AsV1alpha1().Build.Architecture,
 				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 
@@ -369,14 +463,184 @@ func TestPublishCopySHA(t *testing.T) {
 			require.NoError(t, err)
 
 			// This verifies that publish deletes the manifest that is auto created by oras
-			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
+			require.NoFileExists(t, layoutExpected.AsV1alpha1().Metadata.Name)
 
 			pkgRefSha := fmt.Sprintf("%s@%s", dstRef.String(), indexDesc.Digest)
 
-			layoutActual := pullFromRemote(ctx, t, pkgRefSha, layoutExpected.Pkg.Build.Architecture, "", t.TempDir())
-			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
+			layoutActual := pullFromRemote(ctx, t, pkgRefSha, layoutExpected.AsV1alpha1().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
+			require.Equal(t, layoutExpected.AsV1alpha1(), layoutActual.AsV1alpha1(), "Uploaded package is not identical to downloaded package")
 		})
 	}
+}
+
+func TestPublishFromOCITransportNegotiation(t *testing.T) {
+	const (
+		username = "source-user"
+		password = "source-password"
+	)
+
+	ctx := testutil.TestContext(t)
+	sourceAddress := testutil.SetupInMemoryRegistryTLSAuth(ctx, t, username, password)
+	destinationAddress := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	setDockerConfig(t, map[string]bool{sourceAddress: true}, username, password)
+
+	layoutExpected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+
+	sourceRef, err := PublishPackage(ctx, layoutExpected, registry.Reference{
+		Registry:   sourceAddress,
+		Repository: "my-namespace",
+	}, PublishPackageOptions{
+		RemoteOptions: types.RemoteOptions{InsecureSkipTLSVerify: true},
+	})
+	require.NoError(t, err)
+
+	destinationRef := registry.Reference{
+		Registry:   destinationAddress,
+		Repository: sourceRef.Repository,
+		Reference:  sourceRef.Reference,
+	}
+	remoteOptions := types.RemoteOptions{
+		PlainHTTP:             true,
+		InsecureSkipTLSVerify: true,
+	}
+	require.NoError(t, PublishFromOCI(ctx, sourceRef, destinationRef, PublishFromOCIOptions{
+		Architecture:  layoutExpected.AsV1alpha1().Build.Architecture,
+		RemoteOptions: remoteOptions,
+	}))
+
+	layoutActual := pullFromRemote(ctx, t, destinationRef.String(), layoutExpected.AsV1alpha1().Build.Architecture, "", t.TempDir(), types.RemoteOptions{PlainHTTP: true})
+	require.Equal(t, layoutExpected.AsV1alpha1(), layoutActual.AsV1alpha1(), "copied package must retain metadata and layers")
+}
+
+func TestSignOCITransportNegotiation(t *testing.T) {
+	const (
+		username = "source-user"
+		password = "source-password"
+	)
+
+	ctx := testutil.TestContext(t)
+	sourceAddress := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	destinationAddress := testutil.SetupInMemoryRegistryTLSAuth(ctx, t, username, password)
+	setDockerConfig(t, map[string]bool{destinationAddress: true}, username, password)
+
+	layoutExpected, err := layout.LoadFromTar(ctx, filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"), layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+
+	sourceRef, err := PublishPackage(ctx, layoutExpected, registry.Reference{
+		Registry:   sourceAddress,
+		Repository: "my-namespace",
+	}, PublishPackageOptions{
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+	})
+	require.NoError(t, err)
+
+	remoteOptions := types.RemoteOptions{
+		PlainHTTP:             true,
+		InsecureSkipTLSVerify: true,
+	}
+	packagePath, err := Pull(ctx, helpers.OCIURLPrefix+sourceRef.String(), t.TempDir(), PullOptions{
+		Architecture:  layoutExpected.AsV1alpha1().Build.Architecture,
+		RemoteOptions: remoteOptions,
+		CachePath:     t.TempDir(),
+	})
+	require.NoError(t, err)
+
+	sourceLayout, err := LoadPackage(ctx, packagePath, LoadOptions{
+		Architecture: layoutExpected.AsV1alpha1().Build.Architecture,
+		Filter:       filters.Empty(),
+		CachePath:    t.TempDir(),
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, sourceLayout.Cleanup())
+	})
+
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
+	signOpts.Password = "password"
+	signOpts.Overwrite = true
+	destinationRef, err := PublishPackage(ctx, sourceLayout, registry.Reference{
+		Registry:   destinationAddress,
+		Repository: sourceRef.Repository,
+	}, PublishPackageOptions{
+		SignBlobOptions: signOpts,
+		RemoteOptions:   remoteOptions,
+	})
+	require.NoError(t, err)
+
+	layoutActual := pullFromRemote(ctx, t, destinationRef.String(), layoutExpected.AsV1alpha1().Build.Architecture, filepath.Join("testdata", "publish", "cosign.pub"), t.TempDir(), types.RemoteOptions{
+		InsecureSkipTLSVerify: true,
+	})
+	require.Equal(t, sourceLayout.AsV1alpha1(), layoutActual.AsV1alpha1(), "signed package must retain metadata and layers")
+	require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Bundle))
+}
+
+func setDockerConfig(t *testing.T, registryAddresses map[string]bool, username, password string) {
+	t.Helper()
+
+	auths := map[string]map[string]string{}
+	for registryAddress, includeCredentials := range registryAddresses {
+		if includeCredentials {
+			auths[registryAddress] = map[string]string{
+				"auth": base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password))),
+			}
+		}
+	}
+	config, err := json.Marshal(map[string]any{"auths": auths})
+	require.NoError(t, err)
+
+	dockerConfig := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dockerConfig, "config.json"), config, 0o600))
+	t.Setenv("DOCKER_CONFIG", dockerConfig)
+}
+
+func TestPullOCIConnectedExcludesImages(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	registryRef := createRegistry(ctx, t)
+
+	tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
+	layoutExpected, err := layout.LoadFromTar(ctx, tarPath, layout.PackageLayoutOptions{Filter: filters.Empty()})
+	require.NoError(t, err)
+
+	packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, PublishPackageOptions{
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+
+	// Pull with Connected=true — image layers should be excluded
+	pkgLayout, err := pullOCI(ctx, pullOCIOptions{
+		Source:        packageRef.String(),
+		Architecture:  "amd64",
+		Filter:        filters.Empty(),
+		CachePath:     t.TempDir(),
+		Connected:     true,
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, pkgLayout.Cleanup())
+	}()
+
+	_, err = os.Stat(pkgLayout.GetImageDirPath())
+	require.ErrorIs(t, err, os.ErrNotExist, "images directory should not exist when pulled with Connected=true")
+
+	// Pull without Connected — image layers should be present
+	pkgLayoutFull, err := pullOCI(ctx, pullOCIOptions{
+		Source:        packageRef.String(),
+		Architecture:  "amd64",
+		Filter:        filters.Empty(),
+		CachePath:     t.TempDir(),
+		Connected:     false,
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, pkgLayoutFull.Cleanup())
+	}()
+
+	_, err = os.Stat(pkgLayoutFull.GetImageDirPath())
+	require.NoError(t, err, "images directory should exist when pulled without Connected")
 }
 
 func TestPublishCopyTag(t *testing.T) {
@@ -384,6 +648,7 @@ func TestPublishCopyTag(t *testing.T) {
 		name             string
 		packageToPublish string
 		opts             PublishPackageOptions
+		dstTag           string
 	}{
 		{
 			name:             "Publish package",
@@ -392,6 +657,16 @@ func TestPublishCopyTag(t *testing.T) {
 				RemoteOptions:  defaultTestRemoteOptions(),
 				OCIConcurrency: 3,
 			},
+			dstTag: "0.0.1",
+		},
+		{
+			name:             "Publish package with tag override",
+			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions:  defaultTestRemoteOptions(),
+				OCIConcurrency: 3,
+			},
+			dstTag: "latest",
 		},
 	}
 
@@ -410,13 +685,13 @@ func TestPublishCopyTag(t *testing.T) {
 
 			dstRegistryRef := createRegistry(ctx, t)
 
-			dst := fmt.Sprintf("%s/%s", dstRegistryRef.String(), "test:0.0.1")
+			dst := fmt.Sprintf("%s/%s:%s", dstRegistryRef.String(), "test", tc.dstTag)
 			dstRegistry, err := registry.ParseReference(dst)
 			require.NoError(t, err)
 
 			opts := PublishFromOCIOptions{
 				RemoteOptions:  tc.opts.RemoteOptions,
-				Architecture:   layoutExpected.Pkg.Build.Architecture,
+				Architecture:   layoutExpected.AsV1alpha1().Build.Architecture,
 				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 
@@ -425,11 +700,13 @@ func TestPublishCopyTag(t *testing.T) {
 			require.NoError(t, err)
 
 			// This verifies that publish deletes the manifest that is auto created by oras
-			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
+			require.NoFileExists(t, layoutExpected.AsV1alpha1().Metadata.Name)
 
-			layoutActual := pullFromRemote(ctx, t, dstRegistry.String(), layoutExpected.Pkg.Build.Architecture, "", t.TempDir())
+			require.Equal(t, tc.dstTag, dstRegistry.Reference)
 
-			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
+			layoutActual := pullFromRemote(ctx, t, dstRegistry.String(), layoutExpected.AsV1alpha1().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
+
+			require.Equal(t, layoutExpected.AsV1alpha1(), layoutActual.AsV1alpha1(), "Uploaded package is not identical to downloaded package")
 		})
 	}
 }

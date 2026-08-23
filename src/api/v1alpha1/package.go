@@ -55,7 +55,7 @@ const SkeletonArch = "skeleton"
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The API version of the Zarf package.
-	APIVersion string `json:"apiVersion,omitempty," jsonschema:"enum=zarf.dev/v1alpha1"`
+	APIVersion string `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
 	// The kind of Zarf package.
 	Kind ZarfPackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	// Package metadata.
@@ -70,6 +70,8 @@ type ZarfPackage struct {
 	Variables []InteractiveVariable `json:"variables,omitempty"`
 	// Values imports Zarf values files for templating and overriding Helm values.
 	Values ZarfValues `json:"values,omitempty"`
+	// Documentation files to be added to the package
+	Documentation map[string]string `json:"documentation,omitempty"`
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.
@@ -77,10 +79,20 @@ func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
 }
 
+// GetComponent returns the component with the given name, or an error if no such component exists.
+func (pkg ZarfPackage) GetComponent(name string) (ZarfComponent, error) {
+	for _, component := range pkg.Components {
+		if component.Name == name {
+			return component, nil
+		}
+	}
+	return ZarfComponent{}, fmt.Errorf("no component named %q in package %q", name, pkg.Metadata.Name)
+}
+
 // HasImages returns true if one of the components contains an image.
 func (pkg ZarfPackage) HasImages() bool {
 	for _, component := range pkg.Components {
-		if len(component.Images) > 0 {
+		if len(component.Images) > 0 || len(component.ImageArchives) > 0 {
 			return true
 		}
 	}
@@ -90,38 +102,11 @@ func (pkg ZarfPackage) HasImages() bool {
 // IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections).
 func (pkg ZarfPackage) IsSBOMAble() bool {
 	for _, c := range pkg.Components {
-		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.DataInjections) > 0 {
+		if len(c.ImageArchives) > 0 || len(c.Images) > 0 || len(c.Files) > 0 || len(c.DataInjections) > 0 {
 			return true
 		}
 	}
 	return false
-}
-
-// UniqueNamespaceCount returns the number of unique namespaces in the package.
-func (pkg ZarfPackage) UniqueNamespaceCount() int {
-	uniqueNamespaces := make(map[string]struct{})
-	for _, component := range pkg.Components {
-		for _, chart := range component.Charts {
-			uniqueNamespaces[chart.Namespace] = struct{}{}
-		}
-		for _, manifest := range component.Manifests {
-			uniqueNamespaces[manifest.Namespace] = struct{}{}
-		}
-	}
-	return len(uniqueNamespaces)
-}
-
-// UpdateAllComponentNamespaces updates all existing namespaces to the provided one
-func (pkg ZarfPackage) UpdateAllComponentNamespaces(namespace string) {
-	for i := range pkg.Components {
-		comp := pkg.Components[i]
-		for j := range comp.Charts {
-			comp.Charts[j].Namespace = namespace
-		}
-		for k := range comp.Manifests {
-			comp.Manifests[k].Namespace = namespace
-		}
-	}
 }
 
 // AllowsNamespaceOverride returns whether the package allows the namespace to be overridden
@@ -217,7 +202,7 @@ type ZarfMetadata struct {
 	// Additional information about this package.
 	Description string `json:"description,omitempty"`
 	// Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with).
-	Version string `json:"version,omitempty"`
+	Version string `json:"version,omitempty" jsonschema:"pattern=^[^/\\\\]*$"`
 	// Link to package information when online.
 	URL string `json:"url,omitempty"`
 	// An image URL to embed in this package (Reserved for future use in Zarf UI).
@@ -226,10 +211,10 @@ type ZarfMetadata struct {
 	Uncompressed bool `json:"uncompressed,omitempty"`
 	// The target cluster architecture for this package.
 	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64"`
-	// Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
-	YOLO bool `json:"yolo,omitempty"`
+	// [Deprecated] Yaml OnLy Online (YOLO) enables deploying a Zarf package without first running zarf init against the cluster. Use --connected when deploying instead.
+	YOLO bool `json:"yolo,omitempty" jsonschema_extras:"deprecated=true"`
 	// Comma-separated list of package authors (including contact info).
-	Authors string `json:"authors,omitempty" jsonschema:"example=Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"`
+	Authors string `json:"authors,omitempty" jsonschema:"example=Zarf <zarf@zarf-dev.com>"`
 	// Link to package documentation when online.
 	Documentation string `json:"documentation,omitempty"`
 	// Link to package source code when online.
@@ -248,9 +233,9 @@ type ZarfMetadata struct {
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
 	// The machine name that created this package.
-	Terminal string `json:"terminal"`
+	Terminal string `json:"terminal,omitempty"`
 	// The username who created this package.
-	User string `json:"user"`
+	User string `json:"user,omitempty"`
 	// The architecture this package was created on.
 	Architecture string `json:"architecture"`
 	// The timestamp when this package was created.
@@ -264,19 +249,49 @@ type ZarfBuildData struct {
 	// Whether this package was created with differential components.
 	Differential bool `json:"differential,omitempty"`
 	// Version of a previously built package used as the basis for creating this differential package.
-	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
+	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty" jsonschema:"pattern=^[^/\\\\]*$"`
 	// List of components that were not included in this package due to differential packaging.
 	DifferentialMissing []string `json:"differentialMissing,omitempty"`
-	// The minimum version of Zarf that does not have breaking package structure changes.
-	LastNonBreakingVersion string `json:"lastNonBreakingVersion,omitempty"`
 	// The flavor of Zarf used to build this package.
-	Flavor string `json:"flavor,omitempty"`
+	Flavor string `json:"flavor,omitempty" jsonschema:"pattern=^[^/\\\\]*$"`
+	// Whether this package was signed
+	Signed *bool `json:"signed,omitempty"`
+	// Requirements for specific package operations.
+	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
+	// ProvenanceFiles lists files present in the package that are not included in checksums.txt.
+	// These are files added after checksum generation (e.g., signature files).
+	// This list is authenticated through the signed zarf.yaml.
+	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
+	// originalAPIVersion records the apiVersion the package was read from before any conversion.
+	originalAPIVersion string
+}
+
+// GetOriginalAPIVersion returns the apiVersion the package was read from before any conversion,
+// defaulting to this package's apiVersion when one was never recorded.
+func (b ZarfBuildData) GetOriginalAPIVersion() string {
+	if b.originalAPIVersion == "" {
+		return APIVersion
+	}
+	return b.originalAPIVersion
+}
+
+// SetOriginalAPIVersion records the apiVersion the package was read from before any conversion.
+func (b *ZarfBuildData) SetOriginalAPIVersion(apiVersion string) {
+	b.originalAPIVersion = apiVersion
 }
 
 // ZarfValues imports package-level values files and validation.
 type ZarfValues struct {
 	// Files declares the relative filepath of Values files.
 	Files []string `json:"files,omitempty"`
-	// Schema is a placeholder field for importing a .json.schema file for imported Values files.
+	// Schema declares a path to a .schema.json file that validates the contents of Files.
 	Schema string `json:"schema,omitempty"`
+}
+
+// VersionRequirement specifies minimum version requirements for the package
+type VersionRequirement struct {
+	// The minimum version of Zarf required to use this package
+	Version string `json:"version"`
+	// Explanation for why this version is required
+	Reason string `json:"reason,omitempty"`
 }

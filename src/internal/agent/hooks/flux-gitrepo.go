@@ -6,7 +6,6 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -17,65 +16,52 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 )
 
-// AgentErrTransformGitURL is thrown when the agent fails to make the git url a Zarf compatible url
-const AgentErrTransformGitURL = "unable to transform the git url"
-
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
-func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	return operations.Hook{
-		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateGitRepo(ctx, r, cluster)
-		},
-		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateGitRepo(ctx, r, cluster)
-		},
-	}
+func NewGitRepositoryMutationHook(c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
+	admit := withMutationGuard(c, mode, func(ctx context.Context, r *v1.AdmissionRequest, repo *flux.GitRepository) (*operations.Result, error) {
+		return mutateGitRepo(ctx, r, c, repo)
+	})
+	return operations.Hook{Create: admit, Update: admit}
 }
 
-// mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
-func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+// mutateGitRepo mutates the git repository url to point to the repository URL defined in the ZarfState.
+func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, repo *flux.GitRepository) (*operations.Result, error) {
 	l := logger.From(ctx)
-	var (
-		patches   []operations.PatchOperation
-		isPatched bool
+	var patches []operations.PatchOperation
 
-		isCreate = r.Operation == v1.Create
-		isUpdate = r.Operation == v1.Update
-	)
-
-	s, err := cluster.LoadState(ctx)
+	s, err := c.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	repo := flux.GitRepository{}
-	if err = json.Unmarshal(r.Object.Raw, &repo); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
+	if !s.GitServer.IsConfigured() {
+		l.Debug("no Zarf git server configured, skipping Flux GitRepository mutation")
+		return &operations.Result{Allowed: true}, nil
 	}
 
 	l.Info("using the Zarf git server URL to mutate the Flux GitRepository",
 		"name", repo.Name,
-		"git-server", s.GitServer.Address)
+		"operation", r.Operation,
+		"gitServer", s.GitServer.Address)
 
-	// Check if this is an update operation and the hostname is different from what we have in the zarfState
-	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
-	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
-	if isUpdate {
-		isPatched, err = helpers.DoHostnamesMatch(s.GitServer.Address, repo.Spec.URL)
-		if err != nil {
-			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
-		}
+	// Skip mutation if the URL already points to the Zarf git server to prevent double-hashing
+	// on resource recreation (e.g. Helm rollback, GitOps reconciliation).
+	isPatched, err := helpers.DoHostnamesMatch(s.GitServer.Address, repo.Spec.URL)
+	if err != nil {
+		return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 	}
 
 	patchedURL := repo.Spec.URL
 
-	// Mutate the git URL if necessary
-	if isCreate || (isUpdate && !isPatched) {
-		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
+	if isPatched {
+		l.Debug("skipping mutation, Flux GitRepository URL already points to Zarf git server",
+			"url", repo.Spec.URL,
+			"operation", r.Operation)
+	} else {
 		transformedURL, err := transform.GitURL(s.GitServer.Address, patchedURL, s.GitServer.PushUsername)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "mediaType": "application/vnd.oci.image.index.v1+json",
+  "manifests": [
+    {
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "digest": "sha256:53cc1017c16ab2500aa5b5367e7650dbe2f753651d88792af1b522e5af328352",
+      "size": 11699,
+      "annotations": {
+        "containerd.io/distribution.source.docker.io": "library/hello-world",
+        "io.containerd.image.name": "docker.io/library/hello-world:linux",
+        "org.opencontainers.image.ref.name": "linux"
+      }
+    }
+  ]
+}

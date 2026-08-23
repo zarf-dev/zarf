@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,20 +24,43 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
 var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, state.ZarfInClusterContainerRegistryNodePort)
+
+// parseValues parses values from file paths and applies key.path=value overrides on top. Each
+// override value is type-inferred; see value.InferType for the rules.
+func parseValues(ctx context.Context, valuesFiles []string, setValues map[string]string) (value.Values, error) {
+	values, err := value.ParseFiles(ctx, valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse values files: %w", err)
+	}
+	for key, val := range setValues {
+		path := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			path = value.Path("." + key)
+		}
+		if err := values.Set(path, value.InferType(val)); err != nil {
+			return nil, fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
+	}
+	return values, nil
+}
 
 func newDevCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -54,15 +78,234 @@ func newDevCommand() *cobra.Command {
 	cmd.AddCommand(newDevInspectCommand(v))
 	cmd.AddCommand(newDevFindImagesCommand(v))
 	cmd.AddCommand(newDevGenerateConfigCommand())
+	cmd.AddCommand(newDevGenerateSchemaCommand(v))
 	cmd.AddCommand(newDevLintCommand(v))
+	cmd.AddCommand(newDevUpgradeSchemaCommand())
+	cmd.AddCommand(newDevTemplateCommand(v))
 
 	return cmd
+}
+
+type devGenerateSchemaOptions struct {
+	flavor         string
+	setPkgTmpl     map[string]string
+	update         bool
+	deleteNotFound bool
+}
+
+type mappedChartSchema struct {
+	sourcePath  value.Path
+	schema      map[string]any
+	excludePath []value.Path
+}
+
+func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
+	o := &devGenerateSchemaOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "generate-schema [ DIRECTORY ]",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Generates a JSON schema for Zarf values based on the package definition, chart defaults, and chart schemas",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(cmd.Context(), args)
+		},
+	}
+
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.setPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
+	cmd.Flags().BoolVarP(&o.update, "update", "u", false, lang.CmdDevFlagGenerateSchemaUpdate)
+	cmd.Flags().BoolVar(&o.deleteNotFound, "delete-not-found", false, lang.CmdDevFlagGenerateSchemaDeleteNotFound)
+
+	return cmd
+}
+
+func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error {
+	l := logger.From(ctx)
+
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
+
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	loadOpts := load.DefinitionOptions{
+		Flavor:                     o.flavor,
+		SetVariables:               o.setPkgTmpl,
+		IsInteractive:              true,
+		SkipVersionCheck:           true,
+		SkipValuesSchemaValidation: true,
+		CachePath:                  cachePath,
+		RemoteOptions:              defaultRemoteOptions(),
+	}
+
+	defined, err := load.PackageDefinition(ctx, basePath, loadOpts)
+	if err != nil {
+		return err
+	}
+	pkg := defined.PackageDefinition.AsV1alpha1()
+
+	// Step 1: Merge default values.files to create initial set of default Zarf values
+	valuesPaths := make([]string, len(pkg.Values.Files))
+	for i, file := range pkg.Values.Files {
+		valuesPaths[i] = filepath.Join(basePath, file)
+	}
+	zarfValues, err := value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to parse package values files: %w", err)
+	}
+
+	var mappedSchemas []mappedChartSchema
+
+	// Step 2: Discover source target mappings and load defaults from chart values where Zarf Value defaults aren't specified
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			l.Warn("unable to clean up temporary directory", "path", tmpDir, "error", err.Error())
+		}
+	}()
+
+	for _, component := range pkg.Components {
+		for _, chart := range component.Charts {
+			chartPaths := layout.ChartPaths{
+				ChartsDir: filepath.Join(tmpDir, "charts", chart.Name),
+				ValuesDir: filepath.Join(tmpDir, "values"),
+			}
+
+			err := assemble.PackageChart(ctx, chart, basePath, chartPaths, cachePath, defaultRemoteOptions())
+			if err != nil {
+				return fmt.Errorf("unable to package chart %q for schema generation: %w", chart.Name, err)
+			}
+
+			helmChart, valuesFilesValues, err := helm.LoadChartData(chart, chartPaths, nil)
+			if err != nil {
+				return fmt.Errorf("unable to load default values for chart %q: %w", chart.Name, err)
+			}
+
+			appliedValues := helpers.MergeMapRecursive(helmChart.Values, valuesFilesValues)
+			var chartSchema map[string]any
+			if len(helmChart.Schema) > 0 {
+				if err := json.Unmarshal(helmChart.Schema, &chartSchema); err != nil {
+					l.Warn("unable to parse Helm chart values schema; falling back to inferred types", "chart", chart.Name, "error", err)
+					chartSchema = nil
+				} else {
+					chartSchema = value.FilterChartSchema(chartSchema)
+					if chartSchema != nil {
+						if err := value.ValidateSchemaDocument(chartSchema); err != nil {
+							l.Warn("unable to validate Helm chart values schema; falling back to inferred types", "chart", chart.Name, "error", err)
+							chartSchema = nil
+						}
+					}
+				}
+			}
+
+			// Map ChartValues' Source to Target and merge into zarfValues if not already present
+			for _, cv := range chart.Values {
+				if cv.SourcePath == "" || cv.TargetPath == "" {
+					return fmt.Errorf("chart %q value mapping has empty sourcePath or targetPath", chart.Name)
+				}
+				val, err := value.Values(appliedValues).Extract(value.Path(cv.TargetPath))
+				if err != nil {
+					return fmt.Errorf("unable to extract chart %q value at targetPath %q: %w", chart.Name, cv.TargetPath, err)
+				}
+
+				if err := zarfValues.Set(value.Path(cv.SourcePath), val); err != nil {
+					return fmt.Errorf("unable to set chart %q value at sourcePath %q: %w", chart.Name, cv.SourcePath, err)
+				}
+
+				if chartSchema != nil {
+					targetSchema, found, err := value.ExtractJSONSchema(chartSchema, value.Path(cv.TargetPath))
+					if err != nil {
+						return fmt.Errorf("unable to inspect chart %q schema at targetPath %q: %w", chart.Name, cv.TargetPath, err)
+					}
+					if found {
+						excludes := make([]value.Path, len(cv.ExcludePaths))
+						for i, excludePath := range cv.ExcludePaths {
+							excludes[i] = value.Path(excludePath)
+						}
+						mappedSchemas = append(mappedSchemas, mappedChartSchema{
+							sourcePath:  value.Path(cv.SourcePath),
+							schema:      targetSchema,
+							excludePath: excludes,
+						})
+					} else {
+						l.Warn("chart values schema does not define mapped target; falling back to inferred types", "chart", chart.Name, "targetPath", cv.TargetPath)
+					}
+				}
+				for _, excludePath := range cv.ExcludePaths {
+					if err := zarfValues.Delete(value.Path(excludePath)); err != nil {
+						return fmt.Errorf("unable to exclude path %q from schema for chart %q: %w", excludePath, chart.Name, err)
+					}
+				}
+			}
+		}
+	}
+
+	// Step 3: Generate JSON generatedSchema from the final map
+	generatedSchema := value.GenerateJSONSchema(zarfValues)
+	for _, mapped := range mappedSchemas {
+		if err := value.MergeJSONSchemaAtPath(generatedSchema, mapped.sourcePath, mapped.schema); err != nil {
+			return fmt.Errorf("unable to apply Helm schema at sourcePath %q: %w", mapped.sourcePath, err)
+		}
+		for _, excludePath := range mapped.excludePath {
+			if err := value.DeleteJSONSchemaAtPath(generatedSchema, excludePath); err != nil {
+				return fmt.Errorf("unable to exclude schema path %q: %w", excludePath, err)
+			}
+		}
+	}
+
+	// Step 4: Merge and reconcile any existing schema
+	existingSchema, mergeErr := value.MergeSchemaFiles(pkg.Values.Schema, defined.ImportedSchemas, basePath)
+	if mergeErr != nil {
+		return fmt.Errorf("unable to merge imported schemas for schema generation: %w", mergeErr)
+	}
+
+	if existingSchema != nil {
+		generatedSchema = value.ReconcileJSONSchema(existingSchema, generatedSchema, o.deleteNotFound)
+	}
+
+	// Step 5: Save the resulting schema
+	b, err := json.MarshalIndent(generatedSchema, "", "  ")
+	if err != nil {
+		return fmt.Errorf("unable to marshal schema to JSON: %w", err)
+	}
+
+	fmt.Println(string(b))
+
+	if o.update {
+		outputFileName := filepath.Join(basePath, "values.schema.json")
+		if pkg.Values.Schema != "" {
+			if !filepath.IsAbs(pkg.Values.Schema) {
+				outputFileName = filepath.Join(basePath, pkg.Values.Schema)
+			} else {
+				outputFileName = pkg.Values.Schema
+			}
+		} else {
+			if err := packager.UpdateSchema(ctx, basePath, "values.schema.json"); err != nil {
+				return fmt.Errorf("unable to update zarf.yaml with schema path: %w", err)
+			}
+		}
+
+		err = os.WriteFile(outputFileName, b, helpers.ReadAllWriteUser)
+		if err != nil {
+			return fmt.Errorf("unable to write schema file: %w", err)
+		}
+
+		l.Info("Schema successfully generated", "filename", outputFileName)
+	}
+	return nil
 }
 
 func newDevInspectCommand(v *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect",
-		Short: "Commands to get information about a Zarf package using a `zarf.yaml`",
+		Short: "Commands to gather information about a Zarf package using its package definition",
 	}
 
 	cmd.AddCommand(newDevInspectDefinitionCommand(v))
@@ -72,8 +315,8 @@ func newDevInspectCommand(v *viper.Viper) *cobra.Command {
 }
 
 type devInspectDefinitionOptions struct {
-	flavor       string
-	setVariables map[string]string
+	flavor     string
+	setPkgTmpl map[string]string
 }
 
 func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
@@ -88,7 +331,7 @@ func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringToStringVar(&o.setPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
 
 	return cmd
 }
@@ -96,34 +339,50 @@ func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	v := getViper()
-	o.setVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+	o.setPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.setPkgTmpl, strings.ToUpper)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 	loadOpts := load.DefinitionOptions{
-		Flavor:        o.flavor,
-		SetVariables:  o.setVariables,
-		CachePath:     cachePath,
-		IsInteractive: true,
+		Flavor:           o.flavor,
+		SetVariables:     o.setPkgTmpl,
+		CachePath:        cachePath,
+		IsInteractive:    true,
+		SkipVersionCheck: true,
+		RemoteOptions:    defaultRemoteOptions(),
 	}
-	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
+	basePath, err := setBaseDirectory(args)
 	if err != nil {
 		return err
 	}
+	defined, err := load.PackageDefinition(ctx, basePath, loadOpts)
+	var lintErr *lint.LintError
+	if errors.As(err, &lintErr) {
+		PrintFindings(ctx, lintErr)
+	}
+	if err != nil {
+		return err
+	}
+
+	// The definition is printed in the apiVersion it was authored in.
+	if defined.PackageDefinition.OriginalAPIVersion() == v1beta1.APIVersion {
+		pkg := defined.PackageDefinition.AsV1beta1()
+		pkg.Build = v1beta1.BuildData{}
+		return utils.ColorPrintYAML(pkg, nil, false)
+	}
+	pkg := defined.PackageDefinition.AsV1alpha1()
 	pkg.Build = v1alpha1.ZarfBuildData{}
-	err = utils.ColorPrintYAML(pkg, nil, false)
-	if err != nil {
-		return err
-	}
-	return nil
+	return utils.ColorPrintYAML(pkg, nil, false)
 }
 
 type devInspectManifestsOptions struct {
 	flavor             string
-	createSetVariables map[string]string
+	createSetPkgTmpl   map[string]string
 	deploySetVariables map[string]string
+	valuesFiles        []string
+	setValues          map[string]string
 	kubeVersion        string
 	outputWriter       io.Writer
 }
@@ -147,8 +406,12 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
+	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -156,23 +419,36 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) error {
 	v := getViper()
-	o.createSetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
+	o.createSetPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
+
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
+
 	opts := packager.InspectDefinitionResourcesOptions{
-		CreateSetVariables: o.createSetVariables,
+		CreateSetVariables: o.createSetPkgTmpl,
 		DeploySetVariables: o.deploySetVariables,
+		Values:             values,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
 		IsInteractive:      true,
+		RemoteOptions:      defaultRemoteOptions(),
 	}
-	resources, err := packager.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
+	resources, err := packager.InspectDefinitionResources(ctx, basePath, opts)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -199,8 +475,10 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 
 type devInspectValuesFilesOptions struct {
 	flavor             string
-	createSetVariables map[string]string
+	createSetPkgTmpl   map[string]string
 	deploySetVariables map[string]string
+	valuesFiles        []string
+	setValues          map[string]string
 	kubeVersion        string
 	outputWriter       io.Writer
 }
@@ -225,8 +503,12 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
+	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -234,23 +516,36 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) error {
 	v := getViper()
-	o.createSetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
+	o.createSetPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
+
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
+
 	opts := packager.InspectDefinitionResourcesOptions{
-		CreateSetVariables: o.createSetVariables,
+		CreateSetVariables: o.createSetPkgTmpl,
 		DeploySetVariables: o.deploySetVariables,
+		Values:             values,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
 		IsInteractive:      true,
+		RemoteOptions:      defaultRemoteOptions(),
 	}
-	resources, err := packager.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
+	resources, err := packager.InspectDefinitionResources(ctx, basePath, opts)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -272,17 +567,21 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 }
 
 type devDeployOptions struct {
-	createSetVariables     map[string]string
-	deploySetVariables     map[string]string
-	registryOverrides      []string
-	flavor                 string
-	registryURL            string
-	adoptExistingResources bool
-	timeout                time.Duration
-	retries                int
-	optionalComponents     string
-	noYOLO                 bool
-	ociConcurrency         int
+	createSetPkgTmpl   map[string]string
+	deploySetVariables map[string]string
+	valuesFiles        []string
+	setValues          map[string]string
+	registryOverrides  []string
+	flavor             string
+	registryURL        string
+	takeOwnership      bool
+	timeout            time.Duration
+	retries            int
+	optionalComponents string
+	noYOLO             bool
+	connected          bool
+	ociConcurrency     int
+	skipVersionCheck   bool
 }
 
 func newDevDeployCommand(v *viper.Viper) *cobra.Command {
@@ -296,7 +595,7 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 		RunE:  o.run,
 	}
 
-	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
 	cmd.Flags().StringArrayVar(&o.registryOverrides, "registry-override", v.GetStringSlice(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
@@ -306,32 +605,50 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 		logger.Default().Debug("unable to mark dev-deploy flag as hidden", "error", err)
 	}
 
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
+	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 
-	// Always require adopt-existing-resources flag (no viper)
-	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	// Always require take-ownership flag (no viper)
+	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
+	cmd.Flags().BoolVar(&o.takeOwnership, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 
+	cmd.Flags().BoolVar(&o.connected, "connected", v.GetBool(VDevDeployConnected), lang.CmdDevDeployFlagConnected)
 	cmd.Flags().BoolVar(&o.noYOLO, "no-yolo", v.GetBool(VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
+	_ = cmd.Flags().MarkDeprecated("no-yolo", "Use --connected=false instead")
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
+	_ = cmd.Flags().MarkHidden("skip-version-check")
 
 	return cmd
 }
 
 func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	baseDir := setBaseDirectory(args)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
 
 	v := getViper()
-	o.createSetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
+	o.createSetPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -342,19 +659,22 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error parsing registry override: %w", err)
 	}
 
-	err = packager.DevDeploy(ctx, baseDir, packager.DevDeployOptions{
-		AirgapMode:         o.noYOLO,
+	err = packager.DevDeploy(ctx, basePath, packager.DevDeployOptions{
+		AirgapMode:         o.noYOLO || !o.connected,
 		Flavor:             o.flavor,
 		RegistryURL:        o.registryURL,
 		RegistryOverrides:  overrides,
-		CreateSetVariables: o.createSetVariables,
+		CreateSetVariables: o.createSetPkgTmpl,
 		DeploySetVariables: o.deploySetVariables,
+		Values:             values,
 		OptionalComponents: o.optionalComponents,
 		Timeout:            o.timeout,
 		Retries:            o.retries,
 		OCIConcurrency:     o.ociConcurrency,
 		RemoteOptions:      defaultRemoteOptions(),
 		CachePath:          cachePath,
+		SkipVersionCheck:   o.skipVersionCheck,
+		TakeOwnership:      o.takeOwnership,
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -407,7 +727,7 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 	if !helpers.InvalidPath(generatedZarfYAMLPath) {
 		prefixed := filepath.Join(o.output, fmt.Sprintf("%s-%s", name, layout.ZarfYAML))
 		l.Warn("using a prefixed name since zarf.yaml already exists in the output directory",
-			"output-directory", o.output,
+			"outputDirectory", o.output,
 			"name", prefixed)
 		generatedZarfYAMLPath = prefixed
 		if !helpers.InvalidPath(generatedZarfYAMLPath) {
@@ -608,13 +928,16 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 type devFindImagesOptions struct {
 	repoHelmChartPath   string
-	createSetVariables  map[string]string
+	createSetPkgTmpl    map[string]string
 	flavor              string
 	deploySetVariables  map[string]string
+	valuesFiles         []string
+	setValues           map[string]string
 	kubeVersionOverride string
 	why                 string
 	skipCosign          bool
 	registryURL         string
+	update              bool
 }
 
 func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
@@ -631,7 +954,7 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVarP(&o.repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdDevFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	cmd.Flags().StringToStringVar(&o.createSetVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSet)
+	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSetPkgTmpl)
 
 	err := cmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
 	if err != nil {
@@ -642,14 +965,20 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 		logger.Default().Debug("unable to mark dev-find-images flag as hidden", "error", err)
 	}
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSet)
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSetPkgTmpl)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
+	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	// allow for the override of the default helm KubeVersion
 	cmd.Flags().StringVar(&o.kubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	// check which manifests are using this particular image
 	cmd.Flags().StringVar(&o.why, "why", "", lang.CmdDevFlagFindImagesWhy)
 	// skip searching cosign artifacts in find images
 	cmd.Flags().BoolVar(&o.skipCosign, "skip-cosign", false, lang.CmdDevFlagFindImagesSkipCosign)
+	// update images in zarf.yaml file
+	cmd.Flags().BoolVarP(&o.update, "update", "u", false, lang.CmdDevFlagFindImagesUpdate)
 
 	cmd.Flags().StringVar(&o.registryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
 
@@ -658,12 +987,15 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	baseDir := setBaseDirectory(args)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
 
 	v := getViper()
 
-	o.createSetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
+	o.createSetPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
 
@@ -672,28 +1004,36 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
+
 	findImagesOptions := packager.FindImagesOptions{
 		RepoHelmChartPath:   o.repoHelmChartPath,
 		RegistryURL:         o.registryURL,
 		KubeVersionOverride: o.kubeVersionOverride,
-		CreateSetVariables:  o.createSetVariables,
+		CreateSetVariables:  o.createSetPkgTmpl,
 		DeploySetVariables:  o.deploySetVariables,
+		Values:              values,
 		Flavor:              o.flavor,
 		Why:                 o.why,
 		SkipCosign:          o.skipCosign,
 		CachePath:           cachePath,
 		IsInteractive:       true,
-	}
-	imagesScans, err := packager.FindImages(ctx, baseDir, findImagesOptions)
-	var lintErr *lint.LintError
-	if errors.As(err, &lintErr) {
-		PrintFindings(ctx, lintErr)
-	}
-	if err != nil {
-		return fmt.Errorf("unable to find images: %w", err)
+		RemoteOptions:       defaultRemoteOptions(),
 	}
 
 	if o.why != "" {
+		imagesScans, err := packager.FindImages(ctx, basePath, findImagesOptions)
+		var lintErr *lint.LintError
+		if errors.As(err, &lintErr) {
+			PrintFindings(ctx, lintErr)
+		}
+		if err != nil {
+			return fmt.Errorf("unable to find images: %w", err)
+		}
 		var foundWhyResource bool
 		for _, scan := range imagesScans {
 			for _, whyResource := range scan.WhyResources {
@@ -708,11 +1048,25 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	definitionImageResults, err := packager.FindDefinitionImages(ctx, basePath, findImagesOptions)
+	var lintErr *lint.LintError
+	if errors.As(err, &lintErr) {
+		PrintFindings(ctx, lintErr)
+	}
+	if err != nil {
+		return fmt.Errorf("unable to filter images included in imageArchives: %w", err)
+	}
+
 	componentDefinition := "\ncomponents:\n"
-	for _, finding := range imagesScans {
-		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts) > 0 {
-			componentDefinition += fmt.Sprintf("  - name: %s\n    images:\n", finding.ComponentName)
+	for _, finding := range definitionImageResults {
+		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts)+len(finding.ImageArchives) > 0 {
+			componentDefinition += fmt.Sprintf("  - name: %s\n", finding.ComponentName)
 		}
+
+		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts) > 0 {
+			componentDefinition += "    images:\n"
+		}
+
 		if len(finding.Matches) > 0 {
 			for _, image := range finding.Matches {
 				componentDefinition += fmt.Sprintf("      - %s\n", image)
@@ -730,8 +1084,31 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 				componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
 			}
 		}
+		if len(finding.ImageArchives) > 0 {
+			componentDefinition += fmt.Sprintf("  # Archive images - %s\n", finding.ComponentName)
+			componentDefinition += "    imageArchives:\n"
+		}
+		for _, archive := range finding.ImageArchives {
+			componentDefinition += fmt.Sprintf("      - path: %s\n", archive.Path)
+			if len(archive.Images) > 0 {
+				componentDefinition += "        images:\n"
+				for _, image := range archive.Images {
+					componentDefinition += fmt.Sprintf("          - %s\n", image)
+				}
+				continue
+			}
+			componentDefinition += "        images: []\n"
+		}
 	}
+
 	fmt.Println(componentDefinition)
+
+	if o.update {
+		if err := packager.UpdateImages(ctx, basePath, definitionImageResults); err != nil {
+			return fmt.Errorf("unable to create update: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -769,8 +1146,8 @@ func (o *devGenerateConfigOptions) run(_ *cobra.Command, args []string) error {
 }
 
 type devLintOptions struct {
-	setVariables map[string]string
-	flavor       string
+	setPkgTmpl map[string]string
+	flavor     string
 }
 
 func newDevLintCommand(v *viper.Viper) *cobra.Command {
@@ -785,7 +1162,7 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringToStringVar(&o.setPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
 	return cmd
@@ -793,18 +1170,22 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	baseDir := setBaseDirectory(args)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
 	v := getViper()
-	o.setVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+	o.setPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.setPkgTmpl, strings.ToUpper)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
-	err = packager.Lint(ctx, baseDir, packager.LintOptions{
-		Flavor:       o.flavor,
-		SetVariables: o.setVariables,
-		CachePath:    cachePath,
+	err = packager.Lint(ctx, basePath, packager.LintOptions{
+		Flavor:        o.flavor,
+		SetVariables:  o.setPkgTmpl,
+		CachePath:     cachePath,
+		RemoteOptions: defaultRemoteOptions(),
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {

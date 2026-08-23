@@ -12,7 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"github.com/spf13/viper"
@@ -25,9 +27,9 @@ const (
 	// Root config keys
 
 	VArchitecture          = "architecture"
+	VCache                 = "cache"
 	VZarfCache             = "zarf_cache"
 	VTmpDir                = "tmp_dir"
-	VInsecure              = "insecure"
 	VPlainHTTP             = "plain_http"
 	VInsecureSkipTLSVerify = "insecure_skip_tls_verify"
 
@@ -58,6 +60,9 @@ const (
 
 	VInitRegistryURL      = "init.registry.url"
 	VInitRegistryNodeport = "init.registry.nodeport"
+	VInitRegistryPort     = "init.registry.port"
+	VInitInjectorPort     = "init.registry.injector_port"
+	VInitInjectorImage    = "init.registry.injector_image"
 	VInitRegistrySecret   = "init.registry.secret"
 	VInitRegistryPushUser = "init.registry.push_username"
 	VInitRegistryPushPass = "init.registry.push_password"
@@ -70,24 +75,41 @@ const (
 	VInitArtifactPushUser  = "init.artifact.push_username"
 	VInitArtifactPushToken = "init.artifact.push_token"
 
+	VInitAgentTLSCA          = "init.agent.tls_ca"
+	VInitAgentTLSCert        = "init.agent.tls_cert"
+	VInitAgentTLSKey         = "init.agent.tls_key"
+	VInitAgentMutationPolicy = "init.agent.mutation_policy"
+
 	// Package config keys
 
 	VPkgOCIConcurrency = "package.oci_concurrency"
-	VPkgPublicKey      = "package.public_key"
+
+	// Package verification config keys (top-level; shared across verify, deploy, pull, and other load commands)
+
+	VPkgVerify                      = "package.verify"
+	VPkgPublicKey                   = "package.public_key"
+	VPkgCertificateIdentity         = "package.certificate_identity"
+	VPkgCertificateIdentityRegexp   = "package.certificate_identity_regexp"
+	VPkgCertificateOIDCIssuer       = "package.certificate_oidc_issuer"
+	VPkgCertificateOIDCIssuerRegexp = "package.certificate_oidc_issuer_regexp"
+	VPkgTrustedRoot                 = "package.trusted_root"
+	VPkgInsecureIgnoreTlog          = "package.insecure_ignore_tlog"
+	VPkgUseSignedTimestamps         = "package.use_signed_timestamps"
 
 	// Package create config keys
 
-	VPkgCreateSet                = "package.create.set"
-	VPkgCreateOutput             = "package.create.output"
-	VPkgCreateSbom               = "package.create.sbom"
-	VPkgCreateSbomOutput         = "package.create.sbom_output"
-	VPkgCreateSkipSbom           = "package.create.skip_sbom"
-	VPkgCreateMaxPackageSize     = "package.create.max_package_size"
-	VPkgCreateSigningKey         = "package.create.signing_key"
-	VPkgCreateSigningKeyPassword = "package.create.signing_key_password"
-	VPkgCreateDifferential       = "package.create.differential"
-	VPkgCreateRegistryOverride   = "package.create.registry_override"
-	VPkgCreateFlavor             = "package.create.flavor"
+	VPkgCreateSet                  = "package.create.set"
+	VPkgCreateOutput               = "package.create.output"
+	VPkgCreateSbom                 = "package.create.sbom"
+	VPkgCreateSbomOutput           = "package.create.sbom_output"
+	VPkgCreateSkipSbom             = "package.create.skip_sbom"
+	VPkgCreateMaxPackageSize       = "package.create.max_package_size"
+	VPkgCreateSigningKey           = "package.create.signing_key"
+	VPkgCreateSigningKeyPassword   = "package.create.signing_key_password"
+	VPkgCreateDifferential         = "package.create.differential"
+	VPkgCreateRegistryOverride     = "package.create.registry_override"
+	VPkgCreateFlavor               = "package.create.flavor"
+	VPkgCreateWithBuildMachineInfo = "package.create.with_build_machine_info"
 
 	// Package deploy config keys
 
@@ -98,20 +120,53 @@ const (
 	VPkgDeployNamespace  = "package.deploy.namespace"
 	VPkgRetries          = "package.deploy.retries"
 	VPkgDeployValues     = "package.deploy.values"
+	VPkgDeploySetValues  = "package.deploy.set_values"
 
 	// Package publish config keys
 
-	VPkgPublishSigningKey         = "package.publish.signing_key"
-	VPkgPublishSigningKeyPassword = "package.publish.signing_key_password"
-	VPkgPublishRetries            = "package.publish.retries"
+	VPkgPublishSigningKey           = "package.publish.signing_key"
+	VPkgPublishSigningKeyPassword   = "package.publish.signing_key_password"
+	VPkgPublishRetries              = "package.publish.retries"
+	VPkgPublishWithBuildMachineInfo = "package.publish.with_build_machine_info"
+
+	// Package sign config keys
+
+	VPkgSignSigningKey         = "package.sign.signing_key"
+	VPkgSignSigningKeyPassword = "package.sign.signing_key_password"
+	VPkgSignOutput             = "package.sign.output"
+	VPkgSignOverwrite          = "package.sign.overwrite"
+	VPkgSignKeyless            = "package.sign.keyless"
+	VPkgSignIdentityToken      = "package.sign.identity_token"
+	VPkgSignFulcioURL          = "package.sign.fulcio_url"
+	VPkgSignFulcioAuthFlow     = "package.sign.fulcio_auth_flow"
+	VPkgSignOIDCIssuer         = "package.sign.oidc_issuer"
+	VPkgSignOIDCClientID       = "package.sign.oidc_client_id"
+	VPkgSignRekorURL           = "package.sign.rekor_url"
+	VPkgSignTlogUpload         = "package.sign.tlog_upload"
+	VPkgSignTSAServerURL       = "package.sign.tsa_server_url"
 
 	// Package pull config keys
 
 	VPkgPullOutputDir = "package.pull.output_directory"
 
+	// Package remove config keys
+
+	VPkgRemoveSetValues = "package.remove.set_values"
+
+	// Package deploy config keys
+
+	VPkgDeployConnected = "package.deploy.connected"
+
 	// Dev deploy config keys
 
-	VDevDeployNoYolo = "dev.deploy.no_yolo"
+	VDevDeployNoYolo    = "dev.deploy.no_yolo"
+	VDevDeployConnected = "dev.deploy.connected"
+
+	// Dev template config keys
+
+	VDevTemplateSet            = "dev.template.set"
+	VDevTemplateSetFile        = "dev.template.set_file"
+	VDevTemplateSkipValidation = "dev.template.skip_validation"
 )
 
 var (
@@ -137,7 +192,7 @@ func initViper() *viper.Viper {
 	v.AutomaticEnv()
 
 	// Set default values for viper
-	setDefaults()
+	setDefaults(v)
 
 	// skip config file setup for version command
 	if isVersionCmd() {
@@ -170,6 +225,11 @@ func getViper() *viper.Viper {
 	}
 
 	return v
+}
+
+// optionIsExplicitlySet determines if an option is explicitly provided in a flag or viper key
+func optionIsExplicitlySet(cmd *cobra.Command, v *viper.Viper, flagName, key string) bool {
+	return cmd.Flags().Changed(flagName) || v.IsSet(key)
 }
 
 func isVersionCmd() bool {
@@ -211,10 +271,9 @@ func PrintViperConfigUsed(ctx context.Context) error {
 	return nil
 }
 
-func setDefaults() {
+func setDefaults(v *viper.Viper) {
 	// Root defaults that are non-zero values
 	v.SetDefault(VLogLevel, "info")
-	v.SetDefault(VZarfCache, config.ZarfDefaultCachePath)
 	v.SetDefault(VLogFormat, string(logger.FormatConsole))
 
 	// Package defaults that are non-zero values
@@ -226,6 +285,18 @@ func setDefaults() {
 
 	// Package publish opts that are non-zero values
 	v.SetDefault(VPkgPublishRetries, 1)
+
+	// Package sign keyless defaults
+	v.SetDefault(VPkgSignFulcioURL, "https://fulcio.sigstore.dev")
+	v.SetDefault(VPkgSignOIDCIssuer, "https://oauth2.sigstore.dev/auth")
+	v.SetDefault(VPkgSignOIDCClientID, "sigstore")
+	v.SetDefault(VPkgSignRekorURL, "https://rekor.sigstore.dev")
+
+	// Dev deploy defaults
+	v.SetDefault(VDevDeployConnected, true)
+
+	// Init defaults that are non-zero values
+	v.SetDefault(VInitAgentMutationPolicy, string(state.MutationPolicyAll))
 }
 
 // GetStringSlice returns a string slice from viper

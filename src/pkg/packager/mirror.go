@@ -17,13 +17,14 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ImagePushOptions are optional parameters to push images in a zarf package to a registry
@@ -32,7 +33,7 @@ type ImagePushOptions struct {
 	NoImageChecksum bool
 	Retries         int
 	OCIConcurrency  int
-	RemoteOptions
+	types.RemoteOptions
 }
 
 // PushImagesToRegistry pushes images in the package layout to the specified registry
@@ -47,8 +48,8 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		opts.Retries = config.ZarfDefaultRetries
 	}
 	refs := []transform.Image{}
-	for _, component := range pkgLayout.Pkg.Components {
-		for _, img := range component.Images {
+	for _, component := range pkgLayout.AsV1alpha1().Components {
+		for _, img := range component.GetImages() {
 			ref, err := transform.ParseImageRef(img)
 			if err != nil {
 				return fmt.Errorf("failed to create ref for image %s: %w", img, err)
@@ -59,19 +60,15 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if len(refs) == 0 {
 		return nil
 	}
-	pushConfig := images.PushConfig{
+	pushOpts := images.PushOptions{
 		OCIConcurrency:        opts.OCIConcurrency,
-		SourceDirectory:       pkgLayout.GetImageDirPath(),
-		RegistryInfo:          registryInfo,
-		ImageList:             refs,
 		PlainHTTP:             opts.PlainHTTP,
 		NoChecksum:            opts.NoImageChecksum,
-		Arch:                  pkgLayout.Pkg.Build.Architecture,
 		Retries:               opts.Retries,
 		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		Cluster:               opts.Cluster,
 	}
-	err := images.Push(ctx, pushConfig)
+	err := images.Push(ctx, refs, pkgLayout.GetImageDirPath(), registryInfo, pushOpts)
 	if err != nil {
 		return fmt.Errorf("failed to push images: %w", err)
 	}
@@ -95,7 +92,7 @@ func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout,
 	if gitInfo.Address == "" {
 		return fmt.Errorf("git server address must be specified")
 	}
-	for _, component := range pkgLayout.Pkg.Components {
+	for _, component := range pkgLayout.AsV1alpha1().Components {
 		err := pushComponentReposToRegistry(ctx, component, pkgLayout, gitInfo, opts.Cluster, opts.Retries)
 		if err != nil {
 			return err

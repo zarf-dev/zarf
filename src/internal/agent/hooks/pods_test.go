@@ -26,6 +26,7 @@ func createPodAdmissionRequest(t *testing.T, op v1.Operation, pod *corev1.Pod, s
 	require.NoError(t, err)
 	return &v1.AdmissionRequest{
 		Operation: op,
+		Namespace: testNamespace,
 		Object: runtime.RawExtension{
 			Raw: raw,
 		},
@@ -40,7 +41,7 @@ func TestPodMutationWebhook(t *testing.T) {
 
 	s := &state.State{RegistryInfo: state.RegistryInfo{Address: "127.0.0.1:31999"}}
 	c := createTestClientWithZarfState(ctx, t, s)
-	handler := admission.NewHandler().Serve(ctx, NewPodMutationHook(ctx, c))
+	handler := admission.NewHandler().Serve(ctx, NewPodMutationHook(c, state.MutationPolicyAll))
 
 	tests := []admissionTest{
 		{
@@ -169,10 +170,77 @@ func TestPodMutationWebhook(t *testing.T) {
 			},
 			code: http.StatusOK,
 		},
+		{
+			name: "pod with volume image",
+			admissionReq: createPodAdmissionRequest(t, v1.Create, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: nil,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "nginx", Image: "nginx"}},
+					Volumes: []corev1.Volume{
+						{Name: "image",
+							VolumeSource: corev1.VolumeSource{
+								Image: &corev1.ImageVolumeSource{
+									Reference: "quay.io/crio/artifact:v1",
+								},
+							},
+						},
+					},
+				},
+			}, ""),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/imagePullSecrets",
+					[]corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/containers/0/image",
+					"127.0.0.1:31999/library/nginx:latest-zarf-3793515731",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/volumes/0/image/reference",
+					"127.0.0.1:31999/crio/artifact:v1-zarf-2568457951",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{"zarf-agent": "patched"},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/annotations",
+					map[string]string{
+						"zarf.dev/original-image-nginx":  "nginx",
+						"zarf.dev/original-volume-image": "quay.io/crio/artifact:v1",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "empty image ref",
+			admissionReq: createPodAdmissionRequest(t, v1.Create, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: nil,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "nginx", Image: "nginx"}},
+					Volumes: []corev1.Volume{
+						{Name: "image",
+							VolumeSource: corev1.VolumeSource{
+								Image: &corev1.ImageVolumeSource{
+									Reference: "",
+								},
+							},
+						},
+					},
+				},
+			}, ""),
+			errContains: "has an ImageVolumeSource with empty reference - this is invalid and must be specified",
+			code:        http.StatusInternalServerError,
+		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)

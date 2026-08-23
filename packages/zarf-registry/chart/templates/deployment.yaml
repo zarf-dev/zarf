@@ -13,7 +13,9 @@ spec:
     matchLabels:
       app: {{ template "docker-registry.name" . }}
       release: {{ .Release.Name }}
+  {{ if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{ end }}
   minReadySeconds: 5
   template:
     metadata:
@@ -25,6 +27,12 @@ spec:
         {{- end }}
       annotations:
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+{{- if .Values.mtls.enabled }}
+{{- $tlsSecret := (lookup "v1" "Secret" .Release.Namespace "zarf-registry-server-tls") }}
+{{- if $tlsSecret }}
+        checksum/tls-secret: {{ $tlsSecret.data | toJson | sha256sum }}
+{{- end }}
+{{- end }}
     spec:
       serviceAccountName: {{ include "docker-registry.serviceAccountName" . }}
       {{- if .Values.imagePullSecrets }}
@@ -33,14 +41,14 @@ spec:
       {{- end }}
       priorityClassName: system-node-critical
       securityContext:
-        runAsUser: 1000
-        fsGroup: 2000
-        runAsGroup: 2000
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
         seccompProfile:
           type: "RuntimeDefault"
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ include "registry.image.repository" . }}:{{ .Values.image.tag }}"
           imagePullPolicy: IfNotPresent
           command:
           - /bin/registry
@@ -52,13 +60,16 @@ spec:
             httpGet:
               path: /
               port: 5000
+              scheme: {{ if .Values.mtls.enabled }}HTTPS{{ else }}HTTP{{ end }}
           readinessProbe:
             httpGet:
               path: /
               port: 5000
+              scheme: {{ if .Values.mtls.enabled }}HTTPS{{ else }}HTTP{{ end }}
           securityContext:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
+            privileged: false
             runAsNonRoot: true
             capabilities:
               drop: ["ALL"]
@@ -71,6 +82,8 @@ spec:
               value: "Registry Realm"
             - name: REGISTRY_AUTH_HTPASSWD_PATH
               value: "/etc/docker/registry/htpasswd"
+            - name: OTEL_TRACES_EXPORTER
+              value: {{ .Values.opentelemetry.exporter | default "otlp" }}
 {{- if .Values.persistence.enabled }}
             - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
               value: "/var/lib/registry"
@@ -83,6 +96,11 @@ spec:
 {{ toYaml .  | indent 12 }}
 {{- end }}
           volumeMounts:
+{{- if .Values.mtls.enabled }}
+            - name: server-certs
+              mountPath: /certs/server
+              readOnly: true
+{{- end }}
             - name: data
               mountPath: /var/lib/registry/
             - name: config
@@ -119,7 +137,16 @@ spec:
       tolerations:
 {{ toYaml .Values.tolerations | indent 8 }}
 {{- end }}
+{{- if .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+{{- end }}
       volumes:
+{{- if .Values.mtls.enabled }}
+        - name: server-certs
+          secret:
+            secretName: zarf-registry-server-tls
+{{- end }}
         - name: config
           secret:
             secretName: {{ template "docker-registry.fullname" . }}-secret

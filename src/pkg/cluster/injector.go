@@ -6,6 +6,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/avast/retry-go/v4"
 	"github.com/google/go-containerregistry/pkg/crane"
 	corev1 "k8s.io/api/core/v1"
@@ -36,17 +38,46 @@ import (
 	componenthelpers "k8s.io/component-helpers/resource"
 )
 
+var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
+
+// ZarfInjectorOptions represents the options used by injector pod
+type ZarfInjectorOptions struct {
+	// RegistryNodePort, using uint16 allows for only valid ports; 0 lets Kubernetes choose
+	RegistryNodePort uint16
+	// InjectorNodePort, using uint16 allows for only valid ports; 0 lets Kubernetes choose
+	InjectorNodePort uint16
+	// Image is the injector container image. When set, Kubernetes schedules the injector on any suitable node.
+	Image string
+	// IPFamily determines the injector listen address; defaults to IPv4 when unset
+	IPFamily state.IPFamily
+}
+
 // StartInjection initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, registryNodePort int, pkgName string) error {
+// Returns the image used for the injector pod and the node port the injector service is exposed on.
+func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, pkgName string, architecture string, opts ZarfInjectorOptions) (string, int, error) {
 	l := logger.From(ctx)
 	start := time.Now()
+
+	// The injector breaks if the same image is added multiple times
+	injectorSeedSrcs = helpers.Unique(injectorSeedSrcs)
+
 	// Stop any previous running injection before starting.
 	err := c.StopInjection(ctx)
 	if err != nil {
-		return err
+		return "", 0, err
 	}
 
 	l.Info("creating Zarf injector resources")
+
+	svc, err := c.createInjectorNodeportService(ctx, pkgName, opts)
+	if err != nil {
+		return "", 0, err
+	}
+
+	payloadCmNames, shasum, err := c.CreateInjectorConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs, pkgName)
+	if err != nil {
+		return "", 0, err
+	}
 
 	resReq := v1ac.ResourceRequirements().
 		WithRequests(corev1.ResourceList{
@@ -57,43 +88,20 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
-	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq)
-	if err != nil {
-		return err
+	injectorImage := opts.Image
+	injectorNodeName := ""
+	if injectorImage == "" {
+		var err error
+		injectorImage, injectorNodeName, err = c.getInjectorImageAndNode(ctx, resReq, architecture)
+		if err != nil {
+			return "", 0, err
+		}
 	}
 
-	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs, pkgName)
-	if err != nil {
-		return fmt.Errorf("unable to generate the injector payload configmaps: %w", err)
-	}
-
-	b, err := os.ReadFile(filepath.Join(tmpDir, "zarf-injector"))
-	if err != nil {
-		return err
-	}
-	cm := v1ac.ConfigMap("rust-binary", state.ZarfNamespaceName).
-		WithBinaryData(map[string][]byte{
-			"zarf-injector": b,
-		}).
-		WithLabels(map[string]string{
-			PackageLabel: pkgName,
-		})
-	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-	if err != nil {
-		return err
-	}
-
-	svc, err := c.createInjectorNodeportService(ctx, registryNodePort, pkgName)
-	if err != nil {
-		return err
-	}
-	// TODO: Remove use of passing data through global variables.
-	config.ZarfSeedPort = fmt.Sprintf("%d", svc.Spec.Ports[0].NodePort)
-
-	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName)
+	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily)
 	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
-		return fmt.Errorf("error creating pod in cluster: %w", err)
+		return "", 0, fmt.Errorf("error creating pod in cluster: %w", err)
 	}
 
 	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
@@ -106,11 +114,36 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	}
 	err = healthchecks.Run(waitCtx, c.Watcher, []v1alpha1.NamespacedObjectKindReference{podRef})
 	if err != nil {
-		return err
+		return "", 0, err
 	}
 
 	l.Debug("done with injection", "duration", time.Since(start))
-	return nil
+	return injectorImage, int(svc.Spec.Ports[0].NodePort), nil
+}
+
+// CreateInjectorConfigMaps creates the required configmaps to run the injector
+func (c *Cluster) CreateInjectorConfigMaps(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, pkgName string) ([]string, string, error) {
+	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs, pkgName)
+	if err != nil {
+		return nil, "", fmt.Errorf("unable to generate the injector payload configmaps: %w", err)
+	}
+
+	b, err := os.ReadFile(filepath.Join(tmpDir, "zarf-injector"))
+	if err != nil {
+		return nil, "", err
+	}
+	cm := v1ac.ConfigMap("rust-binary", state.ZarfNamespaceName).
+		WithBinaryData(map[string][]byte{
+			"zarf-injector": b,
+		}).
+		WithLabels(map[string]string{
+			PackageLabel: pkgName,
+		})
+	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+	if err != nil {
+		return nil, "", err
+	}
+	return payloadCmNames, shasum, nil
 }
 
 // StopInjection handles cleanup once the seed registry is up.
@@ -126,7 +159,9 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	_, err = retryInjectorRequest(ctx, "delete injector binary ConfigMap", func() error {
+		return c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
@@ -141,25 +176,11 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	listOpts := metav1.ListOptions{
 		LabelSelector: selector.String(),
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	_, err = retryInjectorRequest(ctx, "delete injector payload ConfigMaps", func() error {
+		return c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	})
 	if err != nil {
 		return err
-	}
-
-	// This is needed because labels were not present in payload config maps previously.
-	// Without this injector will fail if the config maps exist from a previous Zarf version.
-	cmList, err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, cm := range cmList.Items {
-		if !strings.HasPrefix(cm.Name, "zarf-payload-") {
-			continue
-		}
-		err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
-		if err != nil {
-			return err
-		}
 	}
 
 	// TODO: Replace with wait package in the future.
@@ -223,7 +244,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 	if err != nil {
 		return nil, "", err
 	}
-
 	cmNames := []string{}
 	l.Info("adding archived binary configmaps of registry image to the cluster")
 	for i, data := range chunks {
@@ -243,20 +263,15 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 		}
 		cmNames = append(cmNames, fileName)
 
-		// Give the control plane a 250ms buffer between each configmap
+		// Give the control plane a 250ms buffer between each configmap.
 		time.Sleep(250 * time.Millisecond)
 	}
 	return cmNames, shasum, nil
 }
 
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
-func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration) (string, string, error) {
+func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration, architecture string) (string, string, error) {
 	l := logger.From(ctx)
-
-	zarfImageRegex, err := regexp.Compile(`(?m)^127\.0\.0\.1:`)
-	if err != nil {
-		return "", "", err
-	}
 
 	// List all nodes and running pods once
 	nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
@@ -281,16 +296,25 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 		podsByNode[pod.Spec.NodeName] = append(podsByNode[pod.Spec.NodeName], pod)
 	}
 
-	// Evaluate nodes one by one, return early when suitable
+	type nodeFallback struct {
+		image string
+		node  string
+	}
+	var fallback *nodeFallback
+
 	for _, node := range nodeList.Items {
 		if hasBlockingTaints(node.Spec.Taints) {
 			l.Debug("skipping node: blocking taints", "node", node.Name)
 			continue
 		}
 
+		if node.Status.NodeInfo.Architecture != "" && node.Status.NodeInfo.Architecture != architecture {
+			continue
+		}
+
 		availCPU := node.Status.Allocatable.Cpu().DeepCopy()
 		availMem := node.Status.Allocatable.Memory().DeepCopy()
-		var candidateImage string
+		var candidateNoCreds, candidateFallback string
 
 		for _, pod := range podsByNode[node.Name] {
 			podReqs := componenthelpers.AggregateContainerRequests(&pod, componenthelpers.PodResourcesOptions{})
@@ -301,20 +325,39 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 				availMem.Sub(*memReq)
 			}
 
-			// Collect candidate images (containers, init, ephemeral)
+			noCreds := len(pod.Spec.ImagePullSecrets) == 0
+			// Collect candidate images (containers, init, ephemeral), preferring pods without imagePullSecrets
 			for _, ctn := range pod.Spec.Containers {
-				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
-					candidateImage = ctn.Image
+				if zarfImageRegex.MatchString(ctn.Image) {
+					continue
+				}
+				if candidateFallback == "" {
+					candidateFallback = ctn.Image
+				}
+				if noCreds && candidateNoCreds == "" {
+					candidateNoCreds = ctn.Image
 				}
 			}
 			for _, ctn := range pod.Spec.InitContainers {
-				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
-					candidateImage = ctn.Image
+				if zarfImageRegex.MatchString(ctn.Image) {
+					continue
+				}
+				if candidateFallback == "" {
+					candidateFallback = ctn.Image
+				}
+				if noCreds && candidateNoCreds == "" {
+					candidateNoCreds = ctn.Image
 				}
 			}
 			for _, ctn := range pod.Spec.EphemeralContainers {
-				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
-					candidateImage = ctn.Image
+				if zarfImageRegex.MatchString(ctn.Image) {
+					continue
+				}
+				if candidateFallback == "" {
+					candidateFallback = ctn.Image
+				}
+				if noCreds && candidateNoCreds == "" {
+					candidateNoCreds = ctn.Image
 				}
 			}
 		}
@@ -328,23 +371,153 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 		if availCPU.Cmp(*resReq.Requests.Cpu()) < 0 || availMem.Cmp(*resReq.Requests.Memory()) < 0 {
 			l.Debug("skipping node: insufficient resources",
 				"node", node.Name,
-				"requiredCPU", resReq.Requests.Cpu().String(),
+				"requiredCpu", resReq.Requests.Cpu().String(),
 				"requiredMem", resReq.Requests.Memory().String(),
-				"availCPU", availCPU.String(),
+				"availCpu", availCPU.String(),
 				"availMem", availMem.String(),
 			)
 			continue
 		}
 
-		if candidateImage != "" {
-			l.Debug("selected image for injector", "node", node.Name, "image", candidateImage)
-			return candidateImage, node.Name, nil
+		if candidateNoCreds != "" {
+			l.Debug("selected image for injector", "node", node.Name, "image", candidateNoCreds)
+			return candidateNoCreds, node.Name, nil
+		}
+		if candidateFallback != "" && fallback == nil {
+			l.Debug("found fallback image, continuing search for image without pull credentials", "node", node.Name, "image", candidateFallback)
+			fallback = &nodeFallback{image: candidateFallback, node: node.Name}
+			continue
 		}
 
 		l.Debug("no suitable image found on node", "node", node.Name)
 	}
 
+	if fallback != nil {
+		l.Debug("selected fallback image for injector", "node", fallback.node, "image", fallback.image)
+		return fallback.image, fallback.node, nil
+	}
 	return "", "", fmt.Errorf("no suitable injector image or node exists")
+}
+
+// GetInjectorDaemonsetImage gets the image that is most likely to be accessible from all nodes
+// It first grabs the latest version pause image with semver 3 or 4, under 1MiB, and with pause in the name.
+// If there are no valid pause images then it grabs the smallest image.
+func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error) {
+	l := logger.From(ctx)
+
+	var injectorImage string
+	err := retry.Do(func() error {
+		nodes, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		// Track images across all nodes
+		allImages := []corev1.ContainerImage{}
+		validPauseImages := []pauseImageInfo{}
+
+		for _, node := range nodes.Items {
+			for _, image := range node.Status.Images {
+				zarfImage := false
+				for _, name := range image.Names {
+					if zarfImageRegex.MatchString(name) {
+						zarfImage = true
+					}
+				}
+				if zarfImage {
+					continue
+				}
+
+				allImages = append(allImages, image)
+				for _, name := range image.Names {
+					if pauseInfo := determinePauseImage(name, image.SizeBytes); pauseInfo != nil {
+						validPauseImages = append(validPauseImages, *pauseInfo)
+					}
+				}
+			}
+		}
+
+		if len(validPauseImages) > 0 {
+			// Find the latest (highest) version pause image
+			latestPause := validPauseImages[0]
+			for _, pauseImg := range validPauseImages[1:] {
+				if pauseImg.version.GreaterThan(latestPause.version) {
+					latestPause = pauseImg
+				}
+			}
+			injectorImage = latestPause.name
+			return nil
+		}
+
+		// Fallback to smallest image if no valid pause images
+		if len(allImages) == 0 {
+			return errors.New("no suitable image found on any node")
+		}
+
+		// Find the smallest image by size
+		smallestImage := allImages[0]
+		for _, image := range allImages[1:] {
+			if image.SizeBytes < smallestImage.SizeBytes {
+				smallestImage = image
+			}
+		}
+
+		if len(smallestImage.Names) == 0 {
+			return errors.New("selected image has no names")
+		}
+		injectorImage = smallestImage.Names[0]
+		return nil
+	}, retry.Attempts(15), retry.Delay(5*time.Second), retry.Context(ctx), retry.DelayType(retry.FixedDelay))
+	if err != nil {
+		return "", err
+	}
+	l.Info("selected image for injector DaemonSet", "name", injectorImage)
+
+	return injectorImage, nil
+}
+
+type pauseImageInfo struct {
+	name    string
+	version *semver.Version
+	size    int64
+}
+
+// determinePauseImage helps us judge if an image is likely to be a pause image with the following criteria:
+// - Name contains "pause"
+// - Semver version 3.x or 4.x
+// - Size is less than 1 MiB (1048576 bytes)
+func determinePauseImage(imageName string, sizeBytes int64) *pauseImageInfo {
+	if !strings.Contains(imageName, "pause") {
+		return nil
+	}
+	// The pause image is currently ~300 KB. Feels relatively safe to assume it will be continue to be less than 1mib
+	// This helps avoid images that coincidentally have pause in the name
+	OneMiB := int64(1024 * 1024)
+	if sizeBytes > OneMiB {
+		return nil
+	}
+
+	img, err := transform.ParseImageRef(imageName)
+	if err != nil {
+		return nil
+	}
+
+	ver, err := semver.NewVersion(img.Tag)
+	if err != nil {
+		return nil
+	}
+
+	// The pause image is currently on 3.11. It was upgraded to version 3, seven years ago
+	// Feels safe to assume it will be version 3 or 4 for the foreseeable future, and we can update this when a new version comes out.
+	if ver.Major() != 3 && ver.Major() != 4 {
+		return nil
+	}
+
+	return &pauseImageInfo{
+		name:    imageName,
+		version: ver,
+		size:    sizeBytes,
+	}
 }
 
 func hasBlockingTaints(taints []corev1.Taint) bool {
@@ -356,7 +529,13 @@ func hasBlockingTaints(taints []corev1.Taint) bool {
 	return false
 }
 
-func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, pkgName string) *v1ac.PodApplyConfiguration {
+func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, pkgName string, ipFamily state.IPFamily) *v1ac.PodApplyConfiguration {
+	listenHost := "0.0.0.0"
+	if ipFamily == state.IPFamilyIPv6 {
+		listenHost = "[::]"
+	}
+	listenAddr := fmt.Sprintf("%s:%d", listenHost, 5000)
+
 	executeMode := int32(0777)
 	userID := int64(1000)
 	groupID := int64(2000)
@@ -406,6 +585,7 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 			v1ac.PodSpec().
 				// The injector doesn't handle sigterm to avoid extra dependencies, so we set it to 1
 				WithTerminationGracePeriodSeconds(1).
+				WithAutomountServiceAccountToken(false).
 				WithNodeName(nodeName).
 				WithRestartPolicy(corev1.RestartPolicyNever).
 				WithSecurityContext(
@@ -424,12 +604,13 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 						WithImage(image).
 						WithImagePullPolicy(corev1.PullIfNotPresent).
 						WithWorkingDir("/zarf-init").
-						WithCommand("/zarf-init/zarf-injector", shasum).
+						WithCommand("/zarf-init/zarf-injector", shasum, listenAddr).
 						WithVolumeMounts(volumeMounts...).
 						WithSecurityContext(
 							v1ac.SecurityContext().
 								WithReadOnlyRootFilesystem(true).
 								WithAllowPrivilegeEscalation(false).
+								WithPrivileged(false).
 								WithRunAsNonRoot(true).
 								WithCapabilities(v1ac.Capabilities().WithDrop(corev1.Capability("ALL"))),
 						).
@@ -453,17 +634,21 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 }
 
 // createInjectorNodeportService creates the injector service on an available port different than the registryNodePort service
-func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNodePort int, pkgName string) (*corev1.Service, error) {
+func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName string, opts ZarfInjectorOptions) (*corev1.Service, error) {
 	l := logger.From(ctx)
 	var svc *corev1.Service
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
+	portConfiguration := v1ac.ServicePort().WithPort(int32(5000))
+	if opts.InjectorNodePort != 0 {
+		portConfiguration.WithNodePort(int32(opts.InjectorNodePort))
+	}
 	err := retry.Do(func() error {
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 			WithSpec(v1ac.ServiceSpec().
 				WithType(corev1.ServiceTypeNodePort).
 				WithPorts(
-					v1ac.ServicePort().WithPort(int32(5000)),
+					portConfiguration,
 				).WithSelector(map[string]string{
 				"app": "zarf-injector",
 			})).WithLabels(map[string]string{
@@ -477,13 +662,13 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNod
 		}
 
 		assignedNodePort := int(svc.Spec.Ports[0].NodePort)
-		if assignedNodePort == registryNodePort {
+		if assignedNodePort == int(opts.RegistryNodePort) {
 			l.Info("injector service NodePort conflicts with registry NodePort, recreating service", "conflictingPort", assignedNodePort)
 			deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
 			if deleteErr != nil {
 				return deleteErr
 			}
-			return fmt.Errorf("nodePort conflict with registry port %d", registryNodePort)
+			return fmt.Errorf("nodePort conflict with registry port %d", opts.RegistryNodePort)
 		}
 		return nil
 	}, retry.Attempts(10), retry.Delay(500*time.Millisecond), retry.Context(timeoutCtx))
@@ -491,4 +676,43 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNod
 		return nil, fmt.Errorf("failed to create the injector nodeport service: %w", err)
 	}
 	return svc, nil
+}
+
+// retryInjectorRequest retries headerless transient Kubernetes API throttles for injector payload cleanup.
+func retryInjectorRequest(ctx context.Context, operation string, request func() error) (retried bool, err error) {
+	l := logger.From(ctx)
+	err = retry.Do(func() error {
+		requestErr := request()
+		if requestErr == nil {
+			return nil
+		}
+		if !kerrors.IsTooManyRequests(requestErr) || hasServerRetryDelay(requestErr) {
+			return retry.Unrecoverable(requestErr)
+		}
+		return requestErr
+	},
+		retry.Attempts(uint(config.ZarfDefaultRetries)),
+		retry.Delay(config.ZarfDefaultRetryDelay),
+		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
+		retry.DelayType(func(n uint, requestErr error, retryConfig *retry.Config) time.Duration {
+			delay := retry.CombineDelay(retry.BackOffDelay, retry.RandomDelay)(n, requestErr, retryConfig)
+			retried = true
+			l.Warn("retrying transient Kubernetes API request",
+				"operation", operation,
+				"attempt", n+1,
+				"maxAttempts", config.ZarfDefaultRetries,
+				"nextDelay", delay,
+				"error", requestErr,
+			)
+			return delay
+		}),
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+	)
+	return retried, err
+}
+
+func hasServerRetryDelay(err error) bool {
+	_, ok := kerrors.SuggestsClientDelay(err)
+	return ok
 }

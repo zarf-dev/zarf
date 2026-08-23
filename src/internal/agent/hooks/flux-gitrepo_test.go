@@ -27,6 +27,7 @@ func createFluxGitRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxGitRep
 	require.NoError(t, err)
 	return &v1.AdmissionRequest{
 		Operation: op,
+		Namespace: testNamespace,
 		Object: runtime.RawExtension{
 			Raw: raw,
 		},
@@ -42,7 +43,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 		PushUsername: "a-push-user",
 	}}
 	c := createTestClientWithZarfState(ctx, t, s)
-	handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(ctx, c))
+	handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(c, state.MutationPolicyAll))
 
 	tests := []admissionTest{
 		{
@@ -88,6 +89,37 @@ func TestFluxMutationWebhook(t *testing.T) {
 			errContains: AgentErrTransformGitURL,
 		},
 		{
+			// Reproduces: https://github.com/zarf-dev/zarf/issues/4690
+			// CREATE has no idempotency guard, so a GitRepository created with an already-mutated
+			// URL (e.g. after a resource delete+recreate) gets double-hashed.
+			name: "should not re-mutate on create if url already points to zarf git server",
+			admissionReq: createFluxGitRepoAdmissionRequest(t, v1.Create, &flux.GitRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "already-mutated",
+				},
+				Spec: flux.GitRepositorySpec{
+					URL: "https://git-server.com/a-push-user/podinfo-1646971829.git",
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"https://git-server.com/a-push-user/podinfo-1646971829.git",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfGitServerSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
 			name: "should patch to same url and update secret if hostname matches",
 			admissionReq: createFluxGitRepoAdmissionRequest(t, v1.Update, &flux.GitRepository{
 				ObjectMeta: metav1.ObjectMeta{
@@ -118,7 +150,6 @@ func TestFluxMutationWebhook(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)

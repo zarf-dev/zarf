@@ -4,6 +4,8 @@
 package packager
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -29,6 +31,7 @@ func TestPull(t *testing.T) {
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		defer file.Close() //nolint:errcheck // best-effort cleanup in test handler
 		//nolint:errcheck // ignore
 		io.Copy(rw, file)
 	}))
@@ -62,6 +65,7 @@ func TestPullUncompressed(t *testing.T) {
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		defer file.Close() //nolint:errcheck // best-effort cleanup in test handler
 		//nolint:errcheck // ignore
 		io.Copy(rw, file)
 	}))
@@ -95,6 +99,7 @@ func TestPullUnsupported(t *testing.T) {
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		defer file.Close() //nolint:errcheck // best-effort cleanup in test handler
 		//nolint:errcheck // ignore
 		io.Copy(rw, file)
 	}))
@@ -107,7 +112,34 @@ func TestPullUnsupported(t *testing.T) {
 		SHASum:       "6e9dccce07ba9d3c45b7c872fae863c5415d296fd5e2fb72a2583530aa750ccd",
 		Architecture: "amd64",
 	})
-	require.EqualError(t, err, "unsupported file type: .txt", "unsupported file type: .txt")
+	require.ErrorContains(t, err, "unsupported archive format:")
+}
+
+func TestPullZstdWithSkippableFrame(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	packageData, err := os.ReadFile(filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"))
+	require.NoError(t, err)
+
+	payload := append([]byte{0x50, 0x2a, 0x4d, 0x18, 0x00, 0x00, 0x00, 0x00}, packageData...)
+	shasum := sha256.Sum256(payload)
+	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		//nolint:errcheck // ignore
+		rw.Write(payload)
+	}))
+	t.Cleanup(srv.Close)
+
+	dir := t.TempDir()
+	pulledPath, err := Pull(ctx, srv.URL, dir, PullOptions{
+		SHASum:       hex.EncodeToString(shasum[:]),
+		Architecture: "amd64",
+	})
+	require.NoError(t, err)
+
+	expectedPath := filepath.Join(dir, "zarf-package-test-amd64-0.0.1.tar.zst")
+	require.Equal(t, expectedPath, pulledPath)
+	require.FileExists(t, pulledPath)
 }
 
 func TestSupportsFiltering(t *testing.T) {

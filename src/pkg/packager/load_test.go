@@ -15,8 +15,9 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -42,34 +43,78 @@ func TestLoadPackage(t *testing.T) {
 
 			for _, shasum := range []string{tt.shasum, ""} {
 				opt := LoadOptions{
-					Shasum:                  shasum,
-					PublicKeyPath:           "",
-					SkipSignatureValidation: false,
-					Filter:                  filters.Empty(),
+					Shasum: shasum,
+					Filter: filters.Empty(),
 				}
 				pkgLayout, err := LoadPackage(ctx, tt.source, opt)
 				require.NoError(t, err)
 
-				require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
-				require.Equal(t, "0.0.1", pkgLayout.Pkg.Metadata.Version)
-				require.Len(t, pkgLayout.Pkg.Components, 1)
+				require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
+				require.Equal(t, "0.0.1", pkgLayout.AsV1alpha1().Metadata.Version)
+				require.Len(t, pkgLayout.AsV1alpha1().Components, 1)
 			}
 
 			opt := LoadOptions{
-				Shasum:                  "foo",
-				PublicKeyPath:           "",
-				SkipSignatureValidation: false,
-				Filter:                  filters.Empty(),
+				Shasum: "foo",
+				Filter: filters.Empty(),
 			}
 			_, err := LoadPackage(ctx, tt.source, opt)
 			require.ErrorContains(t, err, fmt.Sprintf("to be %s, found %s", opt.Shasum, tt.shasum))
 		})
 	}
+
+	t.Run("VerificationStrategy explicit values", func(t *testing.T) {
+		t.Parallel()
+
+		tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
+
+		keyPath := filepath.Join("layout", "testdata", "cosign.pub")
+		verifyOpts := signing.DefaultVerifyBlobOptions()
+		verifyOpts.Key = keyPath
+
+		// VerifyNever should skip verification entirely and succeed
+		opt := LoadOptions{
+			VerificationStrategy: layout.VerifyNever,
+			VerifyBlobOptions:    &verifyOpts,
+			Filter:               filters.Empty(),
+		}
+		pkgLayout, err := LoadPackage(ctx, tarPath, opt)
+		require.NoError(t, err)
+		require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
+
+		// VerifyIfPossible with no material should warn but continue on unsigned package
+		opt = LoadOptions{
+			VerificationStrategy: layout.VerifyIfPossible,
+			Filter:               filters.Empty(),
+		}
+		pkgLayout, err = LoadPackage(ctx, tarPath, opt)
+		require.NoError(t, err)
+		require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
+
+		// VerifyIfPossible with a key against an unsigned package is always fatal
+		opt = LoadOptions{
+			VerificationStrategy: layout.VerifyIfPossible,
+			VerifyBlobOptions:    &verifyOpts,
+			Filter:               filters.Empty(),
+		}
+		_, err = LoadPackage(ctx, tarPath, opt)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
+
+		// VerifyAlways should fail on unsigned package
+		opt = LoadOptions{
+			VerificationStrategy: layout.VerifyAlways,
+			VerifyBlobOptions:    &verifyOpts,
+			Filter:               filters.Empty(),
+		}
+		_, err = LoadPackage(ctx, tarPath, opt)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
+	})
 }
 
 func TestLoadSplitPackage(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
 	ctx := testutil.TestContext(t)
 
@@ -109,9 +154,7 @@ func TestLoadSplitPackage(t *testing.T) {
 
 			// Load the split package, verify that the split package became one
 			opt := LoadOptions{
-				PublicKeyPath:           "",
-				SkipSignatureValidation: false,
-				Filter:                  filters.Empty(),
+				Filter: filters.Empty(),
 			}
 			_, err = LoadPackage(ctx, packageSource, opt)
 			require.NoError(t, err)
@@ -166,7 +209,6 @@ func TestIdentifySource(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -188,14 +230,14 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	pkgPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
 	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, pkgPath, "", LoadOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "test", pkg.Metadata.Name)
+	require.Equal(t, "test", pkg.AsV1alpha1().Metadata.Name)
 
 	c := &cluster.Cluster{
 		Clientset: fake.NewClientset(),
 	}
-	_, err = c.RecordPackageDeployment(ctx, pkg, nil, 1)
+	_, err = c.RecordPackageDeployment(ctx, pkg.AsV1alpha1(), "sha256:abcdeadbeef", nil, 1)
 	require.NoError(t, err)
 	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", "", LoadOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "test", pkg.Metadata.Name)
+	require.Equal(t, "test", pkg.AsV1alpha1().Metadata.Name)
 }

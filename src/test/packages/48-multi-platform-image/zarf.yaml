@@ -1,0 +1,17 @@
+kind: ZarfPackageConfig
+metadata:
+  name: index-image
+  description: Pin a container image by index digest; the entire index is preserved in the package.
+  version: 0.0.1
+  architecture: amd64
+
+components:
+  - name: podinfo
+    required: true
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0@sha256:57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8
+    manifests:
+      - name: podinfo
+        namespace: multi-platform-test
+        files:
+          - pod.yaml

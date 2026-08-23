@@ -21,6 +21,9 @@ services:
     ports:
       - "3000:3000"
       - "222:22"
+    networks:
+      k3d-net:
+        ipv4_address: 172.31.0.99
     healthcheck:
       test: ["CMD", "curl", "-f", "http://gitea.localhost:3000/api/healthz"]
       interval: 5s
@@ -44,3 +47,41 @@ services:
       - ./data/gitea:/data/gitea
     depends_on:
       - server
+  registry:
+    image: registry:3
+    container_name: registry.localhost
+    environment:
+      - REGISTRY_HTTP_ADDR=0.0.0.0:5001
+      - REGISTRY_HTTP_DEBUG_ADDR=
+      - REGISTRY_STORAGE_DELETE_ENABLED=true
+      - REGISTRY_HTTP_SECRET=superSecurePassword
+      - REGISTRY_AUTH=htpasswd
+      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm
+      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
+    volumes:
+      - registry-auth:/auth
+    ports:
+      - "5001:5001"
+    networks:
+      - k3d-net
+    depends_on:
+      registry-init:
+        condition: service_completed_successfully
+  registry-init:
+    image: httpd:2
+    container_name: registry.init
+    command: sh -c 'htpasswd -Bbn push-user superSecurePassword > /auth/htpasswd'
+    volumes:
+      - registry-auth:/auth
+
+volumes:
+  registry-auth:
+
+networks:
+  k3d-net:
+    name: k3d-k3s-external-test
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/16
+          gateway: 172.31.0.1

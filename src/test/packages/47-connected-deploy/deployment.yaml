@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connected-deploy-test
+  namespace: connected-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connected-deploy-test
+  template:
+    metadata:
+      labels:
+        app: connected-deploy-test
+    spec:
+      containers:
+        - name: game
+          image: ghcr.io/zarf-dev/doom-game:0.0.1
+          ports:
+            - containerPort: 3000

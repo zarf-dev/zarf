@@ -1,0 +1,6 @@
+redis:
+  enabled: true
+
+subchart:
+  postgres:
+    enabled: false

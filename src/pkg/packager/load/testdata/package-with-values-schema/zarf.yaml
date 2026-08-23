@@ -1,0 +1,17 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-values-schema
+  description: Test package with values schema validation
+
+values:
+  files:
+    - values/values.yaml
+  schema: values.schema.json
+
+components:
+  - name: test-component
+    required: true
+    manifests:
+      - name: test-manifest
+        files:
+          - manifest.yaml

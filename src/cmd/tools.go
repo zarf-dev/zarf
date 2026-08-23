@@ -22,6 +22,7 @@ func newToolsCommand() *cobra.Command {
 
 	cmd.AddCommand(newArchiverCommand())
 	cmd.AddCommand(newRegistryCommand())
+	cmd.AddCommand(newDeprecatedCraneCommand())
 	cmd.AddCommand(newHelmCommand())
 	cmd.AddCommand(newK9sCommand())
 	cmd.AddCommand(newKubectlCommand())
@@ -34,6 +35,7 @@ func newToolsCommand() *cobra.Command {
 	cmd.AddCommand(newDownloadInitCommand())
 	cmd.AddCommand(newGenPKICommand())
 	cmd.AddCommand(newGenKeyCommand())
+	cmd.AddCommand(newTrustedRootCommand())
 
 	return cmd
 }

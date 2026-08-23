@@ -12,13 +12,36 @@ image:
 imagePullSecrets:
   - name: private-registry
 
+proxy:
+  enabled: ###ZARF_REGISTRY_PROXY###
+  hostNetwork: ###ZARF_VAR_HOST_NETWORK_PROXY###
+  tolerations:
+    ###ZARF_VAR_PROXY_TOLERATIONS###
+  image:
+    repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_PROXY_IMAGE###"
+    tag: "###ZARF_CONST_PROXY_IMAGE_TAG###"
+  registry:
+    image:
+      repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_IMAGE###"
+  injector:
+    hostPort: ###ZARF_INJECTOR_HOSTPORT###
+    image: "###ZARF_INJECTOR_IMAGE###"
+    payLoadConfigMapAmount: "###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###"
+    shasum: "###ZARF_INJECTOR_SHASUM###"
+
+mtls:
+  enabled: ###ZARF_REGISTRY_MTLS_ENABLED###
+
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"
   configData:
     http:
       secret: "###ZARF_REGISTRY_SECRET###"
 
+ipv6Only: ###ZARF_IPV6_ONLY###
+
 service:
+  registryPort: "###ZARF_REGISTRY_PORT###"
   nodePort: "###ZARF_NODEPORT###"
 
 resources:
@@ -42,6 +65,9 @@ affinity:
 tolerations:
   ###ZARF_VAR_REGISTRY_TOLERATIONS###
 
+nodeSelector:
+  ###ZARF_VAR_REGISTRY_NODE_SELECTOR###
+
 autoscaling:
   enabled: ###ZARF_VAR_REGISTRY_HPA_ENABLE###
   mapReplicasToNodes: ###ZARF_VAR_REGISTRY_HPA_AUTO_SIZE###
@@ -62,3 +88,11 @@ serviceAccount:
   name: "###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_NAME###"
   annotations:
     ###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS###
+
+opentelemetry:
+  exporter: ###ZARF_VAR_REGISTRY_OTEL_EXPORTER###
+
+securityContext:
+  runAsUser: ###ZARF_VAR_REGISTRY_SECURITY_CONTEXT_RUN_AS_USER###
+  fsGroup: ###ZARF_VAR_REGISTRY_SECURITY_CONTEXT_FS_GROUP###
+  runAsGroup: ###ZARF_VAR_REGISTRY_SECURITY_CONTEXT_RUN_AS_GROUP###

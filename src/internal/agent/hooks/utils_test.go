@@ -21,6 +21,8 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
+const testNamespace = "test"
+
 type admissionTest struct {
 	name         string
 	admissionReq *v1.AdmissionRequest
@@ -28,6 +30,8 @@ type admissionTest struct {
 	code         int
 	errContains  string
 	svc          *corev1.Service
+	registryInfo state.RegistryInfo
+	useMTLS      bool
 }
 
 func createTestClientWithZarfState(ctx context.Context, t *testing.T, s *state.State) *cluster.Cluster {
@@ -46,6 +50,10 @@ func createTestClientWithZarfState(ctx context.Context, t *testing.T, s *state.S
 		},
 	}
 	_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, secret, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNamespace}}
+	_, err = c.Clientset.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	require.NoError(t, err)
 	return c
 }
@@ -73,11 +81,17 @@ func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handl
 func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expected admissionTest) {
 	t.Helper()
 
-	require.Equal(t, expected.code, rr.Code)
-
 	var admissionReview v1.AdmissionReview
-
 	err := json.NewDecoder(rr.Body).Decode(&admissionReview)
+	require.NoError(t, err)
+
+	if rr.Code == 500 && expected.code != 500 {
+		if admissionReview.Response != nil && admissionReview.Response.Result != nil {
+			t.Logf("Error message: %s", admissionReview.Response.Result.Message)
+		}
+	}
+
+	require.Equal(t, expected.code, rr.Code)
 
 	if expected.errContains != "" {
 		require.Contains(t, admissionReview.Response.Result.Message, expected.errContains)
@@ -85,7 +99,6 @@ func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expected admis
 	}
 
 	resp := admissionReview.Response
-	require.NoError(t, err)
 	if expected.patch == nil {
 		require.Empty(t, string(resp.Patch))
 	} else {

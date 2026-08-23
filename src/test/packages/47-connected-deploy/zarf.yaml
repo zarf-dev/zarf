@@ -1,0 +1,14 @@
+kind: ZarfPackageConfig
+metadata:
+  name: connected-deploy
+
+components:
+  - name: test-connected
+    required: true
+    images:
+      - ghcr.io/zarf-dev/doom-game:0.0.1
+    manifests:
+      - name: test-deployment
+        namespace: connected-test
+        files:
+          - deployment.yaml

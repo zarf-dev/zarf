@@ -64,7 +64,7 @@ func TestZarfInit(t *testing.T) {
 	}
 
 	// run `zarf init`
-	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "--confirm")
+	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "--injector-port", "31888", "--confirm")
 	require.NoError(t, err)
 
 	// Verify that any state secrets were not included in the log
@@ -80,13 +80,16 @@ func TestZarfInit(t *testing.T) {
 		// make sure that we upgraded `k3s` correctly and are running the correct version - this should match that found in `packages/distros/k3s`
 		kubeletVersion, _, err := e2e.Kubectl(t, "get", "nodes", "-o", "jsonpath={.items[0].status.nodeInfo.kubeletVersion}")
 		require.NoError(t, err)
-		require.Contains(t, kubeletVersion, "v1.32.3+k3s1")
+		require.Contains(t, kubeletVersion, "v1.34.3+k3s1")
 	}
 
 	// Check that the registry is running on the correct NodePort
 	stdOut, _, err := e2e.Kubectl(t, "get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "31337")
+
+	// Verify that we save the injector port
+	require.Equal(t, 31888, s.InjectorInfo.Port)
 
 	// Check that the registry is running with the correct scale down policy
 	stdOut, _, err = e2e.Kubectl(t, "get", "hpa", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.behavior.scaleDown.selectPolicy}'")
@@ -102,15 +105,15 @@ func TestZarfInit(t *testing.T) {
 	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1") //nolint:errcheck
 	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")     //nolint:errcheck
 
-	// Zarf should fail since registry info (nodeport) has changed on a subsequent init
-	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31338", "--confirm")
+	// Zarf should fail since registry credentials are changing on a subsequent init
+	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--registry-push-password", "new-password", "--confirm")
 	require.Error(t, err)
 }
 
 func verifyZarfNamespaceLabels(t *testing.T) {
 	t.Helper()
 
-	expectedLabels := `'{"app.kubernetes.io/managed-by":"zarf","kubernetes.io/metadata.name":"zarf"}'`
+	expectedLabels := `'{"app.kubernetes.io/managed-by":"zarf","kubernetes.io/metadata.name":"zarf","zarf.dev/agent":"mutate"}'`
 	actualLabels, _, err := e2e.Kubectl(t, "get", "ns", "zarf", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
 	require.Equal(t, expectedLabels, actualLabels)

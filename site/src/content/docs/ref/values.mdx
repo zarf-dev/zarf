@@ -1,5 +1,5 @@
 ---
-title: Deployment Values
+title: Deployment Variables
 sidebar:
   order: 35
 ---
@@ -9,11 +9,11 @@ import ExampleYAML from "@components/ExampleYAML.astro";
 
 Deploy time values are used throughout the Zarf deployment process to template `manifests` and `files`, set Helm values, or provide environment variables for `actions`, and can be provided by the `zarf package deploy` user, the `zarf package create` user, or internally by Zarf itself.
 
-## Using Values
+## Using Variables
 
-### Value Templates
+### Variable Templates
 
-Values can be templated into `manifests`, `files`, and `charts` using a unique `###ZARF_VAR_<VALUE_KEY>###` syntax anywhere in the file, where `<VALUE_KEY>` is the name of the value along with any associated prefix in ALL_CAPS (see [Setting Values](#setting-values) below). This allows you to punch through other templating engines to place values precisely where you want in a given file.  You can also control how this templating happens when defining a value such as with the `autoIndent` key on `constants` and `variables`.  A simple value template for a [Zarf Variable](#variables-zarf_var_) named `DATABASE_USERNAME` would look like the following:
+Values can be templated into `manifests`, `files`, and `charts` using a unique `###ZARF_VAR_<VALUE_KEY>###` syntax anywhere in the file, where `<VALUE_KEY>` is the name of the value along with any associated prefix in ALL_CAPS (see [Setting Values](#setting-values) below). This allows you to punch through other templating engines to place values precisely where you want in a given file. You can also control how this templating happens when defining a value such as with the `autoIndent` key on `constants` and `variables`.  A simple value template for a [Zarf Variable](#variables-zarf_var_) named `DATABASE_USERNAME` would look like the following:
 
 ```yaml
 apiVersion: v1
@@ -30,12 +30,6 @@ To preview the effects of value templates on your manifests and charts without b
 
 :::
 
-:::note
-
-Helm [chart hooks](https://helm.sh/docs/topics/charts_hooks/) are not templated by Zarf
-
-:::
-
 ### Helm Chart Mapping
 
 [Zarf Variables](#variables-zarf_var_) can also be mapped directly to Helm values within a given `charts` definition.  This is done with the `variables` key within a chart that allows you to take a Zarf Variable `name` and map it to a YAML path within that chart's Helm values.  This chart's Helm value will then be set to the current value of the Zarf Variable at the time of it's installation.
@@ -43,7 +37,7 @@ Helm [chart hooks](https://helm.sh/docs/topics/charts_hooks/) are not templated 
 ```yaml
     charts:
       - name: wordpress
-        version: 16.0.4
+        version: 26.0.0
         namespace: wordpress
         localPath: chart
         variables:
@@ -141,13 +135,13 @@ constants:
 <Properties item="Constant" />
 
 
-### Internal Values (`ZARF_`)
+### Internal Variables (`ZARF_`)
 
 In addition to user supplied Variables, and Constants, Zarf maintains a list of internal variables that components can use for more advanced functionality (such as within [`init` packages](/ref/init-package)).  Below are the current values Zarf supports:
 
 - `STORAGE_CLASS`: Storage class specified for persistent storage within the Kubernetes cluster (maps to `--storage-class` on `zarf init`)
 - `REGISTRY`: Address of the registry server used during `zarf init` (maps to `--registry-url` on `zarf init`)
-- `NODEPORT`: Nodeport used for a registry internal to the cluster (maps to `--nodeport` on `zarf init`)
+- `REGISTRY_PORT`: Port of the internal registry (maps to `--registry-port` on `zarf init`)
 - `REGISTRY_AUTH_PUSH`: Password for pushing images to the registry (maps to `--registry-push-password` on `zarf init`)
 - `REGISTRY_AUTH_PULL`: Password for pulling images from the registry (maps to `--registry-pull-password` on `zarf init`)
 - `GIT_PUSH`: Username utilized for pushing changes to the Git server (maps to `--git-push-username` on `zarf init`)

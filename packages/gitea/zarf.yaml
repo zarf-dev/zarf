@@ -39,6 +39,33 @@ variables:
     description: Disables the ability to register new users
     default: "true"
 
+  - name: GIT_SERVER_AFFINITY
+    description: Custom affinity map for the gitea deployment
+    default: ""
+    autoIndent: true
+
+  - name: GIT_SERVER_TOLERATIONS
+    description: Custom tolerations array for the gitea deployment
+    default: ""
+    autoIndent: true
+
+  - name: GIT_SERVER_NODE_SELECTOR
+    description: Custom node selector map for the gitea deployment
+    default: ""
+    autoIndent: true
+
+  - name: GIT_SERVER_SECURITY_CONTEXT_RUN_AS_USER
+    description: The user ID to run the git server as
+    default: "1000"
+
+  - name: GIT_SERVER_SECURITY_CONTEXT_FS_GROUP
+    description: The filesystem group ID to run the git server as
+    default: "1000"
+
+  - name: GIT_SERVER_SECURITY_CONTEXT_RUN_AS_GROUP
+    description: The group ID to run the git server as
+    default: "1000"
+
 constants:
   - name: GITEA_IMAGE
     value: "###ZARF_PKG_TMPL_GITEA_IMAGE###"
@@ -83,13 +110,5 @@ components:
         onFailure:
           - cmd: ./zarf internal update-gitea-pvc --rollback
 
-# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
-x-mdx: |
-  The default setup for this package is to use a `rootless` image, specified in `gitea-values.yaml`. Because the gitea helm chart does its own appending of `-rootless` to the image tag, based on the `rootless` helm value, users don't need to supply the full image tag when overriding the default gitea image. Instead you need to use the `GITEA_SERVER_VERSION`, either in the zarf-config.toml or with `--set`.
-
-  _Make sure, though, that the `x.x.x-rootless` tag does exist for Zarf to find._
-
-  ```bash
-  $ zarf package create . --set GITEA_IMAGE="custom.enterprise.corp/ironbank/opensource/gitea" \
-    --set GITEA_SERVER_VERSION="v1.19.3"
-  ```
+documentation:
+  readme: readme.md

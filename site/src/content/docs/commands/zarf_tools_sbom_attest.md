@@ -18,11 +18,27 @@ Generate a packaged-based Software Bill Of Materials (SBOM) from a container ima
 zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
 ```
 
+### Examples
+
+```
+  zarf tools sbom attest --output [FORMAT] alpine:latest            defaults to using images from a Docker daemon. If Docker is not present, the image is pulled directly from the registry
+
+  You can also explicitly specify the scheme to use:
+    zarf tools sbom attest docker:yourrepo/yourimage:tag            explicitly use the Docker daemon
+    zarf tools sbom attest podman:yourrepo/yourimage:tag            explicitly use the Podman daemon
+    zarf tools sbom attest registry:yourrepo/yourimage:tag          pull image directly from a registry (no container runtime required)
+    zarf tools sbom attest docker-archive:path/to/yourimage.tar     use a tarball from disk for archives created from "docker save"
+    zarf tools sbom attest oci-archive:path/to/yourimage.tar        use a tarball from disk for OCI archives (from Skopeo or otherwise)
+    zarf tools sbom attest oci-dir:path/to/yourimage                read directly from a path on disk for OCI layout directories (from Skopeo or otherwise)
+    zarf tools sbom attest singularity:path/to/yourimage.sif        read directly from a Singularity Image Format (SIF) container on disk
+
+```
+
 ### Options
 
 ```
       --base-path string                          base directory for scanning, no links will be followed above this directory, and all paths will be reported relative to this directory
-      --enrich stringArray                        enable package data enrichment from local and online sources (options: all, golang, java, javascript)
+      --enrich stringArray                        enable package data enrichment from local and online sources (options: all, golang, java, javascript, python, vcpkg)
       --exclude stringArray                       exclude paths from being scanned using a glob expression
       --from stringArray                          specify the source behavior to use (e.g. docker, registry, oci-dir, ...)
   -h, --help                                      help for attest
@@ -42,9 +58,9 @@ zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
 
 ```
   -c, --config stringArray         syft configuration file(s) to use
-      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --profile stringArray        configuration profiles to use
   -q, --quiet                      suppress all logging output
   -v, --verbose count              increase verbosity (-v = info, -vv = debug)

@@ -1,0 +1,8 @@
+kind: ZarfPackageConfig
+metadata:
+  name: bottom-package
+values:
+  schema: bottom-values.schema.json
+components:
+  - name: nested-component
+    required: true

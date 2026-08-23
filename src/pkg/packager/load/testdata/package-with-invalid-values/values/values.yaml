@@ -1,0 +1,3 @@
+appName: test-app
+replicas: "not-a-number"
+enabled: true

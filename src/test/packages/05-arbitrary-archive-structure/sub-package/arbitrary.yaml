@@ -1,0 +1,46 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-compose-sub-package
+  description: Deploy podinfo using a Helm OCI chart
+  version: 6.4.0
+
+components:
+  - name: test-compose-sub-package
+    only:
+      localOS: linux
+    charts:
+      - name: podinfo-compose
+        releaseName: podinfo-compose
+        version: 6.4.0
+        namespace: podinfo-compose
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+        valuesFiles:
+          - ../files/test-values.yaml
+    manifests:
+      - name: connect-service
+        namespace: podinfo-compose
+        files:
+          - ../files/service.yaml
+        kustomizations:
+          - ../files/
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+    repos:
+      - https://github.com/zarf-dev/zarf-public-test.git
+    files:
+      - source: ../files/coffee-ipsum.txt
+        target: coffee-ipsum.txt
+    dataInjections:
+      - source: ../files
+        target:
+          selector: app.kubernetes.io/name=podinfo-compose
+          namespace: podinfo-compose
+          container: podinfo
+          path: /home/app/service.yaml
+    actions:
+      onCreate:
+        before:
+          - cmd: ls
+      onDeploy:
+        after:
+          - cmd: cat coffee-ipsum.txt

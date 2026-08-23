@@ -17,26 +17,79 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/downloader"
-	"helm.sh/helm/v3/pkg/getter"
-	"helm.sh/helm/v3/pkg/registry"
-	"helm.sh/helm/v3/pkg/repo"
+	"helm.sh/helm/v4/pkg/action"
+	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
+	"helm.sh/helm/v4/pkg/chart/v2/loader"
+	"helm.sh/helm/v4/pkg/cli"
+	"helm.sh/helm/v4/pkg/downloader"
+	"helm.sh/helm/v4/pkg/getter"
+	"helm.sh/helm/v4/pkg/registry"
+	repov1 "helm.sh/helm/v4/pkg/repo/v1"
+
+	retry "github.com/avast/retry-go/v4"
+	orasRegistry "oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
+// negotiateChartPlainHTTP decides the transport scheme for an OCI chart or chart
+// dependency host discovered in package data (not named on the command line).
+// remoteOptions.PlainHTTP gates whether to probe at all: unset skips the network
+// call and defaults to HTTPS; set verifies this specific host rather than forcing
+// plain HTTP onto it directly.
+func negotiateChartPlainHTTP(ctx context.Context, ociURL string, remoteOptions types.RemoteOptions) (bool, error) {
+	if !remoteOptions.PlainHTTP {
+		return false, nil
+	}
+	ref, err := orasRegistry.ParseReference(strings.TrimPrefix(ociURL, helpers.OCIURLPrefix))
+	if err != nil {
+		return false, fmt.Errorf("unable to parse chart url %q: %w", ociURL, err)
+	}
+	plainHTTP, err := ocischeme.From(ctx).UsePlainHTTP(ctx, ref.Registry, ocischeme.ProbeOptions{InsecureSkipTLSVerify: remoteOptions.InsecureSkipTLSVerify})
+	if err != nil {
+		return false, fmt.Errorf("unable to reach chart registry for %q: %w", ociURL, err)
+	}
+	return plainHTTP, nil
+}
+
+// negotiateLoadedChartDependenciesPlainHTTP negotiates a chart's OCI-referenced
+// dependency hosts (see negotiateChartPlainHTTP). Charts with no OCI dependencies
+// return HTTPS without probing. Dependencies spanning hosts that disagree on scheme
+// default to HTTPS rather than guessing.
+func negotiateLoadedChartDependenciesPlainHTTP(ctx context.Context, chartName string, dependencies []*chartv2.Dependency, remoteOptions types.RemoteOptions) (bool, error) {
+	var decided bool
+	var decidedSet bool
+	for _, dep := range dependencies {
+		if !registry.IsOCI(dep.Repository) {
+			continue
+		}
+		plainHTTP, err := negotiateChartPlainHTTP(ctx, dep.Repository, remoteOptions)
+		if err != nil {
+			return false, err
+		}
+		if !decidedSet {
+			decided, decidedSet = plainHTTP, true
+			continue
+		}
+		if decided != plainHTTP {
+			logger.From(ctx).Debug("chart's OCI dependencies span hosts that disagree on plain-http vs HTTPS; defaulting to HTTPS", "chart", chartName)
+			return false, nil
+		}
+	}
+	return decided, nil
+}
+
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
-func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string) error {
+func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	if len(chart.URL) > 0 {
 		url, refPlain, err := transform.GitURLSplitRef(chart.URL)
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
@@ -51,18 +104,18 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valu
 				chart.URL = fmt.Sprintf("%s@%s", chart.URL, chart.Version)
 			}
 
-			err = PackageChartFromGit(ctx, chart, chartPath, valuesPath)
+			err = PackageChartFromGit(ctx, chart, paths, cachePath, remoteOptions)
 			if err != nil {
 				return fmt.Errorf("unable to pull the chart %q from git: %w", chart.Name, err)
 			}
 		} else {
-			err = DownloadPublishedChart(ctx, chart, chartPath, valuesPath)
+			err = DownloadPublishedChart(ctx, chart, paths, cachePath, remoteOptions)
 			if err != nil {
 				return fmt.Errorf("unable to download the published chart %q: %w", chart.Name, err)
 			}
 		}
 	} else {
-		err := PackageChartFromLocalFiles(ctx, chart, chartPath, valuesPath)
+		err := PackageChartFromLocalFiles(ctx, chart, paths, cachePath, remoteOptions)
 		if err != nil {
 			return fmt.Errorf("unable to package the %q chart: %w", chart.Name, err)
 		}
@@ -71,7 +124,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valu
 }
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, chartPath string, valuesPath string) error {
+func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 	l.Info("processing local helm chart",
 		"name", chart.Name,
@@ -80,16 +133,16 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 	)
 
 	// Load and validate the chart
-	cl, _, err := loadAndValidateChart(chart.LocalPath)
+	cl, parsed, err := loadAndValidateChart(chart.LocalPath)
 	if err != nil {
 		return err
 	}
 
-	// Handle the chart directory or tarball
+	// Handle the chart directory or tarball.
 	var saved string
-	temp := filepath.Join(chartPath, "temp")
+	temp := filepath.Join(filepath.Dir(paths.Archive(chart.Name, chart.Version)), "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
-		err = buildChartDependencies(ctx, chart)
+		err = buildChartDependencies(ctx, chart, cachePath, parsed.Metadata.Dependencies, remoteOptions)
 		if err != nil {
 			return fmt.Errorf("unable to build dependencies for the chart: %w", err)
 		}
@@ -114,7 +167,7 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 	}
 
 	// Finalize the chart
-	err = finalizeChartPackage(ctx, chart, chartPath, valuesPath, saved)
+	err = finalizeChartPackage(ctx, chart, paths, saved)
 	if err != nil {
 		return err
 	}
@@ -128,7 +181,7 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 }
 
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
-func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string) error {
+func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 	l.Info("processing Helm chart", "name", chart.Name)
 
@@ -145,11 +198,11 @@ func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, chartPat
 
 	// Set the directory for the chart and package it
 	chart.LocalPath = filepath.Join(gitPath, chart.GitPath)
-	return PackageChartFromLocalFiles(ctx, chart, chartPath, valuesPath)
+	return PackageChartFromLocalFiles(ctx, chart, paths, cachePath, remoteOptions)
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string) error {
+func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Info("processing Helm chart",
@@ -166,8 +219,13 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		regClient *registry.Client
 		chartURL  string
 		err       error
+		// plainHTTP is always negotiated for an OCI chart host (never taken from
+		// remoteOptions.PlainHTTP directly): the host was discovered by reading package
+		// data or a repo index, not named explicitly on this command line, so the global
+		// --plain-http flag is not necessarily meant for it.
+		plainHTTP bool
 	)
-	repoFile, err := repo.LoadFile(pull.Settings.RepositoryConfig)
+	repoFile, err := repov1.LoadFile(pull.Settings.RepositoryConfig)
 
 	// Not returning the error here since the repo file is only needed if we are pulling from a repo that requires authentication
 	if err != nil {
@@ -182,10 +240,6 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 
 	// Handle OCI registries
 	if registry.IsOCI(chart.URL) {
-		regClient, err = registry.NewClient(registry.ClientOptEnableCache(true))
-		if err != nil {
-			return fmt.Errorf("unable to create the new registry client: %w", err)
-		}
 		chartURL = chart.URL
 		// Explicitly set the pull version for OCI
 		pull.Version = chart.Version
@@ -206,49 +260,81 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 			}
 		}
 
-		chartURL, err = repo.FindChartInAuthAndTLSRepoURL(
+		chartURL, err = repov1.FindChartInRepoURL(
 			chart.URL,
-			username,
-			password,
 			chartName,
-			chart.Version,
-			pull.CertFile,
-			pull.KeyFile,
-			pull.CaFile,
-			config.CommonOptions.InsecureSkipTLSVerify,
 			getter.All(pull.Settings),
+			repov1.WithChartVersion(chart.Version),
+			repov1.WithUsernamePassword(username, password),
+			repov1.WithClientTLS(pull.CertFile, pull.KeyFile, pull.CaFile),
+			repov1.WithInsecureSkipTLSVerify(remoteOptions.InsecureSkipTLSVerify),
 		)
 		if err != nil {
 			return fmt.Errorf("unable to pull the helm chart: %w", err)
 		}
 	}
 
+	// chartURL is OCI either when given directly or when a classic Helm repo
+	// index redirects to an OCI reference
+	if registry.IsOCI(chartURL) {
+		plainHTTP, err = negotiateChartPlainHTTP(ctx, chartURL, remoteOptions)
+		if err != nil {
+			return err
+		}
+		clientOpts := []registry.ClientOption{registry.ClientOptEnableCache(true)}
+		if plainHTTP {
+			clientOpts = append(clientOpts, registry.ClientOptPlainHTTP())
+		}
+		regClient, err = registry.NewClient(clientOpts...)
+		if err != nil {
+			return fmt.Errorf("unable to create the new registry client: %w", err)
+		}
+	}
+
+	contentCache := filepath.Join(cachePath, contentCachePath)
+
 	// Set up the chart chartDownloader
 	chartDownloader := downloader.ChartDownloader{
 		Out:            io.Discard,
 		RegistryClient: regClient,
+		ContentCache:   contentCache,
 		// TODO: Further research this with regular/OCI charts
 		Verify:  downloader.VerifyNever,
 		Getters: getter.All(pull.Settings),
 		Options: []getter.Option{
-			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.InsecureSkipTLSVerify),
+			// plainHTTP is negotiated only in the OCI branch above and stays false for
+			// a traditional repo; Helm's http/https getter (unlike its OCI getter)
+			// never reads this option, taking its scheme from chartURL instead.
+			getter.WithPlainHTTP(plainHTTP),
+			getter.WithInsecureSkipVerifyTLS(remoteOptions.InsecureSkipTLSVerify),
 			getter.WithBasicAuth(username, password),
 		},
 	}
 
-	// Download the file into a temp directory since we don't control what name helm creates here
-	temp := filepath.Join(chartPath, "temp")
-	if err = helpers.CreateDirectory(temp, helpers.ReadWriteExecuteUser); err != nil {
-		return fmt.Errorf("unable to create helm chart temp directory: %w", err)
-	}
-	defer func(l *slog.Logger) {
-		err := os.RemoveAll(temp)
-		if err != nil {
-			l.Error(err.Error())
-		}
-	}(l)
-
-	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, temp)
+	var saved string
+	err = retry.Do(
+		func() error {
+			var downloadErr error
+			saved, _, downloadErr = chartDownloader.DownloadToCache(chartURL, pull.Version)
+			return downloadErr
+		},
+		retry.Attempts(uint(config.ZarfDefaultRetries)),
+		retry.Delay(config.ZarfDefaultRetryDelay),
+		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
+		retry.DelayType(retry.BackOffDelay),
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+		retry.OnRetry(func(n uint, err error) {
+			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
+				l.Warn("retrying chart download",
+					"attempt", n+1,
+					"maxAttempts", config.ZarfDefaultRetries,
+					"chart", chart.Name,
+					"error", err,
+				)
+			}
+		}),
+	)
 	if err != nil {
 		return fmt.Errorf("unable to download the helm chart: %w", err)
 	}
@@ -260,7 +346,7 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 	}
 
 	// Finalize the chart
-	err = finalizeChartPackage(ctx, chart, chartPath, valuesPath, saved)
+	err = finalizeChartPackage(ctx, chart, paths, saved)
 	if err != nil {
 		return err
 	}
@@ -287,32 +373,31 @@ func DownloadChartFromGitToTemp(ctx context.Context, url string) (string, error)
 	return repository.Path(), nil
 }
 
-func finalizeChartPackage(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath, saved string) error {
+func finalizeChartPackage(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, saved string) error {
 	// Ensure the name is consistent for deployments
-	destinationTarball := StandardName(chartPath, chart) + ".tgz"
-	err := os.Rename(saved, destinationTarball)
+	err := helpers.CreatePathAndCopy(saved, paths.Archive(chart.Name, chart.Version))
 	if err != nil {
 		return fmt.Errorf("unable to save the final chart tarball: %w", err)
 	}
 
-	err = packageValues(ctx, chart, valuesPath)
+	err = packageValues(ctx, chart, paths)
 	if err != nil {
 		return fmt.Errorf("unable to process the values for the package: %w", err)
 	}
 	return nil
 }
 
-func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, valuesPath string) error {
-	for valuesIdx, path := range chart.ValuesFiles {
-		dst := StandardValuesName(valuesPath, chart, valuesIdx)
+func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths) error {
+	for _, f := range GetChartValuesFiles(chart) {
+		dst := paths.ValuesFile(chart.Name, chart.Version, f.GlobalIdx)
 
-		if helpers.IsURL(path) {
-			if err := utils.DownloadToFile(ctx, path, dst); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
+		if helpers.IsURL(f.Source) {
+			if err := utils.DownloadToFile(ctx, f.Source, dst); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, f.Source, err)
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(path, dst); err != nil {
-				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+			if err := helpers.CreatePathAndCopy(f.Source, dst); err != nil {
+				return fmt.Errorf("unable to copy chart values file %s: %w", f.Source, err)
 			}
 		}
 	}
@@ -320,20 +405,35 @@ func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, valuesPath str
 	return nil
 }
 
-// buildChartDependencies builds the helm chart dependencies
-func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart) error {
+// buildChartDependencies builds the helm chart dependencies. dependencies is the
+// already-loaded chart's declared Chart.yaml dependencies; the caller has already
+// loaded the chart to get here, so this avoids reloading it from disk.
+func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart, cachePath string, dependencies []*chartv2.Dependency, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
+
+	// negotiate the transport instead of forcing the global flag.
+	plainHTTP, err := negotiateLoadedChartDependenciesPlainHTTP(ctx, chart.Name, dependencies, remoteOptions)
+	if err != nil {
+		return err
+	}
+
 	// Download and build the specified dependencies
-	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
+	clientOpts := []registry.ClientOption{registry.ClientOptEnableCache(true)}
+	if plainHTTP {
+		clientOpts = append(clientOpts, registry.ClientOptPlainHTTP())
+	}
+	regClient, err := registry.NewClient(clientOpts...)
 	if err != nil {
 		return fmt.Errorf("unable to create a new registry client: %w", err)
 	}
 
 	settings := cli.New()
 
+	contentCache := filepath.Join(cachePath, contentCachePath)
+
 	man := &downloader.Manager{
-		// TODO(mkcp): Shouldn't rely on a global mutable var. Pass in a writer here somehow, or at least make atomic?
-		Out:            &logger.DebugWriter{Logger: l},
+		Out:            &logger.LogWriter{Logger: l, Level: logger.Debug},
+		ContentCache:   contentCache,
 		ChartPath:      chart.LocalPath,
 		Getters:        getter.All(settings),
 		RegistryClient: regClient,
@@ -364,7 +464,7 @@ func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart) error
 	return nil
 }
 
-func loadAndValidateChart(location string) (loader.ChartLoader, *chart.Chart, error) {
+func loadAndValidateChart(location string) (loader.ChartLoader, *chartv2.Chart, error) {
 	// Validate the chart
 	cl, err := loader.Loader(location)
 	if err != nil {

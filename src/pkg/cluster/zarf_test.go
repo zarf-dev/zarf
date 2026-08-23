@@ -10,13 +10,69 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
+
+func TestGetInstalledChartsForComponentNamespaceOverride(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	c := &Cluster{Clientset: fake.NewClientset()}
+
+	componentName := "games"
+	packageName := "dos-games"
+
+	packages := []state.DeployedPackage{
+		{
+			Name: packageName,
+			DeployedComponents: []state.DeployedComponent{{
+				Name: componentName,
+				InstalledCharts: []state.InstalledChart{
+					{Namespace: "dos-games", ChartName: "zarf-original"},
+				},
+			}},
+		},
+		{
+			Name:              packageName,
+			NamespaceOverride: "arcade-alt",
+			DeployedComponents: []state.DeployedComponent{{
+				Name: componentName,
+				InstalledCharts: []state.InstalledChart{
+					{Namespace: "arcade-alt", ChartName: "zarf-override"},
+				},
+			}},
+		},
+	}
+
+	for _, p := range packages {
+		b, err := json.Marshal(p)
+		require.NoError(t, err)
+		secret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      p.GetSecretName(),
+				Namespace: "zarf",
+				Labels:    map[string]string{state.ZarfPackageInfoLabel: p.Name},
+			},
+			Data: map[string][]byte{"data": b},
+		}
+		_, err = c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	component := v1alpha1.ZarfComponent{Name: componentName}
+
+	originalCharts, err := c.GetInstalledChartsForComponent(ctx, packageName, component)
+	require.NoError(t, err)
+	require.Equal(t, []state.InstalledChart{{Namespace: "dos-games", ChartName: "zarf-original"}}, originalCharts)
+
+	overrideCharts, err := c.GetInstalledChartsForComponent(ctx, packageName, component, state.WithPackageNamespaceOverride("arcade-alt"))
+	require.NoError(t, err)
+	require.Equal(t, []state.InstalledChart{{Namespace: "arcade-alt", ChartName: "zarf-override"}}, overrideCharts)
+}
 
 func TestGetDeployedPackage(t *testing.T) {
 	t.Parallel()
@@ -67,39 +123,6 @@ func TestGetDeployedPackage(t *testing.T) {
 	actualList, err := c.GetDeployedZarfPackages(ctx)
 	require.NoError(t, err)
 	require.ElementsMatch(t, packages, actualList)
-}
-
-func TestRegistryHPA(t *testing.T) {
-	ctx := context.Background()
-	cs := fake.NewClientset()
-	hpa := autoscalingv2.HorizontalPodAutoscaler{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "zarf-docker-registry",
-			Namespace: state.ZarfNamespaceName,
-		},
-		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-			Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
-				ScaleDown: &autoscalingv2.HPAScalingRules{},
-			},
-		},
-	}
-	_, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Create(ctx, &hpa, metav1.CreateOptions{})
-	require.NoError(t, err)
-	c := &Cluster{
-		Clientset: cs,
-	}
-
-	err = c.EnableRegHPAScaleDown(ctx)
-	require.NoError(t, err)
-	enableHpa, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	require.Equal(t, autoscalingv2.MinChangePolicySelect, *enableHpa.Spec.Behavior.ScaleDown.SelectPolicy)
-
-	err = c.DisableRegHPAScaleDown(ctx)
-	require.NoError(t, err)
-	disableHpa, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	require.Equal(t, autoscalingv2.DisabledPolicySelect, *disableHpa.Spec.Behavior.ScaleDown.SelectPolicy)
 }
 
 func TestInternalGitServerExists(t *testing.T) {

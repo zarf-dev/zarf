@@ -90,7 +90,7 @@ Zarf provides a few options that can provide control over how a deployment of a 
 
 Zarf normally expects to operate against a Kubernetes cluster that has been [Zarf initialized](/tutorials/1-initializing-a-k8s-cluster/), but there are additional modes that can be configured by package creators including:
 
-- **YOLO Mode** - Yaml-OnLy Online mode allows for a faster deployment without requiring the `zarf init` command to be run beforehand. It can be useful for testing or for environments that manage their own registries and Git servers completely outside of Zarf.  Given this mode does not use the [Zarf Agent](/faq#what-is-the-zarf-agent) any resources specified will need to be manually modified for the environment.
+- **Connected Mode** - Deploying with the `--connected` flag skips the publishing of Git repositories and container images. Deploying directly from an OCI source also skips pulling the package's container images. Connected mode does not require `zarf init` to be run; resources will be labeled with `zarf.dev/agent: ignore` to prevent mutations when the cluster is initialized.
 
 - **Cluster-less** - Zarf normally interacts with clusters and kubernetes resources, but it is possible to have Zarf perform actions before a cluster exists (including [deploying the cluster itself](/tutorials/4-creating-a-k8s-cluster-with-zarf)).  These packages generally have more dependencies on the host or environment that they run within.
 
@@ -117,7 +117,7 @@ $ zarf connect [service name]
 
 :::note
 
-You can also specify a package locally, or via oci such as `zarf package deploy oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 --key=https://zarf.dev/cosign.pub`
+You can also specify a package locally, or via oci such as `zarf package deploy oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 --key=https://zarf.dev/cosign.pub`
 
 :::
 

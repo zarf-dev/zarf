@@ -9,9 +9,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -20,12 +23,16 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 const (
@@ -134,16 +141,27 @@ func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	httpClient, err := rest.HTTPClientFor(cfg)
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
-	restMapper, err := apiutil.NewDynamicRESTMapper(cfg, httpClient)
-	if err != nil {
-		return nil, err
-	}
+	discoveryCache := memory.NewMemCacheClient(discoveryClient)
+	restMapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryCache)
 	sw := watcher.NewDefaultStatusWatcher(dynamicClient, restMapper)
-	return sw, nil
+	return &invalidatingWatcher{StatusWatcher: sw, discoveryCache: discoveryCache}, nil
+}
+
+// invalidatingWatcher invalidates the discovery cache before each watch so that
+// CRDs registered since the previous watch resolve on the next mapping lookup.
+type invalidatingWatcher struct {
+	watcher.StatusWatcher
+	discoveryCache discovery.CachedDiscoveryInterface
+}
+
+// Watch the cluster for changes made to the specified objects.
+func (w *invalidatingWatcher) Watch(ctx context.Context, objs object.ObjMetadataSet, opts watcher.Options) <-chan event.Event {
+	w.discoveryCache.Invalidate()
+	return w.StatusWatcher.Watch(ctx, objs, opts)
 }
 
 // InitStateOptions tracks the user-defined options during cluster initialization.
@@ -158,6 +176,14 @@ type InitStateOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
+	// InjectorPort is the port that the injector will be exposed through
+	InjectorPort int
+	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
+	AgentTLS *pki.GeneratedPKI
+	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
+	AgentMutationPolicy state.MutationPolicy
+	// InternalServices lists the state services that Zarf is deploying in this init run.
+	InternalServices state.ServiceSet
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -173,8 +199,19 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		return nil, fmt.Errorf("failed to check for existing state: %w", err)
 	}
 
+	l.Debug("applying the Zarf namespace")
+	zarfNamespace := NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
+	_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
+	if err != nil {
+		return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
+	}
+
+	ipFamily, err := c.GetIPFamily(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
+	}
+
 	// If state is nil, this is a new cluster.
-	// TODO(mkcp): Simplify nesting with early returns closer to the top of the function.
 	if s == nil {
 		s = &state.State{}
 		l.Debug("new cluster, no prior Zarf deployments found")
@@ -202,43 +239,10 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			l.Debug("Detected K8s distro", "name", s.Distro)
 		}
 
-		// Setup zarf agent PKI
-		agentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
-		if err != nil {
-			return nil, err
-		}
-		s.AgentTLS = agentTLS
-
-		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
-		}
-		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
-		for _, namespace := range namespaceList.Items {
-			if namespace.Name == "zarf" {
-				continue
+		if opts.InternalServices.Has(state.AgentKey) {
+			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
+				return nil, err
 			}
-			l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
-
-			if namespace.Labels == nil {
-				// Ensure label map exists to avoid nil panic
-				namespace.Labels = make(map[string]string)
-			}
-			// This label will tell the Zarf Agent to ignore this namespace.
-			namespace.Labels[AgentLabel] = "ignore"
-			namespaceCopy := namespace
-			_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
-			if err != nil {
-				return nil, fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
-			}
-		}
-
-		// Try to create the zarf namespace.
-		l.Debug("creating the Zarf namespace")
-		zarfNamespace := NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
-		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
-		if err != nil {
-			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
 
 		// Wait up to 2 minutes for the default service account to be created.
@@ -257,18 +261,86 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
-		err = opts.GitServer.FillInEmptyValues()
-		if err != nil {
-			return nil, err
+		// Populate git/registry/artifact state for each service that is either
+		// deployed by Zarf (InternalServices) or pointed at an external endpoint.
+		if opts.InternalServices.Has(state.GitKey) || opts.GitServer.Address != "" {
+			if err := opts.GitServer.FillInEmptyValues(); err != nil {
+				return nil, err
+			}
+			s.GitServer = opts.GitServer
 		}
-		s.GitServer = opts.GitServer
-		err = opts.RegistryInfo.FillInEmptyValues()
-		if err != nil {
-			return nil, err
+		if opts.InternalServices.Has(state.RegistryKey) || opts.RegistryInfo.Address != "" {
+			if err := opts.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {
+				return nil, err
+			}
+			s.RegistryInfo = opts.RegistryInfo
 		}
-		s.RegistryInfo = opts.RegistryInfo
-		opts.ArtifactServer.FillInEmptyValues()
-		s.ArtifactServer = opts.ArtifactServer
+		if opts.InternalServices.Has(state.ArtifactKey) || opts.ArtifactServer.Address != "" {
+			opts.ArtifactServer.FillInEmptyValues()
+			s.ArtifactServer = opts.ArtifactServer
+		}
+	} else {
+		// Re-init: fill defaults only for internal services that weren't configured
+		// on a prior init. External services are managed via `zarf tools update-creds`.
+		if opts.InternalServices.Has(state.GitKey) && !s.GitServer.IsConfigured() {
+			if err := s.GitServer.FillInEmptyValues(); err != nil {
+				return nil, err
+			}
+		}
+		if opts.InternalServices.Has(state.ArtifactKey) && !s.ArtifactServer.IsConfigured() {
+			s.ArtifactServer.FillInEmptyValues()
+		}
+		if opts.InternalServices.Has(state.RegistryKey) && !s.RegistryInfo.IsConfigured() {
+			if err := s.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {
+				return nil, err
+			}
+		}
+		if opts.InternalServices.Has(state.AgentKey) && !s.AgentIsConfigured() {
+			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	s.IPFamily = ipFamily
+
+	previousMode := s.RegistryInfo.RegistryMode
+	if opts.RegistryInfo.RegistryMode != "" {
+		s.RegistryInfo.RegistryMode = opts.RegistryInfo.RegistryMode
+	}
+	modeChanged := opts.RegistryInfo.RegistryMode != "" && opts.RegistryInfo.RegistryMode != previousMode
+
+	// If the registry mode is changing the injector will be re-made so the port should be reset
+	if modeChanged {
+		s.InjectorInfo.Port = 0
+	}
+
+	switch s.RegistryInfo.RegistryMode {
+	case state.RegistryModeNodePort:
+		switch {
+		case opts.RegistryInfo.Port != 0:
+			s.RegistryInfo.Port = opts.RegistryInfo.Port
+		case modeChanged:
+			s.RegistryInfo.Port = state.ZarfInClusterContainerRegistryNodePort
+		}
+		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyNone
+		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
+	case state.RegistryModeProxy:
+		switch {
+		case opts.RegistryInfo.Port != 0:
+			s.RegistryInfo.Port = opts.RegistryInfo.Port
+		case modeChanged:
+			s.RegistryInfo.Port = state.ZarfRegistryHostPort
+		}
+		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
+	}
+
+	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
+		err = c.InitRegistryCerts(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate certs: %w", err)
+		}
+		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
 	}
 
 	switch s.Distro {
@@ -286,12 +358,155 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.StorageClass = opts.StorageClass
 	}
 
+	if opts.InjectorPort != 0 {
+		s.InjectorInfo.Port = opts.InjectorPort
+	}
+
+	if opts.AgentMutationPolicy != "" {
+		s.AgentMutationPolicy = opts.AgentMutationPolicy
+	}
+
 	// Save the state back to K8s
 	if err := c.SaveState(ctx, s); err != nil {
 		return nil, fmt.Errorf("unable to save the Zarf state: %w", err)
 	}
 
 	return s, nil
+}
+
+func (c *Cluster) initAgent(ctx context.Context, s *state.State, agentTLS *pki.GeneratedPKI) error {
+	if agentTLS != nil {
+		s.AgentTLS = *agentTLS
+		s.AgentTLSUserProvided = true
+	} else {
+		generatedAgentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
+		if err != nil {
+			return err
+		}
+		s.AgentTLS = generatedAgentTLS
+		s.AgentTLSUserProvided = false
+	}
+	return c.ignoreExistingNamespacesForAgent(ctx)
+}
+
+func (c *Cluster) ignoreExistingNamespacesForAgent(ctx context.Context) error {
+	l := logger.From(ctx)
+	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
+	}
+	// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
+	for _, namespace := range namespaceList.Items {
+		if namespace.Name == "zarf" {
+			continue
+		}
+		l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
+
+		if namespace.Labels == nil {
+			namespace.Labels = make(map[string]string)
+		}
+		namespace.Labels[AgentLabel] = "ignore"
+		namespaceCopy := namespace
+		_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
+		}
+	}
+	return nil
+}
+
+// GetRegistryClientMTLSCert retrieves the client cert for interacting with the internal Zarf registry while in registry proxy mode.
+// Returns an error if the secret is not found or incomplete.
+func (c *Cluster) GetRegistryClientMTLSCert(ctx context.Context) (pki.GeneratedPKI, error) {
+	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.RegistryClientTLSSecret, metav1.GetOptions{})
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to get client TLS secret: %w", err)
+	}
+	return state.RegistryCertFromSecretData(clientSecret.Data)
+}
+
+// needsCertRenewal determines if a tls secret needs renewal by checking if it doesn't exist or has less than half of it's remaining life
+func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath string, renewalThresholdPercentage float64) (bool, error) {
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, fmt.Errorf("failed to get secret %s: %w", secretName, err)
+	}
+
+	certData, exists := secret.Data[certPath]
+	if !exists {
+		return true, nil // Certificate key doesn't exist in secret
+	}
+
+	percentageRemainingLife, err := pki.GetRemainingCertLifePercentage(certData)
+	if err != nil {
+		return false, err
+	}
+	if percentageRemainingLife < renewalThresholdPercentage {
+		return true, nil
+	}
+	return false, nil
+}
+
+// ShouldRenewRegistryCerts checks if any of the registry mTLS certificates (CA, server, or client) have less remaining life
+// than the threshold, and renews all certs if so
+func (c *Cluster) ShouldRenewRegistryCerts(ctx context.Context, renewalThresholdPercentage float64) (bool, error) {
+	needsCARenewal, err := c.needsCertRenewal(ctx, state.RegistryServerTLSSecret, state.RegistrySecretCAPath, renewalThresholdPercentage)
+	if err != nil {
+		return false, fmt.Errorf("failed to check CA certificate renewal: %w", err)
+	}
+
+	needsServerRenewal, err := c.needsCertRenewal(ctx, state.RegistryServerTLSSecret, state.RegistrySecretCertPath, renewalThresholdPercentage)
+	if err != nil {
+		return false, fmt.Errorf("failed to check server certificate renewal: %w", err)
+	}
+
+	needsClientRenewal, err := c.needsCertRenewal(ctx, state.RegistryClientTLSSecret, state.RegistrySecretCertPath, renewalThresholdPercentage)
+	if err != nil {
+		return false, fmt.Errorf("failed to check client certificate renewal: %w", err)
+	}
+
+	return needsCARenewal || needsServerRenewal || needsClientRenewal, nil
+}
+
+// ApplyRegistryClientCertSecret using the given pki to the given namespace.
+// Accepts a namespace so the secret can live in any namespace that requires interacting with the registry
+func (c *Cluster) ApplyRegistryClientCertSecret(ctx context.Context, clientPKI pki.GeneratedPKI, namespace string) error {
+	serverSecret := v1ac.Secret(state.RegistryClientTLSSecret, namespace).
+		WithType(corev1.SecretTypeTLS).
+		WithLabels(map[string]string{
+			state.ZarfManagedByLabel: "zarf",
+		}).
+		WithData(state.RegistryCertSecretData(clientPKI))
+	if _, err := c.Clientset.CoreV1().Secrets(namespace).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
+		return fmt.Errorf("failed to create client TLS secret: %w", err)
+	}
+	return nil
+}
+
+// ApplyZarfRegistryCertSecrets applies the provided server and client certificates to the cluster as Kubernetes secrets.
+// Both the server and client PKI bundles should contain the same CA certificate.
+func (c *Cluster) ApplyZarfRegistryCertSecrets(ctx context.Context, serverPKI, clientPKI pki.GeneratedPKI) error {
+	l := logger.From(ctx)
+
+	if err := c.ApplyRegistryClientCertSecret(ctx, clientPKI, state.ZarfNamespaceName); err != nil {
+		return err
+	}
+
+	serverSecret := v1ac.Secret(state.RegistryServerTLSSecret, state.ZarfNamespaceName).
+		WithType(corev1.SecretTypeTLS).
+		WithLabels(map[string]string{
+			state.ZarfManagedByLabel: "zarf",
+		}).
+		WithData(state.RegistryCertSecretData(serverPKI))
+	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
+		return fmt.Errorf("failed to create server TLS secret: %w", err)
+	}
+
+	l.Info("applying secrets for registry mTLS in the Zarf namespace", "secrets", []string{state.RegistryServerTLSSecret, state.RegistryClientTLSSecret})
+	return nil
 }
 
 // LoadState utilizes the k8s Clientset to load and return the current state.State data or an empty state.State if no
@@ -308,12 +523,23 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
-	state.DebugPrint(ctx, s)
+	// Reconcile Port/NodePort for backwards compatibility with older state
+	s.RegistryInfo.ReconcilePort()
+	// If registry mode is not set then this is an old Zarf cluster and we can assume it's either external or nodeport
+	if s.RegistryInfo.RegistryMode == "" {
+		if s.RegistryInfo.IsInternal() {
+			s.RegistryInfo.RegistryMode = state.RegistryModeNodePort
+		} else {
+			s.RegistryInfo.RegistryMode = state.RegistryModeExternal
+		}
+	}
 	return s, nil
 }
 
 // SaveState takes a given state.State and persists it to k8s Cluster secrets.
 func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
+	// Sync NodePort from Port so older Zarf versions can read the state.
+	s.RegistryInfo.ReconcilePort()
 	state.DebugPrint(ctx, s)
 
 	data, err := json.Marshal(&s)
@@ -334,4 +560,81 @@ func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
 		return fmt.Errorf("unable to apply the zarf state secret: %w", err)
 	}
 	return nil
+}
+
+// GetIPFamily returns the IP family of the cluster, can be ipv4, ipv6, or dual.
+func (c *Cluster) GetIPFamily(ctx context.Context) (_ state.IPFamily, err error) {
+	svcName := "zarf-ip-family-test"
+	service := v1ac.Service(svcName, state.ZarfNamespaceName).
+		WithSpec(v1ac.ServiceSpec().
+			WithIPFamilyPolicy(corev1.IPFamilyPolicyPreferDualStack).
+			WithPorts(v1ac.ServicePort().
+				WithPort(443).
+				WithProtocol(corev1.ProtocolTCP).
+				WithName("test-port")).
+			WithType(corev1.ServiceTypeClusterIP))
+
+	_, err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Apply(ctx, service, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
+	if err != nil {
+		return "", fmt.Errorf("unable to apply test service: %w", err)
+	}
+
+	defer func() {
+		if deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, svcName, metav1.DeleteOptions{}); deleteErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to cleanup test service %s: %w", svcName, deleteErr))
+		}
+	}()
+
+	// Use health checks to wait for the service to be ready
+	healthCheck := []v1alpha1.NamespacedObjectKindReference{
+		{
+			APIVersion: "v1",
+			Kind:       "Service",
+			Namespace:  state.ZarfNamespaceName,
+			Name:       svcName,
+		},
+	}
+
+	if err := healthchecks.Run(ctx, c.Watcher, healthCheck); err != nil {
+		return "", fmt.Errorf("service health check failed: %w", err)
+	}
+
+	// Get the updated service to check which IP families are available
+	updatedService, err := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, svcName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("unable to get updated service: %w", err)
+	}
+
+	// Determine IP family based on the service's IP families
+	ipFamilies := updatedService.Spec.IPFamilies
+	hasIPv4 := slices.Contains(ipFamilies, corev1.IPv4Protocol)
+	hasIPv6 := slices.Contains(ipFamilies, corev1.IPv6Protocol)
+
+	switch {
+	case hasIPv4 && hasIPv6:
+		return state.IPFamilyDualStack, nil
+	case hasIPv6:
+		return state.IPFamilyIPv6, nil
+	case hasIPv4:
+		return state.IPFamilyIPv4, nil
+	default:
+		return "", fmt.Errorf("unable to determine IP family of cluster")
+	}
+}
+
+// InitRegistryCerts creates CA, server, and client certificates for registry mTLS
+// and applies them to the cluster as Kubernetes secrets with bundled CA certificates.
+// Only generates certificates if they don't exist or have less than 50% remaining life.
+func (c *Cluster) InitRegistryCerts(ctx context.Context) error {
+	renewalThresholdPercentage := 50.0
+	needsRenewal, err := c.ShouldRenewRegistryCerts(ctx, renewalThresholdPercentage)
+	if err != nil {
+		return err
+	}
+
+	if !needsRenewal {
+		return nil
+	}
+
+	return c.ApplyZarfManagedMTLSSecrets(ctx)
 }

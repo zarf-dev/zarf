@@ -63,7 +63,13 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	eventCh := sw.Watch(cancelCtx, objs, watcher.Options{})
+	// Prefer namespace-scoped informers even when objects span multiple namespaces.
+	// The automatic cli-utils strategy switches to root-scoped informers when more
+	// than one namespace is present, which unnecessarily requires cluster-wide
+	// list/watch permissions for namespaced resources.
+	eventCh := sw.Watch(cancelCtx, objs, watcher.Options{
+		RESTScopeStrategy: watcher.RESTScopeNamespace,
+	})
 	statusCollector := collector.NewResourceStatusCollector(objs)
 	done := statusCollector.ListenWithObserver(eventCh, collector.ObserverFunc(
 		func(statusCollector *collector.ResourceStatusCollector, _ event.Event) {
@@ -71,6 +77,12 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 			for _, rs := range statusCollector.ResourceStatuses {
 				if rs == nil {
 					continue
+				}
+				// Failed is a terminal state. This check ensures we don't wait forever for a resource
+				// that has already failed, as intervention is required to resolve the failure.
+				if rs.Status == status.FailedStatus {
+					cancel()
+					return
 				}
 				rss = append(rss, rs)
 			}
@@ -87,24 +99,18 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 		return statusCollector.Error
 	}
 
-	// Only check parent context error, otherwise we would error when desired status is achieved.
-	if ctx.Err() != nil {
-		errs := []error{}
-		for _, id := range objs {
-			rs := statusCollector.ResourceStatuses[id]
-			switch rs.Status {
-			case status.CurrentStatus:
-			case status.NotFoundStatus:
-				errs = append(errs, fmt.Errorf("%s: %s not found", rs.Identifier.Name, rs.Identifier.GroupKind.Kind))
-			default:
-				errs = append(errs, fmt.Errorf("%s: %s not ready", rs.Identifier.Name, rs.Identifier.GroupKind.Kind))
-			}
+	errs := []error{}
+	for _, id := range objs {
+		rs := statusCollector.ResourceStatuses[id]
+		if rs.Status != status.CurrentStatus {
+			errs = append(errs, fmt.Errorf("%s: %s not ready, status is %s, message: %s", rs.Identifier.Name, rs.Identifier.GroupKind.Kind, rs.Status, rs.Message))
 		}
-		errs = append(errs, ctx.Err())
-		return errors.Join(errs...)
 	}
-
-	return nil
+	// Only append parent context error, otherwise we would error when desired status is achieved.
+	if ctx.Err() != nil {
+		errs = append(errs, ctx.Err())
+	}
+	return errors.Join(errs...)
 }
 
 // ImmediateWatcher should only be used for testing and returns the set status immediately.

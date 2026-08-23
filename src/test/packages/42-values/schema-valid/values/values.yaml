@@ -1,0 +1,4 @@
+appName: test-app
+version: 1.0.0
+replicas: 3
+enabled: true

@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,22 +20,23 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
-	"github.com/zarf-dev/zarf/src/internal/template"
-	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/pkg/wait"
 )
 
 // Run runs all provided actions.
-func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values) error {
+func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error {
 	if variableConfig == nil {
 		variableConfig = ptmpl.GetZarfVariableConfig(ctx, false)
 	}
 
 	for _, a := range actions {
-		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig, values); err != nil {
+		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig, values, stateAccess); err != nil {
 			return err
 		}
 	}
@@ -41,43 +44,28 @@ func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponent
 }
 
 // Run commands that a component has provided.
-func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values) error {
+func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error {
 	var cmdEscaped string
 	var err error
 	cmd := action.Cmd
 	l := logger.From(ctx)
 	start := time.Now()
 
-	tmplObjs := template.NewObjects(values).
+	tmplObjs, err := template.NewObjects(values).
 		WithConstants(variableConfig.GetConstants()).
-		WithVariables(variableConfig.GetSetVariableMap())
+		WithVariables(variableConfig.GetSetVariableMap()).
+		WithState(stateAccess)
+	if err != nil {
+		return err
+	}
 
-	// If the action is a wait, convert it to a command.
 	if action.Wait != nil {
-		// If the wait has no timeout, set a default of 5 minutes.
-		if action.MaxTotalSeconds == nil {
-			fiveMin := 300
-			action.MaxTotalSeconds = &fiveMin
-		}
-
-		// Convert the wait to a command.
-		if cmd, err = convertWaitToCmd(ctx, *action.Wait, action.MaxTotalSeconds); err != nil {
+		err := runWaitAction(ctx, action, variableConfig, tmplObjs)
+		if err != nil {
 			return err
 		}
-
-		// Mute the output because it will be noisy.
-		t := true
-		action.Mute = &t
-
-		// Set the max retries to 0.
-		z := 0
-		action.MaxRetries = &z
-
-		// Not used for wait actions.
-		d := ""
-		action.Dir = &d
-		action.Env = []string{}
-		action.SetVariables = []v1alpha1.Variable{}
+		l.Debug("wait action succeeded", "duration", time.Since(start))
+		return nil
 	}
 
 	if action.Description != "" {
@@ -86,10 +74,12 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 		cmdEscaped = helpers.Truncate(cmd, 60, false)
 	}
 
-	// Apply go-templates in cmds
-	cmd, err = template.Apply(ctx, cmd, tmplObjs)
-	if err != nil {
-		return fmt.Errorf("could not tempalte cmd %s: %w", cmdEscaped, err)
+	// Apply go-templates in cmds if templating is enabled
+	if action.ShouldTemplate() {
+		cmd, err = template.Apply(ctx, cmd, tmplObjs)
+		if err != nil {
+			return fmt.Errorf("could not template cmd %s: %w", cmdEscaped, err)
+		}
 	}
 
 	l.Info("running command", "cmd", cmdEscaped)
@@ -132,11 +122,6 @@ retryCmd:
 				if err := parseAndSetValue(outTrimmed, v, values); err != nil {
 					return err
 				}
-			}
-
-			if action.Wait != nil {
-				l.Debug("wait for action succeeded", "cmd", cmdEscaped, "duration", time.Since(start))
-				return nil
 			}
 
 			l.Debug("completed action", "cmd", cmdEscaped, "duration", time.Since(start))
@@ -189,40 +174,126 @@ retryCmd:
 	}
 }
 
-// convertWaitToCmd will return the wait command if it exists, otherwise it will return the original command.
-func convertWaitToCmd(_ context.Context, wait v1alpha1.ZarfComponentActionWait, timeout *int) (string, error) {
-	// Build the timeout string.
-	timeoutString := fmt.Sprintf("--timeout %ds", *timeout)
+func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, tmplObjs template.Objects) error {
+	waitCfg := action.Wait
 
-	// If the action has a wait, build a cmd from that instead.
-	cluster := wait.Cluster
-	if cluster != nil {
-		ns := cluster.Namespace
-		if ns != "" {
-			ns = fmt.Sprintf("-n %s", ns)
-		}
-
-		// Build a call to the zarf tools wait-for command.
-		return fmt.Sprintf("./zarf tools wait-for %s %s %s %s %s",
-			cluster.Kind, cluster.Name, cluster.Condition, ns, timeoutString), nil
+	timeout := 5 * time.Minute
+	if action.MaxTotalSeconds != nil && *action.MaxTotalSeconds > 0 {
+		timeout = time.Duration(*action.MaxTotalSeconds) * time.Second
 	}
 
-	network := wait.Network
-	if network != nil {
-		// Make sure the protocol is lower case.
-		network.Protocol = strings.ToLower(network.Protocol)
+	// Apply variable substitution to wait action fields.
+	templates := variableConfig.GetAllTemplates()
 
-		// If the protocol is http and no code is set, default to 200.
-		if strings.HasPrefix(network.Protocol, "http") && network.Code == 0 {
-			network.Code = 200
+	// Apply go-templates if templating is enabled, in the same way as regular actions.
+	var applyTemplates func(s string) (string, error)
+	if action.ShouldTemplate() {
+		applyTemplates = func(s string) (string, error) {
+			return template.Apply(ctx, s, tmplObjs)
 		}
-
-		// Build a call to the zarf tools wait-for command.
-		return fmt.Sprintf("./zarf tools wait-for %s %s %d %s",
-			network.Protocol, network.Address, network.Code, timeoutString), nil
 	}
 
-	return "", fmt.Errorf("wait action is missing a cluster or network")
+	switch {
+	case waitCfg.Cluster != nil:
+		cluster := waitCfg.Cluster
+		cluster.Kind = templateString(cluster.Kind, templates)
+		cluster.Name = templateString(cluster.Name, templates)
+		cluster.Namespace = templateString(cluster.Namespace, templates)
+		cluster.Condition = templateString(cluster.Condition, templates)
+		if applyTemplates != nil {
+			var err error
+			if cluster.Kind, err = applyTemplates(cluster.Kind); err != nil {
+				return fmt.Errorf("could not template wait.cluster.kind: %w", err)
+			}
+			if cluster.Name, err = applyTemplates(cluster.Name); err != nil {
+				return fmt.Errorf("could not template wait.cluster.name: %w", err)
+			}
+			if cluster.Namespace, err = applyTemplates(cluster.Namespace); err != nil {
+				return fmt.Errorf("could not template wait.cluster.namespace: %w", err)
+			}
+			if cluster.Condition, err = applyTemplates(cluster.Condition); err != nil {
+				return fmt.Errorf("could not template wait.cluster.condition: %w", err)
+			}
+		}
+		return runWaitClusterAction(ctx, cluster, timeout)
+	case waitCfg.Network != nil:
+		network := waitCfg.Network
+		network.Protocol = templateString(network.Protocol, templates)
+		network.Address = templateString(network.Address, templates)
+		if applyTemplates != nil {
+			var err error
+			if network.Protocol, err = applyTemplates(network.Protocol); err != nil {
+				return fmt.Errorf("could not template wait.network.protocol: %w", err)
+			}
+			if network.Address, err = applyTemplates(network.Address); err != nil {
+				return fmt.Errorf("could not template wait.network.address: %w", err)
+			}
+		}
+		return runWaitNetworkAction(ctx, network, timeout)
+	default:
+		return fmt.Errorf("wait action is missing a cluster or network")
+	}
+}
+
+func templateString(s string, templates map[string]*variables.TextTemplate) string {
+	// Replace ${VAR} syntax (unambiguous due to braces).
+	for key, tmpl := range templates {
+		envName := strings.TrimPrefix(strings.TrimSuffix(key, "###"), "###")
+		s = strings.ReplaceAll(s, fmt.Sprintf("${%s}", envName), tmpl.Value)
+	}
+
+	// Replace bare $VAR syntax, processing longer names first to avoid
+	// partial matches (e.g. $ZARF_VAR_NAME matching inside $ZARF_VAR_NAMESPACE).
+	keys := make([]string, 0, len(templates))
+	for key := range templates {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return len(keys[i]) > len(keys[j])
+	})
+	for _, key := range keys {
+		envName := strings.TrimPrefix(strings.TrimSuffix(key, "###"), "###")
+		s = strings.ReplaceAll(s, fmt.Sprintf("$%s", envName), templates[key].Value)
+	}
+	return s
+}
+
+func runWaitClusterAction(ctx context.Context, cluster *v1alpha1.ZarfComponentActionWaitCluster, timeout time.Duration) error {
+	l := logger.From(ctx)
+
+	kind := cluster.Kind
+	identifier := cluster.Name
+	condition := cluster.Condition
+	namespace := cluster.Namespace
+
+	desc := fmt.Sprintf("wait for %s/%s", kind, identifier)
+	if condition != "" {
+		desc = fmt.Sprintf("%s to be %s", desc, condition)
+	}
+	l.Info("running wait action", "description", desc)
+
+	return wait.ForResource(ctx, kind, identifier, condition, namespace, timeout)
+}
+
+func runWaitNetworkAction(ctx context.Context, network *v1alpha1.ZarfComponentActionWaitNetwork, timeout time.Duration) error {
+	l := logger.From(ctx)
+
+	kind := strings.ToLower(network.Protocol)
+	identifier := network.Address
+	var condition string
+	if strings.HasPrefix(kind, "http") && network.Code == 0 {
+		condition = "200"
+	} else if network.Code != 0 {
+		condition = strconv.Itoa(network.Code)
+	}
+
+	desc := fmt.Sprintf("wait for %s/%s", kind, identifier)
+	if condition != "" {
+		desc = fmt.Sprintf("%s to be %s", desc, condition)
+	}
+	l.Info("running wait action", "description", desc)
+
+	return wait.ForNetwork(ctx, kind, identifier, condition, timeout)
 }
 
 // Perform some basic string mutations to make commands more useful.

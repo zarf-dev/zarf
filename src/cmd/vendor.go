@@ -52,6 +52,14 @@ func IsVendorCmd(args []string, vendoredCmds []string) bool {
 		args = args[1:]
 	}
 
+	// under the hood cobra uses the subcommand "__complete" to populate the various shell commands/arguments
+	// because of that we remove the argument containing the "__complete", then proceed our normal logic.
+	if len(args) > 1 {
+		if args[1] == cobra.ShellCompRequestCmd || args[1] == cobra.ShellCompNoDescRequestCmd {
+			args = args[1:]
+		}
+	}
+
 	if len(args) > 2 {
 		if args[1] == "tools" || args[1] == "t" {
 			if slices.Contains(vendoredCmds, args[2]) {

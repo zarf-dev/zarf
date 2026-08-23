@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "appName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "replicas": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "enabled": {
+      "type": "boolean"
+    }
+  },
+  "required": ["appName", "replicas"]
+}

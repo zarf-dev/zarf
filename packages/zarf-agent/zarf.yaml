@@ -3,6 +3,32 @@ metadata:
   name: init-package-zarf-agent
   description: Install the zarf agent mutating webhook on a new cluster
 
+variables:
+  - name: AGENT_AFFINITY
+    description: Custom affinity map for the zarf-agent deployment
+    default: ""
+    autoIndent: true
+
+  - name: AGENT_TOLERATIONS
+    description: Custom tolerations array for the zarf-agent deployment
+    default: ""
+    autoIndent: true
+
+  - name: AGENT_NODE_SELECTOR
+    description: Custom node selector map for the zarf-agent deployment
+    default: ""
+    autoIndent: true
+
+  - name: AGENT_WEBHOOK_ANNOTATIONS
+    description: Custom annotations map for the zarf-agent mutating webhook
+    default: "{}"
+    autoIndent: true
+
+  - name: AGENT_MUTATION_EXCLUSIONS
+    description: YAML list of GitOps resource groups the zarf-agent should not mutate (valid values are argocd and flux)
+    default: "[]"
+    autoIndent: true
+
 constants:
   - name: AGENT_IMAGE
     value: "###ZARF_PKG_TMPL_AGENT_IMAGE###"
@@ -25,6 +51,8 @@ components:
         localPath: chart
         version: 0.1.0
         namespace: zarf
+        valuesFiles:
+          - agent-values.yaml
     actions:
       onCreate:
         before:

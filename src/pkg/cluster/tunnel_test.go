@@ -11,6 +11,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -48,6 +49,254 @@ func TestListConnections(t *testing.T) {
 	require.Equal(t, expectedConnections, connections)
 }
 
+func TestCheckForZarfConnectLabel(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		svc         corev1.Service
+		connectName string
+		expectedErr string
+		expected    TunnelInfo
+	}{
+		{
+			// A service with no ports (e.g. ExternalName)
+			name: "service with no ports",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "no-ports",
+					Labels: map[string]string{
+						ZarfConnectLabelName: "my-connect",
+					},
+				},
+				Spec: corev1.ServiceSpec{},
+			},
+			connectName: "my-connect",
+			expectedErr: "service default/no-ports has no ports",
+		},
+		{
+			name: "service with ports",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "app-ns",
+					Name:      "web",
+					Labels: map[string]string{
+						ZarfConnectLabelName: "web-ui",
+					},
+					Annotations: map[string]string{
+						ZarfConnectAnnotationURL: "/dashboard",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Port:       8080,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+				},
+			},
+			connectName: "web-ui",
+			expected: TunnelInfo{
+				ResourceType: SvcResource,
+				ResourceName: "web",
+				Namespace:    "app-ns",
+				RemotePort:   8080,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := &Cluster{
+				Clientset: fake.NewClientset(),
+			}
+			_, err := c.Clientset.CoreV1().Services(tt.svc.Namespace).Create(context.Background(), &tt.svc, metav1.CreateOptions{})
+			require.NoError(t, err)
+
+			ti, err := c.checkForZarfConnectLabel(context.Background(), tt.connectName)
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expected.ResourceType, ti.ResourceType)
+			require.Equal(t, tt.expected.ResourceName, ti.ResourceName)
+			require.Equal(t, tt.expected.Namespace, ti.Namespace)
+			require.Equal(t, tt.expected.RemotePort, ti.RemotePort)
+		})
+	}
+}
+
+func TestFindPodContainerPort(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		svc          corev1.Service
+		pods         []corev1.Pod
+		expectedErr  string
+		expectedPort int
+	}{
+		{
+			name: "service with no ports",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "no-ports",
+				},
+				Spec: corev1.ServiceSpec{},
+			},
+			expectedErr: "service default/no-ports has no ports",
+		},
+		{
+			name: "matching named port on pod",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "app-ns",
+					Name:      "web",
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{"app": "web"},
+					Ports: []corev1.ServicePort{
+						{
+							Port:       80,
+							TargetPort: intstr.FromString("http"),
+						},
+					},
+				},
+			},
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "app-ns",
+						Name:      "web-ui",
+						Labels:    map[string]string{"app": "web"},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: "server",
+								Ports: []corev1.ContainerPort{
+									{
+										Name:          "http",
+										ContainerPort: 8080,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedPort: 8080,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := &Cluster{
+				Clientset: fake.NewClientset(),
+			}
+			for i := range tt.pods {
+				_, err := c.Clientset.CoreV1().Pods(tt.pods[i].Namespace).Create(context.Background(), &tt.pods[i], metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			port, err := c.findPodContainerPort(context.Background(), tt.svc)
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedPort, port)
+		})
+	}
+}
+
+func TestGetAttachablePodForService(t *testing.T) {
+	t.Parallel()
+
+	readyCondition := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+	notReadyCondition := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionFalse}
+	now := metav1.Now()
+
+	tests := []struct {
+		name        string
+		pods        []corev1.Pod
+		expectedErr string
+		expectedPod string
+	}{
+		{
+			name:        "no pods",
+			expectedErr: "no pods found for service web",
+		},
+		{
+			name: "only a terminating pod",
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-terminating", Labels: map[string]string{"app": "web"}, DeletionTimestamp: &now, Finalizers: []string{"keep-around-for-test"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
+				},
+			},
+			expectedErr: "no ready pods found for service web",
+		},
+		{
+			name: "only a not-ready pod",
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-not-ready", Labels: map[string]string{"app": "web"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{notReadyCondition}},
+				},
+			},
+			expectedErr: "no ready pods found for service web",
+		},
+		{
+			name: "skips terminating and not-ready pods, picks the ready one",
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-terminating", Labels: map[string]string{"app": "web"}, DeletionTimestamp: &now, Finalizers: []string{"keep-around-for-test"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-not-ready", Labels: map[string]string{"app": "web"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{notReadyCondition}},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-ready", Labels: map[string]string{"app": "web"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
+				},
+			},
+			expectedPod: "web-ready",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			clientset := fake.NewClientset()
+			svc := corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web"},
+				Spec:       corev1.ServiceSpec{Selector: map[string]string{"app": "web"}},
+			}
+			_, err := clientset.CoreV1().Services(svc.Namespace).Create(context.Background(), &svc, metav1.CreateOptions{})
+			require.NoError(t, err)
+			for i := range tt.pods {
+				_, err := clientset.CoreV1().Pods(tt.pods[i].Namespace).Create(context.Background(), &tt.pods[i], metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			tunnel := &Tunnel{clientset: clientset, namespace: "app-ns", resourceName: "web"}
+			podName, err := tunnel.getAttachablePodForService(context.Background())
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedPod, podName)
+		})
+	}
+}
+
 func TestServiceInfoFromNodePortURL(t *testing.T) {
 	t.Parallel()
 
@@ -63,7 +312,7 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 	}{
 		{
 			name:        "invalid node port",
-			nodePortURL: "example.com",
+			nodePortURL: "example.com:30001",
 			expectedErr: "node port services should be on localhost",
 		},
 		{
@@ -147,13 +396,70 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 			expectedIP:        "good-ip",
 			expectedPort:      3333,
 		},
+		{
+			name:        "bare localhost host:port (issue #4518)",
+			nodePortURL: "localhost:30001",
+			services: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "good-service", Namespace: "good-namespace"},
+					Spec: corev1.ServiceSpec{
+						Type:      corev1.ServiceTypeNodePort,
+						Ports:     []corev1.ServicePort{{NodePort: 30001, Port: 3333}},
+						ClusterIP: "good-ip",
+					},
+				},
+			},
+			expectedNamespace: "good-namespace",
+			expectedName:      "good-service",
+			expectedIP:        "good-ip",
+			expectedPort:      3333,
+		},
+		{
+			name:        "bare loopback ip host:port",
+			nodePortURL: "127.0.0.1:30001",
+			services: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "good-service", Namespace: "good-namespace"},
+					Spec: corev1.ServiceSpec{
+						Type:      corev1.ServiceTypeNodePort,
+						Ports:     []corev1.ServicePort{{NodePort: 30001, Port: 3333}},
+						ClusterIP: "good-ip",
+					},
+				},
+			},
+			expectedNamespace: "good-namespace",
+			expectedName:      "good-service",
+			expectedIP:        "good-ip",
+			expectedPort:      3333,
+		},
+		{
+			name:        "ipv6 loopback host:port",
+			nodePortURL: "[::1]:30001",
+			services: []corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "good-service", Namespace: "good-namespace"},
+					Spec: corev1.ServiceSpec{
+						Type:      corev1.ServiceTypeNodePort,
+						Ports:     []corev1.ServicePort{{NodePort: 30001, Port: 3333}},
+						ClusterIP: "good-ip",
+					},
+				},
+			},
+			expectedNamespace: "good-namespace",
+			expectedName:      "good-service",
+			expectedIP:        "good-ip",
+			expectedPort:      3333,
+		},
+		{
+			name:        "non-loopback private ip rejected",
+			nodePortURL: "192.168.1.5:30001",
+			expectedErr: "node port services should be on localhost",
+		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-
-			svc, port, err := serviceInfoFromNodePortURL(tt.services, tt.nodePortURL)
+			svc, port, err := ServiceInfoFromNodePortURL(tt.services, tt.nodePortURL)
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
 				return

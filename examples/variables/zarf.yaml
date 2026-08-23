@@ -44,6 +44,11 @@ variables:
     autoIndent: true
     sensitive: true
     type: file
+  # EXTRA_DATA demonstrates a multi-line variable substituted as the sole entry under a YAML
+  # mapping key (see nginx-extra-configmap.yaml). Also serves as regression coverage for #4863.
+  - name: EXTRA_DATA
+    default: |
+      extra-key: extra-value
 
 components:
   # The following component templates the provided config file with the defined ENVIRONMENT
@@ -79,12 +84,9 @@ components:
       - name: variables-with-nginx
         files:
           - nginx-configmap.yaml
+          - nginx-extra-configmap.yaml
           - nginx-deployment.yaml
           - nginx-service.yaml
 
-# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
-# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
-x-mdx: |
-  This example demonstrates how to define `variables` and `constants` in your package that will be templated across the manifests and charts your package uses during `zarf package deploy` with `###ZARF_VAR_*###` and `###ZARF_CONST_*###`, and also shows how package configuration templates can be used in the `zarf.yaml` during `zarf package create` with `###ZARF_PKG_TMPL_*###`.
-
-  With these variables and templating features, you can define values in the `zarf.yaml` file without having to set them manually in every manifest and chart, and can prompt the deploy user for certain information you may want to make dynamic on `zarf package deploy`.
+documentation:
+  readme: readme.md

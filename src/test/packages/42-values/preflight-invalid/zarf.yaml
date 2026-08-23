@@ -1,0 +1,19 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-values-preflight
+  description: package whose templated action references a value nothing can provide
+
+components:
+  - name: undefined-value
+    required: true
+    manifests:
+      - name: preflight-configmap
+        files:
+          - configmap.yaml
+    actions:
+      onDeploy:
+        after:
+          # references a value that is never defined and cannot be set by any setValues action,
+          # so the deploy must fail before the manifest above is ever applied.
+          - cmd: echo "{{ .Values.doesNotExist }}"
+            template: true

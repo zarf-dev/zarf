@@ -16,7 +16,6 @@ components:
     required: true
     import:
       path: import
-
   - name: component-from-different-package
     required: true
     import:

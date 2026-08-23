@@ -28,6 +28,7 @@ spec:
           type: "RuntimeDefault"
       affinity: {{- toYaml .Values.affinity | nindent 8 }}
       tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
       containers:
         - name: server
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -37,11 +38,20 @@ spec:
               path: /healthz
               port: 8443
               scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8443
+              scheme: HTTPS
+            periodSeconds: 3
+            timeoutSeconds: 2
+            failureThreshold: 2
           ports:
             - containerPort: 8443
           securityContext:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
+            privileged: false
             runAsNonRoot: true
             capabilities:
               drop: ["ALL"]
@@ -52,6 +62,9 @@ spec:
             limits:
               memory: {{ .Values.resources.limits.memory }}
               cpu: {{ .Values.resources.limits.cpu }}
+          env:
+            - name: ZARF_AGENT_MUTATION_POLICY
+              value: {{ .Values.mutationPolicy }}
           volumeMounts:
             - name: tls-certs
               mountPath: /etc/certs

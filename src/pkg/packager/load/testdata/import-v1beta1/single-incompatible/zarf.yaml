@@ -1,0 +1,9 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: single-incompatible-import
+components:
+  - name: web
+    import:
+      local:
+        - path: components/web-apache.yaml

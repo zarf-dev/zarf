@@ -16,11 +16,14 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"helm.sh/helm/v4/pkg/kube"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/feature"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 )
 
 var (
@@ -69,6 +72,8 @@ func (o *outputFormat) Type() string {
 var rootCmd = NewZarfCommand()
 
 func preRun(cmd *cobra.Command, _ []string) error {
+	// This ensures the field manager is set to Zarf during any Helm SDK actions
+	kube.ManagedFieldsManager = cluster.FieldManagerName
 	// Configure user defined Features
 	err := setupFeatures(features)
 	if err != nil {
@@ -79,12 +84,6 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		if _, err = fmt.Fprintln(os.Stderr, logo()); err != nil {
 			return err
 		}
-	}
-
-	// If --insecure was provided, set --insecure-skip-tls-verify and --plain-http to match
-	if config.CommonOptions.Insecure {
-		config.CommonOptions.InsecureSkipTLSVerify = true
-		config.CommonOptions.PlainHTTP = true
 	}
 
 	// Skip for vendor only commands
@@ -98,6 +97,8 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	ctx := logger.WithContext(cmd.Context(), l)
+	// One negotiator per CLI invocation; decisions never expire (TTL 0) since Zarf is a short-lived process
+	ctx = ocischeme.WithNegotiator(ctx, ocischeme.New(ocischeme.Options{}))
 	cmd.SetContext(ctx)
 
 	// Print enabled features once we have a logger available
@@ -184,7 +185,7 @@ func NewZarfCommand() *cobra.Command {
 		Long:         lang.RootCmdLong,
 		Args:         cobra.MaximumNArgs(1),
 		SilenceUsage: true,
-		// TODO(mkcp): Do we actually want to silence errors here?
+		// We use silence errors so we can print out errors in the Zarf log format
 		SilenceErrors:     true,
 		PersistentPreRunE: preRun,
 		Run:               run,
@@ -208,41 +209,23 @@ func NewZarfCommand() *cobra.Command {
 
 	rootCmd.AddCommand(newVersionCommand())
 
+	// Setup flags - skip for vendor-only commands
+	if !checkVendorOnlyFromArgs() {
+		setupRootFlags(rootCmd)
+	}
+
+	setupGroupedFlagUsage(rootCmd)
+
 	return rootCmd
 }
 
-// Execute is the entrypoint for the CLI.
-func Execute(ctx context.Context) {
-	cmd, err := rootCmd.ExecuteContextC(ctx)
-	if err == nil {
-		return
-	}
-
-	// Check if we need to use the default err printer
-	defaultPrintCmds := []string{"helm", "yq", "kubectl"}
-	comps := strings.Split(cmd.CommandPath(), " ")
-	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
-		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
-		os.Exit(1)
-	}
-
-	// NOTE(mkcp): This line must be run with the unconfigured default logger because user flags are set downstream
-	// in rootCmd's preRun func.
-	logger.Default().Error(err.Error())
-	os.Exit(1)
-}
-
-func init() {
+// setupRootFlags sets up the persistent flags for the root command
+func setupRootFlags(rootCmd *cobra.Command) {
 	var showNoProgressDeprecation bool
-	// Skip for vendor-only commands
-	if checkVendorOnlyFromArgs() {
-		return
-	}
-
 	vpr := getViper()
 
 	// Features
-	rootCmd.PersistentFlags().StringToStringVar(&features, "features", vpr.GetStringMapString(VFeatures), "[ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features \"foo=true,bar=false,baz=true\"")
+	rootCmd.PersistentFlags().StringToStringVar(&features, "features", vpr.GetStringMapString(VFeatures), "Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features \"foo=true,bar=false,baz=true\"")
 
 	// Logs
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
@@ -253,14 +236,41 @@ func init() {
 
 	// Core functionality
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", vpr.GetString(VZarfCache), lang.RootCmdFlagCachePath)
+	cachePath := vpr.GetString(VCache)
+	if cachePath == "" {
+		cachePath = vpr.GetString(VZarfCache)
+	}
+	if cachePath == "" {
+		cachePath = config.ZarfDefaultCachePath
+	}
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", cachePath, lang.RootCmdFlagCachePath)
+	_ = rootCmd.PersistentFlags().MarkDeprecated("zarf-cache", "use --cache instead")
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "cache", cachePath, lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
 	// Security
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", vpr.GetBool(VInsecure), lang.RootCmdFlagInsecure)
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", vpr.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", vpr.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
-	_ = rootCmd.PersistentFlags().MarkDeprecated("insecure", "please use --plain-http, --insecure-skip-tls-verify, or --skip-signature-validation instead.")
+	rootCmd.PersistentFlags().BoolVar(&plainHTTP, "plain-http", vpr.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
+	rootCmd.PersistentFlags().BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", vpr.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
+}
+
+// Execute is the entrypoint for the CLI.
+func Execute(ctx context.Context) error {
+	cmd, err := rootCmd.ExecuteContextC(ctx)
+	if err == nil {
+		return nil
+	}
+
+	// Check if we need to use the default err printer
+	defaultPrintCmds := []string{"helm", "yq", "kubectl"}
+	comps := strings.Split(cmd.CommandPath(), " ")
+	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
+		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
+		os.Exit(1)
+	}
+
+	// Use default logger in case there was an error prior to the logger being setup
+	logger.Default().Error(err.Error())
+	return err
 }
 
 // setupLogger handles creating a logger and setting it as the global default.

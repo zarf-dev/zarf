@@ -7,13 +7,26 @@ package state
 import (
 	"context"
 	"fmt"
-	"slices"
+	"regexp"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+)
+
+// MutationPolicy controls the agent's default mutation behavior.
+type MutationPolicy string
+
+const (
+	// MutationPolicyAll mutates all resources unless they carry zarf.dev/agent: ignore/skip.
+	MutationPolicyAll MutationPolicy = "all"
+	// MutationPolicyLabeled mutates only resources (or namespaces) labeled zarf.dev/agent: mutate.
+	MutationPolicyLabeled MutationPolicy = "labeled"
 )
 
 // Declares secrets and metadata keys and values.
@@ -27,16 +40,54 @@ const (
 	ZarfPackageInfoLabel = "package-deploy-info"
 )
 
+// ServiceKey identifies a Zarf-managed service in state (registry, git, artifact, agent).
+type ServiceKey string
+
 // Credential keys
-// TODO(mkcp): Provide semantic doccomments for how these are used.
 const (
-	RegistryKey     = "registry"
-	RegistryReadKey = "registry-readonly"
-	GitKey          = "git"
-	GitReadKey      = "git-readonly"
-	ArtifactKey     = "artifact"
-	AgentKey        = "agent"
+	RegistryKey ServiceKey = "registry"
+	GitKey      ServiceKey = "git"
+	ArtifactKey ServiceKey = "artifact"
+	AgentKey    ServiceKey = "agent"
 )
+
+// AllServiceKeys is the canonical ordered list of every supported service key.
+func AllServiceKeys() []ServiceKey {
+	return []ServiceKey{RegistryKey, GitKey, ArtifactKey, AgentKey}
+}
+
+// ServiceSet is an unordered set of ServiceKeys.
+type ServiceSet map[ServiceKey]struct{}
+
+// NewServiceSet returns a ServiceSet populated with the given keys.
+func NewServiceSet(keys ...ServiceKey) ServiceSet {
+	s := make(ServiceSet, len(keys))
+	for _, k := range keys {
+		s[k] = struct{}{}
+	}
+	return s
+}
+
+// Has reports whether k is in the set.
+func (s ServiceSet) Has(k ServiceKey) bool {
+	_, ok := s[k]
+	return ok
+}
+
+// Add inserts k into the set.
+func (s ServiceSet) Add(k ServiceKey) {
+	s[k] = struct{}{}
+}
+
+// ParseServiceKey returns the ServiceKey matching s, or an error if s is not recognized.
+func ParseServiceKey(s string) (ServiceKey, error) {
+	for _, k := range AllServiceKeys() {
+		if string(k) == s {
+			return k, nil
+		}
+	}
+	return "", fmt.Errorf("invalid service key %q, valid keys are: %v", s, AllServiceKeys())
+}
 
 // ComponentStatus defines the deployment status of a Zarf component within a package.
 type ComponentStatus string
@@ -47,6 +98,16 @@ const (
 	ComponentStatusFailed    ComponentStatus = "Failed"
 	ComponentStatusDeploying ComponentStatus = "Deploying"
 	ComponentStatusRemoving  ComponentStatus = "Removing"
+)
+
+// IPFamily defines the different possible IPfamilies that can be used in Kubernetes clusters
+type IPFamily string
+
+// The possible IP stacks in a Kubernetes Cluster
+const (
+	IPFamilyIPv4      IPFamily = "ipv4"
+	IPFamilyIPv6      IPFamily = "ipv6"
+	IPFamilyDualStack IPFamily = "dual"
 )
 
 // All status options for a Zarf component chart
@@ -60,6 +121,8 @@ const (
 	ZarfGeneratedPasswordLen               = 24
 	ZarfGeneratedSecretLen                 = 48
 	ZarfInClusterContainerRegistryNodePort = 31999
+	ZarfInjectorDefaultHostPort            = 5001
+	ZarfRegistryHostPort                   = 5000
 	ZarfRegistryPushUser                   = "zarf-push"
 	ZarfRegistryPullUser                   = "zarf-pull"
 
@@ -69,7 +132,25 @@ const (
 
 	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+
+	// ZarfRegistryMTLSServerCommonName is the common name for the registry server certificate
+	ZarfRegistryMTLSServerCommonName = "zarf-docker-registry"
+	// ZarfRegistryMTLSClientCommonName is the common name for the registry client certificate
+	ZarfRegistryMTLSClientCommonName = "zarf-registry-client"
+	ZarfRegistryMTLSCASubject        = "Zarf Registry CA"
 )
+
+// ZarfRegistryMTLSServerHosts is the list of DNS names and IPs for the registry server certificate
+var ZarfRegistryMTLSServerHosts = []string{
+	"zarf-docker-registry",
+	"zarf-docker-registry.zarf.svc.cluster.local",
+	"localhost",
+	"127.0.0.1",
+	"[::1]",
+}
+
+// IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
+const IPV6Localhost = "::1"
 
 // State is maintained as a secret in the Zarf namespace to track Zarf init data.
 type State struct {
@@ -77,12 +158,17 @@ type State struct {
 	ZarfAppliance bool `json:"zarfAppliance"`
 	// K8s distribution of the cluster Zarf was deployed to
 	Distro string `json:"distro"`
-	// Machine architecture of the k8s node(s)
-	Architecture string `json:"architecture"`
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
+	// The IP family of the cluster, can be ipv4, ipv6, or dual
+	IPFamily IPFamily `json:"ipFamily,omitempty"`
 	// PKI certificate information for the agent pods Zarf manages
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
+	// AgentTLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated
+	AgentTLSUserProvided bool `json:"agentTLSUserProvided,omitempty"`
+	// AgentMutationPolicy controls the conditions required for the agent to mutate resources
+	AgentMutationPolicy MutationPolicy `json:"agentMutationPolicy"`
+	InjectorInfo        InjectorInfo   `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -90,6 +176,23 @@ type State struct {
 	RegistryInfo RegistryInfo `json:"registryInfo"`
 	// Information about the artifact registry Zarf is configured to use
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
+}
+
+// AgentIsConfigured returns true when Zarf has agent TLS configured.
+func (s *State) AgentIsConfigured() bool {
+	return len(s.AgentTLS.Cert) > 0
+}
+
+// InjectorInfo contains information on how to run the long lived Daemonset Injector
+type InjectorInfo struct {
+	// The image to be used for the long lived injector
+	Image string `json:"injectorImage"`
+	// The number of payload configmaps required
+	PayLoadConfigMapAmount int `json:"payLoadConfigMapAmount"`
+	// The PayLoadShaSum for the payload ConfigMaps
+	PayLoadShaSum string `json:"payLoadShaSum"`
+	// The port that the injector is exposed through, either hostPort or nodePort
+	Port int `json:"port"`
 }
 
 // GitServerInfo contains information Zarf uses to communicate with a git repository to push/pull repositories to.
@@ -109,6 +212,13 @@ type GitServerInfo struct {
 // IsInternal returns true if the git server URL is equivalent to a git server deployed through the default init package
 func (gs GitServerInfo) IsInternal() bool {
 	return gs.Address == ZarfInClusterGitServiceURL
+}
+
+// IsConfigured returns true if the git server address has been set.
+// clusters initialized before services-gated state https://github.com/zarf-dev/zarf/pull/4832
+// may report true even without a real git server.
+func (gs GitServerInfo) IsConfigured() bool {
+	return gs.Address != ""
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
@@ -166,6 +276,11 @@ func (as ArtifactServerInfo) IsInternal() bool {
 	return as.Address == ZarfInClusterArtifactServiceURL
 }
 
+// IsConfigured returns true if the artifact server address has been set.
+func (as ArtifactServerInfo) IsConfigured() bool {
+	return as.Address != ""
+}
+
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
 func (as *ArtifactServerInfo) FillInEmptyValues() {
 	// Set default svc url if an external registry was not provided
@@ -179,6 +294,65 @@ func (as *ArtifactServerInfo) FillInEmptyValues() {
 	}
 }
 
+// MTLSStrategy defines the strategy to manage the mTLS certificates for the registry
+type MTLSStrategy string
+
+const (
+	// MTLSStrategyNone indicates no mTLS certificate management
+	MTLSStrategyNone MTLSStrategy = "none"
+	// MTLSStrategyZarfManaged indicates Zarf is managing the mTLS certificates
+	MTLSStrategyZarfManaged MTLSStrategy = "zarf-managed"
+)
+
+// Secrets holding the registry mTLS certificates, and the keys within them. The keys are
+// the standard kubernetes.io/tls format plus the conventional CA companion.
+const (
+	// RegistryServerTLSSecret holds the certificate the registry serves.
+	RegistryServerTLSSecret = "zarf-registry-server-tls"
+	// RegistryClientTLSSecret holds the certificate clients present to the registry.
+	RegistryClientTLSSecret = "zarf-registry-client-tls"
+
+	RegistrySecretCAPath   = "ca.crt"
+	RegistrySecretCertPath = "tls.crt"
+	RegistrySecretKeyPath  = "tls.key"
+)
+
+// RegistryCertFromSecretData reads a registry mTLS keypair out of the secret data Zarf
+// stores. It is the exact inverse of RegistryCertSecretData, and takes the data map
+// rather than the secret so that deciding *how* to read the secret stays with the caller.
+func RegistryCertFromSecretData(data map[string][]byte) (pki.GeneratedPKI, error) {
+	certs := pki.GeneratedPKI{
+		CA:   data[RegistrySecretCAPath],
+		Cert: data[RegistrySecretCertPath],
+		Key:  data[RegistrySecretKeyPath],
+	}
+	if len(certs.CA) == 0 || len(certs.Cert) == 0 || len(certs.Key) == 0 {
+		return pki.GeneratedPKI{}, fmt.Errorf("registry TLS secret is incomplete")
+	}
+	return certs, nil
+}
+
+// RegistryCertSecretData lays a registry mTLS keypair out as Kubernetes secret data.
+func RegistryCertSecretData(certs pki.GeneratedPKI) map[string][]byte {
+	return map[string][]byte{
+		RegistrySecretCAPath:   certs.CA,
+		RegistrySecretCertPath: certs.Cert,
+		RegistrySecretKeyPath:  certs.Key,
+	}
+}
+
+// RegistryMode defines how the registry is accessed
+type RegistryMode string
+
+const (
+	// RegistryModeNodePort accesses the registry via NodePort service
+	RegistryModeNodePort RegistryMode = "nodeport"
+	// RegistryModeProxy accesses the registry via DaemonSet proxy
+	RegistryModeProxy RegistryMode = "proxy"
+	// RegistryModeExternal is used when the user has an external registry
+	RegistryModeExternal RegistryMode = "external"
+)
+
 // RegistryInfo contains information Zarf uses to communicate with a container registry to push/pull images.
 type RegistryInfo struct {
 	// Username of a user with push access to the registry
@@ -191,28 +365,152 @@ type RegistryInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the registry
 	Address string `json:"address"`
-	// Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster
+	// Deprecated: Use Port instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
 	NodePort int `json:"nodePort"`
+	// Port of the internal registry. In nodeport mode this is a Kubernetes NodePort, in proxy mode it is a host port.
+	Port int `json:"port"`
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
+	// RegistryMode defines how the registry is accessed (nodeport, proxy, or external)
+	RegistryMode RegistryMode `json:"registryMode"`
+	// MTLSStrategy defines who manages the mTLS certificates for the registry (defaults to none)
+	MTLSStrategy MTLSStrategy `json:"mtlsStrategy,omitempty"`
+}
+
+// SetPort updates the registry port and its deprecated compatibility field.
+func (ri *RegistryInfo) SetPort(port int) {
+	ri.Port = port
+	ri.NodePort = port
+}
+
+// ReconcilePort syncs the deprecated NodePort field with Port at serialization boundaries.
+// On read (LoadState): copies NodePort into Port when Port is unset, for state written by older Zarf.
+// On write (SaveState): copies Port into NodePort so older Zarf versions can read the state.
+func (ri *RegistryInfo) ReconcilePort() {
+	if ri.Port == 0 && ri.NodePort != 0 {
+		ri.Port = ri.NodePort
+	}
+	ri.NodePort = ri.Port
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
 func (ri RegistryInfo) IsInternal() bool {
-	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+	if ri.RegistryMode != "" {
+		return ri.RegistryMode != RegistryModeExternal
+	}
+	// This is kept for backwards compatibility with previous versions of Zarf that did not set the registry mode
+	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.Port) ||
+		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.Port)
+}
+
+// IsConfigured returns true if the registry info address has been set
+func (ri RegistryInfo) IsConfigured() bool {
+	return ri.Address != ""
+}
+
+// ShouldUseMTLS returns true if mTLS should be used for the registry connection.
+func (ri RegistryInfo) ShouldUseMTLS() bool {
+	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
+}
+
+// KnownPlainHTTP reports whether the registry's scheme is already certain without
+// probing. Zarf-managed mTLS implies HTTPS, while Zarf's internal registry without
+// mTLS only serves plain HTTP. known is false when the caller must negotiate the
+// scheme.
+func (ri RegistryInfo) KnownPlainHTTP() (plainHTTP bool, known bool) {
+	switch {
+	case ri.ShouldUseMTLS():
+		return false, true
+	case ri.IsInternal():
+		return true, true
+	default:
+		return false, false
+	}
+}
+
+// ResolvePlainHTTP decides whether host should be reached over plain HTTP for this
+// registry. A scheme known from state (KnownPlainHTTP) wins outright; otherwise a
+// localhost registry is probed (unless forcePlainHTTP already forces plain HTTP),
+// and every other host defaults to forcePlainHTTP. This is also the authoritative
+// scheme resolver downstream consumers should call to determine scheme when pushing
+// to a Zarf-deployed registry.
+func (ri RegistryInfo) ResolvePlainHTTP(ctx context.Context, host string, forcePlainHTTP bool, probe ocischeme.ProbeOptions) (bool, error) {
+	if known, ok := ri.KnownPlainHTTP(); ok {
+		return known, nil
+	}
+	if !forcePlainHTTP && dns.IsLocalOrPrivate(host) {
+		return ocischeme.From(ctx).UsePlainHTTP(ctx, host, probe)
+	}
+	return forcePlainHTTP, nil
+}
+
+// Htpasswd returns an htpasswd-formatted string for the registry's push and pull users.
+// Returns an empty string for external registries.
+func (ri RegistryInfo) Htpasswd() (string, error) {
+	if !ri.IsInternal() {
+		return "", nil
+	}
+	pushUser, err := utils.GetHtpasswdString(ri.PushUsername, ri.PushPassword)
+	if err != nil {
+		return "", fmt.Errorf("generating htpasswd for push user: %w", err)
+	}
+	pullUser, err := utils.GetHtpasswdString(ri.PullUsername, ri.PullPassword)
+	if err != nil {
+		return "", fmt.Errorf("generating htpasswd for pull user: %w", err)
+	}
+	return fmt.Sprintf("%s\\n%s", pushUser, pullUser), nil
+}
+
+// CheckIfRegistryAddressOrCredsChanged compares two RegistryInfo structs and returns true if the creds or address changed
+func CheckIfRegistryAddressOrCredsChanged(existing, given RegistryInfo) bool {
+	if given.PushUsername != "" && existing.PushUsername != given.PushUsername {
+		return true
+	}
+	if given.PullUsername != "" && existing.PullUsername != given.PullUsername {
+		return true
+	}
+	if given.PushPassword != "" && existing.PushPassword != given.PushPassword {
+		return true
+	}
+	if given.PullPassword != "" && existing.PullPassword != given.PullPassword {
+		return true
+	}
+	if given.Address != "" && existing.Address != given.Address {
+		return true
+	}
+	if given.Secret != "" && existing.Secret != given.Secret {
+		return true
+	}
+	return false
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
-func (ri *RegistryInfo) FillInEmptyValues() error {
+func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	var err error
-	// Set default NodePort if none was provided and the registry is internal
-	if ri.NodePort == 0 && ri.Address == "" {
-		ri.NodePort = ZarfInClusterContainerRegistryNodePort
+
+	// If registry mode is empty, then default to nodeport if internal, or set as external if address is set
+	if ri.RegistryMode == "" {
+		if ri.Address == "" {
+			ri.RegistryMode = RegistryModeNodePort
+		} else {
+			ri.RegistryMode = RegistryModeExternal
+		}
+	}
+
+	if ri.Port == 0 && ri.Address == "" {
+		switch ri.RegistryMode {
+		// Set default port if none was provided and the registry is internal
+		case RegistryModeNodePort:
+			ri.Port = ZarfInClusterContainerRegistryNodePort
+		// In proxy mode, we should avoid using a port in the nodeport range as Kubernetes will still randomly assign nodeports even on already claimed hostports
+		case RegistryModeProxy:
+			ri.Port = ZarfRegistryHostPort
+		}
 	}
 
 	// Set default url if an external registry was not provided
 	if ri.Address == "" {
-		ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+		ri.Address = LocalhostRegistryAddress(ipFamily, ri.Port)
 	}
 
 	// Generate a push-user password if not provided by init flag
@@ -252,6 +550,10 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 		}
 	}
 
+	if ri.MTLSStrategy == "" {
+		ri.MTLSStrategy = MTLSStrategyNone
+	}
+
 	return nil
 }
 
@@ -262,7 +564,7 @@ func Default() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = state.RegistryInfo.FillInEmptyValues()
+	err = state.RegistryInfo.FillInEmptyValues(IPFamilyDualStack)
 	if err != nil {
 		return nil, err
 	}
@@ -276,60 +578,77 @@ type MergeOptions struct {
 	GitServer      GitServerInfo
 	RegistryInfo   RegistryInfo
 	ArtifactServer ArtifactServerInfo
-	Services       []string
+	Services       ServiceSet
+	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
+	AgentTLS *pki.GeneratedPKI
+	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
+	AgentMutationPolicy MutationPolicy
 }
 
 // Merge merges init options for provided services into the provided state to create a new state struct
 func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	newState := *oldState
 	var err error
-	if slices.Contains(opts.Services, RegistryKey) {
+	if opts.Services.Has(RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, opts.RegistryInfo)
+		// A resolved mode makes the access fields authoritative, including a zero external port.
+		if opts.RegistryInfo.RegistryMode != "" {
+			newState.RegistryInfo.SetPort(opts.RegistryInfo.Port)
+		}
 
-		// Set the new passwords if they should be autogenerated
-		if newState.RegistryInfo.PushPassword == oldState.RegistryInfo.PushPassword && oldState.RegistryInfo.IsInternal() {
+		// Only autogenerate passwords if the user didn't provide one and the target registry is internal
+		if opts.RegistryInfo.PushPassword == "" && newState.RegistryInfo.IsInternal() {
 			if newState.RegistryInfo.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		}
-		if newState.RegistryInfo.PullPassword == oldState.RegistryInfo.PullPassword && oldState.RegistryInfo.IsInternal() {
+		if opts.RegistryInfo.PullPassword == "" && newState.RegistryInfo.IsInternal() {
 			if newState.RegistryInfo.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		}
 	}
-	if slices.Contains(opts.Services, GitKey) {
+	if opts.Services.Has(GitKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, opts.GitServer)
 
-		// Set the new passwords if they should be autogenerated
-		if newState.GitServer.PushPassword == oldState.GitServer.PushPassword && oldState.GitServer.IsInternal() {
+		// Only autogenerate passwords if the user didn't provide one and the git server is internal
+		if opts.GitServer.PushPassword == "" && oldState.GitServer.IsInternal() {
 			if newState.GitServer.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		}
-		if newState.GitServer.PullPassword == oldState.GitServer.PullPassword && oldState.GitServer.IsInternal() {
+		if opts.GitServer.PullPassword == "" && oldState.GitServer.IsInternal() {
 			if newState.GitServer.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		}
 	}
-	if slices.Contains(opts.Services, ArtifactKey) {
+	if opts.Services.Has(ArtifactKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, opts.ArtifactServer)
 
-		// Set an empty token if it should be autogenerated
-		if newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && oldState.ArtifactServer.IsInternal() {
+		// Only clear token for autogeneration if the user didn't provide one and the artifact server is internal
+		if opts.ArtifactServer.PushToken == "" && oldState.ArtifactServer.IsInternal() {
 			newState.ArtifactServer.PushToken = ""
 		}
 	}
-	if slices.Contains(opts.Services, AgentKey) {
-		agentTLS, err := pki.GeneratePKI(ZarfAgentHost)
-		if err != nil {
-			return nil, err
+	if opts.Services.Has(AgentKey) {
+		if opts.AgentTLS != nil {
+			newState.AgentTLS = *opts.AgentTLS
+			newState.AgentTLSUserProvided = true
+		} else {
+			agentTLS, err := pki.GeneratePKI(ZarfAgentHost)
+			if err != nil {
+				return nil, err
+			}
+			newState.AgentTLS = agentTLS
+			newState.AgentTLSUserProvided = false
 		}
-		newState.AgentTLS = agentTLS
+		if opts.AgentMutationPolicy != "" {
+			newState.AgentMutationPolicy = opts.AgentMutationPolicy
+		}
 	}
 
 	return &newState, nil
@@ -377,18 +696,45 @@ func WithPackageNamespaceOverride(namespaceOverride string) DeployedPackageOptio
 	}
 }
 
+// WithPackageConnectivity sets the connectivity mode for the deployed package
+func WithPackageConnectivity(connected bool) DeployedPackageOptions {
+	return func(o *DeployedPackage) {
+		if connected {
+			o.PackageConnectivity = PackageConnectivityConnected
+		} else {
+			o.PackageConnectivity = PackageConnectivityAirGap
+		}
+	}
+}
+
+// PackageConnectivity defines the connectivity mode of package deployments
+type PackageConnectivity string
+
+const (
+	// PackageConnectivityAirGap is the default deploy mode
+	PackageConnectivityAirGap PackageConnectivity = "airgap"
+	// PackageConnectivityConnected is used when a package is deployed with YOLO or in connected mode.
+	PackageConnectivityConnected PackageConnectivity = "connected"
+)
+
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
-	Name               string               `json:"name"`
-	Data               v1alpha1.ZarfPackage `json:"data"`
-	CLIVersion         string               `json:"cliVersion"`
-	Generation         int                  `json:"generation"`
-	DeployedComponents []DeployedComponent  `json:"deployedComponents"`
-	ConnectStrings     ConnectStrings       `json:"connectStrings,omitempty"`
+	Name                string               `json:"name"`
+	Digest              string               `json:"digest"`
+	Data                v1alpha1.ZarfPackage `json:"data"`
+	CLIVersion          string               `json:"cliVersion"`
+	Generation          int                  `json:"generation"`
+	DeployedComponents  []DeployedComponent  `json:"deployedComponents"`
+	ConnectStrings      ConnectStrings       `json:"connectStrings,omitempty"`
+	PackageConnectivity PackageConnectivity  `json:"packageConnectivity"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
 }
+
+// DeployedPackageNameRegex is a regex for lowercase, numbers and hyphens that cannot start with a hyphen.
+// https://regex101.com/r/FLdG9G/2
+var DeployedPackageNameRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*$`).MatchString
 
 // GetSecretName returns the k8s secret name for the deployed package
 func (d *DeployedPackage) GetSecretName() string {
@@ -397,6 +743,15 @@ func (d *DeployedPackage) GetSecretName() string {
 		return fmt.Sprintf("%s-%s-override-%s", "zarf-package", d.Name, d.NamespaceOverride)
 	}
 	return fmt.Sprintf("%s-%s", "zarf-package", d.Name)
+}
+
+// GetPackageConnectivity returns the connectivity mode the package is using
+// Defaults to airgap for packages that were deployed before connectivity was introduced
+func (d *DeployedPackage) GetPackageConnectivity() PackageConnectivity {
+	if d.PackageConnectivity == "" {
+		return PackageConnectivityAirGap
+	}
+	return d.PackageConnectivity
 }
 
 // ConnectString contains information about a connection made with Zarf connect.
@@ -472,4 +827,12 @@ func MergeInstalledChartsForComponent(existingCharts, installedCharts []Installe
 	}
 
 	return merged
+}
+
+// LocalhostRegistryAddress builds the IPv4 or IPv6 local address of the Zarf deployed registry.
+func LocalhostRegistryAddress(ipFamily IPFamily, port int) string {
+	if ipFamily == IPFamilyIPv6 {
+		return fmt.Sprintf("[%s]:%d", IPV6Localhost, port)
+	}
+	return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, port)
 }

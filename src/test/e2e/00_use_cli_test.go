@@ -17,8 +17,41 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/otiai10/copy"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/test"
 )
+
+func TestTrustedRootCreate(t *testing.T) {
+	t.Parallel()
+
+	t.Run("with default services retrieves public root", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		outputPath := filepath.Join(tmpDir, "trusted_root.json")
+
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "trusted-root", "create", "--with-default-services", "--out", outputPath)
+		require.NoError(t, err, stdOut, stdErr)
+
+		trJSON, err := os.ReadFile(outputPath)
+		require.NoError(t, err)
+		require.NotEmpty(t, trJSON)
+
+		tr, err := root.NewTrustedRootFromJSON(trJSON)
+		require.NoError(t, err)
+		require.NotEmpty(t, tr.FulcioCertificateAuthorities(), "trusted root should contain Fulcio CAs")
+		require.NotEmpty(t, tr.RekorLogs(), "trusted root should contain Rekor transparency logs")
+	})
+
+	t.Run("errors on bare invocation without flags", func(t *testing.T) {
+		t.Parallel()
+		_, stdErr, err := e2e.Zarf(t, "tools", "trusted-root", "create")
+		require.Error(t, err)
+		require.Contains(t, stdErr, "--with-default-services")
+	})
+}
 
 func TestUseCLI(t *testing.T) {
 	t.Parallel()
@@ -33,6 +66,39 @@ func TestUseCLI(t *testing.T) {
 		b, err := os.ReadFile(filepath.Join(pathToPackage, "expected-zarf.yaml"))
 		require.NoError(t, err)
 		require.Contains(t, stdOut, string(b))
+	})
+
+	t.Run("zarf dev inspect definition v1beta1", func(t *testing.T) {
+		t.Parallel()
+		pathToPackage := filepath.Join("src", "test", "packages", "00-dev-inspect-definition-v1beta1")
+
+		stdOut, _, err := e2e.Zarf(t, "dev", "inspect", "definition", pathToPackage, "--architecture=amd64")
+		require.NoError(t, err)
+		b, err := os.ReadFile(filepath.Join(pathToPackage, "expected-zarf.yaml"))
+		require.NoError(t, err)
+		require.Contains(t, stdOut, string(b))
+	})
+
+	t.Run("zarf dev template", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.tpl.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: app
+  description: [[ .environment ]]
+components:
+  - name: app
+    images:
+      - name: [[ .image ]]
+`), 0o644))
+
+		stdOut, stdErr, err := e2e.ZarfInDir(t, dir, "dev", "template", "--set", "environment=development", "--set", "image=registry.example/app:v1")
+		require.NoError(t, err, stdOut, stdErr)
+		generated, err := os.ReadFile(filepath.Join(dir, "zarf.gen.yaml"))
+		require.NoError(t, err)
+		require.Contains(t, string(generated), "description: development")
+		require.Contains(t, string(generated), "name: registry.example/app:v1")
 	})
 
 	t.Run("zarf dev sha256sum <local>", func(t *testing.T) {
@@ -290,4 +356,60 @@ func TestUseCLI(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "4\n", stdOut)
 	})
+}
+
+func TestBuildMachineInfo(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name                 string
+		withBuildMachineInfo bool
+	}{
+		{
+			name:                 "included",
+			withBuildMachineInfo: true,
+		},
+		{
+			name:                 "omitted",
+			withBuildMachineInfo: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := logger.WithContext(t.Context(), test.GetLogger(t))
+			tmpdir := t.TempDir()
+
+			packagePath := filepath.Join("src", "test", "packages", "00-no-components")
+			packageName := fmt.Sprintf("zarf-package-no-components-%s.tar.zst", e2e.Arch)
+
+			args := []string{"package", "create", packagePath, "-o", tmpdir}
+			if tt.withBuildMachineInfo {
+				args = append(args, "--with-build-machine-info")
+			}
+
+			stdOut, stdErr, err := e2e.Zarf(t, args...)
+			require.NoError(t, err, stdOut, stdErr)
+
+			pkgPath := filepath.Join(tmpdir, packageName)
+			pkgLayout, err := layout.LoadFromTar(ctx, pkgPath, layout.PackageLayoutOptions{})
+			require.NoError(t, err)
+
+			stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pkgPath)
+			require.NoError(t, err, stdOut, stdErr)
+
+			if tt.withBuildMachineInfo {
+				require.NotEmpty(t, pkgLayout.AsV1alpha1().Build.Terminal)
+				require.NotEmpty(t, pkgLayout.AsV1alpha1().Build.User)
+				require.Contains(t, stdOut, "terminal:")
+				require.Contains(t, stdOut, "user:")
+			} else {
+				require.Empty(t, pkgLayout.AsV1alpha1().Build.Terminal)
+				require.Empty(t, pkgLayout.AsV1alpha1().Build.User)
+				require.NotContains(t, stdOut, "terminal:")
+				require.NotContains(t, stdOut, "user:")
+			}
+		})
+	}
 }

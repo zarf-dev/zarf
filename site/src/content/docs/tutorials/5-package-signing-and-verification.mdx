@@ -1,0 +1,168 @@
+---
+title: Package Signing and Verification
+sidebar:
+  order: 5
+---
+
+## Introduction
+
+In this tutorial, create and sign a package, verify its signature, and deploy it.
+
+Package signing lets consumers verify a package's contents, and that it was signed by an expected identity before deployment. Trust the signer by verifying with its public key or a pinned OIDC issuer and identity.
+
+## Prerequisites
+
+Complete these prerequisites:
+
+- Install the Zarf binary ([Installing Zarf](/getting-started/install/)).
+- Clone the Zarf source repository to create the WordPress example package.
+
+:::note
+
+For a comprehensive reference on signing methods, signature formats, and advanced use cases, see the [Package Signing Reference](/ref/package-signing/).
+
+:::
+
+## Step 1: Clone the Zarf repository
+
+```bash
+git clone https://github.com/zarf-dev/zarf.git
+```
+
+Stay outside the cloned repository for the remaining steps so the generated keys and package are written to your current directory.
+
+## Step 2: Generate a Signing Key Pair
+
+Generate a private and public key pair:
+
+```bash
+zarf tools gen-key
+```
+
+Enter a strong password when prompted to encrypt the private key.
+
+This creates two files:
+
+- `cosign.key`: private signing key
+- `cosign.pub`: public verification key
+
+:::caution
+
+Keep your private key secure and never commit it to version control. Anyone with access to your private key can sign packages as you.
+
+:::
+
+## Step 3: Create a Package
+
+Create a WordPress package for `amd64` from the Zarf examples directory:
+
+```bash
+zarf package create ./zarf/examples/wordpress --architecture amd64
+```
+
+The log shows the path to the created package:
+```
+INF writing package to disk path=zarf-package-wordpress-amd64-26.0.0.tar.zst
+```
+
+## Step 4: Sign the Package
+
+Sign the package with the private key:
+
+```bash
+zarf package sign zarf-package-wordpress-amd64-26.0.0.tar.zst --signing-key cosign.key --signing-key-pass <password>
+```
+
+The package now contains a signature.
+
+## Step 5: Verify the Package Signature
+
+Verify the signature with the public key:
+
+```bash
+zarf package verify zarf-package-wordpress-amd64-26.0.0.tar.zst --key cosign.pub
+```
+
+Successful verification includes the following output:
+
+```
+2026-01-15 14:17:13 INF checksum verification status=PASSED
+Verified OK
+2026-01-15 14:17:16 INF signature verification status=PASSED
+2026-01-15 14:17:16 INF verification complete status=SUCCESS
+```
+
+Verification checks the signature and package checksums. This confirms the package came from the expected signer and has not been modified.
+
+## Step 6: Deploy with Signature Verification
+
+Deploy with signature verification enabled. If you have an initialized Kubernetes cluster, see [Initializing a K8s Cluster](/tutorials/1-initializing-a-k8s-cluster/), then run:
+
+```bash
+zarf package deploy zarf-package-wordpress-amd64-26.0.0.tar.zst --key cosign.pub --verify --confirm
+```
+
+The `--verify` flag enforces signature verification. If the signature is invalid or the public key doesn't match, Zarf will abort the deployment.
+
+Before deployment begins, the output includes:
+
+```
+Verifying package signature...
+✔ Package signature verified successfully
+Deploying package...
+```
+
+## Keyless Signing
+
+Use keyless signing in CI/CD or when you want to sign with an OIDC identity instead of managing a private key. Sigstore's Fulcio certificate authority issues a short-lived certificate for that identity.
+
+### Sign Keylessly
+
+Run this command interactively to open a browser for OIDC login:
+
+```bash
+zarf package sign zarf-package-wordpress-amd64-26.0.0.tar.zst --keyless --confirm
+```
+
+In GitHub Actions, Zarf detects the job's OIDC environment. Grant the job `id-token: write` permission and use the same command; no `--identity-token` flag is needed:
+
+```yaml
+permissions:
+  id-token: write
+  contents: read
+```
+
+### Verify a Keyless-Signed Package
+
+Verify the expected OIDC identity instead of providing a public key:
+
+```bash
+zarf package verify zarf-package-wordpress-amd64-26.0.0.tar.zst \
+  --certificate-identity "your-email@example.com" \
+  --certificate-oidc-issuer "https://accounts.google.com"
+```
+
+For packages signed in GitHub Actions, use `--certificate-identity-regexp` to match the workflow path:
+
+```bash
+zarf package verify zarf-package-wordpress-amd64-26.0.0.tar.zst \
+  --certificate-identity-regexp "https://github.com/my-org/my-repo/.github/workflows/release.yml@refs/tags/" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+For packages signed with the default keyless options, verification works offline. Zarf embeds the Sigstore TrustedRoot in the binary, and the package bundle includes the Rekor inclusion proof. See the [Package Signing Reference](/ref/package-signing/#verifying-keyless-packages-offline) for keyless-signing, custom TrustedRoot, and TSA timestamp details.
+
+## Next Steps
+
+Next, you can:
+
+- Learn about signing existing packages with `zarf package sign` in the [Package Signing Reference](/ref/package-signing/)
+- Explore cloud KMS options for production signing in the [Package Signing Reference](/ref/package-signing/#using-a-cloud-kms)
+- Integrate signature verification into your CI/CD pipelines
+- Establish key management and rotation procedures for your organization
+
+## Additional Resources
+
+- [Package Signing Reference](/ref/package-signing/) - Comprehensive signing and verification documentation
+- [zarf package sign command](/commands/zarf_package_sign/) - Command reference
+- [zarf package verify command](/commands/zarf_package_verify/) - Command reference

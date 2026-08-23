@@ -1,0 +1,4 @@
+apiVersion: v2
+name: test-chart
+version: 1.0.0
+description: Minimal test chart for values inspection

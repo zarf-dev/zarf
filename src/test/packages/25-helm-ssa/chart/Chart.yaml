@@ -1,0 +1,6 @@
+apiVersion: v2
+name: simple-configmap
+description: A simple chart with a ConfigMap for testing SSA
+type: application
+version: 0.1.0
+appVersion: "1.0"

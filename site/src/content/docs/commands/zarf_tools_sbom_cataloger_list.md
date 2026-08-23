@@ -19,8 +19,8 @@ zarf tools sbom cataloger list [OPTIONS] [flags]
 ```
   -h, --help                                      help for list
   -o, --output string                             format to output the cataloger list (available: table, json)
-      --override-default-catalogers stringArray   override the default catalogers with an expression (default [all])
-      --select-catalogers stringArray             select catalogers with an expression
+      --override-default-catalogers stringArray   set the base set of catalogers to use (defaults to 'image' or 'directory' depending on the scan source) (default [all])
+      --select-catalogers stringArray             add, remove, and filter the catalogers to be used
   -s, --show-hidden                               show catalogers that have been de-selected
 ```
 
@@ -28,9 +28,9 @@ zarf tools sbom cataloger list [OPTIONS] [flags]
 
 ```
   -c, --config stringArray         syft configuration file(s) to use
-      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --profile stringArray        configuration profiles to use
   -q, --quiet                      suppress all logging output
   -v, --verbose count              increase verbosity (-v = info, -vv = debug)

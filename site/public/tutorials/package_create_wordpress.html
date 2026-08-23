@@ -59,7 +59,7 @@ b.BWHI {background-color: #aaaaaa}
 <b style="color:#ff55ff;"></b><b style="color:#55ffff;">metadata</b>:<b style="color:#55ffff;"></b>
 <b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> wordpress</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> A Zarf Package that deploys the WordPress blogging and content management platform</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 16.0.4</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 26.0.0</b>
 <b style="color:#ff55ff;"></b><b style="color:#55ffff;">components</b>:
 -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> wordpress</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Deploys the Bitnami-packaged WordPress chart into the cluster</b>
@@ -67,7 +67,7 @@ b.BWHI {background-color: #aaaaaa}
 <b style="color:#ffffff;">  </b><b style="color:#55ffff;">charts</b>:
   -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> wordpress</b>
 <b style="color:#ff55ff;">    </b><b style="color:#55ffff;">url</b>:<b style="color:#ff55ff;"> oci://registry-1.docker.io/bitnamicharts/wordpress</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 16.0.4</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 26.0.0</b>
 <b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> wordpress</b>
 <b style="color:#ff55ff;">    </b><b style="color:#55ffff;">valuesFiles</b>:
     -<b style="color:#ff55ff;"> wordpress-values.yaml</b>
@@ -77,9 +77,9 @@ b.BWHI {background-color: #aaaaaa}
 <b style="color:#ff55ff;">    </b><b style="color:#55ffff;">files</b>:
     -<b style="color:#ff55ff;"> connect-services.yaml</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
-  -<b style="color:#ff55ff;"> docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> docker.io/bitnami/mariadb:10.11.2-debian-11-r21</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> docker.io/bitnami/wordpress:6.2.0-debian-11-r18</b>
+  -<b style="color:#ff55ff;"> docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4</b>
 <b style="color:#ff55ff;"></b><b style="color:#55ffff;">variables</b>:
 -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_USERNAME</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The username that is used to login to the WordPress admin account</b>

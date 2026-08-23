@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Release.Namespace }}
+data:
+  message: "Hello from {{ .Release.Name }}"
+  timestamp: "{{ now | date "2006-01-02T15:04:05Z07:00" }}"

@@ -6,7 +6,6 @@ package test
 
 import (
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -14,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHelmReleaseHistory(t *testing.T) {
+func TestReleaseHistoryHelm(t *testing.T) {
 	outputPath := t.TempDir()
 	localTgzChartPath := filepath.Join("src", "test", "packages", "25-helm-release-history")
 	_, _, err := e2e.Zarf(t, "package", "create", localTgzChartPath, "-o", outputPath, "--confirm")
@@ -26,36 +25,17 @@ func TestHelmReleaseHistory(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	stdout, err := exec.Command("helm", "history", "-n", "helm-release-history", "chart").Output()
+	stdout, _, err := e2e.Zarf(t, "tools", "helm", "history", "-n", "helm-release-history", "chart")
 	require.NoError(t, err)
-	out := strings.TrimSpace(string(stdout))
-	count := len(strings.Split(string(out), "\n"))
+	out := strings.TrimSpace(stdout)
+	count := len(strings.Split(out, "\n"))
 	require.Equal(t, 11, count)
 
 	_, _, err = e2e.Zarf(t, "package", "remove", packagePath, "--confirm")
 	require.NoError(t, err)
 }
 
-func TestHelm(t *testing.T) {
-	t.Log("E2E: Helm chart")
-
-	tmpdir := t.TempDir()
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "-o", tmpdir, "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-
-	testHelmUninstallRollback(t, tmpdir)
-
-	testHelmAdoption(t, tmpdir)
-
-	t.Run("helm charts example", testHelmChartsExample)
-
-	t.Run("helm charts example with environment registry overrides", testHelmExampleWithOverrides)
-
-	t.Run("helm escaping", testHelmEscaping)
-}
-
-func testHelmChartsExample(t *testing.T) {
-	t.Parallel()
+func TestHelmChartsExample(t *testing.T) {
 	t.Log("E2E: Helm chart example")
 	tmpdir := t.TempDir()
 
@@ -109,7 +89,49 @@ func testHelmChartsExample(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testHelmExampleWithOverrides(t *testing.T) {
+func TestHelmServerSideApply(t *testing.T) {
+	t.Log("E2E: Helm server-side apply")
+	tmpdir := t.TempDir()
+
+	helmSSAPath := filepath.Join("src", "test", "packages", "25-helm-ssa")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", helmSSAPath, "-o", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Deploy the package
+	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-helm-charts-ssa-%s.tar.zst", e2e.Arch))
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Verify configmap-with-ssa was deployed with server-side apply
+	stdOut, _, err = e2e.Zarf(t, "tools", "helm", "get", "metadata", "configmap-with-ssa", "-n", "configmap-with-ssa")
+	require.NoError(t, err, "unable to get helm metadata for configmap-with-ssa")
+	require.Contains(t, stdOut, "APPLY_METHOD: server-side apply")
+
+	// Verify configmap-without-ssa was deployed with client-side apply
+	stdOut, _, err = e2e.Zarf(t, "tools", "helm", "get", "metadata", "configmap-without-ssa", "-n", "configmap-without-ssa")
+	require.NoError(t, err, "unable to get helm metadata for configmap-without-ssa")
+	require.Contains(t, stdOut, "APPLY_METHOD: client-side apply")
+
+	// Verify manifest-with-ssa was deployed with server-side apply
+	stdOut, _, err = e2e.Zarf(t, "tools", "helm", "get", "metadata", "zarf-71016e23f48837b03b2b97da9d8431281380c50c", "-n", "manifest-with-ssa")
+	require.NoError(t, err, "unable to get helm metadata for configmap-with-ssa")
+	require.Contains(t, stdOut, "APPLY_METHOD: server-side apply")
+
+	// Verify manifest-without-ssa was deployed with client side apply
+	stdOut, _, err = e2e.Zarf(t, "tools", "helm", "get", "metadata", "zarf-36ee54b64d04b2baf257eb9c2cd8208be817ab10", "-n", "manifest-without-ssa")
+	require.NoError(t, err, "unable to get helm metadata for configmap-without-ssa")
+	require.Contains(t, stdOut, "APPLY_METHOD: client-side apply")
+
+	// Verify the field manager is "zarf" for SSA-deployed resources
+	kubectlOut, _, err := e2e.Kubectl(t, "get", "configmap", "configmap-with-ssa-config", "-n", "configmap-with-ssa", "-o", "jsonpath={.metadata.managedFields[*].manager}")
+	require.NoError(t, err, "unable to get managedFields for configmap-with-ssa-config")
+	require.Contains(t, kubectlOut, "zarf")
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-charts-ssa", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
+
+func TestHelmExampleWithOverrides(t *testing.T) {
 	// Cannot use t.Parallel() here because of the Setenv
 	t.Log("E2E: Helm chart with overrides")
 	tmpdir := t.TempDir()
@@ -123,8 +145,7 @@ func testHelmExampleWithOverrides(t *testing.T) {
 	require.Contains(t, string(stdErr), "localhost:555/noway")
 }
 
-func testHelmEscaping(t *testing.T) {
-	t.Parallel()
+func TestHelmEscaping(t *testing.T) {
 	t.Log("E2E: Helm chart escaping")
 
 	// Create the package.
@@ -138,27 +159,33 @@ func testHelmEscaping(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the configmap was deployed, escaped, and contains all of its data
-	kubectlOut, err := exec.Command("kubectl", "-n", "default", "describe", "cm", "dont-template-me").Output()
-	require.NoError(t, err, "unable to describe configmap")
-	require.Contains(t, string(kubectlOut), `alert: OOMKilled {{ "{{ \"random.Values\" }}" }}`)
-	require.Contains(t, string(kubectlOut), "backtick1: \"content with backticks `some random things`\"")
-	require.Contains(t, string(kubectlOut), "backtick2: \"nested templating with backticks {{` random.Values `}}\"")
-	require.Contains(t, string(kubectlOut), `description: Pod {{$labels.pod}} in {{$labels.namespace}} got OOMKilled`)
-	require.Contains(t, string(kubectlOut), `TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIG`)
+	kubectlOut, kubectlErr, err := e2e.Kubectl(t, "-n", "default", "describe", "cm", "dont-template-me")
+	require.NoError(t, err, kubectlOut, kubectlErr, "unable to describe configmap")
+	require.Contains(t, kubectlOut, `alert: OOMKilled {{ "{{ \"random.Values\" }}" }}`)
+	require.Contains(t, kubectlOut, "backtick1: \"content with backticks `some random things`\"")
+	require.Contains(t, kubectlOut, "backtick2: \"nested templating with backticks {{` random.Values `}}\"")
+	require.Contains(t, kubectlOut, `description: Pod {{$labels.pod}} in {{$labels.namespace}} got OOMKilled`)
+	require.Contains(t, kubectlOut, `TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIG`)
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "evil-templates", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testHelmUninstallRollback(t *testing.T, tmpdir string) {
+func TestHelmUninstallRollback(t *testing.T) {
 	t.Log("E2E: Helm Uninstall and Rollback")
 
-	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.2.0.tar.zst", e2e.Arch)
+	tmpdir := t.TempDir()
+
+	// Create the good dos-games package.
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "-o", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.3.0.tar.zst", e2e.Arch)
 	goodPath := filepath.Join(tmpdir, packageName)
 
 	// Create the evil package (with the bad service).
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/25-evil-dos-games/", "-o", tmpdir, "--skip-sbom", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", "src/test/packages/25-evil-dos-games/", "-o", tmpdir, "--skip-sbom", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	evilName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
@@ -172,70 +199,113 @@ func testHelmUninstallRollback(t *testing.T, tmpdir string) {
 	// We do not want to uninstall charts that had failed installs/upgrades
 	// to prevent unintentional deletion and/or data loss in production environments.
 	// https://github.com/zarf-dev/zarf/issues/2455
-	helmOut, err := exec.Command("helm", "list", "-n", "dos-games").Output()
+	helmOut, _, err := e2e.Zarf(t, "tools", "helm", "list", "-n", "dos-games")
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+	require.Contains(t, helmOut, "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
 	// Deploy the good package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", goodPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure this upgrades/fixes the dos-games chart.
-	helmOut, err = exec.Command("helm", "list", "-n", "dos-games").Output()
+	helmOut, _, err = e2e.Zarf(t, "tools", "helm", "list", "-n", "dos-games")
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+	require.Contains(t, helmOut, "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
 	// Deploy the evil package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", evilPath, "--timeout", "10s", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 
 	// Ensure that we rollback properly
-	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
+	helmOut, _, err = e2e.Zarf(t, "tools", "helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1")
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "Rollback to 2")
+	require.Contains(t, helmOut, "Rollback to 2")
 
 	// Deploy the evil package (again to ensure we check full history)
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", evilPath, "--timeout", "10s", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 
 	// Ensure that we rollback properly
-	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
+	helmOut, _, err = e2e.Zarf(t, "tools", "helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1")
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "Rollback to 4")
+	require.Contains(t, helmOut, "Rollback to 4")
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testHelmAdoption(t *testing.T, tmpdir string) {
-	t.Log("E2E: Helm Adopt a Deployment")
+func TestHelmAdoption(t *testing.T) {
+	t.Log("E2E: Helm Adopt existing resources")
 
-	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-dos-games-%s-1.2.0.tar.zst", e2e.Arch))
-	deploymentManifest := "src/test/packages/25-manifest-adoption/deployment.yaml"
+	tmpdir := t.TempDir()
+	const ns = "manifest-adoption"
+	// The release name is zarf-<sha1("raw-<pkg>-<component>-<manifest>")>.
+	const releaseName = "zarf-3bf0a070e0db6eba0e7e39a4e1a36caac631d957"
+	adoptionPath := filepath.Join("src", "test", "packages", "25-manifest-adoption")
 
-	// Deploy dos-games manually into the cluster without Zarf
-	kubectlOut, _, err := e2e.Kubectl(t, "apply", "-f", deploymentManifest)
-	require.NoError(t, err, "unable to apply", "deploymentManifest", deploymentManifest)
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", adoptionPath, "-o", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-manifest-adoption-%s-0.0.1.tar.zst", e2e.Arch))
+
+	// Deploy the namespaced and cluster-scoped resources manually, without Zarf
+	existingResources := filepath.Join(adoptionPath, "existing-resources.yaml")
+	kubectlOut, _, err := e2e.Kubectl(t, "apply", "-f", existingResources)
+	require.NoError(t, err, "unable to apply", "existingResources", existingResources)
 	require.Contains(t, kubectlOut, "deployment.apps/game created")
+	require.Contains(t, kubectlOut, "clusterrole.rbac.authorization.k8s.io/zarf-adoption-test created")
+	t.Cleanup(func() {
+		_, _, err := e2e.Kubectl(t, "delete", "clusterrole", "zarf-adoption-test", "--ignore-not-found")
+		require.NoError(t, err)
+		_, _, err = e2e.Kubectl(t, "delete", "namespace", ns, "--ignore-not-found")
+		require.NoError(t, err)
+	})
 
-	// Deploy dos-games into the cluster with Zarf
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--adopt-existing-resources")
+	// Adopt the pre-existing resources into the cluster with Zarf
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--take-ownership")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Ensure that this does create a dos-games chart
-	helmOut, err := exec.Command("helm", "list", "-n", "dos-games").Output()
+	// Ensure that this creates a Helm release adopting the existing resources
+	helmOut, _, err := e2e.Zarf(t, "tools", "helm", "list", "-n", ns)
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+	require.Contains(t, helmOut, releaseName)
 
-	existingLabel, _, err := e2e.Kubectl(t, "get", "ns", "dos-games", "-o=jsonpath={.metadata.labels.keep-this}")
+	// The namespace's pre-existing labels and annotations are preserved
+	existingLabel, _, err := e2e.Kubectl(t, "get", "ns", ns, "-o=jsonpath={.metadata.labels.keep-this}")
+	require.NoError(t, err)
 	require.Equal(t, "label", existingLabel)
+	existingAnnotation, _, err := e2e.Kubectl(t, "get", "ns", ns, "-o=jsonpath={.metadata.annotations.keep-this}")
 	require.NoError(t, err)
-	existingAnnotation, _, err := e2e.Kubectl(t, "get", "ns", "dos-games", "-o=jsonpath={.metadata.annotations.keep-this}")
 	require.Equal(t, "annotation", existingAnnotation)
+
+	// The cluster-scoped resource is adopted into the Helm release
+	managedBy, _, err := e2e.Kubectl(t, "get", "clusterrole", "zarf-adoption-test", "-o=jsonpath={.metadata.labels.app\\.kubernetes\\.io/managed-by}")
 	require.NoError(t, err)
+	require.Equal(t, "Helm", managedBy)
+	adoptedRelease, _, err := e2e.Kubectl(t, "get", "clusterrole", "zarf-adoption-test", "-o=jsonpath={.metadata.annotations.meta\\.helm\\.sh/release-name}")
+	require.NoError(t, err)
+	require.Equal(t, releaseName, adoptedRelease)
 
 	// Remove the package.
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "manifest-adoption", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
+
+func TestHelmHooks(t *testing.T) {
+	tmpdir := t.TempDir()
+	packagePath := filepath.Join("src", "test", "packages", "25-helm-hooks")
+
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", packagePath, "-o", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	pkgPath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-helm-hooks-%s-0.1.0.tar.zst", e2e.Arch))
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgPath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	kubectlOut, _, err := e2e.Kubectl(t, "-n", "helm-hooks", "get", "configmap", "post-install-hook-config", "-o", "jsonpath={.data.message}")
+	require.NoError(t, err)
+	require.Equal(t, "Zarf-templated post-install hook", kubectlOut)
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-hooks", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

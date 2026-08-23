@@ -1,0 +1,7 @@
+*.gz
+*.zip
+go.work
+go.sum
+musl-*
+COPYRIGHT-MUSL
+.claude/

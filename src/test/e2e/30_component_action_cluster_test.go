@@ -35,7 +35,7 @@ func TestComponentActionEdgeCases(t *testing.T) {
 	t.Log("E2E: Component action edge cases")
 
 	tmpdir := t.TempDir()
-	sourcePath := filepath.Join("src", "test", "packages", "31-component-actions-edgecases")
+	sourcePath := filepath.Join("src", "test", "packages", "30-component-actions-edgecases")
 	packageName := fmt.Sprintf("zarf-package-component-actions-edgecases-%s.tar.zst", e2e.Arch)
 	packagePath := filepath.Join(tmpdir, packageName)
 

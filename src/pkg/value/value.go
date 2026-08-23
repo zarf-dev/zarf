@@ -1,0 +1,506 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package value supports values files and validation
+package value
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/goccy/go-yaml"
+	"github.com/xeipuuv/gojsonschema"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+)
+
+// Values provides a map of keys to values for use in templating and Helm overrides.
+// NOTE(mkcp): Values is NOT thread-safe. If you need concurrent access:
+//   - Use external synchronization (sync.RWMutex)
+//   - Clone before passing to goroutines
+type Values map[string]any
+
+// Path starts with a . and represents a specific key in a nested hierarchy of keys. For example, .resources.limits.cpu
+// resolves the value for "cpu" within the keyspace of Values.
+type Path string
+
+// Validate inspects the string stored at Path and ensures it's valid.
+func (p Path) Validate() error {
+	if p == "" || !strings.HasPrefix(string(p), ".") {
+		return fmt.Errorf("invalid path format: %s", p)
+	}
+	return nil
+}
+
+// Segments returns the dot-separated keys of the path with the leading dot removed. The root path
+// "." (or an empty path) yields an empty slice.
+func (p Path) Segments() []string {
+	s := strings.TrimPrefix(string(p), ".")
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, ".")
+}
+
+// ParseFilesOptions provides optional configuration for ParseFiles
+type ParseFilesOptions struct {
+	// TODO(mkcp): Add schema check. Maybe here in parsing, or later in the process like templating?
+	// Schema Schema
+	// REVIEW: Should we guard against?
+	// FileSizeLimit
+	// MaximumYAMLDepth
+	// Timeout
+}
+
+// ParseFiles parses the given files in order, overwriting previous values with later values, and returns a merged
+// Values map.
+func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Values, err error) {
+	m := make(Values)
+	start := time.Now()
+	defer func() {
+		logger.From(ctx).Debug("values parsing complete",
+			"duration", time.Since(start),
+			"files", len(paths))
+	}()
+
+	// No files given
+	if len(paths) <= 0 {
+		return Values{}, nil
+	}
+	// Validate file extensions
+	for _, path := range paths {
+		ext := strings.ToLower(filepath.Ext(path))
+		if ext != ".yaml" && ext != ".yml" {
+			return nil, &InvalidFileExtError{FilePath: path, Ext: ext}
+		}
+	}
+
+	logger.From(ctx).Debug("parsing values files", "paths", paths)
+	for _, path := range paths {
+		// Allow for cancellation
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			var vals Values
+			if helpers.IsURL(path) {
+				return nil, fmt.Errorf("remote values files not yet supported, url=%s", path)
+			}
+			_, err := helpers.IsTextFile(path)
+			if err != nil {
+				return nil, err
+			}
+			vals, err = ParseLocalFile(ctx, path)
+			if err != nil {
+				return nil, err
+			}
+			// Done, merge new values into existing
+			m.DeepMerge(vals)
+		}
+	}
+	return m, nil
+}
+
+// ParseLocalFile reads and parses a single local YAML file into a Values map.
+func ParseLocalFile(ctx context.Context, path string) (Values, error) {
+	if strings.TrimSpace(path) == "" {
+		return make(Values), nil
+	}
+
+	// Handle files
+	f, err := os.Open(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return make(Values), nil
+		}
+		return make(Values), err
+	}
+	defer func(f *os.File) {
+		if closeErr := f.Close(); closeErr != nil {
+			// Log close errors, don't fail on them for read operations
+			logger.From(ctx).Warn("failed to close file", "path", path, "error", closeErr)
+		}
+	}(f)
+
+	// Decode and merge values
+	m := make(Values)
+	if err = yaml.NewDecoder(f).DecodeContext(ctx, &m); err != nil {
+		if errors.Is(err, io.EOF) {
+			// Empty file - ensure we return initialized map not nil
+			return make(Values), nil
+		}
+		return make(Values), &YAMLDecodeError{
+			FilePath: path,
+			Err:      fmt.Errorf("%s", yaml.FormatError(err, true, true)),
+		}
+	}
+	return m, nil
+}
+
+// InferType converts a --set-values scalar string into its natural type: "true"/"false" become
+// booleans and whole base-10 numbers become int64. Everything else, including decimals (1.5) and
+// leading-zero numbers (0755), stays a string. Wrapping the value in single quotes forces a
+// string, e.g. "'123'" yields "123".
+func InferType(s string) any {
+	if len(s) >= 2 && s[0] == '\'' && s[len(s)-1] == '\'' {
+		return s[1 : len(s)-1]
+	}
+	if strings.EqualFold(s, "true") {
+		return true
+	}
+	if strings.EqualFold(s, "false") {
+		return false
+	}
+	// A leading zero (0755) signals an intentional string, except for "0" itself.
+	if s == "0" {
+		return int64(0)
+	}
+	if len(s) != 0 && s[0] != '0' {
+		if iv, err := strconv.ParseInt(s, 10, 64); err == nil {
+			return iv
+		}
+	}
+	return s
+}
+
+// DeepMerge merges one or more Values maps recursively into the receiver via mutation.
+// Later maps in the variadic arguments take precedence over earlier ones.
+func (v Values) DeepMerge(sources ...Values) {
+	if v == nil {
+		return
+	}
+	for _, src := range sources {
+		if src == nil {
+			continue
+		}
+		for key, srcVal := range src {
+			if dstVal, exists := v[key]; exists {
+				// Both have the key, merge
+				srcMap, srcIsMap := srcVal.(map[string]any)
+				dstMap, dstIsMap := dstVal.(map[string]any)
+				if srcIsMap && dstIsMap {
+					// Both are maps, recur
+					Values(dstMap).DeepMerge(srcMap)
+				} else {
+					// Not both maps, src overwrites dst
+					v[key] = srcVal
+				}
+			} else {
+				// Key only in src
+				v[key] = srcVal
+			}
+		}
+	}
+}
+
+// Extract retrieves a value from a nested Values map using dot notation path.
+// Path format: ".key.subkey.value" where each dot represents a map level.
+func (v Values) Extract(path Path) (any, error) {
+	if err := path.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Fetch everything if given the root path "."
+	if path == "." {
+		// Convert the return value to a map[string]any to not leak Values from extract
+		return map[string]any(v), nil
+	}
+
+	parts := path.Segments()
+
+	// Traverse the nested map structure
+	current := v
+	for i, key := range parts {
+		value, exists := current[key]
+		if !exists {
+			return nil, fmt.Errorf("key %q not found in path %s", key, path)
+		}
+
+		// If this is the final key, return the value
+		if i == len(parts)-1 {
+			return value, nil
+		}
+
+		// Otherwise, value must be a nested map to continue
+		nextMap, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("cannot traverse path %s: key %q contains %T, expected map",
+				path, key, value)
+		}
+		current = nextMap
+	}
+	return nil, fmt.Errorf("internal error: empty path components")
+}
+
+// Set takes a Values, a Path to a new or existing key, and any value and stores the newVal at the path.
+// Special case: path "." merges the newVal's map contents directly into v (at the root).
+func (v Values) Set(path Path, newVal any) error {
+	if err := path.Validate(); err != nil {
+		return err
+	}
+
+	// Handle root path "." - merge the value directly into the map
+	if path == "." {
+		newMap, newIsMap := newVal.(map[string]any)
+		if !newIsMap {
+			return fmt.Errorf("cannot merge non-map value at root path")
+		}
+		v.DeepMerge(newMap)
+		return nil
+	}
+
+	parts := path.Segments()
+
+	// Navigate to the nested location and set the value
+	current := v
+	for i, part := range parts {
+		if i == len(parts)-1 {
+			newMap, newIsMap := newVal.(map[string]any)
+			currMap, currIsMap := current[part].(map[string]any)
+			if newIsMap && currIsMap {
+				Values(currMap).DeepMerge(newMap)
+			} else {
+				current[part] = newVal
+			}
+		} else {
+			if _, exists := current[part]; !exists {
+				// If the part does not exist, create a new map for it
+				current[part] = make(map[string]any)
+			}
+
+			nextMap, ok := current[part].(map[string]any)
+			if !ok {
+				return fmt.Errorf("conflict at %q, expected map but got %T", strings.Join(parts[:i+1], "."), current[part])
+			}
+			current = nextMap
+		}
+	}
+	return nil
+}
+
+// Delete removes the value at the given dot-notation path from v. Deleting a key
+// that does not exist is a no-op.
+func (v Values) Delete(path Path) error {
+	if err := path.Validate(); err != nil {
+		return err
+	}
+	if path == "." {
+		return fmt.Errorf("cannot delete root path")
+	}
+
+	parts := path.Segments()
+	current := v
+	for i, part := range parts {
+		if i == len(parts)-1 {
+			delete(current, part)
+			return nil
+		}
+		next, exists := current[part]
+		if !exists {
+			return nil
+		}
+		nextMap, ok := next.(map[string]any)
+		if !ok {
+			return fmt.Errorf("cannot traverse path %s: key %q contains %T, expected map",
+				path, part, next)
+		}
+		current = nextMap
+	}
+	return nil
+}
+
+// DeepCopy returns a recursive copy of v so the result can be mutated without
+// affecting the original maps or slices.
+func (v Values) DeepCopy() Values {
+	cp := make(Values, len(v))
+	for k, val := range v {
+		cp[k] = deepCopyValue(val)
+	}
+	return cp
+}
+
+func deepCopyValue(val any) any {
+	switch t := val.(type) {
+	case map[string]any:
+		cp := make(map[string]any, len(t))
+		for k, sub := range t {
+			cp[k] = deepCopyValue(sub)
+		}
+		return cp
+	// We should not hit this case because Values should not contain Values but this is defensive
+	case Values:
+		return deepCopyValue(map[string]any(t))
+	case []any:
+		cp := make([]any, len(t))
+		for i, sub := range t {
+			cp[i] = deepCopyValue(sub)
+		}
+		return cp
+	default:
+		return t
+	}
+}
+
+// ValidateOptions provides optional configuration for Values validation
+type ValidateOptions struct {
+	// SkipRequired skips validation of required fields
+	SkipRequired bool
+}
+
+// Validate validates the Values against a JSON schema file at schemaPath.
+func (v Values) Validate(ctx context.Context, schemaPath string, opts ValidateOptions) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	defer func() {
+		l.Debug("schema validation complete",
+			"duration", time.Since(start),
+			"schemaPath", schemaPath)
+	}()
+
+	// Load the schema from file
+	// Convert to absolute path and ensure forward slashes for URI
+	absPath, err := filepath.Abs(schemaPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve absolute path of %s: %w", schemaPath, err)
+	}
+	// Convert backslashes to forward slashes for file URI
+	absPath = filepath.ToSlash(absPath)
+	schemaLoader := gojsonschema.NewReferenceLoader("file:///" + absPath)
+
+	// Convert Values to a document for validation
+	documentLoader := gojsonschema.NewGoLoader(v)
+
+	// Validate
+	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
+	if err != nil {
+		return fmt.Errorf("failed to load or parse schema at %s: %w", schemaPath, err)
+	}
+
+	return validationResultError(result, schemaPath, opts)
+}
+
+// ValidateAgainstSchema validates the Values against an already-loaded JSON schema document.
+func (v Values) ValidateAgainstSchema(ctx context.Context, schema map[string]any, schemaName string, opts ValidateOptions) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	defer func() {
+		l.Debug("schema validation complete",
+			"duration", time.Since(start),
+			"schemaPath", schemaName)
+	}()
+
+	result, err := gojsonschema.Validate(gojsonschema.NewGoLoader(schema), gojsonschema.NewGoLoader(v))
+	if err != nil {
+		return fmt.Errorf("failed to load or parse schema at %s: %w", schemaName, err)
+	}
+	return validationResultError(result, schemaName, opts)
+}
+
+func validationResultError(result *gojsonschema.Result, schemaPath string, opts ValidateOptions) error {
+	if result.Valid() {
+		return nil
+	}
+
+	errs := result.Errors()
+	if opts.SkipRequired {
+		var filteredErrors []gojsonschema.ResultError
+		for _, err := range errs {
+			if err.Type() != "required" {
+				filteredErrors = append(filteredErrors, err)
+			}
+		}
+		errs = filteredErrors
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return &SchemaValidationError{
+		SchemaPath: schemaPath,
+		Errors:     errs,
+	}
+}
+
+// SchemaValidationError represents an error when JSON schema validation fails
+type SchemaValidationError struct {
+	SchemaPath string
+	Errors     []gojsonschema.ResultError
+}
+
+func (e *SchemaValidationError) Error() string {
+	if len(e.Errors) > 0 {
+		var errMsgs []string
+		for _, err := range e.Errors {
+			errMsgs = append(errMsgs, err.String())
+		}
+		return fmt.Sprintf("schema validation failed for %s:\n%s", e.SchemaPath, strings.Join(errMsgs, "\n"))
+	}
+	return fmt.Sprintf("schema validation failed for %s", e.SchemaPath)
+}
+
+// ValidateSchemaFile validates that a file at schemaPath is a valid JSON Schema.
+// It checks that the file exists, is readable, and can be parsed as a valid JSON Schema.
+func ValidateSchemaFile(schemaPath string) error {
+	// Check file exists and is readable
+	if _, err := os.Stat(schemaPath); err != nil {
+		return fmt.Errorf("unable to access schema file %s: %w", schemaPath, err)
+	}
+
+	// Convert to absolute path and ensure forward slashes for URI
+	absPath, err := filepath.Abs(schemaPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve absolute path of %s: %w", schemaPath, err)
+	}
+	absPath = filepath.ToSlash(absPath)
+
+	// Attempt to compile the schema - this validates it's valid JSON Schema
+	schemaLoader := gojsonschema.NewReferenceLoader("file:///" + absPath)
+	_, err = gojsonschema.NewSchema(schemaLoader)
+	if err != nil {
+		return fmt.Errorf("invalid JSON schema at %s: %w", schemaPath, err)
+	}
+
+	return nil
+}
+
+// ValidateSchemaDocument validates that an already-parsed document is a valid JSON Schema.
+// Prefer this over ValidateSchemaFile when the document has already been read and unmarshaled,
+// as it avoids a second disk read and parse.
+func ValidateSchemaDocument(doc map[string]any) error {
+	_, err := gojsonschema.NewSchema(gojsonschema.NewGoLoader(doc))
+	if err != nil {
+		return fmt.Errorf("invalid JSON schema: %w", err)
+	}
+	return nil
+}
+
+// InvalidFileExtError represents an error when a file has an invalid extension
+type InvalidFileExtError struct {
+	FilePath string
+	Ext      string
+}
+
+func (e *InvalidFileExtError) Error() string {
+	return fmt.Sprintf("invalid file extension for values file %s: %s", e.FilePath, e.Ext)
+}
+
+// YAMLDecodeError represents an error when YAML parsing fails
+type YAMLDecodeError struct {
+	FilePath string
+	Err      error
+}
+
+func (e *YAMLDecodeError) Error() string {
+	return fmt.Sprintf("failed to decode YAML from values file %s: %v", e.FilePath, e.Err)
+}
+
+func (e *YAMLDecodeError) Unwrap() error {
+	return e.Err
+}

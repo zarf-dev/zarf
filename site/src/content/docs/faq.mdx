@@ -30,7 +30,7 @@ No, Zarf is used in connected environments as well. Some users value making thei
 
 ## Should Zarf only be used with Kubernetes?
 
-No, while improving the airgapped Kubernetes UX is often the top priority for the project, many users find value in [mirroring resources](commands/zarf_package_mirror-resources) across environments and using [Zarf actions](ref/actions).
+No, while improving the airgapped Kubernetes UX is often the top priority for the project, many users find value in [mirroring resources](/commands/zarf_package_mirror-resources/) across environments and using [Zarf actions](/ref/actions/).
 
 ## How can I improve the speed of loading large images from Docker on `zarf package create`?
 
@@ -110,16 +110,6 @@ spec:
 
 :::
 
-## What is YOLO Mode and why would I use it?
-
-YOLO Mode is a special package metadata designation that be added to a package prior to `zarf package create` to allow the package to be installed without the need for a `zarf init` operation. In most cases this will not be used, but it can be useful for testing or for environments that manage their own registries and Git servers completely outside of Zarf. This can also be used as a way to transition slowly to using Zarf without having to do a full migration.
-
-:::note
-
-Typically you should not deploy a Zarf package in YOLO mode if the cluster has already been initialized with Zarf. This could lead to an [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) if the resources in the package do not include the `zarf.dev/agent: ignore` label and are not already available in the Zarf Registry.
-
-:::
-
 ## What is a `skeleton` Zarf Package?
 
 A `skeleton` package is a bare-bones Zarf package definition alongside its associated local files and manifests that has been published to an OCI registry. These packages are intended for use with [component composability](/ref/components) to provide versioned imports for components that you wish to mix and match or modify with merge-overrides across multiple separate packages.
@@ -133,5 +123,5 @@ Skeleton packages are published by pointing the publish command to a directory r
 When Zarf pulls new images or OCI artifacts, it will store them locally to speed up future uses. Over time, the cache
 will grow, especially if you run `zarf package create` often with a variety of packages or with many large images. The
 default location is in the home directory for the current user at `~/.zarf-cache`. Unix users can check the cache size
-with `du -sh ~/.zarf-cache` and if you'd like to free up some disk space we recommend running `zarf tools cache-clear`.
+with `du -sh ~/.zarf-cache` and if you'd like to free up some disk space we recommend running `zarf tools clear-cache`.
 How often you clear your cache will depend on your disk space and network needs.

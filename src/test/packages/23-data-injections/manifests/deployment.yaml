@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: file-server
+  namespace: data-injection
+  labels:
+    app: file-server
+spec:
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: file-server
+  template:
+    metadata:
+      labels:
+        app: file-server
+    spec:
+      # The main container can hot-load files from the filesystem, but if your application cannot, this example shows how you can use an initContainer to bootstrap the injected files.
+      # It's necessary to include the ###ZARF_DATA_INJECTION_MARKER### somewhere in the podspec, otherwise data injections will not occur.
+      initContainers:
+        - name: data-loader
+          image: ghcr.io/static-web-server/static-web-server:2.32.1-alpine
+          command:
+            [
+              "sh",
+              "-c",
+              # This command looks for the Zarf "data injection marker" which is a timestamped file that is injected after everything else and marks the injection as complete.
+              'while [ ! -f /data/###ZARF_DATA_INJECTION_MARKER### ]; do echo "waiting for zarf data sync" && sleep 1; done; echo "we are done waiting!"',
+            ]
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "50m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+          volumeMounts:
+            - mountPath: /data
+              name: data
+      containers:
+        - name: file-server
+          image: "ghcr.io/static-web-server/static-web-server:2.32.1-alpine"
+          command:
+            [
+              "sh",
+              "-c",
+              "ls -la /data && exec static-web-server --root /data --port 80 --log-level error",
+            ]
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "50m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /hello.txt
+              port: 80
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: injected-data

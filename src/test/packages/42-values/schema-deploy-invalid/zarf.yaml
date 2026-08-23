@@ -1,0 +1,18 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-values-schema-deploy-invalid
+  description: Test package with valid values at create time, but invalid values can be provided at deploy time
+
+values:
+  files:
+    - values/values.yaml
+  schema: values.schema.json
+
+components:
+  - name: test-component
+    required: true
+    manifests:
+      - name: test-configmap
+        template: true
+        files:
+          - configmap.yaml

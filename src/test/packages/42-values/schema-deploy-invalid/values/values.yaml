@@ -1,0 +1,4 @@
+# Valid values at create time
+appName: test-app
+replicas: 3
+enabled: true

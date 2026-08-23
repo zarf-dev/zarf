@@ -12,11 +12,14 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // CreateOptions are the optional parameters to create
@@ -32,10 +35,13 @@ type CreateOptions struct {
 	DifferentialPackagePath string
 	OCIConcurrency          int
 	CachePath               string
+	WithBuildMachineInfo    bool
 	// applicable when output is an OCI registry
-	RemoteOptions
+	types.RemoteOptions
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
+	// SkipVersionCheck skips version requirement validation
+	SkipVersionCheck bool
 }
 
 // Create takes a path to a directory containing a ZarfPackageConfig and returns the path to the created package
@@ -44,26 +50,38 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		return "", fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
 
-	loadOpts := load.DefinitionOptions{
-		Flavor:        opts.Flavor,
-		SetVariables:  opts.SetVariables,
-		CachePath:     opts.CachePath,
-		IsInteractive: opts.IsInteractive,
-	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return "", err
+	}
+
+	loadOpts := load.DefinitionOptions{
+		Flavor:           opts.Flavor,
+		SetVariables:     opts.SetVariables,
+		CachePath:        opts.CachePath,
+		IsInteractive:    opts.IsInteractive,
+		SkipVersionCheck: opts.SkipVersionCheck,
+		RemoteOptions:    opts.RemoteOptions,
+	}
+	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	if err != nil {
+		return "", err
+	}
+	pkg := defined.PackageDefinition.AsV1alpha1()
+
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
+	if err != nil {
+		return "", fmt.Errorf("unable to access package path %q: %w", packagePath, err)
 	}
 
 	var differentialPkg v1alpha1.ZarfPackage
 	if opts.DifferentialPackagePath != "" {
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
-			Architecture:            pkg.Metadata.Architecture,
-			RemoteOptions:           opts.RemoteOptions,
-			LayersSelector:          zoci.MetadataLayers,
-			OCIConcurrency:          opts.OCIConcurrency,
-			CachePath:               opts.CachePath,
-			SkipSignatureValidation: true,
+			Architecture:   pkg.Metadata.Architecture,
+			RemoteOptions:  opts.RemoteOptions,
+			LayerTypes:     []zoci.LayerType{zoci.MetadataLayers},
+			OCIConcurrency: opts.OCIConcurrency,
+			CachePath:      opts.CachePath,
 		})
 		if err != nil {
 			return "", fmt.Errorf("failed to load differential package: %w", err)
@@ -71,20 +89,22 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err := pkgLayout.Cleanup(); err != nil {
 			return "", err
 		}
-		differentialPkg = pkgLayout.Pkg
+		differentialPkg = pkgLayout.AsV1alpha1()
 	}
 
-	assembleOpt := layout.AssembleOptions{
-		SkipSBOM:            opts.SkipSBOM,
-		OCIConcurrency:      opts.OCIConcurrency,
-		DifferentialPackage: differentialPkg,
-		Flavor:              opts.Flavor,
-		RegistryOverrides:   opts.RegistryOverrides,
-		SigningKeyPath:      opts.SigningKeyPath,
-		SigningKeyPassword:  opts.SigningKeyPassword,
-		CachePath:           opts.CachePath,
+	assembleOpt := assemble.AssembleOptions{
+		SkipSBOM:             opts.SkipSBOM,
+		OCIConcurrency:       opts.OCIConcurrency,
+		DifferentialPackage:  differentialPkg,
+		Flavor:               opts.Flavor,
+		RegistryOverrides:    opts.RegistryOverrides,
+		SigningKeyPath:       opts.SigningKeyPath,
+		SigningKeyPassword:   opts.SigningKeyPassword,
+		CachePath:            opts.CachePath,
+		WithBuildMachineInfo: opts.WithBuildMachineInfo,
+		RemoteOptions:        opts.RemoteOptions,
 	}
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
+	pkgLayout, err := assemble.AssemblePackage(ctx, defined, pkgPath.BaseDir, assembleOpt)
 	if err != nil {
 		return "", err
 	}
@@ -94,12 +114,14 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 
 	var packageLocation string
 	if helpers.IsOCIURL(output) {
-		ref, err := zoci.ReferenceFromMetadata(output, pkgLayout.Pkg)
+		pkg := pkgLayout.AsV1alpha1()
+		ref, err := zoci.ReferenceFromMetadata(output, pkg)
 		if err != nil {
 			return "", err
 		}
-		remote, err := zoci.NewRemote(ctx, ref.String(), oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture),
-			oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+		remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), oci.PlatformForArch(pkg.Build.Architecture), zoci.RemoteClientOptions{
+			RemoteOptions: opts.RemoteOptions,
+		})
 		if err != nil {
 			return "", err
 		}
@@ -121,7 +143,8 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}
 
 	if opts.SBOMOut != "" {
-		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, pkgLayout.Pkg.Metadata.Name))
+		// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
+		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, filepath.Base(pkgLayout.AsV1alpha1().Metadata.Name)))
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {

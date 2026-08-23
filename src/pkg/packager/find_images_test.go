@@ -9,7 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -18,7 +20,7 @@ func TestFindImages(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck
 
 	tests := []struct {
 		name           string
@@ -43,7 +45,7 @@ func TestFindImages(t *testing.T) {
 			},
 		},
 		{
-			name:        "helm chart",
+			name:        "helm chart excludes test resources by default",
 			packagePath: "./testdata/find-images/helm-chart",
 			opts: FindImagesOptions{
 				SkipCosign: true,
@@ -52,8 +54,8 @@ func TestFindImages(t *testing.T) {
 				{
 					ComponentName: "baseline",
 					Matches: []string{
-						"nginx:1.16.0",
-						"busybox",
+						"docker.io/library/nginx:1.16.0",
+						"docker.io/library/alpine:latest",
 					},
 				},
 			},
@@ -83,13 +85,13 @@ func TestFindImages(t *testing.T) {
 				{
 					ComponentName: "baseline",
 					Matches: []string{
-						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
 						"10.0.0.1:443/zarf-dev/zarf/agent:v0.38.1",
-						"alpine",
-						"xn--7o8h.com/myimage:9.8.7",
-						"registry.io/foo/project--id.module--name.ver---sion--name",
-						"foo_bar:latest",
+						"docker.io/library/alpine:latest",
+						"docker.io/library/foo_bar:latest",
 						"foo.com:8080/bar:1.2.3",
+						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
+						"registry.io/foo/project--id.module--name.ver---sion--name:latest",
+						"xn--7o8h.com/myimage:9.8.7",
 					},
 				},
 			},
@@ -122,9 +124,9 @@ func TestFindImages(t *testing.T) {
 				{
 					ComponentName: "baseline",
 					Matches: []string{
-						"curlimages/curl:7.69.0",
-						"giantswarm/tiny-tools",
-						"stefanprodan/grpc_health_probe:v0.3.0",
+						"docker.io/curlimages/curl:7.69.0",
+						"docker.io/giantswarm/tiny-tools:latest",
+						"docker.io/stefanprodan/grpc_health_probe:v0.3.0",
 						"ghcr.io/stefanprodan/podinfo:6.4.0",
 					},
 				},
@@ -175,6 +177,85 @@ func TestFindImages(t *testing.T) {
 						"registry.k8s.io/sig-storage/csi-snapshotter:v8.2.1",
 					},
 				},
+				{
+					ComponentName: "underscores",
+					Matches:       []string{},
+					PotentialMatches: []string{
+						"docker.io/percona/mongodb_exporter:0.47.1",
+						"docker.io/library/alpine:3.23",
+					},
+				},
+			},
+		},
+		{
+			name:        "values from package definition",
+			packagePath: "./testdata/find-images/values",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches: []string{
+						"docker.io/library/nginx:1.25.0",
+					},
+				},
+			},
+		},
+		{
+			name:        "values from options",
+			packagePath: "./testdata/find-images/values-options",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+				Values: value.Values{
+					"config": map[string]any{
+						"tag": "1.24.0",
+					},
+				},
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches: []string{
+						"docker.io/library/nginx:1.24.0",
+					},
+				},
+			},
+		},
+		{
+			name:        "values from options override package definition",
+			packagePath: "./testdata/find-images/values",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+				Values: value.Values{
+					"config": map[string]any{
+						"tag": "2.0.0",
+					},
+				},
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches: []string{
+						"docker.io/library/nginx:2.0.0",
+					},
+				},
+			},
+		},
+		{
+			name:        "pod volume image",
+			packagePath: "./testdata/find-images/pod-volume-image",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches: []string{
+						"ghcr.io/zarf-dev/zarf/agent:v0.68.1",
+						"quay.io/almalinuxorg/10-minimal:10",
+					},
+				},
 			},
 		},
 	}
@@ -198,6 +279,137 @@ func TestFindImages(t *testing.T) {
 	}
 }
 
+func TestFindDefinitionImages(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	tests := []struct {
+		name                           string
+		packagePath                    string
+		expectedErr                    string
+		expectedDefinitionImageResults []DefinitionImageResult
+	}{
+		{
+			name:        "no image archives",
+			packagePath: "./testdata/find-images/helm-chart/",
+			expectedDefinitionImageResults: []DefinitionImageResult{
+				{
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "baseline",
+						Matches: []string{
+							"docker.io/library/alpine:latest",
+							"docker.io/library/nginx:1.16.0",
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "images found in archives",
+			packagePath: "./testdata/find-images/image-archives/",
+			expectedDefinitionImageResults: []DefinitionImageResult{
+				{
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "manifest-referencing-image-in-archive",
+					},
+				},
+				{
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "manifest-referencing-image-not-in-archive",
+						Matches: []string{
+							"docker.io/library/alpine:latest",
+						},
+					},
+				},
+				{
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "image-archive-component",
+					},
+					ImageArchives: []v1alpha1.ImageArchive{
+						{
+							Images: []string{
+								"docker.io/library/scratch:latest",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "images found in different archives",
+			packagePath: "./testdata/find-images/multiple-image-archives/",
+			expectedDefinitionImageResults: []DefinitionImageResult{
+				{
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "manifest-referencing-image-in-archive",
+					},
+				},
+				{
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "manifest-referencing-scratch-other-image-in-archive",
+					},
+				},
+				{
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "manifest-referencing-image-not-in-archive",
+						Matches: []string{
+							"docker.io/library/alpine:latest",
+						},
+					},
+				},
+				{
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "image-archive-component",
+					},
+					ImageArchives: []v1alpha1.ImageArchive{
+						{
+							Images: []string{
+								"docker.io/library/scratch:latest",
+							},
+						},
+						{
+							Images: []string{
+								"docker.io/library/scratch:other",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := FindImagesOptions{}
+			definitionImageResults, err := FindDefinitionImages(ctx, tt.packagePath, opts)
+
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, tt.expectedDefinitionImageResults, len(definitionImageResults))
+
+			for i, expected := range tt.expectedDefinitionImageResults {
+				require.Equal(t, expected.ComponentName, definitionImageResults[i].ComponentName)
+				require.ElementsMatch(t, expected.Matches, definitionImageResults[i].Matches)
+				for j, expectedArchive := range expected.ImageArchives {
+					require.ElementsMatch(t, expectedArchive.Images, definitionImageResults[i].ImageArchives[j].Images)
+				}
+			}
+		})
+	}
+}
+
+func TestFindImagesWhyExcludesHelmTestResources(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	packagePath := "./testdata/find-images/helm-chart"
+
+	_, err := FindImages(ctx, packagePath, FindImagesOptions{Why: "busybox", SkipCosign: true})
+	require.EqualError(t, err, "image busybox not found in any charts or manifests")
+}
+
 func TestBuildImageMap(t *testing.T) {
 	t.Parallel()
 
@@ -211,7 +423,6 @@ func TestBuildImageMap(t *testing.T) {
 			},
 		},
 		Containers: []corev1.Container{
-
 			{
 				Image: "container-image",
 			},

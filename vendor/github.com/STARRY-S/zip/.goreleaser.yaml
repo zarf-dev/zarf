@@ -1,0 +1,19 @@
+version: 2
+
+before:
+  hooks: []
+
+builds:
+  - skip: true
+
+release:
+  prerelease: auto
+
+archives: []
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

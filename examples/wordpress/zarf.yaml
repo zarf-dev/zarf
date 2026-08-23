@@ -1,40 +1,14 @@
 kind: ZarfPackageConfig # ZarfPackageConfig is the package kind for most normal zarf packages
 metadata:
   name: wordpress       # specifies the name of our package and should be unique and unchanging through updates
-  version: 16.0.4       # (optional) a version we can track as we release updates or publish to a registry
+  version: 26.0.0       # (optional) a version we can track as we release updates or publish to a registry
   description: |        # (optional) a human-readable description of the package that you are creating
     A Zarf Package that deploys the WordPress blogging and content management platform
 
-variables:
-    # The unique name of the variable corresponding to the ###ZARF_VAR_### template
-  - name: WORDPRESS_USERNAME
-    # A human-readable description of the variable shown during prompting
-    description: The username that is used to login to the WordPress admin account
-    # A default value to take if --confirm is used or the user chooses the default prompt
-    default: zarf
-    # Whether to prompt for this value interactively if it is not --set on the CLI
-    prompt: true
-  - name: WORDPRESS_PASSWORD
-    description: The password that is used to login to the WordPress admin account
-    prompt: true
-    # Whether to treat this value as sensitive to keep it out of Zarf logs
-    sensitive: true
-  - name: WORDPRESS_EMAIL
-    description: The email that is used for the WordPress admin account
-    default: hello@defenseunicorns.com
-    prompt: true
-  - name: WORDPRESS_FIRST_NAME
-    description: The first name that is used for the WordPress admin account
-    default: Zarf
-    prompt: true
-  - name: WORDPRESS_LAST_NAME
-    description: The last name that is used for the WordPress admin account
-    default: The Axolotl
-    prompt: true
-  - name: WORDPRESS_BLOG_NAME
-    description: The blog name that is used for the WordPress admin account
-    default: The Zarf Blog
-    prompt: true
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
 
 components:
   - name: wordpress  # specifies the name of our component and should be unique and unchanging through updates
@@ -44,23 +18,32 @@ components:
     charts:
       - name: wordpress
         url: oci://registry-1.docker.io/bitnamicharts/wordpress
-        version: 16.0.4
+        version: 26.0.0
         namespace: wordpress
         valuesFiles:
           - wordpress-values.yaml
+        values:
+          - sourcePath: ".wordpress.username"
+            targetPath: ".wordpressUsername"
+          - sourcePath: ".wordpress.password"
+            targetPath: ".wordpressPassword"
+          - sourcePath: ".wordpress.email"
+            targetPath: ".wordpressEmail"
+          - sourcePath: ".wordpress.firstName"
+            targetPath: ".wordpressFirstName"
+          - sourcePath: ".wordpress.lastName"
+            targetPath: ".wordpressLastName"
+          - sourcePath: ".wordpress.blogName"
+            targetPath: ".wordpressBlogName"
     images:
-      - docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2
-      - docker.io/bitnami/mariadb:10.11.2-debian-11-r21
-      - docker.io/bitnami/wordpress:6.2.0-debian-11-r18
+      - docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55
+      - docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0
+      - docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4
     manifests:
       - name: connect-services
         namespace: wordpress
         files:
           - connect-services.yaml
 
-# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
-# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
-x-mdx: |
-  This example demonstrates how to use Zarf to deploy a WordPress blog into a cluster.
-
-  It is used as a part of the [Creating a Zarf Package](/tutorials/0-creating-a-zarf-package/) and [Deploying a Zarf Package](/tutorials/2-deploying-zarf-packages/) tutorials.
+documentation:
+  readme: readme.md

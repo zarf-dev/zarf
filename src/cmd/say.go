@@ -7,8 +7,11 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"regexp"
 
 	"github.com/spf13/cobra"
+
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 func sayCommand() *cobra.Command {
@@ -17,7 +20,13 @@ func sayCommand() *cobra.Command {
 		Short: "Print Zarf logo",
 		Long:  "Print out the adorable Zarf logo",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			_, err := fmt.Fprintln(os.Stderr, logo())
+			out := logo()
+			if !message.ColorEnabled() {
+				// Strip ANSI color codes - https://regex101.com/r/YFyIwC/2
+				ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
+				out = ansiRegex.ReplaceAllString(out, "")
+			}
+			_, err := fmt.Fprintln(os.Stderr, out)
 			return err
 		},
 	}
