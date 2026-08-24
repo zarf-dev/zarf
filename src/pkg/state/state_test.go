@@ -26,6 +26,28 @@ func TestAgentIsConfigured(t *testing.T) {
 	require.True(t, (&State{AgentInfo: AgentInfo{TLS: pki.GeneratedPKI{Cert: []byte("cert")}}}).AgentIsConfigured())
 }
 
+func TestStateReconcile(t *testing.T) {
+	t.Parallel()
+
+	legacyTLS := pki.GeneratedPKI{Cert: []byte("legacy-cert")}
+	s := State{
+		AgentTLS:             legacyTLS,
+		AgentTLSUserProvided: true,
+		AgentMutationPolicy:  MutationPolicyLabeled,
+		RegistryInfo: RegistryInfo{
+			NodePort: 1234,
+		},
+	}
+
+	s.Reconcile()
+
+	require.Equal(t, legacyTLS, s.AgentInfo.TLS)
+	require.True(t, s.AgentInfo.TLSUserProvided)
+	require.Equal(t, MutationPolicyLabeled, s.AgentInfo.MutationPolicy)
+	require.Equal(t, 1234, s.RegistryInfo.Port)
+	require.Equal(t, 1234, s.RegistryInfo.NodePort)
+}
+
 func TestStateAgentInfoJSONCompatibility(t *testing.T) {
 	t.Parallel()
 

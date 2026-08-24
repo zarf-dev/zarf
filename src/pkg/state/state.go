@@ -193,11 +193,18 @@ type AgentInfo struct {
 
 // AgentIsConfigured returns true when Zarf has agent TLS configured.
 func (s *State) AgentIsConfigured() bool {
-	s.ReconcileAgentInfo()
+	s.Reconcile()
 	return len(s.AgentInfo.TLS.Cert) > 0
 }
 
-// ReconcileAgentInfo syncs AgentInfo with deprecated agent fields at serialization boundaries.
+// Reconcile synchronizes compatibility fields with their canonical replacements.
+// Call it when State crosses an application boundary or before reading compatibility-sensitive fields.
+func (s *State) Reconcile() {
+	s.RegistryInfo.ReconcilePort()
+	s.ReconcileAgentInfo()
+}
+
+// ReconcileAgentInfo syncs AgentInfo with deprecated agent fields.
 // When AgentInfo is empty, the deprecated fields are assumed to be the source of truth so
 // callers that still construct State with the legacy fields remain supported.
 func (s *State) ReconcileAgentInfo() {
@@ -231,9 +238,9 @@ func (ai AgentInfo) isZero() bool {
 	return len(ai.TLS.CA) == 0 && len(ai.TLS.Cert) == 0 && len(ai.TLS.Key) == 0 && !ai.TLSUserProvided && ai.MutationPolicy == ""
 }
 
-// MarshalJSON emits both the canonical agentInfo object and the legacy fields so older Zarf versions can read state written by newer versions.
+// MarshalJSON emits canonical state and compatibility fields so older Zarf versions can read state written by newer versions.
 func (s State) MarshalJSON() ([]byte, error) {
-	s.ReconcileAgentInfo()
+	s.Reconcile()
 	type stateAlias State
 	return json.Marshal(stateAlias(s))
 }
@@ -254,11 +261,12 @@ func (s *State) UnmarshalJSON(data []byte) error {
 	if _, ok := raw["agentInfo"]; ok {
 		// The nested object is authoritative, including when it is explicitly empty.
 		s.syncLegacyAgentFields()
-		return nil
+	} else {
+		s.AgentInfo = s.legacyAgentInfo()
+		s.syncLegacyAgentFields()
 	}
 
-	s.AgentInfo = s.legacyAgentInfo()
-	s.syncLegacyAgentFields()
+	s.Reconcile()
 	return nil
 }
 
@@ -648,6 +656,7 @@ func Default() (*State, error) {
 		return nil, err
 	}
 	state.ArtifactServer.FillInEmptyValues()
+	state.Reconcile()
 	return state, nil
 }
 
@@ -667,7 +676,7 @@ type MergeOptions struct {
 // Merge merges init options for provided services into the provided state to create a new state struct
 func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	newState := *oldState
-	newState.ReconcileAgentInfo()
+	newState.Reconcile()
 	var err error
 	if opts.Services.Has(RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
@@ -733,6 +742,7 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 		newState.SetAgentInfo(agentInfo)
 	}
 
+	newState.Reconcile()
 	return &newState, nil
 }
 

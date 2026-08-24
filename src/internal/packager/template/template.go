@@ -41,6 +41,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 	templateMap = make(map[string]*variables.TextTemplate)
 
 	if s != nil {
+		s.Reconcile()
 		regInfo := s.RegistryInfo
 		gitInfo := s.GitServer
 

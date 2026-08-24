@@ -527,8 +527,8 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
-	// Reconcile Port/NodePort for backwards compatibility with older state
-	s.RegistryInfo.ReconcilePort()
+	// Reconcile compatibility fields from older state versions.
+	s.Reconcile()
 	// If registry mode is not set then this is an old Zarf cluster and we can assume it's either external or nodeport
 	if s.RegistryInfo.RegistryMode == "" {
 		if s.RegistryInfo.IsInternal() {
@@ -542,11 +542,8 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 
 // SaveState takes a given state.State and persists it to k8s Cluster secrets.
 func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
-	// Sync NodePort from Port so older Zarf versions can read the state.
-	s.RegistryInfo.ReconcilePort()
-	// Sync deprecated agent fields so older Zarf versions can read the state.
-	// FIXME: likely unnecessary
-	s.ReconcileAgentInfo()
+	// Sync compatibility fields so older Zarf versions can read the state.
+	s.Reconcile()
 	state.DebugPrint(ctx, s)
 
 	data, err := json.Marshal(&s)

@@ -106,7 +106,7 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 	if s == nil {
 		return o, nil
 	}
-	s.ReconcileAgentInfo()
+	s.Reconcile()
 
 	registry := map[string]any{
 		"Address":      s.RegistryInfo.Address,
