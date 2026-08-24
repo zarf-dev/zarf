@@ -110,10 +110,16 @@ func publishRemoteComponent(ctx context.Context, t *testing.T, reference string,
 		Repository: "components",
 		Reference:  reference,
 	}
+	return publishRemoteComponentToReference(ctx, t, ref, resourcePaths...)
+}
+
+func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref registry.Reference, resourcePaths ...string) registry.Reference {
+	t.Helper()
+
 	component := v1beta1.ComponentConfig{
 		APIVersion: v1beta1.APIVersion,
 		Kind:       v1beta1.ZarfComponentConfig,
-		Metadata:   v1beta1.ComponentMetadata{Name: reference},
+		Metadata:   v1beta1.ComponentMetadata{Name: ref.Reference},
 		Component: v1beta1.ComponentSpec{
 			Actions: v1beta1.ComponentActions{OnDeploy: v1beta1.ComponentActionSet{Before: []v1beta1.ComponentAction{{Cmd: "echo remote"}}}},
 		},
@@ -148,6 +154,29 @@ func publishRemoteComponent(ctx context.Context, t *testing.T, reference string,
 	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
 	require.NoError(t, err)
 	return ref
+}
+
+func TestRemoteImportResolutionPinsReferencesForOneInvocation(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	ref := registry.Reference{
+		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+		Repository: "components",
+		Reference:  "mutable",
+	}
+	publishRemoteComponentToReference(ctx, t, ref, "resources/0/first.txt")
+	imports := v1beta1.ComponentImport{Remote: []v1beta1.ComponentImportRemote{{URL: "oci://" + ref.String()}}}
+	cache := remoteReferenceCache{}
+
+	first, err := selectImportVariant(ctx, imports, t.TempDir(), "amd64", "", nil, types.RemoteOptions{PlainHTTP: true}, "", cache)
+	require.NoError(t, err)
+
+	publishRemoteComponentToReference(ctx, t, ref, "resources/0/second.txt")
+	second, err := selectImportVariant(ctx, imports, t.TempDir(), "amd64", "", nil, types.RemoteOptions{PlainHTTP: true}, "", cache)
+	require.NoError(t, err)
+	require.Equal(t, first.path, second.path)
+	require.Equal(t, first.resources, second.resources)
 }
 
 func resolveRemoteImport(ctx context.Context, t *testing.T, ref registry.Reference) v1beta1ImportResolution {
