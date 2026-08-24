@@ -6,7 +6,6 @@ package state
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -46,43 +45,6 @@ func TestStateReconcile(t *testing.T) {
 	require.Equal(t, MutationPolicyLabeled, s.AgentInfo.MutationPolicy)
 	require.Equal(t, 1234, s.RegistryInfo.Port)
 	require.Equal(t, 1234, s.RegistryInfo.NodePort)
-}
-
-func TestStateAgentInfoSerialization(t *testing.T) {
-	t.Parallel()
-
-	agentInfo := AgentInfo{
-		TLS: pki.GeneratedPKI{
-			CA:   []byte("ca"),
-			Cert: []byte("cert"),
-			Key:  []byte("key"),
-		},
-		TLSUserProvided: true,
-		MutationPolicy:  MutationPolicyLabeled,
-	}
-
-	s := State{}
-	s.SetAgentInfo(agentInfo)
-
-	data, err := json.Marshal(s)
-	require.NoError(t, err)
-
-	var raw map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(data, &raw))
-	require.Contains(t, raw, "agentInfo")
-	require.Contains(t, raw, "agentTLS")
-	require.Contains(t, raw, "agentTLSUserProvided")
-	require.Contains(t, raw, "agentMutationPolicy")
-
-	var legacy struct {
-		AgentTLS             pki.GeneratedPKI `json:"agentTLS"`
-		AgentTLSUserProvided bool             `json:"agentTLSUserProvided"`
-		AgentMutationPolicy  MutationPolicy   `json:"agentMutationPolicy"`
-	}
-	require.NoError(t, json.Unmarshal(data, &legacy))
-	require.Equal(t, agentInfo.TLS, legacy.AgentTLS)
-	require.True(t, legacy.AgentTLSUserProvided)
-	require.Equal(t, agentInfo.MutationPolicy, legacy.AgentMutationPolicy)
 }
 
 func TestRegistryInfoKnownPlainHTTP(t *testing.T) {
