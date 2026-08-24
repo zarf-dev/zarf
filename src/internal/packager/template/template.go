@@ -73,11 +73,11 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 		// Don't template component-specific variables for every component
 		switch componentName {
 		case "zarf-agent":
-			agentTLS := s.AgentTLS
+			agentTLS := s.AgentInfo.TLS
 			builtinMap["AGENT_CRT"] = base64.StdEncoding.EncodeToString(agentTLS.Cert)
 			builtinMap["AGENT_KEY"] = base64.StdEncoding.EncodeToString(agentTLS.Key)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
-			builtinMap["AGENT_MUTATION_POLICY"] = string(s.AgentMutationPolicy)
+			builtinMap["AGENT_MUTATION_POLICY"] = string(s.AgentInfo.MutationPolicy)
 
 		case "zarf-seed-registry", "zarf-registry":
 			builtinMap["SEED_REGISTRY"] = state.LocalhostRegistryAddress(s.IPFamily, s.InjectorInfo.Port)

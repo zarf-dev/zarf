@@ -608,7 +608,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		require.Empty(t, s.ArtifactServer.Address)
 		require.False(t, s.GitServer.IsConfigured())
 		require.NotEmpty(t, s.RegistryInfo.Address)
-		require.NotEmpty(t, s.AgentTLS.Cert)
+		require.NotEmpty(t, s.AgentInfo.TLS.Cert)
 	})
 
 	t.Run("new cluster without agent service leaves agent TLS empty", func(t *testing.T) {
@@ -618,8 +618,8 @@ func TestInitStateServicesGating(t *testing.T) {
 			InternalServices: state.NewServiceSet(state.RegistryKey),
 		})
 		require.NoError(t, err)
-		require.Empty(t, s.AgentTLS.Cert)
-		require.False(t, s.AgentTLSUserProvided)
+		require.Empty(t, s.AgentInfo.TLS.Cert)
+		require.False(t, s.AgentInfo.TLSUserProvided)
 	})
 
 	t.Run("new cluster with all services populates everything", func(t *testing.T) {
@@ -632,7 +632,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		require.True(t, s.GitServer.IsConfigured())
 		require.True(t, s.ArtifactServer.IsInternal())
 		require.NotEmpty(t, s.RegistryInfo.Address)
-		require.NotEmpty(t, s.AgentTLS.Cert)
+		require.NotEmpty(t, s.AgentInfo.TLS.Cert)
 	})
 
 	t.Run("re-init adds a missing git service without overwriting existing registry", func(t *testing.T) {
@@ -682,7 +682,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.True(t, s.AgentIsConfigured())
-		require.False(t, s.AgentTLSUserProvided)
+		require.False(t, s.AgentInfo.TLSUserProvided)
 
 		ns, err := c.Clientset.CoreV1().Namespaces().Get(ctx, "app", metav1.GetOptions{})
 		require.NoError(t, err)
@@ -704,8 +704,8 @@ func TestInitStateServicesGating(t *testing.T) {
 			AgentTLS:         &agentTLS,
 		})
 		require.NoError(t, err)
-		require.Equal(t, agentTLS, s.AgentTLS)
-		require.True(t, s.AgentTLSUserProvided)
+		require.Equal(t, agentTLS, s.AgentInfo.TLS)
+		require.True(t, s.AgentInfo.TLSUserProvided)
 	})
 
 	t.Run("new cluster with external git URL persists without being in InternalServices", func(t *testing.T) {
@@ -776,6 +776,49 @@ func TestInitStateServicesGating(t *testing.T) {
 		require.False(t, s.RegistryInfo.IsInternal())
 		require.Equal(t, 0, s.InjectorInfo.Port, "injector port must reset when mode changes")
 	})
+}
+
+func TestStateAgentInfoCompatibility(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	c := &Cluster{Clientset: fake.NewClientset()}
+	legacy := struct {
+		AgentTLS             pki.GeneratedPKI     `json:"agentTLS"`
+		AgentTLSUserProvided bool                 `json:"agentTLSUserProvided"`
+		AgentMutationPolicy  state.MutationPolicy `json:"agentMutationPolicy"`
+	}{
+		AgentTLS: pki.GeneratedPKI{
+			CA:   []byte("ca"),
+			Cert: []byte("cert"),
+			Key:  []byte("key"),
+		},
+		AgentTLSUserProvided: true,
+		AgentMutationPolicy:  state.MutationPolicyLabeled,
+	}
+	legacyData, err := json.Marshal(legacy)
+	require.NoError(t, err)
+	_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: state.ZarfNamespaceName, Name: state.ZarfStateSecretName},
+		Data:       map[string][]byte{state.ZarfStateDataKey: legacyData},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	loaded, err := c.LoadState(ctx)
+	require.NoError(t, err)
+	require.Equal(t, legacy.AgentTLS, loaded.AgentInfo.TLS)
+	require.True(t, loaded.AgentInfo.TLSUserProvided)
+	require.Equal(t, state.MutationPolicyLabeled, loaded.AgentInfo.MutationPolicy)
+
+	require.NoError(t, c.SaveState(ctx, loaded))
+	persisted, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
+	require.NoError(t, err)
+	var raw map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(persisted.Data[state.ZarfStateDataKey], &raw))
+	require.Contains(t, raw, "agentInfo")
+	require.Contains(t, raw, "agentTLS")
+	require.Contains(t, raw, "agentTLSUserProvided")
+	require.Contains(t, raw, "agentMutationPolicy")
 }
 
 func TestIgnoreExistingNamespacesForAgent(t *testing.T) {

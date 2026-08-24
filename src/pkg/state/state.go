@@ -6,6 +6,7 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 
@@ -162,11 +163,13 @@ type State struct {
 	StorageClass string `json:"storageClass"`
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
 	IPFamily IPFamily `json:"ipFamily,omitempty"`
-	// PKI certificate information for the agent pods Zarf manages
+	// AgentInfo contains information Zarf uses to configure the agent.
+	AgentInfo AgentInfo `json:"agentInfo"`
+	// Deprecated: Use AgentInfo.TLS instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
-	// AgentTLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated
+	// Deprecated: Use AgentInfo.TLSUserProvided instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
 	AgentTLSUserProvided bool `json:"agentTLSUserProvided,omitempty"`
-	// AgentMutationPolicy controls the conditions required for the agent to mutate resources
+	// Deprecated: Use AgentInfo.MutationPolicy instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
 	AgentMutationPolicy MutationPolicy `json:"agentMutationPolicy"`
 	InjectorInfo        InjectorInfo   `json:"injectorInfo"`
 
@@ -178,9 +181,85 @@ type State struct {
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
 }
 
+// AgentInfo contains information Zarf uses to configure the agent.
+type AgentInfo struct {
+	// TLS contains certificate information for the agent pods Zarf manages.
+	TLS pki.GeneratedPKI `json:"tls"`
+	// TLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated.
+	TLSUserProvided bool `json:"tlsUserProvided,omitempty"`
+	// MutationPolicy controls the conditions required for the agent to mutate resources.
+	MutationPolicy MutationPolicy `json:"mutationPolicy"`
+}
+
 // AgentIsConfigured returns true when Zarf has agent TLS configured.
 func (s *State) AgentIsConfigured() bool {
-	return len(s.AgentTLS.Cert) > 0
+	s.ReconcileAgentInfo()
+	return len(s.AgentInfo.TLS.Cert) > 0
+}
+
+// ReconcileAgentInfo syncs AgentInfo with deprecated agent fields at serialization boundaries.
+// When AgentInfo is empty, the deprecated fields are assumed to be the source of truth so
+// callers that still construct State with the legacy fields remain supported.
+func (s *State) ReconcileAgentInfo() {
+	if s.AgentInfo.isZero() {
+		s.AgentInfo = s.legacyAgentInfo()
+	}
+	s.syncLegacyAgentFields()
+}
+
+// SetAgentInfo updates AgentInfo and its deprecated compatibility fields together.
+func (s *State) SetAgentInfo(agentInfo AgentInfo) {
+	s.AgentInfo = agentInfo
+	s.syncLegacyAgentFields()
+}
+
+func (s *State) legacyAgentInfo() AgentInfo {
+	return AgentInfo{
+		TLS:             s.AgentTLS,
+		TLSUserProvided: s.AgentTLSUserProvided,
+		MutationPolicy:  s.AgentMutationPolicy,
+	}
+}
+
+func (s *State) syncLegacyAgentFields() {
+	s.AgentTLS = s.AgentInfo.TLS
+	s.AgentTLSUserProvided = s.AgentInfo.TLSUserProvided
+	s.AgentMutationPolicy = s.AgentInfo.MutationPolicy
+}
+
+func (ai AgentInfo) isZero() bool {
+	return len(ai.TLS.CA) == 0 && len(ai.TLS.Cert) == 0 && len(ai.TLS.Key) == 0 && !ai.TLSUserProvided && ai.MutationPolicy == ""
+}
+
+// MarshalJSON emits both the canonical agentInfo object and the legacy fields so older Zarf versions can read state written by newer versions.
+func (s State) MarshalJSON() ([]byte, error) {
+	s.ReconcileAgentInfo()
+	type stateAlias State
+	return json.Marshal(stateAlias(s))
+}
+
+// UnmarshalJSON reads the canonical agentInfo object when it is present and otherwise migrates legacy agent fields.
+func (s *State) UnmarshalJSON(data []byte) error {
+	type stateAlias State
+	var decoded stateAlias
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*s = State(decoded)
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["agentInfo"]; ok {
+		// The nested object is authoritative, including when it is explicitly empty.
+		s.syncLegacyAgentFields()
+		return nil
+	}
+
+	s.AgentInfo = s.legacyAgentInfo()
+	s.syncLegacyAgentFields()
+	return nil
 }
 
 // InjectorInfo contains information on how to run the long lived Daemonset Injector
@@ -588,6 +667,7 @@ type MergeOptions struct {
 // Merge merges init options for provided services into the provided state to create a new state struct
 func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	newState := *oldState
+	newState.ReconcileAgentInfo()
 	var err error
 	if opts.Services.Has(RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
@@ -635,20 +715,22 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 		}
 	}
 	if opts.Services.Has(AgentKey) {
+		agentInfo := newState.AgentInfo
 		if opts.AgentTLS != nil {
-			newState.AgentTLS = *opts.AgentTLS
-			newState.AgentTLSUserProvided = true
+			agentInfo.TLS = *opts.AgentTLS
+			agentInfo.TLSUserProvided = true
 		} else {
 			agentTLS, err := pki.GeneratePKI(ZarfAgentHost)
 			if err != nil {
 				return nil, err
 			}
-			newState.AgentTLS = agentTLS
-			newState.AgentTLSUserProvided = false
+			agentInfo.TLS = agentTLS
+			agentInfo.TLSUserProvided = false
 		}
 		if opts.AgentMutationPolicy != "" {
-			newState.AgentMutationPolicy = opts.AgentMutationPolicy
+			agentInfo.MutationPolicy = opts.AgentMutationPolicy
 		}
+		newState.SetAgentInfo(agentInfo)
 	}
 
 	return &newState, nil
@@ -667,9 +749,11 @@ func DebugPrint(ctx context.Context, state *State) {
 
 func sanitizeState(s *State) *State {
 	// Overwrite the AgentTLS information
-	s.AgentTLS.CA = []byte("**sanitized**")
-	s.AgentTLS.Cert = []byte("**sanitized**")
-	s.AgentTLS.Key = []byte("**sanitized**")
+	agentInfo := s.AgentInfo
+	agentInfo.TLS.CA = []byte("**sanitized**")
+	agentInfo.TLS.Cert = []byte("**sanitized**")
+	agentInfo.TLS.Key = []byte("**sanitized**")
+	s.SetAgentInfo(agentInfo)
 
 	// Overwrite the GitServer passwords
 	s.GitServer.PushPassword = "**sanitized**"

@@ -382,9 +382,9 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
 	if agentTLS != nil {
-		if !bytes.Equal(agentTLS.CA, s.AgentTLS.CA) ||
-			!bytes.Equal(agentTLS.Cert, s.AgentTLS.Cert) ||
-			!bytes.Equal(agentTLS.Key, s.AgentTLS.Key) {
+		if !bytes.Equal(agentTLS.CA, s.AgentInfo.TLS.CA) ||
+			!bytes.Equal(agentTLS.Cert, s.AgentInfo.TLS.Cert) ||
+			!bytes.Equal(agentTLS.Key, s.AgentInfo.TLS.Key) {
 			return fmt.Errorf("cannot change agent TLS certificates after initial init, to update run `zarf tools update-creds agent`")
 		}
 	}

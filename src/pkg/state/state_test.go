@@ -6,6 +6,7 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -21,8 +22,89 @@ func TestAgentIsConfigured(t *testing.T) {
 	t.Parallel()
 
 	require.False(t, (&State{}).AgentIsConfigured())
-	require.False(t, (&State{AgentTLS: pki.GeneratedPKI{CA: []byte("ca"), Key: []byte("key")}}).AgentIsConfigured())
-	require.True(t, (&State{AgentTLS: pki.GeneratedPKI{Cert: []byte("cert")}}).AgentIsConfigured())
+	require.False(t, (&State{AgentInfo: AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Key: []byte("key")}}}).AgentIsConfigured())
+	require.True(t, (&State{AgentInfo: AgentInfo{TLS: pki.GeneratedPKI{Cert: []byte("cert")}}}).AgentIsConfigured())
+}
+
+func TestStateAgentInfoJSONCompatibility(t *testing.T) {
+	t.Parallel()
+
+	agentInfo := AgentInfo{
+		TLS: pki.GeneratedPKI{
+			CA:   []byte("ca"),
+			Cert: []byte("cert"),
+			Key:  []byte("key"),
+		},
+		TLSUserProvided: true,
+		MutationPolicy:  MutationPolicyLabeled,
+	}
+
+	t.Run("loads legacy fields", func(t *testing.T) {
+		legacy := struct {
+			AgentTLS             pki.GeneratedPKI `json:"agentTLS"`
+			AgentTLSUserProvided bool             `json:"agentTLSUserProvided"`
+			AgentMutationPolicy  MutationPolicy   `json:"agentMutationPolicy"`
+		}{
+			AgentTLS:             agentInfo.TLS,
+			AgentTLSUserProvided: agentInfo.TLSUserProvided,
+			AgentMutationPolicy:  agentInfo.MutationPolicy,
+		}
+		data, err := json.Marshal(legacy)
+		require.NoError(t, err)
+
+		var got State
+		require.NoError(t, json.Unmarshal(data, &got))
+		require.Equal(t, agentInfo, got.AgentInfo)
+		require.Equal(t, agentInfo.TLS, got.AgentTLS)
+		require.True(t, got.AgentTLSUserProvided)
+		require.Equal(t, agentInfo.MutationPolicy, got.AgentMutationPolicy)
+	})
+
+	t.Run("nested fields take precedence and synchronize legacy fields", func(t *testing.T) {
+		legacyTLS := pki.GeneratedPKI{Cert: []byte("legacy-cert")}
+		// FIXME: why not just actually use the state struct here?
+		data, err := json.Marshal(struct {
+			AgentInfo            AgentInfo        `json:"agentInfo"`
+			AgentTLS             pki.GeneratedPKI `json:"agentTLS"`
+			AgentTLSUserProvided bool             `json:"agentTLSUserProvided"`
+			AgentMutationPolicy  MutationPolicy   `json:"agentMutationPolicy"`
+		}{
+			AgentInfo:            agentInfo,
+			AgentTLS:             legacyTLS,
+			AgentMutationPolicy:  MutationPolicyAll,
+			AgentTLSUserProvided: false,
+		})
+		require.NoError(t, err)
+
+		var got State
+		require.NoError(t, json.Unmarshal(data, &got))
+		require.Equal(t, agentInfo, got.AgentInfo)
+		require.Equal(t, agentInfo.TLS, got.AgentTLS)
+		require.True(t, got.AgentTLSUserProvided)
+		require.Equal(t, agentInfo.MutationPolicy, got.AgentMutationPolicy)
+	})
+
+	t.Run("writes both formats", func(t *testing.T) {
+		data, err := json.Marshal(State{AgentInfo: agentInfo})
+		require.NoError(t, err)
+
+		var raw map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(data, &raw))
+		require.Contains(t, raw, "agentInfo")
+		require.Contains(t, raw, "agentTLS")
+		require.Contains(t, raw, "agentTLSUserProvided")
+		require.Contains(t, raw, "agentMutationPolicy")
+
+		var legacy struct {
+			AgentTLS             pki.GeneratedPKI `json:"agentTLS"`
+			AgentTLSUserProvided bool             `json:"agentTLSUserProvided"`
+			AgentMutationPolicy  MutationPolicy   `json:"agentMutationPolicy"`
+		}
+		require.NoError(t, json.Unmarshal(data, &legacy))
+		require.Equal(t, agentInfo.TLS, legacy.AgentTLS)
+		require.True(t, legacy.AgentTLSUserProvided)
+		require.Equal(t, agentInfo.MutationPolicy, legacy.AgentMutationPolicy)
+	})
 }
 
 func TestRegistryInfoKnownPlainHTTP(t *testing.T) {
@@ -491,14 +573,14 @@ func TestMergeStateAgent(t *testing.T) {
 		agentTLS, err := pki.GeneratePKI("example.com")
 		require.NoError(t, err)
 		oldState := &State{
-			AgentTLS: agentTLS,
+			AgentInfo: AgentInfo{TLS: agentTLS},
 		}
 		newState, err := Merge(oldState, MergeOptions{
 			Services: NewServiceSet(AgentKey),
 		})
 		require.NoError(t, err)
-		require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
-		require.False(t, newState.AgentTLSUserProvided)
+		require.NotEqual(t, oldState.AgentInfo.TLS, newState.AgentInfo.TLS)
+		require.False(t, newState.AgentInfo.TLSUserProvided)
 	})
 
 	t.Run("user-provided certs are used and provenance is set", func(t *testing.T) {
@@ -514,22 +596,24 @@ func TestMergeStateAgent(t *testing.T) {
 			AgentTLS: &userTLS,
 		})
 		require.NoError(t, err)
-		require.Equal(t, userTLS, newState.AgentTLS)
-		require.True(t, newState.AgentTLSUserProvided)
+		require.Equal(t, userTLS, newState.AgentInfo.TLS)
+		require.True(t, newState.AgentInfo.TLSUserProvided)
 	})
 
 	t.Run("auto-generate resets user-provided provenance", func(t *testing.T) {
 		t.Parallel()
 		oldState := &State{
-			AgentTLS:             pki.GeneratedPKI{CA: []byte("old-ca")},
-			AgentTLSUserProvided: true,
+			AgentInfo: AgentInfo{
+				TLS:             pki.GeneratedPKI{CA: []byte("old-ca")},
+				TLSUserProvided: true,
+			},
 		}
 		newState, err := Merge(oldState, MergeOptions{
 			Services: NewServiceSet(AgentKey),
 		})
 		require.NoError(t, err)
-		require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
-		require.False(t, newState.AgentTLSUserProvided)
+		require.NotEqual(t, oldState.AgentInfo.TLS, newState.AgentInfo.TLS)
+		require.False(t, newState.AgentInfo.TLSUserProvided)
 	})
 }
 

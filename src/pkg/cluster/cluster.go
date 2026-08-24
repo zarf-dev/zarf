@@ -363,7 +363,9 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 
 	if opts.AgentMutationPolicy != "" {
-		s.AgentMutationPolicy = opts.AgentMutationPolicy
+		agentInfo := s.AgentInfo
+		agentInfo.MutationPolicy = opts.AgentMutationPolicy
+		s.SetAgentInfo(agentInfo)
 	}
 
 	// Save the state back to K8s
@@ -375,17 +377,19 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 }
 
 func (c *Cluster) initAgent(ctx context.Context, s *state.State, agentTLS *pki.GeneratedPKI) error {
+	agentInfo := s.AgentInfo
 	if agentTLS != nil {
-		s.AgentTLS = *agentTLS
-		s.AgentTLSUserProvided = true
+		agentInfo.TLS = *agentTLS
+		agentInfo.TLSUserProvided = true
 	} else {
 		generatedAgentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
 		if err != nil {
 			return err
 		}
-		s.AgentTLS = generatedAgentTLS
-		s.AgentTLSUserProvided = false
+		agentInfo.TLS = generatedAgentTLS
+		agentInfo.TLSUserProvided = false
 	}
+	s.SetAgentInfo(agentInfo)
 	return c.ignoreExistingNamespacesForAgent(ctx)
 }
 
@@ -519,7 +523,7 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	}
 
 	s := &state.State{}
-	err = json.Unmarshal(secret.Data[state.ZarfStateDataKey], &s)
+	err = json.Unmarshal(secret.Data[state.ZarfStateDataKey], s)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
@@ -540,6 +544,9 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
 	// Sync NodePort from Port so older Zarf versions can read the state.
 	s.RegistryInfo.ReconcilePort()
+	// Sync deprecated agent fields so older Zarf versions can read the state.
+	// FIXME: likely unnecessary
+	s.ReconcileAgentInfo()
 	state.DebugPrint(ctx, s)
 
 	data, err := json.Marshal(&s)

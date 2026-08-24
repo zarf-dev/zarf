@@ -775,7 +775,7 @@ func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkgLayout *lay
 	if !s.AgentIsConfigured() {
 		return nil
 	}
-	return pki.CheckForExpiredCert(ctx, s.AgentTLS)
+	return pki.CheckForExpiredCert(ctx, s.AgentInfo.TLS)
 }
 
 func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state.State, error) {
