@@ -28,7 +28,10 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
-const defaultRetries = 3
+const (
+	defaultComponentPushAttempts = 3
+	imagePushAttempts            = 2
+)
 
 // PushOptions is the configuration for pushing images.
 type PushOptions struct {
@@ -57,7 +60,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		return fmt.Errorf("registry uses Zarf-managed mTLS, but no cluster is available to obtain its client certificate")
 	}
 	if cfg.Retries < 1 {
-		cfg.Retries = defaultRetries
+		cfg.Retries = defaultComponentPushAttempts
 	}
 	if cfg.ResponseHeaderTimeout <= 0 {
 		cfg.ResponseHeaderTimeout = 10 * time.Second
@@ -180,13 +183,17 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 
 				err = retry.Do(
 					func() error { return pushImage(img, offlineNameCRC) },
-					retry.OnRetry(func(_ uint, err error) {
+					retry.OnRetry(func(attempt uint, err error) {
+						if attempt == imagePushAttempts-1 {
+							return
+						}
 						ociConcurrency = 1
-						l.Debug("retrying image push", "error", err, "concurrency", ociConcurrency)
+						l.Warn("retrying image push", "error", err, "concurrency", ociConcurrency)
 					}),
 					retry.Context(ctx),
-					retry.Attempts(2),
+					retry.Attempts(imagePushAttempts),
 					retry.Delay(500*time.Millisecond),
+					retry.LastErrorOnly(true),
 				)
 				if err != nil {
 					return err
@@ -202,13 +209,17 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 
 			err = retry.Do(
 				func() error { return pushImage(img, offlineName) },
-				retry.OnRetry(func(_ uint, err error) {
+				retry.OnRetry(func(attempt uint, err error) {
+					if attempt == imagePushAttempts-1 {
+						return
+					}
 					ociConcurrency = 1
-					l.Debug("retrying image push", "error", err, "concurrency", ociConcurrency)
+					l.Warn("retrying image push", "error", err, "concurrency", ociConcurrency)
 				}),
 				retry.Context(ctx),
-				retry.Attempts(2),
+				retry.Attempts(imagePushAttempts),
 				retry.Delay(500*time.Millisecond),
+				retry.LastErrorOnly(true),
 			)
 			if err != nil {
 				return err
@@ -217,11 +228,13 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			pushed = append(pushed, img)
 		}
 		return nil
-	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond), retry.OnRetry(func(attempt uint, _ error) {
-		if uint(cfg.Retries) > 2 && attempt == uint(cfg.Retries)-2 {
-			cfg.ResponseHeaderTimeout = 60 * time.Second // this should really never happen
+	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond), retry.LastErrorOnly(true), retry.OnRetry(func(attempt uint, err error) {
+		if attempt == uint(cfg.Retries)-1 {
+			return
 		}
-		l.Debug("retrying component image(s) push", "responseTimeout", cfg.ResponseHeaderTimeout)
+		// S3-backed registries may take longer to finalize an upload and respond.
+		cfg.ResponseHeaderTimeout = 60 * time.Second
+		l.Warn("retrying component image(s) push", "error", err, "responseTimeout", cfg.ResponseHeaderTimeout)
 	}))
 	if err != nil {
 		return err
