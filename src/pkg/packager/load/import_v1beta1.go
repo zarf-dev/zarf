@@ -231,7 +231,7 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
-	manifest, err := remote.FetchRoot(ctx)
+	manifest, err := remote.FetchManifest(ctx, root)
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
