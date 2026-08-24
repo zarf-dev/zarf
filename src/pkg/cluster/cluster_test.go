@@ -681,7 +681,7 @@ func TestInitStateServicesGating(t *testing.T) {
 			InternalServices: state.NewServiceSet(state.AgentKey),
 		})
 		require.NoError(t, err)
-		require.True(t, s.AgentIsConfigured())
+		require.True(t, s.AgentInfo.IsConfigured())
 		require.False(t, s.AgentInfo.TLSUserProvided)
 
 		ns, err := c.Clientset.CoreV1().Namespaces().Get(ctx, "app", metav1.GetOptions{})

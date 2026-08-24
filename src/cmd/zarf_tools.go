@@ -796,7 +796,7 @@ func (o *updateAgentCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if !oldState.AgentIsConfigured() {
+	if !oldState.AgentInfo.IsConfigured() {
 		return errors.New("no agent is configured in the Zarf state; nothing to update")
 	}
 

@@ -18,12 +18,12 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 )
 
-func TestAgentIsConfigured(t *testing.T) {
+func TestAgentInfoIsConfigured(t *testing.T) {
 	t.Parallel()
 
-	require.False(t, (&State{}).AgentIsConfigured())
-	require.False(t, (&State{AgentInfo: AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Key: []byte("key")}}}).AgentIsConfigured())
-	require.True(t, (&State{AgentInfo: AgentInfo{TLS: pki.GeneratedPKI{Cert: []byte("cert")}}}).AgentIsConfigured())
+	require.False(t, (AgentInfo{}).IsConfigured())
+	require.False(t, (AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Key: []byte("key")}}).IsConfigured())
+	require.True(t, (AgentInfo{TLS: pki.GeneratedPKI{Cert: []byte("cert")}}).IsConfigured())
 }
 
 func TestStateReconcile(t *testing.T) {

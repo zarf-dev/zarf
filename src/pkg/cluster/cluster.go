@@ -295,7 +295,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 				return nil, err
 			}
 		}
-		if opts.InternalServices.Has(state.AgentKey) && !s.AgentIsConfigured() {
+		if opts.InternalServices.Has(state.AgentKey) && !s.AgentInfo.IsConfigured() {
 			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
 				return nil, err
 			}
