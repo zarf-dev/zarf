@@ -506,10 +506,11 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, index, count int, op
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = opts.OCIConcurrency
 	copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
-	logArgs := []any{"index", index, "count", count, "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2)}
+	logArgs := []any{"name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2)}
 	if len(imageInfo.platforms) > 0 {
 		logArgs = append(logArgs, "platforms", strings.Join(imageInfo.platforms, ","))
 	}
+	logArgs = append(logArgs, "count", fmt.Sprintf("%d/%d", index, count))
 	l.Info("saving image", logArgs...)
 	localCache, err := oci.NewWithContext(ctx, opts.CacheDirectory)
 	if err != nil {
