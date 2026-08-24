@@ -48,7 +48,7 @@ func TestStateReconcile(t *testing.T) {
 	require.Equal(t, 1234, s.RegistryInfo.NodePort)
 }
 
-func TestStateAgentInfoJSONCompatibility(t *testing.T) {
+func TestStateAgentInfoSerialization(t *testing.T) {
 	t.Parallel()
 
 	agentInfo := AgentInfo{
@@ -61,72 +61,28 @@ func TestStateAgentInfoJSONCompatibility(t *testing.T) {
 		MutationPolicy:  MutationPolicyLabeled,
 	}
 
-	t.Run("loads legacy fields", func(t *testing.T) {
-		legacy := struct {
-			AgentTLS             pki.GeneratedPKI `json:"agentTLS"`
-			AgentTLSUserProvided bool             `json:"agentTLSUserProvided"`
-			AgentMutationPolicy  MutationPolicy   `json:"agentMutationPolicy"`
-		}{
-			AgentTLS:             agentInfo.TLS,
-			AgentTLSUserProvided: agentInfo.TLSUserProvided,
-			AgentMutationPolicy:  agentInfo.MutationPolicy,
-		}
-		data, err := json.Marshal(legacy)
-		require.NoError(t, err)
+	s := State{}
+	s.SetAgentInfo(agentInfo)
 
-		var got State
-		require.NoError(t, json.Unmarshal(data, &got))
-		require.Equal(t, agentInfo, got.AgentInfo)
-		require.Equal(t, agentInfo.TLS, got.AgentTLS)
-		require.True(t, got.AgentTLSUserProvided)
-		require.Equal(t, agentInfo.MutationPolicy, got.AgentMutationPolicy)
-	})
+	data, err := json.Marshal(s)
+	require.NoError(t, err)
 
-	t.Run("nested fields take precedence and synchronize legacy fields", func(t *testing.T) {
-		legacyTLS := pki.GeneratedPKI{Cert: []byte("legacy-cert")}
-		// FIXME: why not just actually use the state struct here?
-		data, err := json.Marshal(struct {
-			AgentInfo            AgentInfo        `json:"agentInfo"`
-			AgentTLS             pki.GeneratedPKI `json:"agentTLS"`
-			AgentTLSUserProvided bool             `json:"agentTLSUserProvided"`
-			AgentMutationPolicy  MutationPolicy   `json:"agentMutationPolicy"`
-		}{
-			AgentInfo:            agentInfo,
-			AgentTLS:             legacyTLS,
-			AgentMutationPolicy:  MutationPolicyAll,
-			AgentTLSUserProvided: false,
-		})
-		require.NoError(t, err)
+	var raw map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(data, &raw))
+	require.Contains(t, raw, "agentInfo")
+	require.Contains(t, raw, "agentTLS")
+	require.Contains(t, raw, "agentTLSUserProvided")
+	require.Contains(t, raw, "agentMutationPolicy")
 
-		var got State
-		require.NoError(t, json.Unmarshal(data, &got))
-		require.Equal(t, agentInfo, got.AgentInfo)
-		require.Equal(t, agentInfo.TLS, got.AgentTLS)
-		require.True(t, got.AgentTLSUserProvided)
-		require.Equal(t, agentInfo.MutationPolicy, got.AgentMutationPolicy)
-	})
-
-	t.Run("writes both formats", func(t *testing.T) {
-		data, err := json.Marshal(State{AgentInfo: agentInfo})
-		require.NoError(t, err)
-
-		var raw map[string]json.RawMessage
-		require.NoError(t, json.Unmarshal(data, &raw))
-		require.Contains(t, raw, "agentInfo")
-		require.Contains(t, raw, "agentTLS")
-		require.Contains(t, raw, "agentTLSUserProvided")
-		require.Contains(t, raw, "agentMutationPolicy")
-
-		var legacy struct {
-			AgentTLS             pki.GeneratedPKI `json:"agentTLS"`
-			AgentTLSUserProvided bool             `json:"agentTLSUserProvided"`
-			AgentMutationPolicy  MutationPolicy   `json:"agentMutationPolicy"`
-		}
-		require.NoError(t, json.Unmarshal(data, &legacy))
-		require.Equal(t, agentInfo.TLS, legacy.AgentTLS)
-		require.True(t, legacy.AgentTLSUserProvided)
-		require.Equal(t, agentInfo.MutationPolicy, legacy.AgentMutationPolicy)
-	})
+	var legacy struct {
+		AgentTLS             pki.GeneratedPKI `json:"agentTLS"`
+		AgentTLSUserProvided bool             `json:"agentTLSUserProvided"`
+		AgentMutationPolicy  MutationPolicy   `json:"agentMutationPolicy"`
+	}
+	require.NoError(t, json.Unmarshal(data, &legacy))
+	require.Equal(t, agentInfo.TLS, legacy.AgentTLS)
+	require.True(t, legacy.AgentTLSUserProvided)
+	require.Equal(t, agentInfo.MutationPolicy, legacy.AgentMutationPolicy)
 }
 
 func TestRegistryInfoKnownPlainHTTP(t *testing.T) {

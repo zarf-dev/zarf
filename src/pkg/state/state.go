@@ -6,7 +6,6 @@ package state
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"regexp"
 
@@ -236,38 +235,6 @@ func (s *State) syncLegacyAgentFields() {
 
 func (ai AgentInfo) isZero() bool {
 	return len(ai.TLS.CA) == 0 && len(ai.TLS.Cert) == 0 && len(ai.TLS.Key) == 0 && !ai.TLSUserProvided && ai.MutationPolicy == ""
-}
-
-// MarshalJSON emits canonical state and compatibility fields so older Zarf versions can read state written by newer versions.
-func (s State) MarshalJSON() ([]byte, error) {
-	s.Reconcile()
-	type stateAlias State
-	return json.Marshal(stateAlias(s))
-}
-
-// UnmarshalJSON reads the canonical agentInfo object when it is present and otherwise migrates legacy agent fields.
-func (s *State) UnmarshalJSON(data []byte) error {
-	type stateAlias State
-	var decoded stateAlias
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return err
-	}
-
-	*s = State(decoded)
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["agentInfo"]; ok {
-		// The nested object is authoritative, including when it is explicitly empty.
-		s.syncLegacyAgentFields()
-	} else {
-		s.AgentInfo = s.legacyAgentInfo()
-		s.syncLegacyAgentFields()
-	}
-
-	s.Reconcile()
-	return nil
 }
 
 // InjectorInfo contains information on how to run the long lived Daemonset Injector
