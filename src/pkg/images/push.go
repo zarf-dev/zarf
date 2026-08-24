@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	defaultRetries         = 3
-	imagePushRetryAttempts = 2
+	defaultComponentPushAttempts = 3
+	imagePushAttempts            = 2
 )
 
 // PushOptions is the configuration for pushing images.
@@ -60,7 +60,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		return fmt.Errorf("registry uses Zarf-managed mTLS, but no cluster is available to obtain its client certificate")
 	}
 	if cfg.Retries < 1 {
-		cfg.Retries = defaultRetries
+		cfg.Retries = defaultComponentPushAttempts
 	}
 	if cfg.ResponseHeaderTimeout <= 0 {
 		cfg.ResponseHeaderTimeout = 10 * time.Second
@@ -184,14 +184,14 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 				err = retry.Do(
 					func() error { return pushImage(img, offlineNameCRC) },
 					retry.OnRetry(func(attempt uint, err error) {
-						if attempt == imagePushRetryAttempts-1 {
+						if attempt == imagePushAttempts-1 {
 							return
 						}
 						ociConcurrency = 1
 						l.Warn("retrying image push", "error", err, "concurrency", ociConcurrency)
 					}),
 					retry.Context(ctx),
-					retry.Attempts(imagePushRetryAttempts),
+					retry.Attempts(imagePushAttempts),
 					retry.Delay(500*time.Millisecond),
 					retry.LastErrorOnly(true),
 				)
@@ -210,14 +210,14 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			err = retry.Do(
 				func() error { return pushImage(img, offlineName) },
 				retry.OnRetry(func(attempt uint, err error) {
-					if attempt == imagePushRetryAttempts-1 {
+					if attempt == imagePushAttempts-1 {
 						return
 					}
 					ociConcurrency = 1
 					l.Warn("retrying image push", "error", err, "concurrency", ociConcurrency)
 				}),
 				retry.Context(ctx),
-				retry.Attempts(imagePushRetryAttempts),
+				retry.Attempts(imagePushAttempts),
 				retry.Delay(500*time.Millisecond),
 				retry.LastErrorOnly(true),
 			)
