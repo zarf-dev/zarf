@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -32,7 +34,7 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
-	"oras.land/oras-go/v2/content/memory"
+	ocistore "oras.land/oras-go/v2/content/oci"
 	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 )
@@ -94,7 +96,20 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 		return registry.Reference{}, fmt.Errorf("unable to marshal component config: %w", err)
 	}
 
-	store := memory.New()
+	stagingDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return registry.Reference{}, fmt.Errorf("unable to create component staging directory: %w", err)
+	}
+	defer func() {
+		if err := os.RemoveAll(stagingDir); err != nil {
+			logger.From(ctx).Warn("unable to clean up component staging directory", "error", err)
+		}
+	}()
+
+	store, err := ocistore.NewWithContext(ctx, stagingDir)
+	if err != nil {
+		return registry.Reference{}, fmt.Errorf("unable to create component staging store: %w", err)
+	}
 	configDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentConfigMediaType, componentJSON)
 	if err := store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to stage component config: %w", err)
@@ -145,7 +160,7 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	return componentRef, nil
 }
 
-func pushComponentArtifact(ctx context.Context, store *memory.Store, sourceRef string, remote *zoci.Remote, componentRef registry.Reference, architecture string, totalSize int64, opts PublishOptions) (_ ocispec.Descriptor, err error) {
+func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourceRef string, remote *zoci.Remote, componentRef registry.Reference, architecture string, totalSize int64, opts PublishOptions) (_ ocispec.Descriptor, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -202,7 +217,7 @@ func pushComponentArtifact(ctx context.Context, store *memory.Store, sourceRef s
 
 // stageComponentResources includes local component resources while leaving remote resources to
 // be fetched when the component is imported during package creation.
-func stageComponentResources(ctx context.Context, store *memory.Store, resources normalizedComponentResources) ([]ocispec.Descriptor, error) {
+func stageComponentResources(ctx context.Context, store content.Storage, resources normalizedComponentResources) ([]ocispec.Descriptor, error) {
 	cleanupImageLayout, err := addComponentImageLayout(ctx, resources.imageArchives, resources.architecture, resources.resources)
 	if err != nil {
 		return nil, err
@@ -217,15 +232,10 @@ func stageComponentResources(ctx context.Context, store *memory.Store, resources
 	layers := make([]ocispec.Descriptor, 0, len(paths))
 	for _, rel := range paths {
 		resource := resources.resources[rel]
-		contents := resource.contents
-		if contents == nil {
-			var err error
-			contents, err = os.ReadFile(resource.sourcePath)
-			if err != nil {
-				return nil, fmt.Errorf("unable to read component resource %q: %w", rel, err)
-			}
+		descriptor, reader, err := componentResourceDescriptor(resource)
+		if err != nil {
+			return nil, fmt.Errorf("unable to read component resource %q: %w", rel, err)
 		}
-		descriptor := content.NewDescriptorFromBytes(componentLayerMediaType, contents)
 		descriptor.Annotations = map[string]string{
 			ocispec.AnnotationTitle:                     rel,
 			layout.ComponentResourceMountPathAnnotation: rel,
@@ -235,14 +245,50 @@ func stageComponentResources(ctx context.Context, store *memory.Store, resources
 			return nil, fmt.Errorf("unable to check component resource %q: %w", rel, err)
 		}
 		if !exists {
-			err = store.Push(ctx, descriptor, bytes.NewReader(contents))
+			err = store.Push(ctx, descriptor, reader)
 		}
+		closeErr := reader.Close()
 		if err != nil {
 			return nil, fmt.Errorf("unable to stage component resource %q: %w", rel, err)
+		}
+		if closeErr != nil {
+			return nil, fmt.Errorf("unable to close component resource %q: %w", rel, closeErr)
 		}
 		layers = append(layers, descriptor)
 	}
 	return layers, nil
+}
+
+// componentResourceDescriptor creates a descriptor and a fresh reader for a component resource.
+// File-backed resources are hashed and staged as streams so large component artifacts are never
+// retained in process memory.
+func componentResourceDescriptor(resource componentResource) (ocispec.Descriptor, io.ReadCloser, error) {
+	if resource.contents != nil {
+		return content.NewDescriptorFromBytes(componentLayerMediaType, resource.contents), io.NopCloser(bytes.NewReader(resource.contents)), nil
+	}
+
+	file, err := os.Open(resource.sourcePath)
+	if err != nil {
+		return ocispec.Descriptor{}, nil, err
+	}
+	digestValue, digestErr := digest.FromReader(file)
+	closeErr := file.Close()
+	if err := errors.Join(digestErr, closeErr); err != nil {
+		return ocispec.Descriptor{}, nil, err
+	}
+	info, err := os.Stat(resource.sourcePath)
+	if err != nil {
+		return ocispec.Descriptor{}, nil, err
+	}
+	reader, err := os.Open(resource.sourcePath)
+	if err != nil {
+		return ocispec.Descriptor{}, nil, err
+	}
+	return ocispec.Descriptor{
+		MediaType: componentLayerMediaType,
+		Digest:    digestValue,
+		Size:      info.Size(),
+	}, reader, nil
 }
 
 // addComponentImageLayout expands image archives into the OCI layout used by regular packages.
