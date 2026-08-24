@@ -183,8 +183,8 @@ type GitRef struct {
 	Tag string `json:"tag,omitempty" jsonschema:"oneof_required=tag"`
 	// The Git branch.
 	Branch string `json:"branch,omitempty" jsonschema:"oneof_required=branch"`
-	// The Git commit SHA.
-	Commit string `json:"commit,omitempty" jsonschema:"oneof_required=commit,pattern=^[0-9a-f]{40}$"`
+	// The Git commit SHA-1.
+	Commit string `json:"commit,omitempty" jsonschema:"oneof_required=commit,pattern=^[0-9A-Fa-f]{40}$"`
 }
 
 // GitSource represents a Helm chart stored in a Git repository.

@@ -715,8 +715,8 @@
           "type": "string"
         },
         "commit": {
-          "description": "The Git commit SHA.",
-          "pattern": "^[0-9a-f]{40}$",
+          "description": "The Git commit SHA-1.",
+          "pattern": "^[0-9A-Fa-f]{40}$",
           "type": "string"
         },
         "tag": {
