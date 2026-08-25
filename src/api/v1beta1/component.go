@@ -185,8 +185,8 @@ type GitRef struct {
 	Tag string `json:"tag,omitempty" jsonschema:"oneof_required=tag"`
 	// The Git branch.
 	Branch string `json:"branch,omitempty" jsonschema:"oneof_required=branch"`
-	// The Git commit SHA.
-	Commit string `json:"commit,omitempty" jsonschema:"oneof_required=commit"`
+	// The Git commit SHA-1.
+	Commit string `json:"commit,omitempty" jsonschema:"oneof_required=commit,pattern=^[0-9A-Fa-f]{40}$"`
 }
 
 // GitSource represents a Helm chart stored in a Git repository.
@@ -258,7 +258,7 @@ type ImageArchive struct {
 // Repository defines a git repository to include in the package.
 type Repository struct {
 	// The URL of the git repository.
-	URL string `json:"url"`
+	URL string `json:"url" jsonschema:"format=uri"`
 	// The Git reference to mirror. Optional; when unset, all branches and tags are mirrored.
 	Ref *GitRef `json:"ref,omitempty"`
 }
