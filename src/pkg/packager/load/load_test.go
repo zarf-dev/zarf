@@ -100,6 +100,72 @@ documenttaion:
 	}
 }
 
+func TestPackageDefinitionValidatesV1Beta1RepositoryGitReferences(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		url    string
+		commit string
+		valid  bool
+	}{
+		{
+			name:   "accepts a SHA-1 commit and HTTPS repository URL",
+			url:    "https://example.com/repository.git",
+			commit: "524980951ff16e19dc25232e9aea8fd693989ba6",
+			valid:  true,
+		},
+		{
+			name:   "rejects a short commit SHA",
+			url:    "https://example.com/repository.git",
+			commit: "5249809",
+		},
+		{
+			name:   "rejects a non-hex commit SHA",
+			url:    "https://example.com/repository.git",
+			commit: "gggggggggggggggggggggggggggggggggggggggg",
+		},
+		{
+			name:   "rejects an invalid repository URL",
+			url:    "not a URI",
+			commit: "524980951ff16e19dc25232e9aea8fd693989ba6",
+		},
+		{
+			name:   "accepts an SSH repository URL",
+			url:    "ssh://git@example.com/organization/repository.git",
+			commit: "524980951ff16e19dc25232e9aea8fd693989ba6",
+			valid:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: repository-schema-validation
+components:
+  - name: component
+    repositories:
+      - url: %q
+        ref:
+          commit: %q
+`, tt.url, tt.commit)
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(packageYAML), 0o600))
+
+			_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+			if tt.valid {
+				require.NoError(t, err)
+				return
+			}
+			var lintErr *lint.LintError
+			require.ErrorAs(t, err, &lintErr)
+			require.Len(t, lintErr.Findings, 1)
+		})
+	}
+}
+
 func TestPackageUsesFlavor(t *testing.T) {
 	t.Parallel()
 
