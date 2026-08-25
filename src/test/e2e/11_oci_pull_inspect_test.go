@@ -86,7 +86,16 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 		"inspect digest should return the same value for the tarball and the OCI source it was published from")
 }
 
-func (suite *PullInspectTestSuite) Test_1_Remote_Inspect() {
+func (suite *PullInspectTestSuite) Test_1_Init_Loads_OCI_Over_Plain_HTTP() {
+	suite.T().Log("E2E: Init package load oci:// over plain HTTP")
+
+	ref := fmt.Sprintf("oci://%s/simple-package:0.0.1", suite.Reference.String())
+	_, stdErr, err := e2e.Zarf(suite.T(), "init", ref, "--plain-http")
+	suite.Error(err, stdErr)
+	suite.Contains(stdErr, `zarf init can only deploy packages of kind "ZarfInitConfig"`)
+}
+
+func (suite *PullInspectTestSuite) Test_2_Remote_Inspect() {
 	suite.T().Log("E2E: Package Inspect oci://")
 
 	// Test inspect w/ bad ref.

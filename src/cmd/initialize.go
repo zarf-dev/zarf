@@ -225,6 +225,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		Filter:               filter,
 		Architecture:         config.GetArch(),
 		CachePath:            cachePath,
+		RemoteOptions:        defaultRemoteOptions(),
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
