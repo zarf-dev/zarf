@@ -611,15 +611,17 @@ func TestInitStateServicesGating(t *testing.T) {
 		require.NotEmpty(t, s.AgentInfo.TLS.Cert)
 	})
 
-	t.Run("new cluster without agent service leaves agent TLS empty", func(t *testing.T) {
+	t.Run("new cluster without agent service leaves agent configuration empty", func(t *testing.T) {
 		ctx := context.Background()
 		c := newFakeInitStateCluster(ctx, t, nil)
 		s, err := c.InitState(ctx, InitStateOptions{
-			InternalServices: state.NewServiceSet(state.RegistryKey),
+			InternalServices:    state.NewServiceSet(state.RegistryKey),
+			AgentMutationPolicy: state.MutationPolicyAll,
 		})
 		require.NoError(t, err)
 		require.Empty(t, s.AgentInfo.TLS.Cert)
 		require.False(t, s.AgentInfo.TLSUserProvided)
+		require.Empty(t, s.AgentInfo.MutationPolicy)
 	})
 
 	t.Run("new cluster with all services populates everything", func(t *testing.T) {

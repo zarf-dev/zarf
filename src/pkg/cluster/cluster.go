@@ -362,7 +362,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.InjectorInfo.Port = opts.InjectorPort
 	}
 
-	if opts.AgentMutationPolicy != "" {
+	if s.AgentInfo.IsConfigured() && opts.AgentMutationPolicy != "" {
 		agentInfo := s.AgentInfo
 		agentInfo.MutationPolicy = opts.AgentMutationPolicy
 		s.SetAgentInfo(agentInfo)

@@ -22,7 +22,8 @@ func TestAgentInfoIsConfigured(t *testing.T) {
 
 	require.False(t, (AgentInfo{}).IsConfigured())
 	require.False(t, (AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Key: []byte("key")}}).IsConfigured())
-	require.True(t, (AgentInfo{TLS: pki.GeneratedPKI{Cert: []byte("cert")}}).IsConfigured())
+	require.False(t, (AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Cert: []byte("cert")}}).IsConfigured())
+	require.True(t, (AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Cert: []byte("cert"), Key: []byte("key")}}).IsConfigured())
 }
 
 func TestStateReconcile(t *testing.T) {

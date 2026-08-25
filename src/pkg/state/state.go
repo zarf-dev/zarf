@@ -190,15 +190,14 @@ type AgentInfo struct {
 	MutationPolicy MutationPolicy `json:"mutationPolicy"`
 }
 
-// IsConfigured returns true when the agent TLS certificate is configured.
+// IsConfigured returns true when a complete agent TLS bundle is configured.
 func (ai AgentInfo) IsConfigured() bool {
-	return len(ai.TLS.Cert) > 0
+	return len(ai.TLS.CA) > 0 && len(ai.TLS.Cert) > 0 && len(ai.TLS.Key) > 0
 }
 
 // AgentIsConfigured returns true when Zarf has agent TLS configured.
 //
-// Deprecated: Use AgentInfo.IsConfigured instead. State is reconciled here to
-// support legacy state fields during the transition.
+// Deprecated: Use AgentInfo.IsConfigured instead.
 func (s *State) AgentIsConfigured() bool {
 	s.Reconcile()
 	return s.AgentInfo.IsConfigured()
