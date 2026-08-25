@@ -19,7 +19,7 @@ func TestComponentPublishRemoteImport(t *testing.T) {
 	componentPath := filepath.Join("src", "test", "packages", "15-component-publish-v1beta1", "component.yaml")
 
 	registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
-	stdOut, stdErr, err := e2e.Zarf(t, "component", "publish", componentPath, "oci://"+registryURL, "--plain-http", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "component", "publish", componentPath, "oci://"+registryURL, "--plain-http")
 	require.NoError(t, err, stdOut, stdErr)
 
 	packageDir := t.TempDir()
