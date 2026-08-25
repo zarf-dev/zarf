@@ -167,7 +167,11 @@ func TestRendererShouldAddAgentIgnoreLabels(t *testing.T) {
 			renderer: renderer{
 				connectedDeploy: true,
 				state: &state.State{
-					AgentInfo: state.AgentInfo{TLS: pki.GeneratedPKI{Cert: []byte("cert")}},
+					AgentInfo: state.AgentInfo{TLS: pki.GeneratedPKI{
+						CA:   []byte("ca"),
+						Cert: []byte("cert"),
+						Key:  []byte("key"),
+					}},
 				},
 			},
 			expected: true,
