@@ -295,7 +295,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 				return nil, err
 			}
 		}
-		if opts.InternalServices.Has(state.AgentKey) && !s.AgentIsConfigured() {
+		if opts.InternalServices.Has(state.AgentKey) && !s.AgentInfo.IsConfigured() {
 			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
 				return nil, err
 			}
@@ -362,8 +362,10 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.InjectorInfo.Port = opts.InjectorPort
 	}
 
-	if opts.AgentMutationPolicy != "" {
-		s.AgentMutationPolicy = opts.AgentMutationPolicy
+	if s.AgentInfo.IsConfigured() && opts.AgentMutationPolicy != "" {
+		agentInfo := s.AgentInfo
+		agentInfo.MutationPolicy = opts.AgentMutationPolicy
+		s.SetAgentInfo(agentInfo)
 	}
 
 	// Save the state back to K8s
@@ -375,17 +377,19 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 }
 
 func (c *Cluster) initAgent(ctx context.Context, s *state.State, agentTLS *pki.GeneratedPKI) error {
+	agentInfo := s.AgentInfo
 	if agentTLS != nil {
-		s.AgentTLS = *agentTLS
-		s.AgentTLSUserProvided = true
+		agentInfo.TLS = *agentTLS
+		agentInfo.TLSUserProvided = true
 	} else {
 		generatedAgentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
 		if err != nil {
 			return err
 		}
-		s.AgentTLS = generatedAgentTLS
-		s.AgentTLSUserProvided = false
+		agentInfo.TLS = generatedAgentTLS
+		agentInfo.TLSUserProvided = false
 	}
+	s.SetAgentInfo(agentInfo)
 	return c.ignoreExistingNamespacesForAgent(ctx)
 }
 
@@ -519,12 +523,12 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	}
 
 	s := &state.State{}
-	err = json.Unmarshal(secret.Data[state.ZarfStateDataKey], &s)
+	err = json.Unmarshal(secret.Data[state.ZarfStateDataKey], s)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
-	// Reconcile Port/NodePort for backwards compatibility with older state
-	s.RegistryInfo.ReconcilePort()
+	// Reconcile compatibility fields from older state versions.
+	s.Reconcile()
 	// If registry mode is not set then this is an old Zarf cluster and we can assume it's either external or nodeport
 	if s.RegistryInfo.RegistryMode == "" {
 		if s.RegistryInfo.IsInternal() {
@@ -538,8 +542,8 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 
 // SaveState takes a given state.State and persists it to k8s Cluster secrets.
 func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
-	// Sync NodePort from Port so older Zarf versions can read the state.
-	s.RegistryInfo.ReconcilePort()
+	// Sync compatibility fields so older Zarf versions can read the state.
+	s.Reconcile()
 	state.DebugPrint(ctx, s)
 
 	data, err := json.Marshal(&s)

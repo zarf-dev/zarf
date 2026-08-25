@@ -772,10 +772,10 @@ func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkgLayout *lay
 		// don't return the err here as state may not yet be setup
 		return nil
 	}
-	if !s.AgentIsConfigured() {
+	if !s.AgentInfo.IsConfigured() {
 		return nil
 	}
-	return pki.CheckForExpiredCert(ctx, s.AgentTLS)
+	return pki.CheckForExpiredCert(ctx, s.AgentInfo.TLS)
 }
 
 func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state.State, error) {
