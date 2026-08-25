@@ -49,6 +49,7 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	suite.NoError(err, stdOut, stdErr)
 
 	simplePackageRef := fmt.Sprintf("oci://%s/simple-package:0.0.1", ref)
+	unprefixedPackageRef := fmt.Sprintf("%s/simple-package:0.0.1", ref)
 	// fail to pull the package without providing the public key
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", "--verify=always")
 	suite.Error(err, stdOut, stdErr)
@@ -57,6 +58,12 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	suite.NoError(err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", "-o", outputPath)
+	suite.NoError(err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", unprefixedPackageRef, "--plain-http", "-o", outputPath)
+	suite.NoError(err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", unprefixedPackageRef, "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", simplePackageRef, "--plain-http", "--verify=always")
@@ -84,6 +91,10 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	ociDigest := strings.TrimSpace(stdOut)
 	suite.Equal(tarballDigest, ociDigest,
 		"inspect digest should return the same value for the tarball and the OCI source it was published from")
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "digest", unprefixedPackageRef, "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+	suite.Equal(ociDigest, strings.TrimSpace(stdOut))
 }
 
 func (suite *PullInspectTestSuite) Test_1_Init_Loads_OCI_Over_Plain_HTTP() {

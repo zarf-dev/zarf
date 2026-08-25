@@ -56,6 +56,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	if source == "" {
 		return nil, fmt.Errorf("must provide a package source")
 	}
+	source = normalizeOCISource(source)
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
@@ -206,11 +207,31 @@ func identifySource(src string) (string, error) {
 	return "", fmt.Errorf("unknown source %s. Did you forget the scheme (e.g. (oci://) or file extension (e.g. .tar.zst)?", src)
 }
 
+// normalizeOCISource adds the OCI scheme to unambiguous registry references.
+func normalizeOCISource(source string) string {
+	if helpers.IsOCIURL(source) || strings.Contains(source, "://") {
+		return source
+	}
+	if strings.HasSuffix(source, ".tar.zst") || strings.HasSuffix(source, ".tar") || strings.Contains(source, ".part000") {
+		return source
+	}
+
+	registry, repository, found := strings.Cut(source, "/")
+	if !found || repository == "" {
+		return source
+	}
+	if registry == "localhost" || strings.Contains(registry, ".") || strings.Contains(registry, ":") || strings.HasPrefix(registry, "[") {
+		return helpers.OCIURLPrefix + source
+	}
+	return source
+}
+
 // GetPackageFromSourceOrCluster retrieves a package definition from a source or cluster.
 func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, namespaceOverride string, opts LoadOptions) (_ api.PackageDefinition, err error) {
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
+	src = normalizeOCISource(src)
 	srcType, err := identifySource(src)
 	if err != nil {
 		return api.PackageDefinition{}, err
