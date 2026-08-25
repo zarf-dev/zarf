@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
@@ -207,7 +208,7 @@ func identifySource(src string) (string, error) {
 	return "", fmt.Errorf("unknown source %s. Did you forget the scheme (e.g. (oci://) or file extension (e.g. .tar.zst)?", src)
 }
 
-// normalizeOCISource adds the OCI scheme to unambiguous registry references.
+// normalizeOCISource adds the OCI scheme to valid registry references.
 func normalizeOCISource(source string) string {
 	if helpers.IsOCIURL(source) || strings.Contains(source, "://") {
 		return source
@@ -216,11 +217,7 @@ func normalizeOCISource(source string) string {
 		return source
 	}
 
-	registry, repository, found := strings.Cut(source, "/")
-	if !found || repository == "" {
-		return source
-	}
-	if registry == "localhost" || strings.Contains(registry, ".") || strings.Contains(registry, ":") || strings.HasPrefix(registry, "[") {
+	if _, err := registry.ParseReference(source); err == nil {
 		return helpers.OCIURLPrefix + source
 	}
 	return source

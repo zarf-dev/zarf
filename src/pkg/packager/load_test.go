@@ -258,9 +258,14 @@ func TestNormalizeOCISource(t *testing.T) {
 			expected: "packages/init.tar.zst",
 		},
 		{
-			name:     "ambiguous path",
+			name:     "short registry hostname",
 			source:   "packages/init:v0.84.0",
-			expected: "packages/init:v0.84.0",
+			expected: "oci://packages/init:v0.84.0",
+		},
+		{
+			name:     "invalid OCI reference",
+			source:   "packages/Init:v0.84.0",
+			expected: "packages/Init:v0.84.0",
 		},
 	}
 
