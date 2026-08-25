@@ -2304,7 +2304,8 @@
                               "type": "string"
                             },
                             "commit": {
-                              "description": "The Git commit SHA.",
+                              "description": "The Git commit SHA-1.",
+                              "pattern": "^[0-9A-Fa-f]{40}$",
                               "type": "string"
                             },
                             "tag": {
@@ -2808,7 +2809,8 @@
                           "type": "string"
                         },
                         "commit": {
-                          "description": "The Git commit SHA.",
+                          "description": "The Git commit SHA-1.",
+                          "pattern": "^[0-9A-Fa-f]{40}$",
                           "type": "string"
                         },
                         "tag": {
@@ -2820,6 +2822,7 @@
                     },
                     "url": {
                       "description": "The URL of the git repository.",
+                      "format": "uri",
                       "type": "string"
                     }
                   },

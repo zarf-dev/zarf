@@ -290,7 +290,7 @@ type ComponentActions struct {
 
 // ComponentActionSet is a set of actions for one lifecycle operation.
 type ComponentActionSet struct {
-	Defaults  ComponentActionDefaults
+	Defaults  *ComponentActionDefaults
 	Before    []ComponentAction
 	OnSuccess []ComponentAction
 	OnFailure []ComponentAction

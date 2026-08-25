@@ -4,12 +4,16 @@
 package v1beta1
 
 import (
+	"fmt"
 	"math/rand"
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -182,10 +186,10 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 	require.Equal(t, original, roundTripped)
 }
 
-// TestConvertGenericRoundTripFuzz reflectively populates every field of a Package with random,
-// non-zero values and asserts the generic round-trip reproduces it exactly. Walking the struct by
-// reflection means a newly added field is exercised automatically, so a field the conversion forgets
-// to carry is caught here rather than silently dropped.
+// TestConvertGenericRoundTripFuzz reflectively populates every field of a Package with random
+// values and asserts the generic round-trip reproduces it exactly. Walking the struct by reflection
+// means a newly added field is exercised automatically, so a field the conversion forgets to carry
+// is caught here rather than silently dropped.
 func TestConvertGenericRoundTripFuzz(t *testing.T) {
 	t.Parallel()
 
@@ -201,9 +205,8 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 		pkg.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
 		for ci := range pkg.Components {
 			for chi := range pkg.Components[ci].Charts {
-				keepOneChartSource(&pkg.Components[ci].Charts[chi])
+				keepRandomChartSource(&pkg.Components[ci].Charts[chi], rng)
 			}
-			normalizeActionPresenceForGenericRoundTrip(&pkg.Components[ci].Actions)
 		}
 
 		roundTripped := ConvertFromGeneric(ConvertToGeneric(pkg))
@@ -211,36 +214,149 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 	}
 }
 
-func normalizeActionPresenceForGenericRoundTrip(actions *v1beta1.ComponentActions) {
-	normalizeActionSetPresenceForGenericRoundTrip(&actions.OnCreate)
-	normalizeActionSetPresenceForGenericRoundTrip(&actions.OnDeploy)
-	normalizeActionSetPresenceForGenericRoundTrip(&actions.OnRemove)
-}
+// keepRandomChartSource clears all but one populated chart source. Chart sources are mutually
+// exclusive, so reflection can otherwise produce invalid charts with several sources.
+func keepRandomChartSource(c *v1beta1.Chart, rng *rand.Rand) {
+	populatedSources := make([]int, 0, 4)
+	if c.HelmRepository != nil {
+		populatedSources = append(populatedSources, 0)
+	}
+	if c.Git != nil {
+		populatedSources = append(populatedSources, 1)
+	}
+	if c.Local != nil {
+		populatedSources = append(populatedSources, 2)
+	}
+	if c.OCI != nil {
+		populatedSources = append(populatedSources, 3)
+	}
+	if len(populatedSources) == 0 {
+		return
+	}
 
-func normalizeActionSetPresenceForGenericRoundTrip(actionSet *v1beta1.ComponentActionSet) {
-	if actionSet.Defaults != nil &&
-		!actionSet.Defaults.Silent &&
-		actionSet.Defaults.MaxTotalSeconds == 0 &&
-		actionSet.Defaults.Retries == 0 &&
-		actionSet.Defaults.Dir == "" &&
-		len(actionSet.Defaults.Env) == 0 &&
-		actionSet.Defaults.Shell.Windows == "" &&
-		actionSet.Defaults.Shell.Linux == "" &&
-		actionSet.Defaults.Shell.Darwin == "" {
-		actionSet.Defaults = nil
+	switch populatedSources[rng.Intn(len(populatedSources))] {
+	case 0:
+		c.Git, c.Local, c.OCI = nil, nil, nil
+	case 1:
+		c.HelmRepository, c.Local, c.OCI = nil, nil, nil
+	case 2:
+		c.HelmRepository, c.Git, c.OCI = nil, nil, nil
+	case 3:
+		c.HelmRepository, c.Git, c.Local = nil, nil, nil
 	}
 }
 
-// keepOneChartSource clears all but the highest-precedence chart source. The sources are mutually
-// exclusive, so blind fuzzing that sets several produces an invalid chart the conversion cannot
-// round-trip; this keeps the one chartFromGeneric would select.
-func keepOneChartSource(c *v1beta1.Chart) {
-	switch {
-	case c.HelmRepository != nil:
-		c.Git, c.Local, c.OCI = nil, nil, nil
-	case c.Git != nil:
-		c.Local, c.OCI = nil, nil
-	case c.Local != nil:
-		c.OCI = nil
+// TestConvertV1beta1V1alpha1RoundTripFuzz verifies that fields shared by v1beta1 and v1alpha1
+// survive a conversion through v1alpha1. Reflection exercises newly added v1beta1 fields by
+// default; cross-version incompatibilities are deliberately excluded below.
+func TestConvertV1beta1V1alpha1RoundTripFuzz(t *testing.T) {
+	t.Parallel()
+
+	rng := rand.New(rand.NewSource(1))
+	for i := range 1000 {
+		var pkg v1beta1.Package
+		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
+		// Valid repository url with only one source so that it can roundtrip
+		populateValidV1beta1Repositories(&pkg, rng)
+		// Valid chart with one only source so it can round trip
+		populateValidV1beta1ChartSources(&pkg, rng, i)
+
+		v1alpha1Pkg := internalv1alpha1.ConvertFromGeneric(ConvertToGeneric(pkg))
+		roundTripped := ConvertFromGeneric(internalv1alpha1.ConvertToGeneric(v1alpha1Pkg))
+		require.Emptyf(t, cmp.Diff(pkg, roundTripped, v1beta1V1alpha1RoundTripExclusions()...), "cross-version round-trip diverged on iteration %d", i)
+	}
+}
+
+func populateValidV1beta1ChartSources(pkg *v1beta1.Package, rng *rand.Rand, iteration int) {
+	chartIndex := iteration
+	for ci := range pkg.Components {
+		for chi := range pkg.Components[ci].Charts {
+			chart := &pkg.Components[ci].Charts[chi]
+			chart.HelmRepository, chart.Git, chart.Local, chart.OCI = nil, nil, nil, nil
+
+			switch rng.Intn(4) {
+			case 0:
+				chart.HelmRepository = &v1beta1.HelmRepositorySource{
+					Name:    fmt.Sprintf("chart-%d", chartIndex),
+					URL:     fmt.Sprintf("https://charts%d.example.com", rng.Intn(1<<30)),
+					Version: fmt.Sprintf("%d", rng.Intn(1<<30)),
+				}
+			case 1:
+				chart.Git = &v1beta1.GitSource{
+					URL:  fmt.Sprintf("https://git%d.example.com/chart-%d.git", rng.Intn(1<<30), chartIndex),
+					Path: fmt.Sprintf("charts/chart-%d", chartIndex),
+					Ref:  validV1beta1GitRef(rng),
+				}
+			case 2:
+				chart.Local = &v1beta1.LocalSource{Path: fmt.Sprintf("charts/chart-%d", chartIndex)}
+			case 3:
+				chart.OCI = &v1beta1.OCISource{
+					URL: fmt.Sprintf("oci://registry%d.example.com/chart-%d", rng.Intn(1<<30), chartIndex),
+					Ref: validV1beta1OCIRef(rng),
+				}
+			}
+			chartIndex++
+		}
+	}
+}
+
+func validV1beta1GitRef(rng *rand.Rand) v1beta1.GitRef {
+	switch rng.Intn(3) {
+	case 0:
+		return v1beta1.GitRef{Tag: fmt.Sprintf("%d", rng.Intn(1<<30))}
+	case 1:
+		return v1beta1.GitRef{Branch: fmt.Sprintf("%d", rng.Intn(1<<30))}
+	default:
+		return v1beta1.GitRef{Commit: fmt.Sprintf("%040x", rng.Uint64())}
+	}
+}
+
+func validV1beta1OCIRef(rng *rand.Rand) v1beta1.OCIRef {
+	if rng.Intn(2) == 0 {
+		return v1beta1.OCIRef{Tag: fmt.Sprintf("%d", rng.Intn(1<<30))}
+	}
+	return v1beta1.OCIRef{Digest: fmt.Sprintf("sha256:%064x", rng.Uint64())}
+}
+
+func populateValidV1beta1Repositories(pkg *v1beta1.Package, rng *rand.Rand) {
+	for ci := range pkg.Components {
+		for ri := range pkg.Components[ci].Repositories {
+			pkg.Components[ci].Repositories[ri] = validV1beta1Repository(rng)
+		}
+	}
+}
+
+func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
+	ref := validV1beta1GitRef(rng)
+	return v1beta1.Repository{
+		URL: fmt.Sprintf("https://example%d.com/repository.git", rng.Intn(1<<30)),
+		Ref: &ref,
+	}
+}
+
+// v1beta1V1alpha1RoundTripExclusions lists the v1beta1 fields that v1alpha1 cannot represent.
+// The fuzz test replaces repositories and chart sources with schema-valid generated values, then
+// ignores only these fields when comparing the result.
+//
+//   - package.apiVersion and package.kind are canonicalized to the target API. originalAPIVersion
+//     is internal build tracking and is set by the version that loads or creates the package
+//   - component.import has separate local and remote lists in v1beta1, while v1alpha1 has one
+//     import object; component.service has no v1alpha1 equivalent.
+//   - image.source distinguishes registry and daemon sources in v1beta1, v1alpha1 images always fallback
+//   - manifest.kustomize is a pointer in v1beta1 but flattened into v1alpha1 manifest fields. An
+//     empty Kustomize object therefore becomes nil on the return trip.
+//   - chart.valuesFiles is one ordered v1beta1 list. v1alpha1 separates plain and templated files,
+//     so their relative order is lost when the two kinds are interleaved.
+//   - actionSet.defaults is a pointer in v1beta1 but a value in v1alpha1, so nil and an explicitly
+//     empty defaults object cannot be distinguished.
+func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
+	return cmp.Options{
+		cmpopts.IgnoreFields(v1beta1.Package{}, "APIVersion", "Kind"),
+		cmpopts.IgnoreUnexported(v1beta1.BuildData{}),
+		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
+		cmpopts.IgnoreFields(v1beta1.Image{}, "Source"),
+		cmpopts.IgnoreFields(v1beta1.Manifest{}, "Kustomize"),
+		cmpopts.IgnoreFields(v1beta1.Chart{}, "ValuesFiles"),
+		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
 	}
 }
