@@ -28,7 +28,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -43,8 +42,6 @@ const componentLayerMediaType = "application/vnd.zarf.component.layer.v1.blob"
 
 // PublishOptions declares parameters for publishing a v1beta1 component config.
 type PublishOptions struct {
-	// SignBlobOptions configures OCI artifact signing for the published component.
-	SignBlobOptions signing.SignBlobOptions
 	// OCIConcurrency configures the number of blobs pushed in parallel.
 	OCIConcurrency int
 	// Retries is the number of attempts to make when publishing fails.
@@ -145,16 +142,9 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	for _, layer := range layers {
 		totalSize += layer.Size
 	}
-	published, err := pushComponentArtifact(ctx, store, manifest.Digest.String(), remote, componentRef, component.Variant.Architecture, totalSize, opts)
+	_, err = pushComponentArtifact(ctx, store, manifest.Digest.String(), remote, componentRef, component.Variant.Architecture, totalSize, opts)
 	if err != nil {
 		return registry.Reference{}, err
-	}
-	if opts.SignBlobOptions.ShouldSign() {
-		artifactRef := fmt.Sprintf("%s/%s@%s", componentRef.Registry, componentRef.Repository, published.Digest)
-		logger.From(ctx).Info("signing published component", "reference", artifactRef)
-		if err := signing.CosignSignImageWithOptions(ctx, artifactRef, opts.SignBlobOptions, opts.PlainHTTP, opts.InsecureSkipTLSVerify); err != nil {
-			return registry.Reference{}, fmt.Errorf("component was published but signing artifact %q failed: %w", artifactRef, err)
-		}
 	}
 	logger.From(ctx).Info("published component", "destination", helpers.OCIURLPrefix+componentRef.String())
 	return componentRef, nil

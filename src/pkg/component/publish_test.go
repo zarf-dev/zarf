@@ -14,15 +14,12 @@ import (
 
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -186,23 +183,6 @@ func TestPublishComponentFlavor(t *testing.T) {
 
 	component, _ := getPublishedComponent(ctx, t, published)
 	require.Equal(t, "test", component.Variant.Flavor)
-}
-
-func TestPublishComponentSigning(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = filepath.Join("..", "packager", "testdata", "publish", "cosign.key")
-	signOpts.Password = "password"
-	signOpts.SkipConfirmation = true
-	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component-flavor.yaml"), createRegistry(ctx, t), PublishOptions{
-		SignBlobOptions: signOpts,
-		RemoteOptions:   defaultTestRemoteOptions(),
-	})
-	require.NoError(t, err)
-
-	require.NoError(t, verifyPublishedComponentSignature(ctx, published.String(), filepath.Join("..", "packager", "testdata", "publish", "cosign.pub")))
 }
 
 func TestPublishComponentRejectsNegativeRetries(t *testing.T) {
@@ -721,21 +701,6 @@ func getPublishedComponentForArchitecture(ctx context.Context, t *testing.T, pub
 	var component v1beta1.ComponentConfig
 	require.NoError(t, json.Unmarshal(componentBytes, &component))
 	return component, manifest
-}
-
-func verifyPublishedComponentSignature(ctx context.Context, componentRef, publicKeyPath string) error {
-	cmd := &verify.VerifyCommand{
-		RegistryOptions: options.RegistryOptions{AllowHTTPRegistry: true},
-		CommonVerifyOptions: options.CommonVerifyOptions{
-			IgnoreTlog:      true,
-			NewBundleFormat: true,
-		},
-		CheckClaims:     true,
-		KeyRef:          publicKeyPath,
-		IgnoreTlog:      true,
-		NewBundleFormat: true,
-	}
-	return cmd.Exec(ctx, []string{componentRef})
 }
 
 func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {

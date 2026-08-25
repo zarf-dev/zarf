@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/component"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -30,11 +29,8 @@ func newComponentCommand() *cobra.Command {
 }
 
 type componentPublishOptions struct {
-	ociConcurrency     int
-	retries            int
-	signingKeyPath     string
-	signingKeyPassword string
-	confirm            bool
+	ociConcurrency int
+	retries        int
 }
 
 func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
@@ -49,9 +45,6 @@ func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
-	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
-	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdComponentPublishFlagConfirm)
 	return cmd
 }
 
@@ -69,15 +62,10 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = o.signingKeyPath
-	signOpts.Password = o.signingKeyPassword
-	signOpts.SkipConfirmation = o.confirm
 	_, err := component.Publish(cmd.Context(), args[0], destination, component.PublishOptions{
-		SignBlobOptions: signOpts,
-		OCIConcurrency:  o.ociConcurrency,
-		Retries:         o.retries,
-		RemoteOptions:   defaultRemoteOptions(),
+		OCIConcurrency: o.ociConcurrency,
+		Retries:        o.retries,
+		RemoteOptions:  defaultRemoteOptions(),
 	})
 	return err
 }
