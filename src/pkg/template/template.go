@@ -106,6 +106,7 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 	if s == nil {
 		return o, nil
 	}
+	s.Reconcile()
 
 	registry := map[string]any{
 		"Address":      s.RegistryInfo.Address,
@@ -155,9 +156,9 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 
 	if slices.Contains(access.AccessKeys, v1alpha1.StateAccessAgentCerts) {
 		stateMap["Agent"] = map[string]any{
-			"CA":   base64.StdEncoding.EncodeToString(s.AgentTLS.CA),
-			"Cert": base64.StdEncoding.EncodeToString(s.AgentTLS.Cert),
-			"Key":  base64.StdEncoding.EncodeToString(s.AgentTLS.Key),
+			"CA":   base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.CA),
+			"Cert": base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.Cert),
+			"Key":  base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.Key),
 		}
 	}
 
