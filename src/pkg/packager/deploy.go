@@ -62,7 +62,7 @@ type DeployOptions struct {
 	ForceConflicts bool
 	// Timeout for Helm operations
 	Timeout time.Duration
-	// Retries to preform for operations like git and image pushes
+	// Retries is the maximum attempts for retryable deployment operations, including transient Helm admission-webhook failures.
 	Retries int
 	// Number of layers to push concurrently per image
 	OCIConcurrency int
@@ -650,6 +650,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			Cluster:           d.c,
 			ConnectedDeploy:   opts.Connected,
 			Timeout:           opts.Timeout,
+			Retries:           opts.Retries,
 			PkgName:           pkg.Metadata.Name,
 			NamespaceOverride: opts.NamespaceOverride,
 			IsInteractive:     opts.IsInteractive,
@@ -741,6 +742,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			Cluster:           d.c,
 			ConnectedDeploy:   opts.Connected,
 			Timeout:           opts.Timeout,
+			Retries:           opts.Retries,
 			PkgName:           pkg.Metadata.Name,
 			NamespaceOverride: opts.NamespaceOverride,
 			IsInteractive:     opts.IsInteractive,
