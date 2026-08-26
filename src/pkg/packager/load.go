@@ -57,7 +57,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	if source == "" {
 		return nil, fmt.Errorf("must provide a package source")
 	}
-	source = normalizeOCISource(source)
+	source = NormalizeOCISource(source)
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
@@ -208,8 +208,8 @@ func identifySource(src string) (string, error) {
 	return "", fmt.Errorf("unknown source %s. Did you forget the scheme (e.g. (oci://) or file extension (e.g. .tar.zst)?", src)
 }
 
-// normalizeOCISource adds the OCI scheme to valid registry references.
-func normalizeOCISource(source string) string {
+// NormalizeOCISource adds the OCI scheme to valid registry references.
+func NormalizeOCISource(source string) string {
 	if helpers.IsOCIURL(source) || strings.Contains(source, "://") {
 		return source
 	}
@@ -228,7 +228,7 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
-	src = normalizeOCISource(src)
+	src = NormalizeOCISource(src)
 	srcType, err := identifySource(src)
 	if err != nil {
 		return api.PackageDefinition{}, err

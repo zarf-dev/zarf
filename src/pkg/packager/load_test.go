@@ -263,6 +263,11 @@ func TestNormalizeOCISource(t *testing.T) {
 			expected: "oci://packages/init:v0.84.0",
 		},
 		{
+			name:     "local registry",
+			source:   "localhost:5000/packages/init:v0.84.0",
+			expected: "oci://localhost:5000/packages/init:v0.84.0",
+		},
+		{
 			name:     "invalid OCI reference",
 			source:   "packages/Init:v0.84.0",
 			expected: "packages/Init:v0.84.0",
@@ -272,7 +277,7 @@ func TestNormalizeOCISource(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tt.expected, normalizeOCISource(tt.source))
+			require.Equal(t, tt.expected, NormalizeOCISource(tt.source))
 		})
 	}
 }

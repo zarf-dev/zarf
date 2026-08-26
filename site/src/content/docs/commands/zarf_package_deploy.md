@@ -26,7 +26,7 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
 # Deploy a local package tarball
 $ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst --confirm
 
-# Deploy a package from an OCI registry (requires oci:// scheme)
+# Deploy a package from an OCI registry (oci:// prefix optional)
 $ zarf package deploy oci://ghcr.io/my-org/my-package:1.0.0 --confirm
 
 # Deploy a package from an HTTPS URL (--shasum required for integrity verification)

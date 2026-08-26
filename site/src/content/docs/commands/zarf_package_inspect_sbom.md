@@ -21,7 +21,7 @@ zarf package inspect sbom [ PACKAGE ] [flags]
 # Extract the SBOM from a local package tarball
 $ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --output ./sbom
 
-# Extract the SBOM from a package in an OCI registry (requires oci:// scheme)
+# Extract the SBOM from a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbom
 
 ```

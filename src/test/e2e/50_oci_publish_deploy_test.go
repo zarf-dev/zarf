@@ -80,6 +80,22 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	// Inspect the published package.
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", "oci://"+ref+"/helm-charts:0.0.1", "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
+
+	// Copy an OCI package without its optional oci:// source prefix. The source tag must be preserved.
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", ref+"/helm-charts:0.0.1", "oci://"+ref+"/implicit-source", "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", "oci://"+ref+"/implicit-source/helm-charts:0.0.1", "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+
+	// Sign an OCI package without its optional oci:// source prefix. With no output flag,
+	// the command must publish the signed package back to the source registry namespace.
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "create", chartPackagePath, "-o", "oci://"+ref+"/implicit-sign-source", "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+	implicitSignSource := ref + "/implicit-sign-source/package-flavors:1.0.0"
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "sign", implicitSignSource, privateKeyFlag, "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "verify", implicitSignSource, publicKeyFlag, "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
 }
 
 func (suite *PublishDeploySuiteTestSuite) Test_1_Deploy() {
