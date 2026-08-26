@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func TestIsRetryableAdmissionWebhookError(t *testing.T) {
+func TestIsRetryableHelmChartError(t *testing.T) {
 	webhookUnavailable := apierrors.NewInternalError(errors.New("failed calling webhook \"validate.example.test\": connection refused"))
 	invalid := apierrors.NewInvalid(schema.GroupKind{Group: "example.test", Kind: "Widget"}, "widget", nil)
 
@@ -63,7 +63,6 @@ func TestIsRetryableAdmissionWebhookError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.retryable, isRetryableAdmissionWebhookError(tt.err))
 			require.Equal(t, tt.retryable, isRetryableHelmChartError(tt.err))
 		})
 	}

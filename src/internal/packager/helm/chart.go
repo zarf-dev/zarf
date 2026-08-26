@@ -239,18 +239,6 @@ func retryHelmChartOperation(ctx context.Context, chartName string, attempts int
 }
 
 func isRetryableHelmChartError(err error) bool {
-	return hasOnlyRetryableHelmErrorLeaves(err, isRetryableHelmChartErrorLeaf)
-}
-
-func isRetryableHelmChartErrorLeaf(err error) bool {
-	return isRetryableAdmissionWebhookErrorLeaf(err)
-}
-
-func isRetryableAdmissionWebhookError(err error) bool {
-	return hasOnlyRetryableHelmErrorLeaves(err, isRetryableAdmissionWebhookErrorLeaf)
-}
-
-func hasOnlyRetryableHelmErrorLeaves(err error, retryable func(error) bool) bool {
 	if err == nil {
 		return false
 	}
@@ -262,19 +250,19 @@ func hasOnlyRetryableHelmErrorLeaves(err error, retryable func(error) bool) bool
 			return false
 		}
 		for _, wrappedErr := range errs {
-			if !hasOnlyRetryableHelmErrorLeaves(wrappedErr, retryable) {
+			if !isRetryableHelmChartError(wrappedErr) {
 				return false
 			}
 		}
 		return true
 	case interface{ Unwrap() error }:
-		return hasOnlyRetryableHelmErrorLeaves(wrapped.Unwrap(), retryable)
+		return isRetryableHelmChartError(wrapped.Unwrap())
 	default:
-		return retryable(err)
+		return isRetryableAdmissionWebhookLeaf(err)
 	}
 }
 
-func isRetryableAdmissionWebhookErrorLeaf(err error) bool {
+func isRetryableAdmissionWebhookLeaf(err error) bool {
 	apiStatus, ok := err.(apierrors.APIStatus)
 	if !ok {
 		return false
