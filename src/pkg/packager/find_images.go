@@ -96,30 +96,35 @@ type DefinitionImageResult struct {
 // FindDefinitionImages finds all images contained in a component and filters them according to images discovered in
 // imageArchives.
 // It returns []DefinitionImageResult
-func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImagesOptions) ([]DefinitionImageResult, error) {
+func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []DefinitionImageResult, err error) {
 	cachePath, err := utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return nil, err
 	}
-	loadOpts := load.DefinitionOptions{
-		Flavor:           opts.Flavor,
-		SetVariables:     opts.CreateSetVariables,
-		CachePath:        cachePath,
-		IsInteractive:    opts.IsInteractive,
-		SkipVersionCheck: true,
-		RemoteOptions:    opts.RemoteOptions,
+	loadOpts := load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			Flavor:           opts.Flavor,
+			SetVariables:     opts.CreateSetVariables,
+			CachePath:        cachePath,
+			IsInteractive:    opts.IsInteractive,
+			SkipVersionCheck: true,
+			RemoteOptions:    opts.RemoteOptions,
+		},
 	}
-	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	loaded, err := load.Package(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
-	pkg := defined.PackageDefinition.AsV1alpha1()
-	imageScans, err := findImages(ctx, pkg, packagePath, opts)
+	defer func() {
+		err = errors.Join(err, loaded.Close())
+	}()
+	pkg := loaded.Definition.AsV1alpha1()
+	imageScans, err := findImages(ctx, pkg, loaded.Resources, loaded.Values, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	return filterImagesFoundInArchives(ctx, pkg, packagePath, imageScans)
+	return filterImagesFoundInArchives(ctx, pkg, loaded.Resources, imageScans)
 }
 
 // FindImages iterates over the manifests and charts within each component to find any container images
@@ -130,31 +135,31 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		return nil, err
 	}
 
-	loadOpts := load.DefinitionOptions{
-		Flavor:           opts.Flavor,
-		SetVariables:     opts.CreateSetVariables,
-		CachePath:        opts.CachePath,
-		IsInteractive:    opts.IsInteractive,
-		SkipVersionCheck: true,
-		RemoteOptions:    opts.RemoteOptions,
+	loadOpts := load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			Flavor:           opts.Flavor,
+			SetVariables:     opts.CreateSetVariables,
+			CachePath:        opts.CachePath,
+			IsInteractive:    opts.IsInteractive,
+			SkipVersionCheck: true,
+			RemoteOptions:    opts.RemoteOptions,
+		},
 	}
-	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	loaded, err := load.Package(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
-	pkg := defined.PackageDefinition.AsV1alpha1()
+	defer func() {
+		err = errors.Join(err, loaded.Close())
+	}()
+	pkg := loaded.Definition.AsV1alpha1()
 
-	return findImages(ctx, pkg, packagePath, opts)
+	return findImages(ctx, pkg, loaded.Resources, loaded.Values, opts)
 }
 
 // filterImagesFoundInArchives merges scan results with each component's imageArchives.
 // An image present in both surfaces only on the archive side
-func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, imageScans []ComponentImageScan) (_ []DefinitionImageResult, err error) {
-	pkgPath, err := layout.ResolvePackagePath(packagePath)
-	if err != nil {
-		return nil, err
-	}
-
+func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, resources *load.ResourceSet, imageScans []ComponentImageScan) (_ []DefinitionImageResult, err error) {
 	componentNameScanMap := make(map[string]ComponentImageScan)
 	var allScanArtifacts []string
 	for _, scan := range imageScans {
@@ -174,7 +179,10 @@ func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, 
 		}
 
 		for _, archive := range component.ImageArchives {
-			archivePath := filepath.Join(pkgPath.BaseDir, archive.Path)
+			archivePath, err := resources.Path(archive.Path)
+			if err != nil {
+				return nil, err
+			}
 			imageManifests, err := images.GetManifestsFromArchive(ctx, archivePath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to retrieve image manifests from archive %s: %w", archive.Path, err)
@@ -215,7 +223,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, 
 	return definitionImageResults, nil
 }
 
-func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
+func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load.ResourceSet, packageValues value.Values, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
 	s, err := state.Default()
 	if err != nil {
@@ -229,14 +237,8 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 		return nil, err
 	}
 
-	pkgPath, err := layout.ResolvePackagePath(packagePath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
-	}
-	vals, err := loadPackageValues(ctx, pkg, pkgPath.BaseDir, opts.Values)
-	if err != nil {
-		return nil, err
-	}
+	vals := packageValues.DeepCopy()
+	vals.DeepMerge(opts.Values)
 
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -288,7 +290,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg, s, component.StateAccess, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, resourceSet, compBuildPath, variableConfig, vals, pkg, s, component.StateAccess, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -332,7 +334,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg, itpl.StateAccess{State: s, AccessKeys: component.StateAccess})
+			manifestResources, err := getTemplatedManifests(ctx, manifest, resourceSet, compBuildPath, variableConfig, vals, pkg, itpl.StateAccess{State: s, AccessKeys: component.StateAccess})
 			if err != nil {
 				return nil, err
 			}

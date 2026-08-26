@@ -955,13 +955,13 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 				Name:        "my-component",
 				Description: "test component",
 				Optional:    true,
+				Selector: v1beta1.ComponentSelector{
+					Architecture: "amd64",
+					Flavor:       "vanilla",
+				},
 				ComponentSpec: v1beta1.ComponentSpec{
 					Target: v1beta1.ComponentTarget{
 						OS: "linux",
-					},
-					Selector: v1beta1.ComponentSelector{
-						Architecture: "amd64",
-						Flavor:       "vanilla",
 					},
 					Import: v1beta1.ComponentImport{
 						Local:  []v1beta1.ComponentImportLocal{{Path: "./path"}},

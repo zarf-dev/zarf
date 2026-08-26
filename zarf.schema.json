@@ -2634,6 +2634,20 @@
               "import": {
                 "additionalProperties": false,
                 "description": "Import a component from another Zarf component config.",
+                "oneOf": [
+                  {
+                    "required": [
+                      "local"
+                    ],
+                    "title": "local"
+                  },
+                  {
+                    "required": [
+                      "remote"
+                    ],
+                    "title": "remote"
+                  }
+                ],
                 "patternProperties": {
                   "^x-": {}
                 },

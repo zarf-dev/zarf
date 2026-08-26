@@ -10,7 +10,9 @@ type Component struct {
 	// Message to include during package deploy describing the purpose of this component.
 	Description string `json:"description,omitempty"`
 	// Do not install this component unless explicitly requested. Defaults to false, meaning the component is required.
-	Optional      bool `json:"optional,omitempty"`
+	Optional bool `json:"optional,omitempty"`
+	// Filter when this component is included during package creation based on architecture or flavor.
+	Selector      ComponentSelector `json:"selector,omitempty"`
 	ComponentSpec `json:",inline"`
 }
 
@@ -48,9 +50,9 @@ type ComponentSelector struct {
 // ComponentImport is a reference to imported Zarf component configs.
 type ComponentImport struct {
 	// Local file path references to component config files to import.
-	Local []ComponentImportLocal `json:"local,omitempty"`
+	Local []ComponentImportLocal `json:"local,omitempty" jsonschema:"oneof_required=local"`
 	// OCI URL references to remote component config files to import; pulled at create time.
-	Remote []ComponentImportRemote `json:"remote,omitempty"`
+	Remote []ComponentImportRemote `json:"remote,omitempty" jsonschema:"oneof_required=remote"`
 }
 
 // ComponentImportLocal is a local file path reference to a component config.
