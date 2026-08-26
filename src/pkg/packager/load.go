@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
@@ -57,7 +56,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	if source == "" {
 		return nil, fmt.Errorf("must provide a package source")
 	}
-	source = NormalizeOCISource(source)
+	source = zoci.NormalizeOCISource(source)
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
@@ -208,27 +207,12 @@ func identifySource(src string) (string, error) {
 	return "", fmt.Errorf("unknown source %s. Did you forget the scheme (e.g. (oci://) or file extension (e.g. .tar.zst)?", src)
 }
 
-// NormalizeOCISource adds the OCI scheme to valid registry references.
-func NormalizeOCISource(source string) string {
-	if helpers.IsOCIURL(source) || strings.Contains(source, "://") {
-		return source
-	}
-	if strings.HasSuffix(source, ".tar.zst") || strings.HasSuffix(source, ".tar") || strings.Contains(source, ".part000") {
-		return source
-	}
-
-	if _, err := registry.ParseReference(source); err == nil {
-		return helpers.OCIURLPrefix + source
-	}
-	return source
-}
-
 // GetPackageFromSourceOrCluster retrieves a package definition from a source or cluster.
 func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, namespaceOverride string, opts LoadOptions) (_ api.PackageDefinition, err error) {
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
-	src = NormalizeOCISource(src)
+	src = zoci.NormalizeOCISource(src)
 	srcType, err := identifySource(src)
 	if err != nil {
 		return api.PackageDefinition{}, err

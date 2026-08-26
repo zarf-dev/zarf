@@ -56,7 +56,7 @@ type PullOptions struct {
 func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ string, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
-	source = NormalizeOCISource(source)
+	source = zoci.NormalizeOCISource(source)
 
 	// ensure architecture is set
 	arch := config.GetArch(opts.Architecture)

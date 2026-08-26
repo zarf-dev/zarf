@@ -1548,7 +1548,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	v := getViper()
 	isSkeletonPackage := helpers.IsDir(packageSource)
 	if !isSkeletonPackage {
-		packageSource = packager.NormalizeOCISource(packageSource)
+		packageSource = zoci.NormalizeOCISource(packageSource)
 	}
 
 	if !helpers.IsOCIURL(args[1]) {
@@ -1805,7 +1805,7 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	l := logger.From(ctx)
-	packageSource := packager.NormalizeOCISource(args[0])
+	packageSource := zoci.NormalizeOCISource(args[0])
 
 	if !o.keyless && o.signingKeyPath == "" {
 		return errors.New("--signing-key is required (or pass --keyless for Sigstore keyless flow)")

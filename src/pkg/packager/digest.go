@@ -39,7 +39,7 @@ type PackageDigestOptions struct {
 // package contents, producing the same digest that would result from publishing with
 // PushPackage.
 func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions) (string, error) {
-	source = NormalizeOCISource(source)
+	source = zoci.NormalizeOCISource(source)
 	srcType, err := identifySource(source)
 	if err != nil {
 		return "", err
