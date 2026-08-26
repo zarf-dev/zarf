@@ -203,8 +203,8 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 	return deployedPackage, nil
 }
 
-// GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.
-func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent, opts ...state.DeployedPackageOptions) ([]state.InstalledChart, error) {
+// GetInstalledChartsForComponent returns any installed Helm Charts for a named package component.
+func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName, componentName string, opts ...state.DeployedPackageOptions) ([]state.InstalledChart, error) {
 	deployedPackage, err := c.GetDeployedPackage(ctx, packageName, opts...)
 	if err != nil {
 		return nil, err
@@ -212,7 +212,7 @@ func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageNam
 
 	installedCharts := make([]state.InstalledChart, 0)
 	for _, deployedComponent := range deployedPackage.DeployedComponents {
-		if deployedComponent.Name == component.Name {
+		if deployedComponent.Name == componentName {
 			installedCharts = append(installedCharts, deployedComponent.InstalledCharts...)
 		}
 	}

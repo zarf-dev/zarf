@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -22,7 +21,7 @@ func Test_actionCmdMutation(t *testing.T) {
 	tests := []struct {
 		name      string
 		cmd       string
-		shellPref v1alpha1.Shell
+		shellPref Shell
 		goos      string
 		want      string
 		wantErr   error
@@ -30,7 +29,7 @@ func Test_actionCmdMutation(t *testing.T) {
 		{
 			name:      "linux without zarf",
 			cmd:       "echo \"this is zarf\"",
-			shellPref: v1alpha1.Shell{},
+			shellPref: Shell{},
 			goos:      "linux",
 			want:      "echo \"this is zarf\"",
 			wantErr:   nil,
@@ -38,7 +37,7 @@ func Test_actionCmdMutation(t *testing.T) {
 		{
 			name:      "linux including zarf",
 			cmd:       "./zarf deploy",
-			shellPref: v1alpha1.Shell{},
+			shellPref: Shell{},
 			goos:      "linux",
 			want:      fmt.Sprintf("%s deploy", zarfCmd),
 			wantErr:   nil,
@@ -46,7 +45,7 @@ func Test_actionCmdMutation(t *testing.T) {
 		{
 			name:      "windows including zarf",
 			cmd:       "./zarf deploy",
-			shellPref: v1alpha1.Shell{},
+			shellPref: Shell{},
 			goos:      "windows",
 			want:      fmt.Sprintf("%s deploy", zarfCmd),
 			wantErr:   nil,
@@ -54,7 +53,7 @@ func Test_actionCmdMutation(t *testing.T) {
 		{
 			name:      "windows env",
 			cmd:       "echo ${ZARF_VAR_ENV1}",
-			shellPref: v1alpha1.Shell{},
+			shellPref: Shell{},
 			goos:      "windows",
 			want:      "echo $Env:ZARF_VAR_ENV1",
 			wantErr:   nil,
@@ -62,7 +61,7 @@ func Test_actionCmdMutation(t *testing.T) {
 		{
 			name: "windows env pwsh",
 			cmd:  "echo ${ZARF_VAR_ENV1}",
-			shellPref: v1alpha1.Shell{
+			shellPref: Shell{
 				Windows: "pwsh",
 			},
 			goos:    "windows",
@@ -72,7 +71,7 @@ func Test_actionCmdMutation(t *testing.T) {
 		{
 			name: "windows env powershell",
 			cmd:  "echo ${ZARF_VAR_ENV1}",
-			shellPref: v1alpha1.Shell{
+			shellPref: Shell{
 				Windows: "powershell",
 			},
 			goos:    "windows",
@@ -82,7 +81,7 @@ func Test_actionCmdMutation(t *testing.T) {
 		{
 			name:      "windows multiple env",
 			cmd:       "echo ${ZARF_VAR_ENV1} ${ZARF_VAR_ENV2}",
-			shellPref: v1alpha1.Shell{},
+			shellPref: Shell{},
 			goos:      "windows",
 			want:      "echo $Env:ZARF_VAR_ENV1 $Env:ZARF_VAR_ENV2",
 			wantErr:   nil,
@@ -90,7 +89,7 @@ func Test_actionCmdMutation(t *testing.T) {
 		{
 			name:      "windows constants",
 			cmd:       "echo ${ZARF_CONST_ENV1}",
-			shellPref: v1alpha1.Shell{},
+			shellPref: Shell{},
 			goos:      "windows",
 			want:      "echo $Env:ZARF_CONST_ENV1",
 			wantErr:   nil,
@@ -109,51 +108,51 @@ func Test_parseAndSetValue(t *testing.T) {
 	tests := []struct {
 		name     string
 		output   string
-		setValue v1alpha1.SetValue
+		setValue ValueOutput
 		expect   value.Values
 	}{
 		{
 			name:   "string type sets value directly",
 			output: "my-string-value",
-			setValue: v1alpha1.SetValue{
+			setValue: ValueOutput{
 				Key:  ".key1",
-				Type: v1alpha1.SetValueString,
+				Type: ValueOutputString,
 			},
 			expect: value.Values{"key1": "my-string-value"},
 		},
 		{
 			name:   "json type parses object",
 			output: `{"myKey":"myValue"}`,
-			setValue: v1alpha1.SetValue{
+			setValue: ValueOutput{
 				Key:  ".json",
-				Type: v1alpha1.SetValueJSON,
+				Type: ValueOutputJSON,
 			},
 			expect: value.Values{"json": map[string]any{"myKey": "myValue"}},
 		},
 		{
 			name:   "json type parses nested object",
 			output: `{"outer":{"inner":"value"}}`,
-			setValue: v1alpha1.SetValue{
+			setValue: ValueOutput{
 				Key:  ".nested",
-				Type: v1alpha1.SetValueJSON,
+				Type: ValueOutputJSON,
 			},
 			expect: value.Values{"nested": map[string]any{"outer": map[string]any{"inner": "value"}}},
 		},
 		{
 			name:   "json type parses array",
 			output: `[1,2,3]`,
-			setValue: v1alpha1.SetValue{
+			setValue: ValueOutput{
 				Key:  ".array",
-				Type: v1alpha1.SetValueJSON,
+				Type: ValueOutputJSON,
 			},
 			expect: value.Values{"array": []any{float64(1), float64(2), float64(3)}},
 		},
 		{
 			name:   "yaml type parses simple object",
 			output: "myKey: myValue",
-			setValue: v1alpha1.SetValue{
+			setValue: ValueOutput{
 				Key:  ".yaml",
-				Type: v1alpha1.SetValueYAML,
+				Type: ValueOutputYAML,
 			},
 			expect: value.Values{"yaml": map[string]any{"myKey": "myValue"}},
 		},
@@ -161,9 +160,9 @@ func Test_parseAndSetValue(t *testing.T) {
 			name: "yaml type parses nested object",
 			output: `outer:
   inner: value`,
-			setValue: v1alpha1.SetValue{
+			setValue: ValueOutput{
 				Key:  ".nested",
-				Type: v1alpha1.SetValueYAML,
+				Type: ValueOutputYAML,
 			},
 			expect: value.Values{"nested": map[string]any{"outer": map[string]any{"inner": "value"}}},
 		},
@@ -172,18 +171,18 @@ func Test_parseAndSetValue(t *testing.T) {
 			output: `- item1
 - item2
 - item3`,
-			setValue: v1alpha1.SetValue{
+			setValue: ValueOutput{
 				Key:  ".array",
-				Type: v1alpha1.SetValueYAML,
+				Type: ValueOutputYAML,
 			},
 			expect: value.Values{"array": []any{"item1", "item2", "item3"}},
 		},
 		{
 			name:   "sets value at nested path",
 			output: "nested-value",
-			setValue: v1alpha1.SetValue{
+			setValue: ValueOutput{
 				Key:  ".app.config.value",
-				Type: v1alpha1.SetValueString,
+				Type: ValueOutputString,
 			},
 			expect: value.Values{
 				"app": map[string]any{
@@ -280,40 +279,40 @@ func Test_parseAndSetValue_Errors(t *testing.T) {
 	tests := []struct {
 		name      string
 		output    string
-		setValue  v1alpha1.SetValue
+		setValue  ValueOutput
 		errSubstr string
 	}{
 		{
 			name:   "json parse error",
 			output: `{invalid json}`,
-			setValue: v1alpha1.SetValue{
+			setValue: ValueOutput{
 				Key:  ".json",
-				Type: v1alpha1.SetValueJSON,
+				Type: ValueOutputJSON,
 			},
 			errSubstr: "failed to parse JSON",
 		},
 		{
 			name:   "yaml parse error",
 			output: "invalid: yaml: with: bad: indentation",
-			setValue: v1alpha1.SetValue{
+			setValue: ValueOutput{
 				Key:  ".yaml",
-				Type: v1alpha1.SetValueYAML,
+				Type: ValueOutputYAML,
 			},
 			errSubstr: "failed to parse YAML",
 		},
 		{
 			name:   "invalid path format",
 			output: "value",
-			setValue: v1alpha1.SetValue{
+			setValue: ValueOutput{
 				Key:  "no-leading-dot",
-				Type: v1alpha1.SetValueString,
+				Type: ValueOutputString,
 			},
 			errSubstr: "invalid path format",
 		},
 		{
 			name:   "unknown setValue type",
 			output: "value",
-			setValue: v1alpha1.SetValue{
+			setValue: ValueOutput{
 				Key:  ".key",
 				Type: "unknown",
 			},
