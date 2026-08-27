@@ -244,8 +244,7 @@ func isRetryableHelmChartError(err error) bool {
 		return false
 	}
 
-	switch wrapped := err.(type) {
-	case interface{ Unwrap() []error }:
+	if wrapped, ok := err.(interface{ Unwrap() []error }); ok {
 		errs := wrapped.Unwrap()
 		if len(errs) == 0 {
 			return false
@@ -256,11 +255,11 @@ func isRetryableHelmChartError(err error) bool {
 			}
 		}
 		return true
-	case interface{ Unwrap() error }:
-		return isRetryableHelmChartError(wrapped.Unwrap())
-	default:
-		return isRetryableAdmissionWebhookLeaf(err)
 	}
+	if wrapped, ok := err.(interface{ Unwrap() error }); ok {
+		return isRetryableHelmChartError(wrapped.Unwrap())
+	}
+	return isRetryableAdmissionWebhookLeaf(err)
 }
 
 func isRetryableAdmissionWebhookLeaf(err error) bool {

@@ -87,7 +87,7 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --registry-push-username string           Username to access to the registry Zarf is configured to use
       --registry-secret string                  Internal registry secret value. Only used when --registry-url is not set.
       --registry-url string                     External registry url address to use for this Zarf cluster
-      --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --retries int                             Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures (default 3)
       --set-values stringToString               Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
       --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
       --skip-values-schema-validation           Skip validation of package values against the values schema.

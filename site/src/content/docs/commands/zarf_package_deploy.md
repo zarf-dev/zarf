@@ -53,7 +53,7 @@ $ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst.part000 --confirm
   -k, --key string                              Path to public key file for validating signed packages
   -n, --namespace string                        [Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined.
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --retries int                             Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures (default 3)
       --set-values stringToString               Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
       --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
       --shasum string                           Shasum of the package to deploy. Required if deploying a remote https package.
