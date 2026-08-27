@@ -46,8 +46,6 @@ $ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry
   -k, --key string                              Path to public key file for validating signed packages
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 1)
-      --signing-key string                      Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider
-      --signing-key-pass string                 Password to the private key used for publishing packages
   -t, --tag string                              The tag to be used in the OCI reference for the package in the registry
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.

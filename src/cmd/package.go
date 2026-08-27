@@ -160,11 +160,15 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagSigningKeyPassword)
+	_ = cmd.Flags().MarkDeprecated("signing-key", "Use 'zarf package sign' after package creation. This flag will be removed in Zarf v1.0.0.")
+	_ = cmd.Flags().MarkDeprecated("signing-key-pass", "Use 'zarf package sign' after package creation. This flag will be removed in Zarf v1.0.0.")
 
 	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgCreateWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
 
 	cmd.Flags().StringVarP(&o.signingKeyPath, "key", "k", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagDeprecatedKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagDeprecatedKeyPassword)
+	_ = cmd.Flags().MarkDeprecated("key", "Use 'zarf package sign' after package creation. This flag will be removed in Zarf v1.0.0.")
+	_ = cmd.Flags().MarkDeprecated("key-pass", "Use 'zarf package sign' after package creation. This flag will be removed in Zarf v1.0.0.")
 
 	errOD := cmd.Flags().MarkHidden("output-directory")
 	if errOD != nil {
@@ -1530,6 +1534,8 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
+	_ = cmd.Flags().MarkDeprecated("signing-key", "Use 'zarf package sign' before package publishing. This flag will be removed in Zarf v1.0.0.")
+	_ = cmd.Flags().MarkDeprecated("signing-key-pass", "Use 'zarf package sign' before package publishing. This flag will be removed in Zarf v1.0.0.")
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVarP(&o.tag, "tag", "t", "", lang.CmdPackagePublishFlagTag)

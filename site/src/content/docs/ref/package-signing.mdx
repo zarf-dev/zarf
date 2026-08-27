@@ -134,23 +134,17 @@ zarf package sign zarf-package-example-amd64.tar.zst \
 
 ## Signing a Package
 
-### During Package Creation
+### Create, Then Sign
 
-Add `--signing-key` when you create a package to sign it during the build:
-
-```bash
-zarf package create . --signing-key cosign.key --signing-key-pass <password>
-```
-
-### After Package Creation
-
-To sign a package after creation, provide the signing key:
+The signing flags on `zarf package create` and `zarf package publish` are deprecated, but remain supported until their removal in Zarf v1.0.0. Create the package locally, then sign the resulting archive before publishing it. Zarf adds the signature to the package archive and marks the `zarf.yaml` as signed.
 
 ```bash
-zarf package sign zarf-package-example-amd64.tar.zst --signing-key cosign.key
+zarf package create . --output ./packages
+zarf package sign ./packages/zarf-package-example-amd64.tar.zst \
+  --signing-key cosign.key \
+  --signing-key-pass <password>
 ```
 
-Zarf adds the signature to the package archive and marks the `zarf.yaml` as signed.
 
 ### Re-signing a Package
 

@@ -34,8 +34,6 @@ zarf package create [ DIRECTORY ] [flags]
   -s, --sbom                        View SBOM contents after creating the package
       --sbom-out string             Specify an output directory for the SBOMs from the created Zarf package
       --set stringToString          Specify package templates to set on the command line (KEY=value) (default [])
-      --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
-      --signing-key-pass string     Password to the private key used for signing packages
       --skip-sbom                   Skip generating SBOM for this package
       --with-build-machine-info     Include build machine information (hostname and username) in the package metadata
 ```
