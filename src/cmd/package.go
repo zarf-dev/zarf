@@ -1543,6 +1543,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 
 func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	packageSource := args[0]
+	packageDestination := zoci.NormalizeOCISource(args[1])
 	ctx := cmd.Context()
 	l := logger.From(ctx)
 	v := getViper()
@@ -1551,12 +1552,12 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		packageSource = zoci.NormalizeOCISource(packageSource)
 	}
 
-	if !helpers.IsOCIURL(args[1]) {
-		return errors.New("registry must be prefixed with 'oci://'")
+	if !helpers.IsOCIURL(packageDestination) {
+		return errors.New("registry must be a valid OCI reference")
 	}
 
 	// Destination Repository
-	parts := strings.Split(strings.TrimPrefix(args[1], helpers.OCIURLPrefix), "/")
+	parts := strings.Split(strings.TrimPrefix(packageDestination, helpers.OCIURLPrefix), "/")
 	dstRef := registry.Reference{
 		Registry:   parts[0],
 		Repository: strings.Join(parts[1:], "/"),
