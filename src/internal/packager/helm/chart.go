@@ -238,6 +238,7 @@ func retryHelmChartOperation(ctx context.Context, chartName string, attempts int
 	)
 }
 
+// isRetryableHelmChartError allows a retry when a just-installed, fail-closed admission webhook is not yet reachable.
 func isRetryableHelmChartError(err error) bool {
 	if err == nil {
 		return false
