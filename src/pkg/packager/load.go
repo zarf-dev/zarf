@@ -56,6 +56,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	if source == "" {
 		return nil, fmt.Errorf("must provide a package source")
 	}
+	source = zoci.NormalizeOCISource(source)
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
@@ -211,6 +212,7 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
+	src = zoci.NormalizeOCISource(src)
 	srcType, err := identifySource(src)
 	if err != nil {
 		return api.PackageDefinition{}, err

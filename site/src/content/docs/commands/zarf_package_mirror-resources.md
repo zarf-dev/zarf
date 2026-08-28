@@ -26,7 +26,7 @@ zarf package mirror-resources [ PACKAGE_SOURCE ] [flags]
 # Mirror a local package to internal Zarf resources (uses Zarf state if available)
 $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Mirror a package from an OCI registry (requires oci:// scheme)
+# Mirror a package from an OCI registry (oci:// prefix optional)
 $ zarf package mirror-resources oci://ghcr.io/my-org/my-package:1.0.0
 
 # Mirror a local package to external resources
