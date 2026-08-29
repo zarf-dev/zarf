@@ -21,7 +21,7 @@ zarf package inspect sbom [ PACKAGE ] [flags]
 # Extract the SBOM from a local package tarball
 $ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --output ./sbom
 
-# Extract the SBOM from a package in an OCI registry (requires oci:// scheme)
+# Extract the SBOM from a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbom
 
 ```
@@ -53,7 +53,7 @@ $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbo
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
 ```
 

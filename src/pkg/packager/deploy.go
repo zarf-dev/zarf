@@ -22,7 +22,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
-	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -32,6 +31,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -165,28 +165,9 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		return DeployResult{}, err
 	}
 
-	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
-		return DeployResult{}, fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
-			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
-	}
-
-	// Read the package values from values.yaml if it exists
-	valuesPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML)
-	vals, err := value.ParseLocalFile(ctx, valuesPath)
+	vals, err := loadDeploymentValues(ctx, pkgLayout, opts.Values, opts.SkipValuesSchemaValidation)
 	if err != nil {
 		return DeployResult{}, err
-	}
-
-	// Package defaults are overridden by deploy values.
-	vals.DeepMerge(opts.Values)
-
-	// Validate merged values against schema if provided
-	if pkgLayout.HasValuesSchema() && !opts.SkipValuesSchemaValidation {
-		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema)
-		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{}); err != nil {
-			return DeployResult{}, fmt.Errorf("values validation failed: %w", err)
-		}
-		l.Debug("values validated against schema", "schemaPath", schemaPath)
 	}
 
 	d := deployer{
@@ -217,6 +198,32 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		Values:             d.vals,
 	}
 	return deployResult, nil
+}
+
+// loadDeploymentValues loads a package's assembled values, applies deploy-time overrides, and validates the result.
+func loadDeploymentValues(ctx context.Context, pkgLayout *layout.PackageLayout, overrides value.Values, skipSchemaValidation bool) (value.Values, error) {
+	pkg := pkgLayout.AsV1alpha1()
+	if !feature.IsEnabled(feature.Values) && (len(pkg.Values.Files) > 0 || len(overrides) > 0) {
+		return nil, fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
+			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+
+	valuesPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML)
+	vals, err := value.ParseLocalFile(ctx, valuesPath)
+	if err != nil {
+		return nil, err
+	}
+	vals.DeepMerge(overrides)
+
+	if pkgLayout.HasValuesSchema() && !skipSchemaValidation {
+		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema)
+		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{}); err != nil {
+			return nil, fmt.Errorf("values validation failed: %w", err)
+		}
+		logger.From(ctx).Debug("values validated against schema", "schemaPath", schemaPath)
+	}
+
+	return vals, nil
 }
 
 func (d *deployer) isConnectedToCluster() bool {
@@ -765,10 +772,10 @@ func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkgLayout *lay
 		// don't return the err here as state may not yet be setup
 		return nil
 	}
-	if !s.AgentIsConfigured() {
+	if !s.AgentInfo.IsConfigured() {
 		return nil
 	}
-	return pki.CheckForExpiredCert(ctx, s.AgentTLS)
+	return pki.CheckForExpiredCert(ctx, s.AgentInfo.TLS)
 }
 
 func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state.State, error) {

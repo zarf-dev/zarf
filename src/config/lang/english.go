@@ -45,7 +45,7 @@ const (
 	RootCmdFlagArch                  = "Architecture for OCI images and Zarf packages"
 	RootCmdFlagCachePath             = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir               = "Specify the temporary directory to use for intermediate files"
-	RootCmdFlagPlainHTTP             = "Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagPlainHTTP             = "Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture."
 	RootCmdFlagInsecureSkipTLSVerify = "Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
 	RootCmdDeprecatedDeploy = "Deprecated: Please use \"zarf package deploy %s\" to deploy this package.  This warning will be removed in Zarf v1.0.0."
@@ -240,7 +240,7 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
 # Deploy a local package tarball
 $ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst --confirm
 
-# Deploy a package from an OCI registry (requires oci:// scheme)
+# Deploy a package from an OCI registry (oci:// prefix optional)
 $ zarf package deploy oci://ghcr.io/my-org/my-package:1.0.0 --confirm
 
 # Deploy a package from an HTTPS URL (--shasum required for integrity verification)
@@ -257,7 +257,7 @@ $ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst.part000 --confirm
 # Mirror a local package to internal Zarf resources (uses Zarf state if available)
 $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Mirror a package from an OCI registry (requires oci:// scheme)
+# Mirror a package from an OCI registry (oci:// prefix optional)
 $ zarf package mirror-resources oci://ghcr.io/my-org/my-package:1.0.0
 
 # Mirror a local package to external resources
@@ -329,7 +329,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 # Get the digest of a local package tarball
 $ zarf package inspect digest zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Get the digest of a package in an OCI registry (requires oci:// scheme; resolved directly from the registry)
+# Get the digest of a package in an OCI registry (oci:// prefix optional; resolved directly from the registry)
 $ zarf package inspect digest oci://ghcr.io/my-org/my-package:1.0.0
 
 # Get the stored digest of a package already deployed to a cluster
@@ -340,7 +340,7 @@ $ zarf package inspect digest my-package
 # Inspect the zarf.yaml of a local package tarball
 $ zarf package inspect definition zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Inspect the zarf.yaml of a package in an OCI registry (requires oci:// scheme)
+# Inspect the zarf.yaml of a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect definition oci://ghcr.io/my-org/my-package:1.0.0
 
 # Inspect the zarf.yaml of a package deployed to a cluster
@@ -351,7 +351,7 @@ $ zarf package inspect definition my-package
 # List images in a local package tarball
 $ zarf package inspect images zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# List images in a package from an OCI registry (requires oci:// scheme)
+# List images in a package from an OCI registry (oci:// prefix optional)
 $ zarf package inspect images oci://ghcr.io/my-org/my-package:1.0.0
 
 # List images in a package already deployed to a cluster
@@ -362,7 +362,7 @@ $ zarf package inspect images my-package
 # Extract the SBOM from a local package tarball
 $ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --output ./sbom
 
-# Extract the SBOM from a package in an OCI registry (requires oci:// scheme)
+# Extract the SBOM from a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbom
 `
 
@@ -370,7 +370,7 @@ $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbo
 # Show templated manifests for a local package tarball
 $ zarf package inspect manifests zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Show manifests for a package in an OCI registry (requires oci:// scheme)
+# Show manifests for a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect manifests oci://ghcr.io/my-org/my-package:1.0.0
 `
 
@@ -378,7 +378,7 @@ $ zarf package inspect manifests oci://ghcr.io/my-org/my-package:1.0.0
 # Show values files for a local package tarball
 $ zarf package inspect values-files zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Show values files for a package in an OCI registry (requires oci:// scheme)
+# Show values files for a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect values-files oci://ghcr.io/my-org/my-package:1.0.0
 `
 
@@ -386,7 +386,7 @@ $ zarf package inspect values-files oci://ghcr.io/my-org/my-package:1.0.0
 # Extract documentation from a local package tarball
 $ zarf package inspect documentation zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Extract documentation from a package in an OCI registry (requires oci:// scheme)
+# Extract documentation from a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect documentation oci://ghcr.io/my-org/my-package:1.0.0
 `
 
@@ -403,7 +403,7 @@ $ zarf package remove my-package --confirm
 # Remove using a local package tarball (package name is read from the tarball)
 $ zarf package remove zarf-package-my-app-amd64-1.0.0.tar.zst --confirm
 
-# Remove using a package from an OCI registry (requires oci:// scheme)
+# Remove using a package from an OCI registry (oci:// prefix optional)
 $ zarf package remove oci://ghcr.io/my-org/my-package:1.0.0 --confirm
 `
 	CmdPackageRemoveFlagConfirm     = "Confirms the removal action"
@@ -419,7 +419,7 @@ $ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry
 # Publish a skeleton package (pre-'create' directory) to a remote registry
 $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 
-# Copy a package from one OCI registry to another (requires oci:// scheme on source)
+# Copy a package from one OCI registry to another (oci:// prefix optional on source)
 $ zarf package publish oci://source-registry.com/my-namespace/my-package:1.0.0 oci://my-registry.com/my-namespace
 
 # Publish a package with a specific tag different from the package metadata.version
@@ -431,6 +431,12 @@ $ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry
 	CmdPackagePublishFlagFlavor             = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
 	CmdPackagePublishFlagTag                = "The tag to be used in the OCI reference for the package in the registry"
 
+	CmdComponentShort          = "Commands for reusable Zarf components"
+	CmdComponentPublishShort   = "Publishes a v1beta1 Zarf component to a remote registry"
+	CmdComponentPublishExample = `
+# Publish a v1beta1 component config to a remote registry
+$ zarf component publish monitoring.yaml oci://ghcr.io/my-org/components
+`
 	CmdPackageSignShort   = "Signs an existing Zarf package"
 	CmdPackageSignLong    = "Signs an existing Zarf package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the zarf.yaml file and does not modify the package checksums."
 	CmdPackageSignExample = `
@@ -472,7 +478,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 # Verify a signed local package tarball
 $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst --key ./public-key.pub
 
-# Verify a package in an OCI registry (requires oci:// scheme)
+# Verify a package in an OCI registry (oci:// prefix optional)
 $ zarf package verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./public-key.pub
 
 # Verify an unsigned package (checksums only)

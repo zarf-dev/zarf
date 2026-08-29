@@ -33,7 +33,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
-	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -41,6 +40,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
+	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -66,14 +66,22 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
-// AssemblePackage takes a resolved package and returns a package layout with all the resources collected.
-func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, packagePath string, opts AssembleOptions) (*layout.PackageLayout, error) {
+// AssemblePackage consumes a resource-ready package and returns a package layout with all the resources collected.
+// It closes the loaded package before returning.
+func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage, opts AssembleOptions) (_ *layout.PackageLayout, err error) {
+	defer func() {
+		err = errors.Join(err, resolvedPackage.Close())
+	}()
+
 	l := logger.From(ctx)
+	packagePath, err := resolvedPackage.Resources.Root()
+	if err != nil {
+		return nil, err
+	}
 	l.Info("assembling package", "path", packagePath)
 
-	definition := resolvedPackage.PackageDefinition
+	definition := resolvedPackage.Definition
 	pkg := definition.AsV1alpha1()
-	importedSchemas := resolvedPackage.ImportedSchemas
 	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
 		return nil, err
 	}
@@ -107,7 +115,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		return nil, err
 	}
 	for _, component := range pkg.Components {
-		err := assemblePackageComponent(ctx, component, packagePath, buildPath, opts.CachePath, opts.RemoteOptions)
+		err := assemblePackageComponent(ctx, component, resolvedPackage.Resources, buildPath, opts.CachePath, opts.RemoteOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -117,8 +125,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
-			if !filepath.IsAbs(imageArchive.Path) {
-				imageArchive.Path = filepath.Join(packagePath, imageArchive.Path)
+			imageArchive.Path, err = resolvedPackage.Resources.Path(imageArchive.Path)
+			if err != nil {
+				return nil, err
 			}
 
 			archiveImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, layout.ImagesDir), pkg.Metadata.Architecture)
@@ -175,16 +184,16 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 		}
 	}
 
-	l.Debug("merging values files to package", "files", pkg.Values.Files)
-	if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, packagePath, buildPath); err != nil {
+	l.Debug("writing resolved values to package")
+	if err = writeValuesFile(buildPath, resolvedPackage.Values); err != nil {
 		return nil, err
 	}
 
-	if err = mergeAndWriteValuesSchema(ctx, pkg.Values.Schema, importedSchemas, packagePath, buildPath); err != nil {
+	if err = writeValuesSchema(buildPath, resolvedPackage.ValuesSchema); err != nil {
 		return nil, err
 	}
 
-	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
+	if err = createDocumentationTar(pkg, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -234,14 +243,16 @@ type AssembleSkeletonOptions struct {
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
-func AssembleSkeleton(ctx context.Context, resolvedPackage load.ResolvedPackage, packagePath string, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
-	definition := resolvedPackage.PackageDefinition
+func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
+	if _, err := resolvedPackage.Resources.Root(); err != nil {
+		return nil, err
+	}
+	definition := resolvedPackage.Definition
 	definition.SetMetadataArchitecture(v1alpha1.SkeletonArch)
 	pkg := definition.AsV1alpha1()
-	importedSchemas := resolvedPackage.ImportedSchemas
 
 	// Creating skeleton packages with the values feature is not yet supported
-	if len(pkg.Values.Files) > 0 || pkg.Values.Schema != "" || len(importedSchemas) > 0 {
+	if len(pkg.Values.Files) > 0 || resolvedPackage.ValuesSchema != nil {
 		return nil, errors.New("creating skeleton packages with the values feature is not yet supported")
 	}
 
@@ -250,7 +261,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage load.ResolvedPackage,
 		return nil, err
 	}
 
-	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
+	if err = createDocumentationTar(pkg, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -260,7 +271,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage load.ResolvedPackage,
 	//     is indicating that you are importing the "upstream" flavor of the zarf init package
 	for i := 0; i < len(pkg.Components); i++ {
 		pkg.Components[i].Only.Flavor = ""
-		err := assembleSkeletonComponent(ctx, pkg.Components[i], packagePath, buildPath)
+		err := assembleSkeletonComponent(ctx, pkg.Components[i], resolvedPackage.Resources, buildPath)
 		if err != nil {
 			return nil, err
 		}
@@ -349,7 +360,11 @@ func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) erro
 	return nil
 }
 
-func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
+func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, resources *load.ResourceSet, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
+	packagePath, err := resources.Root()
+	if err != nil {
+		return err
+	}
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -374,7 +389,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 			ChartsDir: filepath.Join(compBuildPath, string(layout.ChartsComponentDir)),
 			ValuesDir: filepath.Join(compBuildPath, string(layout.ValuesComponentDir)),
 		}
-		err := PackageChart(ctx, chart, packagePath, paths, cachePath, remoteOpts)
+		err := PackageChart(ctx, chart, resources, paths, cachePath, remoteOpts)
 		if err != nil {
 			return err
 		}
@@ -418,9 +433,9 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				}
 			}
 		} else {
-			src := file.Source
-			if !filepath.IsAbs(file.Source) {
-				src = filepath.Join(packagePath, file.Source)
+			src, err := resources.Path(file.Source)
+			if err != nil {
+				return err
 			}
 			if file.ExtractPath != "" {
 				decompressOpts := archive.DecompressOpts{
@@ -476,9 +491,9 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				return fmt.Errorf(lang.ErrDownloading, data.Source, err)
 			}
 		} else {
-			src := data.Source
-			if !filepath.IsAbs(data.Source) {
-				src = filepath.Join(packagePath, data.Source)
+			src, err := resources.Path(data.Source)
+			if err != nil {
+				return err
 			}
 			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 				return fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
@@ -494,7 +509,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 	}
 	for _, manifest := range component.Manifests {
-		err := PackageManifest(ctx, manifest, compBuildPath, packagePath)
+		err := PackageManifest(ctx, manifest, compBuildPath, resources)
 		if err != nil {
 			return err
 		}
@@ -534,7 +549,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 }
 
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
-func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBuildPath string, packagePath string) error {
+func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBuildPath string, resources *load.ResourceSet) error {
 	for fileIdx, path := range manifest.Files {
 		rel := filepath.Join(string(layout.ManifestsComponentDir), layout.ManifestFileName(manifest.Name, fileIdx))
 		dst := filepath.Join(compBuildPath, rel)
@@ -545,9 +560,9 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 				return fmt.Errorf(lang.ErrDownloading, path, err)
 			}
 		} else {
-			src := path
-			if !filepath.IsAbs(src) {
-				src = filepath.Join(packagePath, src)
+			src, err := resources.Path(path)
+			if err != nil {
+				return err
 			}
 			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 				return fmt.Errorf("unable to copy manifest %s: %w", src, err)
@@ -561,8 +576,12 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 		rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
 		dst := filepath.Join(compBuildPath, rel)
 
-		if !helpers.IsURL(path) && !filepath.IsAbs(path) {
-			path = filepath.Join(packagePath, path)
+		if !helpers.IsURL(path) {
+			var err error
+			path, err = resources.Path(path)
+			if err != nil {
+				return err
+			}
 		}
 		if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory, manifest.EnableKustomizePlugins); err != nil {
 			return fmt.Errorf("unable to build kustomization %s: %w", path, err)
@@ -572,15 +591,23 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 }
 
 // PackageChart takes a Zarf Chart definition and packs it into a package layout
-func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath string, paths layout.ChartPaths, cachePath string, remoteOpts types.RemoteOptions) error {
-	if chart.LocalPath != "" && !filepath.IsAbs(chart.LocalPath) {
-		chart.LocalPath = filepath.Join(packagePath, chart.LocalPath)
+func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, resources *load.ResourceSet, paths layout.ChartPaths, cachePath string, remoteOpts types.RemoteOptions) error {
+	if chart.LocalPath != "" && !helpers.IsURL(chart.LocalPath) {
+		localPath, err := resources.Path(chart.LocalPath)
+		if err != nil {
+			return err
+		}
+		chart.LocalPath = localPath
 	}
 	oldValuesFiles := chart.ValuesFiles
 	valuesFiles := []string{}
 	for _, v := range chart.ValuesFiles {
-		if !helpers.IsURL(v) && !filepath.IsAbs(v) {
-			v = filepath.Join(packagePath, v)
+		if !helpers.IsURL(v) {
+			var err error
+			v, err = resources.Path(v)
+			if err != nil {
+				return err
+			}
 		}
 		valuesFiles = append(valuesFiles, v)
 	}
@@ -589,8 +616,12 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath str
 	oldTemplatedValuesFiles := chart.TemplatedValuesFiles
 	templatedValuesFiles := []string{}
 	for _, v := range chart.TemplatedValuesFiles {
-		if !helpers.IsURL(v) && !filepath.IsAbs(v) {
-			v = filepath.Join(packagePath, v)
+		if !helpers.IsURL(v) {
+			var err error
+			v, err = resources.Path(v)
+			if err != nil {
+				return err
+			}
 		}
 		templatedValuesFiles = append(templatedValuesFiles, v)
 	}
@@ -604,7 +635,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath str
 	return nil
 }
 
-func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
+func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfComponent, resources *load.ResourceSet, buildPath string) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -623,9 +654,9 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := filepath.ToSlash(filepath.Join(string(layout.ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx)))
 			dst := filepath.Join(compBuildPath, rel)
 
-			file := chart.LocalPath
-			if !filepath.IsAbs(file) {
-				file = filepath.Join(packagePath, file)
+			file, err := resources.Path(chart.LocalPath)
+			if err != nil {
+				return err
 			}
 			if err := helpers.CreatePathAndCopy(file, dst); err != nil {
 				return fmt.Errorf("unable to copy file %s: %w", file, err)
@@ -642,8 +673,9 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := filepath.ToSlash(filepath.Join(string(layout.ValuesComponentDir), layout.ChartValuesFileName(chart.Name, chart.Version, valuesIdx)))
 			component.Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
-			if !filepath.IsAbs(path) {
-				path = filepath.Join(packagePath, path)
+			path, err = resources.Path(path)
+			if err != nil {
+				return err
 			}
 			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
@@ -659,8 +691,9 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := filepath.ToSlash(filepath.Join(string(layout.ValuesComponentDir), layout.ChartValuesFileName(chart.Name, chart.Version, nValuesFiles+valuesIdx)))
 			component.Charts[chartIdx].TemplatedValuesFiles[valuesIdx] = rel
 
-			if !filepath.IsAbs(path) {
-				path = filepath.Join(packagePath, path)
+			path, err = resources.Path(path)
+			if err != nil {
+				return err
 			}
 			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
 				return fmt.Errorf("unable to copy chart templated values file %s: %w", path, err)
@@ -676,9 +709,9 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		rel := filepath.ToSlash(filepath.Join(string(layout.FilesComponentDir), layout.ComponentFileRelPath(filesIdx, file.Target)))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
-		src := file.Source
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(packagePath, src)
+		src, err := resources.Path(file.Source)
+		if err != nil {
+			return err
 		}
 
 		if file.ExtractPath != "" {
@@ -733,9 +766,9 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		rel := filepath.ToSlash(filepath.Join(string(layout.DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path)))
 		dst := filepath.Join(compBuildPath, rel)
 
-		src := data.Source
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(packagePath, src)
+		src, err := resources.Path(data.Source)
+		if err != nil {
+			return err
 		}
 		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 			return fmt.Errorf("unable to copy data injection %s: %w", src, err)
@@ -756,9 +789,9 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			dst := filepath.Join(compBuildPath, rel)
 
 			// Copy manifests without any processing.
-			src := path
-			if !filepath.IsAbs(src) {
-				src = filepath.Join(packagePath, src)
+			src, err := resources.Path(path)
+			if err != nil {
+				return err
 			}
 			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 				return fmt.Errorf("unable to copy manifest %s: %w", src, err)
@@ -773,8 +806,9 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
 			dst := filepath.Join(compBuildPath, rel)
 
-			if !filepath.IsAbs(path) {
-				path = filepath.Join(packagePath, path)
+			path, err = resources.Path(path)
+			if err != nil {
+				return err
 			}
 
 			// Build() requires the path be present - otherwise will throw an error.
@@ -1035,96 +1069,32 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 	})
 }
 
-func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, buildPath string) error {
-	l := logger.From(ctx)
-
-	if len(files) == 0 {
+func writeValuesFile(buildPath string, vals value.Values) error {
+	if len(vals) == 0 {
 		return nil
 	}
-
-	// Build absolute paths for all values files
-	valueFilePaths := make([]string, len(files))
-	for i, file := range files {
-		src := file
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(packagePath, file)
-		}
-		// Validate src exists
-		if _, err := os.Stat(src); err != nil {
-			return fmt.Errorf("unable to access values file %s: %w", src, err)
-		}
-		valueFilePaths[i] = src
-	}
-
-	// Parse and merge all values files
-	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to parse values files: %w", err)
-	}
-
-	// Write merged values to YAML
 	dst := filepath.Join(buildPath, layout.ValuesYAML)
-	l.Debug("writing merged values file", "dst", dst, "fileCount", len(files))
 	if err := utils.WriteYaml(dst, vals, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to write merged values file: %w", err)
 	}
-
 	return nil
 }
 
-// mergeAndWriteValuesSchema merges imported child schemas with the parent schema (parent wins)
-// and writes the result to buildPath/values.schema.json. If only a parent schema exists with
-// no imports, it is validated and copied as-is. If only child schemas exist, they are merged
-// and written. If neither exists, the function is a no-op.
-//
-// Schemas containing "$ref" pointers are rejected in all cases because references may point
-// to files unavailable after assembly.
-func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importedSchemas []string, packagePath, buildPath string) error {
-	l := logger.From(ctx)
-
-	if parentSchema == "" && len(importedSchemas) == 0 {
+func writeValuesSchema(buildPath string, schema value.SchemaDocument) error {
+	if schema == nil {
 		return nil
 	}
-
-	// No child schemas — check for $ref, validate, then copy the parent schema file verbatim.
-	if len(importedSchemas) == 0 {
-		_, src, err := value.LoadValidatedSchema(packagePath, parentSchema)
-		if err != nil {
-			return err
-		}
-		dst := filepath.Join(buildPath, layout.ValuesSchema)
-		l.Debug("copying values schema file", "src", src, "dst", dst)
-		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-			return fmt.Errorf("failed to copy values schema file %s: %w", parentSchema, err)
-		}
-		return os.Chmod(dst, helpers.ReadWriteUser)
-	}
-
-	l.Debug("merging values schemas", "parent", parentSchema, "imported", len(importedSchemas))
-
-	// Merge child schemas left-to-right; among children the earlier one wins.
-	merged, err := value.MergeSchemaFiles(parentSchema, importedSchemas, packagePath)
-	if err != nil {
-		return fmt.Errorf("merging schemas: %w", err)
-	}
-
-	if err := value.ValidateSchemaDocument(merged); err != nil {
-		return fmt.Errorf("merged values schema is invalid: %w", err)
-	}
-
-	dst := filepath.Join(buildPath, layout.ValuesSchema)
-	l.Debug("writing merged values schema", "dst", dst)
-	b, err := json.MarshalIndent(merged, "", "  ")
+	b, err := json.MarshalIndent(schema, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal merged values schema: %w", err)
 	}
-	if err := os.WriteFile(dst, b, helpers.ReadWriteUser); err != nil {
+	if err := os.WriteFile(filepath.Join(buildPath, layout.ValuesSchema), b, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to write merged values schema: %w", err)
 	}
 	return nil
 }
 
-func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath string) (err error) {
+func createDocumentationTar(pkg v1alpha1.ZarfPackage, resources *load.ResourceSet, buildPath string) (err error) {
 	if len(pkg.Documentation) == 0 {
 		return nil
 	}
@@ -1141,9 +1111,9 @@ func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath str
 	fileNames := layout.GetDocumentationFileNames(pkg.Documentation)
 
 	for key, file := range pkg.Documentation {
-		src := file
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(packagePath, file)
+		src, err := resources.Path(file)
+		if err != nil {
+			return err
 		}
 
 		docFilename := fileNames[key]

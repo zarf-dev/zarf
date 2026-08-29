@@ -8,10 +8,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -283,27 +281,17 @@ func (c *Cluster) findPodContainerPort(ctx context.Context, svc corev1.Service) 
 // ServiceInfoFromNodePortURL returns the Kubernetes Service that corresponds to the given NodePort URL.
 // nodePortURL may be a bare host:port (e.g. "localhost:31999") or a full URL.
 func ServiceInfoFromNodePortURL(services []corev1.Service, nodePortURL string) (corev1.Service, int, error) {
-	// url.Parse misreads a bare "localhost:31999" as scheme:opaque (empty host), so
-	// fall back to the raw string and let net.SplitHostPort do the splitting.
-	rawHost := nodePortURL
-	if u, err := url.Parse(nodePortURL); err == nil && u.Host != "" {
-		rawHost = u.Host
-	}
-	hostname, portStr, err := net.SplitHostPort(rawHost)
+	hostname, nodePort, err := registryAddressHostPort(nodePortURL)
 	if err != nil {
 		return corev1.Service{}, 0, err
 	}
 
-	// NodePort tunnels are served on loopback.
+	// NodePort services are served on loopback.
 	if !dns.IsLocalhost(hostname) {
 		return corev1.Service{}, 0, fmt.Errorf("node port services should be on localhost")
 	}
 
-	// Get the node port from the nodeportURL.
-	nodePort, err := strconv.Atoi(portStr)
-	if err != nil {
-		return corev1.Service{}, 0, err
-	}
+	// NodePort services must have ports in the NodePort range
 	if nodePort < 30000 || nodePort > 32767 {
 		return corev1.Service{}, 0, fmt.Errorf("node port services should use the port range 30000-32767")
 	}

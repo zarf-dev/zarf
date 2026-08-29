@@ -358,9 +358,10 @@ func TestValidateTemplateRefsAccumulatesErrors(t *testing.T) {
 func assembleLayout(t *testing.T, srcDir string) *layout.PackageLayout {
 	t.Helper()
 	ctx := testutil.TestContext(t)
-	defined, err := load.PackageDefinition(ctx, srcDir, load.DefinitionOptions{})
+	loaded, err := load.Package(ctx, srcDir, load.PackageOptions{})
 	require.NoError(t, err)
-	pkgLayout, err := assemble.AssemblePackage(ctx, defined, srcDir, assemble.AssembleOptions{SkipSBOM: true})
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{SkipSBOM: true})
 	require.NoError(t, err)
 	return pkgLayout
 }

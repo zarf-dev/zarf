@@ -38,6 +38,8 @@ import (
 
 type initOptions struct {
 	setVariables               map[string]string
+	valuesFiles                []string
+	setValues                  map[string]string
 	optionalComponents         string
 	skipValuesSchemaValidation bool
 	storageClass               string
@@ -79,6 +81,8 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
 	_ = cmd.Flags().MarkDeprecated("set", "Use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSetVariables)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdInitFlagConfirm)
@@ -196,6 +200,11 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -216,6 +225,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		Filter:               filter,
 		Architecture:         config.GetArch(),
 		CachePath:            cachePath,
+		RemoteOptions:        defaultRemoteOptions(),
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
@@ -238,6 +248,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		Retries:                    o.retries,
 		OCIConcurrency:             o.ociConcurrency,
 		SetVariables:               o.setVariables,
+		Values:                     values,
 		StorageClass:               o.storageClass,
 		InjectorPort:               o.injectorPort,
 		InjectorImage:              o.injectorImage,
@@ -372,9 +383,9 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
 	if agentTLS != nil {
-		if !bytes.Equal(agentTLS.CA, s.AgentTLS.CA) ||
-			!bytes.Equal(agentTLS.Cert, s.AgentTLS.Cert) ||
-			!bytes.Equal(agentTLS.Key, s.AgentTLS.Key) {
+		if !bytes.Equal(agentTLS.CA, s.AgentInfo.TLS.CA) ||
+			!bytes.Equal(agentTLS.Cert, s.AgentInfo.TLS.Cert) ||
+			!bytes.Equal(agentTLS.Key, s.AgentInfo.TLS.Key) {
 			return fmt.Errorf("cannot change agent TLS certificates after initial init, to update run `zarf tools update-creds agent`")
 		}
 	}

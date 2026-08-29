@@ -1,0 +1,32 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: published-component
+  version: 0.0.1
+values:
+  files:
+    - component-values.yaml
+  schema: component-values.schema.json
+component:
+  charts:
+    - name: local-chart
+      namespace: default
+      local:
+        path: local-chart
+      valuesFiles:
+        - path: local-chart-values.yaml
+  manifests:
+    - name: local-manifest
+      namespace: default
+      files:
+        - local-manifest.yaml
+    - name: local-kustomization
+      namespace: default
+      kustomize:
+        files:
+          - kustomization
+  files:
+    - source: local-file.txt
+      destination: /tmp/local-file.txt
+  images:
+    - name: ghcr.io/zarf-dev/images/hello-world:latest

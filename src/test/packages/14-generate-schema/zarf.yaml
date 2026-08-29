@@ -22,6 +22,10 @@ components:
             targetPath: ".replicaCount"
           - sourcePath: ".network.port"
             targetPath: ".service.port"
+          - sourcePath: ".configMap.annotations"
+            targetPath: ".configMap.annotations"
+          - sourcePath: ".configMap.labels"
+            targetPath: ".configMap.labels"
   
   - name: backend-chart
     required: true

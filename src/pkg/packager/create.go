@@ -55,24 +55,24 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		return "", err
 	}
 
-	loadOpts := load.DefinitionOptions{
-		Flavor:           opts.Flavor,
-		SetVariables:     opts.SetVariables,
-		CachePath:        opts.CachePath,
-		IsInteractive:    opts.IsInteractive,
-		SkipVersionCheck: opts.SkipVersionCheck,
-		RemoteOptions:    opts.RemoteOptions,
+	loadOpts := load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			Flavor:           opts.Flavor,
+			SetVariables:     opts.SetVariables,
+			CachePath:        opts.CachePath,
+			IsInteractive:    opts.IsInteractive,
+			SkipVersionCheck: opts.SkipVersionCheck,
+			RemoteOptions:    opts.RemoteOptions,
+		},
 	}
-	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	loaded, err := load.Package(ctx, packagePath, loadOpts)
 	if err != nil {
 		return "", err
 	}
-	pkg := defined.PackageDefinition.AsV1alpha1()
-
-	pkgPath, err := layout.ResolvePackagePath(packagePath)
-	if err != nil {
-		return "", fmt.Errorf("unable to access package path %q: %w", packagePath, err)
-	}
+	defer func() {
+		err = errors.Join(err, loaded.Close())
+	}()
+	pkg := loaded.Definition.AsV1alpha1()
 
 	var differentialPkg v1alpha1.ZarfPackage
 	if opts.DifferentialPackagePath != "" {
@@ -104,7 +104,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,
 	}
-	pkgLayout, err := assemble.AssemblePackage(ctx, defined, pkgPath.BaseDir, assembleOpt)
+	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assembleOpt)
 	if err != nil {
 		return "", err
 	}
@@ -119,8 +119,9 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err != nil {
 			return "", err
 		}
-		remote, err := zoci.NewRemote(ctx, ref.String(), oci.PlatformForArch(pkg.Build.Architecture),
-			oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+		remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), oci.PlatformForArch(pkg.Build.Architecture), zoci.RemoteClientOptions{
+			RemoteOptions: opts.RemoteOptions,
+		})
 		if err != nil {
 			return "", err
 		}

@@ -224,7 +224,7 @@ func actionsToGeneric(a v1alpha1.ZarfComponentActions) types.ComponentActions {
 }
 
 func actionSetToGeneric(s v1alpha1.ZarfComponentActionSet) types.ComponentActionSet {
-	defaults := types.ComponentActionDefaults{
+	defaults := &types.ComponentActionDefaults{
 		Silent:          s.Defaults.Mute,
 		MaxTotalSeconds: int32(s.Defaults.MaxTotalSeconds),
 		Retries:         int32(s.Defaults.MaxRetries),
@@ -657,17 +657,20 @@ func actionsFromGeneric(a types.ComponentActions) v1alpha1.ZarfComponentActions 
 }
 
 func actionSetFromGeneric(s types.ComponentActionSet) v1alpha1.ZarfComponentActionSet {
-	defaults := v1alpha1.ZarfComponentActionDefaults{
-		Mute:            s.Defaults.Silent,
-		MaxTotalSeconds: int(s.Defaults.MaxTotalSeconds),
-		MaxRetries:      int(s.Defaults.Retries),
-		Dir:             s.Defaults.Dir,
-		Env:             s.Defaults.Env,
-		Shell: v1alpha1.Shell{
-			Windows: s.Defaults.Shell.Windows,
-			Linux:   s.Defaults.Shell.Linux,
-			Darwin:  s.Defaults.Shell.Darwin,
-		},
+	defaults := v1alpha1.ZarfComponentActionDefaults{}
+	if s.Defaults != nil {
+		defaults = v1alpha1.ZarfComponentActionDefaults{
+			Mute:            s.Defaults.Silent,
+			MaxTotalSeconds: int(s.Defaults.MaxTotalSeconds),
+			MaxRetries:      int(s.Defaults.Retries),
+			Dir:             s.Defaults.Dir,
+			Env:             s.Defaults.Env,
+			Shell: v1alpha1.Shell{
+				Windows: s.Defaults.Shell.Windows,
+				Linux:   s.Defaults.Shell.Linux,
+				Darwin:  s.Defaults.Shell.Darwin,
+			},
+		}
 	}
 
 	return v1alpha1.ZarfComponentActionSet{

@@ -43,9 +43,10 @@ func TestInspectPackageResourcesSkipsValuesSchemaValidationWhenConfigured(t *tes
 	setupInspectTests(t)
 	ctx := testutil.TestContext(t)
 	srcDir := filepath.Join("load", "testdata", "package-with-invalid-values")
-	defined, err := load.PackageDefinition(ctx, srcDir, load.DefinitionOptions{SkipValuesSchemaValidation: true})
+	loaded, err := load.Package(ctx, srcDir, load.PackageOptions{SkipValuesSchemaValidation: true})
 	require.NoError(t, err)
-	pkgLayout, err := assemble.AssemblePackage(ctx, defined, srcDir, assemble.AssembleOptions{SkipSBOM: true})
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{SkipSBOM: true})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 

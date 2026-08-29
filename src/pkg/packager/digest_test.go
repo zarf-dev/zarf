@@ -57,9 +57,7 @@ func TestPackageDigestOCI(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// PackageDigest expects an oci:// URL so identifySource classifies it correctly.
-	ociURL := fmt.Sprintf("oci://%s", packageRef.String())
-	digest, err := PackageDigest(ctx, ociURL, PackageDigestOptions{
+	digest, err := PackageDigest(ctx, packageRef.String(), PackageDigestOptions{
 		Architecture:  pkgLayout.AsV1alpha1().Build.Architecture,
 		RemoteOptions: defaultTestRemoteOptions(),
 	})

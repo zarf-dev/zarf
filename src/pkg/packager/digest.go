@@ -39,6 +39,7 @@ type PackageDigestOptions struct {
 // package contents, producing the same digest that would result from publishing with
 // PushPackage.
 func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions) (string, error) {
+	source = zoci.NormalizeOCISource(source)
 	srcType, err := identifySource(source)
 	if err != nil {
 		return "", err
@@ -60,9 +61,9 @@ func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions
 
 	case "oci":
 		platform := oci.PlatformForArch(config.GetArch(opts.Architecture))
-		remote, err := zoci.NewRemote(ctx, source, platform,
-			oci.WithPlainHTTP(opts.RemoteOptions.PlainHTTP),
-			oci.WithInsecureSkipVerify(opts.RemoteOptions.InsecureSkipTLSVerify))
+		remote, err := zoci.NewRemoteWithOptions(ctx, source, platform, zoci.RemoteClientOptions{
+			RemoteOptions: opts.RemoteOptions,
+		})
 		if err != nil {
 			return "", fmt.Errorf("unable to connect to OCI registry: %w", err)
 		}

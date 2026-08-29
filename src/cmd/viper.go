@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -224,6 +225,11 @@ func getViper() *viper.Viper {
 	}
 
 	return v
+}
+
+// optionIsExplicitlySet determines if an option is explicitly provided in a flag or viper key
+func optionIsExplicitlySet(cmd *cobra.Command, v *viper.Viper, flagName, key string) bool {
+	return cmd.Flags().Changed(flagName) || v.IsSet(key)
 }
 
 func isVersionCmd() bool {

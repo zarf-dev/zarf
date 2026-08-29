@@ -26,7 +26,7 @@ zarf package mirror-resources [ PACKAGE_SOURCE ] [flags]
 # Mirror a local package to internal Zarf resources (uses Zarf state if available)
 $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Mirror a package from an OCI registry (requires oci:// scheme)
+# Mirror a package from an OCI registry (oci:// prefix optional)
 $ zarf package mirror-resources oci://ghcr.io/my-org/my-package:1.0.0
 
 # Mirror a local package to external resources
@@ -91,7 +91,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
 ```
 

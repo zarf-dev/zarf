@@ -6,6 +6,7 @@ package packager
 import (
 	"context"
 	"errors"
+	"fmt"
 	"runtime"
 	"slices"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/types"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -39,6 +41,8 @@ type DevDeployOptions struct {
 	CreateSetVariables map[string]string
 	// DeploySetVariables are for package variables
 	DeploySetVariables map[string]string
+	// Values are values passed in at deploy time.
+	Values value.Values
 	// OptionalComponents to be deployed
 	OptionalComponents string
 	// Timeout for Helm operations
@@ -72,32 +76,37 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		return err
 	}
 
-	loadOpts := load.DefinitionOptions{
-		Flavor:           opts.Flavor,
-		SetVariables:     opts.CreateSetVariables,
-		CachePath:        opts.CachePath,
-		IsInteractive:    false,
-		SkipVersionCheck: opts.SkipVersionCheck,
-		RemoteOptions:    opts.RemoteOptions,
+	loadOpts := load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			Flavor:           opts.Flavor,
+			SetVariables:     opts.CreateSetVariables,
+			CachePath:        opts.CachePath,
+			IsInteractive:    false,
+			SkipVersionCheck: opts.SkipVersionCheck,
+			RemoteOptions:    opts.RemoteOptions,
+		},
 	}
-	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	loaded, err := load.Package(ctx, packagePath, loadOpts)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = errors.Join(err, loaded.Close())
+	}()
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.ForDeploy(opts.OptionalComponents, false),
 	)
-	definition, err := filters.Apply(defined.PackageDefinition, filter)
+	definition, err := filters.Apply(loaded.Definition, filter)
 	if err != nil {
 		return err
 	}
-	defined.PackageDefinition = definition
+	loaded.Definition = definition
 
 	// If not building for airgap, strip out all images and repos.
 	if !opts.AirgapMode {
-		defined.PackageDefinition.RemoveImages()
-		defined.PackageDefinition.RemoveRepositories()
+		loaded.Definition.RemoveImages()
+		loaded.Definition.RemoveRepositories()
 	}
 
 	createOpts := assemble.AssembleOptions{
@@ -107,7 +116,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		OCIConcurrency:    opts.OCIConcurrency,
 		CachePath:         opts.CachePath,
 	}
-	pkgLayout, err := assemble.AssemblePackage(ctx, defined, packagePath, createOpts)
+	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, createOpts)
 	if err != nil {
 		return err
 	}
@@ -120,11 +129,16 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if err != nil {
 		return err
 	}
+	values, err := loadDeploymentValues(ctx, pkgLayout, opts.Values, false)
+	if err != nil {
+		return err
+	}
 
 	l.Info("starting package dev deploy", "name", pkg.Metadata.Name)
 
 	var d deployer
 	d.vc = variableConfig
+	d.vals = values
 	if !opts.AirgapMode {
 		// Set default builtin values so they exist in case any helm charts rely on them
 		d.s, err = state.Default()
@@ -156,9 +170,14 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		}
 	}
 
+	if err := validateTemplateRefs(ctx, pkgLayout, values); err != nil {
+		return fmt.Errorf("package references values that cannot be resolved (value templates must be explicitly defined, even if empty): %w", err)
+	}
+
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOptions{
 		SetVariables:   opts.DeploySetVariables,
+		Values:         opts.Values,
 		Timeout:        opts.Timeout,
 		Retries:        opts.Retries,
 		Connected:      !opts.AirgapMode,

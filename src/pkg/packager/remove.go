@@ -13,12 +13,13 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
-	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 
 	"helm.sh/helm/v4/pkg/storage/driver"
@@ -31,7 +32,8 @@ import (
 
 // RemoveOptions are the options for Remove.
 type RemoveOptions struct {
-	Cluster           *cluster.Cluster
+	Cluster *cluster.Cluster
+	// Timeout for Helm operations
 	Timeout           time.Duration
 	NamespaceOverride string
 	SkipVersionCheck  bool
@@ -49,6 +51,10 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 		if err := requirements.ValidateVersionRequirements(pkg); err != nil {
 			return fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", err)
 		}
+	}
+
+	if opts.Timeout == 0 {
+		opts.Timeout = config.ZarfDefaultTimeout
 	}
 
 	definition, err := filters.Apply(definition, filters.ByLocalOS(runtime.GOOS))
