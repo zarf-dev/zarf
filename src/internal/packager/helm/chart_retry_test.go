@@ -40,6 +40,11 @@ func TestIsRetryableHelmChartError(t *testing.T) {
 			retryable: true,
 		},
 		{
+			name:      "joined webhook transport failures",
+			err:       errors.Join(webhookUnavailable, fmt.Errorf("another webhook call failed: %w", webhookUnavailable)),
+			retryable: true,
+		},
+		{
 			name:      "other internal error",
 			err:       apierrors.NewInternalError(errors.New("etcd unavailable")),
 			retryable: false,
