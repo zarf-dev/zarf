@@ -25,7 +25,7 @@ zarf package verify PACKAGE_SOURCE [flags]
 # Verify a signed local package tarball
 $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst --key ./public-key.pub
 
-# Verify a package in an OCI registry (requires oci:// scheme)
+# Verify a package in an OCI registry (oci:// prefix optional)
 $ zarf package verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./public-key.pub
 
 # Verify an unsigned package (checksums only)

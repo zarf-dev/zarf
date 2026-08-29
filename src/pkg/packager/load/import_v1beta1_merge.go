@@ -9,18 +9,12 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
 
-// mergeComponentSpec overlays override onto imported.
-func mergeComponentSpec(imported, override v1beta1.ComponentSpec) v1beta1.ComponentSpec {
+// mergeComponentConfigSpec overlays override onto imported.
+func mergeComponentConfigSpec(imported, override v1beta1.ComponentSpec) v1beta1.ComponentSpec {
 	merged := imported
 
 	if override.Target.OS != "" {
 		merged.Target.OS = override.Target.OS
-	}
-	if override.Selector.Architecture != "" {
-		merged.Selector.Architecture = override.Selector.Architecture
-	}
-	if override.Selector.Flavor != "" {
-		merged.Selector.Flavor = override.Selector.Flavor
 	}
 	if override.Service != "" {
 		merged.Service = override.Service

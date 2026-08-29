@@ -21,7 +21,7 @@ zarf package inspect images [ PACKAGE_SOURCE ] [flags]
 # List images in a local package tarball
 $ zarf package inspect images zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# List images in a package from an OCI registry (requires oci:// scheme)
+# List images in a package from an OCI registry (oci:// prefix optional)
 $ zarf package inspect images oci://ghcr.io/my-org/my-package:1.0.0
 
 # List images in a package already deployed to a cluster
