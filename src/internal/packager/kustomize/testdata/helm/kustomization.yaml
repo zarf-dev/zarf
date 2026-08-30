@@ -1,0 +1,6 @@
+helmGlobals:
+  chartHome: .
+helmCharts:
+  - releaseName: chart
+    name: chart
+    repo: ./chart
