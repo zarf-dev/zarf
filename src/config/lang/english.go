@@ -557,6 +557,14 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
 	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
 
+	CmdDevImageVolumeArchiveShort = "Creates an image archive from a given directory with a given image reference"
+	CmdDevImageVolumeArchiveUsage = "image-volume-archive [ DIRECTORY ] [ IMAGE-REFERENCE ]"
+
+	CmdDevImageVolumeArchiveFlagCompression = "Compression algorthm used on the individual layers of the image volume"
+	CmdDevImageVolumeArchiveFlagPlatformOS  = "Operating system of the image volume"
+	CmdDevImageVolumeArchiveFlagOutput      = "Path to write the resulting tar archive to (default derived from IMAGE-REFERENCE)"
+	CmdDevImageVolumeArchiveFlagMaxLayer    = "Cap on the number of layers in the resulting image; files are batched across fewer layers as needed to stay under it. 0 disables the cap."
+
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"
 
