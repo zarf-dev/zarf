@@ -303,49 +303,44 @@ func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, upda
 		return fmt.Errorf("unable to create helm renderer: %w", err)
 	}
 
-	histClient := action.NewHistory(actionConfig)
-	histClient.Max = 1
-	releases, histErr := histClient.Run(zarfChart.ReleaseName)
-	if histErr == nil && len(releases) > 0 {
-		lastReleaser := releases[len(releases)-1]
-		lastRelease, err := release.NewAccessor(lastReleaser)
-		if err != nil {
-			return fmt.Errorf("unable to access release: %w", err)
-		}
+	lastReleaser, err := action.NewGet(actionConfig).Run(zarfChart.ReleaseName)
+	if err != nil {
+		return fmt.Errorf("unable to find the %s helm release: %w", zarfChart.ReleaseName, err)
+	}
+	lastRelease, err := release.NewAccessor(lastReleaser)
+	if err != nil {
+		return fmt.Errorf("unable to access release: %w", err)
+	}
+	// Setup a new upgrade action
+	client := action.NewUpgrade(actionConfig)
 
-		// Setup a new upgrade action
-		client := action.NewUpgrade(actionConfig)
+	// Let each chart run for the default timeout.
+	client.Timeout = opts.Timeout
 
-		// Let each chart run for the default timeout.
-		client.Timeout = opts.Timeout
+	client.SkipCRDs = true
 
-		client.SkipCRDs = true
+	// Namespace must be specified.
+	client.Namespace = zarfChart.Namespace
 
-		// Namespace must be specified.
-		client.Namespace = zarfChart.Namespace
+	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
+	client.PostRenderer = postRender
 
-		// Post-processing our manifests to apply vars and run zarf helm logic in cluster
-		client.PostRenderer = postRender
+	// Set reuse values to only override the values we are explicitly given
+	client.ReuseValues = true
 
-		// Set reuse values to only override the values we are explicitly given
-		client.ReuseValues = true
+	// Wait for the update operation to successfully complete
+	client.WaitStrategy = kube.LegacyStrategy
 
-		// Wait for the update operation to successfully complete
-		client.WaitStrategy = kube.LegacyStrategy
+	client.ServerSideApply = zarfChart.GetServerSideApply()
+	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), lastRelease, opts.ForceConflicts)
 
-		client.ServerSideApply = zarfChart.GetServerSideApply()
-		client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), lastRelease, opts.ForceConflicts)
-
-		// Perform the loadedChart upgrade.
-		_, err = client.RunWithContext(ctx, zarfChart.ReleaseName, lastRelease.Chart(), updatedValues)
-		if err != nil {
-			return err
-		}
-
-		return nil
+	// Perform the loadedChart upgrade.
+	_, err = client.RunWithContext(ctx, zarfChart.ReleaseName, lastRelease.Chart(), updatedValues)
+	if err != nil {
+		return err
 	}
 
-	return fmt.Errorf("unable to find the %s helm release", zarfChart.ReleaseName)
+	return nil
 }
 
 func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
