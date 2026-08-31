@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/test"
 	// "github.com/zarf-dev/zarf/src/pkg/utils/exec"
@@ -53,17 +52,7 @@ func TestMain(m *testing.M) {
 
 	// If APPLIANCE_MODE set to true, warn Mac user and run only non-cluster tests
 	if e2e.ApplianceMode && runtime.GOOS != "linux" {
-		cfg := logger.Config{
-			Level:       logger.Info,
-			Format:      logger.FormatConsole,
-			Destination: logger.DestinationDefault,
-			Color:       true,
-		}
-		l, err := logger.New(cfg)
-		if err != nil {
-			log.Fatal(err)
-		}
-		l.Warn("APPLIANCE_MODE=true is only fully supported on Linux. " +
+		log.Println("WARNING: APPLIANCE_MODE=true is only fully supported on Linux. " +
 			"On macOS, only tests that do not require a cluster will run. " +
 			"To run with-cluster tests on macOS, create a local cluster first " +
 			"and run make test-e2e-with-cluster ARCH=arm64 instead.")
@@ -74,17 +63,7 @@ func TestMain(m *testing.M) {
 	if !e2e.ApplianceMode {
 		_, _, err := exec.CmdWithContext(context.Background(), exec.Config{}, e2e.ZarfBinPath, "tools", "kubectl", "cluster-info")
 		if err != nil {
-			cfg := logger.Config{
-				Level:       logger.Warn,
-				Format:      logger.FormatConsole,
-				Destination: logger.DestinationDefault,
-				Color:       true,
-			}
-			l, logErr := logger.New(cfg)
-			if logErr != nil {
-				log.Fatal(logErr)
-			}
-			l.Warn("No cluster found - with-cluster tests will fail. " +
+			log.Println("WARNING: No cluster found - with-cluster tests will fail. " +
 				"To run only tests that do not require a cluster use: make test-e2e-without-cluster. " +
 				"To run with-cluster tests, ensure a valid cluster is running.")
 		}

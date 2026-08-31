@@ -6,7 +6,7 @@ Currently, we primarily test Zarf through a series of [end-to-end tests](https:/
 
 In addition, Zarf implements unit tests for specific functions where edge cases prove difficult to cover through end-to-end testing alone. Unit tests follow standard Go convention and are `*_test.go` files.
 
-## Dependencies # TODO: update any more dependencies
+## Dependencies
 
 To run the end-to-end tests locally, you must meet the same prerequisites as those required for building and running Zarf, which include:
 
@@ -16,7 +16,7 @@ To run the end-to-end tests locally, you must meet the same prerequisites as tho
 4. Docker Buildx
 5. Any clean K8s cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed K3s cluster
 
-## Unit Tests # TODO: DONE these have been tested on mac and linux so this section is GTG
+## Unit Tests
 
 There are several ways to run tests depending on your specific situation, such as:
 
@@ -77,8 +77,10 @@ make test-e2e ARCH="[amd64|arm64]"
 # To get a single-line readable summary of all the e2e tests currently defined:
 cd src/test/e2e && go test ./main_test.go ./[01]* -failfast -v -timeout 35m 2>&1 | grep -E "^(--- FAIL|--- PASS|FAIL|ok)"
 
+######### TODO: All of the above has been tested and is gtg #####################
+######### TODO: Working below this line #########################################
 # To test against a Zarf-created cluster (Linux only with sudo, not compatible with macOS)
-APPLIANCE_MODE=true make test-e2e ARCH="amd64"
+APPLIANCE_MODE=true make test-e2e ARCH="amd64" TODO: ✅ Confirmed this works on Linux
 
 # If you already have everything built, you can run this inside this folder. This lets you customize the test run.
 go test ./src/test/... -v -failfast -count=1
