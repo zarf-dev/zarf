@@ -226,7 +226,7 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
 	CmdPackageFlagFlagPublicKey           = "Path to public key file for validating signed packages"
 	CmdPackageFlagVerify                  = "Signature verification mode (always|if-possible|never)."
 	CmdPackageFlagSkipSignatureValidation = "[Deprecated] Skip validating the signature of the Zarf package. Use --verify=never instead."
-	CmdPackageFlagRetries                 = "Number of retries to perform for Zarf operations like git/image pushes"
+	CmdPackageFlagRetries                 = "Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
 	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +
