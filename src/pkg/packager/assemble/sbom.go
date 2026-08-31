@@ -216,7 +216,7 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 	catalog := pkg.NewCollection()
 	relationships := []artifact.Relationship{}
 	for index, sbomFile := range sbomFiles {
-		l.Info("creating file SBOMs", "index", (index + 1), "count", len(sbomFiles), "file", sbomFile)
+		l.Info("creating file SBOMs", "file", sbomFile, "count", fmt.Sprintf("%d/%d", index+1, len(sbomFiles)))
 		fileSrc, err := filesource.NewFromPath(sbomFile)
 		if err != nil {
 			return nil, err
