@@ -1,0 +1,5 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test
+components:
+  - name: test-flavor
