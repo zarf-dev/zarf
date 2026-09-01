@@ -24,6 +24,9 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// MaxRetryAfter limits server-requested retry delays.
+const MaxRetryAfter = 60 * time.Second
+
 // retryAfterDuration is returned on a 429 so the custom DelayType can use it
 // instead of stacking on top of the normal backoff.
 type retryAfterDuration time.Duration
@@ -139,10 +142,9 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusTooManyRequests {
-			if d := parseRetryAfter(resp.Header.Get("Retry-After")); d > 0 {
-				const maxRetryAfter = 60 * time.Second
-				if d > maxRetryAfter {
-					return retry.Unrecoverable(fmt.Errorf("rate limited (HTTP 429) with Retry-After %s exceeding %s: %s", d, maxRetryAfter, resp.Status))
+			if d := ParseRetryAfter(resp.Header.Get("Retry-After")); d > 0 {
+				if d > MaxRetryAfter {
+					return retry.Unrecoverable(fmt.Errorf("rate limited (HTTP 429) with Retry-After %s exceeding %s: %s", d, MaxRetryAfter, resp.Status))
 				}
 				return retryAfterDuration(d)
 			}
@@ -162,9 +164,9 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	return nil
 }
 
-// parseRetryAfter parses the Retry-After header value into a duration.
+// ParseRetryAfter parses the Retry-After header value into a duration.
 // It supports both delay-seconds (integer) and HTTP-date formats.
-func parseRetryAfter(value string) time.Duration {
+func ParseRetryAfter(value string) time.Duration {
 	if value == "" {
 		return 0
 	}

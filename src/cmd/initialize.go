@@ -224,6 +224,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		VerificationStrategy: o.verify.toStrategy(),
 		Filter:               filter,
 		Architecture:         config.GetArch(),
+		Retries:              o.retries,
 		CachePath:            cachePath,
 		RemoteOptions:        defaultRemoteOptions(),
 	}
@@ -343,6 +344,7 @@ func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory st
 		pullOptions := packager.PullOptions{
 			Architecture:   config.GetArch(),
 			OCIConcurrency: o.ociConcurrency,
+			Retries:        o.retries,
 			CachePath:      cachePath,
 		}
 
