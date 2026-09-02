@@ -36,14 +36,13 @@ func TestCreateTemplating(t *testing.T) {
 	pkgLayout, err := layout.LoadFromTar(context.Background(), templatingPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 	expectedConstant := v1alpha1.Constant{Name: "PODINFO_VERSION", Value: "6.4.0", Pattern: "^[\\w\\-\\.]+$"}
-	require.Contains(t, pkgLayout.Pkg.Constants, expectedConstant)
+	require.Contains(t, pkgLayout.AsV1alpha1().Constants, expectedConstant)
 
 	// Test that files and file folders template and handle SBOMs correctly
 	_, _, err = e2e.Zarf(t, "package", "create", "src/test/packages/04-file-folders-templating-sbom/", "-o", outPath, "--sbom-out", sbomPath, "--confirm")
 	require.NoError(t, err)
 
 	// Ensure that the `requirements.txt` files are discovered correctly
-	require.FileExists(t, filepath.Join(sbomPath, "file-folders-templating-sbom", "compare.html"))
 	require.FileExists(t, filepath.Join(sbomPath, "file-folders-templating-sbom", "sbom-viewer-zarf-component-folders.html"))
 	foldersJSON, err := os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "zarf-component-folders.json"))
 	require.NoError(t, err)

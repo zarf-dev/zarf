@@ -23,7 +23,9 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"oras.land/oras-go/v2/content"
+	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/credentials"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
@@ -70,55 +72,6 @@ func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
 		}
 	}
 	return true
-}
-
-func buildScheme(plainHTTP bool) string {
-	if plainHTTP {
-		return "http"
-	}
-	return "https"
-}
-
-// Ping verifies if a user can connect to a registry
-func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) (err error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	url := fmt.Sprintf("%s://%s/v2/", buildScheme(plainHTTP), registryURL)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, resp.Body.Close())
-	}()
-
-	switch resp.StatusCode {
-	case http.StatusOK, http.StatusUnauthorized, http.StatusForbidden:
-		return nil
-	}
-	return fmt.Errorf("could not connect to registry %s over %s. status code: %d", registryURL, buildScheme(plainHTTP), resp.StatusCode)
-}
-
-// ShouldUsePlainHTTP returns true if the registryURL is an http endpoint
-// This is inspired by the Crane functionality to determine the schema to be used - https://github.com/google/go-containerregistry/blob/main/pkg/v1/remote/transport/ping.go
-// Zarf relies heavily on this logic, as the internal registry communicates over HTTP, however we want Zarf to be flexible should the registry be over https in the future
-func ShouldUsePlainHTTP(ctx context.Context, registryURL string, client *auth.Client) (bool, error) {
-	// If the https connection works use https
-	err := Ping(ctx, false, registryURL, client)
-	if err == nil {
-		return false, nil
-	}
-	logger.From(ctx).Debug("failing back to plainHTTP connection", "registryUrl", registryURL, "err", err)
-	// If https regular request failed and plainHTTP is allowed check again over plainHTTP
-	err2 := Ping(ctx, true, registryURL, client)
-	if err2 != nil {
-		return false, errors.Join(err, err2)
-	}
-	return true, nil
 }
 
 // IsManifest reports whether the media type represents an OCI manifest.
@@ -187,6 +140,48 @@ func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
 	return nil
 }
 
+// NewAuthClientFromDocker creates an ORAS auth client from the default Docker credentials store.
+func NewAuthClientFromDocker(ctx context.Context, insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration, preAuthHosts map[string]struct{}) (_ *auth.Client, err error) {
+	credStore, err := credentials.NewStoreFromDocker(credentials.StoreOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get credentials: %w", err)
+	}
+
+	transport, err := orasTransport(insecureSkipTLSVerify, responseHeaderTimeout)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &auth.Client{
+		Client: &http.Client{
+			Transport: transport,
+		},
+		Cache:      auth.NewCache(),
+		Credential: credentials.Credential(credStore),
+	}
+
+	logger.From(ctx).Debug("gathering credentials from default Docker config file", "credentialsConfigured", credStore.IsAuthConfigured())
+
+	// We ping registries to pre-authenticate as some auth mechanisms open up a browser.
+	// When this happens concurrently a browser tab is opened for each image from that host and authenticating to one tab will not propagate creds.
+	// Instead we auth synchronously with ping so the auth is cached before concurrent fetch.
+	if credStore.IsAuthConfigured() {
+		for host := range preAuthHosts {
+			if host == "" {
+				continue
+			}
+			registry, err := orasRemote.NewRegistry(host)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create registry: %w", err)
+			}
+			registry.Client = client
+			_ = registry.Ping(ctx) //nolint: errcheck
+		}
+	}
+
+	return client, nil
+}
+
 func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration) (*retry.Transport, error) {
 	transport, ok := http.DefaultTransport.(*http.Transport)
 	if !ok {
@@ -198,6 +193,17 @@ func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Durati
 	// Users frequently run into servers hanging indefinitely, if the server doesn't send headers in 10 seconds then we timeout to avoid this
 	transport.ResponseHeaderTimeout = responseHeaderTimeout
 	return retry.NewTransport(transport), nil
+}
+
+// unwrapRetryTransport returns rt's underlying RoundTripper if rt is an oras-go
+// retry.Transport, so a scheme probe never inherits its retry/backoff behavior:
+// probing must fail fast on a connection error, not retry it into a multi-second
+// (or, compounded across the negotiate-invalidate-retry cycle, multi-minute) stall.
+func unwrapRetryTransport(rt http.RoundTripper) http.RoundTripper {
+	if retryRT, ok := rt.(*retry.Transport); ok && retryRT.Base != nil {
+		return retryRT.Base
+	}
+	return rt
 }
 
 // NoopOpt is a no-op option for crane.

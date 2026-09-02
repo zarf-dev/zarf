@@ -1,0 +1,10 @@
+kind: ZarfPackageConfig
+metadata:
+  name: template-refs-dir-file
+components:
+  - name: comp
+    files:
+      # A directory target is walked file-by-file; templated files inside it are validated.
+      - source: confdir
+        target: confdir
+        template: true

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: schema-chart-values
+  {{ with .Values.configMap.annotations }}
+  annotations:
+    {{ toYaml . | nindent 4 }}
+  {{ end }}
+  {{ with .Values.configMap.labels }}
+  labels:
+    {{ toYaml . | nindent 4 }}
+  {{ end }}
+data:
+  name: {{ .Values.name | default "unknown" | quote }}
+  replicas: {{ .Values.replicaCount | quote }}
+  port: {{ .Values.service.port | quote }}

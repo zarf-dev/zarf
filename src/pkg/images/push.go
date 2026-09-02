@@ -20,15 +20,18 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
-const defaultRetries = 3
+const (
+	defaultComponentPushAttempts = 3
+	imagePushAttempts            = 2
+)
 
 // PushOptions is the configuration for pushing images.
 type PushOptions struct {
@@ -53,8 +56,11 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 	if registryInfo.Address == "" {
 		return fmt.Errorf("registry address must be specified")
 	}
+	if registryInfo.ShouldUseMTLS() && cfg.Cluster == nil {
+		return fmt.Errorf("registry uses Zarf-managed mTLS, but no cluster is available to obtain its client certificate")
+	}
 	if cfg.Retries < 1 {
-		cfg.Retries = defaultRetries
+		cfg.Retries = defaultComponentPushAttempts
 	}
 	if cfg.ResponseHeaderTimeout <= 0 {
 		cfg.ResponseHeaderTimeout = 10 * time.Second
@@ -105,7 +111,8 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 
 		var transport http.RoundTripper
 		var certs pki.GeneratedPKI
-		if cfg.Cluster != nil && registryInfo.ShouldUseMTLS() {
+		usingMTLS := registryInfo.ShouldUseMTLS()
+		if usingMTLS {
 			certs, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
 			if err != nil {
 				return err
@@ -132,13 +139,14 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			}),
 		}
 
-		plainHTTP := cfg.PlainHTTP
-		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
-			var err error
-			plainHTTP, err = ShouldUsePlainHTTP(ctx, registryRef.Host(), client)
-			if err != nil {
-				return err
-			}
+		// Negotiate only when the registry's scheme isn't already known, since the
+		// negotiation itself is a probe over the same tunnel the real push depends on.
+		// Reuse the same transport the real push will use, but stripped of any retry
+		// wrapper: probing must stay fast, not retry with backoff on every failure.
+		var plainHTTP bool
+		plainHTTP, err = registryInfo.ResolvePlainHTTP(ctx, registryRef.Host(), cfg.PlainHTTP, ocischeme.ProbeOptions{InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify, Transport: unwrapRetryTransport(transport)})
+		if err != nil {
+			return err
 		}
 
 		pushImage := func(srcName, dstName string) error {
@@ -175,13 +183,17 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 
 				err = retry.Do(
 					func() error { return pushImage(img, offlineNameCRC) },
-					retry.OnRetry(func(_ uint, err error) {
+					retry.OnRetry(func(attempt uint, err error) {
+						if attempt == imagePushAttempts-1 {
+							return
+						}
 						ociConcurrency = 1
-						l.Debug("retrying image push", "error", err, "concurrency", ociConcurrency)
+						l.Warn("retrying image push", "error", err, "concurrency", ociConcurrency)
 					}),
 					retry.Context(ctx),
-					retry.Attempts(2),
+					retry.Attempts(imagePushAttempts),
 					retry.Delay(500*time.Millisecond),
+					retry.LastErrorOnly(true),
 				)
 				if err != nil {
 					return err
@@ -197,13 +209,17 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 
 			err = retry.Do(
 				func() error { return pushImage(img, offlineName) },
-				retry.OnRetry(func(_ uint, err error) {
+				retry.OnRetry(func(attempt uint, err error) {
+					if attempt == imagePushAttempts-1 {
+						return
+					}
 					ociConcurrency = 1
-					l.Debug("retrying image push", "error", err, "concurrency", ociConcurrency)
+					l.Warn("retrying image push", "error", err, "concurrency", ociConcurrency)
 				}),
 				retry.Context(ctx),
-				retry.Attempts(2),
+				retry.Attempts(imagePushAttempts),
 				retry.Delay(500*time.Millisecond),
+				retry.LastErrorOnly(true),
 			)
 			if err != nil {
 				return err
@@ -212,11 +228,13 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			pushed = append(pushed, img)
 		}
 		return nil
-	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond), retry.OnRetry(func(attempt uint, _ error) {
-		if uint(cfg.Retries) > 2 && attempt == uint(cfg.Retries)-2 {
-			cfg.ResponseHeaderTimeout = 60 * time.Second // this should really never happen
+	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond), retry.LastErrorOnly(true), retry.OnRetry(func(attempt uint, err error) {
+		if attempt == uint(cfg.Retries)-1 {
+			return
 		}
-		l.Debug("retrying component image(s) push", "responseTimeout", cfg.ResponseHeaderTimeout)
+		// S3-backed registries may take longer to finalize an upload and respond.
+		cfg.ResponseHeaderTimeout = 60 * time.Second
+		l.Warn("retrying component image(s) push", "error", err, "responseTimeout", cfg.ResponseHeaderTimeout)
 	}))
 	if err != nil {
 		return err

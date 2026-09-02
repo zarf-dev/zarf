@@ -22,7 +22,7 @@ type ZarfComponent struct {
 	Only ZarfComponentOnlyTarget `json:"only,omitempty"`
 
 	// [Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.
-	DeprecatedGroup string `json:"group,omitempty" jsonschema:"deprecated=true"`
+	DeprecatedGroup string `json:"group,omitempty" jsonschema_extras:"deprecated=true"`
 
 	// Import a component from another Zarf package.
 	Import ZarfComponentImport `json:"import,omitempty"`
@@ -34,7 +34,7 @@ type ZarfComponent struct {
 	Charts []ZarfChart `json:"charts,omitempty"`
 
 	// [Deprecated] Datasets to inject into a container in the target cluster.
-	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"deprecated=true"`
+	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema_extras:"deprecated=true"`
 
 	// Files or folders to place on disk during package deployment.
 	Files []ZarfFile `json:"files,omitempty"`
@@ -49,14 +49,30 @@ type ZarfComponent struct {
 	Repos []string `json:"repos,omitempty"`
 
 	// [Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0.
-	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"deprecated=true"`
+	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema_extras:"deprecated=true"`
 
 	// Custom commands to run at various stages of a package lifecycle.
 	Actions ZarfComponentActions `json:"actions,omitempty"`
 
 	// List of resources to health check after deployment
 	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
+
+	// Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).
+	// Valid values: "registryCredentials", "gitCredentials", "agentCerts".
+	StateAccess []StateAccessKey `json:"stateAccess,omitempty"`
 }
+
+// StateAccessKey identifies a named group of sensitive state fields available in {{ .State }} Go templates.
+type StateAccessKey string
+
+const (
+	// StateAccessRegistryCredentials unlocks .State.Registry.{PushPassword,PullPassword,Secret,Htpasswd}.
+	StateAccessRegistryCredentials StateAccessKey = "registryCredentials"
+	// StateAccessGitCredentials unlocks .State.Git.{PushPassword,PullPassword}.
+	StateAccessGitCredentials StateAccessKey = "gitCredentials"
+	// StateAccessAgentCerts unlocks .State.Agent.{CA,Cert,Key} (base64-encoded) and adds the .State.Agent sub-object.
+	StateAccessAgentCerts StateAccessKey = "agentCerts"
+)
 
 // ImageArchive points to an archived file containing an OCI layout
 type ImageArchive struct {
@@ -162,7 +178,7 @@ type ZarfFile struct {
 	Symlinks []string `json:"symlinks,omitempty"`
 	// Local folder or file to be extracted from a 'source' archive.
 	ExtractPath string `json:"extractPath,omitempty"`
-	// [alpha]
+	// [beta]
 	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
 	// known at deploy-time. See documentation for Zarf Values for how to set these values.
 	Template *bool `json:"template,omitempty"`
@@ -200,9 +216,11 @@ type ZarfChart struct {
 	NoWait bool `json:"noWait,omitempty"`
 	// List of local values file paths or remote URLs to include in the package; these will be merged together when deployed.
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
+	// [beta] List of local values file paths or remote URLs that will have Go templates applied at deploy time
+	TemplatedValuesFiles []string `json:"templatedValuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
-	// [alpha] List of values sources to their Helm override target
+	// [beta] List of values sources to their Helm override target
 	Values []ZarfChartValue `json:"values,omitempty"`
 	// Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.
 	SchemaValidation *bool `json:"schemaValidation,omitempty"`
@@ -244,9 +262,11 @@ type ZarfChartVariable struct {
 // ZarfChartValue maps a Zarf Value key to a Helm Value.
 type ZarfChartValue struct {
 	// Path to Zarf values key. A single dot (.) represents the root.
-	SourcePath string `json:"sourcePath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.registry.port"`
+	SourcePath string `json:"sourcePath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.registry"`
 	// Path to chart values key. A single dot (.) represents the root.
-	TargetPath string `json:"targetPath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.service.port"`
+	TargetPath string `json:"targetPath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.distribution"`
+	// Paths under sourcePath to omit when mapping to the target. Each path must be a descendant of sourcePath.
+	ExcludePaths []string `json:"excludePaths,omitempty" jsonschema:"pattern=^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$,example=.registry.image"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
@@ -272,7 +292,7 @@ type ZarfManifest struct {
 	//              was used when the chart was first installed
 	// Defaults to "auto" when omitted.
 	ServerSideApply string `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
-	// [alpha]
+	// [beta]
 	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
 	// known at deploy-time. See documentation for Zarf Values for how to set these values.
 	Template *bool `json:"template,omitempty"`
@@ -369,7 +389,7 @@ type ZarfComponentAction struct {
 	// (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.
 	Shell *Shell `json:"shell,omitempty"`
 	// [Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.
-	DeprecatedSetVariable string `json:"setVariable,omitempty" jsonschema:"pattern=^[A-Z0-9_]+$"`
+	DeprecatedSetVariable string `json:"setVariable,omitempty" jsonschema:"pattern=^[A-Z0-9_]+$" jsonschema_extras:"deprecated=true"`
 	// (onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
 	SetVariables []Variable `json:"setVariables,omitempty"`
 	// (onDeploy/onRemove/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.

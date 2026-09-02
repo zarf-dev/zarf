@@ -14,6 +14,7 @@ spec:
         # Don't mutate this pod
         zarf.dev/agent: ignore
     spec:
+      automountServiceAccountToken: false
       priorityClassName: system-node-critical
       containers:
         - name: injector
@@ -61,6 +62,7 @@ spec:
             capabilities:
               drop:
               - ALL
+            privileged: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
     {{- if eq (include "proxy.hostNetwork" .) "true" }}

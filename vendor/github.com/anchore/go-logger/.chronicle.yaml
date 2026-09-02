@@ -1,0 +1,5 @@
+# no matter the change, stay v0 for now
+enforce-v0: true
+
+# since github release pages already have titles that are the tag, we don't need to repeat that in the changelog
+title: ""

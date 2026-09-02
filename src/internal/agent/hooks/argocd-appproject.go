@@ -6,14 +6,13 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	v1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,28 +34,20 @@ type AppProjectSpec struct {
 }
 
 // NewAppProjectMutationHook creates a new mutation hook for ArgoCD AppProjects.
-func NewAppProjectMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	return operations.Hook{
-		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateAppProject(ctx, r, cluster)
-		},
-		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateAppProject(ctx, r, cluster)
-		},
-	}
+func NewAppProjectMutationHook(c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
+	admit := withMutationGuard(c, mode, func(ctx context.Context, r *v1.AdmissionRequest, proj *AppProject) (*operations.Result, error) {
+		return mutateAppProject(ctx, r, c, proj)
+	})
+	return operations.Hook{Create: admit, Update: admit}
 }
 
 // mutateAppProject mutates the sourceRepos in ArgoCD AppProject to point to the Zarf git server.
-func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, proj *AppProject) (*operations.Result, error) {
 	l := logger.From(ctx)
-	s, err := cluster.LoadState(ctx)
+
+	s, err := c.LoadState(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	proj := AppProject{}
-	if err = json.Unmarshal(r.Object.Raw, &proj); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
 	requiresGit, requiresRegistry := classifyURLSchemes(proj.Spec.SourceRepos)
@@ -66,7 +57,7 @@ func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, cluster *clus
 		return &operations.Result{Allowed: true}, nil
 	}
 
-	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	registryAddress, clusterIP, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}

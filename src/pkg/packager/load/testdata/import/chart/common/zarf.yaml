@@ -11,3 +11,5 @@ components:
         values:
           - sourcePath: .baseValue
             targetPath: .config.base
+        templatedValuesFiles:
+          - base-templated-values.yaml

@@ -2,6 +2,7 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 global:
+  imageRegistry: "###ZARF_REGISTRY###"
   cattle:
     systemDefaultRegistry: ""
     windowsCluster:
@@ -25,44 +26,44 @@ image:
   longhorn:
     engine:
       repository: longhornio/longhorn-engine
-      tag: v1.4.0
+      tag: v1.11.2
     manager:
       repository: longhornio/longhorn-manager
-      tag: v1.4.0
+      tag: v1.11.2
     ui:
       repository: longhornio/longhorn-ui
-      tag: v1.4.0
+      tag: v1.11.2
     instanceManager:
       repository: longhornio/longhorn-instance-manager
-      tag: v1.4.0
+      tag: v1.11.2
     shareManager:
       repository: longhornio/longhorn-share-manager
-      tag: v1.4.0
+      tag: v1.11.2
     backingImageManager:
       repository: longhornio/backing-image-manager
-      tag: v1.4.0
+      tag: v1.11.2
     supportBundleKit:
       repository: longhornio/support-bundle-kit
-      tag: v0.0.17
+      tag: v0.0.84
   csi:
     attacher:
       repository: longhornio/csi-attacher
-      tag: v3.4.0
+      tag: v4.11.0-20260428
     provisioner:
       repository: longhornio/csi-provisioner
-      tag: v2.1.2
+      tag: v5.3.0-20260428
     nodeDriverRegistrar:
       repository: longhornio/csi-node-driver-registrar
-      tag: v2.5.0
+      tag: v2.16.0-20260428
     resizer:
       repository: longhornio/csi-resizer
-      tag: v1.3.0
+      tag: v2.1.0-20260428
     snapshotter:
       repository: longhornio/csi-snapshotter
-      tag: v5.0.1
+      tag: v8.5.0-20260428
     livenessProbe:
       repository: longhornio/livenessprobe
-      tag: v2.8.0
+      tag: v2.18.0-20260428
   pullPolicy: IfNotPresent
 
 service:
@@ -98,7 +99,7 @@ persistence:
   removeSnapshotsDuringFilesystemTrim: ignored # "enabled" or "disabled" otherwise
 
 csi:
-  kubeletRootDir: "/var/lib/kubelet"
+  kubeletRootDir: "/var/lib/rancher/k3s/agent/kubelet"
   attacherReplicaCount: ~
   provisionerReplicaCount: ~
   resizerReplicaCount: ~
@@ -330,3 +331,6 @@ annotations: {}
 serviceAccount:
   # Annotations to add to the service account
   annotations: {}
+
+preUpgradeChecker:
+  upgradeVersionCheck: false

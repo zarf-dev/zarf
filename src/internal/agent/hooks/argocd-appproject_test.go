@@ -25,6 +25,7 @@ func createArgoAppProjectAdmissionRequest(t *testing.T, op v1.Operation, argoApp
 	require.NoError(t, err)
 	return &v1.AdmissionRequest{
 		Operation: op,
+		Namespace: testNamespace,
 		Object: runtime.RawExtension{
 			Raw: raw,
 		},
@@ -167,7 +168,7 @@ func TestArgoAppProjectWebhook(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := createTestClientWithZarfState(ctx, t, s)
-			handler := admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(ctx, c))
+			handler := admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(c, state.MutationPolicyAll))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)
@@ -241,7 +242,7 @@ func TestArgoAppProjectWebhookRegistryOnly(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := createTestClientWithZarfState(ctx, t, s)
-			handler := admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(ctx, c))
+			handler := admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(c, state.MutationPolicyAll))
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
 			verifyAdmission(t, rr, tt)
 		})
@@ -271,7 +272,7 @@ func TestArgoAppProjectWebhookGitOnly(t *testing.T) {
 	})
 
 	c := createTestClientWithZarfState(ctx, t, s)
-	handler := admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(ctx, c))
+	handler := admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(c, state.MutationPolicyAll))
 	rr := sendAdmissionRequest(t, admissionReq, handler)
 	verifyAdmission(t, rr, admissionTest{patch: nil, code: http.StatusOK})
 }

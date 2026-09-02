@@ -5,6 +5,7 @@ package packager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 
@@ -75,14 +77,17 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	arch := config.GetArch(opts.Architecture)
 	p := oci.PlatformForArch(arch)
 
-	// Set up remote repo client
-	srcRemote, err := zoci.NewRemote(ctx, src.String(), p, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
-	if err != nil {
-		return fmt.Errorf("could not instantiate remote: %w", err)
+	// Set up remote repo clients.
+	remoteOptions := zoci.RemoteClientOptions{
+		RemoteOptions: opts.RemoteOptions,
 	}
-	dstRemote, err := zoci.NewRemote(ctx, dst.String(), p, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+	srcRemote, err := zoci.NewRemoteWithOptions(ctx, src.String(), p, remoteOptions)
 	if err != nil {
-		return fmt.Errorf("could not instantiate remote: %w", err)
+		return fmt.Errorf("could not instantiate source remote: %w", err)
+	}
+	dstRemote, err := zoci.NewRemoteWithOptions(ctx, dst.String(), p, remoteOptions)
+	if err != nil {
+		return fmt.Errorf("could not instantiate destination remote: %w", err)
 	}
 
 	publishOptions := zoci.PublishOptions{
@@ -160,7 +165,7 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		Tag: opts.Tag,
 	}
 	// Build Reference for remote from registry location and pkg
-	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(dst.String(), pkgLayout.Pkg, referenceOptions)
+	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(dst.String(), pkgLayout.AsV1alpha1(), referenceOptions)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -197,7 +202,7 @@ type PublishSkeletonOptions struct {
 
 // PublishSkeleton takes a Path to the package definition and uploads a skeleton package to the given a registry.
 // dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
-func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (registry.Reference, error) {
+func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (_ registry.Reference, err error) {
 	l := logger.From(ctx)
 
 	// disallow infinite or negative
@@ -226,29 +231,34 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
-	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
-		CachePath:          opts.CachePath,
-		Flavor:             opts.Flavor,
-		SkipVersionCheck:   opts.SkipVersionCheck,
-		SkipRequiredValues: true,
-		RemoteOptions:      opts.RemoteOptions,
+	loaded, err := load.Package(ctx, path, load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			CachePath:        opts.CachePath,
+			Flavor:           opts.Flavor,
+			SkipVersionCheck: opts.SkipVersionCheck,
+			RemoteOptions:    opts.RemoteOptions,
+		},
 	})
 	if err != nil {
 		return registry.Reference{}, err
 	}
+	defer func() {
+		err = errors.Join(err, loaded.Close())
+	}()
+	pkg := loaded.Definition.AsV1alpha1()
 	for _, comp := range pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")
 		}
 	}
 	// Create skeleton buildpath
-	createOpts := layout.AssembleSkeletonOptions{
+	createOpts := assemble.AssembleSkeletonOptions{
 		SigningKeyPath:       opts.SigningKeyPath,
 		SigningKeyPassword:   opts.SigningKeyPassword,
 		Flavor:               opts.Flavor,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
-	pkgLayout, err := layout.AssembleSkeleton(ctx, pkg, path, createOpts)
+	pkgLayout, err := assemble.AssembleSkeleton(ctx, loaded, createOpts)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
 	}
@@ -256,7 +266,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		Tag: opts.Tag,
 	}
 	// Build Reference for remote from registry location and pkg
-	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(ref.String(), pkgLayout.Pkg, referenceOptions)
+	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(ref.String(), pkgLayout.AsV1alpha1(), referenceOptions)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -266,7 +276,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	}
 	l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
 	ex := []v1alpha1.ZarfComponent{}
-	for _, c := range pkgLayout.Pkg.Components {
+	for _, c := range pkgLayout.AsV1alpha1().Components {
 		ex = append(ex, v1alpha1.ZarfComponent{
 			Name: fmt.Sprintf("import-%s", c.Name),
 			Import: v1alpha1.ZarfComponentImport{
@@ -285,11 +295,13 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 // pushToRemote pushes a package to the given reference
 func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, retries int, remoteOpts types.RemoteOptions) error {
-	arch := layout.Pkg.Metadata.Architecture
+	arch := layout.AsV1alpha1().Metadata.Architecture
 	// Set platform
 	platform := oci.PlatformForArch(arch)
 
-	remote, err := zoci.NewRemote(ctx, ref.String(), platform, oci.WithPlainHTTP(remoteOpts.PlainHTTP), oci.WithInsecureSkipVerify(remoteOpts.InsecureSkipTLSVerify))
+	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), platform, zoci.RemoteClientOptions{
+		RemoteOptions: remoteOpts,
+	})
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}

@@ -128,9 +128,12 @@ func (g *Client) UpdateGitUser(ctx context.Context, username string, password st
 	if err != nil {
 		return err
 	}
-	_, _, err = g.DoRequest(ctx, http.MethodPatch, fmt.Sprintf("/api/v1/admin/users/%s", username), body)
+	_, statusCode, err := g.DoRequest(ctx, http.MethodPatch, fmt.Sprintf("/api/v1/admin/users/%s", username), body)
 	if err != nil {
 		return err
+	}
+	if statusCode < 200 || statusCode >= 300 {
+		return fmt.Errorf("failed to update git user %q: unexpected status code %d", username, statusCode)
 	}
 	return nil
 }

@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "backend": {
+      "type": "object",
+      "description": "Backend configuration",
+      "properties": {
+        "name": {
+          "type": "number",
+          "description": "Backend name"
+        },
+        "replicaCount": {
+          "type": "string",
+          "description": "Replica count"
+        }
+      }
+    },
+    "app": {
+      "type": "object",
+      "description": "should be overridden by parent",
+      "properties": {
+        "name": {
+          "type": "number",
+          "description": "should be overridden by parent"
+        },
+        "replicas": {
+          "type": "string",
+          "description": "should be overridden by parent"
+        }
+      }
+    }
+  }
+}

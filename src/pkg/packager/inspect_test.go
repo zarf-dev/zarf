@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -35,6 +37,26 @@ func assertContainsAll(t *testing.T, resources []Resource, expectedContent []str
 	for _, expected := range expectedContent {
 		require.Contains(t, allContent, expected)
 	}
+}
+
+func TestInspectPackageResourcesSkipsValuesSchemaValidationWhenConfigured(t *testing.T) {
+	setupInspectTests(t)
+	ctx := testutil.TestContext(t)
+	srcDir := filepath.Join("load", "testdata", "package-with-invalid-values")
+	loaded, err := load.Package(ctx, srcDir, load.PackageOptions{SkipValuesSchemaValidation: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	_, err = InspectPackageResources(ctx, pkgLayout, InspectPackageResourcesOptions{})
+	require.ErrorContains(t, err, "inspect values validation failed")
+
+	_, err = InspectPackageResources(ctx, pkgLayout, InspectPackageResourcesOptions{
+		SkipValuesSchemaValidation: true,
+	})
+	require.NoError(t, err)
 }
 
 func TestInspectDefinitionResources(t *testing.T) {
@@ -156,6 +178,24 @@ func TestInspectDefinitionResources(t *testing.T) {
 				"customField: fromValues",
 				"pullPolicy: IfNotPresent",
 				"port: 8080",
+			},
+		},
+		{
+			name:       "chart with templatedValuesFiles renders Go templates",
+			packageDir: inspectTestDataPath("chart-with-templated-values-files"),
+			opts: InspectDefinitionResourcesOptions{
+				Values: value.Values{
+					"replicas": 3,
+					"imageTag": "1.21",
+				},
+			},
+			expectedResources: 2, // 1 chart resource + 1 values file resource
+			expectedContent: []string{
+				// from valuesFiles (static, no templating)
+				"staticField: from-static-file",
+				// from templatedValuesFiles (Go templates resolved from .Values)
+				"replicaCount: 3",
+				"image: nginx:1.21",
 			},
 		},
 		{

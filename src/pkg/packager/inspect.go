@@ -15,11 +15,12 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
-	tmpl "github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	tmpl "github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -50,6 +51,8 @@ type InspectPackageResourcesOptions struct {
 	// Values merge on top of the package's values.yaml and feed chart overrides and manifest Go-templates.
 	Values      value.Values
 	KubeVersion string
+	// SkipValuesSchemaValidation skips validation of the merged package values against the package schema.
+	SkipValuesSchemaValidation bool
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	types.RemoteOptions
@@ -61,13 +64,14 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	if err != nil {
 		return nil, err
 	}
+	pkg := pkgLayout.AsV1alpha1()
 
-	if !feature.IsEnabled(feature.Values) && (len(pkgLayout.Pkg.Values.Files) > 0 || len(opts.Values) > 0) {
+	if !feature.IsEnabled(feature.Values) && (len(pkg.Values.Files) > 0 || len(opts.Values) > 0) {
 		return nil, fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables, opts.IsInteractive)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +83,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	}
 	vals.DeepMerge(opts.Values)
 
-	if pkgLayout.Pkg.Values.Schema != "" {
+	if pkgLayout.HasValuesSchema() && !opts.SkipValuesSchemaValidation {
 		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema)
 		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: true}); err != nil {
 			return nil, fmt.Errorf("inspect values validation failed: %w", err)
@@ -96,7 +100,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	}(tmpPackagePath)
 
 	var resources []Resource
-	for _, component := range pkgLayout.Pkg.Components {
+	for _, component := range pkg.Components {
 		tmpComponentPath := filepath.Join(tmpPackagePath, component.Name)
 		err := os.MkdirAll(tmpComponentPath, helpers.ReadWriteExecuteUser)
 		if err != nil {
@@ -127,11 +131,17 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 				if err != nil {
 					return nil, err
 				}
-				if err := templateValuesFiles(chart, valuesDir, variableConfig); err != nil {
+				if err := templateValuesFiles(ctx, chart, valuesDir, templateValuesFilesOpts{
+					variableConfig: variableConfig,
+					pkg:            pkg,
+					vals:           vals,
+					s:              s,
+					stateAccess:    component.StateAccess,
+				}); err != nil {
 					return nil, err
 				}
 
-				helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, chartOverrides)
+				helmChart, values, err := helm.LoadChartData(chart, layout.ChartPaths{ChartsDir: chartDir, ValuesDir: valuesDir}, chartOverrides)
 				if err != nil {
 					return nil, fmt.Errorf("failed to load chart data: %w", err)
 				}
@@ -164,10 +174,10 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 			for _, manifest := range component.Manifests {
 				files := make([]string, 0, len(manifest.Files)+len(manifest.Kustomizations))
 				for idx := range manifest.Files {
-					files = append(files, fmt.Sprintf("%s-%d.yaml", manifest.Name, idx))
+					files = append(files, layout.ManifestFileName(manifest.Name, idx))
 				}
 				for idx := range manifest.Kustomizations {
-					files = append(files, fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx))
+					files = append(files, layout.KustomizationFileName(manifest.Name, idx))
 				}
 				for _, file := range files {
 					path := filepath.Join(manifestDir, file)
@@ -175,11 +185,14 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 						return nil, fmt.Errorf("error templating the manifest: %w", err)
 					}
 					if manifest.IsTemplate() {
-						objs := tmpl.NewObjects(vals).
-							WithPackage(pkgLayout.Pkg).
-							WithBuild(pkgLayout.Pkg.Build).
+						objs, err := tmpl.NewObjects(vals).
+							WithPackage(pkg).
 							WithVariables(variableConfig.GetSetVariableMap()).
-							WithConstants(variableConfig.GetConstants())
+							WithConstants(variableConfig.GetConstants()).
+							WithState(tmpl.StateAccess{State: s, AccessKeys: component.StateAccess})
+						if err != nil {
+							return nil, fmt.Errorf("error building state template objects: %w", err)
+						}
 						if err := tmpl.ApplyToFile(ctx, path, path, objs); err != nil {
 							return nil, fmt.Errorf("error applying Go templates to manifest: %w", err)
 						}
@@ -201,13 +214,49 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	return resources, nil
 }
 
-func templateValuesFiles(chart v1alpha1.ZarfChart, valuesDir string, variableConfig *variables.VariableConfig) error {
-	for idx := range chart.ValuesFiles {
-		valueFilePath := helm.StandardValuesName(valuesDir, chart, idx)
-		if err := variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
+type templateValuesFilesOpts struct {
+	variableConfig *variables.VariableConfig
+	pkg            v1alpha1.ZarfPackage
+	vals           value.Values
+	s              *state.State
+	stateAccess    []v1alpha1.StateAccessKey
+}
+
+func templateValuesFiles(ctx context.Context, chart v1alpha1.ZarfChart, valuesDir string, opts templateValuesFilesOpts) error {
+	chartFiles := helm.GetChartValuesFiles(chart)
+
+	if len(chart.TemplatedValuesFiles) == 0 {
+		for _, f := range chartFiles {
+			valueFilePath := filepath.Join(valuesDir, layout.ChartValuesFileName(chart.Name, chart.Version, f.GlobalIdx))
+			if err := opts.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
+				return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
+			}
+		}
+		return nil
+	}
+
+	// Build objs once — inputs don't vary per file and WithState may invoke bcrypt.
+	objs, err := tmpl.NewObjects(opts.vals).
+		WithPackage(opts.pkg).
+		WithVariables(opts.variableConfig.GetSetVariableMap()).
+		WithConstants(opts.variableConfig.GetConstants()).
+		WithState(tmpl.StateAccess{State: opts.s, AccessKeys: opts.stateAccess})
+	if err != nil {
+		return fmt.Errorf("error building template objects: %w", err)
+	}
+
+	for _, f := range chartFiles {
+		valueFilePath := filepath.Join(valuesDir, layout.ChartValuesFileName(chart.Name, chart.Version, f.GlobalIdx))
+		if err := opts.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 			return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
 		}
+		if f.Template {
+			if err := tmpl.ApplyToFile(ctx, valueFilePath, valueFilePath, objs); err != nil {
+				return fmt.Errorf("error applying Go templates to values file %s: %w", valueFilePath, err)
+			}
+		}
 	}
+
 	return nil
 }
 
@@ -238,36 +287,34 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if err != nil {
 		return nil, err
 	}
-	loadOpts := load.DefinitionOptions{
-		Flavor:           opts.Flavor,
-		SetVariables:     opts.CreateSetVariables,
-		CachePath:        opts.CachePath,
-		IsInteractive:    opts.IsInteractive,
-		SkipVersionCheck: true,
-		RemoteOptions:    opts.RemoteOptions,
+	loadOpts := load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			Flavor:           opts.Flavor,
+			SetVariables:     opts.CreateSetVariables,
+			CachePath:        opts.CachePath,
+			IsInteractive:    opts.IsInteractive,
+			SkipVersionCheck: true,
+			RemoteOptions:    opts.RemoteOptions,
+		},
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	loaded, err := load.Package(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		err = errors.Join(err, loaded.Close())
+	}()
+	pkg := loaded.Definition.AsV1alpha1()
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, opts.IsInteractive)
 	if err != nil {
 		return nil, err
 	}
 
-	pkgPath, err := layout.ResolvePackagePath(packagePath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
-	}
+	vals := loaded.Values.DeepCopy()
+	vals.DeepMerge(opts.Values)
 
-	vals, err := loadPackageValues(ctx, pkg, pkgPath.BaseDir, opts.Values)
-	if err != nil {
-		return nil, err
-	}
-
-	if pkg.Values.Schema != "" {
-		schemaPath := filepath.Join(pkgPath.BaseDir, pkg.Values.Schema)
-		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: true}); err != nil {
+	if loaded.ValuesSchema != nil {
+		if err := vals.ValidateAgainstSchema(ctx, loaded.ValuesSchema, "resolved package values schema", value.ValidateOptions{SkipRequired: true}); err != nil {
 			return nil, fmt.Errorf("inspect values validation failed: %w", err)
 		}
 	}
@@ -296,7 +343,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		}
 
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, pkgPath.BaseDir, compBuildPath, variableConfig, vals, opts.KubeVersion, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, loaded.Resources, compBuildPath, variableConfig, vals, pkg, s, component.StateAccess, opts.KubeVersion, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -320,7 +367,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, loaded.Resources, compBuildPath, variableConfig, vals, pkg, tmpl.StateAccess{State: s, AccessKeys: component.StateAccess})
 			if err != nil {
 				return nil, err
 			}
@@ -331,8 +378,8 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	return resources, nil
 }
 
-func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage) (_ []Resource, err error) {
-	if err := layout.PackageManifest(ctx, manifest, baseComponentDir, packagePath); err != nil {
+func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, resourceSet *load.ResourceSet, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage, stateAccess tmpl.StateAccess) (_ []Resource, err error) {
+	if err := assemble.PackageManifest(ctx, manifest, baseComponentDir, resourceSet); err != nil {
 		return nil, err
 	}
 
@@ -356,9 +403,14 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 		var content []byte
 		if manifest.IsTemplate() {
 			// Create template objects with values, metadata, build, constants, and variables
-			objs := tmpl.NewObjects(vals).
+			objs, err := tmpl.NewObjects(vals).
 				WithPackage(pkg).
-				WithVariables(variableConfig.GetSetVariableMap())
+				WithVariables(variableConfig.GetSetVariableMap()).
+				WithConstants(variableConfig.GetConstants()).
+				WithState(stateAccess)
+			if err != nil {
+				return fmt.Errorf("error building state template objects: %w", err)
+			}
 
 			// Create a temp file for the output
 			tmpDir, err := os.MkdirTemp("", "zarf-inspect-*")
@@ -401,11 +453,11 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 }
 
 // getTemplatedChart returns a templated chart.yaml as a string after templating
-func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, componentName string, packagePath string,
-	baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, kubeVersion string, isInteractive bool, cachePath string, remoteOptions types.RemoteOptions) (Resource, common.Values, error) {
+func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, componentName string, resources *load.ResourceSet,
+	baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage, s *state.State, stateAccess []v1alpha1.StateAccessKey, kubeVersion string, isInteractive bool, cachePath string, remoteOptions types.RemoteOptions) (Resource, common.Values, error) {
 	chartPath := filepath.Join(baseComponentDir, string(layout.ChartsComponentDir))
 	valuesFilePath := filepath.Join(baseComponentDir, string(layout.ValuesComponentDir))
-	if err := layout.PackageChart(ctx, zarfChart, packagePath, chartPath, valuesFilePath, cachePath, remoteOptions); err != nil {
+	if err := assemble.PackageChart(ctx, zarfChart, resources, layout.ChartPaths{ChartsDir: chartPath, ValuesDir: valuesFilePath}, cachePath, remoteOptions); err != nil {
 		return Resource{}, common.Values{}, err
 	}
 
@@ -419,18 +471,17 @@ func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, compon
 		return Resource{}, common.Values{}, err
 	}
 
-	valuesFilePaths, err := helpers.RecursiveFileList(valuesFilePath, nil, false)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return Resource{}, common.Values{}, fmt.Errorf("failed to list values files: %w", err)
-	}
-	for _, valueFilePath := range valuesFilePaths {
-		err := variableConfig.ReplaceTextTemplate(valueFilePath)
-		if err != nil {
-			return Resource{}, common.Values{}, fmt.Errorf("error templating the values file: %w", err)
-		}
+	if err := templateValuesFiles(ctx, zarfChart, valuesFilePath, templateValuesFilesOpts{
+		variableConfig: variableConfig,
+		pkg:            pkg,
+		vals:           vals,
+		s:              s,
+		stateAccess:    stateAccess,
+	}); err != nil {
+		return Resource{}, common.Values{}, err
 	}
 
-	chart, values, err := helm.LoadChartData(zarfChart, chartPath, valuesFilePath, chartOverrides)
+	chart, values, err := helm.LoadChartData(zarfChart, layout.ChartPaths{ChartsDir: chartPath, ValuesDir: valuesFilePath}, chartOverrides)
 	if err != nil {
 		return Resource{}, common.Values{}, fmt.Errorf("failed to load chart data: %w", err)
 	}

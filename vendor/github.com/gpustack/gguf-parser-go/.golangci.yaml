@@ -1,0 +1,148 @@
+version: "1"
+
+run:
+  timeout: 10m
+  tests: true
+  modules-download-mode: readonly
+  go: "1.22"
+
+# output configuration options
+output:
+  print-issued-lines: true
+  print-linter-name: true
+  path-prefix: ""
+  sort-results: true
+
+linters:
+  disable-all: true
+  enable:
+    - asciicheck
+    - bidichk
+    - decorder
+    - durationcheck
+    - errcheck
+    - errname
+    - errorlint
+    - copyloopvar
+    - godot
+    - goconst
+    - gocritic
+    - gosimple
+    - gosec
+    - govet
+    - gofumpt
+    - gofmt
+    - ineffassign
+    - importas
+    - lll
+    - makezero
+    - misspell
+    - nakedret
+    - nilerr
+    - prealloc
+    - predeclared
+    - revive
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - whitespace
+
+linters-settings:
+  decorder:
+    dec-order:
+      - const
+      - var
+      - func
+    disable-init-func-first-check: false
+    disable-dec-order-check: true
+  errorlint:
+    errorf: true
+    asserts: true
+    comparison: true
+  godot:
+    scope: all
+    exclude:
+      - "(?i)^ FIXME:"
+      - "(?i)^ TODO:"
+      - "(?i)^ SPDX\\-License\\-Identifier:"
+      - "(?i)^ +"
+    period: true
+    capital: false
+  goconst:
+    min-len: 3
+    min-occurrences: 10
+  gosimple:
+    checks: [ "all" ]
+  gosec:
+    severity: "low"
+    confidence: "low"
+    excludes:
+      - G101
+      - G107
+      - G112
+      - G115
+      - G404
+  gofumpt:
+    extra-rules: true
+  gofmt:
+    simplify: true
+    rewrite-rules:
+      - pattern: 'interface{}'
+        replacement: 'any'
+      - pattern: 'a[b:len(a)]'
+        replacement: 'a[b:]'
+  importas:
+    no-unaliased: true
+  lll:
+    line-length: 150
+    tab-width: 1
+  makezero:
+    always: false
+  misspell:
+    locale: US
+  nakedret:
+    max-func-lines: 60
+  revive:
+    rules:
+      - name: var-naming
+        disabled: true
+        arguments:
+          - [ "HTTP", "ID", "TLS", "TCP", "UDP", "API", "CA", "URL", "DNS" ]
+  staticcheck:
+    checks: [ "all", "-SA1019", "-SA2002", "-SA5008" ]
+  stylecheck:
+    checks: [ "all", "-ST1003" ]
+  unparam:
+    check-exported: false
+  unused:
+    field-writes-are-uses: true
+    post-statements-are-reads: true
+    exported-fields-are-used: true
+    parameters-are-used: true
+    local-variables-are-used: true
+    generated-is-used: true
+  usestdlibvars:
+    http-method: true
+    http-status-code: true
+    time-weekday: true
+    time-month: true
+    time-layout: true
+    crypto-hash: true
+
+issues:
+  uniq-by-line: true
+  exclude-files:
+    - "doc.go"
+    - "zz_generated.*.go"
+    - "gen.*.go"
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+        - makezero
+        - lll

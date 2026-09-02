@@ -87,6 +87,7 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      - vendor$
 formatters:
   enable:
     - goimports
@@ -97,3 +98,4 @@ formatters:
       - third_party$
       - builtin$
       - examples$
+      - vendor$

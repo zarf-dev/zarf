@@ -1,0 +1,5 @@
+apiVersion: v2
+name: adopt-ns-with-agent-ignore
+description: Chart with a namespace template setting zarf.dev/agent:ignore for adopt label testing
+type: application
+version: 0.1.0

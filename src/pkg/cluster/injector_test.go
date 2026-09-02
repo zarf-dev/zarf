@@ -109,12 +109,13 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		_, err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test", "amd64", ZarfInjectorOptions{
+		selectedImage, _, err := c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test", "amd64", ZarfInjectorOptions{
 			InjectorNodePort: 0,
 			RegistryNodePort: 31999,
 		})
 
 		require.NoError(t, err)
+		require.Equal(t, "ubuntu:latest", selectedImage)
 
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
@@ -159,6 +160,37 @@ func TestInjector(t *testing.T) {
 	require.Empty(t, cmList.Items)
 }
 
+func TestStartInjectionUsesRequestedImage(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cs := fake.NewClientset()
+	c := &Cluster{
+		Clientset: cs,
+		Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
+	}
+	tmpDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "zarf-injector"), []byte("foobar"), 0o644))
+
+	idx, err := random.Index(1, 1, 1)
+	require.NoError(t, err)
+	_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
+	require.NoError(t, err)
+
+	image := "registry.example.com/zarf/injector:latest"
+	selectedImage, _, err := c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test", "amd64", ZarfInjectorOptions{
+		RegistryNodePort: 31999,
+		Image:            image,
+	})
+	require.NoError(t, err)
+	require.Equal(t, image, selectedImage)
+
+	pod, err := cs.CoreV1().Pods(state.ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, image, pod.Spec.Containers[0].Image)
+	require.Empty(t, pod.Spec.NodeName)
+}
+
 func TestBuildInjectionPod(t *testing.T) {
 	t.Parallel()
 
@@ -172,15 +204,20 @@ func TestBuildInjectionPod(t *testing.T) {
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			})
-	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test")
+	// An unset IP family defaults to IPv4.
+	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test", "")
 	require.Equal(t, "injector", *pod.Name)
 	require.Equal(t, "test", pod.Labels["zarf.dev/package"])
+	require.Equal(t, []string{"/zarf-init/zarf-injector", "shasum", "0.0.0.0:5000"}, pod.Spec.Containers[0].Command)
 	b, err := json.MarshalIndent(pod, "", "  ")
 	require.NoError(t, err)
 
 	expected, err := os.ReadFile("./testdata/expected-injection-pod.json")
 	require.NoError(t, err)
 	require.Equal(t, strings.TrimSpace(string(expected)), string(b))
+
+	ipv6Pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test", state.IPFamilyIPv6)
+	require.Equal(t, []string{"/zarf-init/zarf-injector", "shasum", "[::]:5000"}, ipv6Pod.Spec.Containers[0].Command)
 }
 
 func setupCluster(t *testing.T, nodes []corev1.Node, pods []corev1.Pod) *Cluster {
@@ -338,6 +375,94 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 
 		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
 		require.Error(t, err)
+	})
+
+	t.Run("prefers image from pod without imagePullSecrets", func(t *testing.T) {
+		nodes := []corev1.Node{{
+			ObjectMeta: metav1.ObjectMeta{Name: "good"},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+				NodeInfo: corev1.NodeSystemInfo{Architecture: "amd64"},
+			},
+		}}
+		pods := []corev1.Pod{
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "pod-with-creds", Namespace: "default"},
+				Spec: corev1.PodSpec{
+					NodeName:         "good",
+					Containers:       []corev1.Container{{Image: "private-image:latest"}},
+					ImagePullSecrets: []corev1.LocalObjectReference{{Name: "my-secret"}},
+				},
+				Status: corev1.PodStatus{Phase: corev1.PodRunning},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "pod-without-creds", Namespace: "default"},
+				Spec: corev1.PodSpec{
+					NodeName:   "good",
+					Containers: []corev1.Container{{Image: "public-image:latest"}},
+				},
+				Status: corev1.PodStatus{Phase: corev1.PodRunning},
+			},
+		}
+		c := setupCluster(t, nodes, pods)
+
+		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		require.NoError(t, err)
+		require.Equal(t, "public-image:latest", image)
+		require.Equal(t, "good", node)
+	})
+
+	t.Run("does not use fallback when a later node has a no-creds image", func(t *testing.T) {
+		nodes := []corev1.Node{
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "node-creds-only"},
+				Status: corev1.NodeStatus{
+					Allocatable: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("1000m"),
+						corev1.ResourceMemory: resource.MustParse("10Gi"),
+					},
+					NodeInfo: corev1.NodeSystemInfo{Architecture: "amd64"},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "node-public-image"},
+				Status: corev1.NodeStatus{
+					Allocatable: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("1000m"),
+						corev1.ResourceMemory: resource.MustParse("10Gi"),
+					},
+					NodeInfo: corev1.NodeSystemInfo{Architecture: "amd64"},
+				},
+			},
+		}
+		pods := []corev1.Pod{
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "pod-with-creds", Namespace: "default"},
+				Spec: corev1.PodSpec{
+					NodeName:         "node-creds-only",
+					Containers:       []corev1.Container{{Image: "private-image:latest"}},
+					ImagePullSecrets: []corev1.LocalObjectReference{{Name: "my-secret"}},
+				},
+				Status: corev1.PodStatus{Phase: corev1.PodRunning},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "pod-without-creds", Namespace: "default"},
+				Spec: corev1.PodSpec{
+					NodeName:   "node-public-image",
+					Containers: []corev1.Container{{Image: "public-image:latest"}},
+				},
+				Status: corev1.PodStatus{Phase: corev1.PodRunning},
+			},
+		}
+		c := setupCluster(t, nodes, pods)
+
+		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		require.NoError(t, err)
+		require.Equal(t, "public-image:latest", image)
+		require.Equal(t, "node-public-image", node)
 	})
 
 	t.Run("allocatable reduced by running pods", func(t *testing.T) {

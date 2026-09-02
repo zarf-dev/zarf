@@ -48,7 +48,7 @@ func newRegistryCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "registry",
-		Aliases: []string{"r", "crane"},
+		Aliases: []string{"r"},
 		Short:   lang.CmdToolsRegistryShort,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// TODO (@austinabro321) once the code in cmd is simplified, we should change this to respect
@@ -84,7 +84,8 @@ func newRegistryCommand() *cobra.Command {
 
 	cmd.AddCommand(newRegistryPruneCommand())
 	cmd.AddCommand(newRegistryLoginCommand())
-	cmd.AddCommand(newRegistryCopyCommand(&craneOptions))
+	cmd.AddCommand(newRegistryLogoutCommand())
+	cmd.AddCommand(craneCmd.NewCmdCopy(&craneOptions))
 	cmd.AddCommand(newRegistryCatalogCommand(&craneOptions))
 
 	// TODO(soltysh): consider splitting craneOptions to be per command
@@ -94,12 +95,28 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdManifest, &craneOptions, lang.CmdToolsRegistryManifestExample, 0))
-	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdExport, &craneOptions, lang.CmdToolsRegistryExportExample, 0))
+	registryExportCmd := zarfCraneInternalWrapper(craneCmd.NewCmdExport, &craneOptions, lang.CmdToolsRegistryExportExample, 0)
+	registryExportCmd.Deprecated = "zarf tools registry export is deprecated. Use the Crane CLI to keep this behavior"
+	cmd.AddCommand(registryExportCmd)
 	cmd.AddCommand(craneCmd.NewCmdVersion())
 	cmd.PersistentFlags().BoolVarP(&o.verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
 	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
 	cmd.PersistentFlags().BoolVar(&o.ndlayers, "allow-nondistributable-artifacts", false, lang.CmdToolsRegistryFlagNonDist)
 	cmd.PersistentFlags().StringVar(&o.platform, "platform", "all", lang.CmdToolsRegistryFlagPlatform)
+	return cmd
+}
+
+func newDeprecatedCraneCommand() *cobra.Command {
+	cmd := newRegistryCommand()
+	cmd.Use = "crane"
+	cmd.Aliases = nil
+	cmd.Short = lang.CmdToolsRegistryShort
+	cmd.Deprecated = "use 'zarf tools registry' instead"
+	originalPreRunE := cmd.PersistentPreRunE
+	cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		logger.Default().Warn("'zarf tools crane' is deprecated, use 'zarf tools registry' instead")
+		return originalPreRunE(cmd, args)
+	}
 	return cmd
 }
 
@@ -210,23 +227,6 @@ func newRegistryLoginCommand() *cobra.Command {
 		return nil
 	}
 	return craneCmd
-}
-
-func newRegistryCopyCommand(craneOpts *[]crane.Option) *cobra.Command {
-	cmd := craneCmd.NewCmdCopy(craneOpts)
-	// Store crane's original PreRunE if it exists
-	originalPreRunE := cmd.PreRunE
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		// No package information is available so do not pass in a list of architectures
-		*craneOpts = append(*craneOpts, crane.WithPlatform(nil))
-		// return the original pre run
-		if originalPreRunE != nil {
-			return originalPreRunE(cmd, args)
-		}
-		return nil
-	}
-
-	return cmd
 }
 
 type registryCatalogOptions struct {
@@ -574,4 +574,31 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 	}
 
 	return wrappedCommand
+}
+
+type registryLogoutOptions struct {
+	originalRunFn func(cmd *cobra.Command, args []string) error
+}
+
+func newRegistryLogoutCommand() *cobra.Command {
+	o := &registryLogoutOptions{}
+	craneCmd := craneCmd.NewCmdAuthLogout()
+	o.originalRunFn = craneCmd.RunE
+	craneCmd.RunE = o.run
+
+	craneCmd.Short = lang.CmdToolsRegistryLogoutShort
+	craneCmd.Example = lang.CmdToolsRegistryLogoutExample
+
+	craneCmd.PreRunE = func(_ *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return errors.New(lang.CmdToolsRegistryLogoutPromptNoRegistryProvidedErr)
+		}
+		return nil
+	}
+
+	return craneCmd
+}
+
+func (o *registryLogoutOptions) run(cmd *cobra.Command, args []string) error {
+	return o.originalRunFn(cmd, args)
 }

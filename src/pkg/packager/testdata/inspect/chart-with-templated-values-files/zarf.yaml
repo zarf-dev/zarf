@@ -1,0 +1,15 @@
+kind: ZarfPackageConfig
+metadata:
+  name: chart-with-templated-values-files
+
+components:
+  - name: test
+    charts:
+      - name: test-chart
+        version: 1.0.0
+        namespace: test
+        localPath: chart
+        valuesFiles:
+          - static-values.yaml
+        templatedValuesFiles:
+          - go-template-values.yaml

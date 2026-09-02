@@ -28,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	itpl "github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -95,29 +96,35 @@ type DefinitionImageResult struct {
 // FindDefinitionImages finds all images contained in a component and filters them according to images discovered in
 // imageArchives.
 // It returns []DefinitionImageResult
-func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImagesOptions) ([]DefinitionImageResult, error) {
+func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []DefinitionImageResult, err error) {
 	cachePath, err := utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return nil, err
 	}
-	loadOpts := load.DefinitionOptions{
-		Flavor:           opts.Flavor,
-		SetVariables:     opts.CreateSetVariables,
-		CachePath:        cachePath,
-		IsInteractive:    opts.IsInteractive,
-		SkipVersionCheck: true,
-		RemoteOptions:    opts.RemoteOptions,
+	loadOpts := load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			Flavor:           opts.Flavor,
+			SetVariables:     opts.CreateSetVariables,
+			CachePath:        cachePath,
+			IsInteractive:    opts.IsInteractive,
+			SkipVersionCheck: true,
+			RemoteOptions:    opts.RemoteOptions,
+		},
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	loaded, err := load.Package(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
-	imageScans, err := findImages(ctx, pkg, packagePath, opts)
+	defer func() {
+		err = errors.Join(err, loaded.Close())
+	}()
+	pkg := loaded.Definition.AsV1alpha1()
+	imageScans, err := findImages(ctx, pkg, loaded.Resources, loaded.Values, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	return filterImagesFoundInArchives(ctx, pkg, packagePath, imageScans)
+	return filterImagesFoundInArchives(ctx, pkg, loaded.Resources, imageScans)
 }
 
 // FindImages iterates over the manifests and charts within each component to find any container images
@@ -128,30 +135,31 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		return nil, err
 	}
 
-	loadOpts := load.DefinitionOptions{
-		Flavor:           opts.Flavor,
-		SetVariables:     opts.CreateSetVariables,
-		CachePath:        opts.CachePath,
-		IsInteractive:    opts.IsInteractive,
-		SkipVersionCheck: true,
-		RemoteOptions:    opts.RemoteOptions,
+	loadOpts := load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			Flavor:           opts.Flavor,
+			SetVariables:     opts.CreateSetVariables,
+			CachePath:        opts.CachePath,
+			IsInteractive:    opts.IsInteractive,
+			SkipVersionCheck: true,
+			RemoteOptions:    opts.RemoteOptions,
+		},
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	loaded, err := load.Package(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		err = errors.Join(err, loaded.Close())
+	}()
+	pkg := loaded.Definition.AsV1alpha1()
 
-	return findImages(ctx, pkg, packagePath, opts)
+	return findImages(ctx, pkg, loaded.Resources, loaded.Values, opts)
 }
 
 // filterImagesFoundInArchives merges scan results with each component's imageArchives.
 // An image present in both surfaces only on the archive side
-func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, imageScans []ComponentImageScan) (_ []DefinitionImageResult, err error) {
-	pkgPath, err := layout.ResolvePackagePath(packagePath)
-	if err != nil {
-		return nil, err
-	}
-
+func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, resources *load.ResourceSet, imageScans []ComponentImageScan) (_ []DefinitionImageResult, err error) {
 	componentNameScanMap := make(map[string]ComponentImageScan)
 	var allScanArtifacts []string
 	for _, scan := range imageScans {
@@ -171,7 +179,10 @@ func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, 
 		}
 
 		for _, archive := range component.ImageArchives {
-			archivePath := filepath.Join(pkgPath.BaseDir, archive.Path)
+			archivePath, err := resources.Path(archive.Path)
+			if err != nil {
+				return nil, err
+			}
 			imageManifests, err := images.GetManifestsFromArchive(ctx, archivePath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to retrieve image manifests from archive %s: %w", archive.Path, err)
@@ -212,7 +223,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, 
 	return definitionImageResults, nil
 }
 
-func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
+func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load.ResourceSet, packageValues value.Values, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
 	s, err := state.Default()
 	if err != nil {
@@ -226,14 +237,8 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 		return nil, err
 	}
 
-	pkgPath, err := layout.ResolvePackagePath(packagePath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
-	}
-	vals, err := loadPackageValues(ctx, pkg, pkgPath.BaseDir, opts.Values)
-	if err != nil {
-		return nil, err
-	}
+	vals := packageValues.DeepCopy()
+	vals.DeepMerge(opts.Values)
 
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -285,7 +290,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, pkgPath.BaseDir, compBuildPath, variableConfig, vals, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, resourceSet, compBuildPath, variableConfig, vals, pkg, s, component.StateAccess, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -295,9 +300,10 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 			if err != nil {
 				return nil, err
 			}
+			yamls = slices.DeleteFunc(yamls, isHelmTestResource)
 			resources = append(resources, yamls...)
 			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
-			chartTarball := helm.StandardName(chartPath, zarfChart) + ".tgz"
+			chartTarball := filepath.Join(chartPath, layout.ChartArchiveName(zarfChart.Name, zarfChart.Version))
 			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 			if err != nil {
 				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", zarfChart.URL, err)
@@ -328,7 +334,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, resourceSet, compBuildPath, variableConfig, vals, pkg, itpl.StateAccess{State: s, AccessKeys: component.StateAccess})
 			if err != nil {
 				return nil, err
 			}
@@ -338,6 +344,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 				if err != nil {
 					return nil, err
 				}
+				yamls = slices.DeleteFunc(yamls, isHelmTestResource)
 				resources = append(resources, yamls...)
 
 				// Check if the --why flag is set and if it is process the manifests
@@ -399,6 +406,30 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 			"duration", time.Since(imgCompStart))
 
 		if !opts.SkipCosign {
+			cosignHosts := map[string]struct{}{}
+			addCosignHosts := func(images []string) error {
+				for _, image := range images {
+					parsed, parseErr := transform.ParseImageRef(image)
+					if parseErr != nil {
+						return fmt.Errorf("could not parse image reference for cosign pre-auth %s: %w", image, parseErr)
+					}
+					cosignHosts[parsed.Host] = struct{}{}
+				}
+
+				return nil
+			}
+			if err := addCosignHosts(scan.Matches); err != nil {
+				return nil, err
+			}
+			if err := addCosignHosts(scan.PotentialMatches); err != nil {
+				return nil, err
+			}
+
+			cosignClient, err := images.NewAuthClientFromDocker(ctx, opts.InsecureSkipTLSVerify, 0, cosignHosts)
+			if err != nil {
+				return nil, err
+			}
+
 			// Handle cosign artifact lookups
 			if len(scan.Matches) > 0 || len(scan.PotentialMatches) > 0 {
 				imgStart := time.Now()
@@ -406,7 +437,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 
 				for _, image := range scan.Matches {
 					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(image)
+					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient, opts.RemoteOptions)
 					if err != nil {
 						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
@@ -415,7 +446,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 
 				for _, image := range scan.PotentialMatches {
 					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(image)
+					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient, opts.RemoteOptions)
 					if err != nil {
 						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
@@ -441,6 +472,10 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 	}
 
 	return componentImageScans, nil
+}
+
+func isHelmTestResource(resource *unstructured.Unstructured) bool {
+	return resource.GetAnnotations()["helm.sh/hook"] == "test"
 }
 
 // processUnstructuredImages processes a Kubernetes resource and extracts container images

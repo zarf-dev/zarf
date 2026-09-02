@@ -12,11 +12,14 @@ import (
 	"slices"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 
 	"helm.sh/helm/v4/pkg/storage/driver"
@@ -29,7 +32,8 @@ import (
 
 // RemoveOptions are the options for Remove.
 type RemoveOptions struct {
-	Cluster           *cluster.Cluster
+	Cluster *cluster.Cluster
+	// Timeout for Helm operations
 	Timeout           time.Duration
 	NamespaceOverride string
 	SkipVersionCheck  bool
@@ -38,8 +42,9 @@ type RemoveOptions struct {
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
-func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) error {
+func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOptions) error {
 	l := logger.From(ctx)
+	pkg := definition.AsV1alpha1()
 
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
@@ -48,11 +53,15 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		}
 	}
 
-	var err error
-	pkg.Components, err = filters.ByLocalOS(runtime.GOOS).Apply(pkg)
+	if opts.Timeout == 0 {
+		opts.Timeout = config.ZarfDefaultTimeout
+	}
+
+	definition, err := filters.Apply(definition, filters.ByLocalOS(runtime.GOOS))
 	if err != nil {
 		return err
 	}
+	pkg = definition.AsV1alpha1()
 
 	if len(pkg.Components) == 0 {
 		return fmt.Errorf("package to remove contains no components")
@@ -104,6 +113,14 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
+	var s *state.State
+	if opts.Cluster != nil {
+		s, err = opts.Cluster.LoadState(ctx)
+		if err != nil {
+			l.Debug("unable to load Zarf state for remove actions", "error", err.Error())
+		}
+	}
+
 	reverseDepComps := slices.Clone(depPkg.DeployedComponents)
 	slices.Reverse(reverseDepComps)
 	for _, depComp := range reverseDepComps {
@@ -114,7 +131,8 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		}
 
 		err := func() error {
-			err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil, vals)
+			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
+			err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil, vals, stateAccess)
 			if err != nil {
 				return fmt.Errorf("unable to run the before action: %w", err)
 			}
@@ -144,11 +162,11 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 				}
 			}
 
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil, vals)
+			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil, vals, stateAccess)
 			if err != nil {
 				return fmt.Errorf("unable to run the after action: %w", err)
 			}
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil, vals)
+			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil, vals, stateAccess)
 			if err != nil {
 				return fmt.Errorf("unable to run the success action: %w", err)
 			}
@@ -167,7 +185,8 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 			return nil
 		}()
 		if err != nil {
-			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil, vals)
+			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
+			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil, vals, stateAccess)
 			if removeErr != nil {
 				return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)
 			}

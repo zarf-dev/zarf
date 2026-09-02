@@ -6,9 +6,7 @@ package v1alpha1
 
 import (
 	"fmt"
-	"maps"
 	"regexp"
-	"slices"
 	"time"
 )
 
@@ -81,6 +79,16 @@ func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
 }
 
+// GetComponent returns the component with the given name, or an error if no such component exists.
+func (pkg ZarfPackage) GetComponent(name string) (ZarfComponent, error) {
+	for _, component := range pkg.Components {
+		if component.Name == name {
+			return component, nil
+		}
+	}
+	return ZarfComponent{}, fmt.Errorf("no component named %q in package %q", name, pkg.Metadata.Name)
+}
+
 // HasImages returns true if one of the components contains an image.
 func (pkg ZarfPackage) HasImages() bool {
 	for _, component := range pkg.Components {
@@ -99,25 +107,6 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 		}
 	}
 	return false
-}
-
-// UniqueNamespaceCount returns the number of unique namespaces in the package.
-func (pkg ZarfPackage) UniqueNamespaceCount() int {
-	return len(pkg.UniqueNamespaces())
-}
-
-// UniqueNamespaces returns a slice of all unique namespaces in the package
-func (pkg ZarfPackage) UniqueNamespaces() []string {
-	uniqueNamespaces := make(map[string]struct{})
-	for _, component := range pkg.Components {
-		for _, chart := range component.Charts {
-			uniqueNamespaces[chart.Namespace] = struct{}{}
-		}
-		for _, manifest := range component.Manifests {
-			uniqueNamespaces[manifest.Namespace] = struct{}{}
-		}
-	}
-	return slices.Collect(maps.Keys(uniqueNamespaces))
 }
 
 // AllowsNamespaceOverride returns whether the package allows the namespace to be overridden
@@ -222,8 +211,8 @@ type ZarfMetadata struct {
 	Uncompressed bool `json:"uncompressed,omitempty"`
 	// The target cluster architecture for this package.
 	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64"`
-	// Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
-	YOLO bool `json:"yolo,omitempty"`
+	// [Deprecated] Yaml OnLy Online (YOLO) enables deploying a Zarf package without first running zarf init against the cluster. Use --connected when deploying instead.
+	YOLO bool `json:"yolo,omitempty" jsonschema_extras:"deprecated=true"`
 	// Comma-separated list of package authors (including contact info).
 	Authors string `json:"authors,omitempty" jsonschema:"example=Zarf <zarf@zarf-dev.com>"`
 	// Link to package documentation when online.
@@ -273,6 +262,22 @@ type ZarfBuildData struct {
 	// These are files added after checksum generation (e.g., signature files).
 	// This list is authenticated through the signed zarf.yaml.
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
+	// originalAPIVersion records the apiVersion the package was read from before any conversion.
+	originalAPIVersion string
+}
+
+// GetOriginalAPIVersion returns the apiVersion the package was read from before any conversion,
+// defaulting to this package's apiVersion when one was never recorded.
+func (b ZarfBuildData) GetOriginalAPIVersion() string {
+	if b.originalAPIVersion == "" {
+		return APIVersion
+	}
+	return b.originalAPIVersion
+}
+
+// SetOriginalAPIVersion records the apiVersion the package was read from before any conversion.
+func (b *ZarfBuildData) SetOriginalAPIVersion(apiVersion string) {
+	b.originalAPIVersion = apiVersion
 }
 
 // ZarfValues imports package-level values files and validation.

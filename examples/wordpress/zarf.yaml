@@ -5,36 +5,10 @@ metadata:
   description: |        # (optional) a human-readable description of the package that you are creating
     A Zarf Package that deploys the WordPress blogging and content management platform
 
-variables:
-    # The unique name of the variable corresponding to the ###ZARF_VAR_### template
-  - name: WORDPRESS_USERNAME
-    # A human-readable description of the variable shown during prompting
-    description: The username that is used to login to the WordPress admin account
-    # A default value to take if --confirm is used or the user chooses the default prompt
-    default: zarf
-    # Whether to prompt for this value interactively if it is not --set on the CLI
-    prompt: true
-  - name: WORDPRESS_PASSWORD
-    description: The password that is used to login to the WordPress admin account
-    prompt: true
-    # Whether to treat this value as sensitive to keep it out of Zarf logs
-    sensitive: true
-  - name: WORDPRESS_EMAIL
-    description: The email that is used for the WordPress admin account
-    default: hello@defenseunicorns.com
-    prompt: true
-  - name: WORDPRESS_FIRST_NAME
-    description: The first name that is used for the WordPress admin account
-    default: Zarf
-    prompt: true
-  - name: WORDPRESS_LAST_NAME
-    description: The last name that is used for the WordPress admin account
-    default: The Axolotl
-    prompt: true
-  - name: WORDPRESS_BLOG_NAME
-    description: The blog name that is used for the WordPress admin account
-    default: The Zarf Blog
-    prompt: true
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
 
 components:
   - name: wordpress  # specifies the name of our component and should be unique and unchanging through updates
@@ -48,6 +22,19 @@ components:
         namespace: wordpress
         valuesFiles:
           - wordpress-values.yaml
+        values:
+          - sourcePath: ".wordpress.username"
+            targetPath: ".wordpressUsername"
+          - sourcePath: ".wordpress.password"
+            targetPath: ".wordpressPassword"
+          - sourcePath: ".wordpress.email"
+            targetPath: ".wordpressEmail"
+          - sourcePath: ".wordpress.firstName"
+            targetPath: ".wordpressFirstName"
+          - sourcePath: ".wordpress.lastName"
+            targetPath: ".wordpressLastName"
+          - sourcePath: ".wordpress.blogName"
+            targetPath: ".wordpressBlogName"
     images:
       - docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55
       - docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0

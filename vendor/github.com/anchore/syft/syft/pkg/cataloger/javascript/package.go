@@ -1,0 +1,389 @@
+package javascript
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/url"
+	"path"
+	"strings"
+	"time"
+
+	"github.com/anchore/packageurl-go"
+	"github.com/anchore/syft/internal"
+	"github.com/anchore/syft/internal/log"
+	"github.com/anchore/syft/syft/file"
+	"github.com/anchore/syft/syft/pkg"
+	"github.com/anchore/syft/syft/pkg/cataloger/internal/licenses"
+)
+
+func newPackageJSONPackage(ctx context.Context, resolver file.Resolver, u packageJSON, indexLocation file.Location) pkg.Package {
+	licenseCandidates, err := u.licensesFromJSON()
+	if err != nil {
+		log.Debugf("unable to extract licenses from javascript package.json: %+v", err)
+	}
+
+	license := pkg.NewLicensesFromLocationWithContext(ctx, indexLocation, licenseCandidates...)
+	// Handle author, authors, contributors, and maintainers fields
+	var authorParts []string
+
+	// Add a single author field if it exists
+	if u.Author.Name != "" || u.Author.Email != "" || u.Author.URL != "" {
+		if authStr := u.Author.AuthorString(); authStr != "" {
+			authorParts = append(authorParts, authStr)
+		}
+	}
+
+	// Add authors field if it exists
+	if len(u.Authors) > 0 {
+		if authorsStr := u.Authors.String(); authorsStr != "" {
+			authorParts = append(authorParts, authorsStr)
+		}
+	}
+
+	// Add contributors field if it exists
+	if len(u.Contributors) > 0 {
+		if contributorsStr := u.Contributors.String(); contributorsStr != "" {
+			authorParts = append(authorParts, contributorsStr)
+		}
+	}
+
+	// Add maintainers field if it exists
+	if len(u.Maintainers) > 0 {
+		if maintainersStr := u.Maintainers.String(); maintainersStr != "" {
+			authorParts = append(authorParts, maintainersStr)
+		}
+	}
+
+	authorInfo := strings.Join(authorParts, ", ")
+
+	p := pkg.Package{
+		Name:      u.Name,
+		Version:   u.Version,
+		PURL:      packageURL(u.Name, u.Version),
+		Locations: file.NewLocationSet(indexLocation),
+		Language:  pkg.JavaScript,
+		Licenses:  pkg.NewLicenseSet(license...),
+		Type:      pkg.NpmPkg,
+		Metadata: pkg.NpmPackage{
+			Name:        u.Name,
+			Version:     u.Version,
+			Description: u.Description,
+			Author:      authorInfo,
+			Homepage:    u.Homepage,
+			URL:         u.Repository.URL,
+			Private:     u.Private,
+		},
+	}
+
+	p.SetID()
+
+	// if license not specified, search for license files
+	p = licenses.RelativeToPackage(ctx, resolver, p)
+
+	return p
+}
+
+func newPackageLockV1Package(ctx context.Context, cfg CatalogerConfig, resolver file.Resolver, location file.Location, name string, u lockDependency) pkg.Package {
+	version := u.Version
+
+	const aliasPrefixPackageLockV1 = "npm:"
+
+	// Handles type aliases https://github.com/npm/rfcs/blob/main/implemented/0001-package-aliases.md
+	if strings.HasPrefix(version, aliasPrefixPackageLockV1) {
+		// this is an alias.
+		// `"version": "npm:canonical-name@X.Y.Z"`
+		canonicalPackageAndVersion := version[len(aliasPrefixPackageLockV1):]
+		versionSeparator := strings.LastIndex(canonicalPackageAndVersion, "@")
+
+		name = canonicalPackageAndVersion[:versionSeparator]
+		version = canonicalPackageAndVersion[versionSeparator+1:]
+	}
+
+	var licenseSet pkg.LicenseSet
+
+	if cfg.SearchRemoteLicenses {
+		license, err := getLicenseFromNpmRegistry(cfg.NPMBaseURL, name, version)
+		if err == nil && license != "" {
+			licenseSet = pkg.NewLicenseSet(pkg.NewLicensesFromValuesWithContext(ctx, license)...)
+		}
+		if err != nil {
+			log.Debugf("unable to extract licenses from javascript package-lock.json for package %s:%s: %+v", name, version, err)
+		}
+	}
+
+	return finalizeLockPkg(
+		ctx,
+		resolver,
+		location,
+		pkg.Package{
+			Name:      name,
+			Version:   version,
+			Licenses:  licenseSet,
+			Locations: file.NewLocationSet(location.WithAnnotation(pkg.EvidenceAnnotationKey, pkg.PrimaryEvidenceAnnotation)),
+			PURL:      packageURL(name, version),
+			Language:  pkg.JavaScript,
+			Type:      pkg.NpmPkg,
+			Metadata:  pkg.NpmPackageLockEntry{Resolved: u.Resolved, Integrity: u.Integrity},
+		},
+	)
+}
+
+func newPackageLockV2Package(ctx context.Context, cfg CatalogerConfig, resolver file.Resolver, location file.Location, name string, u lockPackage) pkg.Package {
+	var licenseSet pkg.LicenseSet
+
+	if u.License != nil {
+		licenseSet = pkg.NewLicenseSet(pkg.NewLicensesFromLocationWithContext(ctx, location, u.License...)...)
+	} else if cfg.SearchRemoteLicenses {
+		license, err := getLicenseFromNpmRegistry(cfg.NPMBaseURL, name, u.Version)
+		if err == nil && license != "" {
+			licenseSet = pkg.NewLicenseSet(pkg.NewLicensesFromValuesWithContext(ctx, license)...)
+		}
+		if err != nil {
+			log.Debugf("unable to extract licenses from javascript package-lock.json for package %s:%s: %+v", name, u.Version, err)
+		}
+	}
+
+	return finalizeLockPkg(
+		ctx,
+		resolver,
+		location,
+		pkg.Package{
+			Name:      name,
+			Version:   u.Version,
+			Locations: file.NewLocationSet(location.WithAnnotation(pkg.EvidenceAnnotationKey, pkg.PrimaryEvidenceAnnotation)),
+			Licenses:  licenseSet,
+			PURL:      packageURL(name, u.Version),
+			Language:  pkg.JavaScript,
+			Type:      pkg.NpmPkg,
+			Metadata:  pkg.NpmPackageLockEntry{Resolved: u.Resolved, Integrity: u.Integrity, Dependencies: u.Dependencies},
+		},
+	)
+}
+
+func newPnpmPackage(ctx context.Context, cfg CatalogerConfig, resolver file.Resolver, location file.Location, name, version string, integrity string, dependencies map[string]string) pkg.Package {
+	var licenseSet pkg.LicenseSet
+
+	if cfg.SearchRemoteLicenses {
+		license, err := getLicenseFromNpmRegistry(cfg.NPMBaseURL, name, version)
+		if err == nil && license != "" {
+			licenseSet = pkg.NewLicenseSet(pkg.NewLicensesFromValuesWithContext(ctx, license)...)
+		}
+		if err != nil {
+			log.Debugf("unable to extract licenses from javascript pnpm-lock.yaml for package %s:%s: %+v", name, version, err)
+		}
+	}
+	return finalizeLockPkg(
+		ctx,
+		resolver,
+		location,
+		pkg.Package{
+			Name:      name,
+			Version:   version,
+			Licenses:  licenseSet,
+			Locations: file.NewLocationSet(location.WithAnnotation(pkg.EvidenceAnnotationKey, pkg.PrimaryEvidenceAnnotation)),
+			PURL:      packageURL(name, version),
+			Language:  pkg.JavaScript,
+			Type:      pkg.NpmPkg,
+			Metadata:  pkg.PnpmLockEntry{Resolution: pkg.PnpmLockResolution{Integrity: integrity}, Dependencies: dependencies},
+		},
+	)
+}
+
+func newYarnLockPackage(ctx context.Context, cfg CatalogerConfig, resolver file.Resolver, location file.Location, name, version string, resolved string, integrity string, dependencies map[string]string) pkg.Package {
+	var licenseSet pkg.LicenseSet
+
+	if cfg.SearchRemoteLicenses {
+		license, err := getLicenseFromNpmRegistry(cfg.NPMBaseURL, name, version)
+		if err == nil && license != "" {
+			licenseSet = pkg.NewLicenseSet(pkg.NewLicensesFromValuesWithContext(ctx, license)...)
+		}
+		if err != nil {
+			log.Debugf("unable to extract licenses from javascript yarn.lock for package %s:%s: %+v", name, version, err)
+		}
+	}
+	return finalizeLockPkg(
+		ctx,
+		resolver,
+		location,
+		pkg.Package{
+			Name:      name,
+			Version:   version,
+			Licenses:  licenseSet,
+			Locations: file.NewLocationSet(location.WithAnnotation(pkg.EvidenceAnnotationKey, pkg.PrimaryEvidenceAnnotation)),
+			PURL:      packageURL(name, version),
+			Language:  pkg.JavaScript,
+			Type:      pkg.NpmPkg,
+			Metadata:  pkg.YarnLockEntry{Resolved: resolved, Integrity: integrity, Dependencies: dependencies},
+		},
+	)
+}
+
+func newBunPackage(ctx context.Context, cfg CatalogerConfig, resolver file.Resolver, location file.Location, name, version string, integrity string, metadata bunPackageMetadata) pkg.Package {
+	var licenseSet pkg.LicenseSet
+
+	if cfg.SearchRemoteLicenses {
+		license, err := getLicenseFromNpmRegistry(cfg.NPMBaseURL, name, version)
+		if err == nil && license != "" {
+			licenseSet = pkg.NewLicenseSet(pkg.NewLicensesFromValuesWithContext(ctx, license)...)
+		}
+		if err != nil {
+			log.Debugf("unable to extract licenses from javascript bun.lock for package %s:%s: %+v", name, version, err)
+		}
+	}
+	return finalizeLockPkg(
+		ctx,
+		resolver,
+		location,
+		pkg.Package{
+			Name:      name,
+			Version:   version,
+			Licenses:  licenseSet,
+			Locations: file.NewLocationSet(location.WithAnnotation(pkg.EvidenceAnnotationKey, pkg.PrimaryEvidenceAnnotation)),
+			PURL:      packageURL(name, version),
+			Language:  pkg.JavaScript,
+			Type:      pkg.NpmPkg,
+			Metadata: pkg.BunLockEntry{
+				Integrity:            integrity,
+				Dependencies:         metadata.Dependencies,
+				OptionalDependencies: metadata.OptionalDependencies,
+				PeerDependencies:     metadata.PeerDependencies,
+				Bin:                  metadata.Bin,
+				OS:                   metadata.OS,
+				CPU:                  metadata.CPU,
+			},
+		},
+	)
+}
+
+func formatNpmRegistryURL(baseURL, packageName, version string) (requestURL string, err error) {
+	urlPath := []string{packageName, version}
+	requestURL, err = url.JoinPath(baseURL, urlPath...)
+	if err != nil {
+		return requestURL, fmt.Errorf("unable to format npm request for pkg:version %s%s; %w", packageName, version, err)
+	}
+	return requestURL, nil
+}
+
+func getLicenseFromNpmRegistry(baseURL, packageName, version string) (string, error) {
+	// "https://registry.npmjs.org/%s/%s", packageName, version
+	requestURL, err := formatNpmRegistryURL(baseURL, packageName, version)
+	if err != nil {
+		return "", fmt.Errorf("unable to format npm request for pkg:version %s%s; %w", packageName, version, err)
+	}
+	log.WithFields("url", requestURL).Info("downloading javascript package from npm")
+
+	npmRequest, err := http.NewRequest(http.MethodGet, requestURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("unable to format remote request: %w", err)
+	}
+
+	httpClient := &http.Client{
+		Timeout: time.Second * 10,
+	}
+
+	resp, err := httpClient.Do(npmRequest)
+	if err != nil {
+		return "", fmt.Errorf("unable to get package from npm registry: %w", err)
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Errorf("unable to close body: %+v", err)
+		}
+	}()
+
+	// Read "license" from the response
+	var license struct {
+		License string `json:"license"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&license); err != nil {
+		return "", fmt.Errorf("unable to parse license from npm registry: %w", err)
+	}
+
+	log.Tracef("Retrieved License: %s", license.License)
+
+	return license.License, nil
+}
+
+func finalizeLockPkg(ctx context.Context, resolver file.Resolver, location file.Location, p pkg.Package) pkg.Package {
+	licenseCandidate := addLicenses(p.Name, resolver, location)
+	p.Licenses.Add(pkg.NewLicensesFromLocationWithContext(ctx, location, licenseCandidate...)...)
+	p.SetID()
+	return p
+}
+
+func addLicenses(name string, resolver file.Resolver, location file.Location) (allLicenses []string) {
+	if resolver == nil {
+		return allLicenses
+	}
+
+	dir := path.Dir(location.RealPath)
+	pkgPath := []string{dir, "node_modules"}
+	pkgPath = append(pkgPath, strings.Split(name, "/")...)
+	pkgPath = append(pkgPath, "package.json")
+	pkgFile := path.Join(pkgPath...)
+	locations, err := resolver.FilesByPath(pkgFile)
+	if err != nil {
+		log.Debugf("an error occurred attempting to read: %s - %+v", pkgFile, err)
+		return allLicenses
+	}
+
+	if len(locations) == 0 {
+		return allLicenses
+	}
+
+	for _, l := range locations {
+		foundLicenses, err := parseLicensesFromLocation(l, resolver, pkgFile)
+		if err != nil {
+			return allLicenses
+		}
+		allLicenses = append(allLicenses, foundLicenses...)
+	}
+
+	return allLicenses
+}
+
+func parseLicensesFromLocation(l file.Location, resolver file.Resolver, pkgFile string) ([]string, error) {
+	contentReader, err := resolver.FileContentsByLocation(l)
+	if err != nil {
+		log.Debugf("error getting file content reader for %s: %v", pkgFile, err)
+		return nil, err
+	}
+	defer internal.CloseAndLogError(contentReader, l.RealPath)
+
+	var pkgJSON packageJSON
+	err = json.NewDecoder(contentReader).Decode(&pkgJSON)
+	if err != nil {
+		log.Debugf("error parsing %s: %v", pkgFile, err)
+		return nil, err
+	}
+
+	out, err := pkgJSON.licensesFromJSON()
+	if err != nil {
+		log.Debugf("error getting licenses from %s: %v", pkgFile, err)
+		return nil, err
+	}
+	return out, nil
+}
+
+// packageURL returns the PURL for the specific NPM package (see https://github.com/package-url/purl-spec)
+func packageURL(name, version string) string {
+	var namespace string
+
+	fields := strings.SplitN(name, "/", 2)
+	if len(fields) > 1 {
+		namespace = fields[0]
+		name = fields[1]
+	}
+
+	return packageurl.NewPackageURL(
+		packageurl.TypeNPM,
+		namespace,
+		name,
+		version,
+		nil,
+		"",
+	).ToString()
+}

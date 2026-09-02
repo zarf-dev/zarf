@@ -1,0 +1,271 @@
+package v6
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
+)
+
+// VulnerabilityBlob represents the core advisory record for a single known vulnerability from a specific provider.
+type VulnerabilityBlob struct {
+	// ID is the lowercase unique string identifier for the vulnerability relative to the provider
+	ID string `json:"id"`
+
+	// Assigners is a list of names, email, or organizations who submitted the vulnerability
+	Assigners []string `json:"assigner,omitempty"`
+
+	// Description of the vulnerability as provided by the source
+	Description string `json:"description,omitempty"`
+
+	// References are URLs to external resources that provide more information about the vulnerability
+	References []Reference `json:"refs,omitempty"`
+
+	// Aliases is a list of IDs of the same vulnerability in other databases, in the form of the ID field. This allows one database to claim that its own entry describes the same vulnerability as one or more entries in other databases.
+	Aliases []string `json:"aliases,omitempty"`
+
+	// Severities is a list of severity indications (quantitative or qualitative) for the vulnerability
+	Severities []Severity `json:"severities,omitempty"`
+}
+
+func (v VulnerabilityBlob) String() string {
+	return v.ID
+}
+
+// Reference represents a single external URL and string tags to use for organizational purposes
+type Reference struct {
+	// URL is the external resource
+	URL string `json:"url"`
+
+	// ID is an optional identifier for the reference (e.g., advisory ID like "RHSA-2023:5455")
+	ID string `json:"id,omitempty"`
+
+	// Tags is a free-form organizational field to convey additional information about the reference
+	Tags []string `json:"tags,omitempty"`
+}
+
+// Severity represents a single string severity record for a vulnerability record
+type Severity struct {
+	// Scheme describes the quantitative method used to determine the Score, such as "CVSS_V3". Alternatively this makes
+	// claim that Value is qualitative, for example "HML" (High, Medium, Low), CHMLN (critical-high-medium-low-negligible)
+	Scheme SeverityScheme `json:"scheme"`
+
+	// Value is the severity score (e.g. "7.5", "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N",  or "high" )
+	Value any `json:"value"` // one of CVSSSeverity, HMLSeverity, CHMLNSeverity
+
+	// Source is the name of the source of the severity score (e.g. "nvd@nist.gov" or "security-advisories@github.com")
+	Source string `json:"source,omitempty"`
+
+	// Rank is a free-form organizational field to convey priority over other severities
+	Rank int `json:"rank"`
+}
+
+type severityAlias Severity
+
+type severityUnmarshalProxy struct {
+	*severityAlias
+	Value json.RawMessage `json:"value"`
+}
+
+// UnmarshalJSON custom unmarshaller for Severity struct
+func (s *Severity) UnmarshalJSON(data []byte) error {
+	aux := &severityUnmarshalProxy{
+		severityAlias: (*severityAlias)(s),
+	}
+
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+
+	var cvss CVSSSeverity
+	if err := json.Unmarshal(aux.Value, &cvss); err == nil && cvss.Vector != "" {
+		s.Value = cvss
+		return nil
+	}
+
+	var strSeverity string
+	if err := json.Unmarshal(aux.Value, &strSeverity); err == nil {
+		s.Value = strSeverity
+		return nil
+	}
+
+	return fmt.Errorf("could not unmarshal severity value to known type: %s", aux.Value)
+}
+
+// CVSSSeverity represents a single Common Vulnerability Scoring System entry
+type CVSSSeverity struct {
+	// Vector is the CVSS assessment as a parameterized string
+	Vector string `json:"vector"`
+
+	// Version is the CVSS version (e.g. "3.0")
+	Version string `json:"version,omitempty"`
+}
+
+func (c CVSSSeverity) String() string {
+	vector := c.Vector
+	if !strings.HasPrefix(strings.ToLower(c.Vector), "cvss:") && c.Version != "" {
+		vector = fmt.Sprintf("CVSS:%s/%s", c.Version, c.Vector)
+	}
+	return vector
+}
+
+// PackageBlob represents a package that is affected by a vulnerability.
+type PackageBlob struct {
+	// CVEs is a list of Common Vulnerabilities and Exposures (CVE) identifiers related to this vulnerability.
+	CVEs []string `json:"cves,omitempty"`
+
+	// Qualifiers are package attributes that confirm the package is affected by the vulnerability.
+	Qualifiers *PackageQualifiers `json:"qualifiers,omitempty"`
+
+	// Ranges specifies the affected version ranges and fixes if available.
+	Ranges []Range `json:"ranges,omitempty"`
+}
+
+func (a PackageBlob) String() string {
+	var fields []string
+
+	if len(a.Ranges) > 0 {
+		var ranges []string
+		for _, r := range a.Ranges {
+			ranges = append(ranges, r.String())
+		}
+		fields = append(fields, fmt.Sprintf("ranges=%s", strings.Join(ranges, ", ")))
+	}
+
+	if len(a.CVEs) > 0 {
+		fields = append(fields, fmt.Sprintf("cves=%s", strings.Join(a.CVEs, ", ")))
+	}
+
+	return strings.Join(fields, ", ")
+}
+
+// PackageQualifiers contains package attributes that should hold true to associate a vulnerablity to that package.
+type PackageQualifiers struct {
+	// RpmModularity indicates if the package follows RPM modularity for versioning.
+	RpmModularity *string `json:"rpm_modularity,omitempty"`
+
+	// PlatformCPEs lists Common Platform Enumeration (CPE) identifiers for affected platforms.
+	PlatformCPEs []string `json:"platform_cpes,omitempty"`
+}
+
+// Range defines a specific range of package versions pertaining to a vulnerability.
+type Range struct {
+	// Version defines the version constraints for affected software.
+	Version Version `json:"version,omitempty"`
+
+	// Fix provides details on the fix version and its state if available.
+	Fix *Fix `json:"fix,omitempty"`
+}
+
+func (a Range) String() string {
+	return fmt.Sprintf("%s (%s)", a.Version, a.Fix)
+}
+
+// Fix conveys availability of a fix for a vulnerability.
+type Fix struct {
+	// Version is the version number of the fix.
+	Version string `json:"version,omitempty"`
+
+	// State represents the status of the fix (e.g., "fixed", "unaffected").
+	State FixStatus `json:"state,omitempty"`
+
+	// Detail provides additional fix information, such as commit details.
+	Detail *FixDetail `json:"detail,omitempty"`
+}
+
+func (f Fix) String() string {
+	switch f.State {
+	case FixedStatus:
+		return fmt.Sprintf("fixed in %s", f.Version)
+	case NotAffectedFixStatus:
+		return fmt.Sprintf("%s is not affected", f.Version)
+	}
+	return string(f.State)
+}
+
+// FixDetail is additional information about a fix, such as commit details and patch URLs.
+type FixDetail struct {
+	// Available indicates when the fix information became available and how it was obtained.
+	Available *FixAvailability `json:"available,omitempty"`
+
+	// References contains URLs or identifiers for additional resources on the fix.
+	References []Reference `json:"references,omitempty"`
+}
+
+type FixAvailability struct {
+	// Date is the date and time when fix information became available. Note: this might not be when the fix was created, committed or merged.
+	Date *time.Time `json:"date,omitempty"`
+
+	// Kind describes how this date was obtained (e.g. advisory, release, commit, PR, issue, first-observed-record)
+	Kind string `json:"kind,omitempty"`
+}
+
+func (f FixAvailability) MarshalJSON() ([]byte, error) {
+	type Alias FixAvailability
+	aux := &struct {
+		Date *string `json:"date,omitempty"`
+		*Alias
+	}{
+		Alias: (*Alias)(&f),
+	}
+
+	// the JSON marshaller should interpret the time.Time as a Date, not a timestamp
+	if f.Date != nil {
+		dateStr := f.Date.Format("2006-01-02")
+		aux.Date = &dateStr
+	}
+
+	return json.Marshal(aux)
+}
+
+func (f *FixAvailability) UnmarshalJSON(data []byte) error {
+	type Alias FixAvailability
+	aux := &struct {
+		Date *string `json:"date,omitempty"`
+		*Alias
+	}{
+		Alias: (*Alias)(f),
+	}
+
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+
+	if aux.Date != nil {
+		if t, err := time.Parse("2006-01-02", *aux.Date); err == nil {
+			f.Date = &t
+			return nil
+		}
+
+		if t, err := time.Parse(time.RFC3339, *aux.Date); err == nil {
+			f.Date = &t
+			return nil
+		}
+
+		return fmt.Errorf("unable to parse date %q: expected format YYYY-MM-DD or RFC3339", *aux.Date)
+	}
+
+	return nil
+}
+
+// Version defines the versioning format and constraints.
+type Version struct {
+	// Type specifies the versioning system used (e.g., "semver", "rpm").
+	Type string `json:"type,omitempty"`
+
+	// Constraint defines the version range constraint for affected versions.
+	Constraint string `json:"constraint,omitempty"`
+}
+
+type KnownExploitedVulnerabilityBlob struct {
+	Cve                        string     `json:"cve"`
+	VendorProject              string     `json:"vendor_project,omitempty"`
+	Product                    string     `json:"product,omitempty"`
+	DateAdded                  *time.Time `json:"date_added,omitempty"`
+	RequiredAction             string     `json:"required_action,omitempty"`
+	DueDate                    *time.Time `json:"due_date,omitempty"`
+	KnownRansomwareCampaignUse string     `json:"known_ransomware_campaign_use,omitempty"`
+	Notes                      string     `json:"notes,omitempty"`
+	URLs                       []string   `json:"urls,omitempty"`
+	CWEs                       []string   `json:"cwes,omitempty"`
+}

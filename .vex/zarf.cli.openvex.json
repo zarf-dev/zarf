@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/zarf-dev/zarf/blob/main/.vex/zarf.cli.openvex.json",
+  "author": "zarf-dev/zarf maintainers",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "golang.org/x/crypto/openpgp is unmaintained and flagged unsafe by design regardless of usage. govulncheck's reported call chain shows Zarf's signing path (src/pkg/signing/cosign.go CosignSignBlobWithOptions -\u003e cosign's SignBlobCmd -\u003e sigstore-go pkg/sign.Bundle/GetTransparencyLogEntry) reaching rekor's PGP public-key parser (pkg/pki/pgp.NewPublicKey -\u003e golang.org/x/crypto/openpgp ReadKeyRing/ReadEntity/addUserID/VerifyUserIdSignature). This is a static-analysis over-approximation: rekor's pki.NewArtifactFactory dispatches to one PKI implementation via an explicit Format argument (pkg/pki/factory.go), and sigstore-go hardcodes that format to x509 for every hashedrekord transparency-log entry it creates (pkg/sign/transparency.go: artifactProperties.PKIFormat = string(pki.X509)). Zarf never supplies or accepts PGP-format keys in its signing flags, so the PGP branch of rekor's format dispatch, and therefore the vulnerable openpgp code, is never exercised at runtime.",
+      "timestamp": "2026-08-19T23:56:29Z"
+    }
+  ],
+  "timestamp": "2026-08-19T23:56:29Z"
+}

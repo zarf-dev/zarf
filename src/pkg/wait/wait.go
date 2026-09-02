@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -397,102 +398,126 @@ func ForNetwork(ctx context.Context, protocol, address, condition string, timeou
 	return forNetwork(ctx, protocol, address, condition, timeout, waitInterval)
 }
 
+var errNetworkNotReady = errors.New("network endpoint not ready")
+
 func forNetwork(ctx context.Context, protocol string, address string, condition string, timeout time.Duration, waitInterval time.Duration) error {
+	return waitForNetwork(ctx, protocol, address, condition, timeout, waitInterval, probeNetwork)
+}
+
+func waitForNetwork(
+	ctx context.Context,
+	protocol string,
+	address string,
+	condition string,
+	timeout time.Duration,
+	waitInterval time.Duration,
+	probe func(context.Context, string, string, string, time.Duration) (bool, error),
+) error {
 	l := logger.From(ctx)
-	expired := time.After(timeout)
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
 	condition = strings.ToLower(condition)
 	if condition == "" {
 		condition = "success"
 	}
 
-	// Create an HTTP client with a per-request timeout that is slightly shorter than our wait-interval to prevent
-	// hanging on slow or unresponsive servers.
-	httpClient := &http.Client{
-		Timeout: waitInterval - (time.Millisecond * 5),
-	}
-
-	delay := 100 * time.Millisecond
-
-	for {
-		// Delay the check for 100ms the first time and then the wait interval after that
-		time.Sleep(delay)
-		delay = waitInterval
-
-		select {
-		case <-expired:
-			return errors.New("wait timed out")
-		case <-ctx.Done():
-			return errors.New("received interrupt")
-		default:
-			switch protocol {
-			case "http", "https":
-				// Handle HTTP and HTTPS endpoints.
-				url := fmt.Sprintf("%s://%s", protocol, address)
-
-				// Default to checking for a 2xx response.
-				if condition == "success" {
-					// Try to get the URL and check the status code.
-					resp, err := httpClient.Get(url)
-					if err != nil {
-						l.Debug(err.Error())
-						continue
-					}
-					err = resp.Body.Close()
-					if err != nil {
-						l.Debug(err.Error())
-					}
-
-					// If the status code is not in the 2xx range, try again.
-					if resp.StatusCode < 200 || resp.StatusCode > 299 {
-						l.Debug("did not receive 2xx status code", "responseCode", resp.StatusCode)
-						continue
-					}
-
-					// Success, break out of the switch statement.
-					break
-				}
-
-				// Convert the condition to an int and check if it's a valid HTTP status code.
-				code, err := strconv.Atoi(condition)
-				if err != nil {
-					return fmt.Errorf("http status code %s is not an integer: %w", condition, err)
-				}
-				if http.StatusText(code) == "" {
-					return errors.New("http status code is unknown")
-				}
-
-				// Try to get the URL and check the status code.
-				resp, err := httpClient.Get(url)
-				if err != nil {
-					l.Debug(err.Error())
-					continue
-				}
-				err = resp.Body.Close()
-				if err != nil {
-					l.Debug(err.Error())
-				}
-
-				if resp.StatusCode != code {
-					l.Debug("did not receive expected status code", "expected", code, "actual", resp.StatusCode)
-					continue
-				}
-			default:
-				// Fallback to any generic protocol using net.Dial
-				conn, err := net.Dial(protocol, address)
-				if err != nil {
-					l.Debug(err.Error())
-					continue
-				}
-				err = conn.Close()
-				if err != nil {
-					l.Debug(err.Error())
-					continue
-				}
+	err := retry.Do(func() error {
+		ok, err := probe(timeoutCtx, protocol, address, condition, waitInterval)
+		if err != nil {
+			l.Debug(err.Error())
+			return err
+		}
+		if !ok {
+			return errNetworkNotReady
+		}
+		return nil
+	},
+		retry.Attempts(0),
+		retry.Delay(waitInterval),
+		retry.DelayType(retry.FixedDelay),
+		retry.LastErrorOnly(true),
+		retry.Context(timeoutCtx),
+		retry.OnRetry(func(_ uint, err error) {
+			if !errors.Is(err, errNetworkNotReady) {
+				l.Debug("retrying network wait", "err", err)
 			}
+		}),
+	)
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		if ctx.Err() != nil {
+			return fmt.Errorf("wait cancelled: %w", ctx.Err())
+		}
+		return errors.New("wait timed out")
+	}
+	return err
+}
 
-			// Yay, we made it!
-			return nil
+func probeNetwork(ctx context.Context, protocol string, address string, condition string, waitInterval time.Duration) (bool, error) {
+	switch protocol {
+	case "http", "https":
+		return probeHTTP(ctx, protocol, address, condition, waitInterval)
+	default:
+		return probeTCP(ctx, protocol, address)
+	}
+}
+
+func probeHTTP(ctx context.Context, protocol string, address string, condition string, waitInterval time.Duration) (ok bool, err error) {
+	expectedStatusCode := 0
+	if condition != "success" {
+		var err error
+		expectedStatusCode, err = strconv.Atoi(condition)
+		if err != nil {
+			return false, retry.Unrecoverable(fmt.Errorf("http status code %s is not an integer: %w", condition, err))
+		}
+		if http.StatusText(expectedStatusCode) == "" {
+			return false, retry.Unrecoverable(errors.New("http status code is unknown"))
 		}
 	}
+
+	// Create an HTTP client with a per-request timeout that is slightly shorter than our wait-interval to prevent
+	// hanging on slow or unresponsive servers.
+	requestTimeout := waitInterval - (time.Millisecond * 5)
+	if requestTimeout < time.Millisecond {
+		requestTimeout = time.Millisecond
+	}
+	httpClient := &http.Client{
+		Timeout: requestTimeout,
+	}
+
+	url := fmt.Sprintf("%s://%s", protocol, address)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return false, err
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		err = errors.Join(err, resp.Body.Close())
+	}()
+
+	// Default to checking for a 2xx response.
+	if condition == "success" {
+		return resp.StatusCode >= 200 && resp.StatusCode <= 299, nil
+	}
+
+	return resp.StatusCode == expectedStatusCode, nil
+}
+
+func probeTCP(ctx context.Context, protocol string, address string) (bool, error) {
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, protocol, address)
+	if err != nil {
+		return false, err
+	}
+	err = conn.Close()
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }

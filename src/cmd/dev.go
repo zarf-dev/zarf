@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,12 +24,15 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -39,7 +43,8 @@ import (
 
 var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, state.ZarfInClusterContainerRegistryNodePort)
 
-// parseValues parses values from file paths and applies set-values overrides on top.
+// parseValues parses values from file paths and applies key.path=value overrides on top. Each
+// override value is type-inferred; see value.InferType for the rules.
 func parseValues(ctx context.Context, valuesFiles []string, setValues map[string]string) (value.Values, error) {
 	values, err := value.ParseFiles(ctx, valuesFiles, value.ParseFilesOptions{})
 	if err != nil {
@@ -50,7 +55,7 @@ func parseValues(ctx context.Context, valuesFiles []string, setValues map[string
 		if !strings.HasPrefix(key, ".") {
 			path = value.Path("." + key)
 		}
-		if err := values.Set(path, val); err != nil {
+		if err := values.Set(path, value.InferType(val)); err != nil {
 			return nil, fmt.Errorf("unable to set value at path %s: %w", key, err)
 		}
 	}
@@ -73,9 +78,225 @@ func newDevCommand() *cobra.Command {
 	cmd.AddCommand(newDevInspectCommand(v))
 	cmd.AddCommand(newDevFindImagesCommand(v))
 	cmd.AddCommand(newDevGenerateConfigCommand())
+	cmd.AddCommand(newDevGenerateSchemaCommand(v))
 	cmd.AddCommand(newDevLintCommand(v))
+	cmd.AddCommand(newDevUpgradeSchemaCommand())
+	cmd.AddCommand(newDevTemplateCommand(v))
 
 	return cmd
+}
+
+type devGenerateSchemaOptions struct {
+	flavor         string
+	setPkgTmpl     map[string]string
+	update         bool
+	deleteNotFound bool
+}
+
+type mappedChartSchema struct {
+	sourcePath  value.Path
+	schema      map[string]any
+	excludePath []value.Path
+}
+
+func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
+	o := &devGenerateSchemaOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "generate-schema [ DIRECTORY ]",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Generates a JSON schema for Zarf values based on the package definition, chart defaults, and chart schemas",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(cmd.Context(), args)
+		},
+	}
+
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.setPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
+	cmd.Flags().BoolVarP(&o.update, "update", "u", false, lang.CmdDevFlagGenerateSchemaUpdate)
+	cmd.Flags().BoolVar(&o.deleteNotFound, "delete-not-found", false, lang.CmdDevFlagGenerateSchemaDeleteNotFound)
+
+	return cmd
+}
+
+func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error {
+	l := logger.From(ctx)
+
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
+
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	loadOpts := load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			Flavor:           o.flavor,
+			SetVariables:     o.setPkgTmpl,
+			IsInteractive:    true,
+			SkipVersionCheck: true,
+			CachePath:        cachePath,
+			RemoteOptions:    defaultRemoteOptions(),
+		},
+		SkipValuesSchemaValidation: true,
+	}
+
+	loaded, err := load.Package(ctx, basePath, loadOpts)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if closeErr := loaded.Close(); closeErr != nil {
+			l.Warn("unable to close loaded package", "error", closeErr)
+		}
+	}()
+	pkg := loaded.Definition.AsV1alpha1()
+
+	// Step 1: Merge default values.files to create initial set of default Zarf values
+	zarfValues := loaded.Values.DeepCopy()
+
+	var mappedSchemas []mappedChartSchema
+
+	// Step 2: Discover source target mappings and load defaults from chart values where Zarf Value defaults aren't specified
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			l.Warn("unable to clean up temporary directory", "path", tmpDir, "error", err.Error())
+		}
+	}()
+
+	for _, component := range pkg.Components {
+		for _, chart := range component.Charts {
+			chartPaths := layout.ChartPaths{
+				ChartsDir: filepath.Join(tmpDir, "charts", chart.Name),
+				ValuesDir: filepath.Join(tmpDir, "values"),
+			}
+
+			err := assemble.PackageChart(ctx, chart, loaded.Resources, chartPaths, cachePath, defaultRemoteOptions())
+			if err != nil {
+				return fmt.Errorf("unable to package chart %q for schema generation: %w", chart.Name, err)
+			}
+
+			helmChart, valuesFilesValues, err := helm.LoadChartData(chart, chartPaths, nil)
+			if err != nil {
+				return fmt.Errorf("unable to load default values for chart %q: %w", chart.Name, err)
+			}
+
+			appliedValues := helpers.MergeMapRecursive(helmChart.Values, valuesFilesValues)
+			var chartSchema map[string]any
+			if len(helmChart.Schema) > 0 {
+				if err := json.Unmarshal(helmChart.Schema, &chartSchema); err != nil {
+					l.Warn("unable to parse Helm chart values schema; falling back to inferred types", "chart", chart.Name, "error", err)
+					chartSchema = nil
+				} else {
+					chartSchema = value.FilterChartSchema(chartSchema)
+					if chartSchema != nil {
+						if err := value.ValidateSchemaDocument(chartSchema); err != nil {
+							l.Warn("unable to validate Helm chart values schema; falling back to inferred types", "chart", chart.Name, "error", err)
+							chartSchema = nil
+						}
+					}
+				}
+			}
+
+			// Map ChartValues' Source to Target and merge into zarfValues if not already present
+			for _, cv := range chart.Values {
+				if cv.SourcePath == "" || cv.TargetPath == "" {
+					return fmt.Errorf("chart %q value mapping has empty sourcePath or targetPath", chart.Name)
+				}
+				val, err := value.Values(appliedValues).Extract(value.Path(cv.TargetPath))
+				if err != nil {
+					return fmt.Errorf("unable to extract chart %q value at targetPath %q: %w", chart.Name, cv.TargetPath, err)
+				}
+
+				if err := zarfValues.Set(value.Path(cv.SourcePath), val); err != nil {
+					return fmt.Errorf("unable to set chart %q value at sourcePath %q: %w", chart.Name, cv.SourcePath, err)
+				}
+
+				if chartSchema != nil {
+					targetSchema, found, err := value.ExtractJSONSchema(chartSchema, value.Path(cv.TargetPath))
+					if err != nil {
+						return fmt.Errorf("unable to inspect chart %q schema at targetPath %q: %w", chart.Name, cv.TargetPath, err)
+					}
+					if found {
+						excludes := make([]value.Path, len(cv.ExcludePaths))
+						for i, excludePath := range cv.ExcludePaths {
+							excludes[i] = value.Path(excludePath)
+						}
+						mappedSchemas = append(mappedSchemas, mappedChartSchema{
+							sourcePath:  value.Path(cv.SourcePath),
+							schema:      targetSchema,
+							excludePath: excludes,
+						})
+					} else {
+						l.Warn("chart values schema does not define mapped target; falling back to inferred types", "chart", chart.Name, "targetPath", cv.TargetPath)
+					}
+				}
+				for _, excludePath := range cv.ExcludePaths {
+					if err := zarfValues.Delete(value.Path(excludePath)); err != nil {
+						return fmt.Errorf("unable to exclude path %q from schema for chart %q: %w", excludePath, chart.Name, err)
+					}
+				}
+			}
+		}
+	}
+
+	// Step 3: Generate JSON generatedSchema from the final map
+	generatedSchema := value.GenerateJSONSchema(zarfValues)
+	for _, mapped := range mappedSchemas {
+		if err := value.MergeJSONSchemaAtPath(generatedSchema, mapped.sourcePath, mapped.schema); err != nil {
+			return fmt.Errorf("unable to apply Helm schema at sourcePath %q: %w", mapped.sourcePath, err)
+		}
+		for _, excludePath := range mapped.excludePath {
+			if err := value.DeleteJSONSchemaAtPath(generatedSchema, excludePath); err != nil {
+				return fmt.Errorf("unable to exclude schema path %q: %w", excludePath, err)
+			}
+		}
+	}
+
+	// Step 4: Merge and reconcile any existing schema
+	existingSchema := loaded.ValuesSchema
+
+	if existingSchema != nil {
+		generatedSchema = value.ReconcileJSONSchema(existingSchema, generatedSchema, o.deleteNotFound)
+	}
+
+	// Step 5: Save the resulting schema
+	b, err := json.MarshalIndent(generatedSchema, "", "  ")
+	if err != nil {
+		return fmt.Errorf("unable to marshal schema to JSON: %w", err)
+	}
+
+	fmt.Println(string(b))
+
+	if o.update {
+		outputFileName := filepath.Join(basePath, "values.schema.json")
+		if pkg.Values.Schema != "" {
+			if !filepath.IsAbs(pkg.Values.Schema) {
+				outputFileName = filepath.Join(basePath, pkg.Values.Schema)
+			} else {
+				outputFileName = pkg.Values.Schema
+			}
+		} else {
+			if err := packager.UpdateSchema(ctx, basePath, "values.schema.json"); err != nil {
+				return fmt.Errorf("unable to update zarf.yaml with schema path: %w", err)
+			}
+		}
+
+		err = os.WriteFile(outputFileName, b, helpers.ReadAllWriteUser)
+		if err != nil {
+			return fmt.Errorf("unable to write schema file: %w", err)
+		}
+
+		l.Info("Schema successfully generated", "filename", outputFileName)
+	}
+	return nil
 }
 
 func newDevInspectCommand(v *viper.Viper) *cobra.Command {
@@ -133,16 +354,24 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	if err != nil {
 		return err
 	}
-	pkg, err := load.PackageDefinition(ctx, basePath, loadOpts)
+	definition, err := load.PackageDefinition(ctx, basePath, loadOpts)
+	var lintErr *lint.LintError
+	if errors.As(err, &lintErr) {
+		PrintFindings(ctx, lintErr)
+	}
 	if err != nil {
 		return err
 	}
+
+	// The definition is printed in the apiVersion it was authored in.
+	if definition.OriginalAPIVersion() == v1beta1.APIVersion {
+		pkg := definition.AsV1beta1()
+		pkg.Build = v1beta1.BuildData{}
+		return utils.ColorPrintYAML(pkg, nil, false)
+	}
+	pkg := definition.AsV1alpha1()
 	pkg.Build = v1alpha1.ZarfBuildData{}
-	err = utils.ColorPrintYAML(pkg, nil, false)
-	if err != nil {
-		return err
-	}
-	return nil
+	return utils.ColorPrintYAML(pkg, nil, false)
 }
 
 type devInspectManifestsOptions struct {
@@ -191,12 +420,12 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -288,12 +517,12 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -335,19 +564,21 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 }
 
 type devDeployOptions struct {
-	createSetPkgTmpl       map[string]string
-	deploySetVariables     map[string]string
-	registryOverrides      []string
-	flavor                 string
-	registryURL            string
-	adoptExistingResources bool
-	timeout                time.Duration
-	retries                int
-	optionalComponents     string
-	noYOLO                 bool
-	connected              bool
-	ociConcurrency         int
-	skipVersionCheck       bool
+	createSetPkgTmpl   map[string]string
+	deploySetVariables map[string]string
+	valuesFiles        []string
+	setValues          map[string]string
+	registryOverrides  []string
+	flavor             string
+	registryURL        string
+	takeOwnership      bool
+	timeout            time.Duration
+	retries            int
+	optionalComponents string
+	noYOLO             bool
+	connected          bool
+	ociConcurrency     int
+	skipVersionCheck   bool
 }
 
 func newDevDeployCommand(v *viper.Viper) *cobra.Command {
@@ -374,9 +605,13 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 
-	// Always require adopt-existing-resources flag (no viper)
-	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	// Always require take-ownership flag (no viper)
+	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
+	cmd.Flags().BoolVar(&o.takeOwnership, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
@@ -406,6 +641,11 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -423,6 +663,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		RegistryOverrides:  overrides,
 		CreateSetVariables: o.createSetPkgTmpl,
 		DeploySetVariables: o.deploySetVariables,
+		Values:             values,
 		OptionalComponents: o.optionalComponents,
 		Timeout:            o.timeout,
 		Retries:            o.retries,
@@ -430,6 +671,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:      defaultRemoteOptions(),
 		CachePath:          cachePath,
 		SkipVersionCheck:   o.skipVersionCheck,
+		TakeOwnership:      o.takeOwnership,
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -753,13 +995,13 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err

@@ -57,7 +57,7 @@ Files can be:
   <TabItem label="Local">
     <ExampleYAML
       src={import("../../../../../examples/component-actions/zarf.yaml?raw")}
-      component="on-deploy-with-template-use-of-variable"
+      component="on-deploy-with-template-use-of-value"
     />
   </TabItem>
   <TabItem label="Remote with SHA sums">
@@ -146,6 +146,8 @@ Images can either be discovered manually, or automatically by using [`zarf dev f
 Another way to bring OCI images can into the package is via archives of [OCI layouts](https://specs.opencontainers.org/image-spec/image-layout/). Common ways to create OCI archives are through the [docker save](https://docs.docker.com/reference/cli/docker/image/save/) and [podman save --format=oci-archive](https://docs.podman.io/en/latest/markdown/podman-save.1.html) commands. The Docker engine version must be >= [25.0.0](https://docs.docker.com/engine/release-notes/25.0/#2500) as this was the release that the save command became compliant with the OCI layout specification.
 
 An OCI layout can have any number of images, Zarf will pull all images that are listed in the sub-field `imageArchives.images`. If a listed image is not found in the archive then Zarf will error. In order for Zarf to find an image its [descriptor](https://specs.opencontainers.org/image-spec/descriptor/?v=v1.1.1) in the OCI-layout index.json must include the annotation "io.containerd.image.name" or "org.opencontainers.image.ref.name". `docker save` and `podman save` will automatically add at least one of these annotations.
+
+Locally-built images that are not pulled from a public registry should be referenced under the reserved [`.internal`](https://www.icann.org/en/board-activities-and-meetings/materials/approved-resolutions-special-meeting-of-the-icann-board-24-07-2024-en#section2.b) top-level domain (for example `zarf.internal/my-app:1.0.0`). The `.internal` TLD will never resolve on the public internet, which avoids accidentally pulling an unexpected image if a registry reference is mistyped or rewriting fails. `zarf dev lint` emits a warning when an image archive image does not use a `.internal` domain.
 
 
 ```yaml

@@ -54,6 +54,12 @@ func TestImageTransformHost(t *testing.T) {
 	}
 }
 
+func TestCRCTag(t *testing.T) {
+	img, err := ParseImageRef("nginx:1.23.3")
+	require.NoError(t, err)
+	require.Equal(t, "1.23.3-zarf-3793515731", CRCTag(img.Name, img.Tag))
+}
+
 func TestImageTransformHostWithoutChecksum(t *testing.T) {
 	var expectedResult = []string{
 		"gitlab.com/project/library/nginx:latest",

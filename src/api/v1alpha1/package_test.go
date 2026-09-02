@@ -10,6 +10,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestOriginalAPIVersion(t *testing.T) {
+	t.Parallel()
+
+	var unset ZarfBuildData
+	require.Equal(t, APIVersion, unset.GetOriginalAPIVersion())
+
+	var recorded ZarfBuildData
+	recorded.SetOriginalAPIVersion("zarf.dev/v1beta1")
+	require.Equal(t, "zarf.dev/v1beta1", recorded.GetOriginalAPIVersion())
+}
+
 func TestZarfPackageIsInitPackage(t *testing.T) {
 	t.Parallel()
 
@@ -45,116 +56,29 @@ func TestZarfPackageHasImages(t *testing.T) {
 	require.True(t, pkg.HasImages())
 }
 
-func TestUniqueNamespaces(t *testing.T) {
+func TestGetComponent(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name     string
-		pkg      ZarfPackage
-		expected []string
-	}{
-		{
-			name:     "empty package",
-			pkg:      ZarfPackage{},
-			expected: []string{},
-		},
-		{
-			name: "single chart namespace",
-			pkg: ZarfPackage{
-				Components: []ZarfComponent{
-					{
-						Charts: []ZarfChart{
-							{Name: "test", Namespace: "test-ns"},
-						},
-					},
-				},
-			},
-			expected: []string{"test-ns"},
-		},
-		{
-			name: "single manifest namespace",
-			pkg: ZarfPackage{
-				Components: []ZarfComponent{
-					{
-						Manifests: []ZarfManifest{
-							{Name: "test", Namespace: "manifest-ns"},
-						},
-					},
-				},
-			},
-			expected: []string{"manifest-ns"},
-		},
-		{
-			name: "multiple unique namespaces",
-			pkg: ZarfPackage{
-				Components: []ZarfComponent{
-					{
-						Charts: []ZarfChart{
-							{Name: "chart1", Namespace: "ns-a"},
-							{Name: "chart2", Namespace: "ns-b"},
-						},
-						Manifests: []ZarfManifest{
-							{Name: "manifest1", Namespace: "ns-c"},
-						},
-					},
-				},
-			},
-			expected: []string{"ns-a", "ns-b", "ns-c"},
-		},
-		{
-			name: "duplicate namespaces are deduplicated",
-			pkg: ZarfPackage{
-				Components: []ZarfComponent{
-					{
-						Charts: []ZarfChart{
-							{Name: "chart1", Namespace: "same-ns"},
-							{Name: "chart2", Namespace: "same-ns"},
-						},
-						Manifests: []ZarfManifest{
-							{Name: "manifest1", Namespace: "same-ns"},
-						},
-					},
-				},
-			},
-			expected: []string{"same-ns"},
-		},
-		{
-			name: "wait action namespaces are not included",
-			pkg: ZarfPackage{
-				Components: []ZarfComponent{
-					{
-						Charts: []ZarfChart{
-							{Name: "chart1", Namespace: "chart-ns"},
-						},
-						Actions: ZarfComponentActions{
-							OnDeploy: ZarfComponentActionSet{
-								After: []ZarfComponentAction{
-									{
-										Wait: &ZarfComponentActionWait{
-											Cluster: &ZarfComponentActionWaitCluster{
-												Kind:      "Pod",
-												Name:      "test",
-												Namespace: "wait-ns",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			expected: []string{"chart-ns"},
+	pkg := ZarfPackage{
+		Components: []ZarfComponent{
+			{Name: "first", Images: []string{"docker.io/library/nginx:latest"}},
+			{Name: "second"},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			result := tt.pkg.UniqueNamespaces()
-			require.ElementsMatch(t, tt.expected, result)
-		})
-	}
+	t.Run("returns matching component", func(t *testing.T) {
+		t.Parallel()
+		got, err := pkg.GetComponent("first")
+		require.NoError(t, err)
+		require.Equal(t, "first", got.Name)
+		require.Equal(t, []string{"docker.io/library/nginx:latest"}, got.Images)
+	})
+
+	t.Run("errors when component is absent", func(t *testing.T) {
+		t.Parallel()
+		_, err := pkg.GetComponent("missing")
+		require.Error(t, err)
+	})
 }
 
 func TestZarfPackageIsSBOMable(t *testing.T) {

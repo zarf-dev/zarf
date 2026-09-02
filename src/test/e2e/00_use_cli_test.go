@@ -68,6 +68,39 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, string(b))
 	})
 
+	t.Run("zarf dev inspect definition v1beta1", func(t *testing.T) {
+		t.Parallel()
+		pathToPackage := filepath.Join("src", "test", "packages", "00-dev-inspect-definition-v1beta1")
+
+		stdOut, _, err := e2e.Zarf(t, "dev", "inspect", "definition", pathToPackage, "--architecture=amd64")
+		require.NoError(t, err)
+		b, err := os.ReadFile(filepath.Join(pathToPackage, "expected-zarf.yaml"))
+		require.NoError(t, err)
+		require.Contains(t, stdOut, string(b))
+	})
+
+	t.Run("zarf dev template", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.tpl.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: app
+  description: [[ .environment ]]
+components:
+  - name: app
+    images:
+      - name: [[ .image ]]
+`), 0o644))
+
+		stdOut, stdErr, err := e2e.ZarfInDir(t, dir, "dev", "template", "--set", "environment=development", "--set", "image=registry.example/app:v1")
+		require.NoError(t, err, stdOut, stdErr)
+		generated, err := os.ReadFile(filepath.Join(dir, "zarf.gen.yaml"))
+		require.NoError(t, err)
+		require.Contains(t, string(generated), "description: development")
+		require.Contains(t, string(generated), "name: registry.example/app:v1")
+	})
+
 	t.Run("zarf dev sha256sum <local>", func(t *testing.T) {
 		t.Parallel()
 
@@ -367,13 +400,13 @@ func TestBuildMachineInfo(t *testing.T) {
 			require.NoError(t, err, stdOut, stdErr)
 
 			if tt.withBuildMachineInfo {
-				require.NotEmpty(t, pkgLayout.Pkg.Build.Terminal)
-				require.NotEmpty(t, pkgLayout.Pkg.Build.User)
+				require.NotEmpty(t, pkgLayout.AsV1alpha1().Build.Terminal)
+				require.NotEmpty(t, pkgLayout.AsV1alpha1().Build.User)
 				require.Contains(t, stdOut, "terminal:")
 				require.Contains(t, stdOut, "user:")
 			} else {
-				require.Empty(t, pkgLayout.Pkg.Build.Terminal)
-				require.Empty(t, pkgLayout.Pkg.Build.User)
+				require.Empty(t, pkgLayout.AsV1alpha1().Build.Terminal)
+				require.Empty(t, pkgLayout.AsV1alpha1().Build.User)
 				require.NotContains(t, stdOut, "terminal:")
 				require.NotContains(t, stdOut, "user:")
 			}

@@ -59,13 +59,13 @@ func publishAndConnect(ctx context.Context, t *testing.T, srcPath string) (*zoci
 		OCIConcurrency: 3,
 	})
 	require.NoError(t, err)
-	t.Cleanup(func() { os.Remove(pkgLayout.Pkg.Metadata.Name) }) //nolint:errcheck
+	t.Cleanup(func() { os.Remove(pkgLayout.AsV1alpha1().Metadata.Name) }) //nolint:errcheck
 
-	cacheModifier, err := zoci.GetOCICacheModifier(ctx, tmpdir)
-	require.NoError(t, err)
-
-	platform := oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture)
-	remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, append([]oci.Modifier{oci.WithPlainHTTP(true)}, cacheModifier)...)
+	platform := oci.PlatformForArch(pkgLayout.AsV1alpha1().Build.Architecture)
+	remote, err := zoci.NewRemoteWithOptions(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
+		CachePath:     tmpdir,
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+	})
 	require.NoError(t, err)
 
 	return remote, pkgLayout
@@ -76,7 +76,7 @@ func TestAllLayersRespectsRequestedComponents(t *testing.T) {
 	remote, pkgLayout := publishAndConnect(ctx, t, "testdata/multi-component")
 
 	alpineOnly := []v1alpha1.ZarfComponent{{Name: "alpine"}}
-	bothComponents := pkgLayout.Pkg.Components
+	bothComponents := pkgLayout.AsV1alpha1().Components
 
 	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents, zoci.GetAllLayerTypes()...)
 	require.NoError(t, err)
@@ -142,7 +142,7 @@ func publishPackage(ctx context.Context, t *testing.T, packagePath, upstream str
 	t.Helper()
 	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
-	t.Cleanup(func() { os.Remove(pkgLayout.Pkg.Metadata.Name) }) //nolint:errcheck
+	t.Cleanup(func() { os.Remove(pkgLayout.AsV1alpha1().Metadata.Name) }) //nolint:errcheck
 
 	dstRef := registry.Reference{Registry: upstream, Repository: "zarf-packages"}
 	packageRef, err := packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
@@ -151,10 +151,12 @@ func publishPackage(ctx context.Context, t *testing.T, packagePath, upstream str
 	})
 	require.NoError(t, err)
 
-	platform := oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture)
-	r, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(true))
+	platform := oci.PlatformForArch(pkgLayout.AsV1alpha1().Build.Architecture)
+	r, err := zoci.NewRemoteWithOptions(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+	})
 	require.NoError(t, err)
-	return r, pkgLayout.Pkg.Components
+	return r, pkgLayout.AsV1alpha1().Components
 }
 
 // buildVirtualPackage pushes a virtual image to a fresh in-memory registry and builds a zarf
@@ -245,6 +247,61 @@ func TestAssembleLayers(t *testing.T) {
 	require.Contains(t, digests, pkg.image.manifest.Digest.String(), "image manifest blob present")
 	require.Contains(t, digests, pkg.image.config.Digest.String(), "image config blob present")
 	require.Contains(t, digests, pkg.image.layer.Digest.String(), "image layer blob present")
+}
+
+func TestAllPublishedLayersArePulled(t *testing.T) {
+	ctx := testutil.TestContext(t)
+
+	dir := t.TempDir()
+	zarfYAML := `kind: ZarfPackageConfig
+metadata:
+  name: all-layers-test
+  version: 0.0.1
+  architecture: amd64
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
+documentation:
+  readme: README.md
+components:
+  - name: with-file
+    required: true
+    files:
+      - source: data.txt
+        target: data.txt
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(zarfYAML), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "data.txt"), []byte("hello\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "README.md"), []byte("# test\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "values.yaml"), []byte("foo: bar\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "values.schema.json"), []byte(`{"type":"object"}`), 0o644))
+
+	tmpdir := t.TempDir()
+	packagePath, err := packager.Create(ctx, dir, tmpdir, packager.CreateOptions{
+		CachePath:      tmpdir,
+		SigningKeyPath: "testdata/cosign.key",
+	})
+	require.NoError(t, err)
+
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	remote, components := publishPackage(ctx, t, packagePath, upstream)
+
+	// Verify that for each entry on the manifest there is an associated layer pulled by remote.AssembleLayers
+	root, err := remote.FetchRoot(ctx)
+	require.NoError(t, err)
+
+	pulled, err := remote.AssembleLayers(ctx, components, zoci.GetAllLayerTypes()...)
+	require.NoError(t, err)
+	pulledDigests := map[string]struct{}{}
+	for _, l := range pulled {
+		pulledDigests[l.Digest.String()] = struct{}{}
+	}
+
+	for _, published := range root.Layers {
+		_, ok := pulledDigests[published.Digest.String()]
+		require.True(t, ok, "published layer %q (%s) is not pulled by AssembleLayers", published.Annotations[ocispec.AnnotationTitle], published.Digest)
+	}
 }
 
 func buildAndPublishPackage(ctx context.Context, t *testing.T, imageRef, upstream string) *zoci.Remote {

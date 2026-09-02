@@ -1,0 +1,10 @@
+kind: ZarfPackageConfig
+metadata:
+  name: middle-package
+values:
+  schema: middle-values.schema.json
+components:
+  - name: nested-component
+    required: true
+    import:
+      path: bottom

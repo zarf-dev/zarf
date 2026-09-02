@@ -7,6 +7,7 @@ package test
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -48,8 +49,9 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	suite.NoError(err, stdOut, stdErr)
 
 	simplePackageRef := fmt.Sprintf("oci://%s/simple-package:0.0.1", ref)
+	unprefixedPackageRef := fmt.Sprintf("%s/simple-package:0.0.1", ref)
 	// fail to pull the package without providing the public key
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", "--verify")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", "--verify=always")
 	suite.Error(err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", publicKeyFlag, "-o", outputPath)
@@ -58,7 +60,13 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", "-o", outputPath)
 	suite.NoError(err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", simplePackageRef, "--plain-http", "--verify")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", unprefixedPackageRef, "--plain-http", "-o", outputPath)
+	suite.NoError(err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", unprefixedPackageRef, "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", simplePackageRef, "--plain-http", "--verify=always")
 	suite.Error(err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "sbom", simplePackageRef, "--plain-http", publicKeyFlag, "--output", suite.T().TempDir())
@@ -71,9 +79,34 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+badPullInspectRef.String(), "--plain-http")
 	suite.Error(err, stdOut, stdErr)
+
+	// Verify inspect digest returns the same value from the local tarball and the OCI registry.
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "digest", out)
+	suite.NoError(err, stdOut, stdErr)
+	tarballDigest := strings.TrimSpace(stdOut)
+	suite.True(strings.HasPrefix(tarballDigest, "sha256:"))
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "digest", simplePackageRef, "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+	ociDigest := strings.TrimSpace(stdOut)
+	suite.Equal(tarballDigest, ociDigest,
+		"inspect digest should return the same value for the tarball and the OCI source it was published from")
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "digest", unprefixedPackageRef, "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+	suite.Equal(ociDigest, strings.TrimSpace(stdOut))
 }
 
-func (suite *PullInspectTestSuite) Test_1_Remote_Inspect() {
+func (suite *PullInspectTestSuite) Test_1_Init_Loads_OCI_Over_Plain_HTTP() {
+	suite.T().Log("E2E: Init package load oci:// over plain HTTP")
+
+	ref := fmt.Sprintf("oci://%s/simple-package:0.0.1", suite.Reference.String())
+	_, stdErr, err := e2e.Zarf(suite.T(), "init", ref, "--plain-http")
+	suite.Error(err, stdErr)
+	suite.Contains(stdErr, `zarf init can only deploy packages of kind "ZarfInitConfig"`)
+}
+
+func (suite *PullInspectTestSuite) Test_2_Remote_Inspect() {
 	suite.T().Log("E2E: Package Inspect oci://")
 
 	// Test inspect w/ bad ref.

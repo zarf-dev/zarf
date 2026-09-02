@@ -49,48 +49,32 @@ func ParseServiceURL(serviceURL string) (string, string, int, error) {
 	return matches[2], matches[1], remotePort, nil
 }
 
-// Inspired from https://github.com/google/go-containerregistry/blob/098045d5e61ff426a61a0eecc19ad0c433cd35a9/pkg/name/registry.go
+// Originally inspired from https://github.com/google/go-containerregistry/blob/098045d5e61ff426a61a0eecc19ad0c433cd35a9/pkg/name/registry.go
 
-// Detect more complex forms of local references.
-var reLocal = regexp.MustCompile(`.*\.local(?:host)?(?::\d{1,5})?$`)
-
-// Detect the loopback IP (127.0.0.1)
-var reLoopback = regexp.MustCompile(regexp.QuoteMeta("127.0.0.1"))
-
-// Detect the loopback IPV6 (::1)
-var reipv6Loopback = regexp.MustCompile(regexp.QuoteMeta("::1"))
-
-func isRFC1918(URL string) bool {
-	ipStr := strings.Split(URL, ":")[0]
-	ip := net.ParseIP(ipStr)
-	if ip == nil {
-		return false
+// IsLocalOrPrivate reports whether hostURL (without a scheme) refers to a host
+// reachable without a public network round-trip - loopback/localhost, a
+// private-network IP (RFC1918/RFC4193), or a .local/.localhost domain - used for
+// choosing to access services over plain HTTP. hostURL may include a port.
+func IsLocalOrPrivate(hostURL string) bool {
+	host := hostURL
+	if h, _, err := net.SplitHostPort(hostURL); err == nil {
+		host = h
 	}
-	for _, cidr := range []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"} {
-		_, block, _ := net.ParseCIDR(cidr) //nolint:errcheck
-		if block.Contains(ip) {
-			return true
-		}
+	if IsLocalhost(host) {
+		return true
 	}
-	return false
+	if ip := net.ParseIP(host); ip != nil && ip.IsPrivate() {
+		return true
+	}
+	return strings.HasSuffix(host, ".local") || strings.HasSuffix(host, ".localhost")
 }
 
-// IsLocalhost returns whether or not a URL without an existing scheme is on localhost
-func IsLocalhost(URL string) bool {
-	if isRFC1918(URL) {
+// IsLocalhost reports whether host is the localhost hostname or a loopback IP
+// (127.0.0.0/8 or ::1). host must be a bare hostname or IP, without a port.
+func IsLocalhost(host string) bool {
+	if host == "localhost" {
 		return true
 	}
-	if strings.HasPrefix(URL, "localhost:") {
-		return true
-	}
-	if reLocal.MatchString(URL) {
-		return true
-	}
-	if reLoopback.MatchString(URL) {
-		return true
-	}
-	if reipv6Loopback.MatchString(URL) {
-		return true
-	}
-	return false
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

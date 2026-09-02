@@ -37,9 +37,8 @@ const (
 	containerdDistributionSourcePrefix = "containerd.io/distribution.source."
 )
 
-// GetManifestsFromArchive take an image archive and returns a list of image descriptors
+// GetManifestsFromArchive takes an image archive or OCI layout directory and returns its image descriptors.
 func GetManifestsFromArchive(ctx context.Context, imageArchive string) (_ []ocispec.Descriptor, err error) {
-	// Create a temporary directory for extraction
 	extractionDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
@@ -48,12 +47,9 @@ func GetManifestsFromArchive(ctx context.Context, imageArchive string) (_ []ocis
 		err = errors.Join(err, os.RemoveAll(extractionDir))
 	}()
 
-	if err := archive.Decompress(ctx, imageArchive, extractionDir, archive.DecompressOpts{}); err != nil {
-		return nil, fmt.Errorf("failed to extract tar: %w", err)
-	}
-	imageDir, err := determineImageDirectory(extractionDir)
+	imageDir, err := resolveImageLayout(ctx, imageArchive, extractionDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to determine image directory: %w", err)
+		return nil, err
 	}
 
 	return getManifestsFromOCILayout(imageDir)
@@ -77,13 +73,12 @@ func FindImagesInOCIManifests(manifests []ocispec.Descriptor) ([]string, error) 
 	return foundImages, nil
 }
 
-// Unpack extracts an image tar and loads it into an OCI layout directory.
-// It returns a list of PulledImage for all images in the tar.
+// Unpack loads images from an image archive or OCI layout directory into destDir.
+// It returns a list of PulledImage for all images in the source.
 func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []PulledImage, err error) {
 	if len(imageArchive.Images) == 0 {
 		return nil, fmt.Errorf("images must be defined")
 	}
-	// Create a temporary directory for extraction
 	extractionDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
@@ -92,13 +87,9 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		err = errors.Join(err, os.RemoveAll(extractionDir))
 	}()
 
-	if err := archive.Decompress(ctx, imageArchive.Path, extractionDir, archive.DecompressOpts{}); err != nil {
-		return nil, fmt.Errorf("failed to extract tar: %w", err)
-	}
-
-	imageDir, err := determineImageDirectory(extractionDir)
+	imageDir, err := resolveImageLayout(ctx, imageArchive.Path, extractionDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to determine image directory: %w", err)
+		return nil, err
 	}
 
 	manifests, err := getManifestsFromOCILayout(imageDir)
@@ -111,7 +102,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		return nil, fmt.Errorf("failed to create OCI store: %w", err)
 	}
 
-	// imageDir is the directory into which the archive was decompressed
+	// imageDir is the OCI layout containing the source images.
 	srcStore, err := oci.NewWithContext(ctx, imageDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create source OCI store: %w", err)
@@ -145,30 +136,9 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		}
 		requestedImages[manifestImg.Reference] = true
 
-		foundDesc, _, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
-		}
-
 		logger.From(ctx).Info("pulling image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
-		// Mirror images.Pull: an index-digest reference preserves the full index, while a tag or
-		// manifest-digest reference is filtered down to a single platform manifest by oras.Copy.
-		var platform *ocispec.Platform
-		isIndexSha := manifestImg.Digest != "" && IsIndex(foundDesc.MediaType)
-		if IsIndex(foundDesc.MediaType) && !isIndexSha {
-			platform = &ocispec.Platform{Architecture: arch, OS: "linux"}
-		}
-		copyOpts := oras.DefaultCopyOptions
-		copyOpts.WithTargetPlatform(platform)
-		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to copy image %s from archive %s: %w", manifestImg.Reference, imageArchive.Path, err)
-		}
-		// Tag the image with annotations so that Syft and ORAS can see them
-		desc = addNameAnnotationsToDesc(desc, manifestImg.Reference)
-		err = dstStore.Tag(ctx, desc, manifestImg.Reference)
-		if err != nil {
-			return nil, fmt.Errorf("failed to tag image: %w", err)
+		if _, err := copyImageFromOCILayout(ctx, srcStore, dstStore, manifestDesc.Digest.String(), manifestImg, arch, 0); err != nil {
+			return nil, fmt.Errorf("failed to pull image %s from archive %s: %w", manifestImg.Reference, imageArchive.Path, err)
 		}
 
 		pulledImages = append(pulledImages, PulledImage{Image: manifestImg})
@@ -183,6 +153,54 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 	}
 
 	return pulledImages, nil
+}
+
+// resolveImageLayout returns an OCI layout directory for an image archive or layout source.
+func resolveImageLayout(ctx context.Context, source, extractionDir string) (string, error) {
+	info, err := os.Stat(source)
+	if err != nil {
+		return "", fmt.Errorf("failed to access image archive: %w", err)
+	}
+	if info.IsDir() {
+		return source, nil
+	}
+	if err := archive.Decompress(ctx, source, extractionDir, archive.DecompressOpts{}); err != nil {
+		return "", fmt.Errorf("failed to extract tar: %w", err)
+	}
+
+	imageDir, err := determineImageDirectory(extractionDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to determine image directory: %w", err)
+	}
+	return imageDir, nil
+}
+
+func copyImageFromOCILayout(ctx context.Context, src oras.ReadOnlyTarget, dst *oci.Store, srcRef string, destImage transform.Image, arch string, concurrency int) (ocispec.Descriptor, error) {
+	desc, _, err := oras.FetchBytes(ctx, src, srcRef, oras.DefaultFetchBytesOptions)
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to fetch manifest for %s: %w", srcRef, err)
+	}
+
+	// Mirror images.Pull: an index-digest reference preserves the full index, while a tag or
+	// manifest-digest reference is filtered down to a single platform manifest by oras.Copy.
+	var platform *ocispec.Platform
+	isIndexSha := destImage.Digest != "" && IsIndex(desc.MediaType)
+	if IsIndex(desc.MediaType) && !isIndexSha && arch != "" {
+		platform = &ocispec.Platform{Architecture: arch, OS: "linux"}
+	}
+	copyOpts := oras.DefaultCopyOptions
+	copyOpts.Concurrency = concurrency
+	copyOpts.WithTargetPlatform(platform)
+	desc, err = oras.Copy(ctx, src, srcRef, dst, destImage.Reference, copyOpts)
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to copy image %s: %w", destImage.Reference, err)
+	}
+	// Tag the image with annotations so that Syft and ORAS can see them
+	desc = addNameAnnotationsToDesc(desc, destImage.Reference)
+	if err := dst.Tag(ctx, desc, destImage.Reference); err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to tag image: %w", err)
+	}
+	return desc, nil
 }
 
 func determineImageDirectory(dir string) (string, error) {
