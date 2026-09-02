@@ -16,7 +16,7 @@ import (
 const (
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
 	ZarfMaxChartNameLength   = 40
-	errChartReleaseNameEmpty = "release name empty, unable to fallback to chart name"
+	errChartReleaseNameEmpty = "release name empty, unable to fall back to chart name"
 )
 
 // Package errors found during validation.
@@ -249,10 +249,10 @@ func validateAction(action v1alpha1.ZarfComponentAction) error {
 	return err
 }
 
-// validateReleaseName validates a release name against DNS 1035 spec, using chartName as fallback.
+// validateReleaseName validates a release name against DNS 1035 spec, using chartName as a fallback.
 // https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names
 func validateReleaseName(chartName, releaseName string) error {
-	// Fallback to chartName if releaseName is empty
+	// Fall back to chartName if releaseName is empty
 	// NOTE: Similar fallback mechanism happens in src/internal/packager/helm/chart.go:InstallOrUpgradeChart
 	if releaseName == "" {
 		releaseName = chartName
