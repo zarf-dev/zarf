@@ -948,6 +948,10 @@ func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []api.V
 	return reqs
 }
 
+// getChecksum walks dirPath recursively, computing a sha256 checksum for each file
+// (skipping the zarf.yaml and checksums.txt files themselves), and returns:
+//   - the checksums.txt content: one "<sha256> <relative-path>" line per file
+//   - the sha256 checksum of that content, hex-encoded
 func getChecksum(dirPath string) (string, string, error) {
 	checksumData := []string{}
 	err := filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {
@@ -981,7 +985,10 @@ func getChecksum(dirPath string) (string, string, error) {
 	return checksumContent, hex.EncodeToString(sha[:]), nil
 }
 
-func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) (err error) {
+// createReproducibleTarballFromDir takes a directory then walks thru every file in that directory and adds it
+// to a tar ball; the reproducible part comes from changing all the file user and group to 0, and settings the
+// file creation, access, and mod time to midnight on January 1st 1970, UTC.
+func createReproducibleTarballFromDir(dirPath string, dirPrefix string, tarballPath string, overrideMode bool) (err error) {
 	tb, err := os.Create(tarballPath)
 	if err != nil {
 		return fmt.Errorf("error creating tarball: %w", err)

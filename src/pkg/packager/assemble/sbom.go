@@ -286,6 +286,8 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 	return jsonData, nil
 }
 
+// createSBOMViewerAsset creates an offline software bill of material html webpage that
+// that can be used to viewed before installing any packages into a cluster.
 func createSBOMViewerAsset(outputDir, identifier string, jsonData, jsonList []byte) error {
 	filename := fmt.Sprintf("sbom-viewer-%s.html", getNormalizedFileName(identifier))
 	return createSBOMHTML(outputDir, filename, "viewer/template.gohtml", jsonData, jsonList)
