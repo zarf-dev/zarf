@@ -97,8 +97,8 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		return err
 	}
 
-	for _, t := range targets {
-		l.Info("creating image SBOM", "reference", t.identifier)
+	for index, t := range targets {
+		l.Info("creating image SBOM", "reference", t.identifier, "count", fmt.Sprintf("%d/%d", index+1, len(targets)))
 		b, err := createImageSBOM(ctx, cachePath, outputPath, t.img, t.identifier)
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
@@ -215,8 +215,8 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 	}
 	catalog := pkg.NewCollection()
 	relationships := []artifact.Relationship{}
-	for _, sbomFile := range sbomFiles {
-		l.Info("creating file SBOMs", "file", sbomFile)
+	for index, sbomFile := range sbomFiles {
+		l.Info("creating file SBOMs", "file", sbomFile, "count", fmt.Sprintf("%d/%d", index+1, len(sbomFiles)))
 		fileSrc, err := filesource.NewFromPath(sbomFile)
 		if err != nil {
 			return nil, err

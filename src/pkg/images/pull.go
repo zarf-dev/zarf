@@ -245,16 +245,19 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		return nil, fmt.Errorf("failed to create oci layout: %w", err)
 	}
 
-	if len(dockerFallBackImages) > 0 {
-		daemonImagesWithManifests, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, opts.Arch, opts.OCIConcurrency)
+	// Daemon fallbacks and registry images are two halves of the same pull, so they share a single
+	// index counted against imageCount. Daemon images go first, offsetting the registry images below.
+	daemonImageCount := len(dockerFallBackImages)
+	if daemonImageCount > 0 {
+		daemonImagesWithManifests, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, opts.Arch, opts.OCIConcurrency, imageCount)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
 		}
 		pulledImages = append(pulledImages, daemonImagesWithManifests...)
 	}
 
-	for _, imageInfo := range imagesInfo {
-		err = orasSave(ctx, imageInfo, opts, dst, client)
+	for index, imageInfo := range imagesInfo {
+		err = orasSave(ctx, imageInfo, daemonImageCount+index+1, imageCount, opts, dst, client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save images: %w", err)
 		}
@@ -287,7 +290,7 @@ func getDockerEndpointHost() (string, error) {
 	return endpoint.Host, nil
 }
 
-func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (_ []PulledImage, err error) {
+func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency, count int) (_ []PulledImage, err error) {
 	pulledImages := []PulledImage{}
 	dockerEndPointHost, err := getDockerEndpointHost()
 	if err != nil {
@@ -308,12 +311,12 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 	// requires Docker engine v25.0+, the first version to export the OCI layout format. For older versions
 	// or if the feature flag is disabled, we fall back to Crane.
 	directPull := feature.IsEnabled(feature.DockerDaemonDirectPull) && daemonSupportsOCIExport(ctx, cli)
-	for _, daemonImage := range daemonImages {
+	for index, daemonImage := range daemonImages {
 		var pullErr error
 		if directPull {
-			pullErr = saveImageFromDockerDaemon(ctx, cli, dst, daemonImage, arch, concurrency)
+			pullErr = saveImageFromDockerDaemon(ctx, cli, dst, daemonImage, arch, concurrency, index+1, count)
 		} else {
-			pullErr = craneSaveImageFromDockerDaemon(ctx, cli, dst, daemonImage, arch, concurrency)
+			pullErr = craneSaveImageFromDockerDaemon(ctx, cli, dst, daemonImage, arch, concurrency, index+1, count)
 		}
 		if pullErr != nil {
 			return nil, pullErr
@@ -342,7 +345,7 @@ func daemonSupportsOCIExport(ctx context.Context, cli *client.Client) bool {
 
 // saveImageFromDockerDaemon exports a single image from the Docker daemon via the engine's OCI image export
 // (the equivalent of `docker save`) and copies it into dst.
-func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, arch string, concurrency int) (err error) {
+func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, arch string, concurrency, index, count int) (err error) {
 	l := logger.From(ctx)
 	l.Debug("pulling image from the Docker Daemon using Docker SDK")
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -387,14 +390,14 @@ func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci
 	if err != nil {
 		return fmt.Errorf("failed to create OCI store: %w", err)
 	}
-	l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference)
+	l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference, "count", fmt.Sprintf("%d/%d", index, count))
 	_, err = copyImageFromOCILayout(ctx, dockerImageSrc, dst, manifests[0].Digest.String(), daemonImage.original, arch, concurrency)
 	return err
 }
 
 // craneSaveImageFromDockerDaemon exports a single image from the Docker daemon using Crane and copies it into dst.
 // Crane handles the older, pre-OCI-layout Docker export formats
-func craneSaveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, arch string, concurrency int) (err error) {
+func craneSaveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, arch string, concurrency, index, count int) (err error) {
 	l := logger.From(ctx)
 	l.Warn("pulling from the Docker daemon using the legacy method. This method will be removed in Zarf v1.0. Upgrade Docker to >=v25.0.0 for continued daemon functionality")
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -478,7 +481,7 @@ func craneSaveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst
 	if err != nil {
 		return err
 	}
-	l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference, "size", utils.ByteFormat(float64(size), 2))
+	l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference, "size", utils.ByteFormat(float64(size), 2), "count", fmt.Sprintf("%d/%d", index, count))
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.WithTargetPlatform(platform)
 	copyOpts.Concurrency = concurrency
@@ -489,7 +492,7 @@ func craneSaveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst
 	return nil
 }
 
-func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, dst *oci.Store, client *auth.Client) error {
+func orasSave(ctx context.Context, imageInfo imagePullInfo, index, count int, opts PullOptions, dst *oci.Store, client *auth.Client) error {
 	l := logger.From(ctx)
 	var pullSrc oras.ReadOnlyTarget
 	var err error
@@ -510,6 +513,7 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	if len(imageInfo.platforms) > 0 {
 		logArgs = append(logArgs, "platforms", strings.Join(imageInfo.platforms, ","))
 	}
+	logArgs = append(logArgs, "count", fmt.Sprintf("%d/%d", index, count))
 	l.Info("saving image", logArgs...)
 	localCache, err := oci.NewWithContext(ctx, opts.CacheDirectory)
 	if err != nil {
