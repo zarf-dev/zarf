@@ -558,7 +558,9 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
 
 	// zarf tools
-	CmdToolsShort = "Collection of additional tools to make airgap easier"
+	CmdToolsShort             = "Collection of additional tools to make airgap easier"
+	CmdToolsAliasesShort      = "Print POSIX shell aliases for bundled tools"
+	CmdToolsAliasesErrWindows = "zarf tools aliases is only supported on Linux and Unix systems"
 
 	CmdToolsArchiverShort           = "Compresses/Decompresses generic archives, including Zarf packages"
 	CmdToolsArchiverCompressShort   = "Compresses a collection of sources based off of the destination file extension."
