@@ -8,10 +8,10 @@ tableOfContents: false
 
 ## zarf package list
 
-Lists out all of the packages that have been deployed to the cluster (runs offline)
+Lists packages that have been deployed to the cluster (runs offline)
 
 ```
-zarf package list [flags]
+zarf package list [PACKAGE_NAME] [flags]
 ```
 
 ### Options

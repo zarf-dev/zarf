@@ -1309,16 +1309,18 @@ func newPackageListCommand() *cobra.Command {
 	o := newPackageListOptions()
 
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"l", "ls"},
-		Short:   lang.CmdPackageListShort,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		Use:               "list [PACKAGE_NAME]",
+		Aliases:           []string{"l", "ls"},
+		Short:             lang.CmdPackageListShort,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: getPackageCompletionArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			err := o.complete(ctx)
 			if err != nil {
 				return err
 			}
-			return o.run(ctx)
+			return o.run(ctx, args)
 		},
 	}
 
@@ -1347,10 +1349,20 @@ type packageListInfo struct {
 	Components        []string                  `json:"components"`
 }
 
-func (o *packageListOptions) run(ctx context.Context) error {
-	deployedZarfPackages, err := o.cluster.GetDeployedZarfPackages(ctx)
-	if err != nil && len(deployedZarfPackages) == 0 {
-		return fmt.Errorf("unable to get the packages deployed to the cluster: %w", err)
+func (o *packageListOptions) run(ctx context.Context, args []string) error {
+	var deployedZarfPackages []state.DeployedPackage
+	if len(args) == 1 {
+		deployedPackage, err := o.cluster.GetDeployedPackage(ctx, args[0])
+		if err != nil {
+			return fmt.Errorf("unable to get package %q deployed to the cluster: %w", args[0], err)
+		}
+		deployedZarfPackages = []state.DeployedPackage{*deployedPackage}
+	} else {
+		var err error
+		deployedZarfPackages, err = o.cluster.GetDeployedZarfPackages(ctx)
+		if err != nil && len(deployedZarfPackages) == 0 {
+			return fmt.Errorf("unable to get the packages deployed to the cluster: %w", err)
+		}
 	}
 
 	var packageList []packageListInfo
