@@ -45,6 +45,8 @@ const (
 	DockerMediaTypeManifest = "application/vnd.docker.distribution.manifest.v2+json"
 	// DockerMediaTypeManifestList is the legacy Docker manifest list, replaced by OCI index
 	DockerMediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
+	// DockerMediaTypeConfig is the legacy Docker image configuration format.
+	DockerMediaTypeConfig = "application/vnd.docker.container.image.v1+json"
 )
 
 // Legacy Docker image layers
@@ -64,14 +66,34 @@ func isLayer(mediaType string) bool {
 	return false
 }
 
-// OnlyHasImageLayers returns true when an OCI manifest only contains container image layers.
-func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
+func isEmptyDescriptor(descriptor ocispec.Descriptor) bool {
+	return descriptor.MediaType == ocispec.DescriptorEmptyJSON.MediaType &&
+		descriptor.Digest == ocispec.DescriptorEmptyJSON.Digest &&
+		descriptor.Size == ocispec.DescriptorEmptyJSON.Size
+}
+
+// onlyHasImageLayers returns true when an OCI manifest only contains container image layers.
+func onlyHasImageLayers(manifest ocispec.Manifest) bool {
+	if len(manifest.Layers) == 0 {
+		return false
+	}
+
 	for _, layer := range manifest.Layers {
-		if !isLayer(string(layer.MediaType)) {
+		if isEmptyDescriptor(layer) || !isLayer(string(layer.MediaType)) {
 			return false
 		}
 	}
 	return true
+}
+
+// IsContainerImage reports whether an OCI manifest describes a container image.
+func IsContainerImage(manifest ocispec.Manifest) bool {
+	switch manifest.Config.MediaType {
+	case ocispec.MediaTypeImageConfig, DockerMediaTypeConfig:
+		return onlyHasImageLayers(manifest)
+	default:
+		return false
+	}
 }
 
 // IsManifest reports whether the media type represents an OCI manifest.

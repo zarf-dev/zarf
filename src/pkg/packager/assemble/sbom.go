@@ -439,7 +439,7 @@ func imageHasOnlyContainerLayers(img v1.Image) (bool, error) {
 	if err := json.Unmarshal(raw, &manifest); err != nil {
 		return false, err
 	}
-	return images.OnlyHasImageLayers(manifest), nil
+	return images.IsContainerImage(manifest), nil
 }
 
 func collectPlatformImagesFromIndex(parent v1.ImageIndex, indexDigest v1.Hash, ref string) ([]platformImage, error) {
@@ -473,7 +473,7 @@ func collectPlatformImagesFromIndex(parent v1.ImageIndex, indexDigest v1.Hash, r
 			if err := json.Unmarshal(rawManifest, &childManifest); err != nil {
 				return nil, fmt.Errorf("failed to parse platform manifest for %s: %w", ref, err)
 			}
-			if !images.OnlyHasImageLayers(childManifest) {
+			if !images.IsContainerImage(childManifest) {
 				continue
 			}
 			platformImages = append(platformImages, platformImage{
