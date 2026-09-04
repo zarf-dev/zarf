@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.85.1](https://github.com/zarf-dev/zarf/compare/v0.85.0...v0.85.1) (2026-09-04)
+
+
+### Features
+
+* **cluster:** support random registry pod selection ([#5317](https://github.com/zarf-dev/zarf/issues/5317)) ([fb3a53b](https://github.com/zarf-dev/zarf/commit/fb3a53b276ed927fa5e279a826ee366243f9d9b7))
+* reject extra arguments to destroy ([#5311](https://github.com/zarf-dev/zarf/issues/5311)) ([2a03baf](https://github.com/zarf-dev/zarf/commit/2a03bafdbf893cd2a5b2828d47a7e29eaf542ee9))
+
 ## [0.85.0](https://github.com/zarf-dev/zarf/compare/v0.84.0...v0.85.0) (2026-09-03)
 
 
