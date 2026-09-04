@@ -32,6 +32,8 @@ import (
 type LoadOptions struct {
 	Shasum       string
 	Architecture string
+	// Retries is the maximum attempts for OCI package pull requests.
+	Retries int
 	// Deprecated: Use VerifyBlobOptions instead.
 	PublicKeyPath     string
 	VerifyBlobOptions *signing.VerifyBlobOptions
@@ -92,8 +94,15 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 	switch srcType {
 	case "oci":
+		if opts.Retries < 0 {
+			return nil, fmt.Errorf("retries cannot be negative")
+		}
+		if opts.Retries == 0 {
+			opts.Retries = config.ZarfDefaultRetries
+		}
 		ociOpts := pullOCIOptions{
 			Source:               source,
+			Retries:              opts.Retries,
 			VerifyBlobOptions:    opts.VerifyBlobOptions,
 			VerificationStrategy: opts.VerificationStrategy,
 			Shasum:               opts.Shasum,
