@@ -1143,8 +1143,9 @@ func (o *devGenerateConfigOptions) run(_ *cobra.Command, args []string) error {
 }
 
 type devLintOptions struct {
-	setPkgTmpl map[string]string
-	flavor     string
+	setPkgTmpl  map[string]string
+	flavor      string
+	allVariants bool
 }
 
 func newDevLintCommand(v *viper.Viper) *cobra.Command {
@@ -1161,6 +1162,9 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringToStringVar(&o.setPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().BoolVar(&o.allVariants, "all-variants", false, lang.CmdDevLintFlagAllVariants)
+
+	cmd.MarkFlagsMutuallyExclusive("flavor", "all-variants")
 
 	return cmd
 }
@@ -1178,11 +1182,18 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	var variantFiltersToSkip []load.VariantDimension
+	if o.allVariants {
+		variantFiltersToSkip = load.AllVariantDimensions()
+	}
+
 	err = packager.Lint(ctx, basePath, packager.LintOptions{
-		Flavor:        o.flavor,
-		SetVariables:  o.setPkgTmpl,
-		CachePath:     cachePath,
-		RemoteOptions: defaultRemoteOptions(),
+		Flavor:             o.flavor,
+		SkipVariantFilters: variantFiltersToSkip,
+		SetVariables:       o.setPkgTmpl,
+		CachePath:          cachePath,
+		RemoteOptions:      defaultRemoteOptions(),
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
