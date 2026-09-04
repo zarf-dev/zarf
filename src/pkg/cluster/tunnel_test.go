@@ -11,8 +11,10 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestListConnections(t *testing.T) {
@@ -222,14 +224,46 @@ func TestGetAttachablePodForService(t *testing.T) {
 	now := metav1.Now()
 
 	tests := []struct {
-		name        string
-		pods        []corev1.Pod
-		expectedErr string
-		expectedPod string
+		name               string
+		pods               []corev1.Pod
+		servicePodSelector servicePodSelector
+		expectedErr        string
+		expectedPod        string
 	}{
 		{
 			name:        "no pods",
 			expectedErr: "no pods found for service web",
+		},
+		{
+			name: "uses first ready pod without a selector",
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-ready-first", Labels: map[string]string{"app": "web"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-ready-final", Labels: map[string]string{"app": "web"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
+				},
+			},
+			expectedPod: "web-ready-first",
+		},
+		{
+			name: "uses configured selector across ready pods",
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-ready-first", Labels: map[string]string{"app": "web"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-ready-final", Labels: map[string]string{"app": "web"}},
+					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
+				},
+			},
+			servicePodSelector: func(pods []corev1.Pod) corev1.Pod {
+				return pods[len(pods)-1]
+			},
+			expectedPod: "web-ready-final",
 		},
 		{
 			name: "only a terminating pod",
@@ -274,6 +308,9 @@ func TestGetAttachablePodForService(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			clientset := fake.NewClientset()
+			clientset.PrependReactor("list", "pods", func(k8stesting.Action) (bool, runtime.Object, error) {
+				return true, &corev1.PodList{Items: tt.pods}, nil
+			})
 			svc := corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web"},
 				Spec:       corev1.ServiceSpec{Selector: map[string]string{"app": "web"}},
@@ -285,7 +322,7 @@ func TestGetAttachablePodForService(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			tunnel := &Tunnel{clientset: clientset, namespace: "app-ns", resourceName: "web"}
+			tunnel := &Tunnel{clientset: clientset, namespace: "app-ns", resourceName: "web", servicePodSelector: tt.servicePodSelector}
 			podName, err := tunnel.getAttachablePodForService(context.Background())
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
