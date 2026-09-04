@@ -554,7 +554,7 @@ func (t *FileTree) AddHardLink(realPath file.Path, linkPath file.Path) (*file.Re
 	if fna.HasFileNode() {
 		// this path already exists
 		if fna.FileNode.FileType != file.TypeHardLink {
-			return nil, fmt.Errorf("path=%q already exists but is NOT a symlink file", realPath)
+			return nil, fmt.Errorf("path=%q already exists but is NOT a hardlink file", realPath)
 		}
 		// this is a symlink file, provide a new or existing file.Reference
 		if fna.FileNode.Reference == nil {
@@ -585,7 +585,7 @@ func (t *FileTree) AddDir(realPath file.Path) (*file.Reference, error) {
 	if fna.HasFileNode() {
 		// this path already exists
 		if fna.FileNode.FileType != file.TypeDirectory {
-			return nil, fmt.Errorf("path=%q already exists but is NOT a symlink file", realPath)
+			return nil, fmt.Errorf("path=%q already exists but is NOT a directory", realPath)
 		}
 		// this is a directory, provide a new or existing file.Reference
 		if fna.FileNode.Reference == nil {
