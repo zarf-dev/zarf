@@ -842,20 +842,30 @@ func newDevSha256SumCommand() *cobra.Command {
 }
 
 func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
-	hashErr := errors.New("unable to compute the SHA256SUM hash")
-	ctx := cmd.Context()
+	out, err := o.compute(cmd.Context(), args[0])
+	if err != nil {
+		return err
+	}
+	fmt.Println(out)
+	return nil
+}
 
-	fileName := args[0]
+// compute assumes source is non-empty; the command's cobra.ExactArgs(1)
+// guarantees that at the CLI boundary.
+func (o *devSha256SumOptions) compute(ctx context.Context, source string) (output string, err error) {
+	hashErr := errors.New("unable to compute the SHA256SUM hash")
+
+	fileName := source
 
 	var tmp string
 	var data io.ReadCloser
 
 	if helpers.IsURL(fileName) {
-		logger.From(cmd.Context()).Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
+		logger.From(ctx).Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
 
 		fileBase, err := helpers.ExtractBasePathFromURL(fileName)
 		if err != nil {
-			return errors.Join(hashErr, err)
+			return "", errors.Join(hashErr, err)
 		}
 
 		if fileBase == "" {
@@ -864,43 +874,41 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 		tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
-			return errors.Join(hashErr, err)
+			return "", errors.Join(hashErr, err)
 		}
-
-		downloadPath := filepath.Join(tmp, fileBase)
-		err = utils.DownloadToFile(ctx, fileName, downloadPath)
-		if err != nil {
-			return errors.Join(hashErr, err)
-		}
-
-		fileName = downloadPath
-
 		defer func(path string) {
 			errRemove := os.RemoveAll(path)
 			err = errors.Join(err, errRemove)
 		}(tmp)
+
+		downloadPath := filepath.Join(tmp, fileBase)
+		err = utils.DownloadToFile(ctx, fileName, downloadPath)
+		if err != nil {
+			return "", errors.Join(hashErr, err)
+		}
+
+		fileName = downloadPath
 	}
 
 	if o.extractPath != "" {
-		if tmp == "" {
-			tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
-			if err != nil {
-				return errors.Join(hashErr, err)
-			}
-			defer func(path string) {
-				errRemove := os.RemoveAll(path)
-				err = errors.Join(err, errRemove)
-			}(tmp)
+		tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return "", errors.Join(hashErr, err)
 		}
+		defer func(path string) {
+			errRemove := os.RemoveAll(path)
+			err = errors.Join(err, errRemove)
+		}(tmp)
 
 		extractedFile := filepath.Join(tmp, o.extractPath)
 
 		decompressOpts := archive.DecompressOpts{
-			Files: []string{extractedFile},
+			// We want to extract the file relative to the tar ball
+			Files: []string{o.extractPath},
 		}
 		err = archive.Decompress(ctx, fileName, tmp, decompressOpts)
 		if err != nil {
-			return errors.Join(hashErr, err)
+			return "", errors.Join(hashErr, err)
 		}
 
 		fileName = extractedFile
@@ -908,7 +916,7 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 	data, err = os.Open(fileName)
 	if err != nil {
-		return errors.Join(hashErr, err)
+		return "", errors.Join(hashErr, err)
 	}
 	defer func(data io.ReadCloser) {
 		errClose := data.Close()
@@ -917,10 +925,9 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 	hash, err := helpers.GetSHA256Hash(data)
 	if err != nil {
-		return errors.Join(hashErr, err)
+		return "", errors.Join(hashErr, err)
 	}
-	fmt.Println(hash)
-	return nil
+	return hash, nil
 }
 
 type devFindImagesOptions struct {
