@@ -284,7 +284,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 
 	CmdPackageInspectShort = "Commands for gathering information from a built package"
 
-	CmdPackageListShort         = "Lists out all of the packages that have been deployed to the cluster (runs offline)"
+	CmdPackageListShort         = "Lists packages that have been deployed to the cluster (runs offline)"
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
 
 	CmdPackageCreateFlagConfirm               = "Confirm package creation without prompting"

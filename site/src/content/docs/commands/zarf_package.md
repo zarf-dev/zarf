@@ -36,7 +36,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 * [zarf package create](/commands/zarf_package_create/)	 - Creates a Zarf package from a given directory or the current directory
 * [zarf package deploy](/commands/zarf_package_deploy/)	 - Deploys a Zarf package from a local file or URL (runs offline)
 * [zarf package inspect](/commands/zarf_package_inspect/)	 - Commands for gathering information from a built package
-* [zarf package list](/commands/zarf_package_list/)	 - Lists out all of the packages that have been deployed to the cluster (runs offline)
+* [zarf package list](/commands/zarf_package_list/)	 - Lists packages that have been deployed to the cluster (runs offline)
 * [zarf package mirror-resources](/commands/zarf_package_mirror-resources/)	 - Mirrors a Zarf package's internal resources to specified image registries and git repositories
 * [zarf package publish](/commands/zarf_package_publish/)	 - Publishes a Zarf package to a remote registry
 * [zarf package pull](/commands/zarf_package_pull/)	 - Pulls a Zarf package from a remote registry and save to the local file system
