@@ -155,7 +155,7 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 	var tunnel *Tunnel
 	if registryInfo.IsInternal() {
 		// Establish a registry tunnel to send the images to the zarf registry
-		if tunnel, err = c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfRegistryName, "", 0, ZarfRegistryPort, withServicePodSelector(selectRandomServicePod)); err != nil {
+		if tunnel, err = c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfRegistryName, "", 0, ZarfRegistryPort); err != nil {
 			return "", tunnel, err
 		}
 	} else if dns.IsServiceURL(registryInfo.Address) {
@@ -322,18 +322,6 @@ const (
 // TunnelOption is a function that configures a tunnel
 type TunnelOption func(*Tunnel)
 
-type servicePodSelector func([]corev1.Pod) corev1.Pod
-
-func withServicePodSelector(selector servicePodSelector) TunnelOption {
-	return func(t *Tunnel) {
-		t.servicePodSelector = selector
-	}
-}
-
-func selectRandomServicePod(pods []corev1.Pod) corev1.Pod {
-	return pods[rand.IntN(len(pods))]
-}
-
 // WithListenAddress will set the listen address for the tunnel
 func WithListenAddress(addr []string) TunnelOption {
 	return func(t *Tunnel) {
@@ -343,19 +331,18 @@ func WithListenAddress(addr []string) TunnelOption {
 
 // Tunnel is the main struct that configures and manages port forwarding tunnels to Kubernetes resources.
 type Tunnel struct {
-	clientset          kubernetes.Interface
-	restConfig         *rest.Config
-	localPort          int
-	remotePort         int
-	namespace          string
-	resourceType       string
-	resourceName       string
-	urlSuffix          string
-	listenAddress      []string
-	servicePodSelector servicePodSelector
-	stopChan           chan struct{}
-	readyChan          chan struct{}
-	errChan            chan error
+	clientset     kubernetes.Interface
+	restConfig    *rest.Config
+	localPort     int
+	remotePort    int
+	namespace     string
+	resourceType  string
+	resourceName  string
+	urlSuffix     string
+	listenAddress []string
+	stopChan      chan struct{}
+	readyChan     chan struct{}
+	errChan       chan error
 }
 
 // NewTunnel will create a new Tunnel struct.
@@ -592,25 +579,17 @@ func (tunnel *Tunnel) getAttachablePodForService(ctx context.Context) (string, e
 	// status.phase=Running alone isn't enough: a pod stays "Running" throughout its
 	// graceful termination (e.g. mid-rollout), so without also checking these, a
 	// port-forward can bind to a pod that's already on its way out.
-	if tunnel.servicePodSelector == nil {
-		for _, pod := range podList.Items {
-			if pod.DeletionTimestamp == nil && podutils.IsPodReady(&pod) {
-				return pod.Name, nil
-			}
-		}
-		return "", fmt.Errorf("no ready pods found for service %s", tunnel.resourceName)
-	}
-
 	readyPods := make([]corev1.Pod, 0, len(podList.Items))
 	for _, pod := range podList.Items {
-		if pod.DeletionTimestamp == nil && podutils.IsPodReady(&pod) {
-			readyPods = append(readyPods, pod)
+		if pod.DeletionTimestamp != nil || !podutils.IsPodReady(&pod) {
+			continue
 		}
+		readyPods = append(readyPods, pod)
 	}
 	if len(readyPods) == 0 {
 		return "", fmt.Errorf("no ready pods found for service %s", tunnel.resourceName)
 	}
-	return tunnel.servicePodSelector(readyPods).Name, nil
+	return readyPods[rand.IntN(len(readyPods))].Name, nil
 }
 
 // Inspired by https://github.com/kubernetes/kubernetes/blob/1ee1ff97fb7f9755a44d29bee0c80d2ccbed68dc/staging/src/k8s.io/kubectl/pkg/cmd/portforward/portforward.go#L139-L156

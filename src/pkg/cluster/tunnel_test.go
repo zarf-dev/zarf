@@ -224,18 +224,17 @@ func TestGetAttachablePodForService(t *testing.T) {
 	now := metav1.Now()
 
 	tests := []struct {
-		name               string
-		pods               []corev1.Pod
-		servicePodSelector servicePodSelector
-		expectedErr        string
-		expectedPod        string
+		name         string
+		pods         []corev1.Pod
+		expectedErr  string
+		expectedPods []string
 	}{
 		{
 			name:        "no pods",
 			expectedErr: "no pods found for service web",
 		},
 		{
-			name: "uses first ready pod without a selector",
+			name: "selects a ready pod",
 			pods: []corev1.Pod{
 				{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-ready-first", Labels: map[string]string{"app": "web"}},
@@ -246,24 +245,7 @@ func TestGetAttachablePodForService(t *testing.T) {
 					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
 				},
 			},
-			expectedPod: "web-ready-first",
-		},
-		{
-			name: "uses configured selector across ready pods",
-			pods: []corev1.Pod{
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-ready-first", Labels: map[string]string{"app": "web"}},
-					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "app-ns", Name: "web-ready-final", Labels: map[string]string{"app": "web"}},
-					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
-				},
-			},
-			servicePodSelector: func(pods []corev1.Pod) corev1.Pod {
-				return pods[len(pods)-1]
-			},
-			expectedPod: "web-ready-final",
+			expectedPods: []string{"web-ready-first", "web-ready-final"},
 		},
 		{
 			name: "only a terminating pod",
@@ -301,7 +283,7 @@ func TestGetAttachablePodForService(t *testing.T) {
 					Status:     corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{readyCondition}},
 				},
 			},
-			expectedPod: "web-ready",
+			expectedPods: []string{"web-ready"},
 		},
 	}
 	for _, tt := range tests {
@@ -322,14 +304,14 @@ func TestGetAttachablePodForService(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			tunnel := &Tunnel{clientset: clientset, namespace: "app-ns", resourceName: "web", servicePodSelector: tt.servicePodSelector}
+			tunnel := &Tunnel{clientset: clientset, namespace: "app-ns", resourceName: "web"}
 			podName, err := tunnel.getAttachablePodForService(context.Background())
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tt.expectedPod, podName)
+			require.Contains(t, tt.expectedPods, podName)
 		})
 	}
 }
