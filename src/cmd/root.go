@@ -239,7 +239,7 @@ func setupRootFlags(rootCmd *cobra.Command) {
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
 
 	if err := rootCmd.RegisterFlagCompletionFunc("architecture", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return zcobra.GetRootArchitectureCobraCompression(), cobra.ShellCompDirectiveNoFileComp
+		return zcobra.ArchitectureCompletions(), cobra.ShellCompDirectiveNoFileComp
 	}); err != nil {
 		logger.From(rootCmd.Context()).Warn("failed to register out-complete", "error", err)
 		panic(err)

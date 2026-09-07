@@ -19,10 +19,10 @@ const (
 	osArchARM64Desc = "the 64-bit ARM architecture"
 )
 
-// GetRootArchitectureCobraCompression returns the valid --architecture
-// values as "value\tdescription" pairs, ready to return from a cobra
+// ArchitectureCompletions returns the valid --architecture values as
+// "value\tdescription" pairs, ready to return from a cobra
 // RegisterFlagCompletionFunc callback for shell tab completion.
-func GetRootArchitectureCobraCompression() []string {
+func ArchitectureCompletions() []string {
 	return []string{
 		fmt.Sprintf("%s\t%s", string(config.OSArchAMD64), osArchAMD64Desc),
 		fmt.Sprintf("%s\t%s", string(config.OSArchARM64), osArchARM64Desc),
