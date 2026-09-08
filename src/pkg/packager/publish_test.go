@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
@@ -320,7 +319,7 @@ func TestPublishPackageDirectoryNameCollision(t *testing.T) {
 			require.NoError(t, err)
 
 			// Create a temporary directory to use as working directory and
-			// create a subdir with same name as the package to test name collission
+			// create a subdir with same name as the package to test name collision
 			// https://github.com/zarf-dev/zarf/issues/4148
 			tmpDir := t.TempDir()
 			collisionDir := filepath.Join(tmpDir, "test")
@@ -539,7 +538,7 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 		PlainHTTP:             true,
 		InsecureSkipTLSVerify: true,
 	}
-	packagePath, err := Pull(ctx, helpers.OCIURLPrefix+sourceRef.String(), t.TempDir(), PullOptions{
+	packagePath, err := Pull(ctx, sourceRef.String(), t.TempDir(), PullOptions{
 		Architecture:  layoutExpected.AsV1alpha1().Build.Architecture,
 		RemoteOptions: remoteOptions,
 		CachePath:     t.TempDir(),

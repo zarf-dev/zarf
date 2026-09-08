@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.85.0](https://github.com/zarf-dev/zarf/compare/v0.84.0...v0.85.0) (2026-09-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* publish v1beta1 component configs ([#5219](https://github.com/zarf-dev/zarf/issues/5219))
+
+### Features
+
+* add index and count to deploy ([#4170](https://github.com/zarf-dev/zarf/issues/4170)) ([ba50b87](https://github.com/zarf-dev/zarf/commit/ba50b8704a6478354457215f06ddf3d39d3de490))
+* add oci source auto-prefixing ([#5273](https://github.com/zarf-dev/zarf/issues/5273)) ([9a41b0d](https://github.com/zarf-dev/zarf/commit/9a41b0db586ce20cd2ba132eb0a4843e2084b766))
+* **helm:** support allowable errors for helm chart retries ([#5287](https://github.com/zarf-dev/zarf/issues/5287)) ([cdb212b](https://github.com/zarf-dev/zarf/commit/cdb212bec6e5acf7a73a0740599cb8f9dd8c3db1))
+* publish v1beta1 component configs ([#5219](https://github.com/zarf-dev/zarf/issues/5219)) ([abd07dd](https://github.com/zarf-dev/zarf/commit/abd07ddf531e47098af30d03c6af243216d3f65f))
+* warn on image push failure ([#5268](https://github.com/zarf-dev/zarf/issues/5268)) ([258fa9e](https://github.com/zarf-dev/zarf/commit/258fa9e800758e08cfe7bf3554b68f7455086765))
+* **zoci:** add transport parameter to NewRemoteWithOptions ([#5260](https://github.com/zarf-dev/zarf/issues/5260)) ([97a1b4d](https://github.com/zarf-dev/zarf/commit/97a1b4d0e9ca6095450f87a9c8690d5c76f71702))
+
+
+### Bug Fixes
+
+* **helm:** ensure retrieval of latest release ([#5295](https://github.com/zarf-dev/zarf/issues/5295)) ([5977f2d](https://github.com/zarf-dev/zarf/commit/5977f2d5a44e4cbb7b557a89d94c41359bb4c320))
+* pass remote options when loading OCI init packages ([#5265](https://github.com/zarf-dev/zarf/issues/5265)) ([4e14f8b](https://github.com/zarf-dev/zarf/commit/4e14f8b773d3b989c307d37370b9027a1b327d96))
+* support platform flag entries for crane copy ([#5280](https://github.com/zarf-dev/zarf/issues/5280)) ([81fedb2](https://github.com/zarf-dev/zarf/commit/81fedb2d73543f06679f5feef298456b50e0c78e))
+
+
+### Refactoring
+
+* **state:** move agent information into a sub-struct ([#5269](https://github.com/zarf-dev/zarf/issues/5269)) ([e702d1c](https://github.com/zarf-dev/zarf/commit/e702d1c7c813b812b6efb137084e85f2309ef281))
+
 ## [0.84.0](https://github.com/zarf-dev/zarf/compare/v0.83.0...v0.84.0) (2026-08-20)
 
 

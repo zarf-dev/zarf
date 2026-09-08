@@ -21,7 +21,7 @@ zarf package inspect definition [ PACKAGE_SOURCE ] [flags]
 # Inspect the zarf.yaml of a local package tarball
 $ zarf package inspect definition zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Inspect the zarf.yaml of a package in an OCI registry (requires oci:// scheme)
+# Inspect the zarf.yaml of a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect definition oci://ghcr.io/my-org/my-package:1.0.0
 
 # Inspect the zarf.yaml of a package deployed to a cluster

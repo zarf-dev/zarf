@@ -1140,10 +1140,12 @@ func testState() *state.State {
 			PayLoadConfigMapAmount: 3,
 			PayLoadShaSum:          "abc123",
 		},
-		AgentTLS: pki.GeneratedPKI{
-			CA:   []byte("ca-data"),
-			Cert: []byte("cert-data"),
-			Key:  []byte("key-data"),
+		AgentInfo: state.AgentInfo{
+			TLS: pki.GeneratedPKI{
+				CA:   []byte("ca-data"),
+				Cert: []byte("cert-data"),
+				Key:  []byte("key-data"),
+			},
 		},
 	}
 }
@@ -1269,9 +1271,9 @@ func TestWithState_AgentCertsGroup(t *testing.T) {
 	require.Contains(t, stateMap, "Agent")
 
 	for tmpl, expectedB64 := range map[string][]byte{
-		`{{ .State.Agent.CA }}`:   s.AgentTLS.CA,
-		`{{ .State.Agent.Cert }}`: s.AgentTLS.Cert,
-		`{{ .State.Agent.Key }}`:  s.AgentTLS.Key,
+		`{{ .State.Agent.CA }}`:   s.AgentInfo.TLS.CA,
+		`{{ .State.Agent.Cert }}`: s.AgentInfo.TLS.Cert,
+		`{{ .State.Agent.Key }}`:  s.AgentInfo.TLS.Key,
 	} {
 		out, err := Apply(ctx, tmpl, objs)
 		require.NoError(t, err, "template %q should render with agentCerts", tmpl)

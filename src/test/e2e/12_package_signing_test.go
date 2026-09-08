@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 func TestPackageSigning(t *testing.T) {
@@ -85,5 +86,20 @@ func TestPackageSigning(t *testing.T) {
 		_, stdErr, err = e2e.Zarf(t, "package", "verify", testPath, "--key", filepath.Join("src", "test", "packages", "zarf-test.pub"))
 		require.Error(t, err)
 		require.Contains(t, stdErr, "verification material was provided but the package is not signed")
+	})
+
+	t.Run("Signing an OCI package without its source prefix", func(t *testing.T) {
+		registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
+		source := registryURL + "/implicit-sign-source/simple-package:0.0.1"
+
+		// Create directly in the registry, then sign without the optional oci:// source prefix.
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", filepath.Join("src", "test", "packages", "11-simple-package"), "-o", "oci://"+registryURL+"/implicit-sign-source", "--plain-http")
+		require.NoError(t, err, stdOut, stdErr)
+
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "sign", source, "--signing-key", filepath.Join("src", "test", "packages", "zarf-test.prv-key"), "--plain-http")
+		require.NoError(t, err, stdOut, stdErr)
+
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "verify", source, "--key", filepath.Join("src", "test", "packages", "zarf-test.pub"), "--plain-http")
+		require.NoError(t, err, stdOut, stdErr)
 	})
 }

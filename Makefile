@@ -81,10 +81,16 @@ destroy: ## Run `zarf destroy` on the current cluster
 	rm -fr build
 
 # Note: the path to the main.go file is not used due to https://github.com/golang/go/issues/51831#issuecomment-1074188363
+.PHONY: vendor
+vendor: vendor/modules.txt ## Update vendored Go dependencies when module metadata changes
+
+vendor/modules.txt: go.mod go.sum
+	go mod vendor
+
 .PHONY: build
 build: ## Build the Zarf CLI for the machines OS and architecture
 	go mod tidy
-	go mod vendor
+	$(MAKE) vendor
 	$(MAKE) $(BUILD_CLI_FOR_SYSTEM)
 
 build-cli-linux-amd: ## Build the Zarf CLI for Linux on AMD64

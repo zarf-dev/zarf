@@ -35,6 +35,10 @@ const (
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 	// ZarfConfigMediaType is the media type for the Zarf package manifest config.
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
+	// ZarfComponentConfigMediaType is the media type for a v1beta1 Zarf component config OCI artifact.
+	ZarfComponentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
+	// ComponentResourceMountPathAnnotation identifies where a component resource is mounted in its OCI artifact.
+	ComponentResourceMountPathAnnotation = "dev.zarf.mountPath"
 	// OCITimestampFormat is the format used for the OCI timestamp annotation
 	OCITimestampFormat = time.RFC3339
 )

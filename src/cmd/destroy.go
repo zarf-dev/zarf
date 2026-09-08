@@ -32,6 +32,7 @@ func newDestroyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "destroy --confirm",
 		Aliases: []string{"d"},
+		Args:    cobra.NoArgs,
 		Short:   lang.CmdDestroyShort,
 		Long:    lang.CmdDestroyLong,
 		RunE:    o.run,

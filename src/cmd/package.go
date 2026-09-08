@@ -1543,16 +1543,21 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 
 func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	packageSource := args[0]
+	packageDestination := zoci.NormalizeOCISource(args[1])
 	ctx := cmd.Context()
 	l := logger.From(ctx)
 	v := getViper()
+	isSkeletonPackage := helpers.IsDir(packageSource)
+	if !isSkeletonPackage {
+		packageSource = zoci.NormalizeOCISource(packageSource)
+	}
 
-	if !helpers.IsOCIURL(args[1]) {
-		return errors.New("registry must be prefixed with 'oci://'")
+	if !helpers.IsOCIURL(packageDestination) {
+		return errors.New("registry must be a valid OCI reference")
 	}
 
 	// Destination Repository
-	parts := strings.Split(strings.TrimPrefix(args[1], helpers.OCIURLPrefix), "/")
+	parts := strings.Split(strings.TrimPrefix(packageDestination, helpers.OCIURLPrefix), "/")
 	dstRef := registry.Reference{
 		Registry:   parts[0],
 		Repository: strings.Join(parts[1:], "/"),
@@ -1568,7 +1573,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Skeleton package - call PublishSkeleton
-	if helpers.IsDir(packageSource) {
+	if isSkeletonPackage {
 		skeletonOpts := packager.PublishSkeletonOptions{
 			OCIConcurrency:       o.ociConcurrency,
 			SigningKeyPath:       o.signingKeyPath,
@@ -1801,7 +1806,7 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	l := logger.From(ctx)
-	packageSource := args[0]
+	packageSource := zoci.NormalizeOCISource(args[0])
 
 	if !o.keyless && o.signingKeyPath == "" {
 		return errors.New("--signing-key is required (or pass --keyless for Sigstore keyless flow)")
