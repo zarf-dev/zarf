@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -34,7 +35,7 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 	if err != nil {
 		return fmt.Errorf("error getting init package: %w", err)
 	}
-	initPkgName, err := findInitPackageWithComponent(pkgs, "zarf-registry")
+	initPkgName, err := findPackageWithService(pkgs, v1beta1.ServiceRegistry)
 	if err != nil {
 		return fmt.Errorf("error finding init package with zarf-registry component: %w", err)
 	}
@@ -98,7 +99,7 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	if err != nil {
 		return fmt.Errorf("error getting init package: %w", err)
 	}
-	initPkgName, err := findInitPackageWithComponent(pkgs, "zarf-agent")
+	initPkgName, err := findPackageWithService(pkgs, v1beta1.ServiceAgent)
 	if err != nil {
 		return fmt.Errorf("error finding init package with zarf-agent component: %w", err)
 	}
@@ -222,18 +223,16 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	return nil
 }
 
-func findInitPackageWithComponent(pkgs []state.DeployedPackage, componentName string) (string, error) {
+func findPackageWithService(pkgs []state.DeployedPackage, service v1beta1.Service) (string, error) {
 	for _, deployedPackage := range pkgs {
 		definition, err := deployedPackage.PackageDefinition()
 		if err != nil {
 			return "", err
 		}
-		pkg := definition.AsV1alpha1()
-		if pkg.Kind == v1alpha1.ZarfInitConfig {
-			for _, c := range pkg.Components {
-				if c.Name == componentName {
-					return deployedPackage.Name, nil
-				}
+		pkg := definition.AsV1beta1()
+		for _, component := range pkg.Components {
+			if component.Service == service {
+				return deployedPackage.Name, nil
 			}
 		}
 	}

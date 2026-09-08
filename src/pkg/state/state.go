@@ -793,7 +793,7 @@ const (
 type DeployedPackage struct {
 	Name   string `json:"name"`
 	Digest string `json:"digest"`
-	// Deprecated: kept so older clients can read package deployment state.
+	// Deprecated: use PackageData or PackageDefinition() instead. This field is kept so older clients can read package deployment state.
 	Data                v1alpha1.ZarfPackage       `json:"data"`
 	PackageData         map[string]json.RawMessage `json:"packageData"`
 	CLIVersion          string                     `json:"cliVersion"`
