@@ -25,7 +25,7 @@ zarf package inspect values-files [ PACKAGE ] [flags]
 # Show values files for a local package tarball
 $ zarf package inspect values-files zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Show values files for a package in an OCI registry (requires oci:// scheme)
+# Show values files for a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect values-files oci://ghcr.io/my-org/my-package:1.0.0
 
 ```

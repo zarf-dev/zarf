@@ -1,0 +1,47 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: published-component
+  version: 0.0.1
+values:
+  files:
+    - component-values.yaml
+  schema: component-values.schema.json
+component:
+  manifests:
+    - name: local-manifest
+      namespace: default
+      files:
+        - local-manifest.yaml
+    - name: remote-manifest
+      namespace: default
+      files:
+        - https://example.com/remote-manifest.yaml
+  charts:
+    - name: local-chart
+      namespace: default
+      local:
+        path: local-chart
+      valuesFiles:
+        - path: local-chart-values.yaml
+        - path: https://example.com/remote-chart-values.yaml
+    - name: remote-chart
+      namespace: default
+      helmRepository:
+        url: https://charts.example.com
+        name: remote-chart
+        version: 1.0.0
+  files:
+    - source: local-file.txt
+      destination: /tmp/local-file.txt
+    - source: https://example.com/remote-file.txt
+      destination: /tmp/remote-file.txt
+  images:
+    - name: docker.io/library/alpine:3.21
+      source: daemon
+    - name: docker.io/library/nginx:1.27
+      source: registry
+  repositories:
+    - url: https://github.com/zarf-dev/zarf.git
+      ref:
+        tag: v0.83.0

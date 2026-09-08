@@ -387,6 +387,20 @@
     "ComponentImport": {
       "additionalProperties": false,
       "description": "ComponentImport is a reference to imported Zarf component configs.",
+      "oneOf": [
+        {
+          "required": [
+            "local"
+          ],
+          "title": "local"
+        },
+        {
+          "required": [
+            "remote"
+          ],
+          "title": "remote"
+        }
+      ],
       "patternProperties": {
         "^x-": {}
       },
@@ -506,28 +520,6 @@
       ],
       "type": "object"
     },
-    "ComponentSelector": {
-      "additionalProperties": false,
-      "description": "ComponentSelector filters a component for inclusion at package create time.",
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "architecture": {
-          "description": "Only include component for the given package architecture.",
-          "enum": [
-            "amd64",
-            "arm64"
-          ],
-          "type": "string"
-        },
-        "flavor": {
-          "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'.",
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
     "ComponentSpec": {
       "additionalProperties": false,
       "description": "ComponentSpec is a reduced component definition used in component configs.",
@@ -585,10 +577,6 @@
           },
           "type": "array"
         },
-        "selector": {
-          "$ref": "#/$defs/ComponentSelector",
-          "description": "Filter when this component is included during package creation based on architecture or flavor."
-        },
         "service": {
           "description": "The Zarf CLI service this component provides, such as the registry, injector, or agent.",
           "enum": [
@@ -633,6 +621,28 @@
             "darwin",
             "windows"
           ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ComponentVariant": {
+      "additionalProperties": false,
+      "description": "ComponentVariant identifies a component config variant.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "architecture": {
+          "description": "Architecture identifies the architecture-specific component artifact.",
+          "enum": [
+            "amd64",
+            "arm64"
+          ],
+          "type": "string"
+        },
+        "flavor": {
+          "description": "Flavor identifies the component config flavor.",
           "type": "string"
         }
       },
@@ -715,7 +725,8 @@
           "type": "string"
         },
         "commit": {
-          "description": "The Git commit SHA.",
+          "description": "The Git commit SHA-1.",
+          "pattern": "^[0-9A-Fa-f]{40}$",
           "type": "string"
         },
         "tag": {
@@ -988,6 +999,7 @@
         },
         "url": {
           "description": "The URL of the git repository.",
+          "format": "uri",
           "type": "string"
         }
       },
@@ -1160,6 +1172,10 @@
     "values": {
       "$ref": "#/$defs/Values",
       "description": "Values imports Zarf values files for templating and overriding Helm values."
+    },
+    "variant": {
+      "$ref": "#/$defs/ComponentVariant",
+      "description": "Variant identifies the flavor and architecture represented by this component config."
     }
   },
   "required": [

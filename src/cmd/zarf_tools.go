@@ -246,7 +246,9 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 		Example: lang.CmdToolsUpdateCredsExample,
 		Aliases: []string{"uc"},
 		Args:    cobra.MaximumNArgs(1),
-		RunE:    o.run,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(cmd, args, v)
+		},
 	}
 
 	// Always require confirm flag (no viper)
@@ -290,7 +292,7 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
+func (o *updateCredsOptions) run(cmd *cobra.Command, args []string, v *viper.Viper) error {
 	ctx := cmd.Context()
 	l := logger.From(ctx)
 	l.Warn(lang.CmdToolsUpdateCredsDeprecated)
@@ -325,15 +327,20 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		l.Warn(lang.ArtifactServerDeprecated)
 	}
 
+	registryURLSet := services.Has(state.RegistryKey) && optionIsExplicitlySet(cmd, v, "registry-url", VInitRegistryURL)
+	registryInfo, err := resolveRegistryUpdate(ctx, c, oldState.RegistryInfo, o.registryInfo, registryURLSet)
+	if err != nil {
+		return err
+	}
 	opts := state.MergeOptions{
 		GitServer:      o.gitServer,
-		RegistryInfo:   o.registryInfo,
+		RegistryInfo:   registryInfo,
 		ArtifactServer: o.artifactServer,
 		Services:       services,
 	}
 
 	if services.Has(state.AgentKey) {
-		if oldState.AgentTLSUserProvided && o.agentTLSCAPath == "" {
+		if oldState.AgentInfo.TLSUserProvided && o.agentTLSCAPath == "" {
 			return fmt.Errorf("current agent TLS certificates are user-provided; provide --agent-tls-ca, --agent-tls-cert, and --agent-tls-key to update them, or explicitly define service list without `agent`")
 		}
 		if o.agentTLSCAPath != "" {
@@ -451,6 +458,7 @@ func printCredentialUpdates(ctx context.Context, oldState *state.State, newState
 		oR := oldState.RegistryInfo
 		nR := newState.RegistryInfo
 		l.Info("registry URL address", "existing", oR.Address, "replacement", nR.Address)
+		l.Info("registry access mode", "existing", oR.RegistryMode, "replacement", nR.RegistryMode)
 		l.Info("registry push username", "existing", oR.PushUsername, "replacement", nR.PushUsername)
 		l.Info("registry push password", "changed", oR.PushPassword != nR.PushPassword)
 		l.Info("registry pull username", "existing", oR.PullUsername, "replacement", nR.PullUsername)
@@ -478,9 +486,9 @@ func printCredentialUpdates(ctx context.Context, oldState *state.State, newState
 		l.Info("artifact server push token", "changed", oA.PushToken != nA.PushToken)
 	}
 	if services.Has(state.AgentKey) {
-		oT := oldState.AgentTLS
-		nT := newState.AgentTLS
-		l.Info("agent TLS source", "userProvided", newState.AgentTLSUserProvided)
+		oT := oldState.AgentInfo.TLS
+		nT := newState.AgentInfo.TLS
+		l.Info("agent TLS source", "userProvided", newState.AgentInfo.TLSUserProvided)
 		l.Info("agent certificate authority", "changed", string(oT.CA) != string(nT.CA))
 		l.Info("agent public certificate", "changed", string(oT.Cert) != string(nT.Cert))
 		l.Info("agent private key", "changed", string(oT.Key) != string(nT.Key))
@@ -530,6 +538,47 @@ func runWithRollback(ctx context.Context, service string, forward, rollback func
 	return nil
 }
 
+// resolveRegistryUpdate resolves, sets and validates registry access fields when the URL changes.
+func resolveRegistryUpdate(ctx context.Context, c *cluster.Cluster, oldRegistryInfo, registryInfo state.RegistryInfo, registryURLSet bool) (state.RegistryInfo, error) {
+	// validate provided options
+	if !registryURLSet {
+		return registryInfo, nil
+	}
+	if registryInfo.Address == "" {
+		return registryInfo, errors.New("--registry-url cannot be explicitly empty")
+	}
+	if strings.Contains(registryInfo.Address, "://") {
+		return registryInfo, errors.New("--registry-url must be a valid OCI registry address without a URL scheme")
+	}
+
+	// Resolve and set registry info
+	mode, port, err := c.ResolveRegistryMode(ctx, registryInfo.Address)
+	if err != nil {
+		return registryInfo, fmt.Errorf("unable to resolve registry update: %w", err)
+	}
+	registryInfo.RegistryMode = mode
+	registryInfo.SetPort(port)
+	registryInfo.MTLSStrategy = state.MTLSStrategyNone
+	if mode == state.RegistryModeProxy {
+		registryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
+	}
+
+	// validate mode changes and implications
+	if oldRegistryInfo.IsInternal() && mode == state.RegistryModeExternal {
+		if registryInfo.PushUsername == "" || registryInfo.PushPassword == "" {
+			return registryInfo, errors.New("--registry-push-username and --registry-push-password are required when switching to an external registry")
+		}
+		switch {
+		case registryInfo.PullUsername == "" && registryInfo.PullPassword == "":
+			registryInfo.PullUsername = registryInfo.PushUsername
+			registryInfo.PullPassword = registryInfo.PushPassword
+		case registryInfo.PullUsername == "" || registryInfo.PullPassword == "":
+			return registryInfo, errors.New("--registry-pull-username and --registry-pull-password must be provided together")
+		}
+	}
+	return registryInfo, nil
+}
+
 type updateRegistryCredsOptions struct {
 	confirm        bool
 	forceConflicts bool
@@ -545,7 +594,9 @@ func newUpdateRegistryCredsCommand(v *viper.Viper) *cobra.Command {
 		Long:    lang.CmdToolsUpdateCredsRegistryLong,
 		Example: lang.CmdToolsUpdateCredsRegistryExample,
 		Args:    cobra.NoArgs,
-		RunE:    o.run,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(cmd, args, v)
+		},
 	}
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsUpdateCredsConfirmFlag)
@@ -559,7 +610,7 @@ func newUpdateRegistryCredsCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
+func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string, v *viper.Viper) error {
 	ctx := cmd.Context()
 	c, oldState, err := loadClusterAndState(ctx)
 	if err != nil {
@@ -570,8 +621,14 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return errors.New("no registry is configured in the Zarf state; nothing to update")
 	}
 
+	registryURLSet := optionIsExplicitlySet(cmd, v, "registry-url", VInitRegistryURL)
+	registryInfo, err := resolveRegistryUpdate(ctx, c, oldState.RegistryInfo, o.registryInfo, registryURLSet)
+	if err != nil {
+		return err
+	}
+
 	newState, err := state.Merge(oldState, state.MergeOptions{
-		RegistryInfo: o.registryInfo,
+		RegistryInfo: registryInfo,
 		Services:     state.NewServiceSet(state.RegistryKey),
 	})
 	if err != nil {
@@ -594,16 +651,18 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	return runWithRollback(ctx, "registry",
-		func() error { return o.applyState(ctx, c, newState) },
-		func() error { return o.applyState(ctx, c, oldState) },
+		func() error { return o.applyState(ctx, c, newState, newState.RegistryInfo.IsInternal()) },
+		func() error {
+			return o.applyState(ctx, c, oldState, oldState.RegistryInfo.IsInternal() && newState.RegistryInfo.IsInternal())
+		},
 	)
 }
 
 // applyState reconciles the cluster to the given registry credentials. The registry deployment is
 // updated first so the old pod keeps matching the not-yet-updated pull secrets throughout
 // the rollout, then the pull secrets are updated, then state is persisted as the final commit.
-func (o *updateRegistryCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, s *state.State) error {
-	if s.RegistryInfo.IsInternal() {
+func (o *updateRegistryCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, s *state.State, updateRegistry bool) error {
+	if updateRegistry {
 		helmOpts := helm.InstallUpgradeOptions{
 			VariableConfig: template.GetZarfVariableConfig(ctx, !o.confirm),
 			State:          s,
@@ -737,12 +796,12 @@ func (o *updateAgentCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if !oldState.AgentIsConfigured() {
+	if !oldState.AgentInfo.IsConfigured() {
 		return errors.New("no agent is configured in the Zarf state; nothing to update")
 	}
 
 	opts := state.MergeOptions{Services: state.NewServiceSet(state.AgentKey)}
-	if oldState.AgentTLSUserProvided && o.agentTLSCAPath == "" {
+	if oldState.AgentInfo.TLSUserProvided && o.agentTLSCAPath == "" {
 		return fmt.Errorf("current agent TLS certificates are user-provided; provide --agent-tls-ca, --agent-tls-cert, and --agent-tls-key to update them")
 	}
 	if o.agentTLSCAPath != "" {

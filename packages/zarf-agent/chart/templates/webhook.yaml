@@ -3,6 +3,8 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: zarf
+  annotations:
+    {{- toYaml .Values.webhookAnnotations | nindent 4 }}
 webhooks:
   - name: agent-pod.zarf.dev
     namespaceSelector:

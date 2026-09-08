@@ -8,10 +8,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -283,27 +282,17 @@ func (c *Cluster) findPodContainerPort(ctx context.Context, svc corev1.Service) 
 // ServiceInfoFromNodePortURL returns the Kubernetes Service that corresponds to the given NodePort URL.
 // nodePortURL may be a bare host:port (e.g. "localhost:31999") or a full URL.
 func ServiceInfoFromNodePortURL(services []corev1.Service, nodePortURL string) (corev1.Service, int, error) {
-	// url.Parse misreads a bare "localhost:31999" as scheme:opaque (empty host), so
-	// fall back to the raw string and let net.SplitHostPort do the splitting.
-	rawHost := nodePortURL
-	if u, err := url.Parse(nodePortURL); err == nil && u.Host != "" {
-		rawHost = u.Host
-	}
-	hostname, portStr, err := net.SplitHostPort(rawHost)
+	hostname, nodePort, err := registryAddressHostPort(nodePortURL)
 	if err != nil {
 		return corev1.Service{}, 0, err
 	}
 
-	// NodePort tunnels are served on loopback.
+	// NodePort services are served on loopback.
 	if !dns.IsLocalhost(hostname) {
 		return corev1.Service{}, 0, fmt.Errorf("node port services should be on localhost")
 	}
 
-	// Get the node port from the nodeportURL.
-	nodePort, err := strconv.Atoi(portStr)
-	if err != nil {
-		return corev1.Service{}, 0, err
-	}
+	// NodePort services must have ports in the NodePort range
 	if nodePort < 30000 || nodePort > 32767 {
 		return corev1.Service{}, 0, fmt.Errorf("node port services should use the port range 30000-32767")
 	}
@@ -590,12 +579,17 @@ func (tunnel *Tunnel) getAttachablePodForService(ctx context.Context) (string, e
 	// status.phase=Running alone isn't enough: a pod stays "Running" throughout its
 	// graceful termination (e.g. mid-rollout), so without also checking these, a
 	// port-forward can bind to a pod that's already on its way out.
+	readyPods := make([]corev1.Pod, 0, len(podList.Items))
 	for _, pod := range podList.Items {
-		if pod.DeletionTimestamp == nil && podutils.IsPodReady(&pod) {
-			return pod.Name, nil
+		if pod.DeletionTimestamp != nil || !podutils.IsPodReady(&pod) {
+			continue
 		}
+		readyPods = append(readyPods, pod)
 	}
-	return "", fmt.Errorf("no ready pods found for service %s", tunnel.resourceName)
+	if len(readyPods) == 0 {
+		return "", fmt.Errorf("no ready pods found for service %s", tunnel.resourceName)
+	}
+	return readyPods[rand.IntN(len(readyPods))].Name, nil
 }
 
 // Inspired by https://github.com/kubernetes/kubernetes/blob/1ee1ff97fb7f9755a44d29bee0c80d2ccbed68dc/staging/src/k8s.io/kubectl/pkg/cmd/portforward/portforward.go#L139-L156
