@@ -5,8 +5,13 @@
 package cmd
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -273,4 +278,89 @@ func TestDevInspectValuesFiles(t *testing.T) {
 			require.Equal(t, expectedYAMLs, actualYAMLs)
 		})
 	}
+}
+
+func TestDevSha256Sum(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		sourceURL   string
+		extractPath string
+		sha256sum   string
+		expectedErr string
+	}{
+		{
+			name:      "dev sha of tar ball",
+			sourceURL: filepath.Join("..", "pkg", "packager", "assemble", "testdata", "zarf-package", "archive.tar"),
+			sha256sum: "69b50ad92da0d32398fe1e5950ab28991c2220603daa2bce1a470e9afde95687",
+		},
+		{
+			name:        "dev sha of tar ball with extract path",
+			sourceURL:   filepath.Join("..", "pkg", "packager", "assemble", "testdata", "zarf-package", "archive.tar"),
+			sha256sum:   "84ff92691f909a05b224e1c56abb4864f01b4f8e3c854e4bb4c7baf1d3f6d652",
+			extractPath: "archive-data.txt",
+		},
+		{
+			name:        "dev sha file does not exist",
+			sourceURL:   filepath.Join("..", "pkg", "packager", "assemble", "testdata", "zarf-package", "archive.tar.zstd"),
+			expectedErr: "unable to compute the SHA256SUM hash",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			opts := devSha256SumOptions{
+				extractPath: tc.extractPath,
+			}
+			out, err := opts.compute(context.Background(), tc.sourceURL)
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.sha256sum, out)
+		})
+	}
+}
+
+// TestDevSha256SumRemoteExtractPathDoesNotCollideWithDownload is a
+// regression test: the download tmp dir and the extract-path tmp dir used to
+// be the same directory, so a remote source whose basename matched
+// extract-path would have the downloaded archive overwritten by its own
+// extracted content mid-read. The archive entry here is named the same as
+// the URL it's served from, reproducing that exact collision; it must now
+// succeed since the two tmp dirs are separate. The archive is built at test
+// time (not committed) to keep no binary fixtures in the repo.
+func TestDevSha256SumRemoteExtractPathDoesNotCollideWithDownload(t *testing.T) {
+	t.Parallel()
+
+	const (
+		entryName = "same.tar"
+		payload   = "regression test payload"
+	)
+
+	archivePath := filepath.Join(t.TempDir(), "outer.tar")
+	outer, err := os.Create(archivePath)
+	require.NoError(t, err)
+	tw := tar.NewWriter(outer)
+	require.NoError(t, tw.WriteHeader(&tar.Header{Name: entryName, Size: int64(len(payload)), Mode: 0o644}))
+	_, err = tw.Write([]byte(payload))
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+	require.NoError(t, outer.Close())
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, archivePath)
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := devSha256SumOptions{extractPath: entryName}
+	out, err := opts.compute(context.Background(), srv.URL+"/"+entryName)
+	require.NoError(t, err)
+
+	sum := sha256.Sum256([]byte(payload))
+	require.Equal(t, hex.EncodeToString(sum[:]), out)
 }
