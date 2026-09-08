@@ -68,34 +68,15 @@ type ActionSet struct {
 // Components returns generic components for execution logic
 func Components(definition api.PackageDefinition) []Component {
 	alpha := definition.AsV1alpha1()
+	originalAPIVersion := definition.OriginalAPIVersion()
 	components := make([]Component, len(alpha.Components))
 	for i, component := range alpha.Components {
-		components[i] = componentFromAlpha(component)
-	}
-
-	if definition.OriginalAPIVersion() == v1beta1.APIVersion {
-		beta := definition.AsV1beta1()
-		for i, component := range beta.Components {
-			components[i].Actions = ComponentActions{
-				OnCreate: actionSetFromV1Beta1(component.Actions.OnCreate),
-				OnDeploy: actionSetFromV1Beta1(component.Actions.OnDeploy),
-				OnRemove: actionSetFromV1Beta1(component.Actions.OnRemove),
-			}
-		}
-		return components
-	}
-
-	for i, component := range alpha.Components {
-		components[i].Actions = ComponentActions{
-			OnCreate: actionSetFromV1Alpha1(component.Actions.OnCreate),
-			OnDeploy: actionSetFromV1Alpha1(component.Actions.OnDeploy),
-			OnRemove: actionSetFromV1Alpha1(component.Actions.OnRemove),
-		}
+		components[i] = componentFromDefinition(component, originalAPIVersion)
 	}
 	return components
 }
 
-func componentFromAlpha(component v1alpha1.ZarfComponent) Component {
+func componentFromDefinition(component v1alpha1.ZarfComponent, originalAPIVersion string) Component {
 	return Component{
 		Name:           component.Name,
 		Manifests:      component.Manifests,
@@ -107,22 +88,27 @@ func componentFromAlpha(component v1alpha1.ZarfComponent) Component {
 		Repos:          component.Repos,
 		HealthChecks:   component.HealthChecks,
 		StateAccess:    component.StateAccess,
+		Actions: ComponentActions{
+			OnCreate: actionSet(component.Actions.OnCreate, originalAPIVersion),
+			OnDeploy: actionSet(component.Actions.OnDeploy, originalAPIVersion),
+			OnRemove: actionSet(component.Actions.OnRemove, originalAPIVersion),
+		},
 	}
 }
 
-func actionSetFromV1Alpha1(set v1alpha1.ZarfComponentActionSet) ActionSet {
+func actionSet(set v1alpha1.ZarfComponentActionSet, originalAPIVersion string) ActionSet {
 	defaults := actions.Config{
 		Silent:  set.Defaults.Mute,
 		Timeout: time.Duration(set.Defaults.MaxTotalSeconds) * time.Second,
 		Retries: set.Defaults.MaxRetries,
 		Dir:     set.Defaults.Dir,
 		Env:     set.Defaults.Env,
-		Shell:   alphaShell(set.Defaults.Shell),
+		Shell:   shellFromDefinition(set.Defaults.Shell),
 	}
 	list := func(in []v1alpha1.ZarfComponentAction) actions.ActionList {
 		out := actions.ActionList{}
 		for _, action := range in {
-			out.Actions = append(out.Actions, alphaAction(action))
+			out.Actions = append(out.Actions, actionFromDefinition(action, originalAPIVersion))
 		}
 		return out
 	}
@@ -135,34 +121,7 @@ func actionSetFromV1Alpha1(set v1alpha1.ZarfComponentActionSet) ActionSet {
 	}
 }
 
-func actionSetFromV1Beta1(set v1beta1.ComponentActionSet) ActionSet {
-	defaults := actions.Config{}
-	if set.Defaults != nil {
-		defaults = actions.Config{
-			Silent:  set.Defaults.Silent,
-			Timeout: time.Duration(set.Defaults.MaxTotalSeconds) * time.Second,
-			Retries: int(set.Defaults.Retries),
-			Dir:     set.Defaults.Dir,
-			Env:     set.Defaults.Env,
-			Shell:   betaShell(set.Defaults.Shell),
-		}
-	}
-	list := func(in []v1beta1.ComponentAction) actions.ActionList {
-		out := actions.ActionList{}
-		for _, action := range in {
-			out.Actions = append(out.Actions, betaAction(action))
-		}
-		return out
-	}
-	return ActionSet{
-		Defaults:  defaults,
-		Before:    list(set.Before),
-		OnSuccess: list(set.OnSuccess),
-		OnFailure: list(set.OnFailure),
-	}
-}
-
-func alphaAction(action v1alpha1.ZarfComponentAction) actions.Action {
+func actionFromDefinition(action v1alpha1.ZarfComponentAction, originalAPIVersion string) actions.Action {
 	out := actions.Action{
 		Silent:         action.Mute,
 		Dir:            action.Dir,
@@ -181,7 +140,7 @@ func alphaAction(action v1alpha1.ZarfComponentAction) actions.Action {
 		out.Retries = &retries
 	}
 	if action.Shell != nil {
-		shell := alphaShell(*action.Shell)
+		shell := shellFromDefinition(*action.Shell)
 		out.Shell = &shell
 	}
 	for _, value := range action.SetValues {
@@ -200,53 +159,24 @@ func alphaAction(action v1alpha1.ZarfComponentAction) actions.Action {
 		})
 	}
 	if action.Wait != nil {
-		out.Wait = alphaWait(action.Wait)
+		out.Wait = waitFromDefinition(action.Wait, originalAPIVersion)
 	}
 	return out
 }
 
-func betaAction(action v1beta1.ComponentAction) actions.Action {
-	out := actions.Action{
-		Silent:         action.Silent,
-		Dir:            action.Dir,
-		Env:            action.Env,
-		Cmd:            action.Cmd,
-		Description:    action.Description,
-		ShouldTemplate: action.EnableTemplating,
-	}
-	if action.MaxTotalSeconds != nil {
-		timeout := time.Duration(*action.MaxTotalSeconds) * time.Second
-		out.Timeout = &timeout
-	}
-	if action.Retries != nil {
-		retries := int(*action.Retries)
-		out.Retries = &retries
-	}
-	if action.Shell != nil {
-		shell := betaShell(*action.Shell)
-		out.Shell = &shell
-	}
-	for _, value := range action.SetValues {
-		out.SetValues = append(out.SetValues, actions.ValueOutput{
-			Key:  value.Key,
-			Type: actions.ValueOutputType(value.Type),
-		})
-	}
-	if action.Wait != nil {
-		out.Wait = betaWait(action.Wait)
-	}
-	return out
-}
-
-func alphaWait(waitCfg *v1alpha1.ZarfComponentActionWait) *actions.Wait {
+func waitFromDefinition(waitCfg *v1alpha1.ZarfComponentActionWait, originalAPIVersion string) *actions.Wait {
 	out := &actions.Wait{}
 	if waitCfg.Cluster != nil {
+		defaultCondition := actions.DefaultConditionExists
+		if originalAPIVersion == v1beta1.APIVersion {
+			defaultCondition = actions.DefaultConditionReady
+		}
 		out.Cluster = &actions.ClusterWait{
 			Kind:             waitCfg.Cluster.Kind,
 			Name:             waitCfg.Cluster.Name,
 			Namespace:        waitCfg.Cluster.Namespace,
 			Condition:        waitCfg.Cluster.Condition,
-			DefaultCondition: actions.DefaultConditionExists,
+			DefaultCondition: defaultCondition,
 		}
 	}
 	if waitCfg.Network != nil {
@@ -259,36 +189,7 @@ func alphaWait(waitCfg *v1alpha1.ZarfComponentActionWait) *actions.Wait {
 	return out
 }
 
-func betaWait(waitCfg *v1beta1.ComponentActionWait) *actions.Wait {
-	out := &actions.Wait{}
-	if waitCfg.Cluster != nil {
-		out.Cluster = &actions.ClusterWait{
-			Kind:             waitCfg.Cluster.Kind,
-			Name:             waitCfg.Cluster.Name,
-			Namespace:        waitCfg.Cluster.Namespace,
-			Condition:        waitCfg.Cluster.Condition,
-			DefaultCondition: actions.DefaultConditionReady,
-		}
-	}
-	if waitCfg.Network != nil {
-		out.Network = &actions.NetworkWait{
-			Protocol: waitCfg.Network.Protocol,
-			Address:  waitCfg.Network.Address,
-			Code:     int(waitCfg.Network.Code),
-		}
-	}
-	return out
-}
-
-func alphaShell(shell v1alpha1.Shell) actions.Shell {
-	return actions.Shell{
-		Windows: shell.Windows,
-		Linux:   shell.Linux,
-		Darwin:  shell.Darwin,
-	}
-}
-
-func betaShell(shell v1beta1.Shell) actions.Shell {
+func shellFromDefinition(shell v1alpha1.Shell) actions.Shell {
 	return actions.Shell{
 		Windows: shell.Windows,
 		Linux:   shell.Linux,
