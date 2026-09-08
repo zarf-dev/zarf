@@ -16,7 +16,6 @@ import (
 const (
 	osArchAMD64Desc = "the x86-64, 64-bit AMD, architecture"
 	osArchARM64Desc = "the 64-bit ARM architecture"
-	osArchRISCVDesc = "the 64-bit RISC-V architecture"
 )
 
 // Architectures returns the valid --architecture values. It must stay in step
@@ -25,6 +24,5 @@ func Architectures() []string {
 	return []string{
 		fmt.Sprintf("%s\t%s", config.OSArchAMD64, osArchAMD64Desc),
 		fmt.Sprintf("%s\t%s", config.OSArchARM64, osArchARM64Desc),
-		fmt.Sprintf("%s\t%s", config.OSArchRISCV, osArchRISCVDesc),
 	}
 }

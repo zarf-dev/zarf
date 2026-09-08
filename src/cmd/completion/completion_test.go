@@ -63,7 +63,7 @@ func TestArchitectures(t *testing.T) {
 	t.Parallel()
 
 	values := requireCompletionPairs(t, Architectures())
-	require.ElementsMatch(t, []string{"amd64", "arm64", "riscv64"}, values)
+	require.ElementsMatch(t, []string{"amd64", "arm64"}, values)
 
 	for _, v := range values {
 		require.NoError(t, image.ValidatePlatformArch(image.PlatformArch(v)), "suggested %q", v)
