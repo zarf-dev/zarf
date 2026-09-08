@@ -1,0 +1,2 @@
+k3s:
+  args: "--disable traefik"

@@ -1,0 +1,15 @@
+# This file works both for templates on create, and to set the images dynamically on deploy
+agent:
+  image: ghcr.io/zarf-dev/zarf/agent
+  tag: local
+
+registry:
+  image: library/registry
+  tag: 3.1.0
+
+proxy:
+  image: alpine/socat
+  tag: 1.8.0.3
+
+gitea:
+  image: ghcr.io/go-gitea/gitea:1.24.6-rootless

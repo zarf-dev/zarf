@@ -1,0 +1,13 @@
+injector:
+  image: ghcr.io/zarf-dev/zarf-injector:v0.3.0
+  port: 31888
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+
+registry:
+  port: 31999
+  mode: nodeport
+  pushUsername: zarf-push
+  pullUsername: zarf-pull
