@@ -53,7 +53,7 @@ jobs:
         id: grype
         uses: anchore/scan-action/download-grype@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
         with:
-          grype-version: v0.116.0
+          grype-version: v0.118.0
 
       - name: Run grype scan (fails on High+)
         run: make scan-grype GRYPE="${{ steps.grype.outputs.cmd }}"
