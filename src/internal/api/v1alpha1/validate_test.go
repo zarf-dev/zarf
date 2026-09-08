@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
 func TestZarfPackageValidate(t *testing.T) {
@@ -56,7 +55,7 @@ func TestZarfPackageValidate(t *testing.T) {
 				Components: []v1alpha1.ZarfComponent{
 					{
 						Name:     "invalid",
-						Required: helpers.BoolPtr(true),
+						Required: new(true),
 						Default:  true,
 						Charts: []v1alpha1.ZarfChart{
 							{Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
@@ -69,7 +68,7 @@ func TestZarfPackageValidate(t *testing.T) {
 					},
 					{
 						Name:            "required-in-group",
-						Required:        helpers.BoolPtr(true),
+						Required:        new(true),
 						DeprecatedGroup: "a-group",
 					},
 					{
@@ -413,7 +412,7 @@ func TestValidateComponentActions(t *testing.T) {
 					Before: []v1alpha1.ZarfComponentAction{
 						{
 							Cmd:      "echo 'templating not allowed'",
-							Template: helpers.BoolPtr(true),
+							Template: new(true),
 						},
 					},
 				},

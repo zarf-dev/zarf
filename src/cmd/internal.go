@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"os"
 	"path/filepath"
 	"strings"
@@ -421,6 +422,6 @@ func newInternalCrc32Command() *cobra.Command {
 
 func (o *internalCrc32Options) run(_ *cobra.Command, args []string) {
 	text := args[0]
-	hash := helpers.GetCRCHash(text)
+	hash := crc32.ChecksumIEEE([]byte(text))
 	fmt.Printf("%d\n", hash)
 }
