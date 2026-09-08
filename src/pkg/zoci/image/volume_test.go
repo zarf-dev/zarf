@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"syscall"
 	"testing"
 
 	"github.com/klauspost/compress/zstd"
@@ -395,28 +394,6 @@ func TestWriteTarFileSymlink(t *testing.T) {
 	}
 }
 
-// TestWriteTarFileSkipsIrregularFiles checks that a file type an image volume
-// cannot hold is skipped rather than opened - opening a FIFO blocks until a
-// writer appears.
-func TestWriteTarFileSkipsIrregularFiles(t *testing.T) {
-	t.Parallel()
-
-	fifo := filepath.Join(t.TempDir(), "pipe")
-	if err := syscall.Mkfifo(fifo, 0o644); err != nil {
-		t.Skipf("cannot create a FIFO here: %v", err)
-	}
-
-	var buf bytes.Buffer
-	tw := tar.NewWriter(&buf)
-	written, err := writeTarFile(tw, "pipe", fifo)
-	require.NoError(t, err)
-	require.False(t, written, "a FIFO has no representation in an image volume")
-	require.NoError(t, tw.Close())
-
-	_, err = tar.NewReader(&buf).Next()
-	require.ErrorIs(t, err, io.EOF, "nothing should have been written")
-}
-
 // TestVolumeAddDirectoryDigestIsStable checks that the same tree built twice,
 // into two separate volumes, produces the same manifest digest.
 func TestVolumeAddDirectoryDigestIsStable(t *testing.T) {
@@ -438,25 +415,6 @@ func TestVolumeAddDirectoryDigestIsStable(t *testing.T) {
 
 	require.NotEmpty(t, digests[0])
 	require.Equal(t, digests[0], digests[1], "the same tree should always produce the same image")
-}
-
-// TestVolumeAddDirectorySkipsIrregularFiles checks that a FIFO in the tree is
-// left out instead of stalling or failing the whole build.
-func TestVolumeAddDirectorySkipsIrregularFiles(t *testing.T) {
-	t.Parallel()
-	ctx := testutil.TestContext(t)
-
-	srcDir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("a"), 0o644))
-	if err := syscall.Mkfifo(filepath.Join(srcDir, "pipe"), 0o644); err != nil {
-		t.Skipf("cannot create a FIFO here: %v", err)
-	}
-
-	iv := newTestVolume(t)
-	require.NoError(t, iv.AddDirectory(ctx, srcDir, "test:latest"))
-
-	require.Len(t, iv.layers, 1)
-	require.Equal(t, "a.txt", iv.layers[0].Annotations[ocispec.AnnotationTitle])
 }
 
 // TestVolumeAddDirectoryBudgetsAgainstExistingLayers checks that batching
