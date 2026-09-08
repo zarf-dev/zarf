@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/goccy/go-yaml"
 	"github.com/xeipuuv/gojsonschema"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 

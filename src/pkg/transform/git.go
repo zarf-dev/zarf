@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"regexp"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
 // For further explanation: https://regex101.com/r/YxpfhC/5

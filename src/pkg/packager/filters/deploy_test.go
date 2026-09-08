@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
 func componentFromQuery(t *testing.T, q string) v1alpha1.ZarfComponent {

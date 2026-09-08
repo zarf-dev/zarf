@@ -12,8 +12,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
 // TextTemplate represents a value to be templated into a text file.
