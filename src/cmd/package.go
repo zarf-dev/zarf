@@ -28,6 +28,7 @@ import (
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -1284,11 +1285,10 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	err = utils.ColorPrintYAML(pkg.AsV1alpha1(), nil, false)
-	if err != nil {
-		return err
+	if pkg.OriginalAPIVersion() == v1beta1.APIVersion {
+		return utils.ColorPrintYAML(pkg.AsV1beta1(), nil, false)
 	}
-	return nil
+	return utils.ColorPrintYAML(pkg.AsV1alpha1(), nil, false)
 }
 
 type packageListOptions struct {
@@ -1354,16 +1354,20 @@ func (o *packageListOptions) run(ctx context.Context) error {
 	}
 
 	var packageList []packageListInfo
-	for _, pkg := range deployedZarfPackages {
+	for _, depPkg := range deployedZarfPackages {
 		var components []string
-		for _, component := range pkg.DeployedComponents {
+		for _, component := range depPkg.DeployedComponents {
 			components = append(components, component.Name)
 		}
+		pkg, err := depPkg.PackageDefinition()
+		if err != nil {
+			return err
+		}
 		packageList = append(packageList, packageListInfo{
-			Package:           pkg.Name,
-			NamespaceOverride: pkg.NamespaceOverride,
-			Version:           pkg.Data.Metadata.Version,
-			Connectivity:      pkg.GetPackageConnectivity(),
+			Package:           depPkg.Name,
+			NamespaceOverride: depPkg.NamespaceOverride,
+			Version:           pkg.AsV1alpha1().Metadata.Version,
+			Connectivity:      depPkg.GetPackageConnectivity(),
 			Components:        components,
 		})
 	}

@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
@@ -152,9 +153,9 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 	l.Debug("done stripping zarf labels and secrets from namespaces", "duration", time.Since(start))
 }
 
-// RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, digest string, components []state.DeployedComponent, generation int, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
-	packageName := pkg.Metadata.Name
+// RecordPackageDeployment saves metadata about a package deployment to the cluster.
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, definition api.PackageDefinition, digest string, components []state.DeployedComponent, generation int, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
+	packageName := definition.AsV1alpha1().Metadata.Name
 
 	// TODO: This is done for backwards compatibility and could be removed in the future.
 	connectStrings := state.ConnectStrings{}
@@ -169,11 +170,13 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 	deployedPackage := &state.DeployedPackage{
 		Name:               packageName,
 		CLIVersion:         config.CLIVersion,
-		Data:               pkg,
 		DeployedComponents: components,
 		ConnectStrings:     connectStrings,
 		Generation:         generation,
 		Digest:             digest,
+	}
+	if err := deployedPackage.SetPackageDefinition(definition); err != nil {
+		return nil, err
 	}
 
 	for _, opt := range opts {
