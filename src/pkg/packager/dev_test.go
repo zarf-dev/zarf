@@ -11,7 +11,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -38,7 +37,7 @@ func TestDevDeploy_filtersComponents(t *testing.T) {
 			},
 			{
 				Name:     "unselected",
-				Required: helpers.BoolPtr(false),
+				Required: new(false),
 				Files:    []v1alpha1.ZarfFile{{Source: source, Target: unselectedTarget}},
 			},
 		},
@@ -71,11 +70,11 @@ func TestDevDeploy_appliesValues(t *testing.T) {
 		Metadata:   v1alpha1.ZarfMetadata{Name: "dev-deploy-values"},
 		Components: []v1alpha1.ZarfComponent{{
 			Name:     "values",
-			Required: helpers.BoolPtr(true),
+			Required: new(true),
 			Files: []v1alpha1.ZarfFile{{
 				Source:   source,
 				Target:   target,
-				Template: helpers.BoolPtr(true),
+				Template: new(true),
 			}},
 		}},
 	}

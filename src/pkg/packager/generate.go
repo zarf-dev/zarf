@@ -42,7 +42,7 @@ func Generate(ctx context.Context, packageName, url, version string, opts Genera
 	l := logger.From(ctx)
 	generatedComponent := v1alpha1.ZarfComponent{
 		Name:     packageName,
-		Required: helpers.BoolPtr(true),
+		Required: new(true),
 		Charts: []v1alpha1.ZarfChart{
 			{
 				Name:      packageName,
