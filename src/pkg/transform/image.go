@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/distribution/reference"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
 // Image represents a config for an OCI image.

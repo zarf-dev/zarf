@@ -16,10 +16,10 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Masterminds/semver/v3"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/config"
