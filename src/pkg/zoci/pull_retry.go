@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"time"
@@ -65,7 +66,8 @@ func isRetryablePullError(resp *http.Response, err error) bool {
 
 func pullRetryDelay(attempt int, resp *http.Response) (time.Duration, error) {
 	if resp != nil && resp.StatusCode == http.StatusTooManyRequests {
-		if delay := utils.ParseRetryAfter(resp.Header.Get("Retry-After")); delay > 0 {
+		delay, retryAfterErr := utils.ParseRetryAfter(resp.Header.Get("Retry-After"))
+		if retryAfterErr == nil && delay > 0 {
 			if delay > utils.MaxRetryAfter {
 				return 0, fmt.Errorf("rate limited (HTTP 429) with Retry-After %s exceeding %s: %s", delay, utils.MaxRetryAfter, resp.Status)
 			}
@@ -76,14 +78,32 @@ func pullRetryDelay(attempt int, resp *http.Response) (time.Duration, error) {
 	delay := config.ZarfDefaultRetryDelay
 	for range attempt {
 		if delay >= config.ZarfDefaultRetryMaxDelay || delay > config.ZarfDefaultRetryMaxDelay-delay {
-			return config.ZarfDefaultRetryMaxDelay, nil
+			return jitterDelay(config.ZarfDefaultRetryMaxDelay), nil
 		}
 		delay *= 2
 	}
-	if delay > config.ZarfDefaultRetryMaxDelay {
-		delay = config.ZarfDefaultRetryMaxDelay
+	if delay >= config.ZarfDefaultRetryMaxDelay {
+		return jitterDelay(config.ZarfDefaultRetryMaxDelay), nil
 	}
-	return delay, nil
+
+	// Add a jitter so concurrent retries do not synchronize into a
+	// second burst. Server-requested Retry-After values above are honored exactly.
+	return jitterDelay(delay), nil
+}
+
+func jitterDelay(delay time.Duration) time.Duration {
+	jitter := delay / 10
+	if jitter == 0 {
+		return delay
+	}
+
+	jitterRange := 2 * jitter
+	if delay >= config.ZarfDefaultRetryMaxDelay {
+		// Jitter only downward at the configured cap so the retry delay remains
+		// bounded by ZarfDefaultRetryMaxDelay.
+		jitterRange = jitter
+	}
+	return delay - jitter + time.Duration(rand.Int64N(int64(jitterRange)))
 }
 
 func responseStatus(resp *http.Response) int {

@@ -94,9 +94,6 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 	switch srcType {
 	case "oci":
-		if opts.Retries < 0 {
-			return nil, fmt.Errorf("retries cannot be negative")
-		}
 		if opts.Retries == 0 {
 			opts.Retries = config.ZarfDefaultRetries
 		}

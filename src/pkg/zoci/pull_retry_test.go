@@ -20,7 +20,8 @@ func TestPullRetryPolicyHonorsMaxAttemptsAtOverflowBoundary(t *testing.T) {
 
 	delay, err := policy.Retry(35, response, nil)
 	require.NoError(t, err)
-	require.Equal(t, config.ZarfDefaultRetryMaxDelay, delay)
+	require.GreaterOrEqual(t, delay, config.ZarfDefaultRetryMaxDelay-config.ZarfDefaultRetryMaxDelay/10)
+	require.LessOrEqual(t, delay, config.ZarfDefaultRetryMaxDelay)
 
 	delay, err = policy.Retry(36, response, nil)
 	require.NoError(t, err)

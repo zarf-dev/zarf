@@ -142,7 +142,8 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusTooManyRequests {
-			if d := ParseRetryAfter(resp.Header.Get("Retry-After")); d > 0 {
+			d, retryAfterErr := ParseRetryAfter(resp.Header.Get("Retry-After"))
+			if retryAfterErr == nil && d > 0 {
 				if d > MaxRetryAfter {
 					return retry.Unrecoverable(fmt.Errorf("rate limited (HTTP 429) with Retry-After %s exceeding %s: %s", d, MaxRetryAfter, resp.Status))
 				}
@@ -164,19 +165,27 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	return nil
 }
 
-// ParseRetryAfter parses the Retry-After header value into a duration.
-// It supports both delay-seconds (integer) and HTTP-date formats.
-func ParseRetryAfter(value string) time.Duration {
+// ParseRetryAfter validates and parses a Retry-After header into a duration.
+// An empty value returns zero without an error.
+func ParseRetryAfter(value string) (time.Duration, error) {
 	if value == "" {
-		return 0
+		return 0, nil
 	}
 	if seconds, err := strconv.ParseInt(value, 10, 64); err == nil {
-		return time.Duration(seconds) * time.Second
+		if seconds <= 0 {
+			return 0, fmt.Errorf("retry-after delay must be positive")
+		}
+		const maxDurationSeconds = int64(1<<63-1) / int64(time.Second)
+		if seconds > maxDurationSeconds {
+			return 0, fmt.Errorf("retry-after delay overflows duration")
+		}
+		return time.Duration(seconds) * time.Second, nil
 	}
 	if t, err := http.ParseTime(value); err == nil {
 		if d := time.Until(t); d > 0 {
-			return d
+			return d, nil
 		}
+		return 0, fmt.Errorf("retry-after date must be in the future")
 	}
-	return 0
+	return 0, fmt.Errorf("invalid retry-after value %q", value)
 }
