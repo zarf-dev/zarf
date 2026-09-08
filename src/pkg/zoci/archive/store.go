@@ -25,11 +25,8 @@ type OCIStore struct {
 	Source *oci.Store
 }
 
-// Info retrieves content information for the given digest from the OCI store.
-//
-// ctx: The context for the operation.
-// dgst: The digest of the content to locate.
-// Returns the content.Info containing the digest and size, or an error if resolution fails.
+// Info returns the size and digest of the content dgst identifies, or an
+// error if the store cannot resolve it.
 func (s *OCIStore) Info(ctx context.Context, dgst digest.Digest) (content.Info, error) {
 	desc, err := s.Source.Resolve(ctx, dgst.String())
 	if err != nil {
@@ -41,11 +38,9 @@ func (s *OCIStore) Info(ctx context.Context, dgst digest.Digest) (content.Info, 
 	}, nil
 }
 
-// ReaderAt returns a content.ReaderAt for the given descriptor from the OCI store.
-//
-// ctx: The context for the operation.
-// desc: The OCI descriptor identifying the content to read.
-// Returns a content.ReaderAt for accessing the content, or an error if the blob cannot be opened or accessed.
+// ReaderAt opens the blob desc identifies directly from the image layout
+// directory and returns a reader over it. The caller owns the returned
+// reader and must close it.
 func (s *OCIStore) ReaderAt(ctx context.Context, desc ocispec.Descriptor) (content.ReaderAt, error) {
 	path := filepath.Join(s.Root, ocispec.ImageBlobsDir, desc.Digest.Algorithm().String(), desc.Digest.Encoded())
 	f, err := os.Open(path)

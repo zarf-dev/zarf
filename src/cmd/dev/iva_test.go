@@ -49,6 +49,13 @@ func TestNewImageVolumeCommand(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, image.DefaultMaxLayers, maxLayers)
 	require.NotNil(t, cmd.Flags().ShorthandLookup("m"), "max-layers should have the -m shorthand")
+
+	// "-o" belongs to output, the way it does in every other CLI. Handing it
+	// to --platform-os would silently write the archive somewhere the user did
+	// not ask for.
+	require.Equal(t, "output", cmd.Flags().ShorthandLookup("o").Name)
+	require.Empty(t, cmd.Flags().Lookup("platform-os").Shorthand)
+	require.Equal(t, "layer-compression", cmd.Flags().ShorthandLookup("c").Name)
 }
 
 func TestImageVolumeOptionsPrerun(t *testing.T) {

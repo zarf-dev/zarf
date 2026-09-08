@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/pflag"
 	"helm.sh/helm/v4/pkg/kube"
 
-	zcobra "github.com/zarf-dev/zarf/src/cmd/cobra"
+	"github.com/zarf-dev/zarf/src/cmd/completion"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -238,12 +238,15 @@ func setupRootFlags(rootCmd *cobra.Command) {
 	// Core functionality
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
 
+	// Registration only fails when the flag doesn't exist or already has a
+	// completion, both of which are wiring mistakes in the line above rather
+	// than anything a user can cause.
 	if err := rootCmd.RegisterFlagCompletionFunc("architecture", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return zcobra.ArchitectureCompletions(), cobra.ShellCompDirectiveNoFileComp
+		return completion.Architectures(), cobra.ShellCompDirectiveNoFileComp
 	}); err != nil {
-		logger.From(rootCmd.Context()).Warn("failed to register out-complete", "error", err)
 		panic(err)
 	}
+
 	cachePath := vpr.GetString(VCache)
 	if cachePath == "" {
 		cachePath = vpr.GetString(VZarfCache)

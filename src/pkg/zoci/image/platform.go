@@ -4,21 +4,26 @@
 package image
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/zarf-dev/zarf/src/config"
 )
 
 var (
 	// ErrLayerCompression is returned when a VolumeCompression is not one of the supported formats.
-	ErrLayerCompression = fmt.Errorf("invalid compression")
+	ErrLayerCompression = errors.New("invalid compression")
 	// ErrPlatformOS is returned when a PlatformOS is not one of the supported operating systems.
-	ErrPlatformOS = fmt.Errorf("invalid platform operating system")
+	ErrPlatformOS = errors.New("invalid platform operating system")
 	// ErrPlatformArch is returned when a PlatformArch is not one of the supported architectures.
-	ErrPlatformArch = fmt.Errorf("invalid platform operating system architecture")
+	ErrPlatformArch = errors.New("invalid platform operating system architecture")
 	// ErrTooManyLayers is returned by AddFile when adding another layer would
 	// exceed the Volume's MaxLayers.
-	ErrTooManyLayers = fmt.Errorf("too many image volume layers")
+	ErrTooManyLayers = errors.New("too many image volume layers")
+	// ErrNoManifest is returned by WriteTar when it is called before
+	// AddDirectory has packed and tagged a manifest.
+	ErrNoManifest = errors.New("no image volume manifest: call AddDirectory first")
 )
 
 const (
@@ -26,9 +31,9 @@ const (
 	// It matches the classic Docker/graphdriver layer limit that some
 	// container runtimes still enforce.
 	DefaultMaxLayers uint8 = 127
-	// UnlimiteLayers is the Volume.MaxLayers value that disables the layer
+	// UnlimitedLayers is the Volume.MaxLayers value that disables the layer
 	// cap entirely: AddDirectory never batches files into fewer layers.
-	UnlimiteLayers uint8 = 0
+	UnlimitedLayers uint8 = 0
 )
 
 // VolumeCompression names the tar compression format used for layers.
@@ -44,13 +49,15 @@ const (
 	VolumeCompressionUncompressed VolumeCompression = "uncompressed"
 )
 
-// ValidateCompression checks if the given compression format is valid.
+// ValidateCompression returns ErrLayerCompression if format is not one of the
+// supported compression formats.
 func ValidateCompression(format VolumeCompression) error {
 	switch format {
 	case VolumeCompressionGzip, VolumeCompressionZstd, VolumeCompressionUncompressed:
 		return nil
 	default:
-		return ErrLayerCompression
+		return fmt.Errorf("%w %q, expected one of %s", ErrLayerCompression, format,
+			strings.Join([]string{string(VolumeCompressionGzip), string(VolumeCompressionZstd), string(VolumeCompressionUncompressed)}, ", "))
 	}
 }
 
@@ -65,16 +72,15 @@ const (
 	PlatformOSWindows PlatformOS = config.OSWindows
 )
 
-// ValidatePlatformOS checks if the given platform operating system format is valid.
-//
-// format: the PlatformOS to validate.
-// error: an error if the operating system format is invalid, otherwise nil.
-func ValidatePlatformOS(format PlatformOS) error {
-	switch format {
+// ValidatePlatformOS returns ErrPlatformOS if os is not one of the supported
+// operating systems.
+func ValidatePlatformOS(os PlatformOS) error {
+	switch os {
 	case PlatformOSLinux, PlatformOSWindows:
 		return nil
 	default:
-		return ErrPlatformOS
+		return fmt.Errorf("%w %q, expected one of %s", ErrPlatformOS, os,
+			strings.Join([]string{string(PlatformOSLinux), string(PlatformOSWindows)}, ", "))
 	}
 }
 
@@ -91,15 +97,14 @@ const (
 	PlatformArchRISCV PlatformArch = config.OSArchRISCV
 )
 
-// ValidatePlatformArch checks if the given platform operating system architecture format is valid.
-//
-// format: the PlatformArch to validate.
-// error: an error if the architecture format is invalid, otherwise nil.
-func ValidatePlatformArch(format PlatformArch) error {
-	switch format {
+// ValidatePlatformArch returns ErrPlatformArch if arch is not one of the
+// supported architectures.
+func ValidatePlatformArch(arch PlatformArch) error {
+	switch arch {
 	case PlatformArchAMD64, PlatformArchARM64, PlatformArchRISCV:
 		return nil
 	default:
-		return ErrPlatformArch
+		return fmt.Errorf("%w %q, expected one of %s", ErrPlatformArch, arch,
+			strings.Join([]string{string(PlatformArchAMD64), string(PlatformArchARM64), string(PlatformArchRISCV)}, ", "))
 	}
 }

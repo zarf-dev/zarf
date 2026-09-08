@@ -4,8 +4,7 @@
 package archive
 
 import (
-	"fmt"
-	"regexp"
+	"errors"
 	"strings"
 )
 
@@ -31,17 +30,14 @@ func ImageRefToTar(ref string) string {
 	return name + ".tar"
 }
 
-var (
-	// ErrNotTarBall is returned by ValidateFileEndsWithTar when the given
-	// path does not end in ".tar".
-	ErrNotTarBall = fmt.Errorf("file does not end with \".tar\"")
-	tarRegex      = regexp.MustCompile(`\.tar$`)
-)
+// ErrNotTarBall is returned by ValidateFileEndsWithTar when the given path
+// does not end in ".tar".
+var ErrNotTarBall = errors.New("file does not end with \".tar\"")
 
 // ValidateFileEndsWithTar returns ErrNotTarBall if file does not end in
 // ".tar".
 func ValidateFileEndsWithTar(file string) error {
-	if !tarRegex.MatchString(file) {
+	if !strings.HasSuffix(file, ".tar") {
 		return ErrNotTarBall
 	}
 	return nil

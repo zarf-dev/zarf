@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	zcobra "github.com/zarf-dev/zarf/src/cmd/cobra"
+	"github.com/zarf-dev/zarf/src/cmd/completion"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -22,6 +22,7 @@ const (
 	flagLayerCompression = "layer-compression"
 	flagPlatformOS       = "platform-os"
 	flagMaxLayer         = "max-layers"
+	flagOutput           = "output"
 )
 
 type imageVolumeOptions struct {
@@ -46,39 +47,32 @@ func NewImageVolumeCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP((*string)(&o.compression), flagLayerCompression, "c", string(image.VolumeCompressionGzip), lang.CmdDevImageVolumeArchiveFlagCompression)
-	cmd.Flags().StringVarP((*string)(&o.os), flagPlatformOS, "o", string(image.PlatformOSLinux), lang.CmdDevImageVolumeArchiveFlagPlatformOS)
-	cmd.Flags().StringVarP(&o.output, "output", "O", "", lang.CmdDevImageVolumeArchiveFlagOutput)
+	// No shorthand for --platform-os: "-o" reads as output everywhere else.
+	cmd.Flags().StringVar((*string)(&o.os), flagPlatformOS, string(image.PlatformOSLinux), lang.CmdDevImageVolumeArchiveFlagPlatformOS)
+	cmd.Flags().StringVarP(&o.output, flagOutput, "o", "", lang.CmdDevImageVolumeArchiveFlagOutput)
 	cmd.Flags().Uint8VarP(&o.maxLayers, flagMaxLayer, "m", image.DefaultMaxLayers, lang.CmdDevImageVolumeArchiveFlagMaxLayer)
 
-	if err := cmd.RegisterFlagCompletionFunc(flagLayerCompression, func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return zcobra.GetDevIVACobraCompression(), cobra.ShellCompDirectiveNoFileComp
-	}); err != nil {
-		logger.From(cmd.Context()).Warn("failed to register out-complete", "error", err)
-		panic(err)
+	// Registration only fails when the flag doesn't exist or already has a
+	// completion, both of which are wiring mistakes in the lines above rather
+	// than anything a user can cause.
+	completions := map[string]func() []string{
+		flagLayerCompression: completion.ImageVolumeCompressions,
+		flagPlatformOS:       completion.ImageVolumePlatformOSes,
+		flagMaxLayer:         completion.ImageVolumeMaxLayers,
 	}
-
-	if err := cmd.RegisterFlagCompletionFunc(flagPlatformOS, func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return zcobra.GetDevIVACobraPlatformOS(), cobra.ShellCompDirectiveNoFileComp
-	}); err != nil {
-		logger.From(cmd.Context()).Warn("failed to register out-complete", "error", err)
-		panic(err)
-	}
-
-	if err := cmd.RegisterFlagCompletionFunc(flagMaxLayer, func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return zcobra.GetDevIVACobraMaxLayers(), cobra.ShellCompDirectiveNoFileComp
-	}); err != nil {
-		logger.From(cmd.Context()).Warn("failed to register out-complete", "error", err)
-		panic(err)
+	for flag, values := range completions {
+		if err := cmd.RegisterFlagCompletionFunc(flag, func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+			return values(), cobra.ShellCompDirectiveNoFileComp
+		}); err != nil {
+			panic(err)
+		}
 	}
 
 	return cmd
 }
 
-// prerun validates the compression format in the image volume options,
-// defaulting to uncompressed if not specified.
-//
-// _ *cobra.Command, args []string.
-// error.
+// prerun fills in the default output path from the image reference and
+// validates every option that does not need the source directory to exist.
 func (o *imageVolumeOptions) prerun(_ *cobra.Command, args []string) error {
 	if o.output == "" {
 		o.output = archive.ImageRefToTar(args[1])
@@ -94,12 +88,17 @@ func (o *imageVolumeOptions) prerun(_ *cobra.Command, args []string) error {
 // run builds an image volume from args[0] (the source directory) tagged as
 // args[1] (the image reference), then writes it to o.output as a
 // Docker/OCI-compatible tar archive.
-//
-// cmd *cobra.Command, args []string.
-// error.
 func (o *imageVolumeOptions) run(cmd *cobra.Command, args []string) error {
 	dir := args[0]
 	ref := args[1]
+	l := logger.From(cmd.Context())
+
+	// The default output path is derived from the reference and lands in the
+	// working directory, so a second run of the same command overwrites the
+	// first run's archive. Say so before spending the build on it.
+	if _, err := os.Stat(o.output); err == nil {
+		l.Warn("image volume archive already exists and will be replaced", "path", o.output)
+	}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -112,10 +111,10 @@ func (o *imageVolumeOptions) run(cmd *cobra.Command, args []string) error {
 	}
 	defer func() {
 		if err := iv.Clean(); err != nil {
-			logger.From(cmd.Context()).Debug("failed to clean image volume workspace", "error", err)
+			l.Debug("failed to clean image volume workspace", "error", err)
 		}
 		if err := os.RemoveAll(tmpDir); err != nil {
-			logger.From(cmd.Context()).Debug("failed to remove staging directory", "error", err)
+			l.Debug("failed to remove staging directory", "error", err)
 		}
 	}()
 
@@ -132,7 +131,7 @@ func (o *imageVolumeOptions) run(cmd *cobra.Command, args []string) error {
 	}
 	defer func() {
 		if closeErr := out.Close(); closeErr != nil {
-			logger.From(cmd.Context()).Debug("failed to close image volume archive", "error", closeErr)
+			l.Debug("failed to close image volume archive", "error", closeErr)
 		}
 	}()
 
@@ -140,6 +139,6 @@ func (o *imageVolumeOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	logger.From(cmd.Context()).Info("wrote image volume archive", "path", o.output)
+	l.Info("wrote image volume archive", "path", o.output)
 	return nil
 }

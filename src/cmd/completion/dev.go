@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package cobra
+package completion
 
 import (
 	"fmt"
@@ -9,58 +9,51 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci/image"
 )
 
-// gzipCobraDesc, zstdCobraDesc, and uncompressedCobraDesc are the shell
-// completion descriptions shown alongside each VolumeCompression value.
+// Descriptions shown alongside each VolumeCompression value.
 const (
-	gzipCobraDesc         = "gzip-compressed layers"
-	zstdCobraDesc         = "zstd-compressed layers"
-	uncompressedCobraDesc = "uncompressed layers"
+	gzipDesc         = "gzip-compressed layers"
+	zstdDesc         = "zstd-compressed layers"
+	uncompressedDesc = "uncompressed layers"
 )
 
-// GetDevIVACobraCompression returns the valid VolumeCompression values as
-// "value\tdescription" pairs, ready to return from a cobra
-// RegisterFlagCompletionFunc callback for shell tab completion.
-func GetDevIVACobraCompression() []string {
+// ImageVolumeCompressions returns the valid VolumeCompression values for
+// `zarf dev image-volume-archive --layer-compression`.
+func ImageVolumeCompressions() []string {
 	return []string{
-		fmt.Sprintf("%s\t%s", string(image.VolumeCompressionGzip), gzipCobraDesc),
-		fmt.Sprintf("%s\t%s", string(image.VolumeCompressionZstd), zstdCobraDesc),
-		fmt.Sprintf("%s\t%s", string(image.VolumeCompressionUncompressed), uncompressedCobraDesc),
+		fmt.Sprintf("%s\t%s", image.VolumeCompressionGzip, gzipDesc),
+		fmt.Sprintf("%s\t%s", image.VolumeCompressionZstd, zstdDesc),
+		fmt.Sprintf("%s\t%s", image.VolumeCompressionUncompressed, uncompressedDesc),
 	}
 }
 
-// unlimitedMaxLayersDesc and defaultMaxLayersDesc are the shell completion
-// descriptions shown alongside the suggested MaxLayers values.
+// Descriptions shown alongside the suggested MaxLayers values.
 const (
 	unlimitedMaxLayersDesc = "unlimited (disables the cap)"
 	defaultMaxLayersDesc   = "default cap"
 )
 
-// GetDevIVACobraMaxLayers returns a short list of sensible MaxLayers values as
-// "value\tdescription" pairs, ready to return from a cobra
-// RegisterFlagCompletionFunc callback for shell tab completion. Unlike
-// GetCobraCompression/GetCobraPlatformOS this isn't an exhaustive set of
-// valid values - MaxLayers accepts any uint8 - just the ones worth
-// suggesting.
-func GetDevIVACobraMaxLayers() []string {
+// ImageVolumeMaxLayers returns suggestions for
+// `zarf dev image-volume-archive --max-layers`. Unlike the other helpers in
+// this package this isn't an exhaustive set of valid values - the flag takes
+// any uint8 - just the ones worth suggesting.
+func ImageVolumeMaxLayers() []string {
 	return []string{
-		fmt.Sprintf("%d\t%s", image.UnlimiteLayers, unlimitedMaxLayersDesc),
+		fmt.Sprintf("%d\t%s", image.UnlimitedLayers, unlimitedMaxLayersDesc),
 		fmt.Sprintf("%d\t%s", image.DefaultMaxLayers, defaultMaxLayersDesc),
 	}
 }
 
-// osLinuxCobraDesc and osWindowCobraDesc are the shell completion
-// descriptions shown alongside each PlatformOS value.
+// Descriptions shown alongside each PlatformOS value.
 const (
-	osLinuxCobraDesc  = "linux image volume"
-	osWindowCobraDesc = "windows image volume"
+	osLinuxDesc   = "linux image volume"
+	osWindowsDesc = "windows image volume"
 )
 
-// GetDevIVACobraPlatformOS returns the valid PlatformOS values as
-// "value\tdescription" pairs, ready to return from a cobra
-// RegisterFlagCompletionFunc callback for shell tab completion.
-func GetDevIVACobraPlatformOS() []string {
+// ImageVolumePlatformOSes returns the valid PlatformOS values for
+// `zarf dev image-volume-archive --platform-os`.
+func ImageVolumePlatformOSes() []string {
 	return []string{
-		fmt.Sprintf("%s\t%s", string(image.PlatformOSLinux), osLinuxCobraDesc),
-		fmt.Sprintf("%s\t%s", string(image.PlatformOSWindows), osWindowCobraDesc),
+		fmt.Sprintf("%s\t%s", image.PlatformOSLinux, osLinuxDesc),
+		fmt.Sprintf("%s\t%s", image.PlatformOSWindows, osWindowsDesc),
 	}
 }

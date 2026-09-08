@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"syscall"
 	"testing"
 
 	"github.com/klauspost/compress/zstd"
@@ -73,7 +74,7 @@ func TestVolumeAddFile(t *testing.T) {
 
 	require.Equal(t, ocispec.MediaTypeImageLayer, desc.MediaType)
 	require.Equal(t, "sub/hello.txt", desc.Annotations[ocispec.AnnotationTitle])
-	require.Equal(t, format, desc.Annotations[ocispec.AnnotationCreated])
+	require.Equal(t, staticRFC3339, desc.Annotations[ocispec.AnnotationCreated])
 	require.Positive(t, desc.Size)
 	require.NotEmpty(t, desc.Digest)
 
@@ -258,7 +259,7 @@ func TestVolumeAddDirectoryAnnotations(t *testing.T) {
 	require.NoError(t, json.NewDecoder(rc).Decode(&manifest))
 
 	require.Equal(t, "bar", manifest.Annotations["org.example.foo"], "caller-supplied annotations should reach the manifest")
-	require.Equal(t, format, manifest.Annotations[ocispec.AnnotationCreated], "AddDirectory should still set its own created annotation")
+	require.Equal(t, staticRFC3339, manifest.Annotations[ocispec.AnnotationCreated], "AddDirectory should still set its own created annotation")
 }
 
 // TestVolumeAddDirectoryPanicsOnNilAnnotations documents that AddDirectory
@@ -296,7 +297,9 @@ func TestWriteTarFile(t *testing.T) {
 
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
-	require.NoError(t, writeTarFile(tw, "a.txt", p))
+	written, err := writeTarFile(tw, "a.txt", p)
+	require.NoError(t, err)
+	require.True(t, written)
 	require.NoError(t, tw.Close())
 
 	tr := tar.NewReader(&buf)
@@ -308,6 +311,232 @@ func TestWriteTarFile(t *testing.T) {
 	got, err := io.ReadAll(tr)
 	require.NoError(t, err)
 	require.Equal(t, content, got)
+}
+
+// TestWriteTarFileHeaderIsMachineIndependent pins the header fields that
+// would otherwise carry the building machine into the layer bytes and so into
+// the diff ID and manifest digest.
+func TestWriteTarFileHeaderIsMachineIndependent(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	p := filepath.Join(dir, "a.txt")
+	require.NoError(t, os.WriteFile(p, []byte("hello"), 0o644))
+
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	_, err := writeTarFile(tw, "a.txt", p)
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+
+	hdr, err := tar.NewReader(&buf).Next()
+	require.NoError(t, err)
+
+	require.Zero(t, hdr.Uid, "uid must not leak the building user into the layer digest")
+	require.Zero(t, hdr.Gid, "gid must not leak the building user's group into the layer digest")
+	require.Empty(t, hdr.Uname)
+	require.Empty(t, hdr.Gname)
+	require.True(t, hdr.AccessTime.IsZero())
+	require.True(t, hdr.ChangeTime.IsZero())
+	// writeTarFile asks for PAX, which lets the writer settle on plain USTAR
+	// whenever every field fits. What matters is that GNU - whose encoding has
+	// varied between Go releases - is off the table.
+	require.NotEqual(t, tar.FormatGNU, hdr.Format)
+}
+
+// TestWriteTarFileSymlink checks that a symlink is stored as a symlink rather
+// than followed: following it would turn a link to a directory into an
+// unreadable entry, and a link out of the tree into a silent copy of outside
+// content.
+func TestWriteTarFileSymlink(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+
+	outside := filepath.Join(t.TempDir(), "secret.txt")
+	require.NoError(t, os.WriteFile(outside, []byte("do not copy me"), 0o644))
+
+	toFile := filepath.Join(dir, "link-to-outside")
+	require.NoError(t, os.Symlink(outside, toFile))
+
+	realDir := filepath.Join(dir, "real")
+	require.NoError(t, os.Mkdir(realDir, 0o755))
+	toDir := filepath.Join(dir, "link-to-dir")
+	require.NoError(t, os.Symlink(realDir, toDir))
+
+	dangling := filepath.Join(dir, "dangling")
+	require.NoError(t, os.Symlink(filepath.Join(dir, "nope"), dangling))
+
+	for _, tt := range []struct {
+		name   string
+		path   string
+		target string
+	}{
+		{name: "link-to-outside", path: toFile, target: outside},
+		{name: "link-to-dir", path: toDir, target: realDir},
+		{name: "dangling", path: dangling, target: filepath.Join(dir, "nope")},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var buf bytes.Buffer
+			tw := tar.NewWriter(&buf)
+			written, err := writeTarFile(tw, tt.name, tt.path)
+			require.NoError(t, err, "a symlink must not abort the build")
+			require.True(t, written)
+			require.NoError(t, tw.Close())
+
+			hdr, err := tar.NewReader(&buf).Next()
+			require.NoError(t, err)
+			require.Equal(t, byte(tar.TypeSymlink), hdr.Typeflag)
+			require.Equal(t, tt.target, hdr.Linkname)
+			require.Zero(t, hdr.Size, "a symlink entry carries no payload")
+		})
+	}
+}
+
+// TestWriteTarFileSkipsIrregularFiles checks that a file type an image volume
+// cannot hold is skipped rather than opened - opening a FIFO blocks until a
+// writer appears.
+func TestWriteTarFileSkipsIrregularFiles(t *testing.T) {
+	t.Parallel()
+
+	fifo := filepath.Join(t.TempDir(), "pipe")
+	if err := syscall.Mkfifo(fifo, 0o644); err != nil {
+		t.Skipf("cannot create a FIFO here: %v", err)
+	}
+
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	written, err := writeTarFile(tw, "pipe", fifo)
+	require.NoError(t, err)
+	require.False(t, written, "a FIFO has no representation in an image volume")
+	require.NoError(t, tw.Close())
+
+	_, err = tar.NewReader(&buf).Next()
+	require.ErrorIs(t, err, io.EOF, "nothing should have been written")
+}
+
+// TestVolumeAddDirectoryDigestIsStable checks that the same tree built twice,
+// into two separate volumes, produces the same manifest digest.
+func TestVolumeAddDirectoryDigestIsStable(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	srcDir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(srcDir, "sub"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("a"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "sub", "b.txt"), []byte("b"), 0o600))
+	require.NoError(t, os.Symlink("a.txt", filepath.Join(srcDir, "link")))
+
+	digests := make([]digest.Digest, 2)
+	for i := range digests {
+		iv := newTestVolume(t)
+		require.NoError(t, iv.AddDirectory(ctx, srcDir, "test:latest"))
+		digests[i] = iv.manifest.Digest
+	}
+
+	require.NotEmpty(t, digests[0])
+	require.Equal(t, digests[0], digests[1], "the same tree should always produce the same image")
+}
+
+// TestVolumeAddDirectorySkipsIrregularFiles checks that a FIFO in the tree is
+// left out instead of stalling or failing the whole build.
+func TestVolumeAddDirectorySkipsIrregularFiles(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	srcDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("a"), 0o644))
+	if err := syscall.Mkfifo(filepath.Join(srcDir, "pipe"), 0o644); err != nil {
+		t.Skipf("cannot create a FIFO here: %v", err)
+	}
+
+	iv := newTestVolume(t)
+	require.NoError(t, iv.AddDirectory(ctx, srcDir, "test:latest"))
+
+	require.Len(t, iv.layers, 1)
+	require.Equal(t, "a.txt", iv.layers[0].Annotations[ocispec.AnnotationTitle])
+}
+
+// TestVolumeAddDirectoryBudgetsAgainstExistingLayers checks that batching
+// accounts for layers the volume already holds. Batching as though the volume
+// were empty would push blobs and only then trip the cap.
+func TestVolumeAddDirectoryBudgetsAgainstExistingLayers(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	iv := newTestVolume(t)
+	iv.MaxLayers = 3
+
+	seedDir := t.TempDir()
+	seed := filepath.Join(seedDir, "seed.txt")
+	require.NoError(t, os.WriteFile(seed, []byte("seed"), 0o644))
+	_, err := iv.AddFile(ctx, seedDir, seed)
+	require.NoError(t, err)
+
+	srcDir := t.TempDir()
+	for i := range 6 {
+		require.NoError(t, os.WriteFile(filepath.Join(srcDir, fmt.Sprintf("f%d.txt", i)), []byte("x"), 0o644))
+	}
+
+	require.NoError(t, iv.AddDirectory(ctx, srcDir, "test:latest"))
+	require.LessOrEqual(t, len(iv.layers), int(iv.MaxLayers))
+	require.Len(t, iv.config.RootFS.DiffIDs, len(iv.layers))
+}
+
+// TestVolumeAddDirectoryOnFullVolume checks that a volume with no layers left
+// is refused up front rather than partway through pushing blobs.
+func TestVolumeAddDirectoryOnFullVolume(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	iv := newTestVolume(t)
+	iv.MaxLayers = 1
+
+	seedDir := t.TempDir()
+	seed := filepath.Join(seedDir, "seed.txt")
+	require.NoError(t, os.WriteFile(seed, []byte("seed"), 0o644))
+	_, err := iv.AddFile(ctx, seedDir, seed)
+	require.NoError(t, err)
+
+	srcDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("a"), 0o644))
+
+	require.ErrorIs(t, iv.AddDirectory(ctx, srcDir, "test:latest"), ErrTooManyLayers)
+	require.Len(t, iv.layers, 1, "the rejected call must not have pushed anything")
+}
+
+// TestVolumeAddFilesLeavesNoWorkspaceFiles checks that a layer's tar (and its
+// compressed twin) are deleted once the blob is in the store. Keeping them
+// would need several times the source tree's size in temp space.
+func TestVolumeAddFilesLeavesNoWorkspaceFiles(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	for _, compression := range []VolumeCompression{
+		VolumeCompressionUncompressed,
+		VolumeCompressionGzip,
+		VolumeCompressionZstd,
+	} {
+		t.Run(string(compression), func(t *testing.T) {
+			t.Parallel()
+
+			iv := newTestVolume(t)
+			iv.Compression = compression
+
+			srcDir := t.TempDir()
+			for i := range 3 {
+				require.NoError(t, os.WriteFile(filepath.Join(srcDir, fmt.Sprintf("f%d.txt", i)), []byte("payload"), 0o644))
+			}
+
+			require.NoError(t, iv.AddDirectory(ctx, srcDir, "test:latest"))
+
+			left, err := os.ReadDir(iv.tmp)
+			require.NoError(t, err)
+			require.Empty(t, left, "the workspace should hold nothing once every layer is pushed")
+		})
+	}
 }
 
 func TestVolumeAddDirectory(t *testing.T) {
@@ -363,7 +592,7 @@ func TestVolumeAddDirectoryEmpty(t *testing.T) {
 	srcDir := t.TempDir()
 
 	err := iv.AddDirectory(ctx, srcDir, "test:latest")
-	require.NoError(t, err)
+	require.ErrorContains(t, err, "no files to add")
 	require.Empty(t, iv.layers)
 	require.Empty(t, iv.config.RootFS.DiffIDs)
 }
@@ -513,10 +742,10 @@ func TestVolumeWriteTar(t *testing.T) {
 	require.True(t, names["manifest.json"], "expected manifest.json entry")
 }
 
-// TestVolumeWriteTarWithoutManifest documents that calling WriteTar before
-// AddDirectory does not error: the zero-value manifest descriptor has no
-// digest, so the containerd exporter silently drops it (after logging a
-// warning) and produces a valid but empty archive.
+// TestVolumeWriteTarWithoutManifest checks that calling WriteTar before
+// AddDirectory is refused. Left to the exporter, a zero-value manifest
+// descriptor is silently dropped and the caller gets a valid but imageless
+// archive instead of an error.
 func TestVolumeWriteTarWithoutManifest(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
@@ -524,22 +753,8 @@ func TestVolumeWriteTarWithoutManifest(t *testing.T) {
 	iv := newTestVolume(t)
 
 	var buf bytes.Buffer
-	require.NoError(t, iv.WriteTar(ctx, "test:latest", &buf))
-
-	names := map[string]bool{}
-	tr := tar.NewReader(&buf)
-	for {
-		hdr, err := tr.Next()
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		require.NoError(t, err)
-		names[hdr.Name] = true
-	}
-
-	require.True(t, names["oci-layout"])
-	require.True(t, names["index.json"])
-	require.False(t, names["manifest.json"], "no image was recorded, so no docker manifest.json should be written")
+	require.ErrorIs(t, iv.WriteTar(ctx, "test:latest", &buf), ErrNoManifest)
+	require.Zero(t, buf.Len())
 }
 
 func TestVolumeAddFileUnsupportedCompression(t *testing.T) {
