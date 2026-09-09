@@ -280,7 +280,98 @@ func (l *Layer) FilesByMIMETypeFromSquash(mimeTypes ...string) ([]file.Reference
 	return refs, nil
 }
 
-func layerTarIndexer(ft filetree.Writer, fileCatalog *FileCatalog, size *int64, layerRef *Layer, monitor *progress.Manual) file.TarIndexVisitor {
+// adoptHardLinkInode rewrites metadata for a hardlink tar header to describe the file it names, and
+// returns that file's opener. Returns false if that file is not in this layer (a malformed archive),
+// leaving the entry to be indexed from its own header.
+//
+// a hardlink is a second name for an inode already in this layer, not a path to resolve later, and
+// its header carries no data section:
+//
+//   - adopted from the target: size, MIME type, type, link destination, and the file type bits of
+//     the mode, which tar does not record on a link header. A hardlink naming a symlink is itself a
+//     symlink.
+//   - kept from this header: permission bits, uid, gid, mtime, which tar already records correctly.
+//
+// "inode" is an analogy. There is no such object here: each name keeps its own file.Reference, ID
+// and catalog entry, and what is shared is the opener plus a copy of the values above. Pointing both
+// names at one reference would model the filesystem more literally, but it would leave a node's
+// RealPath disagreeing with its reference's, and drop the second name as a location callers can
+// address at all.
+//
+// Binding here rather than at resolution time is what makes the name immune to later layers: the
+// catalog is keyed by file.ID and is never squashed or merged, so replacing or deleting the other
+// name cannot change what this one refers to, which is what the filesystem does.
+//
+// where this model bends the truth:
+//
+//   - on disk neither name is "the hardlink". Which one a tar marks is an artifact of directory walk
+//     order (alphabetical in practice), so it is often the one a person would call the original.
+//   - adopting erases that mark, so the names come out symmetric. But nothing can then answer "is
+//     this path also known as something else", the way nlink would.
+//   - we trust the headers. Data on a link header with an empty regular header would be adopted
+//     backwards and serve nothing.
+//   - when adoption fails, or is undone by the caller because the adopted type collides with a node
+//     already at that path, that one name keeps TypeHardLink, size 0 and an empty data section: the
+//     lopsided picture this function exists to avoid.
+//   - only this layer is searched. extraction resolves a link name against everything applied so
+//     far, so a name pointing into a lower layer does work in a real runtime and is not adopted
+//     here. matching that needs the squash as of the previous layer, not a walk of each lower tree,
+//     which would resolve names that an intervening whiteout had already deleted. squashing runs
+//     after all layers are read, so threading it in would make every layer's indexing wait on the
+//     one below it. no mainstream builder emits these: they keep the inode table per archive.
+func adoptHardLinkInode(ft filetree.Reader, fileCatalog *FileCatalog, metadata *file.Metadata) (file.Opener, bool) {
+	// a hardlink's link name refers to an earlier member of this same archive, relative to its root.
+	// the lookup below is not literal: a miss retries following ancestor symlinks, which is what
+	// link(2) does when extracting the archive for real
+	linkPath := file.Path(path.Clean(file.DirSeparator + metadata.LinkDestination))
+
+	// an empty link name cleans to the tree root, which would otherwise adopt the root directory
+	if metadata.LinkDestination == "" || linkPath == file.Path(file.DirSeparator) {
+		return nil, false
+	}
+
+	exists, resolution, err := ft.File(linkPath)
+	if err != nil || !exists || resolution == nil || resolution.Reference == nil {
+		return nil, false
+	}
+
+	target, err := fileCatalog.Get(*resolution.Reference)
+	if err != nil {
+		return nil, false
+	}
+
+	// link(2) refuses a directory, so an archive naming one is malformed. adopting it anyway would
+	// describe this name as a directory that cannot be listed or walked.
+	// a target that is still a hardlink is one that failed to adopt, and taking its description would
+	// spread that failure while reporting success, down to its link destination
+	if target.Type == file.TypeDirectory || target.Type == file.TypeHardLink {
+		return nil, false
+	}
+
+	opener := fileCatalog.opener(resolution.ID())
+	if opener == nil {
+		return nil, false
+	}
+
+	metadata.FileInfo = file.ManualInfo{
+		NameValue: path.Base(metadata.Path),
+		SizeValue: target.Size(),
+		// permission bits stay from this header, but the file type bits come from the target: tar
+		// records no type bits on a link header, and two names for one inode share a mode
+		ModeValue:    metadata.Mode()&^fs.ModeType | target.Mode()&fs.ModeType,
+		ModTimeValue: metadata.ModTime(),
+		// deliberately the un-adopted header: it is the escape hatch to what the tar actually said,
+		// so it still reports TypeLink, size 0 and this name's own link name
+		SysValue: metadata.Sys(),
+	}
+	metadata.MIMEType = target.MIMEType
+	metadata.Type = target.Type
+	metadata.LinkDestination = target.LinkDestination
+
+	return opener, true
+}
+
+func layerTarIndexer(ft filetree.ReadWriter, fileCatalog *FileCatalog, size *int64, layerRef *Layer, monitor *progress.Manual) file.TarIndexVisitor {
 	builder := filetree.NewBuilder(ft, fileCatalog.Index)
 
 	return func(index file.TarIndexEntry) error {
@@ -295,6 +386,26 @@ func layerTarIndexer(ft filetree.Writer, fileCatalog *FileCatalog, size *int64, 
 		}()
 		metadata := file.NewMetadata(entry.Header, contents)
 
+		// a hardlink names a file already present in this layer; describe it as that file and read
+		// its contents through that file's opener rather than this header's empty data section
+		var hardLinkOpener file.Opener
+		var preAdoptionMetadata *file.Metadata
+		if metadata.Type == file.TypeHardLink {
+			original := metadata
+			var adopted bool
+			hardLinkOpener, adopted = adoptHardLinkInode(ft, fileCatalog, &metadata)
+			if adopted {
+				// keep the un-adopted description to fall back to: adoption changes the node type this
+				// entry claims, which can conflict with what an earlier header put at the same path
+				preAdoptionMetadata = &original
+			} else {
+				// trace, not warn: resolution still works via the link path, and a per-header warning
+				// would be noisy on any archive that trips this
+				log.WithFields("path", metadata.Path, "linkName", metadata.LinkDestination).
+					Trace("hardlink names a file that is not in this layer, indexing it from its own header")
+			}
+		}
+
 		// note: the tar header name is independent of surrounding structure, for example, there may be a tar header entry
 		// for /some/path/to/file.txt without any entries to constituent paths (/some, /some/path, /some/path/to ).
 		// This is ok, and the FileTree will account for this by automatically adding directories for non-existing
@@ -307,15 +418,36 @@ func layerTarIndexer(ft filetree.Writer, fileCatalog *FileCatalog, size *int64, 
 		// the FileCatalog should NEVER have entries that don't appear in one (or more) FileTree(s).
 		ref, err := builder.Add(metadata)
 		if err != nil {
-			return err
+			if preAdoptionMetadata == nil {
+				return err
+			}
+			// only an adopted hardlink can be described here as something other than what its own
+			// header says, so a malformed archive should cost this one entry its adoption rather than
+			// the whole image. errors on the un-adopted retry are still fatal, as they were before.
+			log.WithFields("path", metadata.Path, "linkName", metadata.LinkDestination, "error", err).
+				Trace("adopted hardlink conflicts with an existing entry, indexing it from its own header")
+
+			metadata = *preAdoptionMetadata
+			hardLinkOpener = nil
+
+			ref, err = builder.Add(metadata)
+			if err != nil {
+				return err
+			}
 		}
 
 		if size != nil {
-			*(size) += metadata.Size()
+			// what this entry contributes to the layer blob, which is its own header's data section.
+			// NOT metadata.Size(), which for an adopted hardlink is the size of the file it names
+			*(size) += entry.Header.Size
 		}
-		fileCatalog.addImageReferences(ref.ID(), layerRef, func() (io.ReadCloser, error) {
-			return index.Open(), nil
-		})
+		opener := hardLinkOpener
+		if opener == nil {
+			opener = func() (io.ReadCloser, error) {
+				return index.Open(), nil
+			}
+		}
+		fileCatalog.addImageReferences(ref.ID(), layerRef, opener)
 
 		if monitor != nil {
 			monitor.Increment()
