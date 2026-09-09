@@ -5,6 +5,7 @@ package value
 
 import (
 	"fmt"
+	"math"
 )
 
 // GenerateJSONSchema infers a JSON schema from the structure and scalar types in values.
@@ -31,6 +32,10 @@ func ReconcileJSONSchema(existing, inferred map[string]any, deleteNotFound bool)
 	typeVal, hasType := inferred["type"]
 	if hasType {
 		existing["type"] = typeVal
+	} else if deleteNotFound {
+		delete(existing, "type")
+		delete(existing, "properties")
+		delete(existing, "items")
 	}
 
 	if schemaTypeIncludes(typeVal, "object") {
@@ -396,8 +401,12 @@ func inferSchemaType(v any) any {
 	switch val := v.(type) {
 	case string:
 		return map[string]any{"type": "string"}
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
-		return map[string]any{"type": "number"}
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return map[string]any{"type": "integer"}
+	case float32:
+		return inferFloatSchema(float64(val))
+	case float64:
+		return inferFloatSchema(val)
 	case bool:
 		return map[string]any{"type": "boolean"}
 	case map[string]any:
@@ -415,6 +424,13 @@ func inferSchemaType(v any) any {
 		}
 		return map[string]any{"type": "array"}
 	default:
-		return map[string]any{"type": "string"}
+		return map[string]any{}
 	}
+}
+
+func inferFloatSchema(val float64) map[string]any {
+	if math.Trunc(val) == val {
+		return map[string]any{"type": "integer"}
+	}
+	return map[string]any{"type": "number"}
 }

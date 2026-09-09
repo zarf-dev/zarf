@@ -16,6 +16,10 @@
         }
       }
     },
+    "fallback": {
+      "type": "string",
+      "description": "Value without an inferred type"
+    },
     "oldField": {
       "type": "string",
       "description": "Should be removed"
