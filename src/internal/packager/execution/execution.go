@@ -13,19 +13,38 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 )
 
+type (
+	// Manifest holds the manifest information needed at runtime
+	Manifest = v1alpha1.ZarfManifest
+	// File holds the file information needed at runtime
+	File = v1alpha1.ZarfFile
+	// NamespacedObjectKindReference holds health check object information needed at runtime
+	NamespacedObjectKindReference = v1alpha1.NamespacedObjectKindReference
+	// StateAccessKey identifies a state value needed at runtime
+	StateAccessKey = v1alpha1.StateAccessKey
+
+	// ImageArchive Holds the Image archive information needed at runtime
+	// 	TODO: introduce generic images.Archive type in images package
+	ImageArchive = v1alpha1.ImageArchive
+	// Chart holds the Helm chart information needed at runtime
+	// TODO: introduce generic helm.Chart type in Helm package
+	Chart = v1alpha1.ZarfChart
+	// DataInjection will stay type aliased to v1alpha1 since there is no v1beta1 equivalent.
+	DataInjection = v1alpha1.ZarfDataInjection
+)
+
 // Component contains the resources needed to deploy a component.
-// TODO: Convert charts, images, repos, and health checks into generic types.
 type Component struct {
 	Name           string
-	Manifests      []v1alpha1.ZarfManifest
-	Charts         []v1alpha1.ZarfChart
-	DataInjections []v1alpha1.ZarfDataInjection
-	Files          []v1alpha1.ZarfFile
+	Manifests      []Manifest
+	Charts         []Chart
+	DataInjections []DataInjection
+	Files          []File
 	Images         []string
-	ImageArchives  []v1alpha1.ImageArchive
+	ImageArchives  []ImageArchive
 	Repos          []string
-	HealthChecks   []v1alpha1.NamespacedObjectKindReference
-	StateAccess    []v1alpha1.StateAccessKey
+	HealthChecks   []NamespacedObjectKindReference
+	StateAccess    []StateAccessKey
 	Actions        ComponentActions
 }
 

@@ -97,7 +97,7 @@ type NetworkWait struct {
 }
 
 // Shell is the preferred command shell for each supported OS.
-type Shell struct {
+type Shell struct { // FIXME: make an alias type
 	Windows string
 	Linux   string
 	Darwin  string
