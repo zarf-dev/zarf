@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package execution translates package schemas into packager runtime models.
-package execution
+// Package runtime translates package schemas into packager runtime models.
+package runtime
 
 import (
 	"time"

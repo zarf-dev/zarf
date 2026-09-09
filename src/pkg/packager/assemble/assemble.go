@@ -19,7 +19,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
+	goruntime "runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -31,9 +31,9 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
-	"github.com/zarf-dev/zarf/src/internal/packager/execution"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/internal/packager/runtime"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -107,7 +107,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage load.ResolvedPackage, 
 	if err != nil {
 		return nil, err
 	}
-	for _, projected := range execution.Components(definition) {
+	for _, projected := range runtime.Components(definition) {
 		err := assemblePackageComponent(ctx, projected, packagePath, buildPath, opts.CachePath, opts.RemoteOptions)
 		if err != nil {
 			return nil, err
@@ -350,7 +350,7 @@ func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) erro
 	return nil
 }
 
-func assemblePackageComponent(ctx context.Context, component execution.Component, packagePath, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
+func assemblePackageComponent(ctx context.Context, component runtime.Component, packagePath, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -835,7 +835,7 @@ func recordPackageMetadata(definition *api.PackageDefinition, flavor string, reg
 		// Just use $USER env variable to avoid CGO issue.
 		// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
 		// Record the name of the user creating the package.
-		if runtime.GOOS == "windows" {
+		if goruntime.GOOS == "windows" {
 			buildData.User = os.Getenv("USERNAME")
 		} else {
 			buildData.User = os.Getenv("USER")

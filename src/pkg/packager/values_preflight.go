@@ -13,8 +13,8 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager/execution"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/runtime"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/template"
@@ -31,7 +31,7 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if pkgLayout == nil {
 		return fmt.Errorf("pkg layout is required")
 	}
-	components := execution.Components(pkgLayout.PackageDefinition)
+	components := runtime.Components(pkgLayout.PackageDefinition)
 	defined := newDefinedValues(vals)
 
 	var errs []error
@@ -45,7 +45,7 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	return errors.Join(errs...)
 }
 
-func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component execution.Component, defined *definedValues) ([]error, error) {
+func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component runtime.Component, defined *definedValues) ([]error, error) {
 	onDeploy := component.Actions.OnDeploy
 	var errs []error
 
@@ -87,7 +87,7 @@ func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, compon
 	return errs, nil
 }
 
-func checkAction(component execution.Component, action actions.Action, defined *definedValues) []error {
+func checkAction(component runtime.Component, action actions.Action, defined *definedValues) []error {
 	if !action.ShouldTemplate {
 		return nil
 	}
@@ -161,7 +161,7 @@ type templateSource struct {
 
 // componentFileSources extracts and reads the go-templated manifest, file, and chart values-file
 // contents for a component.
-func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, component execution.Component) (_ []templateSource, err error) {
+func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, component runtime.Component) (_ []templateSource, err error) {
 	hasManifests := false
 	for _, m := range component.Manifests {
 		if m.IsTemplate() {

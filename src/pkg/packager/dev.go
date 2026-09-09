@@ -7,13 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
+	goruntime "runtime"
 	"slices"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager/execution"
+	"github.com/zarf-dev/zarf/src/internal/packager/runtime"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -90,7 +90,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		return err
 	}
 	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
+		filters.ByLocalOS(goruntime.GOOS),
 		filters.ForDeploy(opts.OptionalComponents, false),
 	)
 	definition, err := filters.Apply(defined.PackageDefinition, filter)
@@ -171,7 +171,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 
 	// Get a list of all the components we are deploying and actually deploy them
-	deployedComponents, err := d.deployComponents(ctx, pkgLayout, execution.Components(pkgLayout.PackageDefinition), DeployOptions{
+	deployedComponents, err := d.deployComponents(ctx, pkgLayout, runtime.Components(pkgLayout.PackageDefinition), DeployOptions{
 		SetVariables:   opts.DeploySetVariables,
 		Values:         opts.Values,
 		Timeout:        opts.Timeout,
