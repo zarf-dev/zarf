@@ -91,6 +91,13 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 
+	// When the user has not chosen explicitly (via the --no-color flag,
+	// ZARF_NO_COLOR, or a config file), disable color if the terminal
+	// cannot render it.
+	if !IsColorDisabled && !cmd.Flags().Changed("no-color") && !getViper().IsSet(VNoColor) {
+		IsColorDisabled = !detectColorEnvironment().supportsColor()
+	}
+
 	// Configure logger and add it to cmd context. We flip NoColor because setLogger wants "isColor"
 	l, err := setupLogger(LogLevelCLI, LogFormat, !IsColorDisabled)
 	if err != nil {
