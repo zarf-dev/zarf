@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"slices"
 	"time"
 
@@ -28,35 +27,48 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// DefinitionOptions are the optional parameters to load.PackageDefinition
+// DefinitionOptions are the optional parameters to load.PackageDefinition.
 type DefinitionOptions struct {
 	Flavor       string
 	SetVariables map[string]string
-	// SkipValuesSchemaValidation skips schema validation for the package values entirely.
-	SkipValuesSchemaValidation bool
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
+	// TODO: implement version requirements for v1beta1 remote resources
 	SkipVersionCheck bool
 	types.RemoteOptions
 }
 
-// ResolvedPackage is the result of loading and resolving a package definition.
-// ImportedSchemas is transient assembly state — child schema paths collected during
-// import resolution that must be passed to package assembly for merging.
-type ResolvedPackage struct {
-	PackageDefinition api.PackageDefinition
-	ImportedSchemas   []string
+type valuePlan struct {
+	// files are ordered for merge; later paths win.
+	files []string
+	// schemas are ordered by precedence; earlier paths win.
+	schemas []string
 }
 
-// PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
-func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (ResolvedPackage, error) {
+type resolution struct {
+	definition      api.PackageDefinition
+	packageRoot     string
+	values          valuePlan
+	remoteResources []remoteResource
+}
+
+// PackageDefinition returns a structurally validated package definition after flavors, imports, and set variables are applied.
+// It does not read package resource contents; callers that need values, schemas, charts, or manifests must use load.Package.
+func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (api.PackageDefinition, error) {
+	resolved, err := resolve(ctx, packagePath, opts)
+	if err != nil {
+		return api.PackageDefinition{}, err
+	}
+	return resolved.definition, nil
+}
+
+func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (resolution, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
@@ -67,99 +79,127 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
-		return ResolvedPackage{}, err
+		return resolution{}, err
 	}
 
 	b, err := os.ReadFile(pkgPath.ManifestFile)
 	if err != nil {
-		return ResolvedPackage{}, err
+		return resolution{}, err
 	}
 
 	version, err := pkgcfg.SelectVersion(ctx, b)
 	if err != nil {
-		return ResolvedPackage{}, err
+		return resolution{}, err
 	}
 
-	var defined ResolvedPackage
+	var defined resolution
 	switch version {
 	case v1beta1.APIVersion:
 		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
 		if err != nil {
-			return ResolvedPackage{}, err
+			return resolution{}, err
 		}
 		if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, b); err != nil {
-			return ResolvedPackage{}, err
+			return resolution{}, err
 		}
-		defined, err = v1beta1PackageDefinition(ctx, pkg, pkgPath, opts)
+		defined, err = v1beta1Resolution(ctx, pkg, pkgPath, opts)
 		if err != nil {
-			return ResolvedPackage{}, err
+			return resolution{}, err
 		}
 	case v1alpha1.APIVersion:
 		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 		if err != nil {
-			return ResolvedPackage{}, err
+			return resolution{}, err
 		}
 		if err := validatePackageSchemaV1Alpha1(pkg.Metadata.Name, b, opts.SetVariables); err != nil {
-			return ResolvedPackage{}, err
+			return resolution{}, err
 		}
-		defined, err = v1alpha1PackageDefinition(ctx, pkg, pkgPath, opts)
+		defined, err = v1alpha1Resolution(ctx, pkg, pkgPath, opts)
 		if err != nil {
-			return ResolvedPackage{}, err
+			return resolution{}, err
 		}
 	default:
-		return ResolvedPackage{}, fmt.Errorf("unrecognized API version")
+		return resolution{}, fmt.Errorf("unrecognized API version")
 	}
 
 	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
 	return defined, nil
 }
 
-func v1alpha1PackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, opts DefinitionOptions) (ResolvedPackage, error) {
+func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, opts DefinitionOptions) (resolution, error) {
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 	var err error
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
-		return ResolvedPackage{}, err
+		return resolution{}, err
 	}
 	var importedSchemas []string
 	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
-		return ResolvedPackage{}, err
+		return resolution{}, err
 	}
 
 	if len(pkg.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
-		return ResolvedPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
+		return resolution{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 		if err != nil {
-			return ResolvedPackage{}, err
+			return resolution{}, err
 		}
 	}
-	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor, opts.SkipValuesSchemaValidation, importedSchemas); err != nil {
-		return ResolvedPackage{}, err
+	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
+		return resolution{}, err
 	}
-	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1alpha1(pkg), ImportedSchemas: importedSchemas}, nil
+	return resolution{
+		definition:  api.NewPackageDefinitionFromV1alpha1(pkg),
+		packageRoot: pkgPath.BaseDir,
+		values: valuePlan{
+			files:   pkg.Values.Files,
+			schemas: schemaSources(pkg.Values.Schema, importedSchemas),
+		},
+	}, nil
 }
 
-func v1beta1PackageDefinition(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, opts DefinitionOptions) (ResolvedPackage, error) {
+func v1beta1Resolution(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, opts DefinitionOptions) (resolution, error) {
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-
-	pkg, importedSchemas, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor)
+	cachePath, err := utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
-		return ResolvedPackage{}, err
+		return resolution{}, err
 	}
 
-	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor, opts.SkipValuesSchemaValidation, importedSchemas); err != nil {
-		return ResolvedPackage{}, err
+	imported, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor, opts.RemoteOptions, cachePath)
+	if err != nil {
+		return resolution{}, err
+	}
+	pkg = imported.pkg
+
+	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
+		return resolution{}, err
 	}
 
-	return ResolvedPackage{PackageDefinition: api.NewPackageDefinitionFromV1beta1(pkg), ImportedSchemas: importedSchemas}, nil
+	return resolution{
+		definition:      api.NewPackageDefinitionFromV1beta1(pkg),
+		packageRoot:     pkgPath.BaseDir,
+		remoteResources: imported.remoteResources,
+		values: valuePlan{
+			files:   pkg.Values.Files,
+			schemas: schemaSources(pkg.Values.Schema, imported.schemas),
+		},
+	}, nil
 }
 
-func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, flavor string, skipSchemaValidation bool, importedSchemas []string) error {
+func schemaSources(parent string, imported []string) []string {
+	sources := make([]string, 0, len(imported)+1)
+	if parent != "" {
+		sources = append(sources, parent)
+	}
+	return append(sources, imported...)
+}
+
+func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, flavor string) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -175,12 +215,6 @@ func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		return fmt.Errorf("package validation failed: %w", err)
 	}
 
-	if !skipSchemaValidation {
-		if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: true, importedSchemas: importedSchemas}); err != nil {
-			return err
-		}
-	}
-
 	l.Debug("done layout.Validate",
 		"pkg", pkg.Metadata.Name,
 		"path", packagePath,
@@ -191,7 +225,7 @@ func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 }
 
 // validateV1Beta1 validates a v1beta1 package before it is converted down to v1alpha1.
-func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath string, flavor string, skipSchemaValidation bool, importedSchemas []string) error {
+func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath string, flavor string) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start v1beta1 validate",
@@ -214,13 +248,6 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 	}
 	if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, resolvedPackage); err != nil {
 		return err
-	}
-
-	if !skipSchemaValidation {
-		alphaPkg := api.NewPackageDefinitionFromV1beta1(pkg).AsV1alpha1()
-		if err := validateValuesSchema(ctx, alphaPkg, packagePath, validateValuesSchemaOptions{skipRequired: true, importedSchemas: importedSchemas}); err != nil {
-			return err
-		}
 	}
 
 	l.Debug("done v1beta1 validate",
@@ -257,50 +284,6 @@ func validatePackageSchemaV1Beta1(pkgName string, b []byte) error {
 		PackageName: pkgName,
 		Findings:    findings,
 	}
-}
-
-type validateValuesSchemaOptions struct {
-	skipRequired    bool
-	importedSchemas []string
-}
-
-func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts validateValuesSchemaOptions) error {
-	// Skip validation if no schema or values files are provided
-	if (pkg.Values.Schema == "" && len(opts.importedSchemas) == 0) || len(pkg.Values.Files) == 0 {
-		return nil
-	}
-
-	l := logger.From(ctx)
-
-	pkgPath, err := layout.ResolvePackagePath(packagePath)
-	if err != nil {
-		return err
-	}
-
-	// Resolve values file paths relative to the package directory
-	valueFilePaths := make([]string, len(pkg.Values.Files))
-	for i, vf := range pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(pkgPath.BaseDir, vf)
-	}
-
-	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to parse values files for validation: %w", err)
-	}
-
-	mergedSchema, err := value.MergeSchemaFiles(pkg.Values.Schema, opts.importedSchemas, pkgPath.BaseDir)
-	if err != nil {
-		return fmt.Errorf("merging schemas for values validation: %w", err)
-	}
-	if mergedSchema == nil {
-		return nil
-	}
-	if err := vals.ValidateAgainstSchema(ctx, mergedSchema, "merged values schema", value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
-		return fmt.Errorf("values validation failed: %w", err)
-	}
-
-	l.Debug("values validated against merged schema", "parentSchema", pkg.Values.Schema, "importedSchemas", len(opts.importedSchemas))
-	return nil
 }
 
 func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {

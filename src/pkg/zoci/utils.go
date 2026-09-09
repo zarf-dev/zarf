@@ -14,6 +14,21 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
+// NormalizeOCISource adds the OCI scheme to valid registry references.
+func NormalizeOCISource(source string) string {
+	if helpers.IsOCIURL(source) || strings.Contains(source, "://") {
+		return source
+	}
+	if strings.HasSuffix(source, ".tar.zst") || strings.HasSuffix(source, ".tar") || strings.Contains(source, ".part000") {
+		return source
+	}
+
+	if _, err := registry.ParseReference(source); err == nil {
+		return helpers.OCIURLPrefix + source
+	}
+	return source
+}
+
 // ReferenceFromMetadata returns a reference for the given metadata.
 func ReferenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (registry.Reference, error) {
 	return ReferenceFromMetadataWithOptions(registryLocation, pkg, ReferenceFromMetadataOptions{})

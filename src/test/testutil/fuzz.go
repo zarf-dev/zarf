@@ -9,13 +9,17 @@ import (
 	"reflect"
 )
 
-// FillValue recursively populates v with random, non-zero values for round-trip fuzz tests. Struct
-// fields that cannot be set via reflection (unexported) are left zero. Pointers are left nil roughly
-// half the time so both the set and unset states are exercised.
+// FillValue recursively populates v for round-trip fuzz tests. Struct fields that cannot be set via
+// reflection (unexported) are left zero. Pointers are generated as nil, empty, or populated so
+// their presence is tested independently from their contents.
 func FillValue(v reflect.Value, rng *rand.Rand) {
 	switch v.Kind() {
 	case reflect.Pointer:
-		if rng.Intn(2) == 0 {
+		switch rng.Intn(3) {
+		case 0:
+			return
+		case 1:
+			v.Set(reflect.New(v.Type().Elem()))
 			return
 		}
 		v.Set(reflect.New(v.Type().Elem()))

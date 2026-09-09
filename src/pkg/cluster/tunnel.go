@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"strings"
@@ -578,12 +579,17 @@ func (tunnel *Tunnel) getAttachablePodForService(ctx context.Context) (string, e
 	// status.phase=Running alone isn't enough: a pod stays "Running" throughout its
 	// graceful termination (e.g. mid-rollout), so without also checking these, a
 	// port-forward can bind to a pod that's already on its way out.
+	readyPods := make([]corev1.Pod, 0, len(podList.Items))
 	for _, pod := range podList.Items {
-		if pod.DeletionTimestamp == nil && podutils.IsPodReady(&pod) {
-			return pod.Name, nil
+		if pod.DeletionTimestamp != nil || !podutils.IsPodReady(&pod) {
+			continue
 		}
+		readyPods = append(readyPods, pod)
 	}
-	return "", fmt.Errorf("no ready pods found for service %s", tunnel.resourceName)
+	if len(readyPods) == 0 {
+		return "", fmt.Errorf("no ready pods found for service %s", tunnel.resourceName)
+	}
+	return readyPods[rand.IntN(len(readyPods))].Name, nil
 }
 
 // Inspired by https://github.com/kubernetes/kubernetes/blob/1ee1ff97fb7f9755a44d29bee0c80d2ccbed68dc/staging/src/k8s.io/kubectl/pkg/cmd/portforward/portforward.go#L139-L156

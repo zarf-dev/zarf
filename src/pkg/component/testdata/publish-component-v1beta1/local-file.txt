@@ -1,0 +1,1 @@
+This local file is published with the component.

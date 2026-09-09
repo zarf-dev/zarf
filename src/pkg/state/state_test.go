@@ -17,12 +17,35 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 )
 
-func TestAgentIsConfigured(t *testing.T) {
+func TestAgentInfoIsConfigured(t *testing.T) {
 	t.Parallel()
 
-	require.False(t, (&State{}).AgentIsConfigured())
-	require.False(t, (&State{AgentTLS: pki.GeneratedPKI{CA: []byte("ca"), Key: []byte("key")}}).AgentIsConfigured())
-	require.True(t, (&State{AgentTLS: pki.GeneratedPKI{Cert: []byte("cert")}}).AgentIsConfigured())
+	require.False(t, (AgentInfo{}).IsConfigured())
+	require.False(t, (AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Key: []byte("key")}}).IsConfigured())
+	require.False(t, (AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Cert: []byte("cert")}}).IsConfigured())
+	require.True(t, (AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Cert: []byte("cert"), Key: []byte("key")}}).IsConfigured())
+}
+
+func TestStateReconcile(t *testing.T) {
+	t.Parallel()
+
+	legacyTLS := pki.GeneratedPKI{Cert: []byte("legacy-cert")}
+	s := State{
+		AgentTLS:             legacyTLS,
+		AgentTLSUserProvided: true,
+		AgentMutationPolicy:  MutationPolicyLabeled,
+		RegistryInfo: RegistryInfo{
+			NodePort: 1234,
+		},
+	}
+
+	s.Reconcile()
+
+	require.Equal(t, legacyTLS, s.AgentInfo.TLS)
+	require.True(t, s.AgentInfo.TLSUserProvided)
+	require.Equal(t, MutationPolicyLabeled, s.AgentInfo.MutationPolicy)
+	require.Equal(t, 1234, s.RegistryInfo.Port)
+	require.Equal(t, 1234, s.RegistryInfo.NodePort)
 }
 
 func TestRegistryInfoKnownPlainHTTP(t *testing.T) {
@@ -491,14 +514,14 @@ func TestMergeStateAgent(t *testing.T) {
 		agentTLS, err := pki.GeneratePKI("example.com")
 		require.NoError(t, err)
 		oldState := &State{
-			AgentTLS: agentTLS,
+			AgentInfo: AgentInfo{TLS: agentTLS},
 		}
 		newState, err := Merge(oldState, MergeOptions{
 			Services: NewServiceSet(AgentKey),
 		})
 		require.NoError(t, err)
-		require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
-		require.False(t, newState.AgentTLSUserProvided)
+		require.NotEqual(t, oldState.AgentInfo.TLS, newState.AgentInfo.TLS)
+		require.False(t, newState.AgentInfo.TLSUserProvided)
 	})
 
 	t.Run("user-provided certs are used and provenance is set", func(t *testing.T) {
@@ -514,22 +537,24 @@ func TestMergeStateAgent(t *testing.T) {
 			AgentTLS: &userTLS,
 		})
 		require.NoError(t, err)
-		require.Equal(t, userTLS, newState.AgentTLS)
-		require.True(t, newState.AgentTLSUserProvided)
+		require.Equal(t, userTLS, newState.AgentInfo.TLS)
+		require.True(t, newState.AgentInfo.TLSUserProvided)
 	})
 
 	t.Run("auto-generate resets user-provided provenance", func(t *testing.T) {
 		t.Parallel()
 		oldState := &State{
-			AgentTLS:             pki.GeneratedPKI{CA: []byte("old-ca")},
-			AgentTLSUserProvided: true,
+			AgentInfo: AgentInfo{
+				TLS:             pki.GeneratedPKI{CA: []byte("old-ca")},
+				TLSUserProvided: true,
+			},
 		}
 		newState, err := Merge(oldState, MergeOptions{
 			Services: NewServiceSet(AgentKey),
 		})
 		require.NoError(t, err)
-		require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
-		require.False(t, newState.AgentTLSUserProvided)
+		require.NotEqual(t, oldState.AgentInfo.TLS, newState.AgentInfo.TLS)
+		require.False(t, newState.AgentInfo.TLSUserProvided)
 	})
 }
 

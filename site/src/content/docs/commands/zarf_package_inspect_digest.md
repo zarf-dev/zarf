@@ -25,7 +25,7 @@ zarf package inspect digest [ PACKAGE_SOURCE ] [flags]
 # Get the digest of a local package tarball
 $ zarf package inspect digest zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Get the digest of a package in an OCI registry (requires oci:// scheme; resolved directly from the registry)
+# Get the digest of a package in an OCI registry (oci:// prefix optional; resolved directly from the registry)
 $ zarf package inspect digest oci://ghcr.io/my-org/my-package:1.0.0
 
 # Get the stored digest of a package already deployed to a cluster

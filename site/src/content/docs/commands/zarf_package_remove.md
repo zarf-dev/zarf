@@ -28,7 +28,7 @@ $ zarf package remove my-package --confirm
 # Remove using a local package tarball (package name is read from the tarball)
 $ zarf package remove zarf-package-my-app-amd64-1.0.0.tar.zst --confirm
 
-# Remove using a package from an OCI registry (requires oci:// scheme)
+# Remove using a package from an OCI registry (oci:// prefix optional)
 $ zarf package remove oci://ghcr.io/my-org/my-package:1.0.0 --confirm
 
 ```

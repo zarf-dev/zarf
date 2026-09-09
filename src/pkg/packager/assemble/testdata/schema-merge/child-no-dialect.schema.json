@@ -1,7 +1,0 @@
-{
-  "type": "object",
-  "required": ["appName"],
-  "properties": {
-    "appName": { "type": "string" }
-  }
-}

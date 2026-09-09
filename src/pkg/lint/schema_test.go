@@ -295,6 +295,27 @@ func TestV1Beta1SourceOneOfSchema(t *testing.T) {
 			}),
 			valid: false,
 		},
+		{
+			name: "component import accepts local sources",
+			doc: baseDoc(map[string]any{
+				"name": "component",
+				"import": map[string]any{
+					"local": []any{map[string]any{"path": "component.yaml"}},
+				},
+			}),
+			valid: true,
+		},
+		{
+			name: "component import rejects local and remote sources",
+			doc: baseDoc(map[string]any{
+				"name": "component",
+				"import": map[string]any{
+					"local":  []any{map[string]any{"path": "component.yaml"}},
+					"remote": []any{map[string]any{"url": "oci://example.com/component"}},
+				},
+			}),
+			valid: false,
+		},
 	}
 
 	for _, tt := range tests {

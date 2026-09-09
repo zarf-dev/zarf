@@ -340,7 +340,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string, v *viper.Vip
 	}
 
 	if services.Has(state.AgentKey) {
-		if oldState.AgentTLSUserProvided && o.agentTLSCAPath == "" {
+		if oldState.AgentInfo.TLSUserProvided && o.agentTLSCAPath == "" {
 			return fmt.Errorf("current agent TLS certificates are user-provided; provide --agent-tls-ca, --agent-tls-cert, and --agent-tls-key to update them, or explicitly define service list without `agent`")
 		}
 		if o.agentTLSCAPath != "" {
@@ -486,9 +486,9 @@ func printCredentialUpdates(ctx context.Context, oldState *state.State, newState
 		l.Info("artifact server push token", "changed", oA.PushToken != nA.PushToken)
 	}
 	if services.Has(state.AgentKey) {
-		oT := oldState.AgentTLS
-		nT := newState.AgentTLS
-		l.Info("agent TLS source", "userProvided", newState.AgentTLSUserProvided)
+		oT := oldState.AgentInfo.TLS
+		nT := newState.AgentInfo.TLS
+		l.Info("agent TLS source", "userProvided", newState.AgentInfo.TLSUserProvided)
 		l.Info("agent certificate authority", "changed", string(oT.CA) != string(nT.CA))
 		l.Info("agent public certificate", "changed", string(oT.Cert) != string(nT.Cert))
 		l.Info("agent private key", "changed", string(oT.Key) != string(nT.Key))
@@ -796,12 +796,12 @@ func (o *updateAgentCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if !oldState.AgentIsConfigured() {
+	if !oldState.AgentInfo.IsConfigured() {
 		return errors.New("no agent is configured in the Zarf state; nothing to update")
 	}
 
 	opts := state.MergeOptions{Services: state.NewServiceSet(state.AgentKey)}
-	if oldState.AgentTLSUserProvided && o.agentTLSCAPath == "" {
+	if oldState.AgentInfo.TLSUserProvided && o.agentTLSCAPath == "" {
 		return fmt.Errorf("current agent TLS certificates are user-provided; provide --agent-tls-ca, --agent-tls-cert, and --agent-tls-key to update them")
 	}
 	if o.agentTLSCAPath != "" {
