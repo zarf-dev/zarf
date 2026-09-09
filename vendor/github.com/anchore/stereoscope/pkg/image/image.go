@@ -352,7 +352,7 @@ func (i *Image) FileContentsByRef(ref file.Reference) (io.ReadCloser, error) {
 	return i.FileCatalog.Open(ref)
 }
 
-// ResolveLinkByLayerSquash resolves a symlink or hardlink for the given file reference relative to the result from
+// ResolveLinkByLayerSquash resolves a symlink for the given file reference relative to the result from
 // the layer squash of the given layer index argument.
 // If the given file reference is not a link type, or is a unresolvable (dead) link, then the given file reference is returned.
 func (i *Image) ResolveLinkByLayerSquash(ref file.Reference, layer int, options ...filetree.LinkResolutionOption) (*file.Resolution, error) {
@@ -361,7 +361,7 @@ func (i *Image) ResolveLinkByLayerSquash(ref file.Reference, layer int, options 
 	return resolvedRef, err
 }
 
-// ResolveLinkByImageSquash resolves a symlink or hardlink for the given file reference relative to the result from the image squash.
+// ResolveLinkByImageSquash resolves a symlink for the given file reference relative to the result from the image squash.
 // If the given file reference is not a link type, or is a unresolvable (dead) link, then the given file reference is returned.
 func (i *Image) ResolveLinkByImageSquash(ref file.Reference, options ...filetree.LinkResolutionOption) (*file.Resolution, error) {
 	allOptions := append([]filetree.LinkResolutionOption{filetree.FollowBasenameLinks}, options...)
