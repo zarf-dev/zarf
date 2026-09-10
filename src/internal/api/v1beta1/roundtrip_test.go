@@ -17,6 +17,11 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
+// defaultFuzzIterations specifies number of fuzzing iterations, higher number
+// will quickly raise the time needed to run them. The 20 iterations balances
+// time (currently <20s) with coverage.
+const defaultFuzzIterations = 20
+
 // TestConvertGenericRoundTripLossless asserts that a v1beta1 package converted to the generic
 // representation and back reproduces the original exactly. layout and zoci load built packages
 // through this round-trip, so any drift would change packages across build hosts.
@@ -194,7 +199,7 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 	t.Parallel()
 
 	rng := rand.New(rand.NewSource(1))
-	for i := range 1000 {
+	for i := range defaultFuzzIterations {
 		var pkg v1beta1.Package
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
 
@@ -253,7 +258,7 @@ func TestConvertV1beta1V1alpha1RoundTripFuzz(t *testing.T) {
 	t.Parallel()
 
 	rng := rand.New(rand.NewSource(1))
-	for i := range 1000 {
+	for i := range defaultFuzzIterations {
 		var pkg v1beta1.Package
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
 		// Valid repository url with only one source so that it can roundtrip
