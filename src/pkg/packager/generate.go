@@ -10,11 +10,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -42,7 +42,7 @@ func Generate(ctx context.Context, packageName, url, version string, opts Genera
 	l := logger.From(ctx)
 	generatedComponent := v1alpha1.ZarfComponent{
 		Name:     packageName,
-		Required: helpers.BoolPtr(true),
+		Required: new(true),
 		Charts: []v1alpha1.ZarfChart{
 			{
 				Name:      packageName,

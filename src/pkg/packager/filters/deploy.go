@@ -11,8 +11,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/agnivade/levenshtein"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/pterm/pterm"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )

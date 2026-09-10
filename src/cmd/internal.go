@@ -8,11 +8,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 	"github.com/spf13/pflag"
@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
@@ -421,6 +422,6 @@ func newInternalCrc32Command() *cobra.Command {
 
 func (o *internalCrc32Options) run(_ *cobra.Command, args []string) {
 	text := args[0]
-	hash := helpers.GetCRCHash(text)
+	hash := crc32.ChecksumIEEE([]byte(text))
 	fmt.Printf("%d\n", hash)
 }

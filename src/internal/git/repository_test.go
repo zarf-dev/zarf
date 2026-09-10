@@ -5,6 +5,7 @@ package git
 
 import (
 	"fmt"
+	"hash/crc32"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -19,8 +20,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/stretchr/testify/require"
-
-	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -44,7 +43,7 @@ func TestRepository(t *testing.T) {
 	rootPath := t.TempDir()
 	repoName := "test"
 	repoAddress := fmt.Sprintf("%s/%s.git", srv.URL, repoName)
-	checksum := helpers.GetCRCHash(repoAddress)
+	checksum := crc32.ChecksumIEEE([]byte(repoAddress))
 	expectedPath := fmt.Sprintf("%s-%d", repoName, checksum)
 
 	storer := memory.NewStorage()
