@@ -67,7 +67,7 @@ func newTestLayout(t *testing.T) (*PackageLayout, []byte) {
 
 	p := &PackageLayout{
 		dirPath: dir,
-		PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+		Package: packageDefinition(v1alpha1.ZarfPackage{
 			Metadata: v1alpha1.ZarfMetadata{Name: "test-pkg", Version: "1.0.0"},
 			Build:    v1alpha1.ZarfBuildData{Architecture: "amd64"},
 		}),

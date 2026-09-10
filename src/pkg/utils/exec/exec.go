@@ -17,7 +17,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -28,6 +27,13 @@ type Config struct {
 	Dir            string
 	Env            []string
 	CommandPrinter func(format string, a ...any)
+}
+
+// Shell identifies the preferred command shell on each supported operating system.
+type Shell struct {
+	Windows string
+	Linux   string
+	Darwin  string
 }
 
 // PrintCfg is a helper function for returning a Config struct with Print set to true.
@@ -159,7 +165,8 @@ func LaunchURL(url string) error {
 }
 
 // GetOSShell returns the shell and shellArgs based on the current OS
-func GetOSShell(shellPref v1alpha1.Shell) (string, []string) {
+// FIXME: this should use the api shell
+func GetOSShell(shellPref Shell) (string, []string) {
 	var shell string
 	var shellArgs []string
 	powershellShellArgs := []string{"-Command", "$ErrorActionPreference = 'Stop';"}

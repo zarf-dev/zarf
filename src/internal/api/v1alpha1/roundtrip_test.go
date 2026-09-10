@@ -146,7 +146,7 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 	}
 	original.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
 
-	roundTripped := ConvertFromGeneric(ConvertToGeneric(original))
+	roundTripped := PackageToV1alpha1(PackageFromV1alpha1(original))
 	require.Equal(t, original, roundTripped)
 }
 
@@ -168,7 +168,7 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 		pkg.Kind = v1alpha1.ZarfPackageConfig
 		pkg.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
 
-		roundTripped := ConvertFromGeneric(ConvertToGeneric(pkg))
+		roundTripped := PackageToV1alpha1(PackageFromV1alpha1(pkg))
 		require.Equalf(t, pkg, roundTripped, "round-trip diverged on iteration %d", i)
 	}
 }
@@ -185,8 +185,8 @@ func TestConvertV1alpha1V1beta1RoundTripFuzz(t *testing.T) {
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
 		populateValidV1alpha1ChartSources(&pkg, rng, i)
 
-		v1beta1Pkg := internalv1beta1.ConvertFromGeneric(ConvertToGeneric(pkg))
-		roundTripped := ConvertFromGeneric(internalv1beta1.ConvertToGeneric(v1beta1Pkg))
+		v1beta1Pkg := internalv1beta1.PackageToV1beta1(PackageFromV1alpha1(pkg))
+		roundTripped := PackageToV1alpha1(internalv1beta1.PackageFromV1beta1(v1beta1Pkg))
 		require.Emptyf(t, cmp.Diff(pkg, roundTripped, v1alpha1V1beta1RoundTripExclusions()...), "cross-version round-trip diverged on iteration %d", i)
 	}
 }

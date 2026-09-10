@@ -23,6 +23,7 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -153,7 +154,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 			l.Warn("unable to close loaded package", "error", closeErr)
 		}
 	}()
-	pkg := loaded.Definition.AsV1alpha1()
+	pkg := convert.PackageToV1alpha1(loaded.Definition)
 
 	// Step 1: Merge default values.files to create initial set of default Zarf values
 	zarfValues := loaded.Values.DeepCopy()
@@ -365,11 +366,11 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 
 	// The definition is printed in the apiVersion it was authored in.
 	if definition.OriginalAPIVersion() == v1beta1.APIVersion {
-		pkg := definition.AsV1beta1()
+		pkg := convert.PackageToV1beta1(definition)
 		pkg.Build = v1beta1.BuildData{}
 		return utils.ColorPrintYAML(pkg, nil, false)
 	}
-	pkg := definition.AsV1alpha1()
+	pkg := convert.PackageToV1alpha1(definition)
 	pkg.Build = v1alpha1.ZarfBuildData{}
 	return utils.ColorPrintYAML(pkg, nil, false)
 }

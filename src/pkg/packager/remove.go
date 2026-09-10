@@ -24,6 +24,7 @@ import (
 
 	"helm.sh/helm/v4/pkg/storage/driver"
 
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
@@ -42,9 +43,9 @@ type RemoveOptions struct {
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
-func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOptions) error {
+func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) error {
 	l := logger.From(ctx)
-	pkg := definition.AsV1alpha1()
+	pkg := convert.PackageToV1alpha1(definition)
 
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
@@ -61,7 +62,8 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 	if err != nil {
 		return err
 	}
-	pkg = definition.AsV1alpha1()
+	pkg = convert.PackageToV1alpha1(definition)
+	normalizedPackage := definition
 
 	if len(pkg.Components) == 0 {
 		return fmt.Errorf("package to remove contains no components")
@@ -81,8 +83,15 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 	// Check that cluster is configured if required.
 	requiresCluster := false
 	componentIdx := map[string]v1alpha1.ZarfComponent{}
+	actionComponents := map[string]api.Component{}
+	for _, component := range normalizedPackage.Components {
+		actionComponents[component.Name] = component
+	}
 	for _, component := range pkg.Components {
 		componentIdx[component.Name] = component
+		if _, ok := actionComponents[component.Name]; !ok {
+			return fmt.Errorf("normalized package is missing component %q", component.Name)
+		}
 		if component.RequiresCluster() {
 			if opts.Cluster == nil {
 				return fmt.Errorf("component %s requires cluster access but none was configured", component.Name)
@@ -132,7 +141,8 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 
 		err := func() error {
 			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
-			err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil, vals, stateAccess)
+			onRemove := actionComponents[comp.Name].Actions.OnRemove
+			err := actions.Run(ctx, cwd, onRemove.Defaults, onRemove.Before, nil, vals, stateAccess)
 			if err != nil {
 				return fmt.Errorf("unable to run the before action: %w", err)
 			}
@@ -162,11 +172,11 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 				}
 			}
 
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil, vals, stateAccess)
+			err = actions.Run(ctx, cwd, onRemove.Defaults, onRemove.After, nil, vals, stateAccess)
 			if err != nil {
 				return fmt.Errorf("unable to run the after action: %w", err)
 			}
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil, vals, stateAccess)
+			err = actions.Run(ctx, cwd, onRemove.Defaults, onRemove.OnSuccess, nil, vals, stateAccess)
 			if err != nil {
 				return fmt.Errorf("unable to run the success action: %w", err)
 			}
@@ -186,7 +196,8 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 		}()
 		if err != nil {
 			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
-			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil, vals, stateAccess)
+			onRemove := actionComponents[comp.Name].Actions.OnRemove
+			removeErr := actions.Run(ctx, cwd, onRemove.Defaults, onRemove.OnFailure, nil, vals, stateAccess)
 			if removeErr != nil {
 				return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)
 			}

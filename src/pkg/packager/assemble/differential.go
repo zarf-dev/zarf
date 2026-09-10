@@ -9,23 +9,24 @@ import (
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
-func applyDifferentialResources(definition, previous api.PackageDefinition) (api.PackageDefinition, error) {
+func applyDifferentialResources(definition, previous api.Package) (api.Package, error) {
 	switch definition.OriginalAPIVersion() {
 	case v1beta1.APIVersion:
-		pkg := definition.AsV1beta1()
-		previousImages, previousRepos := v1beta1DifferentialResources(previous.AsV1beta1().Components)
+		pkg := convert.PackageToV1beta1(definition)
+		previousImages, previousRepos := v1beta1DifferentialResources(convert.PackageToV1beta1(previous).Components)
 		for componentIdx, component := range pkg.Components {
 			images := make([]v1beta1.Image, 0, len(component.Images))
 			for _, img := range component.Images {
 				includeImage, err := includeDifferentialImage(img.Name, previousImages)
 				if err != nil {
-					return api.PackageDefinition{}, err
+					return api.Package{}, err
 				}
 				if includeImage {
 					images = append(images, img)
@@ -41,16 +42,16 @@ func applyDifferentialResources(definition, previous api.PackageDefinition) (api
 			}
 			pkg.Components[componentIdx].Repositories = repos
 		}
-		return api.NewPackageDefinitionFromV1beta1(pkg), nil
+		return convert.PackageFromV1beta1(pkg), nil
 	case v1alpha1.APIVersion:
-		pkg := definition.AsV1alpha1()
-		previousImages, previousRepos := v1alpha1DifferentialResources(previous.AsV1alpha1().Components)
+		pkg := convert.PackageToV1alpha1(definition)
+		previousImages, previousRepos := v1alpha1DifferentialResources(convert.PackageToV1alpha1(previous).Components)
 		for componentIdx, component := range pkg.Components {
 			images := make([]string, 0, len(component.Images))
 			for _, img := range component.Images {
 				includeImage, err := includeDifferentialImage(img, previousImages)
 				if err != nil {
-					return api.PackageDefinition{}, err
+					return api.Package{}, err
 				}
 				if includeImage {
 					images = append(images, img)
@@ -62,7 +63,7 @@ func applyDifferentialResources(definition, previous api.PackageDefinition) (api
 			for _, repo := range component.Repos {
 				includeRepo, err := includeDifferentialRepository(repo, previousRepos)
 				if err != nil {
-					return api.PackageDefinition{}, err
+					return api.Package{}, err
 				}
 				if includeRepo {
 					repos = append(repos, repo)
@@ -70,9 +71,9 @@ func applyDifferentialResources(definition, previous api.PackageDefinition) (api
 			}
 			pkg.Components[componentIdx].Repos = repos
 		}
-		return api.NewPackageDefinitionFromV1alpha1(pkg), nil
+		return convert.PackageFromV1alpha1(pkg), nil
 	default:
-		return api.PackageDefinition{}, fmt.Errorf("unsupported original apiVersion %q", definition.OriginalAPIVersion())
+		return api.Package{}, fmt.Errorf("unsupported original apiVersion %q", definition.OriginalAPIVersion())
 	}
 }
 

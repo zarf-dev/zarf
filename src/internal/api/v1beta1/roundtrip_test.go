@@ -182,7 +182,7 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 	}
 	original.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
 
-	roundTripped := ConvertFromGeneric(ConvertToGeneric(original))
+	roundTripped := PackageToV1beta1(PackageFromV1beta1(original))
 	require.Equal(t, original, roundTripped)
 }
 
@@ -209,7 +209,7 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 			}
 		}
 
-		roundTripped := ConvertFromGeneric(ConvertToGeneric(pkg))
+		roundTripped := PackageToV1beta1(PackageFromV1beta1(pkg))
 		require.Equalf(t, pkg, roundTripped, "round-trip diverged on iteration %d", i)
 	}
 }
@@ -261,8 +261,8 @@ func TestConvertV1beta1V1alpha1RoundTripFuzz(t *testing.T) {
 		// Valid chart with one only source so it can round trip
 		populateValidV1beta1ChartSources(&pkg, rng, i)
 
-		v1alpha1Pkg := internalv1alpha1.ConvertFromGeneric(ConvertToGeneric(pkg))
-		roundTripped := ConvertFromGeneric(internalv1alpha1.ConvertToGeneric(v1alpha1Pkg))
+		v1alpha1Pkg := internalv1alpha1.PackageToV1alpha1(PackageFromV1beta1(pkg))
+		roundTripped := PackageToV1beta1(internalv1alpha1.PackageFromV1alpha1(v1alpha1Pkg))
 		require.Emptyf(t, cmp.Diff(pkg, roundTripped, v1beta1V1alpha1RoundTripExclusions()...), "cross-version round-trip diverged on iteration %d", i)
 	}
 }

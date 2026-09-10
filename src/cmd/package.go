@@ -27,6 +27,7 @@ import (
 	"github.com/spf13/viper"
 	"oras.land/oras-go/v2/registry"
 
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -432,7 +433,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
 	if opts.NamespaceOverride != "" {
-		if err := pkgLayout.PackageDefinition.OverrideNamespace(opts.NamespaceOverride); err != nil {
+		if err := pkgLayout.Package.OverrideNamespace(opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
@@ -447,11 +448,11 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 			filters.ByLocalOS(runtime.GOOS),
 			filters.ForDeploy(optionalComponents, true),
 		)
-		definition, err := filters.Apply(pkgLayout.PackageDefinition, filter)
+		definition, err := filters.Apply(pkgLayout.Package, filter)
 		if err != nil {
 			return nil, err
 		}
-		pkgLayout.PackageDefinition = definition
+		pkgLayout.Package = definition
 	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)
@@ -1151,7 +1152,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	}
 
 	images := make([]string, 0)
-	for _, component := range pkg.AsV1alpha1().Components {
+	for _, component := range convert.PackageToV1alpha1(pkg).Components {
 		images = append(images, component.GetImages()...)
 	}
 	images = helpers.Unique(images)
@@ -1284,7 +1285,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	err = utils.ColorPrintYAML(pkg.AsV1alpha1(), nil, false)
+	err = utils.ColorPrintYAML(convert.PackageToV1alpha1(pkg), nil, false)
 	if err != nil {
 		return err
 	}
@@ -1478,7 +1479,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		SkipVersionCheck:  o.skipVersionCheck,
 		Values:            vals,
 	}
-	legacyPkg := pkg.AsV1alpha1()
+	legacyPkg := convert.PackageToV1alpha1(pkg)
 	logger.From(ctx).Info("loaded package for removal", "name", legacyPkg.Metadata.Name)
 	err = utils.ColorPrintYAML(legacyPkg, nil, false)
 	if err != nil {

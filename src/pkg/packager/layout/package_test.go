@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
@@ -25,8 +26,8 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func packageDefinition(pkg v1alpha1.ZarfPackage) api.PackageDefinition {
-	return api.NewPackageDefinitionFromV1alpha1(pkg)
+func packageDefinition(pkg v1alpha1.ZarfPackage) api.Package {
+	return convert.PackageFromV1alpha1(pkg)
 }
 
 func verifyOptsFromKey(keyPath string) *signing.VerifyBlobOptions {
@@ -328,7 +329,7 @@ func TestPackageFileName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			layout := PackageLayout{PackageDefinition: packageDefinition(tt.pkg)}
+			layout := PackageLayout{Package: packageDefinition(tt.pkg)}
 			actual, err := layout.FileName()
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
@@ -353,8 +354,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -379,8 +380,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -397,8 +398,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 	t.Run("missing zarf.yaml", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -412,8 +413,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 
 	t.Run("invalid directory path", func(t *testing.T) {
 		pkgLayout := &PackageLayout{
-			dirPath:           "/nonexistent/path",
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: "/nonexistent/path",
+			Package: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -427,8 +428,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 
 	t.Run("empty dirPath", func(t *testing.T) {
 		pkgLayout := &PackageLayout{
-			dirPath:           "",
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: "",
+			Package: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -453,8 +454,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -496,8 +497,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoFileExists(t, bundlePath)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -522,8 +523,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		// Empty options - no signing key material configured
@@ -544,8 +545,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           filePath,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: filePath,
+			Package: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -566,8 +567,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -594,8 +595,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		// Wrong password should cause signing to fail
@@ -620,7 +621,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		existingSigned := false
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+			Package: packageDefinition(v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
 					Signed: &existingSigned,
 				},
@@ -656,8 +657,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		}
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(initialPkg),
+			dirPath: tmpDir,
+			Package: packageDefinition(initialPkg),
 		}
 
 		// Marshal and write initial package (without signed field)
@@ -722,7 +723,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				existingSigned := false
 				layout := &PackageLayout{
 					dirPath: tmpDir,
-					PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+					Package: packageDefinition(v1alpha1.ZarfPackage{
 						APIVersion: v1alpha1.APIVersion,
 						Build: v1alpha1.ZarfBuildData{
 							Signed: &existingSigned,
@@ -751,7 +752,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				existingSigned := true
 				layout := &PackageLayout{
 					dirPath: tmpDir,
-					PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+					Package: packageDefinition(v1alpha1.ZarfPackage{
 						APIVersion: v1alpha1.APIVersion,
 						Build: v1alpha1.ZarfBuildData{
 							Signed: &existingSigned,
@@ -778,8 +779,8 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 				layout := &PackageLayout{
-					dirPath:           tmpDir,
-					PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+					dirPath: tmpDir,
+					Package: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 				}
 
 				opts := signing.DefaultSignBlobOptions()
@@ -800,8 +801,8 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
 
 				layout := &PackageLayout{
-					dirPath:           tmpDir,
-					PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+					dirPath: tmpDir,
+					Package: packageDefinition(v1alpha1.ZarfPackage{}),
 				}
 
 				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
@@ -827,7 +828,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 
 				layout := &PackageLayout{
 					dirPath: tmpDir,
-					PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+					Package: packageDefinition(v1alpha1.ZarfPackage{
 						APIVersion: v1alpha1.APIVersion,
 						Metadata:   v1alpha1.ZarfMetadata{},
 						Build:      v1alpha1.ZarfBuildData{},
@@ -896,8 +897,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		signOpts := signing.DefaultSignBlobOptions()
@@ -925,8 +926,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		// Sign with the test key
@@ -954,8 +955,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		verifyOpts := signing.DefaultVerifyBlobOptions()
@@ -968,8 +969,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 	t.Run("verification fails with empty dirPath", func(t *testing.T) {
 		pkgLayout := &PackageLayout{
-			dirPath:           "",
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: "",
+			Package: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		verifyOpts := signing.DefaultVerifyBlobOptions()
@@ -981,8 +982,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 	t.Run("verification fails with invalid directory", func(t *testing.T) {
 		pkgLayout := &PackageLayout{
-			dirPath:           "/nonexistent/path",
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: "/nonexistent/path",
+			Package: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		verifyOpts := signing.DefaultVerifyBlobOptions()
@@ -1000,8 +1001,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           filePath,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: filePath,
+			Package: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		verifyOpts := signing.DefaultVerifyBlobOptions()
@@ -1022,8 +1023,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		// Sign the package
@@ -1053,8 +1054,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		// Sign the package
@@ -1092,8 +1093,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		// Sign the package
@@ -1142,7 +1143,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signed := true
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+			Package: packageDefinition(v1alpha1.ZarfPackage{
 				APIVersion: v1alpha1.APIVersion,
 				Build:      v1alpha1.ZarfBuildData{Signed: &signed},
 			}),
@@ -1166,8 +1167,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		signOpts := signing.DefaultSignBlobOptions()
@@ -1218,8 +1219,8 @@ func TestGetDocumentation(t *testing.T) {
 		}
 
 		pkgLayout := &PackageLayout{
-			dirPath:           pkgDir,
-			PackageDefinition: packageDefinition(pkg),
+			dirPath: pkgDir,
+			Package: packageDefinition(pkg),
 		}
 
 		outputDir := filepath.Join(tmpDir, "output")
@@ -1366,8 +1367,8 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		if signed {
 			// Sign the package
 			pkgLayout := &PackageLayout{
-				dirPath:           pkgDir,
-				PackageDefinition: packageDefinition(pkg),
+				dirPath: pkgDir,
+				Package: packageDefinition(pkg),
 			}
 
 			signOpts := signing.DefaultSignBlobOptions()
@@ -1774,7 +1775,7 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+			Package: packageDefinition(v1alpha1.ZarfPackage{
 				APIVersion: v1alpha1.APIVersion,
 				Build: v1alpha1.ZarfBuildData{
 					ProvenanceFiles: []string{Checksums},
@@ -1804,7 +1805,7 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 		original := []string{Checksums}
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+			Package: packageDefinition(v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
 					ProvenanceFiles: original,
 				},
@@ -1972,8 +1973,8 @@ func TestHasValuesSchema(t *testing.T) {
 		dir := t.TempDir()
 		require.NoError(t, os.WriteFile(filepath.Join(dir, ValuesSchema), []byte(`{}`), 0o600))
 		p := &PackageLayout{
-			dirPath:           dir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}), // Values.Schema is ""
+			dirPath: dir,
+			Package: packageDefinition(v1alpha1.ZarfPackage{}), // Values.Schema is ""
 		}
 		require.True(t, p.HasValuesSchema(), "file on disk should take precedence over empty metadata field")
 	})

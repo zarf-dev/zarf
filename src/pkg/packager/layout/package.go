@@ -19,6 +19,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -34,10 +35,10 @@ import (
 // PackageLayout manages the layout for a package.
 type PackageLayout struct {
 	dirPath string
-	// PackageDefinition is the parsed package definition for this layout.
-	PackageDefinition api.PackageDefinition
-	digest            string
-	cache             *manifestCache
+	// Package is the parsed version-neutral package for this layout.
+	Package api.Package
+	digest  string
+	cache   *manifestCache
 }
 
 // Digest returns the OCI manifest digest for this package layout.
@@ -47,12 +48,12 @@ func (p *PackageLayout) Digest() string {
 
 // AsV1alpha1 returns the package definition as a v1alpha1 ZarfPackage.
 func (p *PackageLayout) AsV1alpha1() v1alpha1.ZarfPackage {
-	return p.PackageDefinition.AsV1alpha1()
+	return convert.PackageToV1alpha1(p.Package)
 }
 
 // AsV1beta1 returns the package definition as a v1beta1 Package.
 func (p *PackageLayout) AsV1beta1() v1beta1.Package {
-	return p.PackageDefinition.AsV1beta1()
+	return convert.PackageToV1beta1(p.Package)
 }
 
 // PackageLayoutOptions are the options used when loading a package.
@@ -81,15 +82,15 @@ const (
 )
 
 // MarshalPackageDefinition returns deterministic zarf.yaml bytes for a package definition.
-func MarshalPackageDefinition(definition api.PackageDefinition) ([]byte, error) {
-	alpha, err := goyaml.Marshal(definition.AsV1alpha1())
+func MarshalPackageDefinition(definition api.Package) ([]byte, error) {
+	alpha, err := goyaml.Marshal(convert.PackageToV1alpha1(definition))
 	if err != nil {
 		return nil, err
 	}
 	if definition.OriginalAPIVersion() != v1beta1.APIVersion {
 		return alpha, nil
 	}
-	beta, err := goyaml.Marshal(definition.AsV1beta1())
+	beta, err := goyaml.Marshal(convert.PackageToV1beta1(definition))
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func MarshalPackageDefinition(definition api.PackageDefinition) ([]byte, error) 
 }
 
 // WritePackageDefinition writes a deterministic zarf.yaml file for a package definition.
-func WritePackageDefinition(path string, definition api.PackageDefinition) error {
+func WritePackageDefinition(path string, definition api.Package) error {
 	b, err := MarshalPackageDefinition(definition)
 	if err != nil {
 		return err
@@ -161,8 +162,8 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 		return nil, err
 	}
 	pkgLayout := &PackageLayout{
-		dirPath:           dirPath,
-		PackageDefinition: definition,
+		dirPath: dirPath,
+		Package: definition,
 	}
 	err = validatePackageIntegrity(pkgLayout, opts.IsPartial)
 	if err != nil {
@@ -263,7 +264,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		return fmt.Errorf("cannot access %s for signing: %w", ZarfYAML, err)
 	}
 
-	originalDefinition := p.PackageDefinition
+	originalDefinition := p.Package
 
 	// Create temporary directory for signing
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -277,19 +278,19 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 	tmpZarfYAMLPath := filepath.Join(tmpDir, ZarfYAML)
 	tmpBundlePath := filepath.Join(tmpDir, Bundle)
 
-	definition := p.PackageDefinition
+	definition := p.Package
 	definition.SetBuildSigned(true)
 	definition.AddProvenanceFile(Bundle)
 	definition.AddVersionRequirement(api.VersionRequirement{
 		Version: "v0.71.0",
 		Reason:  "This package contains a bundle format signature which requires Zarf v0.71.0 or later",
 	})
-	p.PackageDefinition = definition
+	p.Package = definition
 
 	// Consolidated in-memory rollback — fires on any error exit via named return.
 	defer func() {
 		if err != nil {
-			p.PackageDefinition = originalDefinition
+			p.Package = originalDefinition
 		}
 	}()
 

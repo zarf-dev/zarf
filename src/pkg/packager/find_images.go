@@ -19,6 +19,7 @@ import (
 	flux "github.com/fluxcd/source-controller/api/v1"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -118,7 +119,7 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
-	pkg := loaded.Definition.AsV1alpha1()
+	pkg := convert.PackageToV1alpha1(loaded.Definition)
 	imageScans, err := findImages(ctx, pkg, loaded.Resources, loaded.Values, opts)
 	if err != nil {
 		return nil, err
@@ -152,7 +153,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
-	pkg := loaded.Definition.AsV1alpha1()
+	pkg := convert.PackageToV1alpha1(loaded.Definition)
 
 	return findImages(ctx, pkg, loaded.Resources, loaded.Values, opts)
 }

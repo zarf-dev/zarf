@@ -9,22 +9,22 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	"github.com/zarf-dev/zarf/src/internal/api/types"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
-// ConvertToGeneric converts a v1beta1 Package to the internal generic representation.
-func ConvertToGeneric(pkg v1beta1.Package) types.Package {
+// PackageFromV1beta1 converts a v1beta1 Package to the internal generic representation.
+func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 	// Carry the equivalent v1alpha1 AllowNamespaceOverride pointer so conversions to v1alpha1
 	// produce an explicit value rather than relying on a projection.
 	allowNamespaceOverride := !pkg.Metadata.PreventNamespaceOverride
-	g := types.Package{
+	g := api.Package{
 		APIVersion: pkg.APIVersion,
 		Kind:       string(pkg.Kind),
-		Metadata: types.PackageMetadata{
+		Metadata: api.PackageMetadata{
 			Name:                     pkg.Metadata.Name,
 			Description:              pkg.Metadata.Description,
 			Version:                  pkg.Metadata.Version,
@@ -34,7 +34,7 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 			PreventNamespaceOverride: pkg.Metadata.PreventNamespaceOverride,
 			AllowNamespaceOverride:   &allowNamespaceOverride,
 		},
-		Build: types.BuildData{
+		Build: api.BuildData{
 			Hostname:                   pkg.Build.Hostname,
 			User:                       pkg.Build.User,
 			Architecture:               pkg.Build.Architecture,
@@ -50,7 +50,7 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 			AggregateChecksum:          pkg.Build.AggregateChecksum,
 			OriginalAPIVersion:         pkg.Build.GetOriginalAPIVersion(),
 		},
-		Values: types.Values{
+		Values: api.Values{
 			Files:  pkg.Values.Files,
 			Schema: pkg.Values.Schema,
 		},
@@ -58,7 +58,7 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 	}
 
 	for _, vr := range pkg.Build.VersionRequirements {
-		g.Build.VersionRequirements = append(g.Build.VersionRequirements, types.VersionRequirement{
+		g.Build.VersionRequirements = append(g.Build.VersionRequirements, api.VersionRequirement{
 			Version: vr.Version,
 			Reason:  vr.Reason,
 		})
@@ -71,15 +71,15 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 	return g
 }
 
-func componentToGeneric(c v1beta1.Component) types.Component {
-	gc := types.Component{
+func componentToGeneric(c v1beta1.Component) api.Component {
+	gc := api.Component{
 		Name:         c.Name,
 		Description:  c.Description,
 		Optional:     c.Optional,
 		Service:      string(c.Service),
 		Repositories: repositoriesToGeneric(c.Repositories),
 		StateAccess:  stateAccessToGeneric(c.StateAccess),
-		Target: types.ComponentTarget{
+		Target: api.ComponentTarget{
 			OS:           c.Target.OS,
 			Architecture: c.Selector.Architecture,
 			Flavor:       c.Selector.Flavor,
@@ -97,7 +97,7 @@ func componentToGeneric(c v1beta1.Component) types.Component {
 	}
 
 	for _, f := range c.Files {
-		gc.Files = append(gc.Files, types.File{
+		gc.Files = append(gc.Files, api.File{
 			Source:           f.Source,
 			Checksum:         f.Checksum,
 			Destination:      f.Destination,
@@ -109,14 +109,14 @@ func componentToGeneric(c v1beta1.Component) types.Component {
 	}
 
 	for _, img := range c.Images {
-		gc.Images = append(gc.Images, types.Image{
+		gc.Images = append(gc.Images, api.Image{
 			Name:   img.Name,
 			Source: img.Source,
 		})
 	}
 
 	for _, ia := range c.ImageArchives {
-		gc.ImageArchives = append(gc.ImageArchives, types.ImageArchive{
+		gc.ImageArchives = append(gc.ImageArchives, api.ImageArchive{
 			Path:   ia.Path,
 			Images: ia.Images,
 		})
@@ -125,19 +125,19 @@ func componentToGeneric(c v1beta1.Component) types.Component {
 	return gc
 }
 
-func importToGeneric(imp v1beta1.ComponentImport) types.ComponentImport {
-	out := types.ComponentImport{}
+func importToGeneric(imp v1beta1.ComponentImport) api.ComponentImport {
+	out := api.ComponentImport{}
 	for _, l := range imp.Local {
-		out.Local = append(out.Local, types.ComponentImportLocal{Path: l.Path})
+		out.Local = append(out.Local, api.ComponentImportLocal{Path: l.Path})
 	}
 	for _, r := range imp.Remote {
-		out.Remote = append(out.Remote, types.ComponentImportRemote{URL: r.URL})
+		out.Remote = append(out.Remote, api.ComponentImportRemote{URL: r.URL})
 	}
 	return out
 }
 
-func manifestToGeneric(m v1beta1.Manifest) types.Manifest {
-	gm := types.Manifest{
+func manifestToGeneric(m v1beta1.Manifest) api.Manifest {
+	gm := api.Manifest{
 		Name:             m.Name,
 		Namespace:        m.Namespace,
 		Files:            m.Files,
@@ -146,7 +146,7 @@ func manifestToGeneric(m v1beta1.Manifest) types.Manifest {
 		EnableTemplating: m.EnableTemplating,
 	}
 	if m.Kustomize != nil {
-		gm.Kustomize = &types.KustomizeManifest{
+		gm.Kustomize = &api.KustomizeManifest{
 			Files:             m.Kustomize.Files,
 			AllowAnyDirectory: m.Kustomize.AllowAnyDirectory,
 			EnablePlugins:     m.Kustomize.EnablePlugins,
@@ -155,8 +155,8 @@ func manifestToGeneric(m v1beta1.Manifest) types.Manifest {
 	return gm
 }
 
-func chartToGeneric(ch v1beta1.Chart) types.Chart {
-	gc := types.Chart{
+func chartToGeneric(ch v1beta1.Chart) api.Chart {
+	gc := api.Chart{
 		Name:                 ch.Name,
 		Namespace:            ch.Namespace,
 		ReleaseName:          ch.ReleaseName,
@@ -167,31 +167,31 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 	}
 
 	if ch.HelmRepository != nil {
-		gc.HelmRepository = &types.HelmRepositorySource{
+		gc.HelmRepository = &api.HelmRepositorySource{
 			Name:    ch.HelmRepository.Name,
 			URL:     ch.HelmRepository.URL,
 			Version: ch.HelmRepository.Version,
 		}
 	}
 	if ch.Git != nil {
-		gc.Git = &types.GitSource{
+		gc.Git = &api.GitSource{
 			URL:  ch.Git.URL,
 			Path: ch.Git.Path,
 			Ref:  gitRefToGeneric(ch.Git.Ref),
 		}
 	}
 	if ch.Local != nil {
-		gc.Local = &types.LocalSource{Path: ch.Local.Path}
+		gc.Local = &api.LocalSource{Path: ch.Local.Path}
 	}
 	if ch.OCI != nil {
-		gc.OCI = &types.OCISource{
+		gc.OCI = &api.OCISource{
 			URL: ch.OCI.URL,
 			Ref: ociRefToGeneric(ch.OCI.Ref),
 		}
 	}
 
 	for _, v := range ch.Values {
-		gc.Values = append(gc.Values, types.ChartValue{
+		gc.Values = append(gc.Values, api.ChartValue{
 			SourcePath:   v.SourcePath,
 			TargetPath:   v.TargetPath,
 			ExcludePaths: v.ExcludePaths,
@@ -201,34 +201,35 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 	return gc
 }
 
-func actionsToGeneric(a v1beta1.ComponentActions) types.ComponentActions {
-	return types.ComponentActions{
+func actionsToGeneric(a v1beta1.ComponentActions) api.ComponentActions {
+	return api.ComponentActions{
 		OnCreate: actionSetToGeneric(a.OnCreate),
 		OnDeploy: actionSetToGeneric(a.OnDeploy),
 		OnRemove: actionSetToGeneric(a.OnRemove),
 	}
 }
 
-func actionSetToGeneric(s v1beta1.ComponentActionSet) types.ComponentActionSet {
-	return types.ComponentActionSet{
-		Defaults:  actionDefaultsToGeneric(s.Defaults),
-		Before:    actionSliceToGeneric(s.Before),
-		OnSuccess: actionSliceToGeneric(s.OnSuccess),
-		OnFailure: actionSliceToGeneric(s.OnFailure),
+func actionSetToGeneric(s v1beta1.ComponentActionSet) api.ActionSet {
+	return api.ActionSet{
+		Defaults:        actionDefaultsToGeneric(s.Defaults),
+		DefaultsDefined: s.Defaults != nil,
+		Before:          actionSliceToGeneric(s.Before),
+		OnSuccess:       actionSliceToGeneric(s.OnSuccess),
+		OnFailure:       actionSliceToGeneric(s.OnFailure),
 	}
 }
 
-func actionDefaultsToGeneric(d *v1beta1.ComponentActionDefaults) *types.ComponentActionDefaults {
+func actionDefaultsToGeneric(d *v1beta1.ComponentActionDefaults) api.ActionDefaults {
 	if d == nil {
-		return nil
+		return api.ActionDefaults{}
 	}
-	return &types.ComponentActionDefaults{
+	return api.ActionDefaults{
 		Silent:          d.Silent,
-		MaxTotalSeconds: d.MaxTotalSeconds,
-		Retries:         d.Retries,
+		MaxTotalSeconds: int(d.MaxTotalSeconds),
+		Retries:         int(d.Retries),
 		Dir:             d.Dir,
 		Env:             d.Env,
-		Shell: types.Shell{
+		Shell: api.Shell{
 			Windows: d.Shell.Windows,
 			Linux:   d.Shell.Linux,
 			Darwin:  d.Shell.Darwin,
@@ -236,19 +237,19 @@ func actionDefaultsToGeneric(d *v1beta1.ComponentActionDefaults) *types.Componen
 	}
 }
 
-func actionSliceToGeneric(actions []v1beta1.ComponentAction) []types.ComponentAction {
-	var out []types.ComponentAction
+func actionSliceToGeneric(actions []v1beta1.ComponentAction) []api.Action {
+	var out []api.Action
 	for _, a := range actions {
 		out = append(out, actionToGeneric(a))
 	}
 	return out
 }
 
-func actionToGeneric(a v1beta1.ComponentAction) types.ComponentAction {
-	ga := types.ComponentAction{
+func actionToGeneric(a v1beta1.ComponentAction) api.Action {
+	ga := api.Action{
 		Silent:           a.Silent,
-		MaxTotalSeconds:  a.MaxTotalSeconds,
-		Retries:          a.Retries,
+		MaxTotalSeconds:  int32PointerToIntPointer(a.MaxTotalSeconds),
+		Retries:          int32PointerToIntPointer(a.Retries),
 		Dir:              a.Dir,
 		Env:              a.Env,
 		Cmd:              a.Cmd,
@@ -258,14 +259,14 @@ func actionToGeneric(a v1beta1.ComponentAction) types.ComponentAction {
 	}
 
 	for _, sv := range a.SetValues {
-		ga.SetValues = append(ga.SetValues, types.SetValue{
+		ga.SetValues = append(ga.SetValues, api.SetValue{
 			Key:  sv.Key,
-			Type: string(sv.Type),
+			Type: api.SetValueType(sv.Type),
 		})
 	}
 
 	if a.Shell != nil {
-		ga.Shell = &types.Shell{
+		ga.Shell = &api.Shell{
 			Windows: a.Shell.Windows,
 			Linux:   a.Shell.Linux,
 			Darwin:  a.Shell.Darwin,
@@ -275,31 +276,31 @@ func actionToGeneric(a v1beta1.ComponentAction) types.ComponentAction {
 	return ga
 }
 
-func waitToGeneric(w *v1beta1.ComponentActionWait) *types.ComponentActionWait {
+func waitToGeneric(w *v1beta1.ComponentActionWait) *api.ActionWait {
 	if w == nil {
 		return nil
 	}
-	gw := &types.ComponentActionWait{}
+	gw := &api.ActionWait{}
 	if w.Cluster != nil {
-		gw.Cluster = &types.ComponentActionWaitCluster{
+		gw.Cluster = &api.ActionWaitCluster{
 			Kind:      w.Cluster.Kind,
 			Name:      w.Cluster.Name,
 			Namespace: w.Cluster.Namespace,
-			Condition: w.Cluster.Condition,
+			Condition: api.WaitCondition{Expression: w.Cluster.Condition, Default: api.WaitForReadiness},
 		}
 	}
 	if w.Network != nil {
-		gw.Network = &types.ComponentActionWaitNetwork{
+		gw.Network = &api.ActionWaitNetwork{
 			Protocol: w.Network.Protocol,
 			Address:  w.Network.Address,
-			Code:     w.Network.Code,
+			Code:     int(w.Network.Code),
 		}
 	}
 	return gw
 }
 
-// ConvertFromGeneric converts the internal generic representation to a v1beta1 Package.
-func ConvertFromGeneric(g types.Package) v1beta1.Package {
+// PackageToV1beta1 converts the internal generic representation to a v1beta1 Package.
+func PackageToV1beta1(g api.Package) v1beta1.Package {
 	pkg := v1beta1.Package{
 		APIVersion:    v1beta1.APIVersion,
 		Kind:          v1beta1.PackageKind(g.Kind),
@@ -332,7 +333,7 @@ func ConvertFromGeneric(g types.Package) v1beta1.Package {
 	return pkg
 }
 
-func metadataFromGeneric(m types.PackageMetadata) v1beta1.PackageMetadata {
+func metadataFromGeneric(m api.PackageMetadata) v1beta1.PackageMetadata {
 	var annotations map[string]string
 	if m.Annotations != nil {
 		annotations = make(map[string]string, len(m.Annotations))
@@ -381,7 +382,7 @@ func metadataFromGeneric(m types.PackageMetadata) v1beta1.PackageMetadata {
 	return meta
 }
 
-func buildFromGeneric(b types.BuildData, m types.PackageMetadata) v1beta1.BuildData {
+func buildFromGeneric(b api.BuildData, m api.PackageMetadata) v1beta1.BuildData {
 	out := v1beta1.BuildData{
 		Hostname:                   b.Hostname,
 		User:                       b.User,
@@ -418,7 +419,7 @@ func buildFromGeneric(b types.BuildData, m types.PackageMetadata) v1beta1.BuildD
 	return out
 }
 
-func componentFromGeneric(c types.Component, isInit, migrateFromV1alpha1 bool) v1beta1.Component {
+func componentFromGeneric(c api.Component, isInit, migrateFromV1alpha1 bool) v1beta1.Component {
 	bc := v1beta1.Component{
 		Name:        c.Name,
 		Description: c.Description,
@@ -503,7 +504,7 @@ func optionalFromGeneric(optional bool, required *bool) bool {
 	return optional
 }
 
-func serviceFromGeneric(c types.Component, isInit bool) v1beta1.Service {
+func serviceFromGeneric(c api.Component, isInit bool) v1beta1.Service {
 	if c.Service != "" {
 		return v1beta1.Service(c.Service)
 	}
@@ -527,7 +528,7 @@ func serviceFromGeneric(c types.Component, isInit bool) v1beta1.Service {
 	return ""
 }
 
-func importFromGeneric(imp types.ComponentImport) v1beta1.ComponentImport {
+func importFromGeneric(imp api.ComponentImport) v1beta1.ComponentImport {
 	out := v1beta1.ComponentImport{}
 	for _, l := range imp.Local {
 		out.Local = append(out.Local, v1beta1.ComponentImportLocal{Path: l.Path})
@@ -545,7 +546,7 @@ func importFromGeneric(imp types.ComponentImport) v1beta1.ComponentImport {
 	return out
 }
 
-func manifestFromGeneric(m types.Manifest) v1beta1.Manifest {
+func manifestFromGeneric(m api.Manifest) v1beta1.Manifest {
 	bm := v1beta1.Manifest{
 		Name:             m.Name,
 		Namespace:        m.Namespace,
@@ -568,7 +569,7 @@ func manifestFromGeneric(m types.Manifest) v1beta1.Manifest {
 	return bm
 }
 
-func chartFromGeneric(ch types.Chart) v1beta1.Chart {
+func chartFromGeneric(ch api.Chart) v1beta1.Chart {
 	bc := v1beta1.Chart{
 		Name:                 ch.Name,
 		Namespace:            ch.Namespace,
@@ -641,7 +642,7 @@ func chartFromGeneric(ch types.Chart) v1beta1.Chart {
 	return bc
 }
 
-func chartValuesFromGeneric(vals []types.ChartValue) []v1beta1.ChartValue {
+func chartValuesFromGeneric(vals []api.ChartValue) []v1beta1.ChartValue {
 	var out []v1beta1.ChartValue
 	for _, v := range vals {
 		out = append(out, v1beta1.ChartValue{
@@ -653,15 +654,15 @@ func chartValuesFromGeneric(vals []types.ChartValue) []v1beta1.ChartValue {
 	return out
 }
 
-func valuesFilesToGeneric(vfs []v1beta1.ValuesFile) []types.ValuesFile {
-	var out []types.ValuesFile
+func valuesFilesToGeneric(vfs []v1beta1.ValuesFile) []api.ValuesFile {
+	var out []api.ValuesFile
 	for _, vf := range vfs {
-		out = append(out, types.ValuesFile{Path: vf.Path, EnableTemplating: vf.EnableTemplating})
+		out = append(out, api.ValuesFile{Path: vf.Path, EnableTemplating: vf.EnableTemplating})
 	}
 	return out
 }
 
-func valuesFilesFromGeneric(vfs []types.ValuesFile) []v1beta1.ValuesFile {
+func valuesFilesFromGeneric(vfs []api.ValuesFile) []v1beta1.ValuesFile {
 	var out []v1beta1.ValuesFile
 	for _, vf := range vfs {
 		out = append(out, v1beta1.ValuesFile{Path: vf.Path, EnableTemplating: vf.EnableTemplating})
@@ -669,7 +670,7 @@ func valuesFilesFromGeneric(vfs []types.ValuesFile) []v1beta1.ValuesFile {
 	return out
 }
 
-func actionsFromGeneric(a types.ComponentActions) v1beta1.ComponentActions {
+func actionsFromGeneric(a api.ComponentActions) v1beta1.ComponentActions {
 	return v1beta1.ComponentActions{
 		OnCreate: actionSetFromGeneric(a.OnCreate),
 		OnDeploy: actionSetFromGeneric(a.OnDeploy),
@@ -677,9 +678,9 @@ func actionsFromGeneric(a types.ComponentActions) v1beta1.ComponentActions {
 	}
 }
 
-func actionSetFromGeneric(s types.ComponentActionSet) v1beta1.ComponentActionSet {
+func actionSetFromGeneric(s api.ActionSet) v1beta1.ComponentActionSet {
 	return v1beta1.ComponentActionSet{
-		Defaults: actionDefaultsFromGeneric(s.Defaults),
+		Defaults: actionDefaultsFromGeneric(s.Defaults, s.DefaultsDefined),
 		Before:   actionSliceFromGeneric(s.Before),
 		// v1beta1 has no After hook; fold the v1alpha1-preserved After actions into OnSuccess.
 		OnSuccess: append(actionSliceFromGeneric(s.After), actionSliceFromGeneric(s.OnSuccess)...),
@@ -687,14 +688,14 @@ func actionSetFromGeneric(s types.ComponentActionSet) v1beta1.ComponentActionSet
 	}
 }
 
-func actionDefaultsFromGeneric(d *types.ComponentActionDefaults) *v1beta1.ComponentActionDefaults {
-	if d == nil {
+func actionDefaultsFromGeneric(d api.ActionDefaults, defined bool) *v1beta1.ComponentActionDefaults {
+	if !defined {
 		return nil
 	}
 	defaults := &v1beta1.ComponentActionDefaults{
 		Silent:          d.Silent,
-		MaxTotalSeconds: d.MaxTotalSeconds,
-		Retries:         d.Retries,
+		MaxTotalSeconds: int32(d.MaxTotalSeconds),
+		Retries:         int32(d.Retries),
 		Dir:             d.Dir,
 		Env:             d.Env,
 		Shell: v1beta1.Shell{
@@ -706,7 +707,7 @@ func actionDefaultsFromGeneric(d *types.ComponentActionDefaults) *v1beta1.Compon
 	return defaults
 }
 
-func actionSliceFromGeneric(actions []types.ComponentAction) []v1beta1.ComponentAction {
+func actionSliceFromGeneric(actions []api.Action) []v1beta1.ComponentAction {
 	var out []v1beta1.ComponentAction
 	for _, a := range actions {
 		out = append(out, actionFromGeneric(a))
@@ -714,11 +715,11 @@ func actionSliceFromGeneric(actions []types.ComponentAction) []v1beta1.Component
 	return out
 }
 
-func actionFromGeneric(a types.ComponentAction) v1beta1.ComponentAction {
+func actionFromGeneric(a api.Action) v1beta1.ComponentAction {
 	ba := v1beta1.ComponentAction{
 		Silent:           a.Silent,
-		MaxTotalSeconds:  a.MaxTotalSeconds,
-		Retries:          a.Retries,
+		MaxTotalSeconds:  intPointerToInt32Pointer(a.MaxTotalSeconds),
+		Retries:          intPointerToInt32Pointer(a.Retries),
 		Dir:              a.Dir,
 		Env:              a.Env,
 		Cmd:              a.Cmd,
@@ -745,7 +746,7 @@ func actionFromGeneric(a types.ComponentAction) v1beta1.ComponentAction {
 	return ba
 }
 
-func waitFromGeneric(w *types.ComponentActionWait) *v1beta1.ComponentActionWait {
+func waitFromGeneric(w *api.ActionWait) *v1beta1.ComponentActionWait {
 	if w == nil {
 		return nil
 	}
@@ -755,17 +756,33 @@ func waitFromGeneric(w *types.ComponentActionWait) *v1beta1.ComponentActionWait 
 			Kind:      w.Cluster.Kind,
 			Name:      w.Cluster.Name,
 			Namespace: w.Cluster.Namespace,
-			Condition: w.Cluster.Condition,
+			Condition: w.Cluster.Condition.Expression,
 		}
 	}
 	if w.Network != nil {
 		bw.Network = &v1beta1.ComponentActionWaitNetwork{
 			Protocol: w.Network.Protocol,
 			Address:  w.Network.Address,
-			Code:     w.Network.Code,
+			Code:     int32(w.Network.Code),
 		}
 	}
 	return bw
+}
+
+func int32PointerToIntPointer(in *int32) *int {
+	if in == nil {
+		return nil
+	}
+	out := int(*in)
+	return &out
+}
+
+func intPointerToInt32Pointer(in *int) *int32 {
+	if in == nil {
+		return nil
+	}
+	out := int32(*in)
+	return &out
 }
 
 // backfillWaitExists sets any action wait.cluster.condition left empty to "exists", preserving
@@ -802,12 +819,12 @@ func isGitURL(url string) bool {
 	return strings.HasSuffix(gitURLNoRef, ".git")
 }
 
-func repositoriesToGeneric(in []v1beta1.Repository) []types.Repository {
-	var out []types.Repository
+func repositoriesToGeneric(in []v1beta1.Repository) []api.Repository {
+	var out []api.Repository
 	for _, r := range in {
-		gr := types.Repository{URL: r.URL}
+		gr := api.Repository{URL: r.URL}
 		if r.Ref != nil {
-			gr.Ref = &types.GitRef{
+			gr.Ref = &api.GitRef{
 				Tag:    r.Ref.Tag,
 				Branch: r.Ref.Branch,
 				Commit: r.Ref.Commit,
@@ -818,7 +835,7 @@ func repositoriesToGeneric(in []v1beta1.Repository) []types.Repository {
 	return out
 }
 
-func repositoriesFromGeneric(in []types.Repository) []v1beta1.Repository {
+func repositoriesFromGeneric(in []api.Repository) []v1beta1.Repository {
 	var out []v1beta1.Repository
 	for _, r := range in {
 		br := v1beta1.Repository{URL: r.URL}
@@ -857,18 +874,18 @@ func stateAccessFromGeneric(in []string) []v1beta1.StateAccessKey {
 	return out
 }
 
-func gitRefToGeneric(ref v1beta1.GitRef) *types.GitRef {
+func gitRefToGeneric(ref v1beta1.GitRef) *api.GitRef {
 	if ref == (v1beta1.GitRef{}) {
 		return nil
 	}
-	return &types.GitRef{
+	return &api.GitRef{
 		Tag:    ref.Tag,
 		Branch: ref.Branch,
 		Commit: ref.Commit,
 	}
 }
 
-func gitRefFromGeneric(ref *types.GitRef) v1beta1.GitRef {
+func gitRefFromGeneric(ref *api.GitRef) v1beta1.GitRef {
 	if ref == nil {
 		return v1beta1.GitRef{}
 	}
@@ -879,17 +896,17 @@ func gitRefFromGeneric(ref *types.GitRef) v1beta1.GitRef {
 	}
 }
 
-func ociRefToGeneric(ref v1beta1.OCIRef) *types.OCIRef {
+func ociRefToGeneric(ref v1beta1.OCIRef) *api.OCIRef {
 	if ref == (v1beta1.OCIRef{}) {
 		return nil
 	}
-	return &types.OCIRef{
+	return &api.OCIRef{
 		Tag:    ref.Tag,
 		Digest: ref.Digest,
 	}
 }
 
-func ociRefFromGeneric(ref *types.OCIRef) v1beta1.OCIRef {
+func ociRefFromGeneric(ref *api.OCIRef) v1beta1.OCIRef {
 	if ref == nil {
 		return v1beta1.OCIRef{}
 	}

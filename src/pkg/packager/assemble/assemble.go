@@ -27,6 +27,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -81,7 +82,8 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	l.Info("assembling package", "path", packagePath)
 
 	definition := resolvedPackage.Definition
-	pkg := definition.AsV1alpha1()
+	normalizedPackage := definition
+	pkg := convert.PackageToV1alpha1(definition)
 	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
 		return nil, err
 	}
@@ -101,12 +103,12 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		if originalAPIVersion != differentialAPIVersion {
 			return nil, fmt.Errorf("%s: package apiVersion %s, differential package apiVersion %s", lang.PkgCreateErrDifferentialAPIVersion, originalAPIVersion, differentialAPIVersion)
 		}
-		updatedDefinition, err := applyDifferentialResources(definition, api.NewPackageDefinitionFromV1alpha1(opts.DifferentialPackage))
+		updatedDefinition, err := applyDifferentialResources(definition, convert.PackageFromV1alpha1(opts.DifferentialPackage))
 		if err != nil {
 			return nil, err
 		}
 		definition = updatedDefinition
-		pkg = definition.AsV1alpha1()
+		pkg = convert.PackageToV1alpha1(definition)
 		definition.SetDifferentialBuild(opts.DifferentialPackage.Metadata.Version)
 	}
 
@@ -115,7 +117,11 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 	for _, component := range pkg.Components {
-		err := assemblePackageComponent(ctx, component, resolvedPackage.Resources, buildPath, opts.CachePath, opts.RemoteOptions)
+		normalizedComponent, ok := normalizedPackage.Component(component.Name)
+		if !ok {
+			return nil, fmt.Errorf("normalized package is missing component %q", component.Name)
+		}
+		err := assemblePackageComponent(ctx, component, normalizedComponent.Actions, resolvedPackage.Resources, buildPath, opts.CachePath, opts.RemoteOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -249,7 +255,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	}
 	definition := resolvedPackage.Definition
 	definition.SetMetadataArchitecture(v1alpha1.SkeletonArch)
-	pkg := definition.AsV1alpha1()
+	pkg := convert.PackageToV1alpha1(definition)
 
 	// Creating skeleton packages with the values feature is not yet supported
 	if len(pkg.Values.Files) > 0 || resolvedPackage.ValuesSchema != nil {
@@ -288,7 +294,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	}
 	// PackageDefinition does not expose component flavor mutations, so retain them
 	// while moving package metadata updates to the generic definition.
-	definition = api.NewPackageDefinitionFromV1alpha1(pkg)
+	definition = convert.PackageFromV1alpha1(pkg)
 
 	if err = recordPackageMetadata(&definition, opts.Flavor, nil, opts.WithBuildMachineInfo, buildPath, checksumSha); err != nil {
 		return nil, err
@@ -360,7 +366,7 @@ func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) erro
 	return nil
 }
 
-func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, resources *load.ResourceSet, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
+func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, componentActions api.ComponentActions, resources *load.ResourceSet, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
 	packagePath, err := resources.Root()
 	if err != nil {
 		return err
@@ -378,7 +384,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		return err
 	}
 
-	onCreate := component.Actions.OnCreate
+	onCreate := componentActions.OnCreate
 	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil, nil, template.StateAccess{}); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
@@ -845,8 +851,8 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(definition *api.PackageDefinition, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath, aggregateChecksum string) error {
-	pkg := definition.AsV1alpha1()
+func recordPackageMetadata(definition *api.Package, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath, aggregateChecksum string) error {
+	pkg := convert.PackageToV1alpha1(*definition)
 	now := time.Now()
 	buildData := api.BuildData{
 		Architecture:      pkg.Metadata.Architecture,

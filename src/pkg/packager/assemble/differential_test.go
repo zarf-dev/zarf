@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -20,7 +21,7 @@ import (
 func TestApplyDifferentialResourcesV1alpha1(t *testing.T) {
 	t.Parallel()
 
-	current := api.NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{
+	current := convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
 		Components: []v1alpha1.ZarfComponent{
 			{
 				Images: []string{
@@ -43,7 +44,7 @@ func TestApplyDifferentialResourcesV1alpha1(t *testing.T) {
 			},
 		},
 	})
-	previous := api.NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{
+	previous := convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
 		Components: []v1alpha1.ZarfComponent{
 			{
 				Images: []string{
@@ -65,7 +66,7 @@ func TestApplyDifferentialResourcesV1alpha1(t *testing.T) {
 	result, err := applyDifferentialResources(current, previous)
 	require.NoError(t, err)
 
-	pkg := result.AsV1alpha1()
+	pkg := convert.PackageToV1alpha1(result)
 	require.ElementsMatch(t, []string{
 		"example.com/include-image-tag:latest",
 		"example.com/image-with-tag:v1",
@@ -83,7 +84,7 @@ func TestApplyDifferentialResourcesV1alpha1(t *testing.T) {
 func TestApplyDifferentialResourcesV1beta1PreservesResourceFields(t *testing.T) {
 	t.Parallel()
 
-	current := api.NewPackageDefinitionFromV1beta1(v1beta1.Package{
+	current := convert.PackageFromV1beta1(v1beta1.Package{
 		APIVersion: v1beta1.APIVersion,
 		Kind:       v1beta1.ZarfPackageConfig,
 		Components: []v1beta1.Component{
@@ -105,7 +106,7 @@ func TestApplyDifferentialResourcesV1beta1PreservesResourceFields(t *testing.T) 
 			},
 		},
 	})
-	previous := api.NewPackageDefinitionFromV1beta1(v1beta1.Package{
+	previous := convert.PackageFromV1beta1(v1beta1.Package{
 		APIVersion: v1beta1.APIVersion,
 		Kind:       v1beta1.ZarfPackageConfig,
 		Components: []v1beta1.Component{
@@ -129,7 +130,7 @@ func TestApplyDifferentialResourcesV1beta1PreservesResourceFields(t *testing.T) 
 	result, err := applyDifferentialResources(current, previous)
 	require.NoError(t, err)
 
-	pkg := result.AsV1beta1()
+	pkg := convert.PackageToV1beta1(result)
 	require.Equal(t, []v1beta1.Image{
 		{Name: "registry.example.com/mutable:latest", Source: "daemon"},
 		{Name: "registry.example.com/new:v1", Source: "daemon"},
@@ -149,18 +150,18 @@ func TestApplyDifferentialResourcesRequiresOriginalAPIVersion(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		definition api.PackageDefinition
+		definition api.Package
 	}{
 		{
 			name:       "missing original api version",
-			definition: api.PackageDefinition{},
+			definition: api.Package{},
 		},
 		{
 			name:       "unsupported original api version",
-			definition: api.NewPackageDefinitionFromV1alpha1(unsupported),
+			definition: convert.PackageFromV1alpha1(unsupported),
 		},
 	}
-	previous := api.NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{})
+	previous := convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{})
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
