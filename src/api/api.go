@@ -53,6 +53,7 @@ func (p *Package) OverrideNamespace(namespace string) error {
 	if p.Metadata.PreventNamespaceOverride {
 		return fmt.Errorf("package explicitly prevents namespace overrides")
 	}
+	// FIXME:, should probably try to use kind here or declare it in api
 	if p.Kind == "ZarfInitConfig" {
 		return fmt.Errorf("package kind is not a ZarfPackageConfig, cannot override namespace")
 	}
@@ -129,6 +130,7 @@ func (p *Package) SetMetadataArchitecture(architecture string) {
 }
 
 // SetBuildData records build metadata generated during package assembly.
+// FIXME: may reconsider
 func (p *Package) SetBuildData(buildData BuildData) {
 	p.Build.Hostname = buildData.Hostname
 	p.Build.User = buildData.User
