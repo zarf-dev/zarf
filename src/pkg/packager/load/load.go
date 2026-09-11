@@ -30,6 +30,13 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+const (
+	// VariantArchitecture is the architecture dimension of a component.only variant
+	VariantArchitecture VariantDimension = "architecture"
+	// VariantFlavor is the flavor dimension of a component.only variant
+	VariantFlavor VariantDimension = "flavor"
+)
+
 // DefinitionOptions are the optional parameters to load.PackageDefinition.
 type DefinitionOptions struct {
 	Flavor       string
@@ -41,6 +48,10 @@ type DefinitionOptions struct {
 	// SkipVersionCheck skips version requirement validation
 	// TODO: implement version requirements for v1beta1 remote resources
 	SkipVersionCheck bool
+	// SkipVariantFilters lists dimensions to retain instead of filtering out.
+	// e.g. VariantArchitecture retains every only.cluster.architecture variant of a
+	// component, as used when publishing skeletons.
+	SkipVariantFilters []VariantDimension
 	types.RemoteOptions
 }
 
@@ -56,6 +67,14 @@ type resolution struct {
 	packageRoot     string
 	values          valuePlan
 	remoteResources []remoteResource
+}
+
+// A VariantDimension represents a single component.only variant dimension, such as flavor or architecture
+type VariantDimension string
+
+// AllVariantDimensions returns a slice of all defined VariantDimensions
+func AllVariantDimensions() []VariantDimension {
+	return []VariantDimension{VariantFlavor, VariantArchitecture}
 }
 
 // PackageDefinition returns a structurally validated package definition after flavors, imports, and set variables are applied.
@@ -74,8 +93,13 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 	l.Debug("start layout.LoadPackage",
 		"path", packagePath,
 		"flavor", opts.Flavor,
+		"skipVariantFilters", opts.SkipVariantFilters,
 		"setVariables", opts.SetVariables,
 	)
+
+	if opts.Flavor != "" && slices.Contains(opts.SkipVariantFilters, VariantFlavor) {
+		return resolution{}, fmt.Errorf("only one of Flavor or skipping flavor variant filtering can be set")
+	}
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
@@ -134,7 +158,7 @@ func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath l
 		return resolution{}, err
 	}
 	var importedSchemas []string
-	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVariantFilters, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
 		return resolution{}, err
 	}
@@ -150,7 +174,7 @@ func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath l
 			return resolution{}, err
 		}
 	}
-	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
+	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor, opts.SkipVariantFilters); err != nil {
 		return resolution{}, err
 	}
 	return resolution{
@@ -199,19 +223,27 @@ func schemaSources(parent string, imported []string) []string {
 	return append(sources, imported...)
 }
 
-func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, flavor string) error {
+func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, flavor string, skipVariantFilters []VariantDimension) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
 		"pkg", pkg.Metadata.Name,
 		"packagePath", packagePath,
 		"flavor", flavor,
+		"skipVariantFilters", skipVariantFilters,
 	)
 
 	if !hasFlavoredComponent(pkg, flavor) {
 		l.Warn("flavor not used in package", "flavor", flavor)
 	}
-	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
+
+	validationOpts := internalv1alpha1.ValidateOpts{}
+
+	if len(skipVariantFilters) > 0 {
+		validationOpts.SkipComponentNameUniquenessValidation = true
+	}
+
+	if err := internalv1alpha1.ValidatePackage(pkg, validationOpts); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
 

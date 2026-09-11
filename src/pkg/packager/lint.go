@@ -15,9 +15,10 @@ import (
 
 // LintOptions are the optional parameters to Lint
 type LintOptions struct {
-	SetVariables map[string]string
-	Flavor       string
-	CachePath    string
+	SetVariables       map[string]string
+	Flavor             string
+	SkipVariantFilters []load.VariantDimension
+	CachePath          string
 	types.RemoteOptions
 }
 
@@ -34,12 +35,13 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) (err error)
 
 	loadOpts := load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{
-			Flavor:           opts.Flavor,
-			SetVariables:     opts.SetVariables,
-			CachePath:        opts.CachePath,
-			IsInteractive:    false,
-			SkipVersionCheck: true,
-			RemoteOptions:    opts.RemoteOptions,
+			Flavor:             opts.Flavor,
+			SetVariables:       opts.SetVariables,
+			CachePath:          opts.CachePath,
+			IsInteractive:      false,
+			SkipVersionCheck:   true,
+			RemoteOptions:      opts.RemoteOptions,
+			SkipVariantFilters: opts.SkipVariantFilters,
 		},
 	}
 	loaded, err := load.Package(ctx, packagePath, loadOpts)

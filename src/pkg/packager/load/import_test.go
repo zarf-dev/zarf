@@ -29,7 +29,7 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 	require.NoError(t, err)
 
-	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
+	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", []VariantDimension{}, false, types.RemoteOptions{})
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
@@ -38,10 +38,11 @@ func TestResolveImports(t *testing.T) {
 	ctx := testutil.TestContext(t)
 
 	testCases := []struct {
-		name             string
-		path             string
-		flavor           string
-		expectedChecksum string
+		name               string
+		path               string
+		flavor             string
+		expectedChecksum   string
+		skipVariantFilters []VariantDimension
 	}{
 		{
 			name:             "two zarf.yaml files import each other",
@@ -104,6 +105,12 @@ func TestResolveImports(t *testing.T) {
 			path:             "./testdata/import/archives",
 			expectedChecksum: "9601cb578d72727bba116d008a23f63ac6dd40c3a685e1d790d376469792db5a",
 		},
+		{
+			name:               "all variants are included",
+			path:               "./testdata/import/all-variants",
+			expectedChecksum:   "7b9b0d81444cef4db9e2b57f9620e6db4bedc659e08faaa32a3b4b061b176e16",
+			skipVariantFilters: AllVariantDimensions(),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -115,7 +122,7 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			require.NoError(t, err)
 
-			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
+			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", tc.skipVariantFilters, false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
@@ -150,7 +157,7 @@ func TestResolveImportsDedupNormalization(t *testing.T) {
 	// Reuse an existing fixture's directory only as the on-disk anchor — resolveImports
 	// stats the path but does not re-parse zarf.yaml when pkg is passed in.
 	resolved, _, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
-		"", "", []string{}, "", false, types.RemoteOptions{})
+		"", "", []string{}, "", []VariantDimension{}, false, types.RemoteOptions{})
 	require.NoError(t, err)
 	require.Equal(t, []string{"parent-values.yaml"}, resolved.Values.Files)
 }
@@ -245,7 +252,7 @@ func TestResolveImportsValueMerge(t *testing.T) {
 			pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			require.NoError(t, err)
 
-			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", []VariantDimension{}, false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			absPaths := make([]string, len(resolved.Values.Files))
@@ -303,7 +310,7 @@ func TestResolveImportsSchemaCollection(t *testing.T) {
 			pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			require.NoError(t, err)
 
-			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", []VariantDimension{}, false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			require.Equal(t, tc.expectedSchemas, importedSchemas)
@@ -435,11 +442,12 @@ func TestCompatibleComponent(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		component      v1alpha1.ZarfComponent
-		arch           string
-		flavor         string
-		expectedResult bool
+		name               string
+		component          v1alpha1.ZarfComponent
+		arch               string
+		flavor             string
+		skipVariantFilters []VariantDimension
+		expectedResult     bool
 	}{
 		{
 			name: "set architecture and set flavor",
@@ -511,12 +519,42 @@ func TestCompatibleComponent(t *testing.T) {
 			flavor:         "foo",
 			expectedResult: false,
 		},
+		{
+			name: "skip flavor filter",
+			component: v1alpha1.ZarfComponent{
+				Only: v1alpha1.ZarfComponentOnlyTarget{
+					Cluster: v1alpha1.ZarfComponentOnlyCluster{
+						Architecture: "amd64",
+					},
+					Flavor: "bar",
+				},
+			},
+			arch:               "amd64",
+			flavor:             "foo",
+			skipVariantFilters: []VariantDimension{VariantFlavor},
+			expectedResult:     true,
+		},
+		{
+			name: "skip arch filter",
+			component: v1alpha1.ZarfComponent{
+				Only: v1alpha1.ZarfComponentOnlyTarget{
+					Cluster: v1alpha1.ZarfComponentOnlyCluster{
+						Architecture: "amd64",
+					},
+					Flavor: "foo",
+				},
+			},
+			arch:               "arm64",
+			flavor:             "foo",
+			skipVariantFilters: []VariantDimension{VariantArchitecture},
+			expectedResult:     true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := compatibleComponent(tt.component, tt.arch, tt.flavor)
+			result := compatibleComponent(tt.component, tt.arch, tt.flavor, tt.skipVariantFilters)
 			require.Equal(t, tt.expectedResult, result)
 		})
 	}
