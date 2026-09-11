@@ -23,7 +23,7 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 	allowNamespaceOverride := !pkg.Metadata.PreventNamespaceOverride
 	g := api.Package{
 		APIVersion: pkg.APIVersion,
-		Kind:       string(pkg.Kind),
+		Kind:       api.PackageKind(pkg.Kind),
 		Metadata: api.PackageMetadata{
 			Name:                     pkg.Metadata.Name,
 			Description:              pkg.Metadata.Description,
@@ -316,7 +316,7 @@ func PackageToV1beta1(g api.Package) v1beta1.Package {
 
 	// v1beta1 has no Kind ZarfInitConfig; collapse the v1alpha1 init kind into the normal package kind.
 	// Component services are only inferred for packages that were init configs.
-	isInit := string(pkg.Kind) == "ZarfInitConfig"
+	isInit := g.Kind == api.ZarfInitConfig
 	if isInit {
 		pkg.Kind = v1beta1.ZarfPackageConfig
 	}

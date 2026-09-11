@@ -7,7 +7,7 @@ package api
 // Package is the version-neutral representation used by package operations and converters.
 type Package struct {
 	APIVersion    string
-	Kind          string
+	Kind          PackageKind
 	Metadata      PackageMetadata
 	Build         BuildData
 	Components    []Component

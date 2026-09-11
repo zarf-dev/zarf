@@ -10,6 +10,16 @@ import (
 	"slices"
 )
 
+// PackageKind identifies the kind of a Zarf package.
+type PackageKind string
+
+const (
+	// ZarfInitConfig is the package kind used during zarf init.
+	ZarfInitConfig PackageKind = "ZarfInitConfig"
+	// ZarfPackageConfig is the default package kind.
+	ZarfPackageConfig PackageKind = "ZarfPackageConfig"
+)
+
 // OriginalAPIVersion returns the API version used to author the package.
 func (p Package) OriginalAPIVersion() string { return p.Build.OriginalAPIVersion }
 
@@ -53,8 +63,7 @@ func (p *Package) OverrideNamespace(namespace string) error {
 	if p.Metadata.PreventNamespaceOverride {
 		return fmt.Errorf("package explicitly prevents namespace overrides")
 	}
-	// FIXME:, should probably try to use kind here or declare it in api
-	if p.Kind == "ZarfInitConfig" {
+	if p.Kind == ZarfInitConfig {
 		return fmt.Errorf("package kind is not a ZarfPackageConfig, cannot override namespace")
 	}
 	namespaces := p.uniqueNamespaces()

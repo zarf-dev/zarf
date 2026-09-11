@@ -16,7 +16,7 @@ import (
 func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 	g := api.Package{
 		APIVersion: pkg.APIVersion,
-		Kind:       string(pkg.Kind),
+		Kind:       api.PackageKind(pkg.Kind),
 		Metadata: api.PackageMetadata{
 			Name:                     pkg.Metadata.Name,
 			Description:              pkg.Metadata.Description,
