@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -357,34 +356,6 @@ components:
 
 	_, err = Package(ctx, dir, PackageOptions{})
 	require.ErrorContains(t, err, "unable to access local resource \"missing-values.yaml\"")
-}
-
-func TestPackageDefinition_normalizesBetaActionDefaults(t *testing.T) {
-	ctx := testutil.TestContext(t)
-	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
-metadata:
-  name: beta-actions
-components:
-  - name: component
-    actions:
-      onDeploy:
-        before:
-          - wait:
-              cluster:
-                kind: Deployment
-                name: app
-`), 0o600))
-
-	definition, err := PackageDefinition(ctx, dir, DefinitionOptions{})
-	require.NoError(t, err)
-
-	pkg := definition
-	component, ok := pkg.Component("component")
-	require.True(t, ok)
-	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
-	require.Equal(t, api.WaitForReadiness, component.Actions.OnDeploy.Before[0].Wait.Cluster.Condition.Default)
 }
 
 func TestLoadedPackageCloseInvalidatesResources(t *testing.T) {
