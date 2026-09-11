@@ -82,7 +82,6 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	l.Info("assembling package", "path", packagePath)
 
 	definition := resolvedPackage.Definition
-	normalizedPackage := definition
 	pkg := convert.PackageToV1alpha1(definition)
 	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
 		return nil, err
@@ -117,11 +116,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 	for _, component := range pkg.Components {
-		normalizedComponent, ok := normalizedPackage.Component(component.Name)
-		if !ok {
-			return nil, fmt.Errorf("normalized package is missing component %q", component.Name)
-		}
-		err := assemblePackageComponent(ctx, component, normalizedComponent.Actions, resolvedPackage.Resources, buildPath, opts.CachePath, opts.RemoteOptions)
+		err := assemblePackageComponent(ctx, component, resolvedPackage.Resources, buildPath, opts.CachePath, opts.RemoteOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -366,7 +361,7 @@ func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) erro
 	return nil
 }
 
-func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, componentActions api.ComponentActions, resources *load.ResourceSet, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
+func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, resources *load.ResourceSet, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
 	packagePath, err := resources.Root()
 	if err != nil {
 		return err
@@ -384,7 +379,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		return err
 	}
 
-	onCreate := componentActions.OnCreate
+	onCreate := component.Actions.OnCreate
 	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil, nil, template.StateAccess{}); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}

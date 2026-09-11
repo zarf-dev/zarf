@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -233,9 +232,7 @@ func (d *deployer) isConnectedToCluster() bool {
 
 func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]state.DeployedComponent, error) {
 	l := logger.From(ctx)
-	// FIXME: lets just use asV1alpha1 for now so we don't need the normalized comopnent
 	pkg := pkgLayout.AsV1alpha1()
-	normalizedPackage := pkgLayout.Package
 	deployedComponents := []state.DeployedComponent{}
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -243,10 +240,6 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 	}
 
 	for _, component := range pkg.Components {
-		normalizedComponent, ok := normalizedPackage.Component(component.Name)
-		if !ok {
-			return nil, fmt.Errorf("normalized package is missing component %q", component.Name)
-		}
 		packageGeneration := 1
 		// Connect to cluster if a component requires it.
 		if component.RequiresCluster() {
@@ -298,12 +291,12 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		var charts []state.InstalledChart
 		var deployErr error
 		if pkg.IsInitConfig() {
-			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, normalizedComponent.Actions, opts)
+			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
 		} else {
-			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, normalizedComponent.Actions, false, false, opts)
+			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
 		}
 
-		onDeploy := normalizedComponent.Actions.OnDeploy
+		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
 			if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnFailure, d.vc, d.vals, template.StateAccess{State: d.s, AccessKeys: component.StateAccess}); err != nil {
@@ -372,7 +365,7 @@ func internalServicesFor(components []v1alpha1.ZarfComponent, opts DeployOptions
 	return services
 }
 
-func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, componentActions api.ComponentActions, opts DeployOptions) ([]state.InstalledChart, error) {
+func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.AsV1alpha1()
 	isSeedRegistry := component.Name == "zarf-seed-registry"
@@ -454,7 +447,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Skip image checksum if component is agent.
 	// Skip image push if component is seed registry.
-	charts, err := d.deployComponent(ctx, pkgLayout, component, componentActions, isAgent, isSeedRegistry, opts)
+	charts, err := d.deployComponent(ctx, pkgLayout, component, isAgent, isSeedRegistry, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -476,7 +469,7 @@ func injectorDaemonsetImage(ctx context.Context, c *cluster.Cluster, requestedIm
 	return c.GetInjectorDaemonsetImage(ctx)
 }
 
-func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, componentActions api.ComponentActions, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {
+func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -488,7 +481,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	hasRepos := len(component.Repos) > 0 && !opts.Connected
 	hasFiles := len(component.Files) > 0
 
-	onDeploy := componentActions.OnDeploy
+	onDeploy := component.Actions.OnDeploy
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory: %w", err)
