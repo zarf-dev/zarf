@@ -21,10 +21,14 @@ const (
 )
 
 // OriginalAPIVersion returns the API version used to author the package.
-func (p Package) OriginalAPIVersion() string { return p.Build.OriginalAPIVersion }
+func (p Package) OriginalAPIVersion() string {
+	return p.Build.OriginalAPIVersion
+}
 
 // SetName updates the package metadata name.
-func (p *Package) SetName(name string) { p.Metadata.Name = name }
+func (p *Package) SetName(name string) {
+	p.Metadata.Name = name
+}
 
 // SetAnnotations updates the package metadata annotations.
 func (p *Package) SetAnnotations(annotations map[string]string) {
@@ -131,7 +135,9 @@ func (c *Component) overrideNamespaces(original, target string) {
 }
 
 // SetMetadataVersion updates the package metadata version.
-func (p *Package) SetMetadataVersion(version string) { p.Metadata.Version = version }
+func (p *Package) SetMetadataVersion(version string) {
+	p.Metadata.Version = version
+}
 
 // SetMetadataArchitecture updates the package metadata architecture.
 func (p *Package) SetMetadataArchitecture(architecture string) {
@@ -160,7 +166,9 @@ func (p *Package) SetDifferentialBuild(packageVersion string) {
 }
 
 // SetBuildSigned records whether the package build is signed.
-func (p *Package) SetBuildSigned(signed bool) { p.Build.Signed = &signed }
+func (p *Package) SetBuildSigned(signed bool) {
+	p.Build.Signed = &signed
+}
 
 // AddProvenanceFile records a provenance file once.
 func (p *Package) AddProvenanceFile(file string) {

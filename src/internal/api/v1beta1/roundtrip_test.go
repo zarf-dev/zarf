@@ -222,7 +222,6 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 func v1beta1GenericRoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreUnexported(v1beta1.BuildData{}),
-		// FIXME: potentially make this a pointer
 		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
 	}
 }

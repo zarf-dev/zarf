@@ -155,10 +155,9 @@ type Manifest struct {
 type Chart struct {
 	Name string
 	// Version identifies this chart's archive and values files within the package.
-	Version     string
-	Namespace   string
-	ReleaseName string
-	// FIXME: we need to maintain ordering here, so we probably need two fields
+	Version              string
+	Namespace            string
+	ReleaseName          string
 	ValuesFiles          []ValuesFile
 	Values               []ChartValue
 	SkipSchemaValidation bool

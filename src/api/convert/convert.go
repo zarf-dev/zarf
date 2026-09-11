@@ -28,8 +28,9 @@ func PackageToV1alpha1(pkg api.Package) v1alpha1.ZarfPackage {
 }
 
 // PackageToV1beta1 converts the normalized model to the v1beta1 wire package.
-// FIXME: every one line function in this branch should be multiple lines
-func PackageToV1beta1(pkg api.Package) v1beta1.Package { return internalv1beta1.PackageToV1beta1(pkg) }
+func PackageToV1beta1(pkg api.Package) v1beta1.Package {
+	return internalv1beta1.PackageToV1beta1(pkg)
+}
 
 // PackageV1alpha1ToV1beta1 converts a v1alpha1 wire package to v1beta1.
 func PackageV1alpha1ToV1beta1(pkg v1alpha1.ZarfPackage) v1beta1.Package {
