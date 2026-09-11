@@ -406,10 +406,7 @@ func metadataFromGeneric(m api.PackageMetadata, b api.BuildData) v1alpha1.ZarfMe
 		Architecture: m.Architecture,
 		YOLO:         m.YOLO,
 	}
-	if m.PreventNamespaceOverride {
-		allowNamespaceOverride := false
-		meta.AllowNamespaceOverride = &allowNamespaceOverride
-	}
+	meta.AllowNamespaceOverride = boolPointer(!m.PreventNamespaceOverride)
 
 	meta.AggregateChecksum = b.AggregateChecksum
 
@@ -560,10 +557,7 @@ func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 			Executable:  f.Executable,
 			Symlinks:    f.Symlinks,
 			ExtractPath: f.ExtractPath,
-		}
-		if f.EnableTemplating {
-			t := true
-			af.Template = &t
+			Template:    boolPointer(f.EnableTemplating),
 		}
 		ac.Files = append(ac.Files, af)
 	}
@@ -584,11 +578,11 @@ func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 
 // requiredFromGeneric maps the operational optional flag back to v1alpha1's inverse field.
 func requiredFromGeneric(optional bool) *bool {
-	if !optional {
-		v := true
-		return &v
-	}
-	return nil
+	return boolPointer(!optional)
+}
+
+func boolPointer(value bool) *bool {
+	return &value
 }
 
 func manifestFromGeneric(m api.Manifest) v1alpha1.ZarfManifest {
@@ -598,35 +592,28 @@ func manifestFromGeneric(m api.Manifest) v1alpha1.ZarfManifest {
 		Files:           m.Files,
 		ServerSideApply: m.ServerSideApply,
 		NoWait:          m.SkipWait,
+		Template:        boolPointer(m.EnableTemplating),
 	}
 	if m.Kustomize != nil {
 		am.Kustomizations = m.Kustomize.Files
 		am.KustomizeAllowAnyDirectory = m.Kustomize.AllowAnyDirectory
 		am.EnableKustomizePlugins = m.Kustomize.EnablePlugins
 	}
-	if m.EnableTemplating {
-		t := true
-		am.Template = &t
-	}
 	return am
 }
 
 func chartFromGeneric(ch api.Chart) v1alpha1.ZarfChart {
 	ac := v1alpha1.ZarfChart{
-		Name:            ch.Name,
-		Version:         ch.Version,
-		Namespace:       ch.Namespace,
-		ReleaseName:     ch.ReleaseName,
-		ServerSideApply: ch.ServerSideApply,
-		NoWait:          ch.SkipWait,
-		Variables:       chartVarsFromGeneric(ch.Variables),
+		Name:             ch.Name,
+		Version:          ch.Version,
+		Namespace:        ch.Namespace,
+		ReleaseName:      ch.ReleaseName,
+		SchemaValidation: boolPointer(!ch.SkipSchemaValidation),
+		ServerSideApply:  ch.ServerSideApply,
+		NoWait:           ch.SkipWait,
+		Variables:        chartVarsFromGeneric(ch.Variables),
 	}
 	ac.ValuesFiles, ac.TemplatedValuesFiles = valuesFilesFromGeneric(ch.ValuesFiles)
-
-	if ch.SkipSchemaValidation {
-		f := false
-		ac.SchemaValidation = &f
-	}
 
 	switch {
 	case ch.HelmRepository != nil && ch.HelmRepository.URL != "":
@@ -720,6 +707,7 @@ func actionFromGeneric(a api.Action) v1alpha1.ZarfComponentAction {
 		Wait:                  waitFromGeneric(a.Wait),
 		SetVariables:          actionVariablesFromGeneric(a.SetVariables),
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
+		Template:              boolPointer(a.EnableTemplating),
 	}
 
 	if a.MaxTotalSeconds != nil {
@@ -730,11 +718,6 @@ func actionFromGeneric(a api.Action) v1alpha1.ZarfComponentAction {
 		v := int(*a.Retries)
 		aa.MaxRetries = &v
 	}
-	if a.EnableTemplating {
-		t := true
-		aa.Template = &t
-	}
-
 	for _, sv := range a.SetValues {
 		aa.SetValues = append(aa.SetValues, v1alpha1.SetValue{
 			Key:   sv.Key,

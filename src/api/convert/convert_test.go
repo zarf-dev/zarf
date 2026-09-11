@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
@@ -221,12 +222,13 @@ func TestV1Alpha1PkgToV1Beta1_RequiredOptionalShift(t *testing.T) {
 		name         string
 		required     *bool
 		wantOptional bool
+		wantRequired bool
 	}{
 		// v1alpha1 defaults an unset required to optional (the inverse of v1beta1's required default),
 		// so a component that omits it must become Optional=true rather than v1beta1's zero value.
-		{name: "unset required is optional", required: nil, wantOptional: true},
-		{name: "explicit false is optional", required: b(false), wantOptional: true},
-		{name: "explicit true is required", required: b(true), wantOptional: false},
+		{name: "unset required is optional", required: nil, wantOptional: true, wantRequired: false},
+		{name: "explicit false is optional", required: b(false), wantOptional: true, wantRequired: false},
+		{name: "explicit true is required", required: b(true), wantOptional: false, wantRequired: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -237,11 +239,59 @@ func TestV1Alpha1PkgToV1Beta1_RequiredOptionalShift(t *testing.T) {
 					{Name: "comp", Required: tt.required},
 				},
 			}
-			result := PackageV1alpha1ToV1beta1(pkg)
+			operational := PackageFromV1alpha1(pkg)
+			require.Len(t, operational.Components, 1)
+			require.Equal(t, tt.wantOptional, operational.Components[0].Optional)
+
+			result := PackageToV1alpha1(operational)
 			require.Len(t, result.Components, 1)
-			require.Equal(t, tt.wantOptional, result.Components[0].Optional)
+			require.NotNil(t, result.Components[0].Required)
+			require.Equal(t, tt.wantRequired, *result.Components[0].Required)
+
+			v1beta1Result := PackageToV1beta1(operational)
+			require.Len(t, v1beta1Result.Components, 1)
+			require.Equal(t, tt.wantOptional, v1beta1Result.Components[0].Optional)
 		})
 	}
+}
+
+func TestPackageToV1alpha1_CanonicalizesBooleanPointers(t *testing.T) {
+	t.Parallel()
+
+	result := PackageToV1alpha1(api.Package{
+		Metadata: api.PackageMetadata{},
+		Components: []api.Component{{
+			Optional: true,
+			Files: []api.File{{
+				EnableTemplating: false,
+			}},
+			Manifests: []api.Manifest{{
+				EnableTemplating: false,
+			}},
+			Charts: []api.Chart{{
+				SkipSchemaValidation: false,
+			}},
+			Actions: api.ComponentActions{
+				OnDeploy: api.ActionSet{
+					Before: []api.Action{{EnableTemplating: false}},
+				},
+			},
+		}},
+	})
+
+	require.NotNil(t, result.Metadata.AllowNamespaceOverride)
+	require.True(t, *result.Metadata.AllowNamespaceOverride)
+	component := result.Components[0]
+	require.NotNil(t, component.Required)
+	require.False(t, *component.Required)
+	require.NotNil(t, component.Files[0].Template)
+	require.False(t, *component.Files[0].Template)
+	require.NotNil(t, component.Manifests[0].Template)
+	require.False(t, *component.Manifests[0].Template)
+	require.NotNil(t, component.Charts[0].SchemaValidation)
+	require.True(t, *component.Charts[0].SchemaValidation)
+	require.NotNil(t, component.Actions.OnDeploy.Before[0].Template)
+	require.False(t, *component.Actions.OnDeploy.Before[0].Template)
 }
 
 func TestV1Alpha1PkgToV1Beta1_ServiceInference(t *testing.T) {
@@ -438,6 +488,7 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 func TestV1Alpha1ChartOperationalRoundTrip(t *testing.T) {
 	t.Parallel()
 
+	schemaValidation := true
 	tests := []struct {
 		name  string
 		chart v1alpha1.ZarfChart
@@ -547,7 +598,9 @@ func TestV1Alpha1ChartOperationalRoundTrip(t *testing.T) {
 			}
 
 			roundTripped := PackageToV1alpha1(PackageFromV1alpha1(pkg))
-			require.Equal(t, tt.want, roundTripped.Components[0].Charts[0])
+			want := tt.want
+			want.SchemaValidation = &schemaValidation
+			require.Equal(t, want, roundTripped.Components[0].Charts[0])
 		})
 	}
 }
@@ -1080,8 +1133,9 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 	require.Equal(t, "my-component", comp.Name)
 	require.Equal(t, "test component", comp.Description)
 
-	// Optional=true → Required unset (nil); v1alpha1 treats an absent required as optional.
-	require.Nil(t, comp.Required)
+	// Optional=true → Required=false; v1alpha1 treats both forms as optional.
+	require.NotNil(t, comp.Required)
+	require.False(t, *comp.Required)
 
 	require.Equal(t, "linux", comp.Only.LocalOS)
 	require.Equal(t, "amd64", comp.Only.Cluster.Architecture)

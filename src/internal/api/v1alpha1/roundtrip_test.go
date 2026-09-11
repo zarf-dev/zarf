@@ -22,7 +22,7 @@ const defaultFuzzIterations = 20
 
 // TestConvertGenericRoundTrip verifies that fields represented by the operational model survive a
 // v1alpha1 conversion. Fields omitted from the comparison are documented below with the behavior
-// that makes their source form unnecessary.
+// that the operational model canonicalizes to explicit values.
 func TestConvertGenericRoundTrip(t *testing.T) {
 	t.Parallel()
 
