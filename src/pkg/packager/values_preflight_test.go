@@ -4,6 +4,9 @@
 package packager
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -20,6 +23,28 @@ import (
 
 func packageDefinition(pkg v1alpha1.ZarfPackage) api.Package {
 	return convert.PackageFromV1alpha1(pkg)
+}
+
+func loadTestPackageLayout(t *testing.T, components []v1alpha1.ZarfComponent) *layout.PackageLayout {
+	t.Helper()
+
+	dir := t.TempDir()
+	checksums := []byte{}
+	sum := sha256.Sum256(checksums)
+	definition := packageDefinition(v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name:              "test-package",
+			AggregateChecksum: hex.EncodeToString(sum[:]),
+		},
+		Components: components,
+	})
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.Checksums), checksums, 0o600))
+	require.NoError(t, layout.WritePackageDefinition(filepath.Join(dir, layout.ZarfYAML), definition))
+
+	pkgLayout, err := layout.LoadFromDir(t.Context(), dir, layout.PackageLayoutOptions{VerificationStrategy: layout.VerifyNever})
+	require.NoError(t, err)
+	return pkgLayout
 }
 
 func tmplPtr() *bool {
@@ -329,7 +354,7 @@ func TestValidateTemplateRefs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pkgLayout := layout.NewPackageLayout(packageDefinition(v1alpha1.ZarfPackage{Components: tt.components}))
+			pkgLayout := loadTestPackageLayout(t, tt.components)
 			err := validateTemplateRefs(t.Context(), pkgLayout, tt.vals)
 			if tt.wantErr == "" {
 				require.NoError(t, err)
@@ -347,7 +372,7 @@ func TestValidateTemplateRefsAccumulatesErrors(t *testing.T) {
 		componentWithCmd("a", "echo {{ .Values.alpha }}"),
 		componentWithCmd("b", "echo {{ .Values.beta }}"),
 	}
-	pkgLayout := layout.NewPackageLayout(packageDefinition(v1alpha1.ZarfPackage{Components: components}))
+	pkgLayout := loadTestPackageLayout(t, components)
 	err := validateTemplateRefs(t.Context(), pkgLayout, nil)
 	require.Error(t, err)
 	require.ErrorContains(t, err, ".Values.alpha")

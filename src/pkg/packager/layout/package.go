@@ -40,12 +40,6 @@ type PackageLayout struct {
 	cache   *manifestCache
 }
 
-// NewPackageLayout creates an in-memory layout for a package definition.
-// FIXME: possible to make this just for test?
-func NewPackageLayout(definition api.Package) *PackageLayout {
-	return &PackageLayout{pkg: definition}
-}
-
 // Definition returns the version-neutral package definition for this layout.
 func (p *PackageLayout) Definition() api.Package {
 	return p.pkg
