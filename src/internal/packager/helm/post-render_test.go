@@ -4,6 +4,8 @@
 package helm
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -13,8 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/test/testutil"
+	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
 )
@@ -533,4 +539,345 @@ func TestProcessManifestContentEmptyObject(t *testing.T) {
 	require.Equal(t, emptyManifest, outputContent)
 	require.NotNil(t, rawData)
 	require.Empty(t, rawData.Object)
+}
+
+func TestEditHelmResourcesListDocuments(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		manifest string
+		assert   func(t *testing.T, doc *unstructured.Unstructured)
+	}{
+		{
+			name: "typed list wrapper is left alone and its items are labeled",
+			manifest: `apiVersion: v1
+kind: ConfigMapList
+items:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: repro-one
+    data:
+      hello: world
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: repro-two
+      labels:
+        grafana_dashboard: "1"
+    data:
+      hello: world
+`,
+			assert: func(t *testing.T, doc *unstructured.Unstructured) {
+				// ListMeta has no labels field, a list that carries one is rejected by the API server
+				_, found, err := unstructured.NestedMap(doc.Object, "metadata")
+				require.NoError(t, err)
+				require.False(t, found, "list wrapper must not be given metadata")
+
+				items, err := listItems(doc)
+				require.NoError(t, err)
+				require.Len(t, items, 2)
+				require.Equal(t, map[string]string{"zarf.dev/package": "test-pkg"}, items[0].GetLabels())
+				require.Equal(t, map[string]string{
+					"grafana_dashboard": "1",
+					"zarf.dev/package":  "test-pkg",
+				}, items[1].GetLabels(), "existing item labels are kept")
+
+				// nothing else about the item changed
+				data, found, err := unstructured.NestedStringMap(items[0].Object, "data")
+				require.NoError(t, err)
+				require.True(t, found)
+				require.Equal(t, map[string]string{"hello": "world"}, data)
+			},
+		},
+		{
+			name: "generic list labels pod templates of its items",
+			manifest: `apiVersion: v1
+kind: List
+items:
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: nested-deploy
+    spec:
+      template:
+        metadata:
+          labels:
+            app: nested
+        spec:
+          containers:
+            - name: main
+              image: nginx
+`,
+			assert: func(t *testing.T, doc *unstructured.Unstructured) {
+				items, err := listItems(doc)
+				require.NoError(t, err)
+				require.Len(t, items, 1)
+				require.Equal(t, map[string]string{"zarf.dev/package": "test-pkg"}, items[0].GetLabels())
+
+				templateLabels, found, err := unstructured.NestedStringMap(items[0].Object, "spec", "template", "metadata", "labels")
+				require.NoError(t, err)
+				require.True(t, found)
+				require.Equal(t, map[string]string{
+					"app":              "nested",
+					"zarf.dev/package": "test-pkg",
+				}, templateLabels)
+			},
+		},
+		{
+			name: "list nested in a list is walked all the way down",
+			manifest: `apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: ConfigMapList
+    items:
+      - apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: deeply-nested
+`,
+			assert: func(t *testing.T, doc *unstructured.Unstructured) {
+				outer, err := listItems(doc)
+				require.NoError(t, err)
+				require.Len(t, outer, 1)
+				require.Nil(t, outer[0].GetLabels(), "nested list wrapper must not be given metadata")
+
+				inner, err := listItems(outer[0])
+				require.NoError(t, err)
+				require.Len(t, inner, 1)
+				require.Equal(t, map[string]string{"zarf.dev/package": "test-pkg"}, inner[0].GetLabels())
+			},
+		},
+		{
+			name: "list that rendered no items is left alone",
+			manifest: `apiVersion: v1
+kind: ConfigMapList
+items: []
+`,
+			assert: func(t *testing.T, doc *unstructured.Unstructured) {
+				_, found, err := unstructured.NestedMap(doc.Object, "metadata")
+				require.NoError(t, err)
+				require.False(t, found, "empty list wrapper must not be given metadata")
+			},
+		},
+		{
+			name: "list kind whose items is not an array is labeled itself",
+			manifest: `apiVersion: example.com/v1
+kind: ShoppingList
+metadata:
+  name: groceries
+items:
+  milk: 2
+`,
+			assert: func(t *testing.T, doc *unstructured.Unstructured) {
+				require.Equal(t, map[string]string{"zarf.dev/package": "test-pkg"}, doc.GetLabels(),
+					"a resource that is not a list wrapper must not be left unlabeled")
+			},
+		},
+		{
+			name: "regular resource is still labeled",
+			manifest: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: plain-cm
+`,
+			assert: func(t *testing.T, doc *unstructured.Unstructured) {
+				require.Equal(t, map[string]string{"zarf.dev/package": "test-pkg"}, doc.GetLabels())
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			doc := renderManifest(t, newTestRenderer(), tt.manifest)
+			tt.assert(t, doc)
+		})
+	}
+}
+
+func TestEditHelmResourcesAgentIgnoreLabelsOnListItems(t *testing.T) {
+	t.Parallel()
+
+	manifest := `apiVersion: v1
+kind: List
+items:
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: nested-deploy
+    spec:
+      template:
+        metadata:
+          labels:
+            app: nested
+`
+
+	r := newTestRenderer()
+	r.connectedDeploy = true
+	r.state = &state.State{
+		AgentInfo: state.AgentInfo{TLS: pki.GeneratedPKI{
+			CA:   []byte("ca"),
+			Cert: []byte("cert"),
+			Key:  []byte("key"),
+		}},
+	}
+	require.True(t, r.shouldAddAgentIgnoreLabels())
+
+	doc := renderManifest(t, r, manifest)
+	items, err := listItems(doc)
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+
+	templateLabels, found, err := unstructured.NestedStringMap(items[0].Object, "spec", "template", "metadata", "labels")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, "ignore", templateLabels["zarf.dev/agent"])
+}
+
+func TestEditHelmResourcesConnectStrings(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		manifest string
+	}{
+		{
+			name: "service in its own document",
+			manifest: `apiVersion: v1
+kind: Service
+metadata:
+  name: connect-me
+  labels:
+    zarf.dev/connect-name: my-connect
+  annotations:
+    zarf.dev/connect-description: a connectable service
+    zarf.dev/connect-url: /nested
+`,
+		},
+		{
+			name: "service inside a list",
+			manifest: `apiVersion: v1
+kind: ServiceList
+items:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: connect-me
+      labels:
+        zarf.dev/connect-name: my-connect
+      annotations:
+        zarf.dev/connect-description: a connectable service
+        zarf.dev/connect-url: /nested
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newTestRenderer()
+			renderManifest(t, r, tt.manifest)
+			require.Equal(t, state.ConnectStrings{
+				"my-connect": {
+					Description: "a connectable service",
+					URL:         "/nested",
+				},
+			}, r.connectStrings)
+		})
+	}
+}
+
+func TestEditHelmResourcesTracksNamespaces(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		manifest string
+	}{
+		{
+			name: "configmap in its own document",
+			manifest: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elsewhere
+  namespace: another-namespace
+`,
+		},
+		{
+			name: "configmap inside a list",
+			manifest: `apiVersion: v1
+kind: ConfigMapList
+items:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: elsewhere
+      namespace: another-namespace
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newTestRenderer()
+			renderManifest(t, r, tt.manifest)
+			// the namespace has to be tracked for zarf to create it before helm applies the chart
+			require.Contains(t, r.namespaces, "another-namespace")
+		})
+	}
+}
+
+func TestEditHelmResourcesConnectStringsIgnoresUnlabeledService(t *testing.T) {
+	t.Parallel()
+
+	r := newTestRenderer()
+	renderManifest(t, r, `apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: plain-service
+`)
+	require.Empty(t, r.connectStrings)
+}
+
+func newTestRenderer() *renderer {
+	return &renderer{
+		pkgName:        "test-pkg",
+		connectStrings: state.ConnectStrings{},
+		namespaces:     map[string]*corev1.Namespace{},
+	}
+}
+
+// renderManifest puts one manifest document through editHelmResources and hands back what it wrote
+func renderManifest(t *testing.T, r *renderer, manifest string) *unstructured.Unstructured {
+	t.Helper()
+
+	output := bytes.NewBuffer(nil)
+	err := r.editHelmResources(testutil.TestContext(t), []releaseutil.Manifest{{Name: "test-manifest", Content: manifest}}, output)
+	require.NoError(t, err)
+
+	doc := &unstructured.Unstructured{}
+	require.NoError(t, yaml.Unmarshal(output.Bytes(), doc))
+	return doc
+}
+
+func listItems(doc *unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+	var items []*unstructured.Unstructured
+	err := doc.EachListItem(func(item runtime.Object) error {
+		itemObj, ok := item.(*unstructured.Unstructured)
+		if !ok {
+			return fmt.Errorf("unexpected item of type %T", item)
+		}
+		items = append(items, itemObj)
+		return nil
+	})
+	return items, err
 }

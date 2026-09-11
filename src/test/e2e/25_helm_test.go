@@ -309,3 +309,42 @@ func TestHelmHooks(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-hooks", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
+
+func TestHelmListKinds(t *testing.T) {
+	t.Log("E2E: Helm charts that render list kinds")
+
+	tmpdir := t.TempDir()
+	packagePath := filepath.Join("src", "test", "packages", "25-list-kinds")
+
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", packagePath, "-o", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	pkgPath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-list-kinds-%s-0.1.0.tar.zst", e2e.Arch))
+	t.Cleanup(func() {
+		_, _, err := e2e.Kubectl(t, "delete", "namespace", "list-kinds-elsewhere", "--ignore-not-found", "--grace-period=0")
+		require.NoError(t, err)
+	})
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgPath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// the configmaps only exist if helm accepted the list documents, and they only carry the
+	// package label if zarf labeled the items rather than the list wrapping them
+	kubectlOut, _, err := e2e.Kubectl(t, "-n", "list-kinds", "get", "configmaps", "-l", "zarf.dev/package=list-kinds", "-o", "jsonpath={.items[*].metadata.name}")
+	require.NoError(t, err)
+	require.Contains(t, kubectlOut, "list-one")
+	require.Contains(t, kubectlOut, "list-two")
+	require.Contains(t, kubectlOut, "generic-list-config")
+
+	// labels the chart set on an item are kept alongside the ones zarf adds
+	kubectlOut, _, err = e2e.Kubectl(t, "-n", "list-kinds", "get", "configmap", "list-two", "-o", "jsonpath={.metadata.labels.chart-owned}")
+	require.NoError(t, err)
+	require.Equal(t, "true", kubectlOut)
+
+	// an item can name a namespace of its own, which zarf has to create before helm applies it
+	kubectlOut, _, err = e2e.Kubectl(t, "-n", "list-kinds-elsewhere", "get", "configmap", "list-elsewhere", "-o", "jsonpath={.metadata.name}")
+	require.NoError(t, err)
+	require.Equal(t, "list-elsewhere", kubectlOut)
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "list-kinds", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
