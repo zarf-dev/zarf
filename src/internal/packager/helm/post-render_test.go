@@ -737,6 +737,75 @@ items:
 	require.Equal(t, "ignore", templateLabels["zarf.dev/agent"])
 }
 
+func TestEditHelmResourcesConnectStrings(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		manifest string
+	}{
+		{
+			name: "service in its own document",
+			manifest: `apiVersion: v1
+kind: Service
+metadata:
+  name: connect-me
+  labels:
+    zarf.dev/connect-name: my-connect
+  annotations:
+    zarf.dev/connect-description: a connectable service
+    zarf.dev/connect-url: /nested
+`,
+		},
+		{
+			name: "service inside a list",
+			manifest: `apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: connect-me
+      labels:
+        zarf.dev/connect-name: my-connect
+      annotations:
+        zarf.dev/connect-description: a connectable service
+        zarf.dev/connect-url: /nested
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newTestRenderer()
+			renderManifest(t, r, tt.manifest)
+			require.Equal(t, state.ConnectStrings{
+				"my-connect": {
+					Description: "a connectable service",
+					URL:         "/nested",
+				},
+			}, r.connectStrings)
+		})
+	}
+}
+
+func TestEditHelmResourcesConnectStringsIgnoresUnlabeledService(t *testing.T) {
+	t.Parallel()
+
+	r := newTestRenderer()
+	renderManifest(t, r, `apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: plain-service
+`)
+	require.Empty(t, r.connectStrings)
+}
+
 func newTestRenderer() *renderer {
 	return &renderer{
 		pkgName:        "test-pkg",

@@ -198,8 +198,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			continue
 		}
 
-		switch rawData.GetKind() {
-		case "Namespace":
+		if rawData.GetKind() == "Namespace" {
 			namespace := &corev1.Namespace{}
 			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shenanigans
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), namespace); err != nil {
@@ -212,27 +211,15 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			}
 			// skip so we can strip namespaces from helm's brain
 			continue
+		}
 
-		case "Service":
-			// Check service resources for the zarf-connect label
-			labels := rawData.GetLabels()
-			if labels == nil {
-				labels = map[string]string{}
-			}
-			annotations := rawData.GetAnnotations()
-			if annotations == nil {
-				annotations = map[string]string{}
-			}
-			if key, keyExists := labels[cluster.ZarfConnectLabelName]; keyExists {
-				// If there is a zarf-connect label
-				l.Debug("match helm service for zarf connection", "service", rawData.GetName(), "connectionKey", key)
-
-				// Add the connectString for processing later in the deployment
-				r.connectStrings[key] = state.ConnectString{
-					Description: annotations[cluster.ZarfConnectAnnotationDescription],
-					URL:         annotations[cluster.ZarfConnectAnnotationURL],
-				}
-			}
+		// a service inside a list is as connectable as one in its own document, so the items are
+		// checked too rather than only the document itself
+		if err := eachResource(rawData, func(obj *unstructured.Unstructured) error {
+			r.recordConnectString(ctx, obj)
+			return nil
+		}); err != nil {
+			return err
 		}
 
 		namespace := rawData.GetNamespace()
@@ -289,6 +276,33 @@ func (r *renderer) addZarfLabels(obj *unstructured.Unstructured) error {
 		}
 	}
 	return nil
+}
+
+// recordConnectString notes the connect string of a service carrying the zarf-connect label, for
+// the deployment to pick up later
+func (r *renderer) recordConnectString(ctx context.Context, obj *unstructured.Unstructured) {
+	if obj.GetKind() != "Service" {
+		return
+	}
+	// Check service resources for the zarf-connect label
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	if key, keyExists := labels[cluster.ZarfConnectLabelName]; keyExists {
+		// If there is a zarf-connect label
+		logger.From(ctx).Debug("match helm service for zarf connection", "service", obj.GetName(), "connectionKey", key)
+
+		// Add the connectString for processing later in the deployment
+		r.connectStrings[key] = state.ConnectString{
+			Description: annotations[cluster.ZarfConnectAnnotationDescription],
+			URL:         annotations[cluster.ZarfConnectAnnotationURL],
+		}
+	}
 }
 
 // addLabelsToNestedPath adds package labels to a nested path in an unstructured object
