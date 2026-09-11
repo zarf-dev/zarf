@@ -35,10 +35,20 @@ import (
 // PackageLayout manages the layout for a package.
 type PackageLayout struct {
 	dirPath string
-	// Package is the parsed version-neutral package for this layout.
-	Package api.Package
+	pkg     api.Package
 	digest  string
 	cache   *manifestCache
+}
+
+// NewPackageLayout creates an in-memory layout for a package definition.
+// FIXME: possible to make this just for test?
+func NewPackageLayout(definition api.Package) *PackageLayout {
+	return &PackageLayout{pkg: definition}
+}
+
+// Definition returns the version-neutral package definition for this layout.
+func (p *PackageLayout) Definition() api.Package {
+	return p.pkg
 }
 
 // Digest returns the OCI manifest digest for this package layout.
@@ -48,12 +58,27 @@ func (p *PackageLayout) Digest() string {
 
 // AsV1alpha1 returns the package definition as a v1alpha1 ZarfPackage.
 func (p *PackageLayout) AsV1alpha1() v1alpha1.ZarfPackage {
-	return convert.PackageToV1alpha1(p.Package)
+	return convert.PackageToV1alpha1(p.pkg)
 }
 
 // AsV1beta1 returns the package definition as a v1beta1 Package.
 func (p *PackageLayout) AsV1beta1() v1beta1.Package {
-	return convert.PackageToV1beta1(p.Package)
+	return convert.PackageToV1beta1(p.pkg)
+}
+
+// OverrideNamespace overrides package namespaces when the package permits it.
+func (p *PackageLayout) OverrideNamespace(namespace string) error {
+	return p.pkg.OverrideNamespace(namespace)
+}
+
+// Filter applies a component filter to this layout's package definition.
+func (p *PackageLayout) Filter(filter filters.ComponentFilterStrategy) error {
+	definition, err := filters.Apply(p.pkg, filter)
+	if err != nil {
+		return err
+	}
+	p.pkg = definition
+	return nil
 }
 
 // PackageLayoutOptions are the options used when loading a package.
@@ -163,7 +188,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	}
 	pkgLayout := &PackageLayout{
 		dirPath: dirPath,
-		Package: definition,
+		pkg:     definition,
 	}
 	err = validatePackageIntegrity(pkgLayout, opts.IsPartial)
 	if err != nil {
@@ -264,7 +289,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		return fmt.Errorf("cannot access %s for signing: %w", ZarfYAML, err)
 	}
 
-	originalDefinition := p.Package
+	originalDefinition := p.pkg
 
 	// Create temporary directory for signing
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -278,19 +303,27 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 	tmpZarfYAMLPath := filepath.Join(tmpDir, ZarfYAML)
 	tmpBundlePath := filepath.Join(tmpDir, Bundle)
 
-	definition := p.Package
-	definition.SetBuildSigned(true)
-	definition.AddProvenanceFile(Bundle)
-	definition.AddVersionRequirement(api.VersionRequirement{
+	definition := p.pkg
+	signed := true
+	definition.Build.Signed = &signed
+	if !slices.Contains(definition.Build.ProvenanceFiles, Bundle) {
+		definition.Build.ProvenanceFiles = append(definition.Build.ProvenanceFiles, Bundle)
+	}
+	requirement := api.VersionRequirement{
 		Version: "v0.71.0",
 		Reason:  "This package contains a bundle format signature which requires Zarf v0.71.0 or later",
-	})
-	p.Package = definition
+	}
+	if !slices.ContainsFunc(definition.Build.VersionRequirements, func(existing api.VersionRequirement) bool {
+		return existing == requirement
+	}) {
+		definition.Build.VersionRequirements = append(definition.Build.VersionRequirements, requirement)
+	}
+	p.pkg = definition
 
 	// Consolidated in-memory rollback — fires on any error exit via named return.
 	defer func() {
 		if err != nil {
-			p.Package = originalDefinition
+			p.pkg = originalDefinition
 		}
 	}()
 

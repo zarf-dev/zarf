@@ -128,24 +128,3 @@ func (c *Component) overrideNamespaces(original, target string) {
 		}
 	}
 }
-
-// SetBuildSigned records whether the package build is signed.
-func (p *Package) SetBuildSigned(signed bool) {
-	p.Build.Signed = &signed
-}
-
-// AddProvenanceFile records a provenance file once.
-func (p *Package) AddProvenanceFile(file string) {
-	if !slices.Contains(p.Build.ProvenanceFiles, file) {
-		p.Build.ProvenanceFiles = append(p.Build.ProvenanceFiles, file)
-	}
-}
-
-// AddVersionRequirement records a version requirement once.
-func (p *Package) AddVersionRequirement(requirement VersionRequirement) {
-	if !slices.ContainsFunc(p.Build.VersionRequirements, func(existing VersionRequirement) bool {
-		return existing == requirement
-	}) {
-		p.Build.VersionRequirements = append(p.Build.VersionRequirements, requirement)
-	}
-}

@@ -329,7 +329,7 @@ func TestValidateTemplateRefs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pkgLayout := &layout.PackageLayout{Package: packageDefinition(v1alpha1.ZarfPackage{Components: tt.components})}
+			pkgLayout := layout.NewPackageLayout(packageDefinition(v1alpha1.ZarfPackage{Components: tt.components}))
 			err := validateTemplateRefs(t.Context(), pkgLayout, tt.vals)
 			if tt.wantErr == "" {
 				require.NoError(t, err)
@@ -347,7 +347,7 @@ func TestValidateTemplateRefsAccumulatesErrors(t *testing.T) {
 		componentWithCmd("a", "echo {{ .Values.alpha }}"),
 		componentWithCmd("b", "echo {{ .Values.beta }}"),
 	}
-	pkgLayout := &layout.PackageLayout{Package: packageDefinition(v1alpha1.ZarfPackage{Components: components})}
+	pkgLayout := layout.NewPackageLayout(packageDefinition(v1alpha1.ZarfPackage{Components: components}))
 	err := validateTemplateRefs(t.Context(), pkgLayout, nil)
 	require.Error(t, err)
 	require.ErrorContains(t, err, ".Values.alpha")

@@ -433,7 +433,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
 	if opts.NamespaceOverride != "" {
-		if err := pkgLayout.Package.OverrideNamespace(opts.NamespaceOverride); err != nil {
+		if err := pkgLayout.OverrideNamespace(opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
@@ -448,11 +448,9 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 			filters.ByLocalOS(runtime.GOOS),
 			filters.ForDeploy(optionalComponents, true),
 		)
-		definition, err := filters.Apply(pkgLayout.Package, filter)
-		if err != nil {
+		if err := pkgLayout.Filter(filter); err != nil {
 			return nil, err
 		}
-		pkgLayout.Package = definition
 	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)

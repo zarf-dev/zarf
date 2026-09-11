@@ -242,5 +242,5 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	return pkgLayout.Package, nil
+	return pkgLayout.Definition(), nil
 }
