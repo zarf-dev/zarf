@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"time"
 )
 
 // PackageKind identifies the kind of a Zarf package.
@@ -19,6 +20,19 @@ const (
 	// ZarfPackageConfig is the default package kind.
 	ZarfPackageConfig PackageKind = "ZarfPackageConfig"
 )
+
+// BuildTimestampFormat is the timestamp format used for package build metadata.
+const BuildTimestampFormat = time.RFC1123Z
+
+// IsSBOMAble reports whether this package contains content that can have an SBOM.
+func (p Package) IsSBOMAble() bool {
+	for _, component := range p.Components {
+		if len(component.ImageArchives) > 0 || len(component.Images) > 0 || len(component.Files) > 0 || len(component.DataInjections) > 0 {
+			return true
+		}
+	}
+	return false
+}
 
 // SetName updates the package metadata name.
 func (p *Package) SetName(name string) {

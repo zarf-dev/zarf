@@ -7,7 +7,8 @@ package v1alpha1
 import (
 	"fmt"
 	"regexp"
-	"time"
+
+	"github.com/zarf-dev/zarf/src/api"
 )
 
 // VariableType represents a type of a Zarf package variable
@@ -27,7 +28,7 @@ var (
 )
 
 // BuildTimestampFormat is the timestamp format used for ZarfBuildData.Timestamp
-const BuildTimestampFormat = time.RFC1123Z
+const BuildTimestampFormat = api.BuildTimestampFormat
 
 // Zarf looks for these strings in zarf.yaml to make dynamic changes
 const (

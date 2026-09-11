@@ -242,7 +242,7 @@ func (e *NoSBOMAvailableError) Error() string {
 
 // ContainsSBOM checks if a package includes an SBOM
 func (p *PackageLayout) ContainsSBOM() bool {
-	if !p.AsV1alpha1().IsSBOMAble() {
+	if !p.pkg.IsSBOMAble() {
 		return false
 	}
 	return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
@@ -504,9 +504,8 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 // checking for the presence of a signature file for backward compatibility.
 func (p *PackageLayout) IsSigned() bool {
 	// Check metadata first (authoritative source)
-	pkg := p.AsV1alpha1()
-	if pkg.Build.Signed != nil {
-		return *pkg.Build.Signed
+	if p.pkg.Build.Signed != nil {
+		return *p.pkg.Build.Signed
 	}
 
 	// Backward compatibility: check for signature file existence
@@ -523,7 +522,7 @@ func (p *PackageLayout) IsSigned() bool {
 // GetSBOM outputs the SBOM data from the package to the given destination path.
 func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 	if !p.ContainsSBOM() {
-		return &NoSBOMAvailableError{pkgName: p.AsV1alpha1().Metadata.Name}
+		return &NoSBOMAvailableError{pkgName: p.Definition().Metadata.Name}
 	}
 
 	// locate the sboms archive under the layout directory
@@ -541,9 +540,8 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 // If keys are provided, only those specific documentation files are extracted.
 func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) (err error) {
 	l := logger.From(ctx)
-	pkg := p.AsV1alpha1()
 
-	if len(pkg.Documentation) == 0 {
+	if len(p.pkg.Documentation) == 0 {
 		return fmt.Errorf("no documentation files found in package")
 	}
 
@@ -552,11 +550,11 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("documentation.tar not found in package")
 	}
 
-	keysToExtract := maps.Clone(pkg.Documentation)
+	keysToExtract := maps.Clone(p.pkg.Documentation)
 	if len(keys) > 0 {
 		keysToExtract = make(map[string]string)
 		for _, key := range keys {
-			if filePath, ok := pkg.Documentation[key]; ok {
+			if filePath, ok := p.pkg.Documentation[key]; ok {
 				keysToExtract[key] = filePath
 			} else {
 				return fmt.Errorf("key %s not found in package documentation", key)
@@ -582,7 +580,7 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
 	}
 
-	fileNames := GetDocumentationFileNames(pkg.Documentation)
+	fileNames := GetDocumentationFileNames(p.pkg.Documentation)
 
 	for key, file := range keysToExtract {
 		docFileName := fileNames[key]
@@ -740,7 +738,7 @@ func (p *PackageLayout) Files() (map[string]string, error) {
 
 // FileName returns the name of the Zarf package should have when exported to the file system
 func (p *PackageLayout) FileName() (string, error) {
-	pkg := p.AsV1alpha1()
+	pkg := p.pkg
 	if pkg.Build.Architecture == "" {
 		return "", errors.New("package must include a build architecture")
 	}
@@ -748,9 +746,9 @@ func (p *PackageLayout) FileName() (string, error) {
 
 	var name string
 	switch pkg.Kind {
-	case v1alpha1.ZarfInitConfig:
+	case api.ZarfInitConfig:
 		name = fmt.Sprintf("zarf-init-%s", arch)
-	case v1alpha1.ZarfPackageConfig:
+	case api.ZarfPackageConfig:
 		name = fmt.Sprintf("zarf-package-%s-%s", pkg.Metadata.Name, arch)
 	default:
 		name = fmt.Sprintf("zarf-%s-%s", strings.ToLower(string(pkg.Kind)), arch)
@@ -774,7 +772,7 @@ func (p *PackageLayout) FileName() (string, error) {
 }
 
 func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
-	pkg := pkgLayout.AsV1alpha1()
+	pkg := pkgLayout.pkg
 	_, err := os.Stat(filepath.Join(pkgLayout.dirPath, ZarfYAML))
 	if err != nil {
 		return err
@@ -783,7 +781,7 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 	if err != nil {
 		return err
 	}
-	err = helpers.SHAsMatch(filepath.Join(pkgLayout.dirPath, Checksums), pkg.Metadata.AggregateChecksum)
+	err = helpers.SHAsMatch(filepath.Join(pkgLayout.dirPath, Checksums), pkg.Build.AggregateChecksum)
 	if err != nil {
 		return err
 	}
@@ -856,7 +854,7 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 
 // validatePackagePaths checks that package config fields used as filesystem
 // path components do not contain path traversal sequences or separators.
-func validatePackagePaths(pkg v1alpha1.ZarfPackage) error {
+func validatePackagePaths(pkg api.Package) error {
 	if !isCleanPath(pkg.Metadata.Name) {
 		return fmt.Errorf("package metadata name %q would result in an invalid path", pkg.Metadata.Name)
 	}

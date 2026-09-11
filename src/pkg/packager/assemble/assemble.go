@@ -851,7 +851,7 @@ func recordPackageMetadata(definition *api.Package, flavor string, registryOverr
 	now := time.Now()
 	buildData := api.BuildData{
 		Architecture:      pkg.Metadata.Architecture,
-		Timestamp:         now.Format(v1alpha1.BuildTimestampFormat),
+		Timestamp:         now.Format(api.BuildTimestampFormat),
 		Version:           config.CLIVersion,
 		Flavor:            flavor,
 		ProvenanceFiles:   []string{layout.Checksums},
