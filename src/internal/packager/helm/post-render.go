@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
@@ -186,23 +187,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
 		newContent, rawData, err := processManifestContent(resource.Content, func(obj *unstructured.Unstructured) error {
-			// Add the package label to all resources
-			labels := obj.GetLabels()
-			if labels == nil {
-				labels = map[string]string{}
-			}
-			obj.SetLabels(r.setPackageLabels(labels))
-			// Add the package label to pod templates (for Deployments, StatefulSets, etc.)
-			if err := r.addLabelsToNestedPath(obj, []string{"spec", "template", "metadata", "labels"}); err != nil {
-				return fmt.Errorf("failed to add labels to pod template: %w", err)
-			}
-			// In connected or YOLO mode, add agent ignore labels so the webhook doesn't mutate resources
-			if r.shouldAddAgentIgnoreLabels() {
-				if err := addAgentIgnoreLabels(obj); err != nil {
-					return err
-				}
-			}
-			return nil
+			return eachResource(obj, r.addZarfLabels)
 		})
 		if err != nil {
 			return err
@@ -259,6 +244,50 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 
 		// Finally place this back onto the output buffer
 		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
+	}
+	return nil
+}
+
+// eachResource calls modifyFn once for every resource a rendered manifest document contains.
+// Most documents hold a single resource, but a list kind like ConfigMapList or the generic List
+// holds one per item.
+// The metadata on a list is a ListMeta, which has no labels field, so whatever gets written there
+// is rejected by the API server. Helm flattens a list into its items before applying it anyway,
+// so the items are what we actually want to edit.
+func eachResource(obj *unstructured.Unstructured, modifyFn func(*unstructured.Unstructured) error) error {
+	// IsList only checks for a top level items array, so every kubernetes list kind ending in List
+	// is checked as well to keep a custom resource carrying its own items from looking like a list.
+	if obj.IsList() && strings.HasSuffix(obj.GetKind(), "List") {
+		// EachListItem shares the underlying map with each item, so edits made here end up
+		// in the manifest that gets marshaled back out
+		return obj.EachListItem(func(item runtime.Object) error {
+			itemObj, ok := item.(*unstructured.Unstructured)
+			if !ok {
+				return fmt.Errorf("unexpected item of type %T in %s", item, obj.GetKind())
+			}
+			return eachResource(itemObj, modifyFn)
+		})
+	}
+	return modifyFn(obj)
+}
+
+// addZarfLabels adds the zarf labels to a single resource
+func (r *renderer) addZarfLabels(obj *unstructured.Unstructured) error {
+	// Add the package label to all resources
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	obj.SetLabels(r.setPackageLabels(labels))
+	// Add the package label to pod templates (for Deployments, StatefulSets, etc.)
+	if err := r.addLabelsToNestedPath(obj, []string{"spec", "template", "metadata", "labels"}); err != nil {
+		return fmt.Errorf("failed to add labels to pod template: %w", err)
+	}
+	// In connected or YOLO mode, add agent ignore labels so the webhook doesn't mutate resources
+	if r.shouldAddAgentIgnoreLabels() {
+		if err := addAgentIgnoreLabels(obj); err != nil {
+			return err
+		}
 	}
 	return nil
 }
