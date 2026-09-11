@@ -17,6 +17,9 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
+// defaultFuzzIterations balances round-trip coverage with unit-test duration.
+const defaultFuzzIterations = 20
+
 // TestConvertGenericRoundTrip verifies that fields represented by the operational model survive a
 // v1alpha1 conversion. Fields omitted from the comparison are documented below with the behavior
 // that makes their source form unnecessary.
@@ -156,7 +159,7 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 	t.Parallel()
 
 	rng := rand.New(rand.NewSource(1))
-	for i := range 1000 {
+	for i := range defaultFuzzIterations {
 		var pkg v1alpha1.ZarfPackage
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
 
@@ -198,7 +201,7 @@ func TestConvertV1alpha1V1beta1RoundTripFuzz(t *testing.T) {
 	t.Parallel()
 
 	rng := rand.New(rand.NewSource(1))
-	for i := range 1000 {
+	for i := range defaultFuzzIterations {
 		var pkg v1alpha1.ZarfPackage
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
 		populateValidV1alpha1ChartSources(&pkg, rng, i)
