@@ -14,34 +14,23 @@ type Package struct {
 	Values        Values
 	Documentation map[string]string
 
-	// v1alpha1-only fields preserved for lossless round-trip.
+	// v1alpha1-only fields
 	Variables []InteractiveVariable
 	Constants []Constant
 }
 
 // PackageMetadata contains metadata shared across package API versions.
 type PackageMetadata struct {
-	Name         string
-	Description  string
-	Version      string
-	Uncompressed bool
-	Architecture string
-	Annotations  map[string]string
-	// PreventNamespaceOverride is the v1beta1 form. v1alpha1 stores AllowNamespaceOverride *bool;
-	// only one of these should be populated by the converter.
+	Name                     string
+	Description              string
+	Version                  string
+	Uncompressed             bool
+	Architecture             string
+	Annotations              map[string]string
 	PreventNamespaceOverride bool
-	AllowNamespaceOverride   *bool
 
-	// v1alpha1-only metadata fields. v1beta1 migrates these to Annotations.
-	URL           string
-	Image         string
-	YOLO          bool
-	Authors       string
-	Documentation string
-	Source        string
-	Vendor        string
-	// AggregateChecksum lives in Metadata on v1alpha1 and in Build on v1beta1.
-	AggregateChecksum string
+	// YOLO changes deploy behavior for v1alpha1 packages.
+	YOLO bool
 }
 
 // BuildData contains build metadata shared across package API versions.
@@ -97,9 +86,7 @@ type Component struct {
 	StateAccess   []string
 	Actions       ComponentActions
 
-	// v1alpha1-only fields preserved for lossless round-trip.
 	Default           bool
-	Required          *bool
 	Group             string
 	DataInjections    []ZarfDataInjection
 	HealthChecks      []NamespacedObjectKindReference
@@ -127,14 +114,13 @@ type ComponentTarget struct {
 
 // ComponentImport carries imports from any API version.
 type ComponentImport struct {
-	// v1beta1 form: separate lists of local and remote component config references.
+	// Local and Remote support the multiple imports accepted by v1beta1.
 	Local  []ComponentImportLocal
 	Remote []ComponentImportRemote
 
-	// v1alpha1-only single-import fields.
+	// Name identifies a v1alpha1 imported component. Path and URL are projected onto
+	// Local and Remote by the v1alpha1 converter.
 	Name string
-	Path string
-	URL  string
 }
 
 // ComponentImportLocal references a local component config file.
@@ -163,12 +149,9 @@ type Manifest struct {
 	SkipWait         bool
 	ServerSideApply  string
 	EnableTemplating bool
-
-	// v1alpha1-only round-trip fields.
-	Template *bool
 }
 
-// Chart is the superset of chart fields across API versions.
+// Chart is the operational representation of a chart across API versions.
 type Chart struct {
 	Name                 string
 	Namespace            string
@@ -179,20 +162,13 @@ type Chart struct {
 	ServerSideApply      string
 	SkipWait             bool
 
-	// v1beta1 structured sources.
 	HelmRepository *HelmRepositorySource
 	Git            *GitSource
 	Local          *LocalSource
 	OCI            *OCISource
 
-	// v1alpha1-only flat source fields. Used during conversion to populate structured sources.
-	URL              string
-	RepoName         string
-	GitPath          string
-	LocalPath        string
-	Version          string
-	SchemaValidation *bool
-	Variables        []ZarfChartVariable
+	// Variables are required to run v1alpha1 chart actions.
+	Variables []ZarfChartVariable
 }
 
 // ValuesFile is a values file merged into a Helm chart, optionally rendered with Zarf templating.
@@ -231,7 +207,8 @@ type GitSource struct {
 
 // LocalSource represents a chart stored locally.
 type LocalSource struct {
-	Path string
+	Path    string
+	Version string
 }
 
 // OCIRef selects a single OCI reference.
@@ -242,9 +219,8 @@ type OCIRef struct {
 
 // OCISource represents a chart stored in an OCI registry.
 type OCISource struct {
-	URL     string
-	Version string
-	Ref     *OCIRef
+	URL string
+	Ref *OCIRef
 }
 
 // Repository defines a git repository.
@@ -262,8 +238,6 @@ type File struct {
 	Symlinks         []string
 	ExtractPath      string
 	EnableTemplating bool
-	// Template is the v1alpha1 *bool preserved so an unset value round-trips losslessly.
-	Template *bool
 }
 
 // Image represents an OCI image in the package.
@@ -352,16 +326,12 @@ type ComponentActions struct {
 }
 
 // ActionSet contains actions for one package lifecycle operation.
-// FIXME: actions should be folded back into the type
 type ActionSet struct {
-	Defaults ActionDefaults
-	// DefaultsDefined preserves whether a source schema explicitly supplied defaults.
-	// FIXME: this must be deleted
-	DefaultsDefined bool
-	Before          []Action
-	After           []Action
-	OnSuccess       []Action
-	OnFailure       []Action
+	Defaults  ActionDefaults
+	Before    []Action
+	After     []Action
+	OnSuccess []Action
+	OnFailure []Action
 }
 
 // ActionDefaults configures every action in an ActionSet unless the action overrides it.
@@ -388,9 +358,7 @@ type Action struct {
 	Description      string
 	Wait             *ActionWait
 	EnableTemplating bool
-	// Template preserves v1alpha1's explicit templating setting for lossless conversion.
-	Template *bool
-	// DeprecatedSetVariable preserves the deprecated v1alpha1 action field during conversion.
+	// DeprecatedSetVariable is required to execute legacy v1alpha1 packages.
 	DeprecatedSetVariable string
 }
 

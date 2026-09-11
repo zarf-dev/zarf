@@ -5,10 +5,13 @@
 package v1alpha1
 
 import (
+	"maps"
 	"strings"
 
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
@@ -23,17 +26,9 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 			Version:                  pkg.Metadata.Version,
 			Uncompressed:             pkg.Metadata.Uncompressed,
 			Architecture:             pkg.Metadata.Architecture,
-			Annotations:              pkg.Metadata.Annotations,
-			AllowNamespaceOverride:   pkg.Metadata.AllowNamespaceOverride,
+			Annotations:              metadataAnnotations(pkg.Metadata),
 			PreventNamespaceOverride: !pkg.AllowsNamespaceOverride(),
-			URL:                      pkg.Metadata.URL,
-			Image:                    pkg.Metadata.Image,
 			YOLO:                     pkg.Metadata.YOLO,
-			Authors:                  pkg.Metadata.Authors,
-			Documentation:            pkg.Metadata.Documentation,
-			Source:                   pkg.Metadata.Source,
-			Vendor:                   pkg.Metadata.Vendor,
-			AggregateChecksum:        pkg.Metadata.AggregateChecksum,
 		},
 		Build: api.BuildData{
 			Hostname:                   pkg.Build.Terminal,
@@ -49,6 +44,7 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 			Signed:                     pkg.Build.Signed,
 			DifferentialMissing:        pkg.Build.DifferentialMissing,
 			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
+			AggregateChecksum:          pkg.Metadata.AggregateChecksum,
 			OriginalAPIVersion:         pkg.Build.GetOriginalAPIVersion(),
 		},
 		Values: api.Values{
@@ -80,7 +76,6 @@ func componentToGeneric(c v1alpha1.ZarfComponent) api.Component {
 		Description:       c.Description,
 		Default:           c.Default,
 		Optional:          !c.IsRequired(),
-		Required:          c.Required,
 		Group:             c.DeprecatedGroup,
 		DataInjections:    dataInjectionsToGeneric(c.DataInjections),
 		HealthChecks:      healthChecksToGeneric(c.HealthChecks),
@@ -93,12 +88,14 @@ func componentToGeneric(c v1alpha1.ZarfComponent) api.Component {
 			Flavor:       c.Only.Flavor,
 		},
 		Distros: c.Only.Cluster.Distros,
-		Import: api.ComponentImport{
-			Name: c.Import.Name,
-			Path: c.Import.Path,
-			URL:  c.Import.URL,
-		},
+		Import:  api.ComponentImport{Name: c.Import.Name},
 		Actions: actionsToGeneric(c.Actions),
+	}
+	if c.Import.Path != "" {
+		gc.Import.Local = []api.ComponentImportLocal{{Path: c.Import.Path}}
+	}
+	if c.Import.URL != "" {
+		gc.Import.Remote = []api.ComponentImportRemote{{URL: c.Import.URL}}
 	}
 
 	for _, m := range c.Manifests {
@@ -118,7 +115,6 @@ func componentToGeneric(c v1alpha1.ZarfComponent) api.Component {
 			Symlinks:         f.Symlinks,
 			ExtractPath:      f.ExtractPath,
 			EnableTemplating: derefBool(f.Template),
-			Template:         f.Template,
 		})
 	}
 
@@ -144,7 +140,6 @@ func manifestToGeneric(m v1alpha1.ZarfManifest) api.Manifest {
 		SkipWait:         m.NoWait,
 		ServerSideApply:  m.ServerSideApply,
 		EnableTemplating: derefBool(m.Template),
-		Template:         m.Template,
 	}
 	if len(m.Kustomizations) > 0 || m.KustomizeAllowAnyDirectory || m.EnableKustomizePlugins {
 		gm.Kustomize = &api.KustomizeManifest{
@@ -165,16 +160,58 @@ func chartToGeneric(ch v1alpha1.ZarfChart) api.Chart {
 		SkipSchemaValidation: ch.SchemaValidation != nil && !*ch.SchemaValidation,
 		ServerSideApply:      ch.ServerSideApply,
 		SkipWait:             ch.NoWait,
-		URL:                  ch.URL,
-		RepoName:             ch.RepoName,
-		GitPath:              ch.GitPath,
-		LocalPath:            ch.LocalPath,
-		Version:              ch.Version,
-		SchemaValidation:     ch.SchemaValidation,
 		Variables:            chartVarsToGeneric(ch.Variables),
 		Values:               chartValuesToGeneric(ch.Values),
 	}
+	chartSourceToGeneric(&gc, ch)
 	return gc
+}
+
+// chartSourceToGeneric projects v1alpha1's flat source fields into the single
+// structured source used by the operational model.
+func chartSourceToGeneric(chart *api.Chart, source v1alpha1.ZarfChart) {
+	switch {
+	case source.LocalPath != "":
+		chart.Local = &api.LocalSource{Path: source.LocalPath, Version: source.Version}
+	case strings.HasPrefix(source.URL, "oci://"):
+		ociURL, ref := source.URL, &api.OCIRef{Tag: source.Version}
+		if url, digest, found := strings.Cut(source.URL, "@sha256:"); found {
+			ociURL, ref = url, &api.OCIRef{Digest: "sha256:" + digest}
+		}
+		chart.OCI = &api.OCISource{URL: ociURL, Ref: ref}
+	case source.GitPath != "" || isGitURL(source.URL):
+		gitURL, ref := source.URL, source.Version
+		if url, parsedRef, err := transform.GitURLSplitRef(source.URL); err == nil {
+			gitURL = url
+			if parsedRef != "" {
+				ref = parsedRef
+			}
+		}
+		chart.Git = &api.GitSource{URL: gitURL, Path: source.GitPath, Ref: classifyGitRef(ref)}
+	case source.URL != "":
+		chart.HelmRepository = &api.HelmRepositorySource{
+			Name: source.RepoName, URL: source.URL, Version: source.Version,
+		}
+	}
+}
+
+func isGitURL(url string) bool {
+	gitURL, _, err := transform.GitURLSplitRef(url)
+	return err == nil && strings.HasSuffix(gitURL, ".git")
+}
+
+func classifyGitRef(ref string) *api.GitRef {
+	if ref == "" {
+		return nil
+	}
+	if plumbing.IsHash(ref) {
+		return &api.GitRef{Commit: ref}
+	}
+	parsed := string(git.ParseRef(ref))
+	if branch, ok := strings.CutPrefix(parsed, "refs/heads/"); ok {
+		return &api.GitRef{Branch: branch}
+	}
+	return &api.GitRef{Tag: strings.TrimPrefix(parsed, "refs/tags/")}
 }
 
 // valuesFilesToGeneric folds the v1alpha1 plain and templated values file lists into the generic
@@ -238,12 +275,11 @@ func actionSetToGeneric(s v1alpha1.ZarfComponentActionSet) api.ActionSet {
 	}
 
 	return api.ActionSet{
-		Defaults:        defaults,
-		DefaultsDefined: true,
-		Before:          actionSliceToGeneric(s.Before),
-		After:           actionSliceToGeneric(s.After),
-		OnSuccess:       actionSliceToGeneric(s.OnSuccess),
-		OnFailure:       actionSliceToGeneric(s.OnFailure),
+		Defaults:  defaults,
+		Before:    actionSliceToGeneric(s.Before),
+		After:     actionSliceToGeneric(s.After),
+		OnSuccess: actionSliceToGeneric(s.OnSuccess),
+		OnFailure: actionSliceToGeneric(s.OnFailure),
 	}
 }
 
@@ -264,7 +300,6 @@ func actionToGeneric(a v1alpha1.ZarfComponentAction) api.Action {
 		Description:           a.Description,
 		Wait:                  waitToGeneric(a.Wait),
 		EnableTemplating:      derefBool(a.Template),
-		Template:              a.Template,
 		SetVariables:          actionVariablesToGeneric(a.SetVariables),
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 	}
@@ -360,31 +395,21 @@ func PackageToV1alpha1(g api.Package) v1alpha1.ZarfPackage {
 
 func metadataFromGeneric(m api.PackageMetadata, b api.BuildData) v1alpha1.ZarfMetadata {
 	meta := v1alpha1.ZarfMetadata{
-		Name:                   m.Name,
-		Description:            m.Description,
-		Version:                m.Version,
-		Uncompressed:           m.Uncompressed,
-		Architecture:           m.Architecture,
-		AllowNamespaceOverride: m.AllowNamespaceOverride,
-		URL:                    m.URL,
-		Image:                  m.Image,
-		YOLO:                   m.YOLO,
-		Authors:                m.Authors,
-		Documentation:          m.Documentation,
-		Source:                 m.Source,
-		Vendor:                 m.Vendor,
+		Name:         m.Name,
+		Description:  m.Description,
+		Version:      m.Version,
+		Uncompressed: m.Uncompressed,
+		Architecture: m.Architecture,
+		YOLO:         m.YOLO,
+	}
+	if m.PreventNamespaceOverride {
+		allowNamespaceOverride := false
+		meta.AllowNamespaceOverride = &allowNamespaceOverride
 	}
 
-	// AggregateChecksum: prefer the v1alpha1 native location, fall back to build (v1beta1 location).
-	switch {
-	case m.AggregateChecksum != "":
-		meta.AggregateChecksum = m.AggregateChecksum
-	case b.AggregateChecksum != "":
-		meta.AggregateChecksum = b.AggregateChecksum
-	}
+	meta.AggregateChecksum = b.AggregateChecksum
 
-	// Restore v1alpha1-only metadata fields from annotations if the generic fields are empty.
-	// This handles the case where data originated from v1beta1 and the fields were stored as annotations.
+	// v1alpha1-only metadata is stored as annotations in the operational model.
 	if m.Annotations != nil {
 		restore := map[string]*string{
 			"metadata.url":           &meta.URL,
@@ -410,6 +435,29 @@ func metadataFromGeneric(m api.PackageMetadata, b api.BuildData) v1alpha1.ZarfMe
 	}
 
 	return meta
+}
+
+func metadataAnnotations(metadata v1alpha1.ZarfMetadata) map[string]string {
+	annotations := maps.Clone(metadata.Annotations)
+	for key, value := range map[string]string{
+		"metadata.url":           metadata.URL,
+		"metadata.image":         metadata.Image,
+		"metadata.authors":       metadata.Authors,
+		"metadata.documentation": metadata.Documentation,
+		"metadata.source":        metadata.Source,
+		"metadata.vendor":        metadata.Vendor,
+	} {
+		if value == "" {
+			continue
+		}
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		if _, exists := annotations[key]; !exists {
+			annotations[key] = value
+		}
+	}
+	return annotations
 }
 
 func buildFromGeneric(b api.BuildData) v1alpha1.ZarfBuildData {
@@ -469,7 +517,7 @@ func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 		Name:              c.Name,
 		Description:       c.Description,
 		Default:           c.Default,
-		Required:          requiredFromGeneric(c.Optional, c.Required),
+		Required:          requiredFromGeneric(c.Optional),
 		DeprecatedGroup:   c.Group,
 		DataInjections:    dataInjectionsFromGeneric(c.DataInjections),
 		HealthChecks:      healthChecksFromGeneric(c.HealthChecks),
@@ -484,19 +532,14 @@ func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 			},
 			Flavor: c.Target.Flavor,
 		},
-		Import: v1alpha1.ZarfComponentImport{
-			Name: c.Import.Name,
-			Path: c.Import.Path,
-			URL:  c.Import.URL,
-		},
+		Import:  v1alpha1.ZarfComponentImport{Name: c.Import.Name},
 		Actions: actionsFromGeneric(c.Actions),
 	}
 
-	// If the v1alpha1 single-path import fields are empty but the v1beta1 lists have one entry, project it back.
-	if ac.Import.Path == "" && len(c.Import.Local) > 0 {
+	if len(c.Import.Local) > 0 {
 		ac.Import.Path = c.Import.Local[0].Path
 	}
-	if ac.Import.URL == "" && len(c.Import.Remote) > 0 {
+	if len(c.Import.Remote) > 0 {
 		ac.Import.URL = c.Import.Remote[0].URL
 	}
 
@@ -516,9 +559,8 @@ func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 			Executable:  f.Executable,
 			Symlinks:    f.Symlinks,
 			ExtractPath: f.ExtractPath,
-			Template:    f.Template,
 		}
-		if af.Template == nil && f.EnableTemplating {
+		if f.EnableTemplating {
 			t := true
 			af.Template = &t
 		}
@@ -539,14 +581,8 @@ func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 	return ac
 }
 
-// requiredFromGeneric maps the generic representation back to the v1alpha1 Required pointer. An
-// explicit Required is preserved verbatim, so a v1alpha1 round-trip (including an unset nil) is
-// lossless. When it is unset, only a required component is materialized as an explicit &true, since
-// v1alpha1 treats an absent required as optional; leaving it nil keeps optional components implicit.
-func requiredFromGeneric(optional bool, required *bool) *bool {
-	if required != nil {
-		return required
-	}
+// requiredFromGeneric maps the operational optional flag back to v1alpha1's inverse field.
+func requiredFromGeneric(optional bool) *bool {
 	if !optional {
 		v := true
 		return &v
@@ -561,14 +597,13 @@ func manifestFromGeneric(m api.Manifest) v1alpha1.ZarfManifest {
 		Files:           m.Files,
 		ServerSideApply: m.ServerSideApply,
 		NoWait:          m.SkipWait,
-		Template:        m.Template,
 	}
 	if m.Kustomize != nil {
 		am.Kustomizations = m.Kustomize.Files
 		am.KustomizeAllowAnyDirectory = m.Kustomize.AllowAnyDirectory
 		am.EnableKustomizePlugins = m.Kustomize.EnablePlugins
 	}
-	if am.Template == nil && m.EnableTemplating {
+	if m.EnableTemplating {
 		t := true
 		am.Template = &t
 	}
@@ -582,60 +617,46 @@ func chartFromGeneric(ch api.Chart) v1alpha1.ZarfChart {
 		ReleaseName:     ch.ReleaseName,
 		ServerSideApply: ch.ServerSideApply,
 		NoWait:          ch.SkipWait,
-		URL:             ch.URL,
-		RepoName:        ch.RepoName,
-		GitPath:         ch.GitPath,
-		LocalPath:       ch.LocalPath,
-		Version:         ch.Version,
 		Variables:       chartVarsFromGeneric(ch.Variables),
 	}
 	ac.ValuesFiles, ac.TemplatedValuesFiles = valuesFilesFromGeneric(ch.ValuesFiles)
 
-	// Prefer preserved v1alpha1 SchemaValidation; otherwise derive from SkipSchemaValidation.
-	if ch.SchemaValidation != nil {
-		ac.SchemaValidation = ch.SchemaValidation
-	} else if ch.SkipSchemaValidation {
+	if ch.SkipSchemaValidation {
 		f := false
 		ac.SchemaValidation = &f
 	}
 
-	// If flat fields are empty but structured sources are populated, project them onto the flat fields.
-	if ac.URL == "" && ac.LocalPath == "" {
-		switch {
-		case ch.HelmRepository != nil && ch.HelmRepository.URL != "":
-			ac.URL = ch.HelmRepository.URL
-			ac.RepoName = ch.HelmRepository.Name
-			if ac.Version == "" {
-				ac.Version = ch.HelmRepository.Version
+	switch {
+	case ch.HelmRepository != nil && ch.HelmRepository.URL != "":
+		ac.URL = ch.HelmRepository.URL
+		ac.RepoName = ch.HelmRepository.Name
+		ac.Version = ch.HelmRepository.Version
+	case ch.OCI != nil && ch.OCI.URL != "":
+		ac.URL = ch.OCI.URL
+		if ch.OCI.Ref != nil {
+			if ch.OCI.Ref.Tag != "" {
+				ac.Version = ch.OCI.Ref.Tag
+			} else if ch.OCI.Ref.Digest != "" {
+				ac.URL = strings.TrimSuffix(ch.OCI.URL, "/") + "@" + ch.OCI.Ref.Digest
 			}
-		case ch.OCI != nil && ch.OCI.URL != "":
-			ac.URL = ch.OCI.URL
-			if ch.OCI.Ref != nil {
-				if ch.OCI.Ref.Tag != "" {
-					ac.Version = ch.OCI.Ref.Tag
-				} else if ch.OCI.Ref.Digest != "" {
-					ac.URL = strings.TrimSuffix(ch.OCI.URL, "/") + "@" + ch.OCI.Ref.Digest
-				}
-			} else if ac.Version == "" {
-				ac.Version = ch.OCI.Version
-			}
-		case ch.Git != nil && ch.Git.URL != "":
-			gitURL := ch.Git.URL
-			if urlNoRef, _, err := transform.GitURLSplitRef(ch.Git.URL); err == nil {
-				gitURL = urlNoRef
-			}
-			ref := flattenGitRef(ch.Git.Ref)
-			// If it starts with refs/ then it shouldn't be included in the version as this becomes a filepath
-			if strings.HasPrefix(ref, "refs/") {
-				ac.URL = gitURL + "@" + ref
-			} else {
-				ac.URL = gitURL
-				ac.Version = ref
-			}
-			ac.GitPath = ch.Git.Path
-		case ch.Local != nil && ch.Local.Path != "":
-			ac.LocalPath = ch.Local.Path
 		}
+	case ch.Git != nil && ch.Git.URL != "":
+		gitURL := ch.Git.URL
+		if urlNoRef, _, err := transform.GitURLSplitRef(ch.Git.URL); err == nil {
+			gitURL = urlNoRef
+		}
+		ref := flattenGitRef(ch.Git.Ref)
+		// If it starts with refs/ then it shouldn't be included in the version as this becomes a filepath.
+		if strings.HasPrefix(ref, "refs/") {
+			ac.URL = gitURL + "@" + ref
+		} else {
+			ac.URL = gitURL
+			ac.Version = ref
+		}
+		ac.GitPath = ch.Git.Path
+	case ch.Local != nil && ch.Local.Path != "":
+		ac.LocalPath = ch.Local.Path
+		ac.Version = ch.Local.Version
 	}
 
 	for _, v := range ch.Values {
@@ -658,20 +679,17 @@ func actionsFromGeneric(a api.ComponentActions) v1alpha1.ZarfComponentActions {
 }
 
 func actionSetFromGeneric(s api.ActionSet) v1alpha1.ZarfComponentActionSet {
-	defaults := v1alpha1.ZarfComponentActionDefaults{}
-	if s.DefaultsDefined {
-		defaults = v1alpha1.ZarfComponentActionDefaults{
-			Mute:            s.Defaults.Silent,
-			MaxTotalSeconds: s.Defaults.MaxTotalSeconds,
-			MaxRetries:      s.Defaults.Retries,
-			Dir:             s.Defaults.Dir,
-			Env:             s.Defaults.Env,
-			Shell: v1alpha1.Shell{
-				Windows: s.Defaults.Shell.Windows,
-				Linux:   s.Defaults.Shell.Linux,
-				Darwin:  s.Defaults.Shell.Darwin,
-			},
-		}
+	defaults := v1alpha1.ZarfComponentActionDefaults{
+		Mute:            s.Defaults.Silent,
+		MaxTotalSeconds: s.Defaults.MaxTotalSeconds,
+		MaxRetries:      s.Defaults.Retries,
+		Dir:             s.Defaults.Dir,
+		Env:             s.Defaults.Env,
+		Shell: v1alpha1.Shell{
+			Windows: s.Defaults.Shell.Windows,
+			Linux:   s.Defaults.Shell.Linux,
+			Darwin:  s.Defaults.Shell.Darwin,
+		},
 	}
 
 	return v1alpha1.ZarfComponentActionSet{
@@ -699,7 +717,6 @@ func actionFromGeneric(a api.Action) v1alpha1.ZarfComponentAction {
 		Cmd:                   a.Cmd,
 		Description:           a.Description,
 		Wait:                  waitFromGeneric(a.Wait),
-		Template:              a.Template,
 		SetVariables:          actionVariablesFromGeneric(a.SetVariables),
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 	}
@@ -712,7 +729,7 @@ func actionFromGeneric(a api.Action) v1alpha1.ZarfComponentAction {
 		v := int(*a.Retries)
 		aa.MaxRetries = &v
 	}
-	if aa.Template == nil && a.EnableTemplating {
+	if a.EnableTemplating {
 		t := true
 		aa.Template = &t
 	}

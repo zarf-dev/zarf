@@ -152,7 +152,6 @@ func (p *Package) SetBuildData(buildData BuildData) {
 	p.Build.ProvenanceFiles = slices.Clone(buildData.ProvenanceFiles)
 	p.Build.VersionRequirements = slices.Clone(buildData.VersionRequirements)
 	p.Build.AggregateChecksum = buildData.AggregateChecksum
-	p.Metadata.AggregateChecksum = buildData.AggregateChecksum
 }
 
 // SetDifferentialBuild records the base package version for a differential package.

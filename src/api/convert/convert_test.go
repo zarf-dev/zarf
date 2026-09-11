@@ -885,9 +885,8 @@ func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 	require.Equal(t, "1.0.0", result.Metadata.Version)
 	require.Equal(t, "amd64", result.Metadata.Architecture)
 	require.True(t, result.Metadata.Uncompressed)
-	// PreventNamespaceOverride=false → AllowNamespaceOverride=true.
-	require.NotNil(t, result.Metadata.AllowNamespaceOverride)
-	require.True(t, *result.Metadata.AllowNamespaceOverride)
+	// PreventNamespaceOverride=false preserves the v1alpha1 default of allowing overrides.
+	require.True(t, result.AllowsNamespaceOverride())
 
 	// v1alpha1-only metadata fields should be restored from annotations.
 	require.Equal(t, "https://example.com", result.Metadata.URL)

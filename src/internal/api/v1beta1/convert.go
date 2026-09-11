@@ -18,9 +18,6 @@ import (
 
 // PackageFromV1beta1 converts a v1beta1 Package to the internal generic representation.
 func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
-	// Carry the equivalent v1alpha1 AllowNamespaceOverride pointer so conversions to v1alpha1
-	// produce an explicit value rather than relying on a projection.
-	allowNamespaceOverride := !pkg.Metadata.PreventNamespaceOverride
 	g := api.Package{
 		APIVersion: pkg.APIVersion,
 		Kind:       api.PackageKind(pkg.Kind),
@@ -32,7 +29,6 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 			Architecture:             pkg.Metadata.Architecture,
 			Annotations:              pkg.Metadata.Annotations,
 			PreventNamespaceOverride: pkg.Metadata.PreventNamespaceOverride,
-			AllowNamespaceOverride:   &allowNamespaceOverride,
 		},
 		Build: api.BuildData{
 			Hostname:                   pkg.Build.Hostname,
@@ -211,11 +207,10 @@ func actionsToGeneric(a v1beta1.ComponentActions) api.ComponentActions {
 
 func actionSetToGeneric(s v1beta1.ComponentActionSet) api.ActionSet {
 	return api.ActionSet{
-		Defaults:        actionDefaultsToGeneric(s.Defaults),
-		DefaultsDefined: s.Defaults != nil,
-		Before:          actionSliceToGeneric(s.Before),
-		OnSuccess:       actionSliceToGeneric(s.OnSuccess),
-		OnFailure:       actionSliceToGeneric(s.OnFailure),
+		Defaults:  actionDefaultsToGeneric(s.Defaults),
+		Before:    actionSliceToGeneric(s.Before),
+		OnSuccess: actionSliceToGeneric(s.OnSuccess),
+		OnFailure: actionSliceToGeneric(s.OnFailure),
 	}
 }
 
@@ -348,41 +343,12 @@ func metadataFromGeneric(m api.PackageMetadata) v1beta1.PackageMetadata {
 		Annotations:  annotations,
 	}
 
-	// Map v1alpha1 AllowNamespaceOverride (*bool, default allow) onto v1beta1 PreventNamespaceOverride (bool, default allow).
-	if m.AllowNamespaceOverride != nil {
-		meta.PreventNamespaceOverride = !*m.AllowNamespaceOverride
-	} else {
-		meta.PreventNamespaceOverride = m.PreventNamespaceOverride
-	}
-
-	// Migrate v1alpha1-only metadata fields into annotations.
-	extras := map[string]string{
-		"metadata.url":           m.URL,
-		"metadata.image":         m.Image,
-		"metadata.authors":       m.Authors,
-		"metadata.documentation": m.Documentation,
-		"metadata.source":        m.Source,
-		"metadata.vendor":        m.Vendor,
-	}
-	for k, v := range extras {
-		if v == "" {
-			continue
-		}
-		if meta.Annotations == nil {
-			meta.Annotations = make(map[string]string)
-		}
-		// Don't clobber an annotation the author already set on a reserved metadata.* key; their
-		// explicit value wins over the migrated field.
-		if _, exists := meta.Annotations[k]; exists {
-			continue
-		}
-		meta.Annotations[k] = v
-	}
+	meta.PreventNamespaceOverride = m.PreventNamespaceOverride
 
 	return meta
 }
 
-func buildFromGeneric(b api.BuildData, m api.PackageMetadata) v1beta1.BuildData {
+func buildFromGeneric(b api.BuildData, _ api.PackageMetadata) v1beta1.BuildData {
 	out := v1beta1.BuildData{
 		Hostname:                   b.Hostname,
 		User:                       b.User,
@@ -401,13 +367,7 @@ func buildFromGeneric(b api.BuildData, m api.PackageMetadata) v1beta1.BuildData 
 	// Preserve the apiVersion the package was originally read from across the conversion.
 	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
 
-	// AggregateChecksum lives in metadata in v1alpha1, build in v1beta1.
-	switch {
-	case b.AggregateChecksum != "":
-		out.AggregateChecksum = b.AggregateChecksum
-	case m.AggregateChecksum != "":
-		out.AggregateChecksum = m.AggregateChecksum
-	}
+	out.AggregateChecksum = b.AggregateChecksum
 
 	for _, vr := range b.VersionRequirements {
 		out.VersionRequirements = append(out.VersionRequirements, v1beta1.VersionRequirement{
@@ -423,7 +383,7 @@ func componentFromGeneric(c api.Component, isInit, migrateFromV1alpha1 bool) v1b
 	bc := v1beta1.Component{
 		Name:        c.Name,
 		Description: c.Description,
-		Optional:    optionalFromGeneric(c.Optional, c.Required),
+		Optional:    c.Optional,
 		Selector: v1beta1.ComponentSelector{
 			Architecture: c.Target.Architecture,
 			Flavor:       c.Target.Flavor,
@@ -494,16 +454,6 @@ func componentFromGeneric(c api.Component, isInit, migrateFromV1alpha1 bool) v1b
 	return bc
 }
 
-// optionalFromGeneric resolves the v1beta1 Optional flag from the generic representation.
-// A v1alpha1-sourced package carries an explicit Required pointer, which wins; otherwise Optional
-// flows through (the v1alpha1 layer already folds an unset required into Optional).
-func optionalFromGeneric(optional bool, required *bool) bool {
-	if required != nil {
-		return !*required
-	}
-	return optional
-}
-
 func serviceFromGeneric(c api.Component, isInit bool) v1beta1.Service {
 	if c.Service != "" {
 		return v1beta1.Service(c.Service)
@@ -536,13 +486,6 @@ func importFromGeneric(imp api.ComponentImport) v1beta1.ComponentImport {
 	for _, r := range imp.Remote {
 		out.Remote = append(out.Remote, v1beta1.ComponentImportRemote{URL: r.URL})
 	}
-	// Promote v1alpha1 single-import fields when no structured imports are present.
-	if len(out.Local) == 0 && imp.Path != "" {
-		out.Local = append(out.Local, v1beta1.ComponentImportLocal{Path: imp.Path})
-	}
-	if len(out.Remote) == 0 && imp.URL != "" {
-		out.Remote = append(out.Remote, v1beta1.ComponentImportRemote{URL: imp.URL})
-	}
 	return out
 }
 
@@ -562,10 +505,6 @@ func manifestFromGeneric(m api.Manifest) v1beta1.Manifest {
 			EnablePlugins:     m.Kustomize.EnablePlugins,
 		}
 	}
-	// v1alpha1 Template *bool maps onto EnableTemplating when it is explicitly true.
-	if !bm.EnableTemplating && m.Template != nil && *m.Template {
-		bm.EnableTemplating = true
-	}
 	return bm
 }
 
@@ -581,7 +520,7 @@ func chartFromGeneric(ch api.Chart) v1beta1.Chart {
 		Values:               chartValuesFromGeneric(ch.Values),
 	}
 
-	// Use the structured sources if present; otherwise infer from v1alpha1 flat fields.
+	// The operational model has a single structured chart source.
 	switch {
 	case ch.HelmRepository != nil:
 		bc.HelmRepository = &v1beta1.HelmRepositorySource{
@@ -602,41 +541,6 @@ func chartFromGeneric(ch api.Chart) v1beta1.Chart {
 			URL: ch.OCI.URL,
 			Ref: ociRefFromGeneric(ch.OCI.Ref),
 		}
-	case ch.URL != "":
-		switch {
-		case strings.HasPrefix(ch.URL, "oci://"):
-			ociURL := ch.URL
-			ref := v1beta1.OCIRef{Tag: ch.Version}
-			if url, digest, found := strings.Cut(ch.URL, "@sha256:"); found {
-				ociURL = url
-				ref = v1beta1.OCIRef{Digest: "sha256:" + digest}
-			}
-			bc.OCI = &v1beta1.OCISource{URL: ociURL, Ref: ref}
-		case ch.GitPath != "" || isGitURL(ch.URL):
-			gitURL := ch.URL
-			refStr := ""
-			if urlNoRef, r, err := transform.GitURLSplitRef(ch.URL); err == nil {
-				gitURL = urlNoRef
-				refStr = r
-			}
-			if refStr == "" && ch.Version != "" {
-				refStr = ch.Version
-			}
-			bc.Git = &v1beta1.GitSource{URL: gitURL, Path: ch.GitPath, Ref: classifyGitRef(refStr)}
-		default:
-			bc.HelmRepository = &v1beta1.HelmRepositorySource{
-				Name:    ch.RepoName,
-				URL:     ch.URL,
-				Version: ch.Version,
-			}
-		}
-	case ch.LocalPath != "":
-		bc.Local = &v1beta1.LocalSource{Path: ch.LocalPath}
-	}
-
-	// v1alpha1 SchemaValidation *bool: nil/true → SkipSchemaValidation=false; explicit false → true.
-	if !bc.SkipSchemaValidation && ch.SchemaValidation != nil && !*ch.SchemaValidation {
-		bc.SkipSchemaValidation = true
 	}
 
 	return bc
@@ -680,7 +584,7 @@ func actionsFromGeneric(a api.ComponentActions) v1beta1.ComponentActions {
 
 func actionSetFromGeneric(s api.ActionSet) v1beta1.ComponentActionSet {
 	return v1beta1.ComponentActionSet{
-		Defaults: actionDefaultsFromGeneric(s.Defaults, s.DefaultsDefined),
+		Defaults: actionDefaultsFromGeneric(s.Defaults),
 		Before:   actionSliceFromGeneric(s.Before),
 		// v1beta1 has no After hook; fold the v1alpha1-preserved After actions into OnSuccess.
 		OnSuccess: append(actionSliceFromGeneric(s.After), actionSliceFromGeneric(s.OnSuccess)...),
@@ -688,10 +592,7 @@ func actionSetFromGeneric(s api.ActionSet) v1beta1.ComponentActionSet {
 	}
 }
 
-func actionDefaultsFromGeneric(d api.ActionDefaults, defined bool) *v1beta1.ComponentActionDefaults {
-	if !defined {
-		return nil
-	}
+func actionDefaultsFromGeneric(d api.ActionDefaults) *v1beta1.ComponentActionDefaults {
 	defaults := &v1beta1.ComponentActionDefaults{
 		Silent:          d.Silent,
 		MaxTotalSeconds: int32(d.MaxTotalSeconds),
@@ -809,14 +710,6 @@ func healthCheckKind(kind, apiVersion string) string {
 		return kind
 	}
 	return kind + "." + version + "." + group
-}
-
-func isGitURL(url string) bool {
-	gitURLNoRef, _, err := transform.GitURLSplitRef(url)
-	if err != nil {
-		return false
-	}
-	return strings.HasSuffix(gitURLNoRef, ".git")
 }
 
 func repositoriesToGeneric(in []v1beta1.Repository) []api.Repository {

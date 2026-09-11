@@ -15,5 +15,5 @@ func TestPackageSetBuildDataPreservesSourceVersion(t *testing.T) {
 	pkg.SetBuildData(api.BuildData{Version: "test", AggregateChecksum: "checksum"})
 
 	require.Equal(t, "zarf.dev/v1beta1", pkg.OriginalAPIVersion())
-	require.Equal(t, "checksum", pkg.Metadata.AggregateChecksum)
+	require.Equal(t, "checksum", pkg.Build.AggregateChecksum)
 }
