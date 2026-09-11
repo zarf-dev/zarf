@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
@@ -255,9 +254,9 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 // is rejected by the API server. Helm flattens a list into its items before applying it anyway,
 // so the items are what we actually want to edit.
 func eachResource(obj *unstructured.Unstructured, modifyFn func(*unstructured.Unstructured) error) error {
-	// IsList only checks for a top level items array, so every kubernetes list kind ending in List
-	// is checked as well to keep a custom resource carrying its own items from looking like a list.
-	if obj.IsList() && strings.HasSuffix(obj.GetKind(), "List") {
+	// IsList is the check the resource builder uses to decide what to flatten, so zarf and helm
+	// agree on which documents hold more than one resource
+	if obj.IsList() {
 		// EachListItem shares the underlying map with each item, so edits made here end up
 		// in the manifest that gets marshaled back out
 		return obj.EachListItem(func(item runtime.Object) error {

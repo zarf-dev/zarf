@@ -677,24 +677,6 @@ items:
 			},
 		},
 		{
-			name: "custom resource with an items field is labeled itself",
-			manifest: `apiVersion: example.com/v1
-kind: Basket
-metadata:
-  name: basket
-items:
-  - apple
-  - banana
-`,
-			assert: func(t *testing.T, doc *unstructured.Unstructured) {
-				require.Equal(t, map[string]string{"zarf.dev/package": "test-pkg"}, doc.GetLabels())
-				items, found, err := unstructured.NestedStringSlice(doc.Object, "items")
-				require.NoError(t, err)
-				require.True(t, found)
-				require.Equal(t, []string{"apple", "banana"}, items, "the items must be left alone")
-			},
-		},
-		{
 			name: "regular resource is still labeled",
 			manifest: `apiVersion: v1
 kind: ConfigMap
