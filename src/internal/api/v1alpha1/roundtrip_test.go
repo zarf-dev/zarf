@@ -147,8 +147,6 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 		Values:        v1alpha1.ZarfValues{Files: []string{"vals.yaml"}, Schema: "schema.json"},
 		Documentation: map[string]string{"doc": "doc.md"},
 	}
-	original.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
-
 	roundTripped := PackageToV1alpha1(PackageFromV1alpha1(original))
 	require.Empty(t, cmp.Diff(original, roundTripped, v1alpha1GenericRoundTripExclusions()...))
 }
@@ -167,7 +165,6 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 		// value; pin them to valid forms and let every other field vary.
 		pkg.APIVersion = v1alpha1.APIVersion
 		pkg.Kind = v1alpha1.ZarfPackageConfig
-		pkg.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
 		populateValidV1alpha1ChartSources(&pkg, rng, i)
 
 		roundTripped := PackageToV1alpha1(PackageFromV1alpha1(pkg))
@@ -184,7 +181,6 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 //   - manifest.template, file.template, and action.template: nil and false all disable templating.
 func v1alpha1GenericRoundTripExclusions() cmp.Options {
 	return cmp.Options{
-		cmpopts.IgnoreUnexported(v1alpha1.ZarfBuildData{}),
 		cmpopts.IgnoreFields(v1alpha1.ZarfMetadata{}, "AllowNamespaceOverride"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponent{}, "Required"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfChart{}, "SchemaValidation"),
@@ -266,8 +262,6 @@ func populateValidV1alpha1ChartSources(pkg *v1alpha1.ZarfPackage, rng *rand.Rand
 //   - metadata annotations using metadata.url, metadata.image, metadata.authors,
 //     metadata.documentation, metadata.source, or metadata.vendor collide with v1alpha1's
 //     dedicated metadata fields during projection.
-//   - originalAPIVersion is internal tracking and is set by the version that loads or creates the
-//     package.
 //   - component.healthChecks are projected to onDeploy/onSuccess wait actions and cannot be
 //     reconstructed as health checks.
 //   - a v1beta1 Git source has no independent chart layout version. Its Git ref is retained, but
@@ -290,7 +284,6 @@ func v1alpha1V1beta1RoundTripExclusions() cmp.Options {
 			}
 		}),
 		cmpopts.IgnoreFields(v1alpha1.ZarfBuildData{}, "DifferentialMissing"),
-		cmpopts.IgnoreUnexported(v1alpha1.ZarfBuildData{}),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponent{}, "Default", "Required", "DeprecatedGroup", "DataInjections", "DeprecatedScripts", "HealthChecks"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentOnlyCluster{}, "Distros"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentImport{}, "Name"),

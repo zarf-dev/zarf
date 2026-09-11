@@ -87,7 +87,7 @@ func MarshalPackageDefinition(definition api.Package) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if definition.OriginalAPIVersion() != v1beta1.APIVersion {
+	if definition.APIVersion != v1beta1.APIVersion {
 		return alpha, nil
 	}
 	beta, err := goyaml.Marshal(convert.PackageToV1beta1(definition))

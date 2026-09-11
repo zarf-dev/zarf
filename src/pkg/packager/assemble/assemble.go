@@ -97,10 +97,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		if noVersionSet {
 			return nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
-		originalAPIVersion := definition.OriginalAPIVersion()
-		differentialAPIVersion := opts.DifferentialPackage.Build.GetOriginalAPIVersion()
-		if originalAPIVersion != differentialAPIVersion {
-			return nil, fmt.Errorf("%s: package apiVersion %s, differential package apiVersion %s", lang.PkgCreateErrDifferentialAPIVersion, originalAPIVersion, differentialAPIVersion)
+		differentialAPIVersion := convert.PackageFromV1alpha1(opts.DifferentialPackage).APIVersion
+		if !apiVersionsMatch(definition.APIVersion, differentialAPIVersion) {
+			return nil, fmt.Errorf("%s: package apiVersion %s, differential package apiVersion %s", lang.PkgCreateErrDifferentialAPIVersion, normalizeAPIVersion(definition.APIVersion), normalizeAPIVersion(differentialAPIVersion))
 		}
 		updatedDefinition, err := applyDifferentialResources(definition, convert.PackageFromV1alpha1(opts.DifferentialPackage))
 		if err != nil {

@@ -6,6 +6,7 @@ package api
 
 // Package is the version-neutral representation used by package operations and converters.
 type Package struct {
+	// APIVersion identifies the source package schema. An empty value is the legacy v1alpha1 form.
 	APIVersion    string
 	Kind          PackageKind
 	Metadata      PackageMetadata
@@ -50,8 +51,6 @@ type BuildData struct {
 	VersionRequirements        []VersionRequirement
 	ProvenanceFiles            []string
 	AggregateChecksum          string
-	// OriginalAPIVersion tracks the apiVersion the package was read from before any conversion.
-	OriginalAPIVersion string
 
 	// v1alpha1-only build fields.
 	DifferentialMissing []string

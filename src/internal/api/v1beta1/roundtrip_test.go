@@ -183,8 +183,6 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 		Values:        v1beta1.Values{Files: []string{"vals.yaml"}, Schema: "schema.json"},
 		Documentation: map[string]string{"doc": "doc.md"},
 	}
-	original.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
-
 	roundTripped := PackageToV1beta1(PackageFromV1beta1(original))
 	require.Empty(t, cmp.Diff(original, roundTripped, v1beta1GenericRoundTripExclusions()...))
 }
@@ -203,7 +201,6 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 		// value; pin them to valid forms and let every other field vary.
 		pkg.APIVersion = v1beta1.APIVersion
 		pkg.Kind = v1beta1.ZarfPackageConfig
-		pkg.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
 		for ci := range pkg.Components {
 			for chi := range pkg.Components[ci].Charts {
 				keepRandomChartSource(&pkg.Components[ci].Charts[chi], rng)
@@ -221,7 +218,6 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 //   - actionSet.defaults: nil and an empty defaults object both apply no defaults.
 func v1beta1GenericRoundTripExclusions() cmp.Options {
 	return cmp.Options{
-		cmpopts.IgnoreUnexported(v1beta1.BuildData{}),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
 	}
 }
@@ -350,8 +346,7 @@ func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
 // The fuzz test replaces repositories and chart sources with schema-valid generated values, then
 // ignores only these fields when comparing the result.
 //
-//   - package.apiVersion and package.kind are canonicalized to the target API. originalAPIVersion
-//     is internal build tracking and is set by the version that loads or creates the package
+//   - package.apiVersion and package.kind are canonicalized to the target API.
 //   - component.import has separate local and remote lists in v1beta1, while v1alpha1 has one
 //     import object; component.service has no v1alpha1 equivalent.
 //   - image.source distinguishes registry and daemon sources in v1beta1, v1alpha1 images always fallback
@@ -361,14 +356,16 @@ func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
 //     so their relative order is lost when the two kinds are interleaved.
 //   - actionSet.defaults is a pointer in v1beta1 but a value in v1alpha1, so nil and an explicitly
 //     empty defaults object cannot be distinguished.
+//   - action.wait.cluster.condition defaults from empty to "exists" in v1alpha1, while it defaults
+//     to readiness in v1beta1.
 func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1beta1.Package{}, "APIVersion", "Kind"),
-		cmpopts.IgnoreUnexported(v1beta1.BuildData{}),
 		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
 		cmpopts.IgnoreFields(v1beta1.Image{}, "Source"),
 		cmpopts.IgnoreFields(v1beta1.Manifest{}, "Kustomize"),
 		cmpopts.IgnoreFields(v1beta1.Chart{}, "ValuesFiles"),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
+		cmpopts.IgnoreFields(v1beta1.ComponentActionWaitCluster{}, "Condition"),
 	}
 }

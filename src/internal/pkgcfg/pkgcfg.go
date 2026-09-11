@@ -137,7 +137,6 @@ func decodeV1Alpha1(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, e
 		return v1alpha1.ZarfPackage{}, err
 	}
 	pkg = internalv1alpha1.ApplyMigrations(ctx, pkg)
-	pkg.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
 	return pkg, nil
 }
 
@@ -148,7 +147,6 @@ func decodeV1Beta1(_ context.Context, node ast.Node) (v1beta1.Package, error) {
 	if err := goyaml.NodeToValue(node, &pkg); err != nil {
 		return v1beta1.Package{}, err
 	}
-	pkg.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
 	return pkg, nil
 }
 

@@ -44,7 +44,6 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 			Signed:                     pkg.Build.Signed,
 			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
 			AggregateChecksum:          pkg.Build.AggregateChecksum,
-			OriginalAPIVersion:         pkg.Build.GetOriginalAPIVersion(),
 		},
 		Values: api.Values{
 			Files:  pkg.Values.Files,
@@ -319,7 +318,7 @@ func PackageToV1beta1(g api.Package) v1beta1.Package {
 	// v1beta1 treats an empty wait.cluster.condition as a kstatus readiness check, whereas v1alpha1
 	// treated it as "wait until the resource exists". Backfill "exists" on migration so existing
 	// packages keep their original behavior.
-	migrateFromV1alpha1 := g.Build.OriginalAPIVersion == v1alpha1.APIVersion
+	migrateFromV1alpha1 := g.APIVersion == "" || g.APIVersion == v1alpha1.APIVersion
 
 	for _, c := range g.Components {
 		pkg.Components = append(pkg.Components, componentFromGeneric(c, isInit, migrateFromV1alpha1))
@@ -363,9 +362,6 @@ func buildFromGeneric(b api.BuildData, _ api.PackageMetadata) v1beta1.BuildData 
 		Signed:                     b.Signed,
 		ProvenanceFiles:            b.ProvenanceFiles,
 	}
-
-	// Preserve the apiVersion the package was originally read from across the conversion.
-	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
 
 	out.AggregateChecksum = b.AggregateChecksum
 

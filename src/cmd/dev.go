@@ -365,7 +365,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	}
 
 	// The definition is printed in the apiVersion it was authored in.
-	if definition.OriginalAPIVersion() == v1beta1.APIVersion {
+	if definition.APIVersion == v1beta1.APIVersion {
 		pkg := convert.PackageToV1beta1(definition)
 		pkg.Build = v1beta1.BuildData{}
 		return utils.ColorPrintYAML(pkg, nil, false)

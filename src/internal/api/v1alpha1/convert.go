@@ -45,7 +45,6 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 			DifferentialMissing:        pkg.Build.DifferentialMissing,
 			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
 			AggregateChecksum:          pkg.Metadata.AggregateChecksum,
-			OriginalAPIVersion:         pkg.Build.GetOriginalAPIVersion(),
 		},
 		Values: api.Values{
 			Files:  pkg.Values.Files,
@@ -362,8 +361,8 @@ func waitToGeneric(w *v1alpha1.ZarfComponentActionWait) *api.ActionWait {
 
 // PackageToV1alpha1 converts the internal generic representation to a v1alpha1 ZarfPackage.
 func PackageToV1alpha1(g api.Package) v1alpha1.ZarfPackage {
-	// An empty source apiVersion is the implicit v1alpha1 form; preserve it so a v1alpha1
-	// round-trip stays byte-for-byte lossless.
+	// An absent v1alpha1 apiVersion predates the required field and must remain absent when the
+	// operational package is written back out.
 	apiVersion := v1alpha1.APIVersion
 	if g.APIVersion == "" {
 		apiVersion = ""
@@ -481,9 +480,6 @@ func buildFromGeneric(b api.BuildData) v1alpha1.ZarfBuildData {
 		Signed:                     b.Signed,
 		ProvenanceFiles:            b.ProvenanceFiles,
 	}
-
-	// Preserve the apiVersion the package was originally read from across the conversion.
-	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
 
 	for _, vr := range b.VersionRequirements {
 		out.VersionRequirements = append(out.VersionRequirements, v1alpha1.VersionRequirement{

@@ -262,22 +262,6 @@ type ZarfBuildData struct {
 	// These are files added after checksum generation (e.g., signature files).
 	// This list is authenticated through the signed zarf.yaml.
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
-	// originalAPIVersion records the apiVersion the package was read from before any conversion.
-	originalAPIVersion string
-}
-
-// GetOriginalAPIVersion returns the apiVersion the package was read from before any conversion,
-// defaulting to this package's apiVersion when one was never recorded.
-func (b ZarfBuildData) GetOriginalAPIVersion() string {
-	if b.originalAPIVersion == "" {
-		return APIVersion
-	}
-	return b.originalAPIVersion
-}
-
-// SetOriginalAPIVersion records the apiVersion the package was read from before any conversion.
-func (b *ZarfBuildData) SetOriginalAPIVersion(apiVersion string) {
-	b.originalAPIVersion = apiVersion
 }
 
 // ZarfValues imports package-level values files and validation.

@@ -216,13 +216,13 @@ func TestParseMultiDocReturnsPackageDefinition(t *testing.T) {
 	mixed := beta + "---\napiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\ncomponents:\n  - name: c\n"
 	pkg, err := ParseMultiDoc(ctx, []byte(mixed))
 	require.NoError(t, err)
-	require.Equal(t, v1beta1.APIVersion, pkg.OriginalAPIVersion())
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, "beta", convert.PackageToV1beta1(pkg).Metadata.Name)
 
 	// With only a v1beta1 document, ParseMultiDoc returns a PackageDefinition.
 	pkg, err = ParseMultiDoc(ctx, []byte(beta))
 	require.NoError(t, err)
-	require.Equal(t, v1beta1.APIVersion, pkg.OriginalAPIVersion())
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, "beta", convert.PackageToV1beta1(pkg).Metadata.Name)
 }
 

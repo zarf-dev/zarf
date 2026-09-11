@@ -17,7 +17,7 @@ import (
 )
 
 func applyDifferentialResources(definition, previous api.Package) (api.Package, error) {
-	switch definition.OriginalAPIVersion() {
+	switch definition.APIVersion {
 	case v1beta1.APIVersion:
 		pkg := convert.PackageToV1beta1(definition)
 		previousImages, previousRepos := v1beta1DifferentialResources(convert.PackageToV1beta1(previous).Components)
@@ -43,7 +43,7 @@ func applyDifferentialResources(definition, previous api.Package) (api.Package, 
 			pkg.Components[componentIdx].Repositories = repos
 		}
 		return convert.PackageFromV1beta1(pkg), nil
-	case v1alpha1.APIVersion:
+	case "", v1alpha1.APIVersion:
 		pkg := convert.PackageToV1alpha1(definition)
 		previousImages, previousRepos := v1alpha1DifferentialResources(convert.PackageToV1alpha1(previous).Components)
 		for componentIdx, component := range pkg.Components {
@@ -73,8 +73,19 @@ func applyDifferentialResources(definition, previous api.Package) (api.Package, 
 		}
 		return convert.PackageFromV1alpha1(pkg), nil
 	default:
-		return api.Package{}, fmt.Errorf("unsupported original apiVersion %q", definition.OriginalAPIVersion())
+		return api.Package{}, fmt.Errorf("unsupported apiVersion %q", definition.APIVersion)
 	}
+}
+
+func apiVersionsMatch(first, second string) bool {
+	return normalizeAPIVersion(first) == normalizeAPIVersion(second)
+}
+
+func normalizeAPIVersion(apiVersion string) string {
+	if apiVersion == "" {
+		return v1alpha1.APIVersion
+	}
+	return apiVersion
 }
 
 func v1alpha1DifferentialResources(components []v1alpha1.ZarfComponent) (map[string]struct{}, map[string]struct{}) {

@@ -288,7 +288,7 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		t.Parallel()
 		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-package"), DefinitionOptions{})
 		require.NoError(t, err)
-		require.Equal(t, v1beta1.APIVersion, defined.OriginalAPIVersion())
+		require.Equal(t, v1beta1.APIVersion, defined.APIVersion)
 
 		pkg := convert.PackageToV1alpha1(defined)
 		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
@@ -383,7 +383,7 @@ components:
 	pkg := definition
 	component, ok := pkg.Component("component")
 	require.True(t, ok)
-	require.Equal(t, v1beta1.APIVersion, pkg.SourceVersion())
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, api.WaitForReadiness, component.Actions.OnDeploy.Before[0].Wait.Cluster.Condition.Default)
 }
 

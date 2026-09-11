@@ -20,11 +20,6 @@ const (
 	ZarfPackageConfig PackageKind = "ZarfPackageConfig"
 )
 
-// OriginalAPIVersion returns the API version used to author the package.
-func (p Package) OriginalAPIVersion() string {
-	return p.Build.OriginalAPIVersion
-}
-
 // SetName updates the package metadata name.
 func (p *Package) SetName(name string) {
 	p.Metadata.Name = name

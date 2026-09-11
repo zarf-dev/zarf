@@ -3,11 +3,6 @@
 
 package api
 
-// SourceVersion returns the source schema version recorded during decoding.
-func (p Package) SourceVersion() string {
-	return p.Build.OriginalAPIVersion
-}
-
 // Component returns the named component.
 // FIXME: probably doesn't need a separate file
 func (p Package) Component(name string) (Component, bool) {
