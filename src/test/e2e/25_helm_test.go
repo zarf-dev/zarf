@@ -320,6 +320,10 @@ func TestHelmListKinds(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	pkgPath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-list-kinds-%s-0.1.0.tar.zst", e2e.Arch))
+	t.Cleanup(func() {
+		_, _, err := e2e.Kubectl(t, "delete", "namespace", "list-kinds-elsewhere", "--ignore-not-found", "--grace-period=0")
+		require.NoError(t, err)
+	})
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
@@ -335,6 +339,11 @@ func TestHelmListKinds(t *testing.T) {
 	kubectlOut, _, err = e2e.Kubectl(t, "-n", "list-kinds", "get", "configmap", "list-two", "-o", "jsonpath={.metadata.labels.chart-owned}")
 	require.NoError(t, err)
 	require.Equal(t, "true", kubectlOut)
+
+	// an item can name a namespace of its own, which zarf has to create before helm applies it
+	kubectlOut, _, err = e2e.Kubectl(t, "-n", "list-kinds-elsewhere", "get", "configmap", "list-elsewhere", "-o", "jsonpath={.metadata.name}")
+	require.NoError(t, err)
+	require.Equal(t, "list-elsewhere", kubectlOut)
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "list-kinds", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)

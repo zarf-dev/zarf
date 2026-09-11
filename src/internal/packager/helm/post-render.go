@@ -213,19 +213,14 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			continue
 		}
 
-		// a service inside a list is as connectable as one in its own document, so the items are
-		// checked too rather than only the document itself
+		// connect strings and namespaces are read off each resource, which for a list kind means
+		// the items it holds rather than the list itself
 		if err := eachResource(rawData, func(obj *unstructured.Unstructured) error {
 			r.recordConnectString(ctx, obj)
+			r.trackNamespace(obj)
 			return nil
 		}); err != nil {
 			return err
-		}
-
-		namespace := rawData.GetNamespace()
-		if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
-			// if this is the first time seeing this ns, we need to track that to create it as well
-			r.namespaces[namespace] = cluster.NewZarfManagedNamespace(namespace)
 		}
 
 		// Finally place this back onto the output buffer
@@ -302,6 +297,16 @@ func (r *renderer) recordConnectString(ctx context.Context, obj *unstructured.Un
 			Description: annotations[cluster.ZarfConnectAnnotationDescription],
 			URL:         annotations[cluster.ZarfConnectAnnotationURL],
 		}
+	}
+}
+
+// trackNamespace notes a namespace zarf has to create before helm applies the chart, since helm
+// does not create the namespaces its resources are placed in
+func (r *renderer) trackNamespace(obj *unstructured.Unstructured) {
+	namespace := obj.GetNamespace()
+	if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
+		// if this is the first time seeing this ns, we need to track that to create it as well
+		r.namespaces[namespace] = cluster.NewZarfManagedNamespace(namespace)
 	}
 }
 

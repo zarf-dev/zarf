@@ -17,3 +17,16 @@ items:
         chart-owned: "true"
     data:
       message: "second item of a ConfigMapList"
+---
+apiVersion: v1
+kind: ConfigMapList
+items:
+  # zarf has to create this namespace before helm applies the item, which it can only do if it
+  # reads the namespace off the items rather than off the list
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: list-elsewhere
+      namespace: list-kinds-elsewhere
+    data:
+      message: "an item pointing at a namespace nothing else creates"

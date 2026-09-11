@@ -760,7 +760,7 @@ metadata:
 		{
 			name: "service inside a list",
 			manifest: `apiVersion: v1
-kind: List
+kind: ServiceList
 items:
   - apiVersion: v1
     kind: Service
@@ -787,6 +787,48 @@ items:
 					URL:         "/nested",
 				},
 			}, r.connectStrings)
+		})
+	}
+}
+
+func TestEditHelmResourcesTracksNamespaces(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		manifest string
+	}{
+		{
+			name: "configmap in its own document",
+			manifest: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elsewhere
+  namespace: another-namespace
+`,
+		},
+		{
+			name: "configmap inside a list",
+			manifest: `apiVersion: v1
+kind: ConfigMapList
+items:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: elsewhere
+      namespace: another-namespace
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := newTestRenderer()
+			renderManifest(t, r, tt.manifest)
+			// the namespace has to be tracked for zarf to create it before helm applies the chart
+			require.Contains(t, r.namespaces, "another-namespace")
 		})
 	}
 }
