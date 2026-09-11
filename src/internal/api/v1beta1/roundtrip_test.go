@@ -17,7 +17,9 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-// defaultFuzzIterations balances round-trip coverage with unit-test duration.
+// defaultFuzzIterations specifies number of fuzzing iterations, higher number
+// will quickly raise the time needed to run them. The 20 iterations balances
+// time (currently <20s) with coverage.
 const defaultFuzzIterations = 20
 
 // TestConvertGenericRoundTrip verifies that fields represented by the operational model survive a
