@@ -1,0 +1,14 @@
+kind: ZarfPackageConfig
+metadata:
+  name: kind-list-anchor
+  version: "0.0.1"
+  # Regression coverage for #4977: a kind: List with a YAML anchor crossing item
+  # boundaries broke Zarf's post-render under Helm v4's annotateAndMerge.
+components:
+  - name: chart
+    required: true
+    charts:
+      - name: min-chart
+        namespace: kind-list-anchor
+        localPath: min-chart
+        version: 0.1.0
