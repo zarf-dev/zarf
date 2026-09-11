@@ -84,12 +84,6 @@ func (vc *VariableConfig) SetVariable(name, value string, sensitive bool, autoIn
 	}
 }
 
-// SetVariableWithType stores a variable using its normalized semantic type.
-// FIXME: delete this
-func (vc *VariableConfig) SetVariableWithType(name, value string, sensitive bool, autoIndent bool, varType string) {
-	vc.SetVariable(name, value, sensitive, autoIndent, v1alpha1.VariableType(varType))
-}
-
 // CheckVariablePattern checks to see if a current variable is set to a value that matches its pattern
 func (vc *VariableConfig) CheckVariablePattern(name, pattern string) error {
 	if variable, ok := vc.setVariableMap[name]; ok {

@@ -107,7 +107,8 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		}
 		definition = updatedDefinition
 		pkg = convert.PackageToV1alpha1(definition)
-		definition.SetDifferentialBuild(opts.DifferentialPackage.Metadata.Version)
+		definition.Build.Differential = true
+		definition.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
 	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -248,7 +249,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, err
 	}
 	definition := resolvedPackage.Definition
-	definition.SetMetadataArchitecture(v1alpha1.SkeletonArch)
+	definition.Metadata.Architecture = v1alpha1.SkeletonArch
 	pkg := convert.PackageToV1alpha1(definition)
 
 	// Creating skeleton packages with the values feature is not yet supported
@@ -873,7 +874,7 @@ func recordPackageMetadata(definition *api.Package, flavor string, registryOverr
 	}
 
 	if pkg.IsInitConfig() && pkg.Metadata.Version == "" {
-		definition.SetMetadataVersion(config.CLIVersion)
+		definition.Metadata.Version = config.CLIVersion
 	}
 
 	hasIndex := false
@@ -897,7 +898,17 @@ func recordPackageMetadata(definition *api.Package, flavor string, registryOverr
 	// Set signed to false by default; this is updated if signing occurs.
 	signed := false
 	buildData.Signed = &signed
-	definition.SetBuildData(buildData)
+	definition.Build.Hostname = buildData.Hostname
+	definition.Build.User = buildData.User
+	definition.Build.Architecture = buildData.Architecture
+	definition.Build.Timestamp = buildData.Timestamp
+	definition.Build.Version = buildData.Version
+	definition.Build.RegistryOverrides = buildData.RegistryOverrides
+	definition.Build.Flavor = buildData.Flavor
+	definition.Build.Signed = buildData.Signed
+	definition.Build.ProvenanceFiles = buildData.ProvenanceFiles
+	definition.Build.VersionRequirements = buildData.VersionRequirements
+	definition.Build.AggregateChecksum = buildData.AggregateChecksum
 
 	return nil
 }

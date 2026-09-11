@@ -9,72 +9,45 @@ import (
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 func applyDifferentialResources(definition, previous api.Package) (api.Package, error) {
-	switch definition.APIVersion {
-	case v1beta1.APIVersion:
-		pkg := convert.PackageToV1beta1(definition)
-		previousImages, previousRepos := v1beta1DifferentialResources(convert.PackageToV1beta1(previous).Components)
-		for componentIdx, component := range pkg.Components {
-			images := make([]v1beta1.Image, 0, len(component.Images))
-			for _, img := range component.Images {
-				includeImage, err := includeDifferentialImage(img.Name, previousImages)
-				if err != nil {
-					return api.Package{}, err
-				}
-				if includeImage {
-					images = append(images, img)
-				}
-			}
-			pkg.Components[componentIdx].Images = images
-
-			repos := make([]v1beta1.Repository, 0, len(component.Repositories))
-			for _, repo := range component.Repositories {
-				if includeDifferentialV1beta1Repository(repo, previousRepos) {
-					repos = append(repos, repo)
-				}
-			}
-			pkg.Components[componentIdx].Repositories = repos
-		}
-		return convert.PackageFromV1beta1(pkg), nil
-	case "", v1alpha1.APIVersion:
-		pkg := convert.PackageToV1alpha1(definition)
-		previousImages, previousRepos := v1alpha1DifferentialResources(convert.PackageToV1alpha1(previous).Components)
-		for componentIdx, component := range pkg.Components {
-			images := make([]string, 0, len(component.Images))
-			for _, img := range component.Images {
-				includeImage, err := includeDifferentialImage(img, previousImages)
-				if err != nil {
-					return api.Package{}, err
-				}
-				if includeImage {
-					images = append(images, img)
-				}
-			}
-			pkg.Components[componentIdx].Images = images
-
-			repos := make([]string, 0, len(component.Repos))
-			for _, repo := range component.Repos {
-				includeRepo, err := includeDifferentialRepository(repo, previousRepos)
-				if err != nil {
-					return api.Package{}, err
-				}
-				if includeRepo {
-					repos = append(repos, repo)
-				}
-			}
-			pkg.Components[componentIdx].Repos = repos
-		}
-		return convert.PackageFromV1alpha1(pkg), nil
-	default:
-		return api.Package{}, fmt.Errorf("unsupported apiVersion %q", definition.APIVersion)
+	if !apiVersionsMatch(definition.APIVersion, previous.APIVersion) {
+		return api.Package{}, fmt.Errorf("package apiVersion %s does not match differential package apiVersion %s", normalizeAPIVersion(definition.APIVersion), normalizeAPIVersion(previous.APIVersion))
 	}
+
+	definition.Components = slices.Clone(definition.Components)
+	previousImages, previousRepos := differentialResources(previous.Components)
+	for componentIdx := range definition.Components {
+		component := &definition.Components[componentIdx]
+		images := make([]api.Image, 0, len(component.Images))
+		for _, image := range component.Images {
+			includeImage, err := includeDifferentialImage(image.Name, previousImages)
+			if err != nil {
+				return api.Package{}, err
+			}
+			if includeImage {
+				images = append(images, image)
+			}
+		}
+		component.Images = images
+
+		repositories := make([]api.Repository, 0, len(component.Repositories))
+		for _, repository := range component.Repositories {
+			includeRepository, err := includeDifferentialRepository(repository, previousRepos)
+			if err != nil {
+				return api.Package{}, err
+			}
+			if includeRepository {
+				repositories = append(repositories, repository)
+			}
+		}
+		component.Repositories = repositories
+	}
+	return definition, nil
 }
 
 func apiVersionsMatch(first, second string) bool {
@@ -88,30 +61,16 @@ func normalizeAPIVersion(apiVersion string) string {
 	return apiVersion
 }
 
-func v1alpha1DifferentialResources(components []v1alpha1.ZarfComponent) (map[string]struct{}, map[string]struct{}) {
+func differentialResources(components []api.Component) (map[string]struct{}, []api.Repository) {
 	images := map[string]struct{}{}
-	repos := map[string]struct{}{}
-	for _, component := range components {
-		for _, image := range component.Images {
-			images[image] = struct{}{}
-		}
-		for _, repo := range component.Repos {
-			repos[repo] = struct{}{}
-		}
-	}
-	return images, repos
-}
-
-func v1beta1DifferentialResources(components []v1beta1.Component) (map[string]struct{}, []v1beta1.Repository) {
-	images := map[string]struct{}{}
-	var repos []v1beta1.Repository
+	var repositories []api.Repository
 	for _, component := range components {
 		for _, image := range component.Images {
 			images[image.Name] = struct{}{}
 		}
-		repos = append(repos, component.Repositories...)
+		repositories = append(repositories, component.Repositories...)
 	}
-	return images, repos
+	return images, repositories
 }
 
 func includeDifferentialImage(img string, previousImages map[string]struct{}) (bool, error) {
@@ -125,8 +84,17 @@ func includeDifferentialImage(img string, previousImages map[string]struct{}) (b
 	return includeImage || !inPrevious, nil
 }
 
-func includeDifferentialRepository(repoURL string, previousRepos map[string]struct{}) (bool, error) {
-	_, refPlain, err := transform.GitURLSplitRef(repoURL)
+func includeDifferentialRepository(repository api.Repository, previousRepositories []api.Repository) (bool, error) {
+	if repository.Ref != nil {
+		if *repository.Ref == (api.GitRef{}) || repository.Ref.Branch != "" {
+			return true, nil
+		}
+		return !slices.ContainsFunc(previousRepositories, func(previousRepository api.Repository) bool {
+			return repositoriesEqual(repository, previousRepository)
+		}), nil
+	}
+
+	_, refPlain, err := transform.GitURLSplitRef(repository.URL)
 	if err != nil {
 		return false, err
 	}
@@ -135,20 +103,13 @@ func includeDifferentialRepository(repoURL string, previousRepos map[string]stru
 		ref = git.ParseRef(refPlain)
 	}
 	includeRepo := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
-	_, inPrevious := previousRepos[repoURL]
+	inPrevious := slices.ContainsFunc(previousRepositories, func(previousRepository api.Repository) bool {
+		return repositoriesEqual(repository, previousRepository)
+	})
 	return includeRepo || !inPrevious, nil
 }
 
-func includeDifferentialV1beta1Repository(repo v1beta1.Repository, previousRepos []v1beta1.Repository) bool {
-	if repo.Ref == nil || *repo.Ref == (v1beta1.GitRef{}) || repo.Ref.Branch != "" {
-		return true
-	}
-	return !slices.ContainsFunc(previousRepos, func(previousRepo v1beta1.Repository) bool {
-		return v1beta1RepositoriesEqual(repo, previousRepo)
-	})
-}
-
-func v1beta1RepositoriesEqual(a, b v1beta1.Repository) bool {
+func repositoriesEqual(a, b api.Repository) bool {
 	if a.URL != b.URL {
 		return false
 	}

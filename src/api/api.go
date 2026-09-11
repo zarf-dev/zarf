@@ -129,37 +129,6 @@ func (c *Component) overrideNamespaces(original, target string) {
 	}
 }
 
-// SetMetadataVersion updates the package metadata version.
-func (p *Package) SetMetadataVersion(version string) {
-	p.Metadata.Version = version
-}
-
-// SetMetadataArchitecture updates the package metadata architecture.
-func (p *Package) SetMetadataArchitecture(architecture string) {
-	p.Metadata.Architecture = architecture
-}
-
-// SetBuildData records build metadata generated during package assembly.
-// FIXME: may reconsider
-func (p *Package) SetBuildData(buildData BuildData) {
-	p.Build.Hostname = buildData.Hostname
-	p.Build.User = buildData.User
-	p.Build.Architecture = buildData.Architecture
-	p.Build.Timestamp = buildData.Timestamp
-	p.Build.Version = buildData.Version
-	p.Build.RegistryOverrides = maps.Clone(buildData.RegistryOverrides)
-	p.Build.Flavor = buildData.Flavor
-	p.Build.Signed = cloneBool(buildData.Signed)
-	p.Build.ProvenanceFiles = slices.Clone(buildData.ProvenanceFiles)
-	p.Build.VersionRequirements = slices.Clone(buildData.VersionRequirements)
-	p.Build.AggregateChecksum = buildData.AggregateChecksum
-}
-
-// SetDifferentialBuild records the base package version for a differential package.
-func (p *Package) SetDifferentialBuild(packageVersion string) {
-	p.Build.Differential, p.Build.DifferentialPackageVersion = true, packageVersion
-}
-
 // SetBuildSigned records whether the package build is signed.
 func (p *Package) SetBuildSigned(signed bool) {
 	p.Build.Signed = &signed
@@ -174,15 +143,9 @@ func (p *Package) AddProvenanceFile(file string) {
 
 // AddVersionRequirement records a version requirement once.
 func (p *Package) AddVersionRequirement(requirement VersionRequirement) {
-	if !slices.ContainsFunc(p.Build.VersionRequirements, func(existing VersionRequirement) bool { return existing == requirement }) {
+	if !slices.ContainsFunc(p.Build.VersionRequirements, func(existing VersionRequirement) bool {
+		return existing == requirement
+	}) {
 		p.Build.VersionRequirements = append(p.Build.VersionRequirements, requirement)
 	}
-}
-
-func cloneBool(value *bool) *bool {
-	if value == nil {
-		return nil
-	}
-	cloned := *value
-	return &cloned
 }
