@@ -153,9 +153,12 @@ type Manifest struct {
 
 // Chart is the operational representation of a chart across API versions.
 type Chart struct {
-	Name                 string
-	Namespace            string
-	ReleaseName          string
+	Name string
+	// Version identifies this chart's archive and values files within the package.
+	Version     string
+	Namespace   string
+	ReleaseName string
+	// FIXME: we need to maintain ordering here, so we probably need two fields
 	ValuesFiles          []ValuesFile
 	Values               []ChartValue
 	SkipSchemaValidation bool
@@ -207,8 +210,7 @@ type GitSource struct {
 
 // LocalSource represents a chart stored locally.
 type LocalSource struct {
-	Path    string
-	Version string
+	Path string
 }
 
 // OCIRef selects a single OCI reference.

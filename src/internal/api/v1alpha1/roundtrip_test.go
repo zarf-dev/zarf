@@ -267,6 +267,9 @@ func populateValidV1alpha1ChartSources(pkg *v1alpha1.ZarfPackage, rng *rand.Rand
 //     package.
 //   - component.healthChecks are projected to onDeploy/onSuccess wait actions and cannot be
 //     reconstructed as health checks.
+//   - a v1beta1 Git source has no independent chart layout version. Its Git ref is retained, but
+//     v1alpha1's Version and its equivalent inline URL representation are not. The adapter names
+//     the resulting chart from its name alone.
 //   - actionSet.after is folded into v1beta1's actionSet.onSuccess, so both lists differ on return.
 //     action.deprecatedSetVariable and action.setVariables have no v1beta1 equivalents; and an
 //     action.template false pointer cannot be distinguished from nil after projection to
@@ -291,7 +294,7 @@ func v1alpha1V1beta1RoundTripExclusions() cmp.Options {
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentActionSet{}, "After", "OnSuccess"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentAction{}, "DeprecatedSetVariable", "SetVariables", "Template"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentActionWaitCluster{}, "Condition"),
-		cmpopts.IgnoreFields(v1alpha1.ZarfChart{}, "Variables", "SchemaValidation"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfChart{}, "URL", "Variables", "SchemaValidation", "Version"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfManifest{}, "Template"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfFile{}, "Template"),
 	}

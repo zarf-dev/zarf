@@ -154,6 +154,7 @@ func manifestToGeneric(m v1alpha1.ZarfManifest) api.Manifest {
 func chartToGeneric(ch v1alpha1.ZarfChart) api.Chart {
 	gc := api.Chart{
 		Name:                 ch.Name,
+		Version:              ch.Version,
 		Namespace:            ch.Namespace,
 		ReleaseName:          ch.ReleaseName,
 		ValuesFiles:          valuesFilesToGeneric(ch.ValuesFiles, ch.TemplatedValuesFiles),
@@ -171,15 +172,7 @@ func chartToGeneric(ch v1alpha1.ZarfChart) api.Chart {
 // structured source used by the operational model.
 func chartSourceToGeneric(chart *api.Chart, source v1alpha1.ZarfChart) {
 	switch {
-	case source.LocalPath != "":
-		chart.Local = &api.LocalSource{Path: source.LocalPath, Version: source.Version}
-	case strings.HasPrefix(source.URL, "oci://"):
-		ociURL, ref := source.URL, &api.OCIRef{Tag: source.Version}
-		if url, digest, found := strings.Cut(source.URL, "@sha256:"); found {
-			ociURL, ref = url, &api.OCIRef{Digest: "sha256:" + digest}
-		}
-		chart.OCI = &api.OCISource{URL: ociURL, Ref: ref}
-	case source.GitPath != "" || isGitURL(source.URL):
+	case isGitURL(source.URL):
 		gitURL, ref := source.URL, source.Version
 		if url, parsedRef, err := transform.GitURLSplitRef(source.URL); err == nil {
 			gitURL = url
@@ -187,11 +180,23 @@ func chartSourceToGeneric(chart *api.Chart, source v1alpha1.ZarfChart) {
 				ref = parsedRef
 			}
 		}
-		chart.Git = &api.GitSource{URL: gitURL, Path: source.GitPath, Ref: classifyGitRef(ref)}
+		chart.Git = &api.GitSource{
+			URL:  gitURL,
+			Path: source.GitPath,
+			Ref:  classifyGitRef(ref),
+		}
+	case strings.HasPrefix(source.URL, "oci://"):
+		ociURL, ref := source.URL, &api.OCIRef{Tag: source.Version}
+		if url, digest, found := strings.Cut(source.URL, "@sha256:"); found {
+			ociURL, ref = url, &api.OCIRef{Digest: "sha256:" + digest}
+		}
+		chart.OCI = &api.OCISource{URL: ociURL, Ref: ref}
 	case source.URL != "":
 		chart.HelmRepository = &api.HelmRepositorySource{
 			Name: source.RepoName, URL: source.URL, Version: source.Version,
 		}
+	case source.LocalPath != "":
+		chart.Local = &api.LocalSource{Path: source.LocalPath}
 	}
 }
 
@@ -613,6 +618,7 @@ func manifestFromGeneric(m api.Manifest) v1alpha1.ZarfManifest {
 func chartFromGeneric(ch api.Chart) v1alpha1.ZarfChart {
 	ac := v1alpha1.ZarfChart{
 		Name:            ch.Name,
+		Version:         ch.Version,
 		Namespace:       ch.Namespace,
 		ReleaseName:     ch.ReleaseName,
 		ServerSideApply: ch.ServerSideApply,
@@ -646,17 +652,16 @@ func chartFromGeneric(ch api.Chart) v1alpha1.ZarfChart {
 			gitURL = urlNoRef
 		}
 		ref := flattenGitRef(ch.Git.Ref)
-		// If it starts with refs/ then it shouldn't be included in the version as this becomes a filepath.
-		if strings.HasPrefix(ref, "refs/") {
+		// A ref distinct from Version must stay inline. PackageChart uses an inline ref to
+		// select the checkout, while Version names the archive and values files it creates.
+		if ref != "" && ref != ch.Version {
 			ac.URL = gitURL + "@" + ref
 		} else {
 			ac.URL = gitURL
-			ac.Version = ref
 		}
 		ac.GitPath = ch.Git.Path
 	case ch.Local != nil && ch.Local.Path != "":
 		ac.LocalPath = ch.Local.Path
-		ac.Version = ch.Local.Version
 	}
 
 	for _, v := range ch.Values {
