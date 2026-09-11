@@ -252,72 +252,6 @@ type ImageArchive struct {
 	Images []string
 }
 
-// VariableType represents a type of a Zarf package variable.
-type VariableType string
-
-const (
-	// RawVariableType is the default type for a Zarf package variable.
-	RawVariableType VariableType = "raw"
-	// FileVariableType loads a variable's contents from a file.
-	FileVariableType VariableType = "file"
-)
-
-// Variable represents a variable that has a value set programmatically.
-type Variable struct {
-	Name       string
-	Sensitive  bool
-	AutoIndent bool
-	Pattern    string
-	Type       VariableType
-}
-
-// InteractiveVariable is a variable that can prompt a user for more information.
-type InteractiveVariable struct {
-	Variable
-	Description string
-	Default     string
-	Prompt      bool
-}
-
-// Constant is a value that can be used to dynamically template resources or run in actions.
-type Constant struct {
-	Name        string
-	Value       string
-	Description string
-	AutoIndent  bool
-	Pattern     string
-}
-
-// ZarfChartVariable represents a variable that can be set for Helm chart overrides.
-type ZarfChartVariable struct {
-	Name        string
-	Description string
-	Path        string
-}
-
-// ZarfContainerTarget defines the destination info for a ZarfDataInjection target.
-type ZarfContainerTarget struct {
-	Namespace string
-	Selector  string
-	Container string
-	Path      string
-}
-
-// ZarfDataInjection is a data-injection definition.
-type ZarfDataInjection struct {
-	Source   string
-	Target   ZarfContainerTarget
-	Compress bool
-}
-
-// NamespacedObjectKindReference references a cluster resource targeted by a health check.
-type NamespacedObjectKindReference struct {
-	APIVersion string
-	Kind       string
-	Namespace  string
-	Name       string
-}
-
 // ComponentActions are the actions associated with each package lifecycle operation.
 type ComponentActions struct {
 	OnCreate ActionSet
@@ -432,4 +366,70 @@ type ActionWaitNetwork struct {
 	Protocol string
 	Address  string
 	Code     int
+}
+
+// VariableType represents a type of a Zarf package variable.
+type VariableType string
+
+const (
+	// RawVariableType is the default type for a Zarf package variable.
+	RawVariableType VariableType = "raw"
+	// FileVariableType loads a variable's contents from a file.
+	FileVariableType VariableType = "file"
+)
+
+// Variable represents a variable that has a value set programmatically.
+type Variable struct {
+	Name       string
+	Sensitive  bool
+	AutoIndent bool
+	Pattern    string
+	Type       VariableType
+}
+
+// InteractiveVariable is a variable that can prompt a user for more information.
+type InteractiveVariable struct {
+	Variable
+	Description string
+	Default     string
+	Prompt      bool
+}
+
+// Constant is a value that can be used to dynamically template resources or run in actions.
+type Constant struct {
+	Name        string
+	Value       string
+	Description string
+	AutoIndent  bool
+	Pattern     string
+}
+
+// ZarfChartVariable represents a variable that can be set for Helm chart overrides.
+type ZarfChartVariable struct {
+	Name        string
+	Description string
+	Path        string
+}
+
+// ZarfContainerTarget defines the destination info for a ZarfDataInjection target.
+type ZarfContainerTarget struct {
+	Namespace string
+	Selector  string
+	Container string
+	Path      string
+}
+
+// ZarfDataInjection is a data-injection definition.
+type ZarfDataInjection struct {
+	Source   string
+	Target   ZarfContainerTarget
+	Compress bool
+}
+
+// NamespacedObjectKindReference references a cluster resource targeted by a health check.
+type NamespacedObjectKindReference struct {
+	APIVersion string
+	Kind       string
+	Namespace  string
+	Name       string
 }
