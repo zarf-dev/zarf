@@ -1,0 +1,14 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: zarf-iva-podinfo
+  namespace: flux-system
+spec:
+  interval: 5m0s
+  url: oci://zarf.internal/zarf-flux-podinfo
+  ref:
+    tag: local
+  layerSelector:
+    mediaType: application/vnd.oci.image.layer.v1.tar+gzip
+    operation: extract
