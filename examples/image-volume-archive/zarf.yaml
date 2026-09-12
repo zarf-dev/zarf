@@ -1,0 +1,28 @@
+kind: ZarfPackageConfig
+metadata:
+  name: image-volume-archive
+  description: Builds an image volume archive from a directory of files and ships it as an imageArchive
+  version: 0.0.1
+
+documentation:
+  readme: readme.md
+
+components:
+  - name: docs-archive
+    required: true
+    actions:
+      onCreate:
+        before:
+          # `zarf dev image-volume-archive` (alias `iva`) packs every file under
+          # the given directory into an OCI image and writes it out as a
+          # `docker save`-compatible tar. The tar name below is what the command
+          # derives from the reference when --output is not passed. A
+          # zarf.internal reference keeps the image from ever resolving to a
+          # public registry, the same way examples/kiwix does.
+          - description: create image archive
+            cmd: |-
+              ./zarf dev iva ../../site zarf.internal/zarf-docs:local
+    imageArchives:
+      - images:
+          - zarf.internal/zarf-docs:local
+        path: zarf.internal_zarf-docs-local.tar
