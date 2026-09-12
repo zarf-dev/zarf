@@ -26,3 +26,26 @@ components:
       - images:
           - zarf.internal/zarf-docs:local
         path: zarf.internal_zarf-docs-local.tar
+  - name: fluxcd-oci-repo
+    required: true
+    actions:
+      onCreate:
+        before:
+          - description: create image archive
+            cmd: |-
+              ./zarf dev iva --max-layers 1 fluxcd/podinfo zarf.internal/zarf-flux-podinfo:local
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.15.0
+    imageArchives:
+      - images:
+          - zarf.internal/zarf-flux-podinfo:local
+        path: zarf.internal_zarf-flux-podinfo-local.tar
+    manifests:
+      - name: podinfo-namespace
+        files:
+          - fluxcd/deploy/ns-podinfo.yaml
+        namespace: podinfo
+      - name: podinfo-manifests
+        kustomizations:
+          - fluxcd/deploy
+        namespace: flux-system

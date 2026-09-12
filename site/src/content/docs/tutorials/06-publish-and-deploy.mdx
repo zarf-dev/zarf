@@ -1,7 +1,7 @@
 ---
 title: Publish & Deploy Packages w/OCI
 sidebar:
-  order: 7
+  order: 6
 ---
 
 ## Introduction
@@ -19,7 +19,7 @@ For following along locally, please ensure the following prerequisites are met:
 
 - Zarf binary installed on your `$PATH`: ([Installing Zarf](/getting-started/install/))
 - Access to a [Registry supporting the OCI Distribution Spec](https://oras.land/docs/compatible_oci_registries#registries-supporting-oci-artifacts), this tutorial will be using Docker Hub
-- Access to a cluster that has been [initialized with zarf](/tutorials/1-initializing-a-k8s-cluster/).
+- Access to a cluster that has been [initialized with zarf](/tutorials/01-initializing-a-k8s-cluster/).
 
 ## Working with OCI Packages
 
@@ -158,8 +158,8 @@ If you receive this error, either you don't have a Kubernetes cluster, your clus
 
 If you need to setup a cluster, you can perform the following.
 
-1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](/tutorials/4-creating-a-k8s-cluster-with-zarf/) tutorial.
-2. Perform the [Initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial.
+1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](/tutorials/04-creating-a-k8s-cluster-with-zarf/) tutorial.
+2. Perform the [Initialize a cluster](/tutorials/01-initializing-a-k8s-cluster/) tutorial.
 
 After that you can try deploying the package again.
 
@@ -171,6 +171,6 @@ After that you can try deploying the package again.
 
 :::note[Remediation]
 
-If you receive this error when zarf is attempting to deploy any component, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this tutorial.  Perform the [Initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial, then try again.
+If you receive this error when zarf is attempting to deploy any component, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this tutorial.  Perform the [Initialize a cluster](/tutorials/01-initializing-a-k8s-cluster/) tutorial, then try again.
 
 :::
