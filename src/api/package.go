@@ -1,53 +1,40 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types holds the internal generic representation of a Zarf package used for lossless conversions between API versions.
-// This type is never exposed publicly. Each API version converts to/from this type, giving N conversion functions instead of N².
-// The shape mirrors the latest schema (v1beta1) with extra fields appended where earlier versions carry data that does not survive
-// untouched on the latest schema.
-package types
+// Package api defines Zarf's version-neutral package model.
+package api
 
-// Package is the internal superset representation used for conversions between API versions.
+// Package is the version-neutral representation used by package operations and converters.
 type Package struct {
+	// APIVersion identifies the source package schema. An empty value is the legacy v1alpha1 form.
 	APIVersion    string
-	Kind          string
+	Kind          PackageKind
 	Metadata      PackageMetadata
 	Build         BuildData
 	Components    []Component
 	Values        Values
 	Documentation map[string]string
 
-	// v1alpha1-only fields preserved for lossless round-trip.
+	// v1alpha1-only fields
 	Variables []InteractiveVariable
 	Constants []Constant
 }
 
-// PackageMetadata is the superset of metadata fields across API versions.
+// PackageMetadata contains metadata shared across package API versions.
 type PackageMetadata struct {
-	Name         string
-	Description  string
-	Version      string
-	Uncompressed bool
-	Architecture string
-	Annotations  map[string]string
-	// PreventNamespaceOverride is the v1beta1 form. v1alpha1 stores AllowNamespaceOverride *bool;
-	// only one of these should be populated by the converter.
+	Name                     string
+	Description              string
+	Version                  string
+	Uncompressed             bool
+	Architecture             string
+	Annotations              map[string]string
 	PreventNamespaceOverride bool
-	AllowNamespaceOverride   *bool
 
-	// v1alpha1-only metadata fields. v1beta1 migrates these to Annotations.
-	URL           string
-	Image         string
-	YOLO          bool
-	Authors       string
-	Documentation string
-	Source        string
-	Vendor        string
-	// AggregateChecksum lives in Metadata on v1alpha1 and in Build on v1beta1.
-	AggregateChecksum string
+	// YOLO changes deploy behavior for v1alpha1 packages.
+	YOLO bool
 }
 
-// BuildData is the superset of build fields across API versions.
+// BuildData contains build metadata shared across package API versions.
 type BuildData struct {
 	// Hostname is the v1beta1 name (v1alpha1: Terminal).
 	Hostname                   string
@@ -64,8 +51,6 @@ type BuildData struct {
 	VersionRequirements        []VersionRequirement
 	ProvenanceFiles            []string
 	AggregateChecksum          string
-	// OriginalAPIVersion tracks the apiVersion the package was read from before any conversion.
-	OriginalAPIVersion string
 
 	// v1alpha1-only build fields.
 	DifferentialMissing []string
@@ -83,7 +68,7 @@ type Values struct {
 	Schema string
 }
 
-// Component is the superset of component fields across API versions.
+// Component is the version-neutral representation of a package component.
 type Component struct {
 	Name          string
 	Description   string
@@ -100,9 +85,7 @@ type Component struct {
 	StateAccess   []string
 	Actions       ComponentActions
 
-	// v1alpha1-only fields preserved for lossless round-trip.
 	Default           bool
-	Required          *bool
 	Group             string
 	DataInjections    []ZarfDataInjection
 	HealthChecks      []NamespacedObjectKindReference
@@ -130,14 +113,13 @@ type ComponentTarget struct {
 
 // ComponentImport carries imports from any API version.
 type ComponentImport struct {
-	// v1beta1 form: separate lists of local and remote component config references.
+	// Local and Remote support the multiple imports accepted by v1beta1.
 	Local  []ComponentImportLocal
 	Remote []ComponentImportRemote
 
-	// v1alpha1-only single-import fields.
+	// Name identifies a v1alpha1 imported component. Path and URL are projected onto
+	// Local and Remote by the v1alpha1 converter.
 	Name string
-	Path string
-	URL  string
 }
 
 // ComponentImportLocal references a local component config file.
@@ -157,7 +139,7 @@ type KustomizeManifest struct {
 	EnablePlugins     bool
 }
 
-// Manifest is the superset of manifest fields across API versions.
+// Manifest is the version-neutral representation of a manifest entry.
 type Manifest struct {
 	Name             string
 	Namespace        string
@@ -166,14 +148,13 @@ type Manifest struct {
 	SkipWait         bool
 	ServerSideApply  string
 	EnableTemplating bool
-
-	// v1alpha1-only round-trip fields.
-	Template *bool
 }
 
-// Chart is the superset of chart fields across API versions.
+// Chart is the operational representation of a chart across API versions.
 type Chart struct {
-	Name                 string
+	Name string
+	// Version identifies this chart's archive and values files within the package.
+	Version              string
 	Namespace            string
 	ReleaseName          string
 	ValuesFiles          []ValuesFile
@@ -182,20 +163,13 @@ type Chart struct {
 	ServerSideApply      string
 	SkipWait             bool
 
-	// v1beta1 structured sources.
 	HelmRepository *HelmRepositorySource
 	Git            *GitSource
 	Local          *LocalSource
 	OCI            *OCISource
 
-	// v1alpha1-only flat source fields. Used during conversion to populate structured sources.
-	URL              string
-	RepoName         string
-	GitPath          string
-	LocalPath        string
-	Version          string
-	SchemaValidation *bool
-	Variables        []ZarfChartVariable
+	// Variables are required to run v1alpha1 chart actions.
+	Variables []ZarfChartVariable
 }
 
 // ValuesFile is a values file merged into a Helm chart, optionally rendered with Zarf templating.
@@ -245,9 +219,8 @@ type OCIRef struct {
 
 // OCISource represents a chart stored in an OCI registry.
 type OCISource struct {
-	URL     string
-	Version string
-	Ref     *OCIRef
+	URL string
+	Ref *OCIRef
 }
 
 // Repository defines a git repository.
@@ -256,7 +229,7 @@ type Repository struct {
 	Ref *GitRef
 }
 
-// File is the superset of file fields across API versions.
+// File is the version-neutral representation of a package file.
 type File struct {
 	Source           string
 	Checksum         string
@@ -265,8 +238,6 @@ type File struct {
 	Symlinks         []string
 	ExtractPath      string
 	EnableTemplating bool
-	// Template is the v1alpha1 *bool preserved so an unset value round-trips losslessly.
-	Template *bool
 }
 
 // Image represents an OCI image in the package.
@@ -281,89 +252,120 @@ type ImageArchive struct {
 	Images []string
 }
 
-// ComponentActions are ActionSets mapped to package lifecycle operations.
+// ComponentActions are the actions associated with each package lifecycle operation.
 type ComponentActions struct {
-	OnCreate ComponentActionSet
-	OnDeploy ComponentActionSet
-	OnRemove ComponentActionSet
+	OnCreate ActionSet
+	OnDeploy ActionSet
+	OnRemove ActionSet
 }
 
-// ComponentActionSet is a set of actions for one lifecycle operation.
-type ComponentActionSet struct {
-	Defaults  *ComponentActionDefaults
-	Before    []ComponentAction
-	OnSuccess []ComponentAction
-	OnFailure []ComponentAction
-
-	// After is the v1alpha1-only "run at the end of an operation" hook, preserved for lossless
-	// round-trips. v1beta1 has no equivalent and folds these into OnSuccess on conversion.
-	After []ComponentAction
+// ActionSet contains actions for one package lifecycle operation.
+type ActionSet struct {
+	Defaults  ActionDefaults
+	Before    []Action
+	After     []Action
+	OnSuccess []Action
+	OnFailure []Action
 }
 
-// ComponentActionDefaults sets defaults for child actions.
-type ComponentActionDefaults struct {
+// ActionDefaults configures every action in an ActionSet unless the action overrides it.
+type ActionDefaults struct {
 	Silent          bool
-	MaxTotalSeconds int32
-	Retries         int32
+	MaxTotalSeconds int
+	Retries         int
 	Dir             string
 	Env             []string
 	Shell           Shell
 }
 
-// ComponentAction is the superset of action fields across API versions.
-type ComponentAction struct {
+// Action is a command or wait operation performed during a package lifecycle operation.
+type Action struct {
 	Silent           *bool
-	MaxTotalSeconds  *int32
-	Retries          *int32
+	MaxTotalSeconds  *int
+	Retries          *int
 	Dir              *string
 	Env              []string
 	Cmd              string
 	Shell            *Shell
+	SetVariables     []ActionVariable
 	SetValues        []SetValue
 	Description      string
-	Wait             *ComponentActionWait
+	Wait             *ActionWait
 	EnableTemplating bool
-
-	// v1alpha1-only round-trip fields.
-	SetVariables          []Variable
+	// DeprecatedSetVariable is required to execute legacy v1alpha1 packages.
 	DeprecatedSetVariable string
-	// Template is the v1alpha1 *bool preserved so an unset value round-trips losslessly.
-	Template *bool
 }
 
-// SetValue declares a value that can be set during a deploy.
+// ActionVariable receives an action's command output.
+type ActionVariable struct {
+	Name       string
+	Sensitive  bool
+	AutoIndent bool
+	Pattern    string
+	Type       string
+}
+
+// SetValue declares how command output is stored in the package values map.
 type SetValue struct {
 	Key   string
 	Value any
-	Type  string
+	Type  SetValueType
 }
 
-// ComponentActionWait specifies a condition to wait for before continuing.
-type ComponentActionWait struct {
-	Cluster *ComponentActionWaitCluster
-	Network *ComponentActionWaitNetwork
-}
+// SetValueType declares the expected output format of an action command.
+type SetValueType string
 
-// ComponentActionWaitCluster specifies a cluster-level wait condition.
-type ComponentActionWaitCluster struct {
-	Kind      string
-	Name      string
-	Namespace string
-	Condition string
-}
+const (
+	// SetValueYAML parses command output as YAML.
+	SetValueYAML SetValueType = "yaml"
+	// SetValueJSON parses command output as JSON.
+	SetValueJSON SetValueType = "json"
+	// SetValueString stores command output without parsing.
+	SetValueString SetValueType = "string"
+)
 
-// ComponentActionWaitNetwork specifies a network-level wait condition.
-type ComponentActionWaitNetwork struct {
-	Protocol string
-	Address  string
-	Code     int32
-}
-
-// Shell represents shell preferences per OS.
+// Shell identifies the preferred command shell on each supported operating system.
 type Shell struct {
 	Windows string
 	Linux   string
 	Darwin  string
+}
+
+// ActionWait specifies a cluster or network condition to wait for.
+type ActionWait struct {
+	Cluster *ActionWaitCluster
+	Network *ActionWaitNetwork
+}
+
+// ActionWaitCluster specifies a cluster-level condition to wait for.
+type ActionWaitCluster struct {
+	Kind      string
+	Name      string
+	Namespace string
+	Condition WaitCondition
+}
+
+// WaitCondition carries both an explicit condition and the semantic default used when it is empty.
+type WaitCondition struct {
+	Expression string
+	Default    WaitDefault
+}
+
+// WaitDefault is the behavior used when a cluster wait condition is omitted.
+type WaitDefault string
+
+const (
+	// WaitForExistence waits for a resource to exist when no condition is supplied.
+	WaitForExistence WaitDefault = "existence"
+	// WaitForReadiness waits for a resource to be reconciled when no condition is supplied.
+	WaitForReadiness WaitDefault = "readiness"
+)
+
+// ActionWaitNetwork specifies a network-level condition to wait for.
+type ActionWaitNetwork struct {
+	Protocol string
+	Address  string
+	Code     int
 }
 
 // VariableType represents a type of a Zarf package variable.

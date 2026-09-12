@@ -19,6 +19,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -34,10 +35,14 @@ import (
 // PackageLayout manages the layout for a package.
 type PackageLayout struct {
 	dirPath string
-	// PackageDefinition is the parsed package definition for this layout.
-	PackageDefinition api.PackageDefinition
-	digest            string
-	cache             *manifestCache
+	pkg     api.Package
+	digest  string
+	cache   *manifestCache
+}
+
+// Definition returns the version-neutral package definition for this layout.
+func (p *PackageLayout) Definition() api.Package {
+	return p.pkg
 }
 
 // Digest returns the OCI manifest digest for this package layout.
@@ -47,12 +52,27 @@ func (p *PackageLayout) Digest() string {
 
 // AsV1alpha1 returns the package definition as a v1alpha1 ZarfPackage.
 func (p *PackageLayout) AsV1alpha1() v1alpha1.ZarfPackage {
-	return p.PackageDefinition.AsV1alpha1()
+	return convert.PackageToV1alpha1(p.pkg)
 }
 
 // AsV1beta1 returns the package definition as a v1beta1 Package.
 func (p *PackageLayout) AsV1beta1() v1beta1.Package {
-	return p.PackageDefinition.AsV1beta1()
+	return convert.PackageToV1beta1(p.pkg)
+}
+
+// OverrideNamespace overrides package namespaces when the package permits it.
+func (p *PackageLayout) OverrideNamespace(namespace string) error {
+	return p.pkg.OverrideNamespace(namespace)
+}
+
+// Filter applies a component filter to this layout's package definition.
+func (p *PackageLayout) Filter(filter filters.ComponentFilterStrategy) error {
+	definition, err := filters.Apply(p.pkg, filter)
+	if err != nil {
+		return err
+	}
+	p.pkg = definition
+	return nil
 }
 
 // PackageLayoutOptions are the options used when loading a package.
@@ -81,15 +101,15 @@ const (
 )
 
 // MarshalPackageDefinition returns deterministic zarf.yaml bytes for a package definition.
-func MarshalPackageDefinition(definition api.PackageDefinition) ([]byte, error) {
-	alpha, err := goyaml.Marshal(definition.AsV1alpha1())
+func MarshalPackageDefinition(definition api.Package) ([]byte, error) {
+	alpha, err := goyaml.Marshal(convert.PackageToV1alpha1(definition))
 	if err != nil {
 		return nil, err
 	}
-	if definition.OriginalAPIVersion() != v1beta1.APIVersion {
+	if definition.APIVersion != v1beta1.APIVersion {
 		return alpha, nil
 	}
-	beta, err := goyaml.Marshal(definition.AsV1beta1())
+	beta, err := goyaml.Marshal(convert.PackageToV1beta1(definition))
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +120,7 @@ func MarshalPackageDefinition(definition api.PackageDefinition) ([]byte, error) 
 }
 
 // WritePackageDefinition writes a deterministic zarf.yaml file for a package definition.
-func WritePackageDefinition(path string, definition api.PackageDefinition) error {
+func WritePackageDefinition(path string, definition api.Package) error {
 	b, err := MarshalPackageDefinition(definition)
 	if err != nil {
 		return err
@@ -161,8 +181,8 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 		return nil, err
 	}
 	pkgLayout := &PackageLayout{
-		dirPath:           dirPath,
-		PackageDefinition: definition,
+		dirPath: dirPath,
+		pkg:     definition,
 	}
 	err = validatePackageIntegrity(pkgLayout, opts.IsPartial)
 	if err != nil {
@@ -222,7 +242,7 @@ func (e *NoSBOMAvailableError) Error() string {
 
 // ContainsSBOM checks if a package includes an SBOM
 func (p *PackageLayout) ContainsSBOM() bool {
-	if !p.AsV1alpha1().IsSBOMAble() {
+	if !p.pkg.IsSBOMAble() {
 		return false
 	}
 	return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
@@ -263,7 +283,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		return fmt.Errorf("cannot access %s for signing: %w", ZarfYAML, err)
 	}
 
-	originalDefinition := p.PackageDefinition
+	originalDefinition := p.pkg
 
 	// Create temporary directory for signing
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -277,19 +297,27 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 	tmpZarfYAMLPath := filepath.Join(tmpDir, ZarfYAML)
 	tmpBundlePath := filepath.Join(tmpDir, Bundle)
 
-	definition := p.PackageDefinition
-	definition.SetBuildSigned(true)
-	definition.AddProvenanceFile(Bundle)
-	definition.AddVersionRequirement(api.VersionRequirement{
+	definition := p.pkg
+	signed := true
+	definition.Build.Signed = &signed
+	if !slices.Contains(definition.Build.ProvenanceFiles, Bundle) {
+		definition.Build.ProvenanceFiles = append(definition.Build.ProvenanceFiles, Bundle)
+	}
+	requirement := api.VersionRequirement{
 		Version: "v0.71.0",
 		Reason:  "This package contains a bundle format signature which requires Zarf v0.71.0 or later",
-	})
-	p.PackageDefinition = definition
+	}
+	if !slices.ContainsFunc(definition.Build.VersionRequirements, func(existing api.VersionRequirement) bool {
+		return existing == requirement
+	}) {
+		definition.Build.VersionRequirements = append(definition.Build.VersionRequirements, requirement)
+	}
+	p.pkg = definition
 
 	// Consolidated in-memory rollback — fires on any error exit via named return.
 	defer func() {
 		if err != nil {
-			p.PackageDefinition = originalDefinition
+			p.pkg = originalDefinition
 		}
 	}()
 
@@ -476,9 +504,8 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 // checking for the presence of a signature file for backward compatibility.
 func (p *PackageLayout) IsSigned() bool {
 	// Check metadata first (authoritative source)
-	pkg := p.AsV1alpha1()
-	if pkg.Build.Signed != nil {
-		return *pkg.Build.Signed
+	if p.pkg.Build.Signed != nil {
+		return *p.pkg.Build.Signed
 	}
 
 	// Backward compatibility: check for signature file existence
@@ -495,7 +522,7 @@ func (p *PackageLayout) IsSigned() bool {
 // GetSBOM outputs the SBOM data from the package to the given destination path.
 func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 	if !p.ContainsSBOM() {
-		return &NoSBOMAvailableError{pkgName: p.AsV1alpha1().Metadata.Name}
+		return &NoSBOMAvailableError{pkgName: p.Definition().Metadata.Name}
 	}
 
 	// locate the sboms archive under the layout directory
@@ -513,9 +540,8 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 // If keys are provided, only those specific documentation files are extracted.
 func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) (err error) {
 	l := logger.From(ctx)
-	pkg := p.AsV1alpha1()
 
-	if len(pkg.Documentation) == 0 {
+	if len(p.pkg.Documentation) == 0 {
 		return fmt.Errorf("no documentation files found in package")
 	}
 
@@ -524,11 +550,11 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("documentation.tar not found in package")
 	}
 
-	keysToExtract := maps.Clone(pkg.Documentation)
+	keysToExtract := maps.Clone(p.pkg.Documentation)
 	if len(keys) > 0 {
 		keysToExtract = make(map[string]string)
 		for _, key := range keys {
-			if filePath, ok := pkg.Documentation[key]; ok {
+			if filePath, ok := p.pkg.Documentation[key]; ok {
 				keysToExtract[key] = filePath
 			} else {
 				return fmt.Errorf("key %s not found in package documentation", key)
@@ -554,7 +580,7 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
 	}
 
-	fileNames := GetDocumentationFileNames(pkg.Documentation)
+	fileNames := GetDocumentationFileNames(p.pkg.Documentation)
 
 	for key, file := range keysToExtract {
 		docFileName := fileNames[key]
@@ -712,7 +738,7 @@ func (p *PackageLayout) Files() (map[string]string, error) {
 
 // FileName returns the name of the Zarf package should have when exported to the file system
 func (p *PackageLayout) FileName() (string, error) {
-	pkg := p.AsV1alpha1()
+	pkg := p.pkg
 	if pkg.Build.Architecture == "" {
 		return "", errors.New("package must include a build architecture")
 	}
@@ -720,9 +746,9 @@ func (p *PackageLayout) FileName() (string, error) {
 
 	var name string
 	switch pkg.Kind {
-	case v1alpha1.ZarfInitConfig:
+	case api.ZarfInitConfig:
 		name = fmt.Sprintf("zarf-init-%s", arch)
-	case v1alpha1.ZarfPackageConfig:
+	case api.ZarfPackageConfig:
 		name = fmt.Sprintf("zarf-package-%s-%s", pkg.Metadata.Name, arch)
 	default:
 		name = fmt.Sprintf("zarf-%s-%s", strings.ToLower(string(pkg.Kind)), arch)
@@ -746,7 +772,7 @@ func (p *PackageLayout) FileName() (string, error) {
 }
 
 func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
-	pkg := pkgLayout.AsV1alpha1()
+	pkg := pkgLayout.pkg
 	_, err := os.Stat(filepath.Join(pkgLayout.dirPath, ZarfYAML))
 	if err != nil {
 		return err
@@ -755,7 +781,7 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 	if err != nil {
 		return err
 	}
-	err = helpers.SHAsMatch(filepath.Join(pkgLayout.dirPath, Checksums), pkg.Metadata.AggregateChecksum)
+	err = helpers.SHAsMatch(filepath.Join(pkgLayout.dirPath, Checksums), pkg.Build.AggregateChecksum)
 	if err != nil {
 		return err
 	}
@@ -828,7 +854,7 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 
 // validatePackagePaths checks that package config fields used as filesystem
 // path components do not contain path traversal sequences or separators.
-func validatePackagePaths(pkg v1alpha1.ZarfPackage) error {
+func validatePackagePaths(pkg api.Package) error {
 	if !isCleanPath(pkg.Metadata.Name) {
 		return fmt.Errorf("package metadata name %q would result in an invalid path", pkg.Metadata.Name)
 	}

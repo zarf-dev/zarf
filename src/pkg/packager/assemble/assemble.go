@@ -27,6 +27,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -81,7 +82,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	l.Info("assembling package", "path", packagePath)
 
 	definition := resolvedPackage.Definition
-	pkg := definition.AsV1alpha1()
+	pkg := convert.PackageToV1alpha1(definition)
 	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
 		return nil, err
 	}
@@ -96,18 +97,18 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		if noVersionSet {
 			return nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
-		originalAPIVersion := definition.OriginalAPIVersion()
-		differentialAPIVersion := opts.DifferentialPackage.Build.GetOriginalAPIVersion()
-		if originalAPIVersion != differentialAPIVersion {
-			return nil, fmt.Errorf("%s: package apiVersion %s, differential package apiVersion %s", lang.PkgCreateErrDifferentialAPIVersion, originalAPIVersion, differentialAPIVersion)
+		differentialAPIVersion := convert.PackageFromV1alpha1(opts.DifferentialPackage).APIVersion
+		if !apiVersionsMatch(definition.APIVersion, differentialAPIVersion) {
+			return nil, fmt.Errorf("%s: package apiVersion %s, differential package apiVersion %s", lang.PkgCreateErrDifferentialAPIVersion, normalizeAPIVersion(definition.APIVersion), normalizeAPIVersion(differentialAPIVersion))
 		}
-		updatedDefinition, err := applyDifferentialResources(definition, api.NewPackageDefinitionFromV1alpha1(opts.DifferentialPackage))
+		updatedDefinition, err := applyDifferentialResources(definition, convert.PackageFromV1alpha1(opts.DifferentialPackage))
 		if err != nil {
 			return nil, err
 		}
 		definition = updatedDefinition
-		pkg = definition.AsV1alpha1()
-		definition.SetDifferentialBuild(opts.DifferentialPackage.Metadata.Version)
+		pkg = convert.PackageToV1alpha1(definition)
+		definition.Build.Differential = true
+		definition.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
 	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -248,8 +249,8 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, err
 	}
 	definition := resolvedPackage.Definition
-	definition.SetMetadataArchitecture(v1alpha1.SkeletonArch)
-	pkg := definition.AsV1alpha1()
+	definition.Metadata.Architecture = v1alpha1.SkeletonArch
+	pkg := convert.PackageToV1alpha1(definition)
 
 	// Creating skeleton packages with the values feature is not yet supported
 	if len(pkg.Values.Files) > 0 || resolvedPackage.ValuesSchema != nil {
@@ -288,7 +289,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	}
 	// PackageDefinition does not expose component flavor mutations, so retain them
 	// while moving package metadata updates to the generic definition.
-	definition = api.NewPackageDefinitionFromV1alpha1(pkg)
+	definition = convert.PackageFromV1alpha1(pkg)
 
 	if err = recordPackageMetadata(&definition, opts.Flavor, nil, opts.WithBuildMachineInfo, buildPath, checksumSha); err != nil {
 		return nil, err
@@ -845,12 +846,12 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(definition *api.PackageDefinition, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath, aggregateChecksum string) error {
-	pkg := definition.AsV1alpha1()
+func recordPackageMetadata(definition *api.Package, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath, aggregateChecksum string) error {
+	pkg := convert.PackageToV1alpha1(*definition)
 	now := time.Now()
 	buildData := api.BuildData{
 		Architecture:      pkg.Metadata.Architecture,
-		Timestamp:         now.Format(v1alpha1.BuildTimestampFormat),
+		Timestamp:         now.Format(api.BuildTimestampFormat),
 		Version:           config.CLIVersion,
 		Flavor:            flavor,
 		ProvenanceFiles:   []string{layout.Checksums},
@@ -873,7 +874,7 @@ func recordPackageMetadata(definition *api.PackageDefinition, flavor string, reg
 	}
 
 	if pkg.IsInitConfig() && pkg.Metadata.Version == "" {
-		definition.SetMetadataVersion(config.CLIVersion)
+		definition.Metadata.Version = config.CLIVersion
 	}
 
 	hasIndex := false
@@ -897,7 +898,17 @@ func recordPackageMetadata(definition *api.PackageDefinition, flavor string, reg
 	// Set signed to false by default; this is updated if signing occurs.
 	signed := false
 	buildData.Signed = &signed
-	definition.SetBuildData(buildData)
+	definition.Build.Hostname = buildData.Hostname
+	definition.Build.User = buildData.User
+	definition.Build.Architecture = buildData.Architecture
+	definition.Build.Timestamp = buildData.Timestamp
+	definition.Build.Version = buildData.Version
+	definition.Build.RegistryOverrides = buildData.RegistryOverrides
+	definition.Build.Flavor = buildData.Flavor
+	definition.Build.Signed = buildData.Signed
+	definition.Build.ProvenanceFiles = buildData.ProvenanceFiles
+	definition.Build.VersionRequirements = buildData.VersionRequirements
+	definition.Build.AggregateChecksum = buildData.AggregateChecksum
 
 	return nil
 }

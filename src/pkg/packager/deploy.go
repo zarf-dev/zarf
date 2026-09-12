@@ -139,7 +139,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	if opts.NamespaceOverride != "" {
-		if err := pkgLayout.PackageDefinition.OverrideNamespace(opts.NamespaceOverride); err != nil {
+		if err := pkgLayout.OverrideNamespace(opts.NamespaceOverride); err != nil {
 			return DeployResult{}, err
 		}
 		pkg = pkgLayout.AsV1alpha1()
@@ -153,11 +153,9 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	var err error
-	definition, err := filters.Apply(pkgLayout.PackageDefinition, filters.ByLocalOS(runtime.GOOS))
-	if err != nil {
+	if err := pkgLayout.Filter(filters.ByLocalOS(runtime.GOOS)); err != nil {
 		return DeployResult{}, err
 	}
-	pkgLayout.PackageDefinition = definition
 	pkg = pkgLayout.AsV1alpha1()
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.SetVariables, opts.IsInteractive)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
@@ -116,11 +117,11 @@ metadata:
 			pkg, err := ParseMultiDoc(context.Background(), []byte(tt.yaml))
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
-				require.Equal(t, api.PackageDefinition{}, pkg)
+				require.Equal(t, api.Package{}, pkg)
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tt.wantName, pkg.AsV1alpha1().Metadata.Name)
+			require.Equal(t, tt.wantName, convert.PackageToV1alpha1(pkg).Metadata.Name)
 		})
 	}
 }
@@ -215,14 +216,14 @@ func TestParseMultiDocReturnsPackageDefinition(t *testing.T) {
 	mixed := beta + "---\napiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\ncomponents:\n  - name: c\n"
 	pkg, err := ParseMultiDoc(ctx, []byte(mixed))
 	require.NoError(t, err)
-	require.Equal(t, v1beta1.APIVersion, pkg.OriginalAPIVersion())
-	require.Equal(t, "beta", pkg.AsV1beta1().Metadata.Name)
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
+	require.Equal(t, "beta", convert.PackageToV1beta1(pkg).Metadata.Name)
 
 	// With only a v1beta1 document, ParseMultiDoc returns a PackageDefinition.
 	pkg, err = ParseMultiDoc(ctx, []byte(beta))
 	require.NoError(t, err)
-	require.Equal(t, v1beta1.APIVersion, pkg.OriginalAPIVersion())
-	require.Equal(t, "beta", pkg.AsV1beta1().Metadata.Name)
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
+	require.Equal(t, "beta", convert.PackageToV1beta1(pkg).Metadata.Name)
 }
 
 func TestDecoderFor(t *testing.T) {

@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -208,27 +209,27 @@ func identifySource(src string) (string, error) {
 }
 
 // GetPackageFromSourceOrCluster retrieves a package definition from a source or cluster.
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, namespaceOverride string, opts LoadOptions) (_ api.PackageDefinition, err error) {
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, namespaceOverride string, opts LoadOptions) (_ api.Package, err error) {
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
 	src = zoci.NormalizeOCISource(src)
 	srcType, err := identifySource(src)
 	if err != nil {
-		return api.PackageDefinition{}, err
+		return api.Package{}, err
 	}
 	if srcType == "cluster" {
 		if cluster == nil {
-			return api.PackageDefinition{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
+			return api.Package{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
 		}
 		depPkg, err := cluster.GetDeployedPackage(ctx, src, state.WithPackageNamespaceOverride(namespaceOverride))
 		if err != nil {
-			return api.PackageDefinition{}, err
+			return api.Package{}, err
 		}
-		definition := api.NewPackageDefinitionFromV1alpha1(depPkg.Data)
+		definition := convert.PackageFromV1alpha1(depPkg.Data)
 		definition, err = filters.Apply(definition, opts.Filter)
 		if err != nil {
-			return api.PackageDefinition{}, err
+			return api.Package{}, err
 		}
 		return definition, nil
 	}
@@ -236,10 +237,10 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 	opts.LayerTypes = []zoci.LayerType{zoci.MetadataLayers}
 	pkgLayout, err := LoadPackage(ctx, src, opts)
 	if err != nil {
-		return api.PackageDefinition{}, err
+		return api.Package{}, err
 	}
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	return pkgLayout.PackageDefinition, nil
+	return pkgLayout.Definition(), nil
 }

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -49,7 +50,7 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) (err error)
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
-	pkg := loaded.Definition.AsV1alpha1()
+	pkg := convert.PackageToV1alpha1(loaded.Definition)
 	findings := []lint.PackageFinding{}
 	for i, component := range pkg.Components {
 		findings = append(findings, lint.CheckComponentValues(component, i)...)
