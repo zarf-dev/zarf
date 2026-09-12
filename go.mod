@@ -16,6 +16,7 @@ require (
 	github.com/anchore/stereoscope v0.3.1
 	github.com/anchore/syft v1.51.1
 	github.com/avast/retry-go/v4 v4.7.0
+	github.com/containerd/containerd/v2 v2.3.6
 	github.com/derailed/k9s v0.51.0
 	github.com/distribution/distribution/v3 v3.1.1
 	github.com/distribution/reference v0.6.0
@@ -109,7 +110,6 @@ require (
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
 	github.com/containerd/cgroups/v3 v3.1.3 // indirect
 	github.com/containerd/containerd/api v1.11.1 // indirect
-	github.com/containerd/containerd/v2 v2.3.6 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/platforms v1.0.0-rc.5 // indirect
