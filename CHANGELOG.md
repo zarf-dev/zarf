@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.85.1](https://github.com/zarf-dev/zarf/compare/v0.85.0...v0.85.1) (2026-09-12)
+
+
+### Features
+
+* **cluster:** support random registry pod selection ([#5317](https://github.com/zarf-dev/zarf/issues/5317)) ([fb3a53b](https://github.com/zarf-dev/zarf/commit/fb3a53b276ed927fa5e279a826ee366243f9d9b7))
+* debug log container runtime for diagnostics - warn on cri-o ([#5333](https://github.com/zarf-dev/zarf/issues/5333)) ([4e34f0e](https://github.com/zarf-dev/zarf/commit/4e34f0eaedba5937e333c1cb5c6e160decac68b6))
+* migrate `zarf tools registry ls` from crane to oras-go ([#5199](https://github.com/zarf-dev/zarf/issues/5199)) ([da37c2a](https://github.com/zarf-dev/zarf/commit/da37c2a805fc8a78b57d691133ec7ecf080aa5cf))
+* reject extra arguments to destroy ([#5311](https://github.com/zarf-dev/zarf/issues/5311)) ([2a03baf](https://github.com/zarf-dev/zarf/commit/2a03bafdbf893cd2a5b2828d47a7e29eaf542ee9))
+
+
+### Bug Fixes
+
+* introduce more randomization in the fuzzers ([#5275](https://github.com/zarf-dev/zarf/issues/5275)) ([46018cf](https://github.com/zarf-dev/zarf/commit/46018cff0e1288cb115ad4c0fc0921362a8dac83))
+
 ## [0.85.0](https://github.com/zarf-dev/zarf/compare/v0.84.0...v0.85.0) (2026-09-03)
 
 
