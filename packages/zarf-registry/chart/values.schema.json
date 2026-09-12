@@ -59,7 +59,10 @@
           "type": "integer"
         },
         "tolerations": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "type": "object"
           }
@@ -254,18 +257,27 @@
           "type": "boolean"
         },
         "custom": {
-          "type": "object"
+          "type": [
+            "object",
+            "null"
+          ]
         }
       }
     },
     "tolerations": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "items": {
         "type": "object"
       }
     },
     "nodeSelector": {
-      "type": "object",
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": {
         "type": "string"
       }
@@ -303,7 +315,10 @@
       "type": "string"
     },
     "extraEnvVars": {
-      "type": "array",
+      "type": [
+        "array",
+        "null"
+      ],
       "items": {
         "type": "object"
       }
@@ -318,7 +333,10 @@
           "type": "string"
         },
         "annotations": {
-          "type": "object",
+          "type": [
+            "object",
+            "null"
+          ],
           "additionalProperties": {
             "type": "string"
           }
