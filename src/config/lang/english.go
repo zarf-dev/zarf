@@ -504,6 +504,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a arm64
 # Pull a skeleton package
 $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
+	CmdPackagePullFlagRetries         = "Maximum attempts for retryable OCI registry requests"
 	CmdPackagePullFlagShasum          = "Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'"
 
 	CmdPackageChoose                = "Choose or type the package file"

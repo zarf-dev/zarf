@@ -19,6 +19,7 @@ zarf tools download-init [flags]
 ```
   -h, --help                      help for download-init
   -o, --output-directory string   Specify a directory to place the init package in.
+      --retries int               Maximum attempts for retryable OCI registry requests (default 3)
   -v, --version string            Specify version to download (defaults to current CLI version)
 ```
 
