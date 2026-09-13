@@ -24,12 +24,21 @@ import (
 	"github.com/stretchr/testify/require"
 	"oras.land/oras-go/v2/content/oci"
 
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 func newTestVolume(t *testing.T) *Volume {
 	t.Helper()
-	iv, err := New(t.TempDir(), "linux", "amd64")
+	return newTestVolumeWith(t, Options{})
+}
+
+// newTestVolumeWith builds a Volume from opts, pinning the platform so the
+// digests a test asserts on do not depend on the machine running it.
+func newTestVolumeWith(t *testing.T, opts Options) *Volume {
+	t.Helper()
+	opts.OS, opts.Arch = PlatformOSLinux, PlatformArchAMD64
+	iv, err := New(t.TempDir(), opts)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, iv.Clean()) })
 	return iv
@@ -38,11 +47,11 @@ func newTestVolume(t *testing.T) *Volume {
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	iv, err := New(t.TempDir(), "linux", "amd64")
+	iv, err := New(t.TempDir(), Options{OS: PlatformOSLinux, Arch: PlatformArchAMD64})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, iv.Clean()) })
 
-	require.NotNil(t, iv.Store())
+	require.NotNil(t, iv.store)
 	require.DirExists(t, iv.tmp)
 	require.Equal(t, "linux", iv.config.Platform.OS)
 	require.Equal(t, "amd64", iv.config.Platform.Architecture)
@@ -51,9 +60,72 @@ func TestNew(t *testing.T) {
 	require.Equal(t, "layers", iv.config.RootFS.Type)
 	require.Empty(t, iv.config.RootFS.DiffIDs)
 	require.Empty(t, iv.layers)
-	require.Equal(t, DefaultMaxLayers, iv.MaxLayers)
-	require.NotNil(t, iv.Annotations)
-	require.Empty(t, iv.Annotations)
+	require.Equal(t, DefaultMaxLayers, iv.maxLayers)
+	require.NotNil(t, iv.annotations)
+	require.Empty(t, iv.annotations)
+}
+
+// TestNewZeroOptions checks that the zero Options is usable, since it is what
+// a caller who only wants an image volume of the host platform will pass.
+func TestNewZeroOptions(t *testing.T) {
+	t.Parallel()
+
+	iv, err := New(t.TempDir(), Options{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, iv.Clean()) })
+
+	require.Equal(t, string(PlatformOSLinux), iv.config.Platform.OS)
+	require.Equal(t, config.GetArch(), iv.config.Platform.Architecture)
+	require.Equal(t, VolumeCompressionUncompressed, iv.compression)
+	require.Equal(t, DefaultMaxLayers, iv.maxLayers)
+	require.NotNil(t, iv.annotations)
+}
+
+func TestNewRejectsInvalidOptions(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		opts    Options
+		wantErr error
+	}{
+		"os":          {Options{OS: PlatformOS("plan9")}, ErrPlatformOS},
+		"arch":        {Options{Arch: PlatformArch("s390x")}, ErrPlatformArch},
+		"compression": {Options{Compression: VolumeCompression("bogus")}, ErrLayerCompression},
+		"layerLimit":  {Options{MaxLayers: 8, UnlimitedLayers: true}, ErrLayerLimitConflict},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			ociDir := t.TempDir()
+			iv, err := New(ociDir, tc.opts)
+			require.ErrorIs(t, err, tc.wantErr)
+			require.Nil(t, iv)
+
+			// Rejected up front: nothing was written before the error.
+			left, err := os.ReadDir(ociDir)
+			require.NoError(t, err)
+			require.Empty(t, left)
+		})
+	}
+}
+
+// TestNewCopiesAnnotations checks that New does not retain the caller's map.
+// AddDirectory writes its own created annotation, which would otherwise land
+// in a map the caller still holds and may reuse for another volume.
+func TestNewCopiesAnnotations(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	caller := map[string]string{"org.example.foo": "bar"}
+	iv := newTestVolumeWith(t, Options{Annotations: caller})
+
+	srcDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("a"), 0o644))
+	require.NoError(t, iv.AddDirectory(ctx, srcDir, "test:latest"))
+
+	require.Equal(t, map[string]string{"org.example.foo": "bar"}, caller,
+		"the caller's map should be untouched")
+	require.Equal(t, staticRFC3339, iv.annotations[ocispec.AnnotationCreated])
 }
 
 func TestVolumeAddFile(t *testing.T) {
@@ -77,7 +149,7 @@ func TestVolumeAddFile(t *testing.T) {
 	require.Positive(t, desc.Size)
 	require.NotEmpty(t, desc.Digest)
 
-	exists, err := iv.Store().Exists(ctx, desc)
+	exists, err := iv.store.Exists(ctx, desc)
 	require.NoError(t, err)
 	require.True(t, exists)
 
@@ -87,7 +159,7 @@ func TestVolumeAddFile(t *testing.T) {
 	require.Equal(t, "ADD sub/hello.txt /", iv.config.History[0].CreatedBy)
 	require.Equal(t, "dev.zarf.zoci.volume.v0", iv.config.History[0].Comment)
 
-	assertLayerTarMatches(ctx, t, iv.Store(), desc, "sub/hello.txt", content)
+	assertLayerTarMatches(ctx, t, iv.store, desc, "sub/hello.txt", content)
 }
 
 func TestVolumeAddFileAccumulatesLayers(t *testing.T) {
@@ -143,7 +215,7 @@ func TestVolumeAddFiles(t *testing.T) {
 	title := desc.Annotations[ocispec.AnnotationTitle]
 	require.Equal(t, "a.txt\nb.txt\nc.txt", title, "title should join every file name in the batch with a blank line")
 
-	contents := layerTarContents(ctx, t, iv.Store(), desc)
+	contents := layerTarContents(ctx, t, iv.store, desc)
 	require.Len(t, contents, len(files))
 	for name, content := range files {
 		require.Equal(t, []byte(content), contents[name])
@@ -163,8 +235,7 @@ func TestVolumeMaxLayersEnforced(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
-	iv := newTestVolume(t)
-	iv.MaxLayers = 1
+	iv := newTestVolumeWith(t, Options{MaxLayers: 1})
 	srcDir := t.TempDir()
 
 	p1 := filepath.Join(srcDir, "a.txt")
@@ -181,12 +252,11 @@ func TestVolumeMaxLayersEnforced(t *testing.T) {
 	require.Len(t, iv.layers, 1)
 }
 
-func TestVolumeMaxLayersZeroDisablesCap(t *testing.T) {
+func TestVolumeUnlimitedLayersDisablesCap(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
-	iv := newTestVolume(t)
-	iv.MaxLayers = 0
+	iv := newTestVolumeWith(t, Options{UnlimitedLayers: true})
 	srcDir := t.TempDir()
 
 	for i := range 3 {
@@ -202,8 +272,7 @@ func TestVolumeAddDirectoryBatchesToStayWithinMaxLayers(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
-	iv := newTestVolume(t)
-	iv.MaxLayers = 2
+	iv := newTestVolumeWith(t, Options{MaxLayers: 2})
 	srcDir := t.TempDir()
 
 	files := map[string]string{
@@ -219,13 +288,13 @@ func TestVolumeAddDirectoryBatchesToStayWithinMaxLayers(t *testing.T) {
 
 	require.NoError(t, iv.AddDirectory(ctx, srcDir, "test:latest"))
 
-	require.LessOrEqual(t, len(iv.layers), int(iv.MaxLayers), "batching should keep the layer count within MaxLayers")
+	require.LessOrEqual(t, len(iv.layers), int(iv.maxLayers), "batching should keep the layer count within the cap")
 	require.Len(t, iv.config.RootFS.DiffIDs, len(iv.layers))
 	require.Len(t, iv.config.History, len(iv.layers))
 
 	seen := map[string][]byte{}
 	for _, desc := range iv.layers {
-		for name, content := range layerTarContents(ctx, t, iv.Store(), desc) {
+		for name, content := range layerTarContents(ctx, t, iv.store, desc) {
 			seen[name] = content
 		}
 	}
@@ -239,18 +308,17 @@ func TestVolumeAddDirectoryAnnotations(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
-	iv := newTestVolume(t)
-	iv.Annotations["org.example.foo"] = "bar"
+	iv := newTestVolumeWith(t, Options{Annotations: map[string]string{"org.example.foo": "bar"}})
 	srcDir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("a"), 0o644))
 
 	const ref = "test:latest"
 	require.NoError(t, iv.AddDirectory(ctx, srcDir, ref))
 
-	manifestDesc, err := iv.Store().Resolve(ctx, ref)
+	manifestDesc, err := iv.store.Resolve(ctx, ref)
 	require.NoError(t, err)
 
-	rc, err := iv.Store().Fetch(ctx, manifestDesc)
+	rc, err := iv.store.Fetch(ctx, manifestDesc)
 	require.NoError(t, err)
 	defer func() { require.NoError(t, rc.Close()) }()
 
@@ -259,31 +327,6 @@ func TestVolumeAddDirectoryAnnotations(t *testing.T) {
 
 	require.Equal(t, "bar", manifest.Annotations["org.example.foo"], "caller-supplied annotations should reach the manifest")
 	require.Equal(t, staticRFC3339, manifest.Annotations[ocispec.AnnotationCreated], "AddDirectory should still set its own created annotation")
-}
-
-// TestVolumeAddDirectoryPanicsOnNilAnnotations documents that AddDirectory
-// unconditionally writes to v.Annotations; a Volume built without New()
-// (whose Annotations is nil, same as TestVolumeCompressionZeroValueIsUncompressed)
-// panics instead of erroring.
-func TestVolumeAddDirectoryPanicsOnNilAnnotations(t *testing.T) {
-	t.Parallel()
-	ctx := testutil.TestContext(t)
-
-	ociDir := t.TempDir()
-	store, err := oci.New(ociDir)
-	require.NoError(t, err)
-
-	iv := &Volume{store: store, tmp: t.TempDir(), root: ociDir}
-	t.Cleanup(func() { require.NoError(t, iv.Clean()) })
-
-	srcDir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("a"), 0o644))
-
-	require.Panics(t, func() {
-		if err := iv.AddDirectory(ctx, srcDir, "test:latest"); err != nil {
-			t.Fatal(err) // unreachable: AddDirectory panics before returning here
-		}
-	})
 }
 
 func TestWriteTarFile(t *testing.T) {
@@ -424,8 +467,7 @@ func TestVolumeAddDirectoryBudgetsAgainstExistingLayers(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
-	iv := newTestVolume(t)
-	iv.MaxLayers = 3
+	iv := newTestVolumeWith(t, Options{MaxLayers: 3})
 
 	seedDir := t.TempDir()
 	seed := filepath.Join(seedDir, "seed.txt")
@@ -439,7 +481,7 @@ func TestVolumeAddDirectoryBudgetsAgainstExistingLayers(t *testing.T) {
 	}
 
 	require.NoError(t, iv.AddDirectory(ctx, srcDir, "test:latest"))
-	require.LessOrEqual(t, len(iv.layers), int(iv.MaxLayers))
+	require.LessOrEqual(t, len(iv.layers), int(iv.maxLayers))
 	require.Len(t, iv.config.RootFS.DiffIDs, len(iv.layers))
 }
 
@@ -449,8 +491,7 @@ func TestVolumeAddDirectoryOnFullVolume(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
-	iv := newTestVolume(t)
-	iv.MaxLayers = 1
+	iv := newTestVolumeWith(t, Options{MaxLayers: 1})
 
 	seedDir := t.TempDir()
 	seed := filepath.Join(seedDir, "seed.txt")
@@ -480,8 +521,7 @@ func TestVolumeAddFilesLeavesNoWorkspaceFiles(t *testing.T) {
 		t.Run(string(compression), func(t *testing.T) {
 			t.Parallel()
 
-			iv := newTestVolume(t)
-			iv.Compression = compression
+			iv := newTestVolumeWith(t, Options{Compression: compression})
 
 			srcDir := t.TempDir()
 			for i := range 3 {
@@ -523,7 +563,7 @@ func TestVolumeAddDirectory(t *testing.T) {
 	require.Len(t, iv.config.RootFS.DiffIDs, len(files))
 	require.Len(t, iv.config.History, len(files))
 
-	manifestDesc, err := iv.Store().Resolve(ctx, ref)
+	manifestDesc, err := iv.store.Resolve(ctx, ref)
 	require.NoError(t, err)
 	require.Equal(t, ocispec.MediaTypeImageManifest, manifestDesc.MediaType)
 
@@ -533,11 +573,11 @@ func TestVolumeAddDirectory(t *testing.T) {
 		require.Contains(t, files, title)
 		seen[title] = true
 
-		exists, err := iv.Store().Exists(ctx, desc)
+		exists, err := iv.store.Exists(ctx, desc)
 		require.NoError(t, err)
 		require.True(t, exists)
 
-		assertLayerTarMatches(ctx, t, iv.Store(), desc, title, []byte(files[title]))
+		assertLayerTarMatches(ctx, t, iv.store, desc, title, []byte(files[title]))
 	}
 	require.Len(t, seen, len(files))
 }
@@ -559,7 +599,7 @@ func TestVolumeClean(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
-	iv, err := New(t.TempDir(), "linux", "amd64")
+	iv, err := New(t.TempDir(), Options{OS: PlatformOSLinux, Arch: PlatformArchAMD64})
 	require.NoError(t, err)
 	require.DirExists(t, iv.tmp)
 
@@ -588,7 +628,7 @@ func TestVolumeArchive(t *testing.T) {
 	desc, err := iv.AddFile(ctx, srcDir, filePath)
 	require.NoError(t, err)
 
-	a := iv.Archive()
+	a := iv.archive()
 
 	info, err := a.Info(ctx, desc.Digest)
 	require.NoError(t, err)
@@ -631,10 +671,7 @@ func TestVolumeAddFileCompression(t *testing.T) {
 		VolumeCompressionGzip,
 		VolumeCompressionZstd,
 	} {
-		iv, err := New(t.TempDir(), "linux", "amd64")
-		require.NoError(t, err)
-		t.Cleanup(func() { require.NoError(t, iv.Clean()) })
-		iv.Compression = compression
+		iv := newTestVolumeWith(t, Options{Compression: compression})
 
 		srcDir := t.TempDir()
 		p := filepath.Join(srcDir, "hello.txt")
@@ -643,11 +680,11 @@ func TestVolumeAddFileCompression(t *testing.T) {
 		desc, err := iv.AddFile(ctx, srcDir, p)
 		require.NoError(t, err, "compression %s", compression)
 
-		exists, err := iv.Store().Exists(ctx, desc)
+		exists, err := iv.store.Exists(ctx, desc)
 		require.NoError(t, err)
 		require.True(t, exists)
 
-		assertLayerTarMatches(ctx, t, iv.Store(), desc, "hello.txt", content)
+		assertLayerTarMatches(ctx, t, iv.store, desc, "hello.txt", content)
 
 		require.Len(t, iv.config.RootFS.DiffIDs, 1)
 		results[compression] = result{desc: desc, diffID: iv.config.RootFS.DiffIDs[0]}
@@ -715,12 +752,15 @@ func TestVolumeWriteTarWithoutManifest(t *testing.T) {
 	require.Zero(t, buf.Len())
 }
 
+// TestVolumeAddFileUnsupportedCompression covers compressLayer's default
+// branch, which New makes unreachable: only an in-package write can put an
+// unsupported format on a Volume.
 func TestVolumeAddFileUnsupportedCompression(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
 	iv := newTestVolume(t)
-	iv.Compression = VolumeCompression("bogus")
+	iv.compression = VolumeCompression("bogus")
 
 	srcDir := t.TempDir()
 	p := filepath.Join(srcDir, "a.txt")
@@ -734,12 +774,7 @@ func TestVolumeCompressionZeroValueIsUncompressed(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
-	ociDir := t.TempDir()
-	store, err := oci.New(ociDir)
-	require.NoError(t, err)
-
-	iv := &Volume{store: store, tmp: t.TempDir(), root: ociDir}
-	t.Cleanup(func() { require.NoError(t, iv.Clean()) })
+	iv := newTestVolumeWith(t, Options{})
 
 	srcDir := t.TempDir()
 	p := filepath.Join(srcDir, "a.txt")

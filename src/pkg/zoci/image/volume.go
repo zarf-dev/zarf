@@ -32,34 +32,24 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci/archive"
 )
 
-// Volume builds an OCI image layer-by-layer from files on disk,
-// pushing each layer to an underlying OCI store and tracking config/history.
+// Volume builds an OCI image layer-by-layer from files on disk, pushing each
+// layer to an underlying OCI store and tracking config/history.
+//
+// A Volume is only valid when built by New, which is what settles its
+// compression format, layer cap, and manifest annotations from an Options: the
+// zero Volume has no OCI store to push to. Nothing about a Volume is
+// configurable after construction, so a Volume New returned is always ready to
+// add files to.
 type Volume struct {
-	// Compression selects the tar compression format used for layers pushed
-	// via AddFile/AddDirectory. The zero value behaves as
-	// VolumeCompressionUncompressed.
-	Compression VolumeCompression
-	// MaxLayers caps the number of layers AddDirectory will produce: once
-	// there are more files than MaxLayers, files are batched several-per-
-	// layer to stay within it. AddFile/AddFiles called directly still fail
-	// once the cap is reached, since there's no further file to batch with.
-	// New sets it to DefaultMaxLayers; set to 0 to disable the cap.
-	MaxLayers uint8
-	// Annotations are set on the manifest AddDirectory packs, per the OCI
-	// image-spec annotations rules (opaque string key/value metadata; see
-	// https://github.com/opencontainers/image-spec/blob/main/annotations.md,
-	// e.g. the ocispec.AnnotationTitle/AnnotationCreated pre-defined keys).
-	// New initializes it to an empty map; AddDirectory adds its own
-	// ocispec.AnnotationCreated entry to it, so it must be non-nil before
-	// AddDirectory runs on a Volume not built via New.
-	Annotations map[string]string
-
-	layers   []ocispec.Descriptor
-	tmp      string
-	root     string
-	store    *oci.Store
-	config   ocispec.Image
-	manifest ocispec.Descriptor
+	compression VolumeCompression
+	maxLayers   uint8
+	annotations map[string]string
+	layers      []ocispec.Descriptor
+	tmp         string
+	root        string
+	store       *oci.Store
+	config      ocispec.Image
+	manifest    ocispec.Descriptor
 }
 
 // Clean removes the temp workspace used while building layers.
@@ -67,43 +57,38 @@ func (v *Volume) Clean() error {
 	return os.RemoveAll(v.tmp)
 }
 
-// Store returns the underlying OCI store.
-func (v *Volume) Store() *oci.Store {
-	return v.store
-}
-
-// Archive returns a read-only content.Provider backed by the OCI store's
+// archive returns a read-only content.Provider backed by the OCI store's
 // on-disk blobs, suitable for handing off to containerd/cri-o mount tooling.
-func (v *Volume) Archive() *archive.OCIStore {
+func (v *Volume) archive() *archive.OCIStore {
 	return &archive.OCIStore{Root: v.root, Source: v.store}
 }
 
-// AddFile tars a single file, compresses it per v.Compression, pushes the
-// result to the store as a layer, and records it in the image's history and
-// diff IDs. path must be inside dir.
+// AddFile tars a single file, compresses it with the volume's compression
+// format, pushes the result to the store as a layer, and records it in the
+// image's history and diff IDs. path must be inside dir.
 //
 // The layer descriptor's digest identifies the pushed (possibly compressed)
 // blob, while the diff ID recorded in RootFS.DiffIDs always identifies the
-// uncompressed tar content, independent of v.Compression.
+// uncompressed tar content, independent of the compression format in use.
 func (v *Volume) AddFile(ctx context.Context, dir, path string) (ocispec.Descriptor, error) {
 	return v.AddFiles(ctx, dir, []string{path})
 }
 
 // AddFiles tars every file in paths into a single tar stream, compresses it
-// per v.Compression, pushes the result to the store as one layer, and
-// records it in the image's history and diff IDs. Each path must be inside
-// dir. AddDirectory calls this with more than one path per layer to keep
-// the total layer count within MaxLayers.
+// with the volume's compression format, pushes the result to the store as one
+// layer, and records it in the image's history and diff IDs. Each path must be
+// inside dir. AddDirectory calls this with more than one path per layer to
+// keep the total layer count within the volume's layer cap.
 //
 // The layer descriptor's digest identifies the pushed (possibly compressed)
 // blob, while the diff ID recorded in RootFS.DiffIDs always identifies the
-// uncompressed tar content, independent of v.Compression.
+// uncompressed tar content, independent of the compression format in use.
 func (v *Volume) AddFiles(ctx context.Context, dir string, paths []string) (_ ocispec.Descriptor, err error) {
 	if len(paths) == 0 {
 		return ocispec.Descriptor{}, fmt.Errorf("no files to add")
 	}
-	if v.MaxLayers > 0 && len(v.layers) >= int(v.MaxLayers) {
-		return ocispec.Descriptor{}, fmt.Errorf("%w: max %d, adding %d more file(s) would exceed it", ErrTooManyLayers, v.MaxLayers, len(paths))
+	if v.maxLayers > 0 && len(v.layers) >= int(v.maxLayers) {
+		return ocispec.Descriptor{}, fmt.Errorf("%w: max %d, adding %d more file(s) would exceed it", ErrTooManyLayers, v.maxLayers, len(paths))
 	}
 
 	diffID, tarPath, tarSize, fileNames, err := v.generateDiffID(dir, paths, len(v.layers))
@@ -163,7 +148,7 @@ func (v *Volume) AddFiles(ctx context.Context, dir string, paths []string) (_ oc
 		"diffId", diffID,
 		"size", blobSize,
 		"uncompressedSize", tarSize,
-		"compression", v.Compression,
+		"compression", v.compression,
 	)
 
 	v.config.History = append(v.config.History, ocispec.History{
@@ -201,10 +186,9 @@ func removeLayerTemps(tarPath, blobPath string) error {
 const addDirectoryLogInterval = 2 * time.Second
 
 // AddDirectory walks folder and adds its files as layers via AddFiles. When
-// MaxLayers is set and folder holds more files than the volume has layers
-// left, files are batched several-per-layer so the resulting image stays
-// within MaxLayers, rather than failing once there are more files than layers
-// available.
+// the volume is capped and folder holds more files than it has layers left,
+// files are batched several-per-layer so the resulting image stays within the
+// cap, rather than failing once there are more files than layers available.
 //
 // Symlinks are stored as symlinks and are never followed. Files that have no
 // representation in an image volume (devices, sockets, FIFOs) are skipped
@@ -213,7 +197,7 @@ const addDirectoryLogInterval = 2 * time.Second
 func (v *Volume) AddDirectory(ctx context.Context, folder, ref string) error {
 	l := logger.From(ctx)
 	start := time.Now()
-	l.Info("building image volume", "path", folder, "ref", ref, "compression", v.Compression)
+	l.Info("building image volume", "path", folder, "ref", ref, "compression", v.compression)
 
 	var files []string
 	if err := filepath.WalkDir(folder, func(path string, d fs.DirEntry, err error) error {
@@ -239,19 +223,19 @@ func (v *Volume) AddDirectory(ctx context.Context, folder, ref string) error {
 		return fmt.Errorf("no files to add: %q holds nothing that can be stored in an image volume", folder)
 	}
 
-	// Budget against the layers already on the volume, not against MaxLayers
+	// Budget against the layers already on the volume, not against the cap
 	// outright: a Volume that has been added to before has fewer layers left
 	// to spend, and batching as though it were empty would push blobs and
 	// only then fail on the cap.
 	batchSize := 1
-	if v.MaxLayers > 0 {
-		remaining := int(v.MaxLayers) - len(v.layers)
+	if v.maxLayers > 0 {
+		remaining := int(v.maxLayers) - len(v.layers)
 		if remaining <= 0 {
-			return fmt.Errorf("%w: max %d, already at %d", ErrTooManyLayers, v.MaxLayers, len(v.layers))
+			return fmt.Errorf("%w: max %d, already at %d", ErrTooManyLayers, v.maxLayers, len(v.layers))
 		}
 		if len(files) > remaining {
 			batchSize = (len(files) + remaining - 1) / remaining
-			l.Debug("batching image volume layers to fit MaxLayers", "files", len(files), "maxLayers", v.MaxLayers, "layersRemaining", remaining, "filesPerLayer", batchSize)
+			l.Debug("batching image volume layers to fit the layer cap", "files", len(files), "maxLayers", v.maxLayers, "layersRemaining", remaining, "filesPerLayer", batchSize)
 		}
 	}
 
@@ -296,7 +280,7 @@ func (v *Volume) AddDirectory(ctx context.Context, folder, ref string) error {
 	}
 	l.Debug("pushed image volume config", "digest", configDesc.Digest, "size", configDesc.Size)
 
-	v.Annotations[ocispec.AnnotationCreated] = staticRFC3339
+	v.annotations[ocispec.AnnotationCreated] = staticRFC3339
 
 	manifestDesc, err := oras.PackManifest(
 		ctx,
@@ -306,7 +290,7 @@ func (v *Volume) AddDirectory(ctx context.Context, folder, ref string) error {
 		oras.PackManifestOptions{
 			Layers:              v.layers,
 			ConfigDescriptor:    &configDesc,
-			ManifestAnnotations: v.Annotations,
+			ManifestAnnotations: v.annotations,
 		},
 	)
 	if err != nil {
@@ -333,7 +317,7 @@ func (v *Volume) WriteTar(ctx context.Context, ref string, w io.Writer) error {
 	if v.manifest.Digest == "" {
 		return ErrNoManifest
 	}
-	return ctdarchive.Export(ctx, v.Archive(), w, ctdarchive.WithManifest(v.manifest, ref))
+	return ctdarchive.Export(ctx, v.archive(), w, ctdarchive.WithManifest(v.manifest, ref))
 }
 
 // writeTarFile writes file into tw as a single tar entry named rel and
@@ -452,14 +436,14 @@ func (v *Volume) generateDiffID(dir string, paths []string, batchIndex int) (dig
 	return digester.Digest(), temp, fi.Size(), fileNames, nil
 }
 
-// compressLayer produces the on-disk blob that will be pushed to the store
-// for a tarred file, applying v.Compression. tarDigest and tarSize describe
-// the uncompressed tar at tarPath (as returned by generateDiffID); for
-// VolumeCompressionUncompressed they are returned unchanged alongside
-// tarPath, since the blob is the tar itself.
+// compressLayer produces the on-disk blob that will be pushed to the store for
+// a tarred file, applying the volume's compression format. tarDigest and
+// tarSize describe the uncompressed tar at tarPath (as returned by
+// generateDiffID); for VolumeCompressionUncompressed they are returned
+// unchanged alongside tarPath, since the blob is the tar itself.
 func (v *Volume) compressLayer(tarPath string, tarDigest digest.Digest, tarSize int64) (mediaType, blobPath string, dgst digest.Digest, size int64, err error) {
-	switch v.Compression {
-	case VolumeCompressionUncompressed, "":
+	switch v.compression {
+	case VolumeCompressionUncompressed:
 		return ocispec.MediaTypeImageLayer, tarPath, tarDigest, tarSize, nil
 	case VolumeCompressionGzip:
 		blobPath, dgst, size, err = v.compressToFile(tarPath, func(w io.Writer) (io.WriteCloser, error) {
@@ -472,7 +456,10 @@ func (v *Volume) compressLayer(tarPath string, tarDigest digest.Digest, tarSize 
 		})
 		return ocispec.MediaTypeImageLayerZstd, blobPath, dgst, size, err
 	default:
-		return "", "", "", 0, fmt.Errorf("unsupported image volume compression: %q", v.Compression)
+		// Unreachable through New, which rejects an unsupported format before
+		// building the Volume. Kept so the switch still has an answer if a
+		// format is added to VolumeCompression without a case here.
+		return "", "", "", 0, fmt.Errorf("unsupported image volume compression: %q", v.compression)
 	}
 }
 

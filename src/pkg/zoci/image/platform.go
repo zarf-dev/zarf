@@ -19,21 +19,26 @@ var (
 	// ErrPlatformArch is returned when a PlatformArch is not one of the supported architectures.
 	ErrPlatformArch = errors.New("invalid platform operating system architecture")
 	// ErrTooManyLayers is returned by AddFile when adding another layer would
-	// exceed the Volume's MaxLayers.
+	// exceed the volume's layer cap.
 	ErrTooManyLayers = errors.New("too many image volume layers")
 	// ErrNoManifest is returned by WriteTar when it is called before
 	// AddDirectory has packed and tagged a manifest.
 	ErrNoManifest = errors.New("no image volume manifest: call AddDirectory first")
+	// ErrLayerLimitConflict is returned by New when Options sets both
+	// MaxLayers and UnlimitedLayers.
+	ErrLayerLimitConflict = errors.New("conflicting image volume layer limit")
 )
 
 const (
-	// DefaultMaxLayers is the layer cap applied to a Volume unless overridden.
+	// DefaultMaxLayers is the layer cap applied to a Volume unless
+	// Options overrides it.
 	// It matches the classic Docker/graphdriver layer limit that some
 	// container runtimes still enforce.
 	DefaultMaxLayers uint8 = 127
-	// UnlimitedLayers is the Volume.MaxLayers value that disables the layer
-	// cap entirely: AddDirectory never batches files into fewer layers.
-	UnlimitedLayers uint8 = 0
+	// noLayerLimit is the internal cap value meaning "uncapped", which
+	// Options.UnlimitedLayers selects: AddDirectory never batches files into
+	// fewer layers.
+	noLayerLimit uint8 = 0
 )
 
 // VolumeCompression names the tar compression format used for layers.
