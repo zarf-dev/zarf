@@ -13,10 +13,12 @@ import (
 func TestGenerateJSONSchema(t *testing.T) {
 	t.Run("infers nested types", func(t *testing.T) {
 		vals := Values{
-			"name":     "zarf",
-			"replicas": uint64(3),
-			"enabled":  true,
-			"ports":    []any{uint64(80)},
+			"name":        "zarf",
+			"replicas":    float64(3),
+			"threshold":   0.75,
+			"enabled":     true,
+			"ports":       []any{uint64(80)},
+			"annotations": nil,
 			"image": map[string]any{
 				"tag": "v1.2.3",
 			},
@@ -36,7 +38,11 @@ func TestGenerateJSONSchema(t *testing.T) {
 
 		replicas, ok := props["replicas"].(map[string]any)
 		require.True(t, ok)
-		assert.Equal(t, "number", replicas["type"])
+		assert.Equal(t, "integer", replicas["type"])
+
+		threshold, ok := props["threshold"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "number", threshold["type"])
 
 		enabled, ok := props["enabled"].(map[string]any)
 		require.True(t, ok)
@@ -47,7 +53,11 @@ func TestGenerateJSONSchema(t *testing.T) {
 		assert.Equal(t, "array", ports["type"])
 		items, ok := ports["items"].(map[string]any)
 		require.True(t, ok)
-		assert.Equal(t, "number", items["type"])
+		assert.Equal(t, "integer", items["type"])
+
+		annotations, ok := props["annotations"].(map[string]any)
+		require.True(t, ok)
+		assert.Empty(t, annotations)
 
 		image, ok := props["image"].(map[string]any)
 		require.True(t, ok)
@@ -58,6 +68,26 @@ func TestGenerateJSONSchema(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, "string", tag["type"])
 	})
+}
+
+func TestReconcileJSONSchemaUnknownType(t *testing.T) {
+	existing := map[string]any{
+		"type":        "object",
+		"description": "preserve this",
+		"properties":  map[string]any{"name": map[string]any{"type": "string"}},
+		"items":       map[string]any{"type": "string"},
+	}
+
+	preserved := ReconcileJSONSchema(existing, map[string]any{}, false)
+	assert.Equal(t, "object", preserved["type"])
+	assert.Contains(t, preserved, "properties")
+	assert.Contains(t, preserved, "items")
+
+	pruned := ReconcileJSONSchema(existing, map[string]any{}, true)
+	assert.NotContains(t, pruned, "type")
+	assert.NotContains(t, pruned, "properties")
+	assert.NotContains(t, pruned, "items")
+	assert.Equal(t, "preserve this", pruned["description"])
 }
 
 func TestMergeJSONSchemaAtPathPreservesNullableObjects(t *testing.T) {

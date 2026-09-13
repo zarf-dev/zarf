@@ -8,3 +8,5 @@ image:
 configMap:
   annotations:
   labels:
+
+fallback:
