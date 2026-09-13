@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -17,6 +18,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
+	"github.com/zarf-dev/zarf/src/cmd/completion"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/zoci/archive"
 	"github.com/zarf-dev/zarf/src/pkg/zoci/image"
@@ -176,11 +179,52 @@ func TestImageVolumeOptionsRunBatchesWithinMaxLayers(t *testing.T) {
 	require.NoError(t, o.run(cmd, []string{srcDir, "test:latest"}))
 	require.FileExists(t, out)
 
-	// maxLayers=0 (the zero value) means unlimited, so a plumbing bug that
-	// silently drops o.maxLayers wouldn't fail here - it would still batch
-	// nothing and produce a manifest with one layer per file. Only counting
-	// the actual layers in the output proves maxLayers reached the Volume.
+	// A plumbing bug that silently drops o.maxLayers wouldn't fail here: the
+	// resulting image.Options would carry no cap at all, which image.New
+	// reads as DefaultMaxLayers, well above the two files. Only counting the
+	// actual layers in the output proves maxLayers reached the Volume.
 	require.Len(t, manifestLayers(t, out), 1)
+}
+
+// TestImageVolumeOptionsImageOptions pins the one flag that cannot be passed
+// through as-is: --max-layers spells "no cap" as 0, while image.Options
+// reserves 0 for "unset" and carries an absent cap as UnlimitedLayers. Setting
+// both of those is an error, so the mapping has to pick exactly one.
+func TestImageVolumeOptionsImageOptions(t *testing.T) {
+	t.Parallel()
+
+	unlimited := (&imageVolumeOptions{maxLayers: completion.UnlimitedMaxLayers}).imageOptions()
+	require.True(t, unlimited.UnlimitedLayers)
+	require.Zero(t, unlimited.MaxLayers)
+
+	capped := (&imageVolumeOptions{maxLayers: 42}).imageOptions()
+	require.False(t, capped.UnlimitedLayers)
+	require.Equal(t, uint8(42), capped.MaxLayers)
+
+	// The rest are carried straight over.
+	o := &imageVolumeOptions{os: image.PlatformOSWindows, compression: image.VolumeCompressionZstd}
+	opts := o.imageOptions()
+	require.Equal(t, image.PlatformOSWindows, opts.OS)
+	require.Equal(t, image.VolumeCompressionZstd, opts.Compression)
+	require.Equal(t, image.PlatformArch(config.GetArch()), opts.Arch)
+}
+
+// TestImageVolumeOptionsImageOptionsAcceptsCompletions checks that every
+// --max-layers value tab completion suggests survives the translation above
+// and builds a Volume, so completion cannot offer a value the command rejects.
+func TestImageVolumeOptionsImageOptionsAcceptsCompletions(t *testing.T) {
+	t.Parallel()
+
+	for _, line := range completion.ImageVolumeMaxLayers() {
+		value, _, _ := strings.Cut(line, "\t")
+		n, err := strconv.ParseUint(value, 10, 8)
+		require.NoError(t, err, "suggested %q should parse as a uint8", value)
+
+		o := &imageVolumeOptions{os: image.PlatformOSLinux, maxLayers: uint8(n)}
+		iv, err := image.New(t.TempDir(), o.imageOptions())
+		require.NoError(t, err, "suggested %q", value)
+		require.NoError(t, iv.Clean())
+	}
 }
 
 func TestImageVolumeOptionsRunInvalidDirectory(t *testing.T) {
