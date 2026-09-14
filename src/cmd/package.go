@@ -1889,33 +1889,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		l.Info("signing package with provided key")
 	}
 
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = o.signingKeyPath
-	signOpts.Password = o.signingKeyPassword
-	signOpts.Overwrite = o.overwrite
-	signOpts.Keyless = o.keyless
-	signOpts.Fulcio.IdentityToken = o.identityToken
-	signOpts.Fulcio.URL = o.fulcioURL
-	signOpts.Fulcio.AuthFlow = o.fulcioAuthFlow
-	signOpts.OIDC.Issuer = o.oidcIssuer
-	signOpts.OIDC.ClientID = o.oidcClientID
-	signOpts.Rekor.URL = o.rekorURL
-	signOpts.TlogUpload = o.tlogUpload
-	signOpts.SkipConfirmation = o.confirm
-	signOpts.TSAServerURL = o.tsaServerURL
-
-	// Keyless certs are short-lived (~10 min). Without Rekor or a TSA timestamp
-	// the signature is unverifiable past expiry. Default --tlog-upload=true for
-	// keyless unless the user explicitly opted out via CLI flag, env var, or config file.
-	if o.keyless {
-		tlogExplicit := cmd.Flags().Changed("tlog-upload") || getViper().IsSet(VPkgSignTlogUpload)
-		if !tlogExplicit {
-			signOpts.TlogUpload = true
-		}
-		if !signOpts.TlogUpload && signOpts.TSAServerURL == "" {
-			l.Warn(lang.CmdPackageSignNoTimestampAnchorWarn)
-		}
-	}
+	signOpts := o.buildSignBlobOptions(cmd)
 
 	if helpers.IsOCIURL(outputDest) {
 		dstRef, err := registry.ParseReference(strings.TrimPrefix(outputDest, helpers.OCIURLPrefix))
@@ -1945,6 +1919,40 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 
 	l.Info("package signed successfully", "path", signedPath)
 	return nil
+}
+
+// buildSignBlobOptions maps the sign command's common flags to the Sigstore
+// options used by package and remote-component signing.
+func (o *packageSignOptions) buildSignBlobOptions(cmd *cobra.Command) signing.SignBlobOptions {
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = o.signingKeyPath
+	signOpts.Password = o.signingKeyPassword
+	signOpts.Overwrite = o.overwrite
+	signOpts.Keyless = o.keyless
+	signOpts.Fulcio.IdentityToken = o.identityToken
+	signOpts.Fulcio.URL = o.fulcioURL
+	signOpts.Fulcio.AuthFlow = o.fulcioAuthFlow
+	signOpts.OIDC.Issuer = o.oidcIssuer
+	signOpts.OIDC.ClientID = o.oidcClientID
+	signOpts.Rekor.URL = o.rekorURL
+	signOpts.TlogUpload = o.tlogUpload
+	signOpts.SkipConfirmation = o.confirm
+	signOpts.TSAServerURL = o.tsaServerURL
+
+	// Keyless certs are short-lived (~10 min). Without Rekor or a TSA timestamp
+	// the signature is unverifiable past expiry. Default --tlog-upload=true for
+	// keyless unless the user explicitly opted out via CLI flag, env var, or config file.
+	if o.keyless {
+		tlogExplicit := cmd.Flags().Changed("tlog-upload") || getViper().IsSet(VPkgSignTlogUpload)
+		if !tlogExplicit {
+			signOpts.TlogUpload = true
+		}
+		if !signOpts.TlogUpload && signOpts.TSAServerURL == "" {
+			logger.From(cmd.Context()).Warn(lang.CmdPackageSignNoTimestampAnchorWarn)
+		}
+	}
+
+	return signOpts
 }
 
 type packageVerifyOptions struct {
