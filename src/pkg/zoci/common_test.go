@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/oci"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
