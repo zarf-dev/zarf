@@ -152,7 +152,7 @@ jobs:
         run: |
           chmod +x build/zarf
           if [[ $GITHUB_REF_NAME == *"rc"* ]]; then
-            echo "BREW_NAME=zarf@latest-rc" >> $GITHUB_ENV
+            echo "BREW_NAME=zarf-rc" >> $GITHUB_ENV
           else
             echo "BREW_NAME=zarf" >> $GITHUB_ENV
           fi
