@@ -135,6 +135,15 @@ func (o *componentSignOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to sign component manifest: %w", err)
 	}
+	if o.keyless {
+		if info, bundleErr := signing.GetManifestBundleInfo(cmd.Context(), componentRef.String(), defaultRemoteOptions()); bundleErr == nil {
+			if info.Identity != "" {
+				logger.From(cmd.Context()).Info("keyless signed component", "identity", info.Identity, "issuer", info.Issuer)
+			}
+		} else {
+			logger.From(cmd.Context()).Debug("could not read component signature bundle metadata", "error", bundleErr)
+		}
+	}
 
 	logger.From(cmd.Context()).Info("component manifest signed successfully", "source", helpers.OCIURLPrefix+componentRef.String())
 	return nil

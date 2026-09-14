@@ -38,6 +38,9 @@ func TestCosignSignManifestPublishesOCIReferrer(t *testing.T) {
 	signOpts.Key = "./testdata/cosign.key"
 	signOpts.Password = "test"
 	require.NoError(t, CosignSignManifestWithOptions(ctx, reference.String(), signOpts, types.RemoteOptions{PlainHTTP: true}))
+	info, err := GetManifestBundleInfo(ctx, reference.String(), types.RemoteOptions{PlainHTTP: true})
+	require.NoError(t, err)
+	require.Equal(t, SigningMethodKey, info.Method)
 
 	verifyOpts := DefaultVerifyBlobOptions()
 	verifyOpts.Key = "./testdata/cosign.pub"

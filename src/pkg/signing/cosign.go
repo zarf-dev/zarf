@@ -6,6 +6,7 @@ package signing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -331,6 +332,35 @@ func CosignSignManifestWithOptions(ctx context.Context, manifestRef string, opts
 
 	l.Debug("OCI manifest signed successfully", "reference", manifestRef)
 	return nil
+}
+
+// GetManifestBundleInfo retrieves Sigstore bundle metadata attached to an OCI
+// manifest through the referrers API.
+func GetManifestBundleInfo(ctx context.Context, manifestRef string, registryOpts types.RemoteOptions) (BundleInfo, error) {
+	registryOptions := options.RegistryOptions{
+		AllowHTTPRegistry: registryOpts.PlainHTTP,
+		AllowInsecure:     registryOpts.InsecureSkipTLSVerify,
+	}
+	ref, err := name.ParseReference(manifestRef, registryOptions.NameOptions()...)
+	if err != nil {
+		return BundleInfo{}, fmt.Errorf("parsing OCI manifest reference: %w", err)
+	}
+	registryClientOpts, err := registryOptions.ClientOpts(ctx)
+	if err != nil {
+		return BundleInfo{}, fmt.Errorf("configuring registry client: %w", err)
+	}
+	bundles, _, err := cosign.GetBundles(ctx, ref, registryClientOpts, registryOptions.NameOptions()...)
+	if err != nil {
+		return BundleInfo{}, fmt.Errorf("retrieving manifest signature bundles: %w", err)
+	}
+	if len(bundles) == 0 {
+		return BundleInfo{}, errors.New("no manifest signature bundles found")
+	}
+	info, err := BundleInfoFromBundle(bundles[len(bundles)-1])
+	if err != nil {
+		return BundleInfo{}, fmt.Errorf("reading manifest signature bundle metadata: %w", err)
+	}
+	return info, nil
 }
 
 // CosignVerifyManifestWithOptions verifies a manifest signature stored as an
