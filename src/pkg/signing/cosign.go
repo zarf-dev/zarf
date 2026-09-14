@@ -375,6 +375,22 @@ func CosignVerifyManifestWithOptions(ctx context.Context, manifestRef string, op
 		}
 	}
 
+	// Keyless verification needs a trusted root. Use the bundled copy unless the
+	// caller supplied one
+	trustedRootPath := opts.CommonVerifyOptions.TrustedRootPath
+	if trustedRootPath == "" && opts.Key == "" && opts.CertVerify.Cert == "" {
+		path, cleanup, prepErr := writeEmbeddedTrustedRoot(opts.TempDir)
+		if prepErr != nil {
+			return fmt.Errorf("preparing embedded trusted root: %w", prepErr)
+		}
+		defer func() {
+			if rmErr := cleanup(); rmErr != nil {
+				l.Debug("failed to remove embedded trusted root tempfile", "error", rmErr)
+			}
+		}()
+		trustedRootPath = path
+	}
+
 	verifyCmd := &verify.VerifyCommand{
 		RegistryOptions: options.RegistryOptions{
 			AllowHTTPRegistry: registryOpts.PlainHTTP,
@@ -393,6 +409,7 @@ func CosignVerifyManifestWithOptions(ctx context.Context, manifestRef string, op
 		NewBundleFormat:       true,
 		AllowCertificateChain: false,
 	}
+	verifyCmd.TrustedRootPath = trustedRootPath
 
 	l.Debug("verifying OCI manifest referrer signature", "reference", manifestRef, "key", opts.Key, "sk", opts.SecurityKey.Use)
 	if opts.Timeout > 0 {
