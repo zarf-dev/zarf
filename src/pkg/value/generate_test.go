@@ -90,6 +90,70 @@ func TestReconcileJSONSchemaUnknownType(t *testing.T) {
 	assert.Equal(t, "preserve this", pruned["description"])
 }
 
+func TestReconcileJSONSchemaPrunesStaleStructure(t *testing.T) {
+	tests := []struct {
+		name     string
+		existing map[string]any
+		inferred map[string]any
+	}{
+		{
+			name: "object to array",
+			existing: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{"name": map[string]any{"type": "string"}},
+			},
+			inferred: map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "integer"},
+			},
+		},
+		{
+			name: "array to object",
+			existing: map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "string"},
+			},
+			inferred: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{"enabled": map[string]any{"type": "boolean"}},
+			},
+		},
+		{
+			name: "empty object",
+			existing: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{"name": map[string]any{"type": "string"}},
+			},
+			inferred: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{},
+			},
+		},
+		{
+			name: "object without properties",
+			existing: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{"name": map[string]any{"type": "string"}},
+			},
+			inferred: map[string]any{"type": "object"},
+		},
+		{
+			name: "empty array",
+			existing: map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "string"},
+			},
+			inferred: map[string]any{"type": "array"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.inferred, ReconcileJSONSchema(tc.existing, tc.inferred, true))
+		})
+	}
+}
+
 func TestMergeJSONSchemaAtPathPreservesNullableObjects(t *testing.T) {
 	schema := GenerateJSONSchema(Values{
 		"serviceAccount": map[string]any{

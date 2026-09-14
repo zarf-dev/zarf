@@ -34,16 +34,18 @@ func ReconcileJSONSchema(existing, inferred map[string]any, deleteNotFound bool)
 		existing["type"] = typeVal
 	} else if deleteNotFound {
 		delete(existing, "type")
-		delete(existing, "properties")
-		delete(existing, "items")
 	}
 
 	if schemaTypeIncludes(typeVal, "object") {
 		reconcileSchemaProperties(existing, inferred, deleteNotFound)
+	} else if deleteNotFound {
+		delete(existing, "properties")
 	}
 
 	if schemaTypeIncludes(typeVal, "array") {
 		reconcileSchemaItems(existing, inferred, deleteNotFound)
+	} else if deleteNotFound {
+		delete(existing, "items")
 	}
 
 	if schemaURI, ok := inferred["$schema"]; ok {
@@ -348,6 +350,9 @@ func isChartSchemaKeyword(key string) bool {
 func reconcileSchemaProperties(existing, inferred map[string]any, deleteNotFound bool) {
 	inferredProps, ok := inferred["properties"].(map[string]any)
 	if !ok {
+		if deleteNotFound {
+			delete(existing, "properties")
+		}
 		return
 	}
 
@@ -385,6 +390,9 @@ func reconcileSchemaProperties(existing, inferred map[string]any, deleteNotFound
 func reconcileSchemaItems(existing, inferred map[string]any, deleteNotFound bool) {
 	inferredItems, hasInferredItems := inferred["items"].(map[string]any)
 	if !hasInferredItems {
+		if deleteNotFound {
+			delete(existing, "items")
+		}
 		return
 	}
 
