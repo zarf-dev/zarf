@@ -79,15 +79,10 @@ func TestReconcileJSONSchemaUnknownType(t *testing.T) {
 	}
 
 	preserved := ReconcileJSONSchema(existing, map[string]any{}, false)
-	assert.Equal(t, "object", preserved["type"])
-	assert.Contains(t, preserved, "properties")
-	assert.Contains(t, preserved, "items")
+	assert.Equal(t, existing, preserved)
 
 	pruned := ReconcileJSONSchema(existing, map[string]any{}, true)
-	assert.NotContains(t, pruned, "type")
-	assert.NotContains(t, pruned, "properties")
-	assert.NotContains(t, pruned, "items")
-	assert.Equal(t, "preserve this", pruned["description"])
+	assert.Equal(t, map[string]any{"description": "preserve this"}, pruned)
 }
 
 func TestReconcileJSONSchemaPrunesStaleStructure(t *testing.T) {
