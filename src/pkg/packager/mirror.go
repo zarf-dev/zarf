@@ -48,7 +48,7 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		opts.Retries = config.ZarfDefaultRetries
 	}
 	refs := []transform.Image{}
-	for _, component := range pkgLayout.Pkg.Components {
+	for _, component := range pkgLayout.AsV1alpha1().Components {
 		for _, img := range component.GetImages() {
 			ref, err := transform.ParseImageRef(img)
 			if err != nil {
@@ -92,7 +92,7 @@ func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout,
 	if gitInfo.Address == "" {
 		return fmt.Errorf("git server address must be specified")
 	}
-	for _, component := range pkgLayout.Pkg.Components {
+	for _, component := range pkgLayout.AsV1alpha1().Components {
 		err := pushComponentReposToRegistry(ctx, component, pkgLayout, gitInfo, opts.Cluster, opts.Retries)
 		if err != nil {
 			return err

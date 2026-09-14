@@ -23,9 +23,16 @@ func ResolvePackagePath(path string) (PackagePath, error) {
 	}
 
 	if fileInfo.IsDir() {
-		// Backward compatible: directory -> zarf.yaml
+		//  Backward compatible: directory -> zarf.yaml -> zarf.gen.yaml
+		manifestFile := filepath.Join(path, ZarfYAML)
+		if _, err := os.Stat(manifestFile); os.IsNotExist(err) {
+			generatedFile := filepath.Join(path, ZarfGeneratedYAML)
+			if _, err := os.Stat(generatedFile); err == nil {
+				manifestFile = generatedFile
+			}
+		}
 		return PackagePath{
-			ManifestFile: filepath.Join(path, ZarfYAML),
+			ManifestFile: manifestFile,
 			BaseDir:      path,
 		}, nil
 	}

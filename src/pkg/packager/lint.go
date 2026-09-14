@@ -22,38 +22,43 @@ type LintOptions struct {
 }
 
 // Lint lints the given Zarf package
-func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
+func Lint(ctx context.Context, packagePath string, opts LintOptions) (err error) {
 	if packagePath == "" {
 		return errors.New("package path is required")
 	}
 
-	var err error
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return err
 	}
 
-	loadOpts := load.DefinitionOptions{
-		Flavor:           opts.Flavor,
-		SetVariables:     opts.SetVariables,
-		CachePath:        opts.CachePath,
-		IsInteractive:    false,
-		SkipVersionCheck: true,
-		RemoteOptions:    opts.RemoteOptions,
+	loadOpts := load.PackageOptions{
+		DefinitionOptions: load.DefinitionOptions{
+			Flavor:           opts.Flavor,
+			SetVariables:     opts.SetVariables,
+			CachePath:        opts.CachePath,
+			IsInteractive:    false,
+			SkipVersionCheck: true,
+			RemoteOptions:    opts.RemoteOptions,
+		},
 	}
-	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	loaded, err := load.Package(ctx, packagePath, loadOpts)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = errors.Join(err, loaded.Close())
+	}()
+	pkg := loaded.Definition.AsV1alpha1()
 	findings := []lint.PackageFinding{}
-	for i, component := range defined.Pkg.Components {
+	for i, component := range pkg.Components {
 		findings = append(findings, lint.CheckComponentValues(component, i)...)
 	}
 	if len(findings) == 0 {
 		return nil
 	}
 	return &lint.LintError{
-		PackageName: defined.Pkg.Metadata.Name,
+		PackageName: pkg.Metadata.Name,
 		Findings:    findings,
 	}
 }

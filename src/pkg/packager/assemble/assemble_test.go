@@ -5,6 +5,7 @@ package assemble
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,10 +14,14 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	_ "modernc.org/sqlite"
 )
@@ -229,15 +234,15 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 func TestCollectVersionRequirements(t *testing.T) {
 	t.Parallel()
 
-	imageArchivesReq := v1alpha1.VersionRequirement{
+	imageArchivesReq := api.VersionRequirement{
 		Version: "v0.68.0",
 		Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
 	}
-	indexReq := v1alpha1.VersionRequirement{
+	indexReq := api.VersionRequirement{
 		Version: "v0.77.0",
 		Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
 	}
-	versionlessChartReq := v1alpha1.VersionRequirement{
+	versionlessChartReq := api.VersionRequirement{
 		Version: "v0.65.0",
 		Reason:  "This package contains a chart without a version, which is only supported on v0.65.0+",
 	}
@@ -246,7 +251,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 		name     string
 		pkg      v1alpha1.ZarfPackage
 		hasIndex bool
-		expected []v1alpha1.VersionRequirement
+		expected []api.VersionRequirement
 	}{
 		{
 			name:     "no requirements for a plain package",
@@ -265,13 +270,13 @@ func TestCollectVersionRequirements(t *testing.T) {
 					},
 				},
 			},
-			expected: []v1alpha1.VersionRequirement{imageArchivesReq},
+			expected: []api.VersionRequirement{imageArchivesReq},
 		},
 		{
 			name:     "preserved index triggers v0.76.0",
 			pkg:      v1alpha1.ZarfPackage{},
 			hasIndex: true,
-			expected: []v1alpha1.VersionRequirement{indexReq},
+			expected: []api.VersionRequirement{indexReq},
 		},
 		{
 			name: "image archives and preserved index trigger both",
@@ -284,7 +289,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 				},
 			},
 			hasIndex: true,
-			expected: []v1alpha1.VersionRequirement{imageArchivesReq, indexReq},
+			expected: []api.VersionRequirement{imageArchivesReq, indexReq},
 		},
 		{
 			name: "image archives requirement is only emitted once across components",
@@ -294,7 +299,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 					{Name: "c2", ImageArchives: []v1alpha1.ImageArchive{{Path: "/tmp/b.tar", Images: []string{"p:q"}}}},
 				},
 			},
-			expected: []v1alpha1.VersionRequirement{imageArchivesReq},
+			expected: []api.VersionRequirement{imageArchivesReq},
 		},
 		{
 			name: "chart without a version triggers v0.65.0",
@@ -306,7 +311,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 					},
 				},
 			},
-			expected: []v1alpha1.VersionRequirement{versionlessChartReq},
+			expected: []api.VersionRequirement{versionlessChartReq},
 		},
 		{
 			name: "versionless chart requirement is only emitted once across charts",
@@ -316,7 +321,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 					{Name: "c2", Charts: []v1alpha1.ZarfChart{{Name: "b", LocalPath: "./b"}}},
 				},
 			},
-			expected: []v1alpha1.VersionRequirement{versionlessChartReq},
+			expected: []api.VersionRequirement{versionlessChartReq},
 		},
 		{
 			name: "chart with a version has no requirement",
@@ -409,251 +414,17 @@ func TestImageLayoutHasIndex(t *testing.T) {
 	}
 }
 
-func TestMergeAndWriteValuesFile(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-
-	t.Run("no-op when no files provided", func(t *testing.T) {
-		t.Parallel()
-		buildPath := t.TempDir()
-		err := mergeAndWriteValuesFile(ctx, nil, t.TempDir(), buildPath)
-		require.NoError(t, err)
-		_, err = os.Stat(filepath.Join(buildPath, layout.ValuesYAML))
-		require.ErrorIs(t, err, os.ErrNotExist)
-	})
-
-	t.Run("merges multiple values files into a single output", func(t *testing.T) {
-		t.Parallel()
-		pkgDir := t.TempDir()
-		buildPath := t.TempDir()
-
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, "base.yaml"), []byte("key: base\nextra: present\n"), 0o600))
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, "override.yaml"), []byte("key: override\n"), 0o600))
-
-		err := mergeAndWriteValuesFile(ctx, []string{"base.yaml", "override.yaml"}, pkgDir, buildPath)
-		require.NoError(t, err)
-
-		out, err := os.ReadFile(filepath.Join(buildPath, layout.ValuesYAML))
-		require.NoError(t, err)
-		require.Contains(t, string(out), "key: override")
-		require.Contains(t, string(out), "extra: present")
-	})
-
-	t.Run("returns error when a values file does not exist", func(t *testing.T) {
-		t.Parallel()
-		err := mergeAndWriteValuesFile(ctx, []string{"does-not-exist.yaml"}, t.TempDir(), t.TempDir())
-		require.ErrorContains(t, err, "does-not-exist.yaml")
-	})
-}
-
-func TestMergeAndWriteValuesSchema(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	testdataDir := filepath.Join("testdata", "schema-merge")
-
-	t.Run("no-op when neither parent nor children are provided", func(t *testing.T) {
-		t.Parallel()
-		buildPath := t.TempDir()
-		err := mergeAndWriteValuesSchema(ctx, "", nil, testdataDir, buildPath)
-		require.NoError(t, err)
-		_, err = os.Stat(filepath.Join(buildPath, layout.ValuesSchema))
-		require.ErrorIs(t, err, os.ErrNotExist, "no schema file should be written when there is nothing to merge")
-	})
-
-	t.Run("copies parent verbatim when no child schemas are present", func(t *testing.T) {
-		t.Parallel()
-		buildPath := t.TempDir()
-		err := mergeAndWriteValuesSchema(ctx, "parent-with-required.schema.json", nil, testdataDir, buildPath)
-		require.NoError(t, err)
-		written, err := os.ReadFile(filepath.Join(buildPath, layout.ValuesSchema))
-		require.NoError(t, err)
-		original, err := os.ReadFile(filepath.Join(testdataDir, "parent-with-required.schema.json"))
-		require.NoError(t, err)
-		require.Equal(t, string(original), string(written), "verbatim copy should match source file exactly")
-	})
-
-	t.Run("rejects parent schema containing external $ref", func(t *testing.T) {
-		t.Parallel()
-		buildPath := t.TempDir()
-		err := mergeAndWriteValuesSchema(ctx, "child-with-external-ref.schema.json", nil, testdataDir, buildPath)
-		require.ErrorContains(t, err, "$ref")
-	})
-
-	t.Run("rejects child schema containing external $ref", func(t *testing.T) {
-		t.Parallel()
-		buildPath := t.TempDir()
-		err := mergeAndWriteValuesSchema(ctx, "parent-with-required.schema.json", []string{"child-with-external-ref.schema.json"}, testdataDir, buildPath)
-		require.ErrorContains(t, err, "$ref")
-	})
-
-	t.Run("allows internal fragment refs in schemas being merged", func(t *testing.T) {
-		t.Parallel()
-		buildPath := t.TempDir()
-		// child-with-ref.schema.json uses "$ref": "#/definitions/name" — internal, safe to merge
-		err := mergeAndWriteValuesSchema(ctx, "parent-with-required.schema.json", []string{"child-with-ref.schema.json"}, testdataDir, buildPath)
-		require.NoError(t, err)
-	})
-
-	t.Run("rejects merge when parent and child declare different versions", func(t *testing.T) {
-		t.Parallel()
-		buildPath := t.TempDir()
-		// parent-with-required declares draft-07; child-wrong-version declares 2019-09
-		err := mergeAndWriteValuesSchema(ctx, "parent-with-required.schema.json", []string{"child-wrong-version.schema.json"}, testdataDir, buildPath)
-		require.ErrorContains(t, err, "different versions")
-		require.ErrorContains(t, err, "draft-07")
-		require.ErrorContains(t, err, "2019-09")
-	})
-
-	t.Run("preserves child definitions when parent overrides with empty map so internal refs remain valid", func(t *testing.T) {
-		t.Parallel()
-		buildPath := t.TempDir()
-		// child-with-ref uses $ref: "#/definitions/name" with a matching definition.
-		// parent-overrides-definitions sets definitions: {} (empty), which previously
-		// deleted the child's definition and left the $ref unresolvable.
-		// With definitions merged like properties, the child-only "name" entry survives.
-		err := mergeAndWriteValuesSchema(ctx, "parent-overrides-definitions.schema.json", []string{"child-with-ref.schema.json"}, testdataDir, buildPath)
-		require.NoError(t, err)
-	})
-
-	t.Run("rejects merge when child omits version", func(t *testing.T) {
-		t.Parallel()
-		buildPath := t.TempDir()
-		err := mergeAndWriteValuesSchema(ctx, "parent-with-required.schema.json", []string{"child-no-dialect.schema.json"}, testdataDir, buildPath)
-		require.ErrorContains(t, err, "missing \"$schema\" version declaration")
-	})
-
-	t.Run("rejects merge when parent omits version", func(t *testing.T) {
-		t.Parallel()
-		buildPath := t.TempDir()
-		err := mergeAndWriteValuesSchema(ctx, "child-no-dialect.schema.json", []string{"child.schema.json"}, testdataDir, buildPath)
-		require.ErrorContains(t, err, "missing \"$schema\" version declaration")
-	})
-
-	mergeTests := []struct {
-		name            string
-		parentSchema    string
-		importedSchemas []string
-		expectedSchema  string
-	}{
-		{
-			name:            "parent and child required arrays are merged — parent entries first",
-			parentSchema:    "parent-with-required.schema.json",
-			importedSchemas: []string{"child.schema.json"},
-			// parent required: ["namespace"], child required: ["appName","replicas"]
-			// merged (parent-first): ["namespace","appName","replicas"]
-			// parent replicas.maximum:5 wins over child's 10
-			expectedSchema: `{
-				"$schema": "http://json-schema.org/draft-07/schema#",
-				"type": "object",
-				"required": ["namespace","appName","replicas"],
-				"properties": {
-					"namespace": {"type":"string","minLength":1},
-					"replicas":  {"type":"integer","minimum":1,"maximum":5},
-					"appName":   {"type":"string","minLength":1},
-					"enabled":   {"type":"boolean"}
-				}
-			}`,
-		},
-		{
-			name:            "child required survives when parent declares no required array",
-			parentSchema:    "parent-no-required.schema.json",
-			importedSchemas: []string{"child.schema.json"},
-			// parent has no required; child required: ["appName","replicas"] preserved as-is
-			expectedSchema: `{
-				"$schema": "http://json-schema.org/draft-07/schema#",
-				"type": "object",
-				"required": ["appName","replicas"],
-				"properties": {
-					"namespace": {"type":"string","minLength":1},
-					"replicas":  {"type":"integer","minimum":1,"maximum":5},
-					"appName":   {"type":"string","minLength":1},
-					"enabled":   {"type":"boolean"}
-				}
-			}`,
-		},
-		{
-			name:            "overlapping required entries are deduplicated with parent ordering preserved",
-			parentSchema:    "parent-overlapping-required.schema.json",
-			importedSchemas: []string{"child.schema.json"},
-			// parent required: ["appName","namespace"], child required: ["appName","replicas"]
-			// dedup (parent-first): ["appName","namespace","replicas"]
-			expectedSchema: `{
-				"$schema": "http://json-schema.org/draft-07/schema#",
-				"type": "object",
-				"required": ["appName","namespace","replicas"],
-				"properties": {
-					"namespace": {"type":"string","minLength":1},
-					"replicas":  {"type":"integer","minimum":1,"maximum":5},
-					"appName":   {"type":"string","minLength":1},
-					"enabled":   {"type":"boolean"}
-				}
-			}`,
-		},
-		{
-			name:            "first sibling wins on property conflicts when no parent is present",
-			importedSchemas: []string{"child.schema.json", "child2.schema.json"},
-			// child required: ["appName","replicas"], child2 required: ["version"]
-			// child replicas.maximum:10 wins over child2's 20 (conflict: child wins)
-			// child enabled has no description; child2 adds description — no conflict, description is inherited
-			// version property comes from child2 only
-			expectedSchema: `{
-				"$schema": "http://json-schema.org/draft-07/schema#",
-				"type": "object",
-				"required": ["appName","replicas","version"],
-				"properties": {
-					"appName":  {"type":"string","minLength":1},
-					"replicas": {"type":"integer","minimum":1,"maximum":10},
-					"enabled":  {"type":"boolean","description":"child2"},
-					"version":  {"type":"string","pattern":"^v[0-9]+"}
-				}
-			}`,
-		},
-		{
-			name:            "parent wins over all siblings; sibling-only properties are still included",
-			parentSchema:    "parent-with-required.schema.json",
-			importedSchemas: []string{"child.schema.json", "child2.schema.json"},
-			// children merged first: replicas.maximum:10 (child wins child2)
-			// parent merged on top: replicas.maximum:5 (parent wins children)
-			// required: parent ["namespace"] + child ["appName","replicas"] + child2 ["version"]
-			// enabled.description inherited from child2 (no conflict with parent or child1)
-			expectedSchema: `{
-				"$schema": "http://json-schema.org/draft-07/schema#",
-				"type": "object",
-				"required": ["namespace","appName","replicas","version"],
-				"properties": {
-					"namespace": {"type":"string","minLength":1},
-					"replicas":  {"type":"integer","minimum":1,"maximum":5},
-					"appName":   {"type":"string","minLength":1},
-					"enabled":   {"type":"boolean","description":"child2"},
-					"version":   {"type":"string","pattern":"^v[0-9]+"}
-				}
-			}`,
-		},
-	}
-
-	for _, tt := range mergeTests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			buildPath := t.TempDir()
-			err := mergeAndWriteValuesSchema(ctx, tt.parentSchema, tt.importedSchemas, testdataDir, buildPath)
-			require.NoError(t, err)
-			written, err := os.ReadFile(filepath.Join(buildPath, layout.ValuesSchema))
-			require.NoError(t, err)
-			require.JSONEq(t, tt.expectedSchema, string(written))
-		})
-	}
-}
-
 func TestAssembleSkeleton(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
 
-	defined, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOptions{})
+	loaded, err := load.Package(ctx, "./testdata/zarf-skeleton-package", load.PackageOptions{})
 	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 
 	opt := AssembleSkeletonOptions{}
-	pkgLayout, err := AssembleSkeleton(ctx, defined.Pkg, "./testdata/zarf-skeleton-package", defined.ImportedSchemas, opt)
+	pkgLayout, err := AssembleSkeleton(ctx, loaded, opt)
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
@@ -667,8 +438,8 @@ fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm
 `
 
 	require.Equal(t, expectedChecksum, string(b))
-	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.Pkg)
-	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.Pkg), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
+	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.AsV1alpha1())
+	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.AsV1alpha1()), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
@@ -678,6 +449,135 @@ func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	path := filepath.Join(dir, layout.ZarfYAML)
 	err = os.WriteFile(path, b, 0700)
 	require.NoError(t, err)
+}
+
+func TestAssemblePackageWritesResolvedValues(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	loadPackage := func(t *testing.T) *load.ResolvedPackage {
+		t.Helper()
+		dir := t.TempDir()
+		writePackageToDisk(t, v1alpha1.ZarfPackage{
+			APIVersion: v1alpha1.APIVersion,
+			Kind:       v1alpha1.ZarfPackageConfig,
+			Metadata:   v1alpha1.ZarfMetadata{Name: "resolved-values"},
+			Components: []v1alpha1.ZarfComponent{{Name: "component"}},
+		}, dir)
+		loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+		require.NoError(t, err)
+		return loaded
+	}
+
+	t.Run("writes values and schema", func(t *testing.T) {
+		loaded := loadPackage(t)
+		loaded.Values = value.Values{"enabled": true, "replicas": 3}
+		loaded.ValuesSchema = value.SchemaDocument{
+			"$schema": "http://json-schema.org/draft-07/schema#",
+			"type":    "object",
+			"properties": map[string]any{
+				"enabled":  map[string]any{"type": "boolean"},
+				"replicas": map[string]any{"type": "integer", "minimum": 1},
+			},
+		}
+
+		pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+		require.NoError(t, err)
+
+		values, err := value.ParseFiles(ctx, []string{filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML)}, value.ParseFilesOptions{})
+		require.NoError(t, err)
+		require.Equal(t, true, values["enabled"])
+		require.EqualValues(t, 3, values["replicas"])
+
+		schema, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema))
+		require.NoError(t, err)
+		require.JSONEq(t, `{
+			"$schema": "http://json-schema.org/draft-07/schema#",
+			"type": "object",
+			"properties": {
+				"enabled": {"type": "boolean"},
+				"replicas": {"type": "integer", "minimum": 1}
+			}
+		}`, string(schema))
+	})
+
+	t.Run("omits empty values and schema", func(t *testing.T) {
+		pkgLayout, err := AssemblePackage(ctx, loadPackage(t), AssembleOptions{SkipSBOM: true})
+		require.NoError(t, err)
+		require.NoFileExists(t, filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML))
+		require.NoFileExists(t, filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema))
+	})
+}
+
+func TestAssemblePackageV1Beta1WritesMultiDocDefinition(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	tmpdir := t.TempDir()
+	dataPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
+	require.NoError(t, err)
+
+	zarfYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-local
+components:
+  - name: beta-component
+    files:
+      - source: %q
+        destination: data.txt
+`, dataPath)
+	require.NoError(t, os.WriteFile(filepath.Join(tmpdir, layout.ZarfYAML), []byte(zarfYAML), 0o600))
+
+	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+
+	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
+	require.NoError(t, err)
+	alphaPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
+	require.NoError(t, err)
+	betaPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
+	require.NoError(t, err)
+	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
+	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
+}
+
+func TestAssemblePackageV1Alpha1DoesNotWriteV1Beta1Definition(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	tmpdir := t.TempDir()
+	dataPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
+	require.NoError(t, err)
+	writePackageToDisk(t, v1alpha1.ZarfPackage{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       v1alpha1.ZarfPackageConfig,
+		Metadata:   v1alpha1.ZarfMetadata{Name: "alpha-local"},
+		Components: []v1alpha1.ZarfComponent{{
+			Name: "alpha-component",
+			Files: []v1alpha1.ZarfFile{{
+				Source: dataPath,
+				Target: "data.txt",
+			}},
+		}},
+	}, tmpdir)
+
+	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+
+	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
+	require.NoError(t, err)
+	alphaPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
+	require.NoError(t, err)
+	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
+	_, err = pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
+	require.Error(t, err)
 }
 
 func TestGetSBOM(t *testing.T) {
@@ -698,10 +598,10 @@ func TestGetSBOM(t *testing.T) {
 		},
 	}
 	writePackageToDisk(t, pkg, tmpdir)
-	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
 	require.NoError(t, err)
-
-	pkgLayout, err := AssemblePackage(ctx, defined.Pkg, tmpdir, nil, AssembleOptions{})
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
@@ -789,15 +689,15 @@ func TestCreateAbsoluteSources(t *testing.T) {
 			// Create the zarf.yaml file in the tmpdir
 			writePackageToDisk(t, pkg, tmpdir)
 
-			defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+			loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
 			require.NoError(t, err)
-
+			t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 			var pkgLayout *layout.PackageLayout
 			if tt.isSkeleton {
-				pkgLayout, err = AssembleSkeleton(ctx, defined.Pkg, tmpdir, defined.ImportedSchemas, AssembleSkeletonOptions{})
+				pkgLayout, err = AssembleSkeleton(ctx, loaded, AssembleSkeletonOptions{})
 				require.NoError(t, err)
 			} else {
-				pkgLayout, err = AssemblePackage(ctx, defined.Pkg, tmpdir, nil, AssembleOptions{SkipSBOM: true})
+				pkgLayout, err = AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
 				require.NoError(t, err)
 			}
 			docsDir := filepath.Join(tmpdir, "docs-dir")
@@ -875,10 +775,11 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	err = os.Mkdir(childDir, 0700)
 	require.NoError(t, err)
 	writePackageToDisk(t, childPkg, childDir)
-	defined, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
 	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 	// create the package
-	pkgLayout, err := AssemblePackage(context.Background(), defined.Pkg, tmpdir, nil, AssembleOptions{})
+	pkgLayout, err := AssemblePackage(context.Background(), loaded, AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the component has the correct file

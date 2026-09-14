@@ -26,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
@@ -205,10 +206,14 @@ func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	ctx := testutil.TestContext(t)
 	ctx = logger.WithContext(ctx, test.GetLogger(t))
 
-	src, err := zoci.NewRemote(ctx, ref, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
+	src, err := zoci.NewRemoteWithOptions(ctx, ref, oci.PlatformForArch(e2e.Arch), zoci.RemoteClientOptions{
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+	})
 	suite.NoError(err)
 
-	dst, err := zoci.NewRemote(ctx, dstRef, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
+	dst, err := zoci.NewRemoteWithOptions(ctx, dstRef, oci.PlatformForArch(e2e.Arch), zoci.RemoteClientOptions{
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+	})
 	suite.NoError(err)
 
 	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])

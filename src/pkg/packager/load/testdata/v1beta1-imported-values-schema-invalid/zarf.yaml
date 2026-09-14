@@ -1,0 +1,9 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: v1beta1-imported-values-schema-invalid
+components:
+  - name: app
+    import:
+      local:
+        - path: components/app.yaml

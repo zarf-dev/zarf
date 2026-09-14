@@ -589,9 +589,18 @@ func DefaultClassifiers() []binutils.Classifier {
 			FileGlob: "**/deno",
 			EvidenceMatcher: binutils.MatchAny(
 				m.FileContentsVersionMatcher(
+					// Deno/2.6.3Deno/
+					// Deno/1.41.0cli/
+					`Deno/(?P<version>[0-9]+\.[0-9]+\.[0-9]+)(Deno/|cli/)`,
+				),
+				m.FileContentsVersionMatcher(
 					// Deno/2.6.3
 					// Deno/1.41.0
 					`Deno/(?P<version>[0-9]+\.[0-9]+\.[0-9]+)`,
+				),
+				m.FileContentsVersionMatcher(
+					// cli/tools/standalone.rsdeno-canary/f4bed1081456089559c82441a13c4fb700840cac1.11.3dlwindows
+					`deno-canary/[0-9a-z]{40}(?P<version>[0-9]+\.[0-9]+\.[0-9]+)`,
 				),
 				m.FileContentsVersionMatcher(
 					// deno::tools::standalonedeno-65db94feba9d4d51a09b74629f566dbc90484fbarelease/v1.29.4windows
@@ -890,6 +899,11 @@ func DefaultClassifiers() []binutils.Classifier {
 			Class:    "gzip-binary",
 			FileGlob: "**/gzip",
 			EvidenceMatcher: m.FileContentsVersionMatcher(
+				// GNU gzip keeps the version as a bare NUL-delimited token, so require an identifying
+				// string from the program as well. Without it any binary that happens to be named gzip
+				// (such as the busybox multicall binary behind a gzip applet symlink) would have an
+				// arbitrary NUL-delimited "N.N" token reported as a GNU gzip version.
+				`%s: %s: not in gzip format`,
 				`\x00(?P<version>[0-9]+\.[0-9]+)\x00`,
 			),
 			Package: "gzip",
@@ -1040,6 +1054,11 @@ func DefaultClassifiers() []binutils.Classifier {
 			EvidenceMatcher: binutils.MatchAny(
 				// [NUL][NUL][NUL][NUL]12.2.0-258092[NUL][NUL][NUL][NUL]
 				m.FileContentsVersionMatcher(`\x00+(?P<version>[0-9]{2}\.[0-9]+\.[0-9]+\-[0-9]{6,})\x00+`),
+				// security patch releases embed the raw version constant with no "release-" prefix
+				// and are not always preceded by NUL bytes (e.g. on arm builds):
+				// [NUL]11.0.5+security-01[NUL][NUL]call frame too large
+				// [NUL]12.4.3+security-02[NUL][NUL]
+				m.FileContentsVersionMatcher(`\x00(?P<version>[0-9]{1,2}\.[0-9]+\.[0-9]+)\+security-[0-9]+\x00`),
 				// [NUL][NUL][NUL][NUL]release-12.3.2+security-01[NUL][NUL][NUL][NUL]
 				// [NUL][NUL][NUL][NUL]release-12.3.1[NUL][NUL][NUL][NUL]
 				m.FileContentsVersionMatcher(`\x00+release-(?P<version>[0-9]{2}\.[0-9]+\.[0-9]+(-beta[0-9]|-test|-preview)?)(\+security-[0-9]+)?\x00+`),
@@ -1144,6 +1163,11 @@ func DefaultClassifiers() []binutils.Classifier {
 			Class:    "ingress-nginx-binary",
 			FileGlob: "**/nginx-ingress-controller",
 			EvidenceMatcher: binutils.MatchAny(
+				// the release is injected with -ldflags -X, which lands it in its own NUL-padded data symbol.
+				// the surrounding bytes are an arch-specific float constant pool, so only the padding is portable.
+				// e.g. v1.9.6[NUL][NUL] on each of linux/amd64, linux/arm, linux/arm64, and linux/s390x
+				// note: one trailing NUL is not enough -- on s390x that matches a vendored "v1.19.0" earlier in the file
+				m.FileContentsVersionMatcher(`v(?P<version>[0-9]+\.[0-9]+\.[0-9]+(\-(alpha|beta)\.[0-9]+)?)\x00\x00`),
 				// [NUL][NUL]v1.15.1[NUL][NUL]@e[ETX][NUL][NUL][NUL][NUL]go1.26.1[NUL][NUL][NUL]
 				// �v1.15.1[NUL][NUL]�z[ETX][NUL][NUL][NUL][NUL]go1.24.4[NUL][NUL][NUL]
 				m.FileContentsVersionMatcher(`v(?P<version>[0-9]+\.[0-9]+\.[0-9]+)\x00+.{0,50}go[0-9]+\.[0-9]+(\-(alpha|beta)\.[0-9])?\.[0-9]+\x00+`),

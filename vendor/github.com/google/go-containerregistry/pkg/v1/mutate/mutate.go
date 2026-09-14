@@ -22,11 +22,10 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 
-	"github.com/google/go-containerregistry/internal/gzip"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/match"
@@ -36,6 +35,11 @@ import (
 )
 
 const whiteoutPrefix = ".wh."
+
+// opaqueWhiteout marks a directory as opaque: all entries from lower layers under
+// its parent directory are hidden. It shares the whiteoutPrefix, so it must be
+// matched exactly and handled before the generic per-file whiteout logic.
+const opaqueWhiteout = ".wh..wh..opq"
 
 // Addendum contains layers and history to be appended
 // to a base image
@@ -267,6 +271,9 @@ func extract(img v1.Image, w io.Writer) error {
 	defer tarWriter.Close()
 
 	fileMap := map[string]bool{}
+	// opaqueDirs holds directories opaqued by an upper layer; entries under them
+	// from lower (later-iterated) layers are hidden.
+	opaqueDirs := map[string]bool{}
 
 	layers, err := img.Layers()
 	if err != nil {
@@ -277,14 +284,18 @@ func extract(img v1.Image, w io.Writer) error {
 	// whiteout layers more efficient, since we can just keep track of the removed
 	// files as we see .wh. layers and ignore those in previous layers.
 	for i := len(layers) - 1; i >= 0; i-- {
-		if err := extractLayer(tarWriter, fileMap, layers[i]); err != nil {
+		if err := extractLayer(tarWriter, fileMap, opaqueDirs, layers[i]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func extractLayer(tarWriter *tar.Writer, fileMap map[string]bool, layer v1.Layer) error {
+func extractLayer(tarWriter *tar.Writer, fileMap, opaqueDirs map[string]bool, layer v1.Layer) error {
+	// Opaque markers in this layer hide only lower layers, so stage them and
+	// promote to opaqueDirs after the whole layer is processed.
+	layerOpaque := map[string]bool{}
+
 	layerReader, err := layer.Uncompressed()
 	if err != nil {
 		return fmt.Errorf("reading layer contents: %w", err)
@@ -303,7 +314,10 @@ func extractLayer(tarWriter *tar.Writer, fileMap map[string]bool, layer v1.Layer
 
 		// Some tools prepend everything with "./", so if we don't Clean the
 		// name, we may have duplicate entries, which angers tar-split.
-		header.Name = filepath.Clean(header.Name)
+		header.Name = path.Clean(header.Name)
+		if unsafeArchivePath(header.Name) {
+			return fmt.Errorf("unsafe tar path %q", header.Name)
+		}
 
 		// Reject relative symlinks and hardlinks whose targets escape the
 		// image rootfs. Relative targets are resolved against the symlink's
@@ -313,11 +327,8 @@ func extractLayer(tarWriter *tar.Writer, fileMap map[string]bool, layer v1.Layer
 		// Absolute targets are left as-is; see #2238 for ongoing discussion
 		// on whether they should be pruned.
 		if header.Typeflag == tar.TypeSymlink || header.Typeflag == tar.TypeLink {
-			if !filepath.IsAbs(header.Linkname) {
-				resolved := filepath.Clean(filepath.Join(filepath.Dir(header.Name), header.Linkname)) //nolint:gosec // G305: path is only used for validation, not file I/O
-				if strings.HasPrefix(resolved, "..") {
-					continue
-				}
+			if unsafeRelativeLink(header.Name, header.Linkname) {
+				continue
 			}
 		}
 
@@ -326,8 +337,16 @@ func extractLayer(tarWriter *tar.Writer, fileMap map[string]bool, layer v1.Layer
 		// prefers USTAR over PAX
 		header.Format = tar.FormatPAX
 
-		basename := filepath.Base(header.Name)
-		dirname := filepath.Dir(header.Name)
+		basename := path.Base(header.Name)
+		dirname := path.Dir(header.Name)
+
+		// An opaque marker hides all lower-layer entries under dirname. It shares
+		// the whiteout prefix, so handle it before the generic per-file logic.
+		if basename == opaqueWhiteout {
+			layerOpaque[dirname] = true
+			continue
+		}
+
 		tombstone := strings.HasPrefix(basename, whiteoutPrefix)
 		if tombstone {
 			basename = basename[len(whiteoutPrefix):]
@@ -339,7 +358,7 @@ func extractLayer(tarWriter *tar.Writer, fileMap map[string]bool, layer v1.Layer
 		if header.Typeflag == tar.TypeDir {
 			name = header.Name
 		} else {
-			name = filepath.Join(dirname, basename)
+			name = path.Join(dirname, basename)
 		}
 
 		if _, ok := fileMap[name]; ok && !tombstone {
@@ -348,6 +367,11 @@ func extractLayer(tarWriter *tar.Writer, fileMap map[string]bool, layer v1.Layer
 
 		// check for a whited out parent directory
 		if inWhiteoutDir(fileMap, name) {
+			continue
+		}
+
+		// check for a parent directory opaqued by an upper layer
+		if inOpaqueDir(opaqueDirs, name) {
 			continue
 		}
 
@@ -366,6 +390,11 @@ func extractLayer(tarWriter *tar.Writer, fileMap map[string]bool, layer v1.Layer
 		}
 	}
 
+	// Opaque dirs found in this layer now hide entries in lower layers.
+	for d := range layerOpaque {
+		opaqueDirs[d] = true
+	}
+
 	// Drain any bytes the tar.Reader did not consume (trailing data after the
 	// end-of-archive marker) so the underlying verifying reader reaches io.EOF
 	// and the layer's digest is verified. Without this, a layer whose contents
@@ -377,9 +406,23 @@ func extractLayer(tarWriter *tar.Writer, fileMap map[string]bool, layer v1.Layer
 	return nil
 }
 
+func inOpaqueDir(opaqueDirs map[string]bool, file string) bool {
+	for file != "" {
+		dirname := path.Dir(file)
+		if file == dirname {
+			break
+		}
+		if opaqueDirs[dirname] {
+			return true
+		}
+		file = dirname
+	}
+	return false
+}
+
 func inWhiteoutDir(fileMap map[string]bool, file string) bool {
 	for file != "" {
-		dirname := filepath.Dir(file)
+		dirname := path.Dir(file)
 		if file == dirname {
 			break
 		}
@@ -391,8 +434,42 @@ func inWhiteoutDir(fileMap map[string]bool, file string) bool {
 	return false
 }
 
+func unsafeArchivePath(name string) bool {
+	clean := cleanArchivePath(name)
+	if clean == ".." || strings.HasPrefix(clean, "../") {
+		return true
+	}
+	if strings.HasPrefix(name, "\\") {
+		return true
+	}
+	return hasWindowsDrivePrefix(clean)
+}
+
+func unsafeRelativeLink(name, linkname string) bool {
+	clean := cleanArchivePath(linkname)
+	if path.IsAbs(clean) {
+		return false
+	}
+	if hasWindowsDrivePrefix(clean) {
+		return true
+	}
+	resolved := path.Clean(path.Join(path.Dir(name), clean)) //nolint:gosec // G305: path is only used for validation, not file I/O
+	return strings.HasPrefix(resolved, "..")
+}
+
+func cleanArchivePath(name string) string {
+	return path.Clean(strings.ReplaceAll(name, "\\", "/"))
+}
+
+func hasWindowsDrivePrefix(name string) bool {
+	return len(name) >= 2 &&
+		(('A' <= name[0] && name[0] <= 'Z') || ('a' <= name[0] && name[0] <= 'z')) &&
+		name[1] == ':'
+}
+
 // Time sets all timestamps in an image to the given timestamp.
-func Time(img v1.Image, t time.Time) (v1.Image, error) {
+// Layers are rewritten as dockerv2+gzip unless opts say otherwise.
+func Time(img v1.Image, t time.Time, opts ...tarball.LayerOption) (v1.Image, error) {
 	newImage := empty.Image
 
 	layers, err := img.Layers()
@@ -408,7 +485,7 @@ func Time(img v1.Image, t time.Time) (v1.Image, error) {
 	addendums := make([]Addendum, max(len(ocf.History), len(layers)))
 	var historyIdx, addendumIdx int
 	for layerIdx := 0; layerIdx < len(layers); addendumIdx, layerIdx = addendumIdx+1, layerIdx+1 {
-		newLayer, err := layerTime(layers[layerIdx], t)
+		newLayer, err := layerTime(layers[layerIdx], t, opts...)
 		if err != nil {
 			return nil, fmt.Errorf("setting layer times: %w", err)
 		}
@@ -470,7 +547,7 @@ func Time(img v1.Image, t time.Time) (v1.Image, error) {
 	return ConfigFile(newImage, cfg)
 }
 
-func layerTime(layer v1.Layer, t time.Time) (v1.Layer, error) {
+func layerTime(layer v1.Layer, t time.Time, opts ...tarball.LayerOption) (v1.Layer, error) {
 	layerReader, err := layer.Uncompressed()
 	if err != nil {
 		return nil, fmt.Errorf("getting layer: %w", err)
@@ -521,11 +598,10 @@ func layerTime(layer v1.Layer, t time.Time) (v1.Layer, error) {
 	}
 
 	b := w.Bytes()
-	// gzip the contents, then create the layer
 	opener := func() (io.ReadCloser, error) {
-		return gzip.ReadCloser(io.NopCloser(bytes.NewReader(b))), nil
+		return io.NopCloser(bytes.NewReader(b)), nil
 	}
-	layer, err = tarball.LayerFromOpener(opener)
+	layer, err = tarball.LayerFromOpener(opener, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("creating layer: %w", err)
 	}
@@ -535,10 +611,10 @@ func layerTime(layer v1.Layer, t time.Time) (v1.Layer, error) {
 
 // Canonical is a helper function to combine Time and configFile
 // to remove any randomness during a docker build.
-func Canonical(img v1.Image) (v1.Image, error) {
+func Canonical(img v1.Image, opts ...tarball.LayerOption) (v1.Image, error) {
 	// Set all timestamps to 0
 	created := time.Time{}
-	img, err := Time(img, created)
+	img, err := Time(img, created, opts...)
 	if err != nil {
 		return nil, err
 	}

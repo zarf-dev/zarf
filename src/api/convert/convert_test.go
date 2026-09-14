@@ -761,6 +761,7 @@ func TestV1Alpha1PkgToV1Beta1_Actions(t *testing.T) {
 	actions := result.Components[0].Actions
 
 	// Defaults
+	require.NotNil(t, actions.OnDeploy.Defaults)
 	require.True(t, actions.OnDeploy.Defaults.Silent)
 	require.Equal(t, int32(60), actions.OnDeploy.Defaults.MaxTotalSeconds)
 	require.Equal(t, int32(2), actions.OnDeploy.Defaults.Retries)
@@ -954,13 +955,13 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 				Name:        "my-component",
 				Description: "test component",
 				Optional:    true,
+				Selector: v1beta1.ComponentSelector{
+					Architecture: "amd64",
+					Flavor:       "vanilla",
+				},
 				ComponentSpec: v1beta1.ComponentSpec{
 					Target: v1beta1.ComponentTarget{
 						OS: "linux",
-					},
-					Selector: v1beta1.ComponentSelector{
-						Architecture: "amd64",
-						Flavor:       "vanilla",
 					},
 					Import: v1beta1.ComponentImport{
 						Local:  []v1beta1.ComponentImportLocal{{Path: "./path"}},
@@ -1170,7 +1171,7 @@ func TestV1Beta1PkgToV1Alpha1_Actions(t *testing.T) {
 				ComponentSpec: v1beta1.ComponentSpec{
 					Actions: v1beta1.ComponentActions{
 						OnDeploy: v1beta1.ComponentActionSet{
-							Defaults: v1beta1.ComponentActionDefaults{
+							Defaults: &v1beta1.ComponentActionDefaults{
 								Silent:          true,
 								MaxTotalSeconds: maxSecDef,
 								Retries:         retriesDef,

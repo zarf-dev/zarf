@@ -12,6 +12,24 @@ components:
       onRemove:
         before:
           - cmd: './zarf tools kubectl -n longhorn-system patch -p ''{"value": "true"}'' --type=merge lhs deleting-confirmation-flag'
+      onDeploy:
+        after:
+          - description: Longhorn EngineImages to finish deploying on every node
+            maxTotalSeconds: 300
+            wait:
+              cluster:
+                kind: engineimages.longhorn.io
+                name: longhorn.io/component=engine-image
+                namespace: longhorn-system
+                condition: "{.status.state}=deployed"
+          - description: Longhorn InstanceManagers to finish starting on every node
+            maxTotalSeconds: 300
+            wait:
+              cluster:
+                kind: instancemanagers.longhorn.io
+                name: longhorn.io/component=instance-manager
+                namespace: longhorn-system
+                condition: "{.status.currentState}=running"
     manifests:
       - name: longhorn-connect
         namespace: longhorn-system

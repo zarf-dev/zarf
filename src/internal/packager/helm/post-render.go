@@ -178,7 +178,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 }
 
 func (r *renderer) shouldAddAgentIgnoreLabels() bool {
-	return r.connectedDeploy && r.state != nil && r.state.AgentIsConfigured()
+	return r.connectedDeploy && r.state != nil && r.state.AgentInfo.IsConfigured()
 }
 
 func (r *renderer) editHelmResources(ctx context.Context, resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {

@@ -120,6 +120,13 @@ func TestMergeSchemaFiles(t *testing.T) {
 		assert.Contains(t, props, "replicas")
 	})
 
+	t.Run("single schema without dialect is returned as-is", func(t *testing.T) {
+		merged, err := MergeSchemaFiles("no-dialect.schema.json", nil, base)
+		require.NoError(t, err)
+		require.NotNil(t, merged)
+		assert.Equal(t, "object", merged["type"])
+	})
+
 	t.Run("earlier schema wins on conflict", func(t *testing.T) {
 		// simple.schema.json has replicas as integer; second.schema.json has replicas as number
 		merged, err := MergeSchemaFiles("simple.schema.json", []string{"second.schema.json"}, base)
@@ -161,6 +168,61 @@ func TestMergeSchemaFiles(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, merged)
 	})
+}
+
+func TestMergeSchemaDocuments(t *testing.T) {
+	t.Parallel()
+
+	draft07 := "http://json-schema.org/draft-07/schema#"
+	t.Run("merges documents in precedence order", func(t *testing.T) {
+		t.Parallel()
+		merged, err := MergeSchemaDocuments([]SchemaDocument{
+			{
+				"$schema":  draft07,
+				"required": []any{"parent"},
+				"properties": map[string]any{
+					"shared": map[string]any{"type": "integer", "maximum": 5},
+				},
+			},
+			{
+				"$schema":  draft07,
+				"required": []any{"child", "parent"},
+				"properties": map[string]any{
+					"shared": map[string]any{"type": "integer", "maximum": 10},
+					"child":  map[string]any{"type": "string"},
+				},
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, []any{"parent", "child"}, merged["required"])
+		properties, ok := merged["properties"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, map[string]any{"type": "integer", "maximum": 5}, properties["shared"])
+		require.Equal(t, map[string]any{"type": "string"}, properties["child"])
+	})
+
+	for _, tt := range []struct {
+		name    string
+		schemas []SchemaDocument
+		wantErr string
+	}{
+		{
+			name:    "rejects different schema dialects",
+			schemas: []SchemaDocument{{"$schema": draft07}, {"$schema": "https://json-schema.org/draft/2019-09/schema"}},
+			wantErr: "different versions",
+		},
+		{
+			name:    "rejects a missing schema dialect",
+			schemas: []SchemaDocument{{"$schema": draft07}, {"type": "object"}},
+			wantErr: "missing \"$schema\"",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := MergeSchemaDocuments(tt.schemas)
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
 }
 
 func TestMergeSchemas(t *testing.T) {

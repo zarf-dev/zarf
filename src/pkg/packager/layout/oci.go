@@ -35,6 +35,10 @@ const (
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 	// ZarfConfigMediaType is the media type for the Zarf package manifest config.
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
+	// ZarfComponentConfigMediaType is the media type for a v1beta1 Zarf component config OCI artifact.
+	ZarfComponentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
+	// ComponentResourceMountPathAnnotation identifies where a component resource is mounted in its OCI artifact.
+	ComponentResourceMountPathAnnotation = "dev.zarf.mountPath"
 	// OCITimestampFormat is the format used for the OCI timestamp annotation
 	OCITimestampFormat = time.RFC3339
 )
@@ -173,16 +177,18 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		return descs[i].Digest.String() < descs[j].Digest.String()
 	})
 
-	// Read the zarf.yaml from disk rather than using p.Pkg, which may have been
-	// component-filtered or otherwise mutated after load.
+	// Read the zarf.yaml from disk rather than using the in-memory package
+	// definition, which may have been component-filtered or otherwise mutated
+	// after load.
 	zarfYAMLBytes, err := os.ReadFile(filepath.Join(p.dirPath, ZarfYAML))
 	if err != nil {
 		return fmt.Errorf("reading %s for manifest: %w", ZarfYAML, err)
 	}
-	zarfPkg, err := pkgcfg.ParseMultiDoc(ctx, zarfYAMLBytes)
+	defined, err := pkgcfg.ParseMultiDoc(ctx, zarfYAMLBytes)
 	if err != nil {
 		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
 	}
+	zarfPkg := defined.AsV1alpha1()
 	configBytes, err := json.Marshal(zarfPkg)
 	if err != nil {
 		return err
@@ -302,7 +308,7 @@ func (p *PackageLayout) Resolve(_ context.Context, reference string) (ocispec.De
 	if p.cache == nil {
 		return ocispec.Descriptor{}, errdef.ErrNotFound
 	}
-	if reference == p.digest || reference == p.Pkg.Metadata.Name {
+	if reference == p.digest || reference == p.AsV1alpha1().Metadata.Name {
 		return p.cache.desc, nil
 	}
 	return ocispec.Descriptor{}, errdef.ErrNotFound

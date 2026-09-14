@@ -69,6 +69,30 @@ func deleteFromMap(node *CandidateNode, childPath interface{}) {
 		}
 	}
 	node.Content = newContents
+	normaliseEmptyCollectionMapKeyComment(node)
+}
+
+func normaliseEmptyCollectionMapKeyComment(node *CandidateNode) {
+	if (node.Kind != SequenceNode && node.Kind != MappingNode) || len(node.Content) != 0 || node.LineComment != "" {
+		return
+	}
+
+	key := node.Key
+	if node.Parent != nil && node.Parent.Kind == MappingNode {
+		for index := 0; index < len(node.Parent.Content)-1; index += 2 {
+			if node.Parent.Content[index+1] == node {
+				key = node.Parent.Content[index]
+				break
+			}
+		}
+	}
+	if key == nil || key.LineComment == "" {
+		return
+	}
+
+	node.LineComment = key.LineComment
+	key.LineComment = ""
+	node.Style = FlowStyle
 }
 
 func deleteFromArray(node *CandidateNode, childPath interface{}) {
@@ -87,4 +111,5 @@ func deleteFromArray(node *CandidateNode, childPath interface{}) {
 		}
 	}
 	node.Content = newContents
+	normaliseEmptyCollectionMapKeyComment(node)
 }

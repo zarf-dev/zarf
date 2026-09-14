@@ -181,9 +181,9 @@ The `zarf-agent` is a [Kubernetes Mutating Webhook](https://kubernetes.io/docs/r
 
 The `zarf-agent` is responsible for modifying [Kubernetes PodSpec](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec) objects [Image](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#Container.Image) fields to point to the Zarf Registry. This allows the cluster to pull images from the Zarf Registry instead of the internet without having to modify the original image references.
 
-The `zarf-agent` modifies the following [Flux](https://fluxcd.io/flux/) resources: [GitRepository](https://fluxcd.io/docs/components/source/gitrepositories/), [OCIRepository](https://fluxcd.io/flux/components/source/ocirepositories/), & [HelmRepository](https://fluxcd.io/flux/components/source/helmrepositories/) to point to the local Git Server or Zarf Registry. HelmRepositories are only modified if the `type` key is set to `oci`. During the mutation of OCIRepositories, a call is made to the Zarf Registry to determine the media type of the OCI artifact. If the artifact is a helm chart the mutation will __NOT__ include the crc32 hash as including the hash interferes with the Flux deployment of the chart.
+The `zarf-agent` modifies the following [Flux](https://fluxcd.io/flux/) resources: [GitRepository](https://fluxcd.io/flux/components/source/gitrepositories/), [OCIRepository](https://fluxcd.io/flux/components/source/ocirepositories/), & [HelmRepository](https://fluxcd.io/flux/components/source/helmrepositories/) to point to the local Git Server or Zarf Registry. HelmRepositories are only modified if the `type` key is set to `oci`. During the mutation of OCIRepositories, a call is made to the Zarf Registry to determine the media type of the OCI artifact. If the artifact is a helm chart the mutation will __NOT__ include the crc32 hash as including the hash interferes with the Flux deployment of the chart.
 
-The `zarf-agent` modifies [ArgoCD applications](https://argo-cd.readthedocs.io/en/stable/user-guide/application-specification/), [ArgoCD ApplicationSet](https://argo-cd.readthedocs.io/en/stable/user-guide/application-set/), & [ArgoCD Repositories](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/)  objects to point to the local Git Server.
+The `zarf-agent` modifies [ArgoCD applications](https://argo-cd.readthedocs.io/en/stable/user-guide/application-specification/), [ArgoCD ApplicationSets](https://argo-cd.readthedocs.io/en/stable/user-guide/application-set/), [ArgoCD Repositories](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/), and [ArgoCD AppProjects](https://argo-cd.readthedocs.io/en/stable/operator-manual/project-specification/) to point to the local Git Server.
 
 :::note
 
@@ -209,6 +209,11 @@ The agent's mutation behavior is controlled by the `--agent-mutation-policy` fla
 - **`labeled`** — the agent only mutates resources (or resources in namespaces) labeled `zarf.dev/agent: mutate`. All namespaces deployed by Zarf are automatically labeled `zarf.dev/agent: mutate` unless they already carry a `zarf.dev/agent` label.
 
 In both policies, a label on the resource always takes priority over a label on its namespace. A resource labeled `zarf.dev/agent: mutate` in a namespace labeled `zarf.dev/agent: ignore` will be mutated, and vice versa.
+
+Argo CD or Flux resources can be excluded from mutation as a group with the `AGENT_MUTATION_EXCLUSIONS` Zarf package variable. The variable accepts a YAML list containing:
+
+- `flux` — excludes GitRepository, OCIRepository, and HelmRepository resources.
+- `argocd` — excludes Application, ApplicationSet, repository and repo-creds Secrets, and AppProject resources.
 
 Zarf will refuse to adopt the Kubernetes [initial namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces) (`default`, `kube-*`, etc...). This is because these namespaces are critical to the operation of the cluster and should not be managed by Zarf.
 

@@ -125,44 +125,6 @@ func TestCheckRemovedFieldsConvertible(t *testing.T) {
 	require.NoError(t, checkRemovedFields(pkg))
 }
 
-func TestDetectAPIVersion(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name    string
-		input   string
-		want    string
-		wantErr bool
-	}{
-		{
-			name:  "explicit v1alpha1",
-			input: "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\n",
-			want:  v1alpha1.APIVersion,
-		},
-		{
-			name:  "explicit v1beta1",
-			input: "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\n",
-			want:  v1beta1.APIVersion,
-		},
-		{
-			name:  "missing apiVersion defaults to v1alpha1",
-			input: "kind: ZarfPackageConfig\nmetadata:\n  name: test\n",
-			want:  v1alpha1.APIVersion,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got, err := detectAPIVersion([]byte(tt.input))
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, tt.want, got)
-		})
-	}
-}
-
 func TestValidateVersionUpgrade(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

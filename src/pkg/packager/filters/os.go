@@ -6,8 +6,6 @@ package filters
 
 import (
 	"errors"
-
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 // ByLocalOS creates a new filter that filters components based on local (runtime) OS.
@@ -24,15 +22,15 @@ type localOSFilter struct {
 var ErrLocalOSRequired = errors.New("localOS is required")
 
 // Apply applies the filter.
-func (f *localOSFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.ZarfComponent, error) {
+func (f *localOSFilter) Apply(pkg PackageView) ([]int, error) {
 	if f.localOS == "" {
 		return nil, ErrLocalOSRequired
 	}
 
-	filtered := []v1alpha1.ZarfComponent{}
-	for _, component := range pkg.Components {
-		if component.Only.LocalOS == "" || component.Only.LocalOS == f.localOS {
-			filtered = append(filtered, component)
+	filtered := []int{}
+	for idx, component := range pkg.Components {
+		if component.OnlyLocalOS == "" || component.OnlyLocalOS == f.localOS {
+			filtered = append(filtered, idx)
 		}
 	}
 	return filtered, nil

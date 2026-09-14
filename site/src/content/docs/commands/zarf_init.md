@@ -74,6 +74,7 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --git-push-username string                Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
       --git-url string                          External git server url to use for this Zarf cluster
   -h, --help                                    help for init
+      --injector-image string                   Image for the injector. This image must be available on every node
       --injector-port int                       The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
@@ -86,7 +87,8 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --registry-push-username string           Username to access to the registry Zarf is configured to use
       --registry-secret string                  Internal registry secret value. Only used when --registry-url is not set.
       --registry-url string                     External registry url address to use for this Zarf cluster
-      --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --retries int                             Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures (default 3)
+      --set-values stringToString               Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
       --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
       --skip-values-schema-validation           Skip validation of package values against the values schema.
       --storage-class string                    Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
@@ -94,6 +96,7 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --timeout duration                        Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+  -v, --values strings                          [beta] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
       --verify verifyMode[=always]              Signature verification mode (always|if-possible|never). (default if-possible)
 ```
 
@@ -107,7 +110,7 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
 ```
 

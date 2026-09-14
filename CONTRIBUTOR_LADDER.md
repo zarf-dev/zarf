@@ -3,6 +3,7 @@
 This document outlines the various contributor roles in the Zarf project, along with their respective prerequisites and responsibilities.
 It also defines the process by which users can change roles.  These roles are progressive, in that responsibilities, prerequisites, and privileges stack.
 
+- [Promotion approval baseline](#promotion-approval-baseline)
 - [Roles](#roles)
   - [Community Participants](#community-participants-aka-zarf-enthusiasts)
   - [Community Members](#community-members)
@@ -10,12 +11,17 @@ It also defines the process by which users can change roles.  These roles are pr
   - [Maintainers](#maintainers)
 - [Inactive members](#inactive-members)
 
+## Promotion approval baseline
+
+Every elevation requires a current Maintainer to explicitly confirm sponsorship and a different current Maintainer to explicitly approve the elevation, both documented on the nomination issue.
+
+This requirement ensures that at least two Maintainers are involved in every elevation.
+
 ## Roles
 
 ### Community Participants AKA Zarf Enthusiasts
 
-Community participants engage with Zarf, 
-contributing their time and energy in discussions or just generally helping out.  Additionally, community participants participate in [Zarf community meetings](https://github.com/zarf-dev/zarf/issues/2613).
+Community participants engage with Zarf, contributing their time and energy in discussions or just generally helping out.  Additionally, community participants participate in [Zarf community meetings](https://github.com/zarf-dev/zarf/issues/2613).
 
 #### Prerequisites
 
@@ -29,7 +35,7 @@ contributing their time and energy in discussions or just generally helping out.
 ### Community Members
 
 Community members are active **contributors** in the community. They help advance the Zarf project through commits, issues, and pull requests.
-Members partipate through Github teams and pre-submit tests run automatically for their PRs.  Community members are expected to be active contributors in the community.
+Members participate through Github teams and pre-submit tests run automatically for their PRs.  Community members are expected to be active contributors in the community.
 
 **Defined by:** Member of the Zarf GitHub "Community Member" team.
 
@@ -57,13 +63,11 @@ Members partipate through Github teams and pre-submit tests run automatically fo
 
 #### Promotion process
 
-- Sponsored by 1 or more maintainers. **Note the following requirements for sponsors**:
-  - Sponsors must have interactions with the prospective Member – e.g. 
-    code/design/proposal review, coordinating on issues, etc.
-- Open an issue in the project's repository
-  - Ensure your sponsors are `@mentioned`
-  - Describe and/or link to all your relevant contributions to the project
-  - Sponsoring reviewers must comment on the issue/PR confirming their sponsorship
+- Meet the [Promotion approval baseline](#promotion-approval-baseline). The sponsoring Maintainer must have interactions with the prospective Member, such as code, design, or proposal review, or coordinating on issues.
+- Open an issue in the project's repository.
+  - Ensure the sponsoring and approving Maintainers are `@mentioned`.
+  - Describe and/or link to all relevant contributions to the project.
+  - The sponsor and approving Maintainer must comment on the issue confirming their sponsorship and approval, respectively.
 
 ### Reviewers
 
@@ -82,7 +86,7 @@ Reviewers have a strong and active track record of contribution to the Zarf proj
 
 #### Responsibilities
 
-- Commits to being an active contributor and reviewer as part of the Zarf project.  'Active' is defined as six PRs or PR reviews (or mix thereof) in **six months**, 
+- Commits to being an active contributor and reviewer as part of the Zarf project.  'Active' is defined as six PRs or PR reviews (or mix thereof) in **six months**,
 as measured by [Zarf Contributor Insights](https://github.com/zarf-dev/zarf/graphs/contributors) and [LFX Insights](https://insights.linuxfoundation.org/project/zarf/contributors?timeRange=alltime).
 - Is supportive of new and occasional contributors and helps get useful PRs in shape to commit.
 
@@ -92,10 +96,9 @@ as measured by [Zarf Contributor Insights](https://github.com/zarf-dev/zarf/grap
 
 #### Promotion process
 
-- Nominated by a maintainer or may self-nominate
-  - In case of self-nomination, sponsor must comment approval on the PR
-- Sponsored by a maintainer, with no objections from other maintainers
-- Completed by addition to Zarf Reviewer group
+- May self-nominate or be nominated by a Maintainer.
+- Meet the [Promotion approval baseline](#promotion-approval-baseline).
+- Completed by addition to Zarf Reviewer group.
 
 
 ### Maintainers
@@ -142,14 +145,12 @@ approval is focused on holistic acceptance of a contribution including:
 
 #### Promotion process
 - Sponsored by a maintainer or [Technical Steering Committee (TSC)](https://github.com/zarf-dev/zarf/blob/main/CONTRIBUTING.md#technical-steering-committee) members.
-  - With no objections from other maintainers
   - With no objections from other TSC members.
   - Done through pull request to update the CODEOWNERS file
-- May self-nominate or be nominated by a maintainer
-  - In case of self-nomination, sponsor must comment approval on the PR
+- May self-nominate or be nominated by a maintainer.
+- Meet the [Promotion approval baseline](#promotion-approval-baseline).
 
 Nominate by opening a PR against the Zarf repository, which adds their GitHub username to the OWNERS file for one or more directories.
-Two maintainers must approve the PR.
 
 ## Inactive members
 A core principle in maintaining a healthy community is encouraging active participation.

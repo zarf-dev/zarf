@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -241,17 +242,25 @@ func externalRegistryState(pullPassword string) *state.State {
 	}
 }
 
-func loadRegistryPullPassword(ctx context.Context, t *testing.T, c *cluster.Cluster) string {
-	t.Helper()
-	s, err := c.LoadState(ctx)
-	require.NoError(t, err)
-	return s.RegistryInfo.PullPassword
+func internalRegistryState(pullPassword string) *state.State {
+	return &state.State{
+		RegistryInfo: state.RegistryInfo{
+			RegistryMode: state.RegistryModeNodePort,
+			Address:      "127.0.0.1:31999",
+			Port:         31999,
+			NodePort:     31999,
+			PullUsername: "pull-user",
+			PullPassword: pullPassword,
+			PushUsername: "push-user",
+			PushPassword: "push-password",
+		},
+	}
 }
 
 func TestUpdateRegistryCredsApplyState(t *testing.T) {
 	t.Parallel()
 
-	t.Run("external registry updates secrets and state", func(t *testing.T) {
+	t.Run("external to external updates secrets and state", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
 		oldState := externalRegistryState("old-pull-password")
@@ -259,29 +268,28 @@ func TestUpdateRegistryCredsApplyState(t *testing.T) {
 		c := seedCredsCluster(ctx, t, oldState, config.ZarfImagePullSecretName)
 
 		o := &updateRegistryCredsOptions{confirm: true}
-		require.NoError(t, o.applyState(ctx, c, newState))
+		require.NoError(t, o.applyState(ctx, c, newState, false))
 
 		imageSecret, err := c.Clientset.CoreV1().Secrets("test").Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Contains(t, string(imageSecret.Data[".dockerconfigjson"]), registryAuth("pull-user", "new-pull-password"))
-		require.Equal(t, "new-pull-password", loadRegistryPullPassword(ctx, t, c))
+		persistedState := loadRegistryState(ctx, t, c)
+		require.Equal(t, state.RegistryModeExternal, persistedState.RegistryInfo.RegistryMode)
+		require.Equal(t, "new-pull-password", persistedState.RegistryInfo.PullPassword)
 	})
 
-	t.Run("save failure rolls back to previous credentials", func(t *testing.T) {
+	t.Run("internal to external save failure rolls back without updating the internal registry", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
-		oldState := externalRegistryState("old-pull-password")
+		oldState := internalRegistryState("old-pull-password")
 		newState := externalRegistryState("new-pull-password")
 		c := seedCredsCluster(ctx, t, oldState, config.ZarfImagePullSecretName)
-
-		// Fail only the first attempt to persist state so the forward pass fails after the image
-		// pull secrets have already been rewritten, then let the rollback's save succeed.
 		failFirstStateSave(t, c)
 
 		o := &updateRegistryCredsOptions{confirm: true}
 		err := runWithRollback(ctx, "registry",
-			func() error { return o.applyState(ctx, c, newState) },
-			func() error { return o.applyState(ctx, c, oldState) },
+			func() error { return o.applyState(ctx, c, newState, false) },
+			func() error { return o.applyState(ctx, c, oldState, false) },
 		)
 		require.ErrorContains(t, err, "was rolled back to the previous credentials")
 
@@ -290,7 +298,136 @@ func TestUpdateRegistryCredsApplyState(t *testing.T) {
 		dockerConfig := string(imageSecret.Data[".dockerconfigjson"])
 		require.Contains(t, dockerConfig, registryAuth("pull-user", "old-pull-password"))
 		require.NotContains(t, dockerConfig, registryAuth("pull-user", "new-pull-password"))
-		require.Equal(t, "old-pull-password", loadRegistryPullPassword(ctx, t, c))
+		require.Equal(t, state.RegistryModeNodePort, loadRegistryState(ctx, t, c).RegistryInfo.RegistryMode)
+	})
+}
+
+func loadRegistryState(ctx context.Context, t *testing.T, c *cluster.Cluster) *state.State {
+	t.Helper()
+	s, err := c.LoadState(ctx)
+	require.NoError(t, err)
+	return s
+}
+
+func TestResolveRegistryUpdate(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	registryService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: cluster.ZarfRegistryName, Namespace: state.ZarfNamespaceName},
+		Spec: corev1.ServiceSpec{
+			Type:  corev1.ServiceTypeNodePort,
+			Ports: []corev1.ServicePort{{Port: cluster.ZarfRegistryPort, NodePort: 31999}},
+		},
+	}
+	c := &cluster.Cluster{Clientset: fake.NewClientset(registryService)}
+
+	t.Run("does nothing when the URL is unchanged", func(t *testing.T) {
+		given := state.RegistryInfo{PullUsername: "pull-user"}
+		resolved, err := resolveRegistryUpdate(ctx, c, state.RegistryInfo{}, given, false)
+		require.NoError(t, err)
+		require.Equal(t, given, resolved)
+	})
+
+	t.Run("rejects an empty URL", func(t *testing.T) {
+		_, err := resolveRegistryUpdate(ctx, c, state.RegistryInfo{}, state.RegistryInfo{}, true)
+		require.EqualError(t, err, "--registry-url cannot be explicitly empty")
+	})
+
+	for _, address := range []string{"http://localhost:31999", "https://registry.example.com"} {
+		t.Run("rejects URL scheme "+address, func(t *testing.T) {
+			_, err := resolveRegistryUpdate(ctx, c, state.RegistryInfo{}, state.RegistryInfo{Address: address}, true)
+			require.EqualError(t, err, "--registry-url must be a valid OCI registry address without a URL scheme")
+		})
+	}
+
+	t.Run("resolves mode and port while preserving credentials", func(t *testing.T) {
+		given := state.RegistryInfo{
+			Address:      "localhost:31999",
+			PullUsername: "pull-user",
+			PullPassword: "pull-password",
+		}
+		resolved, err := resolveRegistryUpdate(ctx, c, state.RegistryInfo{RegistryMode: state.RegistryModeExternal}, given, true)
+		require.NoError(t, err)
+		require.Equal(t, state.RegistryModeNodePort, resolved.RegistryMode)
+		require.Equal(t, 31999, resolved.Port)
+		require.Equal(t, 31999, resolved.NodePort) //nolint:staticcheck // verify backwards compatibility sync
+		require.Equal(t, state.MTLSStrategyNone, resolved.MTLSStrategy)
+		require.Equal(t, given.PullUsername, resolved.PullUsername)
+		require.Equal(t, given.PullPassword, resolved.PullPassword)
+	})
+
+	t.Run("resolves proxy access with managed mTLS", func(t *testing.T) {
+		proxyService := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{Name: cluster.ZarfRegistryName, Namespace: state.ZarfNamespaceName},
+			Spec: corev1.ServiceSpec{
+				Type:  corev1.ServiceTypeClusterIP,
+				Ports: []corev1.ServicePort{{Port: cluster.ZarfRegistryPort}},
+			},
+		}
+		proxy := &appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{Name: "zarf-registry-proxy", Namespace: state.ZarfNamespaceName},
+			Spec: appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{
+				HostNetwork: true,
+				Containers: []corev1.Container{{Ports: []corev1.ContainerPort{{
+					ContainerPort: 5000,
+				}}}},
+			}}},
+		}
+		proxyCluster := &cluster.Cluster{Clientset: fake.NewClientset(proxyService, proxy)}
+
+		resolved, err := resolveRegistryUpdate(ctx, proxyCluster,
+			state.RegistryInfo{RegistryMode: state.RegistryModeExternal},
+			state.RegistryInfo{Address: "localhost:5000"},
+			true,
+		)
+		require.NoError(t, err)
+		require.Equal(t, state.RegistryModeProxy, resolved.RegistryMode)
+		require.Equal(t, 5000, resolved.Port)
+		require.Equal(t, 5000, resolved.NodePort) //nolint:staticcheck // verify backwards compatibility sync
+		require.Equal(t, state.MTLSStrategyZarfManaged, resolved.MTLSStrategy)
+	})
+
+	t.Run("internal to external requires push credentials", func(t *testing.T) {
+		_, err := resolveRegistryUpdate(ctx, c,
+			state.RegistryInfo{RegistryMode: state.RegistryModeNodePort},
+			state.RegistryInfo{Address: "localhost:31777"},
+			true,
+		)
+		require.EqualError(t, err, "--registry-push-username and --registry-push-password are required when switching to an external registry")
+	})
+
+	t.Run("internal to external defaults pull credentials to push credentials", func(t *testing.T) {
+		given := state.RegistryInfo{
+			Address:      "localhost:31777",
+			PushUsername: "external-user",
+			PushPassword: "external-password",
+		}
+		resolved, err := resolveRegistryUpdate(ctx, c,
+			state.RegistryInfo{RegistryMode: state.RegistryModeNodePort},
+			given,
+			true,
+		)
+		require.NoError(t, err)
+		require.Equal(t, state.RegistryModeExternal, resolved.RegistryMode)
+		require.Zero(t, resolved.Port)
+		require.Zero(t, resolved.NodePort) //nolint:staticcheck // verify backwards compatibility sync
+		require.Equal(t, state.MTLSStrategyNone, resolved.MTLSStrategy)
+		require.Equal(t, given.PushUsername, resolved.PullUsername)
+		require.Equal(t, given.PushPassword, resolved.PullPassword)
+	})
+
+	t.Run("internal to external rejects incomplete pull credentials", func(t *testing.T) {
+		_, err := resolveRegistryUpdate(ctx, c,
+			state.RegistryInfo{RegistryMode: state.RegistryModeNodePort},
+			state.RegistryInfo{
+				Address:      "localhost:31777",
+				PushUsername: "external-user",
+				PushPassword: "external-password",
+				PullUsername: "pull-user",
+			},
+			true,
+		)
+		require.EqualError(t, err, "--registry-pull-username and --registry-pull-password must be provided together")
 	})
 }
 

@@ -26,7 +26,7 @@ zarf package mirror-resources [ PACKAGE_SOURCE ] [flags]
 # Mirror a local package to internal Zarf resources (uses Zarf state if available)
 $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Mirror a package from an OCI registry (requires oci:// scheme)
+# Mirror a package from an OCI registry (oci:// prefix optional)
 $ zarf package mirror-resources oci://ghcr.io/my-org/my-package:1.0.0
 
 # Mirror a local package to external resources
@@ -74,7 +74,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
       --registry-push-username string           Username to access to the registry Zarf is configured to use (default "zarf-push")
       --registry-url string                     External registry url address to use for this Zarf cluster
       --repos                                   mirror only the git repositories
-      --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --retries int                             Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures (default 3)
       --shasum string                           Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
@@ -91,7 +91,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
 ```
 

@@ -224,7 +224,7 @@ func actionsToGeneric(a v1alpha1.ZarfComponentActions) types.ComponentActions {
 }
 
 func actionSetToGeneric(s v1alpha1.ZarfComponentActionSet) types.ComponentActionSet {
-	defaults := types.ComponentActionDefaults{
+	defaults := &types.ComponentActionDefaults{
 		Silent:          s.Defaults.Mute,
 		MaxTotalSeconds: int32(s.Defaults.MaxTotalSeconds),
 		Retries:         int32(s.Defaults.MaxRetries),
@@ -613,7 +613,7 @@ func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 				if ch.OCI.Ref.Tag != "" {
 					ac.Version = ch.OCI.Ref.Tag
 				} else if ch.OCI.Ref.Digest != "" {
-					ac.Version = ch.OCI.Ref.Digest
+					ac.URL = strings.TrimSuffix(ch.OCI.URL, "/") + "@" + ch.OCI.Ref.Digest
 				}
 			} else if ac.Version == "" {
 				ac.Version = ch.OCI.Version
@@ -657,17 +657,20 @@ func actionsFromGeneric(a types.ComponentActions) v1alpha1.ZarfComponentActions 
 }
 
 func actionSetFromGeneric(s types.ComponentActionSet) v1alpha1.ZarfComponentActionSet {
-	defaults := v1alpha1.ZarfComponentActionDefaults{
-		Mute:            s.Defaults.Silent,
-		MaxTotalSeconds: int(s.Defaults.MaxTotalSeconds),
-		MaxRetries:      int(s.Defaults.Retries),
-		Dir:             s.Defaults.Dir,
-		Env:             s.Defaults.Env,
-		Shell: v1alpha1.Shell{
-			Windows: s.Defaults.Shell.Windows,
-			Linux:   s.Defaults.Shell.Linux,
-			Darwin:  s.Defaults.Shell.Darwin,
-		},
+	defaults := v1alpha1.ZarfComponentActionDefaults{}
+	if s.Defaults != nil {
+		defaults = v1alpha1.ZarfComponentActionDefaults{
+			Mute:            s.Defaults.Silent,
+			MaxTotalSeconds: int(s.Defaults.MaxTotalSeconds),
+			MaxRetries:      int(s.Defaults.Retries),
+			Dir:             s.Defaults.Dir,
+			Env:             s.Defaults.Env,
+			Shell: v1alpha1.Shell{
+				Windows: s.Defaults.Shell.Windows,
+				Linux:   s.Defaults.Shell.Linux,
+				Darwin:  s.Defaults.Shell.Darwin,
+			},
+		}
 	}
 
 	return v1alpha1.ZarfComponentActionSet{

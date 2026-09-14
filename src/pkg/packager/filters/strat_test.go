@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
@@ -44,7 +45,8 @@ func TestCombine(t *testing.T) {
 		},
 	}
 
-	result, err := combo.Apply(pkg)
+	indices, err := combo.Apply(packageView(api.NewPackageDefinitionFromV1alpha1(pkg)))
+	result := selectV1alpha1Components(pkg, indices)
 	require.NoError(t, err)
 	require.Equal(t, expected, result)
 
@@ -54,6 +56,21 @@ func TestCombine(t *testing.T) {
 		Name:            "group with no default",
 		DeprecatedGroup: "g1",
 	})
-	_, err = combo.Apply(pkg)
+	_, err = combo.Apply(packageView(api.NewPackageDefinitionFromV1alpha1(pkg)))
 	require.Error(t, err)
+}
+
+func TestApply(t *testing.T) {
+	t.Parallel()
+
+	definition := api.NewPackageDefinitionFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{
+		{Name: "keep"},
+		{Name: "discard", Only: v1alpha1.ZarfComponentOnlyTarget{LocalOS: "windows"}},
+	}})
+
+	filtered, err := Apply(definition, ByLocalOS("linux"))
+
+	require.NoError(t, err)
+	require.Len(t, definition.AsV1alpha1().Components, 2)
+	require.Equal(t, []v1alpha1.ZarfComponent{{Name: "keep"}}, filtered.AsV1alpha1().Components)
 }

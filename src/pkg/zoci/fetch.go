@@ -26,7 +26,11 @@ func FetchZarfYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetc
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	return pkgcfg.ParseMultiDoc(ctx, b)
+	defined, err := pkgcfg.ParseMultiDoc(ctx, b)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	return defined.AsV1alpha1(), nil
 }
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.

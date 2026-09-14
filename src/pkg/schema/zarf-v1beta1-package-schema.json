@@ -577,6 +577,20 @@
     "ComponentImport": {
       "additionalProperties": false,
       "description": "ComponentImport is a reference to imported Zarf component configs.",
+      "oneOf": [
+        {
+          "required": [
+            "local"
+          ],
+          "title": "local"
+        },
+        {
+          "required": [
+            "remote"
+          ],
+          "title": "remote"
+        }
+      ],
       "patternProperties": {
         "^x-": {}
       },
@@ -721,6 +735,26 @@
     "GitRef": {
       "additionalProperties": false,
       "description": "GitRef selects a single Git reference.",
+      "oneOf": [
+        {
+          "required": [
+            "tag"
+          ],
+          "title": "tag"
+        },
+        {
+          "required": [
+            "branch"
+          ],
+          "title": "branch"
+        },
+        {
+          "required": [
+            "commit"
+          ],
+          "title": "commit"
+        }
+      ],
       "patternProperties": {
         "^x-": {}
       },
@@ -730,7 +764,8 @@
           "type": "string"
         },
         "commit": {
-          "description": "The Git commit SHA.",
+          "description": "The Git commit SHA-1.",
+          "pattern": "^[0-9A-Fa-f]{40}$",
           "type": "string"
         },
         "tag": {
@@ -939,6 +974,20 @@
     "OCIRef": {
       "additionalProperties": false,
       "description": "OCIRef selects a single OCI reference.",
+      "oneOf": [
+        {
+          "required": [
+            "tag"
+          ],
+          "title": "tag"
+        },
+        {
+          "required": [
+            "digest"
+          ],
+          "title": "digest"
+        }
+      ],
       "patternProperties": {
         "^x-": {}
       },
@@ -1038,6 +1087,7 @@
         },
         "url": {
           "description": "The URL of the git repository.",
+          "format": "uri",
           "type": "string"
         }
       },

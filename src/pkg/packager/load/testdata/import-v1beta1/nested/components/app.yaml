@@ -1,0 +1,17 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component:
+  import:
+    local:
+      - path: child/child.yaml
+  charts:
+    - name: app-chart
+      namespace: app
+      local:
+        path: app-chart
+values:
+  files:
+    - app-values.yaml
+  schema: app.schema.json

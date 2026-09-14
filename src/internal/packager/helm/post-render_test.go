@@ -167,7 +167,11 @@ func TestRendererShouldAddAgentIgnoreLabels(t *testing.T) {
 			renderer: renderer{
 				connectedDeploy: true,
 				state: &state.State{
-					AgentTLS: pki.GeneratedPKI{Cert: []byte("cert")},
+					AgentInfo: state.AgentInfo{TLS: pki.GeneratedPKI{
+						CA:   []byte("ca"),
+						Cert: []byte("cert"),
+						Key:  []byte("key"),
+					}},
 				},
 			},
 			expected: true,
@@ -184,7 +188,7 @@ func TestRendererShouldAddAgentIgnoreLabels(t *testing.T) {
 			name: "airgap deploy with configured agent",
 			renderer: renderer{
 				state: &state.State{
-					AgentTLS: pki.GeneratedPKI{Cert: []byte("cert")},
+					AgentInfo: state.AgentInfo{TLS: pki.GeneratedPKI{Cert: []byte("cert")}},
 				},
 			},
 			expected: false,

@@ -69,7 +69,7 @@ func TestFlavorArchFiltering(t *testing.T) {
 			pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{Filter: tt.Filter})
 			require.NoError(t, err)
 			compIDs := []string{}
-			for _, comp := range pkgLayout.Pkg.Components {
+			for _, comp := range pkgLayout.AsV1alpha1().Components {
 				compIDs = append(compIDs, comp.Name+"-"+comp.Description)
 			}
 			require.ElementsMatch(t, compIDs, tt.expectedIDs)

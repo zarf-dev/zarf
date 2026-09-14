@@ -1,9 +1,8 @@
 # go-getter
 
-[![CircleCI](https://circleci.com/gh/hashicorp/go-getter/tree/main.svg?style=svg)][circleci]
+[![GitHub Actions](https://github.com/hashicorp/go-getter/actions/workflows/go-getter.yml/badge.svg?branch=main)][github-actions]
 [![Go Documentation](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)][godocs]
 
-[circleci]: https://circleci.com/gh/hashicorp/go-getter/tree/main
 [godocs]: http://godoc.org/github.com/hashicorp/go-getter
 
 go-getter is a library for Go (golang) for downloading files or directories
@@ -374,7 +373,7 @@ In order to access to GCS, authentication credentials should be provided. More i
 
 #### GCS Testing
 
-The tests for `get_gcs.go` require you to have GCP credentials set in your environment.  These credentials can have any level of permissions to any project, they just need to exist.  This means setting `GOOGLE_APPLICATION_CREDENTIALS="~/path/to/credentials.json"` or `GOOGLE_CREDENTIALS="{stringified-credentials-json}"`.  Due to this configuration, `get_gcs_test.go` will fail for external contributors in CircleCI.
+The tests for `get_gcs.go` require you to have GCP credentials set in your environment.  These credentials can have any level of permissions to any project, they just need to exist.  This means setting `GOOGLE_APPLICATION_CREDENTIALS="~/path/to/credentials.json"` or `GOOGLE_CREDENTIALS="{stringified-credentials-json}"`.  Due to this configuration, `get_gcs_test.go` will fail for external contributors in GitHub Actions.
 
 
 ### Security Options
@@ -450,4 +449,3 @@ var hgGetter = &getter.HgGetter{
     Timeout: 5 * time.Minute,
 }
 ```
-

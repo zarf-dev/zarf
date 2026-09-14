@@ -2275,6 +2275,26 @@
                         "ref": {
                           "additionalProperties": false,
                           "description": "The Git reference to check out. Required for charts.",
+                          "oneOf": [
+                            {
+                              "required": [
+                                "tag"
+                              ],
+                              "title": "tag"
+                            },
+                            {
+                              "required": [
+                                "branch"
+                              ],
+                              "title": "branch"
+                            },
+                            {
+                              "required": [
+                                "commit"
+                              ],
+                              "title": "commit"
+                            }
+                          ],
                           "patternProperties": {
                             "^x-": {}
                           },
@@ -2284,7 +2304,8 @@
                               "type": "string"
                             },
                             "commit": {
-                              "description": "The Git commit SHA.",
+                              "description": "The Git commit SHA-1.",
+                              "pattern": "^[0-9A-Fa-f]{40}$",
                               "type": "string"
                             },
                             "tag": {
@@ -2366,6 +2387,20 @@
                         "ref": {
                           "additionalProperties": false,
                           "description": "The OCI reference to pull. Exactly one of Ref.Tag or Ref.Digest must be set.",
+                          "oneOf": [
+                            {
+                              "required": [
+                                "tag"
+                              ],
+                              "title": "tag"
+                            },
+                            {
+                              "required": [
+                                "digest"
+                              ],
+                              "title": "digest"
+                            }
+                          ],
                           "patternProperties": {
                             "^x-": {}
                           },
@@ -2599,6 +2634,20 @@
               "import": {
                 "additionalProperties": false,
                 "description": "Import a component from another Zarf component config.",
+                "oneOf": [
+                  {
+                    "required": [
+                      "local"
+                    ],
+                    "title": "local"
+                  },
+                  {
+                    "required": [
+                      "remote"
+                    ],
+                    "title": "remote"
+                  }
+                ],
                 "patternProperties": {
                   "^x-": {}
                 },
@@ -2745,6 +2794,26 @@
                     "ref": {
                       "additionalProperties": false,
                       "description": "The Git reference to mirror. Optional; when unset, all branches and tags are mirrored.",
+                      "oneOf": [
+                        {
+                          "required": [
+                            "tag"
+                          ],
+                          "title": "tag"
+                        },
+                        {
+                          "required": [
+                            "branch"
+                          ],
+                          "title": "branch"
+                        },
+                        {
+                          "required": [
+                            "commit"
+                          ],
+                          "title": "commit"
+                        }
+                      ],
                       "patternProperties": {
                         "^x-": {}
                       },
@@ -2754,7 +2823,8 @@
                           "type": "string"
                         },
                         "commit": {
-                          "description": "The Git commit SHA.",
+                          "description": "The Git commit SHA-1.",
+                          "pattern": "^[0-9A-Fa-f]{40}$",
                           "type": "string"
                         },
                         "tag": {
@@ -2766,6 +2836,7 @@
                     },
                     "url": {
                       "description": "The URL of the git repository.",
+                      "format": "uri",
                       "type": "string"
                     }
                   },
@@ -3166,6 +3237,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -3422,6 +3494,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -3755,6 +3828,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -4011,6 +4085,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -4277,6 +4352,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -4533,6 +4609,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -4866,6 +4943,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -5122,6 +5200,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -5388,6 +5467,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -5644,6 +5724,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -5977,6 +6058,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -6233,6 +6315,7 @@
                             "type": "array"
                           },
                           "setVariable": {
+                            "deprecated": true,
                             "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
                             "pattern": "^[A-Z0-9_]+$",
                             "type": "string"
@@ -6597,6 +6680,7 @@
               "type": "array"
             },
             "dataInjections": {
+              "deprecated": true,
               "description": "[Deprecated] Datasets to inject into a container in the target cluster.",
               "items": {
                 "additionalProperties": false,
@@ -6715,6 +6799,7 @@
               "type": "array"
             },
             "group": {
+              "deprecated": true,
               "description": "[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.",
               "type": "string"
             },
@@ -6948,6 +7033,7 @@
             },
             "scripts": {
               "additionalProperties": false,
+              "deprecated": true,
               "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0.",
               "patternProperties": {
                 "^x-": {}
@@ -7136,7 +7222,8 @@
             "type": "string"
           },
           "yolo": {
-            "description": "Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.",
+            "deprecated": true,
+            "description": "[Deprecated] Yaml OnLy Online (YOLO) enables deploying a Zarf package without first running zarf init against the cluster. Use --connected when deploying instead.",
             "type": "boolean"
           }
         },

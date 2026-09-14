@@ -26,7 +26,7 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
 # Deploy a local package tarball
 $ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst --confirm
 
-# Deploy a package from an OCI registry (requires oci:// scheme)
+# Deploy a package from an OCI registry (oci:// prefix optional)
 $ zarf package deploy oci://ghcr.io/my-org/my-package:1.0.0 --confirm
 
 # Deploy a package from an HTTPS URL (--shasum required for integrity verification)
@@ -53,7 +53,7 @@ $ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst.part000 --confirm
   -k, --key string                              Path to public key file for validating signed packages
   -n, --namespace string                        [Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined.
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --retries int                             Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures (default 3)
       --set-values stringToString               Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
       --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
       --shasum string                           Shasum of the package to deploy. Required if deploying a remote https package.
@@ -76,7 +76,7 @@ $ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst.part000 --confirm
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
 ```
 

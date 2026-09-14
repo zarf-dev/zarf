@@ -33,8 +33,8 @@ func TestComposabilityExample(t *testing.T) {
 	pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
-	require.Len(t, pkgLayout.Pkg.Components, 2)
-	b, err := goyaml.Marshal(pkgLayout.Pkg.Components)
+	require.Len(t, pkgLayout.AsV1alpha1().Components, 2)
+	b, err := goyaml.Marshal(pkgLayout.AsV1alpha1().Components)
 	require.NoError(t, err)
 
 	absComposeExample, err := filepath.Abs(composeExample)
@@ -89,8 +89,8 @@ func TestFullComposability(t *testing.T) {
 	pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
-	require.Len(t, pkgLayout.Pkg.Components, 1)
-	b, err := goyaml.Marshal(pkgLayout.Pkg.Components)
+	require.Len(t, pkgLayout.AsV1alpha1().Components, 1)
+	b, err := goyaml.Marshal(pkgLayout.AsV1alpha1().Components)
 	require.NoError(t, err)
 
 	expectedYaml := `- name: test-compose-package

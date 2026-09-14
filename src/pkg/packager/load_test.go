@@ -49,9 +49,9 @@ func TestLoadPackage(t *testing.T) {
 				pkgLayout, err := LoadPackage(ctx, tt.source, opt)
 				require.NoError(t, err)
 
-				require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
-				require.Equal(t, "0.0.1", pkgLayout.Pkg.Metadata.Version)
-				require.Len(t, pkgLayout.Pkg.Components, 1)
+				require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
+				require.Equal(t, "0.0.1", pkgLayout.AsV1alpha1().Metadata.Version)
+				require.Len(t, pkgLayout.AsV1alpha1().Components, 1)
 			}
 
 			opt := LoadOptions{
@@ -80,7 +80,7 @@ func TestLoadPackage(t *testing.T) {
 		}
 		pkgLayout, err := LoadPackage(ctx, tarPath, opt)
 		require.NoError(t, err)
-		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+		require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
 
 		// VerifyIfPossible with no material should warn but continue on unsigned package
 		opt = LoadOptions{
@@ -89,7 +89,7 @@ func TestLoadPackage(t *testing.T) {
 		}
 		pkgLayout, err = LoadPackage(ctx, tarPath, opt)
 		require.NoError(t, err)
-		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+		require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
 
 		// VerifyIfPossible with a key against an unsigned package is always fatal
 		opt = LoadOptions{
@@ -230,14 +230,14 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	pkgPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
 	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, pkgPath, "", LoadOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "test", pkg.Metadata.Name)
+	require.Equal(t, "test", pkg.AsV1alpha1().Metadata.Name)
 
 	c := &cluster.Cluster{
 		Clientset: fake.NewClientset(),
 	}
-	_, err = c.RecordPackageDeployment(ctx, pkg, "sha256:abcdeadbeef", nil, 1)
+	_, err = c.RecordPackageDeployment(ctx, pkg.AsV1alpha1(), "sha256:abcdeadbeef", nil, 1)
 	require.NoError(t, err)
 	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", "", LoadOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "test", pkg.Metadata.Name)
+	require.Equal(t, "test", pkg.AsV1alpha1().Metadata.Name)
 }

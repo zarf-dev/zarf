@@ -254,7 +254,9 @@ func verifyEnvelopeWithArtifacts(verifier signature.Verifier, envelope EnvelopeC
 	if err := verifyEnvelope(verifier, envelope); err != nil {
 		return err
 	}
-	statement, err := envelope.Statement()
+	// Verification only consumes the statement's subjects; summarizing
+	// avoids materializing the (potentially very large) predicate.
+	statement, err := summarizeStatement(envelope)
 	if err != nil {
 		return fmt.Errorf("could not verify artifact: unable to extract statement from envelope: %w", err)
 	}
@@ -336,7 +338,9 @@ func verifyEnvelopeWithArtifactDigests(verifier signature.Verifier, envelope Env
 	if err := verifyEnvelope(verifier, envelope); err != nil {
 		return err
 	}
-	statement, err := envelope.Statement()
+	// Verification only consumes the statement's subjects; summarizing
+	// avoids materializing the (potentially very large) predicate.
+	statement, err := summarizeStatement(envelope)
 	if err != nil {
 		return fmt.Errorf("could not verify artifact: unable to extract statement from envelope: %w", err)
 	}

@@ -85,11 +85,11 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(newRegistryPruneCommand())
 	cmd.AddCommand(newRegistryLoginCommand())
 	cmd.AddCommand(newRegistryLogoutCommand())
-	cmd.AddCommand(newRegistryCopyCommand(&craneOptions))
+	cmd.AddCommand(craneCmd.NewCmdCopy(&craneOptions))
 	cmd.AddCommand(newRegistryCatalogCommand(&craneOptions))
+	cmd.AddCommand(newRegistryListCommand())
 
 	// TODO(soltysh): consider splitting craneOptions to be per command
-	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdList, &craneOptions, lang.CmdToolsRegistryListExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPush, &craneOptions, lang.CmdToolsRegistryPushExample, 1))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
@@ -227,23 +227,6 @@ func newRegistryLoginCommand() *cobra.Command {
 		return nil
 	}
 	return craneCmd
-}
-
-func newRegistryCopyCommand(craneOpts *[]crane.Option) *cobra.Command {
-	cmd := craneCmd.NewCmdCopy(craneOpts)
-	// Store crane's original PreRunE if it exists
-	originalPreRunE := cmd.PreRunE
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		// No package information is available so do not pass in a list of architectures
-		*craneOpts = append(*craneOpts, crane.WithPlatform(nil))
-		// return the original pre run
-		if originalPreRunE != nil {
-			return originalPreRunE(cmd, args)
-		}
-		return nil
-	}
-
-	return cmd
 }
 
 type registryCatalogOptions struct {

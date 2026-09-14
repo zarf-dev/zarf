@@ -80,6 +80,12 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	// Inspect the published package.
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", "oci://"+ref+"/helm-charts:0.0.1", "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
+
+	// Copy an OCI package without its optional oci:// source or destination prefix. The source tag must be preserved.
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", ref+"/helm-charts:0.0.1", ref+"/implicit-source", "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", "oci://"+ref+"/implicit-source/helm-charts:0.0.1", "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
 }
 
 func (suite *PublishDeploySuiteTestSuite) Test_1_Deploy() {

@@ -4,22 +4,42 @@
 package testutil
 
 import (
-	"fmt"
 	"math/rand"
 	"reflect"
+	"strings"
 )
 
-// FillValue recursively populates v with random, non-zero values for round-trip fuzz tests. Struct
-// fields that cannot be set via reflection (unexported) are left zero. Pointers are left nil roughly
-// half the time so both the set and unset states are exercised.
+const (
+	// maxElements specifies maximum number of elements in array/slice
+	maxElements = 10
+	// maxStringLen specifies maximum string length
+	maxStringLen = 20
+
+	// the following unicode range covers:
+	// - Latin-1 Supplement (0x00A0–0x00FF),
+	// - Latin Extended-A (0x0100–0x017F),
+	// - Latin Extended-B (0x0180–0x024F),
+	// - IPA Extensions (0x0250–0x02AF).
+	unicodeRangeLo = 0x00A0
+	unicodeRangeHi = 0x02AF
+)
+
+// FillValue recursively populates v for round-trip fuzz tests. Struct fields that cannot be set via
+// reflection (unexported) are left zero. Pointers are generated as nil, empty, or populated so
+// their presence is tested independently from their contents.
 func FillValue(v reflect.Value, rng *rand.Rand) {
 	switch v.Kind() {
 	case reflect.Pointer:
-		if rng.Intn(2) == 0 {
+		switch rng.Intn(3) {
+		case 0:
 			return
+		case 1:
+			v.Set(reflect.New(v.Type().Elem()))
+			return
+		default:
+			v.Set(reflect.New(v.Type().Elem()))
+			FillValue(v.Elem(), rng)
 		}
-		v.Set(reflect.New(v.Type().Elem()))
-		FillValue(v.Elem(), rng)
 	case reflect.Struct:
 		for i := range v.NumField() {
 			if f := v.Field(i); f.CanSet() {
@@ -27,7 +47,7 @@ func FillValue(v reflect.Value, rng *rand.Rand) {
 			}
 		}
 	case reflect.Slice:
-		n := 1 + rng.Intn(2)
+		n := 1 + rng.Intn(maxElements)
 		s := reflect.MakeSlice(v.Type(), n, n)
 		for i := range n {
 			FillValue(s.Index(i), rng)
@@ -35,7 +55,7 @@ func FillValue(v reflect.Value, rng *rand.Rand) {
 		v.Set(s)
 	case reflect.Map:
 		m := reflect.MakeMap(v.Type())
-		for range 1 + rng.Intn(2) {
+		for range 1 + rng.Intn(maxElements) {
 			key := reflect.New(v.Type().Key()).Elem()
 			FillValue(key, rng)
 			val := reflect.New(v.Type().Elem()).Elem()
@@ -44,14 +64,24 @@ func FillValue(v reflect.Value, rng *rand.Rand) {
 		}
 		v.Set(m)
 	case reflect.String:
-		v.SetString(fmt.Sprintf("s%d", rng.Intn(1<<30)))
+		v.SetString(randString(rng, rng.Intn(maxStringLen)))
 	case reflect.Bool:
 		v.SetBool(rng.Intn(2) == 1)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		v.SetInt(int64(1 + rng.Intn(1000)))
+		v.SetInt(int64(rng.Int31()))
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		v.SetUint(uint64(1 + rng.Intn(1000)))
+		v.SetUint(uint64(rng.Uint32()))
 	case reflect.Float32, reflect.Float64:
-		v.SetFloat(float64(1 + rng.Intn(1000)))
+		v.SetFloat(rng.Float64())
 	}
+}
+
+func randString(rng *rand.Rand, n int) string {
+	var sb strings.Builder
+	span := int(unicodeRangeHi-unicodeRangeLo) + 1
+	for range n {
+		r := unicodeRangeLo + rune(rng.Intn(span))
+		sb.WriteRune(r)
+	}
+	return sb.String()
 }

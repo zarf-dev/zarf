@@ -60,7 +60,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
   -o, --output string                           Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources
       --overwrite                               Overwrite an existing signature if the package is already signed
       --rekor-url string                        Rekor transparency log URL. Override for private Sigstore deployments. (default "https://rekor.sigstore.dev")
-      --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --retries int                             Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures (default 3)
       --signing-key string                      Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)
       --signing-key-pass string                 Password for encrypted private key
       --tlog-upload                             Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (allows for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window).
@@ -80,7 +80,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
 ```
 

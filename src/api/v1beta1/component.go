@@ -10,7 +10,9 @@ type Component struct {
 	// Message to include during package deploy describing the purpose of this component.
 	Description string `json:"description,omitempty"`
 	// Do not install this component unless explicitly requested. Defaults to false, meaning the component is required.
-	Optional      bool `json:"optional,omitempty"`
+	Optional bool `json:"optional,omitempty"`
+	// Filter when this component is included during package creation based on architecture or flavor.
+	Selector      ComponentSelector `json:"selector,omitempty"`
 	ComponentSpec `json:",inline"`
 }
 
@@ -48,9 +50,9 @@ type ComponentSelector struct {
 // ComponentImport is a reference to imported Zarf component configs.
 type ComponentImport struct {
 	// Local file path references to component config files to import.
-	Local []ComponentImportLocal `json:"local,omitempty"`
+	Local []ComponentImportLocal `json:"local,omitempty" jsonschema:"oneof_required=local"`
 	// OCI URL references to remote component config files to import; pulled at create time.
-	Remote []ComponentImportRemote `json:"remote,omitempty"`
+	Remote []ComponentImportRemote `json:"remote,omitempty" jsonschema:"oneof_required=remote"`
 }
 
 // ComponentImportLocal is a local file path reference to a component config.
@@ -180,11 +182,11 @@ type HelmRepositorySource struct {
 // GitRef selects a single Git reference. Exactly one of Tag, Branch, or Commit must be set.
 type GitRef struct {
 	// The Git tag.
-	Tag string `json:"tag,omitempty"`
+	Tag string `json:"tag,omitempty" jsonschema:"oneof_required=tag"`
 	// The Git branch.
-	Branch string `json:"branch,omitempty"`
-	// The Git commit SHA.
-	Commit string `json:"commit,omitempty"`
+	Branch string `json:"branch,omitempty" jsonschema:"oneof_required=branch"`
+	// The Git commit SHA-1.
+	Commit string `json:"commit,omitempty" jsonschema:"oneof_required=commit,pattern=^[0-9A-Fa-f]{40}$"`
 }
 
 // GitSource represents a Helm chart stored in a Git repository.
@@ -206,9 +208,9 @@ type LocalSource struct {
 // OCIRef selects a single OCI reference. Exactly one of Tag or Digest must be set.
 type OCIRef struct {
 	// The OCI tag.
-	Tag string `json:"tag,omitempty"`
+	Tag string `json:"tag,omitempty" jsonschema:"oneof_required=tag"`
 	// The OCI digest, in the form sha256:<sha>.
-	Digest string `json:"digest,omitempty"`
+	Digest string `json:"digest,omitempty" jsonschema:"oneof_required=digest"`
 }
 
 // OCISource represents a Helm chart stored in an OCI registry.
@@ -256,7 +258,7 @@ type ImageArchive struct {
 // Repository defines a git repository to include in the package.
 type Repository struct {
 	// The URL of the git repository.
-	URL string `json:"url"`
+	URL string `json:"url" jsonschema:"format=uri"`
 	// The Git reference to mirror. Optional; when unset, all branches and tags are mirrored.
 	Ref *GitRef `json:"ref,omitempty"`
 }
@@ -286,7 +288,7 @@ type ComponentActions struct {
 // ComponentActionSet is a set of actions to run during a Zarf package operation.
 type ComponentActionSet struct {
 	// Default configuration for all actions in this set.
-	Defaults ComponentActionDefaults `json:"defaults,omitempty"`
+	Defaults *ComponentActionDefaults `json:"defaults,omitempty"`
 	// Actions to run at the start of an operation.
 	Before []ComponentAction `json:"before,omitempty"`
 	// Actions to run at the end of an operation if it succeeds.

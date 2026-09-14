@@ -1,0 +1,9 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: cycle-import
+components:
+  - name: a
+    import:
+      local:
+        - path: a.yaml
