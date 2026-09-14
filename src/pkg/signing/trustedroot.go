@@ -17,7 +17,7 @@ import (
 var embeddedTrustedRoot []byte
 
 // writeEmbeddedTrustedRoot stages the embedded TrustedRoot JSON to a tempfile so
-// cosign's VerifyBlobCmd (which only accepts file paths) can consume it.
+// cosign verification commands, which accept trusted roots as file paths, can consume it.
 // Caller must invoke cleanup when done; cleanup returns the os.Remove error.
 // Will use the os default temporary directory if empty string is supplied
 func writeEmbeddedTrustedRoot(tmpDir string) (string, func() error, error) {

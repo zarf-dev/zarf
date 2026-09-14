@@ -437,6 +437,23 @@ $ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry
 # Publish a v1beta1 component config to a remote registry
 $ zarf component publish monitoring.yaml oci://ghcr.io/my-org/components
 `
+	CmdComponentSignShort   = "Signs an already published Zarf component"
+	CmdComponentSignExample = `
+# Sign a published component with a private key
+$ zarf component sign ghcr.io/my-org/my-component:1.0 --signing-key ./private-key.pem
+
+# Sign a published component using Sigstore keyless signing
+$ zarf component sign ghcr.io/my-org/my-component:1.0 --keyless --confirm
+`
+	CmdComponentVerifyShort   = "Verifies a published Zarf component signature"
+	CmdComponentVerifyLong    = "Verifies the Sigstore signature stored as an OCI referrer of a published Zarf component manifest."
+	CmdComponentVerifyExample = `
+# Verify a published component with a public key
+$ zarf component verify ghcr.io/my-org/my-component:1.0 --key ./public-key.pem
+
+# Verify a keyless signature by its certificate identity
+$ zarf component verify ghcr.io/my-org/my-component:1.0 --certificate-identity signer@example.com
+`
 	CmdPackageSignShort   = "Signs an existing Zarf package"
 	CmdPackageSignLong    = "Signs an existing Zarf package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the zarf.yaml file and does not modify the package checksums."
 	CmdPackageSignExample = `
