@@ -333,6 +333,51 @@ func CosignSignManifestWithOptions(ctx context.Context, manifestRef string, opts
 	return nil
 }
 
+// CosignVerifyManifestWithOptions verifies a manifest signature stored as an
+// OCI referrer. It verifies both the Sigstore signature and the bundle's
+// in-toto subject claim against the resolved manifest digest.
+func CosignVerifyManifestWithOptions(ctx context.Context, manifestRef string, opts VerifyBlobOptions, registryOpts types.RemoteOptions) error {
+	l := logger.From(ctx)
+	if opts.KeyRef != "" {
+		l.Warn("VerifyBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
+		if opts.Key == "" {
+			opts.Key = opts.KeyRef
+		}
+	}
+
+	verifyCmd := &verify.VerifyCommand{
+		RegistryOptions: options.RegistryOptions{
+			AllowHTTPRegistry: registryOpts.PlainHTTP,
+			AllowInsecure:     registryOpts.InsecureSkipTLSVerify,
+		},
+		CertVerifyOptions:     opts.CertVerify,
+		CommonVerifyOptions:   opts.CommonVerifyOptions,
+		CheckClaims:           true,
+		KeyRef:                opts.Key,
+		RekorURL:              opts.Rekor.URL,
+		IgnoreSCT:             opts.CertVerify.IgnoreSCT,
+		UseSignedTimestamps:   opts.CommonVerifyOptions.UseSignedTimestamps,
+		IgnoreTlog:            opts.CommonVerifyOptions.IgnoreTlog,
+		Sk:                    opts.SecurityKey.Use,
+		Slot:                  opts.SecurityKey.Slot,
+		NewBundleFormat:       true,
+		AllowCertificateChain: false,
+	}
+
+	l.Debug("verifying OCI manifest referrer signature", "reference", manifestRef, "key", opts.Key, "sk", opts.SecurityKey.Use)
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer cancel()
+	}
+	if err := verifyCmd.Exec(ctx, []string{manifestRef}); err != nil {
+		return err
+	}
+
+	l.Debug("OCI manifest signature verified successfully", "reference", manifestRef)
+	return nil
+}
+
 // CosignVerifyBlobWithOptions verifies a blob via cosign's VerifyBlobCmd.
 // Mirrors cmd/cosign/cli/verify.go (v3.0.6) VerifyBlob().RunE.
 func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) error {

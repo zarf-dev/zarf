@@ -30,6 +30,7 @@ func newComponentCommand() *cobra.Command {
 	v := getViper()
 	cmd.AddCommand(newComponentPublishCommand(v))
 	cmd.AddCommand(newComponentSignCommand(v))
+	cmd.AddCommand(newComponentVerifyCommand(v))
 	return cmd
 }
 
@@ -136,5 +137,51 @@ func (o *componentSignOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	logger.From(cmd.Context()).Info("component manifest signed successfully", "source", helpers.OCIURLPrefix+componentRef.String())
+	return nil
+}
+
+type componentVerifyOptions struct {
+	packageVerifyFlags
+}
+
+func newComponentVerifyCommand(v *viper.Viper) *cobra.Command {
+	o := &componentVerifyOptions{}
+	cmd := &cobra.Command{
+		Use:     "verify COMPONENT_SOURCE",
+		Aliases: []string{"v"},
+		Args:    cobra.ExactArgs(1),
+		Short:   lang.CmdComponentVerifyShort,
+		Long:    lang.CmdComponentVerifyLong,
+		Example: lang.CmdComponentVerifyExample,
+		RunE:    o.run,
+	}
+
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageVerifyFlagKey)
+	cmd.Flags().AddFlagSet(newKeylessVerifyFlagSet(v, &o.packageVerifyFlags))
+	if err := cmd.Flags().SetAnnotation("key", flagGroupAnnotation, []string{verifyFlagGroupTitle}); err != nil {
+		panic(err)
+	}
+	markVerifyFlagsMutuallyExclusive(cmd)
+
+	return cmd
+}
+
+func (o *componentVerifyOptions) run(cmd *cobra.Command, args []string) error {
+	componentSource := strings.TrimPrefix(args[0], helpers.OCIURLPrefix)
+	componentRef, err := registry.ParseReference(componentSource)
+	if err != nil {
+		return fmt.Errorf("component source must be a published OCI reference: %w", err)
+	}
+	if err := componentRef.Validate(); err != nil {
+		return fmt.Errorf("invalid component source: %w", err)
+	}
+
+	l := logger.From(cmd.Context())
+	l.Info("verifying component manifest signature", "source", helpers.OCIURLPrefix+componentRef.String())
+	if err := signing.CosignVerifyManifestWithOptions(cmd.Context(), componentRef.String(), *o.buildVerifyBlobOptions(cmd, v), defaultRemoteOptions()); err != nil {
+		return fmt.Errorf("component signature verification failed: %w", err)
+	}
+
+	l.Info("component signature verification", "status", "PASSED")
 	return nil
 }

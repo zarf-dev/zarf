@@ -445,6 +445,15 @@ $ zarf component sign ghcr.io/my-org/my-component:1.0 --signing-key ./private-ke
 # Sign a published component using Sigstore keyless signing
 $ zarf component sign ghcr.io/my-org/my-component:1.0 --keyless --confirm
 `
+	CmdComponentVerifyShort   = "Verifies a published Zarf component signature"
+	CmdComponentVerifyLong    = "Verifies the Sigstore signature stored as an OCI referrer of a published Zarf component manifest."
+	CmdComponentVerifyExample = `
+# Verify a published component with a public key
+$ zarf component verify ghcr.io/my-org/my-component:1.0 --key ./public-key.pem
+
+# Verify a keyless signature by its certificate identity
+$ zarf component verify ghcr.io/my-org/my-component:1.0 --certificate-identity signer@example.com
+`
 	CmdPackageSignShort   = "Signs an existing Zarf package"
 	CmdPackageSignLong    = "Signs an existing Zarf package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the zarf.yaml file and does not modify the package checksums."
 	CmdPackageSignExample = `
