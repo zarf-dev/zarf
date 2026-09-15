@@ -438,6 +438,11 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		if err := d.c.SaveState(ctx, d.s); err != nil {
 			return nil, err
 		}
+
+		switch d.s.RegistryInfo.RegistryMode {
+		case state.RegistryModeNodePort, state.RegistryModeProxy:
+			logBootstrapRuntimeDiagnostics(ctx, d.c, state.LocalhostRegistryAddress(d.s.IPFamily, d.s.InjectorInfo.Port))
+		}
 	}
 
 	// Skip image checksum if component is agent.
