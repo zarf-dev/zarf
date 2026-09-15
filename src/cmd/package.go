@@ -1292,9 +1292,10 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 }
 
 type packageListOptions struct {
-	outputFormat outputFormat
-	outputWriter io.Writer
-	cluster      *cluster.Cluster
+	outputFormat      outputFormat
+	outputWriter      io.Writer
+	cluster           *cluster.Cluster
+	namespaceOverride string
 }
 
 func newPackageListOptions() *packageListOptions {
@@ -1309,20 +1310,23 @@ func newPackageListCommand() *cobra.Command {
 	o := newPackageListOptions()
 
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"l", "ls"},
-		Short:   lang.CmdPackageListShort,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		Use:               "list [PACKAGE_NAME]",
+		Aliases:           []string{"l", "ls"},
+		Short:             lang.CmdPackageListShort,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: getPackageCompletionArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			err := o.complete(ctx)
 			if err != nil {
 				return err
 			}
-			return o.run(ctx)
+			return o.run(ctx, args)
 		},
 	}
 
 	cmd.Flags().VarP(&o.outputFormat, "output-format", "o", "Prints the output in the specified format. Valid options: table, json, yaml")
+	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", "", lang.CmdPackageListFlagNamespace)
 
 	return cmd
 }
@@ -1347,10 +1351,10 @@ type packageListInfo struct {
 	Components        []string                  `json:"components"`
 }
 
-func (o *packageListOptions) run(ctx context.Context) error {
-	deployedZarfPackages, err := o.cluster.GetDeployedZarfPackages(ctx)
-	if err != nil && len(deployedZarfPackages) == 0 {
-		return fmt.Errorf("unable to get the packages deployed to the cluster: %w", err)
+func (o *packageListOptions) run(ctx context.Context, args []string) error {
+	deployedZarfPackages, err := o.getDeployedPackages(ctx, args)
+	if err != nil {
+		return err
 	}
 
 	var packageList []packageListInfo
@@ -1394,6 +1398,31 @@ func (o *packageListOptions) run(ctx context.Context) error {
 		return fmt.Errorf("unsupported output format: %s", o.outputFormat)
 	}
 	return nil
+}
+
+func (o *packageListOptions) getDeployedPackages(ctx context.Context, args []string) ([]state.DeployedPackage, error) {
+	if len(args) == 0 {
+		deployedZarfPackages, err := o.cluster.GetDeployedZarfPackages(ctx)
+		if err != nil && len(deployedZarfPackages) == 0 {
+			return nil, fmt.Errorf("unable to get the packages deployed to the cluster: %w", err)
+		}
+		if o.namespaceOverride != "" {
+			filteredPackages := make([]state.DeployedPackage, 0, len(deployedZarfPackages))
+			for _, deployedPackage := range deployedZarfPackages {
+				if deployedPackage.NamespaceOverride == o.namespaceOverride {
+					filteredPackages = append(filteredPackages, deployedPackage)
+				}
+			}
+			return filteredPackages, nil
+		}
+		return deployedZarfPackages, nil
+	}
+
+	deployedPackage, err := o.cluster.GetDeployedPackage(ctx, args[0], state.WithPackageNamespaceOverride(o.namespaceOverride))
+	if err != nil {
+		return nil, fmt.Errorf("unable to get package %q deployed to the cluster: %w", args[0], err)
+	}
+	return []state.DeployedPackage{*deployedPackage}, nil
 }
 
 type packageRemoveOptions struct {
