@@ -97,6 +97,12 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 							ServerSideApply:      v1beta1.ServerSideApplyAuto,
 							HelmRepository:       &v1beta1.HelmRepositorySource{Name: "chart", URL: "https://charts.example.com", Version: "1.0.0"},
 							Values:               []v1beta1.ChartValue{{SourcePath: ".a", TargetPath: ".b"}},
+							PostRenderers: []v1beta1.PostRenderer{
+								{Kustomize: &v1beta1.KustomizePostRenderer{EnableTemplating: true, Patches: []v1beta1.KustomizePatch{
+									{Patch: "apiVersion: v1\nkind: Service", Target: &v1beta1.KustomizePatchTarget{Version: "v1", Kind: "Service", Name: "app", Namespace: "default", LabelSelector: "app=app", AnnotationSelector: "example.com/enabled=true"}},
+									{Path: "patches/deployment.yaml", Target: &v1beta1.KustomizePatchTarget{Group: "apps", Version: "v1", Kind: "Deployment"}},
+								}}},
+							},
 						},
 						{
 							Name: "git-chart",

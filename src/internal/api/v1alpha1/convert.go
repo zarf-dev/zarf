@@ -173,8 +173,39 @@ func chartToGeneric(ch v1alpha1.ZarfChart) types.Chart {
 		SchemaValidation:     ch.SchemaValidation,
 		Variables:            chartVarsToGeneric(ch.Variables),
 		Values:               chartValuesToGeneric(ch.Values),
+		PostRenderers:        postRenderersToGeneric(ch.PostRenderers),
 	}
 	return gc
+}
+
+func postRenderersToGeneric(renderers []v1alpha1.PostRenderer) []types.PostRenderer {
+	if renderers == nil {
+		return nil
+	}
+	result := make([]types.PostRenderer, 0, len(renderers))
+	for _, renderer := range renderers {
+		genericRenderer := types.PostRenderer{}
+		if renderer.Kustomize != nil {
+			genericRenderer.Kustomize = &types.KustomizePostRenderer{EnableTemplating: renderer.Kustomize.EnableTemplating}
+			for _, patch := range renderer.Kustomize.Patches {
+				genericPatch := types.KustomizePatch{Patch: patch.Patch, Path: patch.Path}
+				if patch.Target != nil {
+					genericPatch.Target = &types.KustomizePatchTarget{
+						Group:              patch.Target.Group,
+						Version:            patch.Target.Version,
+						Kind:               patch.Target.Kind,
+						Name:               patch.Target.Name,
+						Namespace:          patch.Target.Namespace,
+						LabelSelector:      patch.Target.LabelSelector,
+						AnnotationSelector: patch.Target.AnnotationSelector,
+					}
+				}
+				genericRenderer.Kustomize.Patches = append(genericRenderer.Kustomize.Patches, genericPatch)
+			}
+		}
+		result = append(result, genericRenderer)
+	}
+	return result
 }
 
 // valuesFilesToGeneric folds the v1alpha1 plain and templated values file lists into the generic
@@ -587,6 +618,7 @@ func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 		LocalPath:       ch.LocalPath,
 		Version:         ch.Version,
 		Variables:       chartVarsFromGeneric(ch.Variables),
+		PostRenderers:   postRenderersFromGeneric(ch.PostRenderers),
 	}
 	ac.ValuesFiles, ac.TemplatedValuesFiles = valuesFilesFromGeneric(ch.ValuesFiles)
 
@@ -646,6 +678,36 @@ func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 	}
 
 	return ac
+}
+
+func postRenderersFromGeneric(renderers []types.PostRenderer) []v1alpha1.PostRenderer {
+	if renderers == nil {
+		return nil
+	}
+	result := make([]v1alpha1.PostRenderer, 0, len(renderers))
+	for _, renderer := range renderers {
+		apiRenderer := v1alpha1.PostRenderer{}
+		if renderer.Kustomize != nil {
+			apiRenderer.Kustomize = &v1alpha1.KustomizePostRenderer{EnableTemplating: renderer.Kustomize.EnableTemplating}
+			for _, patch := range renderer.Kustomize.Patches {
+				apiPatch := v1alpha1.KustomizePatch{Patch: patch.Patch, Path: patch.Path}
+				if patch.Target != nil {
+					apiPatch.Target = &v1alpha1.KustomizePatchTarget{
+						Group:              patch.Target.Group,
+						Version:            patch.Target.Version,
+						Kind:               patch.Target.Kind,
+						Name:               patch.Target.Name,
+						Namespace:          patch.Target.Namespace,
+						LabelSelector:      patch.Target.LabelSelector,
+						AnnotationSelector: patch.Target.AnnotationSelector,
+					}
+				}
+				apiRenderer.Kustomize.Patches = append(apiRenderer.Kustomize.Patches, apiPatch)
+			}
+		}
+		result = append(result, apiRenderer)
+	}
+	return result
 }
 
 func actionsFromGeneric(a types.ComponentActions) v1alpha1.ZarfComponentActions {

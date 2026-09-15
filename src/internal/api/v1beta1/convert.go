@@ -164,6 +164,7 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 		SkipSchemaValidation: ch.SkipSchemaValidation,
 		ServerSideApply:      string(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
+		PostRenderers:        postRenderersToGeneric(ch.PostRenderers),
 	}
 
 	if ch.HelmRepository != nil {
@@ -199,6 +200,36 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 	}
 
 	return gc
+}
+
+func postRenderersToGeneric(renderers []v1beta1.PostRenderer) []types.PostRenderer {
+	if renderers == nil {
+		return nil
+	}
+	result := make([]types.PostRenderer, 0, len(renderers))
+	for _, renderer := range renderers {
+		genericRenderer := types.PostRenderer{}
+		if renderer.Kustomize != nil {
+			genericRenderer.Kustomize = &types.KustomizePostRenderer{EnableTemplating: renderer.Kustomize.EnableTemplating}
+			for _, patch := range renderer.Kustomize.Patches {
+				genericPatch := types.KustomizePatch{Patch: patch.Patch, Path: patch.Path}
+				if patch.Target != nil {
+					genericPatch.Target = &types.KustomizePatchTarget{
+						Group:              patch.Target.Group,
+						Version:            patch.Target.Version,
+						Kind:               patch.Target.Kind,
+						Name:               patch.Target.Name,
+						Namespace:          patch.Target.Namespace,
+						LabelSelector:      patch.Target.LabelSelector,
+						AnnotationSelector: patch.Target.AnnotationSelector,
+					}
+				}
+				genericRenderer.Kustomize.Patches = append(genericRenderer.Kustomize.Patches, genericPatch)
+			}
+		}
+		result = append(result, genericRenderer)
+	}
+	return result
 }
 
 func actionsToGeneric(a v1beta1.ComponentActions) types.ComponentActions {
@@ -578,6 +609,7 @@ func chartFromGeneric(ch types.Chart) v1beta1.Chart {
 		ServerSideApply:      v1beta1.ServerSideApplyMode(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
 		Values:               chartValuesFromGeneric(ch.Values),
+		PostRenderers:        postRenderersFromGeneric(ch.PostRenderers),
 	}
 
 	// Use the structured sources if present; otherwise infer from v1alpha1 flat fields.
@@ -639,6 +671,36 @@ func chartFromGeneric(ch types.Chart) v1beta1.Chart {
 	}
 
 	return bc
+}
+
+func postRenderersFromGeneric(renderers []types.PostRenderer) []v1beta1.PostRenderer {
+	if renderers == nil {
+		return nil
+	}
+	result := make([]v1beta1.PostRenderer, 0, len(renderers))
+	for _, renderer := range renderers {
+		apiRenderer := v1beta1.PostRenderer{}
+		if renderer.Kustomize != nil {
+			apiRenderer.Kustomize = &v1beta1.KustomizePostRenderer{EnableTemplating: renderer.Kustomize.EnableTemplating}
+			for _, patch := range renderer.Kustomize.Patches {
+				apiPatch := v1beta1.KustomizePatch{Patch: patch.Patch, Path: patch.Path}
+				if patch.Target != nil {
+					apiPatch.Target = &v1beta1.KustomizePatchTarget{
+						Group:              patch.Target.Group,
+						Version:            patch.Target.Version,
+						Kind:               patch.Target.Kind,
+						Name:               patch.Target.Name,
+						Namespace:          patch.Target.Namespace,
+						LabelSelector:      patch.Target.LabelSelector,
+						AnnotationSelector: patch.Target.AnnotationSelector,
+					}
+				}
+				apiRenderer.Kustomize.Patches = append(apiRenderer.Kustomize.Patches, apiPatch)
+			}
+		}
+		result = append(result, apiRenderer)
+	}
+	return result
 }
 
 func chartValuesFromGeneric(vals []types.ChartValue) []v1beta1.ChartValue {

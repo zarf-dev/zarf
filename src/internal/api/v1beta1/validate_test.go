@@ -6,6 +6,7 @@ package v1beta1
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -266,6 +267,118 @@ func TestValidateChart(t *testing.T) {
 			} else {
 				require.ElementsMatch(t, tt.expectedErrs, validationErrorMessages(errs))
 			}
+		})
+	}
+}
+
+func TestValidatePostRenderer(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		renderer v1beta1.PostRenderer
+		wantErr  string
+	}{
+		{
+			name: "inline patch",
+			renderer: v1beta1.PostRenderer{
+				Kustomize: &v1beta1.KustomizePostRenderer{
+					Patches: []v1beta1.KustomizePatch{{Patch: "apiVersion: v1"}},
+				},
+			},
+		},
+		{
+			name: "local patch path",
+			renderer: v1beta1.PostRenderer{
+				Kustomize: &v1beta1.KustomizePostRenderer{
+					Patches: []v1beta1.KustomizePatch{
+						{
+							Path: "patch.yaml",
+						},
+					},
+				},
+			},
+		},
+		{
+			name:    "missing renderer kind",
+			wantErr: "exactly one supported renderer kind"},
+		{
+			name: "empty patch source",
+			renderer: v1beta1.PostRenderer{
+				Kustomize: &v1beta1.KustomizePostRenderer{
+					Patches: []v1beta1.KustomizePatch{{}},
+				},
+			},
+			wantErr: "exactly one of patch or path"},
+		{
+			name: "ambiguous patch source",
+			renderer: v1beta1.PostRenderer{
+				Kustomize: &v1beta1.KustomizePostRenderer{
+					Patches: []v1beta1.KustomizePatch{
+						{
+							Patch: "a", Path: "patch.yaml",
+						},
+					},
+				},
+			},
+			wantErr: "exactly one of patch or path"},
+		{
+			name: "whitespace patch source",
+			renderer: v1beta1.PostRenderer{
+				Kustomize: &v1beta1.KustomizePostRenderer{
+					Patches: []v1beta1.KustomizePatch{
+						{
+							Patch: " ", Path: "\t",
+						},
+					},
+				},
+			},
+			wantErr: "exactly one of patch or path"},
+		{
+			name: "url patch path",
+			renderer: v1beta1.PostRenderer{
+				Kustomize: &v1beta1.KustomizePostRenderer{
+					Patches: []v1beta1.KustomizePatch{
+						{
+							Path: "https://example.com/patch.yaml",
+						},
+					},
+				},
+			},
+			wantErr: "must be local"},
+		{
+			name: "absolute patch path",
+			renderer: v1beta1.PostRenderer{
+				Kustomize: &v1beta1.KustomizePostRenderer{
+					Patches: []v1beta1.KustomizePatch{
+						{
+							Path: filepath.Join(t.TempDir(), "patch.yaml"),
+						},
+					},
+				},
+			},
+			wantErr: "within the component"},
+		{
+			name: "traversal patch path",
+			renderer: v1beta1.PostRenderer{
+				Kustomize: &v1beta1.KustomizePostRenderer{
+					Patches: []v1beta1.KustomizePatch{
+						{
+							Path: "../patch.yaml",
+						},
+					},
+				},
+			},
+			wantErr: "within the component"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := validatePostRenderer(tt.renderer)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
 }

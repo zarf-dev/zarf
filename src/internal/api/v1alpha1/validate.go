@@ -7,6 +7,8 @@ package v1alpha1
 import (
 	"errors"
 	"fmt"
+	"net/url"
+	"path/filepath"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -44,6 +46,11 @@ const (
 	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
 	PkgValidateErrChartVersion            = "chart %q must include a chart version"
 	PkgValidateErrChartValueExcludePath   = "chart %q excludePath %q must be a descendant of sourcePath %q"
+	PkgValidateErrChartPostRenderer       = "chart %q has invalid post-renderer %d: %w"
+	PkgValidateErrPostRendererKind        = "exactly one supported renderer kind must be specified"
+	PkgValidateErrPostRendererPatchSource = "patch %d must specify exactly one of patch or path"
+	PkgValidateErrPostRendererPatchURL    = "patch %d path %q must be local"
+	PkgValidateErrPostRendererPatchPath   = "patch %d path %q must be a local path within the component"
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrVariable                = "invalid package variable: %w"
@@ -309,7 +316,45 @@ func validateChart(chart v1alpha1.ZarfChart) error {
 		}
 	}
 
+	for idx, renderer := range chart.PostRenderers {
+		if rendererErr := validatePostRenderer(renderer); rendererErr != nil {
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrChartPostRenderer, chart.Name, idx, rendererErr))
+		}
+	}
+
 	return err
+}
+
+func validatePostRenderer(renderer v1alpha1.PostRenderer) error {
+	if renderer.Kustomize == nil {
+		return errors.New(PkgValidateErrPostRendererKind)
+	}
+
+	var err error
+	for idx, patch := range renderer.Kustomize.Patches {
+		inlinePatch := strings.TrimSpace(patch.Patch) != ""
+		path := strings.TrimSpace(patch.Path)
+		if inlinePatch == (path != "") {
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrPostRendererPatchSource, idx))
+			continue
+		}
+		if path != "" && isURL(path) {
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrPostRendererPatchURL, idx, patch.Path))
+		} else if path != "" && (filepath.IsAbs(path) || pathEscapesBase(path)) {
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrPostRendererPatchPath, idx, patch.Path))
+		}
+	}
+	return err
+}
+
+func pathEscapesBase(path string) bool {
+	clean := filepath.Clean(path)
+	return clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator))
+}
+
+func isURL(path string) bool {
+	parsed, err := url.Parse(path)
+	return err == nil && parsed.Scheme != "" && parsed.Host != ""
 }
 
 // isPathDescendant reports whether child is a strict descendant of parent, where
