@@ -102,6 +102,12 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 						ServerSideApply:      "auto",
 						Variables:            []v1alpha1.ZarfChartVariable{{Name: "VAR", Description: "d", Path: "p"}},
 						Values:               []v1alpha1.ZarfChartValue{{SourcePath: ".a", TargetPath: ".b"}},
+						PostRenderers: []v1alpha1.PostRenderer{
+							{Kustomize: &v1alpha1.KustomizePostRenderer{EnableTemplating: true, Patches: []v1alpha1.KustomizePatch{
+								{Patch: "apiVersion: v1\nkind: Service", Target: &v1alpha1.KustomizePatchTarget{Version: "v1", Kind: "Service", Name: "app", Namespace: "default", LabelSelector: "app=app", AnnotationSelector: "example.com/enabled=true"}},
+								{Path: "patches/deployment.yaml", Target: &v1alpha1.KustomizePatchTarget{Group: "apps", Version: "v1", Kind: "Deployment"}},
+							}}},
+						},
 					},
 				},
 				Manifests: []v1alpha1.ZarfManifest{

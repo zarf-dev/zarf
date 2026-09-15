@@ -181,6 +181,7 @@ type Chart struct {
 	SkipSchemaValidation bool
 	ServerSideApply      string
 	SkipWait             bool
+	PostRenderers        []PostRenderer
 
 	// v1beta1 structured sources.
 	HelmRepository *HelmRepositorySource
@@ -196,6 +197,35 @@ type Chart struct {
 	Version          string
 	SchemaValidation *bool
 	Variables        []ZarfChartVariable
+}
+
+// PostRenderer configures a renderer applied to rendered Helm chart manifests.
+type PostRenderer struct {
+	Kustomize *KustomizePostRenderer
+}
+
+// KustomizePostRenderer configures Kustomize patches for rendered Helm chart manifests.
+type KustomizePostRenderer struct {
+	EnableTemplating bool
+	Patches          []KustomizePatch
+}
+
+// KustomizePatch applies an inline or local patch to matching rendered manifests.
+type KustomizePatch struct {
+	Target *KustomizePatchTarget
+	Patch  string
+	Path   string
+}
+
+// KustomizePatchTarget selects rendered resources for a Kustomize patch.
+type KustomizePatchTarget struct {
+	Group              string
+	Version            string
+	Kind               string
+	Name               string
+	Namespace          string
+	LabelSelector      string
+	AnnotationSelector string
 }
 
 // ValuesFile is a values file merged into a Helm chart, optionally rendered with Zarf templating.

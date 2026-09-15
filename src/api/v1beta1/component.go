@@ -149,6 +149,50 @@ type Chart struct {
 	SkipSchemaValidation bool `json:"skipSchemaValidation,omitempty"`
 	// Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart. Defaults to "auto" when omitted.
 	ServerSideApply ServerSideApplyMode `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto,default=auto"`
+	// Ordered post-renderers applied to the rendered Helm chart manifests.
+	PostRenderers []PostRenderer `json:"postRenderers,omitempty"`
+}
+
+// PostRenderer configures a renderer applied to rendered Helm chart manifests.
+type PostRenderer struct {
+	// Kustomize applies Kustomize patches to rendered manifests.
+	Kustomize *KustomizePostRenderer `json:"kustomize,omitempty" jsonschema:"oneof_required=kustomize"`
+}
+
+// KustomizePostRenderer configures Kustomize patches for rendered Helm chart manifests.
+type KustomizePostRenderer struct {
+	// EnableTemplating enables Go templating for Kustomize patches.
+	EnableTemplating bool `json:"enableTemplating,omitempty"`
+	// Patches applied to rendered manifests in order.
+	Patches []KustomizePatch `json:"patches,omitempty"`
+}
+
+// KustomizePatch applies an inline or local patch to matching rendered manifests.
+type KustomizePatch struct {
+	// Target optionally selects rendered resources to patch.
+	Target *KustomizePatchTarget `json:"target,omitempty"`
+	// Patch is an inline strategic merge or JSON 6902 patch.
+	Patch string `json:"patch,omitempty" jsonschema:"oneof_required=patch"`
+	// Path is a local path to a strategic merge or JSON 6902 patch.
+	Path string `json:"path,omitempty" jsonschema:"oneof_required=path"`
+}
+
+// KustomizePatchTarget selects rendered resources for a Kustomize patch.
+type KustomizePatchTarget struct {
+	// Group is the API group of selected resources.
+	Group string `json:"group,omitempty"`
+	// Version is the API version of selected resources.
+	Version string `json:"version,omitempty"`
+	// Kind is the kind of selected resources.
+	Kind string `json:"kind,omitempty"`
+	// Name is the name of selected resources.
+	Name string `json:"name,omitempty"`
+	// Namespace is the namespace of selected resources.
+	Namespace string `json:"namespace,omitempty"`
+	// LabelSelector selects resources by label.
+	LabelSelector string `json:"labelSelector,omitempty"`
+	// AnnotationSelector selects resources by annotation.
+	AnnotationSelector string `json:"annotationSelector,omitempty"`
 }
 
 // ValuesFile is a values file merged into a Helm chart on deploy.

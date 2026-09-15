@@ -6,6 +6,8 @@ package v1beta1
 import (
 	"errors"
 	"fmt"
+	"net/url"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -33,6 +35,11 @@ const (
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
 	PkgValidateErrChartName               = "chart %q exceed the maximum length of %d characters"
 	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
+	PkgValidateErrChartPostRenderer       = "chart %q has invalid post-renderer %d: %w"
+	PkgValidateErrPostRendererKind        = "exactly one supported renderer kind must be specified"
+	PkgValidateErrPostRendererPatchSource = "patch %d must specify exactly one of patch or path"
+	PkgValidateErrPostRendererPatchURL    = "patch %d path %q must be local"
+	PkgValidateErrPostRendererPatchPath   = "patch %d path %q must be a local path within the component"
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
@@ -228,7 +235,45 @@ func validateChart(chart v1beta1.Chart) ValidationErrors {
 		errs = append(errs, nameErr)
 	}
 
+	for idx, renderer := range chart.PostRenderers {
+		if rendererErr := validatePostRenderer(renderer); rendererErr != nil {
+			errs = append(errs, fmt.Errorf(PkgValidateErrChartPostRenderer, chart.Name, idx, rendererErr))
+		}
+	}
+
 	return errs
+}
+
+func validatePostRenderer(renderer v1beta1.PostRenderer) error {
+	if renderer.Kustomize == nil {
+		return errors.New(PkgValidateErrPostRendererKind)
+	}
+
+	var err error
+	for idx, patch := range renderer.Kustomize.Patches {
+		inlinePatch := strings.TrimSpace(patch.Patch) != ""
+		path := strings.TrimSpace(patch.Path)
+		if inlinePatch == (path != "") {
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrPostRendererPatchSource, idx))
+			continue
+		}
+		if path != "" && isURL(path) {
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrPostRendererPatchURL, idx, patch.Path))
+		} else if path != "" && (filepath.IsAbs(path) || pathEscapesBase(path)) {
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrPostRendererPatchPath, idx, patch.Path))
+		}
+	}
+	return err
+}
+
+func pathEscapesBase(path string) bool {
+	clean := filepath.Clean(path)
+	return clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator))
+}
+
+func isURL(path string) bool {
+	parsed, err := url.Parse(path)
+	return err == nil && parsed.Scheme != "" && parsed.Host != ""
 }
 
 // validateManifest runs all validation checks on a manifest.
