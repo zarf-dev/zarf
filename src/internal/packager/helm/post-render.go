@@ -183,6 +183,10 @@ func (r *renderer) shouldAddAgentIgnoreLabels() bool {
 
 func (r *renderer) editHelmResources(ctx context.Context, resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
 	l := logger.From(ctx)
+	resources, err := flattenHelmResources(resources)
+	if err != nil {
+		return err
+	}
 	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
 		newContent, rawData, err := processManifestContent(resource.Content, func(obj *unstructured.Unstructured) error {
@@ -261,6 +265,58 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
 	}
 	return nil
+}
+
+// flattenHelmResources replaces every list document with the resources it holds, so that the rest
+// of the post renderer only ever sees one resource per manifest.
+// A list is a wrapper rather than a resource: its metadata is a ListMeta, which has no labels
+// field, so a label written there is rejected by the API server, and everything zarf keys off the
+// kind of a document misses what the list holds. Helm flattens a list into its items before
+// applying it anyway, so the items are what ends up in the cluster either way.
+func flattenHelmResources(resources []releaseutil.Manifest) ([]releaseutil.Manifest, error) {
+	flattened := make([]releaseutil.Manifest, 0, len(resources))
+	for _, resource := range resources {
+		_, rawData, err := processManifestContent(resource.Content, nil)
+		if err != nil {
+			return nil, err
+		}
+		// IsList is the check helm's resource builder uses to decide what to flatten, so zarf and
+		// helm agree on which documents hold more than one resource
+		if len(rawData.Object) == 0 || !rawData.IsList() {
+			flattened = append(flattened, resource)
+			continue
+		}
+		err = flattenListResource(rawData, func(obj *unstructured.Unstructured) error {
+			content, err := yaml.Marshal(obj.Object)
+			if err != nil {
+				return fmt.Errorf("failed to marshal list item: %w", err)
+			}
+			// the item keeps the name of the file the list was rendered from
+			item := resource
+			item.Content = string(content)
+			flattened = append(flattened, item)
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return flattened, nil
+}
+
+// flattenListResource calls addResource once for every resource a document holds, walking a list
+// that holds lists all the way down
+func flattenListResource(obj *unstructured.Unstructured, addResource func(*unstructured.Unstructured) error) error {
+	if !obj.IsList() {
+		return addResource(obj)
+	}
+	return obj.EachListItem(func(item runtime.Object) error {
+		listItem, ok := item.(*unstructured.Unstructured)
+		if !ok {
+			return fmt.Errorf("unexpected item of type %T in %s", item, obj.GetKind())
+		}
+		return flattenListResource(listItem, addResource)
+	})
 }
 
 // addLabelsToNestedPath adds package labels to a nested path in an unstructured object
