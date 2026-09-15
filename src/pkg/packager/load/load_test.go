@@ -447,9 +447,9 @@ components:
 		dir := t.TempDir()
 		zarfYAML := `kind: ZarfPackageConfig
 metadata:
-  name: test
+  name: "###ZARF_PKG_TMPL_MYVAR###"
 components:
-  - name: test
+  - name: "###ZARF_PKG_TMPL_MYVAR###"
     required: true
     actions:
       onCreate:
@@ -460,6 +460,27 @@ components:
 		_, err := PackageDefinition(ctx, dir, DefinitionOptions{
 			SetVariables: map[string]string{}, // non-nil triggers fillActiveTemplate; MYVAR is absent
 		})
-		require.ErrorContains(t, err, "MYVAR")
+		require.ErrorContains(t, err, `template "MYVAR" must be '--set' when using the '--confirm' flag`)
+	})
+
+	t.Run("resolves package and component names from package templates", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		zarfYAML := `kind: ZarfPackageConfig
+metadata:
+  name: "###ZARF_PKG_TMPL_MYVAR###"
+components:
+  - name: "###ZARF_PKG_TMPL_MYVAR###"
+    required: true
+`
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(zarfYAML), 0o600))
+
+		defined, err := PackageDefinition(ctx, dir, DefinitionOptions{
+			SetVariables: map[string]string{"MYVAR": "test-package"},
+		})
+		require.NoError(t, err)
+		pkg := defined.AsV1alpha1()
+		require.Equal(t, "test-package", pkg.Metadata.Name)
+		require.Equal(t, "test-package", pkg.Components[0].Name)
 	})
 }
