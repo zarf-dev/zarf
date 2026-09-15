@@ -687,6 +687,21 @@ metadata:
 	}
 }
 
+func TestEditHelmResourcesListWithNonObjectItem(t *testing.T) {
+	t.Parallel()
+
+	manifest := `apiVersion: v1
+kind: ConfigMapList
+items:
+  - null
+`
+	err := newTestRenderer().editHelmResources(testutil.TestContext(t),
+		[]releaseutil.Manifest{{Name: "test-manifest", Content: manifest}}, bytes.NewBuffer(nil))
+	// apimachinery reports the type it wanted rather than the one it got, so the kind is all
+	// someone has to go looking for the document that broke
+	require.ErrorContains(t, err, "ConfigMapList")
+}
+
 func TestEditHelmResourcesNamespaceInsideList(t *testing.T) {
 	t.Parallel()
 

@@ -291,14 +291,16 @@ func flattenHelmResources(resources []releaseutil.Manifest) ([]releaseutil.Manif
 			if err != nil {
 				return fmt.Errorf("failed to marshal list item: %w", err)
 			}
-			// the item keeps the name of the file the list was rendered from
+			// the item inherits the manifest name zarf writes its own source comment from. helm
+			// tracks the original file with an annotation it puts on the wrapper, which the item
+			// does not carry, so helm files these under a generated name of its own
 			item := resource
 			item.Content = string(content)
 			flattened = append(flattened, item)
 			return nil
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to flatten %s: %w", rawData.GetKind(), err)
 		}
 	}
 	return flattened, nil

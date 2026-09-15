@@ -354,8 +354,9 @@ func TestHelmListKinds(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// zarf owns that namespace rather than helm, so removing the package leaves it behind instead
-	// of taking everything living in it with it
-	kubectlOut, _, err = e2e.Kubectl(t, "get", "namespace", "list-kinds-nested-ns", "-o", "jsonpath={.metadata.name}")
+	// of taking everything living in it with it. a namespace helm deleted would still answer with
+	// its name while terminating, so read the phase rather than the name
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "namespace", "list-kinds-nested-ns", "-o", "jsonpath={.status.phase}")
 	require.NoError(t, err)
-	require.Equal(t, "list-kinds-nested-ns", kubectlOut)
+	require.Equal(t, "Active", kubectlOut)
 }
