@@ -1,0 +1,65 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zarf-docs
+  labels:
+    app: zarf-docs
+spec:
+  replicas: 1
+  strategy:
+    # The volume is immutable content rather than a running dependency, so
+    # there is nothing to gain from overlapping old and new pods.
+    type: Recreate
+  selector:
+    matchLabels:
+      app: zarf-docs
+  template:
+    metadata:
+      labels:
+        app: zarf-docs
+    spec:
+      containers:
+        - name: nginx
+          image: "docker.io/library/nginx:1.29.2"
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          volumeMounts:
+            # The docs volume is mounted read-only by the kubelet regardless of
+            # what is requested here; saying so keeps the intent explicit.
+            - name: docs
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+      volumes:
+        # The image volume. `reference` is the same zarf.internal reference the
+        # archive was built with; the Zarf agent rewrites it to the in-cluster
+        # registry on admission. Requires OCI volume support in the cluster
+        # (generally available in Kubernetes 1.35).
+        - name: docs
+          image:
+            reference: zarf.internal/zarf-docs:local
+            pullPolicy: "Always"
+        - name: nginx-config
+          configMap:
+            name: zarf-docs-nginx
