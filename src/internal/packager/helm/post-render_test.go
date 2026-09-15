@@ -246,6 +246,24 @@ func TestAddAgentIgnoreLabels(t *testing.T) {
 			expectLabel: true,
 		},
 		{
+			name: "Deployment with pod template labels written as null",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "apps/v1",
+				"kind":       "Deployment",
+				"metadata": map[string]interface{}{
+					"name": "null-template-labels",
+				},
+				"spec": map[string]interface{}{
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"labels": nil,
+						},
+					},
+				},
+			}},
+			expectLabel: true,
+		},
+		{
 			name: "ArgoCD repository secret gets label",
 			obj: &unstructured.Unstructured{Object: map[string]interface{}{
 				"apiVersion": "v1",
@@ -756,6 +774,239 @@ items:
 	require.NoError(t, err)
 	require.True(t, found)
 	require.Equal(t, "ignore", templateLabels["zarf.dev/agent"])
+}
+
+func TestEditHelmResourcesPodTemplateLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		manifest string
+		expected map[string]string
+		path     []string
+	}{
+		{
+			name: "pod template labels written as null",
+			manifest: `apiVersion: batch/v1
+kind: Job
+metadata:
+  name: null-template-labels
+spec:
+  template:
+    metadata:
+      labels: null
+`,
+			expected: map[string]string{"zarf.dev/package": "test-pkg"},
+			path:     []string{"spec", "template", "metadata", "labels"},
+		},
+		{
+			name: "pod template with no labels of its own",
+			manifest: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: no-template-labels
+spec:
+  template:
+    metadata: {}
+`,
+			expected: map[string]string{"zarf.dev/package": "test-pkg"},
+			path:     []string{"spec", "template", "metadata", "labels"},
+		},
+		{
+			name: "pod template labels are kept",
+			manifest: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: with-template-labels
+spec:
+  template:
+    metadata:
+      labels:
+        app: mine
+`,
+			expected: map[string]string{"app": "mine", "zarf.dev/package": "test-pkg"},
+			path:     []string{"spec", "template", "metadata", "labels"},
+		},
+		{
+			name: "pod template metadata written as null",
+			manifest: `apiVersion: batch/v1
+kind: Job
+metadata:
+  name: null-template-metadata
+spec:
+  template:
+    metadata: null
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: main
+          image: busybox
+`,
+			expected: map[string]string{"zarf.dev/package": "test-pkg"},
+			path:     []string{"spec", "template", "metadata", "labels"},
+		},
+		{
+			name: "replicationcontroller pod template",
+			manifest: `apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: rc
+spec:
+  template:
+    metadata:
+      labels:
+        app: mine
+`,
+			expected: map[string]string{"app": "mine", "zarf.dev/package": "test-pkg"},
+			path:     []string{"spec", "template", "metadata", "labels"},
+		},
+		{
+			name: "cronjob keeps its pod template a level deeper",
+			manifest: `apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nested-template
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: mine
+`,
+			expected: map[string]string{"app": "mine", "zarf.dev/package": "test-pkg"},
+			path:     []string{"spec", "jobTemplate", "spec", "template", "metadata", "labels"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			docs := renderManifest(t, newTestRenderer(), tt.manifest)
+			require.Len(t, docs, 1)
+			labels, found, err := unstructured.NestedStringMap(docs[0].Object, tt.path...)
+			require.NoError(t, err)
+			require.True(t, found)
+			require.Equal(t, tt.expected, labels)
+		})
+	}
+}
+
+func TestEditHelmResourcesWithoutAPodTemplateToLabel(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		manifest string
+	}{
+		{
+			name: "pod template written as null",
+			manifest: `apiVersion: batch/v1
+kind: Job
+metadata:
+  name: null-template
+spec:
+  template: null
+`,
+		},
+		{
+			name: "spec written as null",
+			manifest: `apiVersion: batch/v1
+kind: Job
+metadata:
+  name: null-spec
+spec: null
+`,
+		},
+		{
+			name: "no spec at all",
+			manifest: `apiVersion: batch/v1
+kind: Job
+metadata:
+  name: no-spec
+`,
+		},
+		{
+			name: "cronjob with no job template",
+			manifest: `apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: no-job-template
+spec:
+  schedule: "* * * * *"
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// the resource is malformed, but that is the API server's to report. writing the path
+			// in would invent a pod template the chart never asked for, and failing here would
+			// take the whole deploy down with an error about zarf rather than about the resource
+			docs := renderManifest(t, newTestRenderer(), tt.manifest)
+			require.Len(t, docs, 1)
+			require.Equal(t, map[string]string{"zarf.dev/package": "test-pkg"}, docs[0].GetLabels())
+
+			original := &unstructured.Unstructured{}
+			require.NoError(t, yaml.Unmarshal([]byte(tt.manifest), original))
+			require.Equal(t, original.Object["spec"], docs[0].Object["spec"])
+		})
+	}
+}
+
+func TestEditHelmResourcesLeavesSpecTemplateOfOtherKinds(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		manifest string
+	}{
+		{
+			name: "spec.template holds a string",
+			manifest: `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: repro
+spec:
+  template: |
+    a config blob in whatever syntax this resource speaks,
+    which has nothing to do with a pod template
+`,
+		},
+		{
+			name: "spec.template holds something shaped like a pod template",
+			manifest: `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: repro
+spec:
+  template:
+    metadata:
+      labels:
+        app: mine
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// the resource is labeled itself, but only a kind known to have a pod template has one
+			// labeled, so whatever sits at spec.template is left as the chart wrote it
+			docs := renderManifest(t, newTestRenderer(), tt.manifest)
+			require.Len(t, docs, 1)
+			require.Equal(t, map[string]string{"zarf.dev/package": "test-pkg"}, docs[0].GetLabels())
+
+			original := &unstructured.Unstructured{}
+			require.NoError(t, yaml.Unmarshal([]byte(tt.manifest), original))
+			require.Equal(t, original.Object["spec"], docs[0].Object["spec"])
+		})
+	}
 }
 
 func TestEditHelmResourcesConnectStrings(t *testing.T) {

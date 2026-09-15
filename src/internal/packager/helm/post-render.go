@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
@@ -197,7 +198,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			}
 			obj.SetLabels(r.setPackageLabels(labels))
 			// Add the package label to pod templates (for Deployments, StatefulSets, etc.)
-			if err := r.addLabelsToNestedPath(obj, []string{"spec", "template", "metadata", "labels"}); err != nil {
+			if err := r.addPodTemplateLabels(obj); err != nil {
 				return fmt.Errorf("failed to add labels to pod template: %w", err)
 			}
 			// In connected or YOLO mode, add agent ignore labels so the webhook doesn't mutate resources
@@ -321,23 +322,68 @@ func flattenListResource(obj *unstructured.Unstructured, addResource func(*unstr
 	})
 }
 
-// addLabelsToNestedPath adds package labels to a nested path in an unstructured object
-func (r *renderer) addLabelsToNestedPath(obj *unstructured.Unstructured, path []string) error {
-	// Check if the nested path exists and get the labels
-	templateLabels, found, err := unstructured.NestedStringMap(obj.Object, path...)
-	if err != nil {
-		return err
-	} else if !found {
-		// Path doesn't exist, nothing to do
+// podTemplateKinds maps the kinds zarf labels the pod template of to where that template keeps its
+// labels. Only a kind known to have a pod template is touched: a custom resource is free to hold
+// anything at spec.template, and labeling whatever happens to sit there fails the deploy of charts
+// that are valid for helm and kubectl alike.
+var podTemplateKinds = map[schema.GroupKind][]string{
+	{Group: "apps", Kind: "Deployment"}:        {"spec", "template", "metadata", "labels"},
+	{Group: "apps", Kind: "StatefulSet"}:       {"spec", "template", "metadata", "labels"},
+	{Group: "apps", Kind: "DaemonSet"}:         {"spec", "template", "metadata", "labels"},
+	{Group: "apps", Kind: "ReplicaSet"}:        {"spec", "template", "metadata", "labels"},
+	{Group: "batch", Kind: "Job"}:              {"spec", "template", "metadata", "labels"},
+	{Group: "batch", Kind: "CronJob"}:          {"spec", "jobTemplate", "spec", "template", "metadata", "labels"},
+	{Group: "", Kind: "ReplicationController"}: {"spec", "template", "metadata", "labels"},
+}
+
+// addPodTemplateLabels adds the package labels to the pod template of a workload resource
+func (r *renderer) addPodTemplateLabels(obj *unstructured.Unstructured) error {
+	path, hasPodTemplate := podTemplateKinds[obj.GroupVersionKind().GroupKind()]
+	if !hasPodTemplate {
 		return nil
 	}
-	if templateLabels == nil {
-		templateLabels = map[string]string{}
+	labels, found, err := labelsAt(obj, path)
+	if err != nil || !found {
+		return err
 	}
-	// Add package labels
-	templateLabels = r.setPackageLabels(templateLabels)
-	// Set the updated labels back
-	return unstructured.SetNestedStringMap(obj.Object, templateLabels, path...)
+	return unstructured.SetNestedStringMap(obj.Object, r.setPackageLabels(labels), path...)
+}
+
+// labelsAt returns the label map at path, ready to be written back to.
+// Everything above the last two segments has to be there already, since a resource without a pod
+// template has nothing to label and writing the path in would invent one the chart never asked
+// for. The last two are optional in a manifest, so they are created when missing, including when
+// they are written as null: that is valid yaml and parses to nil, which reads back as absent and
+// which unstructured.SetNestedStringMap refuses to write through.
+func labelsAt(obj *unstructured.Unstructured, path []string) (map[string]string, bool, error) {
+	parent := obj.Object
+	for _, field := range path[:len(path)-2] {
+		nested, isMap := parent[field].(map[string]interface{})
+		if !isMap {
+			return nil, false, nil
+		}
+		parent = nested
+	}
+	for _, field := range path[len(path)-2:] {
+		nested, isMap := parent[field].(map[string]interface{})
+		if !isMap {
+			if parent[field] != nil {
+				return nil, false, fmt.Errorf("%s is not a map", strings.Join(path, "."))
+			}
+			nested = map[string]interface{}{}
+			parent[field] = nested
+		}
+		parent = nested
+	}
+	labels := make(map[string]string, len(parent))
+	for key, value := range parent {
+		text, isString := value.(string)
+		if !isString {
+			return nil, false, fmt.Errorf("label %q in %s is not a string", key, strings.Join(path, "."))
+		}
+		labels[key] = text
+	}
+	return labels, true, nil
 }
 
 // agentMutatedKinds maps resources mutated by the Zarf agent webhook to the
@@ -374,12 +420,12 @@ func addAgentIgnoreLabels(obj *unstructured.Unstructured) error {
 	}
 
 	for _, path := range labelPaths {
-		labels, found, err := unstructured.NestedStringMap(obj.Object, path...)
+		labels, found, err := labelsAt(obj, path)
 		if err != nil {
 			return err
 		}
-		if !found || labels == nil {
-			labels = map[string]string{}
+		if !found {
+			continue
 		}
 		labels[cluster.AgentLabel] = "ignore"
 		if err := unstructured.SetNestedStringMap(obj.Object, labels, path...); err != nil {
