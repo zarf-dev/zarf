@@ -14,8 +14,9 @@ func TestGenerateJSONSchema(t *testing.T) {
 	t.Run("infers nested types", func(t *testing.T) {
 		vals := Values{
 			"name":        "zarf",
-			"replicas":    float64(3),
+			"replicas":    uint64(3),
 			"threshold":   0.75,
+			"percentage":  5.0,
 			"enabled":     true,
 			"ports":       []any{uint64(80)},
 			"annotations": nil,
@@ -43,6 +44,10 @@ func TestGenerateJSONSchema(t *testing.T) {
 		threshold, ok := props["threshold"].(map[string]any)
 		require.True(t, ok)
 		assert.Equal(t, "number", threshold["type"])
+
+		percentage, ok := props["percentage"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "number", percentage["type"])
 
 		enabled, ok := props["enabled"].(map[string]any)
 		require.True(t, ok)

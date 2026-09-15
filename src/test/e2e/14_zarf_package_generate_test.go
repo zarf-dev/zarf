@@ -71,7 +71,7 @@ func TestZarfDevGenerate(t *testing.T) {
 
 		aReplicas, ok := appProps["replicas"].(map[string]any)
 		require.True(t, ok)
-		require.Equal(t, "integer", aReplicas["type"])
+		require.Equal(t, "number", aReplicas["type"])
 		// .app.replicas should take the description from the parent values.schema.json
 		require.Equal(t, "Replica count", aReplicas["description"])
 
@@ -89,7 +89,7 @@ func TestZarfDevGenerate(t *testing.T) {
 
 		bReplicas, ok := backendProps["replicaCount"].(map[string]any)
 		require.True(t, ok)
-		require.Equal(t, "integer", bReplicas["type"])
+		require.Equal(t, "number", bReplicas["type"])
 		// .backend.replicas should take the description from the child values.schema.json
 		require.Equal(t, "Replica count", bReplicas["description"])
 
@@ -100,7 +100,7 @@ func TestZarfDevGenerate(t *testing.T) {
 		require.True(t, ok)
 		bPort, ok := bServiceProps["port"].(map[string]any)
 		require.True(t, ok)
-		require.Equal(t, "integer", bPort["type"])
+		require.Equal(t, "number", bPort["type"])
 
 		// .network should be pulled in from the parent's mapped chart
 		network, ok := props["network"].(map[string]any)
@@ -109,7 +109,7 @@ func TestZarfDevGenerate(t *testing.T) {
 		require.True(t, ok)
 		port, ok := networkProps["port"].(map[string]any)
 		require.True(t, ok)
-		require.Equal(t, "integer", port["type"])
+		require.Equal(t, "number", port["type"])
 
 		configMap, ok := props["configMap"].(map[string]any)
 		require.True(t, ok)

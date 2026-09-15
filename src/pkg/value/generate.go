@@ -3,10 +3,7 @@
 
 package value
 
-import (
-	"fmt"
-	"math"
-)
+import "fmt"
 
 // GenerateJSONSchema infers a JSON schema from the structure and scalar types in values.
 func GenerateJSONSchema(vals Values) map[string]any {
@@ -411,10 +408,8 @@ func inferSchemaType(v any) any {
 		return map[string]any{"type": "string"}
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return map[string]any{"type": "integer"}
-	case float32:
-		return inferFloatSchema(float64(val))
-	case float64:
-		return inferFloatSchema(val)
+	case float32, float64:
+		return map[string]any{"type": "number"}
 	case bool:
 		return map[string]any{"type": "boolean"}
 	case map[string]any:
@@ -434,11 +429,4 @@ func inferSchemaType(v any) any {
 	default:
 		return map[string]any{}
 	}
-}
-
-func inferFloatSchema(val float64) map[string]any {
-	if math.Trunc(val) == val {
-		return map[string]any{"type": "integer"}
-	}
-	return map[string]any{"type": "number"}
 }
