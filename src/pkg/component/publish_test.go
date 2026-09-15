@@ -15,6 +15,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
@@ -99,7 +100,7 @@ components:
 	loaded, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{CachePath: cachePath, RemoteOptions: defaultTestRemoteOptions()}})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
-	resourcePath, err := loaded.Resources.Path(loaded.Definition.AsV1alpha1().Components[0].Files[0].Source)
+	resourcePath, err := loaded.Resources.Path(convert.PackageToV1alpha1(loaded.Definition).Components[0].Files[0].Source)
 	require.NoError(t, err)
 
 	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{CachePath: cachePath, SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
@@ -536,7 +537,7 @@ components:
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 
-	contents, err := loaded.Resources.ReadFile(loaded.Definition.AsV1beta1().Components[0].Files[0].Source)
+	contents, err := loaded.Resources.ReadFile(convert.PackageToV1beta1(loaded.Definition).Components[0].Files[0].Source)
 	require.NoError(t, err)
 	require.Equal(t, "arm64", string(contents))
 }

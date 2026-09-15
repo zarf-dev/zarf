@@ -24,6 +24,7 @@ import (
 
 	"helm.sh/helm/v4/pkg/storage/driver"
 
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
@@ -42,9 +43,9 @@ type RemoveOptions struct {
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
-func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOptions) error {
+func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) error {
 	l := logger.From(ctx)
-	pkg := definition.AsV1alpha1()
+	pkg := convert.PackageToV1alpha1(definition)
 
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
@@ -61,7 +62,7 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 	if err != nil {
 		return err
 	}
-	pkg = definition.AsV1alpha1()
+	pkg = convert.PackageToV1alpha1(definition)
 
 	if len(pkg.Components) == 0 {
 		return fmt.Errorf("package to remove contains no components")

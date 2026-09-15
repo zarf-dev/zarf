@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -21,7 +20,10 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"oras.land/oras-go/v2"
@@ -54,29 +56,37 @@ type manifestCache struct {
 	totalSize    int64                      // layers + config + manifest
 }
 
-// AnnotationsFromMetadata extracts OCI manifest annotations from Zarf package metadata.
-func AnnotationsFromMetadata(metadata v1alpha1.ZarfMetadata) map[string]string {
+// AnnotationsFromMetadata extracts OCI manifest annotations from a package definition.
+func AnnotationsFromMetadata(pkg api.Package) map[string]string {
+	metadata := pkg.Metadata
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,
 	}
-	if url := metadata.URL; url != "" {
+	if url := metadata.Annotations["metadata.url"]; url != "" {
 		annotations[ocispec.AnnotationURL] = url
 	}
-	if authors := metadata.Authors; authors != "" {
+	if authors := metadata.Annotations["metadata.authors"]; authors != "" {
 		annotations[ocispec.AnnotationAuthors] = authors
 	}
-	if documentation := metadata.Documentation; documentation != "" {
+	if documentation := metadata.Annotations["metadata.documentation"]; documentation != "" {
 		annotations[ocispec.AnnotationDocumentation] = documentation
 	}
-	if source := metadata.Source; source != "" {
+	if source := metadata.Annotations["metadata.source"]; source != "" {
 		annotations[ocispec.AnnotationSource] = source
 	}
-	if vendor := metadata.Vendor; vendor != "" {
+	if vendor := metadata.Annotations["metadata.vendor"]; vendor != "" {
 		annotations[ocispec.AnnotationVendor] = vendor
 	}
-	// annotations explicitly defined in metadata.Annotations take precedence over legacy fields.
-	maps.Copy(annotations, metadata.Annotations)
+	// FIXME: not sure if this is right
+	for key, value := range metadata.Annotations {
+		switch key {
+		case "metadata.url", "metadata.image", "metadata.authors", "metadata.documentation", "metadata.source", "metadata.vendor":
+			continue
+		default:
+			annotations[key] = value
+		}
+	}
 	return annotations
 }
 
@@ -184,21 +194,20 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("reading %s for manifest: %w", ZarfYAML, err)
 	}
-	defined, err := pkgcfg.ParseMultiDoc(ctx, zarfYAMLBytes)
+	config, err := configDefinitionFromZarfYAML(ctx, zarfYAMLBytes)
 	if err != nil {
 		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
 	}
-	zarfPkg := defined.AsV1alpha1()
-	configBytes, err := json.Marshal(zarfPkg)
+	configBytes, err := json.Marshal(config.definition)
 	if err != nil {
 		return err
 	}
 	configDesc := content.NewDescriptorFromBytes(ZarfConfigMediaType, configBytes)
 
-	annotations := AnnotationsFromMetadata(zarfPkg.Metadata)
+	annotations := AnnotationsFromMetadata(config.pkg)
 
 	// Back-compatible timestamp parsing → OCI format. Fall back to zero time (epoch) if the timestamp is absent.
-	t, parseErr := time.Parse(v1alpha1.BuildTimestampFormat, zarfPkg.Build.Timestamp)
+	t, parseErr := time.Parse(api.BuildTimestampFormat, config.pkg.Build.Timestamp)
 	if parseErr != nil {
 		t = time.Time{}
 	}
@@ -233,6 +242,35 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	}
 	p.digest = root.Digest.String()
 	return nil
+}
+
+type ociConfigDefinition struct {
+	definition any
+	pkg        api.Package
+}
+
+func configDefinitionFromZarfYAML(ctx context.Context, definition []byte) (ociConfigDefinition, error) {
+	version, err := pkgcfg.SelectVersion(ctx, definition)
+	if err != nil {
+		return ociConfigDefinition{}, err
+	}
+
+	switch version {
+	case v1alpha1.APIVersion:
+		pkg, err := pkgcfg.ParseAs(ctx, definition, pkgcfg.V1Alpha1)
+		if err != nil {
+			return ociConfigDefinition{}, err
+		}
+		return ociConfigDefinition{definition: pkg, pkg: convert.PackageFromV1alpha1(pkg)}, nil
+	case v1beta1.APIVersion:
+		pkg, err := pkgcfg.ParseAs(ctx, definition, pkgcfg.V1Beta1)
+		if err != nil {
+			return ociConfigDefinition{}, err
+		}
+		return ociConfigDefinition{definition: pkg, pkg: convert.PackageFromV1beta1(pkg)}, nil
+	default:
+		return ociConfigDefinition{}, fmt.Errorf("unsupported package apiVersion %q", version)
+	}
 }
 
 // SetRegistryDigest records the manifest digest as resolved from a registry.

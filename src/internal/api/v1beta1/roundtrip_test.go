@@ -22,10 +22,10 @@ import (
 // time (currently <20s) with coverage.
 const defaultFuzzIterations = 20
 
-// TestConvertGenericRoundTripLossless asserts that a v1beta1 package converted to the generic
-// representation and back reproduces the original exactly. layout and zoci load built packages
-// through this round-trip, so any drift would change packages across build hosts.
-func TestConvertGenericRoundTripLossless(t *testing.T) {
+// TestConvertGenericRoundTrip verifies that fields represented by the operational model survive a
+// v1beta1 conversion. Fields omitted from the comparison are documented below with the behavior
+// that makes their source form unnecessary.
+func TestConvertGenericRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	b := func(v bool) *bool { return &v }
@@ -185,16 +185,12 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 		Values:        v1beta1.Values{Files: []string{"vals.yaml"}, Schema: "schema.json"},
 		Documentation: map[string]string{"doc": "doc.md"},
 	}
-	original.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
-
-	roundTripped := ConvertFromGeneric(ConvertToGeneric(original))
-	require.Equal(t, original, roundTripped)
+	roundTripped := PackageToV1beta1(PackageFromV1beta1(original))
+	require.Empty(t, cmp.Diff(original, roundTripped, v1beta1GenericRoundTripExclusions()...))
 }
 
-// TestConvertGenericRoundTripFuzz reflectively populates every field of a Package with random
-// values and asserts the generic round-trip reproduces it exactly. Walking the struct by reflection
-// means a newly added field is exercised automatically, so a field the conversion forgets to carry
-// is caught here rather than silently dropped.
+// TestConvertGenericRoundTripFuzz reflectively populates every v1beta1 field. The explicit
+// exclusions make fields intentionally normalized by the operational model visible in review.
 func TestConvertGenericRoundTripFuzz(t *testing.T) {
 	t.Parallel()
 
@@ -207,15 +203,24 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 		// value; pin them to valid forms and let every other field vary.
 		pkg.APIVersion = v1beta1.APIVersion
 		pkg.Kind = v1beta1.ZarfPackageConfig
-		pkg.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
 		for ci := range pkg.Components {
 			for chi := range pkg.Components[ci].Charts {
 				keepRandomChartSource(&pkg.Components[ci].Charts[chi], rng)
 			}
 		}
 
-		roundTripped := ConvertFromGeneric(ConvertToGeneric(pkg))
-		require.Equalf(t, pkg, roundTripped, "round-trip diverged on iteration %d", i)
+		roundTripped := PackageToV1beta1(PackageFromV1beta1(pkg))
+		require.Emptyf(t, cmp.Diff(pkg, roundTripped, v1beta1GenericRoundTripExclusions()...), "round-trip diverged on iteration %d", i)
+	}
+}
+
+// v1beta1GenericRoundTripExclusions lists source-form distinctions intentionally absent from the
+// operational model.
+//
+//   - actionSet.defaults: nil and an empty defaults object both apply no defaults.
+func v1beta1GenericRoundTripExclusions() cmp.Options {
+	return cmp.Options{
+		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
 	}
 }
 
@@ -266,8 +271,8 @@ func TestConvertV1beta1V1alpha1RoundTripFuzz(t *testing.T) {
 		// Valid chart with one only source so it can round trip
 		populateValidV1beta1ChartSources(&pkg, rng, i)
 
-		v1alpha1Pkg := internalv1alpha1.ConvertFromGeneric(ConvertToGeneric(pkg))
-		roundTripped := ConvertFromGeneric(internalv1alpha1.ConvertToGeneric(v1alpha1Pkg))
+		v1alpha1Pkg := internalv1alpha1.PackageToV1alpha1(PackageFromV1beta1(pkg))
+		roundTripped := PackageToV1beta1(internalv1alpha1.PackageFromV1alpha1(v1alpha1Pkg))
 		require.Emptyf(t, cmp.Diff(pkg, roundTripped, v1beta1V1alpha1RoundTripExclusions()...), "cross-version round-trip diverged on iteration %d", i)
 	}
 }
@@ -343,8 +348,7 @@ func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
 // The fuzz test replaces repositories and chart sources with schema-valid generated values, then
 // ignores only these fields when comparing the result.
 //
-//   - package.apiVersion and package.kind are canonicalized to the target API. originalAPIVersion
-//     is internal build tracking and is set by the version that loads or creates the package
+//   - package.apiVersion and package.kind are canonicalized to the target API.
 //   - component.import has separate local and remote lists in v1beta1, while v1alpha1 has one
 //     import object; component.service has no v1alpha1 equivalent.
 //   - image.source distinguishes registry and daemon sources in v1beta1, v1alpha1 images always fallback
@@ -354,14 +358,16 @@ func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
 //     so their relative order is lost when the two kinds are interleaved.
 //   - actionSet.defaults is a pointer in v1beta1 but a value in v1alpha1, so nil and an explicitly
 //     empty defaults object cannot be distinguished.
+//   - action.wait.cluster.condition defaults from empty to "exists" in v1alpha1, while it defaults
+//     to readiness in v1beta1.
 func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1beta1.Package{}, "APIVersion", "Kind"),
-		cmpopts.IgnoreUnexported(v1beta1.BuildData{}),
 		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
 		cmpopts.IgnoreFields(v1beta1.Image{}, "Source"),
 		cmpopts.IgnoreFields(v1beta1.Manifest{}, "Kustomize"),
 		cmpopts.IgnoreFields(v1beta1.Chart{}, "ValuesFiles"),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
+		cmpopts.IgnoreFields(v1beta1.ComponentActionWaitCluster{}, "Condition"),
 	}
 }

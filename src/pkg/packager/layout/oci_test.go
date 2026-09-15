@@ -5,6 +5,7 @@ package layout
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,27 +15,29 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"oras.land/oras-go/v2/errdef"
 )
 
 func TestAnnotationsFromMetadata(t *testing.T) {
 	t.Parallel()
 
-	metadata := v1alpha1.ZarfMetadata{
-		Name:          "foo",
-		Description:   "bar",
-		URL:           "https://example.com",
-		Authors:       "Zarf",
-		Documentation: "documentation",
-		Source:        "source",
-		Vendor:        "vendor",
+	pkg := api.Package{Metadata: api.PackageMetadata{
+		Name:        "foo",
+		Description: "bar",
 		Annotations: map[string]string{
+			"metadata.url":                   "https://example.com",
+			"metadata.authors":               "Zarf",
+			"metadata.documentation":         "documentation",
+			"metadata.source":                "source",
+			"metadata.vendor":                "vendor",
 			"org.opencontainers.image.title": "overridden",
 			"org.opencontainers.image.new":   "new-field",
 		},
-	}
-	annotations := AnnotationsFromMetadata(metadata)
+	}}
+	annotations := AnnotationsFromMetadata(pkg)
 	expectedAnnotations := map[string]string{
 		"org.opencontainers.image.title":         "overridden",
 		"org.opencontainers.image.description":   "bar",
@@ -67,7 +70,7 @@ func newTestLayout(t *testing.T) (*PackageLayout, []byte) {
 
 	p := &PackageLayout{
 		dirPath: dir,
-		PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+		pkg: packageDefinition(v1alpha1.ZarfPackage{
 			Metadata: v1alpha1.ZarfMetadata{Name: "test-pkg", Version: "1.0.0"},
 			Build:    v1alpha1.ZarfBuildData{Architecture: "amd64"},
 		}),
@@ -81,7 +84,28 @@ func TestDigest(t *testing.T) {
 	p, _ := newTestLayout(t)
 
 	d := p.Digest()
-	assert.Equal(t, "sha256:28999b2812b62c2df92f9eb90e48b0a467ba3f0aeeaae10702e438387aa12bd3", d, "digest should match expected precomputed digest")
+	assert.Equal(t, "sha256:25242bc565875477a9f691d8ce135b433bb014340a46b87113d977f0c08bd728", d, "digest should match expected precomputed digest")
+}
+
+func TestComputeManifest_UsesDefinitionAPIVersionForConfig(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, Checksums), []byte{}, 0600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ZarfYAML), []byte("apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: test-pkg\n"), 0600))
+
+	p := &PackageLayout{dirPath: dir}
+	require.NoError(t, p.computeManifest(context.Background()))
+
+	manifest, err := p.Manifest()
+	require.NoError(t, err)
+	config, err := p.Fetch(context.Background(), manifest.Config)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, config.Close()) })
+
+	var definition struct {
+		APIVersion string `json:"apiVersion"`
+	}
+	require.NoError(t, json.NewDecoder(config).Decode(&definition))
+	require.Equal(t, v1beta1.APIVersion, definition.APIVersion)
 }
 
 func TestTotalSize(t *testing.T) {
