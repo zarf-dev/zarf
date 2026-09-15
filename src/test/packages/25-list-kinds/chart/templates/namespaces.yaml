@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: NamespaceList
+items:
+  # zarf strips namespaces out of what helm applies so it owns them itself, which it can only do
+  # for an item if the list it came in is flattened first
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: list-kinds-nested-ns
