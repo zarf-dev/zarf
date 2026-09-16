@@ -10,28 +10,10 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 )
 
-// ComponentView is the stable projection a filter sees.
-type ComponentView struct {
-	Name        string
-	Description string
-	Optional    bool
-	Default     bool
-	Group       string
-	OnlyLocalOS string
-
-	// Definition is the complete versioned component definition for interactive display.
-	Definition any
-}
-
-// PackageView is the stable package projection a filter sees.
-type PackageView struct {
-	Components []ComponentView
-}
-
 // ComponentFilterStrategy is a strategy interface for filtering components.
 type ComponentFilterStrategy interface {
 	// Apply returns the indices of the components to keep, in order.
-	Apply(PackageView) ([]int, error)
+	Apply(api.Package) ([]int, error)
 }
 
 // Apply applies a component filter to a package definition.
@@ -40,7 +22,7 @@ func Apply(definition api.Package, filter ComponentFilterStrategy) (api.Package,
 		filter = Empty()
 	}
 
-	indices, err := filter.Apply(packageView(definition))
+	indices, err := filter.Apply(definition)
 	if err != nil {
 		return api.Package{}, err
 	}
@@ -51,29 +33,13 @@ func Apply(definition api.Package, filter ComponentFilterStrategy) (api.Package,
 	return definition, nil
 }
 
-func packageView(definition api.Package) PackageView {
-	components := make([]ComponentView, 0, len(definition.Components))
-	for _, component := range definition.Components {
-		components = append(components, ComponentView{
-			Name:        component.Name,
-			Description: component.Description,
-			Optional:    component.Optional,
-			Default:     component.Default,
-			Group:       component.Group,
-			OnlyLocalOS: component.Target.OS,
-			Definition:  component,
-		})
-	}
-	return PackageView{Components: components}
-}
-
 // comboFilter is a filter that applies a sequence of filters.
 type comboFilter struct {
 	filters []ComponentFilterStrategy
 }
 
 // Apply applies the filter.
-func (f *comboFilter) Apply(pkg PackageView) ([]int, error) {
+func (f *comboFilter) Apply(pkg api.Package) ([]int, error) {
 	result := pkg
 	resultIndices := make([]int, len(pkg.Components))
 	for idx := range pkg.Components {
@@ -86,16 +52,16 @@ func (f *comboFilter) Apply(pkg PackageView) ([]int, error) {
 			return nil, fmt.Errorf("error applying filter %T: %w", filter, err)
 		}
 
-		components := make([]ComponentView, 0, len(indices))
 		nextIndices := make([]int, 0, len(indices))
 		for _, idx := range indices {
 			if idx < 0 || idx >= len(result.Components) {
 				return nil, fmt.Errorf("error applying filter %T: index %d out of range", filter, idx)
 			}
-			components = append(components, result.Components[idx])
 			nextIndices = append(nextIndices, resultIndices[idx])
 		}
-		result.Components = components
+		if err := result.RetainComponents(indices); err != nil {
+			return nil, fmt.Errorf("error applying filter %T: %w", filter, err)
+		}
 		resultIndices = nextIndices
 	}
 

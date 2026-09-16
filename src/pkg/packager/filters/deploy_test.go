@@ -11,9 +11,42 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
+
+func TestComponentForDisplay_UsesPackageAPIVersion(t *testing.T) {
+	tests := map[string]struct {
+		definition api.Package
+		wantType   any
+	}{
+		"v1alpha1": {
+			definition: convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
+				APIVersion: v1alpha1.APIVersion,
+				Components: []v1alpha1.ZarfComponent{{Name: "component"}},
+			}),
+			wantType: v1alpha1.ZarfComponent{},
+		},
+		"v1beta1": {
+			definition: convert.PackageFromV1beta1(v1beta1.Package{
+				APIVersion: v1beta1.APIVersion,
+				Components: []v1beta1.Component{{Name: "component"}},
+			}),
+			wantType: v1beta1.Component{},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			component, err := componentForDisplay(tt.definition, 0)
+
+			require.NoError(t, err)
+			require.IsType(t, tt.wantType, component)
+		})
+	}
+}
 
 func componentFromQuery(t *testing.T, q string) v1alpha1.ZarfComponent {
 	c := v1alpha1.ZarfComponent{
@@ -208,7 +241,7 @@ func TestDeployFilter_Apply(t *testing.T) {
 			isInteractive := false
 			filter := ForDeploy(tt.optionalComponents, isInteractive)
 
-			indices, err := filter.Apply(packageView(convert.PackageFromV1alpha1(tt.pkg)))
+			indices, err := filter.Apply(convert.PackageFromV1alpha1(tt.pkg))
 			result := selectV1alpha1Components(tt.pkg, indices)
 			if tt.expectedErr != nil {
 				require.ErrorIs(t, err, tt.expectedErr)

@@ -13,6 +13,10 @@ import (
 	"github.com/agnivade/levenshtein"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/pterm/pterm"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -42,7 +46,7 @@ var (
 )
 
 // Apply applies the filter.
-func (f *deploymentFilter) Apply(pkg PackageView) ([]int, error) {
+func (f *deploymentFilter) Apply(pkg api.Package) ([]int, error) {
 	var selectedComponents []int
 	groupedComponents := map[string][]indexedComponent{}
 	orderedComponentGroups := []string{}
@@ -172,7 +176,7 @@ func (f *deploymentFilter) Apply(pkg PackageView) ([]int, error) {
 				}
 
 				if f.isInteractive {
-					selected, err := selectOptionalComponent(component.component)
+					selected, err := selectOptionalComponent(pkg, component)
 					if err != nil {
 						return nil, fmt.Errorf("%w: %w", ErrSelectionCanceled, err)
 					}
@@ -195,24 +199,24 @@ func (f *deploymentFilter) Apply(pkg PackageView) ([]int, error) {
 
 type indexedComponent struct {
 	idx       int
-	component ComponentView
+	component api.Component
 }
 
-func selectOptionalComponent(component ComponentView) (bool, error) {
+func selectOptionalComponent(pkg api.Package, indexed indexedComponent) (bool, error) {
 	message.HorizontalRule()
 
-	definition := component.Definition
-	if definition == nil {
-		definition = component
+	definition, err := componentForDisplay(pkg, indexed.idx)
+	if err != nil {
+		return false, err
 	}
-	err := utils.ColorPrintYAML(definition, nil, false)
+	err = utils.ColorPrintYAML(definition, nil, false)
 	if err != nil {
 		return false, err
 	}
 
 	prompt := &survey.Confirm{
-		Message: fmt.Sprintf("Deploy the %s component?", component.Name),
-		Default: component.Default,
+		Message: fmt.Sprintf("Deploy the %s component?", indexed.component.Name),
+		Default: indexed.component.Default,
 	}
 
 	var confirm bool
@@ -221,6 +225,22 @@ func selectOptionalComponent(component ComponentView) (bool, error) {
 		return false, err
 	}
 	return confirm, nil
+}
+
+// componentForDisplay converts a component back to the package's authored API version.
+func componentForDisplay(pkg api.Package, idx int) (any, error) {
+	if idx < 0 || idx >= len(pkg.Components) {
+		return nil, fmt.Errorf("component index %d out of range", idx)
+	}
+
+	switch pkg.APIVersion {
+	case "", v1alpha1.APIVersion:
+		return convert.PackageToV1alpha1(pkg).Components[idx], nil
+	case v1beta1.APIVersion:
+		return convert.PackageToV1beta1(pkg).Components[idx], nil
+	default:
+		return nil, fmt.Errorf("unsupported package apiVersion %q", pkg.APIVersion)
+	}
 }
 
 func selectChoiceGroup(componentGroup []indexedComponent) (indexedComponent, error) {
