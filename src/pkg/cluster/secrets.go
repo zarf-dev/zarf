@@ -63,8 +63,8 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 		},
 	}
 
-	if registryInfo.RegistryMode == state.RegistryModeProxy {
-		svc, err := c.Clientset.CoreV1().Services("zarf").Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
+	if registryInfo.ShouldUseMTLS() && registryInfo.UsesUniformMTLSEndpoint() {
+		svc, err := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, ZarfRegistryMTLSServiceName, metav1.GetOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return nil, err
 		}
@@ -74,6 +74,17 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 			}
 			port := svc.Spec.Ports[0].Port
 			addRegistryAuthEntries(dockerConfigJSON.Auths, svc, port, authEncodedValue)
+		}
+	} else if registryInfo.RegistryMode == state.RegistryModeProxy {
+		svc, err := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, ZarfRegistryName, metav1.GetOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return nil, err
+		}
+		if !kerrors.IsNotFound(err) {
+			if len(svc.Spec.Ports) == 0 {
+				return nil, fmt.Errorf("registry service has no ports")
+			}
+			addRegistryAuthEntries(dockerConfigJSON.Auths, svc, svc.Spec.Ports[0].Port, authEncodedValue)
 		}
 	} else {
 		serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
@@ -227,19 +238,60 @@ func (c *Cluster) ApplyZarfManagedMTLSSecrets(ctx context.Context) error {
 	return nil
 }
 
+// ApplyUserManagedRegistryTLSSecrets stores a user-provided server identity and
+// generates the distinct client CA used to authenticate Zarf machine clients. The
+// user-provided server key never leaves the zarf namespace.
+func (c *Cluster) ApplyUserManagedRegistryTLSSecrets(ctx context.Context, serverPKI pki.GeneratedPKI) error {
+	clientCA, clientCAKey, err := pki.GenerateCA(state.ZarfRegistryMTLSCASubject)
+	if err != nil {
+		return fmt.Errorf("generate registry client CA: %w", err)
+	}
+	clientCert, clientKey, err := pki.GenerateClientCert(clientCA, clientCAKey, state.ZarfRegistryMTLSClientCommonName)
+	if err != nil {
+		return fmt.Errorf("generate registry client certificate: %w", err)
+	}
+
+	// The registry trusts the generated client CA, while clients trust the CA
+	// supplied for the server certificate.
+	serverForRegistry := serverPKI
+	serverForRegistry.CA = clientCA
+	clientForRegistry := pki.GeneratedPKI{CA: serverPKI.CA, Cert: clientCert, Key: clientKey}
+	if err := c.ApplyZarfRegistryCertSecrets(ctx, serverForRegistry, clientForRegistry); err != nil {
+		return err
+	}
+
+	namespaces, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: state.ZarfManagedByLabel + "=zarf"})
+	if err != nil {
+		return fmt.Errorf("list Zarf-managed namespaces: %w", err)
+	}
+	for _, namespace := range namespaces.Items {
+		if namespace.Name == state.ZarfNamespaceName || namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore" {
+			continue
+		}
+		if err := c.ApplyRegistryClientCertSecret(ctx, clientForRegistry, namespace.Name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // GetServiceInfoFromRegistryAddress gets the service info for a registry address
 // If the address is not a service then it is returned
 // If the address is a service then the service DNS name and clusterIP is returned
 func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, registryInfo state.RegistryInfo) (string, string, error) {
-	if registryInfo.RegistryMode == state.RegistryModeProxy {
-		svc, err := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, ZarfRegistryName, metav1.GetOptions{})
+	if registryInfo.RegistryMode == state.RegistryModeProxy || (registryInfo.IsInternal() && registryInfo.ShouldUseMTLS()) {
+		serviceName := ZarfRegistryName
+		if registryInfo.UsesUniformMTLSEndpoint() {
+			serviceName = ZarfRegistryMTLSServiceName
+		}
+		svc, err := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, serviceName, metav1.GetOptions{})
 		if err != nil {
 			return "", "", err
 		}
 		if len(svc.Spec.Ports) == 0 {
 			return "", "", fmt.Errorf("registry service has no ports")
 		}
-		serviceDNS := fmt.Sprintf("%s.%s.svc.cluster.local:%d", ZarfRegistryName, state.ZarfNamespaceName, svc.Spec.Ports[0].Port)
+		serviceDNS := fmt.Sprintf("%s.%s.svc.cluster.local:%d", serviceName, state.ZarfNamespaceName, svc.Spec.Ports[0].Port)
 		clusterIP := net.JoinHostPort(svc.Spec.ClusterIP, fmt.Sprintf("%d", svc.Spec.Ports[0].Port))
 		return serviceDNS, clusterIP, nil
 	}

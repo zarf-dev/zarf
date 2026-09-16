@@ -134,7 +134,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Clust
 
 		var transport http.RoundTripper
 		if useMTLS {
-			transport, err = pki.TransportWithKey(certs)
+			transport, err = pki.TransportWithKeyForServer(certs, zarfState.RegistryInfo.MTLSServerName())
 			if err != nil {
 				return nil, fmt.Errorf("failed to create transport from client cert: %w", err)
 			}

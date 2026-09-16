@@ -180,6 +180,9 @@ type InitStateOptions struct {
 	InjectorPort int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// RegistryTLS allows providing the registry's server CA, certificate, and key. When nil,
+	// internal registries use Zarf-managed mTLS.
+	RegistryTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
 	AgentMutationPolicy state.MutationPolicy
 	// InternalServices lists the state services that Zarf is deploying in this init run.
@@ -212,7 +215,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 
 	// If state is nil, this is a new cluster.
-	if s == nil {
+	isNewState := s == nil
+	if isNewState {
 		s = &state.State{}
 		l.Debug("new cluster, no prior Zarf deployments found")
 		if opts.ApplianceMode {
@@ -323,7 +327,19 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		case modeChanged:
 			s.RegistryInfo.Port = state.ZarfInClusterContainerRegistryNodePort
 		}
-		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyNone
+		if opts.RegistryTLS != nil {
+			s.RegistryInfo.MTLSStrategy = state.MTLSStrategyUserManaged
+		} else if isNewState && (s.RegistryInfo.MTLSStrategy == "" || s.RegistryInfo.MTLSStrategy == state.MTLSStrategyNone) {
+			s.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
+		} else if modeChanged {
+			// Existing NodePort registries remain plaintext unless an explicit TLS
+			// identity is supplied during a current init reconciliation.
+			s.RegistryInfo.MTLSStrategy = state.MTLSStrategyNone
+			s.RegistryInfo.MTLSEndpointVersion = 0
+		}
+		if (isNewState || opts.RegistryTLS != nil) && s.RegistryInfo.ShouldUseMTLS() {
+			s.RegistryInfo.MTLSEndpointVersion = 1
+		}
 		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
 	case state.RegistryModeProxy:
 		switch {
@@ -333,14 +349,29 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			s.RegistryInfo.Port = state.ZarfRegistryHostPort
 		}
 		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
+		if opts.RegistryTLS != nil {
+			s.RegistryInfo.MTLSStrategy = state.MTLSStrategyUserManaged
+		} else if s.RegistryInfo.MTLSStrategy == "" || s.RegistryInfo.MTLSStrategy == state.MTLSStrategyNone {
+			s.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
+		}
+		// A legacy proxy retains endpoint version zero until its current init package
+		// installs and verifies the uniform service
+		// FIXME: does this handle custom init or is it coupled to the CLI
+		if (isNewState || opts.RegistryTLS != nil) && s.RegistryInfo.MTLSEndpointVersion == 0 && s.RegistryInfo.ShouldUseMTLS() {
+			s.RegistryInfo.MTLSEndpointVersion = 1
+		}
 	}
 
-	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
-		err = c.InitRegistryCerts(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate certs: %w", err)
+	if s.RegistryInfo.IsInternal() && s.RegistryInfo.ShouldUseMTLS() {
+		if opts.RegistryTLS != nil {
+			if err = c.ApplyUserManagedRegistryTLSSecrets(ctx, *opts.RegistryTLS); err != nil {
+				return nil, fmt.Errorf("failed to apply user-managed registry TLS certificates: %w", err)
+			}
+		} else if s.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
+			if err = c.InitRegistryCerts(ctx); err != nil {
+				return nil, fmt.Errorf("failed to generate certs: %w", err)
+			}
 		}
-		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
 	}
 
 	switch s.Distro {
@@ -491,7 +522,8 @@ func (c *Cluster) ApplyRegistryClientCertSecret(ctx context.Context, clientPKI p
 }
 
 // ApplyZarfRegistryCertSecrets applies the provided server and client certificates to the cluster as Kubernetes secrets.
-// Both the server and client PKI bundles should contain the same CA certificate.
+// Both the server and client PKI bundles should contain the same CA certificate for
+// Zarf-managed mTLS. User-managed server certificates use ApplyUserManagedRegistryTLSSecrets.
 func (c *Cluster) ApplyZarfRegistryCertSecrets(ctx context.Context, serverPKI, clientPKI pki.GeneratedPKI) error {
 	l := logger.From(ctx)
 

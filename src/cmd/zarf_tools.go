@@ -580,9 +580,12 @@ func resolveRegistryUpdate(ctx context.Context, c *cluster.Cluster, oldRegistryI
 }
 
 type updateRegistryCredsOptions struct {
-	confirm        bool
-	forceConflicts bool
-	registryInfo   state.RegistryInfo
+	confirm             bool
+	forceConflicts      bool
+	registryInfo        state.RegistryInfo
+	registryTLSCAPath   string
+	registryTLSCertPath string
+	registryTLSKeyPath  string
 }
 
 func newUpdateRegistryCredsCommand(v *viper.Viper) *cobra.Command {
@@ -606,6 +609,10 @@ func newUpdateRegistryCredsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.registryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 	cmd.Flags().StringVar(&o.registryInfo.PullUsername, "registry-pull-username", v.GetString(VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
 	cmd.Flags().StringVar(&o.registryInfo.PullPassword, "registry-pull-password", v.GetString(VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
+	cmd.Flags().StringVar(&o.registryTLSCAPath, "registry-tls-ca", v.GetString(VInitRegistryTLSCA), "Path to a PEM-encoded CA certificate for the Zarf Registry")
+	cmd.Flags().StringVar(&o.registryTLSCertPath, "registry-tls-cert", v.GetString(VInitRegistryTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf Registry")
+	cmd.Flags().StringVar(&o.registryTLSKeyPath, "registry-tls-key", v.GetString(VInitRegistryTLSKey), "Path to a PEM-encoded TLS private key for the Zarf Registry")
+	cmd.MarkFlagsRequiredTogether("registry-tls-ca", "registry-tls-cert", "registry-tls-key")
 
 	return cmd
 }
@@ -620,11 +627,34 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string, v *vipe
 	if !oldState.RegistryInfo.IsConfigured() {
 		return errors.New("no registry is configured in the Zarf state; nothing to update")
 	}
+	var registryTLS *pki.GeneratedPKI
+	if o.registryTLSCAPath != "" {
+		if !oldState.RegistryInfo.IsInternal() {
+			return errors.New("registry TLS flags are only supported for Zarf-managed nodeport and proxy registries")
+		}
+		if oldState.RegistryInfo.RegistryMode == state.RegistryModeProxy && oldState.RegistryInfo.MTLSEndpointVersion == 0 {
+			return errors.New("this proxy registry uses a legacy init package; rerun zarf init with a current init package before updating registry TLS")
+		}
+		loadedTLS, err := loadAndValidateRegistryTLS(o.registryTLSCAPath, o.registryTLSCertPath, o.registryTLSKeyPath)
+		if err != nil {
+			return fmt.Errorf("invalid registry TLS certificates: %w", err)
+		}
+		registryTLS = &loadedTLS
+		o.registryInfo.MTLSStrategy = state.MTLSStrategyUserManaged
+		o.registryInfo.MTLSEndpointVersion = 1
+	}
 
 	registryURLSet := optionIsExplicitlySet(cmd, v, "registry-url", VInitRegistryURL)
 	registryInfo, err := resolveRegistryUpdate(ctx, c, oldState.RegistryInfo, o.registryInfo, registryURLSet)
 	if err != nil {
 		return err
+	}
+	if registryTLS != nil {
+		if !registryInfo.IsInternal() {
+			return errors.New("registry TLS flags are only supported for Zarf-managed nodeport and proxy registries")
+		}
+		registryInfo.MTLSStrategy = state.MTLSStrategyUserManaged
+		registryInfo.MTLSEndpointVersion = 1
 	}
 
 	newState, err := state.Merge(oldState, state.MergeOptions{
@@ -643,8 +673,12 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string, v *vipe
 		return nil
 	}
 
-	// mTLS certs are not part of state, and so not part of the rollback
-	if newState.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
+	// mTLS certs are not part of state, and so not part of the rollback.
+	if registryTLS != nil {
+		if err := c.ApplyUserManagedRegistryTLSSecrets(ctx, *registryTLS); err != nil {
+			return err
+		}
+	} else if newState.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
 		if err := c.ApplyZarfManagedMTLSSecrets(ctx); err != nil {
 			return err
 		}

@@ -86,6 +86,9 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --registry-push-password string           Password for the push-user to connect to the registry
       --registry-push-username string           Username to access to the registry Zarf is configured to use
       --registry-secret string                  Internal registry secret value. Only used when --registry-url is not set.
+      --registry-tls-ca string                  Path to a PEM-encoded CA certificate for the Zarf Registry
+      --registry-tls-cert string                Path to a PEM-encoded TLS certificate for the Zarf Registry
+      --registry-tls-key string                 Path to a PEM-encoded TLS private key for the Zarf Registry
       --registry-url string                     External registry url address to use for this Zarf cluster
       --retries int                             Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures (default 3)
       --set-values stringToString               Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])

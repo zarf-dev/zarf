@@ -40,12 +40,16 @@ const (
 	ZarfGit      = "GIT"
 	ZarfInjector = "INJECTOR"
 
-	ZarfInjectorName  = "zarf-injector"
-	ZarfInjectorPort  = 5000
-	ZarfRegistryName  = "zarf-docker-registry"
-	ZarfRegistryPort  = 5000
-	ZarfGitServerName = "zarf-gitea-http"
-	ZarfGitServerPort = 3000
+	ZarfInjectorName = "zarf-injector"
+	ZarfInjectorPort = 5000
+	ZarfRegistryName = "zarf-docker-registry"
+	ZarfRegistryPort = 5000
+	// ZarfRegistryMTLSServiceName is the uniform in-cluster endpoint used by
+	// Zarf clients. The NodePort registry remains plaintext for kubelets.
+	ZarfRegistryMTLSServiceName = "zarf-docker-registry-mtls"
+	ZarfRegistryMTLSServicePort = 5000
+	ZarfGitServerName           = "zarf-gitea-http"
+	ZarfGitServerPort           = 3000
 )
 
 // TunnelInfo is a struct that contains the necessary info to create a new Tunnel
@@ -154,8 +158,14 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 	var err error
 	var tunnel *Tunnel
 	if registryInfo.IsInternal() {
+		serviceName := ZarfRegistryName
+		servicePort := ZarfRegistryPort
+		if registryInfo.UsesUniformMTLSEndpoint() {
+			serviceName = ZarfRegistryMTLSServiceName
+			servicePort = ZarfRegistryMTLSServicePort
+		}
 		// Establish a registry tunnel to send the images to the zarf registry
-		if tunnel, err = c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfRegistryName, "", 0, ZarfRegistryPort); err != nil {
+		if tunnel, err = c.NewTunnel(state.ZarfNamespaceName, SvcResource, serviceName, "", 0, servicePort); err != nil {
 			return "", tunnel, err
 		}
 	} else if dns.IsServiceURL(registryInfo.Address) {

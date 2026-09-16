@@ -393,18 +393,30 @@ func GenerateMTLSCerts(caSubject string, serverDNSNames []string, serverCommonNa
 // The registry CA is added to, rather than replaces, the system trust store. Registry
 // storage drivers can redirect blob requests to external endpoints such as S3
 func TransportWithKey(certs GeneratedPKI) (http.RoundTripper, error) {
+	return TransportWithKeyForServer(certs, "")
+}
+
+// TransportWithKeyForServer creates an mTLS transport and, when serverName is
+// provided, verifies that DNS name instead of the host used by the connection.
+// This is required for locally port-forwarded Kubernetes services.
+func TransportWithKeyForServer(certs GeneratedPKI, serverName string) (http.RoundTripper, error) {
+	// FIXME: why the system cert pool?
 	rootCAs, err := x509.SystemCertPool()
 	if err != nil || rootCAs == nil {
 		rootCAs = x509.NewCertPool()
 	}
 
-	return transportWithKey(certs, rootCAs)
+	return transportWithKeyForServer(certs, rootCAs, serverName)
 }
 
 // transportWithKey creates an mTLS transport using baseRootCAs as the existing
 // trusted roots. It is split out to make the combined trust behavior testable
 // without depending on the host's system trust store.
 func transportWithKey(certs GeneratedPKI, baseRootCAs *x509.CertPool) (http.RoundTripper, error) {
+	return transportWithKeyForServer(certs, baseRootCAs, "")
+}
+
+func transportWithKeyForServer(certs GeneratedPKI, baseRootCAs *x509.CertPool, serverName string) (http.RoundTripper, error) {
 	cert, err := tls.X509KeyPair(certs.Cert, certs.Key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load client certificate: %w", err)
@@ -421,6 +433,7 @@ func transportWithKey(certs GeneratedPKI, baseRootCAs *x509.CertPool) (http.Roun
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      caCertPool,
+		ServerName:   serverName,
 	}
 	transport, ok := http.DefaultTransport.(*http.Transport)
 	if !ok {

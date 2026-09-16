@@ -117,7 +117,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			if err != nil {
 				return err
 			}
-			transport, err = pki.TransportWithKey(certs)
+			transport, err = pki.TransportWithKeyForServer(certs, registryInfo.MTLSServerName())
 			if err != nil {
 				return err
 			}

@@ -72,6 +72,22 @@ func TestRegistryInfoKnownPlainHTTP(t *testing.T) {
 	}
 }
 
+func TestRegistryInfoMTLSEndpointSelection(t *testing.T) {
+	t.Parallel()
+
+	legacy := RegistryInfo{RegistryMode: RegistryModeProxy, MTLSStrategy: MTLSStrategyZarfManaged}
+	require.False(t, legacy.UsesUniformMTLSEndpoint())
+	require.Equal(t, "zarf-docker-registry.zarf.svc.cluster.local", legacy.MTLSServerName())
+
+	uniform := legacy
+	uniform.MTLSEndpointVersion = 1
+	require.True(t, uniform.UsesUniformMTLSEndpoint())
+	require.Equal(t, "zarf-docker-registry-mtls.zarf.svc.cluster.local", uniform.MTLSServerName())
+
+	plain := RegistryInfo{RegistryMode: RegistryModeNodePort, MTLSEndpointVersion: 1}
+	require.False(t, plain.UsesUniformMTLSEndpoint())
+}
+
 func TestRegistryInfoResolvePlainHTTP(t *testing.T) {
 	t.Parallel()
 

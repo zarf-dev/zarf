@@ -144,6 +144,8 @@ const (
 var ZarfRegistryMTLSServerHosts = []string{
 	"zarf-docker-registry",
 	"zarf-docker-registry.zarf.svc.cluster.local",
+	"zarf-docker-registry-mtls",
+	"zarf-docker-registry-mtls.zarf.svc.cluster.local",
 	"localhost",
 	"127.0.0.1",
 	"[::1]",
@@ -363,6 +365,8 @@ const (
 	MTLSStrategyNone MTLSStrategy = "none"
 	// MTLSStrategyZarfManaged indicates Zarf is managing the mTLS certificates
 	MTLSStrategyZarfManaged MTLSStrategy = "zarf-managed"
+	// MTLSStrategyUserManaged indicates the registry server certificate was supplied by the user.
+	MTLSStrategyUserManaged MTLSStrategy = "user-managed"
 )
 
 // Secrets holding the registry mTLS certificates, and the keys within them. The keys are
@@ -436,6 +440,24 @@ type RegistryInfo struct {
 	RegistryMode RegistryMode `json:"registryMode"`
 	// MTLSStrategy defines who manages the mTLS certificates for the registry (defaults to none)
 	MTLSStrategy MTLSStrategy `json:"mtlsStrategy,omitempty"`
+	// MTLSEndpointVersion identifies the secure machine-client endpoint supported by the registry chart.
+	// Zero preserves the legacy proxy endpoint for clusters initialized by older Zarf versions.
+	MTLSEndpointVersion int `json:"mtlsEndpointVersion,omitempty"`
+}
+
+// UsesUniformMTLSEndpoint reports whether machine clients should use the dedicated
+// ClusterIP mTLS service instead of the legacy registry service.
+func (ri RegistryInfo) UsesUniformMTLSEndpoint() bool {
+	return ri.IsInternal() && ri.ShouldUseMTLS() && ri.MTLSEndpointVersion >= 1
+}
+
+// MTLSServerName returns the service DNS name clients should verify when their
+// connection is locally port-forwarded.
+func (ri RegistryInfo) MTLSServerName() string {
+	if ri.UsesUniformMTLSEndpoint() {
+		return "zarf-docker-registry-mtls.zarf.svc.cluster.local"
+	}
+	return "zarf-docker-registry.zarf.svc.cluster.local"
 }
 
 // SetPort updates the registry port and its deprecated compatibility field.

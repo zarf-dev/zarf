@@ -117,7 +117,7 @@ Build registry configData with mTLS settings when enabled
 */}}
 {{- define "docker-registry.configData" -}}
 {{- $config := deepCopy .Values.secrets.configData -}}
-{{- if .Values.mtls.enabled -}}
+{{- if and .Values.mtls.enabled .Values.proxy.enabled -}}
 {{- $tlsDefaults := dict
   "certificate" "/certs/server/tls.crt"
   "key" "/certs/server/tls.key"

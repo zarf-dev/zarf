@@ -79,6 +79,8 @@ type DeployOptions struct {
 	InjectorImage  string
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// RegistryTLS allows providing a user-managed registry server identity.
+	RegistryTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
 	AgentMutationPolicy state.MutationPolicy
 
@@ -390,6 +392,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			StorageClass:        opts.StorageClass,
 			InjectorPort:        opts.InjectorPort,
 			AgentTLS:            opts.AgentTLS,
+			RegistryTLS:         opts.RegistryTLS,
 			AgentMutationPolicy: opts.AgentMutationPolicy,
 			InternalServices:    internalServicesFor(pkg.Components, opts),
 		})

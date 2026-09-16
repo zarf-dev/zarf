@@ -279,7 +279,7 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 	*o.craneOptions = append(*o.craneOptions, authOption)
 
 	if zarfState.RegistryInfo.ShouldUseMTLS() {
-		t, err := getZarfRegistryMTLSTransport(ctx, c)
+		t, err := getZarfRegistryMTLSTransport(ctx, c, zarfState.RegistryInfo)
 		if err != nil {
 			return err
 		}
@@ -294,12 +294,12 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 	return o.originalRunFn(cmd, []string{registryEndpoint})
 }
 
-func getZarfRegistryMTLSTransport(ctx context.Context, c *cluster.Cluster) (http.RoundTripper, error) {
+func getZarfRegistryMTLSTransport(ctx context.Context, c *cluster.Cluster, registryInfo state.RegistryInfo) (http.RoundTripper, error) {
 	certs, err := c.GetRegistryClientMTLSCert(ctx)
 	if err != nil {
 		return nil, err
 	}
-	t, err := pki.TransportWithKey(certs)
+	t, err := pki.TransportWithKeyForServer(certs, registryInfo.MTLSServerName())
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +360,7 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	if zarfState.RegistryInfo.ShouldUseMTLS() {
-		t, err := getZarfRegistryMTLSTransport(ctx, c)
+		t, err := getZarfRegistryMTLSTransport(ctx, c, zarfState.RegistryInfo)
 		if err != nil {
 			return err
 		}
@@ -552,7 +552,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
 
 		if s.RegistryInfo.ShouldUseMTLS() {
-			t, err := getZarfRegistryMTLSTransport(ctx, c)
+			t, err := getZarfRegistryMTLSTransport(ctx, c, s.RegistryInfo)
 			if err != nil {
 				return err
 			}

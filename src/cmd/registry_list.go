@@ -156,7 +156,7 @@ func setupRegistryAuth(ctx context.Context, repoRef string, plainHTTP, insecureS
 	})
 
 	if s.RegistryInfo.ShouldUseMTLS() {
-		t, err := getZarfRegistryMTLSTransport(ctx, c)
+		t, err := getZarfRegistryMTLSTransport(ctx, c, s.RegistryInfo)
 		if err != nil {
 			return registryConnection{}, err
 		}

@@ -68,6 +68,9 @@ const (
 	VInitRegistryPushPass = "init.registry.push_password"
 	VInitRegistryPullUser = "init.registry.pull_username"
 	VInitRegistryPullPass = "init.registry.pull_password"
+	VInitRegistryTLSCA    = "init.registry.tls_ca"
+	VInitRegistryTLSCert  = "init.registry.tls_cert"
+	VInitRegistryTLSKey   = "init.registry.tls_key"
 
 	// Init Package config keys
 

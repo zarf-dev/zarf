@@ -22,6 +22,10 @@ spec:
       labels:
         app: {{ template "docker-registry.name" . }}
         release: {{ .Release.Name }}
+        # FIXME: is this needed with the state field
+        {{- if .Values.mtls.enabled }}
+        zarf.dev/registry-mtls-endpoint-version: "1"
+        {{- end }}
         {{- if .Values.podLabels }}
 {{ toYaml .Values.podLabels | indent 8 }}
         {{- end }}
@@ -60,12 +64,12 @@ spec:
             httpGet:
               path: /
               port: 5000
-              scheme: {{ if .Values.mtls.enabled }}HTTPS{{ else }}HTTP{{ end }}
+              scheme: {{ if and .Values.mtls.enabled .Values.proxy.enabled }}HTTPS{{ else }}HTTP{{ end }}
           readinessProbe:
             httpGet:
               path: /
               port: 5000
-              scheme: {{ if .Values.mtls.enabled }}HTTPS{{ else }}HTTP{{ end }}
+              scheme: {{ if and .Values.mtls.enabled .Values.proxy.enabled }}HTTPS{{ else }}HTTP{{ end }}
           securityContext:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
@@ -105,6 +109,36 @@ spec:
               mountPath: /var/lib/registry/
             - name: config
               mountPath: "/etc/docker/registry"
+{{- if and .Values.mtls.enabled (not .Values.proxy.enabled) }}
+        - name: zarf-registry-mtls
+          image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
+
+          imagePullPolicy: IfNotPresent
+          args:
+          # FIXME what about non-ipv6?
+            - {{ if .Values.ipv6Only }}OPENSSL-LISTEN:5002,bind=[::],reuseaddr,fork,cert=/certs/server/tls.crt,key=/certs/server/tls.key,cafile=/certs/server/ca.crt,verify=1{{ else }}OPENSSL-LISTEN:5002,reuseaddr,fork,cert=/certs/server/tls.crt,key=/certs/server/tls.key,cafile=/certs/server/ca.crt,verify=1{{ end }}
+            - {{ if .Values.ipv6Only }}TCP6:[::1]:5000{{ else }}TCP4:127.0.0.1:5000{{ end }}
+          ports:
+            - name: mtls
+              containerPort: 5002
+          livenessProbe:
+            tcpSocket:
+              port: 5002
+          readinessProbe:
+            tcpSocket:
+              port: 5002
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            privileged: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: server-certs
+              mountPath: /certs/server
+              readOnly: true
+{{- end }}
 {{- if .Values.caBundle }}
             - mountPath: /etc/ssl/certs/ca-certificates.crt
               name: {{ template "docker-registry.fullname" . }}-ca-bundle

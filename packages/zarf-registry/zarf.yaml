@@ -174,7 +174,8 @@ components:
       - name: docker-registry
         releaseName: zarf-docker-registry
         localPath: chart
-        version: 1.0.1
+        # FIXME: can keep version the same
+        version: 1.1.0
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
@@ -201,7 +202,7 @@ components:
       - name: docker-registry
         releaseName: zarf-docker-registry
         localPath: chart
-        version: 1.0.1
+        version: 1.1.0
         namespace: zarf
         valuesFiles:
           - registry-values.yaml

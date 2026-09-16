@@ -42,6 +42,9 @@ $ zarf tools update-creds registry --registry-push-username={USERNAME} --registr
       --registry-pull-username string   Username for pull-only access to the registry
       --registry-push-password string   Password for the push-user to connect to the registry
       --registry-push-username string   Username to access to the registry Zarf is configured to use
+      --registry-tls-ca string          Path to a PEM-encoded CA certificate for the Zarf Registry
+      --registry-tls-cert string        Path to a PEM-encoded TLS certificate for the Zarf Registry
+      --registry-tls-key string         Path to a PEM-encoded TLS private key for the Zarf Registry
       --registry-url string             External registry url address to use for this Zarf cluster
 ```
 

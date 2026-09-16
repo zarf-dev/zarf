@@ -57,6 +57,9 @@ type initOptions struct {
 	agentTLSCAPath             string
 	agentTLSCertPath           string
 	agentTLSKeyPath            string
+	registryTLSCAPath          string
+	registryTLSCertPath        string
+	registryTLSKeyPath         string
 	agentMutationPolicy        string
 	packageVerifyFlags
 }
@@ -113,6 +116,9 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.registryInfo.PullUsername, "registry-pull-username", v.GetString(VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
 	cmd.Flags().StringVar(&o.registryInfo.PullPassword, "registry-pull-password", v.GetString(VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
 	cmd.Flags().StringVar(&o.registryInfo.Secret, "registry-secret", v.GetString(VInitRegistrySecret), lang.CmdInitFlagRegSecret)
+	cmd.Flags().StringVar(&o.registryTLSCAPath, "registry-tls-ca", v.GetString(VInitRegistryTLSCA), "Path to a PEM-encoded CA certificate for the Zarf Registry")
+	cmd.Flags().StringVar(&o.registryTLSCertPath, "registry-tls-cert", v.GetString(VInitRegistryTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf Registry")
+	cmd.Flags().StringVar(&o.registryTLSKeyPath, "registry-tls-key", v.GetString(VInitRegistryTLSKey), "Path to a PEM-encoded TLS private key for the Zarf Registry")
 
 	// Flags for using an external artifact server
 	cmd.Flags().StringVar(&o.artifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
@@ -143,6 +149,7 @@ func newInitCommand() *cobra.Command {
 
 	// Agent TLS flags must all be provided together
 	cmd.MarkFlagsRequiredTogether("agent-tls-ca", "agent-tls-cert", "agent-tls-key")
+	cmd.MarkFlagsRequiredTogether("registry-tls-ca", "registry-tls-cert", "registry-tls-key")
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-port")
@@ -150,6 +157,9 @@ func newInitCommand() *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-port")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-secret")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-tls-ca")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-tls-cert")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-tls-key")
 	cmd.MarkFlagsMutuallyExclusive("registry-port", "nodeport")
 
 	cmd.Flags().SortFlags = true
@@ -172,6 +182,14 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("invalid agent TLS certificates: %w", err)
 		}
 		agentTLS = &loadedTLS
+	}
+	var registryTLS *pki.GeneratedPKI
+	if o.registryTLSCAPath != "" {
+		loadedTLS, err := loadAndValidateRegistryTLS(o.registryTLSCAPath, o.registryTLSCertPath, o.registryTLSKeyPath)
+		if err != nil {
+			return fmt.Errorf("invalid registry TLS certificates: %w", err)
+		}
+		registryTLS = &loadedTLS
 	}
 
 	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer, agentTLS)
@@ -255,6 +273,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:              defaultRemoteOptions(),
 		IsInteractive:              !o.confirm,
 		AgentTLS:                   agentTLS,
+		RegistryTLS:                registryTLS,
 		AgentMutationPolicy:        state.MutationPolicy(o.agentMutationPolicy),
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
 	}
@@ -426,7 +445,47 @@ func loadAndValidateAgentTLS(caPath, certPath, keyPath string) (pki.GeneratedPKI
 	return pki.GeneratedPKI{CA: ca, Cert: cert, Key: key}, nil
 }
 
+// loadAndValidateRegistryTLS reads a user-managed registry server identity and
+// enforces the service SANs required by both legacy and uniform Zarf clients.
+func loadAndValidateRegistryTLS(caPath, certPath, keyPath string) (pki.GeneratedPKI, error) {
+	ca, err := os.ReadFile(caPath)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read registry TLS CA: %w", err)
+	}
+	cert, err := os.ReadFile(certPath)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read registry TLS cert: %w", err)
+	}
+	key, err := os.ReadFile(keyPath)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read registry TLS key: %w", err)
+	}
+	if _, err := tls.X509KeyPair(cert, key); err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("registry TLS cert and key do not match: %w", err)
+	}
+	parsed, err := pki.ParseCertFromPEM(cert)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("parse registry TLS certificate: %w", err)
+	}
+	if parsed.NotAfter.Before(time.Now()) {
+		return pki.GeneratedPKI{}, fmt.Errorf("registry TLS certificate expired at %s", parsed.NotAfter)
+	}
+	caPool := x509.NewCertPool()
+	if !caPool.AppendCertsFromPEM(ca) {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse provided CA certificate")
+	}
+	for _, name := range []string{"zarf-docker-registry.zarf.svc.cluster.local", "zarf-docker-registry-mtls.zarf.svc.cluster.local"} {
+		if _, err := parsed.Verify(x509.VerifyOptions{Roots: caPool, DNSName: name, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}); err != nil {
+			return pki.GeneratedPKI{}, fmt.Errorf("registry TLS certificate must be valid for %s: %w", name, err)
+		}
+	}
+	return pki.GeneratedPKI{CA: ca, Cert: cert, Key: key}, nil
+}
+
 func (o *initOptions) validateInitFlags() error {
+	if o.registryTLSCAPath != "" && (o.registryInfo.RegistryMode == state.RegistryModeExternal || o.registryInfo.Address != "") {
+		return errors.New("registry TLS flags are only supported for Zarf-managed nodeport and proxy registries")
+	}
 	// If 'git-url' is provided, make sure they provided values for the username and password of the push user
 	if o.gitServer.Address != "" {
 		if o.gitServer.PushUsername == "" || o.gitServer.PushPassword == "" {
