@@ -35,7 +35,6 @@ type ComponentFilterStrategy interface {
 }
 
 // Apply applies a component filter to a package definition.
-// FIXME: change filters to be a package view
 func Apply(definition api.Package, filter ComponentFilterStrategy) (api.Package, error) {
 	if filter == nil {
 		filter = Empty()
