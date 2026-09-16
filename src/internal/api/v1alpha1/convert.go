@@ -172,12 +172,11 @@ func chartToGeneric(ch v1alpha1.ZarfChart) api.Chart {
 func chartSourceToGeneric(chart *api.Chart, source v1alpha1.ZarfChart) {
 	switch {
 	case isGitURL(source.URL):
-		gitURL, ref := source.URL, source.Version
+		gitURL := source.URL
+		var ref string
 		if url, parsedRef, err := transform.GitURLSplitRef(source.URL); err == nil {
 			gitURL = url
-			if parsedRef != "" {
-				ref = parsedRef
-			}
+			ref = parsedRef
 		}
 		chart.Git = &api.GitSource{
 			URL:  gitURL,
@@ -635,9 +634,9 @@ func chartFromGeneric(ch api.Chart) v1alpha1.ZarfChart {
 			gitURL = urlNoRef
 		}
 		ref := flattenGitRef(ch.Git.Ref)
-		// A ref distinct from Version must stay inline. PackageChart uses an inline ref to
-		// select the checkout, while Version names the archive and values files it creates.
-		if ref != "" && ref != ch.Version {
+		// Git.Ref records a ref authored inline in a v1alpha1 URL. Version remains separate
+		// because PackageChart uses it as the fallback checkout ref and archive identifier.
+		if ref != "" {
 			ac.URL = gitURL + "@" + ref
 		} else {
 			ac.URL = gitURL
