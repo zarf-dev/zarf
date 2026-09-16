@@ -400,7 +400,6 @@ func TransportWithKey(certs GeneratedPKI) (http.RoundTripper, error) {
 // provided, verifies that DNS name instead of the host used by the connection.
 // This is required for locally port-forwarded Kubernetes services.
 func TransportWithKeyForServer(certs GeneratedPKI, serverName string) (http.RoundTripper, error) {
-	// FIXME: why the system cert pool?
 	rootCAs, err := x509.SystemCertPool()
 	if err != nil || rootCAs == nil {
 		rootCAs = x509.NewCertPool()

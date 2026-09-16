@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -206,4 +207,28 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 			require.Equal(t, expectedGitSecret, *updatedGitSecret)
 		})
 	}
+}
+
+func TestRemoveZarfManagedRegistryMTLSSecrets(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	c := &Cluster{Clientset: fake.NewClientset(
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: state.ZarfNamespaceName}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "managed", Labels: map[string]string{state.ZarfManagedByLabel: "zarf"}}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "unmanaged"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: state.RegistryServerTLSSecret, Namespace: state.ZarfNamespaceName}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: state.RegistryClientTLSSecret, Namespace: state.ZarfNamespaceName}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: state.RegistryClientTLSSecret, Namespace: "managed"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: state.RegistryClientTLSSecret, Namespace: "unmanaged"}},
+	)}
+
+	require.NoError(t, c.RemoveZarfManagedRegistryMTLSSecrets(ctx))
+	_, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.RegistryServerTLSSecret, metav1.GetOptions{})
+	require.True(t, kerrors.IsNotFound(err))
+	_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.RegistryClientTLSSecret, metav1.GetOptions{})
+	require.True(t, kerrors.IsNotFound(err))
+	_, err = c.Clientset.CoreV1().Secrets("managed").Get(ctx, state.RegistryClientTLSSecret, metav1.GetOptions{})
+	require.True(t, kerrors.IsNotFound(err))
+	_, err = c.Clientset.CoreV1().Secrets("unmanaged").Get(ctx, state.RegistryClientTLSSecret, metav1.GetOptions{})
+	require.NoError(t, err)
 }

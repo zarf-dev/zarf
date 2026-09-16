@@ -275,6 +275,27 @@ func (c *Cluster) ApplyUserManagedRegistryTLSSecrets(ctx context.Context, server
 	return nil
 }
 
+// RemoveZarfManagedRegistryMTLSSecrets removes registry TLS material that Zarf
+// created after the registry has been switched back to plaintext NodePort mode.
+func (c *Cluster) RemoveZarfManagedRegistryMTLSSecrets(ctx context.Context) error {
+	namespaces, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: state.ZarfManagedByLabel + "=zarf"})
+	if err != nil {
+		return fmt.Errorf("list Zarf-managed namespaces: %w", err)
+	}
+	for _, namespace := range namespaces.Items {
+		if err := c.Clientset.CoreV1().Secrets(namespace.Name).Delete(ctx, state.RegistryClientTLSSecret, metav1.DeleteOptions{}); err != nil && !kerrors.IsNotFound(err) {
+			return fmt.Errorf("delete registry client TLS secret from namespace %s: %w", namespace.Name, err)
+		}
+	}
+	if err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Delete(ctx, state.RegistryClientTLSSecret, metav1.DeleteOptions{}); err != nil && !kerrors.IsNotFound(err) {
+		return fmt.Errorf("delete registry client TLS secret from zarf namespace: %w", err)
+	}
+	if err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Delete(ctx, state.RegistryServerTLSSecret, metav1.DeleteOptions{}); err != nil && !kerrors.IsNotFound(err) {
+		return fmt.Errorf("delete registry server TLS secret: %w", err)
+	}
+	return nil
+}
+
 // GetServiceInfoFromRegistryAddress gets the service info for a registry address
 // If the address is not a service then it is returned
 // If the address is a service then the service DNS name and clusterIP is returned

@@ -586,6 +586,7 @@ type updateRegistryCredsOptions struct {
 	registryTLSCAPath   string
 	registryTLSCertPath string
 	registryTLSKeyPath  string
+	disableRegistryTLS  bool
 }
 
 func newUpdateRegistryCredsCommand(v *viper.Viper) *cobra.Command {
@@ -612,7 +613,12 @@ func newUpdateRegistryCredsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.registryTLSCAPath, "registry-tls-ca", v.GetString(VInitRegistryTLSCA), "Path to a PEM-encoded CA certificate for the Zarf Registry")
 	cmd.Flags().StringVar(&o.registryTLSCertPath, "registry-tls-cert", v.GetString(VInitRegistryTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf Registry")
 	cmd.Flags().StringVar(&o.registryTLSKeyPath, "registry-tls-key", v.GetString(VInitRegistryTLSKey), "Path to a PEM-encoded TLS private key for the Zarf Registry")
+	cmd.Flags().BoolVar(&o.disableRegistryTLS, "registry-tls-disable", false, "Disable mTLS for a Zarf-managed NodePort registry")
 	cmd.MarkFlagsRequiredTogether("registry-tls-ca", "registry-tls-cert", "registry-tls-key")
+	cmd.MarkFlagsMutuallyExclusive("registry-tls-disable", "registry-tls-ca")
+	cmd.MarkFlagsMutuallyExclusive("registry-tls-disable", "registry-tls-cert")
+	cmd.MarkFlagsMutuallyExclusive("registry-tls-disable", "registry-tls-key")
+	cmd.MarkFlagsMutuallyExclusive("registry-tls-disable", "registry-url")
 
 	return cmd
 }
@@ -626,6 +632,14 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string, v *vipe
 
 	if !oldState.RegistryInfo.IsConfigured() {
 		return errors.New("no registry is configured in the Zarf state; nothing to update")
+	}
+	if o.disableRegistryTLS {
+		if oldState.RegistryInfo.RegistryMode != state.RegistryModeNodePort {
+			return errors.New("--registry-tls-disable is only supported for Zarf-managed NodePort registries")
+		}
+		if !oldState.RegistryInfo.ShouldUseMTLS() {
+			return errors.New("registry mTLS is not enabled")
+		}
 	}
 	var registryTLS *pki.GeneratedPKI
 	if o.registryTLSCAPath != "" {
@@ -656,6 +670,10 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string, v *vipe
 		registryInfo.MTLSStrategy = state.MTLSStrategyUserManaged
 		registryInfo.MTLSEndpointVersion = 1
 	}
+	if o.disableRegistryTLS {
+		registryInfo.MTLSStrategy = state.MTLSStrategyNone
+		registryInfo.MTLSEndpointVersion = 0
+	}
 
 	newState, err := state.Merge(oldState, state.MergeOptions{
 		RegistryInfo: registryInfo,
@@ -663,6 +681,9 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string, v *vipe
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update registry credentials: %w", err)
+	}
+	if o.disableRegistryTLS {
+		newState.RegistryInfo.MTLSEndpointVersion = 0
 	}
 
 	confirm, err := confirmCredentialUpdate(ctx, oldState, newState, state.RegistryKey, o.confirm)
@@ -678,18 +699,27 @@ func (o *updateRegistryCredsOptions) run(cmd *cobra.Command, _ []string, v *vipe
 		if err := c.ApplyUserManagedRegistryTLSSecrets(ctx, *registryTLS); err != nil {
 			return err
 		}
-	} else if newState.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
+	} else if !o.disableRegistryTLS && newState.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
 		if err := c.ApplyZarfManagedMTLSSecrets(ctx); err != nil {
 			return err
 		}
 	}
 
-	return runWithRollback(ctx, "registry",
+	err = runWithRollback(ctx, "registry",
 		func() error { return o.applyState(ctx, c, newState, newState.RegistryInfo.IsInternal()) },
 		func() error {
 			return o.applyState(ctx, c, oldState, oldState.RegistryInfo.IsInternal() && newState.RegistryInfo.IsInternal())
 		},
 	)
+	if err != nil {
+		return err
+	}
+	if o.disableRegistryTLS {
+		if err := c.RemoveZarfManagedRegistryMTLSSecrets(ctx); err != nil {
+			return fmt.Errorf("registry mTLS was disabled, but TLS secret cleanup failed: %w", err)
+		}
+	}
+	return nil
 }
 
 // applyState reconciles the cluster to the given registry credentials. The registry deployment is

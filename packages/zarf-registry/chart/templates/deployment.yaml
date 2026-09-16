@@ -108,11 +108,9 @@ spec:
 {{- if and .Values.mtls.enabled (not .Values.proxy.enabled) }}
         - name: zarf-registry-mtls
           image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
-
           imagePullPolicy: IfNotPresent
           args:
-          # FIXME what about non-ipv6?
-            - {{ if .Values.ipv6Only }}OPENSSL-LISTEN:5002,bind=[::],reuseaddr,fork,cert=/certs/server/tls.crt,key=/certs/server/tls.key,cafile=/certs/server/ca.crt,verify=1{{ else }}OPENSSL-LISTEN:5002,reuseaddr,fork,cert=/certs/server/tls.crt,key=/certs/server/tls.key,cafile=/certs/server/ca.crt,verify=1{{ end }}
+            - {{ if .Values.ipv6Only }}OPENSSL-LISTEN:5002,bind=[::],reuseaddr,fork,cert=/certs/server/tls.crt,key=/certs/server/tls.key,cafile=/certs/server/ca.crt,verify=1{{ else }}OPENSSL-LISTEN:5002,bind=0.0.0.0,reuseaddr,fork,cert=/certs/server/tls.crt,key=/certs/server/tls.key,cafile=/certs/server/ca.crt,verify=1{{ end }}
             - {{ if .Values.ipv6Only }}TCP6:[::1]:5000{{ else }}TCP4:127.0.0.1:5000{{ end }}
           ports:
             - name: mtls

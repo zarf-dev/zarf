@@ -44,6 +44,7 @@ $ zarf tools update-creds registry --registry-push-username={USERNAME} --registr
       --registry-push-username string   Username to access to the registry Zarf is configured to use
       --registry-tls-ca string          Path to a PEM-encoded CA certificate for the Zarf Registry
       --registry-tls-cert string        Path to a PEM-encoded TLS certificate for the Zarf Registry
+      --registry-tls-disable            Disable mTLS for a Zarf-managed NodePort registry
       --registry-tls-key string         Path to a PEM-encoded TLS private key for the Zarf Registry
       --registry-url string             External registry url address to use for this Zarf cluster
 ```
