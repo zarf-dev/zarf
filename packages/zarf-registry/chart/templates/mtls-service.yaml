@@ -7,8 +7,6 @@ metadata:
   labels:
     app: {{ template "docker-registry.name" . }}
     release: {{ .Release.Name }}
-    # FIXME: unsure if required
-    zarf.dev/registry-mtls-endpoint-version: "1"
 spec:
   type: ClusterIP
   ipFamilyPolicy: PreferDualStack

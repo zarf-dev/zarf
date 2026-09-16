@@ -22,10 +22,6 @@ spec:
       labels:
         app: {{ template "docker-registry.name" . }}
         release: {{ .Release.Name }}
-        # FIXME: is this needed with the state field
-        {{- if .Values.mtls.enabled }}
-        zarf.dev/registry-mtls-endpoint-version: "1"
-        {{- end }}
         {{- if .Values.podLabels }}
 {{ toYaml .Values.podLabels | indent 8 }}
         {{- end }}
