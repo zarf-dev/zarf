@@ -476,11 +476,10 @@ components:
 `
 		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(zarfYAML), 0o600))
 
-		defined, err := PackageDefinition(ctx, dir, DefinitionOptions{
+		pkg, err := PackageDefinition(ctx, dir, DefinitionOptions{
 			SetVariables: map[string]string{"MYVAR": "test-package"},
 		})
 		require.NoError(t, err)
-		pkg := defined.AsV1alpha1()
 		require.Equal(t, "test-package", pkg.Metadata.Name)
 		require.Equal(t, "test-package", pkg.Components[0].Name)
 	})
