@@ -20,7 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// Decoder decodes one apiVersion's document into its native package type T and converts that into a PackageDefinition.
+// Decoder decodes one apiVersion's document into its native package type T and converts that into a Package.
 type Decoder[T any] struct {
 	version      string
 	priority     int

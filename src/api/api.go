@@ -58,19 +58,6 @@ func (p *Package) RemoveRepositories() {
 	}
 }
 
-// RetainComponents retains the components at the given indices, in order.
-func (p *Package) RetainComponents(indices []int) error {
-	components := make([]Component, 0, len(indices))
-	for _, idx := range indices {
-		if idx < 0 || idx >= len(p.Components) {
-			return fmt.Errorf("component index %d out of range", idx)
-		}
-		components = append(components, p.Components[idx])
-	}
-	p.Components = components
-	return nil
-}
-
 // OverrideNamespace overrides component namespaces when the package permits it.
 func (p *Package) OverrideNamespace(namespace string) error {
 	if p.Metadata.PreventNamespaceOverride {

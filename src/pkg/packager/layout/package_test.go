@@ -88,6 +88,43 @@ func TestPackageLayout(t *testing.T) {
 	}
 }
 
+func TestPackageLayoutMutators(t *testing.T) {
+	pkgLayout := &PackageLayout{pkg: api.Package{
+		Metadata: api.PackageMetadata{
+			Name:        "original",
+			Annotations: map[string]string{"existing": "annotation"},
+		},
+		Components: []api.Component{
+			{
+				Images:        []api.Image{{}},
+				ImageArchives: []api.ImageArchive{{}},
+				Repositories:  []api.Repository{{}},
+			},
+			{
+				Images:        []api.Image{{}},
+				ImageArchives: []api.ImageArchive{{}},
+				Repositories:  []api.Repository{{}},
+			},
+		},
+	}}
+
+	annotations := map[string]string{"environment": "test"}
+	pkgLayout.SetName("renamed")
+	pkgLayout.SetAnnotations(annotations)
+	pkgLayout.RemoveImages()
+	pkgLayout.RemoveRepositories()
+	annotations["environment"] = "changed"
+
+	definition := pkgLayout.Definition()
+	require.Equal(t, "renamed", definition.Metadata.Name)
+	require.Equal(t, map[string]string{"environment": "test"}, definition.Metadata.Annotations)
+	for _, component := range definition.Components {
+		require.Nil(t, component.Images)
+		require.Nil(t, component.ImageArchives)
+		require.Nil(t, component.Repositories)
+	}
+}
+
 func TestPackageLayoutLoadFromDirPreservesMultiDocDefinition(t *testing.T) {
 	t.Parallel()
 

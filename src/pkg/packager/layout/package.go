@@ -45,6 +45,26 @@ func (p *PackageLayout) Definition() api.Package {
 	return p.pkg
 }
 
+// SetName updates the package metadata name.
+func (p *PackageLayout) SetName(name string) {
+	p.pkg.SetName(name)
+}
+
+// SetAnnotations updates the package metadata annotations.
+func (p *PackageLayout) SetAnnotations(annotations map[string]string) {
+	p.pkg.SetAnnotations(annotations)
+}
+
+// RemoveImages removes images and image archives from every component.
+func (p *PackageLayout) RemoveImages() {
+	p.pkg.RemoveImages()
+}
+
+// RemoveRepositories removes git repositories from every component.
+func (p *PackageLayout) RemoveRepositories() {
+	p.pkg.RemoveRepositories()
+}
+
 // Digest returns the OCI manifest digest for this package layout.
 func (p *PackageLayout) Digest() string {
 	return p.digest
