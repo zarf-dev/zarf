@@ -23,6 +23,28 @@ import (
 // time (currently <20s) with coverage.
 const defaultFuzzIterations = 20
 
+func TestPackageFromV1beta1NormalizesMetadataAnnotations(t *testing.T) {
+	pkg := PackageFromV1beta1(v1beta1.Package{
+		Metadata: v1beta1.PackageMetadata{Annotations: map[string]string{
+			"url":           "url-value",
+			"image":         "image-value",
+			"authors":       "authors-value",
+			"documentation": "documentation-value",
+			"source":        "source-value",
+			"vendor":        "vendor-value",
+			"custom":        "custom-value",
+		}},
+	})
+
+	require.Equal(t, "url-value", pkg.Metadata.URL)
+	require.Equal(t, "image-value", pkg.Metadata.Image)
+	require.Equal(t, "authors-value", pkg.Metadata.Authors)
+	require.Equal(t, "documentation-value", pkg.Metadata.Documentation)
+	require.Equal(t, "source-value", pkg.Metadata.Source)
+	require.Equal(t, "vendor-value", pkg.Metadata.Vendor)
+	require.Equal(t, map[string]string{"custom": "custom-value"}, pkg.Metadata.Annotations)
+}
+
 func TestPackageToV1beta1OmitsEmptyActionDefaults(t *testing.T) {
 	pkg := PackageToV1beta1(api.Package{
 		Components: []api.Component{{Name: "component"}},

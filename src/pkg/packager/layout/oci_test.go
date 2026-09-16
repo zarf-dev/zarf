@@ -26,14 +26,19 @@ func TestAnnotationsFromMetadata(t *testing.T) {
 	t.Parallel()
 
 	pkg := api.Package{Metadata: api.PackageMetadata{
-		Name:        "foo",
-		Description: "bar",
+		Name:          "foo",
+		Description:   "bar",
+		URL:           "https://field.example.com",
+		Authors:       "Field Author",
+		Documentation: "field-documentation",
+		Source:        "field-source",
+		Vendor:        "field-vendor",
 		Annotations: map[string]string{
-			"url":                            "https://example.com",
-			"authors":                        "Zarf",
-			"documentation":                  "documentation",
-			"source":                         "source",
-			"vendor":                         "vendor",
+			"url":                            "https://annotation.example.com",
+			"authors":                        "Annotation Author",
+			"documentation":                  "annotation-documentation",
+			"source":                         "annotation-source",
+			"vendor":                         "annotation-vendor",
 			"metadata.url":                   "https://custom.example.com",
 			"org.opencontainers.image.title": "overridden",
 			"org.opencontainers.image.new":   "new-field",
@@ -43,13 +48,18 @@ func TestAnnotationsFromMetadata(t *testing.T) {
 	expectedAnnotations := map[string]string{
 		"org.opencontainers.image.title":         "overridden",
 		"org.opencontainers.image.description":   "bar",
-		"org.opencontainers.image.url":           "https://example.com",
-		"org.opencontainers.image.authors":       "Zarf",
-		"org.opencontainers.image.documentation": "documentation",
-		"org.opencontainers.image.source":        "source",
-		"org.opencontainers.image.vendor":        "vendor",
+		"org.opencontainers.image.url":           "https://field.example.com",
+		"org.opencontainers.image.authors":       "Field Author",
+		"org.opencontainers.image.documentation": "field-documentation",
+		"org.opencontainers.image.source":        "field-source",
+		"org.opencontainers.image.vendor":        "field-vendor",
 		"org.opencontainers.image.new":           "new-field",
 		"metadata.url":                           "https://custom.example.com",
+		"url":                                    "https://annotation.example.com",
+		"authors":                                "Annotation Author",
+		"documentation":                          "annotation-documentation",
+		"source":                                 "annotation-source",
+		"vendor":                                 "annotation-vendor",
 	}
 	require.Equal(t, expectedAnnotations, annotations)
 }

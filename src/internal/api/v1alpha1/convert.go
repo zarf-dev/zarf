@@ -26,9 +26,15 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 			Version:                  pkg.Metadata.Version,
 			Uncompressed:             pkg.Metadata.Uncompressed,
 			Architecture:             pkg.Metadata.Architecture,
-			Annotations:              metadataAnnotations(pkg.Metadata),
+			Annotations:              maps.Clone(pkg.Metadata.Annotations),
 			PreventNamespaceOverride: !pkg.AllowsNamespaceOverride(),
+			URL:                      pkg.Metadata.URL,
+			Image:                    pkg.Metadata.Image,
 			YOLO:                     pkg.Metadata.YOLO,
+			Authors:                  pkg.Metadata.Authors,
+			Documentation:            pkg.Metadata.Documentation,
+			Source:                   pkg.Metadata.Source,
+			Vendor:                   pkg.Metadata.Vendor,
 		},
 		Build: api.BuildData{
 			Hostname:                   pkg.Build.Terminal,
@@ -398,66 +404,25 @@ func PackageToV1alpha1(g api.Package) v1alpha1.ZarfPackage {
 
 func metadataFromGeneric(m api.PackageMetadata, b api.BuildData) v1alpha1.ZarfMetadata {
 	meta := v1alpha1.ZarfMetadata{
-		Name:         m.Name,
-		Description:  m.Description,
-		Version:      m.Version,
-		Uncompressed: m.Uncompressed,
-		Architecture: m.Architecture,
-		YOLO:         m.YOLO,
+		Name:          m.Name,
+		Description:   m.Description,
+		Version:       m.Version,
+		URL:           m.URL,
+		Image:         m.Image,
+		Uncompressed:  m.Uncompressed,
+		Architecture:  m.Architecture,
+		YOLO:          m.YOLO,
+		Authors:       m.Authors,
+		Documentation: m.Documentation,
+		Source:        m.Source,
+		Vendor:        m.Vendor,
+		Annotations:   maps.Clone(m.Annotations),
 	}
 	meta.AllowNamespaceOverride = boolPointer(!m.PreventNamespaceOverride)
 
 	meta.AggregateChecksum = b.AggregateChecksum
 
-	// v1alpha1-only metadata is stored as annotations in the operational model.
-	if m.Annotations != nil {
-		restore := map[string]*string{
-			"url":           &meta.URL,
-			"image":         &meta.Image,
-			"authors":       &meta.Authors,
-			"documentation": &meta.Documentation,
-			"source":        &meta.Source,
-			"vendor":        &meta.Vendor,
-		}
-		annotations := make(map[string]string)
-		for k, v := range m.Annotations {
-			if target, ok := restore[k]; ok {
-				if *target == "" {
-					*target = v
-				}
-				continue
-			}
-			annotations[k] = v
-		}
-		if len(annotations) > 0 {
-			meta.Annotations = annotations
-		}
-	}
-
 	return meta
-}
-
-func metadataAnnotations(metadata v1alpha1.ZarfMetadata) map[string]string {
-	annotations := maps.Clone(metadata.Annotations)
-	for key, value := range map[string]string{
-		"url":           metadata.URL,
-		"image":         metadata.Image,
-		"authors":       metadata.Authors,
-		"documentation": metadata.Documentation,
-		"source":        metadata.Source,
-		"vendor":        metadata.Vendor,
-	} {
-		if value == "" {
-			continue
-		}
-		if annotations == nil {
-			annotations = make(map[string]string)
-		}
-		if _, exists := annotations[key]; !exists {
-			annotations[key] = value
-		}
-	}
-	return annotations
 }
 
 func buildFromGeneric(b api.BuildData) v1alpha1.ZarfBuildData {

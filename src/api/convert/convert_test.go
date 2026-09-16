@@ -66,22 +66,21 @@ func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
 
 func TestV1Alpha1PkgToV1Beta1_LegacyMetadataDoesNotClobberUserAnnotation(t *testing.T) {
 	t.Parallel()
-	// A legacy field is stored under its short key, leaving a user-defined metadata.* annotation intact.
+	// A user-defined annotation takes precedence over a legacy field during v1beta1 projection.
 	pkg := v1alpha1.ZarfPackage{
 		Kind: v1alpha1.ZarfPackageConfig,
 		Metadata: v1alpha1.ZarfMetadata{
 			Name: "test-pkg",
 			URL:  "https://from-field.example.com",
 			Annotations: map[string]string{
-				"metadata.url": "https://from-annotation.example.com",
+				"url": "https://from-annotation.example.com",
 			},
 		},
 	}
 
 	result := PackageV1alpha1ToV1beta1(pkg)
 
-	require.Equal(t, "https://from-field.example.com", result.Metadata.Annotations["url"])
-	require.Equal(t, "https://from-annotation.example.com", result.Metadata.Annotations["metadata.url"])
+	require.Equal(t, "https://from-annotation.example.com", result.Metadata.Annotations["url"])
 }
 
 func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
@@ -1049,8 +1048,7 @@ func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 	require.Equal(t, "Example Corp", result.Metadata.Vendor)
 
 	// Legacy metadata annotations should be consumed, regular annotations preserved.
-	require.Equal(t, "annotation", result.Metadata.Annotations["existing"])
-	require.Empty(t, result.Metadata.Annotations["url"])
+	require.Equal(t, map[string]string{"existing": "annotation"}, result.Metadata.Annotations)
 
 	// AggregateChecksum should move from build to metadata.
 	require.Equal(t, "abc123", result.Metadata.AggregateChecksum)

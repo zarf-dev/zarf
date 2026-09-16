@@ -20,7 +20,7 @@ type Package struct {
 	Constants []Constant
 }
 
-// PackageMetadata contains metadata shared across package API versions.
+// PackageMetadata contains metadata from all supported package API versions.
 type PackageMetadata struct {
 	Name                     string
 	Description              string
@@ -30,8 +30,14 @@ type PackageMetadata struct {
 	Annotations              map[string]string
 	PreventNamespaceOverride bool
 
-	// YOLO changes deploy behavior for v1alpha1 packages.
-	YOLO bool
+	// v1alpha1-only metadata fields.
+	URL           string
+	Image         string
+	YOLO          bool
+	Authors       string
+	Documentation string
+	Source        string
+	Vendor        string
 }
 
 // BuildData contains build metadata shared across package API versions.

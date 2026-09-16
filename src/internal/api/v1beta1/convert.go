@@ -20,15 +20,7 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 	g := api.Package{
 		APIVersion: pkg.APIVersion,
 		Kind:       api.PackageKind(pkg.Kind),
-		Metadata: api.PackageMetadata{
-			Name:                     pkg.Metadata.Name,
-			Description:              pkg.Metadata.Description,
-			Version:                  pkg.Metadata.Version,
-			Uncompressed:             pkg.Metadata.Uncompressed,
-			Architecture:             pkg.Metadata.Architecture,
-			Annotations:              pkg.Metadata.Annotations,
-			PreventNamespaceOverride: pkg.Metadata.PreventNamespaceOverride,
-		},
+		Metadata:   metadataToGeneric(pkg.Metadata),
 		Build: api.BuildData{
 			Hostname:                   pkg.Build.Hostname,
 			User:                       pkg.Build.User,
@@ -63,6 +55,37 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 	}
 
 	return g
+}
+
+func metadataToGeneric(m v1beta1.PackageMetadata) api.PackageMetadata {
+	annotations := maps.Clone(m.Annotations)
+	meta := api.PackageMetadata{
+		Name:                     m.Name,
+		Description:              m.Description,
+		Version:                  m.Version,
+		Uncompressed:             m.Uncompressed,
+		Architecture:             m.Architecture,
+		Annotations:              annotations,
+		PreventNamespaceOverride: m.PreventNamespaceOverride,
+	}
+	consume := map[string]*string{
+		"url":           &meta.URL,
+		"image":         &meta.Image,
+		"authors":       &meta.Authors,
+		"documentation": &meta.Documentation,
+		"source":        &meta.Source,
+		"vendor":        &meta.Vendor,
+	}
+	for key, target := range consume {
+		if value, ok := annotations[key]; ok {
+			*target = value
+			delete(annotations, key)
+		}
+	}
+	if len(annotations) == 0 {
+		meta.Annotations = nil
+	}
+	return meta
 }
 
 func componentToGeneric(c v1beta1.Component) api.Component {
@@ -334,6 +357,24 @@ func metadataFromGeneric(m api.PackageMetadata) v1beta1.PackageMetadata {
 		Uncompressed: m.Uncompressed,
 		Architecture: m.Architecture,
 		Annotations:  annotations,
+	}
+	for key, value := range map[string]string{
+		"url":           m.URL,
+		"image":         m.Image,
+		"authors":       m.Authors,
+		"documentation": m.Documentation,
+		"source":        m.Source,
+		"vendor":        m.Vendor,
+	} {
+		if value == "" {
+			continue
+		}
+		if meta.Annotations == nil {
+			meta.Annotations = make(map[string]string)
+		}
+		if _, exists := meta.Annotations[key]; !exists {
+			meta.Annotations[key] = value
+		}
 	}
 
 	meta.PreventNamespaceOverride = m.PreventNamespaceOverride

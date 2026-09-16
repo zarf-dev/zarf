@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -60,30 +61,23 @@ func AnnotationsFromMetadata(pkg api.Package) map[string]string {
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,
 	}
-	if url := metadata.Annotations["url"]; url != "" {
+	if url := metadata.URL; url != "" {
 		annotations[ocispec.AnnotationURL] = url
 	}
-	if authors := metadata.Annotations["authors"]; authors != "" {
+	if authors := metadata.Authors; authors != "" {
 		annotations[ocispec.AnnotationAuthors] = authors
 	}
-	if documentation := metadata.Annotations["documentation"]; documentation != "" {
+	if documentation := metadata.Documentation; documentation != "" {
 		annotations[ocispec.AnnotationDocumentation] = documentation
 	}
-	if source := metadata.Annotations["source"]; source != "" {
+	if source := metadata.Source; source != "" {
 		annotations[ocispec.AnnotationSource] = source
 	}
-	if vendor := metadata.Annotations["vendor"]; vendor != "" {
+	if vendor := metadata.Vendor; vendor != "" {
 		annotations[ocispec.AnnotationVendor] = vendor
 	}
-	// These keys are migrated v1alpha1 metadata and are represented by OCI annotations above so we skip adding them a second time.
-	for key, value := range metadata.Annotations {
-		switch key {
-		case "url", "authors", "documentation", "source", "vendor":
-			continue
-		default:
-			annotations[key] = value
-		}
-	}
+	// Explicit annotations take precedence over generated OCI annotations.
+	maps.Copy(annotations, metadata.Annotations)
 	return annotations
 }
 

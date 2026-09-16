@@ -22,6 +22,35 @@ import (
 // time (currently <60s) with coverage.
 const defaultFuzzIterations = 20
 
+func TestConvertGenericRoundTripPreservesMetadataAnnotationCollisions(t *testing.T) {
+	allowNamespaceOverride := true
+	original := v1alpha1.ZarfPackage{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			URL:                    "field-url",
+			Image:                  "field-image",
+			Authors:                "field-authors",
+			Documentation:          "field-documentation",
+			Source:                 "field-source",
+			Vendor:                 "field-vendor",
+			AllowNamespaceOverride: &allowNamespaceOverride,
+			Annotations: map[string]string{
+				"url":           "annotation-url",
+				"image":         "annotation-image",
+				"authors":       "annotation-authors",
+				"documentation": "annotation-documentation",
+				"source":        "annotation-source",
+				"vendor":        "annotation-vendor",
+			},
+		},
+	}
+
+	roundTripped := PackageToV1alpha1(PackageFromV1alpha1(original))
+
+	require.Equal(t, original.Metadata, roundTripped.Metadata)
+}
+
 // TestConvertGenericRoundTrip verifies that fields represented by the operational model survive a
 // v1alpha1 conversion. Fields omitted from the comparison are documented below with the behavior
 // that the operational model canonicalizes to explicit values.
@@ -261,8 +290,6 @@ func populateValidV1alpha1ChartSources(pkg *v1alpha1.ZarfPackage, rng *rand.Rand
 //     SkipSchemaValidation; and manifest.template and file.template to EnableTemplating. In each
 //     case, nil is indistinguishable from one of the boolean values.
 //   - package.apiVersion and package.kind are canonicalized to the target API.
-//   - metadata annotations using url, image, authors, documentation, source, or vendor collide with v1alpha1's
-//     dedicated metadata fields during projection.
 //   - component.healthChecks are projected to onDeploy/onSuccess wait actions and cannot be
 //     reconstructed as health checks.
 //   - a v1beta1 Git source has no independent chart layout version. Its Git ref is retained, but
@@ -276,14 +303,6 @@ func v1alpha1V1beta1RoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1alpha1.ZarfPackage{}, "APIVersion", "Kind", "Constants", "Variables"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfMetadata{}, "YOLO", "AllowNamespaceOverride"),
-		cmpopts.IgnoreMapEntries(func(key, _ string) bool {
-			switch key {
-			case "url", "image", "authors", "documentation", "source", "vendor":
-				return true
-			default:
-				return false
-			}
-		}),
 		cmpopts.IgnoreFields(v1alpha1.ZarfBuildData{}, "DifferentialMissing"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponent{}, "Default", "Required", "DeprecatedGroup", "DataInjections", "DeprecatedScripts", "HealthChecks"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentOnlyCluster{}, "Distros"),
