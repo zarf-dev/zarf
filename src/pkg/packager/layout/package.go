@@ -307,11 +307,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		Version: "v0.71.0",
 		Reason:  "This package contains a bundle format signature which requires Zarf v0.71.0 or later",
 	}
-	if !slices.ContainsFunc(definition.Build.VersionRequirements, func(existing api.VersionRequirement) bool {
-		return existing == requirement
-	}) {
-		definition.Build.VersionRequirements = append(definition.Build.VersionRequirements, requirement)
-	}
+	definition.Build.VersionRequirements = append(definition.Build.VersionRequirements, requirement)
 	p.pkg = definition
 
 	// Consolidated in-memory rollback — fires on any error exit via named return.
