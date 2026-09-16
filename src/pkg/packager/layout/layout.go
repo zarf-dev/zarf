@@ -6,8 +6,10 @@ package layout
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 // Constants used in the default package layout.
@@ -71,7 +73,9 @@ func KustomizationFileName(manifestName string, idx int) string {
 // ComponentFileRelPath returns the path, relative to a component's files directory, where the idx-th
 // file's contents are stored.
 func ComponentFileRelPath(idx int, target string) string {
-	return filepath.Join(strconv.Itoa(idx), filepath.Base(target))
+	// replace Windows \ paths with / so that *nix-created packages resolve the same Windows target filename
+	target = strings.ReplaceAll(target, `\`, "/")
+	return filepath.Join(strconv.Itoa(idx), path.Base(target))
 }
 
 // chartStem is the name both of a chart's packaged artifacts are built from:
