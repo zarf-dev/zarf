@@ -40,7 +40,7 @@ func TestComponentForDisplay_UsesPackageAPIVersion(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			component, err := componentForDisplay(tt.definition, 0)
+			component, err := componentForDisplay(tt.definition, tt.definition.Components[0])
 
 			require.NoError(t, err)
 			require.IsType(t, tt.wantType, component)
