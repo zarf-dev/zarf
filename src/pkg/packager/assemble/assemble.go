@@ -57,8 +57,8 @@ type AssembleOptions struct {
 	SigningKeyPath     string
 	SigningKeyPassword string
 	SkipSBOM           bool
-	// When DifferentialPackage is set the zarf package created only includes images and repos not in the differential package
-	DifferentialPackage v1alpha1.ZarfPackage
+	// When DifferentialPackage is set the zarf package created only includes images and repos not in the differential package.
+	DifferentialPackage api.Package
 	OCIConcurrency      int
 	// CachePath is the path to the Zarf cache, used to cache images and charts
 	CachePath string
@@ -97,11 +97,10 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		if noVersionSet {
 			return nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
-		differentialAPIVersion := convert.PackageFromV1alpha1(opts.DifferentialPackage).APIVersion
-		if !apiVersionsMatch(definition.APIVersion, differentialAPIVersion) {
-			return nil, fmt.Errorf("%s: package apiVersion %s, differential package apiVersion %s", lang.PkgCreateErrDifferentialAPIVersion, normalizeAPIVersion(definition.APIVersion), normalizeAPIVersion(differentialAPIVersion))
+		if !apiVersionsMatch(definition.APIVersion, opts.DifferentialPackage.APIVersion) {
+			return nil, fmt.Errorf("%s: package apiVersion %s, differential package apiVersion %s", lang.PkgCreateErrDifferentialAPIVersion, normalizeAPIVersion(definition.APIVersion), normalizeAPIVersion(opts.DifferentialPackage.APIVersion))
 		}
-		updatedDefinition, err := applyDifferentialResources(definition, convert.PackageFromV1alpha1(opts.DifferentialPackage))
+		updatedDefinition, err := applyDifferentialResources(definition, opts.DifferentialPackage)
 		if err != nil {
 			return nil, err
 		}

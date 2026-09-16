@@ -157,9 +157,10 @@ func TestAssemblePackageDifferentialRequiresSameAPIVersion(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	previous := v1alpha1.ZarfPackage{
-		Kind: v1alpha1.ZarfPackageConfig,
-		Metadata: v1alpha1.ZarfMetadata{
+	previous := api.Package{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       api.ZarfPackageConfig,
+		Metadata: api.PackageMetadata{
 			Name:    "differential-test",
 			Version: "0.0.1",
 		},
@@ -187,4 +188,41 @@ components:
 	require.Contains(t, err.Error(), lang.PkgCreateErrDifferentialAPIVersion)
 	require.Contains(t, err.Error(), "package apiVersion "+v1beta1.APIVersion)
 	require.Contains(t, err.Error(), "differential package apiVersion "+v1alpha1.APIVersion)
+}
+
+func TestAssemblePackageDifferentialV1beta1(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	previous := api.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       api.ZarfPackageConfig,
+		Metadata: api.PackageMetadata{
+			Name:    "differential-test",
+			Version: "0.0.1",
+		},
+	}
+
+	packageDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(packageDir, "zarf.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: differential-test
+  version: 0.0.2
+components:
+  - name: current
+`), 0o600))
+	loaded, err := load.Package(ctx, packageDir, load.PackageOptions{})
+	require.NoError(t, err)
+
+	pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{
+		DifferentialPackage: previous,
+		SkipSBOM:            true,
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	definition := pkgLayout.Definition()
+	require.True(t, definition.Build.Differential)
+	require.Equal(t, previous.Metadata.Version, definition.Build.DifferentialPackageVersion)
 }

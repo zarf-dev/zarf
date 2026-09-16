@@ -11,8 +11,8 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
@@ -75,7 +75,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}()
 	pkg := convert.PackageToV1alpha1(loaded.Definition)
 
-	var differentialPkg v1alpha1.ZarfPackage
+	var differentialPkg api.Package
 	if opts.DifferentialPackagePath != "" {
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
 			Architecture:   pkg.Metadata.Architecture,
@@ -90,7 +90,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err := pkgLayout.Cleanup(); err != nil {
 			return "", err
 		}
-		differentialPkg = pkgLayout.AsV1alpha1()
+		differentialPkg = pkgLayout.Definition()
 	}
 
 	assembleOpt := assemble.AssembleOptions{
