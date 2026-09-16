@@ -261,8 +261,7 @@ func populateValidV1alpha1ChartSources(pkg *v1alpha1.ZarfPackage, rng *rand.Rand
 //     SkipSchemaValidation; and manifest.template and file.template to EnableTemplating. In each
 //     case, nil is indistinguishable from one of the boolean values.
 //   - package.apiVersion and package.kind are canonicalized to the target API.
-//   - metadata annotations using metadata.url, metadata.image, metadata.authors,
-//     metadata.documentation, metadata.source, or metadata.vendor collide with v1alpha1's
+//   - metadata annotations using url, image, authors, documentation, source, or vendor collide with v1alpha1's
 //     dedicated metadata fields during projection.
 //   - component.healthChecks are projected to onDeploy/onSuccess wait actions and cannot be
 //     reconstructed as health checks.
@@ -279,7 +278,7 @@ func v1alpha1V1beta1RoundTripExclusions() cmp.Options {
 		cmpopts.IgnoreFields(v1alpha1.ZarfMetadata{}, "YOLO", "AllowNamespaceOverride"),
 		cmpopts.IgnoreMapEntries(func(key, _ string) bool {
 			switch key {
-			case "metadata.url", "metadata.image", "metadata.authors", "metadata.documentation", "metadata.source", "metadata.vendor":
+			case "url", "image", "authors", "documentation", "source", "vendor":
 				return true
 			default:
 				return false

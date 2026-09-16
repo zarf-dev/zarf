@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"oras.land/oras-go/v2/errdef"
@@ -28,11 +29,12 @@ func TestAnnotationsFromMetadata(t *testing.T) {
 		Name:        "foo",
 		Description: "bar",
 		Annotations: map[string]string{
-			"metadata.url":                   "https://example.com",
-			"metadata.authors":               "Zarf",
-			"metadata.documentation":         "documentation",
-			"metadata.source":                "source",
-			"metadata.vendor":                "vendor",
+			"url":                            "https://example.com",
+			"authors":                        "Zarf",
+			"documentation":                  "documentation",
+			"source":                         "source",
+			"vendor":                         "vendor",
+			"metadata.url":                   "https://custom.example.com",
 			"org.opencontainers.image.title": "overridden",
 			"org.opencontainers.image.new":   "new-field",
 		},
@@ -47,8 +49,32 @@ func TestAnnotationsFromMetadata(t *testing.T) {
 		"org.opencontainers.image.source":        "source",
 		"org.opencontainers.image.vendor":        "vendor",
 		"org.opencontainers.image.new":           "new-field",
+		"metadata.url":                           "https://custom.example.com",
 	}
 	require.Equal(t, expectedAnnotations, annotations)
+}
+
+func TestAnnotationsFromMetadata_PreservesV1alpha1Precedence(t *testing.T) {
+	t.Parallel()
+
+	pkg := convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
+		Metadata: v1alpha1.ZarfMetadata{
+			Name:        "foo",
+			Description: "bar",
+			URL:         "https://legacy.example.com",
+			Annotations: map[string]string{
+				"metadata.url":        "https://custom.example.com",
+				ocispec.AnnotationURL: "https://override.example.com",
+			},
+		},
+	})
+
+	require.Equal(t, map[string]string{
+		ocispec.AnnotationTitle:       "foo",
+		ocispec.AnnotationDescription: "bar",
+		ocispec.AnnotationURL:         "https://override.example.com",
+		"metadata.url":                "https://custom.example.com",
+	}, AnnotationsFromMetadata(pkg))
 }
 
 // newTestLayout creates a minimal PackageLayout with a computed manifest.

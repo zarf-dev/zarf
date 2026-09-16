@@ -77,18 +77,23 @@ func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 	b, err := goyaml.Marshal(pkgLayout.AsV1alpha1().Components)
 	require.NoError(t, err)
 	expectedYaml := `- name: 1-test-deprecated-set-variable
+  required: false
   actions:
     onDeploy:
       before:
       - cmd: echo "Hello Kitteh"
+        template: false
         setVariables:
         - name: HELLO_KITTEH
       - cmd: echo "Hello from ${ZARF_VAR_HELLO_KITTEH}"
+        template: false
 - name: 2-test-deprecated-pkg-var
+  required: false
   actions:
     onDeploy:
       before:
       - cmd: echo "Zarf-The-Axolotl"
+        template: false
 `
 	require.YAMLEq(t, expectedYaml, string(b))
 }

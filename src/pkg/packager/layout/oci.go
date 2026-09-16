@@ -63,25 +63,25 @@ func AnnotationsFromMetadata(pkg api.Package) map[string]string {
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,
 	}
-	if url := metadata.Annotations["metadata.url"]; url != "" {
+	if url := metadata.Annotations["url"]; url != "" {
 		annotations[ocispec.AnnotationURL] = url
 	}
-	if authors := metadata.Annotations["metadata.authors"]; authors != "" {
+	if authors := metadata.Annotations["authors"]; authors != "" {
 		annotations[ocispec.AnnotationAuthors] = authors
 	}
-	if documentation := metadata.Annotations["metadata.documentation"]; documentation != "" {
+	if documentation := metadata.Annotations["documentation"]; documentation != "" {
 		annotations[ocispec.AnnotationDocumentation] = documentation
 	}
-	if source := metadata.Annotations["metadata.source"]; source != "" {
+	if source := metadata.Annotations["source"]; source != "" {
 		annotations[ocispec.AnnotationSource] = source
 	}
-	if vendor := metadata.Annotations["metadata.vendor"]; vendor != "" {
+	if vendor := metadata.Annotations["vendor"]; vendor != "" {
 		annotations[ocispec.AnnotationVendor] = vendor
 	}
-	// FIXME: not sure if this is right
+	// These keys are migrated v1alpha1 metadata and are represented by OCI annotations above so we skip adding them a second time.
 	for key, value := range metadata.Annotations {
 		switch key {
-		case "metadata.url", "metadata.image", "metadata.authors", "metadata.documentation", "metadata.source", "metadata.vendor":
+		case "url", "authors", "documentation", "source", "vendor":
 			continue
 		default:
 			annotations[key] = value

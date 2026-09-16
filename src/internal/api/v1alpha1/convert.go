@@ -413,12 +413,12 @@ func metadataFromGeneric(m api.PackageMetadata, b api.BuildData) v1alpha1.ZarfMe
 	// v1alpha1-only metadata is stored as annotations in the operational model.
 	if m.Annotations != nil {
 		restore := map[string]*string{
-			"metadata.url":           &meta.URL,
-			"metadata.image":         &meta.Image,
-			"metadata.authors":       &meta.Authors,
-			"metadata.documentation": &meta.Documentation,
-			"metadata.source":        &meta.Source,
-			"metadata.vendor":        &meta.Vendor,
+			"url":           &meta.URL,
+			"image":         &meta.Image,
+			"authors":       &meta.Authors,
+			"documentation": &meta.Documentation,
+			"source":        &meta.Source,
+			"vendor":        &meta.Vendor,
 		}
 		annotations := make(map[string]string)
 		for k, v := range m.Annotations {
@@ -441,12 +441,12 @@ func metadataFromGeneric(m api.PackageMetadata, b api.BuildData) v1alpha1.ZarfMe
 func metadataAnnotations(metadata v1alpha1.ZarfMetadata) map[string]string {
 	annotations := maps.Clone(metadata.Annotations)
 	for key, value := range map[string]string{
-		"metadata.url":           metadata.URL,
-		"metadata.image":         metadata.Image,
-		"metadata.authors":       metadata.Authors,
-		"metadata.documentation": metadata.Documentation,
-		"metadata.source":        metadata.Source,
-		"metadata.vendor":        metadata.Vendor,
+		"url":           metadata.URL,
+		"image":         metadata.Image,
+		"authors":       metadata.Authors,
+		"documentation": metadata.Documentation,
+		"source":        metadata.Source,
+		"vendor":        metadata.Vendor,
 	} {
 		if value == "" {
 			continue

@@ -51,12 +51,12 @@ func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
 	require.False(t, result.Metadata.PreventNamespaceOverride)
 
 	// v1alpha1-only metadata fields should be migrated to annotations.
-	require.Equal(t, "https://example.com", result.Metadata.Annotations["metadata.url"])
-	require.Equal(t, "https://example.com/image.png", result.Metadata.Annotations["metadata.image"])
-	require.Equal(t, "Test Author", result.Metadata.Annotations["metadata.authors"])
-	require.Equal(t, "https://docs.example.com", result.Metadata.Annotations["metadata.documentation"])
-	require.Equal(t, "https://github.com/example", result.Metadata.Annotations["metadata.source"])
-	require.Equal(t, "Example Corp", result.Metadata.Annotations["metadata.vendor"])
+	require.Equal(t, "https://example.com", result.Metadata.Annotations["url"])
+	require.Equal(t, "https://example.com/image.png", result.Metadata.Annotations["image"])
+	require.Equal(t, "Test Author", result.Metadata.Annotations["authors"])
+	require.Equal(t, "https://docs.example.com", result.Metadata.Annotations["documentation"])
+	require.Equal(t, "https://github.com/example", result.Metadata.Annotations["source"])
+	require.Equal(t, "Example Corp", result.Metadata.Annotations["vendor"])
 	// Existing annotation should be preserved.
 	require.Equal(t, "annotation", result.Metadata.Annotations["existing"])
 
@@ -64,10 +64,9 @@ func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
 	require.Equal(t, "abc123", result.Build.AggregateChecksum)
 }
 
-func TestV1Alpha1PkgToV1Beta1_ReservedAnnotationNotClobbered(t *testing.T) {
+func TestV1Alpha1PkgToV1Beta1_LegacyMetadataDoesNotClobberUserAnnotation(t *testing.T) {
 	t.Parallel()
-	// A field migrates into a reserved metadata.* annotation key, but an author who already set that
-	// key explicitly must keep their value rather than have the field overwrite it.
+	// A legacy field is stored under its short key, leaving a user-defined metadata.* annotation intact.
 	pkg := v1alpha1.ZarfPackage{
 		Kind: v1alpha1.ZarfPackageConfig,
 		Metadata: v1alpha1.ZarfMetadata{
@@ -81,6 +80,7 @@ func TestV1Alpha1PkgToV1Beta1_ReservedAnnotationNotClobbered(t *testing.T) {
 
 	result := PackageV1alpha1ToV1beta1(pkg)
 
+	require.Equal(t, "https://from-field.example.com", result.Metadata.Annotations["url"])
 	require.Equal(t, "https://from-annotation.example.com", result.Metadata.Annotations["metadata.url"])
 }
 
@@ -1005,13 +1005,13 @@ func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 			Uncompressed:             true,
 			PreventNamespaceOverride: false,
 			Annotations: map[string]string{
-				"existing":               "annotation",
-				"metadata.url":           "https://example.com",
-				"metadata.image":         "https://example.com/image.png",
-				"metadata.authors":       "Test Author",
-				"metadata.documentation": "https://docs.example.com",
-				"metadata.source":        "https://github.com/example",
-				"metadata.vendor":        "Example Corp",
+				"existing":      "annotation",
+				"url":           "https://example.com",
+				"image":         "https://example.com/image.png",
+				"authors":       "Test Author",
+				"documentation": "https://docs.example.com",
+				"source":        "https://github.com/example",
+				"vendor":        "Example Corp",
 			},
 		},
 		Build: v1beta1.BuildData{
@@ -1039,9 +1039,9 @@ func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 	require.Equal(t, "https://github.com/example", result.Metadata.Source)
 	require.Equal(t, "Example Corp", result.Metadata.Vendor)
 
-	// Metadata-specific annotations should be consumed, regular annotations preserved.
+	// Legacy metadata annotations should be consumed, regular annotations preserved.
 	require.Equal(t, "annotation", result.Metadata.Annotations["existing"])
-	require.Empty(t, result.Metadata.Annotations["metadata.url"])
+	require.Empty(t, result.Metadata.Annotations["url"])
 
 	// AggregateChecksum should move from build to metadata.
 	require.Equal(t, "abc123", result.Metadata.AggregateChecksum)

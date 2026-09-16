@@ -49,6 +49,7 @@ func TestComposabilityExample(t *testing.T) {
   manifests:
   - name: multi-games
     namespace: dos-games
+    template: false
     files:
     - ../dos-games/manifests/deployment.yaml
     - ../dos-games/manifests/service.yaml
@@ -56,9 +57,11 @@ func TestComposabilityExample(t *testing.T) {
   images:
   - ghcr.io/zarf-dev/doom-game:0.0.1
 - name: oci-games-url
+  required: false
   manifests:
   - name: multi-games
     namespace: dos-games
+    template: false
     files:
     - %s/oci/dirs/f1ca184d563e3ad29355ce14797e3ac68b7ef31e22461e494a27510c449949cf/manifests/multi-games-0.yaml
     - %s/oci/dirs/f1ca184d563e3ad29355ce14797e3ac68b7ef31e22461e494a27510c449949cf/manifests/multi-games-1.yaml
@@ -68,6 +71,7 @@ func TestComposabilityExample(t *testing.T) {
     onDeploy:
       before:
       - cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}
+        template: false
 `, rel, rel)
 	require.YAMLEq(t, expectedYaml, string(b))
 }
@@ -101,6 +105,7 @@ func TestFullComposability(t *testing.T) {
   manifests:
   - name: connect-service
     namespace: podinfo-override
+    template: false
     files:
     - files/service.yaml
     - files/service.yaml
@@ -109,6 +114,7 @@ func TestFullComposability(t *testing.T) {
     - files/
   - name: connect-service-two
     namespace: podinfo-compose-two
+    template: false
     files:
     - files/service.yaml
     kustomizations:
@@ -119,6 +125,7 @@ func TestFullComposability(t *testing.T) {
     url: oci://ghcr.io/stefanprodan/charts/podinfo
     namespace: podinfo-override
     releaseName: podinfo-override
+    schemaValidation: true
     valuesFiles:
     - files/test-values.yaml
     - files/test-values.yaml
@@ -127,6 +134,7 @@ func TestFullComposability(t *testing.T) {
     url: oci://ghcr.io/stefanprodan/charts/podinfo
     namespace: podinfo-compose-two
     releaseName: podinfo-compose-two
+    schemaValidation: true
     valuesFiles:
     - files/test-values.yaml
   dataInjections:
@@ -145,8 +153,10 @@ func TestFullComposability(t *testing.T) {
   files:
   - source: files/coffee-ipsum.txt
     target: coffee-ipsum.txt
+    template: false
   - source: files/coffee-ipsum.txt
     target: coffee-ipsum.txt
+    template: false
   images:
   - ghcr.io/stefanprodan/podinfo:6.4.0
   - ghcr.io/stefanprodan/podinfo:6.4.1
@@ -158,16 +168,20 @@ func TestFullComposability(t *testing.T) {
       before:
       - dir: sub-package
         cmd: ls
+        template: false
       - cmd: ls
+        template: false
     onDeploy:
       after:
       - cmd: cat coffee-ipsum.txt
+        template: false
       - wait:
           cluster:
             kind: deployment
             name: podinfo-compose-two
             namespace: podinfo-compose-two
             condition: available
+        template: false
 `
 	require.YAMLEq(t, expectedYaml, string(b))
 }
