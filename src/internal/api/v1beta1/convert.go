@@ -583,6 +583,9 @@ func actionSetFromGeneric(s api.ActionSet) v1beta1.ComponentActionSet {
 }
 
 func actionDefaultsFromGeneric(d api.ActionDefaults) *v1beta1.ComponentActionDefaults {
+	if !d.Silent && d.MaxTotalSeconds == 0 && d.Retries == 0 && d.Dir == "" && len(d.Env) == 0 && d.Shell == (api.Shell{}) {
+		return nil
+	}
 	defaults := &v1beta1.ComponentActionDefaults{
 		Silent:          d.Silent,
 		MaxTotalSeconds: int32(d.MaxTotalSeconds),

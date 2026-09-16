@@ -12,6 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -21,6 +22,17 @@ import (
 // will quickly raise the time needed to run them. The 20 iterations balances
 // time (currently <20s) with coverage.
 const defaultFuzzIterations = 20
+
+func TestPackageToV1beta1OmitsEmptyActionDefaults(t *testing.T) {
+	pkg := PackageToV1beta1(api.Package{
+		Components: []api.Component{{Name: "component"}},
+	})
+
+	require.Len(t, pkg.Components, 1)
+	require.Nil(t, pkg.Components[0].Actions.OnCreate.Defaults)
+	require.Nil(t, pkg.Components[0].Actions.OnDeploy.Defaults)
+	require.Nil(t, pkg.Components[0].Actions.OnRemove.Defaults)
+}
 
 // TestConvertGenericRoundTrip verifies that fields represented by the operational model survive a
 // v1beta1 conversion. Fields omitted from the comparison are documented below with the behavior
