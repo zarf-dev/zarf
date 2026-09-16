@@ -28,8 +28,7 @@ func TestLocalOSFilter(t *testing.T) {
 		} else {
 			require.NoError(t, err)
 		}
-		for _, idx := range result {
-			component := pkg.Components[idx]
+		for _, component := range result {
 			if component.Target.OS != "" {
 				require.Equal(t, os, component.Target.OS)
 			}

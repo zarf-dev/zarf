@@ -45,10 +45,9 @@ func TestCombine(t *testing.T) {
 		},
 	}
 
-	indices, err := combo.Apply(convert.PackageFromV1alpha1(pkg))
-	result := selectV1alpha1Components(pkg, indices)
+	components, err := combo.Apply(convert.PackageFromV1alpha1(pkg))
 	require.NoError(t, err)
-	require.Equal(t, expected, result)
+	require.Equal(t, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: expected}).Components, components)
 
 	// Test error propagation
 	combo = Combine(f1, f2, ForDeploy("group with no default", false))

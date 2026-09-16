@@ -241,13 +241,12 @@ func TestDeployFilter_Apply(t *testing.T) {
 			isInteractive := false
 			filter := ForDeploy(tt.optionalComponents, isInteractive)
 
-			indices, err := filter.Apply(convert.PackageFromV1alpha1(tt.pkg))
-			result := selectV1alpha1Components(tt.pkg, indices)
+			components, err := filter.Apply(convert.PackageFromV1alpha1(tt.pkg))
 			if tt.expectedErr != nil {
 				require.ErrorIs(t, err, tt.expectedErr)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tt.want, result)
+				require.Equal(t, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: tt.want}).Components, components)
 			}
 		})
 	}

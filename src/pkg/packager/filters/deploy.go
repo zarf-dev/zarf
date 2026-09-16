@@ -46,8 +46,8 @@ var (
 )
 
 // Apply applies the filter.
-func (f *deploymentFilter) Apply(pkg api.Package) ([]int, error) {
-	var selectedComponents []int
+func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
+	var selectedComponents []api.Component
 	groupedComponents := map[string][]indexedComponent{}
 	orderedComponentGroups := []string{}
 
@@ -108,14 +108,14 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]int, error) {
 					}
 
 					// Then append to the final list
-					selectedComponents = append(selectedComponents, component.idx)
+					selectedComponents = append(selectedComponents, component.component)
 					groupSelected = &component
 				}
 			}
 
 			// If nothing was selected from a group, handle the default
 			if groupSelected == nil && groupDefault != nil {
-				selectedComponents = append(selectedComponents, groupDefault.idx)
+				selectedComponents = append(selectedComponents, groupDefault.component)
 			} else if len(groupedComponents[groupKey]) > 1 && groupSelected == nil && groupDefault == nil {
 				// If no default component was found, give up
 				componentNames := []string{}
@@ -148,14 +148,14 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]int, error) {
 					if err != nil {
 						return nil, fmt.Errorf("%w: %w", ErrSelectionCanceled, err)
 					}
-					selectedComponents = append(selectedComponents, component.idx)
+					selectedComponents = append(selectedComponents, component.component)
 				} else {
 					foundDefault := false
 					componentNames := []string{}
 					for _, component := range group {
 						// If the component is default, then use it
 						if component.component.Default {
-							selectedComponents = append(selectedComponents, component.idx)
+							selectedComponents = append(selectedComponents, component.component)
 							foundDefault = true
 							break
 						}
@@ -171,7 +171,7 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]int, error) {
 				component := groupedComponents[groupKey][0]
 
 				if !component.component.Optional {
-					selectedComponents = append(selectedComponents, component.idx)
+					selectedComponents = append(selectedComponents, component.component)
 					continue
 				}
 
@@ -181,13 +181,13 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]int, error) {
 						return nil, fmt.Errorf("%w: %w", ErrSelectionCanceled, err)
 					}
 					if selected {
-						selectedComponents = append(selectedComponents, component.idx)
+						selectedComponents = append(selectedComponents, component.component)
 						continue
 					}
 				}
 
 				if component.component.Default {
-					selectedComponents = append(selectedComponents, component.idx)
+					selectedComponents = append(selectedComponents, component.component)
 					continue
 				}
 			}

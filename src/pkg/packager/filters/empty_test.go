@@ -23,5 +23,5 @@ func TestEmptyFilter_Apply(t *testing.T) {
 	result, err := filter.Apply(pkg)
 
 	require.NoError(t, err)
-	require.Equal(t, []int{0, 1}, result)
+	require.Equal(t, pkg.Components, result)
 }

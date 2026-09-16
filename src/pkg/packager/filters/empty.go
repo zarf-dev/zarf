@@ -15,10 +15,6 @@ func Empty() ComponentFilterStrategy {
 type emptyFilter struct{}
 
 // Apply returns the components unchanged.
-func (f *emptyFilter) Apply(pkg api.Package) ([]int, error) {
-	indices := make([]int, len(pkg.Components))
-	for idx := range pkg.Components {
-		indices[idx] = idx
-	}
-	return indices, nil
+func (f *emptyFilter) Apply(pkg api.Package) ([]api.Component, error) {
+	return pkg.Components, nil
 }
