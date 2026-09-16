@@ -96,11 +96,15 @@ func TestPackageLayoutMutators(t *testing.T) {
 		},
 		Components: []api.Component{
 			{
+				Name:          "first",
+				Charts:        []api.Chart{{Name: "target", Namespace: "old"}, {Name: "other", Namespace: "old"}},
 				Images:        []api.Image{{}},
 				ImageArchives: []api.ImageArchive{{}},
 				Repositories:  []api.Repository{{}},
 			},
 			{
+				Name:          "second",
+				Charts:        []api.Chart{{Name: "target", Namespace: "old"}},
 				Images:        []api.Image{{}},
 				ImageArchives: []api.ImageArchive{{}},
 				Repositories:  []api.Repository{{}},
@@ -111,6 +115,7 @@ func TestPackageLayoutMutators(t *testing.T) {
 	annotations := map[string]string{"environment": "test"}
 	pkgLayout.SetName("renamed")
 	pkgLayout.SetAnnotations(annotations)
+	pkgLayout.SetChartNamespace("first", "target", "new")
 	pkgLayout.RemoveImages()
 	pkgLayout.RemoveRepositories()
 	annotations["environment"] = "changed"
@@ -118,6 +123,9 @@ func TestPackageLayoutMutators(t *testing.T) {
 	definition := pkgLayout.Definition()
 	require.Equal(t, "renamed", definition.Metadata.Name)
 	require.Equal(t, map[string]string{"environment": "test"}, definition.Metadata.Annotations)
+	require.Equal(t, "new", definition.Components[0].Charts[0].Namespace)
+	require.Equal(t, "old", definition.Components[0].Charts[1].Namespace)
+	require.Equal(t, "old", definition.Components[1].Charts[0].Namespace)
 	for _, component := range definition.Components {
 		require.Nil(t, component.Images)
 		require.Nil(t, component.ImageArchives)

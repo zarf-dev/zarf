@@ -303,7 +303,7 @@ func actionToGeneric(a v1alpha1.ZarfComponentAction) api.Action {
 		Description:           a.Description,
 		Wait:                  waitToGeneric(a.Wait),
 		EnableTemplating:      derefBool(a.Template),
-		SetVariables:          actionVariablesToGeneric(a.SetVariables),
+		SetVariables:          variablesToGeneric(a.SetVariables),
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 	}
 
@@ -704,7 +704,7 @@ func actionFromGeneric(a api.Action) v1alpha1.ZarfComponentAction {
 		Cmd:                   a.Cmd,
 		Description:           a.Description,
 		Wait:                  waitFromGeneric(a.Wait),
-		SetVariables:          actionVariablesFromGeneric(a.SetVariables),
+		SetVariables:          variablesFromGeneric(a.SetVariables),
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 		Template:              boolPointer(a.EnableTemplating),
 	}
@@ -786,24 +786,24 @@ func variableFromGeneric(v api.Variable) v1alpha1.Variable {
 	}
 }
 
-func actionVariablesToGeneric(in []v1alpha1.Variable) []api.ActionVariable {
+func variablesToGeneric(in []v1alpha1.Variable) []api.Variable {
 	if in == nil {
 		return nil
 	}
-	out := make([]api.ActionVariable, 0, len(in))
+	out := make([]api.Variable, 0, len(in))
 	for _, variable := range in {
-		out = append(out, api.ActionVariable{Name: variable.Name, Sensitive: variable.Sensitive, AutoIndent: variable.AutoIndent, Pattern: variable.Pattern, Type: string(variable.Type)})
+		out = append(out, variableToGeneric(variable))
 	}
 	return out
 }
 
-func actionVariablesFromGeneric(in []api.ActionVariable) []v1alpha1.Variable {
+func variablesFromGeneric(in []api.Variable) []v1alpha1.Variable {
 	if in == nil {
 		return nil
 	}
 	out := make([]v1alpha1.Variable, 0, len(in))
 	for _, variable := range in {
-		out = append(out, v1alpha1.Variable{Name: variable.Name, Sensitive: variable.Sensitive, AutoIndent: variable.AutoIndent, Pattern: variable.Pattern, Type: v1alpha1.VariableType(variable.Type)})
+		out = append(out, variableFromGeneric(variable))
 	}
 	return out
 }

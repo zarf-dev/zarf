@@ -34,20 +34,11 @@ func (p Package) IsSBOMAble() bool {
 	return false
 }
 
-// SetName updates the package metadata name.
-func (p *Package) SetName(name string) {
-	p.Metadata.Name = name
-}
-
-// SetAnnotations updates the package metadata annotations.
-func (p *Package) SetAnnotations(annotations map[string]string) {
-	p.Metadata.Annotations = maps.Clone(annotations)
-}
-
 // RemoveImages removes images and image archives from every component.
 func (p *Package) RemoveImages() {
 	for i := range p.Components {
-		p.Components[i].Images, p.Components[i].ImageArchives = nil, nil
+		p.Components[i].Images = nil
+		p.Components[i].ImageArchives = nil
 	}
 }
 
@@ -78,20 +69,6 @@ func (p *Package) OverrideNamespace(namespace string) error {
 		p.Components[i].overrideNamespaces(original, namespace)
 	}
 	return nil
-}
-
-// SetChartNamespace sets the namespace for charts matching the component and chart names.
-func (p *Package) SetChartNamespace(componentName, chartName, namespace string) {
-	for i := range p.Components {
-		if p.Components[i].Name != componentName {
-			continue
-		}
-		for j := range p.Components[i].Charts {
-			if p.Components[i].Charts[j].Name == chartName {
-				p.Components[i].Charts[j].Namespace = namespace
-			}
-		}
-	}
 }
 
 func (p Package) uniqueNamespaces() []string {

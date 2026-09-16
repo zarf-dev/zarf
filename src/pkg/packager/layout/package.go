@@ -47,12 +47,12 @@ func (p *PackageLayout) Definition() api.Package {
 
 // SetName updates the package metadata name.
 func (p *PackageLayout) SetName(name string) {
-	p.pkg.SetName(name)
+	p.pkg.Metadata.Name = name
 }
 
 // SetAnnotations updates the package metadata annotations.
 func (p *PackageLayout) SetAnnotations(annotations map[string]string) {
-	p.pkg.SetAnnotations(annotations)
+	p.pkg.Metadata.Annotations = maps.Clone(annotations)
 }
 
 // RemoveImages removes images and image archives from every component.
@@ -63,6 +63,21 @@ func (p *PackageLayout) RemoveImages() {
 // RemoveRepositories removes git repositories from every component.
 func (p *PackageLayout) RemoveRepositories() {
 	p.pkg.RemoveRepositories()
+}
+
+// SetChartNamespace sets the namespace for charts matching the component and chart names.
+func (p *PackageLayout) SetChartNamespace(componentName, chartName, namespace string) {
+	for i := range p.pkg.Components {
+		component := &p.pkg.Components[i]
+		if component.Name != componentName {
+			continue
+		}
+		for j := range component.Charts {
+			if component.Charts[j].Name == chartName {
+				component.Charts[j].Namespace = namespace
+			}
+		}
+	}
 }
 
 // Digest returns the OCI manifest digest for this package layout.

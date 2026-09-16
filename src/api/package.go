@@ -287,22 +287,13 @@ type Action struct {
 	Env              []string
 	Cmd              string
 	Shell            *Shell
-	SetVariables     []ActionVariable
+	SetVariables     []Variable
 	SetValues        []SetValue
 	Description      string
 	Wait             *ActionWait
 	EnableTemplating bool
 	// DeprecatedSetVariable is required to execute legacy v1alpha1 packages.
 	DeprecatedSetVariable string
-}
-
-// ActionVariable receives an action's command output.
-type ActionVariable struct {
-	Name       string
-	Sensitive  bool
-	AutoIndent bool
-	Pattern    string
-	Type       string
 }
 
 // SetValue declares how command output is stored in the package values map.

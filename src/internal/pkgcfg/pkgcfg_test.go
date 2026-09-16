@@ -207,7 +207,7 @@ func TestParseAsErrors(t *testing.T) {
 	require.ErrorContains(t, err, `no "zarf.dev/v1beta1" document found`)
 }
 
-func TestParseMultiDocReturnsPackageDefinition(t *testing.T) {
+func TestParseMultiDocReturnsPackage(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
@@ -219,7 +219,7 @@ func TestParseMultiDocReturnsPackageDefinition(t *testing.T) {
 	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, "beta", convert.PackageToV1beta1(pkg).Metadata.Name)
 
-	// With only a v1beta1 document, ParseMultiDoc returns a PackageDefinition.
+	// With only a v1beta1 document, ParseMultiDoc returns an operational Package.
 	pkg, err = ParseMultiDoc(ctx, []byte(beta))
 	require.NoError(t, err)
 	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)

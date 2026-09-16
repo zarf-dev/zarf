@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -299,7 +298,7 @@ func PackageToV1beta1(g api.Package) v1beta1.Package {
 		APIVersion:    v1beta1.APIVersion,
 		Kind:          v1beta1.PackageKind(g.Kind),
 		Metadata:      metadataFromGeneric(g.Metadata),
-		Build:         buildFromGeneric(g.Build, g.Metadata),
+		Build:         buildFromGeneric(g.Build),
 		Values:        v1beta1.Values{Files: g.Values.Files, Schema: g.Values.Schema},
 		Documentation: g.Documentation,
 	}
@@ -315,13 +314,8 @@ func PackageToV1beta1(g api.Package) v1beta1.Package {
 		pkg.Kind = v1beta1.ZarfPackageConfig
 	}
 
-	// v1beta1 treats an empty wait.cluster.condition as a kstatus readiness check, whereas v1alpha1
-	// treated it as "wait until the resource exists". Backfill "exists" on migration so existing
-	// packages keep their original behavior.
-	migrateFromV1alpha1 := g.APIVersion == "" || g.APIVersion == v1alpha1.APIVersion
-
 	for _, c := range g.Components {
-		pkg.Components = append(pkg.Components, componentFromGeneric(c, isInit, migrateFromV1alpha1))
+		pkg.Components = append(pkg.Components, componentFromGeneric(c, isInit))
 	}
 
 	return pkg
@@ -347,7 +341,7 @@ func metadataFromGeneric(m api.PackageMetadata) v1beta1.PackageMetadata {
 	return meta
 }
 
-func buildFromGeneric(b api.BuildData, _ api.PackageMetadata) v1beta1.BuildData {
+func buildFromGeneric(b api.BuildData) v1beta1.BuildData {
 	out := v1beta1.BuildData{
 		Hostname:                   b.Hostname,
 		User:                       b.User,
@@ -375,7 +369,7 @@ func buildFromGeneric(b api.BuildData, _ api.PackageMetadata) v1beta1.BuildData 
 	return out
 }
 
-func componentFromGeneric(c api.Component, isInit, migrateFromV1alpha1 bool) v1beta1.Component {
+func componentFromGeneric(c api.Component, isInit bool) v1beta1.Component {
 	bc := v1beta1.Component{
 		Name:        c.Name,
 		Description: c.Description,
@@ -428,10 +422,6 @@ func componentFromGeneric(c api.Component, isInit, migrateFromV1alpha1 bool) v1b
 			Path:   ia.Path,
 			Images: ia.Images,
 		})
-	}
-
-	if migrateFromV1alpha1 {
-		backfillWaitExists(&bc.Actions)
 	}
 
 	// Convert v1alpha1 HealthChecks into onDeploy onSuccess wait actions.
@@ -653,11 +643,15 @@ func waitFromGeneric(w *api.ActionWait) *v1beta1.ComponentActionWait {
 	}
 	bw := &v1beta1.ComponentActionWait{}
 	if w.Cluster != nil {
+		condition := w.Cluster.Condition.Expression
+		if condition == "" && w.Cluster.Condition.Default == api.WaitForExistence {
+			condition = "exists"
+		}
 		bw.Cluster = &v1beta1.ComponentActionWaitCluster{
 			Kind:      w.Cluster.Kind,
 			Name:      w.Cluster.Name,
 			Namespace: w.Cluster.Namespace,
-			Condition: w.Cluster.Condition.Expression,
+			Condition: condition,
 		}
 	}
 	if w.Network != nil {
@@ -684,21 +678,6 @@ func intPointerToInt32Pointer(in *int) *int32 {
 	}
 	out := int32(*in)
 	return &out
-}
-
-// backfillWaitExists sets any action wait.cluster.condition left empty to "exists", preserving
-// v1alpha1 wait semantics. Health-check-derived waits are appended after this runs and keep an
-// empty condition so they use v1beta1 kstatus readiness checks.
-func backfillWaitExists(actions *v1beta1.ComponentActions) {
-	for _, set := range []*v1beta1.ComponentActionSet{&actions.OnCreate, &actions.OnDeploy, &actions.OnRemove} {
-		for _, slice := range [][]v1beta1.ComponentAction{set.Before, set.OnSuccess, set.OnFailure} {
-			for k := range slice {
-				if w := slice[k].Wait; w != nil && w.Cluster != nil && w.Cluster.Condition == "" {
-					w.Cluster.Condition = "exists"
-				}
-			}
-		}
-	}
 }
 
 // healthCheckKind returns the wait-for kind string for a v1alpha1 health check.

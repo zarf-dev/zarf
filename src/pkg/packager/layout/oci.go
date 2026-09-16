@@ -21,9 +21,6 @@ import (
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/convert"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"oras.land/oras-go/v2"
@@ -194,20 +191,20 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("reading %s for manifest: %w", ZarfYAML, err)
 	}
-	config, err := configDefinitionFromZarfYAML(ctx, zarfYAMLBytes)
+	configDefinition, configPackage, err := pkgcfg.ParseMultiDocNative(ctx, zarfYAMLBytes)
 	if err != nil {
 		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
 	}
-	configBytes, err := json.Marshal(config.definition)
+	configBytes, err := json.Marshal(configDefinition)
 	if err != nil {
 		return err
 	}
 	configDesc := content.NewDescriptorFromBytes(ZarfConfigMediaType, configBytes)
 
-	annotations := AnnotationsFromMetadata(config.pkg)
+	annotations := AnnotationsFromMetadata(configPackage)
 
 	// Back-compatible timestamp parsing → OCI format. Fall back to zero time (epoch) if the timestamp is absent.
-	t, parseErr := time.Parse(api.BuildTimestampFormat, config.pkg.Build.Timestamp)
+	t, parseErr := time.Parse(api.BuildTimestampFormat, configPackage.Build.Timestamp)
 	if parseErr != nil {
 		t = time.Time{}
 	}
@@ -242,35 +239,6 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	}
 	p.digest = root.Digest.String()
 	return nil
-}
-
-type ociConfigDefinition struct {
-	definition any
-	pkg        api.Package
-}
-
-func configDefinitionFromZarfYAML(ctx context.Context, definition []byte) (ociConfigDefinition, error) {
-	version, err := pkgcfg.SelectVersion(ctx, definition)
-	if err != nil {
-		return ociConfigDefinition{}, err
-	}
-
-	switch version {
-	case v1alpha1.APIVersion:
-		pkg, err := pkgcfg.ParseAs(ctx, definition, pkgcfg.V1Alpha1)
-		if err != nil {
-			return ociConfigDefinition{}, err
-		}
-		return ociConfigDefinition{definition: pkg, pkg: convert.PackageFromV1alpha1(pkg)}, nil
-	case v1beta1.APIVersion:
-		pkg, err := pkgcfg.ParseAs(ctx, definition, pkgcfg.V1Beta1)
-		if err != nil {
-			return ociConfigDefinition{}, err
-		}
-		return ociConfigDefinition{definition: pkg, pkg: convert.PackageFromV1beta1(pkg)}, nil
-	default:
-		return ociConfigDefinition{}, fmt.Errorf("unsupported package apiVersion %q", version)
-	}
 }
 
 // SetRegistryDigest records the manifest digest as resolved from a registry.
