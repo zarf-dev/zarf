@@ -49,7 +49,7 @@ components:
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 
-	metadata := pkgLayout.AsV1alpha1().Metadata
+	metadata := pkgLayout.Definition().Metadata
 	require.Equal(t, "field-url", metadata.URL)
 	require.Equal(t, "field-image", metadata.Image)
 	require.Equal(t, "field-authors", metadata.Authors)
@@ -88,7 +88,7 @@ func TestPackageCreatePublishArch(t *testing.T) {
 			})
 			require.NoError(t, err)
 			layout := pullFromRemote(ctx, t, packageSource, tt.expectedArch, "", t.TempDir(), defaultTestRemoteOptions())
-			require.Equal(t, tt.expectedArch, layout.AsV1alpha1().Metadata.Architecture)
+			require.Equal(t, tt.expectedArch, layout.Definition().Metadata.Architecture)
 		})
 	}
 }

@@ -10,8 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api/convert"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -166,7 +165,7 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		Tag: opts.Tag,
 	}
 	// Build Reference for remote from registry location and pkg
-	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(dst.String(), pkgLayout.AsV1alpha1(), referenceOptions)
+	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(dst.String(), pkgLayout.Definition(), referenceOptions)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -246,7 +245,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
-	pkg := convert.PackageToV1alpha1(loaded.Definition)
+	pkg := loaded.Definition
 	for _, comp := range pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")
@@ -267,7 +266,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		Tag: opts.Tag,
 	}
 	// Build Reference for remote from registry location and pkg
-	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(ref.String(), pkgLayout.AsV1alpha1(), referenceOptions)
+	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(ref.String(), pkgLayout.Definition(), referenceOptions)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -276,13 +275,13 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return registry.Reference{}, err
 	}
 	l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
-	ex := []v1alpha1.ZarfComponent{}
-	for _, c := range pkgLayout.AsV1alpha1().Components {
-		ex = append(ex, v1alpha1.ZarfComponent{
+	ex := []api.Component{}
+	for _, c := range pkgLayout.Definition().Components {
+		ex = append(ex, api.Component{
 			Name: fmt.Sprintf("import-%s", c.Name),
-			Import: v1alpha1.ZarfComponentImport{
-				Name: c.Name,
-				URL:  helpers.OCIURLPrefix + pkgRef.String(),
+			Import: api.ComponentImport{
+				Name:   c.Name,
+				Remote: []api.ComponentImportRemote{{URL: helpers.OCIURLPrefix + pkgRef.String()}},
 			},
 		})
 	}
@@ -296,7 +295,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 // pushToRemote pushes a package to the given reference
 func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, retries int, remoteOpts types.RemoteOptions) error {
-	arch := layout.AsV1alpha1().Metadata.Architecture
+	arch := layout.Definition().Metadata.Architecture
 	// Set platform
 	platform := oci.PlatformForArch(arch)
 

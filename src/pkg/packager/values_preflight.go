@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -30,7 +30,7 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if pkgLayout == nil {
 		return fmt.Errorf("pkg layout is required")
 	}
-	components := pkgLayout.AsV1alpha1().Components
+	components := pkgLayout.Definition().Components
 	defined := newDefinedValues(vals)
 
 	var errs []error
@@ -44,7 +44,7 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	return errors.Join(errs...)
 }
 
-func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, defined *definedValues) ([]error, error) {
+func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, defined *definedValues) ([]error, error) {
 	onDeploy := component.Actions.OnDeploy
 	var errs []error
 
@@ -86,8 +86,8 @@ func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, compon
 	return errs, nil
 }
 
-func checkAction(component v1alpha1.ZarfComponent, action v1alpha1.ZarfComponentAction, defined *definedValues) []error {
-	if !action.ShouldTemplate() {
+func checkAction(component api.Component, action api.Action, defined *definedValues) []error {
+	if !action.EnableTemplating {
 		return nil
 	}
 	location := fmt.Sprintf("component %q action %q", component.Name, actionLabel(action))
@@ -112,7 +112,7 @@ func newDefinedValues(vals value.Values) *definedValues {
 	return &definedValues{vals: vals}
 }
 
-func (d *definedValues) addAction(action v1alpha1.ZarfComponentAction) {
+func (d *definedValues) addAction(action api.Action) {
 	for _, sv := range action.SetValues {
 		if sv.Key == "." {
 			d.setValueRoot = true
@@ -160,7 +160,7 @@ type templateSource struct {
 
 // componentFileSources extracts and reads the go-templated manifest, file, and chart values-file
 // contents for a component.
-func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent) (_ []templateSource, err error) {
+func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component) (_ []templateSource, err error) {
 	hasManifests := false
 	for _, m := range component.Manifests {
 		if m.IsTemplate() {
@@ -177,7 +177,7 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	}
 	hasTemplatedValues := false
 	for _, chart := range component.Charts {
-		if len(chart.TemplatedValuesFiles) > 0 {
+		if hasTemplatedValuesFile(chart) {
 			hasTemplatedValues = true
 			break
 		}
@@ -226,7 +226,7 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 			if !file.IsTemplate() {
 				continue
 			}
-			fileLocation := filepath.Join(filesDir, layout.ComponentFileRelPath(fileIdx, file.Target))
+			fileLocation := filepath.Join(filesDir, layout.ComponentFileRelPath(fileIdx, file.Destination))
 			fileList := []string{fileLocation}
 			if helpers.IsDir(fileLocation) {
 				fileList, err = helpers.RecursiveFileList(fileLocation, nil, false)
@@ -241,7 +241,7 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 				}
 				sources = append(sources, templateSource{
 					content:  string(content),
-					location: fmt.Sprintf("component %q file %q", component.Name, file.Target),
+					location: fmt.Sprintf("component %q file %q", component.Name, file.Destination),
 				})
 			}
 		}
@@ -262,7 +262,7 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 				}
 				sources = append(sources, templateSource{
 					content:  string(content),
-					location: fmt.Sprintf("component %q chart %q templated values file %q", component.Name, chart.Name, vf.Source),
+					location: fmt.Sprintf("component %q chart %q templated values file %q", component.Name, chart.Name, filepath.Base(vf.Source)),
 				})
 			}
 		}
@@ -270,11 +270,11 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	return sources, nil
 }
 
-func actionTemplateStrings(a v1alpha1.ZarfComponentAction) []string {
+func actionTemplateStrings(a api.Action) []string {
 	if a.Wait != nil {
 		var out []string
 		if c := a.Wait.Cluster; c != nil {
-			out = append(out, c.Kind, c.Name, c.Namespace, c.Condition)
+			out = append(out, c.Kind, c.Name, c.Namespace, c.Condition.Expression)
 		}
 		if n := a.Wait.Network; n != nil {
 			out = append(out, n.Protocol, n.Address)
@@ -284,7 +284,7 @@ func actionTemplateStrings(a v1alpha1.ZarfComponentAction) []string {
 	return []string{a.Cmd}
 }
 
-func actionLabel(a v1alpha1.ZarfComponentAction) string {
+func actionLabel(a api.Action) string {
 	if a.Description != "" {
 		return a.Description
 	}

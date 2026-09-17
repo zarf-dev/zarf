@@ -25,7 +25,6 @@ import (
 	"helm.sh/helm/v4/pkg/storage/driver"
 
 	"github.com/zarf-dev/zarf/src/api/convert"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -45,11 +44,9 @@ type RemoveOptions struct {
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) error {
 	l := logger.From(ctx)
-	pkg := convert.PackageToV1alpha1(definition)
-
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
-		if err := requirements.ValidateVersionRequirements(pkg); err != nil {
+		if err := requirements.ValidateVersionRequirements(definition); err != nil {
 			return fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", err)
 		}
 	}
@@ -62,9 +59,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 	if err != nil {
 		return err
 	}
-	pkg = convert.PackageToV1alpha1(definition)
-
-	if len(pkg.Components) == 0 {
+	if len(definition.Components) == 0 {
 		return fmt.Errorf("package to remove contains no components")
 	}
 
@@ -81,8 +76,8 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 
 	// Check that cluster is configured if required.
 	requiresCluster := false
-	componentIdx := map[string]v1alpha1.ZarfComponent{}
-	for _, component := range pkg.Components {
+	componentIdx := map[string]api.Component{}
+	for _, component := range definition.Components {
 		componentIdx[component.Name] = component
 		if component.RequiresCluster() {
 			if opts.Cluster == nil {
@@ -96,15 +91,15 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 	depPkg := &state.DeployedPackage{}
 	if requiresCluster {
 		var err error
-		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
+		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, definition.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %w", err)
 		}
 	} else {
 		// If we do not need the cluster, create a deployed components object based on the info we have
-		depPkg.Name = pkg.Metadata.Name
-		depPkg.Data = pkg
-		for _, component := range pkg.Components {
+		depPkg.Name = definition.Metadata.Name
+		depPkg.Data = convert.PackageToV1alpha1(definition)
+		for _, component := range definition.Components {
 			depPkg.DeployedComponents = append(depPkg.DeployedComponents, state.DeployedComponent{Name: component.Name})
 		}
 	}
@@ -203,6 +198,6 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 		}
 	}
 
-	l.Info("package successfully removed", "name", pkg.Metadata.Name)
+	l.Info("package successfully removed", "name", definition.Metadata.Name)
 	return nil
 }

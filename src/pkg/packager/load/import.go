@@ -26,24 +26,25 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	ocistore "oras.land/oras-go/v2/content/oci"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-func getComponentToImportName(component v1alpha1.ZarfComponent) string {
+func getComponentToImportName(component api.Component) string {
 	if component.Import.Name != "" {
 		return component.Import.Name
 	}
 	return component.Name
 }
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, []string, error) {
+func resolveImports(ctx context.Context, pkg api.Package, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (api.Package, []string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, nil, err
+		return api.Package{}, nil, err
 	}
 
 	// Zarf imports merge in the top level package objects variables and constants
@@ -65,7 +66,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	var importedSchemas []string
 	variables := pkg.Variables
 	constants := pkg.Constants
-	components := []v1alpha1.ZarfComponent{}
+	components := []api.Component{}
 
 	for _, component := range pkg.Components {
 		if !compatibleComponent(component, arch, flavor) {
@@ -73,39 +74,40 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 
 		// Skip as component does not have any imports.
-		if component.Import.Path == "" && component.Import.URL == "" {
+		if componentImportPath(component) == "" && componentImportURL(component) == "" {
 			components = append(components, component)
 			continue
 		}
 
 		if err := validateComponentCompose(component); err != nil {
-			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("invalid imported definition for %s: %w", component.Name, err)
+			return api.Package{}, nil, fmt.Errorf("invalid imported definition for %s: %w", component.Name, err)
 		}
 
-		var importedPkg v1alpha1.ZarfPackage
+		var importedPkg api.Package
 		var innerSchemas []string
-		if component.Import.Path != "" {
-			importPath := filepath.Join(pkgPath.BaseDir, component.Import.Path)
+		if componentImportPath(component) != "" {
+			importPath := filepath.Join(pkgPath.BaseDir, componentImportPath(component))
 			for _, sp := range importStack {
 				if sp == importPath {
-					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(pkgPath.BaseDir), component.Name)
+					return api.Package{}, nil, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(pkgPath.BaseDir), component.Name)
 				}
 			}
 
 			importPkgPath, err := layout.ResolvePackagePath(importPath)
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("unable to access import package path %q: %w", importPath, err)
+				return api.Package{}, nil, fmt.Errorf("unable to access import package path %q: %w", importPath, err)
 			}
 
 			b, err := os.ReadFile(importPkgPath.ManifestFile)
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, nil, err
+				return api.Package{}, nil, err
 			}
-			importedPkg, err = pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
+			parsed, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, nil, err
+				return api.Package{}, nil, err
 			}
-			var relevantComponents []v1alpha1.ZarfComponent
+			importedPkg = convert.PackageFromV1alpha1(parsed)
+			var relevantComponents []api.Component
 			for _, importedComponent := range importedPkg.Components {
 				if importedComponent.Name == getComponentToImportName(component) {
 					relevantComponents = append(relevantComponents, importedComponent)
@@ -114,64 +116,64 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			importedPkg.Components = relevantComponents
 			importedPkg, innerSchemas, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck, remoteOptions)
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, nil, err
+				return api.Package{}, nil, err
 			}
-		} else if component.Import.URL != "" {
-			remote, err := zoci.NewRemoteWithOptions(ctx, component.Import.URL, zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
+		} else if componentImportURL(component) != "" {
+			remote, err := zoci.NewRemoteWithOptions(ctx, componentImportURL(component), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
 				CachePath:     cachePath,
 				RemoteOptions: remoteOptions,
 			})
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, nil, err
+				return api.Package{}, nil, err
 			}
 			_, err = remote.ResolveRoot(ctx)
 			if err != nil {
 				if strings.Contains(err.Error(), "no matching manifest was found in the manifest list") {
-					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", component.Import.URL, err)
+					return api.Package{}, nil, fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", componentImportURL(component), err)
 				}
-				return v1alpha1.ZarfPackage{}, nil, err
+				return api.Package{}, nil, err
 			}
 			importedPkg, err = remote.FetchZarfYAML(ctx)
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, nil, err
+				return api.Package{}, nil, err
 			}
 
 			if len(importedPkg.Values.Files) > 0 || importedPkg.Values.Schema != "" {
-				return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("imported skeleton %s declares values which are not yet supported", component.Import.URL)
+				return api.Package{}, nil, fmt.Errorf("imported skeleton %s declares values which are not yet supported", componentImportURL(component))
 			}
 
 			if !skipVersionCheck {
 				// Validate skeleton package is compatible with new package
 				if err := pkgvalidate.ValidateVersionRequirements(importedPkg); err != nil {
-					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("package %s has unmet requirements: %w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", component.Import.URL, err)
+					return api.Package{}, nil, fmt.Errorf("package %s has unmet requirements: %w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", componentImportURL(component), err)
 				}
 			}
 		}
 
 		name := getComponentToImportName(component)
-		found := []v1alpha1.ZarfComponent{}
+		found := []api.Component{}
 		for _, component := range importedPkg.Components {
 			if component.Name == name && compatibleComponent(component, arch, flavor) {
 				found = append(found, component)
 			}
 		}
 		if len(found) == 0 {
-			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("no compatible component named %s found", name)
+			return api.Package{}, nil, fmt.Errorf("no compatible component named %s found", name)
 		} else if len(found) > 1 {
-			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("multiple components named %s found", name)
+			return api.Package{}, nil, fmt.Errorf("multiple components named %s found", name)
 		}
 		importedComponent := found[0]
 
 		importPath, err := fetchOCISkeleton(ctx, component, pkgPath.BaseDir, cachePath, remoteOptions)
 		if err != nil {
-			return v1alpha1.ZarfPackage{}, nil, err
+			return api.Package{}, nil, err
 		}
 
 		// this is a special case for paths and imports where we do not want to join BaseDir and importPath
 		// we check that the path is valid but ensure the value remains relative for fixing
 		fileInfo, err := os.Stat(filepath.Join(pkgPath.BaseDir, importPath))
 		if err != nil {
-			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("unable to access import path %q: %w", importPath, err)
+			return api.Package{}, nil, fmt.Errorf("unable to access import path %q: %w", importPath, err)
 		}
 		if !fileInfo.IsDir() {
 			importPath = filepath.Dir(importPath)
@@ -179,7 +181,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		importedComponent = fixPaths(importedComponent, importPath, pkgPath.BaseDir)
 		composed, err := overrideMetadata(importedComponent, component)
 		if err != nil {
-			return v1alpha1.ZarfPackage{}, nil, err
+			return api.Package{}, nil, err
 		}
 		composed = overrideDeprecated(composed, component)
 		composed = overrideActions(composed, component)
@@ -250,24 +252,40 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	return pkg, deduplicatedSchemas, nil
 }
 
-func validateComponentCompose(c v1alpha1.ZarfComponent) error {
+func componentImportPath(component api.Component) string {
+	if len(component.Import.Local) == 0 {
+		return ""
+	}
+	return component.Import.Local[0].Path
+}
+
+func componentImportURL(component api.Component) string {
+	if len(component.Import.Remote) == 0 {
+		return ""
+	}
+	return component.Import.Remote[0].URL
+}
+
+func validateComponentCompose(c api.Component) error {
 	errs := []error{}
-	if strings.Contains(c.Import.Path, v1alpha1.ZarfPackageTemplatePrefix) || strings.Contains(c.Import.URL, v1alpha1.ZarfPackageTemplatePrefix) {
+	importPath := componentImportPath(c)
+	importURL := componentImportURL(c)
+	if strings.Contains(importPath, api.PackageTemplatePrefix) || strings.Contains(importURL, api.PackageTemplatePrefix) {
 		errs = append(errs, errors.New("package templates are not supported for import path or URL"))
 	}
-	if c.Import.Path == "" && c.Import.URL == "" {
+	if importPath == "" && importURL == "" {
 		errs = append(errs, errors.New("neither a path nor a URL was provided"))
 	}
-	if c.Import.Path != "" && c.Import.URL != "" {
+	if importPath != "" && importURL != "" {
 		errs = append(errs, errors.New("both a path and a URL were provided"))
 	}
-	if c.Import.URL == "" && c.Import.Path != "" {
-		if filepath.IsAbs(c.Import.Path) {
+	if importURL == "" && importPath != "" {
+		if filepath.IsAbs(importPath) {
 			errs = append(errs, errors.New("path cannot be an absolute path"))
 		}
 	}
-	if c.Import.URL != "" && c.Import.Path == "" {
-		ok := helpers.IsOCIURL(c.Import.URL)
+	if importURL != "" && importPath == "" {
+		ok := helpers.IsOCIURL(importURL)
 		if !ok {
 			errs = append(errs, errors.New("URL is not a valid OCI URL"))
 		}
@@ -275,16 +293,16 @@ func validateComponentCompose(c v1alpha1.ZarfComponent) error {
 	return errors.Join(errs...)
 }
 
-func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
-	satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
-	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
+func compatibleComponent(c api.Component, arch, flavor string) bool {
+	satisfiesArch := c.Target.Architecture == "" || c.Target.Architecture == arch
+	satisfiesFlavor := c.Target.Flavor == "" || c.Target.Flavor == flavor
 	return satisfiesArch && satisfiesFlavor
 }
 
 // TODO (phillebaba): Refactor package structure so that pullOCI can be used instead.
-func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string, remoteOptions types.RemoteOptions) (string, error) {
-	if component.Import.URL == "" {
-		return component.Import.Path, nil
+func fetchOCISkeleton(ctx context.Context, component api.Component, packagePath string, cachePath string, remoteOptions types.RemoteOptions) (string, error) {
+	if componentImportURL(component) == "" {
+		return componentImportPath(component), nil
 	}
 
 	name := component.Name
@@ -298,7 +316,7 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	}
 
 	// Get the descriptor for the component.
-	remote, err := zoci.NewRemoteWithOptions(ctx, component.Import.URL, zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemoteWithOptions(ctx, componentImportURL(component), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
 		RemoteOptions: remoteOptions,
 	})
 	if err != nil {
@@ -309,9 +327,9 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		// This error likely won't occur as the root has been resolved before this function is invoked.
 		// This serves as a secondary mechanism to highlight the potential for the package existing without a published skeleton.
 		if strings.Contains(err.Error(), "no matching manifest was found in the manifest list") {
-			return "", fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", component.Import.URL, err)
+			return "", fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", componentImportURL(component), err)
 		}
-		return "", fmt.Errorf("published skeleton package for %s does not exist: %w", component.Import.URL, err)
+		return "", fmt.Errorf("published skeleton package for %s does not exist: %w", componentImportURL(component), err)
 	}
 	manifest, err := remote.FetchRoot(ctx)
 	if err != nil {
@@ -323,7 +341,7 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	// In this case, we represent the component with an empty directory
 	if oci.IsEmptyDescriptor(componentDesc) {
 		h := sha256.New()
-		h.Write([]byte(component.Import.URL + name))
+		h.Write([]byte(componentImportURL(component) + name))
 		id := fmt.Sprintf("%x", h.Sum(nil))
 
 		dir = filepath.Join(cache, "dirs", id)
@@ -377,11 +395,11 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	return rel, nil
 }
 
-func overrideMetadata(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, error) {
+func overrideMetadata(comp api.Component, override api.Component) (api.Component, error) {
 	// Metadata
 	comp.Name = override.Name
 	comp.Default = override.Default
-	comp.Required = override.Required
+	comp.Optional = override.Optional
 
 	// Override description if it was provided.
 	if override.Description != "" {
@@ -389,21 +407,21 @@ func overrideMetadata(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompone
 	}
 
 	// If the imported component has a flavor, mark the component with that flavor
-	if override.Only.Flavor != "" {
-		comp.Only.Flavor = override.Only.Flavor
+	if override.Target.Flavor != "" {
+		comp.Target.Flavor = override.Target.Flavor
 	}
 
-	if override.Only.LocalOS != "" {
-		if comp.Only.LocalOS != "" {
-			return v1alpha1.ZarfComponent{}, fmt.Errorf("component %q: \"only.localOS\" %q cannot be redefined as %q during compose", comp.Name, comp.Only.LocalOS, override.Only.LocalOS)
+	if override.Target.OS != "" {
+		if comp.Target.OS != "" {
+			return api.Component{}, fmt.Errorf("component %q: \"only.localOS\" %q cannot be redefined as %q during compose", comp.Name, comp.Target.OS, override.Target.OS)
 		}
-		comp.Only.LocalOS = override.Only.LocalOS
+		comp.Target.OS = override.Target.OS
 	}
 	return comp, nil
 }
 
-func overrideDeprecated(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfComponent) v1alpha1.ZarfComponent {
-	comp.DeprecatedGroup = override.DeprecatedGroup
+func overrideDeprecated(comp api.Component, override api.Component) api.Component {
+	comp.Group = override.Group
 
 	// Merge deprecated scripts for backwards compatibility with older zarf binaries.
 	comp.DeprecatedScripts.Before = append(comp.DeprecatedScripts.Before, override.DeprecatedScripts.Before...)
@@ -421,7 +439,7 @@ func overrideDeprecated(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompo
 	return comp
 }
 
-func overrideActions(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfComponent) v1alpha1.ZarfComponent {
+func overrideActions(comp api.Component, override api.Component) api.Component {
 	comp.Actions.OnCreate.Defaults = override.Actions.OnCreate.Defaults
 	comp.Actions.OnCreate.Before = append(comp.Actions.OnCreate.Before, override.Actions.OnCreate.Before...)
 	comp.Actions.OnCreate.After = append(comp.Actions.OnCreate.After, override.Actions.OnCreate.After...)
@@ -442,11 +460,11 @@ func overrideActions(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfComponen
 	return comp
 }
 
-func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfComponent) v1alpha1.ZarfComponent {
+func overrideResources(comp api.Component, override api.Component) api.Component {
 	comp.DataInjections = append(comp.DataInjections, override.DataInjections...)
 	comp.Files = append(comp.Files, override.Files...)
 	comp.Images = append(comp.Images, override.Images...)
-	comp.Repos = append(comp.Repos, override.Repos...)
+	comp.Repositories = append(comp.Repositories, override.Repositories...)
 
 	// Merge charts with the same name to keep them unique
 	for _, overrideChart := range override.Charts {
@@ -462,11 +480,13 @@ func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompon
 				if overrideChart.Version != "" {
 					comp.Charts[idx].Version = overrideChart.Version
 				}
-				if overrideChart.URL != "" {
-					comp.Charts[idx].URL = overrideChart.URL
+				if overrideChart.SourceURL() != "" {
+					comp.Charts[idx].HelmRepository = overrideChart.HelmRepository
+					comp.Charts[idx].Git = overrideChart.Git
+					comp.Charts[idx].Local = overrideChart.Local
+					comp.Charts[idx].OCI = overrideChart.OCI
 				}
 				comp.Charts[idx].ValuesFiles = append(comp.Charts[idx].ValuesFiles, overrideChart.ValuesFiles...)
-				comp.Charts[idx].TemplatedValuesFiles = append(comp.Charts[idx].TemplatedValuesFiles, overrideChart.TemplatedValuesFiles...)
 				comp.Charts[idx].Variables = append(comp.Charts[idx].Variables, overrideChart.Variables...)
 				comp.Charts[idx].Values = append(comp.Charts[idx].Values, overrideChart.Values...)
 				existing = true
@@ -487,7 +507,12 @@ func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompon
 					comp.Manifests[idx].Namespace = overrideManifest.Namespace
 				}
 				comp.Manifests[idx].Files = append(comp.Manifests[idx].Files, overrideManifest.Files...)
-				comp.Manifests[idx].Kustomizations = append(comp.Manifests[idx].Kustomizations, overrideManifest.Kustomizations...)
+				if overrideManifest.Kustomize != nil {
+					if comp.Manifests[idx].Kustomize == nil {
+						comp.Manifests[idx].Kustomize = &api.KustomizeManifest{}
+					}
+					comp.Manifests[idx].Kustomize.Files = append(comp.Manifests[idx].Kustomize.Files, overrideManifest.Kustomize.Files...)
+				}
 
 				existing = true
 			}
@@ -514,7 +539,7 @@ func makePathRelativeTo(path, relativeTo string) string {
 	return filepath.ToSlash(filepath.Join(relativeTo, path))
 }
 
-func fixPaths(child v1alpha1.ZarfComponent, relativeToHead, packagePath string) v1alpha1.ZarfComponent {
+func fixPaths(child api.Component, relativeToHead, packagePath string) api.Component {
 	for fileIdx, file := range child.Files {
 		composed := makePathRelativeTo(file.Source, relativeToHead)
 		child.Files[fileIdx].Source = composed
@@ -527,16 +552,10 @@ func fixPaths(child v1alpha1.ZarfComponent, relativeToHead, packagePath string) 
 
 	for chartIdx, chart := range child.Charts {
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
-			composed := makePathRelativeTo(valuesFile, relativeToHead)
-			child.Charts[chartIdx].ValuesFiles[valuesIdx] = composed
+			child.Charts[chartIdx].ValuesFiles[valuesIdx].Path = makePathRelativeTo(valuesFile.Path, relativeToHead)
 		}
-		for valuesIdx, valuesFile := range chart.TemplatedValuesFiles {
-			composed := makePathRelativeTo(valuesFile, relativeToHead)
-			child.Charts[chartIdx].TemplatedValuesFiles[valuesIdx] = composed
-		}
-		if child.Charts[chartIdx].LocalPath != "" {
-			composed := makePathRelativeTo(chart.LocalPath, relativeToHead)
-			child.Charts[chartIdx].LocalPath = composed
+		if child.Charts[chartIdx].Local != nil {
+			child.Charts[chartIdx].Local.Path = makePathRelativeTo(chart.Local.Path, relativeToHead)
 		}
 	}
 
@@ -545,12 +564,15 @@ func fixPaths(child v1alpha1.ZarfComponent, relativeToHead, packagePath string) 
 			composed := makePathRelativeTo(file, relativeToHead)
 			child.Manifests[manifestIdx].Files[fileIdx] = composed
 		}
-		for kustomizeIdx, kustomization := range manifest.Kustomizations {
+		if manifest.Kustomize == nil {
+			continue
+		}
+		for kustomizeIdx, kustomization := range manifest.Kustomize.Files {
 			composed := makePathRelativeTo(kustomization, relativeToHead)
 			// kustomizations can use non-standard urls, so we need to check if the composed path exists on the local filesystem
 			invalid := helpers.InvalidPath(filepath.Join(packagePath, composed))
 			if !invalid {
-				child.Manifests[manifestIdx].Kustomizations[kustomizeIdx] = composed
+				child.Manifests[manifestIdx].Kustomize.Files[kustomizeIdx] = composed
 			}
 		}
 	}
@@ -570,7 +592,7 @@ func fixPaths(child v1alpha1.ZarfComponent, relativeToHead, packagePath string) 
 }
 
 // fixActionPaths takes a slice of actions and mutates the Dir to be relative to the head node
-func fixActionPaths(actions []v1alpha1.ZarfComponentAction, defaultDir, relativeToHead string) []v1alpha1.ZarfComponentAction {
+func fixActionPaths(actions []api.Action, defaultDir, relativeToHead string) []api.Action {
 	for actionIdx, action := range actions {
 		var composed string
 		if action.Dir != nil {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -29,7 +30,7 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 	require.NoError(t, err)
 
-	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
+	_, _, err = resolveImports(ctx, convert.PackageFromV1alpha1(pkg), "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
@@ -46,63 +47,63 @@ func TestResolveImports(t *testing.T) {
 		{
 			name:             "two zarf.yaml files import each other",
 			path:             "./testdata/import/import-each-other",
-			expectedChecksum: "1ba733591d28761e89f6a576593cb3a09000f3d6a699212214a5aceaf74455c0",
+			expectedChecksum: "56851d4445f1e53797812c3480716a9afb23a2f35ee1710ab8fcc146058baa95",
 		},
 		{
 			name:             "variables and constants are resolved correctly",
 			path:             "./testdata/import/variables",
-			expectedChecksum: "41e3bdf823769eb2c13079191179ee723a6b8550c5492a8668233de8b77e03da",
+			expectedChecksum: "65bcb19b6a36e43621f6789875f30c40abc131549837051ea4a6a4da8e3e069a",
 		},
 		{
 			name:             "values files from nested imports preserve deepest-first precedence order",
 			path:             "./testdata/import/values/precedence-order",
-			expectedChecksum: "1269606562ec5f7065169f601f0c3d7dff4707ec613216050f513b4ea0161849",
+			expectedChecksum: "8ceda625711717294695cd02c1aebc6f878292a4a12ea42bf05e2da875ec2c63",
 		},
 		{
 			name:             "values files from multiple sibling imports preserve left-to-right order",
 			path:             "./testdata/import/values/multiple-imports",
-			expectedChecksum: "06b9e2cbc17034b371efd57f75bb299e4849b8644f4fdde257f778ff2c48fb01",
+			expectedChecksum: "5659e6ea458dbfbcaf0eb16e8955e11abeffd8dd1cd4202f58a85969b6523378",
 		},
 		{
 			name:             "duplicate values file paths from consecutive imports are deduplicated",
 			path:             "./testdata/import/values/duplicate-consecutive",
-			expectedChecksum: "9698b8c12900a862f370d12bf240c721a62b5508fc26a34af33cd787261eaca3",
+			expectedChecksum: "24b9aee0c2aaf66b3efe0337a5cd08954da98ced28e3ba1e53c166de5d474f3a",
 		},
 		{
 			name:             "duplicate values file paths from non-consecutive imports are deduplicated",
 			path:             "./testdata/import/values/duplicate-interleaved",
-			expectedChecksum: "23c92f2941e30e5717546a0f4d3cd76ced28787346d4681936d0acb1df204255",
+			expectedChecksum: "341908959e2753328f53cb79345d9e1d509d01729fb3a8bbce83faed4e55b3ea",
 		},
 		{
 			name:             "an empty parent schema is kept even when an imported package has one",
 			path:             "./testdata/import/values/schema-parent-empty",
-			expectedChecksum: "63135e84455ebf25324cbe847d2c778da2adecee477d7c0172744b9825e8615f",
+			expectedChecksum: "8d5d599a87cf5bcf69e053426580f5902329acab826c1d9b52a77dfb95a95f9d",
 		},
 		{
 			name:             "a parent schema takes precedence over an imported package's schema",
 			path:             "./testdata/import/values/schema-parent-wins",
-			expectedChecksum: "e43e13f0f064be03780d69f2772caed374e9f4c30ddfd8c0f09dcb0461a6e53d",
+			expectedChecksum: "6a03bf06329b743ada9500fd64664ebd111f5863e2a8b1ed5aae7c5114b5c62a",
 		},
 		{
 			name:             "two separate chains of imports importing a common file",
 			path:             "./testdata/import/branch",
-			expectedChecksum: "5213106f8fb4a752a44fc2fd370c06335c31069113d9148ad627082510e9a4ef",
+			expectedChecksum: "a75b6079f2b090dd3d124f9d0e1f854ace92071503999609d18c759eee519816",
 		},
 		{
 			name:             "flavor is preserved when importing",
 			path:             "./testdata/import/flavor",
 			flavor:           "pistachio",
-			expectedChecksum: "9c60125954b1b38a5947401411b87cde3d586e5ff8eef03bcc37dae1e24ab08e",
+			expectedChecksum: "a43253815628aebcb506c97716cc370c33cbfe7b6f532f74a9b60623c0140266",
 		},
 		{
 			name:             "chart version and url properties are not overridden",
 			path:             "./testdata/import/chart",
-			expectedChecksum: "ec6553c389314a5853259c58c073a8d214dc807f709f4ac9cad4099f25144ffe",
+			expectedChecksum: "e70086ac46b963cfd923f4d68d7df6389e79b60d146a31a43db64d8c4124f65a",
 		},
 		{
 			name:             "archives work as expected",
 			path:             "./testdata/import/archives",
-			expectedChecksum: "9601cb578d72727bba116d008a23f63ac6dd40c3a685e1d790d376469792db5a",
+			expectedChecksum: "ba81af688158cbe6e3f9b10ffb27c82f38f42ff119301cf2a117ecc5d1f90c68",
 		},
 	}
 
@@ -115,7 +116,7 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			require.NoError(t, err)
 
-			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
+			resolvedPkg, _, err := resolveImports(ctx, convert.PackageFromV1alpha1(pkg), tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
@@ -123,9 +124,10 @@ func TestResolveImports(t *testing.T) {
 			expectedPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 
 			require.NoError(t, err)
-			require.Equal(t, expectedPkg, resolvedPkg)
-			testutil.RequireNoBackslashInPackagePaths(t, resolvedPkg)
-			require.Equal(t, tc.expectedChecksum, testutil.ChecksumZarfYAMLContent(t, resolvedPkg), "resolved zarf.yaml checksum drift — package would differ across build hosts")
+			require.Equal(t, convert.PackageFromV1alpha1(expectedPkg), resolvedPkg)
+			resolvedLegacy := convert.PackageToV1alpha1(resolvedPkg)
+			testutil.RequireNoBackslashInPackagePaths(t, resolvedLegacy)
+			require.Equal(t, tc.expectedChecksum, testutil.ChecksumZarfYAMLContent(t, resolvedLegacy), "resolved zarf.yaml checksum drift — package would differ across build hosts")
 		})
 	}
 }
@@ -149,7 +151,7 @@ func TestResolveImportsDedupNormalization(t *testing.T) {
 
 	// Reuse an existing fixture's directory only as the on-disk anchor — resolveImports
 	// stats the path but does not re-parse zarf.yaml when pkg is passed in.
-	resolved, _, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
+	resolved, _, err := resolveImports(ctx, convert.PackageFromV1alpha1(pkg), "./testdata/import/values/duplicate-consecutive",
 		"", "", []string{}, "", false, types.RemoteOptions{})
 	require.NoError(t, err)
 	require.Equal(t, []string{"parent-values.yaml"}, resolved.Values.Files)
@@ -245,7 +247,7 @@ func TestResolveImportsValueMerge(t *testing.T) {
 			pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			require.NoError(t, err)
 
-			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, _, err := resolveImports(ctx, convert.PackageFromV1alpha1(pkg), tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			absPaths := make([]string, len(resolved.Values.Files))
@@ -303,7 +305,7 @@ func TestResolveImportsSchemaCollection(t *testing.T) {
 			pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
 			require.NoError(t, err)
 
-			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, importedSchemas, err := resolveImports(ctx, convert.PackageFromV1alpha1(pkg), tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			require.Equal(t, tc.expectedSchemas, importedSchemas)
@@ -419,7 +421,7 @@ func TestValidateComponentCompose(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := validateComponentCompose(tt.component)
+			err := validateComponentCompose(convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{tt.component}}).Components[0])
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
@@ -516,7 +518,7 @@ func TestCompatibleComponent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := compatibleComponent(tt.component, tt.arch, tt.flavor)
+			result := compatibleComponent(convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{tt.component}}).Components[0], tt.arch, tt.flavor)
 			require.Equal(t, tt.expectedResult, result)
 		})
 	}

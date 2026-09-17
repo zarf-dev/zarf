@@ -154,7 +154,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 			l.Warn("unable to close loaded package", "error", closeErr)
 		}
 	}()
-	pkg := convert.PackageToV1alpha1(loaded.Definition)
+	pkg := loaded.Definition
 
 	// Step 1: Merge default values.files to create initial set of default Zarf values
 	zarfValues := loaded.Values.DeepCopy()
@@ -746,7 +746,7 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 		return err
 	}
 
-	b, err := goyaml.MarshalWithOptions(pkg, goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
+	b, err := goyaml.MarshalWithOptions(convert.PackageToV1alpha1(pkg), goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
 	if err != nil {
 		return err
 	}

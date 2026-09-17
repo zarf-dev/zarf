@@ -21,7 +21,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/sprig/v3"
 	"github.com/goccy/go-yaml"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -58,9 +58,9 @@ func (o Objects) WithValues(values value.Values) Objects {
 	return o
 }
 
-// WithConstants Takes a slice of v1alpha1.Constants and unwraps it into the templating Objects map so constants can be
+// WithConstants takes a slice of api.Constants and unwraps it into the templating Objects map so constants can be
 // accessed in templates by their key name.
-func (o Objects) WithConstants(constants []v1alpha1.Constant) Objects {
+func (o Objects) WithConstants(constants []api.Constant) Objects {
 	m := make(map[string]string)
 	for _, v := range constants {
 		m[v.Name] = v.Value
@@ -80,8 +80,9 @@ func (o Objects) WithVariables(vars variables.SetVariableMap) Objects {
 	return o
 }
 
-// WithPackage makes a v1alpha1.ZarfPackage available on the Objects map.
-func (o Objects) WithPackage(pkg v1alpha1.ZarfPackage) Objects {
+// WithPackage makes a version-neutral package available on the Objects map.
+// FIXME: the key used should depend on the package
+func (o Objects) WithPackage(pkg api.Package) Objects {
 	o[objectKeyPackage] = pkg
 	return o
 }
@@ -93,7 +94,7 @@ type StateAccess struct {
 	State *state.State
 	// AccessKeys lists which groups of sensitive state fields the component may access.
 	// Accessing a field whose group is not listed causes a template error (missingkey=error).
-	AccessKeys []v1alpha1.StateAccessKey
+	AccessKeys []string
 }
 
 // WithState adds Zarf runtime state to the template Objects under the "State" key.
@@ -130,7 +131,7 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		"PayloadShaSum":     s.InjectorInfo.PayLoadShaSum,
 	}
 
-	if slices.Contains(access.AccessKeys, v1alpha1.StateAccessRegistryCredentials) {
+	if slices.Contains(access.AccessKeys, "registryCredentials") {
 		registry["PushPassword"] = s.RegistryInfo.PushPassword
 		registry["PullPassword"] = s.RegistryInfo.PullPassword
 		registry["Secret"] = s.RegistryInfo.Secret
@@ -140,7 +141,7 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		}
 		registry["Htpasswd"] = htpasswd
 	}
-	if slices.Contains(access.AccessKeys, v1alpha1.StateAccessGitCredentials) {
+	if slices.Contains(access.AccessKeys, "gitCredentials") {
 		git["PushPassword"] = s.GitServer.PushPassword
 		git["PullPassword"] = s.GitServer.PullPassword
 	}
@@ -154,7 +155,7 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		"Injector":     injector,
 	}
 
-	if slices.Contains(access.AccessKeys, v1alpha1.StateAccessAgentCerts) {
+	if slices.Contains(access.AccessKeys, "agentCerts") {
 		stateMap["Agent"] = map[string]any{
 			"CA":   base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.CA),
 			"Cert": base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.Cert),

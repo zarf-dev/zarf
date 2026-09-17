@@ -15,6 +15,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
@@ -219,7 +220,7 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := validateImageArchivesNoDuplicates(tt.components)
+			err := validateImageArchivesNoDuplicates(convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: tt.components}).Components)
 
 			if tt.errorContains != "" {
 				require.Error(t, err)
@@ -340,7 +341,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tt.expected, collectVersionRequirements(tt.pkg, tt.hasIndex))
+			require.Equal(t, tt.expected, collectVersionRequirements(convert.PackageFromV1alpha1(tt.pkg), tt.hasIndex))
 		})
 	}
 }
@@ -438,8 +439,8 @@ fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm
 `
 
 	require.Equal(t, expectedChecksum, string(b))
-	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.AsV1alpha1())
-	require.Equal(t, "7eb1a1e4e33ec7b6a7da78937b99c64bf7cf4751b70c0ed0662356cd7c18f967", testutil.ChecksumZarfYAMLContent(t, pkgLayout.AsV1alpha1()), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
+	testutil.RequireNoBackslashInPackagePaths(t, convert.PackageToV1alpha1(pkgLayout.Definition()))
+	require.Equal(t, "7eb1a1e4e33ec7b6a7da78937b99c64bf7cf4751b70c0ed0662356cd7c18f967", testutil.ChecksumZarfYAMLContent(t, convert.PackageToV1alpha1(pkgLayout.Definition())), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {

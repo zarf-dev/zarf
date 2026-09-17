@@ -8,19 +8,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 func TestParseChartValues(t *testing.T) {
 	t.Parallel()
 
-	chart := v1alpha1.ZarfChart{
+	chart := api.Chart{
 		Name:    "test",
 		Version: "1.0.0",
 		// One entry each — length drives index iteration; the string content is not used for path resolution.
-		ValuesFiles:          []string{"regular.yaml"},
-		TemplatedValuesFiles: []string{"templated.yaml"},
+		ValuesFiles: []api.ValuesFile{{Path: "regular.yaml"}, {Path: "templated.yaml", EnableTemplating: true}},
 	}
 
 	tmpDir := t.TempDir()

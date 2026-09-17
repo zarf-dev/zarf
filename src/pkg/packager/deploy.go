@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
@@ -111,7 +111,7 @@ type DeployResult struct {
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	start := time.Now()
-	pkg := pkgLayout.AsV1alpha1()
+	pkg := pkgLayout.Definition()
 	if opts.Connected && pkg.IsInitConfig() {
 		return DeployResult{}, fmt.Errorf("--connected is not supported for init packages")
 	}
@@ -142,7 +142,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		if err := pkgLayout.OverrideNamespace(opts.NamespaceOverride); err != nil {
 			return DeployResult{}, err
 		}
-		pkg = pkgLayout.AsV1alpha1()
+		pkg = pkgLayout.Definition()
 	}
 
 	if opts.Retries == 0 {
@@ -156,7 +156,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	if err := pkgLayout.Filter(filters.ByLocalOS(runtime.GOOS)); err != nil {
 		return DeployResult{}, err
 	}
-	pkg = pkgLayout.AsV1alpha1()
+	pkg = pkgLayout.Definition()
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 	if err != nil {
@@ -200,7 +200,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 // loadDeploymentValues loads a package's assembled values, applies deploy-time overrides, and validates the result.
 func loadDeploymentValues(ctx context.Context, pkgLayout *layout.PackageLayout, overrides value.Values, skipSchemaValidation bool) (value.Values, error) {
-	pkg := pkgLayout.AsV1alpha1()
+	pkg := pkgLayout.Definition()
 	if !feature.IsEnabled(feature.Values) && (len(pkg.Values.Files) > 0 || len(overrides) > 0) {
 		return nil, fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
@@ -230,7 +230,7 @@ func (d *deployer) isConnectedToCluster() bool {
 
 func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]state.DeployedComponent, error) {
 	l := logger.From(ctx)
-	pkg := pkgLayout.AsV1alpha1()
+	pkg := pkgLayout.Definition()
 	deployedComponents := []state.DeployedComponent{}
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -344,7 +344,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 }
 
 // internalServicesFor returns the state services Zarf will deploy internally in this init run.
-func internalServicesFor(components []v1alpha1.ZarfComponent, opts DeployOptions) state.ServiceSet {
+func internalServicesFor(components []api.Component, opts DeployOptions) state.ServiceSet {
 	services := state.NewServiceSet()
 	registryExternal := opts.RegistryInfo.Address != ""
 	for _, c := range components {
@@ -363,9 +363,9 @@ func internalServicesFor(components []v1alpha1.ZarfComponent, opts DeployOptions
 	return services
 }
 
-func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) ([]state.InstalledChart, error) {
+func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
-	pkg := pkgLayout.AsV1alpha1()
+	pkg := pkgLayout.Definition()
 	isSeedRegistry := component.Name == "zarf-seed-registry"
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
@@ -467,7 +467,7 @@ func injectorDaemonsetImage(ctx context.Context, c *cluster.Cluster, requestedIm
 	return c.GetInjectorDaemonsetImage(ctx)
 }
 
-func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {
+func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -476,7 +476,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	hasImages := len(component.GetImages()) > 0 && !noImgPush && !opts.Connected
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
-	hasRepos := len(component.Repos) > 0 && !opts.Connected
+	hasRepos := len(component.Repositories) > 0 && !opts.Connected
 	hasFiles := len(component.Files) > 0
 
 	onDeploy := component.Actions.OnDeploy
@@ -598,9 +598,9 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	return charts, nil
 }
 
-func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []state.InstalledChart, err error) {
+func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
-	pkg := pkgLayout.AsV1alpha1()
+	pkg := pkgLayout.Definition()
 	installedCharts := []state.InstalledChart{}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -623,7 +623,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 	for _, chart := range component.Charts {
 		// Do not wait for the chart to be ready if data injections are present.
 		if len(component.DataInjections) > 0 {
-			chart.NoWait = true
+			chart.SkipWait = true
 		}
 
 		if err := templateValuesFiles(ctx, chart, valuesDir, templateValuesFilesOpts{
@@ -675,9 +675,9 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 	return installedCharts, nil
 }
 
-func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []state.InstalledChart, err error) {
+func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
-	pkg := pkgLayout.AsV1alpha1()
+	pkg := pkgLayout.Definition()
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -718,12 +718,14 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 		// Move kustomizations to files now, applying ###ZARF_VAR_*### substitution as well.
-		for idx := range manifest.Kustomizations {
-			kustomization := layout.KustomizationFileName(manifest.Name, idx)
-			manifest.Files = append(manifest.Files, kustomization)
-			path := filepath.Join(manifestDir, kustomization)
-			if err := d.vc.ReplaceTextTemplate(path); err != nil {
-				return installedCharts, fmt.Errorf("error templating kustomization %s: %w", path, err)
+		if manifest.Kustomize != nil {
+			for idx := range manifest.Kustomize.Files {
+				kustomization := layout.KustomizationFileName(manifest.Name, idx)
+				manifest.Files = append(manifest.Files, kustomization)
+				path := filepath.Join(manifestDir, kustomization)
+				if err := d.vc.ReplaceTextTemplate(path); err != nil {
+					return installedCharts, fmt.Errorf("error templating kustomization %s: %w", path, err)
+				}
 			}
 		}
 
@@ -810,7 +812,7 @@ func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state
 }
 
 func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout) error {
-	pkg := pkgLayout.AsV1alpha1()
+	pkg := pkgLayout.Definition()
 	// Ignore this check if the package contains no images
 	if !pkg.HasImages() {
 		return nil
@@ -849,9 +851,9 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayo
 	return nil
 }
 
-func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) (err error) {
+func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) (err error) {
 	l := logger.From(ctx)
-	pkg := pkgLayout.AsV1alpha1()
+	pkg := pkgLayout.Definition()
 	start := time.Now()
 	l.Info("copying files", "count", len(component.Files))
 
@@ -869,24 +871,24 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 	}
 
 	for fileIdx, file := range component.Files {
-		l.Info("loading file", "name", file.Target)
+		l.Info("loading file", "name", file.Destination)
 
-		fileLocation := filepath.Join(filesDir, layout.ComponentFileRelPath(fileIdx, file.Target))
+		fileLocation := filepath.Join(filesDir, layout.ComponentFileRelPath(fileIdx, file.Destination))
 
 		// If a shasum is specified check it again on deployment as well
-		if file.Shasum != "" {
-			l.Debug("Validating SHASUM", "file", file.Target)
-			if err := helpers.SHAsMatch(fileLocation, file.Shasum); err != nil {
+		if file.Checksum != "" {
+			l.Debug("Validating SHASUM", "file", file.Destination)
+			if err := helpers.SHAsMatch(fileLocation, file.Checksum); err != nil {
 				return err
 			}
 		}
 
 		// Replace temp target directory and home directory
-		target, err := config.GetAbsHomePath(strings.Replace(file.Target, "###ZARF_TEMP###", pkgLayout.DirPath(), 1))
+		target, err := config.GetAbsHomePath(strings.Replace(file.Destination, "###ZARF_TEMP###", pkgLayout.DirPath(), 1))
 		if err != nil {
 			return err
 		}
-		file.Target = target
+		file.Destination = target
 
 		fileList := []string{}
 		if helpers.IsDir(fileLocation) {
@@ -908,14 +910,14 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 
 			// If the file is a text file, template it
 			if isText {
-				l.Debug("template file", "name", file.Target)
+				l.Debug("template file", "name", file.Destination)
 				if err := variableConfig.ReplaceTextTemplate(subFile); err != nil {
 					return fmt.Errorf("unable to template file %s: %w", subFile, err)
 				}
 			}
 			// If the file has go-templating enabled, apply templates.
 			if file.IsTemplate() {
-				l.Debug("templates enabled, processing file", "name", file.Target)
+				l.Debug("templates enabled, processing file", "name", file.Destination)
 				objs, err := template.NewObjects(values).
 					WithPackage(pkg).
 					WithVariables(variableConfig.GetSetVariableMap()).
@@ -932,10 +934,10 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 		}
 
 		// Copy the file to the destination
-		l.Debug("saving file", "name", file.Target)
-		err = helpers.CreatePathAndCopy(fileLocation, file.Target)
+		l.Debug("saving file", "name", file.Destination)
+		err = helpers.CreatePathAndCopy(fileLocation, file.Destination)
 		if err != nil {
-			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
+			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Destination, err)
 		}
 
 		// Loop over all symlinks and create them
@@ -949,9 +951,9 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 				return fmt.Errorf("failed to create parent directory for %s: %w", link, err)
 			}
 			// Create the symlink
-			err := os.Symlink(file.Target, link)
+			err := os.Symlink(file.Destination, link)
 			if err != nil {
-				return fmt.Errorf("unable to create symlink %s->%s: %w", link, file.Target, err)
+				return fmt.Errorf("unable to create symlink %s->%s: %w", link, file.Destination, err)
 			}
 		}
 	}

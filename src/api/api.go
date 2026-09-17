@@ -19,6 +19,18 @@ const (
 	ZarfInitConfig PackageKind = "ZarfInitConfig"
 	// ZarfPackageConfig is the default package kind.
 	ZarfPackageConfig PackageKind = "ZarfPackageConfig"
+	// FIXME: perhaps some of these should stay as v1alpha1 constructs
+
+	// SkeletonArch is the special architecture used for skeleton packages.
+	SkeletonArch = "skeleton"
+	// PackageTemplatePrefix marks a legacy package template placeholder.
+	PackageTemplatePrefix = "###ZARF_PKG_TMPL_"
+	// PackageVariablePrefix marks a legacy package variable placeholder.
+	PackageVariablePrefix = "###ZARF_PKG_VAR_"
+	// PackageArch is the legacy template placeholder for package architecture.
+	PackageArch = "###ZARF_PKG_ARCH###"
+	// ComponentName is the template placeholder for a component's name.
+	ComponentName = "###ZARF_COMPONENT_NAME###"
 )
 
 // BuildTimestampFormat is the timestamp format used for package build metadata.
@@ -32,6 +44,114 @@ func (p Package) IsSBOMAble() bool {
 		}
 	}
 	return false
+}
+
+// HasImages reports whether a package contains images or image archives.
+func (p Package) HasImages() bool {
+	for _, component := range p.Components {
+		if len(component.Images) > 0 || len(component.ImageArchives) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// IsInitConfig reports whether this is a Zarf init package.
+func (p Package) IsInitConfig() bool {
+	return p.Kind == ZarfInitConfig
+}
+
+// RequiresCluster reports whether this component requires a cluster connection.
+func (c Component) RequiresCluster() bool {
+	return len(c.Images) > 0 || len(c.ImageArchives) > 0 || len(c.Charts) > 0 ||
+		len(c.Manifests) > 0 || len(c.Repositories) > 0 || len(c.DataInjections) > 0 ||
+		len(c.HealthChecks) > 0
+}
+
+// IsRequired reports whether this component is required.
+func (c Component) IsRequired() bool {
+	return !c.Optional
+}
+
+// GetImages returns all images specified by this component, including image archives.
+func (c Component) GetImages() []string {
+	images := make([]string, 0, len(c.Images))
+	for _, image := range c.Images {
+		images = append(images, image.Name)
+	}
+	for _, archive := range c.ImageArchives {
+		images = append(images, archive.Images...)
+	}
+	return images
+}
+
+// IsTemplate reports whether this file should be rendered as a Go template.
+func (f File) IsTemplate() bool {
+	return f.EnableTemplating
+}
+
+// ShouldRunSchemaValidation reports whether Helm values schema validation is enabled.
+func (c Chart) ShouldRunSchemaValidation() bool {
+	return !c.SkipSchemaValidation
+}
+
+// GetServerSideApply returns the configured apply strategy, defaulting to auto.
+func (c Chart) GetServerSideApply() string {
+	if c.ServerSideApply == "" {
+		return "auto"
+	}
+	return c.ServerSideApply
+}
+
+// SourceURL returns the chart source URL, if the chart is remotely sourced.
+func (c Chart) SourceURL() string {
+	switch {
+	case c.HelmRepository != nil:
+		return c.HelmRepository.URL
+	case c.Git != nil:
+		return c.Git.URL
+	case c.OCI != nil:
+		return c.OCI.URL
+	default:
+		return ""
+	}
+}
+
+// LocalPath returns the source path for a local chart.
+func (c Chart) LocalPath() string {
+	if c.Local == nil {
+		return ""
+	}
+	return c.Local.Path
+}
+
+// RepositoryName returns the named chart in a Helm repository, if set.
+func (c Chart) RepositoryName() string {
+	if c.HelmRepository == nil {
+		return ""
+	}
+	return c.HelmRepository.Name
+}
+
+// GitPath returns the chart path within a Git source, if set.
+func (c Chart) GitPath() string {
+	if c.Git == nil {
+		return ""
+	}
+	return c.Git.Path
+}
+
+// GetServerSideApply returns the configured apply strategy, defaulting to auto.
+func (m Manifest) GetServerSideApply() string {
+	if m.ServerSideApply == "" {
+		return "auto"
+	}
+	return m.ServerSideApply
+}
+
+// IsTemplate reports whether this manifest should be rendered as a Go template.
+func (m Manifest) IsTemplate() bool {
+	return m.EnableTemplating
 }
 
 // RemoveImages removes images and image archives from every component.

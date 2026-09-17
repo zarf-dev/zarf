@@ -16,7 +16,7 @@ import (
 	chartutil "helm.sh/helm/v4/pkg/chart/v2/util"
 	"helm.sh/helm/v4/pkg/registry"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -66,10 +66,10 @@ entries:
 	repoSrv := httptest.NewServer(mux)
 	defer repoSrv.Close()
 
-	chart := v1alpha1.ZarfChart{
-		Name:    "simple-chart",
-		Version: "1.0.0",
-		URL:     repoSrv.URL,
+	chart := api.Chart{
+		Name:           "simple-chart",
+		Version:        "1.0.0",
+		HelmRepository: &api.HelmRepositorySource{URL: repoSrv.URL},
 	}
 	chartPath := t.TempDir()
 	paths := layout.ChartPaths{ChartsDir: chartPath, ValuesDir: t.TempDir()}
@@ -103,10 +103,10 @@ func TestDownloadPublishedChartFromOCI(t *testing.T) {
 	_, err = regClient.Push(chartData, fmt.Sprintf("%s/charts/simple-chart:1.0.0", regAddr))
 	require.NoError(t, err)
 
-	chart := v1alpha1.ZarfChart{
+	chart := api.Chart{
 		Name:    "simple-chart",
 		Version: "1.0.0",
-		URL:     fmt.Sprintf("oci://%s/charts/simple-chart", regAddr),
+		OCI:     &api.OCISource{URL: fmt.Sprintf("oci://%s/charts/simple-chart", regAddr)},
 	}
 	chartPath := t.TempDir()
 	paths := layout.ChartPaths{ChartsDir: chartPath, ValuesDir: t.TempDir()}

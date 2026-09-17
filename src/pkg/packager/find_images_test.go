@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -325,7 +325,7 @@ func TestFindDefinitionImages(t *testing.T) {
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "image-archive-component",
 					},
-					ImageArchives: []v1alpha1.ImageArchive{
+					ImageArchives: []api.ImageArchive{
 						{
 							Images: []string{
 								"docker.io/library/scratch:latest",
@@ -361,7 +361,7 @@ func TestFindDefinitionImages(t *testing.T) {
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "image-archive-component",
 					},
-					ImageArchives: []v1alpha1.ImageArchive{
+					ImageArchives: []api.ImageArchive{
 						{
 							Images: []string{
 								"docker.io/library/scratch:latest",
