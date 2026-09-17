@@ -46,6 +46,10 @@ spec:
         runAsGroup: {{ .Values.securityContext.runAsGroup }}
         seccompProfile:
           type: "RuntimeDefault"
+{{- if .Values.securityContext.seLinuxOptions.level }}
+        seLinuxOptions:
+          level: {{ .Values.securityContext.seLinuxOptions.level | quote }}
+{{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ include "registry.image.repository" . }}:{{ .Values.image.tag }}"
@@ -73,10 +77,6 @@ spec:
             runAsNonRoot: true
             capabilities:
               drop: ["ALL"]
-{{- if .Values.securityContext.seLinuxOptions.level }}
-            seLinuxOptions:
-              level: {{ .Values.securityContext.seLinuxOptions.level | quote }}
-{{- end }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
           env:
