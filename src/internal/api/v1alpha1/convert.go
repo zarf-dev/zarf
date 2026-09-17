@@ -943,15 +943,15 @@ func flattenGitRef(ref *api.GitRef) string {
 	return ""
 }
 
-func stateAccessToGeneric(in []v1alpha1.StateAccessKey) []string {
-	var out []string
+func stateAccessToGeneric(in []v1alpha1.StateAccessKey) []api.StateAccessKey {
+	var out []api.StateAccessKey
 	for _, s := range in {
-		out = append(out, string(s))
+		out = append(out, api.StateAccessKey(s))
 	}
 	return out
 }
 
-func stateAccessFromGeneric(in []string) []v1alpha1.StateAccessKey {
+func stateAccessFromGeneric(in []api.StateAccessKey) []v1alpha1.StateAccessKey {
 	var out []v1alpha1.StateAccessKey
 	for _, s := range in {
 		out = append(out, v1alpha1.StateAccessKey(s))

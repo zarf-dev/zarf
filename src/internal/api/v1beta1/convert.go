@@ -770,15 +770,15 @@ func repositoriesFromGeneric(in []api.Repository) []v1beta1.Repository {
 	return out
 }
 
-func stateAccessToGeneric(in []v1beta1.StateAccessKey) []string {
-	var out []string
+func stateAccessToGeneric(in []v1beta1.StateAccessKey) []api.StateAccessKey {
+	var out []api.StateAccessKey
 	for _, s := range in {
-		out = append(out, string(s))
+		out = append(out, api.StateAccessKey(s))
 	}
 	return out
 }
 
-func stateAccessFromGeneric(in []string) []v1beta1.StateAccessKey {
+func stateAccessFromGeneric(in []api.StateAccessKey) []v1beta1.StateAccessKey {
 	var out []v1beta1.StateAccessKey
 	for _, s := range in {
 		out = append(out, v1beta1.StateAccessKey(s))
