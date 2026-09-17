@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.86.0](https://github.com/zarf-dev/zarf/compare/v0.85.0...v0.86.0) (2026-09-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* move sbom viewer behind disabled feature flag ([#5368](https://github.com/zarf-dev/zarf/issues/5368))
+
+### Features
+
+* **cluster:** support random registry pod selection ([#5317](https://github.com/zarf-dev/zarf/issues/5317)) ([fb3a53b](https://github.com/zarf-dev/zarf/commit/fb3a53b276ed927fa5e279a826ee366243f9d9b7))
+* debug log container runtime for diagnostics - warn on cri-o ([#5333](https://github.com/zarf-dev/zarf/issues/5333)) ([4e34f0e](https://github.com/zarf-dev/zarf/commit/4e34f0eaedba5937e333c1cb5c6e160decac68b6))
+* migrate `zarf tools registry ls` from crane to oras-go ([#5199](https://github.com/zarf-dev/zarf/issues/5199)) ([da37c2a](https://github.com/zarf-dev/zarf/commit/da37c2a805fc8a78b57d691133ec7ecf080aa5cf))
+* reject extra arguments to destroy ([#5311](https://github.com/zarf-dev/zarf/issues/5311)) ([2a03baf](https://github.com/zarf-dev/zarf/commit/2a03bafdbf893cd2a5b2828d47a7e29eaf542ee9))
+* support listing a deployed package by name ([#5310](https://github.com/zarf-dev/zarf/issues/5310)) ([5fda9ff](https://github.com/zarf-dev/zarf/commit/5fda9ffa434d1cde07ec28d6c712b52c1735dba1))
+
+
+### Bug Fixes
+
+* differing Windows `files` basenames on Linux and Windows ([#5359](https://github.com/zarf-dev/zarf/issues/5359)) ([22bbb45](https://github.com/zarf-dev/zarf/commit/22bbb4583e44d62074366b13ba60337d6bed7bff))
+* interactive template prompts on create ([#5362](https://github.com/zarf-dev/zarf/issues/5362)) ([9545b01](https://github.com/zarf-dev/zarf/commit/9545b01b5d5f1de99daf143ff5c238688c1409a5))
+* introduce more randomization in the fuzzers ([#5275](https://github.com/zarf-dev/zarf/issues/5275)) ([46018cf](https://github.com/zarf-dev/zarf/commit/46018cff0e1288cb115ad4c0fc0921362a8dac83))
+* move sbom viewer behind disabled feature flag ([#5368](https://github.com/zarf-dev/zarf/issues/5368)) ([9a1699a](https://github.com/zarf-dev/zarf/commit/9a1699ab3f74de6eab258dc074e858bd9d6d3bd4))
+* **values:** infer integer and unknown schema types ([#5334](https://github.com/zarf-dev/zarf/issues/5334)) ([221c4f6](https://github.com/zarf-dev/zarf/commit/221c4f6c26cb7db6e7b115719ca47652fd831cc7))
+
 ## [0.85.0](https://github.com/zarf-dev/zarf/compare/v0.84.0...v0.85.0) (2026-09-03)
 
 
