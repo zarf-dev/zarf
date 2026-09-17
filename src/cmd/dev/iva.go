@@ -85,6 +85,24 @@ func (o *imageVolumeOptions) prerun(_ *cobra.Command, args []string) error {
 	)
 }
 
+// imageOptions turns the command's flags into the image.Options that build the
+// volume. The only flag that needs translating is --max-layers: 0 is how the
+// flag spells "no cap", while image.Options reserves 0 for "unset" and carries
+// an absent cap as a bool, so the two cannot be passed straight through.
+func (o *imageVolumeOptions) imageOptions() image.Options {
+	opts := image.Options{
+		OS:          o.os,
+		Arch:        image.PlatformArch(config.GetArch()),
+		Compression: o.compression,
+	}
+	if o.maxLayers == completion.UnlimitedMaxLayers {
+		opts.UnlimitedLayers = true
+	} else {
+		opts.MaxLayers = o.maxLayers
+	}
+	return opts
+}
+
 // run builds an image volume from args[0] (the source directory) tagged as
 // args[1] (the image reference), then writes it to o.output as a
 // Docker/OCI-compatible tar archive.
@@ -105,7 +123,7 @@ func (o *imageVolumeOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	iv, err := image.New(tmpDir, string(o.os), config.GetArch())
+	iv, err := image.New(tmpDir, o.imageOptions())
 	if err != nil {
 		return err
 	}
@@ -117,9 +135,6 @@ func (o *imageVolumeOptions) run(cmd *cobra.Command, args []string) error {
 			l.Debug("failed to remove staging directory", "error", err)
 		}
 	}()
-
-	iv.Compression = o.compression
-	iv.MaxLayers = o.maxLayers
 
 	if err := iv.AddDirectory(cmd.Context(), dir, ref); err != nil {
 		return err
