@@ -22,6 +22,52 @@ to = "/ref/"
 from = "/examples/*"
 to = "/ref/examples/:splat"
 
+# Tutorial pages were renamed to zero-padded slugs (`1-` -> `01-`) so that the
+# filenames sort in sidebar order. These keep the old URLs working. Exact paths
+# rather than splats: the pages have no sub-paths, and a bare path is not
+# documented to match a `/*` rule. Trailing slashes are normalized by the edge
+# before rules run, so each rule covers both spellings.
+
+[[redirects]]
+from = "/tutorials/0-creating-a-zarf-package"
+to = "/tutorials/00-creating-a-zarf-package/"
+
+[[redirects]]
+from = "/tutorials/1-initializing-a-k8s-cluster"
+to = "/tutorials/01-initializing-a-k8s-cluster/"
+
+[[redirects]]
+from = "/tutorials/2-deploying-zarf-packages"
+to = "/tutorials/02-deploying-zarf-packages/"
+
+[[redirects]]
+from = "/tutorials/3-deploy-a-retro-arcade"
+to = "/tutorials/03-deploy-a-retro-arcade/"
+
+[[redirects]]
+from = "/tutorials/4-creating-a-k8s-cluster-with-zarf"
+to = "/tutorials/04-creating-a-k8s-cluster-with-zarf/"
+
+[[redirects]]
+from = "/tutorials/5-package-signing-and-verification"
+to = "/tutorials/05-package-signing-and-verification/"
+
+[[redirects]]
+from = "/tutorials/6-publish-and-deploy"
+to = "/tutorials/06-publish-and-deploy/"
+
+[[redirects]]
+from = "/tutorials/7-custom-init-packages"
+to = "/tutorials/07-custom-init-packages/"
+
+[[redirects]]
+from = "/tutorials/8-resource-adoption"
+to = "/tutorials/08-resource-adoption/"
+
+[[redirects]]
+from = "/tutorials/9-package-create-differential"
+to = "/tutorials/09-package-create-differential/"
+
 [[redirects]]
 from = "/docs/:page"
 to = "/:page"
