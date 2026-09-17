@@ -563,9 +563,6 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 		}
 	}
 
-	if manifest.Kustomize == nil {
-		return nil
-	}
 	for kustomizeIdx, path := range manifest.Kustomize.Files {
 		// Generate manifests from kustomizations and place in the package.
 		kname := layout.KustomizationFileName(manifest.Name, kustomizeIdx)
@@ -754,9 +751,6 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 			component.Manifests[manifestIdx].Files[fileIdx] = rel
 		}
 
-		if manifest.Kustomize == nil {
-			continue
-		}
 		for kustomizeIdx, path := range manifest.Kustomize.Files {
 			// Generate manifests from kustomizations and place in the package.
 			kname := layout.KustomizationFileName(manifest.Name, kustomizeIdx)
@@ -774,8 +768,8 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 			}
 		}
 
-		// remove kustomizations
-		component.Manifests[manifestIdx].Kustomize = nil
+		// Remove kustomizations.
+		component.Manifests[manifestIdx].Kustomize = api.KustomizeManifest{}
 	}
 
 	// Write the tar component.

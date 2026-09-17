@@ -172,10 +172,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 				return nil, fmt.Errorf("failed to get package manifests: %w", err)
 			}
 			for _, manifest := range component.Manifests {
-				kustomizeFiles := []string(nil)
-				if manifest.Kustomize != nil {
-					kustomizeFiles = manifest.Kustomize.Files
-				}
+				kustomizeFiles := manifest.Kustomize.Files
 				files := make([]string, 0, len(manifest.Files)+len(kustomizeFiles))
 				for idx := range manifest.Files {
 					files = append(files, layout.ManifestFileName(manifest.Name, idx))
@@ -223,8 +220,7 @@ type templateValuesFilesOpts struct {
 	pkg            api.Package
 	vals           value.Values
 	s              *state.State
-	// FIXME: probably should also be a type
-	stateAccess []string
+	stateAccess    []api.StateAccessKey
 }
 
 func hasTemplatedValuesFile(chart api.Chart) bool {
@@ -468,7 +464,7 @@ func getTemplatedManifests(ctx context.Context, manifest api.Manifest, resourceS
 
 // getTemplatedChart returns a templated chart.yaml as a string after templating
 func getTemplatedChart(ctx context.Context, zarfChart api.Chart, componentName string, resources *load.ResourceSet,
-	baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg api.Package, s *state.State, stateAccess []string, kubeVersion string, isInteractive bool, cachePath string, remoteOptions types.RemoteOptions) (Resource, common.Values, error) {
+	baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg api.Package, s *state.State, stateAccess []api.StateAccessKey, kubeVersion string, isInteractive bool, cachePath string, remoteOptions types.RemoteOptions) (Resource, common.Values, error) {
 	chartPath := filepath.Join(baseComponentDir, string(layout.ChartsComponentDir))
 	valuesFilePath := filepath.Join(baseComponentDir, string(layout.ValuesComponentDir))
 	if err := assemble.PackageChart(ctx, zarfChart, resources, layout.ChartPaths{ChartsDir: chartPath, ValuesDir: valuesFilePath}, cachePath, remoteOptions); err != nil {

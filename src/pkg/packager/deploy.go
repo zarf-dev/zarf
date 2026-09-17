@@ -718,14 +718,12 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 		// Move kustomizations to files now, applying ###ZARF_VAR_*### substitution as well.
-		if manifest.Kustomize != nil {
-			for idx := range manifest.Kustomize.Files {
-				kustomization := layout.KustomizationFileName(manifest.Name, idx)
-				manifest.Files = append(manifest.Files, kustomization)
-				path := filepath.Join(manifestDir, kustomization)
-				if err := d.vc.ReplaceTextTemplate(path); err != nil {
-					return installedCharts, fmt.Errorf("error templating kustomization %s: %w", path, err)
-				}
+		for idx := range manifest.Kustomize.Files {
+			kustomization := layout.KustomizationFileName(manifest.Name, idx)
+			manifest.Files = append(manifest.Files, kustomization)
+			path := filepath.Join(manifestDir, kustomization)
+			if err := d.vc.ReplaceTextTemplate(path); err != nil {
+				return installedCharts, fmt.Errorf("error templating kustomization %s: %w", path, err)
 			}
 		}
 

@@ -94,7 +94,7 @@ type StateAccess struct {
 	State *state.State
 	// AccessKeys lists which groups of sensitive state fields the component may access.
 	// Accessing a field whose group is not listed causes a template error (missingkey=error).
-	AccessKeys []string
+	AccessKeys []api.StateAccessKey
 }
 
 // WithState adds Zarf runtime state to the template Objects under the "State" key.
@@ -131,7 +131,7 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		"PayloadShaSum":     s.InjectorInfo.PayLoadShaSum,
 	}
 
-	if slices.Contains(access.AccessKeys, "registryCredentials") {
+	if slices.Contains(access.AccessKeys, api.StateAccessRegistryCredentials) {
 		registry["PushPassword"] = s.RegistryInfo.PushPassword
 		registry["PullPassword"] = s.RegistryInfo.PullPassword
 		registry["Secret"] = s.RegistryInfo.Secret
@@ -141,7 +141,7 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		}
 		registry["Htpasswd"] = htpasswd
 	}
-	if slices.Contains(access.AccessKeys, "gitCredentials") {
+	if slices.Contains(access.AccessKeys, api.StateAccessGitCredentials) {
 		git["PushPassword"] = s.GitServer.PushPassword
 		git["PullPassword"] = s.GitServer.PullPassword
 	}
@@ -155,7 +155,7 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		"Injector":     injector,
 	}
 
-	if slices.Contains(access.AccessKeys, "agentCerts") {
+	if slices.Contains(access.AccessKeys, api.StateAccessAgentCerts) {
 		stateMap["Agent"] = map[string]any{
 			"CA":   base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.CA),
 			"Cert": base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.Cert),

@@ -1216,7 +1216,7 @@ func TestWithState_RegistryCredentialsGroup(t *testing.T) {
 	s := testState()
 	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
 		State:      s,
-		AccessKeys: []string{"registryCredentials"},
+		AccessKeys: []api.StateAccessKey{api.StateAccessRegistryCredentials},
 	})
 	require.NoError(t, err)
 
@@ -1240,7 +1240,7 @@ func TestWithState_GitCredentialsGroup(t *testing.T) {
 	s := testState()
 	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
 		State:      s,
-		AccessKeys: []string{"gitCredentials"},
+		AccessKeys: []api.StateAccessKey{api.StateAccessGitCredentials},
 	})
 	require.NoError(t, err)
 
@@ -1263,7 +1263,7 @@ func TestWithState_AgentCertsGroup(t *testing.T) {
 	s := testState()
 	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
 		State:      s,
-		AccessKeys: []string{"agentCerts"},
+		AccessKeys: []api.StateAccessKey{api.StateAccessAgentCerts},
 	})
 	require.NoError(t, err)
 
@@ -1306,9 +1306,9 @@ func TestWithState_MultipleGroups(t *testing.T) {
 	s := testState()
 	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
 		State: s,
-		AccessKeys: []string{
-			"registryCredentials",
-			"gitCredentials",
+		AccessKeys: []api.StateAccessKey{
+			api.StateAccessRegistryCredentials,
+			api.StateAccessGitCredentials,
 		},
 	})
 	require.NoError(t, err)

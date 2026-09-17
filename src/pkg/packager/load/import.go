@@ -507,11 +507,10 @@ func overrideResources(comp api.Component, override api.Component) api.Component
 					comp.Manifests[idx].Namespace = overrideManifest.Namespace
 				}
 				comp.Manifests[idx].Files = append(comp.Manifests[idx].Files, overrideManifest.Files...)
-				if overrideManifest.Kustomize != nil {
-					if comp.Manifests[idx].Kustomize == nil {
-						comp.Manifests[idx].Kustomize = &api.KustomizeManifest{}
-					}
+				if len(overrideManifest.Kustomize.Files) > 0 || overrideManifest.Kustomize.AllowAnyDirectory || overrideManifest.Kustomize.EnablePlugins {
 					comp.Manifests[idx].Kustomize.Files = append(comp.Manifests[idx].Kustomize.Files, overrideManifest.Kustomize.Files...)
+					comp.Manifests[idx].Kustomize.AllowAnyDirectory = comp.Manifests[idx].Kustomize.AllowAnyDirectory || overrideManifest.Kustomize.AllowAnyDirectory
+					comp.Manifests[idx].Kustomize.EnablePlugins = comp.Manifests[idx].Kustomize.EnablePlugins || overrideManifest.Kustomize.EnablePlugins
 				}
 
 				existing = true
@@ -563,9 +562,6 @@ func fixPaths(child api.Component, relativeToHead, packagePath string) api.Compo
 		for fileIdx, file := range manifest.Files {
 			composed := makePathRelativeTo(file, relativeToHead)
 			child.Manifests[manifestIdx].Files[fileIdx] = composed
-		}
-		if manifest.Kustomize == nil {
-			continue
 		}
 		for kustomizeIdx, kustomization := range manifest.Kustomize.Files {
 			composed := makePathRelativeTo(kustomization, relativeToHead)
