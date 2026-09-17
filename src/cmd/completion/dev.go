@@ -49,16 +49,6 @@ func ImageVolumeMaxLayers() []string {
 	}
 }
 
-// ImageVolumeOptions turns the --max-layers flag value into the matching
-// image.Options fields, so the suggestion list above and the command that
-// consumes it cannot drift apart on what 0 means.
-func ImageVolumeOptions(maxLayers uint8) image.Options {
-	if maxLayers == UnlimitedMaxLayers {
-		return image.Options{UnlimitedLayers: true}
-	}
-	return image.Options{MaxLayers: maxLayers}
-}
-
 // Descriptions shown alongside each PlatformOS value.
 const (
 	osLinuxDesc   = "linux image volume"
