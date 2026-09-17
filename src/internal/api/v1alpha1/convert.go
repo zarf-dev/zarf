@@ -145,13 +145,11 @@ func manifestToGeneric(m v1alpha1.ZarfManifest) api.Manifest {
 		SkipWait:         m.NoWait,
 		ServerSideApply:  m.ServerSideApply,
 		EnableTemplating: derefBool(m.Template),
-	}
-	if len(m.Kustomizations) > 0 || m.KustomizeAllowAnyDirectory || m.EnableKustomizePlugins {
-		gm.Kustomize = &api.KustomizeManifest{
+		Kustomize: api.KustomizeManifest{
 			Files:             m.Kustomizations,
 			AllowAnyDirectory: m.KustomizeAllowAnyDirectory,
 			EnablePlugins:     m.EnableKustomizePlugins,
-		}
+		},
 	}
 	return gm
 }
@@ -551,17 +549,15 @@ func boolPointer(value bool) *bool {
 
 func manifestFromGeneric(m api.Manifest) v1alpha1.ZarfManifest {
 	am := v1alpha1.ZarfManifest{
-		Name:            m.Name,
-		Namespace:       m.Namespace,
-		Files:           m.Files,
-		ServerSideApply: m.ServerSideApply,
-		NoWait:          m.SkipWait,
-		Template:        boolPointer(m.EnableTemplating),
-	}
-	if m.Kustomize != nil {
-		am.Kustomizations = m.Kustomize.Files
-		am.KustomizeAllowAnyDirectory = m.Kustomize.AllowAnyDirectory
-		am.EnableKustomizePlugins = m.Kustomize.EnablePlugins
+		Name:                       m.Name,
+		Namespace:                  m.Namespace,
+		Files:                      m.Files,
+		ServerSideApply:            m.ServerSideApply,
+		NoWait:                     m.SkipWait,
+		Template:                   boolPointer(m.EnableTemplating),
+		Kustomizations:             m.Kustomize.Files,
+		KustomizeAllowAnyDirectory: m.Kustomize.AllowAnyDirectory,
+		EnableKustomizePlugins:     m.Kustomize.EnablePlugins,
 	}
 	return am
 }
@@ -952,15 +948,15 @@ func flattenGitRef(ref *api.GitRef) string {
 	return ""
 }
 
-func stateAccessToGeneric(in []v1alpha1.StateAccessKey) []string {
-	var out []string
+func stateAccessToGeneric(in []v1alpha1.StateAccessKey) []api.StateAccessKey {
+	var out []api.StateAccessKey
 	for _, s := range in {
-		out = append(out, string(s))
+		out = append(out, api.StateAccessKey(s))
 	}
 	return out
 }
 
-func stateAccessFromGeneric(in []string) []v1alpha1.StateAccessKey {
+func stateAccessFromGeneric(in []api.StateAccessKey) []v1alpha1.StateAccessKey {
 	var out []v1alpha1.StateAccessKey
 	for _, s := range in {
 		out = append(out, v1alpha1.StateAccessKey(s))

@@ -129,7 +129,7 @@ func TestValidateManifest(t *testing.T) {
 		},
 		{
 			name:         "valid kustomize",
-			manifest:     v1beta1.Manifest{Name: "valid", Kustomize: &v1beta1.KustomizeManifest{Files: []string{"a-dir"}}},
+			manifest:     v1beta1.Manifest{Name: "valid", Kustomize: v1beta1.KustomizeManifest{Files: []string{"a-dir"}}},
 			expectedErrs: nil,
 		},
 		{

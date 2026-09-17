@@ -105,12 +105,10 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 				return component, normalizedComponentResources{}, err
 			}
 		}
-		if manifest.Kustomize != nil {
-			for j := range manifest.Kustomize.Files {
-				manifest.Kustomize.Files[j], err = addResource(&normalizer, manifest.Kustomize.Files[j])
-				if err != nil {
-					return component, normalizedComponentResources{}, err
-				}
+		for j := range manifest.Kustomize.Files {
+			manifest.Kustomize.Files[j], err = addResource(&normalizer, manifest.Kustomize.Files[j])
+			if err != nil {
+				return component, normalizedComponentResources{}, err
 			}
 		}
 	}

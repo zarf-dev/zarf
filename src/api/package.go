@@ -88,7 +88,7 @@ type Component struct {
 	Images        []Image
 	ImageArchives []ImageArchive
 	Repositories  []Repository
-	StateAccess   []string
+	StateAccess   []StateAccessKey
 	Actions       ComponentActions
 
 	Default           bool
@@ -145,12 +145,24 @@ type KustomizeManifest struct {
 	EnablePlugins     bool
 }
 
+// StateAccessKey identifies a named group of sensitive state fields available in Go templates.
+type StateAccessKey string
+
+const (
+	// StateAccessRegistryCredentials unlocks registry credentials in .State.
+	StateAccessRegistryCredentials StateAccessKey = "registryCredentials"
+	// StateAccessGitCredentials unlocks Git credentials in .State.
+	StateAccessGitCredentials StateAccessKey = "gitCredentials"
+	// StateAccessAgentCerts unlocks agent certificates in .State.
+	StateAccessAgentCerts StateAccessKey = "agentCerts"
+)
+
 // Manifest is the version-neutral representation of a manifest entry.
 type Manifest struct {
 	Name             string
 	Namespace        string
 	Files            []string
-	Kustomize        *KustomizeManifest
+	Kustomize        KustomizeManifest
 	SkipWait         bool
 	ServerSideApply  string
 	EnableTemplating bool
