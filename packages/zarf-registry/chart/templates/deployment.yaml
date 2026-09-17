@@ -73,6 +73,10 @@ spec:
             runAsNonRoot: true
             capabilities:
               drop: ["ALL"]
+{{- if .Values.securityContext.seLinuxOptions.level }}
+            seLinuxOptions:
+              level: {{ .Values.securityContext.seLinuxOptions.level | quote }}
+{{- end }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
           env:
