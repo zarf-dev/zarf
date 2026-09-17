@@ -72,7 +72,7 @@ func TestPublishComponentAndAssembleRemoteImportResources(t *testing.T) {
 		Values:     v1beta1.Values{Files: []string{"values.yaml"}, Schema: "schema.json"},
 		Component: v1beta1.ComponentSpec{
 			Charts:    []v1beta1.Chart{{Name: "test", Namespace: "default", Local: &v1beta1.LocalSource{Path: "chart"}, ValuesFiles: []v1beta1.ValuesFile{{Path: "chart-values.yaml"}}}},
-			Manifests: []v1beta1.Manifest{{Name: "manifest", Files: []string{"manifest.yaml"}}, {Name: "kustomize", Kustomize: &v1beta1.KustomizeManifest{Files: []string{"kustomize"}}}},
+			Manifests: []v1beta1.Manifest{{Name: "manifest", Files: []string{"manifest.yaml"}}, {Name: "kustomize", Kustomize: v1beta1.KustomizeManifest{Files: []string{"kustomize"}}}},
 			Files:     []v1beta1.File{{Source: "file.txt", Destination: "/tmp/file.txt"}},
 		},
 	}
@@ -607,7 +607,7 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 			}},
 			Manifests: []v1beta1.Manifest{{
 				Files:     []string{filepath.Join(externalDir, "manifest.yaml")},
-				Kustomize: &v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
+				Kustomize: v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
 			}},
 			Files: []v1beta1.File{{Source: filepath.Join(externalDir, "file.txt"), Destination: "/tmp/file.txt"}},
 		},
@@ -754,7 +754,7 @@ func TestComponentResourcesAllowsSupportedRemoteSources(t *testing.T) {
 			Charts: []v1beta1.Chart{{ValuesFiles: []v1beta1.ValuesFile{{Path: "https://example.com/chart-values.yaml"}}}},
 			Manifests: []v1beta1.Manifest{{
 				Files:     []string{"https://example.com/manifest.yaml"},
-				Kustomize: &v1beta1.KustomizeManifest{Files: []string{"https://example.com/kustomization.yaml"}},
+				Kustomize: v1beta1.KustomizeManifest{Files: []string{"https://example.com/kustomization.yaml"}},
 			}},
 			Files: []v1beta1.File{{Source: "https://example.com/file.txt"}},
 		},

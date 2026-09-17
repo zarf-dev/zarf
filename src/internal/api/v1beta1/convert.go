@@ -161,13 +161,11 @@ func manifestToGeneric(m v1beta1.Manifest) api.Manifest {
 		SkipWait:         m.SkipWait,
 		ServerSideApply:  string(m.ServerSideApply),
 		EnableTemplating: m.EnableTemplating,
-	}
-	if m.Kustomize != nil {
-		gm.Kustomize = &api.KustomizeManifest{
+		Kustomize: api.KustomizeManifest{
 			Files:             m.Kustomize.Files,
 			AllowAnyDirectory: m.Kustomize.AllowAnyDirectory,
 			EnablePlugins:     m.Kustomize.EnablePlugins,
-		}
+		},
 	}
 	return gm
 }
@@ -524,13 +522,11 @@ func manifestFromGeneric(m api.Manifest) v1beta1.Manifest {
 		SkipWait:         m.SkipWait,
 		ServerSideApply:  v1beta1.ServerSideApplyMode(m.ServerSideApply),
 		EnableTemplating: m.EnableTemplating,
-	}
-	if m.Kustomize != nil {
-		bm.Kustomize = &v1beta1.KustomizeManifest{
+		Kustomize: v1beta1.KustomizeManifest{
 			Files:             m.Kustomize.Files,
 			AllowAnyDirectory: m.Kustomize.AllowAnyDirectory,
 			EnablePlugins:     m.Kustomize.EnablePlugins,
-		}
+		},
 	}
 	return bm
 }

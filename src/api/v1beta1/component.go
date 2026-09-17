@@ -114,7 +114,7 @@ type Manifest struct {
 	// List of local K8s YAML files or remote URLs to deploy (in order).
 	Files []string `json:"files,omitempty"`
 	// Kustomize settings for this manifest.
-	Kustomize *KustomizeManifest `json:"kustomize,omitempty"`
+	Kustomize KustomizeManifest `json:"kustomize,omitzero"`
 	// Whether to skip waiting for manifest resources to be ready before continuing.
 	SkipWait bool `json:"skipWait,omitempty"`
 	// Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy. Defaults to "auto" when omitted.

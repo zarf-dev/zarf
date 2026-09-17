@@ -150,7 +150,7 @@ type Manifest struct {
 	Name             string
 	Namespace        string
 	Files            []string
-	Kustomize        *KustomizeManifest
+	Kustomize        KustomizeManifest
 	SkipWait         bool
 	ServerSideApply  string
 	EnableTemplating bool

@@ -150,7 +150,7 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 							Name:      "manifest",
 							Namespace: "default",
 							Files:     []string{"deploy.yaml"},
-							Kustomize: &v1beta1.KustomizeManifest{
+							Kustomize: v1beta1.KustomizeManifest{
 								Files:             []string{"kustomize"},
 								AllowAnyDirectory: true,
 								EnablePlugins:     true,
@@ -386,8 +386,6 @@ func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
 //   - component.import has separate local and remote lists in v1beta1, while v1alpha1 has one
 //     import object; component.service has no v1alpha1 equivalent.
 //   - image.source distinguishes registry and daemon sources in v1beta1, v1alpha1 images always fallback
-//   - manifest.kustomize is a pointer in v1beta1 but flattened into v1alpha1 manifest fields. An
-//     empty Kustomize object therefore becomes nil on the return trip.
 //   - chart.valuesFiles is one ordered v1beta1 list. v1alpha1 separates plain and templated files,
 //     so their relative order is lost when the two kinds are interleaved.
 //   - actionSet.defaults is a pointer in v1beta1 but a value in v1alpha1, so nil and an explicitly
@@ -399,7 +397,6 @@ func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 		cmpopts.IgnoreFields(v1beta1.Package{}, "APIVersion", "Kind"),
 		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
 		cmpopts.IgnoreFields(v1beta1.Image{}, "Source"),
-		cmpopts.IgnoreFields(v1beta1.Manifest{}, "Kustomize"),
 		cmpopts.IgnoreFields(v1beta1.Chart{}, "ValuesFiles"),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionWaitCluster{}, "Condition"),
