@@ -255,7 +255,7 @@ func init() {
 		},
 		{
 			Name:        SBOMViewer,
-			Description: "Enables deprecated SBOM viewer HTML and component file SBOM generation during package creation.",
+			Description: "Enables deprecated SBOM viewer HTML generation during package creation.",
 			Enabled:     false,
 			Since:       "v0.86.0",
 			Stage:       Deprecated,
