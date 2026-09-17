@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zarf-docs-nginx
+  labels:
+    app: zarf-docs
+data:
+  # Replaces the image's default.conf. The document root is the image volume
+  # mount, which is read-only, so nothing here may write into it.
+  default.conf: |
+    server {
+        listen       80;
+        server_name  localhost;
+
+        root  /usr/share/nginx/html;
+        index index.html;
+
+        # `zarf connect` forwards to an arbitrary local port, and the default
+        # absolute Location header would drop it and send the browser to
+        # http://localhost/<path>/. Relative redirects stay correct behind any
+        # port-forward, ingress, or proxy prefix.
+        absolute_redirect off;
+
+        # Astro emits directory-style URLs (/ref/create/index.html), so `$uri/`
+        # is what resolves a page request to its index.html.
+        location / {
+            try_files $uri $uri/ =404;
+        }
+
+        # Serve Astro's generated 404 page rather than nginx's built-in one.
+        error_page 404 /404.html;
+        location = /404.html {
+            internal;
+        }
+    }
