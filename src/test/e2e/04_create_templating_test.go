@@ -20,7 +20,6 @@ import (
 func TestCreateTemplating(t *testing.T) {
 	t.Log("E2E: Create Templating")
 
-	sbomPath := t.TempDir()
 	outPath := t.TempDir()
 	templatingPath := filepath.Join(outPath, fmt.Sprintf("zarf-package-templating-%s.tar.zst", e2e.Arch))
 	fileFoldersPath := filepath.Join(outPath, fmt.Sprintf("zarf-package-file-folders-templating-sbom-%s.tar.zst", e2e.Arch))
@@ -38,20 +37,9 @@ func TestCreateTemplating(t *testing.T) {
 	expectedConstant := v1alpha1.Constant{Name: "PODINFO_VERSION", Value: "6.4.0", Pattern: "^[\\w\\-\\.]+$"}
 	require.Contains(t, pkgLayout.AsV1alpha1().Constants, expectedConstant)
 
-	// Test that files and file folders template and handle SBOMs correctly
-	_, _, err = e2e.Zarf(t, "package", "create", "src/test/packages/04-file-folders-templating-sbom/", "-o", outPath, "--features=sbom-viewer=true", "--sbom-out", sbomPath, "--confirm")
+	// Test templating files and folders.
+	_, _, err = e2e.Zarf(t, "package", "create", "src/test/packages/04-file-folders-templating-sbom/", "-o", outPath, "--confirm")
 	require.NoError(t, err)
-
-	// Ensure that the `requirements.txt` files are discovered correctly
-	require.FileExists(t, filepath.Join(sbomPath, "file-folders-templating-sbom", "sbom-viewer-zarf-component-folders.html"))
-	foldersJSON, err := os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "zarf-component-folders.json"))
-	require.NoError(t, err)
-	require.Contains(t, string(foldersJSON), "numpy")
-	_, err = os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "sbom-viewer-zarf-component-files.html"))
-	require.NoError(t, err)
-	filesJSON, err := os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "zarf-component-files.json"))
-	require.NoError(t, err)
-	require.Contains(t, string(filesJSON), "pandas")
 
 	// Deploy the package and look for the variables in the output
 	workingPath := t.TempDir()

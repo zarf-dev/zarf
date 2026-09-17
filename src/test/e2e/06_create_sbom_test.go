@@ -60,6 +60,21 @@ func TestCreateSBOM(t *testing.T) {
 		require.FileExists(t, filepath.Join(sbomPath, sbomViewer))
 	}
 
+	fileSBOMPath := t.TempDir()
+	fileBuildPath := t.TempDir()
+	_, _, err = e2e.Zarf(t, "package", "create", "src/test/packages/04-file-folders-templating-sbom", "-o", fileBuildPath, "--features=sbom-viewer=true", "--sbom-out", fileSBOMPath, "--confirm")
+	require.NoError(t, err)
+
+	fileSBOMDir := filepath.Join(fileSBOMPath, "file-folders-templating-sbom")
+	require.FileExists(t, filepath.Join(fileSBOMDir, "sbom-viewer-zarf-component-folders.html"))
+	foldersJSON, err := os.ReadFile(filepath.Join(fileSBOMDir, "zarf-component-folders.json"))
+	require.NoError(t, err)
+	require.Contains(t, string(foldersJSON), "numpy")
+	require.FileExists(t, filepath.Join(fileSBOMDir, "sbom-viewer-zarf-component-files.html"))
+	filesJSON, err := os.ReadFile(filepath.Join(fileSBOMDir, "zarf-component-files.json"))
+	require.NoError(t, err)
+	require.Contains(t, string(filesJSON), "pandas")
+
 	// Clean the SBOM path so it is forced to be recreated by inspect.
 	err = os.RemoveAll(defaultSBOMPath)
 	require.NoError(t, err)

@@ -408,10 +408,6 @@ func TestPackageTarballDirectoryStructure(t *testing.T) {
 			// |-- sboms
 			// |   |-- ghcr.io_stefanprodan_podinfo_6.4.0.json
 			// |   |-- ghcr.io_stefanprodan_podinfo_6.4.1.json
-			// |   |-- sbom-viewer-ghcr.io_stefanprodan_podinfo_6.4.0.html
-			// |   |-- sbom-viewer-ghcr.io_stefanprodan_podinfo_6.4.1.html
-			// |   |-- sbom-viewer-zarf-component-test-component-1.html
-			// |   |-- sbom-viewer-zarf-component-test-component-2.html
 			// |   |-- zarf-component-test-component-1.json
 			// |   `-- zarf-component-test-component-2.json
 			// `-- zarf.yaml
@@ -491,10 +487,6 @@ func TestPackageTarballDirectoryStructure(t *testing.T) {
 			wantFiles := []string{
 				"ghcr.io_stefanprodan_podinfo_6.4.0.json",
 				"ghcr.io_stefanprodan_podinfo_6.4.1.json",
-				"sbom-viewer-ghcr.io_stefanprodan_podinfo_6.4.0.html",
-				"sbom-viewer-ghcr.io_stefanprodan_podinfo_6.4.1.html",
-				"sbom-viewer-zarf-component-test-component-1.html",
-				"sbom-viewer-zarf-component-test-component-2.html",
 				"zarf-component-test-component-1.json",
 				"zarf-component-test-component-2.json",
 			}
