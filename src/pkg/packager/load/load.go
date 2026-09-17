@@ -133,11 +133,11 @@ func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath l
 	if err != nil {
 		return resolution{}, err
 	}
-	definition := convert.PackageFromV1alpha1(pkg)
-	definition, importedSchemas, err := resolveImports(ctx, definition, pkgPath.ManifestFile, definition.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+	pkg, importedSchemas, err := resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
 		return resolution{}, err
 	}
+	definition := convert.PackageFromV1alpha1(pkg)
 	if opts.SetVariables != nil {
 		definition, _, err = fillActiveTemplate(ctx, definition, opts.SetVariables, opts.IsInteractive)
 		if err != nil {
