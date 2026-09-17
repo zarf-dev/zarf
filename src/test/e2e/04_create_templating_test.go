@@ -39,7 +39,7 @@ func TestCreateTemplating(t *testing.T) {
 	require.Contains(t, pkgLayout.AsV1alpha1().Constants, expectedConstant)
 
 	// Test that files and file folders template and handle SBOMs correctly
-	_, _, err = e2e.Zarf(t, "package", "create", "src/test/packages/04-file-folders-templating-sbom/", "-o", outPath, "--sbom-out", sbomPath, "--confirm")
+	_, _, err = e2e.Zarf(t, "package", "create", "src/test/packages/04-file-folders-templating-sbom/", "-o", outPath, "--features=sbom-viewer=true", "--sbom-out", sbomPath, "--confirm")
 	require.NoError(t, err)
 
 	// Ensure that the `requirements.txt` files are discovered correctly
