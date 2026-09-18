@@ -424,13 +424,7 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 		return fmt.Errorf("package is signed but no verification material was provided (--key, --certificate-identity + --certificate-oidc-issuer): %w", ErrNoVerificationMaterial)
 	}
 
-	// Preserve a caller-provided staging directory while retaining Zarf's default.
-	if opts.TempDir == "" {
-		opts.TempDir = config.CommonOptions.TempDirectory
-	}
-
 	if hasBundleInfo {
-		opts.BundlePath = bundlePath
 		// Auto-enable UseSignedTimestamps when the bundle contains timestamps.
 		// The bundle was signed with a TSA; using those timestamps is required to
 		// verify the signature after the short-lived Fulcio cert expires.
@@ -438,8 +432,12 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 			l.Debug("bundle contains TSA timestamps; enabling signed-timestamp verification automatically")
 			opts.CommonVerifyOptions.UseSignedTimestamps = true
 		}
-		ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
-		_, err := signing.SigstoreVerifyBundleWithOptions(ctx, ZarfYAMLPath, opts)
+		bundleOpts, err := signing.NewBundleVerificationOptions(ctx, opts)
+		if err != nil {
+			return err
+		}
+		zarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
+		_, err = signing.VerifyBundle(ctx, zarfYAMLPath, bundlePath, bundleOpts)
 		return err
 	}
 	if !errors.Is(bundleErr, os.ErrNotExist) {
@@ -464,6 +462,11 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 	}
 
 	// Legacy signature found
+
+	// Preserve a caller-provided staging directory while retaining Zarf's default.
+	if opts.TempDir == "" {
+		opts.TempDir = config.CommonOptions.TempDirectory
+	}
 	l.Warn("bundle format signature not found: legacy signature is being deprecated.")
 	opts.Signature = signaturePath
 

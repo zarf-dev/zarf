@@ -913,6 +913,10 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
 		require.NoError(t, err)
+
+		verifyOpts.CommonVerifyOptions.AllowCertificateChain = true
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.EqualError(t, err, "unsupported package bundle verification option: --allow-certificate-chain")
 	})
 
 	t.Run("verification fails with wrong public key", func(t *testing.T) {
@@ -1151,8 +1155,11 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
+		// AllowCertificateChain remains a legacy Cosign option. Its success
+		// proves the legacy route does not cross the package-bundle boundary.
+		verifyOpts.CommonVerifyOptions.AllowCertificateChain = true
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
-		require.NoError(t, err, "verification should succeed with legacy signature format")
+		require.NoError(t, err, "legacy verification must retain the Cosign route")
 	})
 
 	t.Run("deprecated KeyRef alias resolves before hasKey is computed", func(t *testing.T) {

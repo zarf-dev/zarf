@@ -19,7 +19,6 @@ import (
 
 	cosigngit "github.com/sigstore/cosign/v3/pkg/cosign/git"
 	"github.com/sigstore/cosign/v3/pkg/cosign/kubernetes"
-	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
@@ -32,27 +31,51 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// SigstoreVerifyBundleWithOptions verifies a Sigstore bundle directly with
-// sigstore-go and returns the verified bundle contents.
-func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) (*verify.VerificationResult, error) {
-	l := logger.From(ctx)
+// BundleVerificationOptions are the package CLI controls supported for direct
+// Sigstore bundle verification.
+type BundleVerificationOptions struct {
+	Key                         string
+	CertificateIdentity         string
+	CertificateIdentityRegexp   string
+	CertificateOIDCIssuer       string
+	CertificateOIDCIssuerRegexp string
+	TrustedRootPath             string
+	IgnoreTlog                  bool
+	UseSignedTimestamps         bool
+	Timeout                     time.Duration
+}
 
+// NewBundleVerificationOptions exposes the options available for package verification
+func NewBundleVerificationOptions(ctx context.Context, opts VerifyBlobOptions) (BundleVerificationOptions, error) {
 	if opts.KeyRef != "" {
-		l.Warn("VerifyBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
+		logger.From(ctx).Warn("VerifyBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
 		if opts.Key == "" {
 			opts.Key = opts.KeyRef
 		}
 	}
-	if opts.SigRef != "" {
-		l.Warn("VerifyBlobOptions.SigRef is deprecated, use Signature (removed in v1.0)")
-		if opts.Signature == "" {
-			opts.Signature = opts.SigRef
-		}
-	}
+
 	if err := validateSigstoreBundleOptions(opts); err != nil {
-		return nil, err
+		return BundleVerificationOptions{}, err
 	}
-	if opts.BundlePath == "" {
+
+	return BundleVerificationOptions{
+		Key:                         opts.Key,
+		CertificateIdentity:         opts.CertVerify.CertIdentity,
+		CertificateIdentityRegexp:   opts.CertVerify.CertIdentityRegexp,
+		CertificateOIDCIssuer:       opts.CertVerify.CertOidcIssuer,
+		CertificateOIDCIssuerRegexp: opts.CertVerify.CertOidcIssuerRegexp,
+		TrustedRootPath:             opts.CommonVerifyOptions.TrustedRootPath,
+		IgnoreTlog:                  opts.CommonVerifyOptions.IgnoreTlog,
+		UseSignedTimestamps:         opts.CommonVerifyOptions.UseSignedTimestamps,
+		Timeout:                     opts.Timeout,
+	}, nil
+}
+
+// VerifyBundle verifies a Sigstore bundle directly with sigstore-go
+// and returns the verified bundle contents.
+func VerifyBundle(ctx context.Context, blobPath, bundlePath string, opts BundleVerificationOptions) (*verify.VerificationResult, error) {
+	l := logger.From(ctx)
+	if bundlePath == "" {
 		return nil, errors.New("bundle path is required")
 	}
 	if opts.Timeout > 0 {
@@ -61,23 +84,19 @@ func SigstoreVerifyBundleWithOptions(ctx context.Context, blobPath string, opts 
 		defer cancel()
 	}
 
-	b, err := bundle.LoadJSONFromPath(opts.BundlePath)
+	b, err := bundle.LoadJSONFromPath(bundlePath)
 	if err != nil {
 		return nil, fmt.Errorf("loading Sigstore bundle: %w", err)
 	}
 
-	hashAlgorithm, err := opts.SignatureDigest.HashAlgorithm()
-	if err != nil {
-		return nil, err
-	}
-	keyVerifier, closeKey, err := resolveBundleVerifier(ctx, opts, hashAlgorithm)
+	keyVerifier, closeKey, err := resolveBundleVerifier(ctx, opts, crypto.SHA256)
 	if err != nil {
 		return nil, fmt.Errorf("loading verifier from key options: %w", err)
 	}
 	defer closeKey()
 
-	useSignedTimestamps := opts.CommonVerifyOptions.UseSignedTimestamps
-	if !opts.CommonVerifyOptions.IgnoreTlog && keyVerifier == nil {
+	useSignedTimestamps := opts.UseSignedTimestamps
+	if !opts.IgnoreTlog && keyVerifier == nil {
 		v1, v2, err := rekorBundleVersions(b)
 		if err != nil {
 			return nil, err
@@ -119,62 +138,65 @@ func validateSigstoreBundleOptions(opts VerifyBlobOptions) error {
 	if opts.Key != "" && (opts.CertVerify.CertIdentity != "" || opts.CertVerify.CertIdentityRegexp != "") {
 		return errors.New("key cannot be combined with certificate identity verification")
 	}
-	if opts.Key != "" && opts.SecurityKey.Use {
-		return errors.New("key cannot be combined with security-key verification")
-	}
-	// These options are rejected by cosign for protobuf bundles. Keeping that
-	// contract prevents detached material from silently weakening verification.
+
 	unsupported := []struct {
-		value string
-		name  string
+		set  bool
+		name string
 	}{
-		{opts.Signature, "detached signature"},
-		{opts.CertVerify.Cert, "certificate"},
-		{opts.CertVerify.CertChain, "certificate chain"},
-		{opts.CertVerify.CARoots, "certificate authority roots"},
-		{opts.CertVerify.CAIntermediates, "certificate authority intermediates"},
-		{opts.CommonVerifyOptions.TSACertChainPath, "timestamp certificate chain"},
-		{opts.CertVerify.SCT, "signed certificate timestamp"},
+		{opts.Signature != "" || opts.SigRef != "", "--signature"},
+		{opts.BundlePath != "", "--bundle"},
+		{opts.SecurityKey.Use, "--sk"},
+		{opts.CertVerify.Cert != "", "--certificate"},
+		{opts.CertVerify.CertChain != "", "--certificate-chain"},
+		{opts.CertVerify.CARoots != "", "--ca-roots"},
+		{opts.CertVerify.CAIntermediates != "", "--ca-intermediates"},
+		{opts.CertVerify.SCT != "", "--sct"},
+		{!opts.CertVerify.IgnoreSCT, "--insecure-ignore-sct"},
+		{opts.CertVerify.CertGithubWorkflowTrigger != "", "--certificate-github-workflow-trigger"},
+		{opts.CertVerify.CertGithubWorkflowSha != "", "--certificate-github-workflow-sha"},
+		{opts.CertVerify.CertGithubWorkflowName != "", "--certificate-github-workflow-name"},
+		{opts.CertVerify.CertGithubWorkflowRepository != "", "--certificate-github-workflow-repository"},
+		{opts.CertVerify.CertGithubWorkflowRef != "", "--certificate-github-workflow-ref"},
+		{opts.Rekor.URL != "", "--rekor-url"},
+		{opts.CommonVerifyOptions.Offline, "--offline"},
+		{opts.CommonVerifyOptions.TSACertChainPath != "", "--timestamp-certificate-chain"},
+		{opts.CommonVerifyOptions.MaxWorkers != 0, "--max-workers"},
+		{opts.CommonVerifyOptions.ExperimentalOCI11, "--experimental-oci11"},
+		{opts.CommonVerifyOptions.PrivateInfrastructure, "--private-infrastructure"},
+		{opts.CommonVerifyOptions.AllowCertificateChain, "--allow-certificate-chain"},
+		{opts.SignatureDigest.AlgorithmName != "" && !strings.EqualFold(strings.TrimSpace(opts.SignatureDigest.AlgorithmName), "sha256"), "--signature-digest-algorithm"},
+		{opts.TempDir != "", "temporary directory"},
 	}
 	for _, option := range unsupported {
-		if option.value != "" {
-			return fmt.Errorf("unsupported verification material for Sigstore bundles: %s", option.name)
+		if option.set {
+			return fmt.Errorf("unsupported package bundle verification option: %s", option.name)
 		}
 	}
 	return nil
 }
 
-func sigstoreVerificationOptions(opts VerifyBlobOptions, hasKey bool, useSignedTimestamps bool) ([]verify.VerifierOption, []verify.PolicyOption, error) {
+func sigstoreVerificationOptions(opts BundleVerificationOptions, hasKey bool, useSignedTimestamps bool) ([]verify.VerifierOption, []verify.PolicyOption, error) {
 	verifierOptions := []verify.VerifierOption{}
 	policyOptions := []verify.PolicyOption{}
 	if hasKey {
 		policyOptions = append(policyOptions, verify.WithKey())
 	} else {
-		san, err := verify.NewSANMatcher(opts.CertVerify.CertIdentity, opts.CertVerify.CertIdentityRegexp)
+		san, err := verify.NewSANMatcher(opts.CertificateIdentity, opts.CertificateIdentityRegexp)
 		if err != nil {
 			return nil, nil, err
 		}
-		issuer, err := verify.NewIssuerMatcher(opts.CertVerify.CertOidcIssuer, opts.CertVerify.CertOidcIssuerRegexp)
+		issuer, err := verify.NewIssuerMatcher(opts.CertificateOIDCIssuer, opts.CertificateOIDCIssuerRegexp)
 		if err != nil {
 			return nil, nil, err
 		}
-		identity, err := verify.NewCertificateIdentity(san, issuer, certificate.Extensions{
-			GithubWorkflowTrigger:    opts.CertVerify.CertGithubWorkflowTrigger,
-			GithubWorkflowSHA:        opts.CertVerify.CertGithubWorkflowSha,
-			GithubWorkflowName:       opts.CertVerify.CertGithubWorkflowName,
-			GithubWorkflowRepository: opts.CertVerify.CertGithubWorkflowRepository,
-			GithubWorkflowRef:        opts.CertVerify.CertGithubWorkflowRef,
-		})
+		identity, err := verify.NewCertificateIdentity(san, issuer, certificate.Extensions{})
 		if err != nil {
 			return nil, nil, err
 		}
 		policyOptions = append(policyOptions, verify.WithCertificateIdentity(identity))
-		if !opts.CertVerify.IgnoreSCT {
-			verifierOptions = append(verifierOptions, verify.WithSignedCertificateTimestamps(1))
-		}
 	}
 
-	if !opts.CommonVerifyOptions.IgnoreTlog {
+	if !opts.IgnoreTlog {
 		verifierOptions = append(verifierOptions, verify.WithTransparencyLog(1))
 		if !useSignedTimestamps {
 			if hasKey {
@@ -187,7 +209,7 @@ func sigstoreVerificationOptions(opts VerifyBlobOptions, hasKey bool, useSignedT
 	if useSignedTimestamps {
 		verifierOptions = append(verifierOptions, verify.WithSignedTimestamps(1))
 	}
-	if opts.CommonVerifyOptions.IgnoreTlog && !useSignedTimestamps {
+	if opts.IgnoreTlog && !useSignedTimestamps {
 		if hasKey {
 			verifierOptions = append(verifierOptions, verify.WithNoObserverTimestamps())
 		} else {
@@ -197,12 +219,12 @@ func sigstoreVerificationOptions(opts VerifyBlobOptions, hasKey bool, useSignedT
 	return verifierOptions, policyOptions, nil
 }
 
-func trustedMaterialForBundle(opts VerifyBlobOptions, keyVerifier signature.Verifier, useSignedTimestamps bool) (root.TrustedMaterial, error) {
+func trustedMaterialForBundle(opts BundleVerificationOptions, keyVerifier signature.Verifier, useSignedTimestamps bool) (root.TrustedMaterial, error) {
 	var material root.TrustedMaterial = &root.BaseTrustedMaterial{}
-	needRoot := opts.CommonVerifyOptions.TrustedRootPath != "" || keyVerifier == nil || !opts.CommonVerifyOptions.IgnoreTlog || useSignedTimestamps
+	needRoot := opts.TrustedRootPath != "" || keyVerifier == nil || !opts.IgnoreTlog || useSignedTimestamps
 	if needRoot {
 		var err error
-		if path := opts.CommonVerifyOptions.TrustedRootPath; path != "" {
+		if path := opts.TrustedRootPath; path != "" {
 			material, err = root.NewTrustedRootFromPath(path)
 		} else {
 			material, err = root.NewTrustedRootFromJSON(embeddedTrustedRoot)
@@ -236,19 +258,7 @@ func rekorBundleVersions(b *bundle.Bundle) (hasV1, hasV2 bool, err error) {
 	return hasV1, hasV2, nil
 }
 
-func resolveBundleVerifier(ctx context.Context, opts VerifyBlobOptions, hashAlgorithm crypto.Hash) (signature.Verifier, func(), error) {
-	if opts.SecurityKey.Use {
-		key, err := pivkey.GetKeyWithSlot(opts.SecurityKey.Slot)
-		if err != nil {
-			return nil, func() {}, err
-		}
-		verifier, err := key.Verifier()
-		if err != nil {
-			key.Close()
-			return nil, func() {}, err
-		}
-		return verifier, key.Close, nil
-	}
+func resolveBundleVerifier(ctx context.Context, opts BundleVerificationOptions, hashAlgorithm crypto.Hash) (signature.Verifier, func(), error) {
 	if opts.Key == "" {
 		return nil, func() {}, nil
 	}
