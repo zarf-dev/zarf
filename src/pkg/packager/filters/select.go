@@ -6,6 +6,7 @@ package filters
 
 import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api"
 )
 
 // BySelectState creates a new simple included filter.
@@ -23,10 +24,10 @@ type selectStateFilter struct {
 }
 
 // Apply applies the filter.
-func (f *selectStateFilter) Apply(pkg PackageView) ([]int, error) {
+func (f *selectStateFilter) Apply(pkg api.Package) ([]api.Component, error) {
 	isPartial := len(f.requestedComponents) > 0 && f.requestedComponents[0] != ""
-	result := []int{}
-	for idx, component := range pkg.Components {
+	result := []api.Component{}
+	for _, component := range pkg.Components {
 		selectState := included
 		if isPartial {
 			var err error
@@ -38,7 +39,7 @@ func (f *selectStateFilter) Apply(pkg PackageView) ([]int, error) {
 		if selectState != included {
 			continue
 		}
-		result = append(result, idx)
+		result = append(result, component)
 	}
 	return result, nil
 }

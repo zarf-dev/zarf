@@ -360,7 +360,6 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 
 		require.Len(t, comp.Manifests, 1)
 		require.Equal(t, "app", comp.Manifests[0].Name)
-		require.NotNil(t, comp.Manifests[0].Kustomize)
 		require.Equal(t, []string{"components/base-kustomization", "override-kustomization"}, comp.Manifests[0].Kustomize.Files)
 		require.True(t, comp.Manifests[0].Kustomize.AllowAnyDirectory)
 		require.True(t, comp.Manifests[0].Kustomize.EnablePlugins)

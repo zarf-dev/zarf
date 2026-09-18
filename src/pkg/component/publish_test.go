@@ -15,6 +15,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
@@ -71,7 +72,7 @@ func TestPublishComponentAndAssembleRemoteImportResources(t *testing.T) {
 		Values:     v1beta1.Values{Files: []string{"values.yaml"}, Schema: "schema.json"},
 		Component: v1beta1.ComponentSpec{
 			Charts:    []v1beta1.Chart{{Name: "test", Namespace: "default", Local: &v1beta1.LocalSource{Path: "chart"}, ValuesFiles: []v1beta1.ValuesFile{{Path: "chart-values.yaml"}}}},
-			Manifests: []v1beta1.Manifest{{Name: "manifest", Files: []string{"manifest.yaml"}}, {Name: "kustomize", Kustomize: &v1beta1.KustomizeManifest{Files: []string{"kustomize"}}}},
+			Manifests: []v1beta1.Manifest{{Name: "manifest", Files: []string{"manifest.yaml"}}, {Name: "kustomize", Kustomize: v1beta1.KustomizeManifest{Files: []string{"kustomize"}}}},
 			Files:     []v1beta1.File{{Source: "file.txt", Destination: "/tmp/file.txt"}},
 		},
 	}
@@ -99,7 +100,7 @@ components:
 	loaded, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{CachePath: cachePath, RemoteOptions: defaultTestRemoteOptions()}})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
-	resourcePath, err := loaded.Resources.Path(loaded.Definition.AsV1alpha1().Components[0].Files[0].Source)
+	resourcePath, err := loaded.Resources.Path(convert.PackageToV1alpha1(loaded.Definition).Components[0].Files[0].Source)
 	require.NoError(t, err)
 
 	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{CachePath: cachePath, SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
@@ -536,7 +537,7 @@ components:
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 
-	contents, err := loaded.Resources.ReadFile(loaded.Definition.AsV1beta1().Components[0].Files[0].Source)
+	contents, err := loaded.Resources.ReadFile(convert.PackageToV1beta1(loaded.Definition).Components[0].Files[0].Source)
 	require.NoError(t, err)
 	require.Equal(t, "arm64", string(contents))
 }
@@ -606,7 +607,7 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 			}},
 			Manifests: []v1beta1.Manifest{{
 				Files:     []string{filepath.Join(externalDir, "manifest.yaml")},
-				Kustomize: &v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
+				Kustomize: v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
 			}},
 			Files: []v1beta1.File{{Source: filepath.Join(externalDir, "file.txt"), Destination: "/tmp/file.txt"}},
 		},
@@ -753,7 +754,7 @@ func TestComponentResourcesAllowsSupportedRemoteSources(t *testing.T) {
 			Charts: []v1beta1.Chart{{ValuesFiles: []v1beta1.ValuesFile{{Path: "https://example.com/chart-values.yaml"}}}},
 			Manifests: []v1beta1.Manifest{{
 				Files:     []string{"https://example.com/manifest.yaml"},
-				Kustomize: &v1beta1.KustomizeManifest{Files: []string{"https://example.com/kustomization.yaml"}},
+				Kustomize: v1beta1.KustomizeManifest{Files: []string{"https://example.com/kustomization.yaml"}},
 			}},
 			Files: []v1beta1.File{{Source: "https://example.com/file.txt"}},
 		},

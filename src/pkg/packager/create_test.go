@@ -5,12 +5,66 @@ package packager
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestPackageCreatePreservesV1alpha1MetadataAnnotationCollisions(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	packageDir := t.TempDir()
+	definition := `kind: ZarfPackageConfig
+metadata:
+  name: metadata-collisions
+  architecture: amd64
+  url: field-url
+  image: field-image
+  authors: field-authors
+  documentation: field-documentation
+  source: field-source
+  vendor: field-vendor
+  annotations:
+    url: annotation-url
+    image: annotation-image
+    authors: annotation-authors
+    documentation: annotation-documentation
+    source: annotation-source
+    vendor: annotation-vendor
+components:
+- name: empty
+`
+	require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(definition), 0o600))
+
+	packagePath, err := Create(ctx, packageDir, t.TempDir(), CreateOptions{
+		CachePath: t.TempDir(),
+		SkipSBOM:  true,
+	})
+	require.NoError(t, err)
+
+	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{VerificationStrategy: layout.VerifyNever})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	metadata := pkgLayout.AsV1alpha1().Metadata
+	require.Equal(t, "field-url", metadata.URL)
+	require.Equal(t, "field-image", metadata.Image)
+	require.Equal(t, "field-authors", metadata.Authors)
+	require.Equal(t, "field-documentation", metadata.Documentation)
+	require.Equal(t, "field-source", metadata.Source)
+	require.Equal(t, "field-vendor", metadata.Vendor)
+	require.Equal(t, map[string]string{
+		"url":           "annotation-url",
+		"image":         "annotation-image",
+		"authors":       "annotation-authors",
+		"documentation": "annotation-documentation",
+		"source":        "annotation-source",
+		"vendor":        "annotation-vendor",
+	}, metadata.Annotations)
+}
 
 func TestPackageCreatePublishArch(t *testing.T) {
 	ctx := testutil.TestContext(t)

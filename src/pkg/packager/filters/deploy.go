@@ -13,6 +13,10 @@ import (
 	"github.com/agnivade/levenshtein"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/pterm/pterm"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -42,13 +46,13 @@ var (
 )
 
 // Apply applies the filter.
-func (f *deploymentFilter) Apply(pkg PackageView) ([]int, error) {
-	var selectedComponents []int
-	groupedComponents := map[string][]indexedComponent{}
+func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
+	var selectedComponents []api.Component
+	groupedComponents := map[string][]api.Component{}
 	orderedComponentGroups := []string{}
 
 	// Group the components by Name and Group while maintaining order
-	for idx, component := range pkg.Components {
+	for _, component := range pkg.Components {
 		groupKey := component.Name
 		if component.Group != "" {
 			groupKey = component.Group
@@ -58,7 +62,7 @@ func (f *deploymentFilter) Apply(pkg PackageView) ([]int, error) {
 			orderedComponentGroups = append(orderedComponentGroups, groupKey)
 		}
 
-		groupedComponents[groupKey] = append(groupedComponents[groupKey], indexedComponent{idx: idx, component: component})
+		groupedComponents[groupKey] = append(groupedComponents[groupKey], component)
 	}
 
 	isPartial := len(f.requestedComponents) > 0 && f.requestedComponents[0] != ""
@@ -68,24 +72,24 @@ func (f *deploymentFilter) Apply(pkg PackageView) ([]int, error) {
 
 		// NOTE: This does not use forIncludedComponents as it takes group, default and required status into account.
 		for _, groupKey := range orderedComponentGroups {
-			var groupDefault *indexedComponent
-			var groupSelected *indexedComponent
+			var groupDefault *api.Component
+			var groupSelected *api.Component
 
 			for _, component := range groupedComponents[groupKey] {
 				// Ensure we have a local version of the component to point to (otherwise the pointer might change on us)
 				component := component
 
-				selectState, matchedRequest, err := includedOrExcluded(component.component.Name, f.requestedComponents)
+				selectState, matchedRequest, err := includedOrExcluded(component.Name, f.requestedComponents)
 				if err != nil {
 					return nil, err
 				}
 
-				if component.component.Optional {
+				if component.Optional {
 					if selectState == excluded {
 						// If the component was explicitly excluded, record the match and continue
 						matchedRequests[matchedRequest] = true
 						continue
-					} else if selectState == unknown && component.component.Default && groupDefault == nil {
+					} else if selectState == unknown && component.Default && groupDefault == nil {
 						// If the component is default but not included or excluded, remember the default
 						groupDefault = &component
 					}
@@ -100,23 +104,23 @@ func (f *deploymentFilter) Apply(pkg PackageView) ([]int, error) {
 
 					// Then check for already selected groups
 					if groupSelected != nil {
-						return nil, fmt.Errorf("%w: group: %s selected: %s, %s", ErrMultipleSameGroup, component.component.Group, groupSelected.component.Name, component.component.Name)
+						return nil, fmt.Errorf("%w: group: %s selected: %s, %s", ErrMultipleSameGroup, component.Group, groupSelected.Name, component.Name)
 					}
 
 					// Then append to the final list
-					selectedComponents = append(selectedComponents, component.idx)
+					selectedComponents = append(selectedComponents, component)
 					groupSelected = &component
 				}
 			}
 
 			// If nothing was selected from a group, handle the default
 			if groupSelected == nil && groupDefault != nil {
-				selectedComponents = append(selectedComponents, groupDefault.idx)
+				selectedComponents = append(selectedComponents, *groupDefault)
 			} else if len(groupedComponents[groupKey]) > 1 && groupSelected == nil && groupDefault == nil {
 				// If no default component was found, give up
 				componentNames := []string{}
 				for _, component := range groupedComponents[groupKey] {
-					componentNames = append(componentNames, component.component.Name)
+					componentNames = append(componentNames, component.Name)
 				}
 				return nil, fmt.Errorf("%w: choose from %s", ErrNoDefaultOrSelection, strings.Join(componentNames, ", "))
 			}
@@ -144,19 +148,19 @@ func (f *deploymentFilter) Apply(pkg PackageView) ([]int, error) {
 					if err != nil {
 						return nil, fmt.Errorf("%w: %w", ErrSelectionCanceled, err)
 					}
-					selectedComponents = append(selectedComponents, component.idx)
+					selectedComponents = append(selectedComponents, component)
 				} else {
 					foundDefault := false
 					componentNames := []string{}
 					for _, component := range group {
 						// If the component is default, then use it
-						if component.component.Default {
-							selectedComponents = append(selectedComponents, component.idx)
+						if component.Default {
+							selectedComponents = append(selectedComponents, component)
 							foundDefault = true
 							break
 						}
 						// Add each component name to the list
-						componentNames = append(componentNames, component.component.Name)
+						componentNames = append(componentNames, component.Name)
 					}
 					if !foundDefault {
 						// If no default component was found, give up
@@ -166,24 +170,24 @@ func (f *deploymentFilter) Apply(pkg PackageView) ([]int, error) {
 			} else {
 				component := groupedComponents[groupKey][0]
 
-				if !component.component.Optional {
-					selectedComponents = append(selectedComponents, component.idx)
+				if !component.Optional {
+					selectedComponents = append(selectedComponents, component)
 					continue
 				}
 
 				if f.isInteractive {
-					selected, err := selectOptionalComponent(component.component)
+					selected, err := selectOptionalComponent(pkg, component)
 					if err != nil {
 						return nil, fmt.Errorf("%w: %w", ErrSelectionCanceled, err)
 					}
 					if selected {
-						selectedComponents = append(selectedComponents, component.idx)
+						selectedComponents = append(selectedComponents, component)
 						continue
 					}
 				}
 
-				if component.component.Default {
-					selectedComponents = append(selectedComponents, component.idx)
+				if component.Default {
+					selectedComponents = append(selectedComponents, component)
 					continue
 				}
 			}
@@ -193,19 +197,14 @@ func (f *deploymentFilter) Apply(pkg PackageView) ([]int, error) {
 	return selectedComponents, nil
 }
 
-type indexedComponent struct {
-	idx       int
-	component ComponentView
-}
-
-func selectOptionalComponent(component ComponentView) (bool, error) {
+func selectOptionalComponent(pkg api.Package, component api.Component) (bool, error) {
 	message.HorizontalRule()
 
-	definition := component.Definition
-	if definition == nil {
-		definition = component
+	definition, err := componentForDisplay(pkg, component)
+	if err != nil {
+		return false, err
 	}
-	err := utils.ColorPrintYAML(definition, nil, false)
+	err = utils.ColorPrintYAML(definition, nil, false)
 	if err != nil {
 		return false, err
 	}
@@ -223,14 +222,27 @@ func selectOptionalComponent(component ComponentView) (bool, error) {
 	return confirm, nil
 }
 
-func selectChoiceGroup(componentGroup []indexedComponent) (indexedComponent, error) {
+// componentForDisplay converts a component back to the package's authored API version.
+func componentForDisplay(pkg api.Package, component api.Component) (any, error) {
+	displayPackage := api.Package{APIVersion: pkg.APIVersion, Components: []api.Component{component}}
+	switch pkg.GetAPIVersion() {
+	case v1alpha1.APIVersion:
+		return convert.PackageToV1alpha1(displayPackage).Components[0], nil
+	case v1beta1.APIVersion:
+		return convert.PackageToV1beta1(displayPackage).Components[0], nil
+	default:
+		return nil, fmt.Errorf("unsupported package apiVersion %q", pkg.GetAPIVersion())
+	}
+}
+
+func selectChoiceGroup(componentGroup []api.Component) (api.Component, error) {
 	message.HorizontalRule()
 
 	var chosen int
 	options := make([]string, 0, len(componentGroup))
 
 	for _, component := range componentGroup {
-		text := fmt.Sprintf("Name: %s\n  Description: %s\n", component.component.Name, component.component.Description)
+		text := fmt.Sprintf("Name: %s\n  Description: %s\n", component.Name, component.Description)
 		options = append(options, text)
 	}
 
