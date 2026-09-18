@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
@@ -26,6 +28,7 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // CosignDefaultTimeout is the default timeout for cosign sign and verify operations.
@@ -234,6 +237,162 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 
 	l.Debug("blob signed successfully", "signatureLength", len(sig))
 	return sig, nil
+}
+
+// SignManifest signs an OCI manifest and publishes the
+// resulting Sigstore bundle as an OCI referrer. Unlike blob signing, this does
+// not require downloading or modifying the artifact's contents.
+func SignManifest(ctx context.Context, manifestRef string, opts SignBlobOptions, registryOpts types.RemoteOptions) error {
+	l := logger.From(ctx)
+
+	if opts.KeyRef != "" {
+		l.Warn("SignBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
+		if opts.Key == "" {
+			opts.Key = opts.KeyRef
+		}
+	}
+
+	oidcClientSecret, err := opts.OIDC.ClientSecret()
+	if err != nil {
+		return err
+	}
+
+	ko := options.KeyOpts{
+		KeyRef:           opts.Key,
+		PassFunc:         nonPromptingPassFunc,
+		Sk:               opts.SecurityKey.Use,
+		Slot:             opts.SecurityKey.Slot,
+		FulcioURL:        opts.Fulcio.URL,
+		IDToken:          opts.Fulcio.IdentityToken,
+		FulcioAuthFlow:   opts.Fulcio.AuthFlow,
+		RekorURL:         opts.Rekor.URL,
+		OIDCIssuer:       opts.OIDC.Issuer,
+		OIDCClientID:     opts.OIDC.ClientID,
+		OIDCClientSecret: oidcClientSecret,
+		BundlePath:       opts.BundlePath,
+		NewBundleFormat:  true,
+		SkipConfirmation: opts.SkipConfirmation,
+		TSAServerURL:     opts.TSAServerURL,
+	}
+	if opts.PassFunc != nil {
+		ko.PassFunc = opts.PassFunc
+	} else if opts.Password != "" {
+		password := opts.Password
+		ko.PassFunc = cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte(password), nil
+		})
+	}
+
+	if err := opts.CheckOverwrite(ctx); err != nil {
+		return err
+	}
+
+	// This is the same Sigstore material setup used for package blob signing.
+	// NewBundleFormat causes cosign to publish with an OCI subject, making the
+	// bundle discoverable through the distribution referrers API.
+	if err := signcommon.LoadTrustedMaterialAndSigningConfig(ctx, &ko,
+		opts.UseSigningConfig, "",
+		opts.Rekor.URL, opts.Fulcio.URL, opts.OIDC.Issuer, opts.TSAServerURL, "",
+		opts.TlogUpload, true, opts.BundlePath, opts.Key, false,
+		"", "", "", "", "", "",
+	); err != nil {
+		return err
+	}
+
+	registryOptions := options.RegistryOptions{
+		AllowHTTPRegistry: registryOpts.PlainHTTP,
+		AllowInsecure:     registryOpts.InsecureSkipTLSVerify,
+	}
+	ref, err := name.ParseReference(manifestRef, registryOptions.NameOptions()...)
+	if err != nil {
+		return fmt.Errorf("parsing OCI manifest reference: %w", err)
+	}
+	descriptor, err := remote.Head(ref, registryOptions.GetRegistryClientOpts(ctx)...)
+	if err != nil {
+		return fmt.Errorf("resolving OCI manifest: %w", err)
+	}
+	manifestRef = ref.Context().Digest(descriptor.Digest.String()).String()
+
+	l.Debug("signing OCI manifest with cosign referrer", "reference", manifestRef, "key", opts.Key, "sk", opts.SecurityKey.Use)
+	rootOpts := &options.RootOptions{Verbose: opts.Verbose, Timeout: opts.Timeout}
+	signOpts := options.SignOptions{
+		Upload:           true,
+		BundlePath:       opts.BundlePath,
+		SkipConfirmation: opts.SkipConfirmation,
+		TlogUpload:       opts.TlogUpload,
+		TSAServerURL:     opts.TSAServerURL,
+		NewBundleFormat:  true,
+		UseSigningConfig: opts.UseSigningConfig,
+		Registry:         registryOptions,
+	}
+	if err := sign.SignCmd(ctx, rootOpts, ko, signOpts, []string{manifestRef}); err != nil {
+		return err
+	}
+
+	l.Debug("OCI manifest signed successfully", "reference", manifestRef)
+	return nil
+}
+
+// VerifyManifest verifies a manifest signature stored as an
+// OCI referrer. It verifies both the Sigstore signature and the bundle's
+// in-toto subject claim against the resolved manifest digest.
+func VerifyManifest(ctx context.Context, manifestRef string, opts VerifyBlobOptions, registryOpts types.RemoteOptions) error {
+	l := logger.From(ctx)
+	if opts.KeyRef != "" {
+		l.Warn("VerifyBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
+		if opts.Key == "" {
+			opts.Key = opts.KeyRef
+		}
+	}
+
+	// Keyless verification needs a trusted root. Use the bundled copy unless the
+	// caller supplied one
+	trustedRootPath := opts.CommonVerifyOptions.TrustedRootPath
+	if trustedRootPath == "" && opts.Key == "" && opts.CertVerify.Cert == "" {
+		path, cleanup, prepErr := writeEmbeddedTrustedRoot(opts.TempDir)
+		if prepErr != nil {
+			return fmt.Errorf("preparing embedded trusted root: %w", prepErr)
+		}
+		defer func() {
+			if rmErr := cleanup(); rmErr != nil {
+				l.Debug("failed to remove embedded trusted root tempfile", "error", rmErr)
+			}
+		}()
+		trustedRootPath = path
+	}
+
+	verifyCmd := &verify.VerifyCommand{
+		RegistryOptions: options.RegistryOptions{
+			AllowHTTPRegistry: registryOpts.PlainHTTP,
+			AllowInsecure:     registryOpts.InsecureSkipTLSVerify,
+		},
+		CertVerifyOptions:     opts.CertVerify,
+		CommonVerifyOptions:   opts.CommonVerifyOptions,
+		CheckClaims:           true,
+		KeyRef:                opts.Key,
+		RekorURL:              opts.Rekor.URL,
+		IgnoreSCT:             opts.CertVerify.IgnoreSCT,
+		UseSignedTimestamps:   opts.CommonVerifyOptions.UseSignedTimestamps,
+		IgnoreTlog:            opts.CommonVerifyOptions.IgnoreTlog,
+		Sk:                    opts.SecurityKey.Use,
+		Slot:                  opts.SecurityKey.Slot,
+		NewBundleFormat:       true,
+		AllowCertificateChain: false,
+	}
+	verifyCmd.TrustedRootPath = trustedRootPath
+
+	l.Debug("verifying OCI manifest referrer signature", "reference", manifestRef, "key", opts.Key, "sk", opts.SecurityKey.Use)
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer cancel()
+	}
+	if err := verifyCmd.Exec(ctx, []string{manifestRef}); err != nil {
+		return err
+	}
+
+	l.Debug("OCI manifest signature verified successfully", "reference", manifestRef)
+	return nil
 }
 
 // CosignVerifyBlobWithOptions verifies a blob via cosign's VerifyBlobCmd.
