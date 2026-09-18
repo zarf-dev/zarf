@@ -9,16 +9,11 @@ import (
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 func applyDifferentialResources(definition, previous api.Package) (api.Package, error) {
-	if !apiVersionsMatch(definition.APIVersion, previous.APIVersion) {
-		return api.Package{}, fmt.Errorf("package apiVersion %s does not match differential package apiVersion %s", normalizeAPIVersion(definition.APIVersion), normalizeAPIVersion(previous.APIVersion))
-	}
-
 	definition.Components = slices.Clone(definition.Components)
 	previousImages, previousRepos := differentialResources(previous.Components)
 	for componentIdx := range definition.Components {
@@ -48,17 +43,6 @@ func applyDifferentialResources(definition, previous api.Package) (api.Package, 
 		component.Repositories = repositories
 	}
 	return definition, nil
-}
-
-func apiVersionsMatch(first, second string) bool {
-	return normalizeAPIVersion(first) == normalizeAPIVersion(second)
-}
-
-func normalizeAPIVersion(apiVersion string) string {
-	if apiVersion == "" {
-		return v1alpha1.APIVersion
-	}
-	return apiVersion
 }
 
 func differentialResources(components []api.Component) (map[string]struct{}, []api.Repository) {
