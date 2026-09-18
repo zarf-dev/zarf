@@ -140,6 +140,13 @@
           "$ref": "#/$defs/OCISource",
           "description": "The OCI registry where the chart is stored."
         },
+        "postRenderers": {
+          "description": "Ordered post-renderers applied to the rendered Helm chart manifests.",
+          "items": {
+            "$ref": "#/$defs/PostRenderer"
+          },
+          "type": "array"
+        },
         "releaseName": {
           "description": "The name of the Helm release to create (defaults to the Zarf name of the chart).",
           "type": "string"
@@ -903,6 +910,101 @@
       },
       "type": "object"
     },
+    "KustomizePatch": {
+      "additionalProperties": false,
+      "description": "KustomizePatch applies an inline or local patch to matching rendered manifests.",
+      "oneOf": [
+        {
+          "required": [
+            "patch"
+          ],
+          "title": "patch"
+        },
+        {
+          "required": [
+            "path"
+          ],
+          "title": "path"
+        }
+      ],
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "patch": {
+          "description": "Patch is an inline strategic merge or JSON 6902 patch.",
+          "type": "string"
+        },
+        "path": {
+          "description": "Path is a local path to a strategic merge or JSON 6902 patch.",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/KustomizePatchTarget",
+          "description": "Target optionally selects rendered resources to patch."
+        }
+      },
+      "type": "object"
+    },
+    "KustomizePatchTarget": {
+      "additionalProperties": false,
+      "description": "KustomizePatchTarget selects rendered resources for a Kustomize patch.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "annotationSelector": {
+          "description": "AnnotationSelector selects resources by annotation.",
+          "type": "string"
+        },
+        "group": {
+          "description": "Group is the API group of selected resources.",
+          "type": "string"
+        },
+        "kind": {
+          "description": "Kind is the kind of selected resources.",
+          "type": "string"
+        },
+        "labelSelector": {
+          "description": "LabelSelector selects resources by label.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of selected resources.",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace is the namespace of selected resources.",
+          "type": "string"
+        },
+        "version": {
+          "description": "Version is the API version of selected resources.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "KustomizePostRenderer": {
+      "additionalProperties": false,
+      "description": "KustomizePostRenderer configures Kustomize patches for rendered Helm chart manifests.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "enableTemplating": {
+          "description": "EnableTemplating enables Go templating for Kustomize patches.",
+          "type": "boolean"
+        },
+        "patches": {
+          "description": "Patches applied to rendered manifests in order.",
+          "items": {
+            "$ref": "#/$defs/KustomizePatch"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "LocalSource": {
       "additionalProperties": false,
       "description": "LocalSource represents a Helm chart stored locally.",
@@ -1072,6 +1174,28 @@
       "required": [
         "name"
       ],
+      "type": "object"
+    },
+    "PostRenderer": {
+      "additionalProperties": false,
+      "description": "PostRenderer configures a renderer applied to rendered Helm chart manifests.",
+      "oneOf": [
+        {
+          "required": [
+            "kustomize"
+          ],
+          "title": "kustomize"
+        }
+      ],
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "kustomize": {
+          "$ref": "#/$defs/KustomizePostRenderer",
+          "description": "Kustomize applies Kustomize patches to rendered manifests."
+        }
+      },
       "type": "object"
     },
     "Repository": {

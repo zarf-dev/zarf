@@ -2427,6 +2427,116 @@
                       ],
                       "type": "object"
                     },
+                    "postRenderers": {
+                      "description": "Ordered post-renderers applied to the rendered Helm chart manifests.",
+                      "items": {
+                        "additionalProperties": false,
+                        "description": "PostRenderer configures a renderer applied to rendered Helm chart manifests.",
+                        "oneOf": [
+                          {
+                            "required": [
+                              "kustomize"
+                            ],
+                            "title": "kustomize"
+                          }
+                        ],
+                        "patternProperties": {
+                          "^x-": {}
+                        },
+                        "properties": {
+                          "kustomize": {
+                            "additionalProperties": false,
+                            "description": "Kustomize applies Kustomize patches to rendered manifests.",
+                            "patternProperties": {
+                              "^x-": {}
+                            },
+                            "properties": {
+                              "enableTemplating": {
+                                "description": "EnableTemplating enables Go templating for Kustomize patches.",
+                                "type": "boolean"
+                              },
+                              "patches": {
+                                "description": "Patches applied to rendered manifests in order.",
+                                "items": {
+                                  "additionalProperties": false,
+                                  "description": "KustomizePatch applies an inline or local patch to matching rendered manifests.",
+                                  "oneOf": [
+                                    {
+                                      "required": [
+                                        "patch"
+                                      ],
+                                      "title": "patch"
+                                    },
+                                    {
+                                      "required": [
+                                        "path"
+                                      ],
+                                      "title": "path"
+                                    }
+                                  ],
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  },
+                                  "properties": {
+                                    "patch": {
+                                      "description": "Patch is an inline strategic merge or JSON 6902 patch.",
+                                      "type": "string"
+                                    },
+                                    "path": {
+                                      "description": "Path is a local path to a strategic merge or JSON 6902 patch.",
+                                      "type": "string"
+                                    },
+                                    "target": {
+                                      "additionalProperties": false,
+                                      "description": "Target optionally selects rendered resources to patch.",
+                                      "patternProperties": {
+                                        "^x-": {}
+                                      },
+                                      "properties": {
+                                        "annotationSelector": {
+                                          "description": "AnnotationSelector selects resources by annotation.",
+                                          "type": "string"
+                                        },
+                                        "group": {
+                                          "description": "Group is the API group of selected resources.",
+                                          "type": "string"
+                                        },
+                                        "kind": {
+                                          "description": "Kind is the kind of selected resources.",
+                                          "type": "string"
+                                        },
+                                        "labelSelector": {
+                                          "description": "LabelSelector selects resources by label.",
+                                          "type": "string"
+                                        },
+                                        "name": {
+                                          "description": "Name is the name of selected resources.",
+                                          "type": "string"
+                                        },
+                                        "namespace": {
+                                          "description": "Namespace is the namespace of selected resources.",
+                                          "type": "string"
+                                        },
+                                        "version": {
+                                          "description": "Version is the API version of selected resources.",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "type": "object"
+                                    }
+                                  },
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              }
+                            },
+                            "type": "object"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "releaseName": {
                       "description": "The name of the Helm release to create (defaults to the Zarf name of the chart).",
                       "type": "string"
@@ -6544,6 +6654,116 @@
                   "noWait": {
                     "description": "Whether to not wait for chart resources to be ready before continuing.",
                     "type": "boolean"
+                  },
+                  "postRenderers": {
+                    "description": "Ordered post-renderers applied to the rendered Helm chart manifests.",
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "PostRenderer configures a renderer applied to rendered Helm chart manifests.",
+                      "oneOf": [
+                        {
+                          "required": [
+                            "kustomize"
+                          ],
+                          "title": "kustomize"
+                        }
+                      ],
+                      "patternProperties": {
+                        "^x-": {}
+                      },
+                      "properties": {
+                        "kustomize": {
+                          "additionalProperties": false,
+                          "description": "Kustomize applies Kustomize patches to rendered manifests.",
+                          "patternProperties": {
+                            "^x-": {}
+                          },
+                          "properties": {
+                            "enableTemplating": {
+                              "description": "EnableTemplating enables Go templating for Kustomize patches.",
+                              "type": "boolean"
+                            },
+                            "patches": {
+                              "description": "Patches applied to rendered manifests in order.",
+                              "items": {
+                                "additionalProperties": false,
+                                "description": "KustomizePatch applies an inline or local patch to matching rendered manifests.",
+                                "oneOf": [
+                                  {
+                                    "required": [
+                                      "patch"
+                                    ],
+                                    "title": "patch"
+                                  },
+                                  {
+                                    "required": [
+                                      "path"
+                                    ],
+                                    "title": "path"
+                                  }
+                                ],
+                                "patternProperties": {
+                                  "^x-": {}
+                                },
+                                "properties": {
+                                  "patch": {
+                                    "description": "Patch is an inline strategic merge or JSON 6902 patch.",
+                                    "type": "string"
+                                  },
+                                  "path": {
+                                    "description": "Path is a local path to a strategic merge or JSON 6902 patch.",
+                                    "type": "string"
+                                  },
+                                  "target": {
+                                    "additionalProperties": false,
+                                    "description": "Target optionally selects rendered resources to patch.",
+                                    "patternProperties": {
+                                      "^x-": {}
+                                    },
+                                    "properties": {
+                                      "annotationSelector": {
+                                        "description": "AnnotationSelector selects resources by annotation.",
+                                        "type": "string"
+                                      },
+                                      "group": {
+                                        "description": "Group is the API group of selected resources.",
+                                        "type": "string"
+                                      },
+                                      "kind": {
+                                        "description": "Kind is the kind of selected resources.",
+                                        "type": "string"
+                                      },
+                                      "labelSelector": {
+                                        "description": "LabelSelector selects resources by label.",
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "description": "Name is the name of selected resources.",
+                                        "type": "string"
+                                      },
+                                      "namespace": {
+                                        "description": "Namespace is the namespace of selected resources.",
+                                        "type": "string"
+                                      },
+                                      "version": {
+                                        "description": "Version is the API version of selected resources.",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "type": "object"
+                                  }
+                                },
+                                "type": "object"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "type": "object"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
                   },
                   "releaseName": {
                     "description": "The name of the Helm release to create (defaults to the Zarf name of the chart).",
