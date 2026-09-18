@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.87.0](https://github.com/zarf-dev/zarf/compare/v0.86.0...v0.87.0) (2026-09-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* public operational type ([#5345](https://github.com/zarf-dev/zarf/issues/5345))
+
+### Features
+
+* public operational type ([#5345](https://github.com/zarf-dev/zarf/issues/5345)) ([6c9d7ce](https://github.com/zarf-dev/zarf/commit/6c9d7ce2af3e54fc24f5cf6a7d809b98a7e74d68))
+
+
+### Bug Fixes
+
+* **helm:** handle charts that render resources inside list kinds ([#5344](https://github.com/zarf-dev/zarf/issues/5344)) ([1f7bbc9](https://github.com/zarf-dev/zarf/commit/1f7bbc9fba04918af1b1a47cb958fb24b1fda5cd))
+
 ## [0.86.0](https://github.com/zarf-dev/zarf/compare/v0.85.0...v0.86.0) (2026-09-17)
 
 
