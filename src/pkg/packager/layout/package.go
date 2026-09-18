@@ -386,7 +386,7 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 		opts.Key = opts.KeyRef //nolint:staticcheck // intentional read of deprecated alias for migration sync
 	}
 
-	hasKey := opts.Key != "" || opts.SecurityKey.Use
+	hasKey := opts.Key != ""
 	hasKeylessIdentity := opts.CertVerify.CertIdentity != "" || opts.CertVerify.CertIdentityRegexp != ""
 	hasCert := opts.CertVerify.Cert != ""
 	hasVerificationMaterial := hasKey || hasKeylessIdentity || hasCert
