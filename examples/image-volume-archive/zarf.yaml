@@ -10,22 +10,43 @@ documentation:
 components:
   - name: docs-archive
     required: true
+    description: Packs this site's built static output into an image volume archive and serves it with nginx
     actions:
       onCreate:
         before:
+          # site/dist is generated and gitignored, so it has to be built before
+          # it can be packed. The helper runs the same Astro build Netlify runs,
+          # in a container pinned to netlify.toml's NODE_VERSION, so no local
+          # Node install is required.
+          - description: build the docs site
+            cmd: ../../site/hack/build-in-docker.sh build
           # `zarf dev image-volume-archive` (alias `iva`) packs every file under
           # the given directory into an OCI image and writes it out as a
           # `docker save`-compatible tar. The tar name below is what the command
           # derives from the reference when --output is not passed. A
           # zarf.internal reference keeps the image from ever resolving to a
           # public registry, the same way examples/kiwix does.
+          #
+          # Unlike the Flux component below, no --max-layers cap is needed: a
+          # pod mounting an image volume sees every layer flattened, so the
+          # default batching across up to 127 layers is fine for a few thousand
+          # files of built HTML and assets.
           - description: create image archive
             cmd: |-
-              ./zarf dev iva ../../site zarf.internal/zarf-docs:local
+              ./zarf dev iva ../../site/dist zarf.internal/zarf-docs:local
+    images:
+      - docker.io/library/nginx:1.29.2
     imageArchives:
       - images:
           - zarf.internal/zarf-docs:local
         path: zarf.internal_zarf-docs-local.tar
+    manifests:
+      - name: zarf-docs
+        namespace: zarf-docs
+        files:
+          - nginx/configmap.yaml
+          - nginx/deployment.yaml
+          - nginx/service.yaml
   - name: fluxcd-oci-repo
     required: true
     actions:
