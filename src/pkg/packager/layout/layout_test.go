@@ -49,7 +49,21 @@ func TestManifestFileNames(t *testing.T) {
 func TestComponentFileRelPath(t *testing.T) {
 	t.Parallel()
 
-	require.Equal(t, filepath.Join("0", "nginx.conf"), ComponentFileRelPath(0, "/etc/nginx/nginx.conf"),
-		"only the target's base name is kept")
-	require.Equal(t, filepath.Join("2", "data.txt"), ComponentFileRelPath(2, "data.txt"))
+	tests := []struct {
+		name   string
+		idx    int
+		target string
+		want   string
+	}{
+		{name: "POSIX path", idx: 0, target: "/etc/app/file.txt", want: filepath.Join("0", "file.txt")},
+		{name: "Windows path", idx: 1, target: `C:\app\file.txt`, want: filepath.Join("1", "file.txt")},
+		{name: "Windows path with forward slashes", idx: 2, target: "C:/app/file.txt", want: filepath.Join("2", "file.txt")},
+		{name: "file name", idx: 3, target: "file.txt", want: filepath.Join("3", "file.txt")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, ComponentFileRelPath(tt.idx, tt.target))
+		})
+	}
 }

@@ -3,9 +3,7 @@
 
 package value
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // GenerateJSONSchema infers a JSON schema from the structure and scalar types in values.
 func GenerateJSONSchema(vals Values) map[string]any {
@@ -31,14 +29,20 @@ func ReconcileJSONSchema(existing, inferred map[string]any, deleteNotFound bool)
 	typeVal, hasType := inferred["type"]
 	if hasType {
 		existing["type"] = typeVal
+	} else if deleteNotFound {
+		delete(existing, "type")
 	}
 
 	if schemaTypeIncludes(typeVal, "object") {
 		reconcileSchemaProperties(existing, inferred, deleteNotFound)
+	} else if deleteNotFound {
+		delete(existing, "properties")
 	}
 
 	if schemaTypeIncludes(typeVal, "array") {
 		reconcileSchemaItems(existing, inferred, deleteNotFound)
+	} else if deleteNotFound {
+		delete(existing, "items")
 	}
 
 	if schemaURI, ok := inferred["$schema"]; ok {
@@ -343,6 +347,9 @@ func isChartSchemaKeyword(key string) bool {
 func reconcileSchemaProperties(existing, inferred map[string]any, deleteNotFound bool) {
 	inferredProps, ok := inferred["properties"].(map[string]any)
 	if !ok {
+		if deleteNotFound {
+			delete(existing, "properties")
+		}
 		return
 	}
 
@@ -380,6 +387,9 @@ func reconcileSchemaProperties(existing, inferred map[string]any, deleteNotFound
 func reconcileSchemaItems(existing, inferred map[string]any, deleteNotFound bool) {
 	inferredItems, hasInferredItems := inferred["items"].(map[string]any)
 	if !hasInferredItems {
+		if deleteNotFound {
+			delete(existing, "items")
+		}
 		return
 	}
 
@@ -396,7 +406,9 @@ func inferSchemaType(v any) any {
 	switch val := v.(type) {
 	case string:
 		return map[string]any{"type": "string"}
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return map[string]any{"type": "integer"}
+	case float32, float64:
 		return map[string]any{"type": "number"}
 	case bool:
 		return map[string]any{"type": "boolean"}
@@ -415,6 +427,6 @@ func inferSchemaType(v any) any {
 		}
 		return map[string]any{"type": "array"}
 	default:
-		return map[string]any{"type": "string"}
+		return map[string]any{}
 	}
 }
