@@ -244,6 +244,10 @@ type AssembleSkeletonOptions struct {
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
 func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
+	if resolvedPackage.Definition.GetAPIVersion() != v1alpha1.APIVersion {
+		return nil, fmt.Errorf("skeleton packages are only supported for apiVersion %s, got %s", v1alpha1.APIVersion, resolvedPackage.Definition.GetAPIVersion())
+	}
+
 	if _, err := resolvedPackage.Resources.Root(); err != nil {
 		return nil, err
 	}
