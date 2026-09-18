@@ -131,7 +131,7 @@ func (o *componentSignOptions) run(cmd *cobra.Command, args []string) error {
 		logger.From(cmd.Context()).Info("signing component manifest with provided key")
 	}
 
-	err = signing.CosignSignManifest(cmd.Context(), componentRef.String(), o.buildSignBlobOptions(cmd), defaultRemoteOptions())
+	err = signing.SignManifest(cmd.Context(), componentRef.String(), o.buildSignBlobOptions(cmd), defaultRemoteOptions())
 	if err != nil {
 		return fmt.Errorf("failed to sign component manifest: %w", err)
 	}
@@ -178,7 +178,7 @@ func (o *componentVerifyOptions) run(cmd *cobra.Command, args []string) error {
 
 	l := logger.From(cmd.Context())
 	l.Info("verifying component manifest signature", "source", helpers.OCIURLPrefix+componentRef.String())
-	if err := signing.CosignVerifyManifest(cmd.Context(), componentRef.String(), *o.buildVerifyBlobOptions(cmd, v), defaultRemoteOptions()); err != nil {
+	if err := signing.VerifyManifest(cmd.Context(), componentRef.String(), *o.buildVerifyBlobOptions(cmd, v), defaultRemoteOptions()); err != nil {
 		return fmt.Errorf("component signature verification failed: %w", err)
 	}
 

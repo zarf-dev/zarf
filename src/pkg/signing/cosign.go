@@ -239,10 +239,10 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 	return sig, nil
 }
 
-// CosignSignManifest signs an OCI manifest and publishes the
+// SignManifest signs an OCI manifest and publishes the
 // resulting Sigstore bundle as an OCI referrer. Unlike blob signing, this does
 // not require downloading or modifying the artifact's contents.
-func CosignSignManifest(ctx context.Context, manifestRef string, opts SignBlobOptions, registryOpts types.RemoteOptions) error {
+func SignManifest(ctx context.Context, manifestRef string, opts SignBlobOptions, registryOpts types.RemoteOptions) error {
 	l := logger.From(ctx)
 
 	if opts.KeyRef != "" {
@@ -333,10 +333,10 @@ func CosignSignManifest(ctx context.Context, manifestRef string, opts SignBlobOp
 	return nil
 }
 
-// CosignVerifyManifest verifies a manifest signature stored as an
+// VerifyManifest verifies a manifest signature stored as an
 // OCI referrer. It verifies both the Sigstore signature and the bundle's
 // in-toto subject claim against the resolved manifest digest.
-func CosignVerifyManifest(ctx context.Context, manifestRef string, opts VerifyBlobOptions, registryOpts types.RemoteOptions) error {
+func VerifyManifest(ctx context.Context, manifestRef string, opts VerifyBlobOptions, registryOpts types.RemoteOptions) error {
 	l := logger.From(ctx)
 	if opts.KeyRef != "" {
 		l.Warn("VerifyBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
