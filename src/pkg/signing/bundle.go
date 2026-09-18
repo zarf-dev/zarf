@@ -5,6 +5,7 @@ package signing
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
@@ -30,11 +31,23 @@ type BundleInfo struct {
 
 // ReadBundleInfo parses a Sigstore bundle file and returns its signing metadata.
 func ReadBundleInfo(bundlePath string) (BundleInfo, error) {
-	b, err := bundle.LoadJSONFromPath(bundlePath)
+	raw, err := os.ReadFile(bundlePath)
 	if err != nil {
 		return BundleInfo{}, fmt.Errorf("loading bundle: %w", err)
 	}
+	return ReadBundleInfoJSON(raw)
+}
 
+// ReadBundleInfoJSON parses Sigstore bundle JSON and returns its signing metadata.
+func ReadBundleInfoJSON(raw []byte) (BundleInfo, error) {
+	b := new(bundle.Bundle)
+	if err := b.UnmarshalJSON(raw); err != nil {
+		return BundleInfo{}, fmt.Errorf("loading bundle: %w", err)
+	}
+	return bundleInfo(b)
+}
+
+func bundleInfo(b *bundle.Bundle) (BundleInfo, error) {
 	timestamps, err := b.Timestamps()
 	if err != nil {
 		return BundleInfo{}, fmt.Errorf("reading bundle timestamps: %w", err)

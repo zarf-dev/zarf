@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -71,21 +70,18 @@ func NewBundleVerificationOptions(ctx context.Context, opts VerifyBlobOptions) (
 	}, nil
 }
 
-// VerifyBundle verifies a Sigstore bundle directly with sigstore-go
-// and returns the verified bundle contents.
-func VerifyBundle(ctx context.Context, blobPath, bundlePath string, opts BundleVerificationOptions) (*verify.VerificationResult, error) {
+// VerifyBundle verifies artifact against a Sigstore JSON bundle directly with
+// sigstore-go and returns the verified bundle contents.
+func VerifyBundle(ctx context.Context, artifact, bundleJSON []byte, opts BundleVerificationOptions) (*verify.VerificationResult, error) {
 	l := logger.From(ctx)
-	if bundlePath == "" {
-		return nil, errors.New("bundle path is required")
-	}
 	if opts.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
 		defer cancel()
 	}
 
-	b, err := bundle.LoadJSONFromPath(bundlePath)
-	if err != nil {
+	b := new(bundle.Bundle)
+	if err := b.UnmarshalJSON(bundleJSON); err != nil {
 		return nil, fmt.Errorf("loading Sigstore bundle: %w", err)
 	}
 
@@ -122,11 +118,7 @@ func VerifyBundle(ctx context.Context, blobPath, bundlePath string, opts BundleV
 		return nil, fmt.Errorf("creating Sigstore verifier: %w", err)
 	}
 
-	artifactPolicy, err := bundleArtifactPolicy(ctx, blobPath)
-	if err != nil {
-		return nil, err
-	}
-	result, err := sev.Verify(b, verify.NewPolicy(artifactPolicy, policyOptions...))
+	result, err := sev.Verify(b, verify.NewPolicy(verify.WithArtifact(bytes.NewReader(artifact)), policyOptions...))
 	if err != nil {
 		return nil, err
 	}
@@ -359,30 +351,4 @@ func loadPublicKeyReference(ctx context.Context, reference string) ([]byte, erro
 	default:
 		return os.ReadFile(filepath.Clean(reference))
 	}
-}
-
-func readBundleArtifact(ctx context.Context, reference string) ([]byte, error) {
-	if reference == "-" {
-		return io.ReadAll(os.Stdin)
-	}
-	return loadPublicKeyReference(ctx, reference)
-}
-
-// bundleArtifactPolicy mirrors cosign's blob verifier: an unreadable artifact
-// may instead be an explicitly supplied algorithm:hex-digest reference.
-func bundleArtifactPolicy(ctx context.Context, reference string) (verify.ArtifactPolicyOption, error) {
-	artifact, readErr := readBundleArtifact(ctx, reference)
-	if readErr == nil {
-		return verify.WithArtifact(bytes.NewReader(artifact)), nil
-	}
-
-	algorithm, encodedDigest, found := strings.Cut(reference, ":")
-	if !found {
-		return nil, readErr
-	}
-	digest, err := hex.DecodeString(encodedDigest)
-	if err != nil {
-		return nil, err
-	}
-	return verify.WithArtifactDigest(algorithm, digest), nil
 }

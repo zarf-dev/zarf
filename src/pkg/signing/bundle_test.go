@@ -136,6 +136,19 @@ func TestReadBundleInfo(t *testing.T) {
 		require.Empty(t, info.Issuer)
 	})
 
+	t.Run("bundle JSON returns the same metadata as its file", func(t *testing.T) {
+		t.Parallel()
+		path := writeKeyBasedBundleFixture(t)
+		raw, err := os.ReadFile(path)
+		require.NoError(t, err)
+
+		info, err := ReadBundleInfoJSON(raw)
+		require.NoError(t, err)
+		require.Equal(t, SigningMethodKey, info.Method)
+		require.Empty(t, info.Identity)
+		require.Empty(t, info.Issuer)
+	})
+
 	t.Run("missing bundle file errors", func(t *testing.T) {
 		t.Parallel()
 		_, err := ReadBundleInfo(filepath.Join(t.TempDir(), "nonexistent.json"))

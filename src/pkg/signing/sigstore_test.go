@@ -6,8 +6,6 @@ package signing
 import (
 	"context"
 	"crypto"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -46,6 +44,15 @@ func TestVerifyBundle(t *testing.T) {
 		return blobPath, bundlePath
 	}
 
+	bundleBytes := func(t *testing.T, blobPath, bundlePath string) ([]byte, []byte) {
+		t.Helper()
+		artifact, err := os.ReadFile(blobPath)
+		require.NoError(t, err)
+		bundleJSON, err := os.ReadFile(bundlePath)
+		require.NoError(t, err)
+		return artifact, bundleJSON
+	}
+
 	newOptions := func(t *testing.T, key string) BundleVerificationOptions {
 		t.Helper()
 		opts := DefaultVerifyBlobOptions()
@@ -57,7 +64,8 @@ func TestVerifyBundle(t *testing.T) {
 
 	verifyBundle := func(t *testing.T, blobPath, bundlePath, key string) error {
 		t.Helper()
-		_, err := VerifyBundle(ctx, blobPath, bundlePath, newOptions(t, key))
+		artifact, bundleJSON := bundleBytes(t, blobPath, bundlePath)
+		_, err := VerifyBundle(ctx, artifact, bundleJSON, newOptions(t, key))
 		return err
 	}
 
@@ -73,23 +81,6 @@ func TestVerifyBundle(t *testing.T) {
 		require.NoError(t, os.WriteFile(blobPath, []byte("tampered"), 0o644))
 		require.Error(t, verifyBundle(t, blobPath, bundlePath, pubPath))
 		require.Error(t, CosignVerifyBlobWithOptions(ctx, blobPath, cosignOpts))
-	})
-
-	t.Run("matches cosign for digest artifact references", func(t *testing.T) {
-		blobPath, bundlePath := newBundle(t)
-		payload, err := os.ReadFile(blobPath)
-		require.NoError(t, err)
-		digest := sha256.Sum256(payload)
-		artifactRef := "sha256:" + hex.EncodeToString(digest[:])
-
-		directOpts := newOptions(t, pubPath)
-		_, err = VerifyBundle(ctx, artifactRef, bundlePath, directOpts)
-		require.NoError(t, err)
-
-		cosignOpts := DefaultVerifyBlobOptions()
-		cosignOpts.Key = pubPath
-		cosignOpts.BundlePath = bundlePath
-		require.NoError(t, CosignVerifyBlobWithOptions(ctx, artifactRef, cosignOpts))
 	})
 
 	t.Run("accepts environment public-key references", func(t *testing.T) {
@@ -168,7 +159,8 @@ current-context: signing-test
 
 		opts := newOptions(t, server.URL)
 		opts.Timeout = 100 * time.Millisecond
-		_, err := VerifyBundle(ctx, blobPath, bundlePath, opts)
+		artifact, bundleJSON := bundleBytes(t, blobPath, bundlePath)
+		_, err := VerifyBundle(ctx, artifact, bundleJSON, opts)
 
 		require.ErrorIs(t, err, context.DeadlineExceeded)
 		select {
@@ -185,9 +177,9 @@ current-context: signing-test
 		require.Error(t, verifyBundle(t, blobPath, bundlePath, pubPath))
 	})
 
-	t.Run("requires a bundle path", func(t *testing.T) {
-		_, err := VerifyBundle(ctx, "payload", "", newOptions(t, pubPath))
-		require.EqualError(t, err, "bundle path is required")
+	t.Run("rejects malformed bundle JSON", func(t *testing.T) {
+		_, err := VerifyBundle(ctx, []byte("payload"), []byte("not a bundle"), newOptions(t, pubPath))
+		require.Error(t, err)
 	})
 
 	t.Run("uses embedded trusted root for keyless verification", func(t *testing.T) {
@@ -207,25 +199,6 @@ current-context: signing-test
 		require.NoError(t, err)
 		require.NotEmpty(t, material.RekorLogs())
 		require.NotEmpty(t, material.TimestampingAuthorities())
-	})
-
-	t.Run("verifies keyless public-good bundle", func(t *testing.T) {
-		opts := BundleVerificationOptions{
-			CertificateIdentityRegexp: "^https://github.com/sigstore/sigstore-js/",
-			CertificateOIDCIssuer:     "https://token.actions.githubusercontent.com",
-			IgnoreTlog:                false,
-		}
-
-		const digestReference = "sha512:46d4e2f74c4877316640000a6fdf8a8b59f1e0847667973e9859f774dd31b8f1e0937813b777fb66a2ac67d50540fe34640966eee9fc2ccca387082b4c85cd3c"
-		result, err := VerifyBundle(ctx, digestReference, "./testdata/sigstore-js-2.0.0-provenance.sigstore.json", opts)
-		require.NoError(t, err)
-		require.NotNil(t, result)
-		require.NotNil(t, result.VerifiedIdentity)
-
-		invalidOpts := opts
-		invalidOpts.CertificateIdentityRegexp = "^https://github.com/sigstore/other-project/"
-		_, err = VerifyBundle(ctx, digestReference, "./testdata/sigstore-js-2.0.0-provenance.sigstore.json", invalidOpts)
-		require.Error(t, err)
 	})
 }
 

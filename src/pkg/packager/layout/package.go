@@ -400,11 +400,15 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 		return fmt.Errorf("package is not signed - verification cannot be performed: %w", ErrNoVerificationMaterial)
 	}
 
-	// Check for bundle format signature (preferred). Parse it once for both method
-	// detection (fast-fail below) and the verify path.
+	// Read the bundle once for method detection and direct byte verification.
 	bundlePath := filepath.Join(p.dirPath, Bundle)
-	bundleInfo, bundleErr := signing.ReadBundleInfo(bundlePath)
+	bundleJSON, bundleErr := os.ReadFile(bundlePath)
+	var bundleInfo signing.BundleInfo
 	hasBundleInfo := bundleErr == nil
+	if hasBundleInfo {
+		bundleInfo, bundleErr = signing.ReadBundleInfoJSON(bundleJSON)
+		hasBundleInfo = bundleErr == nil
+	}
 
 	// Early validation: fail fast with a method-specific message before cosign emits a generic error.
 	if hasBundleInfo {
@@ -436,8 +440,11 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 		if err != nil {
 			return err
 		}
-		zarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
-		_, err = signing.VerifyBundle(ctx, zarfYAMLPath, bundlePath, bundleOpts)
+		zarfYAML, err := os.ReadFile(filepath.Join(p.dirPath, ZarfYAML))
+		if err != nil {
+			return fmt.Errorf("reading %s for signature verification: %w", ZarfYAML, err)
+		}
+		_, err = signing.VerifyBundle(ctx, zarfYAML, bundleJSON, bundleOpts)
 		return err
 	}
 	if !errors.Is(bundleErr, os.ErrNotExist) {
