@@ -1257,13 +1257,6 @@ github.com/davecgh/go-spew/spew
 # github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
 ## explicit; go 1.17
 github.com/decred/dcrd/dcrec/secp256k1/v4
-# github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
-## explicit; go 1.24.0
-github.com/defenseunicorns/pkg/helpers/v2
-# github.com/defenseunicorns/pkg/oci v1.3.2
-## explicit; go 1.24.0
-github.com/defenseunicorns/pkg/oci
-github.com/defenseunicorns/pkg/oci/cache
 # github.com/deitch/magic v0.0.0-20240306090643-c67ab88f10cb
 ## explicit; go 1.20
 github.com/deitch/magic/pkg/magic

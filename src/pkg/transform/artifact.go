@@ -6,11 +6,10 @@ package transform
 
 import (
 	"fmt"
+	"hash/crc32"
 	"net/url"
 	"regexp"
 	"strings"
-
-	"github.com/defenseunicorns/pkg/helpers/v2"
 )
 
 const (
@@ -77,7 +76,7 @@ func GenTransformURL(targetBaseURL string, sourceURL string) (*url.URL, error) {
 		packageName = fileName
 	}
 	// Add crc32 hash of the url to the end of the package name
-	packageNameGlobal := fmt.Sprintf("%s-%d", packageName, helpers.GetCRCHash(sanitizedURL))
+	packageNameGlobal := fmt.Sprintf("%s-%d", packageName, crc32.ChecksumIEEE([]byte(sanitizedURL)))
 
 	version := strings.ReplaceAll(matches[idx("version")], "/", "")
 	if version == "" {

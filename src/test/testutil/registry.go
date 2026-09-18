@@ -15,12 +15,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 )
 
