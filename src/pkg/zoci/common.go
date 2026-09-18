@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -20,6 +21,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/types"
 	ociDirectory "oras.land/oras-go/v2/content/oci"
+	"oras.land/oras-go/v2/registry/remote/auth"
+	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
 // LayerType specifies a category of layers in a Zarf OCI package.
@@ -68,6 +71,9 @@ type PublishOptions struct {
 type RemoteClientOptions struct {
 	// CachePath stores OCI layers locally when non-empty.
 	CachePath string
+	// Retries is the maximum attempts for individual OCI pull requests. A zero
+	// value leaves the default transport retry policy in place.
+	Retries int
 	// Transport configures HTTP transport behavior such as proxies and mTLS.
 	// It is cloned before use and is never modified.
 	Transport *http.Transport
@@ -107,6 +113,14 @@ func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Plat
 	if err != nil {
 		return nil, err
 	}
+	if options.Retries < 0 {
+		return nil, fmt.Errorf("retries cannot be negative")
+	}
+	if options.Retries > 0 {
+		if err := configurePullRetries(remote, options.Retries); err != nil {
+			return nil, err
+		}
+	}
 
 	// negotiate if required after the remote has been instantiated for any canonical updates (docker.io etc)
 	if options.PlainHTTP {
@@ -124,6 +138,27 @@ func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Plat
 	}
 
 	return remote, nil
+}
+
+// configurePullRetries installs Zarf's retry policy for OCI pull requests.
+// Package pulls do not use upload progress, so this unwraps the dependency's
+// progress transport to avoid nesting its default retry policy inside ours.
+func configurePullRetries(remote *Remote, retries int) error {
+	client, ok := remote.Repo().Client.(*auth.Client)
+	if !ok || client.Client == nil {
+		return fmt.Errorf("repository client does not support configuring pull retries")
+	}
+	progressTransport, ok := client.Client.Transport.(*helpers.Transport)
+	if !ok {
+		return fmt.Errorf("repository transport does not support configuring pull retries")
+	}
+	client.Client.Transport = &orasRetry.Transport{
+		Base: progressTransport.Base,
+		Policy: func() orasRetry.Policy {
+			return newPullRetryPolicy(remote.Repo().Reference.String(), retries, remote.Log())
+		},
+	}
+	return nil
 }
 
 // transportForProbe returns a copy of transport with the same TLS verification
