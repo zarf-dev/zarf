@@ -34,11 +34,6 @@ func ReadBundleInfo(bundlePath string) (BundleInfo, error) {
 	if err != nil {
 		return BundleInfo{}, fmt.Errorf("loading bundle: %w", err)
 	}
-	return BundleInfoFromBundle(b)
-}
-
-// BundleInfoFromBundle extracts signing metadata from a parsed Sigstore bundle.
-func BundleInfoFromBundle(b *bundle.Bundle) (BundleInfo, error) {
 	timestamps, err := b.Timestamps()
 	if err != nil {
 		return BundleInfo{}, fmt.Errorf("reading bundle timestamps: %w", err)
