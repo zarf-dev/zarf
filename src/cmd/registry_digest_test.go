@@ -142,10 +142,6 @@ func TestResolveDigestUsesKnownPlainHTTP(t *testing.T) {
 	_, err = oras.Tag(ctx, seedRepo, desc.Digest.String(), "1.0.0")
 	require.NoError(t, err)
 
-	// This registry only speaks plain HTTP. Deliberately claim the opposite (known HTTPS) and
-	// expect a failure: if resolveDigest instead fell through to probing the (local) host
-	// itself, that probe would correctly detect plain HTTP and the call would succeed despite
-	// the wrong known value. Failing here proves the known value is what actually gets used.
 	conn := registryConnection{
 		ref:            imageRef,
 		client:         &auth.Client{Client: http.DefaultClient},

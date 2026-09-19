@@ -45,12 +45,6 @@ func newRegistryListCommand() *cobra.Command {
 	return cmd
 }
 
-// normalizeRepoRef expands short Docker Hub names the same way `docker pull`/Crane do (e.g.
-// "stefanprodan/podinfo" -> "docker.io/stefanprodan/podinfo", "alpine" -> "docker.io/library/alpine"),
-// while leaving references that already specify a registry (including Zarf's own, e.g.
-// "127.0.0.1:31999/...") unchanged. A tag or digest is rejected: this command lists all tags
-// for a repo, so a caller including one is likely expecting it to scope the results somehow,
-// which it doesn't.
 func normalizeRepoRef(repoRef string) (string, error) {
 	named, err := reference.ParseNormalizedNamed(repoRef)
 	if err != nil {
