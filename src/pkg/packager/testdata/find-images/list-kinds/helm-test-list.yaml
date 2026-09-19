@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: helm-test-in-list
+      annotations:
+        helm.sh/hook: test
+    spec:
+      template:
+        spec:
+          containers:
+            - name: t
+              image: docker.io/library/busybox:1.36

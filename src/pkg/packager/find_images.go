@@ -301,6 +301,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 			if err != nil {
 				return nil, err
 			}
+			yamls = flattenListResources(yamls)
 			yamls = slices.DeleteFunc(yamls, isHelmTestResource)
 			resources = append(resources, yamls...)
 			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
@@ -345,6 +346,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 				if err != nil {
 					return nil, err
 				}
+				yamls = flattenListResources(yamls)
 				yamls = slices.DeleteFunc(yamls, isHelmTestResource)
 				resources = append(resources, yamls...)
 
@@ -473,6 +475,40 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 	}
 
 	return componentImageScans, nil
+}
+
+// flattenListResources replaces every list document with the resources it holds, so everything
+// downstream sees one resource per document. A wrapper has its own kind and none of the annotations
+// of what it holds, so a workload inside one is never read as one, nor a helm test filtered out.
+//
+// A document that only looks like a list is scanned as the one document it is: IsList reports an
+// items array and nothing more, and a custom resource may keep anything there.
+func flattenListResources(resources []*unstructured.Unstructured) []*unstructured.Unstructured {
+	flattened := make([]*unstructured.Unstructured, 0, len(resources))
+	for _, resource := range resources {
+		// IsList is the check helm's resource builder uses to decide what to flatten, so zarf and
+		// helm agree on which documents hold more than one resource
+		if !resource.IsList() {
+			flattened = append(flattened, resource)
+			continue
+		}
+		var items []*unstructured.Unstructured
+		err := resource.EachListItem(func(item runtime.Object) error {
+			child, ok := item.(*unstructured.Unstructured)
+			if !ok {
+				return fmt.Errorf("unexpected item of type %T in %s", item, resource.GetKind())
+			}
+			items = append(items, child)
+			return nil
+		})
+		if err != nil {
+			flattened = append(flattened, resource)
+			continue
+		}
+		// an item can be a list of its own, so keep going until what is left is a resource
+		flattened = append(flattened, flattenListResources(items)...)
+	}
+	return flattened
 }
 
 func isHelmTestResource(resource *unstructured.Unstructured) bool {
