@@ -21,18 +21,6 @@ const (
 	ZarfInitConfig PackageKind = "ZarfInitConfig"
 	// ZarfPackageConfig is the default package kind.
 	ZarfPackageConfig PackageKind = "ZarfPackageConfig"
-	// FIXME: perhaps some of these should stay as v1alpha1 constructs
-
-	// SkeletonArch is the special architecture used for skeleton packages.
-	SkeletonArch = "skeleton"
-	// PackageTemplatePrefix marks a legacy package template placeholder.
-	PackageTemplatePrefix = "###ZARF_PKG_TMPL_"
-	// PackageVariablePrefix marks a legacy package variable placeholder.
-	PackageVariablePrefix = "###ZARF_PKG_VAR_"
-	// PackageArch is the legacy template placeholder for package architecture.
-	PackageArch = "###ZARF_PKG_ARCH###"
-	// ComponentName is the template placeholder for a component's name.
-	ComponentName = "###ZARF_COMPONENT_NAME###"
 )
 
 // BuildTimestampFormat is the timestamp format used for package build metadata.

@@ -11,7 +11,7 @@ import (
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/xeipuuv/gojsonschema"
-	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/schema"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -119,12 +119,12 @@ func templateZarfObj(zarfObj any, setVariables map[string]string) error {
 		return nil
 	}
 
-	if err := setVars(api.PackageTemplatePrefix); err != nil {
+	if err := setVars(v1alpha1.ZarfPackageTemplatePrefix); err != nil {
 		return err
 	}
 
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
-	if err := setVars(api.PackageVariablePrefix); err != nil {
+	if err := setVars(v1alpha1.ZarfPackageVariablePrefix); err != nil {
 		return err
 	}
 

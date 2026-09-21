@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
@@ -18,8 +19,8 @@ import (
 func isPinnedImage(image string) (bool, error) {
 	transformedImage, err := transform.ParseImageRef(image)
 	if err != nil {
-		if strings.Contains(image, api.PackageTemplatePrefix) ||
-			strings.Contains(image, api.PackageVariablePrefix) {
+		if strings.Contains(image, v1alpha1.ZarfPackageTemplatePrefix) ||
+			strings.Contains(image, v1alpha1.ZarfPackageVariablePrefix) {
 			return true, nil
 		}
 		return false, err
@@ -41,8 +42,8 @@ func isCosignAttestation(image string) bool {
 // isTemplatedImage returns true if the image reference contains a Zarf template
 // or variable placeholder that has not yet been substituted.
 func isTemplatedImage(image string) bool {
-	return strings.Contains(image, api.PackageTemplatePrefix) ||
-		strings.Contains(image, api.PackageVariablePrefix)
+	return strings.Contains(image, v1alpha1.ZarfPackageTemplatePrefix) ||
+		strings.Contains(image, v1alpha1.ZarfPackageVariablePrefix)
 }
 
 // imageDomain returns the registry domain explicitly specified in the image

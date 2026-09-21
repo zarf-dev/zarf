@@ -251,7 +251,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, err
 	}
 	definition := resolvedPackage.Definition
-	definition.Metadata.Architecture = api.SkeletonArch
+	definition.Metadata.Architecture = v1alpha1.SkeletonArch
 
 	// Creating skeleton packages with the values feature is not yet supported
 	if len(definition.Values.Files) > 0 || resolvedPackage.ValuesSchema != nil {

@@ -14,7 +14,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
@@ -168,6 +168,6 @@ func GetOCICacheModifier(ctx context.Context, cachePath string) (oci.Modifier, e
 func PlatformForSkeleton() ocispec.Platform {
 	return ocispec.Platform{
 		OS:           oci.MultiOS,
-		Architecture: api.SkeletonArch,
+		Architecture: v1alpha1.SkeletonArch,
 	}
 }

@@ -337,16 +337,16 @@ func fillActiveTemplate(ctx context.Context, pkg api.Package, setVariables map[s
 		return api.Package{}, nil, err
 	}
 
-	if err := promptAndSetTemplate(api.PackageTemplatePrefix, false); err != nil {
+	if err := promptAndSetTemplate(v1alpha1.ZarfPackageTemplatePrefix, false); err != nil {
 		return api.Package{}, nil, err
 	}
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
-	if err := promptAndSetTemplate(api.PackageVariablePrefix, true); err != nil {
+	if err := promptAndSetTemplate(v1alpha1.ZarfPackageVariablePrefix, true); err != nil {
 		return api.Package{}, nil, err
 	}
 
 	// Add special variable for the current package architecture
-	templateMap[api.PackageArch] = pkg.Metadata.Architecture
+	templateMap[v1alpha1.ZarfPackageArch] = pkg.Metadata.Architecture
 
 	if err := utils.ReloadYamlTemplate(&pkg, templateMap); err != nil {
 		return api.Package{}, nil, err
@@ -359,7 +359,7 @@ func fillActiveTemplate(ctx context.Context, pkg api.Package, setVariables map[s
 // Any instance of ###ZARF_COMPONENT_NAME### within a component will be replaced with that components name
 func reloadComponentTemplate(component *api.Component) error {
 	mappings := map[string]string{}
-	mappings[api.ComponentName] = component.Name
+	mappings[v1alpha1.ZarfComponentName] = component.Name
 	err := utils.ReloadYamlTemplate(component, mappings)
 	if err != nil {
 		return err
