@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 const onlineRemoteName = "online-upstream"
@@ -23,4 +25,26 @@ func ParseRef(r string) plumbing.ReferenceName {
 	}
 	// Set the reference name to the provided ref.
 	return plumbing.ReferenceName(r)
+}
+
+// URLWithRef returns a Git URL that selects ref. A nil ref preserves url for
+// v1alpha1 repositories, which embed their reference in the URL.
+// FIXME: error when there is both a ref in the url and an actual ref
+func URLWithRef(url string, ref *api.GitRef) string {
+	if ref == nil {
+		return url
+	}
+	if baseURL, _, err := transform.GitURLSplitRef(url); err == nil {
+		url = baseURL
+	}
+	switch {
+	case ref.Tag != "":
+		return url + "@" + ref.Tag
+	case ref.Branch != "":
+		return url + "@refs/heads/" + ref.Branch
+	case ref.Commit != "":
+		return url + "@" + ref.Commit
+	default:
+		return url
+	}
 }

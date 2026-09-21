@@ -515,10 +515,10 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 
 	// Load all specified git repos.
 	for _, repository := range component.Repositories {
-		// Pull all the references if there is no `@` in the string.
-		_, err := git.Clone(ctx, filepath.Join(compBuildPath, string(layout.RepoComponentDir)), repository.URL, false)
+		repositoryURL := git.URLWithRef(repository.URL, repository.Ref)
+		_, err := git.Clone(ctx, filepath.Join(compBuildPath, string(layout.RepoComponentDir)), repositoryURL, false)
 		if err != nil {
-			return fmt.Errorf("unable to pull git repo %s: %w", repository.URL, err)
+			return fmt.Errorf("unable to pull git repo %s: %w", repositoryURL, err)
 		}
 	}
 

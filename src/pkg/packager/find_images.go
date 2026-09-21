@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -267,17 +268,25 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 
 		if opts.RepoHelmChartPath != "" {
 			// Also process git repos that have helm charts
+			// FIXME: confirm unit tests for his part
 			for idx, repo := range component.Repositories {
-				if repo.Ref == nil || repo.Ref.Tag == "" {
+				gitURL, gitRef := repo.URL, repo.Ref
+				if url, ref, err := transform.GitURLSplitRef(repo.URL); err == nil && ref != "" {
+					gitURL = url
+					if gitRef == nil && git.ParseRef(ref).IsTag() {
+						gitRef = &api.GitRef{Tag: strings.TrimPrefix(ref, "refs/tags/")}
+					}
+				}
+				if gitRef == nil || gitRef.Tag == "" {
 					return nil, fmt.Errorf("cannot convert the Git repository %s to a Helm chart without a version tag", repo.URL)
 				}
 				// If a repo helm chart path is specified,
 				component.Charts = append(component.Charts, api.Chart{
 					Name:    fmt.Sprintf("temp-git-chart-%d", idx),
-					Version: repo.Ref.Tag,
+					Version: gitRef.Tag,
 					Git: &api.GitSource{
-						URL:  repo.URL,
-						Ref:  repo.Ref,
+						URL:  gitURL,
+						Ref:  gitRef,
 						Path: strings.TrimPrefix(opts.RepoHelmChartPath, "/"),
 					},
 					// Trim the first char to match how the packager expects it, this is messy,need to clean up better

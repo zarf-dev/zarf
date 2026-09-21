@@ -105,7 +105,7 @@ func pushComponentReposToRegistry(ctx context.Context, component api.Component,
 	pkgLayout *layout.PackageLayout, gitInfo state.GitServerInfo, c *cluster.Cluster, retries int) (err error) {
 	l := logger.From(ctx)
 	for _, repo := range component.Repositories {
-		repoURL := repo.URL
+		repoURL := git.URLWithRef(repo.URL, repo.Ref)
 		tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
 			return err

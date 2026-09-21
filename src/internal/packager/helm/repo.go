@@ -262,7 +262,7 @@ func PackageChartFromGit(ctx context.Context, chart api.Chart, paths layout.Char
 	l.Info("processing Helm chart", "name", chart.Name)
 
 	// Retrieve the repo containing the chart
-	gitPath, err := DownloadChartFromGitToTemp(ctx, gitChartSourceURL(chart))
+	gitPath, err := DownloadChartFromGitToTemp(ctx, git.URLWithRef(chart.Git.URL, chart.Git.Ref))
 	if err != nil {
 		return err
 	}
@@ -275,28 +275,6 @@ func PackageChartFromGit(ctx context.Context, chart api.Chart, paths layout.Char
 	// Set the directory for the chart and package it
 	chart.Local = &api.LocalSource{Path: filepath.Join(gitPath, chart.GitPath())}
 	return PackageChartFromLocalFiles(ctx, chart, paths, cachePath, remoteOptions)
-}
-
-func gitChartSourceURL(chart api.Chart) string {
-	url := chart.SourceURL()
-	if chart.Git == nil {
-		return url
-	}
-	ref := ""
-	if chart.Git.Ref != nil {
-		switch {
-		case chart.Git.Ref.Tag != "":
-			ref = chart.Git.Ref.Tag
-		case chart.Git.Ref.Branch != "":
-			ref = chart.Git.Ref.Branch
-		case chart.Git.Ref.Commit != "":
-			ref = chart.Git.Ref.Commit
-		}
-	}
-	if ref == "" {
-		return url
-	}
-	return url + "@" + ref
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
@@ -462,6 +440,7 @@ func DownloadPublishedChart(ctx context.Context, chart api.Chart, paths layout.C
 }
 
 // DownloadChartFromGitToTemp downloads a chart from git into a temp directory
+// FIXME: perhaps the git package should take the api git construct
 func DownloadChartFromGitToTemp(ctx context.Context, url string) (string, error) {
 	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {

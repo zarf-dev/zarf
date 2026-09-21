@@ -747,19 +747,19 @@ func repositoriesFromGeneric(in []api.Repository) []v1beta1.Repository {
 	var out []v1beta1.Repository
 	for _, r := range in {
 		br := v1beta1.Repository{URL: r.URL}
+		var urlRef v1beta1.GitRef
+		if urlNoRef, refStr, err := transform.GitURLSplitRef(r.URL); err == nil && refStr != "" {
+			br.URL = urlNoRef
+			urlRef = classifyGitRef(refStr)
+		}
 		if r.Ref != nil {
 			br.Ref = &v1beta1.GitRef{
 				Tag:    r.Ref.Tag,
 				Branch: r.Ref.Branch,
 				Commit: r.Ref.Commit,
 			}
-		} else {
-			// v1alpha1 repos embed the ref in the URL; split it for v1beta1.
-			if urlNoRef, refStr, err := transform.GitURLSplitRef(r.URL); err == nil && refStr != "" {
-				br.URL = urlNoRef
-				ref := classifyGitRef(refStr)
-				br.Ref = &ref
-			}
+		} else if urlRef != (v1beta1.GitRef{}) {
+			br.Ref = &urlRef
 		}
 		out = append(out, br)
 	}
