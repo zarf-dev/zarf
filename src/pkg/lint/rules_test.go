@@ -12,12 +12,19 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 )
 
-// FIXME: no reason to make this file super hard to read
-
 func TestUnpinnedRepo(t *testing.T) {
 	t.Parallel()
+
 	unpinnedRepo := "https://github.com/zarf-dev/zarf-public-test.git"
-	component := api.Component{Repositories: []api.Repository{{URL: unpinnedRepo}, {URL: "https://dev.azure.com/zarf-dev/zarf-public-test/_git/zarf-public-test", Ref: &api.GitRef{Tag: "v0.0.1"}}}}
+	component := api.Component{
+		Repositories: []api.Repository{
+			{URL: unpinnedRepo},
+			{
+				URL: "https://dev.azure.com/zarf-dev/zarf-public-test/_git/zarf-public-test",
+				Ref: &api.GitRef{Tag: "v0.0.1"},
+			},
+		},
+	}
 	findings := checkForUnpinnedRepos(component, 0)
 	expected := []PackageFinding{
 		{
@@ -32,11 +39,20 @@ func TestUnpinnedRepo(t *testing.T) {
 
 func TestUnpinnedImageWarning(t *testing.T) {
 	t.Parallel()
+
 	unpinnedImage := "registry.com:9001/whatever/image:1.0.0"
 	badImage := "badimage:badimage@@sha256:3fbc632167424a6d997e74f5"
 	cosignSignature := "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig"
 	cosignAttestation := "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.att"
-	component := api.Component{Images: []api.Image{{Name: unpinnedImage}, {Name: "busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79"}, {Name: badImage}, {Name: cosignSignature}, {Name: cosignAttestation}}}
+	component := api.Component{
+		Images: []api.Image{
+			{Name: unpinnedImage},
+			{Name: "busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79"},
+			{Name: badImage},
+			{Name: cosignSignature},
+			{Name: cosignAttestation},
+		},
+	}
 	findings := checkForUnpinnedImages(component, 0)
 	expected := []PackageFinding{
 		{
@@ -57,6 +73,7 @@ func TestUnpinnedImageWarning(t *testing.T) {
 
 func TestUnpinnnedFileWarning(t *testing.T) {
 	t.Parallel()
+
 	fileURL := "http://example.com/file.zip"
 	localFile := "local.txt"
 	zarfFiles := []api.File{
@@ -87,7 +104,17 @@ func TestUnpinnnedFileWarning(t *testing.T) {
 
 func TestImagesWithoutDomain(t *testing.T) {
 	t.Parallel()
-	component := api.Component{Images: []api.Image{{Name: "myapp:1.0.0"}, {Name: "library/myapp:1.0.0"}, {Name: "docker.io/library/myapp:1.0.0"}, {Name: "ghcr.io/zarf-dev/zarf:v0.1.0"}, {Name: "localhost:5000/myapp:1.0.0"}, {Name: "###ZARF_PKG_TMPL_IMAGE###"}}}
+
+	component := api.Component{
+		Images: []api.Image{
+			{Name: "myapp:1.0.0"},
+			{Name: "library/myapp:1.0.0"},
+			{Name: "docker.io/library/myapp:1.0.0"},
+			{Name: "ghcr.io/zarf-dev/zarf:v0.1.0"},
+			{Name: "localhost:5000/myapp:1.0.0"},
+			{Name: "###ZARF_PKG_TMPL_IMAGE###"},
+		},
+	}
 	findings := checkForImagesWithoutDomain(component, 0)
 	expected := []PackageFinding{
 		{
@@ -108,18 +135,21 @@ func TestImagesWithoutDomain(t *testing.T) {
 
 func TestImageArchivesWithoutInternalDomain(t *testing.T) {
 	t.Parallel()
-	component := api.Component{ImageArchives: []api.ImageArchive{
-		{
-			Path: "images.tar",
-			Images: []string{
-				"zarf.internal/myapp:1.0.0",
-				"my.registry.internal:5000/myapp:1.0.0",
-				"myapp:1.0.0",
-				"docker.io/library/myapp:1.0.0",
-				"###ZARF_PKG_TMPL_IMAGE###",
+
+	component := api.Component{
+		ImageArchives: []api.ImageArchive{
+			{
+				Path: "images.tar",
+				Images: []string{
+					"zarf.internal/myapp:1.0.0",
+					"my.registry.internal:5000/myapp:1.0.0",
+					"myapp:1.0.0",
+					"docker.io/library/myapp:1.0.0",
+					"###ZARF_PKG_TMPL_IMAGE###",
+				},
 			},
 		},
-	}}
+	}
 	findings := checkForImageArchivesWithoutInternalDomain(component, 0)
 	expected := []PackageFinding{
 		{
