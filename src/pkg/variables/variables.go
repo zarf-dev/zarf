@@ -16,7 +16,6 @@ import (
 type SetVariableMap map[string]*SetVariable
 
 // SetVariable is the runtime value of a package variable.
-// / FIXME: Why do we need this type?
 type SetVariable struct {
 	api.Variable
 	Value string

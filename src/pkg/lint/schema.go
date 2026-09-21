@@ -108,7 +108,6 @@ func runSchema(jsonSchema []byte, pkg interface{}) ([]gojsonschema.ResultError, 
 	return nil, nil
 }
 
-// FIXME: this only needs to happen for v1alpha1
 func templateZarfObj(zarfObj any, setVariables map[string]string) error {
 	templateMap := map[string]string{}
 

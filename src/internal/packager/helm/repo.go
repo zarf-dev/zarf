@@ -247,9 +247,8 @@ func DownloadPublishedChart(ctx context.Context, chart api.Chart, paths layout.C
 	var username string
 	var password string
 
-	// Handle OCI registries
-	// FIXME: can use the presence of the oci field here
-	if registry.IsOCI(chart.SourceURL()) {
+	// Handle charts sourced directly from an OCI registry.
+	if chart.OCI != nil {
 		chartURL = chart.SourceURL()
 		// Explicitly set the pull version for OCI
 		pull.Version = chart.Version
