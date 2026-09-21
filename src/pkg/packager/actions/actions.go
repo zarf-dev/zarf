@@ -29,14 +29,22 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/wait"
 )
 
+// RunOptions configures optional action execution behavior.
+type RunOptions struct {
+	DefaultConfig  api.ActionDefaults
+	VariableConfig *variables.VariableConfig
+	Values         value.Values
+	StateAccess    template.StateAccess
+}
+
 // Run runs all provided actions.
-func Run(ctx context.Context, basePath string, defaultCfg api.ActionDefaults, actions []api.Action, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error {
-	if variableConfig == nil {
-		variableConfig = ptmpl.GetZarfVariableConfig(ctx, false)
+func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOptions) error {
+	if opts.VariableConfig == nil {
+		opts.VariableConfig = ptmpl.GetZarfVariableConfig(ctx, false)
 	}
 
 	for _, a := range actions {
-		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig, values, stateAccess); err != nil {
+		if err := runAction(ctx, basePath, opts.DefaultConfig, a, opts.VariableConfig, opts.Values, opts.StateAccess); err != nil {
 			return err
 		}
 	}
