@@ -56,6 +56,16 @@ func TestV1Alpha1ChartSourceCompatibility(t *testing.T) {
 	require.NoError(t, err)
 
 	gitURL, gitCommit := createLegacyChartGitRepository(t)
+	// v1alpha1 repositories embedded their checkout reference in the URL. The
+	// old CLI creates this package; the current CLI loads and deploys it.
+	repositories := []string{
+		gitURL,
+		gitURL + "@v1.0.0",
+		gitURL + "@+v1.0.0",
+		gitURL + "@refs/tags/v1.0.0",
+		gitURL + "@refs/heads/release",
+		gitURL + "@" + gitCommit,
+	}
 	charts := []v1alpha1.ZarfChart{
 		{Name: "local-versionless", Namespace: "legacy-local", LocalPath: "local-chart"},
 		{Name: "helm-renamed", Namespace: "legacy-helm", Version: "0.1.0", URL: helmRepositoryURL, RepoName: "helm-source"},
@@ -70,8 +80,7 @@ func TestV1Alpha1ChartSourceCompatibility(t *testing.T) {
 		{Name: "git-commit", Namespace: "legacy-git-commit", Version: "commit-layout", URL: gitURL + "@" + gitCommit, GitPath: "git-charts/commit"},
 		{Name: "git-root", Namespace: "legacy-git-root", Version: "root-layout", URL: gitURL + "@v1.0.0"},
 	}
-	writeLegacyChartPackageDefinition(t, packageDir, charts)
-	// FIXME: package remove is probably fine
+	writeLegacyChartPackageDefinition(t, packageDir, charts, repositories)
 	t.Cleanup(func() {
 		cleanupLegacyChartNamespaces(t, charts)
 	})
@@ -91,8 +100,19 @@ func TestV1Alpha1ChartSourceCompatibility(t *testing.T) {
 	require.NoError(t, err, stdout, stderr)
 
 	packagePath := filepath.Join(outputDir, fmt.Sprintf("zarf-package-legacy-chart-source-compatibility-%s-0.0.1.tar.zst", e2e.Arch))
+	deployed := false
+	t.Cleanup(func() {
+		if !deployed {
+			return
+		}
+		stdout, stderr, err := e2e.Zarf(t, "package", "remove", packagePath, "--confirm")
+		if err != nil {
+			t.Errorf("unable to remove legacy chart compatibility package: %s%s", stdout, stderr)
+		}
+	})
 	stdout, stderr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm")
 	require.NoError(t, err, stdout, stderr)
+	deployed = true
 
 	for _, chart := range charts {
 		stdout, stderr, err = e2e.Kubectl(t,
@@ -103,9 +123,6 @@ func TestV1Alpha1ChartSourceCompatibility(t *testing.T) {
 		require.NoError(t, err, stdout, stderr)
 		require.Equal(t, chart.Name, stdout, "chart %q selected the wrong source revision", chart.Name)
 	}
-
-	stdout, stderr, err = e2e.Zarf(t, "package", "remove", packagePath, "--confirm")
-	require.NoError(t, err, stdout, stderr)
 }
 
 func cleanupLegacyChartNamespaces(t *testing.T, charts []v1alpha1.ZarfChart) {
@@ -122,7 +139,7 @@ func cleanupLegacyChartNamespaces(t *testing.T, charts []v1alpha1.ZarfChart) {
 	}
 }
 
-func writeLegacyChartPackageDefinition(t *testing.T, packageDir string, charts []v1alpha1.ZarfChart) {
+func writeLegacyChartPackageDefinition(t *testing.T, packageDir string, charts []v1alpha1.ZarfChart, repositories []string) {
 	t.Helper()
 
 	required := true
@@ -133,6 +150,7 @@ func writeLegacyChartPackageDefinition(t *testing.T, packageDir string, charts [
 			Name:     "charts",
 			Required: &required,
 			Charts:   charts,
+			Repos:    repositories,
 		}},
 	}
 	require.NoError(t, utils.WriteYaml(filepath.Join(packageDir, "zarf.yaml"), pkg, 0o600))
