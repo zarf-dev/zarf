@@ -96,10 +96,16 @@
           "type": "object",
           "properties": {
             "memory": {
-              "type": "string"
+              "type": [
+                "string",
+                "number"
+              ]
             },
             "cpu": {
-              "type": "string"
+              "type": [
+                "string",
+                "number"
+              ]
             }
           }
         },
@@ -107,10 +113,16 @@
           "type": "object",
           "properties": {
             "memory": {
-              "type": "string"
+              "type": [
+                "string",
+                "number"
+              ]
             },
             "cpu": {
-              "type": "string"
+              "type": [
+                "string",
+                "number"
+              ]
             }
           }
         }
