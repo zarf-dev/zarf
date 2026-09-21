@@ -124,7 +124,6 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 	return defined, nil
 }
 
-// FIXME: there is no reason for this function to start being generic
 func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, rawPackage []byte, opts DefinitionOptions) (resolution, error) {
 	l := logger.From(ctx)
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)

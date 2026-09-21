@@ -746,7 +746,7 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 		return err
 	}
 
-	b, err := goyaml.MarshalWithOptions(convert.PackageToV1alpha1(pkg), goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
+	b, err := goyaml.MarshalWithOptions(pkg, goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
 	if err != nil {
 		return err
 	}

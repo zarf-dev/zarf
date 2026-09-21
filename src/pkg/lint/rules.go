@@ -13,8 +13,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
-// FIXME: the lint package should stay for v1alpha1
-
 func isPinnedImage(image string) (bool, error) {
 	transformedImage, err := transform.ParseImageRef(image)
 	if err != nil {
