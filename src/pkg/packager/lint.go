@@ -6,7 +6,10 @@ package packager
 import (
 	"context"
 	"errors"
+	"fmt"
 
+	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -49,7 +52,10 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) (err error)
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
-	pkg := loaded.Definition
+	if loaded.Definition.GetAPIVersion() != v1alpha1.APIVersion {
+		return fmt.Errorf("linting packages with apiVersion %q is not yet supported; only %s is supported", loaded.Definition.GetAPIVersion(), v1alpha1.APIVersion)
+	}
+	pkg := convert.PackageToV1alpha1(loaded.Definition)
 	findings := []lint.PackageFinding{}
 	for i, component := range pkg.Components {
 		findings = append(findings, lint.CheckComponentValues(component, i)...)

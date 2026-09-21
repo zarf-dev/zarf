@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
@@ -37,6 +36,10 @@ func isCosignSignature(image string) bool {
 
 func isCosignAttestation(image string) bool {
 	return strings.HasSuffix(image, ".att")
+}
+
+func isPinnedRepo(repo string) bool {
+	return strings.Contains(repo, "@")
 }
 
 // isTemplatedImage returns true if the image reference contains a Zarf template
@@ -76,7 +79,7 @@ func hasInternalDomain(image string) bool {
 }
 
 // CheckComponentValues runs lint rules validating values on component keys, should be run after templating
-func CheckComponentValues(c api.Component, i int) []PackageFinding {
+func CheckComponentValues(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
 	findings = append(findings, checkForUnpinnedRepos(c, i)...)
 	findings = append(findings, checkForUnpinnedImages(c, i)...)
@@ -86,15 +89,15 @@ func CheckComponentValues(c api.Component, i int) []PackageFinding {
 	return findings
 }
 
-func checkForUnpinnedRepos(c api.Component, i int) []PackageFinding {
+func checkForUnpinnedRepos(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
-	for j, repo := range c.Repositories {
+	for j, repo := range c.Repos {
 		repoYqPath := fmt.Sprintf(".components.[%d].repos.[%d]", i, j)
-		if repo.Ref == nil || (repo.Ref.Tag == "" && repo.Ref.Branch == "" && repo.Ref.Commit == "") {
+		if !isPinnedRepo(repo) {
 			findings = append(findings, PackageFinding{
 				YqPath:      repoYqPath,
 				Description: "Unpinned repository",
-				Item:        repo.URL,
+				Item:        repo,
 				Severity:    SevWarn,
 			})
 		}
@@ -102,16 +105,16 @@ func checkForUnpinnedRepos(c api.Component, i int) []PackageFinding {
 	return findings
 }
 
-func checkForUnpinnedImages(c api.Component, i int) []PackageFinding {
+func checkForUnpinnedImages(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
 	for j, image := range c.Images {
 		imageYqPath := fmt.Sprintf(".components.[%d].images.[%d]", i, j)
-		pinnedImage, err := isPinnedImage(image.Name)
+		pinnedImage, err := isPinnedImage(image)
 		if err != nil {
 			findings = append(findings, PackageFinding{
 				YqPath:      imageYqPath,
 				Description: "Failed to parse image reference",
-				Item:        image.Name,
+				Item:        image,
 				Severity:    SevWarn,
 			})
 			continue
@@ -120,7 +123,7 @@ func checkForUnpinnedImages(c api.Component, i int) []PackageFinding {
 			findings = append(findings, PackageFinding{
 				YqPath:      imageYqPath,
 				Description: "Image not pinned with digest",
-				Item:        image.Name,
+				Item:        image,
 				Severity:    SevWarn,
 			})
 		}
@@ -128,17 +131,17 @@ func checkForUnpinnedImages(c api.Component, i int) []PackageFinding {
 	return findings
 }
 
-func checkForImagesWithoutDomain(c api.Component, i int) []PackageFinding {
+func checkForImagesWithoutDomain(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
 	for j, image := range c.Images {
-		if isTemplatedImage(image.Name) {
+		if isTemplatedImage(image) {
 			continue
 		}
-		if imageDomain(image.Name) == "" {
+		if imageDomain(image) == "" {
 			findings = append(findings, PackageFinding{
 				YqPath:      fmt.Sprintf(".components.[%d].images.[%d]", i, j),
 				Description: "Image reference does not specify a registry domain",
-				Item:        image.Name,
+				Item:        image,
 				Severity:    SevWarn,
 			})
 		}
@@ -146,7 +149,7 @@ func checkForImagesWithoutDomain(c api.Component, i int) []PackageFinding {
 	return findings
 }
 
-func checkForImageArchivesWithoutInternalDomain(c api.Component, i int) []PackageFinding {
+func checkForImageArchivesWithoutInternalDomain(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
 	for j, archive := range c.ImageArchives {
 		for k, image := range archive.Images {
@@ -166,11 +169,11 @@ func checkForImageArchivesWithoutInternalDomain(c api.Component, i int) []Packag
 	return findings
 }
 
-func checkForUnpinnedFiles(c api.Component, i int) []PackageFinding {
+func checkForUnpinnedFiles(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
 	for j, file := range c.Files {
 		fileYqPath := fmt.Sprintf(".components.[%d].files.[%d]", i, j)
-		if file.Checksum == "" && helpers.IsURL(file.Source) {
+		if file.Shasum == "" && helpers.IsURL(file.Source) {
 			findings = append(findings, PackageFinding{
 				YqPath:      fileYqPath,
 				Description: "No shasum for remote file",
