@@ -262,7 +262,7 @@ func PackageChartFromGit(ctx context.Context, chart api.Chart, paths layout.Char
 	l.Info("processing Helm chart", "name", chart.Name)
 
 	// Retrieve the repo containing the chart
-	gitPath, err := DownloadChartFromGitToTemp(ctx, git.URLWithRef(chart.Git.URL, chart.Git.Ref))
+	gitPath, err := DownloadChartFromGitToTemp(ctx, api.Repository{URL: chart.Git.URL, Ref: chart.Git.Ref})
 	if err != nil {
 		return err
 	}
@@ -439,14 +439,13 @@ func DownloadPublishedChart(ctx context.Context, chart api.Chart, paths layout.C
 	return nil
 }
 
-// DownloadChartFromGitToTemp downloads a chart from git into a temp directory
-// FIXME: perhaps the git package should take the api git construct
-func DownloadChartFromGitToTemp(ctx context.Context, url string) (string, error) {
+// DownloadChartFromGitToTemp downloads a chart from a Git repository into a temp directory.
+func DownloadChartFromGitToTemp(ctx context.Context, source api.Repository) (string, error) {
 	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return "", fmt.Errorf("unable to create tmpdir: %w", err)
 	}
-	repository, err := git.Clone(ctx, path, url, true)
+	repository, err := git.Clone(ctx, path, source, true)
 	if err != nil {
 		return "", err
 	}

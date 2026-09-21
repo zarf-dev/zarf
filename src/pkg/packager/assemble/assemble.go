@@ -515,10 +515,9 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 
 	// Load all specified git repos.
 	for _, repository := range component.Repositories {
-		repositoryURL := git.URLWithRef(repository.URL, repository.Ref)
-		_, err := git.Clone(ctx, filepath.Join(compBuildPath, string(layout.RepoComponentDir)), repositoryURL, false)
+		_, err := git.Clone(ctx, filepath.Join(compBuildPath, string(layout.RepoComponentDir)), repository, false)
 		if err != nil {
-			return fmt.Errorf("unable to pull git repo %s: %w", repositoryURL, err)
+			return fmt.Errorf("unable to pull git repo %s: %w", repository.URL, err)
 		}
 	}
 

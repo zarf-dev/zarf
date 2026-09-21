@@ -241,7 +241,7 @@ type OCISource struct {
 	Ref *OCIRef
 }
 
-// Repository defines a git repository.
+// Repository defines a Git repository and the optional reference to retrieve.
 type Repository struct {
 	URL string
 	Ref *GitRef

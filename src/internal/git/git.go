@@ -27,24 +27,28 @@ func ParseRef(r string) plumbing.ReferenceName {
 	return plumbing.ReferenceName(r)
 }
 
-// URLWithRef returns a Git URL that selects ref. A nil ref preserves url for
-// v1alpha1 repositories, which embed their reference in the URL.
-// FIXME: error when there is both a ref in the url and an actual ref
-func URLWithRef(url string, ref *api.GitRef) string {
-	if ref == nil {
-		return url
+// repositoryAddress returns a Git URL that selects the repository reference.
+// If the URL has a builtin ref then
+// FIXME: need to add validation to v1beta1 so that it can't create a url with a builtin ref
+func repositoryAddress(repository api.Repository) (string, error) {
+	if repository.Ref == nil {
+		return repository.URL, nil
 	}
-	if baseURL, _, err := transform.GitURLSplitRef(url); err == nil {
-		url = baseURL
+	url, urlRef, err := transform.GitURLSplitRef(repository.URL)
+	if err != nil {
+		return "", err
+	}
+	if urlRef != "" {
+		return "", fmt.Errorf("git repository %q defines a ref in both its URL and ref field", repository.URL)
 	}
 	switch {
-	case ref.Tag != "":
-		return url + "@" + ref.Tag
-	case ref.Branch != "":
-		return url + "@refs/heads/" + ref.Branch
-	case ref.Commit != "":
-		return url + "@" + ref.Commit
+	case repository.Ref.Tag != "":
+		return url + "@" + repository.Ref.Tag, nil
+	case repository.Ref.Branch != "":
+		return url + "@refs/heads/" + repository.Ref.Branch, nil
+	case repository.Ref.Commit != "":
+		return url + "@" + repository.Ref.Commit, nil
 	default:
-		return url
+		return url, nil
 	}
 }

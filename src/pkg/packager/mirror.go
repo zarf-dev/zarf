@@ -105,7 +105,6 @@ func pushComponentReposToRegistry(ctx context.Context, component api.Component,
 	pkgLayout *layout.PackageLayout, gitInfo state.GitServerInfo, c *cluster.Cluster, retries int) (err error) {
 	l := logger.From(ctx)
 	for _, repo := range component.Repositories {
-		repoURL := git.URLWithRef(repo.URL, repo.Ref)
 		tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
 			return err
@@ -117,13 +116,13 @@ func pushComponentReposToRegistry(ctx context.Context, component api.Component,
 		if err != nil {
 			return err
 		}
-		repository, err := git.Open(reposPath, repoURL)
+		repository, err := git.Open(reposPath, repo)
 		if err != nil {
 			return err
 		}
 		err = retry.Do(func() error {
 			if !dns.IsServiceURL(gitInfo.Address) {
-				l.Info("pushing repository to server", "repo", repoURL, "server", gitInfo.Address)
+				l.Info("pushing repository to server", "repo", repo.URL, "server", gitInfo.Address)
 				err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword)
 				if err != nil {
 					return err
@@ -157,14 +156,14 @@ func pushComponentReposToRegistry(ctx context.Context, component api.Component,
 				return err
 			}
 			return tunnel.Wrap(func() error {
-				l.Info("pushing repository to server", "repo", repoURL, "server", endpoints[0])
+				l.Info("pushing repository to server", "repo", repo.URL, "server", endpoints[0])
 				err = repository.Push(ctx, endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword)
 				if err != nil {
 					return err
 				}
 				// Add the read-only user to this repo
 				// TODO: This should not be done here. Or the function name should be changed.
-				repoName, err := transform.GitURLtoRepoName(repoURL)
+				repoName, err := transform.GitURLtoRepoName(repo.URL)
 				if err != nil {
 					return retry.Unrecoverable(err)
 				}
@@ -176,7 +175,7 @@ func pushComponentReposToRegistry(ctx context.Context, component api.Component,
 			})
 		}, retry.Context(ctx), retry.Attempts(uint(retries)), retry.Delay(500*time.Millisecond))
 		if err != nil {
-			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
+			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repo.URL, err)
 		}
 	}
 	return nil

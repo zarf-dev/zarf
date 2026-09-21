@@ -18,13 +18,18 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // Open opens an existing local repository at the given path.
-func Open(rootPath, address string) (*Repository, error) {
+func Open(rootPath string, source api.Repository) (*Repository, error) {
+	address, err := repositoryAddress(source)
+	if err != nil {
+		return nil, err
+	}
 	repoFolder, err := transform.GitURLtoFolderName(address)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse git url %s: %w", address, err)
@@ -50,8 +55,12 @@ func Open(rootPath, address string) (*Repository, error) {
 }
 
 // Clone clones a git repository to the given local path.
-func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Repository, error) {
+func Clone(ctx context.Context, rootPath string, source api.Repository, shallow bool) (*Repository, error) {
 	l := logger.From(ctx)
+	address, err := repositoryAddress(source)
+	if err != nil {
+		return nil, err
+	}
 	// Split the remote url and the zarf reference
 	gitURLNoRef, refPlain, err := transform.GitURLSplitRef(address)
 	if err != nil {
