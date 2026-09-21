@@ -58,7 +58,9 @@ func TestV1Alpha1ChartSourceCompatibility(t *testing.T) {
 		{Name: "oci-tag", Namespace: "legacy-oci-tag", Version: "0.1.0", URL: fmt.Sprintf("oci://%s/charts/oci-tag-source", registryAddress)},
 		{Name: "oci-digest", Namespace: "legacy-oci-digest", Version: "digest-layout", URL: fmt.Sprintf("oci://%s/charts/oci-digest-source@%s", registryAddress, ociDigest.Manifest.Digest)},
 		{Name: "git-version-tag", Namespace: "legacy-git-version", Version: "v1.0.0", URL: gitURL, GitPath: "git-charts/version-tag"},
+		{Name: "git-version-commit", Namespace: "legacy-git-version-commit", Version: gitCommit, URL: gitURL, GitPath: "git-charts/version-commit"},
 		{Name: "git-inline-tag", Namespace: "legacy-git-inline-tag", Version: "inline-tag-layout", URL: gitURL + "@v1.0.0", GitPath: "git-charts/inline-tag"},
+		{Name: "git-inline-force-tag", Namespace: "legacy-git-inline-force-tag", Version: "inline-force-tag-layout", URL: gitURL + "@+v1.0.0", GitPath: "git-charts/inline-force-tag"},
 		{Name: "git-refspec-tag", Namespace: "legacy-git-refspec-tag", Version: "refspec-tag-layout", URL: gitURL + "@refs/tags/v1.0.0", GitPath: "git-charts/refspec-tag"},
 		{Name: "git-branch", Namespace: "legacy-git-branch", Version: "branch-layout", URL: gitURL + "@refs/heads/release", GitPath: "git-charts/branch"},
 		{Name: "git-commit", Namespace: "legacy-git-commit", Version: "commit-layout", URL: gitURL + "@" + gitCommit, GitPath: "git-charts/commit"},
@@ -207,7 +209,9 @@ func createLegacyChartGitRepository(t *testing.T) (string, string) {
 
 	writeLegacyConfigMapChart(t, workingDirectory, "git-root", "git-root-config", "git-root")
 	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "version-tag"), "git-version-tag", "git-version-tag-config", "git-version-tag")
+	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "version-commit"), "git-version-commit", "git-version-commit-config", "git-version-commit-initial")
 	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "inline-tag"), "git-inline-tag", "git-inline-tag-config", "git-inline-tag")
+	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "inline-force-tag"), "git-inline-force-tag", "git-inline-force-tag-config", "git-inline-force-tag")
 	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "refspec-tag"), "git-refspec-tag", "git-refspec-tag-config", "git-refspec-tag")
 	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "commit"), "git-commit", "git-commit-config", "git-commit-initial")
 	runLegacyChartGit(t, "-C", workingDirectory, "add", ".")
@@ -222,6 +226,7 @@ func createLegacyChartGitRepository(t *testing.T) (string, string) {
 
 	runLegacyChartGit(t, "-C", workingDirectory, "checkout", "main")
 	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "commit"), "git-commit", "git-commit-config", "git-commit")
+	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "version-commit"), "git-version-commit", "git-version-commit-config", "git-version-commit")
 	runLegacyChartGit(t, "-C", workingDirectory, "add", ".")
 	runLegacyChartGit(t, "-C", workingDirectory, "commit", "-m", "commit chart")
 	commit := strings.TrimSpace(runLegacyChartGit(t, "-C", workingDirectory, "rev-parse", "HEAD"))

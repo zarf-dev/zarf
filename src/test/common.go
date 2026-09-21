@@ -88,6 +88,7 @@ func (e2e *ZarfE2ETest) GetZarfAtVersion(t *testing.T, version string) string {
 	defer func() {
 		require.NoError(t, resp.Body.Close())
 	}()
+	require.Equalf(t, http.StatusOK, resp.StatusCode, "unable to download Zarf %s: %s", version, resp.Status)
 
 	tmpFile, err := os.CreateTemp(t.TempDir(), "zarf-*")
 	require.NoError(t, err)
