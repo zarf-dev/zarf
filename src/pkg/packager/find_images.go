@@ -268,7 +268,6 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 
 		if opts.RepoHelmChartPath != "" {
 			// Also process git repos that have helm charts
-			// FIXME: confirm unit tests for his part
 			for idx, repo := range component.Repositories {
 				gitURL, gitRef := repo.URL, repo.Ref
 				if url, ref, err := transform.GitURLSplitRef(repo.URL); err == nil && ref != "" {
@@ -277,7 +276,7 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 						gitRef = &api.GitRef{Tag: strings.TrimPrefix(ref, "refs/tags/")}
 					}
 				}
-				if gitRef == nil || gitRef.Tag == "" {
+				if gitRef == nil {
 					return nil, fmt.Errorf("cannot convert the Git repository %s to a Helm chart without a version tag", repo.URL)
 				}
 				// If a repo helm chart path is specified,

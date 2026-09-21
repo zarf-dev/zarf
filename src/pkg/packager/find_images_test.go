@@ -4,8 +4,15 @@
 package packager
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
@@ -277,6 +284,78 @@ func TestFindImages(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFindImagesFromRepositoryHelmChartWithBranchRef(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	repoURL := createRepositoryHelmChart(t)
+	packageDir := t.TempDir()
+	packageDefinition := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: repository-chart
+components:
+  - name: baseline
+    repositories:
+      - url: %s
+        ref:
+          branch: main
+`, repoURL)
+	require.NoError(t, os.WriteFile(filepath.Join(packageDir, "zarf.yaml"), []byte(packageDefinition), 0o600))
+
+	images, err := FindImages(ctx, packageDir, FindImagesOptions{
+		RepoHelmChartPath: "/",
+		SkipCosign:        true,
+	})
+	require.NoError(t, err)
+	require.Equal(t, []ComponentImageScan{{
+		ComponentName: "baseline",
+		Matches:       []string{"docker.io/library/nginx:1.25.0"},
+	}}, images)
+}
+
+func createRepositoryHelmChart(t *testing.T) string {
+	t.Helper()
+
+	repositoryDir := t.TempDir()
+	repository, err := git.PlainInitWithOptions(repositoryDir, &git.PlainInitOptions{
+		InitOptions: git.InitOptions{DefaultBranch: plumbing.Main},
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, os.MkdirAll(filepath.Join(repositoryDir, "templates"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(repositoryDir, "Chart.yaml"), []byte("apiVersion: v2\nname: repository-chart\nversion: 0.1.0\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(repositoryDir, "templates", "deployment.yaml"), []byte(`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: repository-chart
+spec:
+  selector:
+    matchLabels:
+      app: repository-chart
+  template:
+    metadata:
+      labels:
+        app: repository-chart
+    spec:
+      containers:
+        - name: app
+          image: nginx:1.25.0
+`), 0o600))
+
+	worktree, err := repository.Worktree()
+	require.NoError(t, err)
+	require.NoError(t, worktree.AddGlob("."))
+	_, err = worktree.Commit("add chart", &git.CommitOptions{Author: &object.Signature{
+		Name:  "Zarf Test",
+		Email: "zarf@example.com",
+		When:  time.Unix(0, 0),
+	}})
+	require.NoError(t, err)
+
+	return "file://" + repositoryDir
 }
 
 func TestFindDefinitionImages(t *testing.T) {
