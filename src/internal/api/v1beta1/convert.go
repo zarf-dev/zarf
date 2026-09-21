@@ -552,14 +552,10 @@ func chartFromGeneric(ch api.Chart) v1beta1.Chart {
 			Version: ch.HelmRepository.Version,
 		}
 	case ch.Git != nil:
-		ref := gitRefFromGeneric(ch.Git.Ref)
-		if ref == (v1beta1.GitRef{}) && ch.Version != "" {
-			ref = classifyGitRef(ch.Version)
-		}
 		bc.Git = &v1beta1.GitSource{
 			URL:  ch.Git.URL,
 			Path: ch.Git.Path,
-			Ref:  ref,
+			Ref:  gitRefFromGeneric(ch.Git.Ref),
 		}
 	case ch.Local != nil:
 		bc.Local = &v1beta1.LocalSource{Path: ch.Local.Path}

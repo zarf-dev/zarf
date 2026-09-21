@@ -535,7 +535,7 @@ func TestV1Alpha1ChartOperationalRoundTrip(t *testing.T) {
 				Name: "git", URL: "https://github.com/example/chart.git", GitPath: "charts/app", Version: "v1.2.3",
 			},
 			want: v1alpha1.ZarfChart{
-				Name: "git", URL: "https://github.com/example/chart.git", GitPath: "charts/app", Version: "v1.2.3",
+				Name: "git", URL: "https://github.com/example/chart.git@v1.2.3", GitPath: "charts/app", Version: "v1.2.3",
 			},
 		},
 		{
@@ -544,7 +544,7 @@ func TestV1Alpha1ChartOperationalRoundTrip(t *testing.T) {
 				Name: "git", URL: "https://github.com/example/chart.git", Version: "v1.2.3",
 			},
 			want: v1alpha1.ZarfChart{
-				Name: "git", URL: "https://github.com/example/chart.git", Version: "v1.2.3",
+				Name: "git", URL: "https://github.com/example/chart.git@v1.2.3", Version: "v1.2.3",
 			},
 		},
 		{

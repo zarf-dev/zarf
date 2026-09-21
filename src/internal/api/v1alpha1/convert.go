@@ -182,6 +182,12 @@ func chartSourceToGeneric(chart *api.Chart, source v1alpha1.ZarfChart) {
 			gitURL = url
 			ref = parsedRef
 		}
+		// In v1alpha1, Version selected the Git checkout when the URL did not
+		// include an explicit @ref. Project that legacy behavior into the
+		// structured source so package operations only need Git.Ref.
+		if ref == "" {
+			ref = source.Version
+		}
 		chart.Git = &api.GitSource{
 			URL:  gitURL,
 			Path: source.GitPath,
@@ -595,8 +601,9 @@ func chartFromGeneric(ch api.Chart) v1alpha1.ZarfChart {
 			gitURL = urlNoRef
 		}
 		ref := flattenGitRef(ch.Git.Ref)
-		// Git.Ref records a ref authored inline in a v1alpha1 URL. Version remains separate
-		// because PackageChart uses it as the fallback checkout ref and archive identifier.
+		// The normalized model does not retain whether a v1alpha1 Git ref came
+		// from an inline URL or Version. Canonicalize it as an inline URL ref;
+		// Version remains the package layout identifier.
 		if ref != "" {
 			ac.URL = gitURL + "@" + ref
 		} else {
