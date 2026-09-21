@@ -27,14 +27,13 @@ import (
 	"helm.sh/helm/v4/pkg/registry"
 )
 
-const legacyChartCompatibilityVersion = "v0.85.0"
+const legacyV1Alpha1CompatibilityVersion = "v0.85.0"
 
-// TestV1Alpha1ChartSourceCompatibility verifies that a package assembled by a
-// released v1alpha1 CLI remains deployable by the current CLI. Each chart only
-// creates a ConfigMap so source selection, package layout, and deployment are
-// the variables under test.
-func TestV1Alpha1ChartSourceCompatibility(t *testing.T) {
-	t.Log("E2E: v1alpha1 chart source compatibility")
+// TestV1Alpha1PackageCompatibility verifies that a package assembled by a
+// released v1alpha1 CLI remains deployable by the current CLI. The package
+// exercises chart source selection and manifest deployment independently.
+func TestV1Alpha1PackageCompatibility(t *testing.T) {
+	t.Log("E2E: v1alpha1 package compatibility")
 
 	packageDir := t.TempDir()
 	localChartDir := filepath.Join(packageDir, "local-chart")
@@ -80,12 +79,14 @@ func TestV1Alpha1ChartSourceCompatibility(t *testing.T) {
 		{Name: "git-commit", Namespace: "legacy-git-commit", Version: "commit-layout", URL: gitURL + "@" + gitCommit, GitPath: "git-charts/commit"},
 		{Name: "git-root", Namespace: "legacy-git-root", Version: "root-layout", URL: gitURL + "@v1.0.0"},
 	}
-	writeLegacyChartPackageDefinition(t, packageDir, charts, repositories)
+	manifestNamespace := "legacy-manifest"
+	writeLegacyManifest(t, packageDir)
+	writeLegacyPackageDefinition(t, packageDir, charts, repositories, manifestNamespace)
 	t.Cleanup(func() {
-		cleanupLegacyChartNamespaces(t, charts)
+		cleanupLegacyNamespaces(t, charts, manifestNamespace)
 	})
 
-	legacyBinary := e2e.GetZarfAtVersion(t, legacyChartCompatibilityVersion)
+	legacyBinary := e2e.GetZarfAtVersion(t, legacyV1Alpha1CompatibilityVersion)
 	outputDir := t.TempDir()
 	legacyTmpDir := t.TempDir()
 	stdout, stderr, err := exec.CmdWithTesting(t, exec.Config{}, legacyBinary,
@@ -99,7 +100,7 @@ func TestV1Alpha1ChartSourceCompatibility(t *testing.T) {
 	)
 	require.NoError(t, err, stdout, stderr)
 
-	packagePath := filepath.Join(outputDir, fmt.Sprintf("zarf-package-legacy-chart-source-compatibility-%s-0.0.1.tar.zst", e2e.Arch))
+	packagePath := filepath.Join(outputDir, fmt.Sprintf("zarf-package-legacy-v1alpha1-package-compatibility-%s-0.0.1.tar.zst", e2e.Arch))
 	deployed := false
 	t.Cleanup(func() {
 		if !deployed {
@@ -107,7 +108,7 @@ func TestV1Alpha1ChartSourceCompatibility(t *testing.T) {
 		}
 		stdout, stderr, err := e2e.Zarf(t, "package", "remove", packagePath, "--confirm")
 		if err != nil {
-			t.Errorf("unable to remove legacy chart compatibility package: %s%s", stdout, stderr)
+			t.Errorf("unable to remove legacy package compatibility package: %s%s", stdout, stderr)
 		}
 	})
 	stdout, stderr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm")
@@ -123,37 +124,66 @@ func TestV1Alpha1ChartSourceCompatibility(t *testing.T) {
 		require.NoError(t, err, stdout, stderr)
 		require.Equal(t, chart.Name, stdout, "chart %q selected the wrong source revision", chart.Name)
 	}
+
+	stdout, stderr, err = e2e.Kubectl(t,
+		"get", "configmap", "legacy-manifest-config",
+		"--namespace", manifestNamespace,
+		"--output", "jsonpath={.data.source}",
+	)
+	require.NoError(t, err, stdout, stderr)
+	require.Equal(t, "legacy-manifest", stdout)
 }
 
-func cleanupLegacyChartNamespaces(t *testing.T, charts []v1alpha1.ZarfChart) {
+func cleanupLegacyNamespaces(t *testing.T, charts []v1alpha1.ZarfChart, manifestNamespace string) {
 	t.Helper()
 
 	args := []string{"delete", "namespace"}
 	for _, chart := range charts {
 		args = append(args, chart.Namespace)
 	}
+	args = append(args, manifestNamespace)
 	args = append(args, "--ignore-not-found", "--wait=false")
 	stdout, stderr, err := e2e.Kubectl(t, args...)
 	if err != nil {
-		t.Errorf("unable to remove legacy chart test namespaces: %s%s", stdout, stderr)
+		t.Errorf("unable to remove legacy package test namespaces: %s%s", stdout, stderr)
 	}
 }
 
-func writeLegacyChartPackageDefinition(t *testing.T, packageDir string, charts []v1alpha1.ZarfChart, repositories []string) {
+func writeLegacyPackageDefinition(t *testing.T, packageDir string, charts []v1alpha1.ZarfChart, repositories []string, manifestNamespace string) {
 	t.Helper()
 
 	required := true
 	pkg := v1alpha1.ZarfPackage{
 		Kind:     v1alpha1.ZarfPackageConfig,
-		Metadata: v1alpha1.ZarfMetadata{Name: "legacy-chart-source-compatibility", Version: "0.0.1"},
+		Metadata: v1alpha1.ZarfMetadata{Name: "legacy-v1alpha1-package-compatibility", Version: "0.0.1"},
 		Components: []v1alpha1.ZarfComponent{{
 			Name:     "charts",
 			Required: &required,
 			Charts:   charts,
 			Repos:    repositories,
+			Manifests: []v1alpha1.ZarfManifest{{
+				Name:      "legacy-manifest",
+				Namespace: manifestNamespace,
+				Files:     []string{"manifests/legacy-manifest.yaml"},
+			}},
 		}},
 	}
 	require.NoError(t, utils.WriteYaml(filepath.Join(packageDir, "zarf.yaml"), pkg, 0o600))
+}
+
+func writeLegacyManifest(t *testing.T, packageDir string) {
+	t.Helper()
+
+	manifestDir := filepath.Join(packageDir, "manifests")
+	require.NoError(t, os.MkdirAll(manifestDir, 0o700))
+	manifest := `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: legacy-manifest-config
+data:
+  source: legacy-manifest
+`
+	require.NoError(t, os.WriteFile(filepath.Join(manifestDir, "legacy-manifest.yaml"), []byte(manifest), 0o600))
 }
 
 func writeLegacyConfigMapChart(t *testing.T, chartDir, chartName, configMapName, marker string) {

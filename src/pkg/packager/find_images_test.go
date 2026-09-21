@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -355,7 +356,11 @@ spec:
 	}})
 	require.NoError(t, err)
 
-	return "file://" + repositoryDir
+	repositoryURLPath := filepath.ToSlash(repositoryDir)
+	if !strings.HasPrefix(repositoryURLPath, "/") {
+		repositoryURLPath = "/" + repositoryURLPath
+	}
+	return "file://" + repositoryURLPath
 }
 
 func TestFindDefinitionImages(t *testing.T) {
