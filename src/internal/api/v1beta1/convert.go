@@ -8,11 +8,8 @@ import (
 	"maps"
 	"strings"
 
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	"github.com/zarf-dev/zarf/src/internal/git"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 // PackageFromV1beta1 converts a v1beta1 Package to the internal generic representation.
@@ -747,19 +744,12 @@ func repositoriesFromGeneric(in []api.Repository) []v1beta1.Repository {
 	var out []v1beta1.Repository
 	for _, r := range in {
 		br := v1beta1.Repository{URL: r.URL}
-		var urlRef v1beta1.GitRef
-		if urlNoRef, refStr, err := transform.GitURLSplitRef(r.URL); err == nil && refStr != "" {
-			br.URL = urlNoRef
-			urlRef = classifyGitRef(refStr)
-		}
 		if r.Ref != nil {
 			br.Ref = &v1beta1.GitRef{
 				Tag:    r.Ref.Tag,
 				Branch: r.Ref.Branch,
 				Commit: r.Ref.Commit,
 			}
-		} else if urlRef != (v1beta1.GitRef{}) {
-			br.Ref = &urlRef
 		}
 		out = append(out, br)
 	}
@@ -822,18 +812,4 @@ func ociRefFromGeneric(ref *api.OCIRef) v1beta1.OCIRef {
 		Tag:    ref.Tag,
 		Digest: ref.Digest,
 	}
-}
-
-func classifyGitRef(ref string) v1beta1.GitRef {
-	if ref == "" {
-		return v1beta1.GitRef{}
-	}
-	if plumbing.IsHash(ref) {
-		return v1beta1.GitRef{Commit: ref}
-	}
-	parsed := string(git.ParseRef(ref))
-	if branch, ok := strings.CutPrefix(parsed, "refs/heads/"); ok {
-		return v1beta1.GitRef{Branch: branch}
-	}
-	return v1beta1.GitRef{Tag: strings.TrimPrefix(parsed, "refs/tags/")}
 }

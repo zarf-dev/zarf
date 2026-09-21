@@ -1467,31 +1467,6 @@ func TestGitRepoRefConversion(t *testing.T) {
 	}
 }
 
-func TestGitRepoExplicitRefTakesPriority(t *testing.T) {
-	t.Parallel()
-
-	const repositoryURL = "https://github.com/zarf-dev/zarf.git"
-	beta := v1beta1.Package{
-		APIVersion: v1beta1.APIVersion,
-		Kind:       v1beta1.ZarfPackageConfig,
-		Components: []v1beta1.Component{{
-			Name: "component",
-			ComponentSpec: v1beta1.ComponentSpec{Repositories: []v1beta1.Repository{{
-				URL: repositoryURL + "@url-tag",
-				Ref: &v1beta1.GitRef{Tag: "explicit-tag"},
-			}}},
-		}},
-	}
-
-	alpha := PackageV1beta1ToV1alpha1(beta)
-	require.Equal(t, []string{repositoryURL + "@explicit-tag"}, alpha.Components[0].Repos)
-
-	roundTripped := PackageV1alpha1ToV1beta1(alpha)
-	repository := roundTripped.Components[0].Repositories[0]
-	require.Equal(t, repositoryURL, repository.URL)
-	require.Equal(t, &v1beta1.GitRef{Tag: "explicit-tag"}, repository.Ref)
-}
-
 func TestGitChartRefConversion(t *testing.T) {
 	t.Parallel()
 
