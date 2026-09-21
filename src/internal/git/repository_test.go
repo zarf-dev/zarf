@@ -103,7 +103,7 @@ func TestRepository(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, filepath.Join(rootPath, expectedPath), repo.Path())
 
-	tagSource := api.Repository{URL: repoAddress, Ref: &api.GitRef{Tag: "v1.0.0"}}
+	tagSource := api.Repository{URL: repoAddress + "@legacy-tag", Ref: &api.GitRef{Tag: "v1.0.0"}}
 	tagRepo, err := Clone(ctx, rootPath, tagSource, false)
 	require.NoError(t, err)
 	tagChecksum := helpers.GetCRCHash(repoAddress + "@v1.0.0")
@@ -113,9 +113,17 @@ func TestRepository(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, filepath.Join(rootPath, fmt.Sprintf("%s-%d", repoName, tagChecksum)), tagRepo.Path())
 
-	_, err = Clone(ctx, rootPath, api.Repository{
-		URL: repoAddress + "@legacy-tag",
-		Ref: &api.GitRef{Tag: "v1.0.0"},
-	}, false)
-	require.ErrorContains(t, err, "defines a ref in both its URL and ref field")
+	legacySource := api.Repository{
+		URL:       repoAddress,
+		Ref:       &api.GitRef{Tag: "v1.0.0"},
+		LegacyURL: repoAddress + "@+v1.0.0",
+	}
+	legacyRepo, err := Clone(ctx, rootPath, legacySource, false)
+	require.NoError(t, err)
+	legacyChecksum := helpers.GetCRCHash(repoAddress + "@+v1.0.0")
+	require.Equal(t, filepath.Join(rootPath, fmt.Sprintf("%s-%d", repoName, legacyChecksum)), legacyRepo.Path())
+
+	legacyRepo, err = Open(rootPath, legacySource)
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(rootPath, fmt.Sprintf("%s-%d", repoName, legacyChecksum)), legacyRepo.Path())
 }

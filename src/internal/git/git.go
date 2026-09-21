@@ -28,18 +28,13 @@ func ParseRef(r string) plumbing.ReferenceName {
 }
 
 // repositoryAddress returns a Git URL that selects the repository reference.
-// If the URL has a builtin ref then
-// FIXME: need to add validation to v1beta1 so that it can't create a url with a builtin ref
 func repositoryAddress(repository api.Repository) (string, error) {
 	if repository.Ref == nil {
 		return repository.URL, nil
 	}
-	url, urlRef, err := transform.GitURLSplitRef(repository.URL)
+	url, _, err := transform.GitURLSplitRef(repository.URL)
 	if err != nil {
 		return "", err
-	}
-	if urlRef != "" {
-		return "", fmt.Errorf("git repository %q defines a ref in both its URL and ref field", repository.URL)
 	}
 	switch {
 	case repository.Ref.Tag != "":
@@ -51,4 +46,12 @@ func repositoryAddress(repository api.Repository) (string, error) {
 	default:
 		return url, nil
 	}
+}
+
+// repositoryLayoutAddress returns the URL used to derive the repository directory name.
+func repositoryLayoutAddress(repository api.Repository) (string, error) {
+	if repository.LegacyURL != "" {
+		return repository.LegacyURL, nil
+	}
+	return repositoryAddress(repository)
 }

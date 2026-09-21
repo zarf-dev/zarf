@@ -26,7 +26,7 @@ import (
 
 // Open opens an existing local repository at the given path.
 func Open(rootPath string, source api.Repository) (*Repository, error) {
-	address, err := repositoryAddress(source)
+	address, err := repositoryLayoutAddress(source)
 	if err != nil {
 		return nil, err
 	}
@@ -61,6 +61,10 @@ func Clone(ctx context.Context, rootPath string, source api.Repository, shallow 
 	if err != nil {
 		return nil, err
 	}
+	layoutAddress, err := repositoryLayoutAddress(source)
+	if err != nil {
+		return nil, err
+	}
 	// Split the remote url and the zarf reference
 	gitURLNoRef, refPlain, err := transform.GitURLSplitRef(address)
 	if err != nil {
@@ -74,7 +78,7 @@ func Clone(ctx context.Context, rootPath string, source api.Repository, shallow 
 	}
 
 	// Construct a path unique to this git repo
-	repoFolder, err := transform.GitURLtoFolderName(address)
+	repoFolder, err := transform.GitURLtoFolderName(layoutAddress)
 	if err != nil {
 		return nil, err
 	}

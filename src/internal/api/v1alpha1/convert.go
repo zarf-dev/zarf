@@ -909,7 +909,12 @@ func healthChecksFromGeneric(in []api.NamespacedObjectKindReference) []v1alpha1.
 func reposToGeneric(repos []string) []api.Repository {
 	var out []api.Repository
 	for _, url := range repos {
-		out = append(out, api.Repository{URL: url})
+		repository := api.Repository{URL: url, LegacyURL: url}
+		if baseURL, ref, err := transform.GitURLSplitRef(url); err == nil && ref != "" {
+			repository.URL = baseURL
+			repository.Ref = classifyGitRef(ref)
+		}
+		out = append(out, repository)
 	}
 	return out
 }
@@ -917,6 +922,10 @@ func reposToGeneric(repos []string) []api.Repository {
 func reposFromGeneric(repos []api.Repository) []string {
 	var out []string
 	for _, r := range repos {
+		if r.LegacyURL != "" {
+			out = append(out, r.LegacyURL)
+			continue
+		}
 		url := r.URL
 		if r.Ref != nil {
 			if refStr := flattenGitRef(r.Ref); refStr != "" {

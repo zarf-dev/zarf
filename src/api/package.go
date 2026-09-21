@@ -245,6 +245,11 @@ type OCISource struct {
 type Repository struct {
 	URL string
 	Ref *GitRef
+	// LegacyURL retains the original v1alpha1 URL, including an inline ref, so
+	// repositories retain the directory names used by existing package layouts
+	// For instance, GitRef can't express ref/tags/v1.0 vs only v1.0
+	// Will be deleted with v1alpha1 is no longer support
+	LegacyURL string
 }
 
 // File is the version-neutral representation of a package file.

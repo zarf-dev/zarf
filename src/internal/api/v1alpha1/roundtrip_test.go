@@ -112,7 +112,7 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 					Flavor:  "prod",
 				},
 				Import: v1alpha1.ZarfComponentImport{Name: "imp", Path: "path", URL: "oci://example.com/pkg"},
-				Repos:  []string{"https://github.com/example/repo"},
+				Repos:  []string{"https://github.com/example/repo@+v1.0.0"},
 				Images: []string{"nginx:latest"},
 				ImageArchives: []v1alpha1.ImageArchive{
 					{Path: "images.tar", Images: []string{"busybox:1.36"}},
