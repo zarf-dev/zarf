@@ -83,8 +83,8 @@ func (c Component) GetImages() []string {
 	return images
 }
 
-// IsTemplate reports whether this file should be rendered as a Go template.
-func (f File) IsTemplate() bool {
+// ShouldTemplate reports whether this file should be rendered as a Go template.
+func (f File) ShouldTemplate() bool {
 	return f.EnableTemplating
 }
 
@@ -147,8 +147,8 @@ func (m Manifest) GetServerSideApply() string {
 	return m.ServerSideApply
 }
 
-// IsTemplate reports whether this manifest should be rendered as a Go template.
-func (m Manifest) IsTemplate() bool {
+// ShouldTemplate reports whether this manifest should be rendered as a Go template.
+func (m Manifest) ShouldTemplate() bool {
 	return m.EnableTemplating
 }
 

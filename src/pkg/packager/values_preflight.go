@@ -163,14 +163,14 @@ type templateSource struct {
 func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component) (_ []templateSource, err error) {
 	hasManifests := false
 	for _, m := range component.Manifests {
-		if m.IsTemplate() {
+		if m.ShouldTemplate() {
 			hasManifests = true
 			break
 		}
 	}
 	hasFiles := false
 	for _, f := range component.Files {
-		if f.IsTemplate() {
+		if f.ShouldTemplate() {
 			hasFiles = true
 			break
 		}
@@ -201,7 +201,7 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 			return nil, err
 		}
 		for _, manifest := range component.Manifests {
-			if !manifest.IsTemplate() {
+			if !manifest.ShouldTemplate() {
 				continue
 			}
 			for idx := range manifest.Files {
@@ -223,7 +223,7 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 			return nil, err
 		}
 		for fileIdx, file := range component.Files {
-			if !file.IsTemplate() {
+			if !file.ShouldTemplate() {
 				continue
 			}
 			fileLocation := filepath.Join(filesDir, layout.ComponentFileRelPath(fileIdx, file.Destination))
