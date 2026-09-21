@@ -589,7 +589,18 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 
 // PackageChart takes a Zarf Chart definition and packs it into a package layout
 func PackageChart(ctx context.Context, chart api.Chart, resources *load.ResourceSet, paths layout.ChartPaths, cachePath string, remoteOpts types.RemoteOptions) error {
+	originalValuesFiles := slices.Clone(chart.ValuesFiles)
+	defer func() {
+		copy(chart.ValuesFiles, originalValuesFiles)
+	}()
+
+	// FIXME: was the chart path ever allowed to be a url?
 	if chart.Local != nil && chart.Local.Path != "" && !helpers.IsURL(chart.Local.Path) {
+		originalLocalPath := chart.Local.Path
+		defer func() {
+			chart.Local.Path = originalLocalPath
+		}()
+
 		localPath, err := resources.Path(chart.Local.Path)
 		if err != nil {
 			return err
