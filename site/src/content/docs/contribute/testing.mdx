@@ -12,7 +12,9 @@ To run the end-to-end tests locally, you must meet the same prerequisites as tho
 
 1. GoLang version >= the version specified in the [go.mod](https://github.com/zarf-dev/zarf/blob/main/go.mod)
 2. Make
-3. Any clean K8s cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed K3s cluster
+3. Docker
+4. Docker Buildx
+5. Any clean K8s cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed K3s cluster
 
 ## Unit Tests
 
@@ -22,12 +24,17 @@ There are several ways to run tests depending on your specific situation, such a
 # The default way, from the root directory of the repo. Will run all of the unit tests that are currently defined.
 make test-unit
 
-# If you already have everything built, you can run this inside this folder. This lets you customize the test run.
+# To get a single-line readable summary of all the unit tests currently defined:
+make test-unit 2>&1 | grep -E "^(ok|FAIL)\s"
+
+# If you already have everything built, you can run the following command inside this folder. This lets you customize the test run.
 go test ./src/pkg/... -v
 
-# Let's say you only want to run one test. You would run:
+# To run a single test:
 go test ./src/pkg/... -v -run TestFooBarBaz
 ```
+
+All unit tests should pass locally before submitting a PR.
 
 ### Adding New Unit Tests
 
@@ -36,10 +43,26 @@ To create a unit test, search for or create a file that ends with `_test.go` in 
 There are two types of unit tests within Zarf:
 
 1. Standard unit tests on isolated functions or files.
-1. Tests in the [src/cmd](https://github.com/zarf-dev/zarf/tree/main/src/cmd) package, which test an entire command. These have similar properties to e2e tests, but faster iteration loops.
+2. Tests in the [src/cmd](https://github.com/zarf-dev/zarf/tree/main/src/cmd) package, which test an entire command. These have similar properties to e2e tests, but faster iteration loops.
 
 Unit tests should always take less than one second. Unit tests should run using `t.Parallel()` unless a specific constraint blocks this.
 
+## Verify Local Environment
+If not running tests in APPLIANCE_MODE, it's a good idea to run a minimal test to verify that all dependencies are functioning and your Kubernetes cluster is properly configured prior to performing a full end-to-end test run.
+
+Because early cluster connectivity checks in the test suite can fail silently and cause confusing errors later, manually verifying your cluster and running a single test is highly recommended.
+
+```
+# Verify cluster connectivity and ensure KUBECONFIG is pointing to a live, clean cluster
+kubectl cluster-info
+
+# Compile the CLI and basic dependencies to verify Go, Make, Docker, and Buildx
+make build
+make init-package
+
+# Run a single E2E test
+go test ./src/test/e2e/... -v -failfast -run TestUseCLI -count=1
+```
 
 ## CLI End-to-End Tests
 
@@ -51,10 +74,15 @@ There are several ways to run tests depending on your specific situation, such a
 # The default way, from the root directory of the repo. Will run all of the tests against your chosen k8s distro. Will automatically build any binary dependencies that don't already exist.
 make test-e2e ARCH="[amd64|arm64]"
 
-# To test against a Zarf-created cluster (on Linux with sudo)
-APPLIANCE_MODE=true make test-e2e ARCH="[amd64|arm64]"
+# To get a single-line readable summary of all the e2e tests currently defined:
+cd src/test/e2e && go test ./main_test.go ./[01]* -failfast -v -timeout 35m 2>&1 | grep -E "^(--- FAIL|--- PASS|FAIL|ok)"
 
-# If you already have everything build, you can run this inside this folder. This lets you customize the test run.
+######### TODO: All of the above has been tested and is gtg #####################
+######### TODO: Working below this line #########################################
+# To test against a Zarf-created cluster (Linux only with sudo, not compatible with macOS)
+APPLIANCE_MODE=true make test-e2e ARCH="amd64" TODO: ✅ Confirmed this works on Linux
+
+# If you already have everything built, you can run this inside this folder. This lets you customize the test run.
 go test ./src/test/... -v -failfast -count=1
 
 # Let's say you only want to run one test. You would run:
@@ -145,4 +173,24 @@ The end-to-end tests are run sequentially and the naming convention is set inten
 - 20 is reserved for `zarf init`.
 - 22 is reserved for tests required the git-server, which is removed at the end of the test.
 - 23-98 are for the remaining tests that only require a basic Zarf cluster without the git-server.
-- 99 is reserved for the `zarf destroy` and Connected mode test.
+- 99 is reserved for the `zarf destroy` and [YOLO Mode](/ref/examples/yolo/) test.
+
+### Troubleshooting ###
+
+Potential e2e testing errors and causes:
+Docker/Buildx:
+
+`unknown flag: --load` → Buildx not installed or broken symlink
+
+Cluster:
+
+dial tcp [::1]:8080: connect: connection refused → No cluster configured or kubeconfig not set
+error loading config file: duplicate name in list → Duplicate entries in ~/.kube/config
+
+Git/1Password:
+
+error: 1Password: Could not connect to socket → 1Password closed during rebase commit signing
+
+Architecture:
+
+no compatible component named k3s found → Either wrong ARCH value or trying to run Linux-only components on macOS
