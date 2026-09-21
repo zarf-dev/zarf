@@ -157,7 +157,7 @@ func manifestToGeneric(m v1alpha1.ZarfManifest) api.Manifest {
 func chartToGeneric(ch v1alpha1.ZarfChart) api.Chart {
 	gc := api.Chart{
 		Name:                 ch.Name,
-		Version:              ch.Version,
+		LegacyVersion:        ch.Version,
 		Namespace:            ch.Namespace,
 		ReleaseName:          ch.ReleaseName,
 		ValuesFiles:          valuesFilesToGeneric(ch.ValuesFiles, ch.TemplatedValuesFiles),
@@ -571,7 +571,7 @@ func manifestFromGeneric(m api.Manifest) v1alpha1.ZarfManifest {
 func chartFromGeneric(ch api.Chart) v1alpha1.ZarfChart {
 	ac := v1alpha1.ZarfChart{
 		Name:             ch.Name,
-		Version:          ch.Version,
+		Version:          ch.LegacyVersion,
 		Namespace:        ch.Namespace,
 		ReleaseName:      ch.ReleaseName,
 		SchemaValidation: boolPointer(!ch.SkipSchemaValidation),

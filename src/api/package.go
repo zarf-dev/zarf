@@ -171,8 +171,9 @@ type Manifest struct {
 // Chart is the operational representation of a chart across API versions.
 type Chart struct {
 	Name string
-	// Version identifies this chart's archive and values files within the package.
-	Version              string
+	// LegacyVersion is kept for existing v1alpha1 packages so that we can track the chart's archive and values files.
+	// The version of the chart is separately tracked in OCI source, HelmRepository, or GitSource
+	LegacyVersion        string
 	Namespace            string
 	ReleaseName          string
 	ValuesFiles          []ValuesFile

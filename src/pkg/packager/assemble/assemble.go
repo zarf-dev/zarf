@@ -653,7 +653,7 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 				continue
 			}
 
-			rel := filepath.ToSlash(filepath.Join(string(layout.ValuesComponentDir), layout.ChartValuesFileName(chart.Name, chart.Version, valuesIdx)))
+			rel := filepath.ToSlash(filepath.Join(string(layout.ValuesComponentDir), layout.ChartValuesFileName(chart.Name, chart.LegacyVersion, valuesIdx)))
 			component.Charts[chartIdx].ValuesFiles[valuesIdx].Path = rel
 
 			path, err := resources.Path(valuesFile.Path)
@@ -889,7 +889,7 @@ func collectVersionRequirements(pkg api.Package, hasIndex bool) []api.VersionReq
 					break
 				}
 			}
-			if chart.Version == "" {
+			if chart.LegacyVersion == "" {
 				hasVersionlessChart = true
 			}
 		}

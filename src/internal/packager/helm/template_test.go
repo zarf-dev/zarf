@@ -21,9 +21,9 @@ func TestChartTemplate(t *testing.T) {
 	ctx := context.Background()
 	chartPath := filepath.Join("testdata", "template", "simple-chart")
 	chart := api.Chart{
-		Name:    "simple-chart",
-		Version: "1.0.0",
-		Local:   &api.LocalSource{Path: chartPath},
+		Name:          "simple-chart",
+		LegacyVersion: "1.0.0",
+		Local:         &api.LocalSource{Path: chartPath},
 	}
 	tmpdir := t.TempDir()
 	paths := layout.ChartPaths{ChartsDir: tmpdir, ValuesDir: tmpdir}

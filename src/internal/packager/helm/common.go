@@ -68,7 +68,7 @@ func ChartFromZarfManifest(manifest api.Manifest, manifestPath, packageName, com
 		Name: tmpChart.Metadata.Name,
 		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
 		ReleaseName:     fmt.Sprintf("zarf-%s", sha1ReleaseName),
-		Version:         tmpChart.Metadata.Version,
+		LegacyVersion:   tmpChart.Metadata.Version,
 		Namespace:       manifest.Namespace,
 		SkipWait:        manifest.SkipWait,
 		ServerSideApply: manifest.GetServerSideApply(),
@@ -99,7 +99,7 @@ func GetChartValuesFiles(chart api.Chart) []ChartValuesFile {
 // loadChartFromTarball returns a helm chart from a tarball.
 func loadChartFromTarball(chart api.Chart, paths layout.ChartPaths) (*chartv2.Chart, error) {
 	// Load the loadedChart tarball
-	loadedChart, err := loader.Load(paths.Archive(chart.Name, chart.Version))
+	loadedChart, err := loader.Load(paths.Archive(chart.Name, chart.LegacyVersion))
 	if err != nil {
 		return nil, fmt.Errorf("unable to load helm chart archive: %w", err)
 	}
@@ -116,7 +116,7 @@ func parseChartValues(chart api.Chart, paths layout.ChartPaths, valuesOverrides 
 	valueOpts := &values.Options{}
 
 	for _, f := range GetChartValuesFiles(chart) {
-		valueOpts.ValueFiles = append(valueOpts.ValueFiles, paths.ValuesFile(chart.Name, chart.Version, f.GlobalIdx))
+		valueOpts.ValueFiles = append(valueOpts.ValueFiles, paths.ValuesFile(chart.Name, chart.LegacyVersion, f.GlobalIdx))
 	}
 
 	httpProvider := getter.Provider{

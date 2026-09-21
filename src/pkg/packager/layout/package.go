@@ -906,8 +906,8 @@ func validatePackagePaths(pkg api.Package) error {
 			if !isCleanPath(chart.Name) {
 				return fmt.Errorf("chart name %q in component %q would result in an invalid path", chart.Name, comp.Name)
 			}
-			if !isCleanPath(chart.Version) {
-				return fmt.Errorf("chart version %q in component %q would result in an invalid path", chart.Version, comp.Name)
+			if !isCleanPath(chart.LegacyVersion) {
+				return fmt.Errorf("chart version %q in component %q would result in an invalid path", chart.LegacyVersion, comp.Name)
 			}
 		}
 		for _, manifest := range comp.Manifests {

@@ -282,8 +282,8 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 				}
 				// If a repo helm chart path is specified,
 				component.Charts = append(component.Charts, api.Chart{
-					Name:    fmt.Sprintf("temp-git-chart-%d", idx),
-					Version: gitRef.Tag,
+					Name:          fmt.Sprintf("temp-git-chart-%d", idx),
+					LegacyVersion: gitRef.Tag,
 					Git: &api.GitSource{
 						URL:  gitURL,
 						Ref:  gitRef,
@@ -311,7 +311,7 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 			yamls = slices.DeleteFunc(yamls, isHelmTestResource)
 			resources = append(resources, yamls...)
 			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
-			chartTarball := filepath.Join(chartPath, layout.ChartArchiveName(zarfChart.Name, zarfChart.Version))
+			chartTarball := filepath.Join(chartPath, layout.ChartArchiveName(zarfChart.Name, zarfChart.LegacyVersion))
 			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 			if err != nil {
 				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", zarfChart.SourceURL(), err)

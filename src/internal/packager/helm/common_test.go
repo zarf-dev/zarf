@@ -16,8 +16,8 @@ func TestParseChartValues(t *testing.T) {
 	t.Parallel()
 
 	chart := api.Chart{
-		Name:    "test",
-		Version: "1.0.0",
+		Name:          "test",
+		LegacyVersion: "1.0.0",
 		// One entry each — length drives index iteration; the string content is not used for path resolution.
 		ValuesFiles: []api.ValuesFile{{Path: "regular.yaml"}, {Path: "templated.yaml", EnableTemplating: true}},
 	}
@@ -26,8 +26,8 @@ func TestParseChartValues(t *testing.T) {
 
 	// ValuesFiles land at global index 0; TemplatedValuesFiles at global index 1 (len(ValuesFiles) + local index).
 	paths := layout.ChartPaths{ValuesDir: tmpDir}
-	regularPath := paths.ValuesFile(chart.Name, chart.Version, 0)
-	templatedPath := paths.ValuesFile(chart.Name, chart.Version, 1)
+	regularPath := paths.ValuesFile(chart.Name, chart.LegacyVersion, 0)
+	templatedPath := paths.ValuesFile(chart.Name, chart.LegacyVersion, 1)
 
 	require.NoError(t, os.WriteFile(regularPath, []byte("shared: from-regular\nregularOnly: present"), 0o644))
 	require.NoError(t, os.WriteFile(templatedPath, []byte("shared: from-templated\ntemplatedOnly: present"), 0o644))

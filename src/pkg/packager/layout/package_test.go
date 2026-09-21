@@ -1882,7 +1882,7 @@ func TestValidatePackagePaths(t *testing.T) {
 				Components: []api.Component{
 					{
 						Name:      "my-component",
-						Charts:    []api.Chart{{Name: "my-chart", Version: "1.2.3"}},
+						Charts:    []api.Chart{{Name: "my-chart", LegacyVersion: "1.2.3"}},
 						Manifests: []api.Manifest{{Name: "my-manifest"}},
 					},
 				},
@@ -1947,7 +1947,7 @@ func TestValidatePackagePaths(t *testing.T) {
 			pkg: api.Package{
 				Metadata: api.PackageMetadata{Name: "pkg"},
 				Components: []api.Component{
-					{Name: "comp", Charts: []api.Chart{{Name: "../evil", Version: "1.0"}}},
+					{Name: "comp", Charts: []api.Chart{{Name: "../evil", LegacyVersion: "1.0"}}},
 				},
 			},
 			wantErr: `chart name "../evil" in component "comp" would result in an invalid path`,
@@ -1957,7 +1957,7 @@ func TestValidatePackagePaths(t *testing.T) {
 			pkg: api.Package{
 				Metadata: api.PackageMetadata{Name: "pkg"},
 				Components: []api.Component{
-					{Name: "comp", Charts: []api.Chart{{Name: "chart", Version: "../bad"}}},
+					{Name: "comp", Charts: []api.Chart{{Name: "chart", LegacyVersion: "../bad"}}},
 				},
 			},
 			wantErr: `chart version "../bad" in component "comp" would result in an invalid path`,

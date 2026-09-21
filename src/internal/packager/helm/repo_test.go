@@ -168,7 +168,7 @@ entries:
 
 	chart := api.Chart{
 		Name:           "simple-chart",
-		Version:        "archive-version",
+		LegacyVersion:  "archive-version",
 		HelmRepository: &api.HelmRepositorySource{URL: repoSrv.URL, Version: "1.0.0"},
 	}
 	chartPath := t.TempDir()
@@ -178,7 +178,7 @@ entries:
 		InsecureSkipTLSVerify: true,
 	})
 	require.NoError(t, err)
-	require.FileExists(t, paths.Archive(chart.Name, chart.Version))
+	require.FileExists(t, paths.Archive(chart.Name, chart.LegacyVersion))
 }
 
 func TestDownloadPublishedChartFromOCI(t *testing.T) {
@@ -204,8 +204,8 @@ func TestDownloadPublishedChartFromOCI(t *testing.T) {
 	require.NoError(t, err)
 
 	chart := api.Chart{
-		Name:    "simple-chart",
-		Version: "archive-version",
+		Name:          "simple-chart",
+		LegacyVersion: "archive-version",
 		OCI: &api.OCISource{
 			URL: fmt.Sprintf("oci://%s/charts/simple-chart", regAddr),
 			Ref: &api.OCIRef{Tag: "1.0.0"},
@@ -218,5 +218,5 @@ func TestDownloadPublishedChartFromOCI(t *testing.T) {
 		InsecureSkipTLSVerify: true,
 	})
 	require.NoError(t, err)
-	require.FileExists(t, paths.Archive(chart.Name, chart.Version))
+	require.FileExists(t, paths.Archive(chart.Name, chart.LegacyVersion))
 }
