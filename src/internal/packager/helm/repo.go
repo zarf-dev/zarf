@@ -467,16 +467,16 @@ func finalizeChartPackage(ctx context.Context, chart api.Chart, paths layout.Cha
 }
 
 func packageValues(ctx context.Context, chart api.Chart, paths layout.ChartPaths) error {
-	for _, f := range GetChartValuesFiles(chart) {
-		dst := paths.ValuesFile(chart.Name, chart.LegacyVersion, f.GlobalIdx)
+	for i, valuesFile := range chart.ValuesFiles {
+		dst := paths.ValuesFile(chart.Name, chart.LegacyVersion, i)
 
-		if helpers.IsURL(f.Source) {
-			if err := utils.DownloadToFile(ctx, f.Source, dst); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, f.Source, err)
+		if helpers.IsURL(valuesFile.Path) {
+			if err := utils.DownloadToFile(ctx, valuesFile.Path, dst); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, valuesFile.Path, err)
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(f.Source, dst); err != nil {
-				return fmt.Errorf("unable to copy chart values file %s: %w", f.Source, err)
+			if err := helpers.CreatePathAndCopy(valuesFile.Path, dst); err != nil {
+				return fmt.Errorf("unable to copy chart values file %s: %w", valuesFile.Path, err)
 			}
 		}
 	}

@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -252,17 +251,17 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 			return nil, err
 		}
 		for _, chart := range component.Charts {
-			for _, vf := range helm.GetChartValuesFiles(chart) {
-				if !vf.Template {
+			for i, valuesFile := range chart.ValuesFiles {
+				if !valuesFile.EnableTemplating {
 					continue
 				}
-				content, err := os.ReadFile(filepath.Join(valuesDir, layout.ChartValuesFileName(chart.Name, chart.LegacyVersion, vf.GlobalIdx)))
+				content, err := os.ReadFile(filepath.Join(valuesDir, layout.ChartValuesFileName(chart.Name, chart.LegacyVersion, i)))
 				if err != nil {
 					return nil, err
 				}
 				sources = append(sources, templateSource{
 					content:  string(content),
-					location: fmt.Sprintf("component %q chart %q templated values file %q", component.Name, chart.Name, filepath.Base(vf.Source)),
+					location: fmt.Sprintf("component %q chart %q templated values file %q", component.Name, chart.Name, filepath.Base(valuesFile.Path)),
 				})
 			}
 		}

@@ -77,25 +77,6 @@ func ChartFromZarfManifest(manifest api.Manifest, manifestPath, packageName, com
 	return chart, tmpChart, nil
 }
 
-// ChartValuesFile represents a single values file for a Helm chart with its global sequential index.
-// Template indicates whether Go template rendering should be applied at deploy time.
-type ChartValuesFile struct {
-	Source    string
-	Template  bool
-	GlobalIdx int
-}
-
-// GetChartValuesFiles returns a flat ordered list of all values files for a chart.
-// ValuesFiles appear first (indices 0..n-1), followed by TemplatedValuesFiles (indices n..n+m-1).
-// All files share the same global sequential index space and are stored via ChartPaths.ValuesFile.
-func GetChartValuesFiles(chart api.Chart) []ChartValuesFile {
-	files := make([]ChartValuesFile, 0, len(chart.ValuesFiles))
-	for i, valueFile := range chart.ValuesFiles {
-		files = append(files, ChartValuesFile{Source: valueFile.Path, Template: valueFile.EnableTemplating, GlobalIdx: i})
-	}
-	return files
-}
-
 // loadChartFromTarball returns a helm chart from a tarball.
 func loadChartFromTarball(chart api.Chart, paths layout.ChartPaths) (*chartv2.Chart, error) {
 	// Load the loadedChart tarball
@@ -115,8 +96,8 @@ func loadChartFromTarball(chart api.Chart, paths layout.ChartPaths) (*chartv2.Ch
 func parseChartValues(chart api.Chart, paths layout.ChartPaths, valuesOverrides map[string]any) (common.Values, error) {
 	valueOpts := &values.Options{}
 
-	for _, f := range GetChartValuesFiles(chart) {
-		valueOpts.ValueFiles = append(valueOpts.ValueFiles, paths.ValuesFile(chart.Name, chart.LegacyVersion, f.GlobalIdx))
+	for i := range chart.ValuesFiles {
+		valueOpts.ValueFiles = append(valueOpts.ValueFiles, paths.ValuesFile(chart.Name, chart.LegacyVersion, i))
 	}
 
 	httpProvider := getter.Provider{
