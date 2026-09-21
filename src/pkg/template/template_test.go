@@ -15,6 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -116,30 +117,41 @@ func TestObjects_WithValues(t *testing.T) {
 
 func TestObjects_WithPackage(t *testing.T) {
 	tests := []struct {
-		name string
-		pkg  v1alpha1.ZarfPackage
+		name         string
+		pkg          api.Package
+		expectedType any
 	}{
 		{
-			name: "populated package",
-			pkg: v1alpha1.ZarfPackage{
-				Metadata: v1alpha1.ZarfMetadata{Name: "test-package", Version: "1.0.0"},
-				Build:    v1alpha1.ZarfBuildData{User: "test-user", Architecture: "amd64"},
+			name:         "v1alpha1 package",
+			expectedType: v1alpha1.ZarfPackage{},
+			pkg: convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
+				APIVersion: v1alpha1.APIVersion,
+				Metadata:   v1alpha1.ZarfMetadata{Name: "test-package", Version: "1.0.0"},
+				Build:      v1alpha1.ZarfBuildData{User: "test-user", Architecture: "amd64"},
 				Constants: []v1alpha1.Constant{
 					{Name: "APP_NAME", Value: "my-app"},
 				},
-			},
+			}),
 		},
 		{
-			name: "empty package",
-			pkg:  v1alpha1.ZarfPackage{},
+			name:         "v1beta1 package",
+			expectedType: v1beta1.Package{},
+			pkg: convert.PackageFromV1beta1(v1beta1.Package{
+				APIVersion: v1beta1.APIVersion,
+				Metadata:   v1beta1.PackageMetadata{Name: "test-package", Version: "1.0.0"},
+			}),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			objects := make(Objects)
-			result := objects.WithPackage(convert.PackageFromV1alpha1(tt.pkg))
-			require.Equal(t, convert.PackageFromV1alpha1(tt.pkg), result[objectKeyPackage])
+			result := objects.WithPackage(tt.pkg)
+			require.IsType(t, tt.expectedType, result[objectKeyPackage])
+
+			output, err := Apply(context.Background(), "{{ .Pkg.APIVersion }}|{{ .Pkg.Metadata.Name }}", result)
+			require.NoError(t, err)
+			require.Equal(t, tt.pkg.GetAPIVersion()+"|test-package", output)
 		})
 	}
 }

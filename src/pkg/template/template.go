@@ -22,6 +22,9 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -80,10 +83,14 @@ func (o Objects) WithVariables(vars variables.SetVariableMap) Objects {
 	return o
 }
 
-// WithPackage makes a version-neutral package available on the Objects map.
-// FIXME: the key used should depend on the package
+// WithPackage makes the package available on the Objects map using its authored API version.
 func (o Objects) WithPackage(pkg api.Package) Objects {
-	o[objectKeyPackage] = pkg
+	switch pkg.GetAPIVersion() {
+	case v1alpha1.APIVersion:
+		o[objectKeyPackage] = convert.PackageToV1alpha1(pkg)
+	case v1beta1.APIVersion:
+		o[objectKeyPackage] = convert.PackageToV1beta1(pkg)
+	}
 	return o
 }
 
