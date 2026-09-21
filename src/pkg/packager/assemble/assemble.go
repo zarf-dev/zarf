@@ -594,8 +594,7 @@ func PackageChart(ctx context.Context, chart api.Chart, resources *load.Resource
 		copy(chart.ValuesFiles, originalValuesFiles)
 	}()
 
-	// FIXME: was the chart path ever allowed to be a url?
-	if chart.Local != nil && chart.Local.Path != "" && !helpers.IsURL(chart.Local.Path) {
+	if chart.Local != nil && chart.Local.Path != "" {
 		originalLocalPath := chart.Local.Path
 		defer func() {
 			chart.Local.Path = originalLocalPath
