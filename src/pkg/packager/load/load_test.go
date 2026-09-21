@@ -58,7 +58,7 @@ func TestLoadPackageWithFlavors(t *testing.T) {
 func TestValidateV1Beta1_FormatsValidationErrors(t *testing.T) {
 	t.Parallel()
 
-	err := validateV1Beta1(context.Background(), v1beta1.Package{}, "")
+	err := validateV1Beta1(context.Background(), v1beta1.Package{}, "", "")
 
 	require.EqualError(t, err, "package validation failed:\npackage does not contain any compatible components")
 }
@@ -252,7 +252,7 @@ func TestPackageUsesFlavor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tt.expected, hasFlavoredComponent(convert.PackageFromV1alpha1(tt.pkg), tt.flavor))
+			require.Equal(t, tt.expected, hasFlavoredComponent(tt.pkg, tt.flavor))
 		})
 	}
 }

@@ -125,45 +125,43 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 }
 
 func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, rawPackage []byte, opts DefinitionOptions) (resolution, error) {
-	l := logger.From(ctx)
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 	var err error
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return resolution{}, err
 	}
-	pkg, importedSchemas, err := resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+	var importedSchemas []string
+	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
 		return resolution{}, err
 	}
+
+	if len(pkg.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
+		return resolution{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
+			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 		if err != nil {
 			return resolution{}, err
 		}
 	}
-	definition := convert.PackageFromV1alpha1(pkg)
-	if !hasFlavoredComponent(definition, opts.Flavor) {
-		l.Warn("flavor not used in package", "flavor", opts.Flavor)
-	}
-	// Validate the authored wire format after imports and package templates have
-	// been resolved, preserving v1alpha1's validation contract at the boundary.
+	// Validate the original document so fields discarded while decoding are still
+	// Done after package templates have been resolved and prompted.
 	if err := validatePackageSchemaV1Alpha1(pkg.Metadata.Name, rawPackage, opts.SetVariables); err != nil {
 		return resolution{}, err
 	}
-	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile); err != nil {
+	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
 		return resolution{}, err
 	}
-	if len(definition.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
-		return resolution{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
-			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
-	}
 	return resolution{
-		definition:  definition,
+		definition:  convert.PackageFromV1alpha1(pkg),
 		packageRoot: pkgPath.BaseDir,
 		values: valuePlan{
-			files:   definition.Values.Files,
-			schemas: schemaSources(definition.Values.Schema, importedSchemas),
+			files:   pkg.Values.Files,
+			schemas: schemaSources(pkg.Values.Schema, importedSchemas),
 		},
 	}, nil
 }
@@ -181,17 +179,12 @@ func v1beta1Resolution(ctx context.Context, pkg v1beta1.Package, pkgPath layout.
 	}
 	pkg = imported.pkg
 
-	definition := convert.PackageFromV1beta1(pkg)
-	if !hasFlavoredComponent(definition, opts.Flavor) {
-		logger.From(ctx).Warn("flavor not used in package", "flavor", opts.Flavor)
-	}
-
-	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile); err != nil {
+	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
 		return resolution{}, err
 	}
 
 	return resolution{
-		definition:      definition,
+		definition:      convert.PackageFromV1beta1(pkg),
 		packageRoot:     pkgPath.BaseDir,
 		remoteResources: imported.remoteResources,
 		values: valuePlan{
@@ -209,14 +202,18 @@ func schemaSources(parent string, imported []string) []string {
 	return append(sources, imported...)
 }
 
-func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string) error {
+func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, flavor string) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
 		"pkg", pkg.Metadata.Name,
 		"packagePath", packagePath,
+		"flavor", flavor,
 	)
 
+	if !hasFlavoredComponent(pkg, flavor) {
+		l.Warn("flavor not used in package", "flavor", flavor)
+	}
 	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
@@ -231,14 +228,18 @@ func validateV1alpha1(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 }
 
 // validateV1Beta1 validates a v1beta1 package before it is converted down to v1alpha1.
-func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath string) error {
+func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath string, flavor string) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start v1beta1 validate",
 		"pkg", pkg.Metadata.Name,
 		"packagePath", packagePath,
+		"flavor", flavor,
 	)
 
+	if !hasFlavoredComponentV1Beta1(pkg, flavor) {
+		l.Warn("flavor not used in package", "flavor", flavor)
+	}
 	if validationErrs := internalv1beta1.ValidatePackage(pkg); len(validationErrs) > 0 {
 		return fmt.Errorf("package validation failed:\n%w", validationErrs)
 	}
@@ -288,9 +289,15 @@ func validatePackageSchemaV1Beta1(pkgName string, b []byte) error {
 	}
 }
 
-func hasFlavoredComponent(pkg api.Package, flavor string) bool {
-	return slices.ContainsFunc(pkg.Components, func(comp api.Component) bool {
-		return comp.Target.Flavor == flavor
+func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
+	return slices.ContainsFunc(pkg.Components, func(comp v1alpha1.ZarfComponent) bool {
+		return comp.Only.Flavor == flavor
+	})
+}
+
+func hasFlavoredComponentV1Beta1(pkg v1beta1.Package, flavor string) bool {
+	return slices.ContainsFunc(pkg.Components, func(comp v1beta1.Component) bool {
+		return comp.Selector.Flavor == flavor
 	})
 }
 
