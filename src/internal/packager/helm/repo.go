@@ -111,7 +111,6 @@ func PackageChartFromLocalFiles(ctx context.Context, chart api.Chart, paths layo
 	l := logger.From(ctx)
 	l.Info("processing local helm chart",
 		"name", chart.Name,
-		"version", chart.Version,
 		"path", chart.LocalPath(),
 	)
 
@@ -158,7 +157,6 @@ func PackageChartFromLocalFiles(ctx context.Context, chart api.Chart, paths layo
 
 	l.Debug("done processing local helm chart",
 		"name", chart.Name,
-		"version", chart.Version,
 		"path", localPath,
 	)
 	return nil
@@ -202,9 +200,6 @@ func gitChartSourceURL(chart api.Chart) string {
 		}
 	}
 	if ref == "" {
-		ref = chart.Version
-	}
-	if ref == "" {
 		return url
 	}
 	return url + "@" + ref
@@ -216,7 +211,6 @@ func DownloadPublishedChart(ctx context.Context, chart api.Chart, paths layout.C
 	start := time.Now()
 	l.Info("processing Helm chart",
 		"name", chart.Name,
-		"version", chart.Version,
 		"repo", chart.SourceURL(),
 	)
 
@@ -250,8 +244,13 @@ func DownloadPublishedChart(ctx context.Context, chart api.Chart, paths layout.C
 	// Handle charts sourced directly from an OCI registry.
 	if chart.OCI != nil {
 		chartURL = chart.SourceURL()
-		// Explicitly set the pull version for OCI
-		pull.Version = chart.Version
+		if chart.OCI.Ref != nil {
+			if chart.OCI.Ref.Digest != "" {
+				chartURL = strings.TrimSuffix(chartURL, "/") + "@" + chart.OCI.Ref.Digest
+			} else {
+				pull.Version = chart.OCI.Ref.Tag
+			}
+		}
 	} else {
 		chartName := chart.Name
 		if chart.RepositoryName() != "" {
@@ -273,7 +272,7 @@ func DownloadPublishedChart(ctx context.Context, chart api.Chart, paths layout.C
 			chart.SourceURL(),
 			chartName,
 			getter.All(pull.Settings),
-			repov1.WithChartVersion(chart.Version),
+			repov1.WithChartVersion(chart.HelmRepository.Version),
 			repov1.WithUsernamePassword(username, password),
 			repov1.WithClientTLS(pull.CertFile, pull.KeyFile, pull.CaFile),
 			repov1.WithInsecureSkipTLSVerify(remoteOptions.InsecureSkipTLSVerify),
@@ -362,7 +361,6 @@ func DownloadPublishedChart(ctx context.Context, chart api.Chart, paths layout.C
 
 	l.Debug("done downloading helm chart",
 		"name", chart.Name,
-		"version", chart.Version,
 		"repo", chart.SourceURL(),
 		"duration", time.Since(start),
 	)

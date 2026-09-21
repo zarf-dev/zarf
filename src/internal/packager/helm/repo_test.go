@@ -68,8 +68,8 @@ entries:
 
 	chart := api.Chart{
 		Name:           "simple-chart",
-		Version:        "1.0.0",
-		HelmRepository: &api.HelmRepositorySource{URL: repoSrv.URL},
+		Version:        "archive-version",
+		HelmRepository: &api.HelmRepositorySource{URL: repoSrv.URL, Version: "1.0.0"},
 	}
 	chartPath := t.TempDir()
 	paths := layout.ChartPaths{ChartsDir: chartPath, ValuesDir: t.TempDir()}
@@ -105,8 +105,11 @@ func TestDownloadPublishedChartFromOCI(t *testing.T) {
 
 	chart := api.Chart{
 		Name:    "simple-chart",
-		Version: "1.0.0",
-		OCI:     &api.OCISource{URL: fmt.Sprintf("oci://%s/charts/simple-chart", regAddr)},
+		Version: "archive-version",
+		OCI: &api.OCISource{
+			URL: fmt.Sprintf("oci://%s/charts/simple-chart", regAddr),
+			Ref: &api.OCIRef{Tag: "1.0.0"},
+		},
 	}
 	chartPath := t.TempDir()
 	paths := layout.ChartPaths{ChartsDir: chartPath, ValuesDir: t.TempDir()}

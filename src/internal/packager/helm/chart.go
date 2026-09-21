@@ -92,7 +92,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart api.Chart, chart *char
 	if source == "" {
 		source = "Zarf-generated"
 	}
-	l.Info("processing Helm chart", "name", zarfChart.Name, "version", zarfChart.Version, "source", source)
+	l.Info("processing Helm chart", "name", zarfChart.Name, "source", source)
 
 	// If no release name is specified, use the chart name.
 	if zarfChart.ReleaseName == "" {
