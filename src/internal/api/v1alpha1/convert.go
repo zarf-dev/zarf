@@ -184,7 +184,7 @@ func chartSourceToGeneric(chart *api.Chart, source v1alpha1.ZarfChart) {
 		}
 		// In v1alpha1, Version selected the Git checkout when the URL did not
 		// include an explicit @ref. Project that legacy behavior into the
-		// structured source so package operations only need Git.Ref.
+		// structured source so Git checkout uses Git.Ref.
 		if ref == "" {
 			ref = source.Version
 		}
