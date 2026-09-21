@@ -136,23 +136,22 @@ func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath l
 	if err != nil {
 		return resolution{}, err
 	}
-	definition := convert.PackageFromV1alpha1(pkg)
 	if opts.SetVariables != nil {
-		definition, _, err = fillActiveTemplate(ctx, definition, opts.SetVariables, opts.IsInteractive)
+		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 		if err != nil {
 			return resolution{}, err
 		}
 	}
-	validated := convert.PackageToV1alpha1(definition)
+	definition := convert.PackageFromV1alpha1(pkg)
 	if !hasFlavoredComponent(definition, opts.Flavor) {
 		l.Warn("flavor not used in package", "flavor", opts.Flavor)
 	}
 	// Validate the authored wire format after imports and package templates have
 	// been resolved, preserving v1alpha1's validation contract at the boundary.
-	if err := validatePackageSchemaV1Alpha1(validated.Metadata.Name, rawPackage, opts.SetVariables); err != nil {
+	if err := validatePackageSchemaV1Alpha1(pkg.Metadata.Name, rawPackage, opts.SetVariables); err != nil {
 		return resolution{}, err
 	}
-	if err := validateV1alpha1(ctx, validated, pkgPath.ManifestFile); err != nil {
+	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile); err != nil {
 		return resolution{}, err
 	}
 	if len(definition.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
@@ -295,7 +294,7 @@ func hasFlavoredComponent(pkg api.Package, flavor string) bool {
 	})
 }
 
-func fillActiveTemplate(ctx context.Context, pkg api.Package, setVariables map[string]string, isInteractive bool) (api.Package, []string, error) {
+func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string, isInteractive bool) (v1alpha1.ZarfPackage, []string, error) {
 	templateMap := map[string]string{}
 	warnings := []string{}
 
@@ -333,22 +332,22 @@ func fillActiveTemplate(ctx context.Context, pkg api.Package, setVariables map[s
 
 	// update the component templates on the package
 	if err := reloadComponentTemplatesInPackage(&pkg); err != nil {
-		return api.Package{}, nil, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	if err := promptAndSetTemplate(v1alpha1.ZarfPackageTemplatePrefix, false); err != nil {
-		return api.Package{}, nil, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
 	if err := promptAndSetTemplate(v1alpha1.ZarfPackageVariablePrefix, true); err != nil {
-		return api.Package{}, nil, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	// Add special variable for the current package architecture
 	templateMap[v1alpha1.ZarfPackageArch] = pkg.Metadata.Architecture
 
 	if err := utils.ReloadYamlTemplate(&pkg, templateMap); err != nil {
-		return api.Package{}, nil, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	return pkg, warnings, nil
@@ -356,7 +355,7 @@ func fillActiveTemplate(ctx context.Context, pkg api.Package, setVariables map[s
 
 // reloadComponentTemplate appends ###ZARF_COMPONENT_NAME### for the component, assigns value, and reloads
 // Any instance of ###ZARF_COMPONENT_NAME### within a component will be replaced with that components name
-func reloadComponentTemplate(component *api.Component) error {
+func reloadComponentTemplate(component *v1alpha1.ZarfComponent) error {
 	mappings := map[string]string{}
 	mappings[v1alpha1.ZarfComponentName] = component.Name
 	err := utils.ReloadYamlTemplate(component, mappings)
@@ -367,7 +366,7 @@ func reloadComponentTemplate(component *api.Component) error {
 }
 
 // reloadComponentTemplatesInPackage appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
-func reloadComponentTemplatesInPackage(zarfPackage *api.Package) error {
+func reloadComponentTemplatesInPackage(zarfPackage *v1alpha1.ZarfPackage) error {
 	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
 	for i := range zarfPackage.Components {
 		if err := reloadComponentTemplate(&zarfPackage.Components[i]); err != nil {
