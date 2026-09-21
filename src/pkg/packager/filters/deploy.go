@@ -225,13 +225,13 @@ func selectOptionalComponent(pkg api.Package, component api.Component) (bool, er
 // componentForDisplay converts a component back to the package's authored API version.
 func componentForDisplay(pkg api.Package, component api.Component) (any, error) {
 	displayPackage := api.Package{APIVersion: pkg.APIVersion, Components: []api.Component{component}}
-	switch pkg.APIVersion {
-	case "", v1alpha1.APIVersion:
+	switch pkg.GetAPIVersion() {
+	case v1alpha1.APIVersion:
 		return convert.PackageToV1alpha1(displayPackage).Components[0], nil
 	case v1beta1.APIVersion:
 		return convert.PackageToV1beta1(displayPackage).Components[0], nil
 	default:
-		return nil, fmt.Errorf("unsupported package apiVersion %q", pkg.APIVersion)
+		return nil, fmt.Errorf("unsupported package apiVersion %q", pkg.GetAPIVersion())
 	}
 }
 

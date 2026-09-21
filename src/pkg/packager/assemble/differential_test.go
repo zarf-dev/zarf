@@ -142,17 +142,6 @@ func TestApplyDifferentialResourcesV1beta1PreservesResourceFields(t *testing.T) 
 	}, pkg.Components[0].Repositories)
 }
 
-func TestApplyDifferentialResourcesRequiresMatchingAPIVersion(t *testing.T) {
-	t.Parallel()
-
-	_, err := applyDifferentialResources(
-		api.Package{APIVersion: v1beta1.APIVersion},
-		api.Package{APIVersion: v1alpha1.APIVersion},
-	)
-
-	require.ErrorContains(t, err, "does not match differential package apiVersion")
-}
-
 func TestAssemblePackageDifferentialRequiresSameAPIVersion(t *testing.T) {
 	t.Parallel()
 

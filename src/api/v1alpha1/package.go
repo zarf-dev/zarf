@@ -7,8 +7,6 @@ package v1alpha1
 import (
 	"fmt"
 	"regexp"
-
-	"github.com/zarf-dev/zarf/src/api"
 )
 
 // VariableType represents a type of a Zarf package variable
@@ -26,9 +24,6 @@ var (
 	// https://regex101.com/r/tfsEuZ/1
 	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 )
-
-// BuildTimestampFormat is the timestamp format used for ZarfBuildData.Timestamp
-const BuildTimestampFormat = api.BuildTimestampFormat
 
 // Zarf looks for these strings in zarf.yaml to make dynamic changes
 const (

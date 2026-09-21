@@ -9,6 +9,8 @@ import (
 	"maps"
 	"slices"
 	"time"
+
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 // PackageKind identifies the kind of a Zarf package.
@@ -35,6 +37,14 @@ const (
 
 // BuildTimestampFormat is the timestamp format used for package build metadata.
 const BuildTimestampFormat = time.RFC1123Z
+
+// GetAPIVersion returns the package API version, treating the legacy omitted value as v1alpha1.
+func (p Package) GetAPIVersion() string {
+	if p.APIVersion == "" {
+		return v1alpha1.APIVersion
+	}
+	return p.APIVersion
+}
 
 // IsSBOMAble reports whether this package contains content that can have an SBOM.
 func (p Package) IsSBOMAble() bool {
