@@ -57,7 +57,7 @@ func Open(rootPath string, source api.Repository) (*Repository, error) {
 // Clone clones a git repository to the given local path.
 func Clone(ctx context.Context, rootPath string, source api.Repository, shallow bool) (*Repository, error) {
 	l := logger.From(ctx)
-	address, err := repositoryAddress(source)
+	address, err := RepositoryAddress(source)
 	if err != nil {
 		return nil, err
 	}

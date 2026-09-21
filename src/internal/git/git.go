@@ -27,8 +27,8 @@ func ParseRef(r string) plumbing.ReferenceName {
 	return plumbing.ReferenceName(r)
 }
 
-// repositoryAddress returns a Git URL that selects the repository reference.
-func repositoryAddress(repository api.Repository) (string, error) {
+// RepositoryAddress returns a Git URL that selects the repository reference.
+func RepositoryAddress(repository api.Repository) (string, error) {
 	if repository.Ref == nil {
 		return repository.URL, nil
 	}
@@ -53,5 +53,5 @@ func repositoryLayoutAddress(repository api.Repository) (string, error) {
 	if repository.LegacyURL != "" {
 		return repository.LegacyURL, nil
 	}
-	return repositoryAddress(repository)
+	return RepositoryAddress(repository)
 }

@@ -96,21 +96,56 @@ func PackageChart(ctx context.Context, chart api.Chart, paths layout.ChartPaths,
 		return err
 	}
 
-	if chart.Git != nil {
+	switch {
+	case chart.Git != nil:
+		address, err := git.RepositoryAddress(api.Repository{URL: chart.Git.URL, Ref: chart.Git.Ref})
+		if err != nil {
+			return fmt.Errorf("unable to construct Git chart address: %w", err)
+		}
+		logger.From(ctx).Info("pulling Helm chart from Git", "name", chart.Name, "address", address, "path", chart.Git.Path)
 		if err := PackageChartFromGit(ctx, chart, paths, cachePath, remoteOptions); err != nil {
 			return fmt.Errorf("unable to pull the chart %q from git: %w", chart.Name, err)
 		}
-	} else if chart.SourceURL() != "" {
+	case chart.HelmRepository != nil:
+		repositoryChartName := chart.RepositoryName()
+		if repositoryChartName == "" {
+			repositoryChartName = chart.Name
+		}
+		logger.From(ctx).Info("pulling Helm chart from repository",
+			"name", chart.Name,
+			"source", chart.HelmRepository.URL,
+			"chart", repositoryChartName,
+			"version", chart.HelmRepository.Version,
+		)
 		if err := DownloadPublishedChart(ctx, chart, paths, cachePath, remoteOptions); err != nil {
 			return fmt.Errorf("unable to download the published chart %q: %w", chart.Name, err)
 		}
-	} else {
+	case chart.OCI != nil:
+		logger.From(ctx).Info("pulling Helm chart from OCI", "name", chart.Name, "address", ociChartAddress(chart.OCI))
+		if err := DownloadPublishedChart(ctx, chart, paths, cachePath, remoteOptions); err != nil {
+			return fmt.Errorf("unable to download the published chart %q: %w", chart.Name, err)
+		}
+	case chart.Local != nil:
+		logger.From(ctx).Info("packaging local Helm chart", "name", chart.Name, "source", chart.Local.Path)
 		err := PackageChartFromLocalFiles(ctx, chart, paths, cachePath, remoteOptions)
 		if err != nil {
 			return fmt.Errorf("unable to package the %q chart: %w", chart.Name, err)
 		}
 	}
 	return nil
+}
+
+func ociChartAddress(source *api.OCISource) string {
+	if source.Ref == nil {
+		return source.URL
+	}
+	if source.Ref.Digest != "" {
+		return strings.TrimSuffix(source.URL, "/") + "@" + source.Ref.Digest
+	}
+	if source.Ref.Tag != "" {
+		return strings.TrimSuffix(source.URL, "/") + ":" + source.Ref.Tag
+	}
+	return source.URL
 }
 
 // validateChartSource ensures a chart has the one fully specified source that
@@ -203,11 +238,6 @@ func validateOCIChartRef(ref *api.OCIRef) error {
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
 func PackageChartFromLocalFiles(ctx context.Context, chart api.Chart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
-	l.Info("processing local helm chart",
-		"name", chart.Name,
-		"path", chart.LocalPath(),
-	)
-
 	// Load and validate the chart
 	localPath := chart.LocalPath()
 	cl, parsed, err := loadAndValidateChart(localPath)
@@ -259,8 +289,6 @@ func PackageChartFromLocalFiles(ctx context.Context, chart api.Chart, paths layo
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
 func PackageChartFromGit(ctx context.Context, chart api.Chart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
-	l.Info("processing Helm chart", "name", chart.Name)
-
 	// Retrieve the repo containing the chart
 	gitPath, err := DownloadChartFromGitToTemp(ctx, api.Repository{URL: chart.Git.URL, Ref: chart.Git.Ref})
 	if err != nil {
@@ -281,11 +309,6 @@ func PackageChartFromGit(ctx context.Context, chart api.Chart, paths layout.Char
 func DownloadPublishedChart(ctx context.Context, chart api.Chart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 	start := time.Now()
-	l.Info("processing Helm chart",
-		"name", chart.Name,
-		"repo", chart.SourceURL(),
-	)
-
 	// Set up the helm pull config
 	pull := action.NewPull()
 	pull.Settings = cli.New()
