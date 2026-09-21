@@ -902,6 +902,7 @@ func healthChecksFromGeneric(in []api.NamespacedObjectKindReference) []v1alpha1.
 func reposToGeneric(repos []string) []api.Repository {
 	var out []api.Repository
 	for _, url := range repos {
+		// FIXME: why is this necessary?
 		repository := api.Repository{URL: url}
 		if baseURL, ref, err := transform.GitURLSplitRef(url); err == nil && ref != "" {
 			repository.URL = baseURL
