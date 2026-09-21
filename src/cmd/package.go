@@ -1301,7 +1301,11 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	err = utils.ColorPrintYAML(convert.PackageToV1alpha1(pkg), nil, false)
+	displayPackage, err := packageForDisplay(pkg)
+	if err != nil {
+		return err
+	}
+	err = utils.ColorPrintYAML(displayPackage, nil, false)
 	if err != nil {
 		return err
 	}
@@ -1525,7 +1529,11 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Values:            vals,
 	}
 	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
-	err = utils.ColorPrintYAML(convert.PackageToV1alpha1(pkg), nil, false)
+	displayPackage, err := packageForDisplay(pkg)
+	if err != nil {
+		return err
+	}
+	err = utils.ColorPrintYAML(displayPackage, nil, false)
 	if err != nil {
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
