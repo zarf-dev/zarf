@@ -722,7 +722,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			if err := d.vc.ReplaceTextTemplate(path); err != nil {
 				return installedCharts, fmt.Errorf("error templating manifest %s: %w", path, err)
 			}
-			if manifest.ShouldTemplate() {
+			if manifest.EnableTemplating {
 				l.Debug("start manifest template", "manifest", manifest.Name, "path", path)
 				objs, err := template.NewObjects(d.vals).
 					WithPackage(pkg).
@@ -934,7 +934,7 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 				}
 			}
 			// If the file has go-templating enabled, apply templates.
-			if file.ShouldTemplate() {
+			if file.EnableTemplating {
 				l.Debug("templates enabled, processing file", "name", file.Destination)
 				objs, err := template.NewObjects(values).
 					WithPackage(pkg).

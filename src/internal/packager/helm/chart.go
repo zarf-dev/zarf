@@ -364,7 +364,7 @@ func installChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Chart
 	// Must be unique per-namespace and < 53 characters. @todo: restrict helm loadedChart name to this.
 	client.ReleaseName = zarfChart.ReleaseName
 
-	client.SkipSchemaValidation = !zarfChart.ShouldRunSchemaValidation()
+	client.SkipSchemaValidation = zarfChart.SkipSchemaValidation
 
 	// Namespace must be specified.
 	client.Namespace = zarfChart.Namespace
@@ -415,7 +415,7 @@ func upgradeChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Chart
 
 	client.SkipCRDs = true
 
-	client.SkipSchemaValidation = !zarfChart.ShouldRunSchemaValidation()
+	client.SkipSchemaValidation = zarfChart.SkipSchemaValidation
 
 	// Namespace must be specified.
 	client.Namespace = zarfChart.Namespace

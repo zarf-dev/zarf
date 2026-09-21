@@ -75,7 +75,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 	}
 
 	// Check that cluster is configured if required.
-	requiresCluster := false
+	hasClusterResources := false
 	componentIdx := map[string]api.Component{}
 	for _, component := range definition.Components {
 		componentIdx[component.Name] = component
@@ -83,13 +83,13 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 			if opts.Cluster == nil {
 				return fmt.Errorf("component %s requires cluster access but none was configured", component.Name)
 			}
-			requiresCluster = true
+			hasClusterResources = true
 		}
 	}
 
 	// Get or build the secret for the deployed package
 	depPkg := &state.DeployedPackage{}
-	if requiresCluster {
+	if hasClusterResources {
 		var err error
 		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, definition.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 		if err != nil {

@@ -185,7 +185,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 					if err := variableConfig.ReplaceTextTemplate(path); err != nil {
 						return nil, fmt.Errorf("error templating the manifest: %w", err)
 					}
-					if manifest.ShouldTemplate() {
+					if manifest.EnableTemplating {
 						objs, err := tmpl.NewObjects(vals).
 							WithPackage(pkg).
 							WithVariables(variableConfig.GetSetVariableMap()).
@@ -409,7 +409,7 @@ func getTemplatedManifests(ctx context.Context, manifest api.Manifest, resourceS
 
 		// Then apply Go template templating if manifest.Template is enabled
 		var content []byte
-		if manifest.ShouldTemplate() {
+		if manifest.EnableTemplating {
 			// Create template objects with values, metadata, build, constants, and variables
 			objs, err := tmpl.NewObjects(vals).
 				WithPackage(pkg).

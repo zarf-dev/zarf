@@ -66,11 +66,6 @@ func (c Component) RequiresCluster() bool {
 		len(c.HealthChecks) > 0
 }
 
-// IsRequired reports whether this component is required.
-func (c Component) IsRequired() bool {
-	return !c.Optional
-}
-
 // GetImages returns all images specified by this component, including image archives.
 func (c Component) GetImages() []string {
 	images := make([]string, 0, len(c.Images))
@@ -81,16 +76,6 @@ func (c Component) GetImages() []string {
 		images = append(images, archive.Images...)
 	}
 	return images
-}
-
-// ShouldTemplate reports whether this file should be rendered as a Go template.
-func (f File) ShouldTemplate() bool {
-	return f.EnableTemplating
-}
-
-// ShouldRunSchemaValidation reports whether Helm values schema validation is enabled.
-func (c Chart) ShouldRunSchemaValidation() bool {
-	return !c.SkipSchemaValidation
 }
 
 // GetServerSideApply returns the configured apply strategy, defaulting to auto.
@@ -145,11 +130,6 @@ func (m Manifest) GetServerSideApply() string {
 		return "auto"
 	}
 	return m.ServerSideApply
-}
-
-// ShouldTemplate reports whether this manifest should be rendered as a Go template.
-func (m Manifest) ShouldTemplate() bool {
-	return m.EnableTemplating
 }
 
 // RemoveImages removes images and image archives from every component.
