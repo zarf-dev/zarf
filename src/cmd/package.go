@@ -29,6 +29,8 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -465,7 +467,11 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
 
-	err = utils.ColorPrintYAML(pkg, getPackageYAMLHints(pkg, setVariables), false)
+	displayPackage, err := packageForDisplay(pkg)
+	if err != nil {
+		return err
+	}
+	err = utils.ColorPrintYAML(displayPackage, getPackageYAMLHints(pkg, setVariables), false)
 	if err != nil {
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
@@ -506,6 +512,18 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 	}
 
 	return nil
+}
+
+// packageForDisplay converts a package to its authored API version for user-facing serialization.
+func packageForDisplay(pkg api.Package) (any, error) {
+	switch pkg.GetAPIVersion() {
+	case v1alpha1.APIVersion:
+		return convert.PackageToV1alpha1(pkg), nil
+	case v1beta1.APIVersion:
+		return convert.PackageToV1beta1(pkg), nil
+	default:
+		return nil, fmt.Errorf("unsupported package apiVersion %q", pkg.GetAPIVersion())
+	}
 }
 
 func getPackageYAMLHints(pkg api.Package, setVariables map[string]string) map[string]string {
