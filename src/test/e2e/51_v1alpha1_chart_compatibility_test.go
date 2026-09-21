@@ -10,9 +10,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
+	"time"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -201,11 +205,31 @@ func createLegacyChartGitRepository(t *testing.T) (string, string) {
 	repositoryDir := t.TempDir()
 	bareRepository := filepath.Join(repositoryDir, "legacy-charts.git")
 	workingDirectory := filepath.Join(repositoryDir, "working")
-	// FIXME: might make sense to use go-git here
-	runLegacyChartGit(t, "init", "--bare", bareRepository)
-	runLegacyChartGit(t, "clone", bareRepository, workingDirectory)
-	runLegacyChartGit(t, "-C", workingDirectory, "config", "user.email", "zarf@example.com")
-	runLegacyChartGit(t, "-C", workingDirectory, "config", "user.name", "Zarf Test")
+	_, err := git.PlainInitWithOptions(bareRepository, &git.PlainInitOptions{
+		Bare: true,
+		InitOptions: git.InitOptions{
+			DefaultBranch: plumbing.Main,
+		},
+	})
+	require.NoError(t, err)
+	repository, err := git.PlainInitWithOptions(workingDirectory, &git.PlainInitOptions{
+		InitOptions: git.InitOptions{
+			DefaultBranch: plumbing.Main,
+		},
+	})
+	require.NoError(t, err)
+	worktree, err := repository.Worktree()
+	require.NoError(t, err)
+	_, err = repository.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{bareRepository},
+	})
+	require.NoError(t, err)
+	commitSignature := &object.Signature{
+		Name:  "Zarf Test",
+		Email: "zarf@example.com",
+		When:  time.Unix(0, 0),
+	}
 
 	writeLegacyConfigMapChart(t, workingDirectory, "git-root", "git-root-config", "git-root")
 	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "version-tag"), "git-version-tag", "git-version-tag-config", "git-version-tag")
@@ -214,31 +238,37 @@ func createLegacyChartGitRepository(t *testing.T) (string, string) {
 	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "inline-force-tag"), "git-inline-force-tag", "git-inline-force-tag-config", "git-inline-force-tag")
 	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "refspec-tag"), "git-refspec-tag", "git-refspec-tag-config", "git-refspec-tag")
 	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "commit"), "git-commit", "git-commit-config", "git-commit-initial")
-	runLegacyChartGit(t, "-C", workingDirectory, "add", ".")
-	runLegacyChartGit(t, "-C", workingDirectory, "commit", "-m", "initial charts")
-	runLegacyChartGit(t, "-C", workingDirectory, "branch", "-M", "main")
-	runLegacyChartGit(t, "-C", workingDirectory, "tag", "--annotate", "--no-sign", "--message", "v1.0.0", "v1.0.0")
+	require.NoError(t, worktree.AddGlob("."))
+	initialCommit, err := worktree.Commit("initial charts", &git.CommitOptions{Author: commitSignature})
+	require.NoError(t, err)
+	_, err = repository.CreateTag("v1.0.0", initialCommit, &git.CreateTagOptions{
+		Tagger:  commitSignature,
+		Message: "v1.0.0",
+	})
+	require.NoError(t, err)
 
-	runLegacyChartGit(t, "-C", workingDirectory, "checkout", "-b", "release")
+	require.NoError(t, worktree.Checkout(&git.CheckoutOptions{
+		Branch: plumbing.NewBranchReferenceName("release"),
+		Create: true,
+	}))
 	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "branch"), "git-branch", "git-branch-config", "git-branch")
-	runLegacyChartGit(t, "-C", workingDirectory, "add", ".")
-	runLegacyChartGit(t, "-C", workingDirectory, "commit", "-m", "release chart")
+	require.NoError(t, worktree.AddGlob("."))
+	_, err = worktree.Commit("release chart", &git.CommitOptions{Author: commitSignature})
+	require.NoError(t, err)
 
-	runLegacyChartGit(t, "-C", workingDirectory, "checkout", "main")
+	require.NoError(t, worktree.Checkout(&git.CheckoutOptions{Branch: plumbing.Main}))
 	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "commit"), "git-commit", "git-commit-config", "git-commit")
 	writeLegacyConfigMapChart(t, filepath.Join(workingDirectory, "git-charts", "version-commit"), "git-version-commit", "git-version-commit-config", "git-version-commit")
-	runLegacyChartGit(t, "-C", workingDirectory, "add", ".")
-	runLegacyChartGit(t, "-C", workingDirectory, "commit", "-m", "commit chart")
-	commit := strings.TrimSpace(runLegacyChartGit(t, "-C", workingDirectory, "rev-parse", "HEAD"))
-	runLegacyChartGit(t, "-C", workingDirectory, "push", "origin", "main", "release", "--tags")
+	require.NoError(t, worktree.AddGlob("."))
+	commit, err := worktree.Commit("commit chart", &git.CommitOptions{Author: commitSignature})
+	require.NoError(t, err)
+	require.NoError(t, repository.Push(&git.PushOptions{
+		RemoteName: "origin",
+		RefSpecs: []config.RefSpec{
+			"refs/heads/*:refs/heads/*",
+			"refs/tags/*:refs/tags/*",
+		},
+	}))
 
-	return "file://" + bareRepository, commit
-}
-
-func runLegacyChartGit(t *testing.T, args ...string) string {
-	t.Helper()
-
-	stdout, stderr, err := exec.CmdWithTesting(t, exec.Config{}, "git", args...)
-	require.NoError(t, err, stdout, stderr)
-	return stdout
+	return "file://" + bareRepository, commit.String()
 }
