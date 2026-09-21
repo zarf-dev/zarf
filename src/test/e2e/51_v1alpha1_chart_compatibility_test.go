@@ -61,6 +61,7 @@ func TestV1Alpha1ChartSourceCompatibility(t *testing.T) {
 	repositories := []string{
 		gitURL,
 		gitURL + "@v1.0.0",
+		// FIXME: explain the + flag
 		gitURL + "@+v1.0.0",
 		gitURL + "@refs/tags/v1.0.0",
 		gitURL + "@refs/heads/release",
