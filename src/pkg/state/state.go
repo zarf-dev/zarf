@@ -12,6 +12,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -808,8 +809,8 @@ type DeployedPackage struct {
 // SetPackageDefinition records every API version needed to read a deployed package.
 // Data always contains the v1alpha1 form to allow older Zarf clients to read the
 // deployed package secret.
-func (d *DeployedPackage) SetPackageDefinition(definition api.PackageDefinition) error {
-	alpha := definition.AsV1alpha1()
+func (d *DeployedPackage) SetPackageDefinition(definition api.Package) error {
+	alpha := convert.PackageToV1alpha1(definition)
 	alphaData, err := json.Marshal(alpha)
 	if err != nil {
 		return fmt.Errorf("marshal %s package data: %w", v1alpha1.APIVersion, err)
@@ -820,45 +821,45 @@ func (d *DeployedPackage) SetPackageDefinition(definition api.PackageDefinition)
 		v1alpha1.APIVersion: alphaData,
 	}
 
-	switch definition.OriginalAPIVersion() {
+	switch definition.GetAPIVersion() {
 	case "", v1alpha1.APIVersion:
 		return nil
 	case v1beta1.APIVersion:
-		betaData, err := json.Marshal(definition.AsV1beta1())
+		betaData, err := json.Marshal(convert.PackageToV1beta1(definition))
 		if err != nil {
 			return fmt.Errorf("marshal %s package data: %w", v1beta1.APIVersion, err)
 		}
 		d.PackageData[v1beta1.APIVersion] = betaData
 		return nil
 	default:
-		return fmt.Errorf("unsupported package API version %q", definition.OriginalAPIVersion())
+		return fmt.Errorf("unsupported package API version %q", definition.APIVersion)
 	}
 }
 
 // PackageDefinition returns the latest package definition this Zarf version
 // understands. Deployed package secrets written before PackageData was added
 // fall back to their legacy v1alpha1 Data field.
-func (d DeployedPackage) PackageDefinition() (api.PackageDefinition, error) {
+func (d DeployedPackage) PackageDefinition() (api.Package, error) {
 	if len(d.PackageData) == 0 {
-		return api.NewPackageDefinitionFromV1alpha1(d.Data), nil
+		return convert.PackageFromV1alpha1(d.Data), nil
 	}
 
 	if data, found := d.PackageData[v1beta1.APIVersion]; found {
 		var pkg v1beta1.Package
 		if err := json.Unmarshal(data, &pkg); err != nil {
-			return api.PackageDefinition{}, fmt.Errorf("unmarshal %s package data: %w", v1beta1.APIVersion, err)
+			return api.Package{}, fmt.Errorf("unmarshal %s package data: %w", v1beta1.APIVersion, err)
 		}
-		return api.NewPackageDefinitionFromV1beta1(pkg), nil
+		return convert.PackageFromV1beta1(pkg), nil
 	}
 	if data, found := d.PackageData[v1alpha1.APIVersion]; found {
 		var pkg v1alpha1.ZarfPackage
 		if err := json.Unmarshal(data, &pkg); err != nil {
-			return api.PackageDefinition{}, fmt.Errorf("unmarshal %s package data: %w", v1alpha1.APIVersion, err)
+			return api.Package{}, fmt.Errorf("unmarshal %s package data: %w", v1alpha1.APIVersion, err)
 		}
-		return api.NewPackageDefinitionFromV1alpha1(pkg), nil
+		return convert.PackageFromV1alpha1(pkg), nil
 	}
 
-	return api.PackageDefinition{}, fmt.Errorf("deployed package has no supported package data")
+	return api.Package{}, fmt.Errorf("deployed package has no supported package data")
 }
 
 // DeployedPackageNameRegex is a regex for lowercase, numbers and hyphens that cannot start with a hyphen.

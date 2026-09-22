@@ -27,8 +27,8 @@ import (
 	"github.com/spf13/viper"
 	"oras.land/oras-go/v2/registry"
 
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -433,7 +433,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
 	if opts.NamespaceOverride != "" {
-		if err := pkgLayout.PackageDefinition.OverrideNamespace(opts.NamespaceOverride); err != nil {
+		if err := pkgLayout.OverrideNamespace(opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
@@ -448,11 +448,9 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 			filters.ByLocalOS(runtime.GOOS),
 			filters.ForDeploy(optionalComponents, true),
 		)
-		definition, err := filters.Apply(pkgLayout.PackageDefinition, filter)
-		if err != nil {
+		if err := pkgLayout.Filter(filter); err != nil {
 			return nil, err
 		}
-		pkgLayout.PackageDefinition = definition
 	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)
@@ -1152,7 +1150,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	}
 
 	images := make([]string, 0)
-	for _, component := range pkg.AsV1alpha1().Components {
+	for _, component := range convert.PackageToV1alpha1(pkg).Components {
 		images = append(images, component.GetImages()...)
 	}
 	images = helpers.Unique(images)
@@ -1285,16 +1283,18 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	if pkg.OriginalAPIVersion() == v1beta1.APIVersion {
-		return utils.ColorPrintYAML(pkg.AsV1beta1(), nil, false)
+	err = utils.ColorPrintYAML(convert.PackageToV1alpha1(pkg), nil, false)
+	if err != nil {
+		return err
 	}
-	return utils.ColorPrintYAML(pkg.AsV1alpha1(), nil, false)
+	return nil
 }
 
 type packageListOptions struct {
-	outputFormat outputFormat
-	outputWriter io.Writer
-	cluster      *cluster.Cluster
+	outputFormat      outputFormat
+	outputWriter      io.Writer
+	cluster           *cluster.Cluster
+	namespaceOverride string
 }
 
 func newPackageListOptions() *packageListOptions {
@@ -1309,20 +1309,23 @@ func newPackageListCommand() *cobra.Command {
 	o := newPackageListOptions()
 
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"l", "ls"},
-		Short:   lang.CmdPackageListShort,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		Use:               "list [PACKAGE_NAME]",
+		Aliases:           []string{"l", "ls"},
+		Short:             lang.CmdPackageListShort,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: getPackageCompletionArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			err := o.complete(ctx)
 			if err != nil {
 				return err
 			}
-			return o.run(ctx)
+			return o.run(ctx, args)
 		},
 	}
 
 	cmd.Flags().VarP(&o.outputFormat, "output-format", "o", "Prints the output in the specified format. Valid options: table, json, yaml")
+	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", "", lang.CmdPackageListFlagNamespace)
 
 	return cmd
 }
@@ -1347,10 +1350,10 @@ type packageListInfo struct {
 	Components        []string                  `json:"components"`
 }
 
-func (o *packageListOptions) run(ctx context.Context) error {
-	deployedZarfPackages, err := o.cluster.GetDeployedZarfPackages(ctx)
-	if err != nil && len(deployedZarfPackages) == 0 {
-		return fmt.Errorf("unable to get the packages deployed to the cluster: %w", err)
+func (o *packageListOptions) run(ctx context.Context, args []string) error {
+	deployedZarfPackages, err := o.getDeployedPackages(ctx, args)
+	if err != nil {
+		return err
 	}
 
 	var packageList []packageListInfo
@@ -1366,7 +1369,7 @@ func (o *packageListOptions) run(ctx context.Context) error {
 		packageList = append(packageList, packageListInfo{
 			Package:           depPkg.Name,
 			NamespaceOverride: depPkg.NamespaceOverride,
-			Version:           pkg.AsV1alpha1().Metadata.Version,
+			Version:           pkg.Metadata.Version,
 			Connectivity:      depPkg.GetPackageConnectivity(),
 			Components:        components,
 		})
@@ -1398,6 +1401,31 @@ func (o *packageListOptions) run(ctx context.Context) error {
 		return fmt.Errorf("unsupported output format: %s", o.outputFormat)
 	}
 	return nil
+}
+
+func (o *packageListOptions) getDeployedPackages(ctx context.Context, args []string) ([]state.DeployedPackage, error) {
+	if len(args) == 0 {
+		deployedZarfPackages, err := o.cluster.GetDeployedZarfPackages(ctx)
+		if err != nil && len(deployedZarfPackages) == 0 {
+			return nil, fmt.Errorf("unable to get the packages deployed to the cluster: %w", err)
+		}
+		if o.namespaceOverride != "" {
+			filteredPackages := make([]state.DeployedPackage, 0, len(deployedZarfPackages))
+			for _, deployedPackage := range deployedZarfPackages {
+				if deployedPackage.NamespaceOverride == o.namespaceOverride {
+					filteredPackages = append(filteredPackages, deployedPackage)
+				}
+			}
+			return filteredPackages, nil
+		}
+		return deployedZarfPackages, nil
+	}
+
+	deployedPackage, err := o.cluster.GetDeployedPackage(ctx, args[0], state.WithPackageNamespaceOverride(o.namespaceOverride))
+	if err != nil {
+		return nil, fmt.Errorf("unable to get package %q deployed to the cluster: %w", args[0], err)
+	}
+	return []state.DeployedPackage{*deployedPackage}, nil
 }
 
 type packageRemoveOptions struct {
@@ -1482,7 +1510,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		SkipVersionCheck:  o.skipVersionCheck,
 		Values:            vals,
 	}
-	legacyPkg := pkg.AsV1alpha1()
+	legacyPkg := convert.PackageToV1alpha1(pkg)
 	logger.From(ctx).Info("loaded package for removal", "name", legacyPkg.Metadata.Name)
 	err = utils.ColorPrintYAML(legacyPkg, nil, false)
 	if err != nil {

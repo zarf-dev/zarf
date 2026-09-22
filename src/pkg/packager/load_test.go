@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -232,20 +232,19 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	pkgPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
 	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, pkgPath, "", LoadOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "test", pkg.AsV1alpha1().Metadata.Name)
+	require.Equal(t, "test", pkg.Metadata.Name)
 
 	c := &cluster.Cluster{
 		Clientset: fake.NewClientset(),
 	}
-
-	beta := api.NewPackageDefinitionFromV1beta1(v1beta1.Package{
+	betaPkg := convert.PackageFromV1beta1(v1beta1.Package{
 		APIVersion: v1beta1.APIVersion,
 		Metadata:   v1beta1.PackageMetadata{Name: "beta-test"},
 	})
-	_, err = c.RecordPackageDeployment(ctx, beta, "sha256:beta", nil, 1)
+	_, err = c.RecordPackageDeployment(ctx, betaPkg, "sha256:abcdeadbeef", nil, 1)
 	require.NoError(t, err)
 	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "beta-test", "", LoadOptions{})
 	require.NoError(t, err)
-	require.Equal(t, v1beta1.APIVersion, pkg.OriginalAPIVersion())
-	require.Equal(t, "beta-test", pkg.AsV1beta1().Metadata.Name)
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
+	require.Equal(t, "beta-test", pkg.Metadata.Name)
 }

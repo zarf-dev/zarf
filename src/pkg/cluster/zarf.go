@@ -154,8 +154,8 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 }
 
 // RecordPackageDeployment saves metadata about a package deployment to the cluster.
-func (c *Cluster) RecordPackageDeployment(ctx context.Context, definition api.PackageDefinition, digest string, components []state.DeployedComponent, generation int, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
-	packageName := definition.AsV1alpha1().Metadata.Name
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, definition api.Package, digest string, components []state.DeployedComponent, generation int, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
+	packageName := definition.Metadata.Name
 
 	// TODO: This is done for backwards compatibility and could be removed in the future.
 	connectStrings := state.ConnectStrings{}

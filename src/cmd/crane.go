@@ -19,6 +19,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -87,9 +88,9 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(newRegistryLogoutCommand())
 	cmd.AddCommand(craneCmd.NewCmdCopy(&craneOptions))
 	cmd.AddCommand(newRegistryCatalogCommand(&craneOptions))
+	cmd.AddCommand(newRegistryListCommand())
 
 	// TODO(soltysh): consider splitting craneOptions to be per command
-	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdList, &craneOptions, lang.CmdToolsRegistryListExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPush, &craneOptions, lang.CmdToolsRegistryPushExample, 1))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
@@ -395,7 +396,7 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 		if err != nil {
 			return err
 		}
-		pkg := pkgDef.AsV1alpha1()
+		pkg := convert.PackageToV1alpha1(pkgDef)
 		for _, component := range pkg.Components {
 			if _, ok := deployedComponents[component.Name]; ok {
 				for _, image := range component.GetImages() {

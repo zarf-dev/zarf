@@ -7,7 +7,7 @@ Zarf is a Go CLI (`main.go`, `go.mod`). Application code under `src/`. Unit test
 ## Build, Test, and Development Commands
 
 - `make build` tidies, vendors, and builds the CLI.
-- `make test-unit` runs tests with race detection and atomic coverage; `make test-unit-quick` skips both.
+- `make test-unit` runs tests with race detection and atomic coverage; `make test-unit-quick` skips both. Never run `go test .src/...` for unit tests as this will run the full e2e suite.
 - `make lint-go` runs configured `golangci-lint` checks.
 - During development, run the focused journey for quick feedback: `go test ./src/test/e2e/ -v -run TestName -count=1 -failfast`. `make test-e2e` is permitted as a final check when reasonable.
 - Cluster-dependent E2E tests need a reachable `kubectl` context; validate it with `kubectl cluster-info`. For isolation, create `kind create cluster --name zarf-e2e-$(id -un)` and delete it after testing. Some tests also require a Zarf-initialized cluster.

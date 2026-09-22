@@ -20,6 +20,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
@@ -229,7 +230,7 @@ func findPackageWithService(pkgs []state.DeployedPackage, service v1beta1.Servic
 		if err != nil {
 			return "", err
 		}
-		pkg := definition.AsV1beta1()
+		pkg := convert.PackageToV1beta1(definition)
 		for _, component := range pkg.Components {
 			if component.Service == service {
 				return deployedPackage.Name, nil

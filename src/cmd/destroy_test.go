@@ -10,9 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Do not run in parallel: Cobra invokes Helm's global initializer for every
+// command execution, and that initializer mutates Helm's shared configuration.
 func TestDestroyCommand(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name            string
 		args            []string
@@ -38,8 +38,6 @@ func TestDestroyCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			cmd := newDestroyCommand()
 			cmd.SilenceErrors = true
 			cmd.SilenceUsage = true

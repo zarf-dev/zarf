@@ -14,7 +14,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
@@ -28,19 +28,19 @@ func TestDeployedPackagePackageDefinition(t *testing.T) {
 		APIVersion: v1beta1.APIVersion,
 		Metadata:   v1beta1.PackageMetadata{Name: "beta-package", Version: "1.2.3"},
 	}
-	definition := api.NewPackageDefinitionFromV1beta1(beta)
+	definition := convert.PackageFromV1beta1(beta)
 
 	deployed := DeployedPackage{}
 	require.NoError(t, deployed.SetPackageDefinition(definition))
-	require.Equal(t, definition.AsV1alpha1(), deployed.Data)
+	require.Equal(t, convert.PackageToV1alpha1(definition), deployed.Data)
 	require.Contains(t, deployed.PackageData, v1alpha1.APIVersion)
 	require.Contains(t, deployed.PackageData, v1beta1.APIVersion)
 
 	actual, err := deployed.PackageDefinition()
 	require.NoError(t, err)
-	require.Equal(t, v1beta1.APIVersion, actual.OriginalAPIVersion())
-	require.Equal(t, beta.APIVersion, actual.AsV1beta1().APIVersion)
-	require.Equal(t, beta.Metadata, actual.AsV1beta1().Metadata)
+	require.Equal(t, v1beta1.APIVersion, actual.GetAPIVersion())
+	require.Equal(t, beta.APIVersion, convert.PackageToV1beta1(actual).APIVersion)
+	require.Equal(t, beta.Metadata, convert.PackageToV1beta1(actual).Metadata)
 }
 
 func TestDeployedPackagePackageDefinition_legacyData(t *testing.T) {
@@ -49,7 +49,9 @@ func TestDeployedPackagePackageDefinition_legacyData(t *testing.T) {
 	legacy := v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "legacy-package"}}
 	definition, err := (DeployedPackage{Data: legacy}).PackageDefinition()
 	require.NoError(t, err)
-	require.Equal(t, legacy.Metadata, definition.AsV1alpha1().Metadata)
+	alpha := convert.PackageToV1alpha1(definition)
+	require.Equal(t, legacy.Metadata.Name, alpha.Metadata.Name)
+	require.True(t, alpha.AllowsNamespaceOverride())
 }
 
 func TestDeployedPackagePackageDefinition_noSupportedData(t *testing.T) {

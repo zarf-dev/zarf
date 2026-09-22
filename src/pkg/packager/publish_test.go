@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -200,6 +201,7 @@ func TestPublishSkeleton(t *testing.T) {
 			var expectedPkg v1alpha1.ZarfPackage
 			err = goyaml.Unmarshal(data, &expectedPkg)
 			require.NoError(t, err)
+			expectedPkg = convert.PackageToV1alpha1(convert.PackageFromV1alpha1(expectedPkg))
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, expectedPkg.Metadata.Name)
 

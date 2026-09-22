@@ -14,6 +14,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -30,7 +31,7 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// DefinitionOptions are the optional parameters to load.PackageDefinition.
+// DefinitionOptions are the optional parameters to load.Package.
 type DefinitionOptions struct {
 	Flavor       string
 	SetVariables map[string]string
@@ -52,7 +53,7 @@ type valuePlan struct {
 }
 
 type resolution struct {
-	definition      api.PackageDefinition
+	definition      api.Package
 	packageRoot     string
 	values          valuePlan
 	remoteResources []remoteResource
@@ -60,10 +61,10 @@ type resolution struct {
 
 // PackageDefinition returns a structurally validated package definition after flavors, imports, and set variables are applied.
 // It does not read package resource contents; callers that need values, schemas, charts, or manifests must use load.Package.
-func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (api.PackageDefinition, error) {
+func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (api.Package, error) {
 	resolved, err := resolve(ctx, packagePath, opts)
 	if err != nil {
-		return api.PackageDefinition{}, err
+		return api.Package{}, err
 	}
 	return resolved.definition, nil
 }
@@ -111,10 +112,7 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 		if err != nil {
 			return resolution{}, err
 		}
-		if err := validatePackageSchemaV1Alpha1(pkg.Metadata.Name, b, opts.SetVariables); err != nil {
-			return resolution{}, err
-		}
-		defined, err = v1alpha1Resolution(ctx, pkg, pkgPath, opts)
+		defined, err = v1alpha1Resolution(ctx, pkg, pkgPath, b, opts)
 		if err != nil {
 			return resolution{}, err
 		}
@@ -126,7 +124,7 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 	return defined, nil
 }
 
-func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, opts DefinitionOptions) (resolution, error) {
+func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, rawPackage []byte, opts DefinitionOptions) (resolution, error) {
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 	var err error
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
@@ -150,11 +148,16 @@ func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath l
 			return resolution{}, err
 		}
 	}
+	// Validate the original document so fields discarded while decoding are still
+	// Done after package templates have been resolved and prompted.
+	if err := validatePackageSchemaV1Alpha1(pkg.Metadata.Name, rawPackage, opts.SetVariables); err != nil {
+		return resolution{}, err
+	}
 	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
 		return resolution{}, err
 	}
 	return resolution{
-		definition:  api.NewPackageDefinitionFromV1alpha1(pkg),
+		definition:  convert.PackageFromV1alpha1(pkg),
 		packageRoot: pkgPath.BaseDir,
 		values: valuePlan{
 			files:   pkg.Values.Files,
@@ -181,7 +184,7 @@ func v1beta1Resolution(ctx context.Context, pkg v1beta1.Package, pkgPath layout.
 	}
 
 	return resolution{
-		definition:      api.NewPackageDefinitionFromV1beta1(pkg),
+		definition:      convert.PackageFromV1beta1(pkg),
 		packageRoot:     pkgPath.BaseDir,
 		remoteResources: imported.remoteResources,
 		values: valuePlan{

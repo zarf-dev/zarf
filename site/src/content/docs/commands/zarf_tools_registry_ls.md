@@ -29,9 +29,11 @@ $ zarf tools registry ls reg.example.com/stefanprodan/podinfo
 ### Options
 
 ```
-      --full-ref           (Optional) if true, print the full image reference
-  -h, --help               help for ls
-  -O, --omit-digest-tags   (Optional), if true, omit digest tags (e.g., ':sha256-...')
+      --full-ref                   (Optional) if true, print the full image reference
+  -h, --help                       help for ls
+      --insecure-skip-tls-verify   (Optional) if true, skip TLS certificate verification
+  -O, --omit-digest-tags           (Optional), if true, omit digest tags (e.g., ':sha256-...')
+      --plain-http                 (Optional) if true, use plain HTTP instead of HTTPS
 ```
 
 ### Options inherited from parent commands
@@ -39,9 +41,6 @@ $ zarf tools registry ls reg.example.com/stefanprodan/podinfo
 ```
       --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
       --features stringToString            Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
-      --insecure                           Allow image references to be fetched without TLS
-      --insecure-skip-tls-verify           Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --plain-http                         Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --platform string                    Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64). (default "all")
   -v, --verbose                            Enable debug logs
 ```

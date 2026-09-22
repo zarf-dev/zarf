@@ -439,7 +439,29 @@ fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm
 
 	require.Equal(t, expectedChecksum, string(b))
 	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.AsV1alpha1())
-	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.AsV1alpha1()), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
+	require.Equal(t, "7eb1a1e4e33ec7b6a7da78937b99c64bf7cf4751b70c0ed0662356cd7c18f967", testutil.ChecksumZarfYAMLContent(t, pkgLayout.AsV1alpha1()), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
+}
+
+func TestAssembleSkeletonRejectsNonV1Alpha1Package(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-skeleton
+components:
+  - name: component
+`), 0o600))
+
+	loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+
+	_, err = AssembleSkeleton(ctx, loaded, AssembleSkeletonOptions{})
+	require.ErrorContains(t, err, "skeleton packages are only supported for apiVersion "+v1alpha1.APIVersion)
+	require.ErrorContains(t, err, v1beta1.APIVersion)
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
@@ -787,8 +809,9 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(importedFileComponent, "0", "file.txt"))
 
-	// Ensure the sbom exists as expected
+	// File-only packages include component SBOMs but not the deprecated viewer by default.
 	err = pkgLayout.GetSBOM(ctx, tmpdir)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(tmpdir, "zarf-component-file-import.json"))
+	require.NoFileExists(t, filepath.Join(tmpdir, "sbom-viewer-zarf-component-file-import.html"))
 }

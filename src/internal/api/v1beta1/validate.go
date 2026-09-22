@@ -239,7 +239,7 @@ func validateManifest(manifest v1beta1.Manifest) ValidationErrors {
 		errs = append(errs, fmt.Errorf(PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
 	}
 
-	if len(manifest.Files) < 1 && manifest.Kustomize == nil {
+	if len(manifest.Files) < 1 && len(manifest.Kustomize.Files) < 1 {
 		errs = append(errs, fmt.Errorf(PkgValidateErrManifestFileOrKustomize, manifest.Name))
 	}
 

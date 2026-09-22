@@ -118,7 +118,7 @@ func TestPackageList(t *testing.T) {
 				outputWriter: buf,
 				cluster:      c,
 			}
-			err := listOpts.run(ctx)
+			err := listOpts.run(ctx, nil)
 			require.NoError(t, err)
 			b, err := os.ReadFile(filepath.Join("testdata", "package-list", tt.file))
 			require.NoError(t, err)
@@ -130,6 +130,140 @@ func TestPackageList(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPackageListFiltersByNamespaceOverride(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	c := &cluster.Cluster{Clientset: fake.NewClientset()}
+	packages := []state.DeployedPackage{
+		{
+			Name: "package1",
+		},
+		{
+			Name:              "package2",
+			NamespaceOverride: "test2",
+		},
+	}
+
+	for _, p := range packages {
+		b, err := json.Marshal(p)
+		require.NoError(t, err)
+		secret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      p.GetSecretName(),
+				Namespace: state.ZarfNamespaceName,
+				Labels:    map[string]string{state.ZarfPackageInfoLabel: p.Name},
+			},
+			Data: map[string][]byte{"data": b},
+		}
+		_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &secret, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	buf := new(bytes.Buffer)
+	listOpts := packageListOptions{
+		outputFormat:      outputJSON,
+		outputWriter:      buf,
+		cluster:           c,
+		namespaceOverride: "test2",
+	}
+	require.NoError(t, listOpts.run(ctx, nil))
+	require.JSONEq(t, `[
+  {
+    "package": "package2",
+    "namespaceOverride": "test2",
+    "version": "",
+    "connectivity": "airgap",
+    "components": null
+  }
+]`, buf.String())
+}
+
+func TestPackageListCommandAcceptsOptionalPackageName(t *testing.T) {
+	t.Parallel()
+
+	cmd := newPackageListCommand()
+
+	require.Equal(t, "list [PACKAGE_NAME]", cmd.Use)
+	require.NotNil(t, cmd.Args)
+	require.Equal(t, "n", cmd.Flag("namespace").Shorthand)
+	require.NoError(t, cmd.Args(cmd, []string{"package1"}))
+	require.Error(t, cmd.Args(cmd, []string{"package1", "package2"}))
+}
+
+func TestPackageListNamedPackage(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	c := &cluster.Cluster{Clientset: fake.NewClientset()}
+	packages := []state.DeployedPackage{
+		{
+			Name: "package1",
+			Data: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Version: "0.42.0"},
+			},
+			DeployedComponents: []state.DeployedComponent{{Name: "component1"}},
+		},
+		{
+			Name:              "package2",
+			NamespaceOverride: "test2",
+			Data: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Version: "1.0.0"},
+			},
+			DeployedComponents: []state.DeployedComponent{{Name: "component2"}},
+		},
+	}
+
+	for _, p := range packages {
+		b, err := json.Marshal(p)
+		require.NoError(t, err)
+		secret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      p.GetSecretName(),
+				Namespace: state.ZarfNamespaceName,
+				Labels:    map[string]string{state.ZarfPackageInfoLabel: p.Name},
+			},
+			Data: map[string][]byte{"data": b},
+		}
+		_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &secret, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	buf := new(bytes.Buffer)
+	listOpts := packageListOptions{
+		outputFormat: outputJSON,
+		outputWriter: buf,
+		cluster:      c,
+	}
+	require.NoError(t, listOpts.run(ctx, []string{"package1"}))
+	require.JSONEq(t, `[
+  {
+    "package": "package1",
+    "namespaceOverride": "",
+    "version": "0.42.0",
+    "connectivity": "airgap",
+    "components": ["component1"]
+  }
+]`, buf.String())
+
+	buf.Reset()
+	listOpts.namespaceOverride = "test2"
+	require.NoError(t, listOpts.run(ctx, []string{"package2"}))
+	require.JSONEq(t, `[
+  {
+    "package": "package2",
+    "namespaceOverride": "test2",
+    "version": "1.0.0",
+    "connectivity": "airgap",
+    "components": ["component2"]
+  }
+]`, buf.String())
+
+	listOpts.namespaceOverride = ""
+	require.Error(t, listOpts.run(ctx, []string{"package2"}))
+	require.Error(t, listOpts.run(ctx, []string{"missing"}))
 }
 
 func TestPackageInspectManifests(t *testing.T) {

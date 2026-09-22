@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
@@ -50,12 +51,12 @@ func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
 	require.False(t, result.Metadata.PreventNamespaceOverride)
 
 	// v1alpha1-only metadata fields should be migrated to annotations.
-	require.Equal(t, "https://example.com", result.Metadata.Annotations["metadata.url"])
-	require.Equal(t, "https://example.com/image.png", result.Metadata.Annotations["metadata.image"])
-	require.Equal(t, "Test Author", result.Metadata.Annotations["metadata.authors"])
-	require.Equal(t, "https://docs.example.com", result.Metadata.Annotations["metadata.documentation"])
-	require.Equal(t, "https://github.com/example", result.Metadata.Annotations["metadata.source"])
-	require.Equal(t, "Example Corp", result.Metadata.Annotations["metadata.vendor"])
+	require.Equal(t, "https://example.com", result.Metadata.Annotations["url"])
+	require.Equal(t, "https://example.com/image.png", result.Metadata.Annotations["image"])
+	require.Equal(t, "Test Author", result.Metadata.Annotations["authors"])
+	require.Equal(t, "https://docs.example.com", result.Metadata.Annotations["documentation"])
+	require.Equal(t, "https://github.com/example", result.Metadata.Annotations["source"])
+	require.Equal(t, "Example Corp", result.Metadata.Annotations["vendor"])
 	// Existing annotation should be preserved.
 	require.Equal(t, "annotation", result.Metadata.Annotations["existing"])
 
@@ -63,52 +64,23 @@ func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
 	require.Equal(t, "abc123", result.Build.AggregateChecksum)
 }
 
-func TestV1Alpha1PkgToV1Beta1_ReservedAnnotationNotClobbered(t *testing.T) {
+func TestV1Alpha1PkgToV1Beta1_LegacyMetadataDoesNotClobberUserAnnotation(t *testing.T) {
 	t.Parallel()
-	// A field migrates into a reserved metadata.* annotation key, but an author who already set that
-	// key explicitly must keep their value rather than have the field overwrite it.
+	// A user-defined annotation takes precedence over a legacy field during v1beta1 projection.
 	pkg := v1alpha1.ZarfPackage{
 		Kind: v1alpha1.ZarfPackageConfig,
 		Metadata: v1alpha1.ZarfMetadata{
 			Name: "test-pkg",
 			URL:  "https://from-field.example.com",
 			Annotations: map[string]string{
-				"metadata.url": "https://from-annotation.example.com",
+				"url": "https://from-annotation.example.com",
 			},
 		},
 	}
 
 	result := PackageV1alpha1ToV1beta1(pkg)
 
-	require.Equal(t, "https://from-annotation.example.com", result.Metadata.Annotations["metadata.url"])
-}
-
-func TestV1Alpha1PkgToV1Beta1_PreservesOriginalAPIVersion(t *testing.T) {
-	t.Parallel()
-	pkg := v1alpha1.ZarfPackage{
-		APIVersion: v1alpha1.APIVersion,
-		Kind:       v1alpha1.ZarfPackageConfig,
-		Metadata:   v1alpha1.ZarfMetadata{Name: "test-pkg"},
-	}
-
-	result := PackageV1alpha1ToV1beta1(pkg)
-
-	// The converted package must remember it originated as v1alpha1 rather than report itself as
-	// v1beta1-native, so a later conversion still applies v1alpha1 migration semantics.
-	require.Equal(t, v1alpha1.APIVersion, result.Build.GetOriginalAPIVersion())
-}
-
-func TestV1Beta1PkgToV1Alpha1_PreservesOriginalAPIVersion(t *testing.T) {
-	t.Parallel()
-	pkg := v1beta1.Package{
-		APIVersion: v1beta1.APIVersion,
-		Kind:       v1beta1.ZarfPackageConfig,
-		Metadata:   v1beta1.PackageMetadata{Name: "test-pkg"},
-	}
-
-	result := PackageV1beta1ToV1alpha1(pkg)
-
-	require.Equal(t, v1beta1.APIVersion, result.Build.GetOriginalAPIVersion())
+	require.Equal(t, "https://from-annotation.example.com", result.Metadata.Annotations["url"])
 }
 
 func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
@@ -249,12 +221,13 @@ func TestV1Alpha1PkgToV1Beta1_RequiredOptionalShift(t *testing.T) {
 		name         string
 		required     *bool
 		wantOptional bool
+		wantRequired bool
 	}{
 		// v1alpha1 defaults an unset required to optional (the inverse of v1beta1's required default),
 		// so a component that omits it must become Optional=true rather than v1beta1's zero value.
-		{name: "unset required is optional", required: nil, wantOptional: true},
-		{name: "explicit false is optional", required: b(false), wantOptional: true},
-		{name: "explicit true is required", required: b(true), wantOptional: false},
+		{name: "unset required is optional", required: nil, wantOptional: true, wantRequired: false},
+		{name: "explicit false is optional", required: b(false), wantOptional: true, wantRequired: false},
+		{name: "explicit true is required", required: b(true), wantOptional: false, wantRequired: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -265,11 +238,59 @@ func TestV1Alpha1PkgToV1Beta1_RequiredOptionalShift(t *testing.T) {
 					{Name: "comp", Required: tt.required},
 				},
 			}
-			result := PackageV1alpha1ToV1beta1(pkg)
+			operational := PackageFromV1alpha1(pkg)
+			require.Len(t, operational.Components, 1)
+			require.Equal(t, tt.wantOptional, operational.Components[0].Optional)
+
+			result := PackageToV1alpha1(operational)
 			require.Len(t, result.Components, 1)
-			require.Equal(t, tt.wantOptional, result.Components[0].Optional)
+			require.NotNil(t, result.Components[0].Required)
+			require.Equal(t, tt.wantRequired, *result.Components[0].Required)
+
+			v1beta1Result := PackageToV1beta1(operational)
+			require.Len(t, v1beta1Result.Components, 1)
+			require.Equal(t, tt.wantOptional, v1beta1Result.Components[0].Optional)
 		})
 	}
+}
+
+func TestPackageToV1alpha1_CanonicalizesBooleanPointers(t *testing.T) {
+	t.Parallel()
+
+	result := PackageToV1alpha1(api.Package{
+		Metadata: api.PackageMetadata{},
+		Components: []api.Component{{
+			Optional: true,
+			Files: []api.File{{
+				EnableTemplating: false,
+			}},
+			Manifests: []api.Manifest{{
+				EnableTemplating: false,
+			}},
+			Charts: []api.Chart{{
+				SkipSchemaValidation: false,
+			}},
+			Actions: api.ComponentActions{
+				OnDeploy: api.ActionSet{
+					Before: []api.Action{{EnableTemplating: false}},
+				},
+			},
+		}},
+	})
+
+	require.NotNil(t, result.Metadata.AllowNamespaceOverride)
+	require.True(t, *result.Metadata.AllowNamespaceOverride)
+	component := result.Components[0]
+	require.NotNil(t, component.Required)
+	require.False(t, *component.Required)
+	require.NotNil(t, component.Files[0].Template)
+	require.False(t, *component.Files[0].Template)
+	require.NotNil(t, component.Manifests[0].Template)
+	require.False(t, *component.Manifests[0].Template)
+	require.NotNil(t, component.Charts[0].SchemaValidation)
+	require.True(t, *component.Charts[0].SchemaValidation)
+	require.NotNil(t, component.Actions.OnDeploy.Before[0].Template)
+	require.False(t, *component.Actions.OnDeploy.Before[0].Template)
 }
 
 func TestV1Alpha1PkgToV1Beta1_ServiceInference(t *testing.T) {
@@ -386,13 +407,13 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 			name: "git repo with version",
 			chart: v1alpha1.ZarfChart{
 				Name:    "my-chart",
-				URL:     "https://github.com/example/repo",
+				URL:     "https://github.com/example/repo.git",
 				GitPath: "charts/my-chart",
 				Version: "6.4.0",
 			},
 			validate: func(t *testing.T, c v1beta1.Chart) {
 				require.NotNil(t, c.Git)
-				require.Equal(t, "https://github.com/example/repo", c.Git.URL)
+				require.Equal(t, "https://github.com/example/repo.git", c.Git.URL)
 				require.Equal(t, "charts/my-chart", c.Git.Path)
 				require.Equal(t, v1beta1.GitRef{Tag: "6.4.0"}, c.Git.Ref)
 			},
@@ -401,12 +422,12 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 			name: "git repo without version",
 			chart: v1alpha1.ZarfChart{
 				Name:    "my-chart",
-				URL:     "https://github.com/example/repo",
+				URL:     "https://github.com/example/repo.git",
 				GitPath: "charts/my-chart",
 			},
 			validate: func(t *testing.T, c v1beta1.Chart) {
 				require.NotNil(t, c.Git)
-				require.Equal(t, "https://github.com/example/repo", c.Git.URL)
+				require.Equal(t, "https://github.com/example/repo.git", c.Git.URL)
 				require.Equal(t, "charts/my-chart", c.Git.Path)
 				require.Equal(t, v1beta1.GitRef{}, c.Git.Ref)
 			},
@@ -456,6 +477,138 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 			require.Len(t, result.Components, 1)
 			require.Len(t, result.Components[0].Charts, 1)
 			tt.validate(t, result.Components[0].Charts[0])
+		})
+	}
+}
+
+// TestV1Alpha1ChartOperationalRoundTrip preserves the fields consumed by the v1alpha1 Helm
+// packager. In particular, PackageChart distinguishes local charts, OCI registries, Git URLs, and
+// Helm repositories from URL shape; a normalized api.Package must not change that behavior.
+func TestV1Alpha1ChartOperationalRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	schemaValidation := true
+	tests := []struct {
+		name  string
+		chart v1alpha1.ZarfChart
+		want  v1alpha1.ZarfChart
+	}{
+		{
+			name: "local chart",
+			chart: v1alpha1.ZarfChart{
+				Name: "local", LocalPath: "charts/local", Version: "1.2.3",
+			},
+			want: v1alpha1.ZarfChart{
+				Name: "local", LocalPath: "charts/local", Version: "1.2.3",
+			},
+		},
+		{
+			name: "helm repository",
+			chart: v1alpha1.ZarfChart{
+				Name: "podinfo", URL: "https://charts.example.com", RepoName: "podinfo", Version: "6.4.0",
+			},
+			want: v1alpha1.ZarfChart{
+				Name: "podinfo", URL: "https://charts.example.com", RepoName: "podinfo", Version: "6.4.0",
+			},
+		},
+		{
+			name: "oci tag",
+			chart: v1alpha1.ZarfChart{
+				Name: "podinfo", URL: "oci://registry.example.com/charts/podinfo", Version: "6.4.0",
+			},
+			want: v1alpha1.ZarfChart{
+				Name: "podinfo", URL: "oci://registry.example.com/charts/podinfo", Version: "6.4.0",
+			},
+		},
+		{
+			name: "oci digest",
+			chart: v1alpha1.ZarfChart{
+				Name: "podinfo", URL: "oci://registry.example.com/charts/podinfo@sha256:0123456789abcdef",
+			},
+			want: v1alpha1.ZarfChart{
+				Name: "podinfo", URL: "oci://registry.example.com/charts/podinfo@sha256:0123456789abcdef",
+			},
+		},
+		{
+			name: "git version",
+			chart: v1alpha1.ZarfChart{
+				Name: "git", URL: "https://github.com/example/chart.git", GitPath: "charts/app", Version: "v1.2.3",
+			},
+			want: v1alpha1.ZarfChart{
+				Name: "git", URL: "https://github.com/example/chart.git", GitPath: "charts/app", Version: "v1.2.3",
+			},
+		},
+		{
+			name: "git repository root",
+			chart: v1alpha1.ZarfChart{
+				Name: "git", URL: "https://github.com/example/chart.git", Version: "v1.2.3",
+			},
+			want: v1alpha1.ZarfChart{
+				Name: "git", URL: "https://github.com/example/chart.git", Version: "v1.2.3",
+			},
+		},
+		{
+			name: "non git URL ignores git path as a helm repository",
+			chart: v1alpha1.ZarfChart{
+				Name: "chart", URL: "https://charts.example.com", GitPath: "ignored", Version: "1.2.3",
+			},
+			want: v1alpha1.ZarfChart{
+				Name: "chart", URL: "https://charts.example.com", Version: "1.2.3",
+			},
+		},
+		{
+			name: "git inline tag preserves checkout and archive versions",
+			chart: v1alpha1.ZarfChart{
+				Name: "git", URL: "https://github.com/example/chart.git@v1.2.3", GitPath: "charts/app", Version: "ignored",
+			},
+			want: v1alpha1.ZarfChart{
+				Name: "git", URL: "https://github.com/example/chart.git@v1.2.3", GitPath: "charts/app", Version: "ignored",
+			},
+		},
+		{
+			name: "git inline tag matching version remains inline",
+			chart: v1alpha1.ZarfChart{
+				Name: "git", URL: "https://github.com/example/chart.git@v1.2.3", GitPath: "charts/app", Version: "v1.2.3",
+			},
+			want: v1alpha1.ZarfChart{
+				Name: "git", URL: "https://github.com/example/chart.git@v1.2.3", GitPath: "charts/app", Version: "v1.2.3",
+			},
+		},
+		{
+			name: "git inline branch remains an inline ref",
+			chart: v1alpha1.ZarfChart{
+				Name: "git", URL: "https://github.com/example/chart.git@refs/heads/release", GitPath: "charts/app", Version: "ignored",
+			},
+			want: v1alpha1.ZarfChart{
+				Name: "git", URL: "https://github.com/example/chart.git@refs/heads/release", GitPath: "charts/app", Version: "ignored",
+			},
+		},
+		{
+			name: "URL takes precedence over local path",
+			chart: v1alpha1.ZarfChart{
+				Name: "chart", URL: "https://charts.example.com", RepoName: "chart", LocalPath: "ignored", Version: "1.2.3",
+			},
+			want: v1alpha1.ZarfChart{
+				Name: "chart", URL: "https://charts.example.com", RepoName: "chart", Version: "1.2.3",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pkg := v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{{
+					Name:   "component",
+					Charts: []v1alpha1.ZarfChart{tt.chart},
+				}},
+			}
+
+			roundTripped := PackageToV1alpha1(PackageFromV1alpha1(pkg))
+			want := tt.want
+			want.SchemaValidation = &schemaValidation
+			require.Equal(t, want, roundTripped.Components[0].Charts[0])
 		})
 	}
 }
@@ -535,16 +688,16 @@ func TestChartGitSSHURLRoundTrip(t *testing.T) {
 	require.Equal(t, v1beta1.GitRef{Tag: "1.2.3"}, beta.Components[0].Charts[0].Git.Ref)
 
 	back := PackageV1beta1ToV1alpha1(beta)
-	require.Equal(t, "ssh://git@github.com/example/repo.git", back.Components[0].Charts[0].URL)
-	require.Equal(t, "1.2.3", back.Components[0].Charts[0].Version)
+	require.Equal(t, "ssh://git@github.com/example/repo.git@1.2.3", back.Components[0].Charts[0].URL)
+	require.Empty(t, back.Components[0].Charts[0].Version)
 	require.Equal(t, "charts/my-chart", back.Components[0].Charts[0].GitPath)
 }
 
 func TestChartGitURLRefBeatsVersion(t *testing.T) {
 	t.Parallel()
 
-	// A ref in the URL and a differing Version is contradictory; v1alpha1 deploy prefers the URL ref,
-	// so the round-trip must preserve v1, not silently switch to v2.
+	// PackageChart uses a URL ref for the checkout and Version for the generated archive and values
+	// paths. Both values are independently observable and must survive conversion.
 	alpha := v1alpha1.ZarfPackage{
 		Kind: v1alpha1.ZarfPackageConfig,
 		Components: []v1alpha1.ZarfComponent{{
@@ -558,11 +711,9 @@ func TestChartGitURLRefBeatsVersion(t *testing.T) {
 		}},
 	}
 
-	back := PackageV1beta1ToV1alpha1(PackageV1alpha1ToV1beta1(alpha))
-	// URL ref wins: v1alpha1 deploy would append Version only if the URL had no ref, so the ref must
-	// land in Version with the ref stripped from URL.
-	require.Equal(t, "https://github.com/example/repo.git", back.Components[0].Charts[0].URL)
-	require.Equal(t, "v1", back.Components[0].Charts[0].Version)
+	back := PackageToV1alpha1(PackageFromV1alpha1(alpha))
+	require.Equal(t, "https://github.com/example/repo.git@v1", back.Components[0].Charts[0].URL)
+	require.Equal(t, "v2", back.Components[0].Charts[0].Version)
 }
 
 func TestV1Alpha1PkgToV1Beta1_WaitConditionBackfill(t *testing.T) {
@@ -862,13 +1013,13 @@ func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 			Uncompressed:             true,
 			PreventNamespaceOverride: false,
 			Annotations: map[string]string{
-				"existing":               "annotation",
-				"metadata.url":           "https://example.com",
-				"metadata.image":         "https://example.com/image.png",
-				"metadata.authors":       "Test Author",
-				"metadata.documentation": "https://docs.example.com",
-				"metadata.source":        "https://github.com/example",
-				"metadata.vendor":        "Example Corp",
+				"existing":      "annotation",
+				"url":           "https://example.com",
+				"image":         "https://example.com/image.png",
+				"authors":       "Test Author",
+				"documentation": "https://docs.example.com",
+				"source":        "https://github.com/example",
+				"vendor":        "Example Corp",
 			},
 		},
 		Build: v1beta1.BuildData{
@@ -885,9 +1036,8 @@ func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 	require.Equal(t, "1.0.0", result.Metadata.Version)
 	require.Equal(t, "amd64", result.Metadata.Architecture)
 	require.True(t, result.Metadata.Uncompressed)
-	// PreventNamespaceOverride=false → AllowNamespaceOverride=true.
-	require.NotNil(t, result.Metadata.AllowNamespaceOverride)
-	require.True(t, *result.Metadata.AllowNamespaceOverride)
+	// PreventNamespaceOverride=false preserves the v1alpha1 default of allowing overrides.
+	require.True(t, result.AllowsNamespaceOverride())
 
 	// v1alpha1-only metadata fields should be restored from annotations.
 	require.Equal(t, "https://example.com", result.Metadata.URL)
@@ -897,9 +1047,8 @@ func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 	require.Equal(t, "https://github.com/example", result.Metadata.Source)
 	require.Equal(t, "Example Corp", result.Metadata.Vendor)
 
-	// Metadata-specific annotations should be consumed, regular annotations preserved.
-	require.Equal(t, "annotation", result.Metadata.Annotations["existing"])
-	require.Empty(t, result.Metadata.Annotations["metadata.url"])
+	// Legacy metadata annotations should be consumed, regular annotations preserved.
+	require.Equal(t, map[string]string{"existing": "annotation"}, result.Metadata.Annotations)
 
 	// AggregateChecksum should move from build to metadata.
 	require.Equal(t, "abc123", result.Metadata.AggregateChecksum)
@@ -991,8 +1140,9 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 	require.Equal(t, "my-component", comp.Name)
 	require.Equal(t, "test component", comp.Description)
 
-	// Optional=true → Required unset (nil); v1alpha1 treats an absent required as optional.
-	require.Nil(t, comp.Required)
+	// Optional=true → Required=false; v1alpha1 treats both forms as optional.
+	require.NotNil(t, comp.Required)
+	require.False(t, *comp.Required)
 
 	require.Equal(t, "linux", comp.Only.LocalOS)
 	require.Equal(t, "amd64", comp.Only.Cluster.Architecture)
@@ -1062,15 +1212,15 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 			chart: v1beta1.Chart{
 				Name: "my-chart",
 				Git: &v1beta1.GitSource{
-					URL:  "https://github.com/example/repo",
+					URL:  "https://github.com/example/repo.git",
 					Path: "charts/my-chart",
 					Ref:  v1beta1.GitRef{Tag: "6.4.0"},
 				},
 			},
 			validate: func(t *testing.T, c v1alpha1.ZarfChart) {
-				require.Equal(t, "https://github.com/example/repo", c.URL)
+				require.Equal(t, "https://github.com/example/repo.git@6.4.0", c.URL)
 				require.Equal(t, "charts/my-chart", c.GitPath)
-				require.Equal(t, "6.4.0", c.Version)
+				require.Empty(t, c.Version)
 			},
 		},
 		{
@@ -1078,12 +1228,12 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 			chart: v1beta1.Chart{
 				Name: "my-chart",
 				Git: &v1beta1.GitSource{
-					URL:  "https://github.com/example/repo",
+					URL:  "https://github.com/example/repo.git",
 					Path: "charts/my-chart",
 				},
 			},
 			validate: func(t *testing.T, c v1alpha1.ZarfChart) {
-				require.Equal(t, "https://github.com/example/repo", c.URL)
+				require.Equal(t, "https://github.com/example/repo.git", c.URL)
 				require.Equal(t, "charts/my-chart", c.GitPath)
 			},
 		},
@@ -1112,6 +1262,8 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 					},
 				},
 			}
+			generic := PackageFromV1beta1(pkg)
+			require.Empty(t, generic.Components[0].Charts[0].Version)
 			result := PackageV1beta1ToV1alpha1(pkg)
 			require.Len(t, result.Components, 1)
 			require.Len(t, result.Components[0].Charts, 1)
@@ -1337,8 +1489,8 @@ func TestGitChartRefConversion(t *testing.T) {
 			gitPath:         "charts/app",
 			wantURL:         "https://github.com/example/repo.git",
 			wantRef:         v1beta1.GitRef{Tag: "v1.0.0"},
-			wantBackURL:     "https://github.com/example/repo.git",
-			wantBackVersion: "v1.0.0",
+			wantBackURL:     "https://github.com/example/repo.git@v1.0.0",
+			wantBackVersion: "",
 		},
 		{
 			name:            "tag in url",
@@ -1346,8 +1498,8 @@ func TestGitChartRefConversion(t *testing.T) {
 			gitPath:         "charts/app",
 			wantURL:         "https://github.com/example/repo.git",
 			wantRef:         v1beta1.GitRef{Tag: "v1.0.0"},
-			wantBackURL:     "https://github.com/example/repo.git",
-			wantBackVersion: "v1.0.0",
+			wantBackURL:     "https://github.com/example/repo.git@v1.0.0",
+			wantBackVersion: "",
 		},
 		{
 			name:            "branch in url",
@@ -1365,25 +1517,25 @@ func TestGitChartRefConversion(t *testing.T) {
 			gitPath:         "charts/app",
 			wantURL:         "https://github.com/example/repo.git",
 			wantRef:         v1beta1.GitRef{Commit: commitSHA},
-			wantBackURL:     "https://github.com/example/repo.git",
-			wantBackVersion: commitSHA,
+			wantBackURL:     "https://github.com/example/repo.git@" + commitSHA,
+			wantBackVersion: "",
 		},
 		{
 			name:            "azure devops tag in url",
-			url:             "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test@v1.0.0",
+			url:             "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test.git@v1.0.0",
 			gitPath:         "chart",
-			wantURL:         "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test",
+			wantURL:         "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test.git",
 			wantRef:         v1beta1.GitRef{Tag: "v1.0.0"},
-			wantBackURL:     "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test",
-			wantBackVersion: "v1.0.0",
+			wantBackURL:     "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test.git@v1.0.0",
+			wantBackVersion: "",
 		},
 		{
 			name:            "azure devops branch in url",
-			url:             "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test@refs/heads/main",
+			url:             "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test.git@refs/heads/main",
 			gitPath:         "chart",
-			wantURL:         "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test",
+			wantURL:         "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test.git",
 			wantRef:         v1beta1.GitRef{Branch: "main"},
-			wantBackURL:     "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test@refs/heads/main",
+			wantBackURL:     "https://me0515@dev.azure.com/me0515/zarf-public-test/_git/zarf-public-test.git@refs/heads/main",
 			wantBackVersion: "",
 		},
 	}

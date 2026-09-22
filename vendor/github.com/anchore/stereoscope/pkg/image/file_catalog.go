@@ -60,6 +60,14 @@ func (c *FileCatalog) addImageReferences(id file.ID, l *Layer, opener file.Opene
 	}
 }
 
+// opener returns the opener for the given file ID, or nil if there is none.
+func (c *FileCatalog) opener(id file.ID) file.Opener {
+	c.RLock()
+	defer c.RUnlock()
+
+	return c.openerByID[id]
+}
+
 func (c *FileCatalog) Layer(f file.Reference) *Layer {
 	c.RLock()
 	defer c.RUnlock()

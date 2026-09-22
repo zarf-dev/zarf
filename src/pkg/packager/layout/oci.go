@@ -21,7 +21,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"oras.land/oras-go/v2"
@@ -54,8 +54,9 @@ type manifestCache struct {
 	totalSize    int64                      // layers + config + manifest
 }
 
-// AnnotationsFromMetadata extracts OCI manifest annotations from Zarf package metadata.
-func AnnotationsFromMetadata(metadata v1alpha1.ZarfMetadata) map[string]string {
+// AnnotationsFromMetadata extracts OCI manifest annotations from a package definition.
+func AnnotationsFromMetadata(pkg api.Package) map[string]string {
+	metadata := pkg.Metadata
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,
@@ -75,7 +76,7 @@ func AnnotationsFromMetadata(metadata v1alpha1.ZarfMetadata) map[string]string {
 	if vendor := metadata.Vendor; vendor != "" {
 		annotations[ocispec.AnnotationVendor] = vendor
 	}
-	// annotations explicitly defined in metadata.Annotations take precedence over legacy fields.
+	// Explicit annotations take precedence over generated OCI annotations.
 	maps.Copy(annotations, metadata.Annotations)
 	return annotations
 }
@@ -184,21 +185,20 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("reading %s for manifest: %w", ZarfYAML, err)
 	}
-	defined, err := pkgcfg.ParseMultiDoc(ctx, zarfYAMLBytes)
+	configDefinition, configPackage, err := pkgcfg.ParseMultiDocNative(ctx, zarfYAMLBytes)
 	if err != nil {
 		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
 	}
-	zarfPkg := defined.AsV1alpha1()
-	configBytes, err := json.Marshal(zarfPkg)
+	configBytes, err := json.Marshal(configDefinition)
 	if err != nil {
 		return err
 	}
 	configDesc := content.NewDescriptorFromBytes(ZarfConfigMediaType, configBytes)
 
-	annotations := AnnotationsFromMetadata(zarfPkg.Metadata)
+	annotations := AnnotationsFromMetadata(configPackage)
 
 	// Back-compatible timestamp parsing → OCI format. Fall back to zero time (epoch) if the timestamp is absent.
-	t, parseErr := time.Parse(v1alpha1.BuildTimestampFormat, zarfPkg.Build.Timestamp)
+	t, parseErr := time.Parse(api.BuildTimestampFormat, configPackage.Build.Timestamp)
 	if parseErr != nil {
 		t = time.Time{}
 	}
