@@ -131,31 +131,26 @@ func (o *componentSignOptions) run(cmd *cobra.Command, args []string) error {
 		logger.From(cmd.Context()).Info("signing component manifest with provided key")
 	}
 
-	err = signing.SignManifest(cmd.Context(), componentRef.String(), o.buildSignManifestOptions(cmd), defaultRemoteOptions())
+	signOpts := signing.SignManifestOptions{
+		Key:              o.signingKeyPath,
+		Password:         o.signingKeyPassword,
+		IdentityToken:    o.identityToken,
+		FulcioURL:        o.fulcioURL,
+		FulcioAuthFlow:   o.fulcioAuthFlow,
+		OIDCIssuer:       o.oidcIssuer,
+		OIDCClientID:     o.oidcClientID,
+		RekorURL:         o.rekorURL,
+		TlogUpload:       o.validateKeylessTlog(cmd),
+		SkipConfirmation: o.confirm,
+		TSAServerURL:     o.tsaServerURL,
+	}
+	err = signing.SignManifest(cmd.Context(), componentRef.String(), signOpts, defaultRemoteOptions())
 	if err != nil {
 		return fmt.Errorf("failed to sign component manifest: %w", err)
 	}
 
 	logger.From(cmd.Context()).Info("component manifest signed successfully", "source", helpers.OCIURLPrefix+componentRef.String())
 	return nil
-}
-
-func (o *componentSignOptions) buildSignManifestOptions(cmd *cobra.Command) signing.SignManifestOptions {
-	// FIXME: don't love these builders
-	blobOpts := o.buildSignBlobOptions(cmd)
-	return signing.SignManifestOptions{
-		Key:              blobOpts.Key,
-		Password:         blobOpts.Password,
-		IdentityToken:    blobOpts.Fulcio.IdentityToken,
-		FulcioURL:        blobOpts.Fulcio.URL,
-		FulcioAuthFlow:   blobOpts.Fulcio.AuthFlow,
-		OIDCIssuer:       blobOpts.OIDC.Issuer,
-		OIDCClientID:     blobOpts.OIDC.ClientID,
-		RekorURL:         blobOpts.Rekor.URL,
-		TlogUpload:       blobOpts.TlogUpload,
-		SkipConfirmation: blobOpts.SkipConfirmation,
-		TSAServerURL:     blobOpts.TSAServerURL,
-	}
 }
 
 type componentVerifyOptions struct {
@@ -196,24 +191,20 @@ func (o *componentVerifyOptions) run(cmd *cobra.Command, args []string) error {
 
 	l := logger.From(cmd.Context())
 	l.Info("verifying component manifest signature", "source", helpers.OCIURLPrefix+componentRef.String())
-	if err := signing.VerifyManifest(cmd.Context(), componentRef.String(), o.buildVerifyManifestOptions(cmd, v), defaultRemoteOptions()); err != nil {
+	verifyOpts := signing.VerifyManifestOptions{
+		Key:                         o.publicKeyPath,
+		CertificateIdentity:         o.certificateIdentity,
+		CertificateIdentityRegexp:   o.certificateIdentityRegexp,
+		CertificateOIDCIssuer:       o.certificateOIDCIssuer,
+		CertificateOIDCIssuerRegexp: o.certificateOIDCIssuerRegexp,
+		TrustedRoot:                 o.trustedRoot,
+		InsecureIgnoreTlog:          o.validateKeylessVerifyTlog(cmd, v),
+		UseSignedTimestamps:         o.useSignedTimestamps,
+	}
+	if err := signing.VerifyManifest(cmd.Context(), componentRef.String(), verifyOpts, defaultRemoteOptions()); err != nil {
 		return fmt.Errorf("component signature verification failed: %w", err)
 	}
 
 	l.Info("component signature verification", "status", "PASSED")
 	return nil
-}
-
-func (o *componentVerifyOptions) buildVerifyManifestOptions(cmd *cobra.Command, v *viper.Viper) signing.VerifyManifestOptions {
-	blobOpts := o.buildVerifyBlobOptions(cmd, v)
-	return signing.VerifyManifestOptions{
-		Key:                         blobOpts.Key,
-		CertificateIdentity:         blobOpts.CertVerify.CertIdentity,
-		CertificateIdentityRegexp:   blobOpts.CertVerify.CertIdentityRegexp,
-		CertificateOIDCIssuer:       blobOpts.CertVerify.CertOidcIssuer,
-		CertificateOIDCIssuerRegexp: blobOpts.CertVerify.CertOidcIssuerRegexp,
-		TrustedRoot:                 blobOpts.CommonVerifyOptions.TrustedRootPath,
-		InsecureIgnoreTlog:          blobOpts.CommonVerifyOptions.IgnoreTlog,
-		UseSignedTimestamps:         blobOpts.CommonVerifyOptions.UseSignedTimestamps,
-	}
 }
