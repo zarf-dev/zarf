@@ -126,33 +126,33 @@ func TestChartAccessors(t *testing.T) {
 		wantLocalPath      string
 		wantRepositoryName string
 		wantGitPath        string
-		wantApply          string
+		wantApply          api.ServerSideApplyMode
 	}{
 		{
 			name:               "helm repository source",
 			chart:              api.Chart{HelmRepository: &api.HelmRepositorySource{Name: "upstream", URL: "https://charts.example.com", Version: "1.0.0"}},
 			wantSourceURL:      "https://charts.example.com",
 			wantRepositoryName: "upstream",
-			wantApply:          "auto",
+			wantApply:          api.ServerSideApplyAuto,
 		},
 		{
 			name:          "git source",
 			chart:         api.Chart{Git: &api.GitSource{URL: "https://example.com/repo.git", Path: "charts/app"}},
 			wantSourceURL: "https://example.com/repo.git",
 			wantGitPath:   "charts/app",
-			wantApply:     "auto",
+			wantApply:     api.ServerSideApplyAuto,
 		},
 		{
 			name:          "OCI source",
-			chart:         api.Chart{OCI: &api.OCISource{URL: "oci://registry.example/charts/app"}, ServerSideApply: "true"},
+			chart:         api.Chart{OCI: &api.OCISource{URL: "oci://registry.example/charts/app"}, ServerSideApply: api.ServerSideApplyEnabled},
 			wantSourceURL: "oci://registry.example/charts/app",
-			wantApply:     "true",
+			wantApply:     api.ServerSideApplyEnabled,
 		},
 		{
 			name:          "local source",
 			chart:         api.Chart{Local: &api.LocalSource{Path: "charts/app"}},
 			wantLocalPath: "charts/app",
-			wantApply:     "auto",
+			wantApply:     api.ServerSideApplyAuto,
 		},
 	}
 
@@ -173,11 +173,11 @@ func TestManifestGetServerSideApply(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		value string
-		want  string
+		value api.ServerSideApplyMode
+		want  api.ServerSideApplyMode
 	}{
-		{name: "defaults to auto", want: "auto"},
-		{name: "returns configured strategy", value: "false", want: "false"},
+		{name: "defaults to auto", want: api.ServerSideApplyAuto},
+		{name: "returns configured strategy", value: api.ServerSideApplyDisabled, want: api.ServerSideApplyDisabled},
 	}
 
 	for _, tt := range tests {

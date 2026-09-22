@@ -79,9 +79,9 @@ func (c Component) GetImages() []string {
 }
 
 // GetServerSideApply returns the configured apply strategy, defaulting to auto.
-func (c Chart) GetServerSideApply() string {
+func (c Chart) GetServerSideApply() ServerSideApplyMode {
 	if c.ServerSideApply == "" {
-		return "auto"
+		return ServerSideApplyAuto
 	}
 	return c.ServerSideApply
 }
@@ -125,9 +125,9 @@ func (c Chart) GitPath() string {
 }
 
 // GetServerSideApply returns the configured apply strategy, defaulting to auto.
-func (m Manifest) GetServerSideApply() string {
+func (m Manifest) GetServerSideApply() ServerSideApplyMode {
 	if m.ServerSideApply == "" {
-		return "auto"
+		return ServerSideApplyAuto
 	}
 	return m.ServerSideApply
 }

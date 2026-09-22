@@ -49,11 +49,11 @@ const maxHelmHistory = 10
 
 // shouldForceConflicts returns true if ssa is enabled and force conflicts is true
 // Zarf won't error if force conflicts is true in a client side apply because a single package could have both csa and ssa
-func shouldForceConflicts(ssa string, lastRelease release.Accessor, forceConflicts bool) bool {
-	if !forceConflicts || ssa == "false" {
+func shouldForceConflicts(ssa api.ServerSideApplyMode, lastRelease release.Accessor, forceConflicts bool) bool {
+	if !forceConflicts || ssa == api.ServerSideApplyDisabled {
 		return false
 	}
-	if ssa == "auto" && lastRelease != nil {
+	if ssa == api.ServerSideApplyAuto && lastRelease != nil {
 		return lastRelease.ApplyMethod() == "ssa"
 	}
 	return true
@@ -331,7 +331,7 @@ func UpdateReleaseValues(ctx context.Context, zarfChart api.Chart, updatedValues
 	// Wait for the update operation to successfully complete
 	client.WaitStrategy = kube.LegacyStrategy
 
-	client.ServerSideApply = zarfChart.GetServerSideApply()
+	client.ServerSideApply = string(zarfChart.GetServerSideApply())
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), lastRelease, opts.ForceConflicts)
 
 	// Perform the loadedChart upgrade.
@@ -372,7 +372,7 @@ func installChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Chart
 	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
-	client.ServerSideApply = zarfChart.GetServerSideApply() != "false"
+	client.ServerSideApply = zarfChart.GetServerSideApply() != api.ServerSideApplyDisabled
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), nil, opts.ForceConflicts)
 
 	// Adopt pre-existing resources into the release instead of erroring on ownership conflicts.
@@ -403,7 +403,7 @@ func upgradeChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Chart
 		client.WaitStrategy = kube.LegacyStrategy
 	}
 
-	client.ServerSideApply = zarfChart.GetServerSideApply()
+	client.ServerSideApply = string(zarfChart.GetServerSideApply())
 	rel, err := release.NewAccessor(lastRelease)
 	if err != nil {
 		return nil, err
@@ -432,7 +432,7 @@ func upgradeChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Chart
 func rollbackChart(zarfChart api.Chart, rel release.Accessor, actionConfig *action.Configuration, timeout time.Duration, forceConflicts bool) error {
 	client := action.NewRollback(actionConfig)
 	client.CleanupOnFail = true
-	client.ServerSideApply = zarfChart.GetServerSideApply()
+	client.ServerSideApply = string(zarfChart.GetServerSideApply())
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), rel, forceConflicts)
 	client.WaitStrategy = kube.LegacyStrategy
 	client.Timeout = timeout

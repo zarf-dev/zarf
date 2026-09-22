@@ -156,7 +156,7 @@ func manifestToGeneric(m v1beta1.Manifest) api.Manifest {
 		Namespace:        m.Namespace,
 		Files:            m.Files,
 		SkipWait:         m.SkipWait,
-		ServerSideApply:  string(m.ServerSideApply),
+		ServerSideApply:  api.ServerSideApplyMode(m.ServerSideApply),
 		EnableTemplating: m.EnableTemplating,
 		Kustomize: api.KustomizeManifest{
 			Files:             m.Kustomize.Files,
@@ -174,7 +174,7 @@ func chartToGeneric(ch v1beta1.Chart) api.Chart {
 		ReleaseName:          ch.ReleaseName,
 		ValuesFiles:          valuesFilesToGeneric(ch.ValuesFiles),
 		SkipSchemaValidation: ch.SkipSchemaValidation,
-		ServerSideApply:      string(ch.ServerSideApply),
+		ServerSideApply:      api.ServerSideApplyMode(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
 	}
 

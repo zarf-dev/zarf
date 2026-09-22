@@ -164,9 +164,21 @@ type Manifest struct {
 	Files            []string
 	Kustomize        KustomizeManifest
 	SkipWait         bool
-	ServerSideApply  string
+	ServerSideApply  ServerSideApplyMode
 	EnableTemplating bool
 }
+
+// ServerSideApplyMode controls when server-side apply is used during deploy.
+type ServerSideApplyMode string
+
+const (
+	// ServerSideApplyEnabled always uses server-side apply.
+	ServerSideApplyEnabled ServerSideApplyMode = "true"
+	// ServerSideApplyDisabled always uses client-side apply.
+	ServerSideApplyDisabled ServerSideApplyMode = "false"
+	// ServerSideApplyAuto uses server-side apply for fresh installs and matches the prior strategy on upgrade.
+	ServerSideApplyAuto ServerSideApplyMode = "auto"
+)
 
 // Chart is the operational representation of a chart across API versions.
 type Chart struct {
@@ -179,7 +191,7 @@ type Chart struct {
 	ValuesFiles          []ValuesFile
 	Values               []ChartValue
 	SkipSchemaValidation bool
-	ServerSideApply      string
+	ServerSideApply      ServerSideApplyMode
 	SkipWait             bool
 
 	HelmRepository *HelmRepositorySource
