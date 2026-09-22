@@ -316,7 +316,11 @@ func TestV1Alpha1PkgToV1Beta1_ServiceInference(t *testing.T) {
 					{Name: tt.compName},
 				},
 			}
-			result := PackageV1alpha1ToV1beta1(pkg)
+			definition := PackageFromV1alpha1(pkg)
+			require.Len(t, definition.Components, 1)
+			require.Equal(t, api.Service(tt.service), definition.Components[0].Service)
+
+			result := PackageToV1beta1(definition)
 			require.Len(t, result.Components, 1)
 			require.Equal(t, tt.service, result.Components[0].Service)
 		})
@@ -333,7 +337,12 @@ func TestV1Alpha1PkgToV1Beta1_NoServiceInferenceForNonInit(t *testing.T) {
 			{Name: "zarf-agent"},
 		},
 	}
-	result := PackageV1alpha1ToV1beta1(pkg)
+	definition := PackageFromV1alpha1(pkg)
+	require.Len(t, definition.Components, 2)
+	require.Empty(t, definition.Components[0].Service)
+	require.Empty(t, definition.Components[1].Service)
+
+	result := PackageToV1beta1(definition)
 	require.Len(t, result.Components, 2)
 	require.Empty(t, result.Components[0].Service)
 	require.Empty(t, result.Components[1].Service)

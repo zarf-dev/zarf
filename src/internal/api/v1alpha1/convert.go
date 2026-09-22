@@ -69,10 +69,31 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 	}
 
 	for _, c := range pkg.Components {
-		g.Components = append(g.Components, componentToGeneric(c))
+		component := componentToGeneric(c)
+		if pkg.Kind == v1alpha1.ZarfInitConfig {
+			component.Service = serviceForComponentName(c.Name)
+		}
+		g.Components = append(g.Components, component)
 	}
 
 	return g
+}
+
+func serviceForComponentName(name string) api.Service {
+	switch name {
+	case "zarf-registry":
+		return api.ServiceRegistry
+	case "zarf-seed-registry":
+		return api.ServiceSeedRegistry
+	case "zarf-injector":
+		return api.ServiceInjector
+	case "zarf-agent":
+		return api.ServiceAgent
+	case "git-server":
+		return api.ServiceGitServer
+	default:
+		return ""
+	}
 }
 
 func componentToGeneric(c v1alpha1.ZarfComponent) api.Component {

@@ -93,7 +93,7 @@ func componentToGeneric(c v1beta1.Component) api.Component {
 		Name:         c.Name,
 		Description:  c.Description,
 		Optional:     c.Optional,
-		Service:      string(c.Service),
+		Service:      api.Service(c.Service),
 		Repositories: repositoriesToGeneric(c.Repositories),
 		StateAccess:  stateAccessToGeneric(c.StateAccess),
 		Target: api.ComponentTarget{

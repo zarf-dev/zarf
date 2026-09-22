@@ -81,7 +81,7 @@ type Component struct {
 	Optional      bool
 	Target        ComponentTarget
 	Import        ComponentImport
-	Service       string
+	Service       Service
 	Manifests     []Manifest
 	Charts        []Chart
 	Files         []File
@@ -98,6 +98,18 @@ type Component struct {
 	Distros           []string
 	DeprecatedScripts DeprecatedComponentScripts
 }
+
+// Service identifies a Zarf-managed cluster service provided by a component.
+type Service string
+
+// Service identifiers used by components that provide Zarf-managed cluster services.
+const (
+	ServiceRegistry     Service = "registry"
+	ServiceSeedRegistry Service = "seed-registry"
+	ServiceInjector     Service = "injector"
+	ServiceAgent        Service = "agent"
+	ServiceGitServer    Service = "git-server"
+)
 
 // DeprecatedComponentScripts is the v1alpha1-only pre-actions scripts block, preserved for lossless
 // round-trip.
