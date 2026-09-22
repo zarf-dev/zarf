@@ -293,10 +293,6 @@ func SignManifest(ctx context.Context, manifestRef string, opts SignBlobOptions,
 		})
 	}
 
-	if err := opts.CheckOverwrite(ctx); err != nil {
-		return err
-	}
-
 	// This is the same Sigstore material setup used for package blob signing.
 	// NewBundleFormat causes cosign to publish with an OCI subject, making the
 	// bundle discoverable through the distribution referrers API.
