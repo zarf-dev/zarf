@@ -758,7 +758,7 @@ func sanitizeState(s *State) *State {
 	return s
 }
 
-// DeployedPackageOptions are options for the DeployedPackage function
+// DeployedPackageOptions configure a deployed package.
 type DeployedPackageOptions func(*DeployedPackage)
 
 // WithPackageNamespaceOverride sets the [ALPHA] optional namespace override for a package during deployment
@@ -794,7 +794,7 @@ const (
 type DeployedPackage struct {
 	Name   string `json:"name"`
 	Digest string `json:"digest"`
-	// Deprecated: use PackageData or PackageDefinition() instead. This field is kept so older clients can read package deployment state.
+	// Deprecated: use PackageData or Definition() instead. This field is kept so older clients can read package deployment state.
 	Data                v1alpha1.ZarfPackage       `json:"data"`
 	PackageData         map[string]json.RawMessage `json:"packageData"`
 	CLIVersion          string                     `json:"cliVersion"`
@@ -804,6 +804,34 @@ type DeployedPackage struct {
 	PackageConnectivity PackageConnectivity        `json:"packageConnectivity"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
+}
+
+// NewDeployedPackage creates persisted deployment state from a package definition.
+func NewDeployedPackage(definition api.Package, digest, cliVersion string, components []DeployedComponent, generation int, opts ...DeployedPackageOptions) (*DeployedPackage, error) {
+	connectStrings := ConnectStrings{}
+	for _, component := range components {
+		for _, chart := range component.InstalledCharts {
+			for name, connectString := range chart.ConnectStrings {
+				connectStrings[name] = connectString
+			}
+		}
+	}
+
+	deployedPackage := &DeployedPackage{
+		Name:               definition.Metadata.Name,
+		Digest:             digest,
+		CLIVersion:         cliVersion,
+		Generation:         generation,
+		DeployedComponents: components,
+		ConnectStrings:     connectStrings,
+	}
+	if err := deployedPackage.SetPackageDefinition(definition); err != nil {
+		return nil, err
+	}
+	for _, opt := range opts {
+		opt(deployedPackage)
+	}
+	return deployedPackage, nil
 }
 
 // SetPackageDefinition records every API version needed to read a deployed package.

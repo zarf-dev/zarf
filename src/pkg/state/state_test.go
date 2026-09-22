@@ -30,8 +30,29 @@ func TestDeployedPackagePackageDefinition(t *testing.T) {
 	}
 	definition := convert.PackageFromV1beta1(beta)
 
-	deployed := DeployedPackage{}
-	require.NoError(t, deployed.SetPackageDefinition(definition))
+	components := []DeployedComponent{{
+		InstalledCharts: []InstalledChart{{
+			ConnectStrings: ConnectStrings{"web": {Description: "Web UI", URL: "/"}},
+		}},
+	}}
+	deployed, err := NewDeployedPackage(
+		definition,
+		"sha256:abc",
+		"v1.2.3",
+		components,
+		7,
+		WithPackageConnectivity(true),
+		WithPackageNamespaceOverride("override"),
+	)
+	require.NoError(t, err)
+	require.Equal(t, "beta-package", deployed.Name)
+	require.Equal(t, "sha256:abc", deployed.Digest)
+	require.Equal(t, "v1.2.3", deployed.CLIVersion)
+	require.Equal(t, 7, deployed.Generation)
+	require.Equal(t, components, deployed.DeployedComponents)
+	require.Equal(t, ConnectStrings{"web": {Description: "Web UI", URL: "/"}}, deployed.ConnectStrings)
+	require.Equal(t, PackageConnectivityConnected, deployed.PackageConnectivity)
+	require.Equal(t, "override", deployed.NamespaceOverride)
 	require.Equal(t, convert.PackageToV1alpha1(definition), deployed.Data)
 	require.Contains(t, deployed.PackageData, v1alpha1.APIVersion)
 	require.Contains(t, deployed.PackageData, v1beta1.APIVersion)
