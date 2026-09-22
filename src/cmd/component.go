@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"path"
 	"strings"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/component"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -24,7 +27,10 @@ func newComponentCommand() *cobra.Command {
 		Hidden: true,
 	}
 
-	cmd.AddCommand(newComponentPublishCommand(getViper()))
+	v := getViper()
+	cmd.AddCommand(newComponentPublishCommand(v))
+	cmd.AddCommand(newComponentSignCommand(v))
+	cmd.AddCommand(newComponentVerifyCommand(v))
 	return cmd
 }
 
@@ -68,4 +74,135 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:  defaultRemoteOptions(),
 	})
 	return err
+}
+
+// componentSignOptions intentionally embeds the shared package-signing
+// options: a component manifest and a package blob use the same keyless and
+// key-based Sigstore configuration.
+type componentSignOptions struct {
+	packageSignOptions
+}
+
+func newComponentSignCommand(v *viper.Viper) *cobra.Command {
+	o := &componentSignOptions{}
+	cmd := &cobra.Command{
+		Use:     "sign COMPONENT_SOURCE",
+		Aliases: []string{"s"},
+		Args:    cobra.ExactArgs(1),
+		Short:   lang.CmdComponentSignShort,
+		Example: lang.CmdComponentSignExample,
+		RunE:    o.run,
+	}
+
+	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgSignSigningKey), lang.CmdPackageSignFlagSigningKey)
+	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgSignSigningKeyPassword), lang.CmdPackageSignFlagSigningKeyPass)
+	cmd.Flags().BoolVar(&o.keyless, "keyless", v.GetBool(VPkgSignKeyless), lang.CmdPackageSignFlagKeyless)
+	cmd.Flags().StringVar(&o.identityToken, "identity-token", v.GetString(VPkgSignIdentityToken), lang.CmdPackageSignFlagIdentityToken)
+	cmd.Flags().StringVar(&o.fulcioURL, "fulcio-url", v.GetString(VPkgSignFulcioURL), lang.CmdPackageSignFlagFulcioURL)
+	cmd.Flags().StringVar(&o.fulcioAuthFlow, "fulcio-auth-flow", v.GetString(VPkgSignFulcioAuthFlow), lang.CmdPackageSignFlagFulcioAuthFlow)
+	cmd.Flags().StringVar(&o.oidcIssuer, "oidc-issuer", v.GetString(VPkgSignOIDCIssuer), lang.CmdPackageSignFlagOIDCIssuer)
+	cmd.Flags().StringVar(&o.oidcClientID, "oidc-client-id", v.GetString(VPkgSignOIDCClientID), lang.CmdPackageSignFlagOIDCClientID)
+	cmd.Flags().StringVar(&o.rekorURL, "rekor-url", v.GetString(VPkgSignRekorURL), lang.CmdPackageSignFlagRekorURL)
+	cmd.Flags().BoolVar(&o.tlogUpload, "tlog-upload", v.GetBool(VPkgSignTlogUpload), lang.CmdPackageSignFlagTlogUpload)
+	cmd.Flags().BoolVar(&o.confirm, "confirm", false, lang.CmdPackageSignFlagConfirm)
+	cmd.Flags().StringVar(&o.tsaServerURL, "tsa-server-url", v.GetString(VPkgSignTSAServerURL), lang.CmdPackageSignFlagTSAServerURL)
+	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
+
+	return cmd
+}
+
+func (o *componentSignOptions) run(cmd *cobra.Command, args []string) error {
+	if !o.keyless && o.signingKeyPath == "" {
+		return errors.New("--signing-key is required (or pass --keyless for Sigstore keyless flow)")
+	}
+
+	componentSource := strings.TrimPrefix(args[0], helpers.OCIURLPrefix)
+	componentRef, err := registry.ParseReference(componentSource)
+	if err != nil {
+		return fmt.Errorf("component source must be a published OCI reference: %w", err)
+	}
+	if err := componentRef.Validate(); err != nil {
+		return fmt.Errorf("invalid component source: %w", err)
+	}
+
+	if o.keyless {
+		logger.From(cmd.Context()).Info("signing component manifest via Sigstore keyless flow")
+	} else {
+		logger.From(cmd.Context()).Info("signing component manifest with provided key")
+	}
+
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = o.signingKeyPath
+	signOpts.Password = o.signingKeyPassword
+	signOpts.IdentityToken = o.identityToken
+	signOpts.FulcioURL = o.fulcioURL
+	signOpts.FulcioAuthFlow = o.fulcioAuthFlow
+	signOpts.OIDCIssuer = o.oidcIssuer
+	signOpts.OIDCClientID = o.oidcClientID
+	signOpts.RekorURL = o.rekorURL
+	signOpts.TlogUpload = o.validateKeylessTlog(cmd)
+	signOpts.SkipConfirmation = o.confirm
+	signOpts.TSAServerURL = o.tsaServerURL
+	err = signing.SignManifest(cmd.Context(), componentRef.String(), signOpts, defaultRemoteOptions())
+	if err != nil {
+		return fmt.Errorf("failed to sign component manifest: %w", err)
+	}
+
+	logger.From(cmd.Context()).Info("component manifest signed successfully", "source", helpers.OCIURLPrefix+componentRef.String())
+	return nil
+}
+
+type componentVerifyOptions struct {
+	packageVerifyFlags
+}
+
+func newComponentVerifyCommand(v *viper.Viper) *cobra.Command {
+	o := &componentVerifyOptions{}
+	cmd := &cobra.Command{
+		Use:     "verify COMPONENT_SOURCE",
+		Aliases: []string{"v"},
+		Args:    cobra.ExactArgs(1),
+		Short:   lang.CmdComponentVerifyShort,
+		Long:    lang.CmdComponentVerifyLong,
+		Example: lang.CmdComponentVerifyExample,
+		RunE:    o.run,
+	}
+
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageVerifyFlagKey)
+	cmd.Flags().AddFlagSet(newKeylessVerifyFlagSet(v, &o.packageVerifyFlags))
+	if err := cmd.Flags().SetAnnotation("key", flagGroupAnnotation, []string{verifyFlagGroupTitle}); err != nil {
+		panic(err)
+	}
+	markVerifyFlagsMutuallyExclusive(cmd)
+
+	return cmd
+}
+
+func (o *componentVerifyOptions) run(cmd *cobra.Command, args []string) error {
+	componentSource := strings.TrimPrefix(args[0], helpers.OCIURLPrefix)
+	componentRef, err := registry.ParseReference(componentSource)
+	if err != nil {
+		return fmt.Errorf("component source must be a published OCI reference: %w", err)
+	}
+	if err := componentRef.Validate(); err != nil {
+		return fmt.Errorf("invalid component source: %w", err)
+	}
+
+	l := logger.From(cmd.Context())
+	l.Info("verifying component manifest signature", "source", helpers.OCIURLPrefix+componentRef.String())
+	verifyOpts := signing.DefaultVerifyManifestOptions()
+	verifyOpts.Key = o.publicKeyPath
+	verifyOpts.CertificateIdentity = o.certificateIdentity
+	verifyOpts.CertificateIdentityRegexp = o.certificateIdentityRegexp
+	verifyOpts.CertificateOIDCIssuer = o.certificateOIDCIssuer
+	verifyOpts.CertificateOIDCIssuerRegexp = o.certificateOIDCIssuerRegexp
+	verifyOpts.TrustedRoot = o.trustedRoot
+	verifyOpts.InsecureIgnoreTlog = o.validateKeylessVerifyTlog(cmd, v)
+	verifyOpts.UseSignedTimestamps = o.useSignedTimestamps
+	if err := signing.VerifyManifest(cmd.Context(), componentRef.String(), verifyOpts, defaultRemoteOptions()); err != nil {
+		return fmt.Errorf("component signature verification failed: %w", err)
+	}
+
+	l.Info("component signature verification", "status", "PASSED")
+	return nil
 }

@@ -15,45 +15,62 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func TestComponentPublishRemoteImport(t *testing.T) {
+func TestComponentPublish(t *testing.T) {
 	componentPath := filepath.Join("src", "test", "packages", "15-component-publish-v1beta1", "component.yaml")
 
 	registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
 	stdOut, stdErr, err := e2e.Zarf(t, "component", "publish", componentPath, "oci://"+registryURL, "--plain-http")
 	require.NoError(t, err, stdOut, stdErr)
 
-	packageDir := t.TempDir()
-	packageTemplatePath := filepath.Join("src", "test", "packages", "15-component-publish-v1beta1", "zarf.tpl.yaml")
-	packageTemplate, err := os.ReadFile(packageTemplatePath)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(packageDir, "zarf.tpl.yaml"), packageTemplate, 0o600))
-	stdOut, stdErr, err = e2e.ZarfInDir(t, packageDir, "dev", "template", "--set", "registryURL="+registryURL)
-	require.NoError(t, err, stdOut, stdErr)
+	componentSource := registryURL + "/published-component:0.0.1"
+	t.Run("sign and verify", func(t *testing.T) {
+		privateKey := filepath.Join("src", "test", "packages", "zarf-test.prv-key")
+		publicKey := filepath.Join("src", "test", "packages", "zarf-test.pub")
 
-	packageOutput := t.TempDir()
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", packageDir, "-o", packageOutput, "--plain-http", "--skip-sbom", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
+		stdOut, stdErr, err := e2e.Zarf(t, "component", "sign", componentSource, "--plain-http", "--signing-key", privateKey)
+		require.NoError(t, err, stdOut, stdErr)
+		require.Contains(t, stdErr, "component manifest signed successfully")
 
-	packagePath := filepath.Join(packageOutput, fmt.Sprintf("zarf-package-component-remote-import-%s.tar.zst", e2e.Arch))
-	pkgLayout, err := layout.LoadFromTar(t.Context(), packagePath, layout.PackageLayoutOptions{})
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(pkgLayout.GetImageDirPath(), "index.json"))
+		stdOut, stdErr, err = e2e.Zarf(t, "component", "verify", componentSource, "--plain-http", "--key", publicKey)
+		require.NoError(t, err, stdOut, stdErr)
+		require.Contains(t, stdErr, "component signature verification")
+		require.Contains(t, stdErr, "PASSED")
+	})
 
-	componentExtractDir := t.TempDir()
-	chartsDir, err := pkgLayout.GetComponentDir(t.Context(), componentExtractDir, "imported-component", layout.ChartsComponentDir)
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(chartsDir, "local-chart.tgz"))
+	t.Run("remote import content", func(t *testing.T) {
+		packageDir := t.TempDir()
+		packageTemplatePath := filepath.Join("src", "test", "packages", "15-component-publish-v1beta1", "zarf.tpl.yaml")
+		packageTemplate, err := os.ReadFile(packageTemplatePath)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(packageDir, "zarf.tpl.yaml"), packageTemplate, 0o600))
+		stdOut, stdErr, err := e2e.ZarfInDir(t, packageDir, "dev", "template", "--set", "registryURL="+registryURL)
+		require.NoError(t, err, stdOut, stdErr)
 
-	valuesDir, err := pkgLayout.GetComponentDir(t.Context(), componentExtractDir, "imported-component", layout.ValuesComponentDir)
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(valuesDir, "local-chart-0"))
+		packageOutput := t.TempDir()
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "create", packageDir, "-o", packageOutput, "--plain-http", "--skip-sbom", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
 
-	filesDir, err := pkgLayout.GetComponentDir(t.Context(), componentExtractDir, "imported-component", layout.FilesComponentDir)
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(filesDir, "0", "local-file.txt"))
+		packagePath := filepath.Join(packageOutput, fmt.Sprintf("zarf-package-component-remote-import-%s.tar.zst", e2e.Arch))
+		pkgLayout, err := layout.LoadFromTar(t.Context(), packagePath, layout.PackageLayoutOptions{})
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(pkgLayout.GetImageDirPath(), "index.json"))
 
-	manifestsDir, err := pkgLayout.GetComponentDir(t.Context(), componentExtractDir, "imported-component", layout.ManifestsComponentDir)
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(manifestsDir, "local-manifest-0.yaml"))
-	require.FileExists(t, filepath.Join(manifestsDir, "kustomization-local-kustomization-0.yaml"))
+		componentExtractDir := t.TempDir()
+		chartsDir, err := pkgLayout.GetComponentDir(t.Context(), componentExtractDir, "imported-component", layout.ChartsComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(chartsDir, "local-chart.tgz"))
+
+		valuesDir, err := pkgLayout.GetComponentDir(t.Context(), componentExtractDir, "imported-component", layout.ValuesComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(valuesDir, "local-chart-0"))
+
+		filesDir, err := pkgLayout.GetComponentDir(t.Context(), componentExtractDir, "imported-component", layout.FilesComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(filesDir, "0", "local-file.txt"))
+
+		manifestsDir, err := pkgLayout.GetComponentDir(t.Context(), componentExtractDir, "imported-component", layout.ManifestsComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(manifestsDir, "local-manifest-0.yaml"))
+		require.FileExists(t, filepath.Join(manifestsDir, "kustomization-local-kustomization-0.yaml"))
+	})
 }

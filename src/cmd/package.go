@@ -1917,33 +1917,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		l.Info("signing package with provided key")
 	}
 
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = o.signingKeyPath
-	signOpts.Password = o.signingKeyPassword
-	signOpts.Overwrite = o.overwrite
-	signOpts.Keyless = o.keyless
-	signOpts.Fulcio.IdentityToken = o.identityToken
-	signOpts.Fulcio.URL = o.fulcioURL
-	signOpts.Fulcio.AuthFlow = o.fulcioAuthFlow
-	signOpts.OIDC.Issuer = o.oidcIssuer
-	signOpts.OIDC.ClientID = o.oidcClientID
-	signOpts.Rekor.URL = o.rekorURL
-	signOpts.TlogUpload = o.tlogUpload
-	signOpts.SkipConfirmation = o.confirm
-	signOpts.TSAServerURL = o.tsaServerURL
-
-	// Keyless certs are short-lived (~10 min). Without Rekor or a TSA timestamp
-	// the signature is unverifiable past expiry. Default --tlog-upload=true for
-	// keyless unless the user explicitly opted out via CLI flag, env var, or config file.
-	if o.keyless {
-		tlogExplicit := cmd.Flags().Changed("tlog-upload") || getViper().IsSet(VPkgSignTlogUpload)
-		if !tlogExplicit {
-			signOpts.TlogUpload = true
-		}
-		if !signOpts.TlogUpload && signOpts.TSAServerURL == "" {
-			l.Warn(lang.CmdPackageSignNoTimestampAnchorWarn)
-		}
-	}
+	signOpts := o.buildSignBlobOptions(cmd)
 
 	if helpers.IsOCIURL(outputDest) {
 		dstRef, err := registry.ParseReference(strings.TrimPrefix(outputDest, helpers.OCIURLPrefix))
@@ -1973,6 +1947,48 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 
 	l.Info("package signed successfully", "path", signedPath)
 	return nil
+}
+
+// buildSignBlobOptions maps the sign command's common flags to the Sigstore
+// options used by package and remote-component signing.
+func (o *packageSignOptions) buildSignBlobOptions(cmd *cobra.Command) signing.SignBlobOptions {
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = o.signingKeyPath
+	signOpts.Password = o.signingKeyPassword
+	signOpts.Overwrite = o.overwrite
+	signOpts.Keyless = o.keyless
+	signOpts.Fulcio.IdentityToken = o.identityToken
+	signOpts.Fulcio.URL = o.fulcioURL
+	signOpts.Fulcio.AuthFlow = o.fulcioAuthFlow
+	signOpts.OIDC.Issuer = o.oidcIssuer
+	signOpts.OIDC.ClientID = o.oidcClientID
+	signOpts.Rekor.URL = o.rekorURL
+	signOpts.SkipConfirmation = o.confirm
+	signOpts.TSAServerURL = o.tsaServerURL
+	signOpts.TlogUpload = o.validateKeylessTlog(cmd)
+
+	return signOpts
+}
+
+// validateKeylessTlog applies the safe keyless default and warns when the
+// resulting signature has no timestamp anchor.
+func (o *packageSignOptions) validateKeylessTlog(cmd *cobra.Command) bool {
+	// Keyless certs are short-lived (~10 min). Without Rekor or a TSA timestamp
+	// the signature is unverifiable past expiry. Default --tlog-upload=true for
+	// keyless unless the user explicitly opted out via CLI flag, env var, or config file.
+	if !o.keyless {
+		return o.tlogUpload
+	}
+
+	tlogExplicit := cmd.Flags().Changed("tlog-upload") || getViper().IsSet(VPkgSignTlogUpload)
+	tlogUpload := o.tlogUpload
+	if !tlogExplicit {
+		tlogUpload = true
+	}
+	if !tlogUpload && o.tsaServerURL == "" {
+		logger.From(cmd.Context()).Warn(lang.CmdPackageSignNoTimestampAnchorWarn)
+	}
+	return tlogUpload
 }
 
 type packageVerifyOptions struct {
@@ -2239,9 +2255,14 @@ func (f *packageVerifyFlags) buildVerifyBlobOptions(cmd *cobra.Command, v *viper
 	opts.CertVerify.CertOidcIssuer = f.certificateOIDCIssuer
 	opts.CertVerify.CertOidcIssuerRegexp = f.certificateOIDCIssuerRegexp
 	opts.CommonVerifyOptions.TrustedRootPath = f.trustedRoot
-	opts.CommonVerifyOptions.IgnoreTlog = f.insecureIgnoreTlog
 	opts.CommonVerifyOptions.UseSignedTimestamps = f.useSignedTimestamps
+	opts.CommonVerifyOptions.IgnoreTlog = f.validateKeylessVerifyTlog(cmd, v)
+	return &opts
+}
 
+// validateKeylessVerifyTlog requires tlog verification for keyless identities
+// unless the user explicitly configured the insecure override.
+func (f *packageVerifyFlags) validateKeylessVerifyTlog(cmd *cobra.Command, v *viper.Viper) bool {
 	// When a keyless identity is provided, require tlog verification by default so the
 	// inclusion proof establishes when the signature was made. Honor any explicit override.
 	// cmd may be nil when run() is called directly (e.g. from tests); in that case only
@@ -2252,9 +2273,9 @@ func (f *packageVerifyFlags) buildVerifyBlobOptions(cmd *cobra.Command, v *viper
 		tlogExplicit = tlogExplicit || cmd.Flags().Changed("insecure-ignore-tlog")
 	}
 	if hasKeylessIdentity && !tlogExplicit {
-		opts.CommonVerifyOptions.IgnoreTlog = false
+		return false
 	}
-	return &opts
+	return f.insecureIgnoreTlog
 }
 
 // preRunE is the cobra PreRunE handler for commands that embed packageVerifyFlags.
