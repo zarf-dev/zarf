@@ -153,6 +153,11 @@ func DefaultVerifyBlobOptions() VerifyBlobOptions {
 // Mirrors cmd/cosign/cli/signblob.go (v3.0.6) SignBlob().RunE.
 func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBlobOptions) ([]byte, error) {
 	l := logger.From(ctx)
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer cancel()
+	}
 
 	if opts.KeyRef != "" {
 		l.Warn("SignBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
@@ -244,6 +249,11 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 // not require downloading or modifying the artifact's contents.
 func SignManifest(ctx context.Context, manifestRef string, opts SignBlobOptions, registryOpts types.RemoteOptions) error {
 	l := logger.From(ctx)
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer cancel()
+	}
 
 	if opts.KeyRef != "" {
 		l.Warn("SignBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
@@ -338,6 +348,11 @@ func SignManifest(ctx context.Context, manifestRef string, opts SignBlobOptions,
 // in-toto subject claim against the resolved manifest digest.
 func VerifyManifest(ctx context.Context, manifestRef string, opts VerifyBlobOptions, registryOpts types.RemoteOptions) error {
 	l := logger.From(ctx)
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer cancel()
+	}
 	if opts.KeyRef != "" {
 		l.Warn("VerifyBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
 		if opts.Key == "" {
@@ -382,11 +397,6 @@ func VerifyManifest(ctx context.Context, manifestRef string, opts VerifyBlobOpti
 	verifyCmd.TrustedRootPath = trustedRootPath
 
 	l.Debug("verifying OCI manifest referrer signature", "reference", manifestRef, "key", opts.Key, "sk", opts.SecurityKey.Use)
-	if opts.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
-		defer cancel()
-	}
 	if err := verifyCmd.Exec(ctx, []string{manifestRef}); err != nil {
 		return err
 	}
@@ -399,6 +409,11 @@ func VerifyManifest(ctx context.Context, manifestRef string, opts VerifyBlobOpti
 // Mirrors cmd/cosign/cli/verify.go (v3.0.6) VerifyBlob().RunE.
 func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) error {
 	l := logger.From(ctx)
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer cancel()
+	}
 
 	if opts.KeyRef != "" {
 		l.Warn("VerifyBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
@@ -472,12 +487,6 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 		"signature", opts.Signature,
 		"bundlePath", opts.BundlePath,
 		"offline", opts.CommonVerifyOptions.Offline)
-
-	if opts.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
-		defer cancel()
-	}
 
 	if err := cmd.Exec(ctx, blobPath); err != nil {
 		return err
