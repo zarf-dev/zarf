@@ -98,7 +98,7 @@ type VerifyBlobOptions struct {
 	SigRef string
 }
 
-// SignManifestOptions holds the component-signing options exposed by the CLI.
+// SignManifestOptions holds component-signing configuration.
 type SignManifestOptions struct {
 	Key              string
 	Password         string
@@ -111,9 +111,10 @@ type SignManifestOptions struct {
 	TlogUpload       bool
 	SkipConfirmation bool
 	TSAServerURL     string
+	Timeout          time.Duration
 }
 
-// VerifyManifestOptions holds the component-verification options exposed by the CLI.
+// VerifyManifestOptions holds component-verification configuration.
 type VerifyManifestOptions struct {
 	Key                         string
 	CertificateIdentity         string
@@ -123,6 +124,7 @@ type VerifyManifestOptions struct {
 	TrustedRoot                 string
 	InsecureIgnoreTlog          bool
 	UseSignedTimestamps         bool
+	Timeout                     time.Duration
 }
 
 // ShouldSign returns true if any signing key material is configured.
@@ -180,6 +182,7 @@ func DefaultVerifyBlobOptions() VerifyBlobOptions {
 func DefaultSignManifestOptions() SignManifestOptions {
 	return SignManifestOptions{
 		OIDCClientID: "sigstore",
+		Timeout:      CosignDefaultTimeout,
 	}
 }
 
@@ -187,6 +190,7 @@ func DefaultSignManifestOptions() SignManifestOptions {
 func DefaultVerifyManifestOptions() VerifyManifestOptions {
 	return VerifyManifestOptions{
 		InsecureIgnoreTlog: true,
+		Timeout:            CosignDefaultTimeout,
 	}
 }
 
@@ -290,9 +294,11 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 // not require downloading or modifying the artifact's contents.
 func SignManifest(ctx context.Context, manifestRef string, opts SignManifestOptions, registryOpts types.RemoteOptions) error {
 	l := logger.From(ctx)
-	// FIXME: not sure if we want this timeout
-	ctx, cancel := context.WithTimeout(ctx, CosignDefaultTimeout)
-	defer cancel()
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer cancel()
+	}
 
 	oidcClientSecret, err := (&options.OIDCOptions{
 		Issuer:   opts.OIDCIssuer,
@@ -350,7 +356,7 @@ func SignManifest(ctx context.Context, manifestRef string, opts SignManifestOpti
 	manifestRef = ref.Context().Digest(descriptor.Digest.String()).String()
 
 	l.Debug("signing OCI manifest with cosign referrer", "reference", manifestRef, "key", opts.Key)
-	rootOpts := &options.RootOptions{Timeout: CosignDefaultTimeout}
+	rootOpts := &options.RootOptions{Timeout: opts.Timeout}
 	signOpts := options.SignOptions{
 		Upload:           true,
 		SkipConfirmation: opts.SkipConfirmation,
@@ -373,8 +379,11 @@ func SignManifest(ctx context.Context, manifestRef string, opts SignManifestOpti
 // in-toto subject claim against the resolved manifest digest.
 func VerifyManifest(ctx context.Context, manifestRef string, opts VerifyManifestOptions, registryOpts types.RemoteOptions) error {
 	l := logger.From(ctx)
-	ctx, cancel := context.WithTimeout(ctx, CosignDefaultTimeout)
-	defer cancel()
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer cancel()
+	}
 
 	// Keyless verification needs a trusted root. Use the bundled copy unless the
 	// caller supplied one

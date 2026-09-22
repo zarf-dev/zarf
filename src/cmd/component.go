@@ -131,19 +131,18 @@ func (o *componentSignOptions) run(cmd *cobra.Command, args []string) error {
 		logger.From(cmd.Context()).Info("signing component manifest with provided key")
 	}
 
-	signOpts := signing.SignManifestOptions{
-		Key:              o.signingKeyPath,
-		Password:         o.signingKeyPassword,
-		IdentityToken:    o.identityToken,
-		FulcioURL:        o.fulcioURL,
-		FulcioAuthFlow:   o.fulcioAuthFlow,
-		OIDCIssuer:       o.oidcIssuer,
-		OIDCClientID:     o.oidcClientID,
-		RekorURL:         o.rekorURL,
-		TlogUpload:       o.validateKeylessTlog(cmd),
-		SkipConfirmation: o.confirm,
-		TSAServerURL:     o.tsaServerURL,
-	}
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = o.signingKeyPath
+	signOpts.Password = o.signingKeyPassword
+	signOpts.IdentityToken = o.identityToken
+	signOpts.FulcioURL = o.fulcioURL
+	signOpts.FulcioAuthFlow = o.fulcioAuthFlow
+	signOpts.OIDCIssuer = o.oidcIssuer
+	signOpts.OIDCClientID = o.oidcClientID
+	signOpts.RekorURL = o.rekorURL
+	signOpts.TlogUpload = o.validateKeylessTlog(cmd)
+	signOpts.SkipConfirmation = o.confirm
+	signOpts.TSAServerURL = o.tsaServerURL
 	err = signing.SignManifest(cmd.Context(), componentRef.String(), signOpts, defaultRemoteOptions())
 	if err != nil {
 		return fmt.Errorf("failed to sign component manifest: %w", err)
@@ -191,16 +190,15 @@ func (o *componentVerifyOptions) run(cmd *cobra.Command, args []string) error {
 
 	l := logger.From(cmd.Context())
 	l.Info("verifying component manifest signature", "source", helpers.OCIURLPrefix+componentRef.String())
-	verifyOpts := signing.VerifyManifestOptions{
-		Key:                         o.publicKeyPath,
-		CertificateIdentity:         o.certificateIdentity,
-		CertificateIdentityRegexp:   o.certificateIdentityRegexp,
-		CertificateOIDCIssuer:       o.certificateOIDCIssuer,
-		CertificateOIDCIssuerRegexp: o.certificateOIDCIssuerRegexp,
-		TrustedRoot:                 o.trustedRoot,
-		InsecureIgnoreTlog:          o.validateKeylessVerifyTlog(cmd, v),
-		UseSignedTimestamps:         o.useSignedTimestamps,
-	}
+	verifyOpts := signing.DefaultVerifyManifestOptions()
+	verifyOpts.Key = o.publicKeyPath
+	verifyOpts.CertificateIdentity = o.certificateIdentity
+	verifyOpts.CertificateIdentityRegexp = o.certificateIdentityRegexp
+	verifyOpts.CertificateOIDCIssuer = o.certificateOIDCIssuer
+	verifyOpts.CertificateOIDCIssuerRegexp = o.certificateOIDCIssuerRegexp
+	verifyOpts.TrustedRoot = o.trustedRoot
+	verifyOpts.InsecureIgnoreTlog = o.validateKeylessVerifyTlog(cmd, v)
+	verifyOpts.UseSignedTimestamps = o.useSignedTimestamps
 	if err := signing.VerifyManifest(cmd.Context(), componentRef.String(), verifyOpts, defaultRemoteOptions()); err != nil {
 		return fmt.Errorf("component signature verification failed: %w", err)
 	}
