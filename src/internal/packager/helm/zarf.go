@@ -226,7 +226,7 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 
 func findPackageWithService(pkgs []state.DeployedPackage, service v1beta1.Service) (string, error) {
 	for _, deployedPackage := range pkgs {
-		definition, err := deployedPackage.PackageDefinition()
+		definition, err := deployedPackage.Definition()
 		if err != nil {
 			return "", err
 		}

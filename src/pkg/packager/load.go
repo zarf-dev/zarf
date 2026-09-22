@@ -225,7 +225,7 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		if err != nil {
 			return api.Package{}, err
 		}
-		definition, err := depPkg.PackageDefinition()
+		definition, err := depPkg.Definition()
 		if err != nil {
 			return api.Package{}, err
 		}

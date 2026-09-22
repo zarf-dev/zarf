@@ -19,7 +19,6 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/spf13/cobra"
-	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -392,11 +391,10 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 		for _, depComponent := range depPkg.DeployedComponents {
 			deployedComponents[depComponent.Name] = true
 		}
-		pkgDef, err := depPkg.PackageDefinition()
+		pkg, err := depPkg.Definition()
 		if err != nil {
 			return err
 		}
-		pkg := convert.PackageToV1alpha1(pkgDef)
 		for _, component := range pkg.Components {
 			if _, ok := deployedComponents[component.Name]; ok {
 				for _, image := range component.GetImages() {

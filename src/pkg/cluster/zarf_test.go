@@ -32,7 +32,7 @@ func TestRecordPackageDefinitionDeployment(t *testing.T) {
 
 	recorded, err := c.RecordPackageDeployment(ctx, definition, "sha256:abcdeadbeef", nil, 1)
 	require.NoError(t, err)
-	recordedDefinition, err := recorded.PackageDefinition()
+	recordedDefinition, err := recorded.Definition()
 	require.NoError(t, err)
 	require.Equal(t, convert.PackageToV1alpha1(definition), convert.PackageToV1alpha1(recordedDefinition))
 	require.Contains(t, recorded.PackageData, v1alpha1.APIVersion)
@@ -40,7 +40,7 @@ func TestRecordPackageDefinitionDeployment(t *testing.T) {
 
 	loaded, err := c.GetDeployedPackage(ctx, "beta-package")
 	require.NoError(t, err)
-	loadedDefinition, err := loaded.PackageDefinition()
+	loadedDefinition, err := loaded.Definition()
 	require.NoError(t, err)
 	require.Equal(t, convert.PackageToV1beta1(definition), convert.PackageToV1beta1(loadedDefinition))
 }

@@ -36,7 +36,7 @@ func TestDeployedPackagePackageDefinition(t *testing.T) {
 	require.Contains(t, deployed.PackageData, v1alpha1.APIVersion)
 	require.Contains(t, deployed.PackageData, v1beta1.APIVersion)
 
-	actual, err := deployed.PackageDefinition()
+	actual, err := deployed.Definition()
 	require.NoError(t, err)
 	require.Equal(t, v1beta1.APIVersion, actual.GetAPIVersion())
 	require.Equal(t, beta.APIVersion, convert.PackageToV1beta1(actual).APIVersion)
@@ -47,7 +47,7 @@ func TestDeployedPackagePackageDefinition_legacyData(t *testing.T) {
 	t.Parallel()
 
 	legacy := v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "legacy-package"}}
-	definition, err := (DeployedPackage{Data: legacy}).PackageDefinition()
+	definition, err := (DeployedPackage{Data: legacy}).Definition()
 	require.NoError(t, err)
 	alpha := convert.PackageToV1alpha1(definition)
 	require.Equal(t, legacy.Metadata.Name, alpha.Metadata.Name)
@@ -58,7 +58,7 @@ func TestDeployedPackagePackageDefinition_noSupportedData(t *testing.T) {
 	t.Parallel()
 
 	deployed := DeployedPackage{PackageData: map[string]json.RawMessage{"zarf.dev/v9": []byte(`{}`)}}
-	_, err := deployed.PackageDefinition()
+	_, err := deployed.Definition()
 	require.EqualError(t, err, "deployed package has no supported package data")
 }
 

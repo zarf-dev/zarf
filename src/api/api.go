@@ -44,6 +44,18 @@ func (p Package) IsSBOMAble() bool {
 	return false
 }
 
+// GetImages returns all images specified by this component, including image archives.
+func (c Component) GetImages() []string {
+	images := make([]string, 0, len(c.Images))
+	for _, image := range c.Images {
+		images = append(images, image.Name)
+	}
+	for _, archive := range c.ImageArchives {
+		images = append(images, archive.Images...)
+	}
+	return images
+}
+
 // RemoveImages removes images and image archives from every component.
 func (p *Package) RemoveImages() {
 	for i := range p.Components {

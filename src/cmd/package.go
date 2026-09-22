@@ -1362,7 +1362,7 @@ func (o *packageListOptions) run(ctx context.Context, args []string) error {
 		for _, component := range depPkg.DeployedComponents {
 			components = append(components, component.Name)
 		}
-		pkg, err := depPkg.PackageDefinition()
+		pkg, err := depPkg.Definition()
 		if err != nil {
 			return err
 		}

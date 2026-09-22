@@ -836,10 +836,10 @@ func (d *DeployedPackage) SetPackageDefinition(definition api.Package) error {
 	}
 }
 
-// PackageDefinition returns the latest package definition this Zarf version
+// Definition returns the latest package definition this Zarf version
 // understands. Deployed package secrets written before PackageData was added
 // fall back to their legacy v1alpha1 Data field.
-func (d DeployedPackage) PackageDefinition() (api.Package, error) {
+func (d DeployedPackage) Definition() (api.Package, error) {
 	if len(d.PackageData) == 0 {
 		return convert.PackageFromV1alpha1(d.Data), nil
 	}
