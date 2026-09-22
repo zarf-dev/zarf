@@ -329,14 +329,12 @@ func PackageToV1beta1(g api.Package) v1beta1.Package {
 	}
 
 	// v1beta1 has no Kind ZarfInitConfig; collapse the v1alpha1 init kind into the normal package kind.
-	// Component services are only inferred for packages that were init configs.
-	isInit := g.Kind == api.ZarfInitConfig
-	if isInit {
+	if g.Kind == api.ZarfInitConfig {
 		pkg.Kind = v1beta1.ZarfPackageConfig
 	}
 
 	for _, c := range g.Components {
-		pkg.Components = append(pkg.Components, componentFromGeneric(c, isInit))
+		pkg.Components = append(pkg.Components, componentFromGeneric(c))
 	}
 
 	return pkg
@@ -408,7 +406,7 @@ func buildFromGeneric(b api.BuildData) v1beta1.BuildData {
 	return out
 }
 
-func componentFromGeneric(c api.Component, isInit bool) v1beta1.Component {
+func componentFromGeneric(c api.Component) v1beta1.Component {
 	bc := v1beta1.Component{
 		Name:        c.Name,
 		Description: c.Description,
@@ -424,7 +422,7 @@ func componentFromGeneric(c api.Component, isInit bool) v1beta1.Component {
 				OS: c.Target.OS,
 			},
 			Import:  importFromGeneric(c.Import),
-			Service: serviceFromGeneric(c, isInit),
+			Service: v1beta1.Service(c.Service),
 			Actions: actionsFromGeneric(c.Actions),
 		},
 	}
@@ -477,30 +475,6 @@ func componentFromGeneric(c api.Component, isInit bool) v1beta1.Component {
 	}
 
 	return bc
-}
-
-func serviceFromGeneric(c api.Component, isInit bool) v1beta1.Service {
-	if c.Service != "" {
-		return v1beta1.Service(c.Service)
-	}
-	// Services only exist on init packages, so don't infer them otherwise.
-	if !isInit {
-		return ""
-	}
-	// Infer the v1beta1 Service from well-known v1alpha1 component names.
-	switch c.Name {
-	case "zarf-registry":
-		return v1beta1.ServiceRegistry
-	case "zarf-seed-registry":
-		return v1beta1.ServiceSeedRegistry
-	case "zarf-injector":
-		return v1beta1.ServiceInjector
-	case "zarf-agent":
-		return v1beta1.ServiceAgent
-	case "git-server":
-		return v1beta1.ServiceGitServer
-	}
-	return ""
 }
 
 func importFromGeneric(imp api.ComponentImport) v1beta1.ComponentImport {

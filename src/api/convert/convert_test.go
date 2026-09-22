@@ -348,6 +348,23 @@ func TestV1Alpha1PkgToV1Beta1_NoServiceInferenceForNonInit(t *testing.T) {
 	require.Empty(t, result.Components[1].Service)
 }
 
+func TestPackageToV1beta1_DoesNotInferServiceFromComponentName(t *testing.T) {
+	t.Parallel()
+
+	definition := api.Package{
+		Kind: api.ZarfInitConfig,
+		Components: []api.Component{
+			{Name: "zarf-registry"},
+			{Name: "zarf-agent"},
+		},
+	}
+
+	result := PackageToV1beta1(definition)
+	require.Len(t, result.Components, 2)
+	require.Empty(t, result.Components[0].Service)
+	require.Empty(t, result.Components[1].Service)
+}
+
 func TestV1Beta1PkgToV1Alpha1_ServiceMarksInitPackage(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
