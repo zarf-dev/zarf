@@ -34,12 +34,12 @@ func TestCosignSignManifestPublishesOCIReferrer(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, remote.Write(reference, empty.Image, remote.WithContext(ctx)))
 
-	signOpts := DefaultSignBlobOptions()
+	signOpts := DefaultSignManifestOptions()
 	signOpts.Key = "./testdata/cosign.key"
 	signOpts.Password = "test"
 	require.NoError(t, SignManifest(ctx, reference.String(), signOpts, types.RemoteOptions{PlainHTTP: true}))
 
-	verifyOpts := DefaultVerifyBlobOptions()
+	verifyOpts := DefaultVerifyManifestOptions()
 	verifyOpts.Key = "./testdata/cosign.pub"
 	require.NoError(t, VerifyManifest(ctx, reference.String(), verifyOpts, types.RemoteOptions{PlainHTTP: true}))
 
