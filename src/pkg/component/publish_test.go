@@ -508,6 +508,10 @@ func TestPublishComponentArchitectureIndexImportsMatchingFlavorVariant(t *testin
 	destination := createRegistry(ctx, t)
 	const flavor = "hardened"
 
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.key")
+	signOpts.Password = "test"
+
 	for _, architecture := range []string{"amd64", "arm64"} {
 		componentPath := filepath.Join(root, architecture+".yaml")
 		require.NoError(t, os.WriteFile(filepath.Join(root, architecture+".txt"), []byte(architecture), 0o600))
@@ -525,7 +529,10 @@ component:
       destination: /tmp/variant.txt
 `, flavor, architecture, architecture)
 		require.NoError(t, os.WriteFile(componentPath, []byte(componentYAML), 0o600))
-		published, err := Publish(ctx, componentPath, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+		published, err := Publish(ctx, componentPath, destination, PublishOptions{
+			SignManifestOptions: signOpts,
+			RemoteOptions:       defaultTestRemoteOptions(),
+		})
 		require.NoError(t, err)
 		require.Equal(t, "0.0.1-hardened", published.Reference)
 	}
@@ -538,6 +545,10 @@ component:
 	rootDescriptor, err := repo.Resolve(ctx, published.Reference)
 	require.NoError(t, err)
 	require.Equal(t, ocispec.MediaTypeImageIndex, rootDescriptor.MediaType)
+
+	verifyOpts := signing.DefaultVerifyManifestOptions()
+	verifyOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.pub")
+	require.NoError(t, signing.VerifyManifest(ctx, published.String(), verifyOpts, defaultTestRemoteOptions()))
 
 	packagePath := filepath.Join(root, "zarf.yaml")
 	packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1

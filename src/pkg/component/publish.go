@@ -26,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	zarfoci "github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -145,12 +146,13 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	for _, layer := range layers {
 		totalSize += layer.Size
 	}
-	_, err = pushComponentArtifact(ctx, store, manifest.Digest.String(), remote, componentRef, component.Variant.Architecture, totalSize, opts)
+	published, err := pushComponentArtifact(ctx, store, manifest.Digest.String(), remote, componentRef, component.Variant.Architecture, totalSize, opts)
 	if err != nil {
 		return registry.Reference{}, err
 	}
 	if opts.SignManifestOptions.ShouldSign() {
-		if err := signing.SignManifest(ctx, componentRef.String(), opts.SignManifestOptions, opts.RemoteOptions); err != nil {
+		immutableRef := fmt.Sprintf("%s/%s@%s", componentRef.Registry, componentRef.Repository, published.Digest)
+		if err := signing.SignManifest(ctx, immutableRef, opts.SignManifestOptions, opts.RemoteOptions); err != nil {
 			return registry.Reference{}, fmt.Errorf("failed to sign published component: %w", err)
 		}
 	}
@@ -200,7 +202,17 @@ func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourc
 				return copyErr
 			}
 			if architecture != "" {
-				return remote.UpdateIndex(ctx, componentRef.Reference, published)
+				indexDescriptor, err := zarfoci.UpdateIndexWithDescriptor(
+					ctx,
+					remote.Repo(),
+					componentRef.Reference,
+					ocispec.Platform{Architecture: architecture},
+					published,
+				)
+				if err != nil {
+					return err
+				}
+				published = indexDescriptor
 			}
 			return nil
 		},
