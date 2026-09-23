@@ -877,6 +877,35 @@ func TestPackageSigningModeGuard(t *testing.T) {
 	require.False(t, signing.DefaultSignBlobOptions().ShouldSign())
 }
 
+func TestPackageSigningModeGuardRejectsViperConflicts(t *testing.T) {
+	t.Parallel()
+
+	for name, keys := range map[string]packageSigningViperKeys{
+		"package create": {
+			signingKey: VPkgCreateSigningKey,
+			keyless:    VPkgCreateKeyless,
+		},
+		"package sign and component commands": {
+			signingKey: VPkgSignSigningKey,
+			keyless:    VPkgSignKeyless,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			v := newTestViper()
+			v.Set(keys.signingKey, "configured-key")
+			v.Set(keys.keyless, true)
+			var flags packageSigningFlags
+			newSigningFlagSet(v, &flags, keys, "", "")
+
+			require.True(t, flags.keyless)
+			require.Equal(t, "configured-key", flags.signingKeyPath)
+			require.EqualError(t, flags.validateSigningMode(), "--keyless cannot be used with --signing-key")
+		})
+	}
+}
+
 func TestVerifyInsecureIgnoreTlogDefaultTrue(t *testing.T) {
 	t.Parallel()
 	v := newTestViper()

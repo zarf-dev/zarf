@@ -200,6 +200,9 @@ func (f *packageSigningFlags) resolveTlogUpload(cmd *cobra.Command, v *viper.Vip
 }
 
 func (f *packageSigningFlags) validateSigningMode() error {
+	if f.keyless && f.signingKeyPath != "" {
+		return errors.New("--keyless cannot be used with --signing-key")
+	}
 	if !f.keyless && f.signingKeyPath == "" {
 		return errors.New("--signing-key is required (or pass --keyless for Sigstore keyless flow)")
 	}
