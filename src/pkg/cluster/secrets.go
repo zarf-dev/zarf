@@ -105,16 +105,83 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 	return secretDockerConfig, nil
 }
 
-// GenerateGitPullCreds generates a secret containing the git credentials.
-func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo state.GitServerInfo) *v1ac.SecretApplyConfiguration {
-	return v1ac.Secret(name, namespace).
+// GenerateGitPullCreds generates a secret containing Git credentials and, for
+// the TLS-enabled internal server, the CA Flux expects under ca.crt.
+func (c *Cluster) GenerateGitPullCreds(ctx context.Context, namespace, name string, gitServerInfo state.GitServerInfo) (*v1ac.SecretApplyConfiguration, error) {
+	data := map[string]string{
+		"username": gitServerInfo.PullUsername,
+		"password": gitServerInfo.PullPassword,
+	}
+	if gitServerInfo.IsInternal() && gitServerInfo.TLSMode.Enabled() {
+		certs, err := c.GetGitServerTLS(ctx)
+		if err != nil {
+			return nil, err
+		}
+		data[state.GitServerTLSCAKey] = string(certs.CA)
+	}
+	secret := v1ac.Secret(name, namespace).
 		WithLabels(map[string]string{
 			state.ZarfManagedByLabel: "zarf",
 		}).WithType(corev1.SecretTypeOpaque).
-		WithStringData(map[string]string{
-			"username": gitServerInfo.PullUsername,
-			"password": gitServerInfo.PullPassword,
-		})
+		WithStringData(data)
+	return secret, nil
+}
+
+// GetGitServerTLS retrieves the TLS bundle used by the internal Git server.
+func (c *Cluster) GetGitServerTLS(ctx context.Context) (pki.GeneratedPKI, error) {
+	// FIXME: we can't assume that we aren't running from an older init package which has never published its secret
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.GitServerTLSSecret, metav1.GetOptions{})
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to get Git server TLS secret: %w", err)
+	}
+	return state.GitServerCertFromSecretData(secret.Data)
+}
+
+// ApplyGitServerTLS stores the server certificate in the fixed Secret mounted
+// by Gitea. Keeping it separate from Helm values prevents private material from
+// being retained in release metadata.
+func (c *Cluster) ApplyGitServerTLS(ctx context.Context, certs pki.GeneratedPKI) error {
+	secret := v1ac.Secret(state.GitServerTLSSecret, state.ZarfNamespaceName).
+		WithLabels(map[string]string{state.ZarfManagedByLabel: "zarf"}).
+		WithType(corev1.SecretTypeTLS).
+		WithData(state.GitServerCertSecretData(certs))
+	_, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, secret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+	if err != nil {
+		return fmt.Errorf("failed to apply Git server TLS secret: %w", err)
+	}
+	return nil
+}
+
+// UpdateArgoCDGitTLSCerts adds the internal Git CA to standard Argo CD TLS
+// ConfigMaps without disturbing certificates managed by Argo CD or users. Argo
+// looks up this ConfigMap by repository hostname; repository Secret client-cert
+// fields are intentionally not used for server trust.
+func (c *Cluster) UpdateArgoCDGitTLSCerts(ctx context.Context, gitServerInfo state.GitServerInfo) error {
+	if !gitServerInfo.IsInternal() || !gitServerInfo.TLSMode.Enabled() {
+		return nil
+	}
+	certs, err := c.GetGitServerTLS(ctx)
+	if err != nil {
+		return err
+	}
+	configMaps, err := c.Clientset.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{FieldSelector: "metadata.name=argocd-tls-certs-cm"})
+	if err != nil {
+		return err
+	}
+	for _, configMap := range configMaps.Items {
+		updated := configMap.DeepCopy()
+		if updated.Data == nil {
+			updated.Data = map[string]string{}
+		}
+		if updated.Data[state.ZarfInClusterGitServiceHost] == string(certs.CA) {
+			continue
+		}
+		updated.Data[state.ZarfInClusterGitServiceHost] = string(certs.CA)
+		if _, err := c.Clientset.CoreV1().ConfigMaps(updated.Namespace).Update(ctx, updated, metav1.UpdateOptions{}); err != nil {
+			return fmt.Errorf("updating Argo CD TLS ConfigMap %s/%s: %w", updated.Namespace, updated.Name, err)
+		}
+	}
+	return nil
 }
 
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
@@ -172,14 +239,17 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, s *state.Stat
 		if currentGitSecret.Labels[state.ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
 			continue
 		}
-		newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, s.GitServer)
+		newGitSecret, err := c.GenerateGitPullCreds(ctx, namespace.Name, config.ZarfGitServerSecretName, s.GitServer)
+		if err != nil {
+			return err
+		}
 		l.Info("applying Zarf managed git secret for namespace", "name", namespace.Name)
 		_, err = c.Clientset.CoreV1().Secrets(*newGitSecret.Namespace).Apply(ctx, newGitSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return err
 		}
 	}
-	return nil
+	return c.UpdateArgoCDGitTLSCerts(ctx, s.GitServer)
 }
 
 // ApplyZarfManagedMTLSSecrets regenerates and updates all Zarf-managed mTLS secrets.

@@ -79,6 +79,8 @@ type DeployOptions struct {
 	InjectorImage  string
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// GitServerTLS allows providing user-managed TLS certificates for the internal Git server.
+	GitServerTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
 	AgentMutationPolicy state.MutationPolicy
 
@@ -388,6 +390,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			StorageClass:        opts.StorageClass,
 			InjectorPort:        opts.InjectorPort,
 			AgentTLS:            opts.AgentTLS,
+			GitServerTLS:        opts.GitServerTLS,
 			AgentMutationPolicy: opts.AgentMutationPolicy,
 			InternalServices:    internalServicesFor(pkg.Components, opts),
 		})

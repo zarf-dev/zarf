@@ -72,6 +72,10 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --git-pull-username string                Username for pull-only access to the git server
       --git-push-password string                Password for the push-user to access the git server
       --git-push-username string                Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
+      --git-tls-ca string                       Path to a PEM-encoded CA certificate for the Git server
+      --git-tls-cert string                     Path to a PEM-encoded TLS certificate for the Git server
+      --git-tls-key string                      Path to a PEM-encoded TLS private key for the Git server
+      --git-tls-mode string                     TLS mode for the internal Git server: disabled, zarf-managed, or user-managed (default "disabled")
       --git-url string                          External git server url to use for this Zarf cluster
   -h, --help                                    help for init
       --injector-image string                   Image for the injector. This image must be available on every node

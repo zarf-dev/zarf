@@ -7,6 +7,8 @@ package gitea
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,7 +29,7 @@ type Client struct {
 }
 
 // NewClient creates and returns a new Gitea client.
-func NewClient(endpoint, username, password string) (*Client, error) {
+func NewClient(endpoint, username, password string, caBundles ...[]byte) (*Client, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -38,6 +40,16 @@ func NewClient(endpoint, username, password string) (*Client, error) {
 	}
 	transport = transport.Clone()
 	transport.MaxIdleConnsPerHost = transport.MaxIdleConns
+	if len(caBundles) > 0 && len(caBundles[0]) > 0 {
+		roots, err := x509.SystemCertPool()
+		if err != nil || roots == nil {
+			roots = x509.NewCertPool()
+		}
+		if !roots.AppendCertsFromPEM(caBundles[0]) {
+			return nil, errors.New("could not parse Git server CA bundle")
+		}
+		transport.TLSClientConfig = &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}
+	}
 	httpClient := &http.Client{
 		Timeout:   10 * time.Second,
 		Transport: transport,

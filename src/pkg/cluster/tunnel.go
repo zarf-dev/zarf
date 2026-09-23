@@ -35,6 +35,7 @@ const (
 	ZarfConnectLabelName             = "zarf.dev/connect-name"
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
 	ZarfConnectAnnotationURL         = "zarf.dev/connect-url"
+	ZarfConnectAnnotationScheme      = "zarf.dev/connect-scheme"
 
 	ZarfRegistry = "REGISTRY"
 	ZarfGit      = "GIT"
@@ -56,6 +57,7 @@ type TunnelInfo struct {
 	Namespace       string
 	ResourceType    string
 	ResourceName    string
+	Scheme          string
 	urlSuffix       string
 }
 
@@ -101,6 +103,11 @@ func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (Tunne
 	case ZarfGit:
 		zt.ResourceName = ZarfGitServerName
 		zt.RemotePort = ZarfGitServerPort
+		s, err := c.LoadState(ctx)
+		if err != nil {
+			return TunnelInfo{}, fmt.Errorf("loading state for Git connection: %w", err)
+		}
+		zt.Scheme = s.GitServer.URLScheme()
 	case ZarfInjector:
 		zt.ResourceName = ZarfInjectorName
 		zt.RemotePort = ZarfInjectorPort
@@ -134,7 +141,7 @@ func (c *Cluster) Connect(ctx context.Context, target string) (*Tunnel, error) {
 
 // ConnectTunnelInfo connects to the cluster with the provided TunnelInfo
 func (c *Cluster) ConnectTunnelInfo(ctx context.Context, zt TunnelInfo) (*Tunnel, error) {
-	tunnel, err := c.NewTunnel(zt.Namespace, zt.ResourceType, zt.ResourceName, zt.urlSuffix, zt.LocalPort, zt.RemotePort, WithListenAddress(zt.ListenAddresses))
+	tunnel, err := c.NewTunnel(zt.Namespace, zt.ResourceType, zt.ResourceName, zt.urlSuffix, zt.LocalPort, zt.RemotePort, WithListenAddress(zt.ListenAddresses), WithScheme(zt.Scheme))
 	if err != nil {
 		return nil, err
 	}
@@ -242,6 +249,7 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 
 		// Add the url suffix too.
 		zt.urlSuffix = svc.Annotations[ZarfConnectAnnotationURL]
+		zt.Scheme = svc.Annotations[ZarfConnectAnnotationScheme]
 
 		logger.From(ctx).Debug("tunnel connection match",
 			"namespace", svc.Namespace,
@@ -329,6 +337,16 @@ func WithListenAddress(addr []string) TunnelOption {
 	}
 }
 
+// WithScheme sets the URL scheme returned by URL endpoints. It does not alter
+// port forwarding, which remains a raw TCP tunnel.
+func WithScheme(scheme string) TunnelOption {
+	return func(t *Tunnel) {
+		if scheme != "" {
+			t.scheme = scheme
+		}
+	}
+}
+
 // Tunnel is the main struct that configures and manages port forwarding tunnels to Kubernetes resources.
 type Tunnel struct {
 	clientset     kubernetes.Interface
@@ -339,6 +357,7 @@ type Tunnel struct {
 	resourceType  string
 	resourceName  string
 	urlSuffix     string
+	scheme        string
 	listenAddress []string
 	stopChan      chan struct{}
 	readyChan     chan struct{}
@@ -358,6 +377,8 @@ func (c *Cluster) NewTunnel(namespace, resourceType, resourceName, urlSuffix str
 		resourceType: resourceType,
 		resourceName: resourceName,
 		urlSuffix:    urlSuffix,
+		// FIXME: use constant ?
+		scheme: "http",
 		listenAddress: []string{
 			"127.0.0.1", // default
 		},
@@ -427,9 +448,19 @@ func (tunnel *Tunnel) HTTPEndpoints() []string {
 	return httpEndpoints
 }
 
+// URLEndpoints returns tunnel endpoints with their configured scheme.
+func (tunnel *Tunnel) URLEndpoints() []string {
+	endpoints := tunnel.Endpoints()
+	urls := make([]string, len(endpoints))
+	for i, addr := range endpoints {
+		urls[i] = fmt.Sprintf("%s://%s", tunnel.scheme, addr)
+	}
+	return urls
+}
+
 // FullURLs returns the tunnel endpoint as a HTTP URL string with the urlSuffix appended.
 func (tunnel *Tunnel) FullURLs() []string {
-	endpoints := tunnel.HTTPEndpoints()
+	endpoints := tunnel.URLEndpoints()
 	fullEndpoints := make([]string, len(endpoints))
 	for i, addr := range endpoints {
 		fullEndpoints[i] = fmt.Sprintf("%s%s", addr, tunnel.urlSuffix)

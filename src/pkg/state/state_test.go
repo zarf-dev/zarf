@@ -48,6 +48,30 @@ func TestStateReconcile(t *testing.T) {
 	require.Equal(t, 1234, s.RegistryInfo.NodePort)
 }
 
+func TestGitServerInfoInternalTLSURLs(t *testing.T) {
+	t.Parallel()
+
+	legacy := GitServerInfo{Address: ZarfInClusterGitServiceURL}
+	tls := GitServerInfo{Address: ZarfInClusterGitURL(GitTLSZarfManaged), TLSMode: GitTLSZarfManaged}
+	artifact := ArtifactServerInfo{Address: ZarfInClusterArtifactURL(GitTLSZarfManaged)}
+
+	require.True(t, legacy.IsInternal())
+	require.Equal(t, "http", legacy.URLScheme())
+	require.True(t, tls.IsInternal())
+	require.Equal(t, "https", tls.URLScheme())
+	require.True(t, artifact.IsInternal())
+	require.False(t, (GitServerInfo{Address: "https://gitea.example.com:3000"}).IsInternal())
+}
+
+func TestGitServerCertSecretDataRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	want := pki.GeneratedPKI{CA: []byte("ca"), Cert: []byte("cert"), Key: []byte("key")}
+	got, err := GitServerCertFromSecretData(GitServerCertSecretData(want))
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
 func TestRegistryInfoKnownPlainHTTP(t *testing.T) {
 	t.Parallel()
 

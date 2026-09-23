@@ -7,6 +7,7 @@ package http
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"net/http"
@@ -40,7 +41,32 @@ func ProxyHandler(ctx context.Context, cluster *cluster.Cluster) http.HandlerFun
 			w.Write([]byte("unable to transform the provided request, see the Zarf HTTP proxy logs for more details"))
 			return
 		}
+		// FIXME: definitely unnecessary for now
 		proxy := &httputil.ReverseProxy{Director: func(_ *http.Request) {}, ModifyResponse: proxyResponseTransform}
+		if s.GitServer.IsInternal() && s.GitServer.TLSMode.Enabled() {
+			caBundle, err := cluster.GitServerCABundle(r.Context(), s.GitServer)
+			if err != nil {
+				l.Debug("loading Git server CA", "error", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			baseTransport, ok := http.DefaultTransport.(*http.Transport)
+			if !ok {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			transport := baseTransport.Clone()
+			roots, err := x509.SystemCertPool()
+			if err != nil || roots == nil {
+				roots = x509.NewCertPool()
+			}
+			if !roots.AppendCertsFromPEM(caBundle) {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			transport.TLSClientConfig = &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}
+			proxy.Transport = transport
+		}
 		proxy.ServeHTTP(w, r)
 	}
 }

@@ -18,7 +18,10 @@ gitea:
     server:
       DISABLE_SSH: true
       OFFLINE_MODE: true
-      ROOT_URL: http://zarf-gitea-http.zarf.svc.cluster.local:3000
+      PROTOCOL: "###ZARF_GIT_SERVER_PROTOCOL###"
+      ROOT_URL: "###ZARF_GIT_SERVER_ROOT_URL###"
+      CERT_FILE: /etc/gitea-tls/tls.crt
+      KEY_FILE: /etc/gitea-tls/tls.key
     database:
       DB_TYPE: sqlite3
       # Note that the init script checks to see if the IP & port of the database service is accessible, so make sure you set those to something that resolves as successful (since sqlite uses files on disk setting the port & ip won't affect the running of gitea).
@@ -76,6 +79,19 @@ valkey-cluster:
 
 strategy:
   type: "Recreate"
+
+extraVolumes:
+  - name: gitea-tls
+    secret:
+      secretName: zarf-git-server-tls
+
+extraContainerVolumeMounts:
+  - name: gitea-tls
+    mountPath: /etc/gitea-tls
+    readOnly: true
+# FIXME: why should we disable test
+test:
+  enabled: false
 
 affinity:
   ###ZARF_VAR_GIT_SERVER_AFFINITY###

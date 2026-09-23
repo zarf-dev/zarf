@@ -137,7 +137,7 @@ func pushComponentReposToRegistry(ctx context.Context, component v1alpha1.ZarfCo
 			if err != nil {
 				return retry.Unrecoverable(err)
 			}
-			tunnel, err := c.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
+			tunnel, err := c.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port, cluster.WithScheme(gitInfo.URLScheme()))
 			if err != nil {
 				return err
 			}
@@ -147,17 +147,21 @@ func pushComponentReposToRegistry(ctx context.Context, component v1alpha1.ZarfCo
 			}
 			defer tunnel.Close()
 			// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
-			endpoints := tunnel.HTTPEndpoints()
+			endpoints := tunnel.URLEndpoints()
 			if len(endpoints) == 0 {
 				return errors.New("no tunnel endpoints found")
 			}
-			giteaClient, err := gitea.NewClient(endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword)
+			caBundle, err := c.GitServerCABundle(ctx, gitInfo)
+			if err != nil {
+				return err
+			}
+			giteaClient, err := gitea.NewClient(endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword, caBundle)
 			if err != nil {
 				return err
 			}
 			return tunnel.Wrap(func() error {
 				l.Info("pushing repository to server", "repo", repoURL, "server", endpoints[0])
-				err = repository.Push(ctx, endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword)
+				err = repository.Push(ctx, endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword, caBundle)
 				if err != nil {
 					return err
 				}

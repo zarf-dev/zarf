@@ -180,6 +180,8 @@ type InitStateOptions struct {
 	InjectorPort int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// GitServerTLS allows providing user-managed TLS certificates for the internal Git server.
+	GitServerTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
 	AgentMutationPolicy state.MutationPolicy
 	// InternalServices lists the state services that Zarf is deploying in this init run.
@@ -277,7 +279,29 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 		if opts.InternalServices.Has(state.ArtifactKey) || opts.ArtifactServer.Address != "" {
 			opts.ArtifactServer.FillInEmptyValues()
+			if opts.ArtifactServer.Address == state.ZarfInClusterArtifactServiceURL && opts.GitServer.TLSMode.Enabled() {
+				opts.ArtifactServer.Address = state.ZarfInClusterArtifactURL(opts.GitServer.TLSMode)
+			}
 			s.ArtifactServer = opts.ArtifactServer
+		}
+		// The chart always mounts this Secret so a legacy HTTP installation can
+		// later move to TLS without a chart-shape migration. The certificate is
+		// unused while TLSMode is disabled.
+		if s.GitServer.IsInternal() {
+			certs := opts.GitServerTLS
+			if certs == nil {
+				generated, err := pki.GeneratePKI(state.ZarfInClusterGitServiceHost, state.ZarfGitServerTLSHosts...)
+				if err != nil {
+					return nil, fmt.Errorf("unable to generate Git server TLS certificates: %w", err)
+				}
+				certs = &generated
+			}
+			if err := c.ApplyGitServerTLS(ctx, *certs); err != nil {
+				return nil, err
+			}
+			if err := c.UpdateArgoCDGitTLSCerts(ctx, s.GitServer); err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		// Re-init: fill defaults only for internal services that weren't configured
