@@ -17,16 +17,21 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// CreateOptions are the optional parameters to create
+// CreateOptions are the optional parameters to create.
 type CreateOptions struct {
-	Flavor                  string
-	RegistryOverrides       []images.RegistryOverride
-	SigningKeyPath          string
+	Flavor            string
+	RegistryOverrides []images.RegistryOverride
+	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
+	SignBlobOptions signing.SignBlobOptions
+	// Deprecated: populate SignBlobOptions.Key directly.
+	SigningKeyPath string
+	// Deprecated: populate SignBlobOptions.Password directly.
 	SigningKeyPassword      string
 	SetVariables            map[string]string
 	MaxPackageSizeMB        int
@@ -92,12 +97,20 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		differentialPkg = pkgLayout.Definition()
 	}
 
+	if opts.SigningKeyPath != "" && opts.SignBlobOptions.Key == "" {
+		opts.SignBlobOptions.Key = opts.SigningKeyPath
+	}
+	if opts.SigningKeyPassword != "" && opts.SignBlobOptions.Password == "" {
+		opts.SignBlobOptions.Password = opts.SigningKeyPassword
+	}
+
 	assembleOpt := assemble.AssembleOptions{
 		SkipSBOM:             opts.SkipSBOM,
 		OCIConcurrency:       opts.OCIConcurrency,
 		DifferentialPackage:  differentialPkg,
 		Flavor:               opts.Flavor,
 		RegistryOverrides:    opts.RegistryOverrides,
+		SignBlobOptions:      opts.SignBlobOptions,
 		SigningKeyPath:       opts.SigningKeyPath,
 		SigningKeyPassword:   opts.SigningKeyPassword,
 		CachePath:            opts.CachePath,
