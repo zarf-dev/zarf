@@ -86,6 +86,40 @@ func TestRemoteComponentConfigRejectsPlatformVariantMismatch(t *testing.T) {
 	require.ErrorContains(t, err, "variant architecture does not match its OCI platform")
 }
 
+func TestRemoteComponentConfigRejectsOnCreateActions(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	ref := registry.Reference{
+		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+		Repository: "components",
+		Reference:  "on-create",
+	}
+	component := v1beta1.ComponentConfig{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfComponentConfig,
+		Metadata:   v1beta1.ComponentMetadata{Name: "on-create"},
+		Component: v1beta1.ComponentSpec{Actions: v1beta1.ComponentActions{
+			OnCreate: v1beta1.ComponentActionSet{Before: []v1beta1.ComponentAction{{Cmd: "touch unexpected"}}},
+		}},
+	}
+	componentJSON, err := json.Marshal(component)
+	require.NoError(t, err)
+	store := memory.New()
+	configDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentConfigMediaType, componentJSON)
+	require.NoError(t, store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)))
+	manifest, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{ConfigDescriptor: &configDescriptor})
+	require.NoError(t, err)
+	require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
+	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), ocispec.Platform{}, zoci.RemoteClientOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
+	require.NoError(t, err)
+	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
+	require.NoError(t, err)
+
+	_, err = remoteComponentConfig(ctx, "oci://"+ref.String(), "amd64", types.RemoteOptions{PlainHTTP: true}, "")
+	require.ErrorContains(t, err, "unsupported onCreate actions")
+}
+
 func mustPackagePath(t *testing.T, dir string) layout.PackagePath {
 	t.Helper()
 	pkgPath, err := layout.ResolvePackagePath(filepath.Join(dir, layout.ZarfYAML))

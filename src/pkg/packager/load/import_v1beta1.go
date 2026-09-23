@@ -255,6 +255,15 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
+	// Remote components are merged into the caller's package. They must not be
+	// able to run package-creation commands or introduce further, unrequested
+	// import sources.
+	if hasActionSet(config.Component.Actions.OnCreate) {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q contains unsupported onCreate actions", importURL)
+	}
+	if len(config.Component.Import.Local) != 0 || len(config.Component.Import.Remote) != 0 {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q contains unresolved imports", importURL)
+	}
 	if !variantMatchesOCIPlatform(config.Variant, root.Platform) {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q variant architecture does not match its OCI platform", importURL)
 	}
@@ -277,6 +286,10 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 		resources = append(resources, remoteResource{remote: remote, descriptor: descriptor, importRoot: importRoot, mountPath: mountPath})
 	}
 	return loadedComponentConfig{config: config, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
+}
+
+func hasActionSet(actions v1beta1.ComponentActionSet) bool {
+	return actions.Defaults != nil || len(actions.Before) != 0 || len(actions.OnSuccess) != 0 || len(actions.OnFailure) != 0
 }
 
 func validRemoteMountPath(mountPath string) bool {
