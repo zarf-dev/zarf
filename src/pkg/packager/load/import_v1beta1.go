@@ -5,7 +5,9 @@ package load
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,6 +19,8 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/componentartifact"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -128,7 +132,6 @@ func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.Compone
 	if err := validateComponentImportV1Beta1(spec.Import); err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
-	// TODO, when resolving a remote component make sure that any maliciously crafted component configs will error
 	if len(spec.Import.Local) == 0 && len(spec.Import.Remote) == 0 {
 		// End of this import chain: there are no deeper imported values to inherit.
 		return spec, importedValues{}, nil, nil
@@ -245,43 +248,28 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
-	if manifest.Config.MediaType != layout.ZarfComponentConfigMediaType {
-		return loadedComponentConfig{}, fmt.Errorf("remote import %q is not a v1beta1 component artifact", importURL)
-	}
 	configBytes, err := remote.FetchLayer(ctx, manifest.Config)
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
-	config, err := componentConfigFromBytes(importURL, configBytes)
+	config, err := publishedComponentConfigFromBytes(importURL, configBytes)
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
-	if !variantMatchesOCIPlatform(config.Variant, root.Platform) {
-		return loadedComponentConfig{}, fmt.Errorf("remote component %q variant architecture does not match its OCI platform", importURL)
+	if err := componentartifact.Validate(componentartifact.Artifact{Config: config, Manifest: manifest.Manifest, Platform: root.Platform}); err != nil {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q failed artifact validation: %w", importURL, err)
 	}
 	importRoot := path.Join(".zarf", "remote-components", strings.ReplaceAll(root.Digest.String(), ":", "-"))
 	resources := make([]remoteResource, 0, len(manifest.Layers))
-	seenMountPaths := make(map[string]struct{}, len(manifest.Layers))
 	for _, descriptor := range manifest.Layers {
 		// An import with only remote resources may have no layers and oras will then create this fake layer
 		if descriptor.MediaType == ocispec.MediaTypeEmptyJSON {
 			continue
 		}
 		mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
-		if !validRemoteMountPath(mountPath) {
-			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an invalid resource layer", importURL)
-		}
-		if _, exists := seenMountPaths[mountPath]; exists {
-			return loadedComponentConfig{}, fmt.Errorf("remote component %q has duplicate resource layers", importURL)
-		}
-		seenMountPaths[mountPath] = struct{}{}
 		resources = append(resources, remoteResource{remote: remote, descriptor: descriptor, importRoot: importRoot, mountPath: mountPath})
 	}
 	return loadedComponentConfig{config: config, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
-}
-
-func validRemoteMountPath(mountPath string) bool {
-	return mountPath != "" && !path.IsAbs(mountPath) && path.Clean(mountPath) == mountPath && mountPath != "." && !strings.HasPrefix(mountPath, "../") && !strings.Contains(mountPath, "/../")
 }
 
 // ComponentConfig reads and schema-validates a v1beta1 ZarfComponentConfig file.
@@ -311,7 +299,99 @@ func componentConfigFromBytes(path string, b []byte) (v1beta1.ComponentConfig, e
 	if err := validateComponentConfigSchemaV1Beta1(path, b); err != nil {
 		return v1beta1.ComponentConfig{}, err
 	}
+	if validationErrs := internalv1beta1.ValidateComponentConfig(config); len(validationErrs) > 0 {
+		return v1beta1.ComponentConfig{}, fmt.Errorf("component config %q validation failed:\n%w", path, validationErrs)
+	}
 	return config, nil
+}
+
+// publishedComponentConfigFromBytes accepts only the JSON document produced by
+// component.Publish. Source component configs intentionally remain YAML.
+func publishedComponentConfigFromBytes(source string, b []byte) (v1beta1.ComponentConfig, error) {
+	// FIXME: a lot of this validation is unnecessary
+	if err := rejectDuplicateJSONKeys(b); err != nil {
+		return v1beta1.ComponentConfig{}, fmt.Errorf("remote component config %q is not valid JSON: %w", source, err)
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(b)))
+	decoder.DisallowUnknownFields()
+	var config v1beta1.ComponentConfig
+	if err := decoder.Decode(&config); err != nil {
+		return v1beta1.ComponentConfig{}, fmt.Errorf("unable to parse remote component config %q: %w", source, err)
+	}
+	if err := ensureJSONEOF(decoder); err != nil {
+		return v1beta1.ComponentConfig{}, fmt.Errorf("remote component config %q has trailing data: %w", source, err)
+	}
+	if err := validateComponentConfigSchemaV1Beta1(source, b); err != nil {
+		return v1beta1.ComponentConfig{}, err
+	}
+	return config, nil
+}
+
+func ensureJSONEOF(decoder *json.Decoder) error {
+	var extra any
+	err := decoder.Decode(&extra)
+	if err == io.EOF {
+		return nil
+	}
+	if err == nil {
+		return fmt.Errorf("multiple JSON values")
+	}
+	return err
+}
+
+// rejectDuplicateJSONKeys walks JSON tokens before typed decoding. The standard
+// decoder silently accepts duplicate keys, which would make the signed blob and
+// the in-memory config disagree about what was intended.
+func rejectDuplicateJSONKeys(b []byte) error {
+	decoder := json.NewDecoder(strings.NewReader(string(b)))
+	if err := walkJSONValue(decoder); err != nil {
+		return err
+	}
+	return ensureJSONEOF(decoder)
+}
+
+func walkJSONValue(decoder *json.Decoder) error {
+	token, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+	delim, ok := token.(json.Delim)
+	if !ok {
+		return nil
+	}
+	switch delim {
+	case '{':
+		seen := map[string]struct{}{}
+		for decoder.More() {
+			key, err := decoder.Token()
+			if err != nil {
+				return err
+			}
+			name, ok := key.(string)
+			if !ok {
+				return fmt.Errorf("object key is not a string")
+			}
+			if _, duplicate := seen[name]; duplicate {
+				return fmt.Errorf("duplicate object key %q", name)
+			}
+			seen[name] = struct{}{}
+			if err := walkJSONValue(decoder); err != nil {
+				return err
+			}
+		}
+		_, err = decoder.Token()
+		return err
+	case '[':
+		for decoder.More() {
+			if err := walkJSONValue(decoder); err != nil {
+				return err
+			}
+		}
+		_, err = decoder.Token()
+		return err
+	default:
+		return fmt.Errorf("unexpected JSON delimiter %q", delim)
+	}
 }
 
 func validateComponentConfigSchemaV1Beta1(path string, b []byte) error {

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -59,10 +60,11 @@ func TestRemoteComponentConfigRejectsPlatformVariantMismatch(t *testing.T) {
 		Reference:  "mismatch",
 	}
 	component := v1beta1.ComponentConfig{
-		APIVersion: v1beta1.APIVersion,
-		Kind:       v1beta1.ZarfComponentConfig,
-		Metadata:   v1beta1.ComponentMetadata{Name: "mismatch"},
-		Variant:    v1beta1.ComponentVariant{Architecture: "arm64"},
+		APIVersion:  v1beta1.APIVersion,
+		Kind:        v1beta1.ZarfComponentConfig,
+		Metadata:    v1beta1.ComponentMetadata{Name: "mismatch", Version: "0.0.1"},
+		Variant:     v1beta1.ComponentVariant{Architecture: "arm64"},
+		PublishData: v1beta1.ComponentPublishData{ZarfVersion: "test"},
 	}
 	componentJSON, err := json.Marshal(component)
 	require.NoError(t, err)
@@ -70,7 +72,7 @@ func TestRemoteComponentConfigRejectsPlatformVariantMismatch(t *testing.T) {
 	store := memory.New()
 	configDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentConfigMediaType, componentJSON)
 	require.NoError(t, store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)))
-	manifest, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{ConfigDescriptor: &configDescriptor})
+	manifest, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{ConfigDescriptor: &configDescriptor, ManifestAnnotations: componentAnnotations(component)})
 	require.NoError(t, err)
 	require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
 
@@ -83,6 +85,59 @@ func TestRemoteComponentConfigRejectsPlatformVariantMismatch(t *testing.T) {
 
 	_, err = remoteComponentConfig(ctx, "oci://"+ref.String(), "arm64", types.RemoteOptions{PlainHTTP: true}, "")
 	require.ErrorContains(t, err, "variant architecture does not match its OCI platform")
+}
+
+func TestResolveImportsV1Beta1RejectsNonPublishedConfigJSON(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	validJSON := `{"apiVersion":"zarf.dev/v1beta1","kind":"ZarfComponentConfig","metadata":{"name":"remote","version":"0.0.1"},"component":{},"publishData":{"zarfVersion":"test"}}`
+	for _, tt := range []struct {
+		name     string
+		config   string
+		contains string
+	}{
+		{name: "YAML", config: "apiVersion: zarf.dev/v1beta1\nkind: ZarfComponentConfig\n", contains: "not valid JSON"},
+		{name: "duplicate keys", config: `{"apiVersion":"zarf.dev/v1beta1","apiVersion":"zarf.dev/v1beta1"}`, contains: "duplicate object key"},
+		{name: "unknown field", config: validJSON[:len(validJSON)-1] + `,"x-extra":true}`, contains: "unknown field"},
+		{name: "trailing document", config: validJSON + " {}", contains: "multiple JSON values"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ref := publishRawRemoteComponentConfig(ctx, t, tt.config, tt.name)
+			dir := t.TempDir()
+			packageYAML := []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: remote
+components:
+  - name: remote
+    import:
+      remote:
+        - url: oci://` + ref.String() + `
+`)
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), packageYAML, 0o600))
+			_, err := resolveImportsV1Beta1(ctx, loadV1Beta1Package(t, dir), mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{PlainHTTP: true}, "")
+			require.ErrorContains(t, err, tt.contains)
+		})
+	}
+}
+
+func publishRawRemoteComponentConfig(ctx context.Context, t *testing.T, config, reference string) registry.Reference {
+	t.Helper()
+	ref := registry.Reference{
+		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+		Repository: "components",
+		Reference:  strings.ReplaceAll(reference, " ", "-"),
+	}
+	store := memory.New()
+	descriptor := content.NewDescriptorFromBytes(layout.ZarfComponentConfigMediaType, []byte(config))
+	require.NoError(t, store.Push(ctx, descriptor, bytes.NewReader([]byte(config))))
+	manifest, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{ConfigDescriptor: &descriptor})
+	require.NoError(t, err)
+	require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
+	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), ocispec.Platform{}, zoci.RemoteClientOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
+	require.NoError(t, err)
+	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
+	require.NoError(t, err)
+	return ref
 }
 
 func mustPackagePath(t *testing.T, dir string) layout.PackagePath {
@@ -117,32 +172,36 @@ func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref re
 	t.Helper()
 
 	component := v1beta1.ComponentConfig{
-		APIVersion: v1beta1.APIVersion,
-		Kind:       v1beta1.ZarfComponentConfig,
-		Metadata:   v1beta1.ComponentMetadata{Name: ref.Reference},
+		APIVersion:  v1beta1.APIVersion,
+		Kind:        v1beta1.ZarfComponentConfig,
+		Metadata:    v1beta1.ComponentMetadata{Name: ref.Reference, Version: "0.0.1"},
+		PublishData: v1beta1.ComponentPublishData{ZarfVersion: "test"},
 		Component: v1beta1.ComponentSpec{
 			Actions: v1beta1.ComponentActions{OnDeploy: v1beta1.ComponentActionSet{Before: []v1beta1.ComponentAction{{Cmd: "echo remote"}}}},
 		},
 	}
-	componentJSON, err := json.Marshal(component)
-	require.NoError(t, err)
-
 	store := memory.New()
-	configDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentConfigMediaType, componentJSON)
-	require.NoError(t, store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)))
 	layers := make([]ocispec.Descriptor, 0, len(resourcePaths))
 	for _, resourcePath := range resourcePaths {
+		component.Component.Files = append(component.Component.Files, v1beta1.File{Source: resourcePath, Destination: "/tmp/" + filepath.Base(resourcePath)})
 		resourceContents := []byte(resourcePath)
-		resourceDescriptor := content.NewDescriptorFromBytes(layout.ZarfLayerMediaTypeBlob, resourceContents)
+		resourceDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentLayerMediaType, resourceContents)
 		resourceDescriptor.Annotations = map[string]string{
+			ocispec.AnnotationTitle:                     resourcePath,
 			layout.ComponentResourceMountPathAnnotation: resourcePath,
 		}
 		require.NoError(t, store.Push(ctx, resourceDescriptor, bytes.NewReader(resourceContents)))
 		layers = append(layers, resourceDescriptor)
 	}
+	componentJSON, err := json.Marshal(component)
+	require.NoError(t, err)
+
+	configDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentConfigMediaType, componentJSON)
+	require.NoError(t, store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)))
 	manifest, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{
-		ConfigDescriptor: &configDescriptor,
-		Layers:           layers,
+		ConfigDescriptor:    &configDescriptor,
+		Layers:              layers,
+		ManifestAnnotations: componentAnnotations(component),
 	})
 	require.NoError(t, err)
 	require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
@@ -154,6 +213,14 @@ func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref re
 	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
 	require.NoError(t, err)
 	return ref
+}
+
+func componentAnnotations(component v1beta1.ComponentConfig) map[string]string {
+	return map[string]string{
+		ocispec.AnnotationTitle:       component.Metadata.Name,
+		ocispec.AnnotationDescription: component.Metadata.Description,
+		ocispec.AnnotationVersion:     component.Metadata.Version,
+	}
 }
 
 func TestRemoteImportResolutionPinsReferencesForOneInvocation(t *testing.T) {
