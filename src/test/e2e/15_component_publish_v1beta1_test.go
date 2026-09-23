@@ -19,19 +19,14 @@ func TestComponentPublish(t *testing.T) {
 	componentPath := filepath.Join("src", "test", "packages", "15-component-publish-v1beta1", "component.yaml")
 
 	registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
-	stdOut, stdErr, err := e2e.Zarf(t, "component", "publish", componentPath, "oci://"+registryURL, "--plain-http")
+	privateKey := filepath.Join("src", "test", "packages", "zarf-test.prv-key")
+	publicKey := filepath.Join("src", "test", "packages", "zarf-test.pub")
+	stdOut, stdErr, err := e2e.Zarf(t, "component", "publish", componentPath, "oci://"+registryURL, "--plain-http", "--signing-key", privateKey)
 	require.NoError(t, err, stdOut, stdErr)
 
 	componentSource := registryURL + "/published-component:0.0.1"
-	t.Run("sign and verify", func(t *testing.T) {
-		privateKey := filepath.Join("src", "test", "packages", "zarf-test.prv-key")
-		publicKey := filepath.Join("src", "test", "packages", "zarf-test.pub")
-
-		stdOut, stdErr, err := e2e.Zarf(t, "component", "sign", componentSource, "--plain-http", "--signing-key", privateKey)
-		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "component manifest signed successfully")
-
-		stdOut, stdErr, err = e2e.Zarf(t, "component", "verify", componentSource, "--plain-http", "--key", publicKey)
+	t.Run("verify published signature", func(t *testing.T) {
+		stdOut, stdErr, err := e2e.Zarf(t, "component", "verify", componentSource, "--plain-http", "--key", publicKey)
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdErr, "component signature verification")
 		require.Contains(t, stdErr, "PASSED")
