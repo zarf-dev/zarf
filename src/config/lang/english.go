@@ -426,11 +426,13 @@ $ zarf package publish oci://source-registry.com/my-namespace/my-package:1.0.0 o
 # Publish a package with a specific tag different from the package metadata.version
 $ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry.com/my-namespace --tag v0.0.1
 `
-	CmdPackagePublishFlagSigningKey         = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider"
-	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key used for publishing packages"
-	CmdPackagePublishFlagConfirm            = "Confirms package publish without prompting. Skips prompt for the signing key password"
-	CmdPackagePublishFlagFlavor             = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
-	CmdPackagePublishFlagTag                = "The tag to be used in the OCI reference for the package in the registry"
+	CmdPackagePublishFlagSigningKey           = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider"
+	CmdPackagePublishFlagSigningKeyPassword   = "Password to the private key used for publishing packages"
+	CmdPackagePublishFlagConfirm              = "Confirms package publish without prompting. Skips prompt for the signing key password"
+	CmdPackagePublishFlagFlavor               = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
+	CmdPackagePublishFlagTag                  = "The tag to be used in the OCI reference for the package in the registry"
+	CmdPackagePublishSigningDeprecation       = "This flag is deprecated. Use signing during package creation or 'zarf package sign' before publishing when applicable."
+	CmdPackagePublishSigningConfigDeprecation = "package.publish signing configuration is deprecated. Use signing during package creation or 'zarf package sign' before publishing."
 
 	CmdComponentShort          = "Commands for reusable Zarf components"
 	CmdComponentPublishShort   = "Publishes a v1beta1 Zarf component to a remote registry"

@@ -1706,6 +1706,8 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
+	_ = cmd.Flags().MarkDeprecated("signing-key", lang.CmdPackagePublishSigningDeprecation)
+	_ = cmd.Flags().MarkDeprecated("signing-key-pass", lang.CmdPackagePublishSigningDeprecation)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVarP(&o.tag, "tag", "t", "", lang.CmdPackagePublishFlagTag)
@@ -1724,6 +1726,12 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 	v := getViper()
 	isSkeletonPackage := helpers.IsDir(packageSource)
+	if !isSkeletonPackage &&
+		!cmd.Flags().Changed("signing-key") &&
+		!cmd.Flags().Changed("signing-key-pass") &&
+		(v.IsSet(VPkgPublishSigningKey) || v.IsSet(VPkgPublishSigningKeyPassword)) {
+		logger.From(ctx).Warn(lang.CmdPackagePublishSigningConfigDeprecation)
+	}
 	if !isSkeletonPackage {
 		packageSource = zoci.NormalizeOCISource(packageSource)
 	}

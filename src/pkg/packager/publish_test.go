@@ -162,10 +162,11 @@ func TestPublishFromOCIValidation(t *testing.T) {
 
 func TestPublishSkeleton(t *testing.T) {
 	tt := []struct {
-		name        string
-		path        string
-		opts        PublishSkeletonOptions
-		expectedTag string
+		name          string
+		path          string
+		opts          PublishSkeletonOptions
+		publicKeyPath string
+		expectedTag   string
 	}{
 		{
 			name: "Publish skeleton package",
@@ -225,6 +226,11 @@ func TestPublishSkeleton(t *testing.T) {
 			// NOTE(mkcp): In future schema version move ZarfPackage.Metadata.AggregateChecksum
 			// to ZarfPackage.Build.AggregateChecksum. See ADR #26
 			require.Equal(t, expected, pkg)
+			if tc.publicKeyPath != "" {
+				signedLayout := pullFromRemote(ctx, t, ref.String(), v1alpha1.SkeletonArch, tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
+				t.Cleanup(func() { require.NoError(t, signedLayout.Cleanup()) })
+				require.True(t, signedLayout.IsSigned())
+			}
 		})
 	}
 }
@@ -255,6 +261,17 @@ func TestPublishPackage(t *testing.T) {
 			opts: PublishPackageOptions{
 				RemoteOptions:   defaultTestRemoteOptions(),
 				SignBlobOptions: signOpts,
+			},
+			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
+			expectedTag:   "0.0.1",
+		},
+		{
+			name: "Sign and publish package with deprecated keypair fields",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions:      defaultTestRemoteOptions(),
+				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
+				SigningKeyPassword: "password",
 			},
 			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
 			expectedTag:   "0.0.1",
@@ -563,13 +580,13 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
 	signOpts.Password = "password"
-	signOpts.Overwrite = true
+	require.NoError(t, sourceLayout.SignPackage(ctx, signOpts))
+
 	destinationRef, err := PublishPackage(ctx, sourceLayout, registry.Reference{
 		Registry:   destinationAddress,
 		Repository: sourceRef.Repository,
 	}, PublishPackageOptions{
-		SignBlobOptions: signOpts,
-		RemoteOptions:   remoteOptions,
+		RemoteOptions: remoteOptions,
 	})
 	require.NoError(t, err)
 
