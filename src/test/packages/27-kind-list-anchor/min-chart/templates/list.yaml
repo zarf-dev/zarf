@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: List
+items:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: cm-a
+  data: &shared
+    key: value
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: cm-b
+  data: *shared
