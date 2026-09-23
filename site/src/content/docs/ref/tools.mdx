@@ -44,3 +44,24 @@ Zarf vendors in [K9s](https://k9scli.io/), a terminal-based UI to interact with 
 ![k9s dashboard](../../../assets/dashboard/k9s_dashboard_example.png)
 
 More instructions on how to use k9s can be found on their [documentation site](https://k9scli.io/topics/commands/).
+
+:::tip
+
+Zarf makes it easy to define aliases for many of the bundled tools.
+
+> command: [`zarf tools aliases`](/commands/zarf_tools_aliases)
+
+Source the generated aliases to use Zarf's bundled `kubectl`, `helm`, `yq`, `k9s`, and `syft` as standalone commands:
+
+```sh
+source <(zarf tools aliases)
+```
+
+When using Bash, enable alias expansion before sourcing aliases from a package manifest or another noninteractive context:
+
+```sh
+shopt -s expand_aliases
+source <(zarf tools aliases)
+```
+
+:::
