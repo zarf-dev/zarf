@@ -602,9 +602,6 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 		Values:     v1beta1.Values{Files: []string{"../external/values.yaml"}, Schema: filepath.Join(externalDir, "schema.json")},
 		Component: v1beta1.ComponentSpec{
 			Charts: []v1beta1.Chart{{
-				// FIXME: verify this is necessary
-				Name:        "external",
-				Namespace:   "default",
 				Local:       &v1beta1.LocalSource{Path: filepath.Join(externalDir, "chart")},
 				ValuesFiles: []v1beta1.ValuesFile{{Path: "../external/chart-values.yaml"}},
 			}},

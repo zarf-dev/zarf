@@ -24,8 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
-	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
-	"github.com/zarf-dev/zarf/src/internal/componentartifact"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -39,6 +37,8 @@ import (
 	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 )
+
+const componentLayerMediaType = "application/vnd.zarf.component.layer.v1.blob"
 
 // PublishOptions declares parameters for publishing a v1beta1 component config.
 type PublishOptions struct {
@@ -61,9 +61,6 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	if validationErrs := internalv1beta1.ValidateComponentConfig(component); len(validationErrs) > 0 {
-		return registry.Reference{}, fmt.Errorf("component validation failed:\n%w", validationErrs)
-	}
 	if component.Metadata.Version == "" {
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
@@ -72,9 +69,6 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 		return registry.Reference{}, fmt.Errorf("unable to resolve component imports: %w", err)
 	}
 	component = resolved.Component
-	if validationErrs := internalv1beta1.ValidateComponentConfig(component); len(validationErrs) > 0 {
-		return registry.Reference{}, fmt.Errorf("resolved component validation failed:\n%w", validationErrs)
-	}
 	resourceSet, err := resolved.MaterializeResources(ctx, componentPath)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to materialize imported component resources: %w", err)
@@ -136,23 +130,6 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if err := store.Tag(ctx, manifest, manifest.Digest.String()); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to stage component artifact: %w", err)
 	}
-	// FIXME: don't need to validate afterward
-	manifestJSON, err := content.FetchAll(ctx, store, manifest)
-	if err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to read staged component manifest: %w", err)
-	}
-	var packedManifest ocispec.Manifest
-	if err := json.Unmarshal(manifestJSON, &packedManifest); err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to parse staged component manifest: %w", err)
-	}
-	var platform *ocispec.Platform
-	if component.Variant.Architecture != "" {
-		platform = &ocispec.Platform{Architecture: component.Variant.Architecture}
-	}
-	if err := componentartifact.Validate(componentartifact.Artifact{Config: component, Manifest: packedManifest, Platform: platform}); err != nil {
-		return registry.Reference{}, fmt.Errorf("component artifact validation failed: %w", err)
-	}
-
 	remote, err := zoci.NewRemoteWithOptions(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Variant.Architecture}, zoci.RemoteClientOptions{
 		RemoteOptions: opts.RemoteOptions,
 	})
@@ -276,7 +253,7 @@ func stageComponentResources(ctx context.Context, store content.Storage, resourc
 // retained in process memory.
 func componentResourceDescriptor(resource componentResource) (ocispec.Descriptor, io.ReadCloser, error) {
 	if resource.contents != nil {
-		return content.NewDescriptorFromBytes(layout.ZarfComponentLayerMediaType, resource.contents), io.NopCloser(bytes.NewReader(resource.contents)), nil
+		return content.NewDescriptorFromBytes(componentLayerMediaType, resource.contents), io.NopCloser(bytes.NewReader(resource.contents)), nil
 	}
 
 	file, err := os.Open(resource.sourcePath)
@@ -297,7 +274,7 @@ func componentResourceDescriptor(resource componentResource) (ocispec.Descriptor
 		return ocispec.Descriptor{}, nil, err
 	}
 	return ocispec.Descriptor{
-		MediaType: layout.ZarfComponentLayerMediaType,
+		MediaType: componentLayerMediaType,
 		Digest:    digestValue,
 		Size:      info.Size(),
 	}, reader, nil
