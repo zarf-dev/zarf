@@ -37,6 +37,7 @@ func newComponentCommand() *cobra.Command {
 type componentPublishOptions struct {
 	ociConcurrency int
 	retries        int
+	confirm        bool
 	packageSigningFlags
 }
 
@@ -67,6 +68,7 @@ func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
 	}, lang.CmdPackageSignFlagSigningKey, lang.CmdPackageSignFlagSigningKeyPass)
 	annotateFlagGroup(signingFlags, signingFlagGroupTitle)
 	cmd.Flags().AddFlagSet(signingFlags)
+	cmd.Flags().BoolVar(&o.confirm, "confirm", false, lang.CmdPackageSignFlagConfirm)
 	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
 	return cmd
 }
@@ -84,7 +86,7 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 	if err := destination.ValidateRegistry(); err != nil {
 		return err
 	}
-	signOpts := o.buildSignManifestOptions(cmd, getViper(), VPkgSignTlogUpload, false)
+	signOpts := o.buildSignManifestOptions(cmd, getViper(), VPkgSignTlogUpload, o.confirm)
 	if signOpts.ShouldSign() {
 		if err := o.validateSigningMode(); err != nil {
 			return err
