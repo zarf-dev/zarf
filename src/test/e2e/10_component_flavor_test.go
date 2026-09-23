@@ -115,4 +115,14 @@ func TestPublishFlavor(t *testing.T) {
 	for i, component := range config.Components {
 		require.Equal(t, expectedIDs[i], component.Name)
 	}
+
+	// Deprecated skeleton signing remains available until package publish signing is removed.
+	privateKeyFlag := "--signing-key=src/test/packages/zarf-test.prv-key"
+	publicKeyFlag := "--key=src/test/packages/zarf-test.pub"
+	_, stdErr, err := e2e.Zarf(t, "package", "publish", flavorTest, "--flavor", "vanilla", "--tag", "signed", "--no-color", "oci://"+ref, "--plain-http", privateKeyFlag)
+	require.NoError(t, err, stdErr)
+	require.Contains(t, stdErr, "deprecated")
+
+	_, stdErr, err = e2e.Zarf(t, "package", "verify", "oci://"+ref+"/test-package-flavors:signed", "--plain-http", "-a", "skeleton", publicKeyFlag)
+	require.NoError(t, err, stdErr)
 }

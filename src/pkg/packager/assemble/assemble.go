@@ -230,6 +230,10 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 
 // AssembleSkeletonOptions are the options for creating a skeleton package.
 type AssembleSkeletonOptions struct {
+	// Deprecated: use package create signing options before publishing.
+	SigningKeyPath string
+	// Deprecated: use package create signing options before publishing.
+	SigningKeyPassword   string
 	Flavor               string
 	WithBuildMachineInfo bool
 }
@@ -301,6 +305,13 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	pkgLayout, err := layout.LoadFromDir(ctx, buildPath, layoutOpts)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load skeleton: %w", err)
+	}
+
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = opts.SigningKeyPath
+	signOpts.Password = opts.SigningKeyPassword
+	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
+		return nil, err
 	}
 
 	return pkgLayout, nil

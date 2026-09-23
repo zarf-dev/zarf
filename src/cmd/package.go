@@ -1728,11 +1728,10 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	if isSkeletonPackage {
-		if o.signingKeyPath != "" {
-			return errors.New("package publish signing is not supported for skeleton directories")
-		}
 		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, packager.PublishSkeletonOptions{
 			OCIConcurrency:       o.ociConcurrency,
+			SigningKeyPath:       o.signingKeyPath,
+			SigningKeyPassword:   o.signingKeyPassword,
 			Retries:              o.retries,
 			RemoteOptions:        defaultRemoteOptions(),
 			CachePath:            cachePath,

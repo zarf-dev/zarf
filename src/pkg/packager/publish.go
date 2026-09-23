@@ -178,19 +178,24 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 
 // PublishSkeletonOptions declares the parameters to publish a skeleton package.
 type PublishSkeletonOptions struct {
-	// OCIConcurrency configures the amount of layers to push in parallel
+	// OCIConcurrency configures the amount of layers to push in parallel.
 	OCIConcurrency int
-	CachePath      string
-	// Flavor specifies the flavor to use
+	// Deprecated: use package create signing options before publishing.
+	SigningKeyPath string
+	// Deprecated: use package create signing options before publishing.
+	SigningKeyPassword string
+	// CachePath is used to cache layers from skeleton package pulls.
+	CachePath string
+	// Flavor specifies the flavor to use.
 	Flavor string
-	// Retries specifies the number of retries to use
+	// Retries specifies the number of retries to use.
 	Retries int
-	// SkipVersionCheck skips version requirement validation
+	// SkipVersionCheck skips version requirement validation.
 	SkipVersionCheck bool
-	// WithBuildMachineInfo controls whether to include build machine information (hostname and username) in the package metadata
+	// WithBuildMachineInfo controls whether to include build machine information (hostname and username) in the package metadata.
 	WithBuildMachineInfo bool
 	types.RemoteOptions
-	// Tag is an optional tag for the OCI reference separate from the package metadata.version
+	// Tag is an optional tag for the OCI reference separate from the package metadata.version.
 	Tag string
 }
 
@@ -247,6 +252,8 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	}
 	// Create skeleton buildpath
 	createOpts := assemble.AssembleSkeletonOptions{
+		SigningKeyPath:       opts.SigningKeyPath,
+		SigningKeyPassword:   opts.SigningKeyPassword,
 		Flavor:               opts.Flavor,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
