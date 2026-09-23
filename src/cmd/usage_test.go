@@ -110,15 +110,14 @@ func TestPackageSigningUsageGroups(t *testing.T) {
 	}
 }
 
-func TestPackagePublishDoesNotRegisterSigningFlags(t *testing.T) {
+func TestPackagePublishSigningFlagsAreDeprecated(t *testing.T) {
 	t.Parallel()
 
 	cmd := newPackagePublishCommand(newTestViper())
-	for _, name := range []string{
-		"signing-key", "signing-key-pass", "keyless", "identity-token", "fulcio-url",
-		"fulcio-auth-flow", "oidc-issuer", "oidc-client-id", "rekor-url", "tlog-upload", "tsa-server-url",
-	} {
-		require.Nilf(t, cmd.Flags().Lookup(name), "publish must not register %s", name)
+	for _, name := range []string{"signing-key", "signing-key-pass"} {
+		flag := cmd.Flags().Lookup(name)
+		require.NotNilf(t, flag, "publish must register %s", name)
+		require.Contains(t, flag.Deprecated, "package sign")
 	}
 }
 

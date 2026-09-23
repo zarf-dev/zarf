@@ -227,11 +227,16 @@ func TestPublishSkeleton(t *testing.T) {
 }
 
 func TestPublishPackage(t *testing.T) {
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
+	signOpts.Password = "password"
+
 	tt := []struct {
-		name        string
-		path        string
-		opts        PublishPackageOptions
-		expectedTag string
+		name          string
+		path          string
+		opts          PublishPackageOptions
+		publicKeyPath string
+		expectedTag   string
 	}{
 		{
 			name: "Publish package",
@@ -240,6 +245,27 @@ func TestPublishPackage(t *testing.T) {
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
 			expectedTag: "0.0.1",
+		},
+		{
+			name: "Sign and publish package",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions:   defaultTestRemoteOptions(),
+				SignBlobOptions: signOpts,
+			},
+			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
+			expectedTag:   "0.0.1",
+		},
+		{
+			name: "Sign and publish package with deprecated keypair fields",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions:      defaultTestRemoteOptions(),
+				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
+				SigningKeyPassword: "password",
+			},
+			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
+			expectedTag:   "0.0.1",
 		},
 		{
 			name: "Publish package with specified tag different from version",
@@ -269,7 +295,7 @@ func TestPublishPackage(t *testing.T) {
 			expectedPkg := layoutExpected.AsV1alpha1()
 			expectedPkg.Build = v1alpha1.ZarfBuildData{}
 
-			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", "", t.TempDir(), defaultTestRemoteOptions())
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
 			actualPkg := layoutActual.AsV1alpha1()
 			actualPkg.Build = v1alpha1.ZarfBuildData{}
 			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")

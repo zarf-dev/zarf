@@ -133,6 +133,8 @@ const (
 
 	// Package publish config keys
 
+	VPkgPublishSigningKey           = "package.publish.signing_key"
+	VPkgPublishSigningKeyPassword   = "package.publish.signing_key_password"
 	VPkgPublishRetries              = "package.publish.retries"
 	VPkgPublishWithBuildMachineInfo = "package.publish.with_build_machine_info"
 
