@@ -14,7 +14,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -77,7 +76,6 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 
 	arch := config.GetArch(opts.Architecture)
 	p := oci.PlatformForArch(arch)
-
 	// Set up remote repo clients.
 	remoteOptions := zoci.RemoteClientOptions{
 		RemoteOptions: opts.RemoteOptions,
@@ -114,18 +112,11 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 type PublishPackageOptions struct {
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
-	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
-	SignBlobOptions signing.SignBlobOptions
 	// Retries specifies the number of retries to use
 	Retries int
 	types.RemoteOptions
 	// Tag is an optional tag for the OCI reference separate from the package metadata.version
 	Tag string
-
-	// Deprecated: populate SignBlobOptions.Key directly.
-	SigningKeyPath string
-	// Deprecated: populate SignBlobOptions.Password directly.
-	SigningKeyPassword string
 }
 
 // PublishPackage takes a package layout and pushes the package to the given registry.
@@ -151,17 +142,6 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
 	}
 
-	if opts.SigningKeyPath != "" && opts.SignBlobOptions.Key == "" {
-		opts.SignBlobOptions.Key = opts.SigningKeyPath
-	}
-	if opts.SigningKeyPassword != "" && opts.SignBlobOptions.Password == "" {
-		opts.SignBlobOptions.Password = opts.SigningKeyPassword
-	}
-
-	if err := pkgLayout.SignPackage(ctx, opts.SignBlobOptions); err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
-	}
-
 	referenceOptions := zoci.ReferenceFromMetadataOptions{
 		Tag: opts.Tag,
 	}
@@ -182,12 +162,7 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 type PublishSkeletonOptions struct {
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
-	// SigningKeyPath points to a signing key on the local disk.
-	SigningKeyPath string
-	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
-	SigningKeyPassword string
-	// CachePath is used to cache layers from skeleton package pulls
-	CachePath string
+	CachePath      string
 	// Flavor specifies the flavor to use
 	Flavor string
 	// Retries specifies the number of retries to use
@@ -254,8 +229,6 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	}
 	// Create skeleton buildpath
 	createOpts := assemble.AssembleSkeletonOptions{
-		SigningKeyPath:       opts.SigningKeyPath,
-		SigningKeyPassword:   opts.SigningKeyPassword,
 		Flavor:               opts.Flavor,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}

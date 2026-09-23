@@ -52,7 +52,6 @@ func TestPackageSigningFlagsAreGrouped(t *testing.T) {
 	commands := map[string]*cobra.Command{
 		"component-sign": newComponentSignCommand(newTestViper()),
 		"create":         newPackageCreateCommand(newTestViper()),
-		"publish":        newPackagePublishCommand(newTestViper()),
 		"sign":           newPackageSignCommand(newTestViper()),
 	}
 	for name, cmd := range commands {
@@ -72,7 +71,6 @@ func TestPackageSigningFlagsMutuallyExclusive(t *testing.T) {
 	for _, factory := range []func(*viper.Viper) *cobra.Command{
 		newComponentSignCommand,
 		newPackageCreateCommand,
-		newPackagePublishCommand,
 		newPackageSignCommand,
 	} {
 		cmd := factory(newTestViper())
@@ -91,7 +89,6 @@ func TestPackageSigningUsageGroups(t *testing.T) {
 	commands := map[string]*cobra.Command{
 		"component-sign": newComponentSignCommand(newTestViper()),
 		"create":         newPackageCreateCommand(newTestViper()),
-		"publish":        newPackagePublishCommand(newTestViper()),
 		"sign":           newPackageSignCommand(newTestViper()),
 	}
 	for name, cmd := range commands {
@@ -106,10 +103,19 @@ func TestPackageSigningUsageGroups(t *testing.T) {
 			defaultFlags := usage[strings.Index(usage, "Flags:"):signingGroupIndex]
 			require.NotContains(t, defaultFlags, "--signing-key")
 			require.NotContains(t, defaultFlags, "--keyless")
-			if name == "publish" {
-				require.Contains(t, usage, verifyFlagGroupTitle+":")
-			}
 		})
+	}
+}
+
+func TestPackagePublishDoesNotRegisterSigningFlags(t *testing.T) {
+	t.Parallel()
+
+	cmd := newPackagePublishCommand(newTestViper())
+	for _, name := range []string{
+		"signing-key", "signing-key-pass", "keyless", "identity-token", "fulcio-url",
+		"fulcio-auth-flow", "oidc-issuer", "oidc-client-id", "rekor-url", "tlog-upload", "tsa-server-url",
+	} {
+		require.Nilf(t, cmd.Flags().Lookup(name), "publish must not register %s", name)
 	}
 }
 

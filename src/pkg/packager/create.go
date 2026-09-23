@@ -18,17 +18,18 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// CreateOptions are the optional parameters to create
+// CreateOptions are the optional parameters to create.
 type CreateOptions struct {
-	Flavor                  string
-	RegistryOverrides       []images.RegistryOverride
-	SigningKeyPath          string
-	SigningKeyPassword      string
+	Flavor            string
+	RegistryOverrides []images.RegistryOverride
+	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
+	SignBlobOptions         signing.SignBlobOptions
 	SetVariables            map[string]string
 	MaxPackageSizeMB        int
 	SBOMOut                 string
@@ -99,8 +100,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		DifferentialPackage:  differentialPkg,
 		Flavor:               opts.Flavor,
 		RegistryOverrides:    opts.RegistryOverrides,
-		SigningKeyPath:       opts.SigningKeyPath,
-		SigningKeyPassword:   opts.SigningKeyPassword,
+		SignBlobOptions:      opts.SignBlobOptions,
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,

@@ -53,10 +53,10 @@ type AssembleOptions struct {
 	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
 	Flavor string
 	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry
-	RegistryOverrides  []images.RegistryOverride
-	SigningKeyPath     string
-	SigningKeyPassword string
-	SkipSBOM           bool
+	RegistryOverrides []images.RegistryOverride
+	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
+	SignBlobOptions signing.SignBlobOptions
+	SkipSBOM        bool
 	// When DifferentialPackage is set the zarf package created only includes images and repos not in the differential package.
 	DifferentialPackage api.Package
 	OCIConcurrency      int
@@ -221,13 +221,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 
-	// Sign the package with the provided options
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = opts.SigningKeyPath
-	signOpts.Password = opts.SigningKeyPassword
-
-	err = pkgLayout.SignPackage(ctx, signOpts)
-	if err != nil {
+	if err := pkgLayout.SignPackage(ctx, opts.SignBlobOptions); err != nil {
 		return nil, err
 	}
 
@@ -236,8 +230,6 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 
 // AssembleSkeletonOptions are the options for creating a skeleton package
 type AssembleSkeletonOptions struct {
-	SigningKeyPath       string
-	SigningKeyPassword   string
 	Flavor               string
 	WithBuildMachineInfo bool
 }
@@ -309,16 +301,6 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	pkgLayout, err := layout.LoadFromDir(ctx, buildPath, layoutOpts)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load skeleton: %w", err)
-	}
-
-	// Sign the package with the provided options
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = opts.SigningKeyPath
-	signOpts.Password = opts.SigningKeyPassword
-
-	err = pkgLayout.SignPackage(ctx, signOpts)
-	if err != nil {
-		return nil, err
 	}
 
 	return pkgLayout, nil

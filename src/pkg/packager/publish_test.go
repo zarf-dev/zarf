@@ -227,16 +227,11 @@ func TestPublishSkeleton(t *testing.T) {
 }
 
 func TestPublishPackage(t *testing.T) {
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
-	signOpts.Password = "password"
-
 	tt := []struct {
-		name          string
-		path          string
-		opts          PublishPackageOptions
-		publicKeyPath string
-		expectedTag   string
+		name        string
+		path        string
+		opts        PublishPackageOptions
+		expectedTag string
 	}{
 		{
 			name: "Publish package",
@@ -245,16 +240,6 @@ func TestPublishPackage(t *testing.T) {
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
 			expectedTag: "0.0.1",
-		},
-		{
-			name: "Sign and publish package",
-			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOptions{
-				RemoteOptions:   defaultTestRemoteOptions(),
-				SignBlobOptions: signOpts,
-			},
-			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
-			expectedTag:   "0.0.1",
 		},
 		{
 			name: "Publish package with specified tag different from version",
@@ -284,13 +269,10 @@ func TestPublishPackage(t *testing.T) {
 			expectedPkg := layoutExpected.AsV1alpha1()
 			expectedPkg.Build = v1alpha1.ZarfBuildData{}
 
-			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", "", t.TempDir(), defaultTestRemoteOptions())
 			actualPkg := layoutActual.AsV1alpha1()
 			actualPkg.Build = v1alpha1.ZarfBuildData{}
 			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")
-			if tc.opts.SignBlobOptions.Key != "" {
-				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Bundle))
-			}
 		})
 	}
 }
@@ -560,13 +542,13 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
 	signOpts.Password = "password"
-	signOpts.Overwrite = true
+	require.NoError(t, sourceLayout.SignPackage(ctx, signOpts))
+
 	destinationRef, err := PublishPackage(ctx, sourceLayout, registry.Reference{
 		Registry:   destinationAddress,
 		Repository: sourceRef.Repository,
 	}, PublishPackageOptions{
-		SignBlobOptions: signOpts,
-		RemoteOptions:   remoteOptions,
+		RemoteOptions: remoteOptions,
 	})
 	require.NoError(t, err)
 

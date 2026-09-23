@@ -49,10 +49,12 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	chartPackagePath := filepath.Join("examples", "helm-charts")
 	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "create", chartPackagePath, "-o", suite.PackagesDir)
 	suite.NoError(err, stdOut, stdErr)
-	// Publish package.
+	// Sign the existing package, then publish it without signing behavior.
 	example := filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
 	ref := suite.Reference.String()
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", example, "oci://"+ref, "--plain-http", privateKeyFlag)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "sign", example, privateKeyFlag)
+	suite.NoError(err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", example, "oci://"+ref, "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Publish w/ package missing `metadata.version` field.
@@ -61,7 +63,9 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	suite.Error(err, stdErr)
 
 	// Inline publish package.
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "create", chartPackagePath, "-o", "oci://"+ref, "--plain-http", "--oci-concurrency=5")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "create", chartPackagePath, "-o", "oci://"+ref, "--plain-http", "--oci-concurrency=5", privateKeyFlag)
+	suite.NoError(err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "verify", "oci://"+ref+"/helm-charts:0.0.1", "--plain-http", publicKeyFlag)
 	suite.NoError(err, stdOut, stdErr)
 
 	// Inline publish flavor.
@@ -69,8 +73,12 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "create", chartPackagePath, "-o", "oci://"+ref, "--flavor", "oracle-cookie-crunch", "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 
-	// Publish from OCI to OCI
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", "oci://"+ref+"/package-flavors:1.0.0-oracle-cookie-crunch", "oci://"+ref+"/namespace/", "--plain-http", privateKeyFlag)
+	// Sign the OCI package into a namespace, then copy it to the destination namespace.
+	packageFlavorSource := "oci://" + ref + "/package-flavors:1.0.0-oracle-cookie-crunch"
+	signedPackageFlavorSource := "oci://" + ref + "/signed/package-flavors:1.0.0-oracle-cookie-crunch"
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "sign", packageFlavorSource, "--output", "oci://"+ref+"/signed", "--plain-http", privateKeyFlag)
+	suite.NoError(err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", signedPackageFlavorSource, "oci://"+ref+"/namespace/", "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Inspect published flavor.

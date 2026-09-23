@@ -798,7 +798,7 @@ func TestPackageSigningTlogUploadNotDefaulted(t *testing.T) {
 	t.Parallel()
 
 	v := newTestViper()
-	for _, key := range []string{VPkgCreateTlogUpload, VPkgPublishTlogUpload, VPkgSignTlogUpload} {
+	for _, key := range []string{VPkgCreateTlogUpload, VPkgSignTlogUpload} {
 		require.Falsef(t, v.IsSet(key), "%s must not have a default; IsSet distinguishes an explicit opt-out", key)
 	}
 }
@@ -847,8 +847,8 @@ func TestBuildPackageSignBlobOptions(t *testing.T) {
 	})
 	t.Run("config tlog opt-out is honored", func(t *testing.T) {
 		v := newTestViper()
-		v.Set(VPkgPublishTlogUpload, false)
-		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, v, VPkgPublishTlogUpload, false, false)
+		v.Set(VPkgCreateTlogUpload, false)
+		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, v, VPkgCreateTlogUpload, false, false)
 		require.False(t, opts.TlogUpload)
 	})
 	t.Run("unsigned options remain valid", func(t *testing.T) {

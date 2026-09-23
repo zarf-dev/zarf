@@ -1635,12 +1635,10 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 type packagePublishOptions struct {
 	flavor               string
 	retries              int
-	confirm              bool
 	ociConcurrency       int
 	skipVersionCheck     bool
 	withBuildMachineInfo bool
 	tag                  string
-	packageSigningFlags
 	packageVerifyFlags
 }
 
@@ -1658,28 +1656,14 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	cmd.Flags().AddFlagSet(newSigningFlagSet(v, &o.packageSigningFlags, packageSigningViperKeys{
-		signingKey:         VPkgPublishSigningKey,
-		signingKeyPassword: VPkgPublishSigningKeyPassword,
-		keyless:            VPkgPublishKeyless,
-		identityToken:      VPkgPublishIdentityToken,
-		fulcioURL:          VPkgPublishFulcioURL,
-		fulcioAuthFlow:     VPkgPublishFulcioAuthFlow,
-		oidcIssuer:         VPkgPublishOIDCIssuer,
-		oidcClientID:       VPkgPublishOIDCClientID,
-		rekorURL:           VPkgPublishRekorURL,
-		tlogUpload:         VPkgPublishTlogUpload,
-		tsaServerURL:       VPkgPublishTSAServerURL,
-	}, lang.CmdPackagePublishFlagSigningKey, lang.CmdPackagePublishFlagSigningKeyPassword))
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVarP(&o.tag, "tag", "t", "", lang.CmdPackagePublishFlagTag)
-	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
+
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when publishing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgPublishWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
-	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
 	return cmd
 }
 
@@ -1706,23 +1690,14 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	signOpts := o.buildSignBlobOptions(cmd, v, VPkgPublishTlogUpload, true, o.confirm)
-	if signOpts.ShouldSign() {
-		if err := o.validateSigningMode(); err != nil {
-			return err
-		}
-	}
-
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 
 	if isSkeletonPackage {
-		skeletonSignOpts := o.buildSignBlobOptions(cmd, v, VPkgPublishTlogUpload, false, o.confirm)
 		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, packager.PublishSkeletonOptions{
 			OCIConcurrency:       o.ociConcurrency,
-			SignBlobOptions:      skeletonSignOpts,
 			Retries:              o.retries,
 			RemoteOptions:        defaultRemoteOptions(),
 			CachePath:            cachePath,
@@ -1750,14 +1725,10 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		}
 
 		return packager.PublishFromOCI(ctx, srcRef, dstRef, packager.PublishFromOCIOptions{
-			SignBlobOptions:      signOpts,
-			VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
-			VerificationStrategy: verificationStrategy,
-			CachePath:            cachePath,
-			OCIConcurrency:       o.ociConcurrency,
-			Architecture:         config.GetArch(),
-			RemoteOptions:        defaultRemoteOptions(),
-			Retries:              o.retries,
+			OCIConcurrency: o.ociConcurrency,
+			Architecture:   config.GetArch(),
+			RemoteOptions:  defaultRemoteOptions(),
+			Retries:        o.retries,
 		})
 	}
 
@@ -1778,11 +1749,10 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}()
 
 	_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
-		OCIConcurrency:  o.ociConcurrency,
-		SignBlobOptions: signOpts,
-		Retries:         o.retries,
-		RemoteOptions:   defaultRemoteOptions(),
-		Tag:             o.tag,
+		OCIConcurrency: o.ociConcurrency,
+		Retries:        o.retries,
+		RemoteOptions:  defaultRemoteOptions(),
+		Tag:            o.tag,
 	})
 	return err
 }
@@ -1995,11 +1965,13 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("invalid destination OCI reference: %w", err)
 		}
 		l.Info("signing and publishing package to OCI registry", "destination", outputDest)
+		if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
+			return fmt.Errorf("failed to sign package: %w", err)
+		}
 		_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
-			OCIConcurrency:  o.ociConcurrency,
-			SignBlobOptions: signOpts,
-			Retries:         o.retries,
-			RemoteOptions:   defaultRemoteOptions(),
+			OCIConcurrency: o.ociConcurrency,
+			Retries:        o.retries,
+			RemoteOptions:  defaultRemoteOptions(),
 		})
 		return err
 	}

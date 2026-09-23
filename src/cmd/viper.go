@@ -133,17 +133,6 @@ const (
 
 	// Package publish config keys
 
-	VPkgPublishSigningKey           = "package.publish.signing_key"
-	VPkgPublishSigningKeyPassword   = "package.publish.signing_key_password"
-	VPkgPublishKeyless              = "package.publish.keyless"
-	VPkgPublishIdentityToken        = "package.publish.identity_token"
-	VPkgPublishFulcioURL            = "package.publish.fulcio_url"
-	VPkgPublishFulcioAuthFlow       = "package.publish.fulcio_auth_flow"
-	VPkgPublishOIDCIssuer           = "package.publish.oidc_issuer"
-	VPkgPublishOIDCClientID         = "package.publish.oidc_client_id"
-	VPkgPublishRekorURL             = "package.publish.rekor_url"
-	VPkgPublishTlogUpload           = "package.publish.tlog_upload"
-	VPkgPublishTSAServerURL         = "package.publish.tsa_server_url"
 	VPkgPublishRetries              = "package.publish.retries"
 	VPkgPublishWithBuildMachineInfo = "package.publish.with_build_machine_info"
 
@@ -315,12 +304,6 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault(VPkgCreateOIDCIssuer, "https://oauth2.sigstore.dev/auth")
 	v.SetDefault(VPkgCreateOIDCClientID, "sigstore")
 	v.SetDefault(VPkgCreateRekorURL, "https://rekor.sigstore.dev")
-
-	// Package publish keyless defaults
-	v.SetDefault(VPkgPublishFulcioURL, "https://fulcio.sigstore.dev")
-	v.SetDefault(VPkgPublishOIDCIssuer, "https://oauth2.sigstore.dev/auth")
-	v.SetDefault(VPkgPublishOIDCClientID, "sigstore")
-	v.SetDefault(VPkgPublishRekorURL, "https://rekor.sigstore.dev")
 
 	// Dev deploy defaults
 	v.SetDefault(VDevDeployConnected, true)
