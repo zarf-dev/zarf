@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/images"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -349,7 +350,9 @@ func TestPackageInspectManifests(t *testing.T) {
 				confirm: true,
 				output:  tmpdir,
 			}
-			err := createOpts.run(context.Background(), []string{tc.definitionDir})
+			cmd := &cobra.Command{}
+			cmd.SetContext(context.Background())
+			err := createOpts.run(cmd, []string{tc.definitionDir})
 			require.NoError(t, err)
 
 			// Inspect manifests
@@ -513,7 +516,9 @@ func checkPackageValuesInspectFiles(t *testing.T, tc ValuesFilesTestData) {
 		confirm: true,
 		output:  tmpdir,
 	}
-	err := createOpts.run(context.Background(), []string{tc.definitionDir})
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+	err := createOpts.run(cmd, []string{tc.definitionDir})
 	require.NoError(t, err)
 
 	// Inspect values files
@@ -714,7 +719,9 @@ func TestPackageInspectDocumentation(t *testing.T) {
 				confirm: true,
 				output:  tmpdir,
 			}
-			err := createOpts.run(ctx, []string{tc.definitionDir})
+			cmd := &cobra.Command{}
+			cmd.SetContext(ctx)
+			err := createOpts.run(cmd, []string{tc.definitionDir})
 			require.NoError(t, err)
 
 			// Inspect documentation
@@ -726,9 +733,9 @@ func TestPackageInspectDocumentation(t *testing.T) {
 			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
 
 			// Create a cobra command with context for the run method
-			cmd := &cobra.Command{}
-			cmd.SetContext(ctx)
-			err = opts.run(cmd, []string{packagePath})
+			inspectCmd := &cobra.Command{}
+			inspectCmd.SetContext(ctx)
+			err = opts.run(inspectCmd, []string{packagePath})
 
 			if tc.expectedErr != "" {
 				require.ErrorContains(t, err, tc.expectedErr)
@@ -785,6 +792,89 @@ func TestSignTlogUploadEnvRespected(t *testing.T) {
 	cmd := newPackageSignCommand(v)
 	f := cmd.Flags().Lookup("tlog-upload")
 	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
+}
+
+func TestPackageSigningTlogUploadNotDefaulted(t *testing.T) {
+	t.Parallel()
+
+	v := newTestViper()
+	for _, key := range []string{VPkgCreateTlogUpload, VPkgPublishTlogUpload, VPkgSignTlogUpload} {
+		require.Falsef(t, v.IsSet(key), "%s must not have a default; IsSet distinguishes an explicit opt-out", key)
+	}
+}
+
+func TestBuildPackageSignBlobOptions(t *testing.T) {
+	t.Parallel()
+
+	allFlags := packageSigningFlags{
+		signingKeyPath:     "key",
+		signingKeyPassword: "password",
+		keyless:            true,
+		identityToken:      "token",
+		fulcioURL:          "fulcio",
+		fulcioAuthFlow:     "device",
+		oidcIssuer:         "issuer",
+		oidcClientID:       "client",
+		rekorURL:           "rekor",
+		tlogUpload:         true,
+		tsaServerURL:       "tsa",
+	}
+	opts := allFlags.buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, true, true)
+	require.Equal(t, "key", opts.Key)
+	require.Equal(t, "password", opts.Password)
+	require.True(t, opts.Keyless)
+	require.Equal(t, "token", opts.Fulcio.IdentityToken)
+	require.Equal(t, "fulcio", opts.Fulcio.URL)
+	require.Equal(t, "device", opts.Fulcio.AuthFlow)
+	require.Equal(t, "issuer", opts.OIDC.Issuer)
+	require.Equal(t, "client", opts.OIDC.ClientID)
+	require.Equal(t, "rekor", opts.Rekor.URL)
+	require.True(t, opts.TlogUpload)
+	require.Equal(t, "tsa", opts.TSAServerURL)
+	require.True(t, opts.Overwrite)
+	require.True(t, opts.SkipConfirmation)
+
+	t.Run("keyless defaults tlog upload", func(t *testing.T) {
+		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		require.True(t, opts.TlogUpload)
+	})
+	t.Run("CLI tlog opt-out is honored", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().Bool("tlog-upload", false, "")
+		require.NoError(t, cmd.Flags().Set("tlog-upload", "false"))
+		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(cmd, newTestViper(), VPkgCreateTlogUpload, false, false)
+		require.False(t, opts.TlogUpload)
+	})
+	t.Run("config tlog opt-out is honored", func(t *testing.T) {
+		v := newTestViper()
+		v.Set(VPkgPublishTlogUpload, false)
+		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, v, VPkgPublishTlogUpload, false, false)
+		require.False(t, opts.TlogUpload)
+	})
+	t.Run("unsigned options remain valid", func(t *testing.T) {
+		opts := (&packageSigningFlags{}).buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		require.False(t, opts.ShouldSign())
+	})
+}
+
+func TestPackageSigningModeGuard(t *testing.T) {
+	t.Parallel()
+
+	for _, flags := range []packageSigningFlags{
+		{identityToken: "token"},
+		{signingKeyPath: "key"},
+		{keyless: true},
+	} {
+		opts := flags.buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		if flags.signingKeyPath != "" || flags.keyless {
+			require.NoError(t, flags.validateSigningMode())
+			continue
+		}
+		require.True(t, opts.ShouldSign())
+		require.EqualError(t, flags.validateSigningMode(), "--signing-key is required (or pass --keyless for Sigstore keyless flow)")
+	}
+
+	require.False(t, signing.DefaultSignBlobOptions().ShouldSign())
 }
 
 func TestVerifyInsecureIgnoreTlogDefaultTrue(t *testing.T) {

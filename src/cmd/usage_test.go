@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,6 +40,77 @@ func TestVerifyFlagsAreGrouped(t *testing.T) {
 		require.Equal(t, []string{verifyFlagGroupTitle}, flag.Annotations[flagGroupAnnotation],
 			"flag %q should belong to the verification group", flag.Name)
 	})
+}
+
+func TestPackageSigningFlagsAreGrouped(t *testing.T) {
+	t.Parallel()
+
+	signingFlags := []string{
+		"signing-key", "signing-key-pass", "keyless", "identity-token", "fulcio-url",
+		"fulcio-auth-flow", "oidc-issuer", "oidc-client-id", "rekor-url", "tlog-upload", "tsa-server-url",
+	}
+	commands := map[string]*cobra.Command{
+		"component-sign": newComponentSignCommand(newTestViper()),
+		"create":         newPackageCreateCommand(newTestViper()),
+		"publish":        newPackagePublishCommand(newTestViper()),
+		"sign":           newPackageSignCommand(newTestViper()),
+	}
+	for name, cmd := range commands {
+		t.Run(name, func(t *testing.T) {
+			for _, name := range signingFlags {
+				flag := cmd.Flags().Lookup(name)
+				require.NotNilf(t, flag, "%s must register %s", cmd.Name(), name)
+				require.Equal(t, []string{signingFlagGroupTitle}, flag.Annotations[flagGroupAnnotation])
+			}
+		})
+	}
+}
+
+func TestPackageSigningFlagsMutuallyExclusive(t *testing.T) {
+	t.Parallel()
+
+	for _, factory := range []func(*viper.Viper) *cobra.Command{
+		newComponentSignCommand,
+		newPackageCreateCommand,
+		newPackagePublishCommand,
+		newPackageSignCommand,
+	} {
+		cmd := factory(newTestViper())
+		require.NoError(t, cmd.Flags().Set("keyless", "true"))
+		require.NoError(t, cmd.Flags().Set("signing-key", "key"))
+		require.Error(t, cmd.ValidateFlagGroups())
+	}
+
+	create := newPackageCreateCommand(newTestViper())
+	require.NoError(t, create.Flags().Set("keyless", "true"))
+	require.NoError(t, create.Flags().Set("key", "key"))
+	require.Error(t, create.ValidateFlagGroups())
+}
+
+func TestPackageSigningUsageGroups(t *testing.T) {
+	commands := map[string]*cobra.Command{
+		"component-sign": newComponentSignCommand(newTestViper()),
+		"create":         newPackageCreateCommand(newTestViper()),
+		"publish":        newPackagePublishCommand(newTestViper()),
+		"sign":           newPackageSignCommand(newTestViper()),
+	}
+	for name, cmd := range commands {
+		t.Run(name, func(t *testing.T) {
+			setupGroupedFlagUsage(cmd)
+			usage := cmd.UsageString()
+			signingGroupIndex := strings.Index(usage, signingFlagGroupTitle+":")
+			require.NotEqual(t, -1, signingGroupIndex)
+			require.Contains(t, usage[signingGroupIndex:], "--signing-key")
+			require.Contains(t, usage[signingGroupIndex:], "--keyless")
+
+			defaultFlags := usage[strings.Index(usage, "Flags:"):signingGroupIndex]
+			require.NotContains(t, defaultFlags, "--signing-key")
+			require.NotContains(t, defaultFlags, "--keyless")
+			if name == "publish" {
+				require.Contains(t, usage, verifyFlagGroupTitle+":")
+			}
+		})
+	}
 }
 
 func TestGroupedFlagUsageRendering(t *testing.T) {
