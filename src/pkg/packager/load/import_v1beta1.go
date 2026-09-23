@@ -255,9 +255,7 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
-	// Remote components are merged into the caller's package. They must not be
-	// able to run package-creation commands or introduce further, unrequested
-	// import sources.
+	// Remote components are barred from oncreate actions, this ensures a component wasn't maliciously published with them
 	if hasActionSet(config.Component.Actions.OnCreate) {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q contains unsupported onCreate actions", importURL)
 	}
