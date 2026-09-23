@@ -217,6 +217,7 @@ func TestPublishSkeleton(t *testing.T) {
 			// HACK(mkcp): Match necessary fields to establish equality
 			pkg.Build = v1alpha1.ZarfBuildData{}
 			pkg.Metadata.AggregateChecksum = ""
+			expectedPkg.Build = v1alpha1.ZarfBuildData{}
 			expectedPkg.Metadata.Architecture = "skeleton"
 
 			// NOTE(mkcp): In future schema version move ZarfPackage.Metadata.AggregateChecksum
