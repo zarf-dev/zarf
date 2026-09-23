@@ -4,6 +4,7 @@
 package cluster
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,9 +13,33 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestGitTLSTrustDistribution(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	certs, err := pki.GeneratePKI(state.ZarfInClusterGitServiceHost, state.ZarfGitServerTLSHosts...)
+	require.NoError(t, err)
+	clientset := fake.NewClientset(
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: state.GitServerTLSSecret, Namespace: state.ZarfNamespaceName}, Data: state.GitServerCertSecretData(certs)},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "argocd-tls-certs-cm", Namespace: "argocd"}, Data: map[string]string{"unrelated.example": "unrelated-ca"}},
+	)
+	c := &Cluster{Clientset: clientset}
+	gitServer := state.GitServerInfo{Address: state.ZarfInClusterGitURL(state.GitTLSZarfManaged), TLSMode: state.GitTLSZarfManaged, PullUsername: "reader", PullPassword: "password"}
+
+	secret, err := c.GenerateGitPullCreds(ctx, "workload", config.ZarfGitServerSecretName, gitServer)
+	require.NoError(t, err)
+	require.Equal(t, string(certs.CA), secret.StringData[state.GitServerTLSCAKey])
+
+	require.NoError(t, c.UpdateArgoCDGitTLSCerts(ctx, gitServer))
+	configMap, err := clientset.CoreV1().ConfigMaps("argocd").Get(ctx, "argocd-tls-certs-cm", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "unrelated-ca", configMap.Data["unrelated.example"])
+	require.Equal(t, string(certs.CA), configMap.Data[state.ZarfInClusterGitServiceHost])
+}
 
 func TestUpdateZarfManagedSecrets(t *testing.T) {
 	ctx := testutil.TestContext(t)
