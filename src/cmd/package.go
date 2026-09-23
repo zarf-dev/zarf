@@ -516,6 +516,9 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 
 // packageForDisplay converts a package to its authored API version for user-facing serialization.
 func packageForDisplay(pkg api.Package) (any, error) {
+	if err := pkg.ValidateVersionFields(); err != nil {
+		return nil, err
+	}
 	switch pkg.GetAPIVersion() {
 	case v1alpha1.APIVersion:
 		return convert.PackageToV1alpha1(pkg), nil

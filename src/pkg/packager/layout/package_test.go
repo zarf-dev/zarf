@@ -36,6 +36,40 @@ func verifyOptsFromKey(keyPath string) *signing.VerifyBlobOptions {
 	return &opts
 }
 
+func TestMarshalPackageDefinitionRejectsFieldsFromAnotherVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		pkg     api.Package
+		wantErr string
+	}{
+		{
+			name: "v1alpha1 image source",
+			pkg: api.Package{Components: []api.Component{{
+				Images: []api.Image{{Name: "example.com/app:1", Source: "daemon"}},
+			}}},
+			wantErr: "components[0].images[0].source",
+		},
+		{
+			name: "v1beta1 data injection",
+			pkg: api.Package{APIVersion: v1beta1.APIVersion, Components: []api.Component{{
+				DataInjections: []api.ZarfDataInjection{{Source: "file"}},
+			}}},
+			wantErr: "components[0].dataInjections",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			data, err := MarshalPackageDefinition(tt.pkg)
+			require.ErrorContains(t, err, tt.wantErr)
+			require.Empty(t, data)
+		})
+	}
+}
+
 func TestPackageLayout(t *testing.T) {
 	t.Parallel()
 
