@@ -1980,11 +1980,12 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpts := packager.LoadOptions{
-		Filter:         filters.Empty(),
-		Architecture:   config.GetArch(),
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
+		Filter:               filters.Empty(),
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
+		VerificationStrategy: layout.VerifyNever,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)
 	if err != nil {
