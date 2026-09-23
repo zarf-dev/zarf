@@ -140,7 +140,6 @@ func newSigningFlagSet(v *viper.Viper, f *packageSigningFlags, keys packageSigni
 	fs.StringVar(&f.rekorURL, "rekor-url", v.GetString(keys.rekorURL), lang.CmdPackageSignFlagRekorURL)
 	fs.BoolVar(&f.tlogUpload, "tlog-upload", v.GetBool(keys.tlogUpload), lang.CmdPackageSignFlagTlogUpload)
 	fs.StringVar(&f.tsaServerURL, "tsa-server-url", v.GetString(keys.tsaServerURL), lang.CmdPackageSignFlagTSAServerURL)
-	annotateFlagGroup(fs, signingFlagGroupTitle)
 	return fs
 }
 
@@ -261,7 +260,7 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 
-	cmd.Flags().AddFlagSet(newSigningFlagSet(v, &o.packageSigningFlags, packageSigningViperKeys{
+	signingFlags := newSigningFlagSet(v, &o.packageSigningFlags, packageSigningViperKeys{
 		signingKey:         VPkgCreateSigningKey,
 		signingKeyPassword: VPkgCreateSigningKeyPassword,
 		keyless:            VPkgCreateKeyless,
@@ -273,7 +272,9 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 		rekorURL:           VPkgCreateRekorURL,
 		tlogUpload:         VPkgCreateTlogUpload,
 		tsaServerURL:       VPkgCreateTSAServerURL,
-	}, lang.CmdPackageCreateFlagSigningKey, lang.CmdPackageCreateFlagSigningKeyPassword))
+	}, lang.CmdPackageCreateFlagSigningKey, lang.CmdPackageCreateFlagSigningKeyPassword)
+	annotateFlagGroup(signingFlags, signingFlagGroupTitle)
+	cmd.Flags().AddFlagSet(signingFlags)
 
 	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgCreateWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
 
@@ -1900,7 +1901,7 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().AddFlagSet(newSigningFlagSet(v, &o.packageSigningFlags, packageSigningViperKeys{
+	signingFlags := newSigningFlagSet(v, &o.packageSigningFlags, packageSigningViperKeys{
 		signingKey:         VPkgSignSigningKey,
 		signingKeyPassword: VPkgSignSigningKeyPassword,
 		keyless:            VPkgSignKeyless,
@@ -1912,7 +1913,9 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 		rekorURL:           VPkgSignRekorURL,
 		tlogUpload:         VPkgSignTlogUpload,
 		tsaServerURL:       VPkgSignTSAServerURL,
-	}, lang.CmdPackageSignFlagSigningKey, lang.CmdPackageSignFlagSigningKeyPass))
+	}, lang.CmdPackageSignFlagSigningKey, lang.CmdPackageSignFlagSigningKeyPass)
+	annotateFlagGroup(signingFlags, signingFlagGroupTitle)
+	cmd.Flags().AddFlagSet(signingFlags)
 	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgSignOutput), lang.CmdPackageSignFlagOutput)
 	cmd.Flags().BoolVar(&o.overwrite, "overwrite", v.GetBool(VPkgSignOverwrite), lang.CmdPackageSignFlagOverwrite)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageSignFlagKey)

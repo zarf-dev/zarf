@@ -52,7 +52,7 @@ func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().AddFlagSet(newSigningFlagSet(v, &o.packageSigningFlags, packageSigningViperKeys{
+	signingFlags := newSigningFlagSet(v, &o.packageSigningFlags, packageSigningViperKeys{
 		signingKey:         VPkgSignSigningKey,
 		signingKeyPassword: VPkgSignSigningKeyPassword,
 		keyless:            VPkgSignKeyless,
@@ -64,7 +64,9 @@ func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
 		rekorURL:           VPkgSignRekorURL,
 		tlogUpload:         VPkgSignTlogUpload,
 		tsaServerURL:       VPkgSignTSAServerURL,
-	}, lang.CmdPackageSignFlagSigningKey, lang.CmdPackageSignFlagSigningKeyPass))
+	}, lang.CmdPackageSignFlagSigningKey, lang.CmdPackageSignFlagSigningKeyPass)
+	annotateFlagGroup(signingFlags, signingFlagGroupTitle)
+	cmd.Flags().AddFlagSet(signingFlags)
 	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
 	return cmd
 }

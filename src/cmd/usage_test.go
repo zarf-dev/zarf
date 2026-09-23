@@ -51,7 +51,6 @@ func TestPackageSigningFlagsAreGrouped(t *testing.T) {
 	}
 	commands := map[string]*cobra.Command{
 		"component-publish": newComponentPublishCommand(newTestViper()),
-		"component-sign":    newComponentSignCommand(newTestViper()),
 		"create":            newPackageCreateCommand(newTestViper()),
 		"sign":              newPackageSignCommand(newTestViper()),
 	}
@@ -90,7 +89,6 @@ func TestPackageSigningFlagsMutuallyExclusive(t *testing.T) {
 func TestPackageSigningUsageGroups(t *testing.T) {
 	commands := map[string]*cobra.Command{
 		"component-publish": newComponentPublishCommand(newTestViper()),
-		"component-sign":    newComponentSignCommand(newTestViper()),
 		"create":            newPackageCreateCommand(newTestViper()),
 		"sign":              newPackageSignCommand(newTestViper()),
 	}
@@ -108,6 +106,16 @@ func TestPackageSigningUsageGroups(t *testing.T) {
 			require.NotContains(t, defaultFlags, "--keyless")
 		})
 	}
+}
+
+func TestComponentSignFlagsAreUngrouped(t *testing.T) {
+	cmd := newComponentSignCommand(newTestViper())
+	setupGroupedFlagUsage(cmd)
+
+	usage := cmd.UsageString()
+	require.NotContains(t, usage, signingFlagGroupTitle+":")
+	require.Contains(t, usage, "--confirm")
+	require.Contains(t, usage, "--signing-key")
 }
 
 func TestPackagePublishSigningFlagsAreDeprecated(t *testing.T) {
