@@ -29,7 +29,11 @@ type CreateOptions struct {
 	Flavor            string
 	RegistryOverrides []images.RegistryOverride
 	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
-	SignBlobOptions         signing.SignBlobOptions
+	SignBlobOptions signing.SignBlobOptions
+	// Deprecated: populate SignBlobOptions.Key directly.
+	SigningKeyPath string
+	// Deprecated: populate SignBlobOptions.Password directly.
+	SigningKeyPassword      string
 	SetVariables            map[string]string
 	MaxPackageSizeMB        int
 	SBOMOut                 string
@@ -94,6 +98,13 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		differentialPkg = pkgLayout.Definition()
 	}
 
+	if opts.SigningKeyPath != "" && opts.SignBlobOptions.Key == "" {
+		opts.SignBlobOptions.Key = opts.SigningKeyPath
+	}
+	if opts.SigningKeyPassword != "" && opts.SignBlobOptions.Password == "" {
+		opts.SignBlobOptions.Password = opts.SigningKeyPassword
+	}
+
 	assembleOpt := assemble.AssembleOptions{
 		SkipSBOM:             opts.SkipSBOM,
 		OCIConcurrency:       opts.OCIConcurrency,
@@ -101,6 +112,8 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		Flavor:               opts.Flavor,
 		RegistryOverrides:    opts.RegistryOverrides,
 		SignBlobOptions:      opts.SignBlobOptions,
+		SigningKeyPath:       opts.SigningKeyPath,
+		SigningKeyPassword:   opts.SigningKeyPassword,
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,

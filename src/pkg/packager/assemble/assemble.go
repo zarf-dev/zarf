@@ -48,21 +48,25 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// AssembleOptions are the options for creating a package from a package object
+// AssembleOptions are the options for creating a package from a package object.
 type AssembleOptions struct {
-	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
+	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified.
 	Flavor string
-	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry
+	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry.
 	RegistryOverrides []images.RegistryOverride
 	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
 	SignBlobOptions signing.SignBlobOptions
-	SkipSBOM        bool
+	// Deprecated: populate SignBlobOptions.Key directly.
+	SigningKeyPath string
+	// Deprecated: populate SignBlobOptions.Password directly.
+	SigningKeyPassword string
+	SkipSBOM           bool
 	// When DifferentialPackage is set the zarf package created only includes images and repos not in the differential package.
 	DifferentialPackage api.Package
 	OCIConcurrency      int
-	// CachePath is the path to the Zarf cache, used to cache images and charts
+	// CachePath is the path to the Zarf cache, used to cache images and charts.
 	CachePath string
-	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata
+	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata.
 	WithBuildMachineInfo bool
 	types.RemoteOptions
 }
@@ -219,6 +223,13 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	pkgLayout, err := layout.LoadFromDir(ctx, buildPath, layout.PackageLayoutOptions{VerificationStrategy: layout.VerifyNever})
 	if err != nil {
 		return nil, err
+	}
+
+	if opts.SigningKeyPath != "" && opts.SignBlobOptions.Key == "" {
+		opts.SignBlobOptions.Key = opts.SigningKeyPath
+	}
+	if opts.SigningKeyPassword != "" && opts.SignBlobOptions.Password == "" {
+		opts.SignBlobOptions.Password = opts.SigningKeyPassword
 	}
 
 	if err := pkgLayout.SignPackage(ctx, opts.SignBlobOptions); err != nil {
