@@ -12,7 +12,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -40,8 +39,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
-
-var gitCommitSHA = regexp.MustCompile(`^[0-9A-Fa-f]{40}$`)
 
 // negotiateChartPlainHTTP decides the transport scheme for an OCI chart or chart
 // dependency host discovered in package data (not named on the command line).
@@ -92,10 +89,6 @@ func negotiateLoadedChartDependenciesPlainHTTP(ctx context.Context, chartName st
 
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
 func PackageChart(ctx context.Context, chart api.Chart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
-	if err := validateChartSource(chart); err != nil {
-		return err
-	}
-
 	switch {
 	case chart.Git != nil:
 		address, err := git.RepositoryAddress(api.Repository{URL: chart.Git.URL, Ref: chart.Git.Ref})
@@ -146,93 +139,6 @@ func ociChartAddress(source *api.OCISource) string {
 		return strings.TrimSuffix(source.URL, "/") + ":" + source.Ref.Tag
 	}
 	return source.URL
-}
-
-// validateChartSource ensures a chart has the one fully specified source that
-// the package schema permits. PackageChart is also called by Go consumers that
-// may construct api.Chart values without schema validation.
-func validateChartSource(chart api.Chart) error {
-	sources := 0
-	for _, configured := range []bool{
-		chart.Git != nil,
-		chart.Local != nil,
-		chart.HelmRepository != nil,
-		chart.OCI != nil,
-	} {
-		if configured {
-			sources++
-		}
-	}
-	if sources != 1 {
-		return fmt.Errorf("chart %q must specify exactly one source: git, local, helm repository, or OCI", chart.Name)
-	}
-
-	switch {
-	case chart.Git != nil:
-		if chart.Git.URL == "" {
-			return fmt.Errorf("git chart %q must specify a URL", chart.Name)
-		}
-		if err := validateGitChartRef(chart.Git.Ref); err != nil {
-			return fmt.Errorf("git chart %q must specify exactly one ref (tag, branch, or commit): %w", chart.Name, err)
-		}
-	case chart.Local != nil:
-		if chart.Local.Path == "" {
-			return fmt.Errorf("local chart %q must specify a path", chart.Name)
-		}
-	case chart.HelmRepository != nil:
-		if chart.HelmRepository.URL == "" {
-			return fmt.Errorf("helm repository chart %q must specify a URL", chart.Name)
-		}
-		if chart.HelmRepository.Version == "" {
-			return fmt.Errorf("helm repository chart %q must specify a version", chart.Name)
-		}
-	case chart.OCI != nil:
-		if chart.OCI.URL == "" {
-			return fmt.Errorf("OCI chart %q must specify a URL", chart.Name)
-		}
-		if err := validateOCIChartRef(chart.OCI.Ref); err != nil {
-			return fmt.Errorf("OCI chart %q must specify exactly one ref (tag or digest): %w", chart.Name, err)
-		}
-	}
-
-	return nil
-}
-
-func validateGitChartRef(ref *api.GitRef) error {
-	if ref == nil {
-		return errors.New("no ref was provided")
-	}
-
-	refs := 0
-	for _, value := range []string{ref.Tag, ref.Branch, ref.Commit} {
-		if value != "" {
-			refs++
-		}
-	}
-	if refs != 1 {
-		return fmt.Errorf("found %d", refs)
-	}
-	if ref.Commit != "" && !gitCommitSHA.MatchString(ref.Commit) {
-		return errors.New("commit must be a 40-character SHA-1")
-	}
-	return nil
-}
-
-func validateOCIChartRef(ref *api.OCIRef) error {
-	if ref == nil {
-		return errors.New("no ref was provided")
-	}
-
-	refs := 0
-	for _, value := range []string{ref.Tag, ref.Digest} {
-		if value != "" {
-			refs++
-		}
-	}
-	if refs != 1 {
-		return fmt.Errorf("found %d", refs)
-	}
-	return nil
 }
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
