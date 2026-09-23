@@ -228,7 +228,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	return pkgLayout, nil
 }
 
-// AssembleSkeletonOptions are the options for creating a skeleton package
+// AssembleSkeletonOptions are the options for creating a skeleton package.
 type AssembleSkeletonOptions struct {
 	Flavor               string
 	WithBuildMachineInfo bool

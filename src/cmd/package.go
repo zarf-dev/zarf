@@ -106,7 +106,7 @@ type packageVerifyFlags struct {
 	useSignedTimestamps         bool
 }
 
-// packageSigningFlags holds signing configuration shared by package producers.
+// packageSigningFlags holds signing configuration shared by package and component producers.
 type packageSigningFlags struct {
 	signingKeyPath     string
 	signingKeyPassword string
@@ -156,6 +156,23 @@ func (f *packageSigningFlags) buildSignBlobOptions(cmd *cobra.Command, v *viper.
 	opts.TlogUpload = f.resolveTlogUpload(cmd, v, tlogUploadKey)
 	opts.TSAServerURL = f.tsaServerURL
 	opts.Overwrite = overwrite
+	opts.SkipConfirmation = skipConfirmation
+	return opts
+}
+
+func (f *packageSigningFlags) buildSignManifestOptions(cmd *cobra.Command, v *viper.Viper, tlogUploadKey string, skipConfirmation bool) signing.SignManifestOptions {
+	opts := signing.DefaultSignManifestOptions()
+	opts.Key = f.signingKeyPath
+	opts.Password = f.signingKeyPassword
+	opts.Keyless = f.keyless
+	opts.IdentityToken = f.identityToken
+	opts.FulcioURL = f.fulcioURL
+	opts.FulcioAuthFlow = f.fulcioAuthFlow
+	opts.OIDCIssuer = f.oidcIssuer
+	opts.OIDCClientID = f.oidcClientID
+	opts.RekorURL = f.rekorURL
+	opts.TlogUpload = f.resolveTlogUpload(cmd, v, tlogUploadKey)
+	opts.TSAServerURL = f.tsaServerURL
 	opts.SkipConfirmation = skipConfirmation
 	return opts
 }

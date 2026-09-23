@@ -37,6 +37,7 @@ func newComponentCommand() *cobra.Command {
 type componentPublishOptions struct {
 	ociConcurrency int
 	retries        int
+	packageSigningFlags
 }
 
 func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
@@ -51,6 +52,20 @@ func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
+	cmd.Flags().AddFlagSet(newSigningFlagSet(v, &o.packageSigningFlags, packageSigningViperKeys{
+		signingKey:         VPkgSignSigningKey,
+		signingKeyPassword: VPkgSignSigningKeyPassword,
+		keyless:            VPkgSignKeyless,
+		identityToken:      VPkgSignIdentityToken,
+		fulcioURL:          VPkgSignFulcioURL,
+		fulcioAuthFlow:     VPkgSignFulcioAuthFlow,
+		oidcIssuer:         VPkgSignOIDCIssuer,
+		oidcClientID:       VPkgSignOIDCClientID,
+		rekorURL:           VPkgSignRekorURL,
+		tlogUpload:         VPkgSignTlogUpload,
+		tsaServerURL:       VPkgSignTSAServerURL,
+	}, lang.CmdPackageSignFlagSigningKey, lang.CmdPackageSignFlagSigningKeyPass))
+	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
 	return cmd
 }
 
@@ -67,11 +82,17 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 	if err := destination.ValidateRegistry(); err != nil {
 		return err
 	}
-
+	signOpts := o.buildSignManifestOptions(cmd, getViper(), VPkgSignTlogUpload, false)
+	if signOpts.ShouldSign() {
+		if err := o.validateSigningMode(); err != nil {
+			return err
+		}
+	}
 	_, err := component.Publish(cmd.Context(), args[0], destination, component.PublishOptions{
-		OCIConcurrency: o.ociConcurrency,
-		Retries:        o.retries,
-		RemoteOptions:  defaultRemoteOptions(),
+		OCIConcurrency:      o.ociConcurrency,
+		Retries:             o.retries,
+		SignManifestOptions: signOpts,
+		RemoteOptions:       defaultRemoteOptions(),
 	})
 	return err
 }
@@ -133,18 +154,7 @@ func (o *componentSignOptions) run(cmd *cobra.Command, args []string) error {
 		logger.From(cmd.Context()).Info("signing component manifest with provided key")
 	}
 
-	signOpts := signing.DefaultSignManifestOptions()
-	signOpts.Key = o.signingKeyPath
-	signOpts.Password = o.signingKeyPassword
-	signOpts.IdentityToken = o.identityToken
-	signOpts.FulcioURL = o.fulcioURL
-	signOpts.FulcioAuthFlow = o.fulcioAuthFlow
-	signOpts.OIDCIssuer = o.oidcIssuer
-	signOpts.OIDCClientID = o.oidcClientID
-	signOpts.RekorURL = o.rekorURL
-	signOpts.TlogUpload = o.resolveTlogUpload(cmd, v, VPkgSignTlogUpload)
-	signOpts.SkipConfirmation = o.confirm
-	signOpts.TSAServerURL = o.tsaServerURL
+	signOpts := o.buildSignManifestOptions(cmd, getViper(), VPkgSignTlogUpload, o.confirm)
 	err = signing.SignManifest(cmd.Context(), componentRef.String(), signOpts, defaultRemoteOptions())
 	if err != nil {
 		return fmt.Errorf("failed to sign component manifest: %w", err)

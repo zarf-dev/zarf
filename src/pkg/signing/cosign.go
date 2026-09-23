@@ -102,6 +102,7 @@ type VerifyBlobOptions struct {
 type SignManifestOptions struct {
 	Key              string
 	Password         string
+	Keyless          bool
 	IdentityToken    string
 	FulcioURL        string
 	FulcioAuthFlow   string
@@ -184,6 +185,11 @@ func DefaultSignManifestOptions() SignManifestOptions {
 		OIDCClientID: "sigstore",
 		Timeout:      CosignDefaultTimeout,
 	}
+}
+
+// ShouldSign reports whether component manifest signing was requested.
+func (opts SignManifestOptions) ShouldSign() bool {
+	return opts.Key != "" || opts.IdentityToken != "" || opts.Keyless
 }
 
 // DefaultVerifyManifestOptions returns the defaults for component verification.

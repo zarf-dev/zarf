@@ -28,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -46,6 +47,8 @@ type PublishOptions struct {
 	OCIConcurrency int
 	// Retries is the number of attempts to make when publishing fails.
 	Retries int
+	// SignManifestOptions configures an optional signature published after the component artifact.
+	SignManifestOptions signing.SignManifestOptions
 	types.RemoteOptions
 }
 
@@ -145,6 +148,11 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	_, err = pushComponentArtifact(ctx, store, manifest.Digest.String(), remote, componentRef, component.Variant.Architecture, totalSize, opts)
 	if err != nil {
 		return registry.Reference{}, err
+	}
+	if opts.SignManifestOptions.ShouldSign() {
+		if err := signing.SignManifest(ctx, componentRef.String(), opts.SignManifestOptions, opts.RemoteOptions); err != nil {
+			return registry.Reference{}, fmt.Errorf("failed to sign published component: %w", err)
+		}
 	}
 	logger.From(ctx).Info("published component", "destination", helpers.OCIURLPrefix+componentRef.String())
 	return componentRef, nil

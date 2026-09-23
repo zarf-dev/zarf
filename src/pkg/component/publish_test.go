@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -172,6 +173,24 @@ func TestPublishComponent(t *testing.T) {
 	} {
 		require.NotContains(t, layerTitles, remotePath)
 	}
+}
+
+func TestPublishComponentSignsManifest(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.key")
+	signOpts.Password = "test"
+	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
+		SignManifestOptions: signOpts,
+		RemoteOptions:       defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+
+	verifyOpts := signing.DefaultVerifyManifestOptions()
+	verifyOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.pub")
+	require.NoError(t, signing.VerifyManifest(ctx, published.String(), verifyOpts, defaultTestRemoteOptions()))
 }
 
 func TestPublishComponentFlavor(t *testing.T) {

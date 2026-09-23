@@ -50,9 +50,10 @@ func TestPackageSigningFlagsAreGrouped(t *testing.T) {
 		"fulcio-auth-flow", "oidc-issuer", "oidc-client-id", "rekor-url", "tlog-upload", "tsa-server-url",
 	}
 	commands := map[string]*cobra.Command{
-		"component-sign": newComponentSignCommand(newTestViper()),
-		"create":         newPackageCreateCommand(newTestViper()),
-		"sign":           newPackageSignCommand(newTestViper()),
+		"component-publish": newComponentPublishCommand(newTestViper()),
+		"component-sign":    newComponentSignCommand(newTestViper()),
+		"create":            newPackageCreateCommand(newTestViper()),
+		"sign":              newPackageSignCommand(newTestViper()),
 	}
 	for name, cmd := range commands {
 		t.Run(name, func(t *testing.T) {
@@ -69,6 +70,7 @@ func TestPackageSigningFlagsMutuallyExclusive(t *testing.T) {
 	t.Parallel()
 
 	for _, factory := range []func(*viper.Viper) *cobra.Command{
+		newComponentPublishCommand,
 		newComponentSignCommand,
 		newPackageCreateCommand,
 		newPackageSignCommand,
@@ -87,9 +89,10 @@ func TestPackageSigningFlagsMutuallyExclusive(t *testing.T) {
 
 func TestPackageSigningUsageGroups(t *testing.T) {
 	commands := map[string]*cobra.Command{
-		"component-sign": newComponentSignCommand(newTestViper()),
-		"create":         newPackageCreateCommand(newTestViper()),
-		"sign":           newPackageSignCommand(newTestViper()),
+		"component-publish": newComponentPublishCommand(newTestViper()),
+		"component-sign":    newComponentSignCommand(newTestViper()),
+		"create":            newPackageCreateCommand(newTestViper()),
+		"sign":              newPackageSignCommand(newTestViper()),
 	}
 	for name, cmd := range commands {
 		t.Run(name, func(t *testing.T) {
