@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net/http"
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -19,6 +20,7 @@ import (
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/memory"
 	"oras.land/oras-go/v2/registry"
+	remote "oras.land/oras-go/v2/registry/remote"
 )
 
 func TestUpdateIndexWithDescriptor(t *testing.T) {
@@ -61,6 +63,46 @@ func TestUpdateIndexWithDescriptor(t *testing.T) {
 		"amd64": amd64Replacement,
 		"arm64": arm64,
 	})
+}
+
+func TestFetchIndexRejectsMismatchedDescriptor(t *testing.T) {
+	t.Parallel()
+
+	expected := []byte(`{"schemaVersion":2,"manifests":[]}`)
+	received := []byte(`{"schemaVersion":3,"manifests":[]}`)
+	descriptor := content.NewDescriptorFromBytes(ocispec.MediaTypeImageIndex, expected)
+	repo := &remote.Repository{
+		Client: staticResponseClient{
+			body:   received,
+			digest: descriptor.Digest.String(),
+		},
+		Reference: registry.Reference{
+			Registry:   "example.com",
+			Repository: "components",
+		},
+		PlainHTTP: true,
+	}
+
+	_, err := fetchIndex(context.Background(), repo, "example")
+	require.ErrorIs(t, err, content.ErrMismatchedDigest)
+}
+
+type staticResponseClient struct {
+	body   []byte
+	digest string
+}
+
+func (c staticResponseClient) Do(request *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode:    http.StatusOK,
+		ContentLength: int64(len(c.body)),
+		Header: http.Header{
+			"Content-Type":          []string{ocispec.MediaTypeImageIndex},
+			"Docker-Content-Digest": []string{c.digest},
+		},
+		Body:    io.NopCloser(bytes.NewReader(c.body)),
+		Request: request,
+	}, nil
 }
 
 func pushManifest(ctx context.Context, t *testing.T, remote *zoci.Remote, contents string) ocispec.Descriptor {

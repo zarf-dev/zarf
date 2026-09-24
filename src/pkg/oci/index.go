@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 
 	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -73,7 +72,7 @@ func fetchIndex(ctx context.Context, repo *registryremote.Repository, tag string
 		return ocispec.Index{}, fmt.Errorf("OCI reference %q is %s, not an image index", tag, descriptor.MediaType)
 	}
 
-	indexBytes, err := io.ReadAll(reader)
+	indexBytes, err := content.ReadAll(reader, descriptor)
 	if err != nil {
 		return ocispec.Index{}, fmt.Errorf("read OCI index: %w", err)
 	}
