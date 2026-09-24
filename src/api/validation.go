@@ -47,7 +47,8 @@ func (p Package) ValidateVersionFields() error {
 
 	for i, component := range p.Components {
 		path := fmt.Sprintf("components[%d]", i)
-		if version == v1alpha1.APIVersion {
+		switch version {
+		case v1alpha1.APIVersion:
 			if component.Service != "" {
 				add(path + ".service")
 			}
@@ -59,68 +60,67 @@ func (p Package) ValidateVersionFields() error {
 					add(fmt.Sprintf("%s.images[%d].source", path, j))
 				}
 			}
-			continue
-		}
-
-		if component.Default {
-			add(path + ".default")
-		}
-		if component.Group != "" {
-			add(path + ".group")
-		}
-		if len(component.DataInjections) > 0 {
-			add(path + ".dataInjections")
-		}
-		if len(component.HealthChecks) > 0 {
-			add(path + ".healthChecks")
-		}
-		if len(component.Distros) > 0 {
-			add(path + ".distros")
-		}
-		if component.Import.Name != "" {
-			add(path + ".import.name")
-		}
-		for j, chart := range component.Charts {
-			if chart.LegacyVersion != "" {
-				add(fmt.Sprintf("%s.charts[%d].legacyVersion", path, j))
+		case v1beta1.APIVersion:
+			if component.Default {
+				add(path + ".default")
 			}
-			if len(chart.Variables) > 0 {
-				add(fmt.Sprintf("%s.charts[%d].variables", path, j))
+			if component.Group != "" {
+				add(path + ".group")
 			}
-		}
-		for j, repository := range component.Repositories {
-			if repository.LegacyURL != "" {
-				add(fmt.Sprintf("%s.repositories[%d].legacyURL", path, j))
+			if len(component.DataInjections) > 0 {
+				add(path + ".dataInjections")
 			}
-		}
-		for _, actionSet := range []struct {
-			name string
-			set  ActionSet
-		}{
-			{"onCreate", component.Actions.OnCreate},
-			{"onDeploy", component.Actions.OnDeploy},
-			{"onRemove", component.Actions.OnRemove},
-		} {
-			setPath := path + ".actions." + actionSet.name
-			if len(actionSet.set.After) > 0 {
-				add(setPath + ".after")
+			if len(component.HealthChecks) > 0 {
+				add(path + ".healthChecks")
 			}
-			for _, actions := range []struct {
-				name  string
-				items []Action
+			if len(component.Distros) > 0 {
+				add(path + ".distros")
+			}
+			if component.Import.Name != "" {
+				add(path + ".import.name")
+			}
+			for j, chart := range component.Charts {
+				if chart.LegacyVersion != "" {
+					add(fmt.Sprintf("%s.charts[%d].legacyVersion", path, j))
+				}
+				if len(chart.Variables) > 0 {
+					add(fmt.Sprintf("%s.charts[%d].variables", path, j))
+				}
+			}
+			for j, repository := range component.Repositories {
+				if repository.LegacyURL != "" {
+					add(fmt.Sprintf("%s.repositories[%d].legacyURL", path, j))
+				}
+			}
+			for _, actionSet := range []struct {
+				name string
+				set  ActionSet
 			}{
-				{"before", actionSet.set.Before},
-				{"onSuccess", actionSet.set.OnSuccess},
-				{"onFailure", actionSet.set.OnFailure},
+				{"onCreate", component.Actions.OnCreate},
+				{"onDeploy", component.Actions.OnDeploy},
+				{"onRemove", component.Actions.OnRemove},
 			} {
-				for j, action := range actions.items {
-					actionPath := fmt.Sprintf("%s.%s[%d]", setPath, actions.name, j)
-					if len(action.SetVariables) > 0 {
-						add(actionPath + ".setVariables")
-					}
-					for k, value := range action.SetValues {
-						if value.Value != nil {
-							add(fmt.Sprintf("%s.setValues[%d].value", actionPath, k))
+				setPath := path + ".actions." + actionSet.name
+				if len(actionSet.set.After) > 0 {
+					add(setPath + ".after")
+				}
+				for _, actions := range []struct {
+					name  string
+					items []Action
+				}{
+					{"before", actionSet.set.Before},
+					{"onSuccess", actionSet.set.OnSuccess},
+					{"onFailure", actionSet.set.OnFailure},
+				} {
+					for j, action := range actions.items {
+						actionPath := fmt.Sprintf("%s.%s[%d]", setPath, actions.name, j)
+						if len(action.SetVariables) > 0 {
+							add(actionPath + ".setVariables")
+						}
+						for k, value := range action.SetValues {
+							if value.Value != nil {
+								add(fmt.Sprintf("%s.setValues[%d].value", actionPath, k))
+							}
 						}
 					}
 				}
