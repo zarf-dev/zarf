@@ -8,7 +8,7 @@ tableOfContents: false
 
 ## zarf
 
-The Airgap Native Packager Manager for Kubernetes
+The Airgap Native Package Manager for Kubernetes
 
 ### Synopsis
 

@@ -32,7 +32,7 @@ Commands useful for developing packages
 
 ### SEE ALSO
 
-* [zarf](/commands/zarf/)	 - The Airgap Native Packager Manager for Kubernetes
+* [zarf](/commands/zarf/)	 - The Airgap Native Package Manager for Kubernetes
 * [zarf dev deploy](/commands/zarf_dev_deploy/)	 - Creates and deploys a Zarf package from a given directory
 * [zarf dev find-images](/commands/zarf_dev_find-images/)	 - Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.
 * [zarf dev generate](/commands/zarf_dev_generate/)	 - Creates a zarf.yaml automatically from a given remote (git) Helm chart
