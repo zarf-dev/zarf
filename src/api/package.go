@@ -164,21 +164,34 @@ type Manifest struct {
 	Files            []string
 	Kustomize        KustomizeManifest
 	SkipWait         bool
-	ServerSideApply  string
+	ServerSideApply  ServerSideApplyMode
 	EnableTemplating bool
 }
+
+// ServerSideApplyMode controls when server-side apply is used during deploy.
+type ServerSideApplyMode string
+
+const (
+	// ServerSideApplyEnabled always uses server-side apply.
+	ServerSideApplyEnabled ServerSideApplyMode = "true"
+	// ServerSideApplyDisabled always uses client-side apply.
+	ServerSideApplyDisabled ServerSideApplyMode = "false"
+	// ServerSideApplyAuto uses server-side apply for fresh installs and matches the prior strategy on upgrade.
+	ServerSideApplyAuto ServerSideApplyMode = "auto"
+)
 
 // Chart is the operational representation of a chart across API versions.
 type Chart struct {
 	Name string
-	// Version identifies this chart's archive and values files within the package.
-	Version              string
+	// LegacyVersion is kept for existing v1alpha1 packages so that we can track the chart's archive and values files.
+	// The version of the chart is separately tracked in OCI source, HelmRepository, or GitSource
+	LegacyVersion        string
 	Namespace            string
 	ReleaseName          string
 	ValuesFiles          []ValuesFile
 	Values               []ChartValue
 	SkipSchemaValidation bool
-	ServerSideApply      string
+	ServerSideApply      ServerSideApplyMode
 	SkipWait             bool
 
 	HelmRepository *HelmRepositorySource
@@ -241,10 +254,15 @@ type OCISource struct {
 	Ref *OCIRef
 }
 
-// Repository defines a git repository.
+// Repository defines a Git repository and the optional reference to retrieve.
 type Repository struct {
 	URL string
 	Ref *GitRef
+	// LegacyURL retains the original v1alpha1 URL, including an inline ref, so
+	// repositories retain the directory names used by existing package layouts
+	// For instance, GitRef can't express ref/tags/v1.0 vs only v1.0
+	// Will be deleted with v1alpha1 is no longer support
+	LegacyURL string
 }
 
 // File is the version-neutral representation of a package file.

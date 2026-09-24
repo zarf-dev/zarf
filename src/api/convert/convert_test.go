@@ -535,7 +535,7 @@ func TestV1Alpha1ChartOperationalRoundTrip(t *testing.T) {
 				Name: "git", URL: "https://github.com/example/chart.git", GitPath: "charts/app", Version: "v1.2.3",
 			},
 			want: v1alpha1.ZarfChart{
-				Name: "git", URL: "https://github.com/example/chart.git", GitPath: "charts/app", Version: "v1.2.3",
+				Name: "git", URL: "https://github.com/example/chart.git@v1.2.3", GitPath: "charts/app", Version: "v1.2.3",
 			},
 		},
 		{
@@ -544,7 +544,7 @@ func TestV1Alpha1ChartOperationalRoundTrip(t *testing.T) {
 				Name: "git", URL: "https://github.com/example/chart.git", Version: "v1.2.3",
 			},
 			want: v1alpha1.ZarfChart{
-				Name: "git", URL: "https://github.com/example/chart.git", Version: "v1.2.3",
+				Name: "git", URL: "https://github.com/example/chart.git@v1.2.3", Version: "v1.2.3",
 			},
 		},
 		{
@@ -1263,7 +1263,7 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 				},
 			}
 			generic := PackageFromV1beta1(pkg)
-			require.Empty(t, generic.Components[0].Charts[0].Version)
+			require.Empty(t, generic.Components[0].Charts[0].LegacyVersion)
 			result := PackageV1beta1ToV1alpha1(pkg)
 			require.Len(t, result.Components, 1)
 			require.Len(t, result.Components[0].Charts, 1)

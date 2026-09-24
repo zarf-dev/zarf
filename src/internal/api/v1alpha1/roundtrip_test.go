@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -110,7 +112,7 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 					Flavor:  "prod",
 				},
 				Import: v1alpha1.ZarfComponentImport{Name: "imp", Path: "path", URL: "oci://example.com/pkg"},
-				Repos:  []string{"https://github.com/example/repo"},
+				Repos:  []string{"https://github.com/example/repo@+v1.0.0"},
 				Images: []string{"nginx:latest"},
 				ImageArchives: []v1alpha1.ImageArchive{
 					{Path: "images.tar", Images: []string{"busybox:1.36"}},
@@ -209,6 +211,7 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 //   - metadata.allowNamespaceOverride: nil and true both permit namespace overrides.
 //   - component.required: nil and false both make a component optional.
 //   - chart.schemaValidation: nil and true both enable schema validation.
+//   - a Git chart's legacy Version fallback is canonically represented as an inline URL ref.
 //   - manifest.template, file.template, and action.template: nil and false all disable templating.
 func v1alpha1GenericRoundTripExclusions() cmp.Options {
 	return cmp.Options{
@@ -218,7 +221,18 @@ func v1alpha1GenericRoundTripExclusions() cmp.Options {
 		cmpopts.IgnoreFields(v1alpha1.ZarfManifest{}, "Template"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfFile{}, "Template"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentAction{}, "Template"),
+		cmp.Transformer("canonicalizeLegacyGitChartVersionRef", canonicalizeLegacyGitChartVersionRef),
 	}
+}
+
+func canonicalizeLegacyGitChartVersionRef(chart v1alpha1.ZarfChart) v1alpha1.ZarfChart {
+	url, ref, err := transform.GitURLSplitRef(chart.URL)
+	if err != nil || !strings.HasSuffix(url, ".git") || ref != "" || chart.Version == "" {
+		return chart
+	}
+
+	chart.URL = url + "@" + chart.Version
+	return chart
 }
 
 // TestConvertV1alpha1V1beta1RoundTripFuzz verifies that fields shared by v1alpha1 and v1beta1

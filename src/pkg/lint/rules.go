@@ -37,7 +37,7 @@ func isCosignAttestation(image string) bool {
 }
 
 func isPinnedRepo(repo string) bool {
-	return (strings.Contains(repo, "@"))
+	return strings.Contains(repo, "@")
 }
 
 // isTemplatedImage returns true if the image reference contains a Zarf template

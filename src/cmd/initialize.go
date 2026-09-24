@@ -20,7 +20,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -231,8 +231,8 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
 	}
-	if pkgLayout.AsV1alpha1().Kind != v1alpha1.ZarfInitConfig {
-		return fmt.Errorf("zarf init can only deploy packages of kind \"%s\"", v1alpha1.ZarfInitConfig)
+	if !pkgLayout.Definition().IsInitConfig() {
+		return fmt.Errorf("zarf init can only deploy packages of kind \"%s\"", api.ZarfInitConfig)
 	}
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())

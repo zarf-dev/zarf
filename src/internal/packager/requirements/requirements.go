@@ -8,14 +8,14 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 )
 
 // VersionRequirementsError is returned when operational requirements are not met
 type VersionRequirementsError struct {
 	RequiredVersion string
-	Requirements    []v1alpha1.VersionRequirement
+	Requirements    []api.VersionRequirement
 	CurrentVersion  string
 }
 
@@ -31,7 +31,7 @@ func (e *VersionRequirementsError) Error() string {
 }
 
 // calculateRequiredVersion finds the highest version from a list of version requirements
-func calculateRequiredVersion(requirements []v1alpha1.VersionRequirement) (string, error) {
+func calculateRequiredVersion(requirements []api.VersionRequirement) (string, error) {
 	if len(requirements) == 0 {
 		return "", nil
 	}
@@ -57,7 +57,7 @@ func calculateRequiredVersion(requirements []v1alpha1.VersionRequirement) (strin
 }
 
 // ValidateVersionRequirements checks if the config.CLIVersion meets the operational requirements.
-func ValidateVersionRequirements(pkg v1alpha1.ZarfPackage) error {
+func ValidateVersionRequirements(pkg api.Package) error {
 	if len(pkg.Build.VersionRequirements) == 0 {
 		return nil
 	}
@@ -72,7 +72,7 @@ func ValidateVersionRequirements(pkg v1alpha1.ZarfPackage) error {
 		return fmt.Errorf("failed to parse current Zarf version '%s': %w", currentVersion, err)
 	}
 
-	var unmetRequirements []v1alpha1.VersionRequirement
+	var unmetRequirements []api.VersionRequirement
 
 	for _, req := range pkg.Build.VersionRequirements {
 		requiredVer, err := semver.NewVersion(req.Version)
