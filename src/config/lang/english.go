@@ -37,7 +37,7 @@ const (
 // Zarf CLI commands.
 const (
 	// root zarf command
-	RootCmdShort = "The Airgap Native Packager Manager for Kubernetes"
+	RootCmdShort = "The Airgap Native Package Manager for Kubernetes"
 	RootCmdLong  = "Zarf eliminates the complexity of airgap software delivery for Kubernetes clusters and cloud native workloads\n" +
 		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
