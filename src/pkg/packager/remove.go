@@ -43,6 +43,9 @@ type RemoveOptions struct {
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) error {
+	if err := definition.ValidateVersionFields(); err != nil {
+		return err
+	}
 	l := logger.From(ctx)
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {

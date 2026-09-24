@@ -70,11 +70,7 @@ func (d Decoder[T]) erase() erasedDecoder {
 			if err != nil {
 				return nil, api.Package{}, err
 			}
-			definition := d.toPackage(pkg)
-			if err := definition.ValidateVersionFields(); err != nil {
-				return nil, api.Package{}, err
-			}
-			return pkg, definition, nil
+			return pkg, d.toPackage(pkg), nil
 		},
 	}
 }
