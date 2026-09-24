@@ -32,6 +32,16 @@ func TestComponentPublish(t *testing.T) {
 		require.Contains(t, stdErr, "PASSED")
 	})
 
+	t.Run("re-sign published component", func(t *testing.T) {
+		stdOut, stdErr, err := e2e.Zarf(t, "component", "sign", componentSource, "--plain-http", "--signing-key", privateKey, "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+
+		stdOut, stdErr, err = e2e.Zarf(t, "component", "verify", componentSource, "--plain-http", "--key", publicKey)
+		require.NoError(t, err, stdOut, stdErr)
+		require.Contains(t, stdErr, "component signature verification")
+		require.Contains(t, stdErr, "PASSED")
+	})
+
 	t.Run("remote import content", func(t *testing.T) {
 		packageDir := t.TempDir()
 		packageTemplatePath := filepath.Join("src", "test", "packages", "15-component-publish-v1beta1", "zarf.tpl.yaml")
