@@ -23,9 +23,11 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 	registryremote "oras.land/oras-go/v2/registry/remote"
 )
@@ -192,6 +194,33 @@ func TestPublishComponentSignsManifest(t *testing.T) {
 	verifyOpts := signing.DefaultVerifyManifestOptions()
 	verifyOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.pub")
 	require.NoError(t, signing.VerifyManifest(ctx, published.String(), verifyOpts, defaultTestRemoteOptions()))
+}
+
+func TestPublishComponentDoesNotTagOnSigningFailure(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	componentPath := filepath.Join("testdata", "publish-component-v1beta1", "component.yaml")
+	destination := createRegistry(ctx, t)
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = filepath.Join(t.TempDir(), "missing.key")
+
+	_, err := Publish(ctx, componentPath, destination, PublishOptions{
+		SignManifestOptions: &signOpts,
+		RemoteOptions:       defaultTestRemoteOptions(),
+	})
+	require.Error(t, err)
+
+	config, err := load.ComponentConfig(componentPath)
+	require.NoError(t, err)
+	componentRef, err := componentReference(destination, config)
+	require.NoError(t, err)
+	remote, err := zoci.NewRemoteWithOptions(ctx, componentRef.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+	_, err = remote.Repo().Resolve(ctx, componentRef.Reference)
+	require.ErrorIs(t, err, errdef.ErrNotFound)
 }
 
 func TestPublishComponentFlavor(t *testing.T) {

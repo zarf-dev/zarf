@@ -41,14 +41,20 @@ func TestUpdateIndexWithDescriptor(t *testing.T) {
 	indexDescriptor, err := UpdateIndexWithDescriptor(ctx, remote.Repo(), ref.Reference, ocispec.Platform{Architecture: "amd64"}, amd64First)
 	require.NoError(t, err)
 	require.Equal(t, ocispec.MediaTypeImageIndex, indexDescriptor.MediaType)
+	_, err = remote.Repo().Resolve(ctx, ref.Reference)
+	require.ErrorContains(t, err, "not found")
+	tagDescriptor(ctx, t, remote, indexDescriptor, ref.Reference)
 	require.Equal(t, indexDescriptor, resolveDescriptor(ctx, t, remote, ref.Reference))
 	requireIndexManifests(t, readIndex(ctx, t, remote, ref.Reference), map[string]ocispec.Descriptor{
 		"amd64": amd64First,
 	})
 
 	arm64 := pushManifest(ctx, t, remote, "arm64")
+	previousIndex := indexDescriptor
 	indexDescriptor, err = UpdateIndexWithDescriptor(ctx, remote.Repo(), ref.Reference, ocispec.Platform{Architecture: "arm64"}, arm64)
 	require.NoError(t, err)
+	require.Equal(t, previousIndex, resolveDescriptor(ctx, t, remote, ref.Reference))
+	tagDescriptor(ctx, t, remote, indexDescriptor, ref.Reference)
 	require.Equal(t, indexDescriptor, resolveDescriptor(ctx, t, remote, ref.Reference))
 	requireIndexManifests(t, readIndex(ctx, t, remote, ref.Reference), map[string]ocispec.Descriptor{
 		"amd64": amd64First,
@@ -56,8 +62,11 @@ func TestUpdateIndexWithDescriptor(t *testing.T) {
 	})
 
 	amd64Replacement := pushManifest(ctx, t, remote, "amd64-replacement")
+	previousIndex = indexDescriptor
 	indexDescriptor, err = UpdateIndexWithDescriptor(ctx, remote.Repo(), ref.Reference, ocispec.Platform{Architecture: "amd64"}, amd64Replacement)
 	require.NoError(t, err)
+	require.Equal(t, previousIndex, resolveDescriptor(ctx, t, remote, ref.Reference))
+	tagDescriptor(ctx, t, remote, indexDescriptor, ref.Reference)
 	require.Equal(t, indexDescriptor, resolveDescriptor(ctx, t, remote, ref.Reference))
 	requireIndexManifests(t, readIndex(ctx, t, remote, ref.Reference), map[string]ocispec.Descriptor{
 		"amd64": amd64Replacement,
@@ -119,6 +128,10 @@ func pushManifest(ctx context.Context, t *testing.T, remote *zoci.Remote, conten
 	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), "", remote.GetDefaultCopyOpts())
 	require.NoError(t, err)
 	return manifest
+}
+func tagDescriptor(ctx context.Context, t *testing.T, remote *zoci.Remote, descriptor ocispec.Descriptor, tag string) {
+	t.Helper()
+	require.NoError(t, remote.Repo().Tag(ctx, descriptor, tag))
 }
 
 func resolveDescriptor(ctx context.Context, t *testing.T, remote *zoci.Remote, tag string) ocispec.Descriptor {

@@ -157,6 +157,9 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 			return registry.Reference{}, fmt.Errorf("failed to sign published component: %w", err)
 		}
 	}
+	if err := remote.Repo().Tag(ctx, published, componentRef.Reference); err != nil {
+		return registry.Reference{}, fmt.Errorf("tag published component: %w", err)
+	}
 	logger.From(ctx).Info("published component", "destination", helpers.OCIURLPrefix+componentRef.String())
 	return componentRef, nil
 }
@@ -194,11 +197,7 @@ func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourc
 			defer trackedRemote.StopReporting()
 
 			var copyErr error
-			destinationRef := componentRef.Reference
-			if architecture != "" {
-				destinationRef = ""
-			}
-			published, copyErr = oras.Copy(ctx, store, sourceRef, trackedRemote, destinationRef, copyOpts)
+			published, copyErr = oras.Copy(ctx, store, sourceRef, trackedRemote, "", copyOpts)
 			if copyErr != nil {
 				return copyErr
 			}

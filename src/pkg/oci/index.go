@@ -18,8 +18,8 @@ import (
 	registryremote "oras.land/oras-go/v2/registry/remote"
 )
 
-// UpdateIndexWithDescriptor updates tag's OCI index for platform and returns the
-// exact immutable descriptor pushed by this invocation.
+// UpdateIndexWithDescriptor updates the index referenced by tag for platform and
+// pushes the resulting immutable descriptor without changing the tag.
 func UpdateIndexWithDescriptor(ctx context.Context, repo *registryremote.Repository, tag string, platform ocispec.Platform, manifest ocispec.Descriptor) (ocispec.Descriptor, error) {
 	index, err := fetchIndex(ctx, repo, tag)
 	if err != nil {
@@ -50,7 +50,7 @@ func UpdateIndexWithDescriptor(ctx context.Context, repo *registryremote.Reposit
 		return ocispec.Descriptor{}, fmt.Errorf("marshal OCI index: %w", err)
 	}
 	indexDescriptor := content.NewDescriptorFromBytes(ocispec.MediaTypeImageIndex, indexBytes)
-	if err := repo.Manifests().PushReference(ctx, indexDescriptor, bytes.NewReader(indexBytes), tag); err != nil {
+	if err := repo.Push(ctx, indexDescriptor, bytes.NewReader(indexBytes)); err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("push OCI index: %w", err)
 	}
 
