@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 )
 
 func TestComponentActionRemove(t *testing.T) {
@@ -44,4 +45,9 @@ func TestComponentActionEdgeCases(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	c, err := cluster.New(t.Context())
+	require.NoError(t, err)
+	_, err = c.GetDeployedPackage(t.Context(), "component-actions-edgecases")
+	require.Error(t, err, "cluster wait actions should not create package state")
 }

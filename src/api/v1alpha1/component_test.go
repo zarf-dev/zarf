@@ -97,3 +97,31 @@ func TestGetImages(t *testing.T) {
 		})
 	}
 }
+
+func TestComponentRequirements(t *testing.T) {
+	t.Parallel()
+
+	clusterWait := ZarfComponentAction{Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{Kind: "Pod"}}}
+	networkWait := ZarfComponentAction{Wait: &ZarfComponentActionWait{Network: &ZarfComponentActionWaitNetwork{Protocol: "tcp"}}}
+	tests := []struct {
+		name            string
+		component       ZarfComponent
+		requiresCluster bool
+		requiresState   bool
+	}{
+		{name: "local component", component: ZarfComponent{}},
+		{name: "image component", component: ZarfComponent{Images: []string{"example.com/image:latest"}}, requiresCluster: true, requiresState: true},
+		{name: "deploy cluster wait", component: ZarfComponent{Actions: ZarfComponentActions{OnDeploy: ZarfComponentActionSet{Before: []ZarfComponentAction{clusterWait}}}}, requiresCluster: true},
+		{name: "remove cluster wait", component: ZarfComponent{Actions: ZarfComponentActions{OnRemove: ZarfComponentActionSet{Before: []ZarfComponentAction{clusterWait}}}}},
+		{name: "network wait", component: ZarfComponent{Actions: ZarfComponentActions{OnDeploy: ZarfComponentActionSet{Before: []ZarfComponentAction{networkWait}}}}},
+		{name: "health check", component: ZarfComponent{HealthChecks: []NamespacedObjectKindReference{{Kind: "Pod"}}}, requiresCluster: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.requiresCluster, tt.component.RequiresCluster())
+			require.Equal(t, tt.requiresState, tt.component.RequiresState())
+		})
+	}
+}

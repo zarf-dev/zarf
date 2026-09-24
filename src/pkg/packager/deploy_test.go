@@ -7,10 +7,12 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -119,6 +121,45 @@ func TestVerifyPackageIsDeployableSkipsAgentCertCheckWhenAgentIsNotConfigured(t 
 	d := deployer{c: c}
 	err = d.verifyPackageIsDeployable(ctx, &layout.PackageLayout{})
 	require.NoError(t, err)
+}
+
+func TestDeployComponentLoadsStateForHealthCheckTemplates(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	cs := fake.NewClientset()
+	c := &cluster.Cluster{
+		Clientset: cs,
+		Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
+	}
+	_, err := cs.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: state.ZarfNamespaceName},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
+	require.NoError(t, c.SaveState(ctx, &state.State{StorageClass: "test-storage-class"}))
+
+	templateAction := true
+	component := v1alpha1.ZarfComponent{
+		Name: "health-check-only",
+		Actions: v1alpha1.ZarfComponentActions{
+			OnDeploy: v1alpha1.ZarfComponentActionSet{
+				Before: []v1alpha1.ZarfComponentAction{{
+					Cmd:      `echo "{{ .State.StorageClass }}"`,
+					Template: &templateAction,
+				}},
+			},
+		},
+		HealthChecks: []v1alpha1.NamespacedObjectKindReference{{
+			APIVersion: "v1",
+			Kind:       "Pod",
+			Namespace:  "default",
+			Name:       "example",
+		}},
+	}
+	require.False(t, component.RequiresState())
+
+	d := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
+	_, err = d.deployComponent(ctx, &layout.PackageLayout{}, component, false, false, DeployOptions{Timeout: time.Second})
+	require.NoError(t, err)
+	require.Equal(t, "test-storage-class", d.s.StorageClass)
 }
 
 func TestDeploySkipsValuesSchemaValidationWhenConfigured(t *testing.T) {

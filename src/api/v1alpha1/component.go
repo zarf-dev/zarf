@@ -94,20 +94,39 @@ type NamespacedObjectKindReference struct {
 	Name string `json:"name"`
 }
 
-// RequiresCluster returns if the component requires a cluster connection to deploy.
+// RequiresCluster returns if the component requires a cluster connection during deployment.
 func (c ZarfComponent) RequiresCluster() bool {
+	return c.RequiresState() || len(c.HealthChecks) > 0 || c.Actions.hasDeployClusterWait()
+}
+
+// RequiresState returns if the component requires Zarf state during deployment or removal.
+func (c ZarfComponent) RequiresState() bool {
 	hasImages := len(c.Images) > 0
 	hasImageArchives := len(c.ImageArchives) > 0
 	hasCharts := len(c.Charts) > 0
 	hasManifests := len(c.Manifests) > 0
 	hasRepos := len(c.Repos) > 0
 	hasDataInjections := len(c.DataInjections) > 0
-	hasHealthChecks := len(c.HealthChecks) > 0
 
-	if hasImageArchives || hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasHealthChecks {
+	if hasImageArchives || hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections {
 		return true
 	}
 
+	return false
+}
+
+func (a ZarfComponentActions) hasDeployClusterWait() bool {
+	return a.OnDeploy.hasClusterWait()
+}
+
+func (a ZarfComponentActionSet) hasClusterWait() bool {
+	for _, actions := range [][]ZarfComponentAction{a.Before, a.After, a.OnSuccess, a.OnFailure} {
+		for _, action := range actions {
+			if action.Wait != nil && action.Wait.Cluster != nil {
+				return true
+			}
+		}
+	}
 	return false
 }
 
