@@ -128,7 +128,6 @@ func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.Compone
 	if err := validateComponentImportV1Beta1(spec.Import); err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
-	// TODO, when resolving a remote component make sure that any maliciously crafted component configs will error
 	if len(spec.Import.Local) == 0 && len(spec.Import.Remote) == 0 {
 		// End of this import chain: there are no deeper imported values to inherit.
 		return spec, importedValues{}, nil, nil
@@ -256,6 +255,13 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
+	// Remote components are barred from oncreate actions, this ensures a component wasn't maliciously published with them
+	if hasActionSet(config.Component.Actions.OnCreate) {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q contains unsupported onCreate actions", importURL)
+	}
+	if len(config.Component.Import.Local) != 0 || len(config.Component.Import.Remote) != 0 {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q contains unresolved imports", importURL)
+	}
 	if !variantMatchesOCIPlatform(config.Variant, root.Platform) {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q variant architecture does not match its OCI platform", importURL)
 	}
@@ -278,6 +284,10 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 		resources = append(resources, remoteResource{remote: remote, descriptor: descriptor, importRoot: importRoot, mountPath: mountPath})
 	}
 	return loadedComponentConfig{config: config, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
+}
+
+func hasActionSet(actions v1beta1.ComponentActionSet) bool {
+	return actions.Defaults != nil || len(actions.Before) != 0 || len(actions.OnSuccess) != 0 || len(actions.OnFailure) != 0
 }
 
 func validRemoteMountPath(mountPath string) bool {

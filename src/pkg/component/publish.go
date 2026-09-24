@@ -130,7 +130,6 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if err := store.Tag(ctx, manifest, manifest.Digest.String()); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to stage component artifact: %w", err)
 	}
-
 	remote, err := zoci.NewRemoteWithOptions(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Variant.Architecture}, zoci.RemoteClientOptions{
 		RemoteOptions: opts.RemoteOptions,
 	})
