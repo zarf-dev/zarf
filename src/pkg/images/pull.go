@@ -27,6 +27,7 @@ import (
 	"github.com/mholt/archives"
 	"github.com/moby/moby/client"
 	"github.com/moby/moby/client/pkg/versions"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"golang.org/x/sync/errgroup"
@@ -60,6 +61,13 @@ type PullOptions struct {
 	PlainHTTP bool
 }
 
+// ImageRequest pairs an image with its source. An empty Source preserves the
+// v1alpha1 registry-with-daemon-fallback behavior.
+type ImageRequest struct {
+	Image  transform.Image
+	Source api.ImageSource
+}
+
 type imagePullInfo struct {
 	registryOverrideRef string
 	ref                 string
@@ -76,17 +84,33 @@ type imagePullInfo struct {
 type imageWithOverride struct {
 	overridden transform.Image
 	original   transform.Image
+	source     api.ImageSource
 }
 
 // Pull pulls all images to the destination directory.
-func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory string, opts PullOptions) ([]PulledImage, error) {
+func Pull(ctx context.Context, imageList []ImageRequest, destinationDirectory string, opts PullOptions) ([]PulledImage, error) {
 	if len(imageList) == 0 {
 		return nil, fmt.Errorf("image list is required")
 	}
 	if destinationDirectory == "" {
 		return nil, fmt.Errorf("destination directory is required")
 	}
-	imageList = helpers.Unique(imageList)
+	uniqueImages := make([]ImageRequest, 0, len(imageList))
+	seenSources := make(map[string]api.ImageSource, len(imageList))
+	for _, request := range imageList {
+		if request.Source != "" && request.Source != api.ImageSourceRegistry && request.Source != api.ImageSourceDaemon {
+			return nil, fmt.Errorf("unsupported source %q for image %q", request.Source, request.Image.Reference)
+		}
+		if previous, exists := seenSources[request.Image.Reference]; exists {
+			if previous != request.Source {
+				return nil, fmt.Errorf("image %q has conflicting sources %q and %q", request.Image.Reference, previous, request.Source)
+			}
+			continue
+		}
+		seenSources[request.Image.Reference] = request.Source
+		uniqueImages = append(uniqueImages, request)
+	}
+	imageList = uniqueImages
 	l := logger.From(ctx)
 	pullStart := time.Now()
 
@@ -105,9 +129,14 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 
 	imagesWithOverride := []imageWithOverride{}
 	// Iterate over all images, marking each one as overridden.
-	for _, img := range imageList {
+	for _, request := range imageList {
+		img := request.Image
+		source := request.Source
 		overriddenImage := img
 		for _, v := range opts.RegistryOverrides {
+			if source == api.ImageSourceDaemon {
+				break
+			}
 			if strings.HasPrefix(img.Reference, v.Source) {
 				// If we have an override, the first override wins.
 				// Doing so allows earlier, longer prefixes (such as docker.io/library)
@@ -119,6 +148,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		imagesWithOverride = append(imagesWithOverride, imageWithOverride{
 			original:   img,
 			overridden: overriddenImage,
+			source:     source,
 		})
 	}
 
@@ -127,7 +157,13 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 
 	uniqueHosts := map[string]struct{}{}
 	for _, v := range imagesWithOverride {
-		uniqueHosts[v.overridden.Host] = struct{}{}
+		if v.source != api.ImageSourceDaemon {
+			ref, err := registry.ParseReference(v.overridden.Reference)
+			if err != nil {
+				return nil, fmt.Errorf("invalid image reference %q: %w", v.overridden.Reference, err)
+			}
+			uniqueHosts[ref.Host()] = struct{}{}
+		}
 	}
 	client, err := NewAuthClientFromDocker(ctx, opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout, uniqueHosts)
 	if err != nil {
@@ -150,6 +186,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 	for _, image := range imagesWithOverride {
+		if image.source == api.ImageSourceDaemon {
+			dockerFallBackImages = append(dockerFallBackImages, image)
+			continue
+		}
 		eg.Go(func() error {
 			repo := &orasRemote.Repository{}
 
@@ -167,6 +207,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			if opts.PlainHTTP || dns.IsLocalOrPrivate(repo.Reference.Host()) {
 				plainHTTP, err = ocischeme.From(ctx).UsePlainHTTP(ctx, repo.Reference.Host(), ocischeme.ProbeOptions{InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify})
 				if err != nil {
+					if image.source == api.ImageSourceRegistry {
+						return fmt.Errorf("unable to reach registry for image %q: %w", image.overridden.Reference, err)
+					}
 					// It could be an image on the daemon instead of a registry.
 					l.Warn("unable to reach registry, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
 					imageListLock.Lock()
@@ -180,6 +223,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			fetchOpts := oras.DefaultFetchBytesOptions
 			desc, b, err := oras.FetchBytes(ectx, repo, image.overridden.Reference, fetchOpts)
 			if err != nil {
+				if image.source == api.ImageSourceRegistry {
+					return fmt.Errorf("unable to fetch registry image %q: %w", image.overridden.Reference, err)
+				}
 				// TODO we could use the k8s library for backoffs here - https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/util/wait/backoff.go
 				if strings.Contains(err.Error(), "toomanyrequests") {
 					return fmt.Errorf("rate limited by registry: %w", err)

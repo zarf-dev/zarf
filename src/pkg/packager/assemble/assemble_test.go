@@ -568,6 +568,31 @@ components:
 	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
 }
 
+func TestAssemblePackageV1Beta1RejectsConflictingImageSources(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	definition := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: conflicting-images
+components:
+  - name: first
+    images:
+      - name: nginx:1.27
+        source: daemon
+  - name: second
+    images:
+      - name: docker.io/library/nginx:1.27
+        source: registry
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+	loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+	require.NoError(t, err)
+	_, err = AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+	require.ErrorContains(t, err, "conflicting sources")
+}
+
 func TestAssemblePackageV1Alpha1DoesNotWriteV1Beta1Definition(t *testing.T) {
 	t.Parallel()
 

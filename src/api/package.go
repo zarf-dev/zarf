@@ -276,10 +276,20 @@ type File struct {
 	EnableTemplating bool
 }
 
+// ImageSource identifies where an image is read during package creation.
+type ImageSource string
+
+const (
+	// ImageSourceRegistry reads an image from a registry.
+	ImageSourceRegistry ImageSource = "registry"
+	// ImageSourceDaemon reads an image from the local container daemon.
+	ImageSourceDaemon ImageSource = "daemon"
+)
+
 // Image represents an OCI image in the package.
 type Image struct {
 	Name   string
-	Source string
+	Source ImageSource
 }
 
 // ImageArchive defines a tar archive of images to include in the package.

@@ -239,12 +239,22 @@ type File struct {
 	EnableTemplating bool `json:"enableTemplating,omitempty"`
 }
 
+// ImageSource identifies where an image is read during package creation.
+type ImageSource string
+
+const (
+	// ImageSourceRegistry reads an image from a registry.
+	ImageSourceRegistry ImageSource = "registry"
+	// ImageSourceDaemon reads an image from the local container daemon.
+	ImageSourceDaemon ImageSource = "daemon"
+)
+
 // Image defines an OCI image to include in the package.
 type Image struct {
 	// The image reference.
 	Name string `json:"name"`
 	// The source to pull the image from. Defaults to "registry".
-	Source string `json:"source,omitempty" jsonschema:"enum=registry,enum=daemon,default=registry"`
+	Source ImageSource `json:"source,omitempty" jsonschema:"enum=registry,enum=daemon,default=registry"`
 }
 
 // ImageArchive defines a tar archive of images to include in the package.

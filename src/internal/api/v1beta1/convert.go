@@ -125,7 +125,7 @@ func componentToGeneric(c v1beta1.Component) api.Component {
 	for _, img := range c.Images {
 		gc.Images = append(gc.Images, api.Image{
 			Name:   img.Name,
-			Source: img.Source,
+			Source: api.ImageSource(img.Source),
 		})
 	}
 
@@ -449,7 +449,7 @@ func componentFromGeneric(c api.Component, isInit bool) v1beta1.Component {
 	for _, img := range c.Images {
 		bc.Images = append(bc.Images, v1beta1.Image{
 			Name:   img.Name,
-			Source: img.Source,
+			Source: v1beta1.ImageSource(img.Source),
 		})
 	}
 

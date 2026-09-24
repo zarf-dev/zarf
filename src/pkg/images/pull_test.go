@@ -19,6 +19,7 @@ import (
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2/registry/remote"
@@ -157,7 +158,7 @@ func TestCheckForIndex(t *testing.T) {
 				CacheDirectory: cacheDir,
 				PlainHTTP:      true,
 			}
-			_, err = Pull(ctx, []transform.Image{refInfo}, dstDir, opts)
+			_, err = Pull(ctx, []ImageRequest{{Image: refInfo}}, dstDir, opts)
 			require.NoError(t, err)
 
 			idx, err := getIndexFromOCILayout(dstDir)
@@ -231,11 +232,11 @@ func TestPull(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			var images []transform.Image
+			var images []ImageRequest
 			for _, ref := range tc.refs {
 				image, err := transform.ParseImageRef(ref)
 				require.NoError(t, err)
-				images = append(images, image)
+				images = append(images, ImageRequest{Image: image})
 			}
 
 			destDir := t.TempDir()
@@ -260,8 +261,8 @@ func TestPull(t *testing.T) {
 			var expectedImageAnnotations []map[string]string
 			for _, ref := range images {
 				expectedAnnotations := map[string]string{
-					ocispec.AnnotationRefName:       ref.Reference,
-					ocispec.AnnotationBaseImageName: ref.Reference,
+					ocispec.AnnotationRefName:       ref.Image.Reference,
+					ocispec.AnnotationBaseImageName: ref.Image.Reference,
 				}
 				expectedImageAnnotations = append(expectedImageAnnotations, expectedAnnotations)
 			}
@@ -298,13 +299,37 @@ func TestPull_LocalhostAutoDetectsPlainHTTPWithoutFlag(t *testing.T) {
 	require.NoError(t, err)
 
 	destDir := t.TempDir()
-	_, err = Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+	_, err = Pull(ctx, []ImageRequest{{Image: ref}}, destDir, PullOptions{
 		CacheDirectory: t.TempDir(),
 		Arch:           "amd64",
 		// PlainHTTP intentionally left false: localhost must be auto-detected.
 	})
 	require.NoError(t, err)
 	requireManifestBlobs(t, destDir, manifest.Digest.String())
+}
+
+func TestPull_RegistrySourceDoesNotUseDaemonFallback(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	registryHost := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	image, err := transform.ParseImageRef(registryHost + "/missing/image:v1")
+	require.NoError(t, err)
+	_, err = Pull(ctx, []ImageRequest{{Image: image, Source: api.ImageSourceRegistry}}, t.TempDir(), PullOptions{
+		Arch:           "amd64",
+		CacheDirectory: t.TempDir(),
+	})
+	require.ErrorContains(t, err, "unable to fetch registry image")
+}
+
+func TestPull_RejectsConflictingSources(t *testing.T) {
+	t.Parallel()
+	image, err := transform.ParseImageRef("registry.example.com/team/app:v1")
+	require.NoError(t, err)
+	_, err = Pull(testutil.TestContext(t), []ImageRequest{
+		{Image: image, Source: api.ImageSourceRegistry},
+		{Image: image, Source: api.ImageSourceDaemon},
+	}, t.TempDir(), PullOptions{CacheDirectory: t.TempDir()})
+	require.ErrorContains(t, err, "conflicting sources")
 }
 
 func TestPullInvalidCache(t *testing.T) {
@@ -330,7 +355,7 @@ func TestPullInvalidCache(t *testing.T) {
 	invalidLayerPath := filepath.Join(cacheDir, fmt.Sprintf("sha256:%s", correctLayerSha))
 	require.NoError(t, os.WriteFile(invalidLayerPath, []byte("this mimics a corrupted file"), 0o777))
 
-	_, err = Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+	_, err = Pull(ctx, []ImageRequest{{Image: ref}}, destDir, PullOptions{
 		CacheDirectory: cacheDir,
 		Arch:           "amd64",
 		PlainHTTP:      true,
