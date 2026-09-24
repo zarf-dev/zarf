@@ -256,6 +256,16 @@ type InjectorInfo struct {
 	Port int `json:"port"`
 }
 
+// GitServerMode identifies whether Zarf manages the git server.
+type GitServerMode string
+
+const (
+	// GitServerModeInternal is used for the git server deployed by Zarf.
+	GitServerModeInternal GitServerMode = "internal"
+	// GitServerModeExternal is used for a user-provided git server.
+	GitServerModeExternal GitServerMode = "external"
+)
+
 // GitServerInfo contains information Zarf uses to communicate with a git repository to push/pull repositories to.
 type GitServerInfo struct {
 	// Username of a user with push access to the git repository
@@ -268,11 +278,23 @@ type GitServerInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the git server
 	Address string `json:"address"`
+	// GitServerMode identifies whether Zarf manages the git server.
+	GitServerMode GitServerMode `json:"gitServerMode,omitempty"`
 }
 
-// IsInternal returns true if the git server URL is equivalent to a git server deployed through the default init package
+// IsInternal reports whether Zarf manages the git server. Older state without a mode uses the address.
 func (gs GitServerInfo) IsInternal() bool {
+	if gs.GitServerMode != "" {
+		return gs.GitServerMode == GitServerModeInternal
+	}
 	return gs.Address == ZarfInClusterGitServiceURL
+}
+
+func gitServerModeForAddress(address string) GitServerMode {
+	if address == ZarfInClusterGitServiceURL {
+		return GitServerModeInternal
+	}
+	return GitServerModeExternal
 }
 
 // IsConfigured returns true if the git server address has been set.
@@ -288,6 +310,9 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 	// Set default svc url if an external repository was not provided
 	if gs.Address == "" {
 		gs.Address = ZarfInClusterGitServiceURL
+	}
+	if gs.GitServerMode == "" {
+		gs.GitServerMode = gitServerModeForAddress(gs.Address)
 	}
 
 	// Generate a push-user password if not provided by init flag
@@ -675,6 +700,9 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	if opts.Services.Has(GitKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, opts.GitServer)
+		if opts.GitServer.Address != "" && opts.GitServer.GitServerMode == "" {
+			newState.GitServer.GitServerMode = gitServerModeForAddress(newState.GitServer.Address)
+		}
 
 		// Only autogenerate passwords if the user didn't provide one and the git server is internal
 		if opts.GitServer.PushPassword == "" && oldState.GitServer.IsInternal() {

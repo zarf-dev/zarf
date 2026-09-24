@@ -632,6 +632,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.True(t, s.GitServer.IsConfigured())
+		require.Equal(t, state.GitServerModeInternal, s.GitServer.GitServerMode)
 		require.True(t, s.ArtifactServer.IsInternal())
 		require.NotEmpty(t, s.RegistryInfo.Address)
 		require.NotEmpty(t, s.AgentInfo.TLS.Cert)
@@ -656,6 +657,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.True(t, s.GitServer.IsConfigured())
+		require.Equal(t, state.GitServerModeInternal, s.GitServer.GitServerMode)
 		require.Equal(t, "127.0.0.1:31999", s.RegistryInfo.Address)
 		require.NotEmpty(t, s.ArtifactServer.Address)
 	})
@@ -723,6 +725,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, "https://git.example.com", s.GitServer.Address)
+		require.Equal(t, state.GitServerModeExternal, s.GitServer.GitServerMode)
 		require.False(t, s.GitServer.IsInternal())
 	})
 
