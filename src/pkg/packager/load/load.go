@@ -119,7 +119,7 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 	default:
 		return resolution{}, fmt.Errorf("unrecognized API version")
 	}
-	if err := defined.definition.ValidateVersionFields(); err != nil {
+	if err := defined.definition.Validate(); err != nil {
 		return resolution{}, fmt.Errorf("package validation failed: %w", err)
 	}
 

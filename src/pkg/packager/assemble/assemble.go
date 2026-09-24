@@ -71,7 +71,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	defer func() {
 		err = errors.Join(err, resolvedPackage.Close())
 	}()
-	if err := resolvedPackage.Definition.ValidateVersionFields(); err != nil {
+	if err := resolvedPackage.Definition.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -245,7 +245,7 @@ type AssembleSkeletonOptions struct {
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
 func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
-	if err := resolvedPackage.Definition.ValidateVersionFields(); err != nil {
+	if err := resolvedPackage.Definition.Validate(); err != nil {
 		return nil, err
 	}
 	if resolvedPackage.Definition.GetAPIVersion() != v1alpha1.APIVersion {

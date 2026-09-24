@@ -11,10 +11,9 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
 
-// ValidateVersionFields rejects fields that cannot be represented by the package's API version.
-// An omitted apiVersion is the legacy v1alpha1 form. This does not validate field values or
-// relationships between fields; those checks belong to package correctness validation.
-func (p Package) ValidateVersionFields() error {
+// Validate rejects fields that cannot be represented by the package's API version.
+// An omitted apiVersion is assumed v1alpha1. This does not validate field values correctness
+func (p Package) Validate() error {
 	version := p.GetAPIVersion()
 	if version != v1alpha1.APIVersion && version != v1beta1.APIVersion {
 		return fmt.Errorf("unsupported package apiVersion %q", version)
