@@ -77,9 +77,6 @@ func (p Package) ValidateVersionFields() error {
 		if len(component.Distros) > 0 {
 			add(path + ".distros")
 		}
-		if hasDeprecatedScripts(component.DeprecatedScripts) {
-			add(path + ".deprecatedScripts")
-		}
 		if component.Import.Name != "" {
 			add(path + ".import.name")
 		}
@@ -121,9 +118,6 @@ func (p Package) ValidateVersionFields() error {
 					if len(action.SetVariables) > 0 {
 						add(actionPath + ".setVariables")
 					}
-					if action.DeprecatedSetVariable != "" {
-						add(actionPath + ".deprecatedSetVariable")
-					}
 					for k, value := range action.SetValues {
 						if value.Value != nil {
 							add(fmt.Sprintf("%s.setValues[%d].value", actionPath, k))
@@ -135,9 +129,4 @@ func (p Package) ValidateVersionFields() error {
 	}
 
 	return errors.Join(errs...)
-}
-
-func hasDeprecatedScripts(s DeprecatedComponentScripts) bool {
-	return s.ShowOutput || s.TimeoutSeconds != 0 || s.Retry ||
-		len(s.Prepare) > 0 || len(s.Before) > 0 || len(s.After) > 0
 }
