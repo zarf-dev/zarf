@@ -219,6 +219,7 @@ func TestPublishSkeleton(t *testing.T) {
 			pkg.Build = api.BuildData{}
 			pkg.Build.AggregateChecksum = ""
 			expected := convert.PackageFromV1alpha1(expectedPkg)
+			expected.Build = api.BuildData{}
 			expected.Metadata.Architecture = "skeleton"
 
 			// NOTE(mkcp): In future schema version move ZarfPackage.Metadata.AggregateChecksum

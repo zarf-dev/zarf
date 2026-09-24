@@ -91,23 +91,11 @@ type Component struct {
 	StateAccess   []StateAccessKey
 	Actions       ComponentActions
 
-	Default           bool
-	Group             string
-	DataInjections    []ZarfDataInjection
-	HealthChecks      []NamespacedObjectKindReference
-	Distros           []string
-	DeprecatedScripts DeprecatedComponentScripts
-}
-
-// DeprecatedComponentScripts is the v1alpha1-only pre-actions scripts block, preserved for lossless
-// round-trip.
-type DeprecatedComponentScripts struct {
-	ShowOutput     bool
-	TimeoutSeconds int
-	Retry          bool
-	Prepare        []string
-	Before         []string
-	After          []string
+	Default        bool
+	Group          string
+	DataInjections []ZarfDataInjection
+	HealthChecks   []NamespacedObjectKindReference
+	Distros        []string
 }
 
 // ComponentTarget filters a component to a target OS/arch/flavor.
@@ -328,8 +316,6 @@ type Action struct {
 	Description      string
 	Wait             *ActionWait
 	EnableTemplating bool
-	// DeprecatedSetVariable is required to execute legacy v1alpha1 packages.
-	DeprecatedSetVariable string
 }
 
 // SetValue declares how command output is stored in the package values map.
