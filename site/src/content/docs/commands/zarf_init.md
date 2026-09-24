@@ -116,5 +116,5 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
 
 ### SEE ALSO
 
-* [zarf](/commands/zarf/)	 - The Airgap Native Packager Manager for Kubernetes
+* [zarf](/commands/zarf/)	 - The Airgap Native Package Manager for Kubernetes
 
