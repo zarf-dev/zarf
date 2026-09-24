@@ -199,6 +199,7 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 		pkg.APIVersion = v1alpha1.APIVersion
 		pkg.Kind = v1alpha1.ZarfPackageConfig
 		populateValidV1alpha1ChartSources(&pkg, rng, i)
+		pkg, _ = migrateDeprecated(pkg)
 
 		roundTripped := PackageToV1alpha1(PackageFromV1alpha1(pkg))
 		require.Emptyf(t, cmp.Diff(pkg, roundTripped, v1alpha1GenericRoundTripExclusions()...), "round-trip diverged on iteration %d", i)
@@ -213,14 +214,16 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 //   - chart.schemaValidation: nil and true both enable schema validation.
 //   - a Git chart's legacy Version fallback is canonically represented as an inline URL ref.
 //   - manifest.template, file.template, and action.template: nil and false all disable templating.
+//   - scripts and setVariable are migrated to actions and setVariables before conversion.
 func v1alpha1GenericRoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1alpha1.ZarfMetadata{}, "AllowNamespaceOverride"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponent{}, "Required"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfComponent{}, "DeprecatedScripts"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfChart{}, "SchemaValidation"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfManifest{}, "Template"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfFile{}, "Template"),
-		cmpopts.IgnoreFields(v1alpha1.ZarfComponentAction{}, "Template"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfComponentAction{}, "DeprecatedSetVariable", "Template"),
 		cmp.Transformer("canonicalizeLegacyGitChartVersionRef", canonicalizeLegacyGitChartVersionRef),
 	}
 }
@@ -246,6 +249,7 @@ func TestConvertV1alpha1V1beta1RoundTripFuzz(t *testing.T) {
 		var pkg v1alpha1.ZarfPackage
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
 		populateValidV1alpha1ChartSources(&pkg, rng, i)
+		pkg, _ = migrateDeprecated(pkg)
 
 		v1beta1Pkg := internalv1beta1.PackageToV1beta1(PackageFromV1alpha1(pkg))
 		roundTripped := PackageToV1alpha1(internalv1beta1.PackageFromV1beta1(v1beta1Pkg))
