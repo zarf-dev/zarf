@@ -33,7 +33,7 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
   -h, --help                       help for digest
       --insecure-skip-tls-verify   (Optional) if true, skip TLS certificate verification
       --plain-http                 (Optional) if true, use plain HTTP instead of HTTPS
-      --tarball string             (Optional) path to tarball containing the image
+      --tarball string             (Optional) path to a tar archive of an OCI image layout
 ```
 
 ### Options inherited from parent commands
