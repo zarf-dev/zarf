@@ -119,9 +119,6 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 	default:
 		return resolution{}, fmt.Errorf("unrecognized API version")
 	}
-	if err := defined.definition.Validate(); err != nil {
-		return resolution{}, fmt.Errorf("package validation failed: %w", err)
-	}
 
 	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
 	return defined, nil
