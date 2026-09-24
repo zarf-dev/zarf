@@ -144,7 +144,7 @@ func manifestToGeneric(m v1alpha1.ZarfManifest) api.Manifest {
 		Namespace:        m.Namespace,
 		Files:            m.Files,
 		SkipWait:         m.NoWait,
-		ServerSideApply:  m.ServerSideApply,
+		ServerSideApply:  api.ServerSideApplyMode(m.ServerSideApply),
 		EnableTemplating: derefBool(m.Template),
 		Kustomize: api.KustomizeManifest{
 			Files:             m.Kustomizations,
@@ -158,12 +158,12 @@ func manifestToGeneric(m v1alpha1.ZarfManifest) api.Manifest {
 func chartToGeneric(ch v1alpha1.ZarfChart) api.Chart {
 	gc := api.Chart{
 		Name:                 ch.Name,
-		Version:              ch.Version,
+		LegacyVersion:        ch.Version,
 		Namespace:            ch.Namespace,
 		ReleaseName:          ch.ReleaseName,
 		ValuesFiles:          valuesFilesToGeneric(ch.ValuesFiles, ch.TemplatedValuesFiles),
 		SkipSchemaValidation: ch.SchemaValidation != nil && !*ch.SchemaValidation,
-		ServerSideApply:      ch.ServerSideApply,
+		ServerSideApply:      api.ServerSideApplyMode(ch.ServerSideApply),
 		SkipWait:             ch.NoWait,
 		Variables:            chartVarsToGeneric(ch.Variables),
 		Values:               chartValuesToGeneric(ch.Values),
@@ -182,6 +182,12 @@ func chartSourceToGeneric(chart *api.Chart, source v1alpha1.ZarfChart) {
 		if url, parsedRef, err := transform.GitURLSplitRef(source.URL); err == nil {
 			gitURL = url
 			ref = parsedRef
+		}
+		// In v1alpha1, Version selected the Git checkout when the URL did not
+		// include an explicit @ref. Project that legacy behavior into the
+		// structured source so Git checkout uses Git.Ref.
+		if ref == "" {
+			ref = source.Version
 		}
 		chart.Git = &api.GitSource{
 			URL:  gitURL,
@@ -529,7 +535,7 @@ func manifestFromGeneric(m api.Manifest) v1alpha1.ZarfManifest {
 		Name:                       m.Name,
 		Namespace:                  m.Namespace,
 		Files:                      m.Files,
-		ServerSideApply:            m.ServerSideApply,
+		ServerSideApply:            string(m.ServerSideApply),
 		NoWait:                     m.SkipWait,
 		Template:                   boolPointer(m.EnableTemplating),
 		Kustomizations:             m.Kustomize.Files,
@@ -542,11 +548,11 @@ func manifestFromGeneric(m api.Manifest) v1alpha1.ZarfManifest {
 func chartFromGeneric(ch api.Chart) v1alpha1.ZarfChart {
 	ac := v1alpha1.ZarfChart{
 		Name:             ch.Name,
-		Version:          ch.Version,
+		Version:          ch.LegacyVersion,
 		Namespace:        ch.Namespace,
 		ReleaseName:      ch.ReleaseName,
 		SchemaValidation: boolPointer(!ch.SkipSchemaValidation),
-		ServerSideApply:  ch.ServerSideApply,
+		ServerSideApply:  string(ch.ServerSideApply),
 		NoWait:           ch.SkipWait,
 		Variables:        chartVarsFromGeneric(ch.Variables),
 	}
@@ -572,8 +578,9 @@ func chartFromGeneric(ch api.Chart) v1alpha1.ZarfChart {
 			gitURL = urlNoRef
 		}
 		ref := flattenGitRef(ch.Git.Ref)
-		// Git.Ref records a ref authored inline in a v1alpha1 URL. Version remains separate
-		// because PackageChart uses it as the fallback checkout ref and archive identifier.
+		// The normalized model does not retain whether a v1alpha1 Git ref came
+		// from an inline URL or Version. Canonicalize it as an inline URL ref;
+		// Version remains the package layout identifier.
 		if ref != "" {
 			ac.URL = gitURL + "@" + ref
 		} else {
@@ -878,7 +885,12 @@ func healthChecksFromGeneric(in []api.NamespacedObjectKindReference) []v1alpha1.
 func reposToGeneric(repos []string) []api.Repository {
 	var out []api.Repository
 	for _, url := range repos {
-		out = append(out, api.Repository{URL: url})
+		repository := api.Repository{URL: url, LegacyURL: url}
+		if baseURL, ref, err := transform.GitURLSplitRef(url); err == nil && ref != "" {
+			repository.URL = baseURL
+			repository.Ref = classifyGitRef(ref)
+		}
+		out = append(out, repository)
 	}
 	return out
 }
@@ -886,6 +898,10 @@ func reposToGeneric(repos []string) []api.Repository {
 func reposFromGeneric(repos []api.Repository) []string {
 	var out []string
 	for _, r := range repos {
+		if r.LegacyURL != "" {
+			out = append(out, r.LegacyURL)
+			continue
+		}
 		url := r.URL
 		if r.Ref != nil {
 			if refStr := flattenGitRef(r.Ref); refStr != "" {

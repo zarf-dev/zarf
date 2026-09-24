@@ -19,9 +19,9 @@ import (
 	flux "github.com/fluxcd/source-controller/api/v1"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/zarf-dev/zarf/src/api/convert"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -91,7 +91,7 @@ type ComponentImageScan struct {
 // DefinitionImageResult contains the results of FindDefinitionImages for a component
 type DefinitionImageResult struct {
 	ComponentImageScan
-	ImageArchives []v1alpha1.ImageArchive
+	ImageArchives []api.ImageArchive
 }
 
 // FindDefinitionImages finds all images contained in a component and filters them according to images discovered in
@@ -119,13 +119,12 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
-	pkg := convert.PackageToV1alpha1(loaded.Definition)
-	imageScans, err := findImages(ctx, pkg, loaded.Resources, loaded.Values, opts)
+	imageScans, err := findImages(ctx, loaded.Definition, loaded.Resources, loaded.Values, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	return filterImagesFoundInArchives(ctx, pkg, loaded.Resources, imageScans)
+	return filterImagesFoundInArchives(ctx, loaded.Definition, loaded.Resources, imageScans)
 }
 
 // FindImages iterates over the manifests and charts within each component to find any container images
@@ -153,14 +152,12 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
-	pkg := convert.PackageToV1alpha1(loaded.Definition)
-
-	return findImages(ctx, pkg, loaded.Resources, loaded.Values, opts)
+	return findImages(ctx, loaded.Definition, loaded.Resources, loaded.Values, opts)
 }
 
 // filterImagesFoundInArchives merges scan results with each component's imageArchives.
 // An image present in both surfaces only on the archive side
-func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, resources *load.ResourceSet, imageScans []ComponentImageScan) (_ []DefinitionImageResult, err error) {
+func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources *load.ResourceSet, imageScans []ComponentImageScan) (_ []DefinitionImageResult, err error) {
 	componentNameScanMap := make(map[string]ComponentImageScan)
 	var allScanArtifacts []string
 	for _, scan := range imageScans {
@@ -192,7 +189,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, 
 			if err != nil {
 				return nil, fmt.Errorf("failed to find images in archive %s: %w", archive.Path, err)
 			}
-			imageArchive := v1alpha1.ImageArchive{
+			imageArchive := api.ImageArchive{
 				Images: archiveImages,
 				Path:   archive.Path,
 			}
@@ -224,7 +221,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, 
 	return definitionImageResults, nil
 }
 
-func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load.ResourceSet, packageValues value.Values, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
+func findImages(ctx context.Context, pkg api.Package, resourceSet *load.ResourceSet, packageValues value.Values, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
 	s, err := state.Default()
 	if err != nil {
@@ -251,7 +248,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 
 	componentImageScans := []ComponentImageScan{}
 	for _, component := range pkg.Components {
-		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
+		if len(component.Charts)+len(component.Manifests)+len(component.Repositories) < 1 {
 			// Skip if there are no manifests, charts, or repos
 			continue
 		}
@@ -271,18 +268,27 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 
 		if opts.RepoHelmChartPath != "" {
 			// Also process git repos that have helm charts
-			for idx, repo := range component.Repos {
-				matches := strings.Split(repo, "@")
-				if len(matches) < 2 {
-					return nil, fmt.Errorf("cannot convert the Git repository %s to a Helm chart without a version tag", repo)
+			for idx, repo := range component.Repositories {
+				gitURL, gitRef := repo.URL, repo.Ref
+				if url, ref, err := transform.GitURLSplitRef(repo.URL); err == nil && ref != "" {
+					gitURL = url
+					if gitRef == nil && git.ParseRef(ref).IsTag() {
+						gitRef = &api.GitRef{Tag: strings.TrimPrefix(ref, "refs/tags/")}
+					}
+				}
+				if gitRef == nil {
+					return nil, fmt.Errorf("cannot convert the Git repository %s to a Helm chart without a version tag", repo.URL)
 				}
 				// If a repo helm chart path is specified,
-				component.Charts = append(component.Charts, v1alpha1.ZarfChart{
-					Name:    fmt.Sprintf("temp-git-chart-%d", idx),
-					URL:     matches[0],
-					Version: matches[1],
+				component.Charts = append(component.Charts, api.Chart{
+					Name:          fmt.Sprintf("temp-git-chart-%d", idx),
+					LegacyVersion: gitRef.Tag,
+					Git: &api.GitSource{
+						URL:  gitURL,
+						Ref:  gitRef,
+						Path: strings.TrimPrefix(opts.RepoHelmChartPath, "/"),
+					},
 					// Trim the first char to match how the packager expects it, this is messy,need to clean up better
-					GitPath: strings.TrimPrefix(opts.RepoHelmChartPath, "/"),
 				})
 			}
 		}
@@ -304,10 +310,10 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 			yamls = slices.DeleteFunc(yamls, isHelmTestResource)
 			resources = append(resources, yamls...)
 			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
-			chartTarball := filepath.Join(chartPath, layout.ChartArchiveName(zarfChart.Name, zarfChart.Version))
+			chartTarball := filepath.Join(chartPath, layout.ChartArchiveName(zarfChart.Name, zarfChart.LegacyVersion))
 			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 			if err != nil {
-				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", zarfChart.URL, err)
+				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", zarfChart.SourceURL(), err)
 			}
 			for _, image := range annotatedImages {
 				matchedImages[image] = true

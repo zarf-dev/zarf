@@ -16,7 +16,7 @@ import (
 	"strconv"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -32,7 +32,7 @@ import (
 var contentCachePath = filepath.Join("helm", "content")
 
 // ChartFromZarfManifest generates a helm chart and config from a given Zarf manifest.
-func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageName, componentName string) (v1alpha1.ZarfChart, *chartv2.Chart, error) {
+func ChartFromZarfManifest(manifest api.Manifest, manifestPath, packageName, componentName string) (api.Chart, *chartv2.Chart, error) {
 	// Generate a new chart.
 	tmpChart := new(chartv2.Chart)
 	tmpChart.Metadata = new(chartv2.Metadata)
@@ -53,7 +53,7 @@ func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, package
 		manifest := path.Join(manifestPath, file)
 		data, err := os.ReadFile(manifest)
 		if err != nil {
-			return v1alpha1.ZarfChart{}, nil, fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
+			return api.Chart{}, nil, fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
 		}
 
 		// Escape all chars and then wrap in {{ }}.
@@ -64,45 +64,23 @@ func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, package
 	}
 
 	// Generate the struct to pass to InstallOrUpgradeChart().
-	chart := v1alpha1.ZarfChart{
+	chart := api.Chart{
 		Name: tmpChart.Metadata.Name,
 		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
 		ReleaseName:     fmt.Sprintf("zarf-%s", sha1ReleaseName),
-		Version:         tmpChart.Metadata.Version,
+		LegacyVersion:   tmpChart.Metadata.Version,
 		Namespace:       manifest.Namespace,
-		NoWait:          manifest.NoWait,
+		SkipWait:        manifest.SkipWait,
 		ServerSideApply: manifest.GetServerSideApply(),
 	}
 
 	return chart, tmpChart, nil
 }
 
-// ChartValuesFile represents a single values file for a Helm chart with its global sequential index.
-// Template indicates whether Go template rendering should be applied at deploy time.
-type ChartValuesFile struct {
-	Source    string
-	Template  bool
-	GlobalIdx int
-}
-
-// GetChartValuesFiles returns a flat ordered list of all values files for a chart.
-// ValuesFiles appear first (indices 0..n-1), followed by TemplatedValuesFiles (indices n..n+m-1).
-// All files share the same global sequential index space and are stored via ChartPaths.ValuesFile.
-func GetChartValuesFiles(chart v1alpha1.ZarfChart) []ChartValuesFile {
-	files := make([]ChartValuesFile, 0, len(chart.ValuesFiles)+len(chart.TemplatedValuesFiles))
-	for i, src := range chart.ValuesFiles {
-		files = append(files, ChartValuesFile{Source: src, Template: false, GlobalIdx: i})
-	}
-	for i, src := range chart.TemplatedValuesFiles {
-		files = append(files, ChartValuesFile{Source: src, Template: true, GlobalIdx: len(chart.ValuesFiles) + i})
-	}
-	return files
-}
-
 // loadChartFromTarball returns a helm chart from a tarball.
-func loadChartFromTarball(chart v1alpha1.ZarfChart, paths layout.ChartPaths) (*chartv2.Chart, error) {
+func loadChartFromTarball(chart api.Chart, paths layout.ChartPaths) (*chartv2.Chart, error) {
 	// Load the loadedChart tarball
-	loadedChart, err := loader.Load(paths.Archive(chart.Name, chart.Version))
+	loadedChart, err := loader.Load(paths.Archive(chart.Name, chart.LegacyVersion))
 	if err != nil {
 		return nil, fmt.Errorf("unable to load helm chart archive: %w", err)
 	}
@@ -115,11 +93,11 @@ func loadChartFromTarball(chart v1alpha1.ZarfChart, paths layout.ChartPaths) (*c
 }
 
 // parseChartValues reads the context of the chart values into an interface if it exists.
-func parseChartValues(chart v1alpha1.ZarfChart, paths layout.ChartPaths, valuesOverrides map[string]any) (common.Values, error) {
+func parseChartValues(chart api.Chart, paths layout.ChartPaths, valuesOverrides map[string]any) (common.Values, error) {
 	valueOpts := &values.Options{}
 
-	for _, f := range GetChartValuesFiles(chart) {
-		valueOpts.ValueFiles = append(valueOpts.ValueFiles, paths.ValuesFile(chart.Name, chart.Version, f.GlobalIdx))
+	for i := range chart.ValuesFiles {
+		valueOpts.ValueFiles = append(valueOpts.ValueFiles, paths.ValuesFile(chart.Name, chart.LegacyVersion, i))
 	}
 
 	httpProvider := getter.Provider{

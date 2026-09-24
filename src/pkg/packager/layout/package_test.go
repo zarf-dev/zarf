@@ -45,8 +45,8 @@ func TestPackageLayout(t *testing.T) {
 	pkgLayout, err := LoadFromTar(ctx, filepath.Join(pathToPackage, "zarf-package-test-amd64-0.0.1.tar.zst"), PackageLayoutOptions{})
 	require.NoError(t, err)
 
-	require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
-	require.Equal(t, "0.0.1", pkgLayout.AsV1alpha1().Metadata.Version)
+	require.Equal(t, "test", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
+	require.Equal(t, "0.0.1", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Version)
 
 	tmpDir := t.TempDir()
 	manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, "test", ManifestsComponentDir)
@@ -144,12 +144,12 @@ func TestPackageLayoutLoadFromDirPreservesMultiDocDefinition(t *testing.T) {
 	pkgLayout, err := LoadFromDir(ctx, tmpDir, PackageLayoutOptions{VerificationStrategy: VerifyNever})
 	require.NoError(t, err)
 
-	require.Equal(t, v1alpha1.APIVersion, pkgLayout.AsV1alpha1().APIVersion)
-	require.Equal(t, "beta-package", pkgLayout.AsV1alpha1().Metadata.Name)
-	require.Len(t, pkgLayout.AsV1alpha1().Components, 1)
-	require.Equal(t, "./components/first.yaml", pkgLayout.AsV1alpha1().Components[0].Import.Path)
+	require.Equal(t, v1alpha1.APIVersion, convert.PackageToV1alpha1(pkgLayout.Definition()).APIVersion)
+	require.Equal(t, "beta-package", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
+	require.Len(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Components, 1)
+	require.Equal(t, "./components/first.yaml", convert.PackageToV1alpha1(pkgLayout.Definition()).Components[0].Import.Path)
 
-	betaPkg := pkgLayout.AsV1beta1()
+	betaPkg := convert.PackageToV1beta1(pkgLayout.Definition())
 	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
 	require.Equal(t, "beta-package", betaPkg.Metadata.Name)
 	require.Len(t, betaPkg.Components, 1)
@@ -411,8 +411,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 		require.FileExists(t, bundlePath, "bundle signature should exist")
 		require.NoFileExists(t, filepath.Join(tmpDir, Signature), "legacy .sig should not be written")
-		require.NotNil(t, pkgLayout.AsV1alpha1().Build.Signed)
-		require.True(t, *pkgLayout.AsV1alpha1().Build.Signed)
+		require.NotNil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
+		require.True(t, *convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
 	})
 
 	t.Run("wrong password", func(t *testing.T) {
@@ -554,8 +554,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, pkgLayout.SignPackage(ctx, opts))
 		require.FileExists(t, bundlePath)
 		require.NoFileExists(t, legacySignaturePath, "legacy signature should be removed after re-sign")
-		require.Contains(t, pkgLayout.AsV1alpha1().Build.ProvenanceFiles, Bundle)
-		require.NotContains(t, pkgLayout.AsV1alpha1().Build.ProvenanceFiles, Signature)
+		require.Contains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Bundle)
+		require.NotContains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Signature)
 	})
 
 	t.Run("skip signing when ShouldSign returns false", func(t *testing.T) {
@@ -580,7 +580,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 		require.NoFileExists(t, bundlePath)
 		require.NoFileExists(t, legacySignaturePath)
-		require.Nil(t, pkgLayout.AsV1alpha1().Build.Signed)
+		require.Nil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
 	})
 
 	t.Run("dirPath is file not directory", func(t *testing.T) {
@@ -653,7 +653,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.Error(t, err)
 
 		// Verify Signed field was not set
-		require.Nil(t, pkgLayout.AsV1alpha1().Build.Signed)
+		require.Nil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
 	})
 
 	t.Run("preserves existing Signed value on skip", func(t *testing.T) {
@@ -680,8 +680,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify Signed field preserved
-		require.NotNil(t, pkgLayout.AsV1alpha1().Build.Signed)
-		require.False(t, *pkgLayout.AsV1alpha1().Build.Signed)
+		require.NotNil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
+		require.False(t, *convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
 	})
 
 	t.Run("zarf.yaml updated with signed:true after signing", func(t *testing.T) {
@@ -740,8 +740,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.True(t, *updatedPkg.Build.Signed, "zarf.yaml should have signed:true")
 
 		// Also verify in-memory state matches
-		require.NotNil(t, pkgLayout.AsV1alpha1().Build.Signed)
-		require.True(t, *pkgLayout.AsV1alpha1().Build.Signed)
+		require.NotNil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
+		require.True(t, *convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
 	})
 }
 
@@ -904,8 +904,8 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				require.ErrorContains(t, err, tt.expectedErr)
 				if !tt.expectSigned {
 					// On error, Signed should not be set to true
-					if layout.AsV1alpha1().Build.Signed != nil {
-						require.False(t, *layout.AsV1alpha1().Build.Signed)
+					if convert.PackageToV1alpha1(layout.Definition()).Build.Signed != nil {
+						require.False(t, *convert.PackageToV1alpha1(layout.Definition()).Build.Signed)
 					}
 				}
 				return
@@ -914,8 +914,8 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 			require.NoError(t, err)
 
 			if tt.expectSigned {
-				require.NotNil(t, layout.AsV1alpha1().Build.Signed)
-				require.True(t, *layout.AsV1alpha1().Build.Signed)
+				require.NotNil(t, convert.PackageToV1alpha1(layout.Definition()).Build.Signed)
+				require.True(t, *convert.PackageToV1alpha1(layout.Definition()).Build.Signed)
 			}
 
 			if tt.expectSignFile {
@@ -1440,7 +1440,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test-verification", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test-verification", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 
 	t.Run("VerifyNever with unsigned package succeeds", func(t *testing.T) {
@@ -1466,7 +1466,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test-verification", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test-verification", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 
 	t.Run("VerifyIfPossible with signed package and no key warns but continues", func(t *testing.T) {
@@ -1481,7 +1481,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test-verification", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test-verification", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 
 	t.Run("VerifyIfPossible with signed package and wrong key fails", func(t *testing.T) {
@@ -1561,7 +1561,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test-verification", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test-verification", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 
 	t.Run("VerifyAlways with signed package and invalid key fails", func(t *testing.T) {
@@ -1665,7 +1665,7 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 			require.NoError(t, pkgLayout.Cleanup())
 		})
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 
 	t.Run("VerifyIfPossible with unsigned tarball and material provided fails", func(t *testing.T) {
@@ -1697,7 +1697,7 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 			require.NoError(t, pkgLayout.Cleanup())
 		})
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 
 	t.Run("VerifyAlways fails on unsigned tarball", func(t *testing.T) {
@@ -1726,7 +1726,7 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 			require.NoError(t, pkgLayout.Cleanup())
 		})
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 }
 
@@ -1835,9 +1835,9 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 		err = pkgLayout.SignPackage(ctx, opts)
 		require.NoError(t, err)
 
-		require.Contains(t, pkgLayout.AsV1alpha1().Build.ProvenanceFiles, Checksums)
-		require.Contains(t, pkgLayout.AsV1alpha1().Build.ProvenanceFiles, Bundle)
-		require.NotContains(t, pkgLayout.AsV1alpha1().Build.ProvenanceFiles, Signature)
+		require.Contains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Checksums)
+		require.Contains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Bundle)
+		require.NotContains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Signature)
 	})
 
 	t.Run("signing rollback restores original provenance files on failure", func(t *testing.T) {
@@ -1863,7 +1863,7 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 
 		err = pkgLayout.SignPackage(ctx, opts)
 		require.Error(t, err)
-		require.Equal(t, []string{Checksums}, pkgLayout.AsV1alpha1().Build.ProvenanceFiles)
+		require.Equal(t, []string{Checksums}, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles)
 	})
 }
 
@@ -1882,7 +1882,7 @@ func TestValidatePackagePaths(t *testing.T) {
 				Components: []api.Component{
 					{
 						Name:      "my-component",
-						Charts:    []api.Chart{{Name: "my-chart", Version: "1.2.3"}},
+						Charts:    []api.Chart{{Name: "my-chart", LegacyVersion: "1.2.3"}},
 						Manifests: []api.Manifest{{Name: "my-manifest"}},
 					},
 				},
@@ -1947,7 +1947,7 @@ func TestValidatePackagePaths(t *testing.T) {
 			pkg: api.Package{
 				Metadata: api.PackageMetadata{Name: "pkg"},
 				Components: []api.Component{
-					{Name: "comp", Charts: []api.Chart{{Name: "../evil", Version: "1.0"}}},
+					{Name: "comp", Charts: []api.Chart{{Name: "../evil", LegacyVersion: "1.0"}}},
 				},
 			},
 			wantErr: `chart name "../evil" in component "comp" would result in an invalid path`,
@@ -1957,7 +1957,7 @@ func TestValidatePackagePaths(t *testing.T) {
 			pkg: api.Package{
 				Metadata: api.PackageMetadata{Name: "pkg"},
 				Components: []api.Component{
-					{Name: "comp", Charts: []api.Chart{{Name: "chart", Version: "../bad"}}},
+					{Name: "comp", Charts: []api.Chart{{Name: "chart", LegacyVersion: "../bad"}}},
 				},
 			},
 			wantErr: `chart version "../bad" in component "comp" would result in an invalid path`,

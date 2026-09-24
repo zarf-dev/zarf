@@ -20,6 +20,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -58,7 +59,7 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 			"htpasswd": fmt.Sprintf("%s\n%s", pushUser, pullUser),
 		},
 	}
-	chart := v1alpha1.ZarfChart{
+	chart := api.Chart{
 		Namespace:   "zarf",
 		ReleaseName: "zarf-docker-registry",
 	}
@@ -147,11 +148,11 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 		}
 		if strings.Contains(chartAcc.Name(), "zarf-agent-zarf-agent") {
 			found = true
-			chart := v1alpha1.ZarfChart{
+			chart := api.Chart{
 				Namespace:   "zarf",
 				ReleaseName: rel.Name(),
 			}
-			opts.VariableConfig.SetConstants([]v1alpha1.Constant{
+			opts.VariableConfig.SetConstants([]api.Constant{
 				{
 					Name:  "AGENT_IMAGE",
 					Value: agentImage.Path,

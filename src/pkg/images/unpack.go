@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -75,7 +75,7 @@ func FindImagesInOCIManifests(manifests []ocispec.Descriptor) ([]string, error) 
 
 // Unpack loads images from an image archive or OCI layout directory into destDir.
 // It returns a list of PulledImage for all images in the source.
-func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []PulledImage, err error) {
+func Unpack(ctx context.Context, imageArchive api.ImageArchive, destDir string, arch string) (_ []PulledImage, err error) {
 	if len(imageArchive.Images) == 0 {
 		return nil, fmt.Errorf("images must be defined")
 	}

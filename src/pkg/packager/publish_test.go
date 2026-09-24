@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -215,14 +216,15 @@ func TestPublishSkeleton(t *testing.T) {
 			require.NoError(t, err)
 
 			// HACK(mkcp): Match necessary fields to establish equality
-			pkg.Build = v1alpha1.ZarfBuildData{}
-			pkg.Metadata.AggregateChecksum = ""
-			expectedPkg.Build = v1alpha1.ZarfBuildData{}
-			expectedPkg.Metadata.Architecture = "skeleton"
+			pkg.Build = api.BuildData{}
+			pkg.Build.AggregateChecksum = ""
+			expected := convert.PackageFromV1alpha1(expectedPkg)
+			expected.Build = api.BuildData{}
+			expected.Metadata.Architecture = "skeleton"
 
 			// NOTE(mkcp): In future schema version move ZarfPackage.Metadata.AggregateChecksum
 			// to ZarfPackage.Build.AggregateChecksum. See ADR #26
-			require.Equal(t, expectedPkg, pkg)
+			require.Equal(t, expected, pkg)
 		})
 	}
 }
@@ -282,12 +284,12 @@ func TestPublishPackage(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedTag, packageRef.Reference)
 
-			expectedPkg := layoutExpected.AsV1alpha1()
-			expectedPkg.Build = v1alpha1.ZarfBuildData{}
+			expectedPkg := layoutExpected.Definition()
+			expectedPkg.Build = api.BuildData{}
 
 			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
-			actualPkg := layoutActual.AsV1alpha1()
-			actualPkg.Build = v1alpha1.ZarfBuildData{}
+			actualPkg := layoutActual.Definition()
+			actualPkg.Build = api.BuildData{}
 			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")
 			if tc.opts.SignBlobOptions.Key != "" {
 				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Bundle))
@@ -346,12 +348,12 @@ func TestPublishPackageDirectoryNameCollision(t *testing.T) {
 			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
-			expectedPkg := layoutExpected.AsV1alpha1()
-			expectedPkg.Build = v1alpha1.ZarfBuildData{}
+			expectedPkg := layoutExpected.Definition()
+			expectedPkg.Build = api.BuildData{}
 
 			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
-			actualPkg := layoutActual.AsV1alpha1()
-			actualPkg.Build = v1alpha1.ZarfBuildData{}
+			actualPkg := layoutActual.Definition()
+			actualPkg.Build = api.BuildData{}
 			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")
 		})
 	}
@@ -386,7 +388,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			require.NoError(t, err)
 
 			// Attempt to get the digest
-			platform := oci.PlatformForArch(layoutExpected.AsV1alpha1().Build.Architecture)
+			platform := oci.PlatformForArch(layoutExpected.Definition().Build.Architecture)
 			remote, err := zoci.NewRemoteWithOptions(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
 				RemoteOptions: tc.opts.RemoteOptions,
 			})
@@ -399,7 +401,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			_, err = PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 			// Publish creates a local oci manifest file using the package name, which gets deleted
-			require.NoFileExists(t, layoutExpected.AsV1alpha1().Metadata.Name)
+			require.NoFileExists(t, layoutExpected.Definition().Metadata.Name)
 
 			latestDesc, err := remote.ResolveRoot(ctx)
 			require.NoError(t, err)
@@ -456,7 +458,7 @@ func TestPublishCopySHA(t *testing.T) {
 
 			opts := PublishFromOCIOptions{
 				RemoteOptions:  tc.opts.RemoteOptions,
-				Architecture:   layoutExpected.AsV1alpha1().Build.Architecture,
+				Architecture:   layoutExpected.Definition().Build.Architecture,
 				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 
@@ -465,12 +467,12 @@ func TestPublishCopySHA(t *testing.T) {
 			require.NoError(t, err)
 
 			// This verifies that publish deletes the manifest that is auto created by oras
-			require.NoFileExists(t, layoutExpected.AsV1alpha1().Metadata.Name)
+			require.NoFileExists(t, layoutExpected.Definition().Metadata.Name)
 
 			pkgRefSha := fmt.Sprintf("%s@%s", dstRef.String(), indexDesc.Digest)
 
-			layoutActual := pullFromRemote(ctx, t, pkgRefSha, layoutExpected.AsV1alpha1().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
-			require.Equal(t, layoutExpected.AsV1alpha1(), layoutActual.AsV1alpha1(), "Uploaded package is not identical to downloaded package")
+			layoutActual := pullFromRemote(ctx, t, pkgRefSha, layoutExpected.Definition().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
+			require.Equal(t, layoutExpected.Definition(), layoutActual.Definition(), "Uploaded package is not identical to downloaded package")
 		})
 	}
 }
@@ -507,12 +509,12 @@ func TestPublishFromOCITransportNegotiation(t *testing.T) {
 		InsecureSkipTLSVerify: true,
 	}
 	require.NoError(t, PublishFromOCI(ctx, sourceRef, destinationRef, PublishFromOCIOptions{
-		Architecture:  layoutExpected.AsV1alpha1().Build.Architecture,
+		Architecture:  layoutExpected.Definition().Build.Architecture,
 		RemoteOptions: remoteOptions,
 	}))
 
-	layoutActual := pullFromRemote(ctx, t, destinationRef.String(), layoutExpected.AsV1alpha1().Build.Architecture, "", t.TempDir(), types.RemoteOptions{PlainHTTP: true})
-	require.Equal(t, layoutExpected.AsV1alpha1(), layoutActual.AsV1alpha1(), "copied package must retain metadata and layers")
+	layoutActual := pullFromRemote(ctx, t, destinationRef.String(), layoutExpected.Definition().Build.Architecture, "", t.TempDir(), types.RemoteOptions{PlainHTTP: true})
+	require.Equal(t, layoutExpected.Definition(), layoutActual.Definition(), "copied package must retain metadata and layers")
 }
 
 func TestSignOCITransportNegotiation(t *testing.T) {
@@ -542,14 +544,14 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 		InsecureSkipTLSVerify: true,
 	}
 	packagePath, err := Pull(ctx, sourceRef.String(), t.TempDir(), PullOptions{
-		Architecture:  layoutExpected.AsV1alpha1().Build.Architecture,
+		Architecture:  layoutExpected.Definition().Build.Architecture,
 		RemoteOptions: remoteOptions,
 		CachePath:     t.TempDir(),
 	})
 	require.NoError(t, err)
 
 	sourceLayout, err := LoadPackage(ctx, packagePath, LoadOptions{
-		Architecture: layoutExpected.AsV1alpha1().Build.Architecture,
+		Architecture: layoutExpected.Definition().Build.Architecture,
 		Filter:       filters.Empty(),
 		CachePath:    t.TempDir(),
 	})
@@ -571,10 +573,10 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	layoutActual := pullFromRemote(ctx, t, destinationRef.String(), layoutExpected.AsV1alpha1().Build.Architecture, filepath.Join("testdata", "publish", "cosign.pub"), t.TempDir(), types.RemoteOptions{
+	layoutActual := pullFromRemote(ctx, t, destinationRef.String(), layoutExpected.Definition().Build.Architecture, filepath.Join("testdata", "publish", "cosign.pub"), t.TempDir(), types.RemoteOptions{
 		InsecureSkipTLSVerify: true,
 	})
-	require.Equal(t, sourceLayout.AsV1alpha1(), layoutActual.AsV1alpha1(), "signed package must retain metadata and layers")
+	require.Equal(t, sourceLayout.Definition(), layoutActual.Definition(), "signed package must retain metadata and layers")
 	require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Bundle))
 }
 
@@ -693,7 +695,7 @@ func TestPublishCopyTag(t *testing.T) {
 
 			opts := PublishFromOCIOptions{
 				RemoteOptions:  tc.opts.RemoteOptions,
-				Architecture:   layoutExpected.AsV1alpha1().Build.Architecture,
+				Architecture:   layoutExpected.Definition().Build.Architecture,
 				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 
@@ -702,13 +704,13 @@ func TestPublishCopyTag(t *testing.T) {
 			require.NoError(t, err)
 
 			// This verifies that publish deletes the manifest that is auto created by oras
-			require.NoFileExists(t, layoutExpected.AsV1alpha1().Metadata.Name)
+			require.NoFileExists(t, layoutExpected.Definition().Metadata.Name)
 
 			require.Equal(t, tc.dstTag, dstRegistry.Reference)
 
-			layoutActual := pullFromRemote(ctx, t, dstRegistry.String(), layoutExpected.AsV1alpha1().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
+			layoutActual := pullFromRemote(ctx, t, dstRegistry.String(), layoutExpected.Definition().Build.Architecture, "", t.TempDir(), defaultTestRemoteOptions())
 
-			require.Equal(t, layoutExpected.AsV1alpha1(), layoutActual.AsV1alpha1(), "Uploaded package is not identical to downloaded package")
+			require.Equal(t, layoutExpected.Definition(), layoutActual.Definition(), "Uploaded package is not identical to downloaded package")
 		})
 	}
 }

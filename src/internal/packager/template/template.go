@@ -12,7 +12,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
@@ -26,7 +26,7 @@ const (
 
 // GetZarfVariableConfig gets a variable configuration specific to Zarf
 func GetZarfVariableConfig(ctx context.Context, isInteractive bool) *variables.VariableConfig {
-	prompt := func(variable v1alpha1.InteractiveVariable) (value string, err error) {
+	prompt := func(variable api.InteractiveVariable) (value string, err error) {
 		if isInteractive {
 			return interactive.PromptVariable(ctx, variable)
 		}

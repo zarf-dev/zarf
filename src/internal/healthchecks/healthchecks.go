@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/aggregator"
@@ -21,7 +21,7 @@ import (
 )
 
 // Run waits for a list of Zarf healthchecks to reach a ready state.
-func Run(ctx context.Context, watcher watcher.StatusWatcher, healthChecks []v1alpha1.NamespacedObjectKindReference) error {
+func Run(ctx context.Context, watcher watcher.StatusWatcher, healthChecks []api.NamespacedObjectKindReference) error {
 	objs := []object.ObjMetadata{}
 	for _, hc := range healthChecks {
 		gv, err := schema.ParseGroupVersion(hc.APIVersion)

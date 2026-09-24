@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
@@ -34,8 +34,8 @@ func TestCreateTemplating(t *testing.T) {
 
 	pkgLayout, err := layout.LoadFromTar(context.Background(), templatingPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
-	expectedConstant := v1alpha1.Constant{Name: "PODINFO_VERSION", Value: "6.4.0", Pattern: "^[\\w\\-\\.]+$"}
-	require.Contains(t, pkgLayout.AsV1alpha1().Constants, expectedConstant)
+	expectedConstant := api.Constant{Name: "PODINFO_VERSION", Value: "6.4.0", Pattern: "^[\\w\\-\\.]+$"}
+	require.Contains(t, pkgLayout.Definition().Constants, expectedConstant)
 
 	// Test templating files and folders.
 	_, _, err = e2e.Zarf(t, "package", "create", "src/test/packages/04-file-folders-templating-sbom/", "-o", outPath, "--confirm")
