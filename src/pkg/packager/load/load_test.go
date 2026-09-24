@@ -331,7 +331,7 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
 		require.Len(t, betaPkg.Components, 1)
 		require.Equal(t, "nginx:1.27.0", betaPkg.Components[0].Images[0].Name)
-		require.Equal(t, "daemon", betaPkg.Components[0].Images[0].Source)
+		require.Equal(t, v1beta1.ImageSourceDaemon, betaPkg.Components[0].Images[0].Source)
 	})
 
 	t.Run("resolves a local component config import", func(t *testing.T) {

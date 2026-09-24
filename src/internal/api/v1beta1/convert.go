@@ -447,9 +447,14 @@ func componentFromGeneric(c api.Component, isInit bool) v1beta1.Component {
 	}
 
 	for _, img := range c.Images {
+		source := img.Source
+		if source == api.ImageSourceRegistryDaemonFallback {
+			// The v1beta1 schema has no fallback source; its default is registry.
+			source = api.ImageSourceRegistry
+		}
 		bc.Images = append(bc.Images, v1beta1.Image{
 			Name:   img.Name,
-			Source: v1beta1.ImageSource(img.Source),
+			Source: v1beta1.ImageSource(source),
 		})
 	}
 

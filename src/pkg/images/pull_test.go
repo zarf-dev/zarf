@@ -314,22 +314,38 @@ func TestPull_RegistrySourceDoesNotUseDaemonFallback(t *testing.T) {
 	registryHost := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	image, err := transform.ParseImageRef(registryHost + "/missing/image:v1")
 	require.NoError(t, err)
-	_, err = Pull(ctx, []ImageRequest{{Image: image, Source: api.ImageSourceRegistry}}, t.TempDir(), PullOptions{
-		Arch:           "amd64",
-		CacheDirectory: t.TempDir(),
-	})
-	require.ErrorContains(t, err, "unable to fetch registry image")
+	for _, tc := range []struct {
+		name   string
+		source api.ImageSource
+	}{
+		{name: "omitted source"},
+		{name: "registry source", source: api.ImageSourceRegistry},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Pull(ctx, []ImageRequest{{Image: image, Source: tc.source}}, t.TempDir(), PullOptions{
+				Arch:           "amd64",
+				CacheDirectory: t.TempDir(),
+			})
+			require.ErrorContains(t, err, "unable to fetch registry image")
+		})
+	}
 }
 
 func TestPull_RejectsConflictingSources(t *testing.T) {
 	t.Parallel()
 	image, err := transform.ParseImageRef("registry.example.com/team/app:v1")
 	require.NoError(t, err)
-	_, err = Pull(testutil.TestContext(t), []ImageRequest{
-		{Image: image, Source: api.ImageSourceRegistry},
-		{Image: image, Source: api.ImageSourceDaemon},
-	}, t.TempDir(), PullOptions{CacheDirectory: t.TempDir()})
-	require.ErrorContains(t, err, "conflicting sources")
+	for _, sources := range [][2]api.ImageSource{
+		{api.ImageSourceRegistry, api.ImageSourceDaemon},
+		{api.ImageSourceRegistryDaemonFallback, api.ImageSourceRegistry},
+		{"", api.ImageSourceDaemon},
+	} {
+		_, err := Pull(testutil.TestContext(t), []ImageRequest{
+			{Image: image, Source: sources[0]},
+			{Image: image, Source: sources[1]},
+		}, t.TempDir(), PullOptions{CacheDirectory: t.TempDir()})
+		require.ErrorContains(t, err, "conflicting sources")
+	}
 }
 
 func TestPullInvalidCache(t *testing.T) {

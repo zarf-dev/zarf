@@ -61,8 +61,7 @@ type PullOptions struct {
 	PlainHTTP bool
 }
 
-// ImageRequest pairs an image with its source. An empty Source preserves the
-// v1alpha1 registry-with-daemon-fallback behavior.
+// ImageRequest pairs an image with its source. An empty Source means registry.
 type ImageRequest struct {
 	Image  transform.Image
 	Source api.ImageSource
@@ -98,7 +97,8 @@ func Pull(ctx context.Context, imageList []ImageRequest, destinationDirectory st
 	uniqueImages := make([]ImageRequest, 0, len(imageList))
 	seenSources := make(map[string]api.ImageSource, len(imageList))
 	for _, request := range imageList {
-		if request.Source != "" && request.Source != api.ImageSourceRegistry && request.Source != api.ImageSourceDaemon {
+		request.Source = request.Source.GetSource()
+		if request.Source != api.ImageSourceRegistry && request.Source != api.ImageSourceDaemon && request.Source != api.ImageSourceRegistryDaemonFallback {
 			return nil, fmt.Errorf("unsupported source %q for image %q", request.Source, request.Image.Reference)
 		}
 		if previous, exists := seenSources[request.Image.Reference]; exists {

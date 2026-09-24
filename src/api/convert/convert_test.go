@@ -64,6 +64,21 @@ func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
 	require.Equal(t, "abc123", result.Build.AggregateChecksum)
 }
 
+func TestV1Alpha1PkgToV1Beta1_ImageSource(t *testing.T) {
+	t.Parallel()
+	pkg := v1alpha1.ZarfPackage{
+		Components: []v1alpha1.ZarfComponent{{
+			Name:   "app",
+			Images: []string{"example.com/app:v1"},
+		}},
+	}
+
+	normalized := PackageFromV1alpha1(pkg)
+	require.Equal(t, api.ImageSourceRegistryDaemonFallback, normalized.Components[0].Images[0].Source)
+	require.Equal(t, pkg.Components[0].Images, PackageToV1alpha1(normalized).Components[0].Images)
+	require.Equal(t, v1beta1.ImageSourceRegistry, PackageToV1beta1(normalized).Components[0].Images[0].Source)
+}
+
 func TestV1Alpha1PkgToV1Beta1_LegacyMetadataDoesNotClobberUserAnnotation(t *testing.T) {
 	t.Parallel()
 	// A user-defined annotation takes precedence over a legacy field during v1beta1 projection.

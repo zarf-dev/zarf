@@ -124,7 +124,7 @@ func componentToGeneric(c v1alpha1.ZarfComponent) api.Component {
 	}
 
 	for _, img := range c.Images {
-		gc.Images = append(gc.Images, api.Image{Name: img})
+		gc.Images = append(gc.Images, api.Image{Name: img, Source: api.ImageSourceRegistryDaemonFallback})
 	}
 
 	for _, ia := range c.ImageArchives {

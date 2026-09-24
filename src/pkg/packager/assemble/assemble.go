@@ -28,7 +28,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
@@ -140,14 +139,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 			if err != nil {
 				return nil, fmt.Errorf("failed to create ref for image %s: %w", image.Name, err)
 			}
-			var source api.ImageSource
-			if pkg.GetAPIVersion() == v1beta1.APIVersion {
-				source = image.Source
-				if source == "" {
-					source = api.ImageSourceRegistry
-				}
-			}
-			componentImages = append(componentImages, images.ImageRequest{Image: refInfo, Source: source})
+			componentImages = append(componentImages, images.ImageRequest{Image: refInfo, Source: image.Source.GetSource()})
 		}
 	}
 	sbomImageList := []transform.Image{}
