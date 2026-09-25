@@ -439,7 +439,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 			return nil, err
 		}
 	}
-	err := confirmDeploy(ctx, pkgLayout, setVariables, opts.IsInteractive)
+	err := confirmDeploy(ctx, pkgLayout, setVariables, opts.IsInteractive, opts.Connected)
 	if err != nil {
 		return nil, err
 	}
@@ -463,11 +463,17 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	return result.DeployedComponents, nil
 }
 
-func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, isInteractive bool) (err error) {
+func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, isInteractive bool, connected bool) (err error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
 
-	displayPackage, err := packageForDisplay(pkg)
+	displayPkg := pkg
+	if connected || pkg.Metadata.YOLO {
+		displayPkg.Components = slices.Clone(pkg.Components)
+		displayPkg.RemoveImages()
+		displayPkg.RemoveRepositories()
+	}
+	displayPackage, err := packageForDisplay(displayPkg)
 	if err != nil {
 		return err
 	}
