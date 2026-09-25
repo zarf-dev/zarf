@@ -28,11 +28,6 @@ func (c Component) GetImages() []string {
 	return images
 }
 
-// RequiresCluster returns true if the component requires a cluster connection to deploy.
-func (c Component) RequiresCluster() bool {
-	return len(c.Images) > 0 || len(c.Charts) > 0 || len(c.Manifests) > 0 || len(c.Repositories) > 0
-}
-
 // ComponentTarget filters a component to only apply for a given local OS at deploy time.
 type ComponentTarget struct {
 	// Only deploy component to specified OS.

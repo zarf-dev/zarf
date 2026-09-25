@@ -56,16 +56,6 @@ func (pkg Package) HasImages() bool {
 	return false
 }
 
-// IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or image archives).
-func (pkg Package) IsSBOMAble() bool {
-	for _, c := range pkg.Components {
-		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.ImageArchives) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
 // PackageMetadata holds information about the package.
 type PackageMetadata struct {
 	// Name to identify this Zarf package.
