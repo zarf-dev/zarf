@@ -20,6 +20,8 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -92,6 +94,7 @@ type ComponentImageScan struct {
 type DefinitionImageResult struct {
 	ComponentImageScan
 	ImageArchives []api.ImageArchive
+	Target        api.ComponentTarget
 }
 
 // FindDefinitionImages finds all images contained in a component and filters them according to images discovered in
@@ -112,7 +115,7 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 			RemoteOptions:    opts.RemoteOptions,
 		},
 	}
-	loaded, err := load.Package(ctx, packagePath, loadOpts)
+	loaded, err := loadImageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +148,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 			RemoteOptions:    opts.RemoteOptions,
 		},
 	}
-	loaded, err := load.Package(ctx, packagePath, loadOpts)
+	loaded, err := loadImageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -153,6 +156,57 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		err = errors.Join(err, loaded.Close())
 	}()
 	return findImages(ctx, loaded.Definition, loaded.Resources, loaded.Values, opts)
+}
+
+func loadImageDefinition(ctx context.Context, source string, opts load.PackageOptions) (*load.ResolvedPackage, error) {
+	resolvedPath, err := layout.ResolvePackagePath(source)
+	if err != nil {
+		return nil, err
+	}
+	contents, err := os.ReadFile(resolvedPath.ManifestFile)
+	if err != nil {
+		return nil, err
+	}
+	var header struct {
+		Kind string `json:"kind"`
+	}
+	if err := yaml.Unmarshal(contents, &header); err != nil {
+		return nil, err
+	}
+	if header.Kind != string(v1beta1.ZarfComponentConfig) {
+		return load.Package(ctx, source, opts)
+	}
+	component, err := load.ComponentConfig(resolvedPath.ManifestFile)
+	if err != nil {
+		return nil, err
+	}
+	resolved, err := load.ResolveComponentConfigImports(ctx, component, resolvedPath.ManifestFile, opts.RemoteOptions)
+	if err != nil {
+		return nil, err
+	}
+	resources, err := resolved.MaterializeResources(ctx, resolvedPath.ManifestFile)
+	if err != nil {
+		return nil, err
+	}
+	valuesPaths := make([]string, 0, len(resolved.Component.Values.Files))
+	for _, valuePath := range resolved.Component.Values.Files {
+		physical, pathErr := resources.Path(valuePath)
+		if pathErr != nil {
+			return nil, errors.Join(pathErr, resources.Close())
+		}
+		valuesPaths = append(valuesPaths, physical)
+	}
+	values, err := value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
+	if err != nil {
+		return nil, errors.Join(err, resources.Close())
+	}
+	definition := convert.PackageFromV1beta1(v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
+		Metadata:   v1beta1.PackageMetadata{Name: component.Metadata.Name},
+		Components: []v1beta1.Component{{Name: component.Metadata.Name, ComponentSpec: resolved.Component.Component}},
+	})
+	return &load.ResolvedPackage{Definition: definition, Resources: resources, Values: values}, nil
 }
 
 // filterImagesFoundInArchives merges scan results with each component's imageArchives.
@@ -170,7 +224,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 	var definitionImageResults []DefinitionImageResult
 	var allArchiveImages []string
 	for _, component := range pkg.Components {
-		result := DefinitionImageResult{}
+		result := DefinitionImageResult{Target: component.Target}
 		result.ComponentName = component.Name
 		if scan, ok := componentNameScanMap[component.Name]; ok {
 			result.ComponentImageScan = scan

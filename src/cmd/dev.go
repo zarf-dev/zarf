@@ -1054,48 +1054,74 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to filter images included in imageArchives: %w", err)
 	}
+	definitionPath, err := layout.ResolvePackagePath(basePath)
+	if err != nil {
+		return err
+	}
+	definitionBytes, err := os.ReadFile(definitionPath.ManifestFile)
+	if err != nil {
+		return err
+	}
+	var definitionHeader struct {
+		APIVersion string `json:"apiVersion"`
+		Kind       string `json:"kind"`
+	}
+	if err := goyaml.Unmarshal(definitionBytes, &definitionHeader); err != nil {
+		return err
+	}
+	isBeta := definitionHeader.APIVersion == v1beta1.APIVersion
+	isComponentConfig := definitionHeader.Kind == string(v1beta1.ZarfComponentConfig)
 
 	componentDefinition := "\ncomponents:\n"
+	if isComponentConfig {
+		componentDefinition = "\ncomponent:\n"
+	}
 	for _, finding := range definitionImageResults {
-		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts)+len(finding.ImageArchives) > 0 {
+		if !isComponentConfig && len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts)+len(finding.ImageArchives) > 0 {
 			componentDefinition += fmt.Sprintf("  - name: %s\n", finding.ComponentName)
+		}
+		indent := "    "
+		imageIndent := "      "
+		if isComponentConfig {
+			indent = "  "
+			imageIndent = "    "
 		}
 
 		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts) > 0 {
-			componentDefinition += "    images:\n"
+			componentDefinition += indent + "images:\n"
 		}
 
 		if len(finding.Matches) > 0 {
 			for _, image := range finding.Matches {
-				componentDefinition += fmt.Sprintf("      - %s\n", image)
+				componentDefinition += formatFoundImage(imageIndent, image, isBeta)
 			}
 		}
 		if len(finding.PotentialMatches) > 0 {
-			componentDefinition += fmt.Sprintf("      # Possible images - %s\n", finding.ComponentName)
+			componentDefinition += indent + fmt.Sprintf("# Possible images - %s\n", finding.ComponentName)
 			for _, image := range finding.PotentialMatches {
-				componentDefinition += fmt.Sprintf("      - %s\n", image)
+				componentDefinition += formatFoundImage(imageIndent, image, isBeta)
 			}
 		}
 		if len(finding.CosignArtifacts) > 0 {
-			componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s\n", finding.ComponentName)
+			componentDefinition += indent + fmt.Sprintf("# Cosign artifacts for images - %s\n", finding.ComponentName)
 			for _, cosignArtifact := range finding.CosignArtifacts {
-				componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
+				componentDefinition += formatFoundImage(imageIndent, cosignArtifact, isBeta)
 			}
 		}
 		if len(finding.ImageArchives) > 0 {
-			componentDefinition += fmt.Sprintf("  # Archive images - %s\n", finding.ComponentName)
-			componentDefinition += "    imageArchives:\n"
+			componentDefinition += indent + fmt.Sprintf("# Archive images - %s\n", finding.ComponentName)
+			componentDefinition += indent + "imageArchives:\n"
 		}
 		for _, archive := range finding.ImageArchives {
-			componentDefinition += fmt.Sprintf("      - path: %s\n", archive.Path)
+			componentDefinition += imageIndent + fmt.Sprintf("- path: %s\n", archive.Path)
 			if len(archive.Images) > 0 {
-				componentDefinition += "        images:\n"
+				componentDefinition += imageIndent + "  images:\n"
 				for _, image := range archive.Images {
-					componentDefinition += fmt.Sprintf("          - %s\n", image)
+					componentDefinition += imageIndent + fmt.Sprintf("    - %s\n", image)
 				}
 				continue
 			}
-			componentDefinition += "        images: []\n"
+			componentDefinition += imageIndent + "  images: []\n"
 		}
 	}
 
@@ -1108,6 +1134,13 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func formatFoundImage(indent, name string, beta bool) string {
+	if beta {
+		return fmt.Sprintf("%s- name: %s\n", indent, name)
+	}
+	return fmt.Sprintf("%s- %s\n", indent, name)
 }
 
 type devGenerateConfigOptions struct{}
