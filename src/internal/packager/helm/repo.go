@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/types"
@@ -37,7 +37,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
@@ -89,32 +88,38 @@ func negotiateLoadedChartDependenciesPlainHTTP(ctx context.Context, chartName st
 }
 
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
-func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
-	if len(chart.URL) > 0 {
-		url, refPlain, err := transform.GitURLSplitRef(chart.URL)
-		// check if the chart is a git url with a ref (if an error is returned url will be empty)
-		isGitURL := strings.HasSuffix(url, ".git")
+func PackageChart(ctx context.Context, chart api.Chart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
+	switch {
+	case chart.Git != nil:
+		address, err := git.RepositoryAddress(api.Repository{URL: chart.Git.URL, Ref: chart.Git.Ref})
 		if err != nil {
-			logger.From(ctx).Debug("unable to parse the url, continuing", "url", chart.URL)
+			return fmt.Errorf("unable to construct Git chart address: %w", err)
 		}
-
-		if isGitURL {
-			// if it is a git url append chart version as if its a tag
-			if refPlain == "" {
-				chart.URL = fmt.Sprintf("%s@%s", chart.URL, chart.Version)
-			}
-
-			err = PackageChartFromGit(ctx, chart, paths, cachePath, remoteOptions)
-			if err != nil {
-				return fmt.Errorf("unable to pull the chart %q from git: %w", chart.Name, err)
-			}
-		} else {
-			err = DownloadPublishedChart(ctx, chart, paths, cachePath, remoteOptions)
-			if err != nil {
-				return fmt.Errorf("unable to download the published chart %q: %w", chart.Name, err)
-			}
+		logger.From(ctx).Info("pulling Helm chart from Git", "name", chart.Name, "address", address, "path", chart.Git.Path)
+		if err := PackageChartFromGit(ctx, chart, paths, cachePath, remoteOptions); err != nil {
+			return fmt.Errorf("unable to pull the chart %q from git: %w", chart.Name, err)
 		}
-	} else {
+	case chart.HelmRepository != nil:
+		repositoryChartName := chart.RepositoryName()
+		if repositoryChartName == "" {
+			repositoryChartName = chart.Name
+		}
+		logger.From(ctx).Info("pulling Helm chart from repository",
+			"name", chart.Name,
+			"source", chart.HelmRepository.URL,
+			"chart", repositoryChartName,
+			"version", chart.HelmRepository.Version,
+		)
+		if err := DownloadPublishedChart(ctx, chart, paths, cachePath, remoteOptions); err != nil {
+			return fmt.Errorf("unable to download the published chart %q: %w", chart.Name, err)
+		}
+	case chart.OCI != nil:
+		logger.From(ctx).Info("pulling Helm chart from OCI", "name", chart.Name, "address", ociChartAddress(chart.OCI))
+		if err := DownloadPublishedChart(ctx, chart, paths, cachePath, remoteOptions); err != nil {
+			return fmt.Errorf("unable to download the published chart %q: %w", chart.Name, err)
+		}
+	case chart.Local != nil:
+		logger.From(ctx).Info("packaging local Helm chart", "name", chart.Name, "source", chart.Local.Path)
 		err := PackageChartFromLocalFiles(ctx, chart, paths, cachePath, remoteOptions)
 		if err != nil {
 			return fmt.Errorf("unable to package the %q chart: %w", chart.Name, err)
@@ -123,24 +128,32 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.Ch
 	return nil
 }
 
-// PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
-	l := logger.From(ctx)
-	l.Info("processing local helm chart",
-		"name", chart.Name,
-		"version", chart.Version,
-		"path", chart.LocalPath,
-	)
+func ociChartAddress(source *api.OCISource) string {
+	if source.Ref == nil {
+		return source.URL
+	}
+	if source.Ref.Digest != "" {
+		return strings.TrimSuffix(source.URL, "/") + "@" + source.Ref.Digest
+	}
+	if source.Ref.Tag != "" {
+		return strings.TrimSuffix(source.URL, "/") + ":" + source.Ref.Tag
+	}
+	return source.URL
+}
 
+// PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
+func PackageChartFromLocalFiles(ctx context.Context, chart api.Chart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
+	l := logger.From(ctx)
 	// Load and validate the chart
-	cl, parsed, err := loadAndValidateChart(chart.LocalPath)
+	localPath := chart.LocalPath()
+	cl, parsed, err := loadAndValidateChart(localPath)
 	if err != nil {
 		return err
 	}
 
 	// Handle the chart directory or tarball.
 	var saved string
-	temp := filepath.Join(filepath.Dir(paths.Archive(chart.Name, chart.Version)), "temp")
+	temp := filepath.Join(filepath.Dir(paths.Archive(chart.Name, chart.LegacyVersion)), "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
 		err = buildChartDependencies(ctx, chart, cachePath, parsed.Metadata.Dependencies, remoteOptions)
 		if err != nil {
@@ -150,10 +163,10 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, p
 		client := action.NewPackage()
 
 		client.Destination = temp
-		saved, err = client.Run(chart.LocalPath, nil)
+		saved, err = client.Run(localPath, nil)
 	} else {
-		saved = filepath.Join(temp, filepath.Base(chart.LocalPath))
-		err = helpers.CreatePathAndCopy(chart.LocalPath, saved)
+		saved = filepath.Join(temp, filepath.Base(localPath))
+		err = helpers.CreatePathAndCopy(localPath, saved)
 	}
 	defer func(l *slog.Logger) {
 		err := os.RemoveAll(temp)
@@ -174,19 +187,16 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, p
 
 	l.Debug("done processing local helm chart",
 		"name", chart.Name,
-		"version", chart.Version,
-		"path", chart.LocalPath,
+		"path", localPath,
 	)
 	return nil
 }
 
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
-func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
+func PackageChartFromGit(ctx context.Context, chart api.Chart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
-	l.Info("processing Helm chart", "name", chart.Name)
-
 	// Retrieve the repo containing the chart
-	gitPath, err := DownloadChartFromGitToTemp(ctx, chart.URL)
+	gitPath, err := DownloadChartFromGitToTemp(ctx, api.Repository{URL: chart.Git.URL, Ref: chart.Git.Ref})
 	if err != nil {
 		return err
 	}
@@ -197,20 +207,14 @@ func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, paths la
 	}(l)
 
 	// Set the directory for the chart and package it
-	chart.LocalPath = filepath.Join(gitPath, chart.GitPath)
+	chart.Local = &api.LocalSource{Path: filepath.Join(gitPath, chart.GitPath())}
 	return PackageChartFromLocalFiles(ctx, chart, paths, cachePath, remoteOptions)
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
+func DownloadPublishedChart(ctx context.Context, chart api.Chart, paths layout.ChartPaths, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 	start := time.Now()
-	l.Info("processing Helm chart",
-		"name", chart.Name,
-		"version", chart.Version,
-		"repo", chart.URL,
-	)
-
 	// Set up the helm pull config
 	pull := action.NewPull()
 	pull.Settings = cli.New()
@@ -238,22 +242,27 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, paths
 	var username string
 	var password string
 
-	// Handle OCI registries
-	if registry.IsOCI(chart.URL) {
-		chartURL = chart.URL
-		// Explicitly set the pull version for OCI
-		pull.Version = chart.Version
+	// Handle charts sourced directly from an OCI registry.
+	if chart.OCI != nil {
+		chartURL = chart.SourceURL()
+		if chart.OCI.Ref != nil {
+			if chart.OCI.Ref.Digest != "" {
+				chartURL = strings.TrimSuffix(chartURL, "/") + "@" + chart.OCI.Ref.Digest
+			} else {
+				pull.Version = chart.OCI.Ref.Tag
+			}
+		}
 	} else {
 		chartName := chart.Name
-		if chart.RepoName != "" {
-			chartName = chart.RepoName
+		if chart.RepositoryName() != "" {
+			chartName = chart.RepositoryName()
 		}
 
 		if repoFile != nil {
 			// TODO: @AustinAbro321 Currently this selects the last repo with the same url
 			// We should introduce a new field in zarf to allow users to specify the local repo they want
 			for _, repo := range repoFile.Repositories {
-				if repo.URL == chart.URL {
+				if repo.URL == chart.SourceURL() {
 					username = repo.Username
 					password = repo.Password
 				}
@@ -261,10 +270,10 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, paths
 		}
 
 		chartURL, err = repov1.FindChartInRepoURL(
-			chart.URL,
+			chart.SourceURL(),
 			chartName,
 			getter.All(pull.Settings),
-			repov1.WithChartVersion(chart.Version),
+			repov1.WithChartVersion(chart.HelmRepository.Version),
 			repov1.WithUsernamePassword(username, password),
 			repov1.WithClientTLS(pull.CertFile, pull.KeyFile, pull.CaFile),
 			repov1.WithInsecureSkipTLSVerify(remoteOptions.InsecureSkipTLSVerify),
@@ -353,29 +362,28 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, paths
 
 	l.Debug("done downloading helm chart",
 		"name", chart.Name,
-		"version", chart.Version,
-		"repo", chart.URL,
+		"repo", chart.SourceURL(),
 		"duration", time.Since(start),
 	)
 	return nil
 }
 
-// DownloadChartFromGitToTemp downloads a chart from git into a temp directory
-func DownloadChartFromGitToTemp(ctx context.Context, url string) (string, error) {
+// DownloadChartFromGitToTemp downloads a chart from a Git repository into a temp directory.
+func DownloadChartFromGitToTemp(ctx context.Context, source api.Repository) (string, error) {
 	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return "", fmt.Errorf("unable to create tmpdir: %w", err)
 	}
-	repository, err := git.Clone(ctx, path, url, true)
+	repository, err := git.Clone(ctx, path, source, true)
 	if err != nil {
 		return "", err
 	}
 	return repository.Path(), nil
 }
 
-func finalizeChartPackage(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths, saved string) error {
+func finalizeChartPackage(ctx context.Context, chart api.Chart, paths layout.ChartPaths, saved string) error {
 	// Ensure the name is consistent for deployments
-	err := helpers.CreatePathAndCopy(saved, paths.Archive(chart.Name, chart.Version))
+	err := helpers.CreatePathAndCopy(saved, paths.Archive(chart.Name, chart.LegacyVersion))
 	if err != nil {
 		return fmt.Errorf("unable to save the final chart tarball: %w", err)
 	}
@@ -387,17 +395,17 @@ func finalizeChartPackage(ctx context.Context, chart v1alpha1.ZarfChart, paths l
 	return nil
 }
 
-func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.ChartPaths) error {
-	for _, f := range GetChartValuesFiles(chart) {
-		dst := paths.ValuesFile(chart.Name, chart.Version, f.GlobalIdx)
+func packageValues(ctx context.Context, chart api.Chart, paths layout.ChartPaths) error {
+	for i, valuesFile := range chart.ValuesFiles {
+		dst := paths.ValuesFile(chart.Name, chart.LegacyVersion, i)
 
-		if helpers.IsURL(f.Source) {
-			if err := utils.DownloadToFile(ctx, f.Source, dst); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, f.Source, err)
+		if helpers.IsURL(valuesFile.Path) {
+			if err := utils.DownloadToFile(ctx, valuesFile.Path, dst); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, valuesFile.Path, err)
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(f.Source, dst); err != nil {
-				return fmt.Errorf("unable to copy chart values file %s: %w", f.Source, err)
+			if err := helpers.CreatePathAndCopy(valuesFile.Path, dst); err != nil {
+				return fmt.Errorf("unable to copy chart values file %s: %w", valuesFile.Path, err)
 			}
 		}
 	}
@@ -408,7 +416,7 @@ func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, paths layout.C
 // buildChartDependencies builds the helm chart dependencies. dependencies is the
 // already-loaded chart's declared Chart.yaml dependencies; the caller has already
 // loaded the chart to get here, so this avoids reloading it from disk.
-func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart, cachePath string, dependencies []*chartv2.Dependency, remoteOptions types.RemoteOptions) error {
+func buildChartDependencies(ctx context.Context, chart api.Chart, cachePath string, dependencies []*chartv2.Dependency, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 
 	// negotiate the transport instead of forcing the global flag.
@@ -434,7 +442,7 @@ func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart, cache
 	man := &downloader.Manager{
 		Out:            &logger.LogWriter{Logger: l, Level: logger.Debug},
 		ContentCache:   contentCache,
-		ChartPath:      chart.LocalPath,
+		ChartPath:      chart.LocalPath(),
 		Getters:        getter.All(settings),
 		RegistryClient: regClient,
 

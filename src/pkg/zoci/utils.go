@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -30,7 +30,7 @@ func NormalizeOCISource(source string) string {
 }
 
 // ReferenceFromMetadata returns a reference for the given metadata.
-func ReferenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (registry.Reference, error) {
+func ReferenceFromMetadata(registryLocation string, pkg api.Package) (registry.Reference, error) {
 	return ReferenceFromMetadataWithOptions(registryLocation, pkg, ReferenceFromMetadataOptions{})
 }
 
@@ -41,7 +41,7 @@ type ReferenceFromMetadataOptions struct {
 }
 
 // ReferenceFromMetadataWithOptions returns a reference for the given metadata with optional overrides
-func ReferenceFromMetadataWithOptions(registryLocation string, pkg v1alpha1.ZarfPackage, opts ReferenceFromMetadataOptions) (registry.Reference, error) {
+func ReferenceFromMetadataWithOptions(registryLocation string, pkg api.Package, opts ReferenceFromMetadataOptions) (registry.Reference, error) {
 	// Explicit requirement for version in order to publish
 	if len(pkg.Metadata.Version) == 0 {
 		return registry.Reference{}, errors.New("version is required for publishing")

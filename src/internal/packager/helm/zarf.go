@@ -10,21 +10,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/pkg/state"
-
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart"
 	"helm.sh/helm/v4/pkg/release"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -62,7 +59,7 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 			"htpasswd": fmt.Sprintf("%s\n%s", pushUser, pullUser),
 		},
 	}
-	chart := v1alpha1.ZarfChart{
+	chart := api.Chart{
 		Namespace:   "zarf",
 		ReleaseName: "zarf-docker-registry",
 	}
@@ -154,11 +151,11 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 		}
 		if strings.Contains(chartAcc.Name(), "zarf-agent-zarf-agent") {
 			found = true
-			chart := v1alpha1.ZarfChart{
+			chart := api.Chart{
 				Namespace:   "zarf",
 				ReleaseName: rel.Name(),
 			}
-			opts.VariableConfig.SetConstants([]v1alpha1.Constant{
+			opts.VariableConfig.SetConstants([]api.Constant{
 				{
 					Name:  "AGENT_IMAGE",
 					Value: agentImage.Path,

@@ -44,6 +44,28 @@ func (p Package) IsSBOMAble() bool {
 	return false
 }
 
+// HasImages reports whether a package contains images or image archives.
+func (p Package) HasImages() bool {
+	for _, component := range p.Components {
+		if len(component.Images) > 0 || len(component.ImageArchives) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// IsInitConfig reports whether this is a Zarf init package.
+func (p Package) IsInitConfig() bool {
+	return p.Kind == ZarfInitConfig
+}
+
+// RequiresCluster reports whether this component requires a cluster connection.
+func (c Component) RequiresCluster() bool {
+	return len(c.Images) > 0 || len(c.ImageArchives) > 0 || len(c.Charts) > 0 ||
+		len(c.Manifests) > 0 || len(c.Repositories) > 0 || len(c.DataInjections) > 0 ||
+		len(c.HealthChecks) > 0
+}
+
 // GetImages returns all images specified by this component, including image archives.
 func (c Component) GetImages() []string {
 	images := make([]string, 0, len(c.Images))
@@ -54,6 +76,60 @@ func (c Component) GetImages() []string {
 		images = append(images, archive.Images...)
 	}
 	return images
+}
+
+// GetServerSideApply returns the configured apply strategy, defaulting to auto.
+func (c Chart) GetServerSideApply() ServerSideApplyMode {
+	if c.ServerSideApply == "" {
+		return ServerSideApplyAuto
+	}
+	return c.ServerSideApply
+}
+
+// SourceURL returns the chart source URL, if the chart is remotely sourced.
+func (c Chart) SourceURL() string {
+	switch {
+	case c.HelmRepository != nil:
+		return c.HelmRepository.URL
+	case c.Git != nil:
+		return c.Git.URL
+	case c.OCI != nil:
+		return c.OCI.URL
+	default:
+		return ""
+	}
+}
+
+// LocalPath returns the source path for a local chart.
+func (c Chart) LocalPath() string {
+	if c.Local == nil {
+		return ""
+	}
+	return c.Local.Path
+}
+
+// RepositoryName returns the named chart in a Helm repository, if set.
+func (c Chart) RepositoryName() string {
+	if c.HelmRepository == nil {
+		return ""
+	}
+	return c.HelmRepository.Name
+}
+
+// GitPath returns the chart path within a Git source, if set.
+func (c Chart) GitPath() string {
+	if c.Git == nil {
+		return ""
+	}
+	return c.Git.Path
+}
+
+// GetServerSideApply returns the configured apply strategy, defaulting to auto.
+func (m Manifest) GetServerSideApply() ServerSideApplyMode {
+	if m.ServerSideApply == "" {
+		return ServerSideApplyAuto
+	}
+	return m.ServerSideApply
 }
 
 // RemoveImages removes images and image archives from every component.

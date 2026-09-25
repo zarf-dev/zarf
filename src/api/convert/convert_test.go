@@ -12,6 +12,48 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
 
+func TestPackageFromV1alpha1MigratesLegacyActions(t *testing.T) {
+	t.Parallel()
+
+	pkg := v1alpha1.ZarfPackage{
+		Components: []v1alpha1.ZarfComponent{{
+			DeprecatedScripts: v1alpha1.DeprecatedZarfComponentScripts{
+				ShowOutput:     true,
+				TimeoutSeconds: 30,
+				Retry:          true,
+				Prepare:        []string{"prepare"},
+				Before:         []string{"before"},
+				After:          []string{"after"},
+			},
+			Actions: v1alpha1.ZarfComponentActions{
+				OnDeploy: v1alpha1.ZarfComponentActionSet{
+					Before: []v1alpha1.ZarfComponentAction{
+						{Cmd: "legacy", DeprecatedSetVariable: "LEGACY"},
+						{Cmd: "current", DeprecatedSetVariable: "IGNORED", SetVariables: []v1alpha1.Variable{{Name: "CURRENT"}}},
+					},
+				},
+			},
+		}},
+	}
+
+	normalized := PackageFromV1alpha1(pkg)
+	require.Equal(t, []string{"scripts-to-actions", "pluralize-set-variable"}, normalized.Build.Migrations)
+	comp := normalized.Components[0]
+	require.Equal(t, "prepare", comp.Actions.OnCreate.Before[0].Cmd)
+	require.Equal(t, "before", comp.Actions.OnDeploy.Before[2].Cmd)
+	require.Equal(t, "after", comp.Actions.OnDeploy.After[0].Cmd)
+	require.Equal(t, api.ActionDefaults{MaxTotalSeconds: 30, Retries: 10000}, comp.Actions.OnDeploy.Defaults)
+	require.Equal(t, []api.Variable{{Name: "LEGACY"}}, comp.Actions.OnDeploy.Before[0].SetVariables)
+	require.Equal(t, []api.Variable{{Name: "CURRENT"}}, comp.Actions.OnDeploy.Before[1].SetVariables)
+
+	wire := PackageToV1alpha1(normalized)
+	require.Empty(t, wire.Components[0].DeprecatedScripts)
+	require.Empty(t, wire.Components[0].Actions.OnDeploy.Before[0].DeprecatedSetVariable)
+	require.Equal(t, normalized.Components[0].Actions, PackageFromV1alpha1(wire).Components[0].Actions)
+
+	require.Equal(t, []string{"scripts-to-actions", "pluralize-set-variable"}, PackageFromV1alpha1(v1alpha1.ZarfPackage{}).Build.Migrations)
+}
+
 func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
 	t.Parallel()
 	allowOverride := true
@@ -561,7 +603,7 @@ func TestV1Alpha1ChartOperationalRoundTrip(t *testing.T) {
 				Name: "git", URL: "https://github.com/example/chart.git", GitPath: "charts/app", Version: "v1.2.3",
 			},
 			want: v1alpha1.ZarfChart{
-				Name: "git", URL: "https://github.com/example/chart.git", GitPath: "charts/app", Version: "v1.2.3",
+				Name: "git", URL: "https://github.com/example/chart.git@v1.2.3", GitPath: "charts/app", Version: "v1.2.3",
 			},
 		},
 		{
@@ -570,7 +612,7 @@ func TestV1Alpha1ChartOperationalRoundTrip(t *testing.T) {
 				Name: "git", URL: "https://github.com/example/chart.git", Version: "v1.2.3",
 			},
 			want: v1alpha1.ZarfChart{
-				Name: "git", URL: "https://github.com/example/chart.git", Version: "v1.2.3",
+				Name: "git", URL: "https://github.com/example/chart.git@v1.2.3", Version: "v1.2.3",
 			},
 		},
 		{
@@ -1289,7 +1331,7 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 				},
 			}
 			generic := PackageFromV1beta1(pkg)
-			require.Empty(t, generic.Components[0].Charts[0].Version)
+			require.Empty(t, generic.Components[0].Charts[0].LegacyVersion)
 			result := PackageV1beta1ToV1alpha1(pkg)
 			require.Len(t, result.Components, 1)
 			require.Len(t, result.Components[0].Charts, 1)

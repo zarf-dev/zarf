@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -17,7 +17,7 @@ import (
 // ValuesOverrides is a map of component names to chart names containing Helm Chart values to override values on deploy.
 type ValuesOverrides map[string]map[string]map[string]any
 
-func getPopulatedVariableConfig(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string, isInteractive bool) (*variables.VariableConfig, error) {
+func getPopulatedVariableConfig(ctx context.Context, pkg api.Package, setVariables map[string]string, isInteractive bool) (*variables.VariableConfig, error) {
 	variableConfig := template.GetZarfVariableConfig(ctx, isInteractive)
 	variableConfig.SetConstants(pkg.Constants)
 	if err := variableConfig.PopulateVariables(pkg.Variables, setVariables); err != nil {
@@ -34,7 +34,7 @@ type overrideOpts struct {
 
 // generateValuesOverrides generates a map of values to override for a given chart and component, with precedence of:
 // Zarf Variable overrides -> Zarf value overrides -> direct API helm-value overrides.
-func generateValuesOverrides(_ context.Context, chart v1alpha1.ZarfChart, componentName string, opts overrideOpts) (map[string]any, error) {
+func generateValuesOverrides(_ context.Context, chart api.Chart, componentName string, opts overrideOpts) (map[string]any, error) {
 	chartOverrides := make(value.Values)
 	valuesOverrides := make(map[string]any)
 

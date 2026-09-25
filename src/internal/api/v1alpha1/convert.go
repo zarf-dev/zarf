@@ -17,6 +17,8 @@ import (
 
 // PackageFromV1alpha1 converts a v1alpha1 ZarfPackage to the internal generic representation.
 func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
+	// Direct conversions need the same legacy action migration as decoded packages.
+	pkg, _ = migrateDeprecated(pkg)
 	g := api.Package{
 		APIVersion: pkg.APIVersion,
 		Kind:       api.PackageKind(pkg.Kind),
@@ -98,16 +100,15 @@ func serviceForComponentName(name string) api.Service {
 
 func componentToGeneric(c v1alpha1.ZarfComponent) api.Component {
 	gc := api.Component{
-		Name:              c.Name,
-		Description:       c.Description,
-		Default:           c.Default,
-		Optional:          !c.IsRequired(),
-		Group:             c.DeprecatedGroup,
-		DataInjections:    dataInjectionsToGeneric(c.DataInjections),
-		HealthChecks:      healthChecksToGeneric(c.HealthChecks),
-		DeprecatedScripts: scriptsToGeneric(c.DeprecatedScripts),
-		Repositories:      reposToGeneric(c.Repos),
-		StateAccess:       stateAccessToGeneric(c.StateAccess),
+		Name:           c.Name,
+		Description:    c.Description,
+		Default:        c.Default,
+		Optional:       !c.IsRequired(),
+		Group:          c.DeprecatedGroup,
+		DataInjections: dataInjectionsToGeneric(c.DataInjections),
+		HealthChecks:   healthChecksToGeneric(c.HealthChecks),
+		Repositories:   reposToGeneric(c.Repos),
+		StateAccess:    stateAccessToGeneric(c.StateAccess),
 		Target: api.ComponentTarget{
 			OS:           c.Only.LocalOS,
 			Architecture: c.Only.Cluster.Architecture,
@@ -164,7 +165,7 @@ func manifestToGeneric(m v1alpha1.ZarfManifest) api.Manifest {
 		Namespace:        m.Namespace,
 		Files:            m.Files,
 		SkipWait:         m.NoWait,
-		ServerSideApply:  m.ServerSideApply,
+		ServerSideApply:  api.ServerSideApplyMode(m.ServerSideApply),
 		EnableTemplating: derefBool(m.Template),
 		Kustomize: api.KustomizeManifest{
 			Files:             m.Kustomizations,
@@ -178,12 +179,12 @@ func manifestToGeneric(m v1alpha1.ZarfManifest) api.Manifest {
 func chartToGeneric(ch v1alpha1.ZarfChart) api.Chart {
 	gc := api.Chart{
 		Name:                 ch.Name,
-		Version:              ch.Version,
+		LegacyVersion:        ch.Version,
 		Namespace:            ch.Namespace,
 		ReleaseName:          ch.ReleaseName,
 		ValuesFiles:          valuesFilesToGeneric(ch.ValuesFiles, ch.TemplatedValuesFiles),
 		SkipSchemaValidation: ch.SchemaValidation != nil && !*ch.SchemaValidation,
-		ServerSideApply:      ch.ServerSideApply,
+		ServerSideApply:      api.ServerSideApplyMode(ch.ServerSideApply),
 		SkipWait:             ch.NoWait,
 		Variables:            chartVarsToGeneric(ch.Variables),
 		Values:               chartValuesToGeneric(ch.Values),
@@ -202,6 +203,12 @@ func chartSourceToGeneric(chart *api.Chart, source v1alpha1.ZarfChart) {
 		if url, parsedRef, err := transform.GitURLSplitRef(source.URL); err == nil {
 			gitURL = url
 			ref = parsedRef
+		}
+		// In v1alpha1, Version selected the Git checkout when the URL did not
+		// include an explicit @ref. Project that legacy behavior into the
+		// structured source so Git checkout uses Git.Ref.
+		if ref == "" {
+			ref = source.Version
 		}
 		chart.Git = &api.GitSource{
 			URL:  gitURL,
@@ -321,15 +328,14 @@ func actionSliceToGeneric(actions []v1alpha1.ZarfComponentAction) []api.Action {
 
 func actionToGeneric(a v1alpha1.ZarfComponentAction) api.Action {
 	ga := api.Action{
-		Silent:                a.Mute,
-		Dir:                   a.Dir,
-		Env:                   a.Env,
-		Cmd:                   a.Cmd,
-		Description:           a.Description,
-		Wait:                  waitToGeneric(a.Wait),
-		EnableTemplating:      derefBool(a.Template),
-		SetVariables:          variablesToGeneric(a.SetVariables),
-		DeprecatedSetVariable: a.DeprecatedSetVariable,
+		Silent:           a.Mute,
+		Dir:              a.Dir,
+		Env:              a.Env,
+		Cmd:              a.Cmd,
+		Description:      a.Description,
+		Wait:             waitToGeneric(a.Wait),
+		EnableTemplating: derefBool(a.Template),
+		SetVariables:     variablesToGeneric(a.SetVariables),
 	}
 
 	if a.MaxTotalSeconds != nil {
@@ -471,40 +477,17 @@ func buildFromGeneric(b api.BuildData) v1alpha1.ZarfBuildData {
 	return out
 }
 
-func scriptsToGeneric(s v1alpha1.DeprecatedZarfComponentScripts) api.DeprecatedComponentScripts {
-	return api.DeprecatedComponentScripts{
-		ShowOutput:     s.ShowOutput,
-		TimeoutSeconds: s.TimeoutSeconds,
-		Retry:          s.Retry,
-		Prepare:        s.Prepare,
-		Before:         s.Before,
-		After:          s.After,
-	}
-}
-
-func scriptsFromGeneric(s api.DeprecatedComponentScripts) v1alpha1.DeprecatedZarfComponentScripts {
-	return v1alpha1.DeprecatedZarfComponentScripts{
-		ShowOutput:     s.ShowOutput,
-		TimeoutSeconds: s.TimeoutSeconds,
-		Retry:          s.Retry,
-		Prepare:        s.Prepare,
-		Before:         s.Before,
-		After:          s.After,
-	}
-}
-
 func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 	ac := v1alpha1.ZarfComponent{
-		Name:              c.Name,
-		Description:       c.Description,
-		Default:           c.Default,
-		Required:          requiredFromGeneric(c.Optional),
-		DeprecatedGroup:   c.Group,
-		DataInjections:    dataInjectionsFromGeneric(c.DataInjections),
-		HealthChecks:      healthChecksFromGeneric(c.HealthChecks),
-		DeprecatedScripts: scriptsFromGeneric(c.DeprecatedScripts),
-		Repos:             reposFromGeneric(c.Repositories),
-		StateAccess:       stateAccessFromGeneric(c.StateAccess),
+		Name:            c.Name,
+		Description:     c.Description,
+		Default:         c.Default,
+		Required:        requiredFromGeneric(c.Optional),
+		DeprecatedGroup: c.Group,
+		DataInjections:  dataInjectionsFromGeneric(c.DataInjections),
+		HealthChecks:    healthChecksFromGeneric(c.HealthChecks),
+		Repos:           reposFromGeneric(c.Repositories),
+		StateAccess:     stateAccessFromGeneric(c.StateAccess),
 		Only: v1alpha1.ZarfComponentOnlyTarget{
 			LocalOS: c.Target.OS,
 			Cluster: v1alpha1.ZarfComponentOnlyCluster{
@@ -573,7 +556,7 @@ func manifestFromGeneric(m api.Manifest) v1alpha1.ZarfManifest {
 		Name:                       m.Name,
 		Namespace:                  m.Namespace,
 		Files:                      m.Files,
-		ServerSideApply:            m.ServerSideApply,
+		ServerSideApply:            string(m.ServerSideApply),
 		NoWait:                     m.SkipWait,
 		Template:                   boolPointer(m.EnableTemplating),
 		Kustomizations:             m.Kustomize.Files,
@@ -586,11 +569,11 @@ func manifestFromGeneric(m api.Manifest) v1alpha1.ZarfManifest {
 func chartFromGeneric(ch api.Chart) v1alpha1.ZarfChart {
 	ac := v1alpha1.ZarfChart{
 		Name:             ch.Name,
-		Version:          ch.Version,
+		Version:          ch.LegacyVersion,
 		Namespace:        ch.Namespace,
 		ReleaseName:      ch.ReleaseName,
 		SchemaValidation: boolPointer(!ch.SkipSchemaValidation),
-		ServerSideApply:  ch.ServerSideApply,
+		ServerSideApply:  string(ch.ServerSideApply),
 		NoWait:           ch.SkipWait,
 		Variables:        chartVarsFromGeneric(ch.Variables),
 	}
@@ -616,8 +599,9 @@ func chartFromGeneric(ch api.Chart) v1alpha1.ZarfChart {
 			gitURL = urlNoRef
 		}
 		ref := flattenGitRef(ch.Git.Ref)
-		// Git.Ref records a ref authored inline in a v1alpha1 URL. Version remains separate
-		// because PackageChart uses it as the fallback checkout ref and archive identifier.
+		// The normalized model does not retain whether a v1alpha1 Git ref came
+		// from an inline URL or Version. Canonicalize it as an inline URL ref;
+		// Version remains the package layout identifier.
 		if ref != "" {
 			ac.URL = gitURL + "@" + ref
 		} else {
@@ -680,15 +664,14 @@ func actionSliceFromGeneric(actions []api.Action) []v1alpha1.ZarfComponentAction
 
 func actionFromGeneric(a api.Action) v1alpha1.ZarfComponentAction {
 	aa := v1alpha1.ZarfComponentAction{
-		Mute:                  a.Silent,
-		Dir:                   a.Dir,
-		Env:                   a.Env,
-		Cmd:                   a.Cmd,
-		Description:           a.Description,
-		Wait:                  waitFromGeneric(a.Wait),
-		SetVariables:          variablesFromGeneric(a.SetVariables),
-		DeprecatedSetVariable: a.DeprecatedSetVariable,
-		Template:              boolPointer(a.EnableTemplating),
+		Mute:         a.Silent,
+		Dir:          a.Dir,
+		Env:          a.Env,
+		Cmd:          a.Cmd,
+		Description:  a.Description,
+		Wait:         waitFromGeneric(a.Wait),
+		SetVariables: variablesFromGeneric(a.SetVariables),
+		Template:     boolPointer(a.EnableTemplating),
 	}
 
 	if a.MaxTotalSeconds != nil {
@@ -923,7 +906,12 @@ func healthChecksFromGeneric(in []api.NamespacedObjectKindReference) []v1alpha1.
 func reposToGeneric(repos []string) []api.Repository {
 	var out []api.Repository
 	for _, url := range repos {
-		out = append(out, api.Repository{URL: url})
+		repository := api.Repository{URL: url, LegacyURL: url}
+		if baseURL, ref, err := transform.GitURLSplitRef(url); err == nil && ref != "" {
+			repository.URL = baseURL
+			repository.Ref = classifyGitRef(ref)
+		}
+		out = append(out, repository)
 	}
 	return out
 }
@@ -931,6 +919,10 @@ func reposToGeneric(repos []string) []api.Repository {
 func reposFromGeneric(repos []api.Repository) []string {
 	var out []string
 	for _, r := range repos {
+		if r.LegacyURL != "" {
+			out = append(out, r.LegacyURL)
+			continue
+		}
 		url := r.URL
 		if r.Ref != nil {
 			if refStr := flattenGitRef(r.Ref); refStr != "" {

@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -106,7 +106,7 @@ func TestRunHealthChecks(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 			defer cancel()
 			statusWatcher := watcher.NewDefaultStatusWatcher(fakeClient, fakeMapper)
-			objs := []v1alpha1.NamespacedObjectKindReference{}
+			objs := []api.NamespacedObjectKindReference{}
 			for _, podYaml := range tt.podYamls {
 				m := make(map[string]any)
 				err := yaml.Unmarshal([]byte(podYaml), &m)
@@ -115,7 +115,7 @@ func TestRunHealthChecks(t *testing.T) {
 				podGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 				err = fakeClient.Tracker().Create(podGVR, pod, pod.GetNamespace())
 				require.NoError(t, err)
-				objs = append(objs, v1alpha1.NamespacedObjectKindReference{
+				objs = append(objs, api.NamespacedObjectKindReference{
 					APIVersion: pod.GetAPIVersion(),
 					Kind:       pod.GetKind(),
 					Namespace:  pod.GetNamespace(),
@@ -151,7 +151,7 @@ func TestFailedHealthChecks(t *testing.T) {
 	err = fakeClient.Tracker().Create(jobGVR, job, job.GetNamespace())
 	require.NoError(t, err)
 
-	objs := []v1alpha1.NamespacedObjectKindReference{
+	objs := []api.NamespacedObjectKindReference{
 		{
 			APIVersion: job.GetAPIVersion(),
 			Kind:       job.GetKind(),
@@ -173,7 +173,7 @@ func TestHealthChecksUseNamespaceScopedWatchesAcrossNamespaces(t *testing.T) {
 	fakeMapper := testutil.NewFakeRESTMapper(v1.SchemeGroupVersion.WithKind("Pod"))
 	statusWatcher := watcher.NewDefaultStatusWatcher(fakeClient, fakeMapper)
 
-	healthChecks := make([]v1alpha1.NamespacedObjectKindReference, 0, 2)
+	healthChecks := make([]api.NamespacedObjectKindReference, 0, 2)
 	for _, namespace := range []string{"alpha", "bravo"} {
 		pod := readyPod(fmt.Sprintf("pod-%s", namespace), namespace)
 		err := fakeClient.Tracker().Create(
@@ -182,7 +182,7 @@ func TestHealthChecksUseNamespaceScopedWatchesAcrossNamespaces(t *testing.T) {
 			namespace,
 		)
 		require.NoError(t, err)
-		healthChecks = append(healthChecks, v1alpha1.NamespacedObjectKindReference{
+		healthChecks = append(healthChecks, api.NamespacedObjectKindReference{
 			APIVersion: pod.GetAPIVersion(),
 			Kind:       pod.GetKind(),
 			Namespace:  pod.GetNamespace(),

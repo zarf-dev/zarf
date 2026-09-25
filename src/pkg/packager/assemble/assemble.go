@@ -27,7 +27,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -41,7 +40,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
-	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -82,7 +80,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	l.Info("assembling package", "path", packagePath)
 
 	definition := resolvedPackage.Definition
-	pkg := convert.PackageToV1alpha1(definition)
+	pkg := definition
 	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
 		return nil, err
 	}
@@ -105,7 +103,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 			return nil, err
 		}
 		definition = updatedDefinition
-		pkg = convert.PackageToV1alpha1(definition)
+		pkg = definition
 		definition.Build.Differential = true
 		definition.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
 	}
@@ -136,10 +134,10 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 			}
 			manifests = append(manifests, archiveImageManifests...)
 		}
-		for _, src := range component.Images {
-			refInfo, err := transform.ParseImageRef(src)
+		for _, image := range component.Images {
+			refInfo, err := transform.ParseImageRef(image.Name)
 			if err != nil {
-				return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
+				return nil, fmt.Errorf("failed to create ref for image %s: %w", image.Name, err)
 			}
 			if slices.Contains(componentImages, refInfo) {
 				continue
@@ -253,10 +251,9 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	}
 	definition := resolvedPackage.Definition
 	definition.Metadata.Architecture = v1alpha1.SkeletonArch
-	pkg := convert.PackageToV1alpha1(definition)
 
 	// Creating skeleton packages with the values feature is not yet supported
-	if len(pkg.Values.Files) > 0 || resolvedPackage.ValuesSchema != nil {
+	if len(definition.Values.Files) > 0 || resolvedPackage.ValuesSchema != nil {
 		return nil, errors.New("creating skeleton packages with the values feature is not yet supported")
 	}
 
@@ -265,7 +262,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, err
 	}
 
-	if err = createDocumentationTar(pkg, resolvedPackage.Resources, buildPath); err != nil {
+	if err = createDocumentationTar(definition, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -273,9 +270,9 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	//   example:
 	//     url: oci://ghcr.io/zarf-dev/packages/init:v0.58.0-upstream
 	//     is indicating that you are importing the "upstream" flavor of the zarf init package
-	for i := 0; i < len(pkg.Components); i++ {
-		pkg.Components[i].Only.Flavor = ""
-		err := assembleSkeletonComponent(ctx, pkg.Components[i], resolvedPackage.Resources, buildPath)
+	for i := range definition.Components {
+		definition.Components[i].Target.Flavor = ""
+		err := assembleSkeletonComponent(ctx, definition.Components[i], resolvedPackage.Resources, buildPath)
 		if err != nil {
 			return nil, err
 		}
@@ -290,10 +287,6 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	if err != nil {
 		return nil, err
 	}
-	// PackageDefinition does not expose component flavor mutations, so retain them
-	// while moving package metadata updates to the generic definition.
-	definition = convert.PackageFromV1alpha1(pkg)
-
 	if err = recordPackageMetadata(&definition, opts.Flavor, nil, opts.WithBuildMachineInfo, buildPath, checksumSha); err != nil {
 		return nil, err
 	}
@@ -326,7 +319,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 
 // validateImageArchivesNoDuplicates ensures no image appears in multiple image archives
 // and that images in image archives don't conflict with images in component.Images.
-func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) error {
+func validateImageArchivesNoDuplicates(components []api.Component) error {
 	imageToArchive := make(map[string]string)
 
 	for _, comp := range components {
@@ -351,9 +344,9 @@ func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) erro
 
 	for _, comp := range components {
 		for _, image := range comp.Images {
-			refInfo, err := transform.ParseImageRef(image)
+			refInfo, err := transform.ParseImageRef(image.Name)
 			if err != nil {
-				return fmt.Errorf("failed to parse image ref %s in component %s: %w", image, comp.Name, err)
+				return fmt.Errorf("failed to parse image ref %s in component %s: %w", image.Name, comp.Name, err)
 			}
 			if archivePath, exists := imageToArchive[refInfo.Reference]; exists {
 				return fmt.Errorf("image %s from %s is also pulled by component %s", refInfo.Reference, archivePath, comp.Name)
@@ -364,7 +357,7 @@ func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) erro
 	return nil
 }
 
-func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, resources *load.ResourceSet, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
+func assemblePackageComponent(ctx context.Context, component api.Component, resources *load.ResourceSet, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
 	packagePath, err := resources.Root()
 	if err != nil {
 		return err
@@ -383,7 +376,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	onCreate := component.Actions.OnCreate
-	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil, nil, template.StateAccess{}); err != nil {
+	if err := actions.Run(ctx, packagePath, onCreate.Before, actions.RunOptions{DefaultConfig: onCreate.Defaults}); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -400,7 +393,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	for filesIdx, file := range component.Files {
-		rel := filepath.Join(string(layout.FilesComponentDir), layout.ComponentFileRelPath(filesIdx, file.Target))
+		rel := filepath.Join(string(layout.FilesComponentDir), layout.ComponentFileRelPath(filesIdx, file.Destination))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
 
@@ -467,8 +460,8 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 
 		// Abort packaging on invalid shasum (if one is specified).
-		if file.Shasum != "" {
-			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
+		if file.Checksum != "" {
+			if err := helpers.SHAsMatch(dst, file.Checksum); err != nil {
 				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
@@ -520,15 +513,14 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	// Load all specified git repos.
-	for _, url := range component.Repos {
-		// Pull all the references if there is no `@` in the string.
-		_, err := git.Clone(ctx, filepath.Join(compBuildPath, string(layout.RepoComponentDir)), url, false)
+	for _, repository := range component.Repositories {
+		_, err := git.Clone(ctx, filepath.Join(compBuildPath, string(layout.RepoComponentDir)), repository, false)
 		if err != nil {
-			return fmt.Errorf("unable to pull git repo %s: %w", url, err)
+			return fmt.Errorf("unable to pull git repo %s: %w", repository.URL, err)
 		}
 	}
 
-	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.After, nil, nil, template.StateAccess{}); err != nil {
+	if err := actions.Run(ctx, packagePath, onCreate.After, actions.RunOptions{DefaultConfig: onCreate.Defaults}); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -553,7 +545,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 }
 
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
-func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBuildPath string, resources *load.ResourceSet) error {
+func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath string, resources *load.ResourceSet) error {
 	for fileIdx, path := range manifest.Files {
 		rel := filepath.Join(string(layout.ManifestsComponentDir), layout.ManifestFileName(manifest.Name, fileIdx))
 		dst := filepath.Join(compBuildPath, rel)
@@ -574,7 +566,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 		}
 	}
 
-	for kustomizeIdx, path := range manifest.Kustomizations {
+	for kustomizeIdx, path := range manifest.Kustomize.Files {
 		// Generate manifests from kustomizations and place in the package.
 		kname := layout.KustomizationFileName(manifest.Name, kustomizeIdx)
 		rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
@@ -587,7 +579,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 				return err
 			}
 		}
-		if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory, manifest.EnableKustomizePlugins); err != nil {
+		if err := kustomize.Build(path, dst, manifest.Kustomize.AllowAnyDirectory, manifest.Kustomize.EnablePlugins); err != nil {
 			return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 		}
 	}
@@ -595,51 +587,38 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 }
 
 // PackageChart takes a Zarf Chart definition and packs it into a package layout
-func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, resources *load.ResourceSet, paths layout.ChartPaths, cachePath string, remoteOpts types.RemoteOptions) error {
-	if chart.LocalPath != "" && !helpers.IsURL(chart.LocalPath) {
-		localPath, err := resources.Path(chart.LocalPath)
+func PackageChart(ctx context.Context, chart api.Chart, resources *load.ResourceSet, paths layout.ChartPaths, cachePath string, remoteOpts types.RemoteOptions) error {
+	originalValuesFiles := slices.Clone(chart.ValuesFiles)
+	defer func() {
+		copy(chart.ValuesFiles, originalValuesFiles)
+	}()
+
+	if chart.Local != nil && chart.Local.Path != "" {
+		originalLocalPath := chart.Local.Path
+		defer func() {
+			chart.Local.Path = originalLocalPath
+		}()
+
+		localPath, err := resources.Path(chart.Local.Path)
 		if err != nil {
 			return err
 		}
-		chart.LocalPath = localPath
+		chart.Local.Path = localPath
 	}
-	oldValuesFiles := chart.ValuesFiles
-	valuesFiles := []string{}
-	for _, v := range chart.ValuesFiles {
-		if !helpers.IsURL(v) {
+	for i := range chart.ValuesFiles {
+		if !helpers.IsURL(chart.ValuesFiles[i].Path) {
 			var err error
-			v, err = resources.Path(v)
+			chart.ValuesFiles[i].Path, err = resources.Path(chart.ValuesFiles[i].Path)
 			if err != nil {
 				return err
 			}
 		}
-		valuesFiles = append(valuesFiles, v)
 	}
-	chart.ValuesFiles = valuesFiles
 
-	oldTemplatedValuesFiles := chart.TemplatedValuesFiles
-	templatedValuesFiles := []string{}
-	for _, v := range chart.TemplatedValuesFiles {
-		if !helpers.IsURL(v) {
-			var err error
-			v, err = resources.Path(v)
-			if err != nil {
-				return err
-			}
-		}
-		templatedValuesFiles = append(templatedValuesFiles, v)
-	}
-	chart.TemplatedValuesFiles = templatedValuesFiles
-
-	if err := helm.PackageChart(ctx, chart, paths, cachePath, remoteOpts); err != nil {
-		return err
-	}
-	chart.ValuesFiles = oldValuesFiles
-	chart.TemplatedValuesFiles = oldTemplatedValuesFiles
-	return nil
+	return helm.PackageChart(ctx, chart, paths, cachePath, remoteOpts)
 }
 
-func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfComponent, resources *load.ResourceSet, buildPath string) (err error) {
+func assembleSkeletonComponent(ctx context.Context, component api.Component, resources *load.ResourceSet, buildPath string) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -654,11 +633,11 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	}
 
 	for chartIdx, chart := range component.Charts {
-		if chart.LocalPath != "" {
+		if chart.Local != nil {
 			rel := filepath.ToSlash(filepath.Join(string(layout.ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx)))
 			dst := filepath.Join(compBuildPath, rel)
 
-			file, err := resources.Path(chart.LocalPath)
+			file, err := resources.Path(chart.Local.Path)
 			if err != nil {
 				return err
 			}
@@ -666,18 +645,18 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				return fmt.Errorf("unable to copy file %s: %w", file, err)
 			}
 
-			component.Charts[chartIdx].LocalPath = rel
+			component.Charts[chartIdx].Local.Path = rel
 		}
 
-		for valuesIdx, path := range chart.ValuesFiles {
-			if helpers.IsURL(path) {
+		for valuesIdx, valuesFile := range chart.ValuesFiles {
+			if helpers.IsURL(valuesFile.Path) {
 				continue
 			}
 
-			rel := filepath.ToSlash(filepath.Join(string(layout.ValuesComponentDir), layout.ChartValuesFileName(chart.Name, chart.Version, valuesIdx)))
-			component.Charts[chartIdx].ValuesFiles[valuesIdx] = rel
+			rel := filepath.ToSlash(filepath.Join(string(layout.ValuesComponentDir), layout.ChartValuesFileName(chart.Name, chart.LegacyVersion, valuesIdx)))
+			component.Charts[chartIdx].ValuesFiles[valuesIdx].Path = rel
 
-			path, err = resources.Path(path)
+			path, err := resources.Path(valuesFile.Path)
 			if err != nil {
 				return err
 			}
@@ -685,32 +664,13 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}
-
-		nValuesFiles := len(chart.ValuesFiles)
-		for valuesIdx, path := range chart.TemplatedValuesFiles {
-			if helpers.IsURL(path) {
-				continue
-			}
-
-			rel := filepath.ToSlash(filepath.Join(string(layout.ValuesComponentDir), layout.ChartValuesFileName(chart.Name, chart.Version, nValuesFiles+valuesIdx)))
-			component.Charts[chartIdx].TemplatedValuesFiles[valuesIdx] = rel
-
-			path, err = resources.Path(path)
-			if err != nil {
-				return err
-			}
-			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
-				return fmt.Errorf("unable to copy chart templated values file %s: %w", path, err)
-			}
-		}
 	}
-
 	for filesIdx, file := range component.Files {
 		if helpers.IsURL(file.Source) {
 			continue
 		}
 
-		rel := filepath.ToSlash(filepath.Join(string(layout.FilesComponentDir), layout.ComponentFileRelPath(filesIdx, file.Target)))
+		rel := filepath.ToSlash(filepath.Join(string(layout.FilesComponentDir), layout.ComponentFileRelPath(filesIdx, file.Destination)))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
 		src, err := resources.Path(file.Source)
@@ -747,8 +707,8 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		component.Files[filesIdx].ExtractPath = ""
 
 		// Abort packaging on invalid shasum (if one is specified).
-		if file.Shasum != "" {
-			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
+		if file.Checksum != "" {
+			if err := helpers.SHAsMatch(dst, file.Checksum); err != nil {
 				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
@@ -804,7 +764,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			component.Manifests[manifestIdx].Files[fileIdx] = rel
 		}
 
-		for kustomizeIdx, path := range manifest.Kustomizations {
+		for kustomizeIdx, path := range manifest.Kustomize.Files {
 			// Generate manifests from kustomizations and place in the package.
 			kname := layout.KustomizationFileName(manifest.Name, kustomizeIdx)
 			rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
@@ -816,13 +776,13 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			}
 
 			// Build() requires the path be present - otherwise will throw an error.
-			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory, manifest.EnableKustomizePlugins); err != nil {
+			if err := kustomize.Build(path, dst, manifest.Kustomize.AllowAnyDirectory, manifest.Kustomize.EnablePlugins); err != nil {
 				return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 			}
 		}
 
-		// remove kustomizations
-		component.Manifests[manifestIdx].Kustomizations = nil
+		// Remove kustomizations.
+		component.Manifests[manifestIdx].Kustomize = api.KustomizeManifest{}
 	}
 
 	// Write the tar component.
@@ -850,10 +810,9 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 }
 
 func recordPackageMetadata(definition *api.Package, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath, aggregateChecksum string) error {
-	pkg := convert.PackageToV1alpha1(*definition)
 	now := time.Now()
 	buildData := api.BuildData{
-		Architecture:      pkg.Metadata.Architecture,
+		Architecture:      definition.Metadata.Architecture,
 		Timestamp:         now.Format(api.BuildTimestampFormat),
 		Version:           config.CLIVersion,
 		Flavor:            flavor,
@@ -876,7 +835,7 @@ func recordPackageMetadata(definition *api.Package, flavor string, registryOverr
 		buildData.Hostname = hostname
 	}
 
-	if pkg.IsInitConfig() && pkg.Metadata.Version == "" {
+	if definition.IsInitConfig() && definition.Metadata.Version == "" {
 		definition.Metadata.Version = config.CLIVersion
 	}
 
@@ -888,7 +847,7 @@ func recordPackageMetadata(definition *api.Package, flavor string, registryOverr
 			return fmt.Errorf("failed to inspect image layout: %w", err)
 		}
 	}
-	buildData.VersionRequirements = collectVersionRequirements(pkg, hasIndex)
+	buildData.VersionRequirements = collectVersionRequirements(*definition, hasIndex)
 
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
@@ -916,7 +875,7 @@ func recordPackageMetadata(definition *api.Package, flavor string, registryOverr
 	return nil
 }
 
-func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []api.VersionRequirement {
+func collectVersionRequirements(pkg api.Package, hasIndex bool) []api.VersionRequirement {
 	var reqs []api.VersionRequirement
 	var hasImageArchives, hasTemplatedValuesFiles, hasVersionlessChart bool
 	for _, comp := range pkg.Components {
@@ -924,10 +883,13 @@ func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []api.V
 			hasImageArchives = true
 		}
 		for _, chart := range comp.Charts {
-			if len(chart.TemplatedValuesFiles) > 0 {
-				hasTemplatedValuesFiles = true
+			for _, valuesFile := range chart.ValuesFiles {
+				if valuesFile.EnableTemplating {
+					hasTemplatedValuesFiles = true
+					break
+				}
 			}
-			if chart.Version == "" {
+			if chart.LegacyVersion == "" {
 				hasVersionlessChart = true
 			}
 		}
@@ -1108,7 +1070,7 @@ func writeValuesSchema(buildPath string, schema value.SchemaDocument) error {
 	return nil
 }
 
-func createDocumentationTar(pkg v1alpha1.ZarfPackage, resources *load.ResourceSet, buildPath string) (err error) {
+func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
 	if len(pkg.Documentation) == 0 {
 		return nil
 	}

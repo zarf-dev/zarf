@@ -27,8 +27,10 @@ import (
 	"github.com/spf13/viper"
 	"oras.land/oras-go/v2/registry"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -415,7 +417,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		return err
 	}
 
-	if pkgLayout.AsV1alpha1().IsInitConfig() {
+	if pkgLayout.Definition().IsInitConfig() {
 		return nil
 	}
 	connectStrings := state.ConnectStrings{}
@@ -463,9 +465,13 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 
 func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, isInteractive bool) (err error) {
 	l := logger.From(ctx)
-	pkg := pkgLayout.AsV1alpha1()
+	pkg := pkgLayout.Definition()
 
-	err = utils.ColorPrintYAML(pkg, getPackageYAMLHints(pkg, setVariables), false)
+	displayPackage, err := packageForDisplay(pkg)
+	if err != nil {
+		return err
+	}
+	err = utils.ColorPrintYAML(displayPackage, getPackageYAMLHints(pkg, setVariables), false)
 	if err != nil {
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
@@ -508,7 +514,19 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 	return nil
 }
 
-func getPackageYAMLHints(pkg v1alpha1.ZarfPackage, setVariables map[string]string) map[string]string {
+// packageForDisplay converts a package to its authored API version for user-facing serialization.
+func packageForDisplay(pkg api.Package) (any, error) {
+	switch pkg.GetAPIVersion() {
+	case v1alpha1.APIVersion:
+		return convert.PackageToV1alpha1(pkg), nil
+	case v1beta1.APIVersion:
+		return convert.PackageToV1beta1(pkg), nil
+	default:
+		return nil, fmt.Errorf("unsupported package apiVersion %q", pkg.GetAPIVersion())
+	}
+}
+
+func getPackageYAMLHints(pkg api.Package, setVariables map[string]string) map[string]string {
 	hints := map[string]string{}
 
 	for _, variable := range pkg.Variables {
@@ -642,9 +660,9 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 
 	images, repos := 0, 0
 	// Let's count the images and repos in the package
-	for _, component := range pkgLayout.AsV1alpha1().Components {
+	for _, component := range pkgLayout.Definition().Components {
 		images += len(component.GetImages())
-		repos += len(component.Repos)
+		repos += len(component.Repositories)
 	}
 	logger.From(ctx).Debug("package contains images and repos", "images", images, "repos", repos)
 
@@ -1079,7 +1097,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
-	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.AsV1alpha1().Metadata.Name))
+	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.Definition().Metadata.Name))
 	err = pkgLayout.GetSBOM(ctx, outputPath)
 	if err != nil {
 		return fmt.Errorf("could not get SBOM: %w", err)
@@ -1150,7 +1168,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	}
 
 	images := make([]string, 0)
-	for _, component := range convert.PackageToV1alpha1(pkg).Components {
+	for _, component := range pkg.Components {
 		images = append(images, component.GetImages()...)
 	}
 	images = helpers.Unique(images)
@@ -1223,7 +1241,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
-	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", filepath.Base(pkgLayout.AsV1alpha1().Metadata.Name)))
+	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", filepath.Base(pkgLayout.Definition().Metadata.Name)))
 	return pkgLayout.GetDocumentation(ctx, outputPath, o.keys)
 }
 
@@ -1283,7 +1301,11 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	err = utils.ColorPrintYAML(convert.PackageToV1alpha1(pkg), nil, false)
+	displayPackage, err := packageForDisplay(pkg)
+	if err != nil {
+		return err
+	}
+	err = utils.ColorPrintYAML(displayPackage, nil, false)
 	if err != nil {
 		return err
 	}
@@ -1510,9 +1532,12 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		SkipVersionCheck:  o.skipVersionCheck,
 		Values:            vals,
 	}
-	legacyPkg := convert.PackageToV1alpha1(pkg)
-	logger.From(ctx).Info("loaded package for removal", "name", legacyPkg.Metadata.Name)
-	err = utils.ColorPrintYAML(legacyPkg, nil, false)
+	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
+	displayPackage, err := packageForDisplay(pkg)
+	if err != nil {
+		return err
+	}
+	err = utils.ColorPrintYAML(displayPackage, nil, false)
 	if err != nil {
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
@@ -1921,33 +1946,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		l.Info("signing package with provided key")
 	}
 
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = o.signingKeyPath
-	signOpts.Password = o.signingKeyPassword
-	signOpts.Overwrite = o.overwrite
-	signOpts.Keyless = o.keyless
-	signOpts.Fulcio.IdentityToken = o.identityToken
-	signOpts.Fulcio.URL = o.fulcioURL
-	signOpts.Fulcio.AuthFlow = o.fulcioAuthFlow
-	signOpts.OIDC.Issuer = o.oidcIssuer
-	signOpts.OIDC.ClientID = o.oidcClientID
-	signOpts.Rekor.URL = o.rekorURL
-	signOpts.TlogUpload = o.tlogUpload
-	signOpts.SkipConfirmation = o.confirm
-	signOpts.TSAServerURL = o.tsaServerURL
-
-	// Keyless certs are short-lived (~10 min). Without Rekor or a TSA timestamp
-	// the signature is unverifiable past expiry. Default --tlog-upload=true for
-	// keyless unless the user explicitly opted out via CLI flag, env var, or config file.
-	if o.keyless {
-		tlogExplicit := cmd.Flags().Changed("tlog-upload") || getViper().IsSet(VPkgSignTlogUpload)
-		if !tlogExplicit {
-			signOpts.TlogUpload = true
-		}
-		if !signOpts.TlogUpload && signOpts.TSAServerURL == "" {
-			l.Warn(lang.CmdPackageSignNoTimestampAnchorWarn)
-		}
-	}
+	signOpts := o.buildSignBlobOptions(cmd)
 
 	if helpers.IsOCIURL(outputDest) {
 		dstRef, err := registry.ParseReference(strings.TrimPrefix(outputDest, helpers.OCIURLPrefix))
@@ -1977,6 +1976,48 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 
 	l.Info("package signed successfully", "path", signedPath)
 	return nil
+}
+
+// buildSignBlobOptions maps the sign command's common flags to the Sigstore
+// options used by package and remote-component signing.
+func (o *packageSignOptions) buildSignBlobOptions(cmd *cobra.Command) signing.SignBlobOptions {
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = o.signingKeyPath
+	signOpts.Password = o.signingKeyPassword
+	signOpts.Overwrite = o.overwrite
+	signOpts.Keyless = o.keyless
+	signOpts.Fulcio.IdentityToken = o.identityToken
+	signOpts.Fulcio.URL = o.fulcioURL
+	signOpts.Fulcio.AuthFlow = o.fulcioAuthFlow
+	signOpts.OIDC.Issuer = o.oidcIssuer
+	signOpts.OIDC.ClientID = o.oidcClientID
+	signOpts.Rekor.URL = o.rekorURL
+	signOpts.SkipConfirmation = o.confirm
+	signOpts.TSAServerURL = o.tsaServerURL
+	signOpts.TlogUpload = o.validateKeylessTlog(cmd)
+
+	return signOpts
+}
+
+// validateKeylessTlog applies the safe keyless default and warns when the
+// resulting signature has no timestamp anchor.
+func (o *packageSignOptions) validateKeylessTlog(cmd *cobra.Command) bool {
+	// Keyless certs are short-lived (~10 min). Without Rekor or a TSA timestamp
+	// the signature is unverifiable past expiry. Default --tlog-upload=true for
+	// keyless unless the user explicitly opted out via CLI flag, env var, or config file.
+	if !o.keyless {
+		return o.tlogUpload
+	}
+
+	tlogExplicit := cmd.Flags().Changed("tlog-upload") || getViper().IsSet(VPkgSignTlogUpload)
+	tlogUpload := o.tlogUpload
+	if !tlogExplicit {
+		tlogUpload = true
+	}
+	if !tlogUpload && o.tsaServerURL == "" {
+		logger.From(cmd.Context()).Warn(lang.CmdPackageSignNoTimestampAnchorWarn)
+	}
+	return tlogUpload
 }
 
 type packageVerifyOptions struct {
@@ -2243,9 +2284,14 @@ func (f *packageVerifyFlags) buildVerifyBlobOptions(cmd *cobra.Command, v *viper
 	opts.CertVerify.CertOidcIssuer = f.certificateOIDCIssuer
 	opts.CertVerify.CertOidcIssuerRegexp = f.certificateOIDCIssuerRegexp
 	opts.CommonVerifyOptions.TrustedRootPath = f.trustedRoot
-	opts.CommonVerifyOptions.IgnoreTlog = f.insecureIgnoreTlog
 	opts.CommonVerifyOptions.UseSignedTimestamps = f.useSignedTimestamps
+	opts.CommonVerifyOptions.IgnoreTlog = f.validateKeylessVerifyTlog(cmd, v)
+	return &opts
+}
 
+// validateKeylessVerifyTlog requires tlog verification for keyless identities
+// unless the user explicitly configured the insecure override.
+func (f *packageVerifyFlags) validateKeylessVerifyTlog(cmd *cobra.Command, v *viper.Viper) bool {
 	// When a keyless identity is provided, require tlog verification by default so the
 	// inclusion proof establishes when the signature was made. Honor any explicit override.
 	// cmd may be nil when run() is called directly (e.g. from tests); in that case only
@@ -2256,9 +2302,9 @@ func (f *packageVerifyFlags) buildVerifyBlobOptions(cmd *cobra.Command, v *viper
 		tlogExplicit = tlogExplicit || cmd.Flags().Changed("insecure-ignore-tlog")
 	}
 	if hasKeylessIdentity && !tlogExplicit {
-		opts.CommonVerifyOptions.IgnoreTlog = false
+		return false
 	}
-	return &opts
+	return f.insecureIgnoreTlog
 }
 
 // preRunE is the cobra PreRunE handler for commands that embed packageVerifyFlags.

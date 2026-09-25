@@ -18,7 +18,6 @@ import (
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -184,7 +183,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, definition api.Pa
 }
 
 // GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.
-func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent, opts ...state.DeployedPackageOptions) ([]state.InstalledChart, error) {
+func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component api.Component, opts ...state.DeployedPackageOptions) ([]state.InstalledChart, error) {
 	deployedPackage, err := c.GetDeployedPackage(ctx, packageName, opts...)
 	if err != nil {
 		return nil, err

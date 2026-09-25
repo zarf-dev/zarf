@@ -26,7 +26,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
@@ -106,13 +106,13 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 
 	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
 	defer waitCancel()
-	podRef := v1alpha1.NamespacedObjectKindReference{
+	podRef := api.NamespacedObjectKindReference{
 		APIVersion: *pod.APIVersion,
 		Kind:       *pod.Kind,
 		Namespace:  *pod.Namespace,
 		Name:       *pod.Name,
 	}
-	err = healthchecks.Run(waitCtx, c.Watcher, []v1alpha1.NamespacedObjectKindReference{podRef})
+	err = healthchecks.Run(waitCtx, c.Watcher, []api.NamespacedObjectKindReference{podRef})
 	if err != nil {
 		return "", 0, err
 	}

@@ -8,11 +8,8 @@ import (
 	"maps"
 	"strings"
 
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	"github.com/zarf-dev/zarf/src/internal/git"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 // PackageFromV1beta1 converts a v1beta1 Package to the internal generic representation.
@@ -159,7 +156,7 @@ func manifestToGeneric(m v1beta1.Manifest) api.Manifest {
 		Namespace:        m.Namespace,
 		Files:            m.Files,
 		SkipWait:         m.SkipWait,
-		ServerSideApply:  string(m.ServerSideApply),
+		ServerSideApply:  api.ServerSideApplyMode(m.ServerSideApply),
 		EnableTemplating: m.EnableTemplating,
 		Kustomize: api.KustomizeManifest{
 			Files:             m.Kustomize.Files,
@@ -177,7 +174,7 @@ func chartToGeneric(ch v1beta1.Chart) api.Chart {
 		ReleaseName:          ch.ReleaseName,
 		ValuesFiles:          valuesFilesToGeneric(ch.ValuesFiles),
 		SkipSchemaValidation: ch.SkipSchemaValidation,
-		ServerSideApply:      string(ch.ServerSideApply),
+		ServerSideApply:      api.ServerSideApplyMode(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
 	}
 
@@ -526,14 +523,10 @@ func chartFromGeneric(ch api.Chart) v1beta1.Chart {
 			Version: ch.HelmRepository.Version,
 		}
 	case ch.Git != nil:
-		ref := gitRefFromGeneric(ch.Git.Ref)
-		if ref == (v1beta1.GitRef{}) && ch.Version != "" {
-			ref = classifyGitRef(ch.Version)
-		}
 		bc.Git = &v1beta1.GitSource{
 			URL:  ch.Git.URL,
 			Path: ch.Git.Path,
-			Ref:  ref,
+			Ref:  gitRefFromGeneric(ch.Git.Ref),
 		}
 	case ch.Local != nil:
 		bc.Local = &v1beta1.LocalSource{Path: ch.Local.Path}
@@ -731,13 +724,6 @@ func repositoriesFromGeneric(in []api.Repository) []v1beta1.Repository {
 				Branch: r.Ref.Branch,
 				Commit: r.Ref.Commit,
 			}
-		} else {
-			// v1alpha1 repos embed the ref in the URL; split it for v1beta1.
-			if urlNoRef, refStr, err := transform.GitURLSplitRef(r.URL); err == nil && refStr != "" {
-				br.URL = urlNoRef
-				ref := classifyGitRef(refStr)
-				br.Ref = &ref
-			}
 		}
 		out = append(out, br)
 	}
@@ -800,18 +786,4 @@ func ociRefFromGeneric(ref *api.OCIRef) v1beta1.OCIRef {
 		Tag:    ref.Tag,
 		Digest: ref.Digest,
 	}
-}
-
-func classifyGitRef(ref string) v1beta1.GitRef {
-	if ref == "" {
-		return v1beta1.GitRef{}
-	}
-	if plumbing.IsHash(ref) {
-		return v1beta1.GitRef{Commit: ref}
-	}
-	parsed := string(git.ParseRef(ref))
-	if branch, ok := strings.CutPrefix(parsed, "refs/heads/"); ok {
-		return v1beta1.GitRef{Branch: branch}
-	}
-	return v1beta1.GitRef{Tag: strings.TrimPrefix(parsed, "refs/tags/")}
 }

@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -90,7 +91,7 @@ func TestGetInstalledChartsForComponentNamespaceOverride(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	component := v1alpha1.ZarfComponent{Name: componentName}
+	component := api.Component{Name: componentName}
 
 	originalCharts, err := c.GetInstalledChartsForComponent(ctx, packageName, component)
 	require.NoError(t, err)

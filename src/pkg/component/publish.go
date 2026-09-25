@@ -21,7 +21,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -306,7 +306,7 @@ func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchiv
 
 	imageDir := filepath.Join(tempDir, layout.ImagesDir)
 	for _, archive := range archives {
-		_, err := images.Unpack(ctx, v1alpha1.ImageArchive{Path: archive.Path, Images: archive.Images}, imageDir, architecture)
+		_, err := images.Unpack(ctx, api.ImageArchive{Path: archive.Path, Images: archive.Images}, imageDir, architecture)
 		if err != nil {
 			return nil, fmt.Errorf("unable to unpack image archive %q: %w", archive.Path, err)
 		}
