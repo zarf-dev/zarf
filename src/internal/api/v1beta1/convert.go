@@ -55,34 +55,15 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 }
 
 func metadataToGeneric(m v1beta1.PackageMetadata) api.PackageMetadata {
-	annotations := maps.Clone(m.Annotations)
-	meta := api.PackageMetadata{
+	return api.PackageMetadata{
 		Name:                     m.Name,
 		Description:              m.Description,
 		Version:                  m.Version,
 		Uncompressed:             m.Uncompressed,
 		Architecture:             m.Architecture,
-		Annotations:              annotations,
+		Annotations:              maps.Clone(m.Annotations),
 		PreventNamespaceOverride: m.PreventNamespaceOverride,
 	}
-	consume := map[string]*string{
-		"url":           &meta.URL,
-		"image":         &meta.Image,
-		"authors":       &meta.Authors,
-		"documentation": &meta.Documentation,
-		"source":        &meta.Source,
-		"vendor":        &meta.Vendor,
-	}
-	for key, target := range consume {
-		if value, ok := annotations[key]; ok {
-			*target = value
-			delete(annotations, key)
-		}
-	}
-	if len(annotations) == 0 {
-		meta.Annotations = nil
-	}
-	return meta
 }
 
 func componentToGeneric(c v1beta1.Component) api.Component {
@@ -342,18 +323,14 @@ func PackageToV1beta1(g api.Package) v1beta1.Package {
 }
 
 func metadataFromGeneric(m api.PackageMetadata) v1beta1.PackageMetadata {
-	var annotations map[string]string
-	if m.Annotations != nil {
-		annotations = make(map[string]string, len(m.Annotations))
-		maps.Copy(annotations, m.Annotations)
-	}
 	meta := v1beta1.PackageMetadata{
-		Name:         m.Name,
-		Description:  m.Description,
-		Version:      m.Version,
-		Uncompressed: m.Uncompressed,
-		Architecture: m.Architecture,
-		Annotations:  annotations,
+		Name:                     m.Name,
+		Description:              m.Description,
+		Version:                  m.Version,
+		Uncompressed:             m.Uncompressed,
+		Architecture:             m.Architecture,
+		Annotations:              maps.Clone(m.Annotations),
+		PreventNamespaceOverride: m.PreventNamespaceOverride,
 	}
 	for key, value := range map[string]string{
 		"url":           m.URL,
@@ -373,9 +350,6 @@ func metadataFromGeneric(m api.PackageMetadata) v1beta1.PackageMetadata {
 			meta.Annotations[key] = value
 		}
 	}
-
-	meta.PreventNamespaceOverride = m.PreventNamespaceOverride
-
 	return meta
 }
 

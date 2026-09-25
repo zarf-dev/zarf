@@ -42,10 +42,40 @@ func TestPackageValidateVersionFields(t *testing.T) {
 			wantErr: "components[0].import (multiple sources)",
 		},
 		{
-			name: "v1beta1 accepts image source and legacy annotation aliases",
+			name: "v1beta1 accepts image source and annotations",
 			pkg: api.Package{APIVersion: v1beta1.APIVersion, Metadata: api.PackageMetadata{
-				URL: "https://example.com", Annotations: map[string]string{"other": "value"},
+				Annotations: map[string]string{"url": "https://example.com", "other": "value"},
 			}, Components: []api.Component{{Images: []api.Image{{Name: "example.com/app:1", Source: "daemon"}}}}},
+		},
+		{
+			name:    "v1beta1 rejects legacy URL",
+			pkg:     api.Package{APIVersion: v1beta1.APIVersion, Metadata: api.PackageMetadata{URL: "https://example.com"}},
+			wantErr: "metadata.url is not supported in " + v1beta1.APIVersion,
+		},
+		{
+			name:    "v1beta1 rejects legacy image",
+			pkg:     api.Package{APIVersion: v1beta1.APIVersion, Metadata: api.PackageMetadata{Image: "image.png"}},
+			wantErr: "metadata.image is not supported in " + v1beta1.APIVersion,
+		},
+		{
+			name:    "v1beta1 rejects legacy authors",
+			pkg:     api.Package{APIVersion: v1beta1.APIVersion, Metadata: api.PackageMetadata{Authors: "author"}},
+			wantErr: "metadata.authors is not supported in " + v1beta1.APIVersion,
+		},
+		{
+			name:    "v1beta1 rejects legacy documentation",
+			pkg:     api.Package{APIVersion: v1beta1.APIVersion, Metadata: api.PackageMetadata{Documentation: "docs"}},
+			wantErr: "metadata.documentation is not supported in " + v1beta1.APIVersion,
+		},
+		{
+			name:    "v1beta1 rejects legacy source",
+			pkg:     api.Package{APIVersion: v1beta1.APIVersion, Metadata: api.PackageMetadata{Source: "source"}},
+			wantErr: "metadata.source is not supported in " + v1beta1.APIVersion,
+		},
+		{
+			name:    "v1beta1 rejects legacy vendor",
+			pkg:     api.Package{APIVersion: v1beta1.APIVersion, Metadata: api.PackageMetadata{Vendor: "vendor"}},
+			wantErr: "metadata.vendor is not supported in " + v1beta1.APIVersion,
 		},
 		{
 			name: "v1beta1 rejects package legacy fields",

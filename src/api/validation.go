@@ -25,10 +25,23 @@ func (p Package) Validate() error {
 	}
 
 	if version == v1beta1.APIVersion {
-		// Legacy metadata aliases are deliberately populated from v1beta1 annotations
-		// and projected back to annotations, so they are valid in this model.
 		if p.Kind == ZarfInitConfig {
 			add("kind ZarfInitConfig")
+		}
+		for _, field := range []struct {
+			name  string
+			value string
+		}{
+			{"url", p.Metadata.URL},
+			{"image", p.Metadata.Image},
+			{"authors", p.Metadata.Authors},
+			{"documentation", p.Metadata.Documentation},
+			{"source", p.Metadata.Source},
+			{"vendor", p.Metadata.Vendor},
+		} {
+			if field.value != "" {
+				add("metadata." + field.name)
+			}
 		}
 		if p.Metadata.YOLO {
 			add("metadata.yolo")
