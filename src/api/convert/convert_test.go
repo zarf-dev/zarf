@@ -1020,6 +1020,33 @@ func TestV1Alpha1PkgToV1Beta1_Files(t *testing.T) {
 	require.True(t, f.EnableTemplating)
 }
 
+func TestPackageFileChecksumConversion(t *testing.T) {
+	t.Parallel()
+
+	wire := v1beta1.Package{
+		Components: []v1beta1.Component{{
+			ComponentSpec: v1beta1.ComponentSpec{
+				Files: []v1beta1.File{
+					{Checksum: "abc123"},
+					{Checksum: "sha256:abc123"},
+					{Checksum: "sha512:def456"},
+				},
+			},
+		}},
+	}
+
+	pkg := PackageFromV1beta1(wire)
+	require.Equal(t, api.FileChecksum{Digest: "abc123"}, pkg.Components[0].Files[0].Checksum)
+	require.Equal(t, api.ChecksumSHA256, pkg.Components[0].Files[0].Checksum.GetAlgorithm())
+	require.Equal(t, api.FileChecksum{Algorithm: api.ChecksumSHA256, Digest: "abc123"}, pkg.Components[0].Files[1].Checksum)
+	require.Equal(t, api.FileChecksum{Algorithm: api.ChecksumSHA512, Digest: "def456"}, pkg.Components[0].Files[2].Checksum)
+
+	roundTripped := PackageToV1beta1(pkg)
+	require.Equal(t, "abc123", roundTripped.Components[0].Files[0].Checksum)
+	require.Equal(t, "sha256:abc123", roundTripped.Components[0].Files[1].Checksum)
+	require.Equal(t, "sha512:def456", roundTripped.Components[0].Files[2].Checksum)
+}
+
 func TestV1Alpha1PkgToV1Beta1_ValuesAndDocumentation(t *testing.T) {
 	t.Parallel()
 	pkg := v1alpha1.ZarfPackage{

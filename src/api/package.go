@@ -4,6 +4,8 @@
 // Package api defines Zarf's version-neutral package model.
 package api
 
+import "strings"
+
 // Package is the version-neutral representation used by package operations and converters.
 type Package struct {
 	// APIVersion identifies the source package schema. An empty value is the legacy v1alpha1 form.
@@ -253,10 +255,64 @@ type Repository struct {
 	LegacyURL string
 }
 
+// ChecksumAlgorithm identifies the hash used for a file checksum.
+type ChecksumAlgorithm string
+
+// Supported file checksum algorithms.
+const (
+	ChecksumSHA256 ChecksumAlgorithm = "sha256"
+	ChecksumSHA512 ChecksumAlgorithm = "sha512"
+)
+
+// FileChecksum is a file checksum with its algorithm and digest.
+type FileChecksum struct {
+	Algorithm ChecksumAlgorithm
+	Digest    string
+}
+
+// ParseFileChecksum converts a wire-format checksum, defaulting to SHA-256.
+func ParseFileChecksum(value string) FileChecksum {
+	if value == "" {
+		return FileChecksum{}
+	}
+	if prefix, rest, ok := strings.Cut(value, ":"); ok {
+		if prefix == "" {
+			// Keep the separator so an invalid empty prefix cannot become a valid digest.
+			return FileChecksum{Digest: value}
+		}
+		return FileChecksum{Algorithm: ChecksumAlgorithm(prefix), Digest: rest}
+	}
+	return FileChecksum{Digest: value}
+}
+
+// GetAlgorithm returns SHA-256 when no algorithm is specified.
+func (c FileChecksum) GetAlgorithm() ChecksumAlgorithm {
+	if c.Algorithm == "" {
+		return ChecksumSHA256
+	}
+	return c.Algorithm
+}
+
+// IsSet reports whether a file checksum was provided.
+func (c FileChecksum) IsSet() bool {
+	return c.Digest != "" || c.Algorithm != ""
+}
+
+// String returns the checksum in the package definition's wire format.
+func (c FileChecksum) String() string {
+	if !c.IsSet() {
+		return ""
+	}
+	if c.Algorithm != "" {
+		return string(c.Algorithm) + ":" + c.Digest
+	}
+	return c.Digest
+}
+
 // File is the version-neutral representation of a package file.
 type File struct {
 	Source           string
-	Checksum         string
+	Checksum         FileChecksum
 	Destination      string
 	Executable       bool
 	Symlinks         []string

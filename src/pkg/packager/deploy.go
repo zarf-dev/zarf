@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
@@ -899,9 +900,9 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 		fileLocation := filepath.Join(filesDir, layout.ComponentFileRelPath(fileIdx, file.Destination))
 
 		// If a shasum is specified check it again on deployment as well
-		if file.Checksum != "" {
+		if file.Checksum.IsSet() {
 			l.Debug("Validating SHASUM", "file", file.Destination)
-			if err := helpers.SHAsMatch(fileLocation, file.Checksum); err != nil {
+			if err := checksum.VerifyFile(fileLocation, file.Checksum.GetAlgorithm(), file.Checksum.Digest); err != nil {
 				return err
 			}
 		}
