@@ -13,7 +13,9 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -70,7 +72,7 @@ func TestMultiPartPackage(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, pkgData.Bytes, fullFileInfo.Size())
 	// Ensure that the pkgData shasum was correct (should be checked during deploy as well, but this is to double check)
-	err = helpers.SHAsMatch(parts[0], pkgData.Sha256Sum)
+	err = checksum.VerifyFile(parts[0], api.ChecksumSHA256, pkgData.Sha256Sum)
 	require.NoError(t, err)
 
 	e2e.CleanFiles(t, parts...)

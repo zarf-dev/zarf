@@ -114,6 +114,43 @@ func TestValidatePackage(t *testing.T) {
 	}
 }
 
+func TestValidatePackageFileChecksumAlgorithm(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		checksum  string
+		wantError bool
+	}{
+		{name: "omitted checksum"},
+		{name: "checksum without prefix", checksum: "abc123"},
+		{name: "sha256 prefix", checksum: "sha256:abc123"},
+		{name: "sha512 prefix", checksum: "sha512:abc123"},
+		{name: "unsupported prefix", checksum: "sha384:abc123", wantError: true},
+		{name: "empty prefix", checksum: ":abc123", wantError: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pkg := v1beta1.Package{Components: []v1beta1.Component{{
+				Name: "app",
+				ComponentSpec: v1beta1.ComponentSpec{Files: []v1beta1.File{{
+					Source: "file.txt", Destination: "/tmp/file.txt", Checksum: tt.checksum,
+				}}},
+			}}}
+
+			errs := ValidatePackage(pkg)
+			if tt.wantError {
+				require.ErrorContains(t, errs, "file.txt")
+				require.ErrorContains(t, errs, "sha256 or sha512")
+			} else {
+				require.Empty(t, errs)
+			}
+		})
+	}
+}
+
 func TestValidateManifest(t *testing.T) {
 	t.Parallel()
 	longName := strings.Repeat("a", ZarfMaxChartNameLength+1)

@@ -13,11 +13,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -142,7 +141,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 
 	// Verify checksum if provided
 	if opts.Shasum != "" {
-		if err := helpers.SHAsMatch(tmpPath, opts.Shasum); err != nil {
+		if err := checksum.VerifyFile(tmpPath, api.ChecksumSHA256, opts.Shasum); err != nil {
 			return nil, fmt.Errorf("SHA256 mismatch for %s: %w", tmpPath, err)
 		}
 	}

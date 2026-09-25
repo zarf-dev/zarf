@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -55,7 +56,7 @@ func TestLoadPackage(t *testing.T) {
 			}
 
 			opt := LoadOptions{
-				Shasum: "foo",
+				Shasum: strings.Repeat("0", len(tt.shasum)),
 				Filter: filters.Empty(),
 			}
 			_, err := LoadPackage(ctx, tt.source, opt)

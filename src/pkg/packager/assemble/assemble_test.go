@@ -5,6 +5,7 @@ package assemble
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -540,6 +541,10 @@ func TestAssemblePackageV1Beta1WritesMultiDocDefinition(t *testing.T) {
 	dataPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
 	require.NoError(t, err)
 
+	data, err := os.ReadFile(dataPath)
+	require.NoError(t, err)
+	checksum := fmt.Sprintf("sha256:%x", sha256.Sum256(data))
+
 	zarfYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
@@ -548,8 +553,9 @@ components:
   - name: beta-component
     files:
       - source: %q
+        checksum: %q
         destination: data.txt
-`, dataPath)
+`, dataPath, checksum)
 	require.NoError(t, os.WriteFile(filepath.Join(tmpdir, layout.ZarfYAML), []byte(zarfYAML), 0o600))
 
 	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
