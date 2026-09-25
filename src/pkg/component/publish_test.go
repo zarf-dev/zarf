@@ -21,10 +21,13 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 	registryremote "oras.land/oras-go/v2/registry/remote"
 )
@@ -132,7 +135,8 @@ func TestPublishComponent(t *testing.T) {
 
 	ctx := context.Background()
 	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
-		RemoteOptions: defaultTestRemoteOptions(),
+		SignManifestOptions: nil,
+		RemoteOptions:       defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
 
@@ -172,6 +176,51 @@ func TestPublishComponent(t *testing.T) {
 	} {
 		require.NotContains(t, layerTitles, remotePath)
 	}
+}
+
+func TestPublishComponentSignsManifest(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.key")
+	signOpts.Password = "test"
+	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
+		SignManifestOptions: &signOpts,
+		RemoteOptions:       defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+
+	verifyOpts := signing.DefaultVerifyManifestOptions()
+	verifyOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.pub")
+	require.NoError(t, signing.VerifyManifest(ctx, published.String(), verifyOpts, defaultTestRemoteOptions()))
+}
+
+func TestPublishComponentDoesNotTagOnSigningFailure(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	componentPath := filepath.Join("testdata", "publish-component-v1beta1", "component.yaml")
+	destination := createRegistry(ctx, t)
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = filepath.Join(t.TempDir(), "missing.key")
+
+	_, err := Publish(ctx, componentPath, destination, PublishOptions{
+		SignManifestOptions: &signOpts,
+		RemoteOptions:       defaultTestRemoteOptions(),
+	})
+	require.Error(t, err)
+
+	config, err := load.ComponentConfig(componentPath)
+	require.NoError(t, err)
+	componentRef, err := componentReference(destination, config)
+	require.NoError(t, err)
+	remote, err := zoci.NewRemoteWithOptions(ctx, componentRef.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+	_, err = remote.Repo().Resolve(ctx, componentRef.Reference)
+	require.ErrorIs(t, err, errdef.ErrNotFound)
 }
 
 func TestPublishComponentFlavor(t *testing.T) {
@@ -489,6 +538,10 @@ func TestPublishComponentArchitectureIndexImportsMatchingFlavorVariant(t *testin
 	destination := createRegistry(ctx, t)
 	const flavor = "hardened"
 
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.key")
+	signOpts.Password = "test"
+
 	for _, architecture := range []string{"amd64", "arm64"} {
 		componentPath := filepath.Join(root, architecture+".yaml")
 		require.NoError(t, os.WriteFile(filepath.Join(root, architecture+".txt"), []byte(architecture), 0o600))
@@ -506,7 +559,10 @@ component:
       destination: /tmp/variant.txt
 `, flavor, architecture, architecture)
 		require.NoError(t, os.WriteFile(componentPath, []byte(componentYAML), 0o600))
-		published, err := Publish(ctx, componentPath, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+		published, err := Publish(ctx, componentPath, destination, PublishOptions{
+			SignManifestOptions: &signOpts,
+			RemoteOptions:       defaultTestRemoteOptions(),
+		})
 		require.NoError(t, err)
 		require.Equal(t, "0.0.1-hardened", published.Reference)
 	}
@@ -519,6 +575,10 @@ component:
 	rootDescriptor, err := repo.Resolve(ctx, published.Reference)
 	require.NoError(t, err)
 	require.Equal(t, ocispec.MediaTypeImageIndex, rootDescriptor.MediaType)
+
+	verifyOpts := signing.DefaultVerifyManifestOptions()
+	verifyOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.pub")
+	require.NoError(t, signing.VerifyManifest(ctx, published.String(), verifyOpts, defaultTestRemoteOptions()))
 
 	packagePath := filepath.Join(root, "zarf.yaml")
 	packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
