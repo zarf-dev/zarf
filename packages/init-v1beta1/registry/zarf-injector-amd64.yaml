@@ -1,0 +1,24 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: zarf-injector
+  description: |
+    Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
+    Removed and destroyed after the Zarf Registry is self-hosting the registry image.
+
+values:
+  files:
+    - ../values.yaml
+  schema: ../values-schema.json
+
+component:
+  import:
+    local:
+      - path: zarf-injector-common.yaml
+  selector:
+    architecture: amd64
+  files:
+    - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.3.0/zarf-injector-amd64
+      destination: "{{ .Zarf.Temp }}/zarf-injector"
+      checksum: "54c37ca19a101c795786510cb89cf4fe2aa7504d4c399985606a3d8f58f42119"
+      executable: true

@@ -1,0 +1,70 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfInitConfig
+metadata:
+  name: init
+  description: Used to establish a new Zarf cluster
+  preventNamespaceOverride: true
+  annotations:
+    source: https://github.com/zarf-dev/zarf
+    documentation: https://docs.zarf.dev
+
+values:
+  files:
+    - values.yaml
+    # The shared template values file both templates the zarf.yaml and provides the image values to the chart. No duplication necessary
+    - shared-template-values.yaml
+  schema: values-schema.json
+
+components:
+  - name: k3s
+    optional: true
+    import:
+      local:
+        - path: k3s/k3s-amd64.yaml
+        - path: k3s/k3s-arm64.yaml
+
+  - name: zarf-injector
+    import:
+      local:
+        - path: registry/zarf-injector-amd64.yaml
+        - path: registry/zarf-injector-arm64.yaml
+
+  - name: zarf-seed-registry
+    import:
+      local:
+        - path: registry/zarf-seed-registry.yaml
+    images:
+      - name: "[[ .registry.image ]]:[[ .registry.tag ]]"
+      - name: "[[ .proxy.image ]]:[[ .proxy.tag ]]"
+
+  - name: zarf-registry
+    import:
+      local:
+        - path: registry/zarf-registry.yaml
+    images:
+      - name: "[[ .registry.image ]]:[[ .registry.tag ]]"
+      - name: "[[ .proxy.image ]]:[[ .proxy.tag ]]"
+
+  - name: zarf-agent
+    import:
+      local:
+        - path: agent/zarf-agent.yaml
+    images:
+      - name: "[[ .agent.image ]]:[[ .agent.tag ]]"
+        source: "[[ if eq .agent.tag \"local\" ]]daemon[[ else ]]registry[[ end ]]"
+    actions:
+      onCreate:
+        before:
+          - cmd: 'test "[[ .agent.tag ]]" != "local" || make build-local-agent-image AGENT_IMAGE_TAG="[[ .agent.tag ]]" ARCH="[[ .PKG.ARCH ]]"'
+            shell:
+              windows: pwsh
+            dir: ../..
+            description: Build the local agent image (if 'agent.tag' was specified as 'local')
+
+  - name: git-server
+    optional: true
+    import:
+      local:
+        - path: git-server/gitea.yaml
+    images:
+      - name: "[[ .gitea.image ]]"

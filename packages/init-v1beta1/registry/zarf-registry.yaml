@@ -1,0 +1,49 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: zarf-registry
+  description: |
+    Updates the Zarf Registry to use the self-hosted registry image.
+    Serves as the primary docker registry for the cluster.
+
+component:
+  service: registry
+  stateValues:
+    - sourcePath: ".registry.address"
+      targetPath: ".Registry.Address"
+    - sourcePath: ".registry.port"
+      targetPath: ".Registry.Port"
+    - sourcePath: ".registry.pushUsername"
+      targetPath: ".Registry.PushUsername"
+    - sourcePath: ".registry.pullUsername"
+      targetPath: ".Registry.PullUsername"
+    - sourcePath: ".registry.mode"
+      targetPath: ".Registry.Mode"
+    - sourcePath: ".registry.mtlsEnabled"
+      targetPath: ".Registry.MTLSEnabled"
+    - sourcePath: ".registry.pushPassword"
+      targetPath: ".Registry.PushPassword"
+    - sourcePath: ".registry.pullPassword"
+      targetPath: ".Registry.PullPassword"
+    - sourcePath: ".registry.secret"
+      targetPath: ".Registry.Secret"
+  manifests:
+    - name: registry-connect
+      namespace: zarf
+      files:
+        - connect.yaml
+    - name: kep-1755-registry-annotation
+      namespace: zarf
+      files:
+        - configmap.yaml
+  charts:
+    - name: docker-registry
+      releaseName: zarf-docker-registry
+      namespace: zarf
+      local:
+        path: chart
+      valuesFiles:
+        - registry-values.yaml
+      values:
+        - sourcePath: ".registry"
+          targetPath: "."
