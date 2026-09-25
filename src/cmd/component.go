@@ -76,11 +76,11 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 	return err
 }
 
-// componentSignOptions intentionally embeds the shared package-signing
-// options: a component manifest and a package blob use the same keyless and
-// key-based Sigstore configuration.
+// componentSignOptions uses the shared signing configuration while retaining
+// only component-specific execution state.
 type componentSignOptions struct {
-	packageSignOptions
+	confirm bool
+	packageSigningFlags
 }
 
 func newComponentSignCommand(v *viper.Viper) *cobra.Command {
@@ -94,26 +94,30 @@ func newComponentSignCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgSignSigningKey), lang.CmdPackageSignFlagSigningKey)
-	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgSignSigningKeyPassword), lang.CmdPackageSignFlagSigningKeyPass)
-	cmd.Flags().BoolVar(&o.keyless, "keyless", v.GetBool(VPkgSignKeyless), lang.CmdPackageSignFlagKeyless)
-	cmd.Flags().StringVar(&o.identityToken, "identity-token", v.GetString(VPkgSignIdentityToken), lang.CmdPackageSignFlagIdentityToken)
-	cmd.Flags().StringVar(&o.fulcioURL, "fulcio-url", v.GetString(VPkgSignFulcioURL), lang.CmdPackageSignFlagFulcioURL)
-	cmd.Flags().StringVar(&o.fulcioAuthFlow, "fulcio-auth-flow", v.GetString(VPkgSignFulcioAuthFlow), lang.CmdPackageSignFlagFulcioAuthFlow)
-	cmd.Flags().StringVar(&o.oidcIssuer, "oidc-issuer", v.GetString(VPkgSignOIDCIssuer), lang.CmdPackageSignFlagOIDCIssuer)
-	cmd.Flags().StringVar(&o.oidcClientID, "oidc-client-id", v.GetString(VPkgSignOIDCClientID), lang.CmdPackageSignFlagOIDCClientID)
-	cmd.Flags().StringVar(&o.rekorURL, "rekor-url", v.GetString(VPkgSignRekorURL), lang.CmdPackageSignFlagRekorURL)
-	cmd.Flags().BoolVar(&o.tlogUpload, "tlog-upload", v.GetBool(VPkgSignTlogUpload), lang.CmdPackageSignFlagTlogUpload)
+	signingFlags := newSigningFlagSet(v, &o.packageSigningFlags, packageSigningViperKeys{
+		signingKey:         VPkgSignSigningKey,
+		signingKeyPassword: VPkgSignSigningKeyPassword,
+		keyless:            VPkgSignKeyless,
+		identityToken:      VPkgSignIdentityToken,
+		fulcioURL:          VPkgSignFulcioURL,
+		fulcioAuthFlow:     VPkgSignFulcioAuthFlow,
+		oidcIssuer:         VPkgSignOIDCIssuer,
+		oidcClientID:       VPkgSignOIDCClientID,
+		rekorURL:           VPkgSignRekorURL,
+		tlogUpload:         VPkgSignTlogUpload,
+		tsaServerURL:       VPkgSignTSAServerURL,
+	}, lang.CmdPackageSignFlagSigningKey, lang.CmdPackageSignFlagSigningKeyPass)
+	annotateFlagGroup(signingFlags, signingFlagGroupTitle)
+	cmd.Flags().AddFlagSet(signingFlags)
 	cmd.Flags().BoolVar(&o.confirm, "confirm", false, lang.CmdPackageSignFlagConfirm)
-	cmd.Flags().StringVar(&o.tsaServerURL, "tsa-server-url", v.GetString(VPkgSignTSAServerURL), lang.CmdPackageSignFlagTSAServerURL)
 	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
 
 	return cmd
 }
 
 func (o *componentSignOptions) run(cmd *cobra.Command, args []string) error {
-	if !o.keyless && o.signingKeyPath == "" {
-		return errors.New("--signing-key is required (or pass --keyless for Sigstore keyless flow)")
+	if err := o.validateSigningMode(); err != nil {
+		return err
 	}
 
 	componentSource := strings.TrimPrefix(args[0], helpers.OCIURLPrefix)
@@ -131,18 +135,7 @@ func (o *componentSignOptions) run(cmd *cobra.Command, args []string) error {
 		logger.From(cmd.Context()).Info("signing component manifest with provided key")
 	}
 
-	signOpts := signing.DefaultSignManifestOptions()
-	signOpts.Key = o.signingKeyPath
-	signOpts.Password = o.signingKeyPassword
-	signOpts.IdentityToken = o.identityToken
-	signOpts.FulcioURL = o.fulcioURL
-	signOpts.FulcioAuthFlow = o.fulcioAuthFlow
-	signOpts.OIDCIssuer = o.oidcIssuer
-	signOpts.OIDCClientID = o.oidcClientID
-	signOpts.RekorURL = o.rekorURL
-	signOpts.TlogUpload = o.validateKeylessTlog(cmd)
-	signOpts.SkipConfirmation = o.confirm
-	signOpts.TSAServerURL = o.tsaServerURL
+	signOpts := o.buildSignManifestOptions(cmd, getViper(), VPkgSignTlogUpload, o.confirm)
 	err = signing.SignManifest(cmd.Context(), componentRef.String(), signOpts, defaultRemoteOptions())
 	if err != nil {
 		return fmt.Errorf("failed to sign component manifest: %w", err)
@@ -197,7 +190,7 @@ func (o *componentVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	verifyOpts.CertificateOIDCIssuer = o.certificateOIDCIssuer
 	verifyOpts.CertificateOIDCIssuerRegexp = o.certificateOIDCIssuerRegexp
 	verifyOpts.TrustedRoot = o.trustedRoot
-	verifyOpts.InsecureIgnoreTlog = o.validateKeylessVerifyTlog(cmd, v)
+	verifyOpts.InsecureIgnoreTlog = o.validateKeylessVerifyTlog(cmd, getViper())
 	verifyOpts.UseSignedTimestamps = o.useSignedTimestamps
 	if err := signing.VerifyManifest(cmd.Context(), componentRef.String(), verifyOpts, defaultRemoteOptions()); err != nil {
 		return fmt.Errorf("component signature verification failed: %w", err)

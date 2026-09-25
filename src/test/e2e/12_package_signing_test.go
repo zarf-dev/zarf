@@ -16,21 +16,17 @@ func TestPackageSigning(t *testing.T) {
 	t.Parallel()
 	t.Log("E2E: Package Signing")
 
-	t.Run("Signing a basic package", func(t *testing.T) {
+	t.Run("Create and verify a basic signed package", func(t *testing.T) {
 		// set tmpdir and path to package
 		tmpdir := t.TempDir()
 		testCreate := filepath.Join("src", "test", "packages", "12-package-signing")
 		testPath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-basic-signing-%s.tar.zst", e2e.Arch))
 
-		// create package without signing
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", testCreate, "-o", tmpdir)
+		// Create and sign the package in one operation.
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", testCreate, "-o", tmpdir, "--signing-key", filepath.Join("src", "test", "packages", "zarf-test.prv-key"))
 		require.NoError(t, err, stdOut, stdErr)
 
-		// sign the package
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "sign", testPath, "--signing-key", filepath.Join("src", "test", "packages", "zarf-test.prv-key"))
-		require.NoError(t, err, stdOut, stdErr)
-
-		// verify the signed package
+		// Verify the package without an intermediate package sign operation.
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "verify", testPath, "--key", filepath.Join("src", "test", "packages", "zarf-test.pub"))
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdErr, "verification complete")
@@ -66,6 +62,7 @@ func TestPackageSigning(t *testing.T) {
 
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "sign", testPath, "--signing-key", filepath.Join("src", "test", "packages", "zarf-test.prv-key"))
 		require.NoError(t, err, stdOut, stdErr)
+		require.NotContains(t, stdErr, "package signature not verified; continuing")
 
 		// try to verify without key (should fail)
 		_, stdErr, err = e2e.Zarf(t, "package", "verify", testPath)
