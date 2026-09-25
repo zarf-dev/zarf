@@ -1,4 +1,4 @@
-This example provides the basis for Zarf's [Retro Arcade](/tutorials/3-deploy-a-retro-arcade) tutorial.  It deploys a Dos Games arcade into the cluster and provides an easy way to connect and play games.
+This example provides the basis for Zarf's [Retro Arcade](/tutorials/03-deploy-a-retro-arcade) tutorial.  It deploys a Dos Games arcade into the cluster and provides an easy way to connect and play games.
 
 :::note
 
