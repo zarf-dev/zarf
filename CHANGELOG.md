@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.87.0](https://github.com/zarf-dev/zarf/compare/v0.86.0...v0.87.0) (2026-09-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* switch to api.Package from v1alpha1.ZarfPackage throughout repository ([#5379](https://github.com/zarf-dev/zarf/issues/5379))
+* public operational type ([#5345](https://github.com/zarf-dev/zarf/issues/5345))
+
+### Features
+
+* add explicit git server mode to state ([#5395](https://github.com/zarf-dev/zarf/issues/5395)) ([a8e695d](https://github.com/zarf-dev/zarf/commit/a8e695dc638e2e8931e105e7dc723c80b87a959d))
+* component sign and verify ([#5358](https://github.com/zarf-dev/zarf/issues/5358)) ([9c58f59](https://github.com/zarf-dev/zarf/commit/9c58f5971b482b3304816bb6891fd1df4e13aca6))
+* public operational type ([#5345](https://github.com/zarf-dev/zarf/issues/5345)) ([6c9d7ce](https://github.com/zarf-dev/zarf/commit/6c9d7ce2af3e54fc24f5cf6a7d809b98a7e74d68))
+* remove migrated fields on api.Package ([#5390](https://github.com/zarf-dev/zarf/issues/5390)) ([ed97710](https://github.com/zarf-dev/zarf/commit/ed97710f1588dc3ef8f4da145e0c2defd6c87b4e))
+
+
+### Bug Fixes
+
+* **helm:** handle charts that render resources inside list kinds ([#5344](https://github.com/zarf-dev/zarf/issues/5344)) ([1f7bbc9](https://github.com/zarf-dev/zarf/commit/1f7bbc9fba04918af1b1a47cb958fb24b1fda5cd))
+* **init:** propagate secret updates on init mode changes ([#5398](https://github.com/zarf-dev/zarf/issues/5398)) ([c18603a](https://github.com/zarf-dev/zarf/commit/c18603a918f293b0e92f22d939c3bddd9170ca3c))
+
+
+### Refactoring
+
+* switch to api.Package from v1alpha1.ZarfPackage throughout repository ([#5379](https://github.com/zarf-dev/zarf/issues/5379)) ([9ce36bb](https://github.com/zarf-dev/zarf/commit/9ce36bbb06e68afe9c0cf923da5caf0910acd3ac))
+
 ## [0.86.0](https://github.com/zarf-dev/zarf/compare/v0.85.0...v0.86.0) (2026-09-17)
 
 
