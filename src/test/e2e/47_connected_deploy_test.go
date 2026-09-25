@@ -29,6 +29,8 @@ func TestConnectedDeploy(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgPath, "--connected", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+	require.NotContains(t, stdOut, "images:", "deployment preview should omit images that will not be pushed")
+	require.Contains(t, stdErr, "does NOT contain an SBOM", "deployment preview should still report package SBOM availability")
 
 	// Verify the deployment does not have a mutated pod
 	c, err := cluster.New(t.Context())
@@ -43,6 +45,8 @@ func TestConnectedDeploy(t *testing.T) {
 	deployedPkg, err := c.GetDeployedPackage(t.Context(), "connected-deploy")
 	require.NoError(t, err)
 	require.Equal(t, state.PackageConnectivityConnected, deployedPkg.GetPackageConnectivity(), "package secret should record connected deploy mode")
+	require.Len(t, deployedPkg.Data.Components, 1)
+	require.Empty(t, deployedPkg.Data.Components[0].Images, "deployed definition should omit images that were not pushed")
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "connected-deploy", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
