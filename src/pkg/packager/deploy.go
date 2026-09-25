@@ -459,6 +459,11 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	if err != nil {
 		return nil, err
 	}
+	if isRegistry && d.s.RegistryInfo.IsInternal() {
+		if err := d.c.UpdateZarfManagedImageSecrets(ctx, d.s); err != nil {
+			return nil, fmt.Errorf("unable to reconcile Zarf-managed image pull secrets: %w", err)
+		}
+	}
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry && d.s.RegistryInfo.RegistryMode == state.RegistryModeNodePort {
