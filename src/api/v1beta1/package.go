@@ -46,10 +46,10 @@ func (pkg Package) GetComponent(name string) (Component, error) {
 	return Component{}, fmt.Errorf("no component named %q in package %q", name, pkg.Metadata.Name)
 }
 
-// HasImages returns true if one of the components contains an image.
+// HasImages returns true if one of the components contains an image or image archive.
 func (pkg Package) HasImages() bool {
 	for _, component := range pkg.Components {
-		if len(component.Images) > 0 {
+		if len(component.Images) > 0 || len(component.ImageArchives) > 0 {
 			return true
 		}
 	}
