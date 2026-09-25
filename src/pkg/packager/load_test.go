@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -235,9 +237,14 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	c := &cluster.Cluster{
 		Clientset: fake.NewClientset(),
 	}
-	_, err = c.RecordPackageDeployment(ctx, pkg, "sha256:abcdeadbeef", nil, 1)
+	betaPkg := convert.PackageFromV1beta1(v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Metadata:   v1beta1.PackageMetadata{Name: "beta-test"},
+	})
+	_, err = c.RecordPackageDeployment(ctx, betaPkg, "sha256:abcdeadbeef", nil, 1)
 	require.NoError(t, err)
-	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", "", LoadOptions{})
+	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "beta-test", "", LoadOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "test", pkg.Metadata.Name)
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
+	require.Equal(t, "beta-test", pkg.Metadata.Name)
 }

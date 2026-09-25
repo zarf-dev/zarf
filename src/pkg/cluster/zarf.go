@@ -18,7 +18,6 @@ import (
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -153,32 +152,11 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 	l.Debug("done stripping zarf labels and secrets from namespaces", "duration", time.Since(start))
 }
 
-// RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg api.Package, digest string, components []state.DeployedComponent, generation int, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
-	packageName := pkg.Metadata.Name
-
-	// TODO: This is done for backwards compatibility and could be removed in the future.
-	connectStrings := state.ConnectStrings{}
-	for _, comp := range components {
-		for _, chart := range comp.InstalledCharts {
-			for k, v := range chart.ConnectStrings {
-				connectStrings[k] = v
-			}
-		}
-	}
-
-	deployedPackage := &state.DeployedPackage{
-		Name:               packageName,
-		CLIVersion:         config.CLIVersion,
-		Data:               convert.PackageToV1alpha1(pkg),
-		DeployedComponents: components,
-		ConnectStrings:     connectStrings,
-		Generation:         generation,
-		Digest:             digest,
-	}
-
-	for _, opt := range opts {
-		opt(deployedPackage)
+// RecordPackageDeployment saves metadata about a package deployment to the cluster.
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, definition api.Package, digest string, components []state.DeployedComponent, generation int, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
+	deployedPackage, err := state.NewDeployedPackage(definition, digest, config.CLIVersion, components, generation, opts...)
+	if err != nil {
+		return nil, err
 	}
 
 	packageData, err := json.Marshal(deployedPackage)
@@ -189,7 +167,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg api.Package, 
 	deployedPackageSecret := v1ac.Secret(deployedPackage.GetSecretName(), state.ZarfNamespaceName).
 		WithLabels(map[string]string{
 			state.ZarfManagedByLabel:   "zarf",
-			state.ZarfPackageInfoLabel: packageName,
+			state.ZarfPackageInfoLabel: deployedPackage.Name,
 		}).WithType(corev1.SecretTypeOpaque).
 		WithData(map[string][]byte{
 			"data": packageData,
