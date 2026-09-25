@@ -63,6 +63,67 @@ func TestValidateV1Beta1_FormatsValidationErrors(t *testing.T) {
 	require.EqualError(t, err, "package validation failed:\npackage does not contain any compatible components")
 }
 
+func TestPackageDefinitionV1Beta1ImageSources(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		components  string
+		expectedErr string
+	}{
+		{
+			name: "conflicting sources across components with equivalent references",
+			components: `  - name: first
+    images:
+      - name: nginx:1.27
+        source: daemon
+  - name: second
+    images:
+      - name: docker.io/library/nginx:1.27
+        source: registry
+`,
+			expectedErr: `image "docker.io/library/nginx:1.27" has conflicting sources "daemon" and "registry"`,
+		},
+		{
+			name: "omitted source defaults to registry",
+			components: `  - name: component
+    images:
+      - name: nginx:1.27
+      - name: nginx:1.27
+        source: daemon
+`,
+			expectedErr: `image "docker.io/library/nginx:1.27" has conflicting sources "registry" and "daemon"`,
+		},
+		{
+			name: "duplicate images with the same source are valid",
+			components: `  - name: first
+    images:
+      - name: nginx:1.27
+  - name: second
+    images:
+      - name: docker.io/library/nginx:1.27
+        source: registry
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			definition := "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: image-sources\ncomponents:\n" + tt.components
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+
+			_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
 func TestPackageDefinitionRejectsUnsupportedRawFields(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
