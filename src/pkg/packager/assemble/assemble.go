@@ -71,6 +71,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	defer func() {
 		err = errors.Join(err, resolvedPackage.Close())
 	}()
+	if err := resolvedPackage.Definition.Validate(); err != nil {
+		return nil, err
+	}
 
 	l := logger.From(ctx)
 	packagePath, err := resolvedPackage.Resources.Root()
@@ -242,6 +245,9 @@ type AssembleSkeletonOptions struct {
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
 func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
+	if err := resolvedPackage.Definition.Validate(); err != nil {
+		return nil, err
+	}
 	if resolvedPackage.Definition.GetAPIVersion() != v1alpha1.APIVersion {
 		return nil, fmt.Errorf("skeleton packages are only supported for apiVersion %s, got %s", v1alpha1.APIVersion, resolvedPackage.Definition.GetAPIVersion())
 	}
@@ -271,7 +277,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	//     url: oci://ghcr.io/zarf-dev/packages/init:v0.58.0-upstream
 	//     is indicating that you are importing the "upstream" flavor of the zarf init package
 	for i := range definition.Components {
-		definition.Components[i].Target.Flavor = ""
+		definition.Components[i].Selector.Flavor = ""
 		err := assembleSkeletonComponent(ctx, definition.Components[i], resolvedPackage.Resources, buildPath)
 		if err != nil {
 			return nil, err

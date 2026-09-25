@@ -92,23 +92,24 @@ func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
 	// AllowNamespaceOverride=true → PreventNamespaceOverride=false.
 	require.False(t, result.Metadata.PreventNamespaceOverride)
 
-	// v1alpha1-only metadata fields should be migrated to annotations.
-	require.Equal(t, "https://example.com", result.Metadata.Annotations["url"])
-	require.Equal(t, "https://example.com/image.png", result.Metadata.Annotations["image"])
-	require.Equal(t, "Test Author", result.Metadata.Annotations["authors"])
-	require.Equal(t, "https://docs.example.com", result.Metadata.Annotations["documentation"])
-	require.Equal(t, "https://github.com/example", result.Metadata.Annotations["source"])
-	require.Equal(t, "Example Corp", result.Metadata.Annotations["vendor"])
-	// Existing annotation should be preserved.
-	require.Equal(t, "annotation", result.Metadata.Annotations["existing"])
+	// v1alpha1-only metadata fields are carried as v1beta1 annotations.
+	require.Equal(t, map[string]string{
+		"existing":      "annotation",
+		"url":           "https://example.com",
+		"image":         "https://example.com/image.png",
+		"authors":       "Test Author",
+		"documentation": "https://docs.example.com",
+		"source":        "https://github.com/example",
+		"vendor":        "Example Corp",
+	}, result.Metadata.Annotations)
 
 	// AggregateChecksum should move from metadata to build.
 	require.Equal(t, "abc123", result.Build.AggregateChecksum)
 }
 
-func TestV1Alpha1PkgToV1Beta1_LegacyMetadataDoesNotClobberUserAnnotation(t *testing.T) {
+func TestV1Alpha1PkgToV1Beta1_PreservesUserAnnotation(t *testing.T) {
 	t.Parallel()
-	// A user-defined annotation takes precedence over a legacy field during v1beta1 projection.
+	// A user-defined annotation is preserved even when a legacy field has the same name.
 	pkg := v1alpha1.ZarfPackage{
 		Kind: v1alpha1.ZarfPackageConfig,
 		Metadata: v1alpha1.ZarfMetadata{
@@ -1081,16 +1082,14 @@ func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 	// PreventNamespaceOverride=false preserves the v1alpha1 default of allowing overrides.
 	require.True(t, result.AllowsNamespaceOverride())
 
-	// v1alpha1-only metadata fields should be restored from annotations.
-	require.Equal(t, "https://example.com", result.Metadata.URL)
-	require.Equal(t, "https://example.com/image.png", result.Metadata.Image)
-	require.Equal(t, "Test Author", result.Metadata.Authors)
-	require.Equal(t, "https://docs.example.com", result.Metadata.Documentation)
-	require.Equal(t, "https://github.com/example", result.Metadata.Source)
-	require.Equal(t, "Example Corp", result.Metadata.Vendor)
-
-	// Legacy metadata annotations should be consumed, regular annotations preserved.
-	require.Equal(t, map[string]string{"existing": "annotation"}, result.Metadata.Annotations)
+	// v1beta1 annotations remain annotations when converted to v1alpha1.
+	require.Empty(t, result.Metadata.URL)
+	require.Empty(t, result.Metadata.Image)
+	require.Empty(t, result.Metadata.Authors)
+	require.Empty(t, result.Metadata.Documentation)
+	require.Empty(t, result.Metadata.Source)
+	require.Empty(t, result.Metadata.Vendor)
+	require.Equal(t, pkg.Metadata.Annotations, result.Metadata.Annotations)
 
 	// AggregateChecksum should move from build to metadata.
 	require.Equal(t, "abc123", result.Metadata.AggregateChecksum)
@@ -1702,8 +1701,10 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 	require.Equal(t, original.Metadata.Description, result.Metadata.Description)
 	require.Equal(t, original.Metadata.Version, result.Metadata.Version)
 	require.Equal(t, original.Metadata.Architecture, result.Metadata.Architecture)
-	require.Equal(t, original.Metadata.URL, result.Metadata.URL)
-	require.Equal(t, original.Metadata.Authors, result.Metadata.Authors)
+	require.Empty(t, result.Metadata.URL)
+	require.Empty(t, result.Metadata.Authors)
+	require.Equal(t, original.Metadata.URL, result.Metadata.Annotations["url"])
+	require.Equal(t, original.Metadata.Authors, result.Metadata.Annotations["authors"])
 
 	require.Len(t, result.Components, 1)
 	comp := result.Components[0]

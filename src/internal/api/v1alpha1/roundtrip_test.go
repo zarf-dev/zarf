@@ -253,6 +253,7 @@ func TestConvertV1alpha1V1beta1RoundTripFuzz(t *testing.T) {
 
 		v1beta1Pkg := internalv1beta1.PackageToV1beta1(PackageFromV1alpha1(pkg))
 		roundTripped := PackageToV1alpha1(internalv1beta1.PackageFromV1beta1(v1beta1Pkg))
+		require.Equal(t, v1beta1Pkg.Metadata.Annotations, roundTripped.Metadata.Annotations)
 		require.Emptyf(t, cmp.Diff(pkg, roundTripped, v1alpha1V1beta1RoundTripExclusions()...), "cross-version round-trip diverged on iteration %d", i)
 	}
 }
@@ -296,13 +297,15 @@ func populateValidV1alpha1ChartSources(pkg *v1alpha1.ZarfPackage, rng *rand.Rand
 }
 
 // v1alpha1V1beta1RoundTripExclusions lists the v1alpha1 fields that v1beta1 cannot represent.
-// The fuzz test replaces chart sources with schema-valid generated values and ignores only these
-// fields when comparing the result.
+// The fuzz test replaces chart sources with schema-valid generated values and checks annotations
+// separately because legacy metadata fields are projected into the v1beta1 annotations map.
 //
 //   - fields removed from v1beta1: package.constants, package.variables, metadata.yolo,
 //     build.differentialMissing, component.default, component.group, component.dataInjections,
 //     component.deprecatedScripts, component.only.cluster.distros, component.import.name, and
 //     chart.variables.
+//   - metadata.url, image, authors, documentation, source, and vendor become annotations,
+//     and are not restored as fields when converting back to v1alpha1.
 //   - boolean pointer presence is lost: metadata.allowNamespaceOverride is projected to the inverse
 //     PreventNamespaceOverride bool; component.required to optional; chart.schemaValidation to
 //     SkipSchemaValidation; and manifest.template and file.template to EnableTemplating. In each
@@ -320,7 +323,7 @@ func populateValidV1alpha1ChartSources(pkg *v1alpha1.ZarfPackage, rng *rand.Rand
 func v1alpha1V1beta1RoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1alpha1.ZarfPackage{}, "APIVersion", "Kind", "Constants", "Variables"),
-		cmpopts.IgnoreFields(v1alpha1.ZarfMetadata{}, "YOLO", "AllowNamespaceOverride"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfMetadata{}, "URL", "Image", "Authors", "Documentation", "Source", "Vendor", "YOLO", "AllowNamespaceOverride", "Annotations"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfBuildData{}, "DifferentialMissing"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponent{}, "Default", "Required", "DeprecatedGroup", "DataInjections", "DeprecatedScripts", "HealthChecks"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentOnlyCluster{}, "Distros"),
