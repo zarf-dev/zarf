@@ -468,6 +468,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 	pkg := pkgLayout.Definition()
 
 	displayPkg := pkg
+	// Operate on temp package so IsSbomAble still works
 	if connected || pkg.Metadata.YOLO {
 		displayPkg.Components = slices.Clone(pkg.Components)
 		displayPkg.RemoveImages()
