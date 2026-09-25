@@ -93,10 +93,12 @@ func componentToGeneric(c v1beta1.Component) api.Component {
 		Service:      string(c.Service),
 		Repositories: repositoriesToGeneric(c.Repositories),
 		StateAccess:  stateAccessToGeneric(c.StateAccess),
-		Target: api.ComponentTarget{
-			OS:           c.Target.OS,
+		Selector: api.ComponentSelector{
 			Architecture: c.Selector.Architecture,
 			Flavor:       c.Selector.Flavor,
+		},
+		Target: api.ComponentTarget{
+			OS: c.Target.OS,
 		},
 		Import:  importToGeneric(c.Import),
 		Actions: actionsToGeneric(c.Actions),
@@ -411,8 +413,8 @@ func componentFromGeneric(c api.Component, isInit bool) v1beta1.Component {
 		Description: c.Description,
 		Optional:    c.Optional,
 		Selector: v1beta1.ComponentSelector{
-			Architecture: c.Target.Architecture,
-			Flavor:       c.Target.Flavor,
+			Architecture: c.Selector.Architecture,
+			Flavor:       c.Selector.Flavor,
 		},
 		ComponentSpec: v1beta1.ComponentSpec{
 			Repositories: repositoriesFromGeneric(c.Repositories),

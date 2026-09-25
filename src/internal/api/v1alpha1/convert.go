@@ -88,10 +88,12 @@ func componentToGeneric(c v1alpha1.ZarfComponent) api.Component {
 		HealthChecks:   healthChecksToGeneric(c.HealthChecks),
 		Repositories:   reposToGeneric(c.Repos),
 		StateAccess:    stateAccessToGeneric(c.StateAccess),
-		Target: api.ComponentTarget{
-			OS:           c.Only.LocalOS,
+		Selector: api.ComponentSelector{
 			Architecture: c.Only.Cluster.Architecture,
 			Flavor:       c.Only.Flavor,
+		},
+		Target: api.ComponentTarget{
+			OS: c.Only.LocalOS,
 		},
 		Distros: c.Only.Cluster.Distros,
 		Import:  api.ComponentImport{Name: c.Import.Name},
@@ -470,10 +472,10 @@ func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 		Only: v1alpha1.ZarfComponentOnlyTarget{
 			LocalOS: c.Target.OS,
 			Cluster: v1alpha1.ZarfComponentOnlyCluster{
-				Architecture: c.Target.Architecture,
+				Architecture: c.Selector.Architecture,
 				Distros:      c.Distros,
 			},
-			Flavor: c.Target.Flavor,
+			Flavor: c.Selector.Flavor,
 		},
 		Import:  v1alpha1.ZarfComponentImport{Name: c.Import.Name},
 		Actions: actionsFromGeneric(c.Actions),
