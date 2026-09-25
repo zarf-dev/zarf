@@ -98,9 +98,6 @@ func Pull(ctx context.Context, imageList []ImageRequest, destinationDirectory st
 	seenSources := make(map[string]api.ImageSource, len(imageList))
 	for _, request := range imageList {
 		request.Source = request.Source.GetSource()
-		if request.Source != api.ImageSourceRegistry && request.Source != api.ImageSourceDaemon && request.Source != api.ImageSourceRegistryDaemonFallback {
-			return nil, fmt.Errorf("unsupported source %q for image %q", request.Source, request.Image.Reference)
-		}
 		if previous, exists := seenSources[request.Image.Reference]; exists {
 			if previous != request.Source {
 				return nil, fmt.Errorf("image %q has conflicting sources %q and %q", request.Image.Reference, previous, request.Source)
