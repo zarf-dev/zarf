@@ -207,3 +207,56 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateZarfManagedImageSecrets_SkipsCurrentSecret(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	clientset := fake.NewClientset()
+	c := &Cluster{Clientset: clientset}
+
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
+	_, err := clientset.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "good-service", Namespace: namespace.Name},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeNodePort,
+			Ports: []corev1.ServicePort{{
+				NodePort: 30001,
+				Port:     3333,
+			}},
+			ClusterIP: "10.11.12.13",
+		},
+	}
+	_, err = clientset.CoreV1().Services(namespace.Name).Create(ctx, svc, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	s := &state.State{
+		RegistryInfo: state.RegistryInfo{
+			PullUsername: "pull-user",
+			PullPassword: "pull-password",
+			Address:      "127.0.0.1:30001",
+		},
+	}
+	desiredRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, namespace.Name, config.ZarfImagePullSecretName, s.RegistryInfo)
+	require.NoError(t, err)
+	currentRegistrySecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      config.ZarfImagePullSecretName,
+			Namespace: namespace.Name,
+			Labels: map[string]string{
+				state.ZarfManagedByLabel: "zarf",
+			},
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+		Data: desiredRegistrySecret.Data,
+	}
+	_, err = clientset.CoreV1().Secrets(namespace.Name).Create(ctx, currentRegistrySecret, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	actionsBefore := len(clientset.Actions())
+	require.NoError(t, c.UpdateZarfManagedImageSecrets(ctx, s))
+	for _, action := range clientset.Actions()[actionsBefore:] {
+		require.NotEqual(t, "patch", action.GetVerb())
+	}
+}
