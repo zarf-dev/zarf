@@ -184,7 +184,9 @@ func Pull(ctx context.Context, imageList []ImageRequest, destinationDirectory st
 	eg.SetLimit(10)
 	for _, image := range imagesWithOverride {
 		if image.source == api.ImageSourceDaemon {
+			imageListLock.Lock()
 			dockerFallBackImages = append(dockerFallBackImages, image)
+			imageListLock.Unlock()
 			continue
 		}
 		eg.Go(func() error {
