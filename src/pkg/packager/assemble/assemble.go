@@ -119,7 +119,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		}
 	}
 
-	componentImages := []transform.Image{}
+	componentImages := []images.ImageRequest{}
 	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
@@ -139,10 +139,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 			if err != nil {
 				return nil, fmt.Errorf("failed to create ref for image %s: %w", image.Name, err)
 			}
-			if slices.Contains(componentImages, refInfo) {
-				continue
-			}
-			componentImages = append(componentImages, refInfo)
+			componentImages = append(componentImages, images.ImageRequest{Image: refInfo, Source: image.Source.GetSource()})
 		}
 	}
 	sbomImageList := []transform.Image{}
