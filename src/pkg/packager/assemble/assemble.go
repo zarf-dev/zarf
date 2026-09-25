@@ -239,9 +239,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 
 // AssembleSkeletonOptions are the options for creating a skeleton package.
 type AssembleSkeletonOptions struct {
-	// Deprecated: use package create signing options before publishing.
+	// Deprecated: use PackageLayout.SignPackage or the sign command.
 	SigningKeyPath string
-	// Deprecated: use package create signing options before publishing.
+	// Deprecated: use PackageLayout.SignPackage or the sign command.
 	SigningKeyPassword   string
 	Flavor               string
 	WithBuildMachineInfo bool
