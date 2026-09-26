@@ -321,20 +321,24 @@ func flattenListResource(obj *unstructured.Unstructured, addResource func(*unstr
 	})
 }
 
-// podTemplatePath is where a workload keeps the labels of the pod template it creates pods from.
-var podTemplatePath = []string{"spec", "template", "metadata", "labels"}
-
-// podTemplatePathsByKind holds the kinds that keep their pod template somewhere else, so a kind
-// is listed only when listing it changes the answer.
-var podTemplatePathsByKind = map[schema.GroupKind][]string{
-	{Group: "batch", Kind: "CronJob"}: {"spec", "jobTemplate", "spec", "template", "metadata", "labels"},
+// podTemplateKinds maps the kubernetes kinds that create pods to where their pod template keeps its
+// labels. Only these are labeled: anything may sit at spec.template on a custom resource, and a chart
+// that wants one labeled can set zarf.dev/package={{ .Pkg.Metadata.Name }} itself.
+var podTemplateKinds = map[schema.GroupKind][]string{
+	{Group: "apps", Kind: "Deployment"}:        {"spec", "template", "metadata", "labels"},
+	{Group: "apps", Kind: "StatefulSet"}:       {"spec", "template", "metadata", "labels"},
+	{Group: "apps", Kind: "DaemonSet"}:         {"spec", "template", "metadata", "labels"},
+	{Group: "apps", Kind: "ReplicaSet"}:        {"spec", "template", "metadata", "labels"},
+	{Group: "batch", Kind: "Job"}:              {"spec", "template", "metadata", "labels"},
+	{Group: "batch", Kind: "CronJob"}:          {"spec", "jobTemplate", "spec", "template", "metadata", "labels"},
+	{Group: "", Kind: "ReplicationController"}: {"spec", "template", "metadata", "labels"},
 }
 
 // addPodTemplateLabels adds the package labels to the pod template of a workload resource
 func (r *renderer) addPodTemplateLabels(obj *unstructured.Unstructured) error {
-	path, ok := podTemplatePathsByKind[obj.GroupVersionKind().GroupKind()]
-	if !ok {
-		path = podTemplatePath
+	path, createsPods := podTemplateKinds[obj.GroupVersionKind().GroupKind()]
+	if !createsPods {
+		return nil
 	}
 	labels, found := ensureLabelsAt(obj, path)
 	if !found {

@@ -965,22 +965,20 @@ func TestEditHelmResourcesLeavesWhatIsNotAPodTemplate(t *testing.T) {
 	}{
 		{
 			name: "spec.template holds a string",
-			manifest: `apiVersion: infinispan.org/v2alpha1
-kind: Cache
+			manifest: `apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: example-cache
+  name: string-template
 spec:
-  template: |
-    a config blob in whatever syntax this resource speaks,
-    which has nothing to do with a pod template
+  template: a string where a pod template belongs
 `,
 		},
 		{
 			name: "spec.template holds a list",
-			manifest: `apiVersion: example.com/v1
-kind: Widget
+			manifest: `apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: repro
+  name: list-template
 spec:
   template:
     - first
@@ -989,10 +987,10 @@ spec:
 		},
 		{
 			name: "spec.template.metadata holds a string",
-			manifest: `apiVersion: example.com/v1
-kind: Widget
+			manifest: `apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: repro
+  name: string-metadata
 spec:
   template:
     metadata: a name for the template, not an ObjectMeta
@@ -1035,8 +1033,8 @@ func TestLabelPathsAddressAnObjectMeta(t *testing.T) {
 	// ensureLabelsAt creates the last objectMetaTail segments and requires the rest to exist, which
 	// is only the right split for a path ending in an ObjectMeta's labels. One ending anywhere else
 	// would have empty maps written into it and the wrong thing labeled, silently.
-	paths := [][]string{podTemplatePath}
-	for _, path := range podTemplatePathsByKind {
+	var paths [][]string
+	for _, path := range podTemplateKinds {
 		paths = append(paths, path)
 	}
 	for _, labelPaths := range agentMutatedKinds {
@@ -1067,18 +1065,18 @@ func TestEnsureLabelsAtPathTooShort(t *testing.T) {
 	}
 }
 
-func TestEditHelmResourcesLabelsPodTemplatesOfAnyKind(t *testing.T) {
+func TestEditHelmResourcesOnlyLabelsWorkloadKinds(t *testing.T) {
 	t.Parallel()
 
-	// a pod template is labeled wherever one is found, not only on kubernetes' own workload kinds,
-	// so an operator's workload gets the package label its pods can be found by
+	// only the kubernetes kinds that create pods are labeled. a custom resource is left as the chart
+	// wrote it whether spec.template holds a real pod template or something else entirely, and a
+	// chart that wants one labeled sets zarf.dev/package itself.
 	tests := []struct {
 		name     string
 		manifest string
-		expected map[string]string
 	}{
 		{
-			name: "argo rollout",
+			name: "argo rollout holding a real pod template",
 			manifest: `apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
@@ -1089,7 +1087,6 @@ spec:
       labels:
         app: mine
 `,
-			expected: map[string]string{"app": "mine", "zarf.dev/package": "test-pkg"},
 		},
 		{
 			name: "openshift deploymentconfig",
@@ -1103,19 +1100,18 @@ spec:
       labels:
         app: mine
 `,
-			expected: map[string]string{"app": "mine", "zarf.dev/package": "test-pkg"},
 		},
 		{
-			name: "custom resource whose spec.template is a pod template",
-			manifest: `apiVersion: example.com/v1
-kind: Widget
+			name: "spec.template holds a config blob, not a pod template",
+			manifest: `apiVersion: infinispan.org/v2alpha1
+kind: Cache
 metadata:
-  name: widget
+  name: example-cache
 spec:
-  template:
-    metadata: {}
+  template: |
+    a config blob in whatever syntax this resource speaks,
+    which has nothing to do with a pod template
 `,
-			expected: map[string]string{"zarf.dev/package": "test-pkg"},
 		},
 	}
 
@@ -1125,12 +1121,35 @@ spec:
 
 			docs := renderManifest(t, newTestRenderer(), tt.manifest)
 			require.Len(t, docs, 1)
-			labels, found, err := unstructured.NestedStringMap(docs[0].Object, "spec", "template", "metadata", "labels")
-			require.NoError(t, err)
-			require.True(t, found)
-			require.Equal(t, tt.expected, labels)
+			// the resource itself is still labeled, only its spec is left alone
+			require.Equal(t, map[string]string{"zarf.dev/package": "test-pkg"}, docs[0].GetLabels())
+
+			original := &unstructured.Unstructured{}
+			require.NoError(t, yaml.Unmarshal([]byte(tt.manifest), original))
+			require.Equal(t, original.Object["spec"], docs[0].Object["spec"])
 		})
 	}
+}
+
+func TestPodTemplateKindsAreTheKubernetesWorkloads(t *testing.T) {
+	t.Parallel()
+
+	// membership is now the whole behavior, so pin it: dropping a kind silently stops labeling its
+	// pods, and adding one reaches into a spec zarf has decided not to touch
+	var kinds []schema.GroupKind
+	for kind := range podTemplateKinds {
+		kinds = append(kinds, kind)
+	}
+
+	require.ElementsMatch(t, []schema.GroupKind{
+		{Group: "apps", Kind: "Deployment"},
+		{Group: "apps", Kind: "StatefulSet"},
+		{Group: "apps", Kind: "DaemonSet"},
+		{Group: "apps", Kind: "ReplicaSet"},
+		{Group: "batch", Kind: "Job"},
+		{Group: "batch", Kind: "CronJob"},
+		{Group: "", Kind: "ReplicationController"},
+	}, kinds)
 }
 
 func TestEditHelmResourcesConnectStrings(t *testing.T) {
