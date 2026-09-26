@@ -307,7 +307,7 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 			if err != nil {
 				return nil, err
 			}
-			yamls = slices.DeleteFunc(yamls, isHelmTestResource)
+			yamls = scannableResources(yamls)
 			resources = append(resources, yamls...)
 			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
 			chartTarball := filepath.Join(chartPath, layout.ChartArchiveName(zarfChart.Name, zarfChart.LegacyVersion))
@@ -351,7 +351,7 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 				if err != nil {
 					return nil, err
 				}
-				yamls = slices.DeleteFunc(yamls, isHelmTestResource)
+				yamls = scannableResources(yamls)
 				resources = append(resources, yamls...)
 
 				// Check if the --why flag is set and if it is process the manifests
@@ -479,6 +479,51 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 	}
 
 	return componentImageScans, nil
+}
+
+// scannableResources returns the resources to scan for images: helm test documents dropped, then
+// every list replaced by the resources it holds. helm reads the hook annotation off each document it
+// renders, so only a whole document can be a test, never an item inside a list.
+func scannableResources(resources []*unstructured.Unstructured) []*unstructured.Unstructured {
+	scannable := make([]*unstructured.Unstructured, 0, len(resources))
+	for _, resource := range resources {
+		if isHelmTestResource(resource) {
+			continue
+		}
+		scannable = append(scannable, flattenListResource(resource)...)
+	}
+	return scannable
+}
+
+// flattenListResource returns the resources a list document holds, or the document itself when it is
+// not one. A document that only looks like a list is kept as the one document it is: IsList reports
+// an items array and nothing more, and a custom resource may keep anything there.
+func flattenListResource(resource *unstructured.Unstructured) []*unstructured.Unstructured {
+	// IsList is the check helm's resource builder uses to decide what to flatten, so zarf and helm
+	// agree on which documents hold more than one resource
+	if !resource.IsList() {
+		return []*unstructured.Unstructured{resource}
+	}
+	var items []*unstructured.Unstructured
+	err := resource.EachListItem(func(item runtime.Object) error {
+		child, ok := item.(*unstructured.Unstructured)
+		if !ok {
+			return fmt.Errorf("unexpected item of type %T in %s", item, resource.GetKind())
+		}
+		items = append(items, child)
+		return nil
+	})
+	if err != nil {
+		// an items array that was never a list of resources is scanned as the one document it is,
+		// which is the answer zarf gave before it read lists at all
+		return []*unstructured.Unstructured{resource}
+	}
+	var flattened []*unstructured.Unstructured
+	for _, item := range items {
+		// an item can be a list of its own, so keep going until what is left is a resource
+		flattened = append(flattened, flattenListResource(item)...)
+	}
+	return flattened
 }
 
 func isHelmTestResource(resource *unstructured.Unstructured) bool {
