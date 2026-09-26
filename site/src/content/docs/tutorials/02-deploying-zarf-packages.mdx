@@ -8,7 +8,7 @@ import { Steps } from '@astrojs/starlight/components';
 
 ## Introduction
 
-In this tutorial, we are going to deploy the WordPress package onto your cluster using the package we created in the earlier [create a package](/tutorials/0-creating-a-zarf-package/) tutorial and the cluster we initialized in the [initialize a k8s cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial. We will be leveraging that past work to go the extra step of deploying an application we packaged onto our cluster with the `zarf package deploy` command.
+In this tutorial, we are going to deploy the WordPress package onto your cluster using the package we created in the earlier [create a package](/tutorials/00-creating-a-zarf-package/) tutorial and the cluster we initialized in the [initialize a k8s cluster](/tutorials/01-initializing-a-k8s-cluster/) tutorial. We will be leveraging that past work to go the extra step of deploying an application we packaged onto our cluster with the `zarf package deploy` command.
 
 ## System Requirements
 
@@ -19,8 +19,8 @@ In this tutorial, we are going to deploy the WordPress package onto your cluster
 Prior to this tutorial you'll want to have a built package and a working cluster with Zarf initialized.
 
 - Zarf binary installed on your $PATH: ([Installing Zarf](/getting-started/install/))
-- [An initialized cluster](/tutorials/1-initializing-a-k8s-cluster/)
-- The [WordPress package created](/tutorials/0-creating-a-zarf-package/)
+- [An initialized cluster](/tutorials/01-initializing-a-k8s-cluster/)
+- The [WordPress package created](/tutorials/00-creating-a-zarf-package/)
 
 ## Deploying the WordPress package
 
@@ -42,7 +42,7 @@ Prior to this tutorial you'll want to have a built package and a working cluster
 
    :::
 
-2. You will be presented with a chance to review the SBOMs for the package along with its definition followed by a series of prompts for each variable we setup in the [previous tutorial](/tutorials/0-creating-a-zarf-package/#setting-up-variables).  To confirm package deployment press `y` then `enter` and input a value for each variable when prompted followed by `enter` for them as well.
+2. You will be presented with a chance to review the SBOMs for the package along with its definition followed by a series of prompts for each variable we setup in the [previous tutorial](/tutorials/00-creating-a-zarf-package/#setting-up-variables).  To confirm package deployment press `y` then `enter` and input a value for each variable when prompted followed by `enter` for them as well.
 
    :::tip
 
@@ -52,7 +52,7 @@ Prior to this tutorial you'll want to have a built package and a working cluster
 
    <iframe src="/tutorials/package_deploy_wordpress_bottom.html" width="100%" height="690px"></iframe>
 
-3. Because we included the connect services in the [previous tutorial](/tutorials/0-creating-a-zarf-package/#setting-up-a-zarf-connect-service) we can quickly test our package in a browser with `zarf connect wordpress-blog`.
+3. Because we included the connect services in the [previous tutorial](/tutorials/00-creating-a-zarf-package/#setting-up-a-zarf-connect-service) we can quickly test our package in a browser with `zarf connect wordpress-blog`.
 
    ![Zarf Connect WordPress](../../../assets/tutorials/wordpress_connected.png)
 
@@ -98,8 +98,8 @@ If you receive this error, either you don't have a Kubernetes cluster, your clus
 
 If you need to setup a cluster, you can perform the following.
 
-1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](/tutorials/4-creating-a-k8s-cluster-with-zarf/) tutorial.
-2. Perform the [Initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial.
+1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](/tutorials/04-creating-a-k8s-cluster-with-zarf/) tutorial.
+2. Perform the [Initialize a cluster](/tutorials/01-initializing-a-k8s-cluster/) tutorial.
 
 After that you can try deploying the package again.
 
@@ -111,6 +111,6 @@ After that you can try deploying the package again.
 
 :::note[Remediation]
 
-If you receive this error when zarf is attempting to deploy a package, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this tutorial.  Perform the [Initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial, then try again.
+If you receive this error when zarf is attempting to deploy a package, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this tutorial.  Perform the [Initialize a cluster](/tutorials/01-initializing-a-k8s-cluster/) tutorial, then try again.
 
 :::

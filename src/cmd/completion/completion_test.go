@@ -59,34 +59,15 @@ func TestImageVolumeMaxLayers(t *testing.T) {
 	values := requireCompletionPairs(t, ImageVolumeMaxLayers())
 	require.Equal(t, []string{"0", "127"}, values)
 
-	// Same agreement the other helpers check, but image.New is what validates
-	// a layer cap rather than a Validate function: every suggested value has
-	// to build a Volume, including the 0 that means "unlimited" to the flag
-	// and "unset" to image.Options.
+	// The other helpers can check their suggestions against a Validate
+	// function; a layer cap has none, since image.New is what validates one.
+	// All this package can promise is that every suggestion is a uint8 the
+	// --max-layers flag will accept - that each one also builds a Volume is
+	// checked where the flag is translated into image.Options, in cmd/dev.
 	for _, v := range values {
-		n, err := strconv.ParseUint(v, 10, 8)
+		_, err := strconv.ParseUint(v, 10, 8)
 		require.NoError(t, err, "suggested %q should parse as a uint8", v)
-
-		iv, err := image.New(t.TempDir(), ImageVolumeOptions(uint8(n)))
-		require.NoError(t, err, "suggested %q", v)
-		require.NoError(t, iv.Clean())
 	}
-}
-
-// TestImageVolumeOptions pins the translation the command relies on: the flag
-// treats 0 as "no cap", image.Options treats 0 as "use the default", and
-// setting both MaxLayers and UnlimitedLayers is an error, so the mapping has
-// to pick exactly one of them.
-func TestImageVolumeOptions(t *testing.T) {
-	t.Parallel()
-
-	unlimited := ImageVolumeOptions(UnlimitedMaxLayers)
-	require.True(t, unlimited.UnlimitedLayers)
-	require.Zero(t, unlimited.MaxLayers)
-
-	capped := ImageVolumeOptions(42)
-	require.False(t, capped.UnlimitedLayers)
-	require.Equal(t, uint8(42), capped.MaxLayers)
 }
 
 func TestArchitectures(t *testing.T) {
