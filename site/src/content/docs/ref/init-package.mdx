@@ -173,6 +173,86 @@ package:
 
 Notably, the `REGISTRY_AFFINITY_CUSTOM` variable overrides the default pod anti-affinity, and `REGISTRY_HPA_AUTO_SIZE` automatically adjusts the minimum and maximum replicas for the registry based on the number of nodes in the cluster. If you prefer to manually set the minimum and maximum replicas, you can use `REGISTRY_HPA_MIN` and `REGISTRY_HPA_MAX` to specify the desired values.
 
+##### Using an S3-Compatible Storage Backend
+
+Instead of a `ReadWriteMany` volume, you can back the registry with S3-compatible object storage. The registry image ships with the [`s3` storage driver](https://distribution.github.io/distribution/storage-drivers/s3/), so every replica reads and writes the same bucket. This removes the shared-volume requirement, which is useful in environments where a `ReadWriteMany` storage class is unavailable or where an NFS-backed one has proven unreliable.
+
+No custom init package is required. The default registry chart takes its storage driver from environment variables, so you can switch to S3 entirely through deploy-time [config](/ref/config-files/): disable the PVC with `REGISTRY_PVC_ENABLED` and pass the driver settings through `REGISTRY_EXTRA_ENVS`.
+
+On EKS, the preferred setup is [IRSA](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) - no credentials appear in the pod spec, and Zarf creates a service account annotated with the IAM role. `REGISTRY_CREATE_SERVICE_ACCOUNT` must be `"true"` for the annotations to be applied:
+
+```yaml
+# zarf-config.yaml
+package:
+  deploy:
+    set:
+      REGISTRY_PVC_ENABLED: "false"
+      REGISTRY_CREATE_SERVICE_ACCOUNT: "true"
+      REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS: |
+        eks.amazonaws.com/role-arn: arn:aws:iam::111122223333:role/zarf-registry-s3
+      REGISTRY_EXTRA_ENVS: |
+        - name: REGISTRY_STORAGE
+          value: "s3"
+        - name: REGISTRY_STORAGE_S3_REGION
+          value: "us-east-1"
+        - name: REGISTRY_STORAGE_S3_BUCKET
+          value: "my-zarf-registry"
+```
+
+The registry reads any `REGISTRY_STORAGE_S3_*` environment variable as the matching [`s3` driver parameter](https://distribution.github.io/distribution/storage-drivers/s3/) - the full parameter list, and the IAM permissions the credentials need, are documented there.
+
+Outside of EKS, or with a non-AWS S3-compatible backend such as MinIO, pass static credentials and the endpoint through `REGISTRY_EXTRA_ENVS` instead. When `REGISTRY_STORAGE_S3_REGIONENDPOINT` is set, the registry also requires `REGISTRY_STORAGE_S3_FORCEPATHSTYLE` to be `"true"`; leave both unset when using Amazon S3 itself:
+
+```yaml
+# zarf-config.yaml
+package:
+  deploy:
+    set:
+      REGISTRY_PVC_ENABLED: "false"
+      REGISTRY_EXTRA_ENVS: |
+        - name: REGISTRY_STORAGE
+          value: "s3"
+        - name: REGISTRY_STORAGE_S3_REGION
+          value: "us-east-1"
+        - name: REGISTRY_STORAGE_S3_BUCKET
+          value: "my-zarf-registry"
+        - name: REGISTRY_STORAGE_S3_REGIONENDPOINT
+          value: "https://minio.example.com:9000"
+        - name: REGISTRY_STORAGE_S3_FORCEPATHSTYLE
+          value: "true"
+        - name: REGISTRY_STORAGE_S3_ACCESSKEY
+          value: "<access-key>"
+        - name: REGISTRY_STORAGE_S3_SECRETKEY
+          value: "<secret-key>"
+```
+
+Entries in `REGISTRY_EXTRA_ENVS` are rendered verbatim into the registry container's environment, so plain `value:` credentials end up in the deployment spec. To keep them out of it, store the keys in a Kubernetes Secret in the `zarf` namespace (created before `zarf init`) and reference them with `valueFrom` instead:
+
+```yaml
+        - name: REGISTRY_STORAGE_S3_ACCESSKEY
+          valueFrom:
+            secretKeyRef:
+              name: zarf-registry-s3-creds
+              key: access-key
+        - name: REGISTRY_STORAGE_S3_SECRETKEY
+          valueFrom:
+            secretKeyRef:
+              name: zarf-registry-s3-creds
+              key: secret-key
+```
+
+:::caution
+
+`REGISTRY_PVC_ENABLED` must be set to `"false"`. When the PVC is enabled the chart also sets the filesystem storage driver (`REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY`), and the registry refuses to start if more than one storage driver is configured.
+
+:::
+
+:::note
+
+Because the registry no longer relies on a shared volume, the default pod anti-affinity from the `ReadWriteMany` example above is not required for S3. Scaling with `REGISTRY_HPA_AUTO_SIZE`, `REGISTRY_HPA_MIN`, and `REGISTRY_HPA_MAX` works the same way.
+
+:::
+
 ### `zarf-agent`
 
 {/* TODO: document and flesh out how the mutations operate for the agent */}
