@@ -364,6 +364,11 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 	}
 	onCreate := component.Actions.OnCreate
 	defer func() {
+		if err == nil {
+			if successErr := actions.Run(ctx, packagePath, onCreate.OnSuccess, actions.RunOptions{DefaultConfig: onCreate.Defaults}); successErr != nil {
+				err = fmt.Errorf("unable to run component success action: %w", successErr)
+			}
+		}
 		if err != nil {
 			if failureErr := actions.Run(ctx, packagePath, onCreate.OnFailure, actions.RunOptions{DefaultConfig: onCreate.Defaults}); failureErr != nil {
 				err = errors.Join(err, fmt.Errorf("unable to run component failure action: %w", failureErr))
@@ -529,9 +534,6 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 
 	if err := actions.Run(ctx, packagePath, onCreate.After, actions.RunOptions{DefaultConfig: onCreate.Defaults}); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
-	}
-	if err := actions.Run(ctx, packagePath, onCreate.OnSuccess, actions.RunOptions{DefaultConfig: onCreate.Defaults}); err != nil {
-		return fmt.Errorf("unable to run component success action: %w", err)
 	}
 
 	// Write the tar component.
