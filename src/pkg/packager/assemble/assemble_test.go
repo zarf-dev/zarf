@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -556,6 +557,45 @@ components:
 			}
 		})
 	}
+}
+
+func TestAssemblePackageCleansStagingDirectoryOnSuccessActionFailure(t *testing.T) {
+	// This test configures a process-global temporary directory.
+	tempDirectory := t.TempDir()
+	originalTempDirectory := config.CommonOptions.TempDirectory
+	config.CommonOptions.TempDirectory = tempDirectory
+	t.Cleanup(func() {
+		config.CommonOptions.TempDirectory = originalTempDirectory
+	})
+
+	ctx := testutil.TestContext(t)
+	sourcePath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
+	require.NoError(t, err)
+	dir := t.TempDir()
+	definition := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: create-actions
+components:
+  - name: component
+    files:
+      - source: %q
+        destination: data.txt
+    actions:
+      onCreate:
+        onSuccess:
+          - cmd: exit 1
+`, sourcePath)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+
+	loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+	require.NoError(t, err)
+	_, err = AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+	require.ErrorContains(t, err, "unable to run component success action")
+
+	entries, err := os.ReadDir(tempDirectory)
+	require.NoError(t, err)
+	require.Empty(t, entries)
 }
 
 func TestAssemblePackageWritesResolvedValues(t *testing.T) {
