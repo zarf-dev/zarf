@@ -474,6 +474,90 @@ func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	require.NoError(t, err)
 }
 
+func TestAssemblePackageOnCreateOutcomeActions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		before      string
+		onSuccess   string
+		wantError   string
+		wantBefore  bool
+		wantSuccess bool
+		wantFailure bool
+	}{
+		{
+			name:        "successful creation",
+			before:      "echo before > before.txt",
+			onSuccess:   "echo success > success.txt",
+			wantBefore:  true,
+			wantSuccess: true,
+		},
+		{
+			name:        "failed before action",
+			before:      "exit 1",
+			onSuccess:   "echo success > success.txt",
+			wantError:   "unable to run component before action",
+			wantFailure: true,
+		},
+		{
+			name:        "failed success action",
+			before:      "echo before > before.txt",
+			onSuccess:   "exit 1",
+			wantError:   "unable to run component success action",
+			wantBefore:  true,
+			wantFailure: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			dir := t.TempDir()
+			definition := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: create-actions
+components:
+  - name: component
+    actions:
+      onCreate:
+        before:
+          - cmd: %q
+        onSuccess:
+          - cmd: %q
+        onFailure:
+          - cmd: echo failure > failure.txt
+`, tt.before, tt.onSuccess)
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+
+			loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+			require.NoError(t, err)
+			pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+			if tt.wantError != "" {
+				require.ErrorContains(t, err, tt.wantError)
+			} else {
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			}
+
+			for name, want := range map[string]bool{
+				"before.txt":  tt.wantBefore,
+				"success.txt": tt.wantSuccess,
+				"failure.txt": tt.wantFailure,
+			} {
+				path := filepath.Join(dir, name)
+				if want {
+					require.FileExists(t, path)
+				} else {
+					require.NoFileExists(t, path)
+				}
+			}
+		})
+	}
+}
+
 func TestAssemblePackageWritesResolvedValues(t *testing.T) {
 	t.Parallel()
 
