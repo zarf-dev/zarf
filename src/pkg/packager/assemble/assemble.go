@@ -362,6 +362,14 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 	if err != nil {
 		return err
 	}
+	onCreate := component.Actions.OnCreate
+	defer func() {
+		if err != nil {
+			if failureErr := actions.Run(ctx, packagePath, onCreate.OnFailure, actions.RunOptions{DefaultConfig: onCreate.Defaults}); failureErr != nil {
+				err = errors.Join(err, fmt.Errorf("unable to run component failure action: %w", failureErr))
+			}
+		}
+	}()
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -375,7 +383,6 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 		return err
 	}
 
-	onCreate := component.Actions.OnCreate
 	if err := actions.Run(ctx, packagePath, onCreate.Before, actions.RunOptions{DefaultConfig: onCreate.Defaults}); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
@@ -522,6 +529,9 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 
 	if err := actions.Run(ctx, packagePath, onCreate.After, actions.RunOptions{DefaultConfig: onCreate.Defaults}); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
+	}
+	if err := actions.Run(ctx, packagePath, onCreate.OnSuccess, actions.RunOptions{DefaultConfig: onCreate.Defaults}); err != nil {
+		return fmt.Errorf("unable to run component success action: %w", err)
 	}
 
 	// Write the tar component.
