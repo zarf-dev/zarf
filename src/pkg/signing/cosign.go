@@ -67,13 +67,8 @@ type SignBlobOptions struct {
 	Password  string
 	PassFunc  cosign.PassFunc
 	Overwrite bool
-	// Keyless gates zarf-specific sign-side guards on top of cosign's behavior.
-	// When true, --signing-key is no longer required and ShouldSign returns true
-	// even without explicit Key/IDToken/Sk material — cosign resolves identity
-	// via Fulcio/OIDC at sign time.
-	Keyless bool
 
-	// Deprecated: use Key. Removed in v1.0.
+	// Deprecated: use Key. Removed in a future version.
 	KeyRef string
 }
 
@@ -92,9 +87,9 @@ type VerifyBlobOptions struct {
 	TempDir string
 	Timeout time.Duration
 
-	// Deprecated: use Key. Removed in v1.0.
+	// Deprecated: use Key. Removed in a future version.
 	KeyRef string
-	// Deprecated: use Signature. Removed in v1.0.
+	// Deprecated: use Signature. Removed in a future version.
 	SigRef string
 }
 
@@ -125,13 +120,6 @@ type VerifyManifestOptions struct {
 	InsecureIgnoreTlog          bool
 	UseSignedTimestamps         bool
 	Timeout                     time.Duration
-}
-
-// ShouldSign returns true if any signing key material is configured.
-// KeyRef is included for backward compatibility; it's synced to Key in
-// CosignSignBlobWithOptions.
-func (opts SignBlobOptions) ShouldSign() bool {
-	return opts.Key != "" || opts.KeyRef != "" || opts.Fulcio.IdentityToken != "" || opts.SecurityKey.Use || opts.Keyless
 }
 
 // CheckOverwrite errors if any output file exists and Overwrite is false.

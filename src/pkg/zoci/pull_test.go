@@ -283,7 +283,7 @@ components:
 	signOpts.Key = "testdata/cosign.key"
 	packagePath, err := packager.Create(ctx, dir, tmpdir, packager.CreateOptions{
 		CachePath:       tmpdir,
-		SignBlobOptions: signOpts,
+		SignBlobOptions: &signOpts,
 	})
 	require.NoError(t, err)
 
