@@ -772,6 +772,19 @@ func TestSignConfirmNotViperBound(t *testing.T) {
 	require.Equal(t, "false", f.DefValue, "--confirm must default to false and must not be bound to viper")
 }
 
+func TestComponentPublishConfirm(t *testing.T) {
+	t.Parallel()
+
+	cmd := newComponentPublishCommand(newTestViper())
+	flag := cmd.Flags().Lookup("confirm")
+	require.NotNil(t, flag)
+	require.Equal(t, "false", flag.DefValue)
+
+	o := componentPublishOptions{confirm: true}
+	signOpts := o.buildSignManifestOptions(nil, newTestViper(), VPkgSignTlogUpload, o.confirm)
+	require.True(t, signOpts.SkipConfirmation)
+}
+
 func TestSignTlogUploadNotDefaulted(t *testing.T) {
 	t.Parallel()
 	v := newTestViper()

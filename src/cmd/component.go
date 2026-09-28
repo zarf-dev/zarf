@@ -37,6 +37,8 @@ func newComponentCommand() *cobra.Command {
 type componentPublishOptions struct {
 	ociConcurrency int
 	retries        int
+	confirm        bool
+	packageSigningFlags
 }
 
 func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
@@ -51,6 +53,23 @@ func newComponentPublishCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
+	signingFlags := newSigningFlagSet(v, &o.packageSigningFlags, packageSigningViperKeys{
+		signingKey:         VPkgSignSigningKey,
+		signingKeyPassword: VPkgSignSigningKeyPassword,
+		keyless:            VPkgSignKeyless,
+		identityToken:      VPkgSignIdentityToken,
+		fulcioURL:          VPkgSignFulcioURL,
+		fulcioAuthFlow:     VPkgSignFulcioAuthFlow,
+		oidcIssuer:         VPkgSignOIDCIssuer,
+		oidcClientID:       VPkgSignOIDCClientID,
+		rekorURL:           VPkgSignRekorURL,
+		tlogUpload:         VPkgSignTlogUpload,
+		tsaServerURL:       VPkgSignTSAServerURL,
+	}, lang.CmdPackageSignFlagSigningKey, lang.CmdPackageSignFlagSigningKeyPass)
+	annotateFlagGroup(signingFlags, signingFlagGroupTitle)
+	cmd.Flags().AddFlagSet(signingFlags)
+	cmd.Flags().BoolVar(&o.confirm, "confirm", false, lang.CmdPackageSignFlagConfirm)
+	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
 	return cmd
 }
 
@@ -67,11 +86,19 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 	if err := destination.ValidateRegistry(); err != nil {
 		return err
 	}
-
+	var signOpts *signing.SignManifestOptions
+	if o.keyless || o.signingKeyPath != "" || o.identityToken != "" {
+		if err := o.validateSigningMode(); err != nil {
+			return err
+		}
+		opts := o.buildSignManifestOptions(cmd, getViper(), VPkgSignTlogUpload, o.confirm)
+		signOpts = &opts
+	}
 	_, err := component.Publish(cmd.Context(), args[0], destination, component.PublishOptions{
-		OCIConcurrency: o.ociConcurrency,
-		Retries:        o.retries,
-		RemoteOptions:  defaultRemoteOptions(),
+		OCIConcurrency:      o.ociConcurrency,
+		Retries:             o.retries,
+		SignManifestOptions: signOpts,
+		RemoteOptions:       defaultRemoteOptions(),
 	})
 	return err
 }
