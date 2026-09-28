@@ -46,21 +46,25 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// AssembleOptions are the options for creating a package from a package object
+// AssembleOptions are the options for creating a package from a package object.
 type AssembleOptions struct {
-	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
+	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified.
 	Flavor string
-	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry
-	RegistryOverrides  []images.RegistryOverride
-	SigningKeyPath     string
+	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry.
+	RegistryOverrides []images.RegistryOverride
+	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
+	SignBlobOptions signing.SignBlobOptions
+	// Deprecated: populate SignBlobOptions.Key directly.
+	SigningKeyPath string
+	// Deprecated: populate SignBlobOptions.Password directly.
 	SigningKeyPassword string
 	SkipSBOM           bool
 	// When DifferentialPackage is set the zarf package created only includes images and repos not in the differential package.
 	DifferentialPackage api.Package
 	OCIConcurrency      int
-	// CachePath is the path to the Zarf cache, used to cache images and charts
+	// CachePath is the path to the Zarf cache, used to cache images and charts.
 	CachePath string
-	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata
+	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata.
 	WithBuildMachineInfo bool
 	types.RemoteOptions
 }
@@ -219,22 +223,25 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 
-	// Sign the package with the provided options
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = opts.SigningKeyPath
-	signOpts.Password = opts.SigningKeyPassword
+	if opts.SigningKeyPath != "" && opts.SignBlobOptions.Key == "" {
+		opts.SignBlobOptions.Key = opts.SigningKeyPath
+	}
+	if opts.SigningKeyPassword != "" && opts.SignBlobOptions.Password == "" {
+		opts.SignBlobOptions.Password = opts.SigningKeyPassword
+	}
 
-	err = pkgLayout.SignPackage(ctx, signOpts)
-	if err != nil {
+	if err := pkgLayout.SignPackage(ctx, opts.SignBlobOptions); err != nil {
 		return nil, err
 	}
 
 	return pkgLayout, nil
 }
 
-// AssembleSkeletonOptions are the options for creating a skeleton package
+// AssembleSkeletonOptions are the options for creating a skeleton package.
 type AssembleSkeletonOptions struct {
-	SigningKeyPath       string
+	// Deprecated: use package create signing options before publishing.
+	SigningKeyPath string
+	// Deprecated: use package create signing options before publishing.
 	SigningKeyPassword   string
 	Flavor               string
 	WithBuildMachineInfo bool
@@ -304,13 +311,10 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, fmt.Errorf("unable to load skeleton: %w", err)
 	}
 
-	// Sign the package with the provided options
 	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = opts.SigningKeyPath
 	signOpts.Password = opts.SigningKeyPassword
-
-	err = pkgLayout.SignPackage(ctx, signOpts)
-	if err != nil {
+	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
 		return nil, err
 	}
 
