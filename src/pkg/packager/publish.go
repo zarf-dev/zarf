@@ -113,7 +113,7 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 type PublishPackageOptions struct {
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
-	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
+	// Deprecated: sign the layout explicitly with PackageLayout.SignPackage before publishing.
 	SignBlobOptions signing.SignBlobOptions
 	// Retries specifies the number of retries to use
 	Retries int
