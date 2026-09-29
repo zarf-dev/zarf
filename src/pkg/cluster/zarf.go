@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -18,6 +19,8 @@ import (
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -48,6 +51,7 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]state.Deployed
 			errs = append(errs, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
 			continue
 		}
+		warnOnUnrecognizedPackageAPIVersions(ctx, deployedPackage)
 		deployedPackages = append(deployedPackages, deployedPackage)
 	}
 
@@ -79,7 +83,22 @@ func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, op
 	if err != nil {
 		return nil, err
 	}
+	warnOnUnrecognizedPackageAPIVersions(ctx, *deployedPackage)
 	return deployedPackage, nil
+}
+
+func warnOnUnrecognizedPackageAPIVersions(ctx context.Context, deployedPackage state.DeployedPackage) {
+	var unknown []string
+	for version := range deployedPackage.PackageData {
+		if version != v1alpha1.APIVersion && version != v1beta1.APIVersion {
+			unknown = append(unknown, version)
+		}
+	}
+	if len(unknown) == 0 {
+		return
+	}
+	sort.Strings(unknown)
+	logger.From(ctx).Warn("deployed package contains an API version this version of Zarf does not recognize; operations may use an older converted API version", "package", deployedPackage.Name, "apiVersions", unknown)
 }
 
 // UpdateDeployedPackage updates the deployed package metadata.
