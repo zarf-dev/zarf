@@ -159,6 +159,12 @@ func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref re
 			Actions: v1beta1.ComponentActions{OnDeploy: v1beta1.ComponentActionSet{Before: []v1beta1.ComponentAction{{Cmd: "echo remote"}}}},
 		},
 	}
+	return publishRemoteComponentConfig(ctx, t, ref, component, resourcePaths...)
+}
+
+func publishRemoteComponentConfig(ctx context.Context, t *testing.T, ref registry.Reference, component v1beta1.ComponentConfig, resourcePaths ...string) registry.Reference {
+	t.Helper()
+
 	store := memory.New()
 	layers := make([]ocispec.Descriptor, 0, len(resourcePaths))
 	for _, resourcePath := range resourcePaths {
@@ -189,6 +195,74 @@ func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref re
 	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
 	require.NoError(t, err)
 	return ref
+}
+
+func TestRemoteImportRejectsUnbundledLocalResources(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name   string
+		set    func(*v1beta1.ComponentConfig, string)
+		field  string
+		reason string
+	}{
+		{name: "absolute file source", set: func(c *v1beta1.ComponentConfig, source string) {
+			c.Component.Files = []v1beta1.File{{Source: source, Destination: "/tmp/target"}}
+		}, field: "component.files[0].source", reason: "invalid local resource path"},
+		{name: "parent traversal", set: func(c *v1beta1.ComponentConfig, _ string) {
+			c.Component.Files = []v1beta1.File{{Source: "../secret.txt", Destination: "/tmp/target"}}
+		}, field: "component.files[0].source", reason: "invalid local resource path"},
+		{name: "unbundled relative source", set: func(c *v1beta1.ComponentConfig, _ string) {
+			c.Component.Files = []v1beta1.File{{Source: "secret.txt", Destination: "/tmp/target"}}
+		}, field: "component.files[0].source", reason: "absent from artifact layers"},
+		{name: "absolute values schema", set: func(c *v1beta1.ComponentConfig, source string) {
+			c.Values.Schema = source
+		}, field: "values.schema", reason: "invalid local resource path"},
+		{name: "absolute chart path", set: func(c *v1beta1.ComponentConfig, source string) {
+			c.Component.Charts = []v1beta1.Chart{{Name: "chart", Local: &v1beta1.LocalSource{Path: source}}}
+		}, field: "component.charts[0].local.path", reason: "invalid local resource path"},
+		{name: "absolute manifest path", set: func(c *v1beta1.ComponentConfig, source string) {
+			c.Component.Manifests = []v1beta1.Manifest{{Name: "manifest", Files: []string{source}}}
+		}, field: "component.manifests[0].files[0]", reason: "invalid local resource path"},
+		{name: "absolute image archive path", set: func(c *v1beta1.ComponentConfig, source string) {
+			c.Component.ImageArchives = []v1beta1.ImageArchive{{Path: source, Images: []string{"example.com/image:1"}}}
+		}, field: "component.imageArchives[0].path", reason: "invalid local resource path"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := testutil.TestContext(t)
+			dir := t.TempDir()
+			secret := filepath.Join(dir, "secret.txt")
+			require.NoError(t, os.WriteFile(secret, []byte("private data"), 0o600))
+			component := v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfComponentConfig,
+				Metadata:   v1beta1.ComponentMetadata{Name: "untrusted"},
+			}
+			tt.set(&component, secret)
+			ref := registry.Reference{
+				Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+				Repository: "components",
+				Reference:  "untrusted",
+			}
+			publishRemoteComponentConfig(ctx, t, ref, component)
+			manifest := []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: remote
+components:
+  - name: remote
+    import:
+      remote:
+        - url: oci://` + ref.String() + "\n")
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), manifest, 0o600))
+
+			_, err := PackageDefinition(ctx, dir, DefinitionOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
+			require.ErrorContains(t, err, tt.field)
+			require.ErrorContains(t, err, tt.reason)
+		})
+	}
 }
 
 func TestRemoteComponentConfigRejectsUnsafeResourceMountPaths(t *testing.T) {

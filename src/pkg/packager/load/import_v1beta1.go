@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
@@ -283,7 +284,76 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 		seenMountPaths[mountPath] = struct{}{}
 		resources = append(resources, remoteResource{remote: remote, descriptor: descriptor, importRoot: importRoot, mountPath: mountPath})
 	}
+	if err := validateRemoteComponentResources(config, seenMountPaths); err != nil {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
+	}
 	return loadedComponentConfig{config: config, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
+}
+
+// validateRemoteComponentResources keeps a fetched component from reading paths on the
+// importing machine. Local sources must refer to files or directories supplied by its OCI layers.
+func validateRemoteComponentResources(config v1beta1.ComponentConfig, mountPaths map[string]struct{}) error {
+	check := func(field, source string, allowURL bool) error {
+		if source == "" {
+			return nil
+		}
+		if allowURL && helpers.IsURL(source) {
+			return nil
+		}
+		if !validResourcePath(source) {
+			return fmt.Errorf("%s has invalid local resource path %q", field, source)
+		}
+		for mountPath := range mountPaths {
+			if source == mountPath || strings.HasPrefix(mountPath, source+"/") {
+				return nil
+			}
+		}
+		return fmt.Errorf("%s references local resource %q absent from artifact layers", field, source)
+	}
+
+	for i, source := range config.Values.Files {
+		if err := check(fmt.Sprintf("values.files[%d]", i), source, false); err != nil {
+			return err
+		}
+	}
+	if err := check("values.schema", config.Values.Schema, false); err != nil {
+		return err
+	}
+	for i, chart := range config.Component.Charts {
+		if chart.Local != nil {
+			if err := check(fmt.Sprintf("component.charts[%d].local.path", i), chart.Local.Path, false); err != nil {
+				return err
+			}
+		}
+		for j, valuesFile := range chart.ValuesFiles {
+			if err := check(fmt.Sprintf("component.charts[%d].valuesFiles[%d].path", i, j), valuesFile.Path, true); err != nil {
+				return err
+			}
+		}
+	}
+	for i, manifest := range config.Component.Manifests {
+		for j, source := range manifest.Files {
+			if err := check(fmt.Sprintf("component.manifests[%d].files[%d]", i, j), source, true); err != nil {
+				return err
+			}
+		}
+		for j, source := range manifest.Kustomize.Files {
+			if err := check(fmt.Sprintf("component.manifests[%d].kustomize.files[%d]", i, j), source, true); err != nil {
+				return err
+			}
+		}
+	}
+	for i, file := range config.Component.Files {
+		if err := check(fmt.Sprintf("component.files[%d].source", i), file.Source, true); err != nil {
+			return err
+		}
+	}
+	for i, archive := range config.Component.ImageArchives {
+		if err := check(fmt.Sprintf("component.imageArchives[%d].path", i), archive.Path, false); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func hasActionSet(actions v1beta1.ComponentActionSet) bool {
