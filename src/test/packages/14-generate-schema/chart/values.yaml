@@ -5,6 +5,8 @@ service:
 image:
   ref: nginx:latest
 
+excludedOnly: true
+
 configMap:
   annotations:
   labels:

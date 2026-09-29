@@ -163,9 +163,14 @@ func TestZarfDevGenerate(t *testing.T) {
 		require.NotContains(t, fallback, "type")
 		require.Equal(t, "Value without an inferred type", fallback["description"])
 
-		// .backend.image should be dropped because it is excluded from the chart mapping.
-		_, hasExcludedImage := backendProps["image"]
-		require.False(t, hasExcludedImage)
+		require.Equal(t, map[string]any{}, props["credentials"])
+
+		image, ok := backendProps["image"].(map[string]any)
+		require.True(t, ok)
+		imageProps, ok := image["properties"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, map[string]any{"type": "string"}, imageProps["ref"])
+		require.NotContains(t, backendProps, "excludedOnly")
 
 		// .oldField should be dropped from the values.schema.json
 		_, hasOldField := props["oldField"]

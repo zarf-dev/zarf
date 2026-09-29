@@ -24,3 +24,6 @@ components:
             targetPath: "."
             excludePaths:
               - ".backend.image"
+              - ".backend.excludedOnly"
+          - sourcePath: ".backend.image"
+            targetPath: ".image"
