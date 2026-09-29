@@ -7,8 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -221,6 +221,9 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 }
 
 func validResourcePath(value string) bool {
-	clean := path.Clean(value)
-	return value != "" && !path.IsAbs(value) && clean == value && value != "." && !strings.HasPrefix(value, "../") && !strings.Contains(value, "/../")
+	if value == "." || !fs.ValidPath(value) || strings.ContainsAny(value, `\:`) {
+		return false
+	}
+	_, err := filepath.Localize(value)
+	return err == nil
 }

@@ -191,6 +191,36 @@ func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref re
 	return ref
 }
 
+func TestRemoteComponentConfigRejectsUnsafeResourceMountPaths(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name      string
+		mountPath string
+	}{
+		{name: "parent-traversal", mountPath: "../outside"},
+		{name: "embedded-parent-traversal", mountPath: "resources/../outside"},
+		{name: "backslash-traversal", mountPath: `..\..\outside`},
+		{name: "backslash-separator", mountPath: `resources\payload.txt`},
+		{name: "mixed-separators", mountPath: `resources/..\payload.txt`},
+		{name: "absolute-path", mountPath: "/absolute/path"},
+		{name: "empty-path", mountPath: ""},
+		{name: "current-directory", mountPath: "."},
+		{name: "windows-drive-path", mountPath: `C:/outside.txt`},
+		{name: "windows-drive-with-backslashes", mountPath: `C:\outside.txt`},
+		{name: "windows-alternate-data-stream", mountPath: `resources/payload.txt:stream`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := testutil.TestContext(t)
+			ref := publishRemoteComponent(ctx, t, tt.name, tt.mountPath)
+			_, err := remoteComponentConfig(ctx, "oci://"+ref.String(), "amd64", types.RemoteOptions{PlainHTTP: true}, "")
+			require.ErrorContains(t, err, "invalid resource layer")
+		})
+	}
+}
+
 func TestRemoteImportResolutionPinsReferencesForOneInvocation(t *testing.T) {
 	t.Parallel()
 

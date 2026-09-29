@@ -274,7 +274,7 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 			continue
 		}
 		mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
-		if !validRemoteMountPath(mountPath) {
+		if !validResourcePath(mountPath) {
 			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an invalid resource layer", importURL)
 		}
 		if _, exists := seenMountPaths[mountPath]; exists {
@@ -288,10 +288,6 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 
 func hasActionSet(actions v1beta1.ComponentActionSet) bool {
 	return actions.Defaults != nil || len(actions.Before) != 0 || len(actions.OnSuccess) != 0 || len(actions.OnFailure) != 0
-}
-
-func validRemoteMountPath(mountPath string) bool {
-	return mountPath != "" && !path.IsAbs(mountPath) && path.Clean(mountPath) == mountPath && mountPath != "." && !strings.HasPrefix(mountPath, "../") && !strings.Contains(mountPath, "/../")
 }
 
 // ComponentConfig reads and schema-validates a v1beta1 ZarfComponentConfig file.
