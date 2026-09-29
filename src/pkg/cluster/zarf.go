@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -19,8 +20,6 @@ import (
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -89,8 +88,9 @@ func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, op
 
 func warnOnUnrecognizedPackageAPIVersions(ctx context.Context, deployedPackage state.DeployedPackage) {
 	var unknown []string
+	known := api.KnownAPIVersions()
 	for version := range deployedPackage.PackageData {
-		if version != v1alpha1.APIVersion && version != v1beta1.APIVersion {
+		if !slices.Contains(known, version) {
 			unknown = append(unknown, version)
 		}
 	}
