@@ -113,12 +113,6 @@ func ValidateComponent(component v1beta1.Component) ValidationErrors {
 	return errs
 }
 
-// ValidateComponentConfig runs semantic validation for a standalone component
-// config, identifying the component by its metadata name.
-func ValidateComponentConfig(config v1beta1.ComponentConfig) ValidationErrors {
-	return ValidateComponent(v1beta1.Component{Name: config.Metadata.Name, ComponentSpec: config.Component})
-}
-
 // validateActions validates the actions of a component.
 func validateActions(a v1beta1.ComponentActions) ValidationErrors {
 	var errs ValidationErrors
