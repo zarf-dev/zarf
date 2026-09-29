@@ -318,8 +318,8 @@ func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariab
 
 			_, present := setVariables[key]
 			if !present && isInteractive {
-				setVal, err := interactive.PromptVariable(ctx, v1alpha1.InteractiveVariable{
-					Variable: v1alpha1.Variable{Name: key},
+				setVal, err := interactive.PromptVariable(ctx, api.InteractiveVariable{
+					Variable: api.Variable{Name: key},
 				})
 				if err != nil {
 					return err

@@ -13,14 +13,14 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 )
 
 // TextTemplate represents a value to be templated into a text file.
 type TextTemplate struct {
 	Sensitive  bool
 	AutoIndent bool
-	Type       v1alpha1.VariableType
+	Type       api.VariableType
 	Value      string
 }
 
@@ -102,7 +102,7 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) (err error) {
 				value = template.Value
 
 				// Check if the value is a file type and load the value contents from the file
-				if template.Type == v1alpha1.FileVariableType && value != "" {
+				if template.Type == api.FileVariableType && value != "" {
 					if isText, err := helpers.IsTextFile(value); err != nil || !isText {
 						nonTextWarning := fmt.Sprintf("Refusing to load a non-text file for templating %s", templateKey)
 						vc.logger.Warn(nonTextWarning)

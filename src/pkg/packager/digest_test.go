@@ -58,7 +58,7 @@ func TestPackageDigestOCI(t *testing.T) {
 	require.NoError(t, err)
 
 	digest, err := PackageDigest(ctx, packageRef.String(), PackageDigestOptions{
-		Architecture:  pkgLayout.AsV1alpha1().Build.Architecture,
+		Architecture:  pkgLayout.Definition().Build.Architecture,
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
@@ -112,7 +112,7 @@ func TestPackageDigestSignedConsistency(t *testing.T) {
 
 	ociURL := fmt.Sprintf("oci://%s", packageRef.String())
 	ociDigest, err := PackageDigest(ctx, ociURL, PackageDigestOptions{
-		Architecture:  pkgLayout.AsV1alpha1().Build.Architecture,
+		Architecture:  pkgLayout.Definition().Build.Architecture,
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)

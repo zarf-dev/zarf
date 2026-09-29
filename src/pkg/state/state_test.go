@@ -26,6 +26,27 @@ func TestAgentInfoIsConfigured(t *testing.T) {
 	require.True(t, (AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Cert: []byte("cert"), Key: []byte("key")}}).IsConfigured())
 }
 
+func TestGitServerInfoIsInternal(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		gitServer  GitServerInfo
+		isInternal bool
+	}{
+		{name: "internal mode takes precedence over external address", gitServer: GitServerInfo{Address: "https://git.example.com", GitServerMode: GitServerModeInternal}, isInternal: true},
+		{name: "external mode takes precedence over internal address", gitServer: GitServerInfo{Address: ZarfInClusterGitServiceURL, GitServerMode: GitServerModeExternal}},
+		{name: "older internal state uses address", gitServer: GitServerInfo{Address: ZarfInClusterGitServiceURL}, isInternal: true},
+		{name: "older external state uses address", gitServer: GitServerInfo{Address: "https://git.example.com"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.isInternal, tt.gitServer.IsInternal())
+		})
+	}
+}
+
 func TestStateReconcile(t *testing.T) {
 	t.Parallel()
 
@@ -385,6 +406,30 @@ func TestMergeStateGit(t *testing.T) {
 			},
 		},
 		{
+			name: "changing the address updates the mode",
+			oldGitServer: GitServerInfo{
+				Address:       ZarfInClusterGitServiceURL,
+				GitServerMode: GitServerModeInternal,
+			},
+			initGitServer: GitServerInfo{Address: "https://git.example.com"},
+			expectedGitServer: GitServerInfo{
+				Address:       "https://git.example.com",
+				GitServerMode: GitServerModeExternal,
+			},
+		},
+		{
+			name: "explicit mode is preserved when address changes",
+			oldGitServer: GitServerInfo{
+				Address:       ZarfInClusterGitServiceURL,
+				GitServerMode: GitServerModeInternal,
+			},
+			initGitServer: GitServerInfo{Address: "https://git.example.com", GitServerMode: GitServerModeInternal},
+			expectedGitServer: GitServerInfo{
+				Address:       "https://git.example.com",
+				GitServerMode: GitServerModeInternal,
+			},
+		},
+		{
 			name: "empty init options not merged",
 			expectedGitServer: GitServerInfo{
 				PushUsername: "",
@@ -408,6 +453,9 @@ func TestMergeStateGit(t *testing.T) {
 			require.Equal(t, tt.expectedGitServer.PushUsername, newState.GitServer.PushUsername)
 			require.Equal(t, tt.expectedGitServer.PullUsername, newState.GitServer.PullUsername)
 			require.Equal(t, tt.expectedGitServer.Address, newState.GitServer.Address)
+			if tt.expectedGitServer.GitServerMode != "" {
+				require.Equal(t, tt.expectedGitServer.GitServerMode, newState.GitServer.GitServerMode)
+			}
 			// Only check passwords if explicitly set in expected (non-empty means explicit expectation)
 			if tt.expectedGitServer.PushPassword != "" {
 				require.Equal(t, tt.expectedGitServer.PushPassword, newState.GitServer.PushPassword)

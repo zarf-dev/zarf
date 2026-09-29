@@ -12,7 +12,7 @@ import (
 
 	"github.com/avast/retry-go/v4"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/internal/git"
@@ -48,7 +48,7 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		opts.Retries = config.ZarfDefaultRetries
 	}
 	refs := []transform.Image{}
-	for _, component := range pkgLayout.AsV1alpha1().Components {
+	for _, component := range pkgLayout.Definition().Components {
 		for _, img := range component.GetImages() {
 			ref, err := transform.ParseImageRef(img)
 			if err != nil {
@@ -92,7 +92,7 @@ func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout,
 	if gitInfo.Address == "" {
 		return fmt.Errorf("git server address must be specified")
 	}
-	for _, component := range pkgLayout.AsV1alpha1().Components {
+	for _, component := range pkgLayout.Definition().Components {
 		err := pushComponentReposToRegistry(ctx, component, pkgLayout, gitInfo, opts.Cluster, opts.Retries)
 		if err != nil {
 			return err
@@ -101,10 +101,10 @@ func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout,
 	return nil
 }
 
-func pushComponentReposToRegistry(ctx context.Context, component v1alpha1.ZarfComponent,
+func pushComponentReposToRegistry(ctx context.Context, component api.Component,
 	pkgLayout *layout.PackageLayout, gitInfo state.GitServerInfo, c *cluster.Cluster, retries int) (err error) {
 	l := logger.From(ctx)
-	for _, repoURL := range component.Repos {
+	for _, repo := range component.Repositories {
 		tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
 			return err
@@ -116,13 +116,13 @@ func pushComponentReposToRegistry(ctx context.Context, component v1alpha1.ZarfCo
 		if err != nil {
 			return err
 		}
-		repository, err := git.Open(reposPath, repoURL)
+		repository, err := git.Open(reposPath, repo)
 		if err != nil {
 			return err
 		}
 		err = retry.Do(func() error {
 			if !dns.IsServiceURL(gitInfo.Address) {
-				l.Info("pushing repository to server", "repo", repoURL, "server", gitInfo.Address)
+				l.Info("pushing repository to server", "repo", repo.URL, "server", gitInfo.Address)
 				err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword)
 				if err != nil {
 					return err
@@ -156,14 +156,14 @@ func pushComponentReposToRegistry(ctx context.Context, component v1alpha1.ZarfCo
 				return err
 			}
 			return tunnel.Wrap(func() error {
-				l.Info("pushing repository to server", "repo", repoURL, "server", endpoints[0])
+				l.Info("pushing repository to server", "repo", repo.URL, "server", endpoints[0])
 				err = repository.Push(ctx, endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword)
 				if err != nil {
 					return err
 				}
 				// Add the read-only user to this repo
 				// TODO: This should not be done here. Or the function name should be changed.
-				repoName, err := transform.GitURLtoRepoName(repoURL)
+				repoName, err := transform.GitURLtoRepoName(repo.URL)
 				if err != nil {
 					return retry.Unrecoverable(err)
 				}
@@ -175,7 +175,7 @@ func pushComponentReposToRegistry(ctx context.Context, component v1alpha1.ZarfCo
 			})
 		}, retry.Context(ctx), retry.Attempts(uint(retries)), retry.Delay(500*time.Millisecond))
 		if err != nil {
-			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
+			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repo.URL, err)
 		}
 	}
 	return nil

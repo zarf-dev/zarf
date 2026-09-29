@@ -22,7 +22,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -31,7 +31,7 @@ import (
 
 // HandleDataInjection waits for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now.
-func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDataInjection, dataInjectionPath string, dataIdx int) error {
+func (c *Cluster) HandleDataInjection(ctx context.Context, data api.ZarfDataInjection, dataInjectionPath string, dataIdx int) error {
 	l := logger.From(ctx)
 	injectionCompletionMarker := filepath.Join(dataInjectionPath, config.GetDataInjectionMarker())
 	if err := os.WriteFile(injectionCompletionMarker, []byte("🦄"), helpers.ReadWriteUser); err != nil {
@@ -54,7 +54,7 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDat
 	}
 
 	// Get the OS shell to execute commands in
-	shell, shellArgs := exec.GetOSShell(v1alpha1.Shell{Windows: "cmd"})
+	shell, shellArgs := exec.GetOSShell(api.Shell{Windows: "cmd"})
 
 	if _, _, err := exec.Cmd(shell, append(shellArgs, "tar --version")...); err != nil {
 		return fmt.Errorf("unable to execute tar, ensure it is installed in the $PATH: %w", err)

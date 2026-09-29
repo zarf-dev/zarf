@@ -26,7 +26,7 @@ func TestPushPackage(t *testing.T) {
 	pkgLayout, err := layout.LoadFromTar(ctx, pkg.packagePath, layout.PackageLayoutOptions{Filter: filters.Empty()})
 	require.NoError(t, err)
 
-	pkgDefinition := pkgLayout.AsV1alpha1()
+	pkgDefinition := pkgLayout.Definition()
 	platform := oci.PlatformForArch(pkgDefinition.Build.Architecture)
 	remote, err := zoci.NewRemoteWithOptions(ctx, pkg.registryAddr+"/"+pkgDefinition.Metadata.Name+":"+pkgDefinition.Metadata.Version, platform, zoci.RemoteClientOptions{
 		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
@@ -49,6 +49,6 @@ func TestPushPackage(t *testing.T) {
 	require.NoError(t, err)
 	var configPkg v1alpha1.ZarfPackage
 	require.NoError(t, json.Unmarshal(configBytes, &configPkg))
-	require.Equal(t, pkgLayout.AsV1alpha1().Metadata.Name, configPkg.Metadata.Name)
-	require.Equal(t, pkgLayout.AsV1alpha1().Metadata.Version, configPkg.Metadata.Version)
+	require.Equal(t, pkgLayout.Definition().Metadata.Name, configPkg.Metadata.Name)
+	require.Equal(t, pkgLayout.Definition().Metadata.Version, configPkg.Metadata.Version)
 }

@@ -308,7 +308,7 @@ func (p *PackageLayout) Resolve(_ context.Context, reference string) (ocispec.De
 	if p.cache == nil {
 		return ocispec.Descriptor{}, errdef.ErrNotFound
 	}
-	if reference == p.digest || reference == p.AsV1alpha1().Metadata.Name {
+	if reference == p.digest || reference == p.Definition().Metadata.Name {
 		return p.cache.desc, nil
 	}
 	return ocispec.Descriptor{}, errdef.ErrNotFound

@@ -167,6 +167,33 @@ components:
 	}
 }
 
+func TestPackageDefinitionRejectsV1Beta1GitURLsWithEmbeddedReferences(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	packageYAML := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: git-url-validation
+components:
+  - name: component
+    repositories:
+      - url: https://example.com/repository.git@legacy-tag
+    charts:
+      - name: chart
+        namespace: default
+        git:
+          url: https://example.com/charts.git@legacy-tag
+          ref:
+            tag: v1.0.0
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(packageYAML), 0o600))
+
+	_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+	require.ErrorContains(t, err, "git URL \"https://example.com/repository.git@legacy-tag\" must not contain an embedded ref")
+	require.ErrorContains(t, err, "git URL \"https://example.com/charts.git@legacy-tag\" must not contain an embedded ref")
+}
+
 func TestPackageUsesFlavor(t *testing.T) {
 	t.Parallel()
 

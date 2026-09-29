@@ -383,6 +383,7 @@ func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
 // ignores only these fields when comparing the result.
 //
 //   - package.apiVersion and package.kind are canonicalized to the target API.
+//   - v1alpha1 conversion records its action migrations in build.migrations.
 //   - component.import has separate local and remote lists in v1beta1, while v1alpha1 has one
 //     import object; component.service has no v1alpha1 equivalent.
 //   - image.source distinguishes registry and daemon sources in v1beta1, v1alpha1 images always fallback
@@ -395,6 +396,7 @@ func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
 func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1beta1.Package{}, "APIVersion", "Kind"),
+		cmpopts.IgnoreFields(v1beta1.BuildData{}, "Migrations"),
 		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
 		cmpopts.IgnoreFields(v1beta1.Image{}, "Source"),
 		cmpopts.IgnoreFields(v1beta1.Chart{}, "ValuesFiles"),

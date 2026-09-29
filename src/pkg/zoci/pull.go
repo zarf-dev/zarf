@@ -15,7 +15,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -74,7 +74,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 // AssembleLayers returns the OCI layer descriptors for the requested components.
 // The include parameter specifies which layer types to return.
 // All layers are included if include is empty and Metadata layers are always included
-func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, requestedComponents []v1alpha1.ZarfComponent, include ...LayerType) ([]ocispec.Descriptor, error) {
+func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, requestedComponents []api.Component, include ...LayerType) ([]ocispec.Descriptor, error) {
 	if len(include) == 0 {
 		include = GetAllLayerTypes()
 	}
@@ -130,13 +130,13 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 
 // LayersFromComponents returns the layers for the requested components and
 // the set of images those components reference, selecting from root.
-func LayersFromComponents(root *oci.Manifest, pkg v1alpha1.ZarfPackage, requestedComponents []v1alpha1.ZarfComponent) ([]ocispec.Descriptor, map[string]bool, error) {
+func LayersFromComponents(root *oci.Manifest, pkg api.Package, requestedComponents []api.Component) ([]ocispec.Descriptor, map[string]bool, error) {
 	layers := make([]ocispec.Descriptor, 0)
 
 	images := map[string]bool{}
 	tarballFormat := "%s.tar"
 	for _, rc := range requestedComponents {
-		component := helpers.Find(pkg.Components, func(component v1alpha1.ZarfComponent) bool {
+		component := helpers.Find(pkg.Components, func(component api.Component) bool {
 			return component.Name == rc.Name
 		})
 		if component.Name == "" {
@@ -250,7 +250,7 @@ func layersFromIndexChildren(ctx context.Context, root *oci.Manifest, fetcher co
 // AssembleLayers returns the OCI layer descriptors for the requested components.
 // The include parameter specifies which layer types to return.
 // All layers are included if include is empty and Metadata layers are always included
-func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, include ...LayerType) ([]ocispec.Descriptor, error) {
+func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []api.Component, include ...LayerType) ([]ocispec.Descriptor, error) {
 	root, err := r.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
@@ -260,7 +260,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 
 // LayersFromComponents returns the layers for the requested components and
 // the set of images those components reference, selecting from root.
-func (r *Remote) LayersFromComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, requestedComponents []v1alpha1.ZarfComponent) ([]ocispec.Descriptor, map[string]bool, error) {
+func (r *Remote) LayersFromComponents(ctx context.Context, pkg api.Package, requestedComponents []api.Component) ([]ocispec.Descriptor, map[string]bool, error) {
 	root, err := r.FetchRoot(ctx)
 	if err != nil {
 		return []ocispec.Descriptor{}, map[string]bool{}, err

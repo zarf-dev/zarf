@@ -175,7 +175,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("by package name", func(t *testing.T) {
-		desc, err := p.Resolve(ctx, p.AsV1alpha1().Metadata.Name)
+		desc, err := p.Resolve(ctx, convert.PackageToV1alpha1(p.Definition()).Metadata.Name)
 		require.NoError(t, err)
 		assert.Equal(t, p.Digest(), desc.Digest.String())
 	})

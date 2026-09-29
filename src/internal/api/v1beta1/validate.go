@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -36,6 +37,7 @@ const (
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
+	PkgValidateErrGitURLWithRef           = "git URL %q must not contain an embedded ref; use the ref field instead"
 )
 
 // ValidationErrors contains all errors found during package validation.
@@ -85,6 +87,11 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 // standalone component configs. The component name is used in diagnostics.
 func ValidateComponent(component v1beta1.Component) ValidationErrors {
 	var errs ValidationErrors
+	for _, repository := range component.Repositories {
+		if err := validateGitURL(repository.URL); err != nil {
+			errs = append(errs, err)
+		}
+	}
 	uniqueChartNames := make(map[string]bool)
 	for _, chart := range component.Charts {
 		// ensure chart name is unique
@@ -235,8 +242,21 @@ func validateChart(chart v1beta1.Chart) ValidationErrors {
 	if nameErr := validateReleaseName(chart.Name, chart.ReleaseName); nameErr != nil {
 		errs = append(errs, nameErr)
 	}
+	if chart.Git != nil {
+		if err := validateGitURL(chart.Git.URL); err != nil {
+			errs = append(errs, err)
+		}
+	}
 
 	return errs
+}
+
+func validateGitURL(url string) error {
+	_, ref, err := transform.GitURLSplitRef(url)
+	if err == nil && ref != "" {
+		return fmt.Errorf(PkgValidateErrGitURLWithRef, url)
+	}
+	return nil
 }
 
 // validateManifest runs all validation checks on a manifest.

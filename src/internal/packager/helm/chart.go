@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -49,11 +49,11 @@ const maxHelmHistory = 10
 
 // shouldForceConflicts returns true if ssa is enabled and force conflicts is true
 // Zarf won't error if force conflicts is true in a client side apply because a single package could have both csa and ssa
-func shouldForceConflicts(ssa string, lastRelease release.Accessor, forceConflicts bool) bool {
-	if !forceConflicts || ssa == "false" {
+func shouldForceConflicts(ssa api.ServerSideApplyMode, lastRelease release.Accessor, forceConflicts bool) bool {
+	if !forceConflicts || ssa == api.ServerSideApplyDisabled {
 		return false
 	}
-	if ssa == "auto" && lastRelease != nil {
+	if ssa == api.ServerSideApplyAuto && lastRelease != nil {
 		return lastRelease.ApplyMethod() == "ssa"
 	}
 	return true
@@ -85,14 +85,14 @@ type InstallUpgradeOptions struct {
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
-func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, values common.Values, opts InstallUpgradeOptions) (state.ConnectStrings, string, error) {
+func InstallOrUpgradeChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Chart, values common.Values, opts InstallUpgradeOptions) (state.ConnectStrings, string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
-	source := zarfChart.URL
+	source := zarfChart.SourceURL()
 	if source == "" {
 		source = "Zarf-generated"
 	}
-	l.Info("processing Helm chart", "name", zarfChart.Name, "version", zarfChart.Version, "source", source)
+	l.Info("processing Helm chart", "name", zarfChart.Name, "source", source)
 
 	// If no release name is specified, use the chart name.
 	if zarfChart.ReleaseName == "" {
@@ -189,7 +189,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		runtimeObjs = append(runtimeObjs, resource.Object)
 	}
 
-	if !zarfChart.NoWait {
+	if !zarfChart.SkipWait {
 		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
 		l.Info("running health checks", "chart", zarfChart.Name)
 		if err := healthchecks.WaitForReadyRuntime(helmCtx, opts.Cluster.Watcher, runtimeObjs); err != nil {
@@ -286,7 +286,7 @@ func RemoveChart(ctx context.Context, namespace string, name string, timeout tim
 
 // UpdateReleaseValues updates values for a given chart release
 // (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
-func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, updatedValues map[string]interface{}, opts InstallUpgradeOptions) error {
+func UpdateReleaseValues(ctx context.Context, zarfChart api.Chart, updatedValues map[string]interface{}, opts InstallUpgradeOptions) error {
 	l := logger.From(ctx)
 	l.Debug("updating values for helm release", "name", zarfChart.ReleaseName)
 
@@ -331,7 +331,7 @@ func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, upda
 	// Wait for the update operation to successfully complete
 	client.WaitStrategy = kube.LegacyStrategy
 
-	client.ServerSideApply = zarfChart.GetServerSideApply()
+	client.ServerSideApply = string(zarfChart.GetServerSideApply())
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), lastRelease, opts.ForceConflicts)
 
 	// Perform the loadedChart upgrade.
@@ -343,7 +343,7 @@ func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, upda
 	return nil
 }
 
-func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
+func installChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Chart, chartValues common.Values,
 	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer) (release.Releaser, error) {
 	// Bind the helm action.
 	client := action.NewInstall(actionConfig)
@@ -352,7 +352,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.Timeout = opts.Timeout
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection).
-	if zarfChart.NoWait {
+	if zarfChart.SkipWait {
 		client.WaitStrategy = kube.HookOnlyStrategy
 	} else {
 		client.WaitStrategy = kube.LegacyStrategy
@@ -364,7 +364,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	// Must be unique per-namespace and < 53 characters. @todo: restrict helm loadedChart name to this.
 	client.ReleaseName = zarfChart.ReleaseName
 
-	client.SkipSchemaValidation = !zarfChart.ShouldRunSchemaValidation()
+	client.SkipSchemaValidation = zarfChart.SkipSchemaValidation
 
 	// Namespace must be specified.
 	client.Namespace = zarfChart.Namespace
@@ -372,7 +372,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
-	client.ServerSideApply = zarfChart.GetServerSideApply() != "false"
+	client.ServerSideApply = zarfChart.GetServerSideApply() != api.ServerSideApplyDisabled
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), nil, opts.ForceConflicts)
 
 	// Adopt pre-existing resources into the release instead of erroring on ownership conflicts.
@@ -382,7 +382,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	return client.RunWithContext(ctx, chart, chartValues)
 }
 
-func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
+func upgradeChart(ctx context.Context, zarfChart api.Chart, chart *chartv2.Chart, chartValues common.Values,
 	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer, lastRelease release.Releaser) (release.Releaser, error) {
 	// Migrate any deprecated APIs (if applicable)
 	err := migrateDeprecatedAPIs(ctx, opts.Cluster, actionConfig, lastRelease)
@@ -397,13 +397,13 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.Timeout = opts.Timeout
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection).
-	if zarfChart.NoWait {
+	if zarfChart.SkipWait {
 		client.WaitStrategy = kube.HookOnlyStrategy
 	} else {
 		client.WaitStrategy = kube.LegacyStrategy
 	}
 
-	client.ServerSideApply = zarfChart.GetServerSideApply()
+	client.ServerSideApply = string(zarfChart.GetServerSideApply())
 	rel, err := release.NewAccessor(lastRelease)
 	if err != nil {
 		return nil, err
@@ -415,7 +415,7 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 
 	client.SkipCRDs = true
 
-	client.SkipSchemaValidation = !zarfChart.ShouldRunSchemaValidation()
+	client.SkipSchemaValidation = zarfChart.SkipSchemaValidation
 
 	// Namespace must be specified.
 	client.Namespace = zarfChart.Namespace
@@ -429,10 +429,10 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	return client.RunWithContext(ctx, zarfChart.ReleaseName, chart, chartValues)
 }
 
-func rollbackChart(zarfChart v1alpha1.ZarfChart, rel release.Accessor, actionConfig *action.Configuration, timeout time.Duration, forceConflicts bool) error {
+func rollbackChart(zarfChart api.Chart, rel release.Accessor, actionConfig *action.Configuration, timeout time.Duration, forceConflicts bool) error {
 	client := action.NewRollback(actionConfig)
 	client.CleanupOnFail = true
-	client.ServerSideApply = zarfChart.GetServerSideApply()
+	client.ServerSideApply = string(zarfChart.GetServerSideApply())
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), rel, forceConflicts)
 	client.WaitStrategy = kube.LegacyStrategy
 	client.Timeout = timeout
@@ -450,7 +450,7 @@ func uninstallChart(name string, actionConfig *action.Configuration, timeout tim
 }
 
 // LoadChartData loads a chart from a tarball and returns the Helm SDK representation of the chart and it's values
-func LoadChartData(zarfChart v1alpha1.ZarfChart, paths layout.ChartPaths, valuesOverrides map[string]any) (*chartv2.Chart, common.Values, error) {
+func LoadChartData(zarfChart api.Chart, paths layout.ChartPaths, valuesOverrides map[string]any) (*chartv2.Chart, common.Values, error) {
 	loadedChart, err := loadChartFromTarball(zarfChart, paths)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to load chart tarball: %w", err)
