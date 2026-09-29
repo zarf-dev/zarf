@@ -150,15 +150,17 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
 	}
 
-	if opts.SigningKeyPath != "" && opts.SignBlobOptions.Key == "" {
-		opts.SignBlobOptions.Key = opts.SigningKeyPath
+	signOpts := opts.SignBlobOptions
+	if opts.SigningKeyPath != "" && signOpts.Key == "" {
+		signOpts.Key = opts.SigningKeyPath
 	}
-	if opts.SigningKeyPassword != "" && opts.SignBlobOptions.Password == "" {
-		opts.SignBlobOptions.Password = opts.SigningKeyPassword
+	if opts.SigningKeyPassword != "" && signOpts.Password == "" {
+		signOpts.Password = opts.SigningKeyPassword
 	}
-
-	if err := pkgLayout.SignPackage(ctx, opts.SignBlobOptions); err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
+	if signOpts.Key != "" || signOpts.KeyRef != "" { //nolint:staticcheck // KeyRef remains supported through its documented removal window.
+		if err := pkgLayout.SignPackage(ctx, &signOpts); err != nil {
+			return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
+		}
 	}
 
 	referenceOptions := zoci.ReferenceFromMetadataOptions{

@@ -65,11 +65,11 @@ func TestPackageDigestOCI(t *testing.T) {
 	require.Equal(t, expectedDigest, digest, "the OCI digest should match the expected digest after publishing and lookup with PackageDigest")
 }
 
-func testSignOpts() signing.SignBlobOptions {
+func testSignOpts() *signing.SignBlobOptions {
 	opts := signing.DefaultSignBlobOptions()
 	opts.Key = filepath.Join("testdata", "publish", "cosign.key")
 	opts.Password = "password"
-	return opts
+	return &opts
 }
 
 // TestPackageDigestSignedDiffersFromUnsigned verifies that the sig file is

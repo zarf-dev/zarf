@@ -821,6 +821,7 @@ func TestPackageSigningTlogUpload(t *testing.T) {
 
 	t.Run("keyless defaults tlog upload", func(t *testing.T) {
 		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		require.NotNil(t, opts)
 		require.True(t, opts.TlogUpload)
 	})
 	t.Run("CLI tlog opt-out is honored", func(t *testing.T) {
@@ -828,12 +829,14 @@ func TestPackageSigningTlogUpload(t *testing.T) {
 		cmd.Flags().Bool("tlog-upload", false, "")
 		require.NoError(t, cmd.Flags().Set("tlog-upload", "false"))
 		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(cmd, newTestViper(), VPkgCreateTlogUpload, false, false)
+		require.NotNil(t, opts)
 		require.False(t, opts.TlogUpload)
 	})
 	t.Run("config tlog opt-out is honored", func(t *testing.T) {
 		v := newTestViper()
 		v.Set(VPkgCreateTlogUpload, false)
 		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, v, VPkgCreateTlogUpload, false, false)
+		require.NotNil(t, opts)
 		require.False(t, opts.TlogUpload)
 	})
 }
@@ -847,15 +850,30 @@ func TestPackageSigningModeGuard(t *testing.T) {
 		{keyless: true},
 	} {
 		opts := flags.buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		require.NotNil(t, opts)
 		if flags.signingKeyPath != "" || flags.keyless {
 			require.NoError(t, flags.validateSigningMode())
 			continue
 		}
-		require.True(t, opts.ShouldSign())
 		require.EqualError(t, flags.validateSigningMode(), "--signing-key is required (or pass --keyless for Sigstore keyless flow)")
 	}
+}
 
-	require.False(t, signing.DefaultSignBlobOptions().ShouldSign())
+func TestBuildSignBlobOptions(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no signing inputs leaves the package unsigned", func(t *testing.T) {
+		opts := (&packageSigningFlags{}).buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		require.Nil(t, opts)
+	})
+
+	t.Run("keyless requests signing with defaults", func(t *testing.T) {
+		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		expected := signing.DefaultSignBlobOptions()
+		expected.TlogUpload = true
+		expected.OIDC.ClientID = ""
+		require.Equal(t, &expected, opts)
+	})
 }
 
 func TestPackageSigningModeGuardRejectsViperConflicts(t *testing.T) {

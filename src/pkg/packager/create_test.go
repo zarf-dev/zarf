@@ -105,7 +105,7 @@ func TestPackageCreateSignsArchiveAndOCIOutputs(t *testing.T) {
 	t.Run("archive", func(t *testing.T) {
 		packagePath, err := Create(ctx, source, t.TempDir(), CreateOptions{
 			CachePath:       t.TempDir(),
-			SignBlobOptions: signOpts,
+			SignBlobOptions: &signOpts,
 		})
 		require.NoError(t, err)
 
@@ -145,7 +145,7 @@ func TestPackageCreateSignsArchiveAndOCIOutputs(t *testing.T) {
 		packageRef, err := Create(ctx, source, fmt.Sprintf("oci://%s", registryRef.String()), CreateOptions{
 			CachePath:       t.TempDir(),
 			RemoteOptions:   defaultTestRemoteOptions(),
-			SignBlobOptions: signOpts,
+			SignBlobOptions: &signOpts,
 		})
 		require.NoError(t, err)
 
@@ -173,7 +173,7 @@ func TestPackageCreateSignsArchiveAndOCIOutputs(t *testing.T) {
 	t.Run("explicit signing options override deprecated key fields", func(t *testing.T) {
 		packagePath, err := Create(ctx, source, t.TempDir(), CreateOptions{
 			CachePath:          t.TempDir(),
-			SignBlobOptions:    signOpts,
+			SignBlobOptions:    &signOpts,
 			SigningKeyPath:     filepath.Join(t.TempDir(), "missing.key"),
 			SigningKeyPassword: "wrong-password",
 		})

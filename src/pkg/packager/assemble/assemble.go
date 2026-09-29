@@ -52,8 +52,8 @@ type AssembleOptions struct {
 	Flavor string
 	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry.
 	RegistryOverrides []images.RegistryOverride
-	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
-	SignBlobOptions signing.SignBlobOptions
+	// A nil value leaves the package unsigned; a non-nil value requests signing.
+	SignBlobOptions *signing.SignBlobOptions
 	// Deprecated: populate SignBlobOptions.Key directly.
 	SigningKeyPath string
 	// Deprecated: populate SignBlobOptions.Password directly.
@@ -228,14 +228,25 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 
-	if opts.SigningKeyPath != "" && opts.SignBlobOptions.Key == "" {
-		opts.SignBlobOptions.Key = opts.SigningKeyPath
+	signOpts := opts.SignBlobOptions
+	if signOpts != nil && ((signOpts.Key == "" && opts.SigningKeyPath != "") || (signOpts.Password == "" && opts.SigningKeyPassword != "")) {
+		copied := *signOpts
+		signOpts = &copied
 	}
-	if opts.SigningKeyPassword != "" && opts.SignBlobOptions.Password == "" {
-		opts.SignBlobOptions.Password = opts.SigningKeyPassword
+	if signOpts == nil && opts.SigningKeyPath != "" {
+		defaults := signing.DefaultSignBlobOptions()
+		signOpts = &defaults
+	}
+	if signOpts != nil {
+		if signOpts.Key == "" {
+			signOpts.Key = opts.SigningKeyPath
+		}
+		if signOpts.Password == "" {
+			signOpts.Password = opts.SigningKeyPassword
+		}
 	}
 
-	if err := pkgLayout.SignPackage(ctx, opts.SignBlobOptions); err != nil {
+	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
 		return nil, err
 	}
 
@@ -316,9 +327,13 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, fmt.Errorf("unable to load skeleton: %w", err)
 	}
 
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = opts.SigningKeyPath
-	signOpts.Password = opts.SigningKeyPassword
+	var signOpts *signing.SignBlobOptions
+	if opts.SigningKeyPath != "" {
+		defaults := signing.DefaultSignBlobOptions()
+		defaults.Key = opts.SigningKeyPath
+		defaults.Password = opts.SigningKeyPassword
+		signOpts = &defaults
+	}
 	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
 		return nil, err
 	}
