@@ -361,7 +361,9 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 		switch c.Name {
 		case "git-server":
 			services.Add(state.GitKey)
-			services.Add(state.ArtifactKey)
+			if feature.IsEnabled(feature.ArtifactServer) {
+				services.Add(state.ArtifactKey)
+			}
 		case "zarf-registry", "zarf-seed-registry", "zarf-injector":
 			if !registryExternal {
 				services.Add(state.RegistryKey)
