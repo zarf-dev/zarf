@@ -221,9 +221,5 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 }
 
 func validResourcePath(value string) bool {
-	if value == "." || !fs.ValidPath(value) || strings.ContainsAny(value, `\:`) {
-		return false
-	}
-	_, err := filepath.Localize(value)
-	return err == nil
+	return value != "." && fs.ValidPath(value) && !strings.ContainsAny(value, `\:`)
 }
