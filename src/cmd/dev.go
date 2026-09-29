@@ -473,6 +473,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 
 type devInspectValuesFilesOptions struct {
 	flavor             string
+	components         string
 	createSetPkgTmpl   map[string]string
 	deploySetVariables map[string]string
 	valuesFiles        []string
@@ -501,6 +502,7 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
 	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
@@ -534,6 +536,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		DeploySetVariables: o.deploySetVariables,
 		Values:             values,
 		Flavor:             o.flavor,
+		Components:         o.components,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
 		IsInteractive:      true,
