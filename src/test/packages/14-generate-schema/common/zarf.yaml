@@ -17,6 +17,8 @@ components:
         releaseName: backend-chart
         namespace: backend-test
         localPath: ../chart
+        valuesFiles:
+          - chart-values.yaml
         values:
           - sourcePath: ".backend"
             targetPath: "."
