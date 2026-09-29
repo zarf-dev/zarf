@@ -91,12 +91,11 @@ type Component struct {
 	StateAccess   []StateAccessKey
 	Actions       ComponentActions
 
-	Default           bool
-	Group             string
-	DataInjections    []ZarfDataInjection
-	HealthChecks      []NamespacedObjectKindReference
-	Distros           []string
-	DeprecatedScripts DeprecatedComponentScripts
+	Default        bool
+	Group          string
+	DataInjections []ZarfDataInjection
+	HealthChecks   []NamespacedObjectKindReference
+	Distros        []string
 }
 
 // Service identifies a Zarf-managed cluster service provided by a component.
@@ -110,17 +109,6 @@ const (
 	ServiceAgent        Service = "agent"
 	ServiceGitServer    Service = "git-server"
 )
-
-// DeprecatedComponentScripts is the v1alpha1-only pre-actions scripts block, preserved for lossless
-// round-trip.
-type DeprecatedComponentScripts struct {
-	ShowOutput     bool
-	TimeoutSeconds int
-	Retry          bool
-	Prepare        []string
-	Before         []string
-	After          []string
-}
 
 // ComponentTarget filters a component to a target OS/arch/flavor.
 type ComponentTarget struct {
