@@ -200,7 +200,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 
-	if err = createDocumentationTar(pkg, resolvedPackage.Resources, buildPath); err != nil {
+	if err = stageDocumentation(pkg, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -285,7 +285,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, err
 	}
 
-	if err = createDocumentationTar(definition, resolvedPackage.Resources, buildPath); err != nil {
+	if err = stageDocumentation(definition, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -1106,7 +1106,7 @@ func writeValuesSchema(buildPath string, schema value.SchemaDocument) error {
 	return nil
 }
 
-func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
+func stageDocumentation(pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
 	if len(pkg.Documentation) == 0 {
 		return nil
 	}
@@ -1119,9 +1119,8 @@ func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildP
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
 
-	// Get the mapping of keys to their final filenames (with deduplication logic)
+	// Get the mapping of keys to their final filenames (with deduplication logic).
 	fileNames := layout.GetDocumentationFileNames(pkg.Documentation)
-
 	for key, file := range pkg.Documentation {
 		src, err := resources.Path(file)
 		if err != nil {
@@ -1129,21 +1128,30 @@ func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildP
 		}
 
 		docFilename := fileNames[key]
-		dst := filepath.Join(tmpDir, docFilename)
+		dstDir := tmpDir
+		if layout.UsesGranularResourceLayout(pkg) {
+			dstDir = filepath.Join(buildPath, layout.DocumentationDir)
+		}
+		if err := os.MkdirAll(dstDir, helpers.ReadWriteExecuteUser); err != nil {
+			return fmt.Errorf("failed to create documentation directory: %w", err)
+		}
+		dst := filepath.Join(dstDir, docFilename)
 
 		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
 		}
-
 		if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
 			return fmt.Errorf("failed to set permissions on documentation file %s: %w", dst, err)
 		}
+	}
+
+	if layout.UsesGranularResourceLayout(pkg) {
+		return nil
 	}
 
 	tarPath := filepath.Join(buildPath, layout.DocumentationTar)
 	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
 		return fmt.Errorf("failed to create documentation tarball: %w", err)
 	}
-
 	return nil
 }

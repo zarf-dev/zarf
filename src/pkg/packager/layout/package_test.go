@@ -88,6 +88,29 @@ func TestPackageLayout(t *testing.T) {
 	}
 }
 
+func TestGetSBOMResourcesV1Beta1(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath("component:metrics")))
+	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+	require.NoError(t, os.WriteFile(resourcePath, []byte("metrics SBOM"), 0o600))
+
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}}},
+		},
+	}
+	outputDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{"component:metrics"}))
+	require.FileExists(t, filepath.Join(outputDir, "metrics.json"))
+	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, nil))
+	require.ErrorContains(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{"component:missing"}), "not found")
+}
+
 func TestPackageLayoutMutators(t *testing.T) {
 	pkgLayout := &PackageLayout{pkg: api.Package{
 		Metadata: api.PackageMetadata{
@@ -1317,6 +1340,25 @@ func TestGetDocumentation(t *testing.T) {
 
 		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"nonexistent"})
 		require.ErrorContains(t, err, "not found in package documentation")
+	})
+	t.Run("extract v1beta1 documentation resources", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		pkgDir := filepath.Join(tmpDir, "package")
+		require.NoError(t, os.MkdirAll(filepath.Join(pkgDir, DocumentationDir), 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, DocumentationDir, "README.md"), []byte("readme content"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, DocumentationDir, "LICENSE"), []byte("license content"), 0o600))
+
+		pkgLayout := &PackageLayout{
+			dirPath: pkgDir,
+			pkg: convert.PackageFromV1beta1(v1beta1.Package{
+				APIVersion:    v1beta1.APIVersion,
+				Documentation: map[string]string{"readme": "README.md", "license": "LICENSE"},
+			}),
+		}
+		outputDir := filepath.Join(tmpDir, "output")
+		require.NoError(t, pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"}))
+		assertFileContent(t, filepath.Join(outputDir, "README.md"), "readme content")
+		require.NoFileExists(t, filepath.Join(outputDir, "LICENSE"))
 	})
 
 	t.Run("extract single key when multiple files have same basename", func(t *testing.T) {

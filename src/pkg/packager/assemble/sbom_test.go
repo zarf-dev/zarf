@@ -33,7 +33,7 @@ func TestCreateImageSBOM(t *testing.T) {
 
 	outputPath := t.TempDir()
 	img := empty.Image
-	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
+	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest", false)
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
 
@@ -51,7 +51,7 @@ func TestCreateImageSBOMNonExistentCachePath(t *testing.T) {
 	// Cache path that doesn't exist yet
 	cachePath := filepath.Join(t.TempDir(), "non-existent-cache")
 	img := empty.Image
-	b, err := createImageSBOM(ctx, cachePath, outputPath, img, "docker.io/foo/bar:latest")
+	b, err := createImageSBOM(ctx, cachePath, outputPath, img, "docker.io/foo/bar:latest", false)
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
 }
@@ -110,7 +110,7 @@ L:Zlib
 	require.NoError(t, err)
 
 	outputPath := t.TempDir()
-	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
+	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest", false)
 	require.NoError(t, err)
 
 	var doc model.Document
@@ -162,7 +162,7 @@ func TestCreateFileSBOMContents(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(componentsDir, component.Name+".tar"), buf.Bytes(), 0o644))
 
 	outputPath := t.TempDir()
-	b, err := createFileSBOM(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], outputPath, buildPath)
+	b, err := createFileSBOM(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], outputPath, buildPath, false)
 	require.NoError(t, err)
 
 	var doc model.Document
@@ -183,4 +183,9 @@ func TestCreateFileSBOMContents(t *testing.T) {
 	fileContent, err := os.ReadFile(filepath.Join(outputPath, "zarf-component-test-component.json"))
 	require.NoError(t, err)
 	require.Equal(t, fileContent, b)
+
+	betaOutputPath := t.TempDir()
+	_, err = createFileSBOM(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], betaOutputPath, buildPath, true)
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.SBOMResourcePath("component:test-component"))))
 }

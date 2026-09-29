@@ -275,12 +275,16 @@ func (e *NoSBOMAvailableError) Error() string {
 	return fmt.Sprintf("zarf package %s does not have an SBOM available", e.pkgName)
 }
 
-// ContainsSBOM checks if a package includes an SBOM
+// ContainsSBOM checks if a package includes an SBOM.
 func (p *PackageLayout) ContainsSBOM() bool {
 	if !p.pkg.IsSBOMAble() {
 		return false
 	}
-	return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
+	if !UsesGranularResourceLayout(p.pkg) {
+		return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
+	}
+	entries, err := os.ReadDir(filepath.Join(p.dirPath, SBOMResourcesDir))
+	return err == nil && len(entries) > 0
 }
 
 // SignPackage signs the zarf package using cosign with the provided options.
@@ -543,18 +547,61 @@ func (p *PackageLayout) IsSigned() bool {
 	return false
 }
 
-// GetSBOM outputs the SBOM data from the package to the given destination path.
+// GetSBOM outputs all SBOM data from the package to the given destination path.
 func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
+	return p.GetSBOMResources(ctx, destPath, nil)
+}
+
+// GetSBOMResources outputs selected SBOM resources from the package to the given destination path.
+func (p *PackageLayout) GetSBOMResources(ctx context.Context, destPath string, keys []string) error {
 	if !p.ContainsSBOM() {
 		return &NoSBOMAvailableError{pkgName: p.Definition().Metadata.Name}
 	}
+	if !UsesGranularResourceLayout(p.pkg) {
+		return archive.Decompress(ctx, filepath.Join(p.dirPath, SBOMTar), destPath, archive.DecompressOpts{})
+	}
 
-	// locate the sboms archive under the layout directory
-	sbomArchive := filepath.Join(p.dirPath, SBOMTar)
+	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
+		return fmt.Errorf("creating SBOM output directory: %w", err)
+	}
+	if len(keys) == 0 {
+		return filepath.WalkDir(filepath.Join(p.dirPath, SBOMResourcesDir), func(sourcePath string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			return copyResourceFile(sourcePath, filepath.Join(destPath, entry.Name()))
+		})
+	}
 
-	err := archive.Decompress(ctx, sbomArchive, destPath, archive.DecompressOpts{})
-	if err != nil {
-		return err
+	for _, key := range keys {
+		resourcePath, err := sbomResourcePathForKey(key)
+		if err != nil {
+			return err
+		}
+		sourcePath := filepath.Join(p.dirPath, filepath.FromSlash(resourcePath))
+		if err := copyResourceFile(sourcePath, filepath.Join(destPath, filepath.Base(resourcePath))); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("SBOM resource key %q not found in package", key)
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+func sbomResourcePathForKey(key string) (string, error) {
+	if componentName, ok := strings.CutPrefix(key, "component:"); ok && !isCleanPath(componentName) {
+		return "", fmt.Errorf("invalid SBOM component key %q", key)
+	}
+	return SBOMResourcePath(key), nil
+}
+
+func copyResourceFile(sourcePath, destPath string) error {
+	if err := helpers.CreatePathAndCopy(sourcePath, destPath); err != nil {
+		return fmt.Errorf("copying package resource: %w", err)
 	}
 	return nil
 }
@@ -564,14 +611,8 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 // If keys are provided, only those specific documentation files are extracted.
 func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) (err error) {
 	l := logger.From(ctx)
-
 	if len(p.pkg.Documentation) == 0 {
 		return fmt.Errorf("no documentation files found in package")
-	}
-
-	tarPath := filepath.Join(p.dirPath, DocumentationTar)
-	if _, err := os.Stat(tarPath); os.IsNotExist(err) {
-		return fmt.Errorf("documentation.tar not found in package")
 	}
 
 	keysToExtract := maps.Clone(p.pkg.Documentation)
@@ -586,32 +627,34 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		}
 	}
 
-	// Extract tar to temp directory
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return fmt.Errorf("failed to create temp directory: %w", err)
-	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(tmpDir))
-	}()
-
-	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
-	if err != nil {
-		return fmt.Errorf("failed to extract documentation.tar: %w", err)
+	sourceDir := filepath.Join(p.dirPath, DocumentationDir)
+	if !UsesGranularResourceLayout(p.pkg) {
+		tarPath := filepath.Join(p.dirPath, DocumentationTar)
+		if _, err := os.Stat(tarPath); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("documentation.tar not found in package")
+			}
+			return err
+		}
+		sourceDir, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return fmt.Errorf("failed to create temp directory: %w", err)
+		}
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(sourceDir))
+		}()
+		if err := archive.Decompress(ctx, tarPath, sourceDir, archive.DecompressOpts{}); err != nil {
+			return fmt.Errorf("failed to extract documentation.tar: %w", err)
+		}
 	}
 
 	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
 	}
-
 	fileNames := GetDocumentationFileNames(p.pkg.Documentation)
-
 	for key, file := range keysToExtract {
 		docFileName := fileNames[key]
-
-		srcPath := filepath.Join(tmpDir, docFileName)
-		dstPath := filepath.Join(destPath, docFileName)
-		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
+		if err := copyResourceFile(filepath.Join(sourceDir, docFileName), filepath.Join(destPath, docFileName)); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", file, err)
 		}
 	}

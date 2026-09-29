@@ -668,12 +668,14 @@ func TestAssemblePackageV1Beta1WritesMultiDocDefinition(t *testing.T) {
 kind: ZarfPackageConfig
 metadata:
   name: beta-local
+documentation:
+  readme: %q
 components:
   - name: beta-component
     files:
       - source: %q
         destination: data.txt
-`, dataPath)
+`, dataPath, dataPath)
 	require.NoError(t, os.WriteFile(filepath.Join(tmpdir, layout.ZarfYAML), []byte(zarfYAML), 0o600))
 
 	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
@@ -690,6 +692,8 @@ components:
 	require.NoError(t, err)
 	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
 	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
+	require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationDir, "data.txt"))
+	require.NoFileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationTar))
 }
 
 func TestAssemblePackageV1Alpha1DoesNotWriteV1Beta1Definition(t *testing.T) {
