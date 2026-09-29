@@ -12,6 +12,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -105,6 +106,92 @@ func TestGetCreds(t *testing.T) {
 			}
 			if tt.outputFormat == outputYAML {
 				require.YAMLEq(t, string(b), buf.String())
+			}
+		})
+	}
+}
+
+func TestGetCredsOnlyConfiguredServices(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		registryAddress string
+		registryMode    state.RegistryMode
+		gitAddress      string
+		artifactAddress string
+		wantKeys        []string
+	}{
+		{"none configured", "", state.RegistryModeNodePort, "", "", []string{}},
+		{"internal registry configured", "127.0.0.1:30001", state.RegistryModeNodePort, "", "", []string{registryKey, registryReadKey}},
+		{"external registry configured", "registry.example.com", state.RegistryModeExternal, "", "", []string{registryKey, registryReadKey}},
+		{"git configured", "", state.RegistryModeNodePort, "https://git.example.com", "", []string{gitKey, gitReadKey}},
+		{"artifact configured", "", state.RegistryModeNodePort, "", "https://artifact.example.com", []string{artifactKey}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			s := &state.State{
+				Distro: "test",
+				RegistryInfo: state.RegistryInfo{
+					Address:      tt.registryAddress,
+					RegistryMode: tt.registryMode,
+					PushPassword: "registry-push-password",
+					PullPassword: "registry-pull-password",
+				},
+				GitServer: state.GitServerInfo{
+					Address:      tt.gitAddress,
+					PushPassword: "git-push-password",
+					PullPassword: "git-pull-password",
+				},
+				ArtifactServer: state.ArtifactServerInfo{
+					Address:   tt.artifactAddress,
+					PushToken: "artifact-token",
+				},
+			}
+			b, err := json.Marshal(s)
+			require.NoError(t, err)
+			c := &cluster.Cluster{Clientset: fake.NewClientset(&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: state.ZarfStateSecretName, Namespace: state.ZarfNamespaceName},
+				Data:       map[string][]byte{state.ZarfStateDataKey: b},
+			})}
+			buf := new(bytes.Buffer)
+			o := getCredsOptions{outputFormat: outputJSON, outputWriter: buf, cluster: c}
+			if len(tt.wantKeys) == 0 {
+				for _, format := range []outputFormat{outputJSON, outputYAML, outputTable} {
+					o.outputFormat = format
+					require.EqualError(t, o.run(ctx, nil), "no services configured")
+					require.Empty(t, buf.String())
+				}
+			} else {
+				require.NoError(t, o.run(ctx, nil))
+				var credentials []credentialInfo
+				require.NoError(t, json.Unmarshal(buf.Bytes(), &credentials))
+				keys := make([]string, 0, len(credentials))
+				for _, credential := range credentials {
+					keys = append(keys, credential.GetCredsKey)
+				}
+				require.Equal(t, tt.wantKeys, keys)
+			}
+
+			for _, keyed := range []struct{ key, want string }{
+				{registryKey, "registry-push-password"},
+				{registryReadKey, "registry-pull-password"},
+				{gitKey, "git-push-password"},
+				{gitReadKey, "git-pull-password"},
+				{artifactKey, "artifact-token"},
+				{"unknown", ""},
+			} {
+				buf.Reset()
+				err := o.run(ctx, []string{keyed.key})
+				if !slices.Contains(tt.wantKeys, keyed.key) {
+					require.EqualError(t, err, "service \""+keyed.key+"\" not found")
+					require.Empty(t, buf.String(), keyed.key)
+				} else {
+					require.NoError(t, err)
+					require.Equal(t, keyed.want+"\n", buf.String(), keyed.key)
+				}
 			}
 		})
 	}
