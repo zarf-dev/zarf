@@ -40,9 +40,13 @@ type LoadOptions struct {
 	Output            string
 	// number of layers to pull in parallel
 	OCIConcurrency int
-	// LayerTypes specifies which layer types to pull from OCI
+	// LayerTypes specifies which layer types to pull from OCI.
 	LayerTypes []zoci.LayerType
-	// CachePath is used to cache layers from OCI package pulls
+	// DocumentationKeys limits a v1beta1 OCI pull to the named documentation resources.
+	DocumentationKeys []string
+	// SBOMKeys limits a v1beta1 OCI pull to the named SBOM resources.
+	SBOMKeys []string
+	// CachePath is used to cache layers from OCI package pulls.
 	CachePath string
 	// Connected skips pulling image layers from OCI sources
 	Connected bool
@@ -101,6 +105,8 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			Architecture:         config.GetArch(opts.Architecture),
 			Filter:               opts.Filter,
 			LayerTypes:           opts.LayerTypes,
+			DocumentationKeys:    opts.DocumentationKeys,
+			SBOMKeys:             opts.SBOMKeys,
 			OCIConcurrency:       opts.OCIConcurrency,
 			RemoteOptions:        opts.RemoteOptions,
 			Connected:            opts.Connected,

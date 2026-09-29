@@ -25,6 +25,13 @@ import (
 // LayerType specifies a category of layers in a Zarf OCI package.
 type LayerType string
 
+// LayerSelection identifies OCI package layer categories and individual granular resources to pull.
+type LayerSelection struct {
+	Types             []LayerType
+	DocumentationKeys []string
+	SBOMKeys          []string
+}
+
 const (
 	// DefaultConcurrency is the default concurrency used for operations
 	DefaultConcurrency = 6

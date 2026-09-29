@@ -118,6 +118,8 @@ type pullOCIOptions struct {
 	Shasum            string
 	Architecture      string
 	LayerTypes        []zoci.LayerType
+	DocumentationKeys []string
+	SBOMKeys          []string
 	Filter            filters.ComponentFilterStrategy
 	OCIConcurrency    int
 	CachePath         string
@@ -166,7 +168,12 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 			return lt == zoci.ImageLayers
 		})
 	}
-	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, layerTypes...)
+	selection := zoci.LayerSelection{
+		Types:             layerTypes,
+		DocumentationKeys: opts.DocumentationKeys,
+		SBOMKeys:          opts.SBOMKeys,
+	}
+	layersToPull, err := remote.AssembleLayersWithSelection(ctx, pkg.Components, selection)
 	if err != nil {
 		return nil, err
 	}
