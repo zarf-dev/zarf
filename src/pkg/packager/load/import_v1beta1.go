@@ -256,8 +256,11 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
+	if err := ValidateRemoteKustomizeRestrictions(config.Component); err != nil {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
+	}
 	// Remote components are barred from oncreate actions, this ensures a component wasn't maliciously published with them
-	if hasActionSet(config.Component.Actions.OnCreate) {
+	if HasActionSet(config.Component.Actions.OnCreate) {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q contains unsupported onCreate actions", importURL)
 	}
 	if len(config.Component.Import.Local) != 0 || len(config.Component.Import.Remote) != 0 {
@@ -288,6 +291,16 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
 	}
 	return loadedComponentConfig{config: config, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
+}
+
+// ValidateRemoteKustomizeRestrictions rejects unrestricted Kustomize builds for remote components.
+func ValidateRemoteKustomizeRestrictions(spec v1beta1.ComponentSpec) error {
+	for _, manifest := range spec.Manifests {
+		if manifest.Kustomize.AllowAnyDirectory {
+			return fmt.Errorf("manifest %q uses kustomize.allowAnyDirectory, which is not supported for remote components", manifest.Name)
+		}
+	}
+	return nil
 }
 
 // validateRemoteComponentResources keeps a fetched component from reading paths on the
@@ -356,7 +369,8 @@ func validateRemoteComponentResources(config v1beta1.ComponentConfig, mountPaths
 	return nil
 }
 
-func hasActionSet(actions v1beta1.ComponentActionSet) bool {
+// HasActionSet reports whether an action set contains actions or defaults.
+func HasActionSet(actions v1beta1.ComponentActionSet) bool {
 	return actions.Defaults != nil || len(actions.Before) != 0 || len(actions.OnSuccess) != 0 || len(actions.OnFailure) != 0
 }
 

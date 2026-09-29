@@ -265,6 +265,44 @@ components:
 	}
 }
 
+func TestRemoteImportRejectsAllowAnyDirectory(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	ref := registry.Reference{
+		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+		Repository: "components",
+		Reference:  "unrestricted-kustomize",
+	}
+	component := v1beta1.ComponentConfig{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfComponentConfig,
+		Metadata:   v1beta1.ComponentMetadata{Name: "unrestricted-kustomize"},
+		Component: v1beta1.ComponentSpec{Manifests: []v1beta1.Manifest{{
+			Name: "app",
+			Kustomize: v1beta1.KustomizeManifest{
+				Files:             []string{"resources/kustomization"},
+				AllowAnyDirectory: true,
+			},
+		}}},
+	}
+	publishRemoteComponentConfig(ctx, t, ref, component, "resources/kustomization")
+
+	manifest := []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: remote
+components:
+  - name: remote
+    import:
+      remote:
+        - url: oci://` + ref.String() + "\n")
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), manifest, 0o600))
+
+	_, err := PackageDefinition(ctx, dir, DefinitionOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
+	require.ErrorContains(t, err, `manifest "app" uses kustomize.allowAnyDirectory`)
+}
+
 func TestRemoteComponentConfigRejectsUnsafeResourceMountPaths(t *testing.T) {
 	t.Parallel()
 

@@ -727,6 +727,30 @@ component:
 	require.EqualError(t, err, "onCreate actions are not supported for published remote components")
 }
 
+func TestPublishComponentRejectsAllowAnyDirectory(t *testing.T) {
+	t.Parallel()
+
+	componentPath := filepath.Join(t.TempDir(), "component.yaml")
+	componentYAML := []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: unrestricted
+  version: 0.0.1
+component:
+  manifests:
+    - name: app
+      kustomize:
+        files:
+          - kustomize
+        allowAnyDirectory: true
+`)
+	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
+
+	ctx := context.Background()
+	_, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.ErrorContains(t, err, `manifest "app" uses kustomize.allowAnyDirectory`)
+}
+
 func getPublishedComponent(ctx context.Context, t *testing.T, published registry.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {
 	return getPublishedComponentForArchitecture(ctx, t, published, "")
 }

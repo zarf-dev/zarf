@@ -74,6 +74,9 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 		return registry.Reference{}, fmt.Errorf("unable to resolve component imports: %w", err)
 	}
 	component = resolved.Component
+	if err := load.ValidateRemoteKustomizeRestrictions(component.Component); err != nil {
+		return registry.Reference{}, err
+	}
 	resourceSet, err := resolved.MaterializeResources(ctx, componentPath)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to materialize imported component resources: %w", err)
