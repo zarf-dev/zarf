@@ -1361,6 +1361,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
+		DocumentationKeys:    o.keys,
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	defer func() {
