@@ -16,7 +16,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -226,7 +225,10 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		if err != nil {
 			return api.Package{}, err
 		}
-		definition := convert.PackageFromV1alpha1(depPkg.Data)
+		definition, err := depPkg.Definition()
+		if err != nil {
+			return api.Package{}, err
+		}
 		definition, err = filters.Apply(definition, opts.Filter)
 		if err != nil {
 			return api.Package{}, err
