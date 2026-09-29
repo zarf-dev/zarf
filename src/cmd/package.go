@@ -1162,6 +1162,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 // packageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
 type packageInspectSBOMOptions struct {
 	outputDir      string
+	keys           []string
 	ociConcurrency int
 	packageVerifyFlags
 }
@@ -1186,6 +1187,7 @@ func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
+	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated list of SBOM resource keys to extract")
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
@@ -1209,6 +1211,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
 		LayerTypes:           []zoci.LayerType{zoci.SbomLayers},
+		SBOMKeys:             o.keys,
 		Filter:               filters.Empty(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1224,7 +1227,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	}()
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
 	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.Definition().Metadata.Name))
-	err = pkgLayout.GetSBOM(ctx, outputPath)
+	err = pkgLayout.GetSBOMResources(ctx, outputPath, o.keys)
 	if err != nil {
 		return fmt.Errorf("could not get SBOM: %w", err)
 	}
@@ -1358,10 +1361,10 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
 		LayerTypes:           []zoci.LayerType{zoci.DocLayers},
+		DocumentationKeys:    o.keys,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
-		DocumentationKeys:    o.keys,
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	defer func() {

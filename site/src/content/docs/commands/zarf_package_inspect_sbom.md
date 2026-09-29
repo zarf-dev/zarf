@@ -36,6 +36,7 @@ $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbo
   -h, --help                                    help for sbom
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
+      --keys strings                            Comma-separated list of SBOM resource keys to extract
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --output string                           Specify an output directory for the SBOMs from the created Zarf package
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
