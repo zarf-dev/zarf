@@ -79,6 +79,19 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, string(b))
 	})
 
+	t.Run("zarf dev inspect values-files with components", func(t *testing.T) {
+		t.Parallel()
+		pathToPackage := filepath.Join("src", "cmd", "testdata", "inspect-values-files", "chart")
+
+		stdOut, stdErr, err := e2e.Zarf(t,
+			"dev", "inspect", "values-files", pathToPackage,
+			"--components=httpd-local",
+			"--deploy-set-variables=PORT=8080,REPLICAS=2,DESCRIPTION=selected",
+		)
+		require.NoError(t, err, stdOut, stdErr)
+		require.Equal(t, 1, strings.Count(stdOut, "# associated chart: htppd-local"))
+		require.Contains(t, stdOut, `replicaCount: "2"`)
+	})
 	t.Run("zarf dev template", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()

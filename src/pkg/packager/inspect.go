@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -280,6 +281,7 @@ type InspectDefinitionResourcesOptions struct {
 	// API callers.
 	Values      value.Values
 	Flavor      string
+	Components  string
 	KubeVersion string
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
@@ -317,6 +319,17 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		err = errors.Join(err, loaded.Close())
 	}()
 	pkg := loaded.Definition
+	selectedComponents := pkg.Components
+	if opts.Components != "" {
+		filteredPkg, err := filters.Apply(pkg, filters.BySelectState(opts.Components))
+		if err != nil {
+			return nil, err
+		}
+		if len(filteredPkg.Components) == 0 {
+			return nil, fmt.Errorf("no components matched %q", opts.Components)
+		}
+		selectedComponents = filteredPkg.Components
+	}
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, opts.IsInteractive)
 	if err != nil {
 		return nil, err
@@ -341,7 +354,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	}(tmpPackagePath)
 
 	var resources []Resource
-	for _, component := range pkg.Components {
+	for _, component := range selectedComponents {
 		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, s)
 		if err != nil {
 			return nil, err
