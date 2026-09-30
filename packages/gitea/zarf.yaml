@@ -3,6 +3,29 @@ metadata:
   name: init-package-git-server
 
 variables:
+  - name: GIT_SERVER_TLS_CA
+    description: Path to a PEM-encoded CA certificate for the internal Git server. Set with GIT_SERVER_TLS_CERT and GIT_SERVER_TLS_KEY.
+    default: ""
+    type: file
+    autoIndent: true
+
+  - name: GIT_SERVER_TLS_CERT
+    description: Path to a PEM-encoded TLS certificate for the internal Git server.
+    default: ""
+    type: file
+    autoIndent: true
+
+  - name: GIT_SERVER_TLS_KEY
+    description: Path to a PEM-encoded TLS private key for the internal Git server.
+    default: ""
+    type: file
+    autoIndent: true
+    sensitive: true
+
+  - name: GIT_SERVER_TLS_CONFIGURED
+    description: Set by Zarf when certificate files are supplied for this deployment
+    default: "false"
+
   - name: GIT_SERVER_EXISTING_PVC
     description: "Optional: Use an existing PVC for the git server instead of creating a new one. If this is set, the GIT_SERVER_PVC_SIZE variable will be ignored."
     default: "data-zarf-gitea-0"
@@ -83,6 +106,14 @@ components:
         files:
           - connect.yaml
     charts:
+      - name: zarf-git-server-tls
+        releaseName: zarf-git-server-tls
+        localPath: tls-chart
+        version: 0.1.0
+        namespace: zarf
+        serverSideApply: "false"
+        valuesFiles:
+          - git-tls-values.yaml
       - name: gitea
         releaseName: zarf-gitea
         url: oci://registry-1.docker.io/giteacharts/gitea

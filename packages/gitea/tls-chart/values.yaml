@@ -1,0 +1,6 @@
+certificates:
+  required: false
+  ca: ""
+  cert: ""
+  key: ""
+rotation: ""

@@ -137,21 +137,6 @@ func (c *Cluster) GetGitServerTLS(ctx context.Context) (pki.GeneratedPKI, error)
 	return state.GitServerCertFromSecretData(secret.Data)
 }
 
-// ApplyGitServerTLS stores the server certificate in the fixed Secret mounted
-// by Gitea. Keeping it separate from Helm values prevents private material from
-// being retained in release metadata.
-func (c *Cluster) ApplyGitServerTLS(ctx context.Context, certs pki.GeneratedPKI) error {
-	secret := v1ac.Secret(state.GitServerTLSSecret, state.ZarfNamespaceName).
-		WithLabels(map[string]string{state.ZarfManagedByLabel: "zarf"}).
-		WithType(corev1.SecretTypeTLS).
-		WithData(state.GitServerCertSecretData(certs))
-	_, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, secret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-	if err != nil {
-		return fmt.Errorf("failed to apply Git server TLS secret: %w", err)
-	}
-	return nil
-}
-
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
 func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, s *state.State) error {
 	l := logger.From(ctx)

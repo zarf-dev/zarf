@@ -5,32 +5,78 @@
 package test
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"testing"
 
-	"encoding/json"
-
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/yaml"
 )
 
-func TestInitGitTLSCertificatesEnableTLS(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		mode []string
-	}{
-		{name: "default mode"},
-		{name: "explicit disabled mode", mode: []string{"--git-tls-mode=disabled"}},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			args := append([]string{"init", "--git-tls-ca=ca.pem", "--git-tls-cert=cert.pem", "--git-tls-key=key.pem", "--git-url=https://git.example.com", "--git-push-username=user", "--git-push-password=password", "--confirm"}, tc.mode...)
-			_, stdErr, err := e2e.Zarf(t, args...)
-			require.Error(t, err)
-			require.Contains(t, stdErr, "git TLS options cannot be used with --git-url")
-		})
+func TestInitGitTLSChartCreatesSecret(t *testing.T) {
+	render := func(t *testing.T, valuesFile string) corev1.Secret {
+		t.Helper()
+		args := []string{"tools", "helm", "template", "zarf-git-server-tls", "packages/gitea/tls-chart", "--namespace", "zarf"}
+		if valuesFile != "" {
+			args = append(args, "-f", valuesFile)
+		}
+		command := exec.Command(e2e.ZarfBinPath, args...)
+		stdout, err := command.Output()
+		require.NoError(t, err)
+		secret := corev1.Secret{}
+		require.NoError(t, yaml.Unmarshal(stdout, &secret))
+		require.Equal(t, state.GitServerTLSSecret, secret.Name)
+		return secret
 	}
+
+	t.Run("generated certificate covers Git clients", func(t *testing.T) {
+		secret := render(t, "")
+		_, err := tls.X509KeyPair(secret.Data[state.GitServerTLSCertKey], secret.Data[state.GitServerTLSKey])
+		require.NoError(t, err)
+		cert, err := pki.ParseCertFromPEM(secret.Data[state.GitServerTLSCertKey])
+		require.NoError(t, err)
+		roots := x509.NewCertPool()
+		require.True(t, roots.AppendCertsFromPEM(secret.Data[state.GitServerTLSCAKey]))
+		_, err = cert.Verify(x509.VerifyOptions{Roots: roots, DNSName: state.ZarfInClusterGitServiceHost})
+		require.NoError(t, err)
+		for _, host := range append(append([]string{}, state.ZarfGitServerTLSHosts...), "127.0.0.1", "::1") {
+			require.NoError(t, cert.VerifyHostname(host))
+		}
+	})
+
+	t.Run("user certificate is stored in the Secret", func(t *testing.T) {
+		certs, err := pki.GeneratePKI(state.ZarfInClusterGitServiceHost, state.ZarfGitServerTLSHosts...)
+		require.NoError(t, err)
+		values, err := yaml.Marshal(map[string]any{"certificates": map[string]any{
+			"required": true, "ca": string(certs.CA), "cert": string(certs.Cert), "key": string(certs.Key),
+		}})
+		require.NoError(t, err)
+		valuesFile := filepath.Join(t.TempDir(), "git-tls-values.yaml")
+		require.NoError(t, os.WriteFile(valuesFile, values, 0600))
+		secret := render(t, valuesFile)
+		require.Equal(t, certs.CA, secret.Data[state.GitServerTLSCAKey])
+		require.Equal(t, certs.Cert, secret.Data[state.GitServerTLSCertKey])
+		require.Equal(t, certs.Key, secret.Data[state.GitServerTLSKey])
+	})
+
+	t.Run("incomplete certificate fails chart rendering", func(t *testing.T) {
+		valuesFile := filepath.Join(t.TempDir(), "partial-values.yaml")
+		require.NoError(t, os.WriteFile(valuesFile, []byte("certificates:\n  required: true\n  ca: incomplete\n"), 0600))
+		command := exec.Command(e2e.ZarfBinPath, "tools", "helm", "template", "zarf-git-server-tls", "packages/gitea/tls-chart", "-f", valuesFile)
+		output, err := command.CombinedOutput()
+		require.Error(t, err)
+		require.Contains(t, string(output), "GIT_SERVER_TLS_CA, GIT_SERVER_TLS_CERT, and GIT_SERVER_TLS_KEY must be provided together")
+	})
 }
 
 func TestZarfInit(t *testing.T) {

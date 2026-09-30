@@ -756,9 +756,9 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 	var gitTLS *pki.GeneratedPKI
 	if o.gitTLSCAPath != "" {
-		loadedTLS, err := loadAndValidateGitTLS(o.gitTLSCAPath, o.gitTLSCertPath, o.gitTLSKeyPath)
+		loadedTLS, err := readGitTLSFiles(o.gitTLSCAPath, o.gitTLSCertPath, o.gitTLSKeyPath)
 		if err != nil {
-			return fmt.Errorf("invalid Git server TLS certificates: %w", err)
+			return err
 		}
 		gitTLS = &loadedTLS
 	}
@@ -796,6 +796,22 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	)
 }
 
+func readGitTLSFiles(caPath, certPath, keyPath string) (pki.GeneratedPKI, error) {
+	ca, err := os.ReadFile(caPath)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read Git TLS CA: %w", err)
+	}
+	cert, err := os.ReadFile(certPath)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read Git TLS certificate: %w", err)
+	}
+	key, err := os.ReadFile(keyPath)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read Git TLS key: %w", err)
+	}
+	return pki.GeneratedPKI{CA: ca, Cert: cert, Key: key}, nil
+}
+
 func (o *updateGitCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, fromState, toState *state.State, userTLSBundles ...*pki.GeneratedPKI) error {
 	var userTLS *pki.GeneratedPKI
 	if len(userTLSBundles) > 0 {
@@ -808,19 +824,16 @@ func (o *updateGitCredsOptions) applyState(ctx context.Context, c *cluster.Clust
 			return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
 		}
 	}
-	if toState.GitServer.IsInternal() && toState.GitServer.TLSMode.Enabled() {
-		certs := userTLS
-		if certs == nil && (o.rotateTLS || fromState.GitServer.TLSMode != toState.GitServer.TLSMode || fromState.GitServer.TLSCertManagement != toState.GitServer.TLSCertManagement) && toState.GitServer.TLSCertManagement == state.GitTLSCertZarfManaged {
-			generated, err := pki.GeneratePKI(state.ZarfInClusterGitServiceHost, state.ZarfGitServerTLSHosts...)
-			if err != nil {
-				return err
-			}
-			certs = &generated
+	rotate := o.rotateTLS ||
+		fromState.GitServer.TLSCertManagement != toState.GitServer.TLSCertManagement &&
+			(fromState.GitServer.TLSCertManagement == state.GitTLSCertUserManaged || toState.GitServer.TLSCertManagement == state.GitTLSCertZarfManaged)
+	if toState.GitServer.IsInternal() && (userTLS != nil || rotate) {
+		helmOpts := helm.InstallUpgradeOptions{
+			VariableConfig: template.GetZarfVariableConfig(ctx, !o.confirm), State: fromState, Cluster: c,
+			Timeout: config.ZarfDefaultTimeout, IsInteractive: !o.confirm, ForceConflicts: o.forceConflicts,
 		}
-		if certs != nil {
-			if err := c.ApplyGitServerTLS(ctx, *certs); err != nil {
-				return err
-			}
+		if err := helm.UpdateZarfGitServerTLSValues(ctx, helmOpts, userTLS, rotate); err != nil {
+			return err
 		}
 	}
 	// Distribute trust before rolling Gitea onto a new certificate.

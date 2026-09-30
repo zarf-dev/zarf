@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -86,6 +87,40 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 	err = healthchecks.WaitForReady(waitCtx, opts.Cluster.Watcher, objs)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+// UpdateZarfGitServerTLSValues updates the init package's TLS chart, which
+// owns the Secret mounted by Gitea. A new rotation token asks the chart to
+// generate a replacement certificate when no user bundle is supplied.
+func UpdateZarfGitServerTLSValues(ctx context.Context, opts InstallUpgradeOptions, certs *pki.GeneratedPKI, rotate bool) error {
+	pkgs, err := opts.Cluster.GetDeployedZarfPackages(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting init package: %w", err)
+	}
+	initPkgName, err := findPackageWithService(pkgs, api.ServiceGitServer)
+	if err != nil {
+		return err
+	}
+	if initPkgName == "" {
+		return fmt.Errorf("error finding init package with git-server component")
+	}
+	opts.PkgName = initPkgName
+	values := map[string]interface{}{}
+	if certs != nil {
+		values["certificates"] = map[string]interface{}{
+			"ca": string(certs.CA), "cert": string(certs.Cert), "key": string(certs.Key), "required": true,
+		}
+	} else if rotate {
+		values["certificates"] = map[string]interface{}{"ca": "", "cert": "", "key": "", "required": false}
+		values["rotation"] = fmt.Sprintf("%d", time.Now().UnixNano())
+	} else {
+		return nil
+	}
+	chart := api.Chart{Namespace: state.ZarfNamespaceName, ReleaseName: "zarf-git-server-tls", ServerSideApply: api.ServerSideApplyDisabled}
+	if err := UpdateReleaseValues(ctx, chart, values, opts); err != nil {
+		return fmt.Errorf("updating Git server TLS release values: %w", err)
 	}
 	return nil
 }

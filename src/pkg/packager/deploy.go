@@ -5,6 +5,7 @@ package packager
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"os"
@@ -79,8 +80,6 @@ type DeployOptions struct {
 	InjectorImage  string
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
-	// GitServerTLS allows providing user-managed TLS certificates for the internal Git server.
-	GitServerTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
 	AgentMutationPolicy state.MutationPolicy
 
@@ -163,6 +162,22 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 	if err != nil {
 		return DeployResult{}, err
+	}
+	if pkg.IsInitConfig() {
+		certFilesProvided := false
+		for _, name := range []string{"GIT_SERVER_TLS_CA", "GIT_SERVER_TLS_CERT", "GIT_SERVER_TLS_KEY"} {
+			if variable, ok := variableConfig.GetSetVariable(name); ok && variable.Value != "" {
+				certFilesProvided = true
+			}
+		}
+		variableConfig.SetVariable("GIT_SERVER_TLS_CONFIGURED", fmt.Sprintf("%t", certFilesProvided), false, false, api.RawVariableType)
+		if certFilesProvided {
+			if opts.GitServer.Address != "" {
+				return DeployResult{}, errors.New("git server TLS certificate variables cannot be used with an external Git server")
+			}
+			opts.GitServer.TLSMode = state.GitTLSEnabled
+			opts.GitServer.TLSCertManagement = state.GitTLSCertUserManaged
+		}
 	}
 
 	vals, err := loadDeploymentValues(ctx, pkgLayout, opts.Values, opts.SkipValuesSchemaValidation)
@@ -384,6 +399,11 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
 	isAgent := component.Name == "zarf-agent"
+	gitServerForState := opts.GitServer
+	if gitServerForState.Address == "" && gitServerForState.TLSMode.Enabled() {
+		gitServerForState.TLSMode = state.GitTLSDisabled
+		gitServerForState.TLSCertManagement = ""
+	}
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if component.RequiresCluster() && d.s == nil {
@@ -395,14 +415,13 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		}
 		var err error
 		d.s, err = d.c.InitState(ctx, cluster.InitStateOptions{
-			GitServer:           opts.GitServer,
+			GitServer:           gitServerForState,
 			RegistryInfo:        opts.RegistryInfo,
 			ArtifactServer:      opts.ArtifactServer,
 			ApplianceMode:       applianceMode,
 			StorageClass:        opts.StorageClass,
 			InjectorPort:        opts.InjectorPort,
 			AgentTLS:            opts.AgentTLS,
-			GitServerTLS:        opts.GitServerTLS,
 			AgentMutationPolicy: opts.AgentMutationPolicy,
 			InternalServices:    internalServicesFor(pkg.Components, opts),
 		})
@@ -416,6 +435,12 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			l.Info("skipping init package component since external registry information was provided", "component", component.Name)
 			return nil, nil
 		}
+	}
+	if component.Name == "git-server" && d.s.GitServer.IsInternal() && opts.GitServer.TLSMode.Enabled() &&
+		(d.s.GitServer.TLSMode != opts.GitServer.TLSMode || d.s.GitServer.TLSCertManagement != opts.GitServer.TLSCertManagement) {
+		d.s.GitServer.TLSMode = opts.GitServer.TLSMode
+		d.s.GitServer.TLSCertManagement = opts.GitServer.TLSCertManagement
+		d.s.GitServer.Address = state.ZarfInClusterGitURL(d.s.GitServer.TLSMode)
 	}
 
 	// Before deploying the seed registry, start the injector
@@ -601,6 +626,12 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			return charts, err
 		}
 	}
+	if pkgLayout.Definition().IsInitConfig() && component.Name == "git-server" && d.s.GitServer.TLSMode.Enabled() {
+		// The post-deploy actions load state from the cluster before calling Gitea.
+		if err := d.c.SaveState(ctx, d.s); err != nil {
+			return charts, fmt.Errorf("unable to save Git server TLS state: %w", err)
+		}
+	}
 
 	// Populate objects available to templates in after actions
 	if err := actions.Run(ctx, cwd, onDeploy.After, actions.RunOptions{
@@ -674,6 +705,27 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, err
 		}
+		if component.Name == "git-server" && chart.ReleaseName == "zarf-gitea" && d.s.GitServer.TLSMode.Enabled() {
+			certs, err := d.c.GetGitServerTLS(ctx)
+			if err != nil {
+				return installedCharts, fmt.Errorf("unable to read Git server TLS certificate: %w", err)
+			}
+			digest := sha256.Sum256(certs.Cert)
+			annotations := map[string]any{}
+			switch existing := valuesOverrides["podAnnotations"].(type) {
+			case nil:
+			case map[string]any:
+				annotations = existing
+			case map[string]string:
+				for name, value := range existing {
+					annotations[name] = value
+				}
+			default:
+				return installedCharts, fmt.Errorf("gitea podAnnotations must be a map, got %T", existing)
+			}
+			annotations["zarf.dev/git-tls-sha256"] = fmt.Sprintf("%x", digest)
+			valuesOverrides["podAnnotations"] = annotations
+		}
 
 		helmOpts := helm.InstallUpgradeOptions{
 			TakeOwnership:     opts.TakeOwnership || opts.AdoptExistingResources,
@@ -688,6 +740,17 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			NamespaceOverride: opts.NamespaceOverride,
 			IsInteractive:     opts.IsInteractive,
 		}
+		if component.Name == "git-server" && chart.ReleaseName == "zarf-git-server-tls" {
+			// Previous init packages wrote this Secret directly. Helm adopts it
+			// while the chart preserves its current certificate through lookup.
+			helmOpts.TakeOwnership = true
+			// The Secret does not exist until Helm applies this chart. The renderer
+			// must not try to copy its CA into namespace credentials yet.
+			stateBeforeTLS := *d.s
+			stateBeforeTLS.GitServer.TLSMode = state.GitTLSDisabled
+			stateBeforeTLS.GitServer.Address = state.ZarfInClusterGitURL(state.GitTLSDisabled)
+			helmOpts.State = &stateBeforeTLS
+		}
 		helmChart, values, err := helm.LoadChartData(chart, layout.ChartPaths{ChartsDir: chartDir, ValuesDir: valuesDir}, valuesOverrides)
 		if err != nil {
 			return installedCharts, fmt.Errorf("failed to load chart data: %w", err)
@@ -700,6 +763,11 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			return installedCharts, err
 		}
 		installedCharts = append(installedCharts, state.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings, Status: state.ChartStatusSucceeded})
+		if component.Name == "git-server" && chart.ReleaseName == "zarf-git-server-tls" && d.s.GitServer.TLSMode.Enabled() {
+			if err := d.c.UpdateZarfManagedGitSecrets(ctx, d.s); err != nil {
+				return installedCharts, fmt.Errorf("unable to distribute Git server CA: %w", err)
+			}
+		}
 	}
 
 	return installedCharts, nil
