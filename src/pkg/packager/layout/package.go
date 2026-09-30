@@ -137,6 +137,9 @@ const (
 
 // MarshalPackageDefinition returns deterministic zarf.yaml bytes for a package definition.
 func MarshalPackageDefinition(definition api.Package) ([]byte, error) {
+	if err := definition.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid package definition: %w", err)
+	}
 	alpha, err := goyaml.Marshal(convert.PackageToV1alpha1(definition))
 	if err != nil {
 		return nil, err
