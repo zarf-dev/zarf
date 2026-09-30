@@ -83,7 +83,7 @@ type Component struct {
 	Optional      bool
 	Target        ComponentTarget
 	Import        ComponentImport
-	Service       string
+	Service       Service
 	Manifests     []Manifest
 	Charts        []Chart
 	Files         []File
@@ -99,6 +99,18 @@ type Component struct {
 	HealthChecks   []NamespacedObjectKindReference
 	Distros        []string
 }
+
+// Service identifies a Zarf-managed cluster service provided by a component.
+type Service string
+
+// Service identifiers used by components that provide Zarf-managed cluster services.
+const (
+	ServiceRegistry     Service = "registry"
+	ServiceSeedRegistry Service = "seed-registry"
+	ServiceInjector     Service = "injector"
+	ServiceAgent        Service = "agent"
+	ServiceGitServer    Service = "git-server"
+)
 
 // ComponentTarget filters a component to a target OS/arch/flavor.
 type ComponentTarget struct {

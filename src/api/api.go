@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
 
 // PackageKind identifies the kind of a Zarf package.
@@ -25,6 +26,11 @@ const (
 
 // BuildTimestampFormat is the timestamp format used for package build metadata.
 const BuildTimestampFormat = time.RFC1123Z
+
+// KnownAPIVersions returns the package API versions recognized by this Zarf version, oldest first.
+func KnownAPIVersions() []string {
+	return []string{v1alpha1.APIVersion, v1beta1.APIVersion}
+}
 
 // GetAPIVersion returns the package API version, treating the legacy omitted value as v1alpha1.
 func (p Package) GetAPIVersion() string {
