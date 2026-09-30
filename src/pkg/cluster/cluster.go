@@ -180,6 +180,8 @@ type InitStateOptions struct {
 	InjectorPort int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// GitServerTLS allows providing user-managed TLS certificates for the internal Git server.
+	GitServerTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
 	AgentMutationPolicy state.MutationPolicy
 	// InternalServices lists the state services that Zarf is deploying in this init run.
@@ -299,6 +301,27 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
 				return nil, err
 			}
+		}
+	}
+
+	// The chart mounts this Secret even in HTTP mode. Ensure it exists before
+	// deploying the Git component, including upgrades from pre-TLS releases.
+	if opts.InternalServices.Has(state.GitKey) && s.GitServer.IsInternal() {
+		_, err := c.GetGitServerTLS(ctx)
+		if kerrors.IsNotFound(err) {
+			certs := opts.GitServerTLS
+			if certs == nil {
+				generated, err := pki.GeneratePKI(state.ZarfInClusterGitServiceHost, state.ZarfGitServerTLSHosts...)
+				if err != nil {
+					return nil, fmt.Errorf("unable to generate Git server TLS certificates: %w", err)
+				}
+				certs = &generated
+			}
+			if err := c.ApplyGitServerTLS(ctx, *certs); err != nil {
+				return nil, err
+			}
+		} else if err != nil {
+			return nil, fmt.Errorf("unable to read Git server TLS certificates: %w", err)
 		}
 	}
 

@@ -248,7 +248,7 @@ func (o *internalCreateReadOnlyGiteaUserOptions) run(cmd *cobra.Command, _ []str
 	if err != nil {
 		return err
 	}
-	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort, cluster.WithScheme(s.GitServer.URLScheme()))
 	if err != nil {
 		return err
 	}
@@ -258,11 +258,15 @@ func (o *internalCreateReadOnlyGiteaUserOptions) run(cmd *cobra.Command, _ []str
 	}
 	defer tunnel.Close()
 	// tunnel is created with the default listenAddress - there will only be one endpoint until otherwise supported
-	tunnelURLs := tunnel.HTTPEndpoints()
+	tunnelURLs := tunnel.URLEndpoints()
 	if len(tunnelURLs) == 0 {
 		return errors.New("no tunnel endpoints found")
 	}
-	giteaClient, err := gitea.NewClient(tunnelURLs[0], s.GitServer.PushUsername, s.GitServer.PushPassword)
+	caBundle, err := c.GitServerCABundle(ctx, s.GitServer)
+	if err != nil {
+		return err
+	}
+	giteaClient, err := gitea.NewClient(tunnelURLs[0], s.GitServer.PushUsername, s.GitServer.PushPassword, caBundle)
 	if err != nil {
 		return err
 	}
@@ -309,7 +313,7 @@ func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ [
 
 	// If we are setup to use an internal artifact server, create the artifact registry token
 	if s.ArtifactServer.IsInternal() {
-		tunnel, err := c.NewTunnel(state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+		tunnel, err := c.NewTunnel(state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort, cluster.WithScheme(s.GitServer.URLScheme()))
 		if err != nil {
 			return err
 		}
@@ -319,11 +323,15 @@ func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ [
 		}
 		defer tunnel.Close()
 		// tunnel is created with the default listenAddress - there will only be one endpoint until otherwise supported
-		tunnelURLs := tunnel.HTTPEndpoints()
+		tunnelURLs := tunnel.URLEndpoints()
 		if len(tunnelURLs) == 0 {
 			return fmt.Errorf("no tunnel endpoints found")
 		}
-		giteaClient, err := gitea.NewClient(tunnelURLs[0], s.GitServer.PushUsername, s.GitServer.PushPassword)
+		caBundle, err := c.GitServerCABundle(ctx, s.GitServer)
+		if err != nil {
+			return err
+		}
+		giteaClient, err := gitea.NewClient(tunnelURLs[0], s.GitServer.PushUsername, s.GitServer.PushPassword, caBundle)
 		if err != nil {
 			return err
 		}

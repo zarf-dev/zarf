@@ -16,6 +16,23 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
+func TestInitGitTLSCertificatesEnableTLS(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		mode []string
+	}{
+		{name: "default mode"},
+		{name: "explicit disabled mode", mode: []string{"--git-tls-mode=disabled"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			args := append([]string{"init", "--git-tls-ca=ca.pem", "--git-tls-cert=cert.pem", "--git-tls-key=key.pem", "--git-url=https://git.example.com", "--git-push-username=user", "--git-push-password=password", "--confirm"}, tc.mode...)
+			_, stdErr, err := e2e.Zarf(t, args...)
+			require.Error(t, err)
+			require.Contains(t, stdErr, "git TLS options cannot be used with --git-url")
+		})
+	}
+}
+
 func TestZarfInit(t *testing.T) {
 	t.Log("E2E: Zarf init")
 
