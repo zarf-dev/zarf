@@ -15,8 +15,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/registry"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
-	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -40,14 +38,8 @@ func TestRegistryPruneSkipsConnectedDeploys(t *testing.T) {
 	address := strings.TrimPrefix(server.URL, "http://")
 	options := []crane.Option{crane.Insecure}
 
-	keptRef := address + "/library/kept:latest"
-	unusedRef := address + "/library/unused:latest"
-	require.NoError(t, crane.Push(empty.Image, keptRef, options...))
-	unusedImage, err := random.Image(128, 1)
-	require.NoError(t, err)
-	require.NoError(t, crane.Push(unusedImage, unusedRef, options...))
-	unusedDigest, err := crane.Digest(unusedRef, options...)
-	require.NoError(t, err)
+	keptDigest := testutil.PushImage(ctx, t, address+"/library/kept", "latest")
+	unusedDigest := testutil.PushImage(ctx, t, address+"/library/unused", "latest")
 
 	packages := []state.DeployedPackage{
 		{
@@ -67,8 +59,9 @@ func TestRegistryPruneSkipsConnectedDeploys(t *testing.T) {
 	}
 
 	require.NoError(t, doPruneImagesForPackages(ctx, options, &state.State{}, packages, address, true, false))
-	_, err = crane.Digest(keptRef, options...)
+	kept, err := testutil.NewRepo(t, address+"/library/kept").Resolve(ctx, "latest")
 	require.NoError(t, err)
+	require.Equal(t, keptDigest, kept.Digest.String())
 	require.Len(t, deletions, 1)
 	require.Equal(t, "/v2/library/unused/manifests/"+unusedDigest, <-deletions)
 }
