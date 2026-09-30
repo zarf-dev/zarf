@@ -94,12 +94,6 @@ type devGenerateSchemaOptions struct {
 	deleteNotFound bool
 }
 
-type mappedChartSchema struct {
-	sourcePath  value.Path
-	schema      map[string]any
-	excludePath []value.Path
-}
-
 func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
 	o := &devGenerateSchemaOptions{}
 
@@ -156,12 +150,13 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	}()
 	pkg := loaded.Definition
 
-	// Step 1: Merge default values.files to create initial set of default Zarf values
-	zarfValues := loaded.Values.DeepCopy()
+	// Step 1: Copy package defaults
+	packageValues := loaded.Values.DeepCopy()
 
-	var mappedSchemas []mappedChartSchema
+	var mappedSchemas []map[string]any
+	var mappedInferredSchemas []map[string]any
 
-	// Step 2: Discover source target mappings and load defaults from chart values where Zarf Value defaults aren't specified
+	// Step 2: Collect chart value schemas
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -190,6 +185,11 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 			}
 
 			appliedValues := helpers.MergeMapRecursive(helmChart.Values, valuesFilesValues)
+			inferredSchema := value.GenerateJSONSchema(value.Values(helmChart.Values))
+			valuesFilesSchema := value.GenerateJSONSchema(value.Values(valuesFilesValues))
+			if err := value.MergeJSONSchemaAtPath(inferredSchema, value.Path("."), valuesFilesSchema); err != nil {
+				return fmt.Errorf("unable to apply valuesFiles for chart %q: %w", chart.Name, err)
+			}
 			var chartSchema map[string]any
 			if len(helmChart.Schema) > 0 {
 				if err := json.Unmarshal(helmChart.Schema, &chartSchema); err != nil {
@@ -206,18 +206,30 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 				}
 			}
 
-			// Map ChartValues' Source to Target and merge into zarfValues if not already present
+			// Map chart schemas from target paths to package value source paths.
 			for _, cv := range chart.Values {
 				if cv.SourcePath == "" || cv.TargetPath == "" {
 					return fmt.Errorf("chart %q value mapping has empty sourcePath or targetPath", chart.Name)
 				}
-				val, err := value.Values(appliedValues).Extract(value.Path(cv.TargetPath))
+				mappedValue, err := value.Values(appliedValues).Extract(value.Path(cv.TargetPath))
 				if err != nil {
 					return fmt.Errorf("unable to extract chart %q value at targetPath %q: %w", chart.Name, cv.TargetPath, err)
 				}
-
-				if err := zarfValues.Set(value.Path(cv.SourcePath), val); err != nil {
-					return fmt.Errorf("unable to set chart %q value at sourcePath %q: %w", chart.Name, cv.SourcePath, err)
+				targetInferredSchema, found, err := value.ExtractJSONSchema(inferredSchema, value.Path(cv.TargetPath))
+				if err != nil {
+					return fmt.Errorf("unable to inspect chart %q values at targetPath %q: %w", chart.Name, cv.TargetPath, err)
+				}
+				if found {
+					mappedValues := value.Values{}
+					if err := mappedValues.Set(value.Path(cv.SourcePath), mappedValue); err != nil {
+						return fmt.Errorf("unable to set chart %q value at sourcePath %q: %w", chart.Name, cv.SourcePath, err)
+					}
+					mappedSchema := value.GenerateJSONSchema(mappedValues)
+					mappedSchema, err = mapSchemaToSource(mappedSchema, targetInferredSchema, value.Path(cv.SourcePath), cv.ExcludePaths)
+					if err != nil {
+						return fmt.Errorf("unable to map inferred schema for chart %q: %w", chart.Name, err)
+					}
+					mappedInferredSchemas = append(mappedInferredSchemas, mappedSchema)
 				}
 
 				if chartSchema != nil {
@@ -226,38 +238,33 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 						return fmt.Errorf("unable to inspect chart %q schema at targetPath %q: %w", chart.Name, cv.TargetPath, err)
 					}
 					if found {
-						excludes := make([]value.Path, len(cv.ExcludePaths))
-						for i, excludePath := range cv.ExcludePaths {
-							excludes[i] = value.Path(excludePath)
+						mappedSchema, err := mapSchemaToSource(nil, targetSchema, value.Path(cv.SourcePath), cv.ExcludePaths)
+						if err != nil {
+							return fmt.Errorf("unable to map Helm schema for chart %q: %w", chart.Name, err)
 						}
-						mappedSchemas = append(mappedSchemas, mappedChartSchema{
-							sourcePath:  value.Path(cv.SourcePath),
-							schema:      targetSchema,
-							excludePath: excludes,
-						})
+						mappedSchemas = append(mappedSchemas, mappedSchema)
 					} else {
 						l.Warn("chart values schema does not define mapped target; falling back to inferred types", "chart", chart.Name, "targetPath", cv.TargetPath)
-					}
-				}
-				for _, excludePath := range cv.ExcludePaths {
-					if err := zarfValues.Delete(value.Path(excludePath)); err != nil {
-						return fmt.Errorf("unable to exclude path %q from schema for chart %q: %w", excludePath, chart.Name, err)
 					}
 				}
 			}
 		}
 	}
 
-	// Step 3: Generate JSON generatedSchema from the final map
-	generatedSchema := value.GenerateJSONSchema(zarfValues)
-	for _, mapped := range mappedSchemas {
-		if err := value.MergeJSONSchemaAtPath(generatedSchema, mapped.sourcePath, mapped.schema); err != nil {
-			return fmt.Errorf("unable to apply Helm schema at sourcePath %q: %w", mapped.sourcePath, err)
+	// Step 3: Merge inferred and chart schemas
+	generatedSchema := value.GenerateJSONSchema(value.Values{})
+	for _, mapped := range mappedInferredSchemas {
+		if err := value.MergeGeneratedJSONSchemaAtPath(generatedSchema, value.Path("."), mapped); err != nil {
+			return fmt.Errorf("unable to apply inferred chart values: %w", err)
 		}
-		for _, excludePath := range mapped.excludePath {
-			if err := value.DeleteJSONSchemaAtPath(generatedSchema, excludePath); err != nil {
-				return fmt.Errorf("unable to exclude schema path %q: %w", excludePath, err)
-			}
+	}
+	if err := value.MergeGeneratedJSONSchemaAtPath(generatedSchema, value.Path("."), value.GenerateJSONSchema(packageValues)); err != nil {
+		return fmt.Errorf("unable to apply package defaults: %w", err)
+	}
+
+	for _, mapped := range mappedSchemas {
+		if err := value.MergeGeneratedJSONSchemaAtPath(generatedSchema, value.Path("."), mapped); err != nil {
+			return fmt.Errorf("unable to apply Helm schema: %w", err)
 		}
 	}
 
@@ -298,6 +305,28 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 		l.Info("Schema successfully generated", "filename", outputFileName)
 	}
 	return nil
+}
+
+func mapSchemaToSource(mappedSchema, schema map[string]any, sourcePath value.Path, excludePaths []string) (map[string]any, error) {
+	if mappedSchema == nil {
+		mappedValues := value.Values{}
+		if sourcePath != "." {
+			if err := mappedValues.Set(sourcePath, nil); err != nil {
+				return nil, fmt.Errorf("unable to set sourcePath %q: %w", sourcePath, err)
+			}
+		}
+		mappedSchema = value.GenerateJSONSchema(mappedValues)
+	}
+
+	if err := value.MergeJSONSchemaAtPath(mappedSchema, sourcePath, schema); err != nil {
+		return nil, fmt.Errorf("unable to apply schema at sourcePath %q: %w", sourcePath, err)
+	}
+	for _, excludePath := range excludePaths {
+		if err := value.DeleteJSONSchemaAtPath(mappedSchema, value.Path(excludePath)); err != nil {
+			return nil, fmt.Errorf("unable to exclude schema path %q: %w", excludePath, err)
+		}
+	}
+	return mappedSchema, nil
 }
 
 func newDevInspectCommand(v *viper.Viper) *cobra.Command {

@@ -163,11 +163,12 @@ func TestMergeJSONSchemaAtPathPreservesNullableObjects(t *testing.T) {
 		},
 	})
 
-	err := MergeJSONSchemaAtPath(schema, Path(".serviceAccount.server.annotations"), map[string]any{
+	overlay := map[string]any{
 		"type":       []any{"object", "null"},
 		"properties": map[string]any{},
 		"required":   []any{"not-imported"},
-	})
+	}
+	err := MergeJSONSchemaAtPath(schema, Path(".serviceAccount.server.annotations"), overlay)
 	require.NoError(t, err)
 
 	annotations, found, err := ExtractJSONSchema(schema, Path(".serviceAccount.server.annotations"))
@@ -288,11 +289,12 @@ func TestMergeJSONSchemaAtPathCopiesValidationFields(t *testing.T) {
 	assert.InDelta(t, float64(1), ports["minItems"], 0)
 	assert.InDelta(t, float64(3), ports["maxItems"], 0)
 
-	err = MergeJSONSchemaAtPath(schema, Path(".config"), map[string]any{
+	overlay := map[string]any{
 		"minProperties": float64(1),
 		"required":      []any{"database"},
 		"allOf":         []any{map[string]any{"const": "postgres"}},
-	})
+	}
+	err = MergeJSONSchemaAtPath(schema, Path(".config"), overlay)
 	require.NoError(t, err)
 	config, found, err := ExtractJSONSchema(schema, Path(".config"))
 	require.NoError(t, err)
@@ -309,7 +311,7 @@ func TestMergeJSONSchemaAtPathKeepsInferredFieldWhenChartRefIsDropped(t *testing
 		},
 	})
 
-	err := MergeJSONSchemaAtPath(schema, Path("."), map[string]any{
+	overlay := map[string]any{
 		"type":                 "object",
 		"additionalProperties": false,
 		"properties": map[string]any{
@@ -322,7 +324,8 @@ func TestMergeJSONSchemaAtPathKeepsInferredFieldWhenChartRefIsDropped(t *testing
 				"$ref": "schemas/external.json",
 			},
 		},
-	})
+	}
+	err := MergeJSONSchemaAtPath(schema, Path("."), overlay)
 	require.NoError(t, err)
 
 	properties, ok := schema["properties"].(map[string]any)
@@ -333,6 +336,17 @@ func TestMergeJSONSchemaAtPathKeepsInferredFieldWhenChartRefIsDropped(t *testing
 	require.True(t, ok)
 	assert.Equal(t, "object", bad["type"])
 	assert.Equal(t, false, schema["additionalProperties"])
+}
+
+func TestMergeGeneratedJSONSchemaAtPathPreservesUnknownProperties(t *testing.T) {
+	schema := GenerateJSONSchema(Values{})
+	overlay := GenerateJSONSchema(Values{"credentials": nil})
+
+	require.NoError(t, MergeGeneratedJSONSchemaAtPath(schema, Path("."), overlay))
+
+	properties, ok := schema["properties"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, map[string]any{}, properties["credentials"])
 }
 
 func TestFilterChartSchemaDropsUnsupportedChildSchemas(t *testing.T) {
