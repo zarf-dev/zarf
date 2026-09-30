@@ -45,6 +45,16 @@ func (p *PackageLayout) Definition() api.Package {
 	return p.pkg
 }
 
+// OriginalDefinition reads the package definition from zarf.yaml, before
+// component filters or deployment changes are applied.
+func (p *PackageLayout) OriginalDefinition(ctx context.Context) (api.Package, error) {
+	b, err := os.ReadFile(filepath.Join(p.dirPath, ZarfYAML))
+	if err != nil {
+		return api.Package{}, err
+	}
+	return pkgcfg.ParseMultiDoc(ctx, b)
+}
+
 // SetName updates the package metadata name.
 func (p *PackageLayout) SetName(name string) {
 	p.pkg.Metadata.Name = name

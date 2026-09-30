@@ -65,6 +65,10 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 		return nil, err
 	}
 	pkg := pkgLayout.Definition()
+	originalPkg, err := pkgLayout.OriginalDefinition(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("reading original package definition: %w", err)
+	}
 
 	if !feature.IsEnabled(feature.Values) && (len(pkg.Values.Files) > 0 || len(opts.Values) > 0) {
 		return nil, fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
@@ -133,7 +137,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 				}
 				if err := templateValuesFiles(ctx, chart, valuesDir, templateValuesFilesOpts{
 					variableConfig: variableConfig,
-					pkg:            pkg,
+					pkg:            originalPkg,
 					vals:           vals,
 					s:              s,
 					stateAccess:    component.StateAccess,
@@ -187,7 +191,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 					}
 					if manifest.EnableTemplating {
 						objs, err := tmpl.NewObjects(vals).
-							WithPackage(pkg).
+							WithPackage(originalPkg).
 							WithVariables(variableConfig.GetSetVariableMap()).
 							WithConstants(variableConfig.GetConstants()).
 							WithState(tmpl.StateAccess{State: s, AccessKeys: component.StateAccess})

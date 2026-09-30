@@ -3,12 +3,14 @@
 package packager
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -57,6 +59,43 @@ func TestInspectPackageResourcesSkipsValuesSchemaValidationWhenConfigured(t *tes
 		SkipValuesSchemaValidation: true,
 	})
 	require.NoError(t, err)
+}
+
+func TestInspectPackageResourcesTemplatesOriginalPackageAfterFiltering(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	srcDir := t.TempDir()
+	definition := `kind: ZarfPackageConfig
+metadata:
+  name: template-original-package
+components:
+  - name: selected
+    manifests:
+      - name: component-count
+        template: true
+        files:
+          - manifest.yaml
+  - name: excluded
+    actions:
+      onDeploy:
+        after:
+          - cmd: "true"
+`
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "zarf.yaml"), []byte(definition), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "manifest.yaml"), []byte("componentCount: {{ len .Pkg.Components }}\n"), 0o600))
+
+	loaded, err := load.Package(ctx, srcDir, load.PackageOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+	require.NoError(t, pkgLayout.Filter(filters.BySelectState("selected")))
+	require.Len(t, pkgLayout.Definition().Components, 1)
+
+	resources, err := InspectPackageResources(ctx, pkgLayout, InspectPackageResourcesOptions{})
+	require.NoError(t, err)
+	require.Len(t, resources, 1)
+	require.Contains(t, resources[0].Content, "componentCount: 2")
 }
 
 func TestInspectDefinitionResources(t *testing.T) {

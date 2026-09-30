@@ -628,6 +628,10 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
+	originalPkg, err := pkgLayout.OriginalDefinition(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("reading original package definition: %w", err)
+	}
 	installedCharts := []state.InstalledChart{}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -655,7 +659,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 
 		if err := templateValuesFiles(ctx, chart, valuesDir, templateValuesFilesOpts{
 			variableConfig: d.vc,
-			pkg:            pkg,
+			pkg:            originalPkg,
 			vals:           d.vals,
 			s:              d.s,
 			stateAccess:    component.StateAccess,
@@ -705,6 +709,10 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
+	originalPkg, err := pkgLayout.OriginalDefinition(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("reading original package definition: %w", err)
+	}
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -732,7 +740,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			if manifest.EnableTemplating {
 				l.Debug("start manifest template", "manifest", manifest.Name, "path", path)
 				objs, err := template.NewObjects(d.vals).
-					WithPackage(pkg).
+					WithPackage(originalPkg).
 					WithVariables(d.vc.GetSetVariableMap()).
 					WithConstants(d.vc.GetConstants()).
 					WithState(template.StateAccess{State: d.s, AccessKeys: component.StateAccess})
@@ -878,7 +886,10 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayo
 
 func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) (err error) {
 	l := logger.From(ctx)
-	pkg := pkgLayout.Definition()
+	originalPkg, err := pkgLayout.OriginalDefinition(ctx)
+	if err != nil {
+		return fmt.Errorf("reading original package definition: %w", err)
+	}
 	start := time.Now()
 	l.Info("copying files", "count", len(component.Files))
 
@@ -944,7 +955,7 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 			if file.EnableTemplating {
 				l.Debug("templates enabled, processing file", "name", file.Destination)
 				objs, err := template.NewObjects(values).
-					WithPackage(pkg).
+					WithPackage(originalPkg).
 					WithVariables(variableConfig.GetSetVariableMap()).
 					WithConstants(variableConfig.GetConstants()).
 					WithState(stateAccess)
