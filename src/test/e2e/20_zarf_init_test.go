@@ -5,7 +5,6 @@
 package test
 
 import (
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -61,7 +60,7 @@ func TestInitGitTLSChartCreatesSecret(t *testing.T) {
 		certs, err := pki.GeneratePKI(state.ZarfInClusterGitServiceHost, state.ZarfGitServerTLSHosts...)
 		require.NoError(t, err)
 		values, err := yaml.Marshal(map[string]any{"certificates": map[string]any{
-			"required": true, "ca": string(certs.CA), "cert": string(certs.Cert), "key": string(certs.Key),
+			"protocol": "https", "ca": string(certs.CA), "cert": string(certs.Cert), "key": string(certs.Key),
 		}})
 		require.NoError(t, err)
 		valuesFile := filepath.Join(t.TempDir(), "git-tls-values.yaml")
@@ -74,7 +73,7 @@ func TestInitGitTLSChartCreatesSecret(t *testing.T) {
 
 	t.Run("incomplete certificate fails chart rendering", func(t *testing.T) {
 		valuesFile := filepath.Join(t.TempDir(), "partial-values.yaml")
-		require.NoError(t, os.WriteFile(valuesFile, []byte("certificates:\n  required: true\n  ca: incomplete\n"), 0600))
+		require.NoError(t, os.WriteFile(valuesFile, []byte("certificates:\n  protocol: https\n  ca: incomplete\n"), 0600))
 		command := exec.Command(e2e.ZarfBinPath, "tools", "helm", "template", "zarf-git-server-tls", "packages/gitea/tls-chart", "-f", valuesFile)
 		output, err := command.CombinedOutput()
 		require.Error(t, err)
@@ -197,10 +196,10 @@ func TestZarfInit(t *testing.T) {
 func verifyGitTLSRotation(t *testing.T) {
 	t.Helper()
 	t.Cleanup(func() {
-		_, stderr, err := e2e.Zarf(t, "tools", "update-creds", "git", "--git-tls-mode=disabled", "--confirm")
+		_, stderr, err := e2e.Zarf(t, "init", "--components=git-server", "--git-tls-mode=disabled", "--confirm")
 		require.NoError(t, err, stderr)
 	})
-	_, stderr, err := e2e.Zarf(t, "tools", "update-creds", "git", "--git-tls-mode=tls-enabled", "--confirm")
+	_, stderr, err := e2e.Zarf(t, "init", "--components=git-server", "--git-tls-mode=tls-enabled", "--confirm")
 	require.NoError(t, err, stderr)
 
 	getSecret := func(name string) corev1.Secret {
@@ -221,16 +220,15 @@ func verifyGitTLSRotation(t *testing.T) {
 	}
 
 	previous := getSecret(state.GitServerTLSSecret)
-	previousDigest := fmt.Sprintf("%x", sha256.Sum256(previous.Data[state.GitServerTLSCertKey]))
-	require.Equal(t, previousDigest, getGiteaDeployment().Spec.Template.Annotations["zarf.dev/git-tls-sha256"])
+	previousRestart := getGiteaDeployment().Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"]
+	require.NotEmpty(t, previousRestart)
 
-	_, stderr, err = e2e.Zarf(t, "tools", "update-creds", "git", "--rotate-tls", "--confirm")
+	_, stderr, err = e2e.Zarf(t, "init", "--components=git-server", "--set-variables=GIT_SERVER_TLS_ROTATE=true", "--confirm")
 	require.NoError(t, err, stderr)
 	rotated := getSecret(state.GitServerTLSSecret)
 	require.NotEqual(t, previous.Data[state.GitServerTLSCAKey], rotated.Data[state.GitServerTLSCAKey])
 	require.NotEqual(t, previous.Data[state.GitServerTLSCertKey], rotated.Data[state.GitServerTLSCertKey])
-	rotatedDigest := fmt.Sprintf("%x", sha256.Sum256(rotated.Data[state.GitServerTLSCertKey]))
-	require.Equal(t, rotatedDigest, getGiteaDeployment().Spec.Template.Annotations["zarf.dev/git-tls-sha256"])
+	require.NotEqual(t, previousRestart, getGiteaDeployment().Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"])
 	require.Equal(t, rotated.Data[state.GitServerTLSCAKey], getSecret(config.ZarfGitServerSecretName).Data[state.GitServerTLSCAKey])
 }
 

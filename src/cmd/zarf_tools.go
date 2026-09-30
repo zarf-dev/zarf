@@ -686,14 +686,8 @@ func (o *updateRegistryCredsOptions) applyState(ctx context.Context, c *cluster.
 }
 
 type updateGitCredsOptions struct {
-	confirm        bool
-	forceConflicts bool
-	rotateTLS      bool
-	gitTLSMode     string
-	gitServer      state.GitServerInfo
-	gitTLSCAPath   string
-	gitTLSCertPath string
-	gitTLSKeyPath  string
+	confirm   bool
+	gitServer state.GitServerInfo
 }
 
 func newUpdateGitCredsCommand(v *viper.Viper) *cobra.Command {
@@ -709,19 +703,11 @@ func newUpdateGitCredsCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsUpdateCredsConfirmFlag)
-	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
-	cmd.Flags().BoolVar(&o.rotateTLS, "rotate-tls", false, "Rotate Zarf-managed internal Git server TLS certificates")
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
 	cmd.Flags().StringVar(&o.gitServer.PushUsername, "git-push-username", v.GetString(VInitGitPushUser), lang.CmdInitFlagGitPushUser)
 	cmd.Flags().StringVar(&o.gitServer.PushPassword, "git-push-password", v.GetString(VInitGitPushPass), lang.CmdInitFlagGitPushPass)
 	cmd.Flags().StringVar(&o.gitServer.PullUsername, "git-pull-username", v.GetString(VInitGitPullUser), lang.CmdInitFlagGitPullUser)
 	cmd.Flags().StringVar(&o.gitServer.PullPassword, "git-pull-password", v.GetString(VInitGitPullPass), lang.CmdInitFlagGitPullPass)
-	cmd.Flags().StringVar(&o.gitTLSMode, "git-tls-mode", v.GetString(VInitGitTLSMode), "Git TLS mode: disabled or tls-enabled. Certificate files automatically enable user-managed TLS")
-	cmd.Flags().StringVar(&o.gitTLSCAPath, "git-tls-ca", v.GetString(VInitGitTLSCA), "Path to a PEM-encoded CA certificate for the Git server")
-	cmd.Flags().StringVar(&o.gitTLSCertPath, "git-tls-cert", v.GetString(VInitGitTLSCert), "Path to a PEM-encoded TLS certificate for the Git server")
-	cmd.Flags().StringVar(&o.gitTLSKeyPath, "git-tls-key", v.GetString(VInitGitTLSKey), "Path to a PEM-encoded TLS private key for the Git server")
-	cmd.MarkFlagsRequiredTogether("git-tls-ca", "git-tls-cert", "git-tls-key")
-
 	return cmd
 }
 
@@ -735,43 +721,12 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	if !oldState.GitServer.IsConfigured() {
 		return errors.New("no Git server is configured in the Zarf state; nothing to update")
 	}
-	gitTLSRequested := optionIsExplicitlySet(cmd, getViper(), "git-tls-mode", VInitGitTLSMode) || o.gitTLSCAPath != "" || o.gitTLSCertPath != "" || o.gitTLSKeyPath != ""
-	mode := state.GitTLSMode("")
-	management := state.GitTLSCertManagement("")
-	if gitTLSRequested {
-		mode, management, err = resolveGitTLSMode(o.gitTLSMode, o.gitTLSCAPath, o.gitTLSCertPath, o.gitTLSKeyPath)
-		if err != nil {
-			return err
-		}
-	}
-	if gitTLSRequested {
-		o.gitServer.TLSMode = mode
-		o.gitServer.TLSCertManagement = management
-	}
-	if o.gitServer.Address != "" && mode.Enabled() {
-		return errors.New("git TLS options cannot be used with --git-url")
-	}
-	if o.rotateTLS && (!oldState.GitServer.TLSMode.Enabled() || oldState.GitServer.TLSCertManagement != state.GitTLSCertZarfManaged || gitTLSRequested && (mode != state.GitTLSEnabled || management != state.GitTLSCertZarfManaged)) {
-		return errors.New("--rotate-tls requires an internal Git server with zarf-managed TLS")
-	}
-	var gitTLS *pki.GeneratedPKI
-	if o.gitTLSCAPath != "" {
-		loadedTLS, err := readGitTLSFiles(o.gitTLSCAPath, o.gitTLSCertPath, o.gitTLSKeyPath)
-		if err != nil {
-			return err
-		}
-		gitTLS = &loadedTLS
-	}
-
 	newState, err := state.Merge(oldState, state.MergeOptions{
 		GitServer: o.gitServer,
 		Services:  state.NewServiceSet(state.GitKey),
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update Git server credentials: %w", err)
-	}
-	if newState.GitServer.IsInternal() && gitTLSRequested {
-		newState.GitServer.Address = state.ZarfInClusterGitURL(newState.GitServer.TLSMode)
 	}
 	confirm, err := confirmCredentialUpdate(ctx, oldState, newState, state.GitKey, o.confirm)
 	if err != nil {
@@ -780,79 +735,20 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	if !confirm {
 		return nil
 	}
-	// Keep the active bundle so a failed rotation can restore the previous CA.
-	var rollbackTLS *pki.GeneratedPKI
-	certificatesWillChange := gitTLS != nil || o.rotateTLS ||
-		oldState.GitServer.TLSCertManagement != newState.GitServer.TLSCertManagement &&
-			(oldState.GitServer.TLSCertManagement == state.GitTLSCertUserManaged || newState.GitServer.TLSCertManagement == state.GitTLSCertZarfManaged)
-	if oldState.GitServer.IsInternal() && oldState.GitServer.TLSMode.Enabled() && newState.GitServer.IsInternal() && certificatesWillChange {
-		previousTLS, err := c.GetGitServerTLS(ctx)
-		if err != nil {
-			return fmt.Errorf("unable to read existing Git server TLS certificates: %w", err)
-		}
-		rollbackTLS = &previousTLS
-	}
-	rollbackOptions := *o
-	rollbackOptions.rotateTLS = false
-
 	return runWithRollback(ctx, "Git server",
-		func() error { return o.applyState(ctx, c, oldState, newState, gitTLS) },
-		func() error { return rollbackOptions.applyState(ctx, c, newState, oldState, rollbackTLS) },
+		func() error { return o.applyState(ctx, c, oldState, newState) },
+		func() error { return o.applyState(ctx, c, newState, oldState) },
 	)
 }
 
-func readGitTLSFiles(caPath, certPath, keyPath string) (pki.GeneratedPKI, error) {
-	ca, err := os.ReadFile(caPath)
-	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("unable to read Git TLS CA: %w", err)
-	}
-	cert, err := os.ReadFile(certPath)
-	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("unable to read Git TLS certificate: %w", err)
-	}
-	key, err := os.ReadFile(keyPath)
-	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("unable to read Git TLS key: %w", err)
-	}
-	return pki.GeneratedPKI{CA: ca, Cert: cert, Key: key}, nil
-}
-
-func (o *updateGitCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, fromState, toState *state.State, userTLSBundles ...*pki.GeneratedPKI) error {
-	var userTLS *pki.GeneratedPKI
-	if len(userTLSBundles) > 0 {
-		userTLS = userTLSBundles[0]
-	}
-	// Update credentials while the listener still has the source state's
-	// protocol and certificate. This keeps migrations and rotations reachable.
+func (o *updateGitCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, fromState, toState *state.State) error {
 	if toState.GitServer.IsInternal() {
 		if err := c.UpdateInternalGitServerSecret(ctx, fromState.GitServer, toState.GitServer); err != nil {
 			return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
 		}
 	}
-	rotate := o.rotateTLS ||
-		fromState.GitServer.TLSCertManagement != toState.GitServer.TLSCertManagement &&
-			(fromState.GitServer.TLSCertManagement == state.GitTLSCertUserManaged || toState.GitServer.TLSCertManagement == state.GitTLSCertZarfManaged)
-	if toState.GitServer.IsInternal() && (userTLS != nil || rotate) {
-		helmOpts := helm.InstallUpgradeOptions{
-			VariableConfig: template.GetZarfVariableConfig(ctx, !o.confirm), State: fromState, Cluster: c,
-			Timeout: config.ZarfDefaultTimeout, IsInteractive: !o.confirm, ForceConflicts: o.forceConflicts,
-		}
-		if err := helm.UpdateZarfGitServerTLSValues(ctx, helmOpts, userTLS, rotate); err != nil {
-			return err
-		}
-	}
-	// Distribute trust before rolling Gitea onto a new certificate.
 	if err := c.UpdateZarfManagedGitSecrets(ctx, toState); err != nil {
 		return err
-	}
-	if toState.GitServer.IsInternal() && (fromState.GitServer.TLSMode != toState.GitServer.TLSMode || fromState.GitServer.TLSCertManagement != toState.GitServer.TLSCertManagement || o.rotateTLS || userTLS != nil) {
-		helmOpts := helm.InstallUpgradeOptions{
-			VariableConfig: template.GetZarfVariableConfig(ctx, !o.confirm), State: toState, Cluster: c,
-			Timeout: config.ZarfDefaultTimeout, IsInteractive: !o.confirm, ForceConflicts: o.forceConflicts,
-		}
-		if err := helm.UpdateZarfGitServerValues(ctx, helmOpts); err != nil {
-			return err
-		}
 	}
 	if err := c.SaveState(ctx, toState); err != nil {
 		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)

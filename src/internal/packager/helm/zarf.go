@@ -6,8 +6,6 @@ package helm
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -23,7 +21,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -87,87 +84,6 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 	err = healthchecks.WaitForReady(waitCtx, opts.Cluster.Watcher, objs)
 	if err != nil {
 		return err
-	}
-	return nil
-}
-
-// UpdateZarfGitServerTLSValues updates the init package's TLS chart, which
-// owns the Secret mounted by Gitea. A new rotation token asks the chart to
-// generate a replacement certificate when no user bundle is supplied.
-func UpdateZarfGitServerTLSValues(ctx context.Context, opts InstallUpgradeOptions, certs *pki.GeneratedPKI, rotate bool) error {
-	pkgs, err := opts.Cluster.GetDeployedZarfPackages(ctx)
-	if err != nil {
-		return fmt.Errorf("error getting init package: %w", err)
-	}
-	initPkgName, err := findPackageWithService(pkgs, api.ServiceGitServer)
-	if err != nil {
-		return err
-	}
-	if initPkgName == "" {
-		return fmt.Errorf("error finding init package with git-server component")
-	}
-	opts.PkgName = initPkgName
-	values := map[string]interface{}{}
-	if certs != nil {
-		values["certificates"] = map[string]interface{}{
-			"ca": string(certs.CA), "cert": string(certs.Cert), "key": string(certs.Key), "required": true,
-		}
-	} else if rotate {
-		values["certificates"] = map[string]interface{}{"ca": "", "cert": "", "key": "", "required": false}
-		values["rotation"] = fmt.Sprintf("%d", time.Now().UnixNano())
-	} else {
-		return nil
-	}
-	chart := api.Chart{Namespace: state.ZarfNamespaceName, ReleaseName: "zarf-git-server-tls", ServerSideApply: api.ServerSideApplyDisabled}
-	if err := UpdateReleaseValues(ctx, chart, values, opts); err != nil {
-		return fmt.Errorf("updating Git server TLS release values: %w", err)
-	}
-	return nil
-}
-
-// UpdateZarfGitServerValues reconciles the Gitea release after a Git TLS mode
-// or certificate change. The certificate itself remains in its Kubernetes
-// Secret; only non-sensitive server configuration is supplied to Helm.
-func UpdateZarfGitServerValues(ctx context.Context, opts InstallUpgradeOptions) error {
-	pkgs, err := opts.Cluster.GetDeployedZarfPackages(ctx)
-	if err != nil {
-		return fmt.Errorf("error getting init package: %w", err)
-	}
-	initPkgName, err := findPackageWithService(pkgs, api.ServiceGitServer)
-	if err != nil {
-		return err
-	}
-	if initPkgName == "" {
-		return fmt.Errorf("error finding init package with git-server component")
-	}
-	opts.PkgName = initPkgName
-	certDigest := ""
-	if opts.State.GitServer.TLSMode.Enabled() {
-		certs, err := opts.Cluster.GetGitServerTLS(ctx)
-		if err != nil {
-			return fmt.Errorf("getting Git server TLS certificate: %w", err)
-		}
-		digest := sha256.Sum256(certs.Cert)
-		certDigest = hex.EncodeToString(digest[:])
-	}
-	chart := api.Chart{Namespace: state.ZarfNamespaceName, ReleaseName: "zarf-gitea"}
-	values := map[string]interface{}{
-		"gitea": map[string]interface{}{
-			"podAnnotations": map[string]interface{}{
-				"zarf.dev/git-tls-sha256": certDigest,
-			},
-			"config": map[string]interface{}{
-				"server": map[string]interface{}{
-					"PROTOCOL":  opts.State.GitServer.URLScheme(),
-					"ROOT_URL":  opts.State.GitServer.Address,
-					"CERT_FILE": "/etc/gitea-tls/tls.crt",
-					"KEY_FILE":  "/etc/gitea-tls/tls.key",
-				},
-			},
-		},
-	}
-	if err := UpdateReleaseValues(ctx, chart, values, opts); err != nil {
-		return fmt.Errorf("updating Gitea release values: %w", err)
 	}
 	return nil
 }

@@ -107,7 +107,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.gitServer.PushPassword, "git-push-password", v.GetString(VInitGitPushPass), lang.CmdInitFlagGitPushPass)
 	cmd.Flags().StringVar(&o.gitServer.PullUsername, "git-pull-username", v.GetString(VInitGitPullUser), lang.CmdInitFlagGitPullUser)
 	cmd.Flags().StringVar(&o.gitServer.PullPassword, "git-pull-password", v.GetString(VInitGitPullPass), lang.CmdInitFlagGitPullPass)
-	cmd.Flags().StringVar(&o.gitTLSMode, "git-tls-mode", gitTLSMode, "Git TLS mode: disabled or tls-enabled. Certificate variables in the Git server package enable user-managed TLS")
+	cmd.Flags().StringVar(&o.gitTLSMode, "git-tls-mode", gitTLSMode, "Git TLS mode for the internal server: disabled or tls-enabled. The init package must provide the matching server configuration and TLS Secret")
 
 	// Flags for using an external registry
 	cmd.Flags().StringVar(&o.registryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
@@ -179,13 +179,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		}
 		agentTLS = &loadedTLS
 	}
-	gitServerForValidation := o.gitServer
-	// A defaulted disabled mode is not an attempt to change a pre-TLS cluster;
-	// only an explicitly selected TLS setting participates in re-init validation.
-	if !optionIsExplicitlySet(cmd, getViper(), "git-tls-mode", VInitGitTLSMode) {
-		gitServerForValidation.TLSMode = ""
-	}
-	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, gitServerForValidation, o.artifactServer, agentTLS)
+	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer, agentTLS)
 	if err != nil {
 		return err
 	}
@@ -251,6 +245,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 
 	opts := packager.DeployOptions{
 		GitServer:                  o.gitServer,
+		GitTLSModeExplicit:         optionIsExplicitlySet(cmd, getViper(), "git-tls-mode", VInitGitTLSMode),
 		RegistryInfo:               o.registryInfo,
 		ArtifactServer:             o.artifactServer,
 		TakeOwnership:              o.takeOwnership,
@@ -384,6 +379,10 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 		return err
 	}
 
+	// The init package controls the listener. An explicit mode change is applied
+	// when its git-server component is redeployed.
+	gitServer.TLSMode = ""
+	gitServer.TLSCertManagement = ""
 	if helpers.IsNotZeroAndNotEqual(gitServer, s.GitServer) {
 		return fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
 	}
@@ -437,26 +436,14 @@ func loadAndValidateAgentTLS(caPath, certPath, keyPath string) (pki.GeneratedPKI
 	return pki.GeneratedPKI{CA: ca, Cert: cert, Key: key}, nil
 }
 
-func resolveGitTLSMode(selection, caPath, certPath, keyPath string) (state.GitTLSMode, state.GitTLSCertManagement, error) {
+func resolveGitTLSMode(selection string) (state.GitTLSMode, error) {
 	if selection != "" && selection != string(state.GitTLSDisabled) && selection != string(state.GitTLSEnabled) {
-		return "", "", fmt.Errorf("invalid Git TLS mode %q: must be %q or %q", selection, state.GitTLSDisabled, state.GitTLSEnabled)
-	}
-	provided := 0
-	for _, path := range []string{caPath, certPath, keyPath} {
-		if path != "" {
-			provided++
-		}
-	}
-	if provided != 0 && provided != 3 {
-		return "", "", errors.New("--git-tls-ca, --git-tls-cert, and --git-tls-key must be provided together")
-	}
-	if provided == 3 {
-		return state.GitTLSEnabled, state.GitTLSCertUserManaged, nil
+		return "", fmt.Errorf("invalid Git TLS mode %q: must be %q or %q", selection, state.GitTLSDisabled, state.GitTLSEnabled)
 	}
 	if selection == string(state.GitTLSEnabled) {
-		return state.GitTLSEnabled, state.GitTLSCertZarfManaged, nil
+		return state.GitTLSEnabled, nil
 	}
-	return state.GitTLSDisabled, "", nil
+	return state.GitTLSDisabled, nil
 }
 
 func (o *initOptions) validateInitFlags() error {
@@ -466,12 +453,11 @@ func (o *initOptions) validateInitFlags() error {
 			return fmt.Errorf(lang.CmdInitErrValidateGit)
 		}
 	}
-	mode, management, err := resolveGitTLSMode(o.gitTLSMode, "", "", "")
+	mode, err := resolveGitTLSMode(o.gitTLSMode)
 	if err != nil {
 		return err
 	}
 	o.gitServer.TLSMode = mode
-	o.gitServer.TLSCertManagement = management
 	if o.gitServer.Address != "" && mode.Enabled() {
 		return errors.New("git TLS options cannot be used with --git-url")
 	}

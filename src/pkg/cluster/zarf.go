@@ -301,11 +301,11 @@ func (c *Cluster) gitServerCABundle(ctx context.Context, gitServer state.GitServ
 	if !gitServer.IsInternal() || !gitServer.TLSMode.Enabled() {
 		return nil, nil
 	}
-	certs, err := c.GetGitServerTLS(ctx)
+	ca, err := c.GetGitServerCA(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return certs.CA, nil
+	return ca, nil
 }
 
 // GitServerCABundle returns the CA needed to authenticate the internal Git

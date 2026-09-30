@@ -1,6 +1,6 @@
 certificates:
-  required: false
+  protocol: http
   ca: ""
   cert: ""
   key: ""
-rotation: ""
+rotate: false

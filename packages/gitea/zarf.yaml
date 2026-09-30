@@ -22,8 +22,8 @@ variables:
     autoIndent: true
     sensitive: true
 
-  - name: GIT_SERVER_TLS_CONFIGURED
-    description: Set by Zarf when certificate files are supplied for this deployment
+  - name: GIT_SERVER_TLS_ROTATE
+    description: Set to true to rotate the package-generated Git server certificate on this deployment
     default: "false"
 
   - name: GIT_SERVER_EXISTING_PVC
@@ -129,6 +129,10 @@ components:
               - name: GIT_SERVER_CREATE_PVC
             mute: true
         after:
+          - cmd: ./zarf tools kubectl rollout restart deployment/zarf-gitea -n zarf
+            description: Reload the Git server certificate
+          - cmd: ./zarf tools kubectl rollout status deployment/zarf-gitea -n zarf --timeout=5m
+            description: Wait for the Git server to restart
           - cmd: ./zarf internal create-read-only-gitea-user
             maxRetries: 3
             maxTotalSeconds: 60

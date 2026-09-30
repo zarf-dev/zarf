@@ -114,11 +114,11 @@ func (c *Cluster) GenerateGitPullCreds(ctx context.Context, namespace, name stri
 		"password": gitServerInfo.PullPassword,
 	}
 	if gitServerInfo.IsInternal() && gitServerInfo.TLSMode.Enabled() {
-		certs, err := c.GetGitServerTLS(ctx)
+		ca, err := c.GetGitServerCA(ctx)
 		if err != nil {
 			return nil, err
 		}
-		data[state.GitServerTLSCAKey] = string(certs.CA)
+		data[state.GitServerTLSCAKey] = string(ca)
 	}
 	secret := v1ac.Secret(name, namespace).
 		WithLabels(map[string]string{
@@ -126,6 +126,19 @@ func (c *Cluster) GenerateGitPullCreds(ctx context.Context, namespace, name stri
 		}).WithType(corev1.SecretTypeOpaque).
 		WithStringData(data)
 	return secret, nil
+}
+
+// GetGitServerCA reads the trust anchor published by the init package.
+func (c *Cluster) GetGitServerCA(ctx context.Context) ([]byte, error) {
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.GitServerTLSSecret, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Git server TLS secret: %w", err)
+	}
+	ca := secret.Data[state.GitServerTLSCAKey]
+	if len(ca) == 0 {
+		return nil, fmt.Errorf("git server TLS secret %q is missing %q", state.GitServerTLSSecret, state.GitServerTLSCAKey)
+	}
+	return ca, nil
 }
 
 // GetGitServerTLS retrieves the TLS bundle used by the internal Git server.
@@ -187,14 +200,14 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, s *state.Stat
 	}
 	for _, namespace := range namespaceList.Items {
 		currentGitSecret, err := c.Clientset.CoreV1().Secrets(namespace.Name).Get(ctx, config.ZarfGitServerSecretName, metav1.GetOptions{})
-		if kerrors.IsNotFound(err) {
+		if kerrors.IsNotFound(err) && namespace.Name != state.ZarfNamespaceName {
 			continue
 		}
-		if err != nil {
-			continue
+		if err != nil && !kerrors.IsNotFound(err) {
+			return err
 		}
 		// Skip if namespace is skipped and secret is not managed by Zarf.
-		if currentGitSecret.Labels[state.ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
+		if currentGitSecret != nil && currentGitSecret.Labels[state.ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
 			continue
 		}
 		newGitSecret, err := c.GenerateGitPullCreds(ctx, namespace.Name, config.ZarfGitServerSecretName, s.GitServer)
