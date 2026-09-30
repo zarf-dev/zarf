@@ -287,23 +287,18 @@ func (p *PackageLayout) ContainsSBOM() bool {
 }
 
 // SignPackage signs the zarf package using cosign with the provided options.
-// If the options do not indicate signing should be performed (no key material configured),
-// this is a no-op and returns nil.
-func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOptions) (err error) {
+// A nil value leaves the package unsigned; a non-nil value requests signing.
+func (p *PackageLayout) SignPackage(ctx context.Context, opts *signing.SignBlobOptions) (err error) {
+	if opts == nil {
+		return nil
+	}
+
 	// This function updates in-memory state (Signed, ProvenanceFiles, VersionRequirements),
 	// writes a signed zarf.yaml to a temp file, then renames the temp files into place.
 	// A defer rolls back in-memory state on any error; disk state is restored best-effort
 	// if a rename partially succeeds before a later rename fails.
 
 	l := logger.From(ctx)
-
-	// Check if signing should be performed based on the options
-	// this is a no-op as there may be many different ways to sign
-	// input validation should be performed in the calling function
-	if !opts.ShouldSign() {
-		l.Info("skipping package signing (no signing key material configured)")
-		return nil
-	}
 
 	// Validate package layout state
 	if p.dirPath == "" {
@@ -367,12 +362,10 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 	}
 
 	// Configure signing. cosign v3.1.1+ writes only the bundle when NewBundleFormat=true.
-	signOpts := opts
+	signOpts := *opts
 	signOpts.NewBundleFormat = true
-
 	actualBundlePath := filepath.Join(p.dirPath, Bundle)
 	signOpts.BundlePath = actualBundlePath
-
 	if err = signOpts.CheckOverwrite(ctx); err != nil {
 		return err
 	}

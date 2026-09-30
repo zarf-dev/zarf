@@ -6,11 +6,15 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -256,6 +260,16 @@ type InjectorInfo struct {
 	Port int `json:"port"`
 }
 
+// GitServerMode identifies whether Zarf manages the git server.
+type GitServerMode string
+
+const (
+	// GitServerModeInternal is used for the git server deployed by Zarf.
+	GitServerModeInternal GitServerMode = "internal"
+	// GitServerModeExternal is used for a user-provided git server.
+	GitServerModeExternal GitServerMode = "external"
+)
+
 // GitServerInfo contains information Zarf uses to communicate with a git repository to push/pull repositories to.
 type GitServerInfo struct {
 	// Username of a user with push access to the git repository
@@ -268,11 +282,23 @@ type GitServerInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the git server
 	Address string `json:"address"`
+	// GitServerMode identifies whether Zarf manages the git server.
+	GitServerMode GitServerMode `json:"gitServerMode,omitempty"`
 }
 
-// IsInternal returns true if the git server URL is equivalent to a git server deployed through the default init package
+// IsInternal reports whether Zarf manages the git server. Older state without a mode uses the address.
 func (gs GitServerInfo) IsInternal() bool {
+	if gs.GitServerMode != "" {
+		return gs.GitServerMode == GitServerModeInternal
+	}
 	return gs.Address == ZarfInClusterGitServiceURL
+}
+
+func gitServerModeForAddress(address string) GitServerMode {
+	if address == ZarfInClusterGitServiceURL {
+		return GitServerModeInternal
+	}
+	return GitServerModeExternal
 }
 
 // IsConfigured returns true if the git server address has been set.
@@ -288,6 +314,9 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 	// Set default svc url if an external repository was not provided
 	if gs.Address == "" {
 		gs.Address = ZarfInClusterGitServiceURL
+	}
+	if gs.GitServerMode == "" {
+		gs.GitServerMode = gitServerModeForAddress(gs.Address)
 	}
 
 	// Generate a push-user password if not provided by init flag
@@ -675,6 +704,9 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	if opts.Services.Has(GitKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, opts.GitServer)
+		if opts.GitServer.Address != "" && opts.GitServer.GitServerMode == "" {
+			newState.GitServer.GitServerMode = gitServerModeForAddress(newState.GitServer.Address)
+		}
 
 		// Only autogenerate passwords if the user didn't provide one and the git server is internal
 		if opts.GitServer.PushPassword == "" && oldState.GitServer.IsInternal() {
@@ -754,7 +786,7 @@ func sanitizeState(s *State) *State {
 	return s
 }
 
-// DeployedPackageOptions are options for the DeployedPackage function
+// DeployedPackageOptions configure a deployed package.
 type DeployedPackageOptions func(*DeployedPackage)
 
 // WithPackageNamespaceOverride sets the [ALPHA] optional namespace override for a package during deployment
@@ -788,16 +820,102 @@ const (
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
-	Name                string               `json:"name"`
-	Digest              string               `json:"digest"`
-	Data                v1alpha1.ZarfPackage `json:"data"`
-	CLIVersion          string               `json:"cliVersion"`
-	Generation          int                  `json:"generation"`
-	DeployedComponents  []DeployedComponent  `json:"deployedComponents"`
-	ConnectStrings      ConnectStrings       `json:"connectStrings,omitempty"`
-	PackageConnectivity PackageConnectivity  `json:"packageConnectivity"`
+	Name   string `json:"name"`
+	Digest string `json:"digest"`
+	// Deprecated: use PackageData or Definition() instead. This field is kept so older clients can read package deployment state.
+	Data                v1alpha1.ZarfPackage       `json:"data"`
+	PackageData         map[string]json.RawMessage `json:"packageData"`
+	CLIVersion          string                     `json:"cliVersion"`
+	Generation          int                        `json:"generation"`
+	DeployedComponents  []DeployedComponent        `json:"deployedComponents"`
+	ConnectStrings      ConnectStrings             `json:"connectStrings,omitempty"`
+	PackageConnectivity PackageConnectivity        `json:"packageConnectivity"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
+}
+
+// NewDeployedPackage creates persisted deployment state from a package definition.
+func NewDeployedPackage(definition api.Package, digest, cliVersion string, components []DeployedComponent, generation int, opts ...DeployedPackageOptions) (*DeployedPackage, error) {
+	connectStrings := ConnectStrings{}
+	for _, component := range components {
+		for _, chart := range component.InstalledCharts {
+			for name, connectString := range chart.ConnectStrings {
+				connectStrings[name] = connectString
+			}
+		}
+	}
+
+	deployedPackage := &DeployedPackage{
+		Name:               definition.Metadata.Name,
+		Digest:             digest,
+		CLIVersion:         cliVersion,
+		Generation:         generation,
+		DeployedComponents: components,
+		ConnectStrings:     connectStrings,
+	}
+	if err := deployedPackage.SetPackageDefinition(definition); err != nil {
+		return nil, err
+	}
+	for _, opt := range opts {
+		opt(deployedPackage)
+	}
+	return deployedPackage, nil
+}
+
+// SetPackageDefinition records every API version needed to read a deployed package.
+// Data always contains the v1alpha1 form to allow older Zarf clients to read the
+// deployed package secret.
+func (d *DeployedPackage) SetPackageDefinition(definition api.Package) error {
+	alpha := convert.PackageToV1alpha1(definition)
+	alphaData, err := json.Marshal(alpha)
+	if err != nil {
+		return fmt.Errorf("marshal %s package data: %w", v1alpha1.APIVersion, err)
+	}
+
+	d.Data = alpha
+	d.PackageData = map[string]json.RawMessage{
+		v1alpha1.APIVersion: alphaData,
+	}
+
+	switch definition.GetAPIVersion() {
+	case "", v1alpha1.APIVersion:
+		return nil
+	case v1beta1.APIVersion:
+		betaData, err := json.Marshal(convert.PackageToV1beta1(definition))
+		if err != nil {
+			return fmt.Errorf("marshal %s package data: %w", v1beta1.APIVersion, err)
+		}
+		d.PackageData[v1beta1.APIVersion] = betaData
+		return nil
+	default:
+		return fmt.Errorf("unsupported package API version %q", definition.APIVersion)
+	}
+}
+
+// Definition returns the latest package definition this Zarf version
+// understands. Deployed package secrets written before PackageData was added
+// fall back to their legacy v1alpha1 Data field.
+func (d DeployedPackage) Definition() (api.Package, error) {
+	if len(d.PackageData) == 0 {
+		return convert.PackageFromV1alpha1(d.Data), nil
+	}
+
+	if data, found := d.PackageData[v1beta1.APIVersion]; found {
+		var pkg v1beta1.Package
+		if err := json.Unmarshal(data, &pkg); err != nil {
+			return api.Package{}, fmt.Errorf("unmarshal %s package data: %w", v1beta1.APIVersion, err)
+		}
+		return convert.PackageFromV1beta1(pkg), nil
+	}
+	if data, found := d.PackageData[v1alpha1.APIVersion]; found {
+		var pkg v1alpha1.ZarfPackage
+		if err := json.Unmarshal(data, &pkg); err != nil {
+			return api.Package{}, fmt.Errorf("unmarshal %s package data: %w", v1alpha1.APIVersion, err)
+		}
+		return convert.PackageFromV1alpha1(pkg), nil
+	}
+
+	return api.Package{}, fmt.Errorf("deployed package has no supported package data")
 }
 
 // DeployedPackageNameRegex is a regex for lowercase, numbers and hyphens that cannot start with a hyphen.

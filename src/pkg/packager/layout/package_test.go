@@ -206,7 +206,7 @@ func TestPackageLayoutSignPackagePreservesMultiDocZarfYAML(t *testing.T) {
 	opts.Key = "./testdata/cosign.key"
 	opts.Password = "test"
 
-	require.NoError(t, pkgLayout.SignPackage(ctx, opts))
+	require.NoError(t, pkgLayout.SignPackage(ctx, &opts))
 
 	updated, err := os.ReadFile(filepath.Join(tmpDir, ZarfYAML))
 	require.NoError(t, err)
@@ -441,7 +441,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.NoError(t, err)
 		require.FileExists(t, bundlePath, "bundle signature should exist")
 		require.NoFileExists(t, filepath.Join(tmpDir, Signature), "legacy .sig should not be written")
@@ -467,7 +467,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "wrongpassword"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.ErrorContains(t, err, "failed to sign package")
 		require.ErrorContains(t, err, "reading key: decrypt: encrypted: decryption failed")
 		require.NoFileExists(t, bundlePath)
@@ -485,7 +485,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err := pkgLayout.SignPackage(ctx, opts)
+		err := pkgLayout.SignPackage(ctx, &opts)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "cannot access zarf.yaml for signing")
 	})
@@ -500,7 +500,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err := pkgLayout.SignPackage(ctx, opts)
+		err := pkgLayout.SignPackage(ctx, &opts)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid package layout directory")
 	})
@@ -515,7 +515,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err := pkgLayout.SignPackage(ctx, opts)
+		err := pkgLayout.SignPackage(ctx, &opts)
 		require.EqualError(t, err, "invalid package layout: dirPath is empty")
 	})
 
@@ -542,7 +542,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Password = "test"
 		opts.Overwrite = true
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.NoError(t, err)
 		require.FileExists(t, bundlePath)
 
@@ -585,36 +585,31 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Password = "test"
 		opts.Overwrite = true
 
-		require.NoError(t, pkgLayout.SignPackage(ctx, opts))
+		require.NoError(t, pkgLayout.SignPackage(ctx, &opts))
 		require.FileExists(t, bundlePath)
 		require.NoFileExists(t, legacySignaturePath, "legacy signature should be removed after re-sign")
 		require.Contains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Bundle)
 		require.NotContains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Signature)
 	})
 
-	t.Run("skip signing when ShouldSign returns false", func(t *testing.T) {
+	t.Run("nil options leave the package unsigned", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		yamlPath := filepath.Join(tmpDir, ZarfYAML)
 		bundlePath := filepath.Join(tmpDir, Bundle)
 		legacySignaturePath := filepath.Join(tmpDir, Signature)
 
-		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
-		require.NoError(t, err)
-
+		existingSigned := false
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
+			pkg: packageDefinition(v1alpha1.ZarfPackage{
+				Build: v1alpha1.ZarfBuildData{Signed: &existingSigned},
+			}),
 		}
 
-		// Empty options - no signing key material configured
-		opts := signing.SignBlobOptions{}
-
-		// Should skip signing without error
-		err = pkgLayout.SignPackage(ctx, opts)
-		require.NoError(t, err)
+		require.NoError(t, pkgLayout.SignPackage(ctx, nil))
 		require.NoFileExists(t, bundlePath)
 		require.NoFileExists(t, legacySignaturePath)
-		require.Nil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
+		require.NotNil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
+		require.False(t, *convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
 	})
 
 	t.Run("dirPath is file not directory", func(t *testing.T) {
@@ -632,7 +627,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "is not a directory")
 	})
@@ -658,7 +653,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		// Store original value
 		originalOutputSignature := opts.OutputSignature
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.NoError(t, err)
 
 		// Verify input options were not modified
@@ -683,39 +678,20 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "wrongpassword"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.Error(t, err)
 
 		// Verify Signed field was not set
 		require.Nil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
 	})
 
-	t.Run("preserves existing Signed value on skip", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		yamlPath := filepath.Join(tmpDir, ZarfYAML)
-
-		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
-		require.NoError(t, err)
-
-		existingSigned := false
+	t.Run("non-nil empty options validate the layout", func(t *testing.T) {
 		pkgLayout := &PackageLayout{
-			dirPath: tmpDir,
-			pkg: packageDefinition(v1alpha1.ZarfPackage{
-				Build: v1alpha1.ZarfBuildData{
-					Signed: &existingSigned,
-				},
-			}),
+			pkg: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
-		// Empty options - should skip signing
-		opts := signing.SignBlobOptions{}
-
-		err = pkgLayout.SignPackage(ctx, opts)
-		require.NoError(t, err)
-
-		// Verify Signed field preserved
-		require.NotNil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
-		require.False(t, *convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
+		err := pkgLayout.SignPackage(ctx, &signing.SignBlobOptions{})
+		require.EqualError(t, err, "invalid package layout: dirPath is empty")
 	})
 
 	t.Run("zarf.yaml updated with signed:true after signing", func(t *testing.T) {
@@ -752,7 +728,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.NoError(t, err)
 
 		// cosign v3.1.1+ produces only the bundle when NewBundleFormat=true (the default).
@@ -932,7 +908,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 
 			layout, opts := tt.setupFunc(t)
 
-			err := layout.SignPackage(ctx, opts)
+			err := layout.SignPackage(ctx, &opts)
 
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
@@ -984,7 +960,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, signOpts)
+		err = pkgLayout.SignPackage(ctx, &signOpts)
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(tmpDir, Bundle), "bundle signature should exist")
 
@@ -1014,7 +990,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, signOpts)
+		err = pkgLayout.SignPackage(ctx, &signOpts)
 		require.NoError(t, err)
 
 		// Try to verify with a different (non-existent) key - should fail
@@ -1111,7 +1087,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, signOpts)
+		err = pkgLayout.SignPackage(ctx, &signOpts)
 		require.NoError(t, err)
 
 		// Try to verify without providing a key
@@ -1142,7 +1118,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, signOpts)
+		err = pkgLayout.SignPackage(ctx, &signOpts)
 		require.NoError(t, err)
 
 		// Corrupt all signature files that were produced
@@ -1181,7 +1157,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, signOpts)
+		err = pkgLayout.SignPackage(ctx, &signOpts)
 		require.NoError(t, err)
 
 		// Modify the zarf.yaml after signing (tampering)
@@ -1254,7 +1230,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, signOpts)
+		err = pkgLayout.SignPackage(ctx, &signOpts)
 		require.NoError(t, err)
 
 		// Use only the deprecated KeyRef alias with Key intentionally left empty.
@@ -1454,7 +1430,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 			signOpts.Key = "./testdata/cosign.key"
 			signOpts.Password = "test"
 
-			err = pkgLayout.SignPackage(ctx, signOpts)
+			err = pkgLayout.SignPackage(ctx, &signOpts)
 			require.NoError(t, err)
 
 			return pkgDir, "./testdata/cosign.pub"
@@ -1866,7 +1842,7 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.NoError(t, err)
 
 		require.Contains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Checksums)
@@ -1895,7 +1871,7 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "wrongpassword"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.Error(t, err)
 		require.Equal(t, []string{Checksums}, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles)
 	})

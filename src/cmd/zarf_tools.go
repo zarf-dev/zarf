@@ -473,6 +473,7 @@ func printCredentialUpdates(ctx context.Context, oldState *state.State, newState
 		oG := oldState.GitServer
 		nG := newState.GitServer
 		l.Info("Git server URL address", "existing", oG.Address, "replacement", nG.Address)
+		l.Info("Git server mode", "existing", oG.GitServerMode, "replacement", nG.GitServerMode)
 		l.Info("Git server push username", "existing", oG.PushUsername, "replacement", nG.PushUsername)
 		l.Info("Git server push password", "changed", oG.PushPassword != nG.PushPassword)
 		l.Info("Git server pull username", "existing", oG.PullUsername, "replacement", nG.PullUsername)
