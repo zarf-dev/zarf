@@ -45,8 +45,10 @@ func TestConnectedDeploy(t *testing.T) {
 	deployedPkg, err := c.GetDeployedPackage(t.Context(), "connected-deploy")
 	require.NoError(t, err)
 	require.Equal(t, state.PackageConnectivityConnected, deployedPkg.GetPackageConnectivity(), "package secret should record connected deploy mode")
-	require.Len(t, deployedPkg.Data.Components, 1)
-	require.Empty(t, deployedPkg.Data.Components[0].Images, "deployed definition should omit images that were not pushed")
+	pkg, err := deployedPkg.Definition()
+	require.NoError(t, err)
+	require.Len(t, pkg.Components, 1)
+	require.Empty(t, pkg.Components[0].Images, "deployed definition should omit images that were not pushed")
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "connected-deploy", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)

@@ -8,14 +8,70 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/go-containerregistry/pkg/registry"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestRegistryPruneSkipsConnectedDeploys(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	deletions := make(chan string, 2)
+	registryHandler := registry.New()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			deletions <- r.URL.Path
+		}
+		registryHandler.ServeHTTP(w, r)
+	}))
+	t.Cleanup(server.Close)
+	address := strings.TrimPrefix(server.URL, "http://")
+	options := []crane.Option{crane.Insecure}
+
+	keptRef := address + "/library/kept:latest"
+	unusedRef := address + "/library/unused:latest"
+	require.NoError(t, crane.Push(empty.Image, keptRef, options...))
+	unusedImage, err := random.Image(128, 1)
+	require.NoError(t, err)
+	require.NoError(t, crane.Push(unusedImage, unusedRef, options...))
+	unusedDigest, err := crane.Digest(unusedRef, options...)
+	require.NoError(t, err)
+
+	packages := []state.DeployedPackage{
+		{
+			PackageConnectivity: state.PackageConnectivityConnected,
+			Data: v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{
+				{Name: "connected", Images: []string{"docker.io/library/connected:latest"}},
+			}},
+			DeployedComponents: []state.DeployedComponent{{Name: "connected"}},
+		},
+		{
+			// Older deployments have no connectivity field and must still protect their images.
+			Data: v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{
+				{Name: "airgap", Images: []string{"docker.io/library/kept:latest"}},
+			}},
+			DeployedComponents: []state.DeployedComponent{{Name: "airgap"}},
+		},
+	}
+
+	require.NoError(t, doPruneImagesForPackages(ctx, options, &state.State{}, packages, address, true, false))
+	_, err = crane.Digest(keptRef, options...)
+	require.NoError(t, err)
+	require.Len(t, deletions, 1)
+	require.Equal(t, "/v2/library/unused/manifests/"+unusedDigest, <-deletions)
+}
 
 func TestRegistryCopyPlatform(t *testing.T) {
 	ctx := context.Background()
