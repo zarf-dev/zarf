@@ -15,6 +15,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -420,77 +421,57 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 	return nil
 }
 
-// loadAndValidateAgentTLS reads agent TLS files from disk and validates them.
+// FIXME: maybe add minValidity to agent
 func loadAndValidateAgentTLS(caPath, certPath, keyPath string) (pki.GeneratedPKI, error) {
-	ca, err := os.ReadFile(caPath)
-	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("unable to read agent TLS CA: %w", err)
-	}
-	cert, err := os.ReadFile(certPath)
-	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("unable to read agent TLS cert: %w", err)
-	}
-	key, err := os.ReadFile(keyPath)
-	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("unable to read agent TLS key: %w", err)
-	}
-	if _, err := tls.X509KeyPair(cert, key); err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("agent TLS cert and key do not match: %w", err)
-	}
-	parsed, err := pki.ParseCertFromPEM(cert)
-	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse agent TLS certificate: %w", err)
-	}
-	caPool := x509.NewCertPool()
-	if !caPool.AppendCertsFromPEM(ca) {
-		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse provided CA certificate")
-	}
-	if _, err := parsed.Verify(x509.VerifyOptions{
-		Roots:   caPool,
-		DNSName: state.ZarfAgentHost,
-	}); err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("agent TLS certificate failed validation: %w", err)
-	}
-	return pki.GeneratedPKI{CA: ca, Cert: cert, Key: key}, nil
+	return loadAndValidateTLS(caPath, certPath, keyPath, state.ZarfAgentHost, nil, 0)
 }
 
 // loadAndValidateGitTLS validates a server certificate before any cluster
 // mutation. Port forwarding exposes the raw Gitea listener, so all service and
 // loopback SANs are mandatory.
 func loadAndValidateGitTLS(caPath, certPath, keyPath string) (pki.GeneratedPKI, error) {
+	hostnames := slices.Concat(state.ZarfGitServerTLSHosts, []string{"127.0.0.1", "::1"})
+	return loadAndValidateTLS(caPath, certPath, keyPath, state.ZarfInClusterGitServiceHost, hostnames, 24*time.Hour)
+}
+
+func loadAndValidateTLS(caPath, certPath, keyPath, hostname string, requiredSANs []string, minValidity time.Duration) (pki.GeneratedPKI, error) {
 	ca, err := os.ReadFile(caPath)
 	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("unable to read Git TLS CA: %w", err)
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read TLS CA: %w", err)
 	}
 	cert, err := os.ReadFile(certPath)
 	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("unable to read Git TLS cert: %w", err)
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read TLS cert: %w", err)
 	}
 	key, err := os.ReadFile(keyPath)
 	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("unable to read Git TLS key: %w", err)
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read TLS key: %w", err)
 	}
 	if _, err := tls.X509KeyPair(cert, key); err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("git TLS cert and key do not match: %w", err)
+		return pki.GeneratedPKI{}, fmt.Errorf("TLS cert and key do not match: %w", err)
 	}
 	parsed, err := pki.ParseCertFromPEM(cert)
 	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse Git TLS certificate: %w", err)
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse TLS certificate: %w", err)
 	}
-	roots := x509.NewCertPool()
-	if !roots.AppendCertsFromPEM(ca) {
-		return pki.GeneratedPKI{}, errors.New("failed to parse provided Git TLS CA certificate")
+	caPool := x509.NewCertPool()
+	if !caPool.AppendCertsFromPEM(ca) {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse provided CA certificate")
 	}
-	if _, err := parsed.Verify(x509.VerifyOptions{Roots: roots, DNSName: state.ZarfInClusterGitServiceHost, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}); err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("git TLS certificate failed validation: %w", err)
+	if _, err := parsed.Verify(x509.VerifyOptions{
+		Roots:     caPool,
+		DNSName:   hostname,
+		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}); err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("TLS certificate failed validation: %w", err)
 	}
-	for _, hostname := range append(append([]string{}, state.ZarfGitServerTLSHosts...), "127.0.0.1", "::1") {
-		if err := parsed.VerifyHostname(hostname); err != nil {
-			return pki.GeneratedPKI{}, fmt.Errorf("git TLS certificate is missing required SAN %q: %w", hostname, err)
+	for _, requiredSAN := range requiredSANs {
+		if err := parsed.VerifyHostname(requiredSAN); err != nil {
+			return pki.GeneratedPKI{}, fmt.Errorf("TLS certificate is missing required SAN %q: %w", requiredSAN, err)
 		}
 	}
-	if parsed.NotAfter.Before(time.Now().Add(24 * time.Hour)) {
-		return pki.GeneratedPKI{}, fmt.Errorf("git TLS certificate expires too soon: %s", parsed.NotAfter)
+	if minValidity > 0 && parsed.NotAfter.Before(time.Now().Add(minValidity)) {
+		return pki.GeneratedPKI{}, fmt.Errorf("TLS certificate expires too soon: %s", parsed.NotAfter)
 	}
 	return pki.GeneratedPKI{CA: ca, Cert: cert, Key: key}, nil
 }
