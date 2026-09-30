@@ -258,7 +258,10 @@ components:
         - url: oci://` + ref.String() + "\n")
 			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), manifest, 0o600))
 
-			_, err := PackageDefinition(ctx, dir, DefinitionOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
+			_, err := PackageDefinition(ctx, dir, DefinitionOptions{
+				CachePath:     t.TempDir(),
+				RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+			})
 			require.ErrorContains(t, err, tt.field)
 			require.ErrorContains(t, err, tt.reason)
 		})
@@ -299,7 +302,10 @@ components:
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), manifest, 0o600))
 
-	_, err := PackageDefinition(ctx, dir, DefinitionOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
+	_, err := PackageDefinition(ctx, dir, DefinitionOptions{
+		CachePath:     t.TempDir(),
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+	})
 	require.ErrorContains(t, err, `manifest "app" uses kustomize.allowAnyDirectory`)
 }
 

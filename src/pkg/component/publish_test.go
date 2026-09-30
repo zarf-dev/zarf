@@ -593,7 +593,11 @@ components:
         - url: oci://%s
 `, published.String())
 	require.NoError(t, os.WriteFile(packagePath, []byte(packageYAML), 0o600))
-	loaded, err := load.Package(ctx, root, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{Flavor: flavor, RemoteOptions: defaultTestRemoteOptions()}})
+	loaded, err := load.Package(ctx, root, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{
+		CachePath:     t.TempDir(),
+		Flavor:        flavor,
+		RemoteOptions: defaultTestRemoteOptions(),
+	}})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 
