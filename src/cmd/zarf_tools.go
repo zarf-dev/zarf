@@ -708,7 +708,6 @@ func newUpdateGitCredsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.gitServer.PushPassword, "git-push-password", v.GetString(VInitGitPushPass), lang.CmdInitFlagGitPushPass)
 	cmd.Flags().StringVar(&o.gitServer.PullUsername, "git-pull-username", v.GetString(VInitGitPullUser), lang.CmdInitFlagGitPullUser)
 	cmd.Flags().StringVar(&o.gitServer.PullPassword, "git-pull-password", v.GetString(VInitGitPullPass), lang.CmdInitFlagGitPullPass)
-
 	return cmd
 }
 
@@ -722,7 +721,6 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	if !oldState.GitServer.IsConfigured() {
 		return errors.New("no Git server is configured in the Zarf state; nothing to update")
 	}
-
 	newState, err := state.Merge(oldState, state.MergeOptions{
 		GitServer: o.gitServer,
 		Services:  state.NewServiceSet(state.GitKey),
@@ -730,7 +728,6 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to update Git server credentials: %w", err)
 	}
-
 	confirm, err := confirmCredentialUpdate(ctx, oldState, newState, state.GitKey, o.confirm)
 	if err != nil {
 		return err
@@ -738,7 +735,6 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	if !confirm {
 		return nil
 	}
-
 	return runWithRollback(ctx, "Git server",
 		func() error { return o.applyState(ctx, c, oldState, newState) },
 		func() error { return o.applyState(ctx, c, newState, oldState) },

@@ -14,15 +14,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/yaml"
 )
 
@@ -1261,6 +1265,42 @@ items:
       name: plain-service
 `)
 	require.Empty(t, r.connectStrings)
+}
+
+func TestRendererAdoptsOnlyDeclaredGitServerTLSSecret(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	clientset := fake.NewClientset(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name: state.GitServerTLSSecret, Namespace: state.ZarfNamespaceName,
+	}})
+	r := newTestRenderer()
+	r.chart = api.Chart{Namespace: state.ZarfNamespaceName, ReleaseName: "custom-git-tls"}
+	r.cluster = &cluster.Cluster{Clientset: clientset}
+	r.adoptGitServerTLSSecret = true
+
+	renderManifest(t, r, `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: unrelated
+  namespace: zarf
+`)
+	secret, err := clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.GitServerTLSSecret, metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Empty(t, secret.Annotations["meta.helm.sh/release-name"])
+
+	renderManifest(t, r, `apiVersion: v1
+kind: Secret
+metadata:
+  name: zarf-git-server-tls
+  namespace: zarf
+data:
+  ca.crt: Y2E=
+`)
+	secret, err = clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.GitServerTLSSecret, metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "custom-git-tls", secret.Annotations["meta.helm.sh/release-name"])
+	require.Equal(t, state.ZarfNamespaceName, secret.Annotations["meta.helm.sh/release-namespace"])
+	require.Equal(t, "Helm", secret.Labels["app.kubernetes.io/managed-by"])
 }
 
 func newTestRenderer() *renderer {

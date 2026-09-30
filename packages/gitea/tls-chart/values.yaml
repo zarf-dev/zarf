@@ -1,0 +1,6 @@
+certificates:
+  protocol: http
+  ca: ""
+  cert: ""
+  key: ""
+rotate: false

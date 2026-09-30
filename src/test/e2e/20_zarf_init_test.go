@@ -5,16 +5,81 @@
 package test
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"testing"
 
-	"encoding/json"
-
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/yaml"
 )
+
+func TestInitGitTLSChartCreatesSecret(t *testing.T) {
+	render := func(t *testing.T, valuesFile string) corev1.Secret {
+		t.Helper()
+		args := []string{"tools", "helm", "template", "zarf-git-server-tls", "packages/gitea/tls-chart", "--namespace", "zarf"}
+		if valuesFile != "" {
+			args = append(args, "-f", valuesFile)
+		}
+		command := exec.Command(e2e.ZarfBinPath, args...)
+		stdout, err := command.Output()
+		require.NoError(t, err)
+		secret := corev1.Secret{}
+		require.NoError(t, yaml.Unmarshal(stdout, &secret))
+		require.Equal(t, state.GitServerTLSSecret, secret.Name)
+		return secret
+	}
+
+	t.Run("generated certificate covers Git clients", func(t *testing.T) {
+		secret := render(t, "")
+		_, err := tls.X509KeyPair(secret.Data[state.GitServerTLSCertKey], secret.Data[state.GitServerTLSKey])
+		require.NoError(t, err)
+		cert, err := pki.ParseCertFromPEM(secret.Data[state.GitServerTLSCertKey])
+		require.NoError(t, err)
+		roots := x509.NewCertPool()
+		require.True(t, roots.AppendCertsFromPEM(secret.Data[state.GitServerTLSCAKey]))
+		_, err = cert.Verify(x509.VerifyOptions{Roots: roots, DNSName: state.ZarfInClusterGitServiceHost})
+		require.NoError(t, err)
+		for _, host := range append(append([]string{}, state.ZarfGitServerTLSHosts...), "127.0.0.1", "::1") {
+			require.NoError(t, cert.VerifyHostname(host))
+		}
+	})
+
+	t.Run("user certificate is stored in the Secret", func(t *testing.T) {
+		certs, err := pki.GeneratePKI(state.ZarfInClusterGitServiceHost, state.ZarfGitServerTLSHosts...)
+		require.NoError(t, err)
+		values, err := yaml.Marshal(map[string]any{"certificates": map[string]any{
+			"protocol": "https", "ca": string(certs.CA), "cert": string(certs.Cert), "key": string(certs.Key),
+		}})
+		require.NoError(t, err)
+		valuesFile := filepath.Join(t.TempDir(), "git-tls-values.yaml")
+		require.NoError(t, os.WriteFile(valuesFile, values, 0600))
+		secret := render(t, valuesFile)
+		require.Equal(t, certs.CA, secret.Data[state.GitServerTLSCAKey])
+		require.Equal(t, certs.Cert, secret.Data[state.GitServerTLSCertKey])
+		require.Equal(t, certs.Key, secret.Data[state.GitServerTLSKey])
+	})
+
+	t.Run("incomplete certificate fails chart rendering", func(t *testing.T) {
+		valuesFile := filepath.Join(t.TempDir(), "partial-values.yaml")
+		require.NoError(t, os.WriteFile(valuesFile, []byte("certificates:\n  protocol: https\n  ca: incomplete\n"), 0600))
+		command := exec.Command(e2e.ZarfBinPath, "tools", "helm", "template", "zarf-git-server-tls", "packages/gitea/tls-chart", "-f", valuesFile)
+		output, err := command.CombinedOutput()
+		require.Error(t, err)
+		require.Contains(t, string(output), "GIT_SERVER_TLS_CA, GIT_SERVER_TLS_CERT, and GIT_SERVER_TLS_KEY must be provided together")
+	})
+}
 
 func TestZarfInit(t *testing.T) {
 	t.Log("E2E: Zarf init")
@@ -122,6 +187,49 @@ func TestZarfInit(t *testing.T) {
 	// Zarf should fail since registry credentials are changing on a subsequent init
 	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--registry-push-password", "new-password", "--confirm")
 	require.Error(t, err)
+
+	if s.GitServer.IsInternal() && !s.GitServer.TLSMode.Enabled() {
+		verifyGitTLSRotation(t)
+	}
+}
+
+func verifyGitTLSRotation(t *testing.T) {
+	t.Helper()
+	t.Cleanup(func() {
+		_, stderr, err := e2e.Zarf(t, "init", "--components=git-server", "--git-tls-mode=disabled", "--confirm")
+		require.NoError(t, err, stderr)
+	})
+	_, stderr, err := e2e.Zarf(t, "init", "--components=git-server", "--git-tls-mode=tls-enabled", "--confirm")
+	require.NoError(t, err, stderr)
+
+	getSecret := func(name string) corev1.Secret {
+		t.Helper()
+		output, stderr, err := e2e.Kubectl(t, "get", "secret", name, "-n", "zarf", "-o=json")
+		require.NoError(t, err, stderr)
+		secret := corev1.Secret{}
+		require.NoError(t, json.Unmarshal([]byte(output), &secret))
+		return secret
+	}
+	getGiteaDeployment := func() appsv1.Deployment {
+		t.Helper()
+		output, stderr, err := e2e.Kubectl(t, "get", "deployment", "zarf-gitea", "-n", "zarf", "-o=json")
+		require.NoError(t, err, stderr)
+		deployment := appsv1.Deployment{}
+		require.NoError(t, json.Unmarshal([]byte(output), &deployment))
+		return deployment
+	}
+
+	previous := getSecret(state.GitServerTLSSecret)
+	previousRestart := getGiteaDeployment().Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"]
+	require.NotEmpty(t, previousRestart)
+
+	_, stderr, err = e2e.Zarf(t, "init", "--components=git-server", "--set-variables=GIT_SERVER_TLS_ROTATE=true", "--confirm")
+	require.NoError(t, err, stderr)
+	rotated := getSecret(state.GitServerTLSSecret)
+	require.NotEqual(t, previous.Data[state.GitServerTLSCAKey], rotated.Data[state.GitServerTLSCAKey])
+	require.NotEqual(t, previous.Data[state.GitServerTLSCertKey], rotated.Data[state.GitServerTLSCertKey])
+	require.NotEqual(t, previousRestart, getGiteaDeployment().Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"])
+	require.Equal(t, rotated.Data[state.GitServerTLSCAKey], getSecret(config.ZarfGitServerSecretName).Data[state.GitServerTLSCAKey])
 }
 
 func verifyZarfNamespaceLabels(t *testing.T) {

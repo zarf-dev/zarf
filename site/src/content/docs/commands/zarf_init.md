@@ -35,6 +35,12 @@ $ zarf init
 # Initializing w/ Zarfs internal git server:
 $ zarf init --components=git-server
 
+# Initializing internal Git with package-managed TLS:
+$ zarf init --components=git-server --git-tls-mode=tls-enabled
+
+# Initializing internal Git with a supplied TLS certificate:
+$ zarf init --components=git-server --git-tls-mode=tls-enabled --set-variables=GIT_SERVER_TLS_CA=ca.pem,GIT_SERVER_TLS_CERT=cert.pem,GIT_SERVER_TLS_KEY=key.pem
+
 # Initializing w/ Zarfs with a custom init package:
 $ zarf init oci://ghcr.io/zarf-dev/packages/init:v0.69.0
 
@@ -72,6 +78,7 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --git-pull-username string                Username for pull-only access to the git server
       --git-push-password string                Password for the push-user to access the git server
       --git-push-username string                Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
+      --git-tls-mode string                     Git TLS mode for the internal server: disabled or tls-enabled. The init package must provide the matching server configuration and TLS Secret (default "disabled")
       --git-url string                          External git server url to use for this Zarf cluster
   -h, --help                                    help for init
       --injector-image string                   Image for the injector. This image must be available on every node

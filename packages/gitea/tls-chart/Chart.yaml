@@ -1,0 +1,5 @@
+apiVersion: v2
+name: zarf-git-server-tls
+description: TLS Secret for the internal Zarf Git server
+type: application
+version: 0.1.0

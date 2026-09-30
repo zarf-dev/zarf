@@ -106,16 +106,48 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 	return secretDockerConfig, nil
 }
 
-// GenerateGitPullCreds generates a secret containing the git credentials.
-func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo state.GitServerInfo) *v1ac.SecretApplyConfiguration {
-	return v1ac.Secret(name, namespace).
+// GenerateGitPullCreds generates a secret containing Git credentials and, for
+// the TLS-enabled internal server, the CA Flux expects under ca.crt.
+func (c *Cluster) GenerateGitPullCreds(ctx context.Context, namespace, name string, gitServerInfo state.GitServerInfo) (*v1ac.SecretApplyConfiguration, error) {
+	data := map[string]string{
+		"username": gitServerInfo.PullUsername,
+		"password": gitServerInfo.PullPassword,
+	}
+	if gitServerInfo.IsInternal() && gitServerInfo.TLSMode.Enabled() {
+		ca, err := c.GetGitServerCA(ctx)
+		if err != nil {
+			return nil, err
+		}
+		data[state.GitServerTLSCAKey] = string(ca)
+	}
+	secret := v1ac.Secret(name, namespace).
 		WithLabels(map[string]string{
 			state.ZarfManagedByLabel: "zarf",
 		}).WithType(corev1.SecretTypeOpaque).
-		WithStringData(map[string]string{
-			"username": gitServerInfo.PullUsername,
-			"password": gitServerInfo.PullPassword,
-		})
+		WithStringData(data)
+	return secret, nil
+}
+
+// GetGitServerCA reads the trust anchor published by the init package.
+func (c *Cluster) GetGitServerCA(ctx context.Context) ([]byte, error) {
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.GitServerTLSSecret, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Git server TLS secret: %w", err)
+	}
+	ca := secret.Data[state.GitServerTLSCAKey]
+	if len(ca) == 0 {
+		return nil, fmt.Errorf("git server TLS secret %q is missing %q", state.GitServerTLSSecret, state.GitServerTLSCAKey)
+	}
+	return ca, nil
+}
+
+// GetGitServerTLS retrieves the TLS bundle used by the internal Git server.
+func (c *Cluster) GetGitServerTLS(ctx context.Context) (pki.GeneratedPKI, error) {
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.GitServerTLSSecret, metav1.GetOptions{})
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to get Git server TLS secret: %w", err)
+	}
+	return state.GitServerCertFromSecretData(secret.Data)
 }
 
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
@@ -168,17 +200,20 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, s *state.Stat
 	}
 	for _, namespace := range namespaceList.Items {
 		currentGitSecret, err := c.Clientset.CoreV1().Secrets(namespace.Name).Get(ctx, config.ZarfGitServerSecretName, metav1.GetOptions{})
-		if kerrors.IsNotFound(err) {
+		if kerrors.IsNotFound(err) && namespace.Name != state.ZarfNamespaceName {
 			continue
 		}
-		if err != nil {
-			continue
+		if err != nil && !kerrors.IsNotFound(err) {
+			return err
 		}
 		// Skip if namespace is skipped and secret is not managed by Zarf.
-		if currentGitSecret.Labels[state.ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
+		if currentGitSecret != nil && currentGitSecret.Labels[state.ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
 			continue
 		}
-		newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, s.GitServer)
+		newGitSecret, err := c.GenerateGitPullCreds(ctx, namespace.Name, config.ZarfGitServerSecretName, s.GitServer)
+		if err != nil {
+			return err
+		}
 		l.Info("applying Zarf managed git secret for namespace", "name", namespace.Name)
 		_, err = c.Clientset.CoreV1().Secrets(*newGitSecret.Namespace).Apply(ctx, newGitSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {

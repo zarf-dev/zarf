@@ -4,6 +4,7 @@
 package cluster
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,9 +13,44 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestGitTLSTrustForFlux(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	certs, err := pki.GeneratePKI(state.ZarfInClusterGitServiceHost, state.ZarfGitServerTLSHosts...)
+	require.NoError(t, err)
+	clientset := fake.NewClientset(
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: state.GitServerTLSSecret, Namespace: state.ZarfNamespaceName}, Data: map[string][]byte{state.GitServerTLSCAKey: certs.CA}},
+	)
+	c := &Cluster{Clientset: clientset}
+	gitServer := state.GitServerInfo{Address: state.ZarfInClusterGitURL(state.GitTLSEnabled), TLSMode: state.GitTLSEnabled, PullUsername: "reader", PullPassword: "password"}
+
+	secret, err := c.GenerateGitPullCreds(ctx, "workload", config.ZarfGitServerSecretName, gitServer)
+	require.NoError(t, err)
+	require.Equal(t, string(certs.CA), secret.StringData[state.GitServerTLSCAKey])
+}
+
+func TestUpdateZarfManagedGitSecretsCreatesZarfCredential(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	ca := []byte("package-owned CA")
+	c := &Cluster{Clientset: fake.NewClientset(
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: state.ZarfNamespaceName}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: state.GitServerTLSSecret, Namespace: state.ZarfNamespaceName}, Data: map[string][]byte{state.GitServerTLSCAKey: ca}},
+	)}
+	s := &state.State{GitServer: state.GitServerInfo{
+		Address: state.ZarfInClusterGitURL(state.GitTLSEnabled), TLSMode: state.GitTLSEnabled,
+		PullUsername: "reader", PullPassword: "password",
+	}}
+	require.NoError(t, c.UpdateZarfManagedGitSecrets(ctx, s))
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, config.ZarfGitServerSecretName, metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, string(ca), secret.StringData[state.GitServerTLSCAKey])
+}
 
 func TestUpdateZarfManagedSecrets(t *testing.T) {
 	ctx := testutil.TestContext(t)
