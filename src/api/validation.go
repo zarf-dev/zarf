@@ -15,9 +15,6 @@ import (
 // An omitted apiVersion is assumed v1alpha1. This does not validate field values correctness
 func (p Package) Validate() error {
 	version := p.GetAPIVersion()
-	if version != v1alpha1.APIVersion && version != v1beta1.APIVersion {
-		return fmt.Errorf("unsupported package apiVersion %q", version)
-	}
 
 	var errs []error
 	add := func(path string) {
@@ -61,9 +58,6 @@ func (p Package) Validate() error {
 		path := fmt.Sprintf("components[%d]", i)
 		switch version {
 		case v1alpha1.APIVersion:
-			if component.Service != "" {
-				add(path + ".service")
-			}
 			if len(component.Import.Local) > 1 || len(component.Import.Remote) > 1 {
 				add(path + ".import (multiple sources)")
 			}

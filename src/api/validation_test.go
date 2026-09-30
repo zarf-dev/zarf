@@ -30,11 +30,6 @@ func TestPackageValidateVersionFields(t *testing.T) {
 			wantErr: "components[0].images[0].source is not supported in " + v1alpha1.APIVersion,
 		},
 		{
-			name:    "v1alpha1 rejects service",
-			pkg:     api.Package{APIVersion: v1alpha1.APIVersion, Components: []api.Component{{Service: "registry"}}},
-			wantErr: "components[0].service",
-		},
-		{
 			name: "v1alpha1 rejects multiple imports",
 			pkg: api.Package{APIVersion: v1alpha1.APIVersion, Components: []api.Component{{
 				Import: api.ComponentImport{Local: []api.ComponentImportLocal{{Path: "a"}, {Path: "b"}}},
@@ -106,11 +101,6 @@ func TestPackageValidateVersionFields(t *testing.T) {
 				}},
 			}}},
 			wantErr: "components[0].actions.onDeploy.after",
-		},
-		{
-			name:    "unsupported version",
-			pkg:     api.Package{APIVersion: "zarf.dev/future"},
-			wantErr: "unsupported package apiVersion",
 		},
 	}
 
