@@ -7,15 +7,47 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 )
+
+const helloSHA256 = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+
+func TestGetSHA256Hash(t *testing.T) {
+	t.Parallel()
+
+	got, err := checksum.GetSHA256Hash(strings.NewReader("hello"))
+	require.NoError(t, err)
+	require.Equal(t, helloSHA256, got)
+
+	readErr := errors.New("read failed")
+	got, err = checksum.GetSHA256Hash(iotest.ErrReader(readErr))
+	require.Empty(t, got)
+	require.ErrorIs(t, err, readErr)
+}
+
+func TestGetSHA256OfFile(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "payload")
+	require.NoError(t, os.WriteFile(path, []byte("hello"), 0o600))
+	got, err := checksum.GetSHA256OfFile(path)
+	require.NoError(t, err)
+	require.Equal(t, helloSHA256, got)
+
+	got, err = checksum.GetSHA256OfFile(filepath.Join(t.TempDir(), "missing"))
+	require.Empty(t, got)
+	require.ErrorIs(t, err, os.ErrNotExist)
+}
 
 func TestVerifyFile(t *testing.T) {
 	t.Parallel()
