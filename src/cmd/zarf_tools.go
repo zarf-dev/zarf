@@ -773,15 +773,6 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	if newState.GitServer.IsInternal() && gitTLSRequested {
 		newState.GitServer.Address = state.ZarfInClusterGitURL(newState.GitServer.TLSMode)
 	}
-	var rollbackTLS *pki.GeneratedPKI
-	if gitTLSRequested && oldState.GitServer.TLSMode.Enabled() && oldState.GitServer.TLSCertManagement == state.GitTLSCertUserManaged {
-		previousTLS, err := c.GetGitServerTLS(ctx)
-		if err != nil {
-			return fmt.Errorf("unable to read existing Git server TLS certificates: %w", err)
-		}
-		rollbackTLS = &previousTLS
-	}
-
 	confirm, err := confirmCredentialUpdate(ctx, oldState, newState, state.GitKey, o.confirm)
 	if err != nil {
 		return err
@@ -789,10 +780,24 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	if !confirm {
 		return nil
 	}
+	// Keep the active bundle so a failed rotation can restore the previous CA.
+	var rollbackTLS *pki.GeneratedPKI
+	certificatesWillChange := gitTLS != nil || o.rotateTLS ||
+		oldState.GitServer.TLSCertManagement != newState.GitServer.TLSCertManagement &&
+			(oldState.GitServer.TLSCertManagement == state.GitTLSCertUserManaged || newState.GitServer.TLSCertManagement == state.GitTLSCertZarfManaged)
+	if oldState.GitServer.IsInternal() && oldState.GitServer.TLSMode.Enabled() && newState.GitServer.IsInternal() && certificatesWillChange {
+		previousTLS, err := c.GetGitServerTLS(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to read existing Git server TLS certificates: %w", err)
+		}
+		rollbackTLS = &previousTLS
+	}
+	rollbackOptions := *o
+	rollbackOptions.rotateTLS = false
 
 	return runWithRollback(ctx, "Git server",
 		func() error { return o.applyState(ctx, c, oldState, newState, gitTLS) },
-		func() error { return o.applyState(ctx, c, newState, oldState, rollbackTLS) },
+		func() error { return rollbackOptions.applyState(ctx, c, newState, oldState, rollbackTLS) },
 	)
 }
 

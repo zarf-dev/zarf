@@ -711,8 +711,15 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 				return installedCharts, fmt.Errorf("unable to read Git server TLS certificate: %w", err)
 			}
 			digest := sha256.Sum256(certs.Cert)
+			giteaValues, ok := valuesOverrides["gitea"].(map[string]any)
+			if !ok {
+				if valuesOverrides["gitea"] != nil {
+					return installedCharts, fmt.Errorf("gitea values must be a map, got %T", valuesOverrides["gitea"])
+				}
+				giteaValues = map[string]any{}
+			}
 			annotations := map[string]any{}
-			switch existing := valuesOverrides["podAnnotations"].(type) {
+			switch existing := giteaValues["podAnnotations"].(type) {
 			case nil:
 			case map[string]any:
 				annotations = existing
@@ -724,7 +731,8 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 				return installedCharts, fmt.Errorf("gitea podAnnotations must be a map, got %T", existing)
 			}
 			annotations["zarf.dev/git-tls-sha256"] = fmt.Sprintf("%x", digest)
-			valuesOverrides["podAnnotations"] = annotations
+			giteaValues["podAnnotations"] = annotations
+			valuesOverrides["gitea"] = giteaValues
 		}
 
 		helmOpts := helm.InstallUpgradeOptions{

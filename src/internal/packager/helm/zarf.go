@@ -152,10 +152,10 @@ func UpdateZarfGitServerValues(ctx context.Context, opts InstallUpgradeOptions) 
 	}
 	chart := api.Chart{Namespace: state.ZarfNamespaceName, ReleaseName: "zarf-gitea"}
 	values := map[string]interface{}{
-		"podAnnotations": map[string]interface{}{
-			"zarf.dev/git-tls-sha256": certDigest,
-		},
 		"gitea": map[string]interface{}{
+			"podAnnotations": map[string]interface{}{
+				"zarf.dev/git-tls-sha256": certDigest,
+			},
 			"config": map[string]interface{}{
 				"server": map[string]interface{}{
 					"PROTOCOL":  opts.State.GitServer.URLScheme(),
