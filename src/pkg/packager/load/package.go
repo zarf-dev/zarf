@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
@@ -32,7 +32,7 @@ type PackageOptions struct {
 // resources and package values. Call Close when resource access is no
 // longer needed.
 type ResolvedPackage struct {
-	Definition   api.PackageDefinition
+	Definition   api.Package
 	Resources    *ResourceSet
 	Values       value.Values
 	ValuesSchema value.SchemaDocument

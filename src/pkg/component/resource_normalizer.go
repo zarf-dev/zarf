@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -105,12 +105,10 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 				return component, normalizedComponentResources{}, err
 			}
 		}
-		if manifest.Kustomize != nil {
-			for j := range manifest.Kustomize.Files {
-				manifest.Kustomize.Files[j], err = addResource(&normalizer, manifest.Kustomize.Files[j])
-				if err != nil {
-					return component, normalizedComponentResources{}, err
-				}
+		for j := range manifest.Kustomize.Files {
+			manifest.Kustomize.Files[j], err = addResource(&normalizer, manifest.Kustomize.Files[j])
+			if err != nil {
+				return component, normalizedComponentResources{}, err
 			}
 		}
 	}

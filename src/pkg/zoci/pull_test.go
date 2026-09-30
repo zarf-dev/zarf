@@ -14,13 +14,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/images"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -59,9 +60,9 @@ func publishAndConnect(ctx context.Context, t *testing.T, srcPath string) (*zoci
 		OCIConcurrency: 3,
 	})
 	require.NoError(t, err)
-	t.Cleanup(func() { os.Remove(pkgLayout.AsV1alpha1().Metadata.Name) }) //nolint:errcheck
+	t.Cleanup(func() { os.Remove(pkgLayout.Definition().Metadata.Name) }) //nolint:errcheck
 
-	platform := oci.PlatformForArch(pkgLayout.AsV1alpha1().Build.Architecture)
+	platform := oci.PlatformForArch(pkgLayout.Definition().Build.Architecture)
 	remote, err := zoci.NewRemoteWithOptions(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
 		CachePath:     tmpdir,
 		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
@@ -75,8 +76,8 @@ func TestAllLayersRespectsRequestedComponents(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	remote, pkgLayout := publishAndConnect(ctx, t, "testdata/multi-component")
 
-	alpineOnly := []v1alpha1.ZarfComponent{{Name: "alpine"}}
-	bothComponents := pkgLayout.AsV1alpha1().Components
+	alpineOnly := []api.Component{{Name: "alpine"}}
+	bothComponents := pkgLayout.Definition().Components
 
 	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents, zoci.GetAllLayerTypes()...)
 	require.NoError(t, err)
@@ -138,11 +139,11 @@ type virtualPackage struct {
 
 // publishPackage loads a package from packagePath, publishes it to upstream/zarf-packages,
 // and returns a connected Remote plus the package's components.
-func publishPackage(ctx context.Context, t *testing.T, packagePath, upstream string) (*zoci.Remote, []v1alpha1.ZarfComponent) {
+func publishPackage(ctx context.Context, t *testing.T, packagePath, upstream string) (*zoci.Remote, []api.Component) {
 	t.Helper()
 	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
-	t.Cleanup(func() { os.Remove(pkgLayout.AsV1alpha1().Metadata.Name) }) //nolint:errcheck
+	t.Cleanup(func() { os.Remove(pkgLayout.Definition().Metadata.Name) }) //nolint:errcheck
 
 	dstRef := registry.Reference{Registry: upstream, Repository: "zarf-packages"}
 	packageRef, err := packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
@@ -151,12 +152,12 @@ func publishPackage(ctx context.Context, t *testing.T, packagePath, upstream str
 	})
 	require.NoError(t, err)
 
-	platform := oci.PlatformForArch(pkgLayout.AsV1alpha1().Build.Architecture)
+	platform := oci.PlatformForArch(pkgLayout.Definition().Build.Architecture)
 	r, err := zoci.NewRemoteWithOptions(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
 		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
 	})
 	require.NoError(t, err)
-	return r, pkgLayout.AsV1alpha1().Components
+	return r, pkgLayout.Definition().Components
 }
 
 // buildVirtualPackage pushes a virtual image to a fresh in-memory registry and builds a zarf
@@ -278,9 +279,11 @@ components:
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "values.schema.json"), []byte(`{"type":"object"}`), 0o644))
 
 	tmpdir := t.TempDir()
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = "testdata/cosign.key"
 	packagePath, err := packager.Create(ctx, dir, tmpdir, packager.CreateOptions{
-		CachePath:      tmpdir,
-		SigningKeyPath: "testdata/cosign.key",
+		CachePath:       tmpdir,
+		SignBlobOptions: &signOpts,
 	})
 	require.NoError(t, err)
 

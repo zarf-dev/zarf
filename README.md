@@ -1,4 +1,4 @@
-# Zarf - The Airgap Native Packager Manager for Kubernetes
+# Zarf - The Airgap Native Package Manager for Kubernetes
 
 [![Latest Release](https://img.shields.io/github/v/release/zarf-dev/zarf)](https://github.com/zarf-dev/zarf/releases)
 [![Go version](https://img.shields.io/github/go-mod/go-version/zarf-dev/zarf?filename=go.mod)](https://go.dev/)
@@ -31,7 +31,7 @@ Zarf eliminates the [complexity of airgap software delivery](https://www.itopsti
 - Automate Kubernetes deployments in disconnected environments
 - Automate [Software Bill of Materials (SBOM)](https://docs.zarf.dev/ref/sboms/) generation
 - Build and [publish packages as OCI image artifacts](https://docs.zarf.dev/tutorials/6-publish-and-deploy/)
-- Provide a [web dashboard](https://docs.zarf.dev/ref/sboms/#the-sbom-viewer) for viewing SBOM output
+- Extract package [SBOMs](https://docs.zarf.dev/ref/sboms/) for analysis with other tools
 - Create and verify package signatures with [cosign](https://github.com/sigstore/cosign)
 - [Publish](https://docs.zarf.dev/commands/zarf_package_publish), [pull](https://docs.zarf.dev/commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
 - Powerful component lifecycle [actions](https://docs.zarf.dev/ref/actions)

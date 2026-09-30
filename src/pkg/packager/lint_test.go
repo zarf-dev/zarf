@@ -4,10 +4,13 @@ package packager
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 )
 
@@ -103,4 +106,21 @@ func TestLintPackageWithImports(t *testing.T) {
 			require.ElementsMatch(t, tc.findings, lintErr.Findings)
 		})
 	}
+}
+
+func TestLintRejectsNonV1Alpha1Package(t *testing.T) {
+	t.Parallel()
+
+	packagePath := t.TempDir()
+	packageYAML := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: v1beta1-package
+components:
+  - name: component
+`
+	require.NoError(t, os.WriteFile(filepath.Join(packagePath, "zarf.yaml"), []byte(packageYAML), 0o600))
+
+	err := Lint(context.Background(), packagePath, LintOptions{})
+	require.EqualError(t, err, "linting packages with apiVersion \""+v1beta1.APIVersion+"\" is not yet supported; only "+v1alpha1.APIVersion+" is supported")
 }

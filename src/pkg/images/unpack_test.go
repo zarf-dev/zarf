@@ -14,7 +14,7 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -261,7 +261,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 			err := archive.Compress(ctx, []string{tc.srcDir}, tarFile, archive.CompressOpts{})
 			require.NoError(t, err)
 			dstDir := t.TempDir()
-			imageArchives := v1alpha1.ImageArchive{
+			imageArchives := api.ImageArchive{
 				Path:   tarFile,
 				Images: tc.requestedImages,
 			}
@@ -315,7 +315,7 @@ func TestUnpackOCILayoutDirectory(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 	destination := t.TempDir()
-	_, err := Unpack(ctx, v1alpha1.ImageArchive{
+	_, err := Unpack(ctx, api.ImageArchive{
 		Path: filepath.Join("testdata", "oras-oci-layout", "images"),
 		Images: []string{
 			"ghcr.io/zarf-dev/images/hello-world:latest",
@@ -370,7 +370,7 @@ func TestUnpackImageIndexes(t *testing.T) {
 			require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
 
 			dstDir := t.TempDir()
-			unpacked, err := Unpack(ctx, v1alpha1.ImageArchive{
+			unpacked, err := Unpack(ctx, api.ImageArchive{
 				Path:   tarFile,
 				Images: []string{tc.ref},
 			}, dstDir, "amd64")
@@ -430,7 +430,7 @@ func TestUnpackTaggedIndexFiltersToPlatform(t *testing.T) {
 	require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
 
 	dstDir := t.TempDir()
-	unpacked, err := Unpack(ctx, v1alpha1.ImageArchive{
+	unpacked, err := Unpack(ctx, api.ImageArchive{
 		Path:   tarFile,
 		Images: []string{tagRef},
 	}, dstDir, "amd64")
@@ -492,7 +492,7 @@ func TestUnpackTaggedIndexPreservesAllPlatformsWithoutArchitecture(t *testing.T)
 	require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
 
 	dstDir := t.TempDir()
-	_, err = Unpack(ctx, v1alpha1.ImageArchive{Path: tarFile, Images: []string{tagRef}}, dstDir, "")
+	_, err = Unpack(ctx, api.ImageArchive{Path: tarFile, Images: []string{tagRef}}, dstDir, "")
 	require.NoError(t, err)
 
 	dstIdx, err := getIndexFromOCILayout(dstDir)

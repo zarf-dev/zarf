@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
@@ -166,6 +167,33 @@ components:
 	}
 }
 
+func TestPackageDefinitionRejectsV1Beta1GitURLsWithEmbeddedReferences(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	packageYAML := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: git-url-validation
+components:
+  - name: component
+    repositories:
+      - url: https://example.com/repository.git@legacy-tag
+    charts:
+      - name: chart
+        namespace: default
+        git:
+          url: https://example.com/charts.git@legacy-tag
+          ref:
+            tag: v1.0.0
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(packageYAML), 0o600))
+
+	_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+	require.ErrorContains(t, err, "git URL \"https://example.com/repository.git@legacy-tag\" must not contain an embedded ref")
+	require.ErrorContains(t, err, "git URL \"https://example.com/charts.git@legacy-tag\" must not contain an embedded ref")
+}
+
 func TestPackageUsesFlavor(t *testing.T) {
 	t.Parallel()
 
@@ -286,9 +314,9 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		t.Parallel()
 		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-package"), DefinitionOptions{})
 		require.NoError(t, err)
-		require.Equal(t, v1beta1.APIVersion, defined.OriginalAPIVersion())
+		require.Equal(t, v1beta1.APIVersion, defined.APIVersion)
 
-		pkg := defined.AsV1alpha1()
+		pkg := convert.PackageToV1alpha1(defined)
 		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
 		require.Equal(t, "beta-package", pkg.Metadata.Name)
 		require.NotEmpty(t, pkg.Metadata.Architecture)
@@ -299,7 +327,7 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 
 		// The v1beta1 view preserves fields with no v1alpha1 representation — here an image's source.
 		// Collapsing to v1alpha1 on load (the previous approach) dropped these.
-		betaPkg := defined.AsV1beta1()
+		betaPkg := convert.PackageToV1beta1(defined)
 		require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
 		require.Len(t, betaPkg.Components, 1)
 		require.Equal(t, "nginx:1.27.0", betaPkg.Components[0].Images[0].Name)
@@ -311,7 +339,7 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-with-import"), DefinitionOptions{})
 		require.NoError(t, err)
 
-		pkg := defined.AsV1alpha1()
+		pkg := convert.PackageToV1alpha1(defined)
 		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
 		require.Len(t, pkg.Components, 1)
 		require.Equal(t, "imported", pkg.Components[0].Name)
@@ -351,7 +379,7 @@ components:
 
 	definition, err := PackageDefinition(ctx, dir, DefinitionOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "definition-only", definition.AsV1alpha1().Metadata.Name)
+	require.Equal(t, "definition-only", convert.PackageToV1alpha1(definition).Metadata.Name)
 
 	_, err = Package(ctx, dir, PackageOptions{})
 	require.ErrorContains(t, err, "unable to access local resource \"missing-values.yaml\"")
@@ -403,7 +431,7 @@ components:
 
 	defined, err := PackageDefinition(ctx, dir, DefinitionOptions{})
 	require.NoError(t, err)
-	chart := defined.AsV1beta1().Components[0].Charts[0]
+	chart := convert.PackageToV1beta1(defined).Components[0].Charts[0]
 	require.Nil(t, chart.Local)
 	require.NotNil(t, chart.OCI)
 }
@@ -447,9 +475,9 @@ components:
 		dir := t.TempDir()
 		zarfYAML := `kind: ZarfPackageConfig
 metadata:
-  name: test
+  name: "###ZARF_PKG_TMPL_MYVAR###"
 components:
-  - name: test
+  - name: "###ZARF_PKG_TMPL_MYVAR###"
     required: true
     actions:
       onCreate:
@@ -460,6 +488,26 @@ components:
 		_, err := PackageDefinition(ctx, dir, DefinitionOptions{
 			SetVariables: map[string]string{}, // non-nil triggers fillActiveTemplate; MYVAR is absent
 		})
-		require.ErrorContains(t, err, "MYVAR")
+		require.ErrorContains(t, err, `template "MYVAR" must be '--set' when using the '--confirm' flag`)
+	})
+
+	t.Run("resolves package and component names from package templates", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		zarfYAML := `kind: ZarfPackageConfig
+metadata:
+  name: "###ZARF_PKG_TMPL_MYVAR###"
+components:
+  - name: "###ZARF_PKG_TMPL_MYVAR###"
+    required: true
+`
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(zarfYAML), 0o600))
+
+		pkg, err := PackageDefinition(ctx, dir, DefinitionOptions{
+			SetVariables: map[string]string{"MYVAR": "test-package"},
+		})
+		require.NoError(t, err)
+		require.Equal(t, "test-package", pkg.Metadata.Name)
+		require.Equal(t, "test-package", pkg.Components[0].Name)
 	})
 }

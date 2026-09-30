@@ -12,7 +12,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -30,7 +30,7 @@ import (
 )
 
 type renderer struct {
-	chart v1alpha1.ZarfChart
+	chart api.Chart
 
 	takeOwnership   bool
 	cluster         *cluster.Cluster
@@ -45,7 +45,7 @@ type renderer struct {
 	namespaceOverride string
 }
 
-func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, takeOwnership bool, c *cluster.Cluster, connectedDeploy bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
+func newRenderer(ctx context.Context, chart api.Chart, takeOwnership bool, c *cluster.Cluster, connectedDeploy bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
 	if actionConfig == nil {
 		return nil, fmt.Errorf("action configuration required to run post renderer")
 	}
@@ -183,6 +183,10 @@ func (r *renderer) shouldAddAgentIgnoreLabels() bool {
 
 func (r *renderer) editHelmResources(ctx context.Context, resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
 	l := logger.From(ctx)
+	resources, err := flattenHelmResources(resources)
+	if err != nil {
+		return err
+	}
 	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
 		newContent, rawData, err := processManifestContent(resource.Content, func(obj *unstructured.Unstructured) error {
@@ -192,8 +196,8 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 				labels = map[string]string{}
 			}
 			obj.SetLabels(r.setPackageLabels(labels))
-			// Add the package label to pod templates (for Deployments, StatefulSets, etc.)
-			if err := r.addLabelsToNestedPath(obj, []string{"spec", "template", "metadata", "labels"}); err != nil {
+			// Add the package label to the pod template of anything that has one
+			if err := r.addPodTemplateLabels(obj); err != nil {
 				return fmt.Errorf("failed to add labels to pod template: %w", err)
 			}
 			// In connected or YOLO mode, add agent ignore labels so the webhook doesn't mutate resources
@@ -263,23 +267,131 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 	return nil
 }
 
-// addLabelsToNestedPath adds package labels to a nested path in an unstructured object
-func (r *renderer) addLabelsToNestedPath(obj *unstructured.Unstructured, path []string) error {
-	// Check if the nested path exists and get the labels
-	templateLabels, found, err := unstructured.NestedStringMap(obj.Object, path...)
-	if err != nil {
-		return err
-	} else if !found {
-		// Path doesn't exist, nothing to do
+// flattenHelmResources replaces every list document with the resources it holds, so that the rest
+// of the post renderer only ever sees one resource per manifest.
+// A list is a wrapper rather than a resource: its metadata is a ListMeta, which has no labels
+// field, so a label written there is rejected by the API server, and everything zarf keys off the
+// kind of a document misses what the list holds. Helm flattens a list into its items before
+// applying it anyway, so the items are what ends up in the cluster either way.
+func flattenHelmResources(resources []releaseutil.Manifest) ([]releaseutil.Manifest, error) {
+	flattened := make([]releaseutil.Manifest, 0, len(resources))
+	for _, resource := range resources {
+		_, rawData, err := processManifestContent(resource.Content, nil)
+		if err != nil {
+			return nil, err
+		}
+		// IsList is the check helm's resource builder uses to decide what to flatten, so zarf and
+		// helm agree on which documents hold more than one resource
+		if len(rawData.Object) == 0 || !rawData.IsList() {
+			flattened = append(flattened, resource)
+			continue
+		}
+		err = flattenListResource(rawData, func(obj *unstructured.Unstructured) error {
+			content, err := yaml.Marshal(obj.Object)
+			if err != nil {
+				return fmt.Errorf("failed to marshal list item: %w", err)
+			}
+			// the item inherits the manifest name zarf writes its own source comment from. helm
+			// tracks the original file with an annotation it puts on the wrapper, which the item
+			// does not carry, so helm files these under a generated name of its own
+			item := resource
+			item.Content = string(content)
+			flattened = append(flattened, item)
+			return nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to flatten %s: %w", rawData.GetKind(), err)
+		}
+	}
+	return flattened, nil
+}
+
+// flattenListResource calls addResource once for every resource a document holds, walking a list
+// that holds lists all the way down
+func flattenListResource(obj *unstructured.Unstructured, addResource func(*unstructured.Unstructured) error) error {
+	if !obj.IsList() {
+		return addResource(obj)
+	}
+	return obj.EachListItem(func(item runtime.Object) error {
+		listItem, ok := item.(*unstructured.Unstructured)
+		if !ok {
+			return fmt.Errorf("unexpected item of type %T in %s", item, obj.GetKind())
+		}
+		return flattenListResource(listItem, addResource)
+	})
+}
+
+// podTemplateKinds maps the kubernetes kinds that create pods to where their pod template keeps its
+// labels. Only these are labeled: anything may sit at spec.template on a custom resource, and a chart
+// that wants one labeled can set zarf.dev/package={{ .Pkg.Metadata.Name }} itself.
+var podTemplateKinds = map[schema.GroupKind][]string{
+	{Group: "apps", Kind: "Deployment"}:        {"spec", "template", "metadata", "labels"},
+	{Group: "apps", Kind: "StatefulSet"}:       {"spec", "template", "metadata", "labels"},
+	{Group: "apps", Kind: "DaemonSet"}:         {"spec", "template", "metadata", "labels"},
+	{Group: "apps", Kind: "ReplicaSet"}:        {"spec", "template", "metadata", "labels"},
+	{Group: "batch", Kind: "Job"}:              {"spec", "template", "metadata", "labels"},
+	{Group: "batch", Kind: "CronJob"}:          {"spec", "jobTemplate", "spec", "template", "metadata", "labels"},
+	{Group: "", Kind: "ReplicationController"}: {"spec", "template", "metadata", "labels"},
+}
+
+// addPodTemplateLabels adds the package labels to the pod template of a workload resource
+func (r *renderer) addPodTemplateLabels(obj *unstructured.Unstructured) error {
+	path, createsPods := podTemplateKinds[obj.GroupVersionKind().GroupKind()]
+	if !createsPods {
 		return nil
 	}
-	if templateLabels == nil {
-		templateLabels = map[string]string{}
+	labels, found := ensureLabelsAt(obj, path)
+	if !found {
+		// nothing shaped like a pod template, so nothing to label
+		return nil
 	}
-	// Add package labels
-	templateLabels = r.setPackageLabels(templateLabels)
-	// Set the updated labels back
-	return unstructured.SetNestedStringMap(obj.Object, templateLabels, path...)
+	return unstructured.SetNestedStringMap(obj.Object, r.setPackageLabels(labels), path...)
+}
+
+// objectMetaTail counts the trailing metadata and labels segments every label path ends in, as in
+// spec.template.metadata.labels.
+const objectMetaTail = 2
+
+// ensureLabelsAt returns the label map at path, creating it when the manifest left it out or wrote
+// it as null. Finding none is an answer, not an error: anything may sit at spec.template, and a
+// malformed resource is the API server's to report, not zarf's to fail a deploy over.
+func ensureLabelsAt(obj *unstructured.Unstructured, path []string) (map[string]string, bool) {
+	if len(path) < objectMetaTail {
+		return nil, false
+	}
+	// the route down has to exist already, since writing it in would invent a pod template the
+	// chart never asked for; the ObjectMeta and labels at the end are optional, so those are created
+	parentPath, metaPath := path[:len(path)-objectMetaTail], path[len(path)-objectMetaTail:]
+
+	parent := obj.Object
+	for _, field := range parentPath {
+		nested, isMap := parent[field].(map[string]interface{})
+		if !isMap {
+			return nil, false
+		}
+		parent = nested
+	}
+	for _, field := range metaPath {
+		nested, isMap := parent[field].(map[string]interface{})
+		if !isMap {
+			if parent[field] != nil {
+				return nil, false
+			}
+			nested = map[string]interface{}{}
+			parent[field] = nested
+		}
+		parent = nested
+	}
+	// SetNestedStringMap writes back a map[string]string, so copy out and refuse anything else
+	labels := make(map[string]string, len(parent))
+	for key, value := range parent {
+		text, isString := value.(string)
+		if !isString {
+			return nil, false
+		}
+		labels[key] = text
+	}
+	return labels, true
 }
 
 // agentMutatedKinds maps resources mutated by the Zarf agent webhook to the
@@ -316,12 +428,9 @@ func addAgentIgnoreLabels(obj *unstructured.Unstructured) error {
 	}
 
 	for _, path := range labelPaths {
-		labels, found, err := unstructured.NestedStringMap(obj.Object, path...)
-		if err != nil {
-			return err
-		}
-		if !found || labels == nil {
-			labels = map[string]string{}
+		labels, found := ensureLabelsAt(obj, path)
+		if !found {
+			continue
 		}
 		labels[cluster.AgentLabel] = "ignore"
 		if err := unstructured.SetNestedStringMap(obj.Object, labels, path...); err != nil {

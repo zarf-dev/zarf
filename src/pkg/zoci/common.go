@@ -12,12 +12,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/types"
 	ociDirectory "oras.land/oras-go/v2/content/oci"
@@ -141,22 +140,18 @@ func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Plat
 }
 
 // configurePullRetries installs Zarf's retry policy for OCI pull requests.
-// Package pulls do not use upload progress, so this unwraps the dependency's
-// progress transport to avoid nesting its default retry policy inside ours.
+// Reuse the OCI transport so the retry policies are not nested.
 func configurePullRetries(remote *Remote, retries int) error {
 	client, ok := remote.Repo().Client.(*auth.Client)
 	if !ok || client.Client == nil {
 		return fmt.Errorf("repository client does not support configuring pull retries")
 	}
-	progressTransport, ok := client.Client.Transport.(*helpers.Transport)
+	retryTransport, ok := client.Client.Transport.(*orasRetry.Transport)
 	if !ok {
 		return fmt.Errorf("repository transport does not support configuring pull retries")
 	}
-	client.Client.Transport = &orasRetry.Transport{
-		Base: progressTransport.Base,
-		Policy: func() orasRetry.Policy {
-			return newPullRetryPolicy(remote.Repo().Reference.String(), retries, remote.Log())
-		},
+	retryTransport.Policy = func() orasRetry.Policy {
+		return newPullRetryPolicy(remote.Repo().Reference.String(), retries, remote.Log())
 	}
 	return nil
 }

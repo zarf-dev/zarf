@@ -17,18 +17,19 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/pterm/pterm"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
@@ -153,7 +154,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 			l.Warn("unable to close loaded package", "error", closeErr)
 		}
 	}()
-	pkg := loaded.Definition.AsV1alpha1()
+	pkg := loaded.Definition
 
 	// Step 1: Merge default values.files to create initial set of default Zarf values
 	zarfValues := loaded.Values.DeepCopy()
@@ -364,12 +365,12 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	}
 
 	// The definition is printed in the apiVersion it was authored in.
-	if definition.OriginalAPIVersion() == v1beta1.APIVersion {
-		pkg := definition.AsV1beta1()
+	if definition.APIVersion == v1beta1.APIVersion {
+		pkg := convert.PackageToV1beta1(definition)
 		pkg.Build = v1beta1.BuildData{}
 		return utils.ColorPrintYAML(pkg, nil, false)
 	}
-	pkg := definition.AsV1alpha1()
+	pkg := convert.PackageToV1alpha1(definition)
 	pkg.Build = v1alpha1.ZarfBuildData{}
 	return utils.ColorPrintYAML(pkg, nil, false)
 }
@@ -472,6 +473,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 
 type devInspectValuesFilesOptions struct {
 	flavor             string
+	components         string
 	createSetPkgTmpl   map[string]string
 	deploySetVariables map[string]string
 	valuesFiles        []string
@@ -500,6 +502,7 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
 	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
@@ -533,6 +536,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		DeploySetVariables: o.deploySetVariables,
 		Values:             values,
 		Flavor:             o.flavor,
+		Components:         o.components,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
 		IsInteractive:      true,

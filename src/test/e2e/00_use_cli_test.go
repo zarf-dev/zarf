@@ -15,10 +15,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/otiai10/copy"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test"
@@ -79,6 +79,19 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, string(b))
 	})
 
+	t.Run("zarf dev inspect values-files with components", func(t *testing.T) {
+		t.Parallel()
+		pathToPackage := filepath.Join("src", "cmd", "testdata", "inspect-values-files", "chart")
+
+		stdOut, stdErr, err := e2e.Zarf(t,
+			"dev", "inspect", "values-files", pathToPackage,
+			"--components=httpd-local",
+			"--deploy-set-variables=PORT=8080,REPLICAS=2,DESCRIPTION=selected",
+		)
+		require.NoError(t, err, stdOut, stdErr)
+		require.Equal(t, 1, strings.Count(stdOut, "# associated chart: htppd-local"))
+		require.Contains(t, stdOut, `replicaCount: "2"`)
+	})
 	t.Run("zarf dev template", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
@@ -400,13 +413,13 @@ func TestBuildMachineInfo(t *testing.T) {
 			require.NoError(t, err, stdOut, stdErr)
 
 			if tt.withBuildMachineInfo {
-				require.NotEmpty(t, pkgLayout.AsV1alpha1().Build.Terminal)
-				require.NotEmpty(t, pkgLayout.AsV1alpha1().Build.User)
+				require.NotEmpty(t, pkgLayout.Definition().Build.Hostname)
+				require.NotEmpty(t, pkgLayout.Definition().Build.User)
 				require.Contains(t, stdOut, "terminal:")
 				require.Contains(t, stdOut, "user:")
 			} else {
-				require.Empty(t, pkgLayout.AsV1alpha1().Build.Terminal)
-				require.Empty(t, pkgLayout.AsV1alpha1().Build.User)
+				require.Empty(t, pkgLayout.Definition().Build.Hostname)
+				require.Empty(t, pkgLayout.Definition().Build.User)
 				require.NotContains(t, stdOut, "terminal:")
 				require.NotContains(t, stdOut, "user:")
 			}

@@ -16,10 +16,10 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Masterminds/semver/v3"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/config"
@@ -473,6 +473,7 @@ func printCredentialUpdates(ctx context.Context, oldState *state.State, newState
 		oG := oldState.GitServer
 		nG := newState.GitServer
 		l.Info("Git server URL address", "existing", oG.Address, "replacement", nG.Address)
+		l.Info("Git server mode", "existing", oG.GitServerMode, "replacement", nG.GitServerMode)
 		l.Info("Git server push username", "existing", oG.PushUsername, "replacement", nG.PushUsername)
 		l.Info("Git server push password", "changed", oG.PushPassword != nG.PushPassword)
 		l.Info("Git server pull username", "existing", oG.PullUsername, "replacement", nG.PullUsername)

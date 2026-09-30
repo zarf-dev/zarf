@@ -58,18 +58,18 @@ func TestPackageDigestOCI(t *testing.T) {
 	require.NoError(t, err)
 
 	digest, err := PackageDigest(ctx, packageRef.String(), PackageDigestOptions{
-		Architecture:  pkgLayout.AsV1alpha1().Build.Architecture,
+		Architecture:  pkgLayout.Definition().Build.Architecture,
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
 	require.Equal(t, expectedDigest, digest, "the OCI digest should match the expected digest after publishing and lookup with PackageDigest")
 }
 
-func testSignOpts() signing.SignBlobOptions {
+func testSignOpts() *signing.SignBlobOptions {
 	opts := signing.DefaultSignBlobOptions()
 	opts.Key = filepath.Join("testdata", "publish", "cosign.key")
 	opts.Password = "password"
-	return opts
+	return &opts
 }
 
 // TestPackageDigestSignedDiffersFromUnsigned verifies that the sig file is
@@ -112,7 +112,7 @@ func TestPackageDigestSignedConsistency(t *testing.T) {
 
 	ociURL := fmt.Sprintf("oci://%s", packageRef.String())
 	ociDigest, err := PackageDigest(ctx, ociURL, PackageDigestOptions{
-		Architecture:  pkgLayout.AsV1alpha1().Build.Architecture,
+		Architecture:  pkgLayout.Definition().Build.Architecture,
 		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)

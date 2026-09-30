@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -18,8 +18,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -113,7 +113,7 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 type PublishPackageOptions struct {
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
-	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
+	// Deprecated: sign the layout explicitly with PackageLayout.SignPackage before publishing.
 	SignBlobOptions signing.SignBlobOptions
 	// Retries specifies the number of retries to use
 	Retries int
@@ -150,22 +150,24 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
 	}
 
-	if opts.SigningKeyPath != "" && opts.SignBlobOptions.Key == "" {
-		opts.SignBlobOptions.Key = opts.SigningKeyPath
+	signOpts := opts.SignBlobOptions
+	if opts.SigningKeyPath != "" && signOpts.Key == "" {
+		signOpts.Key = opts.SigningKeyPath
 	}
-	if opts.SigningKeyPassword != "" && opts.SignBlobOptions.Password == "" {
-		opts.SignBlobOptions.Password = opts.SigningKeyPassword
+	if opts.SigningKeyPassword != "" && signOpts.Password == "" {
+		signOpts.Password = opts.SigningKeyPassword
 	}
-
-	if err := pkgLayout.SignPackage(ctx, opts.SignBlobOptions); err != nil {
-		return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
+	if signOpts.Key != "" || signOpts.KeyRef != "" { //nolint:staticcheck // KeyRef remains supported through its documented removal window.
+		if err := pkgLayout.SignPackage(ctx, &signOpts); err != nil {
+			return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
+		}
 	}
 
 	referenceOptions := zoci.ReferenceFromMetadataOptions{
 		Tag: opts.Tag,
 	}
 	// Build Reference for remote from registry location and pkg
-	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(dst.String(), pkgLayout.AsV1alpha1(), referenceOptions)
+	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(dst.String(), pkgLayout.Definition(), referenceOptions)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -245,7 +247,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
-	pkg := loaded.Definition.AsV1alpha1()
+	pkg := loaded.Definition
 	for _, comp := range pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")
@@ -266,7 +268,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		Tag: opts.Tag,
 	}
 	// Build Reference for remote from registry location and pkg
-	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(ref.String(), pkgLayout.AsV1alpha1(), referenceOptions)
+	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(ref.String(), pkgLayout.Definition(), referenceOptions)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -275,13 +277,13 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return registry.Reference{}, err
 	}
 	l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
-	ex := []v1alpha1.ZarfComponent{}
-	for _, c := range pkgLayout.AsV1alpha1().Components {
-		ex = append(ex, v1alpha1.ZarfComponent{
+	ex := []api.Component{}
+	for _, c := range pkgLayout.Definition().Components {
+		ex = append(ex, api.Component{
 			Name: fmt.Sprintf("import-%s", c.Name),
-			Import: v1alpha1.ZarfComponentImport{
-				Name: c.Name,
-				URL:  helpers.OCIURLPrefix + pkgRef.String(),
+			Import: api.ComponentImport{
+				Name:   c.Name,
+				Remote: []api.ComponentImportRemote{{URL: helpers.OCIURLPrefix + pkgRef.String()}},
 			},
 		})
 	}
@@ -295,7 +297,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 // pushToRemote pushes a package to the given reference
 func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, retries int, remoteOpts types.RemoteOptions) error {
-	arch := layout.AsV1alpha1().Metadata.Architecture
+	arch := layout.Definition().Metadata.Architecture
 	// Set platform
 	platform := oci.PlatformForArch(arch)
 

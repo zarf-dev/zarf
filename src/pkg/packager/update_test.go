@@ -8,6 +8,7 @@ import (
 
 	"github.com/goccy/go-yaml/parser"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
@@ -168,7 +169,7 @@ func TestImageUpdateNeeded(t *testing.T) {
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "argocd-archive",
 					},
-					ImageArchives: []v1alpha1.ImageArchive{
+					ImageArchives: []api.ImageArchive{
 						{
 							Images: []string{
 								"docker.io/library/redis:7.0.15-alpine",
@@ -203,7 +204,7 @@ func TestImageUpdateNeeded(t *testing.T) {
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "argocd-archive",
 					},
-					ImageArchives: []v1alpha1.ImageArchive{
+					ImageArchives: []api.ImageArchive{
 						{
 							Images: []string{
 								"docker.io/library/redis:7.0.15-alpine",
@@ -236,7 +237,7 @@ func TestImageUpdateNeeded(t *testing.T) {
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "argocd-archive",
 					},
-					ImageArchives: []v1alpha1.ImageArchive{
+					ImageArchives: []api.ImageArchive{
 						{
 							Images: []string{
 								"docker.io/library/redis:7.0.14-alpine",
@@ -268,7 +269,7 @@ func TestImageUpdateNeeded(t *testing.T) {
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "argocd-archive",
 					},
-					ImageArchives: []v1alpha1.ImageArchive{
+					ImageArchives: []api.ImageArchive{
 						{
 							Images: []string{
 								"docker.io/library/redis:7.0.14-alpine",
@@ -396,7 +397,7 @@ func TestCreateImageUpdate(t *testing.T) {
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "flux-automation-controller-archive",
 					},
-					ImageArchives: []v1alpha1.ImageArchive{
+					ImageArchives: []api.ImageArchive{
 						{
 							Path: "automation-controller.tar",
 							Images: []string{
