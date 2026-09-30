@@ -20,8 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/types"
 	ociDirectory "oras.land/oras-go/v2/content/oci"
-	"oras.land/oras-go/v2/registry/remote/auth"
-	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
 // LayerType specifies a category of layers in a Zarf OCI package.
@@ -94,8 +92,14 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 // NewRemoteWithOptions returns an ORAS remote repository configured with Zarf's
 // cache and transport options.
 func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Platform, options RemoteClientOptions) (*Remote, error) {
+	if options.Retries < 0 {
+		return nil, fmt.Errorf("retries cannot be negative")
+	}
 	modifiers := []oci.Modifier{
 		oci.WithInsecureSkipVerify(options.InsecureSkipTLSVerify),
+	}
+	if options.Retries > 0 {
+		modifiers = append(modifiers, oci.WithRetryAttempts(options.Retries))
 	}
 	if options.Transport != nil {
 		modifiers = append(modifiers, oci.WithTransport(options.Transport))
@@ -111,14 +115,6 @@ func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Plat
 	remote, err := newRemote(ctx, url, platform, modifiers...)
 	if err != nil {
 		return nil, err
-	}
-	if options.Retries < 0 {
-		return nil, fmt.Errorf("retries cannot be negative")
-	}
-	if options.Retries > 0 {
-		if err := configurePullRetries(remote, options.Retries); err != nil {
-			return nil, err
-		}
 	}
 
 	// negotiate if required after the remote has been instantiated for any canonical updates (docker.io etc)
@@ -137,23 +133,6 @@ func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Plat
 	}
 
 	return remote, nil
-}
-
-// configurePullRetries installs Zarf's retry policy for OCI pull requests.
-// Reuse the OCI transport so the retry policies are not nested.
-func configurePullRetries(remote *Remote, retries int) error {
-	client, ok := remote.Repo().Client.(*auth.Client)
-	if !ok || client.Client == nil {
-		return fmt.Errorf("repository client does not support configuring pull retries")
-	}
-	retryTransport, ok := client.Client.Transport.(*orasRetry.Transport)
-	if !ok {
-		return fmt.Errorf("repository transport does not support configuring pull retries")
-	}
-	retryTransport.Policy = func() orasRetry.Policy {
-		return newPullRetryPolicy(remote.Repo().Reference.String(), retries, remote.Log())
-	}
-	return nil
 }
 
 // transportForProbe returns a copy of transport with the same TLS verification

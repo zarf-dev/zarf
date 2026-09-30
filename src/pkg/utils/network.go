@@ -24,9 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// MaxRetryAfter limits server-requested retry delays.
-const MaxRetryAfter = 60 * time.Second
-
 // retryAfterDuration is returned on a 429 so the custom DelayType can use it
 // instead of stacking on top of the normal backoff.
 type retryAfterDuration time.Duration
@@ -142,10 +139,10 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusTooManyRequests {
-			d, retryAfterErr := ParseRetryAfter(resp.Header.Get("Retry-After"))
-			if retryAfterErr == nil && d > 0 {
-				if d > MaxRetryAfter {
-					return retry.Unrecoverable(fmt.Errorf("rate limited (HTTP 429) with Retry-After %s exceeding %s: %s", d, MaxRetryAfter, resp.Status))
+			if d := parseRetryAfter(resp.Header.Get("Retry-After")); d > 0 {
+				const maxRetryAfter = 60 * time.Second
+				if d > maxRetryAfter {
+					return retry.Unrecoverable(fmt.Errorf("rate limited (HTTP 429) with Retry-After %s exceeding %s: %s", d, maxRetryAfter, resp.Status))
 				}
 				return retryAfterDuration(d)
 			}
@@ -165,27 +162,19 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	return nil
 }
 
-// ParseRetryAfter validates and parses a Retry-After header into a duration.
-// An empty value returns zero without an error.
-func ParseRetryAfter(value string) (time.Duration, error) {
+// parseRetryAfter parses the Retry-After header value into a duration.
+// It supports both delay-seconds (integer) and HTTP-date formats.
+func parseRetryAfter(value string) time.Duration {
 	if value == "" {
-		return 0, nil
+		return 0
 	}
 	if seconds, err := strconv.ParseInt(value, 10, 64); err == nil {
-		if seconds <= 0 {
-			return 0, fmt.Errorf("retry-after delay must be positive")
-		}
-		const maxDurationSeconds = int64(1<<63-1) / int64(time.Second)
-		if seconds > maxDurationSeconds {
-			return 0, fmt.Errorf("retry-after delay overflows duration")
-		}
-		return time.Duration(seconds) * time.Second, nil
+		return time.Duration(seconds) * time.Second
 	}
 	if t, err := http.ParseTime(value); err == nil {
 		if d := time.Until(t); d > 0 {
-			return d, nil
+			return d
 		}
-		return 0, fmt.Errorf("retry-after date must be in the future")
 	}
-	return 0, fmt.Errorf("invalid retry-after value %q", value)
+	return 0
 }
