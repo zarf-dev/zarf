@@ -8,13 +8,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -22,20 +18,12 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"oras.land/oras-go/v2/errdef"
 )
 
 func TestRegistryPruneSkipsConnectedDeploys(t *testing.T) {
 	ctx := testutil.TestContext(t)
-	deletions := make(chan string, 2)
-	registryHandler := registry.New()
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodDelete {
-			deletions <- r.URL.Path
-		}
-		registryHandler.ServeHTTP(w, r)
-	}))
-	t.Cleanup(server.Close)
-	address := strings.TrimPrefix(server.URL, "http://")
+	address := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	options := []crane.Option{crane.Insecure}
 
 	keptDigest := testutil.PushImage(ctx, t, address+"/library/kept", "latest")
@@ -50,7 +38,6 @@ func TestRegistryPruneSkipsConnectedDeploys(t *testing.T) {
 			DeployedComponents: []state.DeployedComponent{{Name: "connected"}},
 		},
 		{
-			// Older deployments have no connectivity field and must still protect their images.
 			Data: v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{
 				{Name: "airgap", Images: []string{"docker.io/library/kept:latest"}},
 			}},
@@ -62,8 +49,8 @@ func TestRegistryPruneSkipsConnectedDeploys(t *testing.T) {
 	kept, err := testutil.NewRepo(t, address+"/library/kept").Resolve(ctx, "latest")
 	require.NoError(t, err)
 	require.Equal(t, keptDigest, kept.Digest.String())
-	require.Len(t, deletions, 1)
-	require.Equal(t, "/v2/library/unused/manifests/"+unusedDigest, <-deletions)
+	_, err = testutil.NewRepo(t, address+"/library/unused").Resolve(ctx, unusedDigest)
+	require.ErrorIs(t, err, errdef.ErrNotFound)
 }
 
 func TestRegistryCopyPlatform(t *testing.T) {

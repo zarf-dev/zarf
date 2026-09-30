@@ -41,7 +41,11 @@ func SetupInMemoryRegistry(ctx context.Context, t *testing.T, port int) string {
 	config.Log.Level = "error"
 	logrus.SetOutput(io.Discard)
 	config.HTTP.DrainTimeout = 10 * time.Second
-	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
+	config.Catalog.MaxEntries = 1000
+	config.Storage = map[string]configuration.Parameters{
+		"inmemory": {},
+		"delete":   {"enabled": true},
+	}
 	ref, err := registry.NewRegistry(ctx, config)
 	require.NoError(t, err)
 	//nolint:errcheck // ignore
