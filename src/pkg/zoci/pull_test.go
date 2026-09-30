@@ -14,11 +14,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/images"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -283,7 +283,7 @@ components:
 	signOpts.Key = "testdata/cosign.key"
 	packagePath, err := packager.Create(ctx, dir, tmpdir, packager.CreateOptions{
 		CachePath:       tmpdir,
-		SignBlobOptions: signOpts,
+		SignBlobOptions: &signOpts,
 	})
 	require.NoError(t, err)
 

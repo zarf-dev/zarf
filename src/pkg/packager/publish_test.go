@@ -13,12 +13,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/oci"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -308,7 +308,7 @@ func TestPublishPackage(t *testing.T) {
 			actualPkg := layoutActual.Definition()
 			actualPkg.Build = api.BuildData{}
 			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")
-			if tc.opts.SignBlobOptions.Key != "" {
+			if tc.publicKeyPath != "" {
 				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Bundle))
 			}
 		})
@@ -580,7 +580,7 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
 	signOpts.Password = "password"
-	require.NoError(t, sourceLayout.SignPackage(ctx, signOpts))
+	require.NoError(t, sourceLayout.SignPackage(ctx, &signOpts))
 
 	destinationRef, err := PublishPackage(ctx, sourceLayout, registry.Reference{
 		Registry:   destinationAddress,

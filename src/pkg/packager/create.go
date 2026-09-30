@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -27,8 +27,8 @@ import (
 type CreateOptions struct {
 	Flavor            string
 	RegistryOverrides []images.RegistryOverride
-	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
-	SignBlobOptions signing.SignBlobOptions
+	// A nil value leaves the package unsigned; a non-nil value requests signing.
+	SignBlobOptions *signing.SignBlobOptions
 	// Deprecated: populate SignBlobOptions.Key directly.
 	SigningKeyPath string
 	// Deprecated: populate SignBlobOptions.Password directly.
@@ -95,13 +95,6 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 			return "", err
 		}
 		differentialPkg = pkgLayout.Definition()
-	}
-
-	if opts.SigningKeyPath != "" && opts.SignBlobOptions.Key == "" {
-		opts.SignBlobOptions.Key = opts.SigningKeyPath
-	}
-	if opts.SigningKeyPassword != "" && opts.SignBlobOptions.Password == "" {
-		opts.SignBlobOptions.Password = opts.SigningKeyPassword
 	}
 
 	assembleOpt := assemble.AssembleOptions{

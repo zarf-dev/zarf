@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/pterm/pterm"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -30,6 +29,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
@@ -473,6 +473,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 
 type devInspectValuesFilesOptions struct {
 	flavor             string
+	components         string
 	createSetPkgTmpl   map[string]string
 	deploySetVariables map[string]string
 	valuesFiles        []string
@@ -501,6 +502,7 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
 	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
@@ -534,6 +536,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		DeploySetVariables: o.deploySetVariables,
 		Values:             values,
 		Flavor:             o.flavor,
+		Components:         o.components,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
 		IsInteractive:      true,

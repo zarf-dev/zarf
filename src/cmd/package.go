@@ -20,11 +20,11 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/api"
@@ -143,11 +143,14 @@ func newSigningFlagSet(v *viper.Viper, f *packageSigningFlags, keys packageSigni
 	return fs
 }
 
-func (f *packageSigningFlags) buildSignBlobOptions(cmd *cobra.Command, v *viper.Viper, tlogUploadKey string, overwrite, skipConfirmation bool) signing.SignBlobOptions {
+func (f *packageSigningFlags) buildSignBlobOptions(cmd *cobra.Command, v *viper.Viper, tlogUploadKey string, overwrite, skipConfirmation bool) *signing.SignBlobOptions {
+	if !f.keyless && f.signingKeyPath == "" && f.identityToken == "" {
+		return nil
+	}
+
 	opts := signing.DefaultSignBlobOptions()
 	opts.Key = f.signingKeyPath
 	opts.Password = f.signingKeyPassword
-	opts.Keyless = f.keyless
 	opts.Fulcio.IdentityToken = f.identityToken
 	opts.Fulcio.URL = f.fulcioURL
 	opts.Fulcio.AuthFlow = f.fulcioAuthFlow
@@ -158,7 +161,7 @@ func (f *packageSigningFlags) buildSignBlobOptions(cmd *cobra.Command, v *viper.
 	opts.TSAServerURL = f.tsaServerURL
 	opts.Overwrite = overwrite
 	opts.SkipConfirmation = skipConfirmation
-	return opts
+	return &opts
 }
 
 func (f *packageSigningFlags) buildSignManifestOptions(cmd *cobra.Command, v *viper.Viper, tlogUploadKey string, skipConfirmation bool) signing.SignManifestOptions {
@@ -357,7 +360,7 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 
 	v := getViper()
 	signOpts := o.buildSignBlobOptions(cmd, v, VPkgCreateTlogUpload, false, o.confirm)
-	if signOpts.ShouldSign() {
+	if signOpts != nil {
 		if err := o.validateSigningMode(); err != nil {
 			return err
 		}
@@ -1502,16 +1505,20 @@ func (o *packageListOptions) run(ctx context.Context, args []string) error {
 	}
 
 	var packageList []packageListInfo
-	for _, pkg := range deployedZarfPackages {
+	for _, depPkg := range deployedZarfPackages {
 		var components []string
-		for _, component := range pkg.DeployedComponents {
+		for _, component := range depPkg.DeployedComponents {
 			components = append(components, component.Name)
 		}
+		pkg, err := depPkg.Definition()
+		if err != nil {
+			return err
+		}
 		packageList = append(packageList, packageListInfo{
-			Package:           pkg.Name,
-			NamespaceOverride: pkg.NamespaceOverride,
-			Version:           pkg.Data.Metadata.Version,
-			Connectivity:      pkg.GetPackageConnectivity(),
+			Package:           depPkg.Name,
+			NamespaceOverride: depPkg.NamespaceOverride,
+			Version:           pkg.Metadata.Version,
+			Connectivity:      depPkg.GetPackageConnectivity(),
 			Components:        components,
 		})
 	}
@@ -1850,7 +1857,6 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	publishSignOpts.Key = o.signingKeyPath
 	publishSignOpts.Password = o.signingKeyPassword
 	publishSignOpts.Overwrite = true
-
 	publishPackageOpts := packager.PublishPackageOptions{
 		OCIConcurrency:  o.ociConcurrency,
 		SignBlobOptions: publishSignOpts,
@@ -2064,6 +2070,10 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	signOpts := o.buildSignBlobOptions(cmd, getViper(), VPkgSignTlogUpload, o.overwrite, o.confirm)
+	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
+		return fmt.Errorf("failed to sign package: %w", err)
+	}
+
 	if helpers.IsOCIURL(outputDest) {
 		dstRef, err := registry.ParseReference(strings.TrimPrefix(outputDest, helpers.OCIURLPrefix))
 		if err != nil {
@@ -2071,17 +2081,11 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		}
 		l.Info("signing and publishing package to OCI registry", "destination", outputDest)
 		_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
-			OCIConcurrency:  o.ociConcurrency,
-			SignBlobOptions: signOpts,
-			Retries:         o.retries,
-			RemoteOptions:   defaultRemoteOptions(),
+			OCIConcurrency: o.ociConcurrency,
+			Retries:        o.retries,
+			RemoteOptions:  defaultRemoteOptions(),
 		})
 		return err
-	}
-
-	err = pkgLayout.SignPackage(ctx, signOpts)
-	if err != nil {
-		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
 	l.Info("archiving signed package to local directory", "directory", outputDest)
