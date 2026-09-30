@@ -58,18 +58,6 @@ func GetSHA256OfFile(path string) (string, error) {
 	return GetSHA256Hash(file)
 }
 
-// SHAsMatch returns an error if the SHA256 hash of the provided file does not match the expected hash.
-func SHAsMatch(path, expected string) error {
-	actual, err := GetSHA256OfFile(path)
-	if err != nil {
-		return err
-	}
-	if actual != expected {
-		return fmt.Errorf("expected sha256 of %s to be %s, found %s", path, expected, actual)
-	}
-	return nil
-}
-
 // GetSHA256Hash returns the SHA256 hash of data read from the provided reader.
 func GetSHA256Hash(data io.Reader) (string, error) {
 	hash := sha256.New()
