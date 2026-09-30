@@ -52,23 +52,27 @@ func GetSHA256OfFile(path string) (string, error) {
 	return hex.EncodeToString(sum), nil
 }
 
+// GetSHA256Hash returns the SHA256 hash of data read from the provided reader.
+func GetSHA256Hash(data io.Reader) (string, error) {
+	sum, err := getHash(data, sha256.New())
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(sum), nil
+}
+
 func getHashOfFile(path string, h hash.Hash) (sum []byte, err error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { err = errors.Join(err, file.Close()) }()
-	if _, err := io.Copy(h, file); err != nil {
+	return getHash(file, h)
+}
+
+func getHash(data io.Reader, h hash.Hash) ([]byte, error) {
+	if _, err := io.Copy(h, data); err != nil {
 		return nil, err
 	}
 	return h.Sum(nil), nil
-}
-
-// GetSHA256Hash returns the SHA256 hash of data read from the provided reader.
-func GetSHA256Hash(data io.Reader) (string, error) {
-	hash := sha256.New()
-	if _, err := io.Copy(hash, data); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }
