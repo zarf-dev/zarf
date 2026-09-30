@@ -6,10 +6,11 @@ package transform
 
 import (
 	"fmt"
+	"hash/crc32"
 	"net/url"
 	"regexp"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
 // For further explanation: https://regex101.com/r/YxpfhC/5
@@ -57,7 +58,7 @@ func GitURLtoFolderName(sourceURL string) (string, error) {
 	// Add crc32 hash of the repoName to the end of the repo
 	gitURL := fmt.Sprintf("%s%s/%s%s%s", get("proto"), get("hostPath"), get("repo"), get("git"), get("atRef"))
 
-	checksum := helpers.GetCRCHash(gitURL)
+	checksum := crc32.ChecksumIEEE([]byte(gitURL))
 
 	newRepoName := fmt.Sprintf("%s-%d", repoName, checksum)
 
@@ -79,7 +80,7 @@ func GitURLtoRepoName(sourceURL string) (string, error) {
 	sanitizedURL := fmt.Sprintf("%s/%s", get("hostPath"), repoName)
 
 	// Add crc32 hash of the repoName to the end of the repo
-	checksum := helpers.GetCRCHash(sanitizedURL)
+	checksum := crc32.ChecksumIEEE([]byte(sanitizedURL))
 
 	newRepoName := fmt.Sprintf("%s-%d", repoName, checksum)
 
