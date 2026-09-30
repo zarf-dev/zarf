@@ -386,13 +386,16 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 
 	// Determine which image digests are currently used by Zarf packages
 	pkgImages := map[string]bool{}
-	for _, pkg := range zarfPackages {
+	for _, depPkg := range zarfPackages {
 		deployedComponents := map[string]bool{}
-		for _, depComponent := range pkg.DeployedComponents {
+		for _, depComponent := range depPkg.DeployedComponents {
 			deployedComponents[depComponent.Name] = true
 		}
-
-		for _, component := range pkg.Data.Components {
+		pkg, err := depPkg.Definition()
+		if err != nil {
+			return err
+		}
+		for _, component := range pkg.Components {
 			if _, ok := deployedComponents[component.Name]; ok {
 				for _, image := range component.GetImages() {
 					// We use the no checksum image since it will always exist and will share the same digest with other tags

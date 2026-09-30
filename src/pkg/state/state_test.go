@@ -6,6 +6,7 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,11 +14,76 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 )
 
-func TestAgentInfoIsConfigured(t *testing.T) {
+func TestDeployedPackagePackageDefinition(t *testing.T) {
+	t.Parallel()
+
+	beta := v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Metadata:   v1beta1.PackageMetadata{Name: "beta-package", Version: "1.2.3"},
+	}
+	definition := convert.PackageFromV1beta1(beta)
+
+	components := []DeployedComponent{{
+		InstalledCharts: []InstalledChart{{
+			ConnectStrings: ConnectStrings{"web": {Description: "Web UI", URL: "/"}},
+		}},
+	}}
+	deployed, err := NewDeployedPackage(
+		definition,
+		"sha256:abc",
+		"v1.2.3",
+		components,
+		7,
+		WithPackageConnectivity(true),
+		WithPackageNamespaceOverride("override"),
+	)
+	require.NoError(t, err)
+	require.Equal(t, "beta-package", deployed.Name)
+	require.Equal(t, "sha256:abc", deployed.Digest)
+	require.Equal(t, "v1.2.3", deployed.CLIVersion)
+	require.Equal(t, 7, deployed.Generation)
+	require.Equal(t, components, deployed.DeployedComponents)
+	require.Equal(t, ConnectStrings{"web": {Description: "Web UI", URL: "/"}}, deployed.ConnectStrings)
+	require.Equal(t, PackageConnectivityConnected, deployed.PackageConnectivity)
+	require.Equal(t, "override", deployed.NamespaceOverride)
+	require.Equal(t, convert.PackageToV1alpha1(definition), deployed.Data)
+	require.Contains(t, deployed.PackageData, v1alpha1.APIVersion)
+	require.Contains(t, deployed.PackageData, v1beta1.APIVersion)
+
+	actual, err := deployed.Definition()
+	require.NoError(t, err)
+	require.Equal(t, v1beta1.APIVersion, actual.GetAPIVersion())
+	require.Equal(t, beta.APIVersion, convert.PackageToV1beta1(actual).APIVersion)
+	require.Equal(t, beta.Metadata, convert.PackageToV1beta1(actual).Metadata)
+}
+
+func TestDeployedPackagePackageDefinition_legacyData(t *testing.T) {
+	t.Parallel()
+
+	legacy := v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "legacy-package"}}
+	definition, err := (DeployedPackage{Data: legacy}).Definition()
+	require.NoError(t, err)
+	alpha := convert.PackageToV1alpha1(definition)
+	require.Equal(t, legacy.Metadata.Name, alpha.Metadata.Name)
+	require.True(t, alpha.AllowsNamespaceOverride())
+}
+
+func TestDeployedPackagePackageDefinition_noSupportedData(t *testing.T) {
+	t.Parallel()
+
+	deployed := DeployedPackage{PackageData: map[string]json.RawMessage{"zarf.dev/v9": []byte(`{}`)}}
+	_, err := deployed.Definition()
+	require.EqualError(t, err, "deployed package has no supported package data")
+}
+
+func TestAgentIsConfigured(t *testing.T) {
 	t.Parallel()
 
 	require.False(t, (AgentInfo{}).IsConfigured())

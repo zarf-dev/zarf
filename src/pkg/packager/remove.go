@@ -12,22 +12,20 @@ import (
 	"slices"
 	"time"
 
+	"helm.sh/helm/v4/pkg/storage/driver"
+
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/value"
-
-	"helm.sh/helm/v4/pkg/storage/driver"
-
-	"github.com/zarf-dev/zarf/src/api/convert"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 )
 
 // RemoveOptions are the options for Remove.
@@ -98,7 +96,9 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 	} else {
 		// If we do not need the cluster, create a deployed components object based on the info we have
 		depPkg.Name = definition.Metadata.Name
-		depPkg.Data = convert.PackageToV1alpha1(definition)
+		if err := depPkg.SetPackageDefinition(definition); err != nil {
+			return err
+		}
 		for _, component := range definition.Components {
 			depPkg.DeployedComponents = append(depPkg.DeployedComponents, state.DeployedComponent{Name: component.Name})
 		}

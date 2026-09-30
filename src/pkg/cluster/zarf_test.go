@@ -5,8 +5,10 @@
 package cluster
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,8 +17,97 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
+
+func TestGetDeployedPackageWarnsOnUnrecognizedAPIVersion(t *testing.T) {
+	t.Parallel()
+
+	const futureVersion = "zarf.dev/v9"
+	knownDefinition, err := json.Marshal(v1alpha1.ZarfPackage{
+		APIVersion: v1alpha1.APIVersion,
+		Metadata:   v1alpha1.ZarfMetadata{Name: "future-package"},
+	})
+	require.NoError(t, err)
+	deployed := state.DeployedPackage{
+		Name: "future-package",
+		PackageData: map[string]json.RawMessage{
+			v1alpha1.APIVersion: knownDefinition,
+			futureVersion:       json.RawMessage(`{"apiVersion":"zarf.dev/v9"}`),
+		},
+	}
+	secretData, err := json.Marshal(deployed)
+	require.NoError(t, err)
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deployed.GetSecretName(),
+			Namespace: state.ZarfNamespaceName,
+			Labels:    map[string]string{state.ZarfPackageInfoLabel: deployed.Name},
+		},
+		Data: map[string][]byte{"data": secretData},
+	}
+	c := &Cluster{Clientset: fake.NewClientset(secret)}
+	var logs bytes.Buffer
+	ctx := logger.WithContext(t.Context(), slog.New(slog.NewJSONHandler(&logs, nil)))
+	known := deployed
+	known.Name = "known-package"
+	known.PackageData = map[string]json.RawMessage{v1alpha1.APIVersion: knownDefinition}
+	knownData, err := json.Marshal(known)
+	require.NoError(t, err)
+	knownSecret := secret.DeepCopy()
+	knownSecret.Name = known.GetSecretName()
+	knownSecret.Data = map[string][]byte{"data": knownData}
+	_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, knownSecret, metav1.CreateOptions{})
+	require.NoError(t, err)
+	_, err = c.GetDeployedPackage(ctx, known.Name)
+	require.NoError(t, err)
+	require.Empty(t, logs.String())
+
+	loaded, err := c.GetDeployedPackage(ctx, deployed.Name)
+	require.NoError(t, err)
+	definition, err := loaded.Definition()
+	require.NoError(t, err)
+	require.Equal(t, v1alpha1.APIVersion, definition.GetAPIVersion())
+	require.Contains(t, logs.String(), `"level":"WARN"`)
+	require.Contains(t, logs.String(), futureVersion)
+	require.Contains(t, logs.String(), "this version of Zarf does not recognize")
+
+	logs.Reset()
+	listed, err := c.GetDeployedZarfPackages(ctx)
+	require.NoError(t, err)
+	require.Len(t, listed, 2)
+	require.Contains(t, logs.String(), `"level":"WARN"`)
+	require.Contains(t, logs.String(), futureVersion)
+}
+
+func TestRecordPackageDefinitionDeployment(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	c := &Cluster{Clientset: fake.NewClientset()}
+	definition := convert.PackageFromV1beta1(v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Metadata:   v1beta1.PackageMetadata{Name: "beta-package", Version: "1.2.3"},
+	})
+
+	recorded, err := c.RecordPackageDeployment(ctx, definition, "sha256:abcdeadbeef", nil, 1)
+	require.NoError(t, err)
+	recordedDefinition, err := recorded.Definition()
+	require.NoError(t, err)
+	require.Equal(t, convert.PackageToV1alpha1(definition), convert.PackageToV1alpha1(recordedDefinition))
+	require.Contains(t, recorded.PackageData, v1alpha1.APIVersion)
+	require.Contains(t, recorded.PackageData, v1beta1.APIVersion)
+
+	loaded, err := c.GetDeployedPackage(ctx, "beta-package")
+	require.NoError(t, err)
+	loadedDefinition, err := loaded.Definition()
+	require.NoError(t, err)
+	require.Equal(t, convert.PackageToV1beta1(definition), convert.PackageToV1beta1(loadedDefinition))
+}
 
 func TestGetInstalledChartsForComponentNamespaceOverride(t *testing.T) {
 	t.Parallel()
