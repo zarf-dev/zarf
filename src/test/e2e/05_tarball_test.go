@@ -16,7 +16,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/split"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -159,13 +158,13 @@ func TestDeterministicOCIPull(t *testing.T) {
 	require.FileExists(t, pkg3Path)
 
 	// Calculate checksums
-	checksum1, err := helpers.GetSHA256OfFile(pkg1Path)
+	checksum1, err := checksum.GetSHA256OfFile(pkg1Path)
 	require.NoError(t, err)
 
-	checksum2, err := helpers.GetSHA256OfFile(pkg2Path)
+	checksum2, err := checksum.GetSHA256OfFile(pkg2Path)
 	require.NoError(t, err)
 
-	checksum3, err := helpers.GetSHA256OfFile(pkg3Path)
+	checksum3, err := checksum.GetSHA256OfFile(pkg3Path)
 	require.NoError(t, err)
 
 	// Assert all three pulls produced identical checksums

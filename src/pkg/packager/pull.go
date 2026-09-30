@@ -16,6 +16,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -23,7 +24,6 @@ import (
 
 	"github.com/mholt/archives"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 
 	"github.com/zarf-dev/zarf/src/config"
@@ -215,7 +215,7 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVe
 		return "", err
 	}
 
-	received, err := helpers.GetSHA256OfFile(tarPath)
+	received, err := checksum.GetSHA256OfFile(tarPath)
 	if err != nil {
 		return "", err
 	}

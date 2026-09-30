@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package checksum verifies file checksums.
+// Package checksum computes and verifies file checksums.
 package checksum
 
 import (
@@ -46,4 +46,35 @@ func VerifyFile(path string, algorithm api.ChecksumAlgorithm, digest string) (er
 		return fmt.Errorf("expected %s of %s to be %s, found %x", algorithm, path, digest, found)
 	}
 	return nil
+}
+
+// GetSHA256OfFile returns the SHA256 hash of the provided file.
+func GetSHA256OfFile(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close() //nolint:errcheck
+	return GetSHA256Hash(file)
+}
+
+// SHAsMatch returns an error if the SHA256 hash of the provided file does not match the expected hash.
+func SHAsMatch(path, expected string) error {
+	actual, err := GetSHA256OfFile(path)
+	if err != nil {
+		return err
+	}
+	if actual != expected {
+		return fmt.Errorf("expected sha256 of %s to be %s, found %s", path, expected, actual)
+	}
+	return nil
+}
+
+// GetSHA256Hash returns the SHA256 hash of data read from the provided reader.
+func GetSHA256Hash(data io.Reader) (string, error) {
+	hash := sha256.New()
+	if _, err := io.Copy(hash, data); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }

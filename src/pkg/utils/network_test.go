@@ -13,11 +13,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zarf-dev/zarf/src/test/testutil"
-
 	"github.com/stretchr/testify/require"
-
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 func TestParseChecksum(t *testing.T) {
@@ -145,7 +143,7 @@ func TestDownloadToFile(t *testing.T) {
 			if tt.shasum == "" {
 				return
 			}
-			check, err := helpers.GetSHA256OfFile(dst)
+			check, err := checksum.GetSHA256OfFile(dst)
 			require.NoError(t, err)
 			require.Equal(t, tt.shasum, check)
 		})

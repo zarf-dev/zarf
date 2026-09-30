@@ -20,6 +20,7 @@ import (
 	retry "github.com/avast/retry-go/v4"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -55,7 +56,7 @@ func parseChecksum(src string) (string, string, error) {
 func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 	// check if the parsed URL has a checksum
 	// if so, remove it and use the checksum to validate the file
-	src, checksum, err := parseChecksum(src)
+	src, expectedChecksum, err := parseChecksum(src)
 	if err != nil {
 		return err
 	}
@@ -105,13 +106,13 @@ func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 	}
 
 	// If the file has a checksum, validate it
-	if 0 < len(checksum) {
-		received, err := helpers.GetSHA256OfFile(dst)
+	if 0 < len(expectedChecksum) {
+		received, err := checksum.GetSHA256OfFile(dst)
 		if err != nil {
 			return err
 		}
-		if received != checksum {
-			return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s ", dst, checksum, received)
+		if received != expectedChecksum {
+			return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s ", dst, expectedChecksum, received)
 		}
 	}
 

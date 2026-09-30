@@ -27,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
@@ -919,7 +920,7 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 		err = errors.Join(err, errClose)
 	}(data)
 
-	hash, err := helpers.GetSHA256Hash(data)
+	hash, err := checksum.GetSHA256Hash(data)
 	if err != nil {
 		return errors.Join(hashErr, err)
 	}

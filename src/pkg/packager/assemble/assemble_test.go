@@ -19,8 +19,8 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -69,7 +69,7 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	err = createReproducibleTarballFromDir(tmpDir, "", tarPath, true)
 	require.NoError(t, err)
 
-	shaSum, err := helpers.GetSHA256OfFile(tarPath)
+	shaSum, err := checksum.GetSHA256OfFile(tarPath)
 	require.NoError(t, err)
 	require.Equal(t, "c09d17f612f241cdf549e5fb97c9e063a8ad18ae7a9f3af066332ed6b38556ad", shaSum)
 }

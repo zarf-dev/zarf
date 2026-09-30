@@ -111,37 +111,6 @@ func IsDir(path string) bool {
 	return err == nil && info.IsDir()
 }
 
-// GetSHA256OfFile returns the SHA256 hash of the provided file.
-func GetSHA256OfFile(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close() //nolint:errcheck
-	return GetSHA256Hash(file)
-}
-
-// SHAsMatch returns an error if the SHA256 hash of the provided file does not match the expected hash.
-func SHAsMatch(path, expected string) error {
-	actual, err := GetSHA256OfFile(path)
-	if err != nil {
-		return err
-	}
-	if actual != expected {
-		return fmt.Errorf("expected sha256 of %s to be %s, found %s", path, expected, actual)
-	}
-	return nil
-}
-
-// GetSHA256Hash returns the computed SHA256 Sum of a given file
-func GetSHA256Hash(data io.Reader) (string, error) {
-	hash := sha256.New()
-	if _, err := io.Copy(hash, data); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
-}
-
 // IsTextFile returns true if path is a text file, false otherwise. It might
 // return an error if the file cannot be read.
 func IsTextFile(path string) (bool, error) {

@@ -977,7 +977,7 @@ func getChecksum(dirPath string) (string, string, error) {
 		if rel == layout.ZarfYAML || rel == layout.Checksums {
 			return nil
 		}
-		sum, err := helpers.GetSHA256OfFile(path)
+		sum, err := checksum.GetSHA256OfFile(path)
 		if err != nil {
 			return err
 		}
