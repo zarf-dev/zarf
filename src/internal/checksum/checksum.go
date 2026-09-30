@@ -19,7 +19,7 @@ import (
 )
 
 // VerifyFile checks a file against the expected digest using the given algorithm.
-func VerifyFile(path string, algorithm api.ChecksumAlgorithm, digest string) (err error) {
+func VerifyFile(path string, algorithm api.ChecksumAlgorithm, digest string) error {
 	var h hash.Hash
 	switch algorithm {
 	case api.ChecksumSHA256:
@@ -33,15 +33,10 @@ func VerifyFile(path string, algorithm api.ChecksumAlgorithm, digest string) (er
 	if err != nil {
 		return fmt.Errorf("invalid %s checksum %q: %w", algorithm, digest, err)
 	}
-	f, err := os.Open(path)
+	found, err := getHashOfFile(path, h)
 	if err != nil {
 		return err
 	}
-	defer func() { err = errors.Join(err, f.Close()) }()
-	if _, err := io.Copy(h, f); err != nil {
-		return err
-	}
-	found := h.Sum(nil)
 	if subtle.ConstantTimeCompare(found, want) != 1 {
 		return fmt.Errorf("expected %s of %s to be %s, found %x", algorithm, path, digest, found)
 	}
@@ -50,12 +45,23 @@ func VerifyFile(path string, algorithm api.ChecksumAlgorithm, digest string) (er
 
 // GetSHA256OfFile returns the SHA256 hash of the provided file.
 func GetSHA256OfFile(path string) (string, error) {
-	file, err := os.Open(path)
+	sum, err := getHashOfFile(path, sha256.New())
 	if err != nil {
 		return "", err
 	}
-	defer file.Close() //nolint:errcheck
-	return GetSHA256Hash(file)
+	return hex.EncodeToString(sum), nil
+}
+
+func getHashOfFile(path string, h hash.Hash) (sum []byte, err error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { err = errors.Join(err, file.Close()) }()
+	if _, err := io.Copy(h, file); err != nil {
+		return nil, err
+	}
+	return h.Sum(nil), nil
 }
 
 // GetSHA256Hash returns the SHA256 hash of data read from the provided reader.
