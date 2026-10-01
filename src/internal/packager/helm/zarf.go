@@ -10,21 +10,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/pkg/state"
-
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart"
 	"helm.sh/helm/v4/pkg/release"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -35,7 +32,10 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 	if err != nil {
 		return fmt.Errorf("error getting init package: %w", err)
 	}
-	initPkgName := findInitPackageWithComponent(pkgs, "zarf-registry")
+	initPkgName, err := findPackageWithService(pkgs, api.ServiceRegistry)
+	if err != nil {
+		return fmt.Errorf("error finding init package with zarf-registry component: %w", err)
+	}
 	if initPkgName == "" {
 		return fmt.Errorf("error finding init package with zarf-registry component")
 	}
@@ -96,7 +96,10 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	if err != nil {
 		return fmt.Errorf("error getting init package: %w", err)
 	}
-	initPkgName := findInitPackageWithComponent(pkgs, "zarf-agent")
+	initPkgName, err := findPackageWithService(pkgs, api.ServiceAgent)
+	if err != nil {
+		return fmt.Errorf("error finding init package with zarf-agent component: %w", err)
+	}
 	if initPkgName == "" {
 		return fmt.Errorf("error finding init package with zarf-agent component")
 	}
@@ -217,15 +220,17 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	return nil
 }
 
-func findInitPackageWithComponent(pkgs []state.DeployedPackage, componentName string) string {
-	for _, pkg := range pkgs {
-		if pkg.Data.Kind == v1alpha1.ZarfInitConfig {
-			for _, c := range pkg.Data.Components {
-				if c.Name == componentName {
-					return pkg.Name
-				}
+func findPackageWithService(pkgs []state.DeployedPackage, service api.Service) (string, error) {
+	for _, deployedPackage := range pkgs {
+		definition, err := deployedPackage.Definition()
+		if err != nil {
+			return "", err
+		}
+		for _, component := range definition.Components {
+			if component.Service == service {
+				return deployedPackage.Name, nil
 			}
 		}
 	}
-	return ""
+	return "", nil
 }

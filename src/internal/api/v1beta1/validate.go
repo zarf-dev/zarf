@@ -77,38 +77,46 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 		}
 		uniqueComponentNames[component.Name] = true
 
-		uniqueChartNames := make(map[string]bool)
-		for _, repository := range component.Repositories {
-			if err := validateGitURL(repository.URL); err != nil {
-				errs = append(errs, err)
-			}
-		}
-		for _, chart := range component.Charts {
-			// ensure chart name is unique
-			if _, ok := uniqueChartNames[chart.Name]; ok {
-				errs = append(errs, fmt.Errorf(PkgValidateErrChartNameNotUnique, chart.Name))
-			}
-			uniqueChartNames[chart.Name] = true
-			for _, chartErr := range validateChart(chart) {
-				errs = append(errs, fmt.Errorf(PkgValidateErrChart, chartErr))
-			}
-		}
-		uniqueManifestNames := make(map[string]bool)
-		for _, manifest := range component.Manifests {
-			// ensure manifest name is unique
-			if _, ok := uniqueManifestNames[manifest.Name]; ok {
-				errs = append(errs, fmt.Errorf(PkgValidateErrManifestNameNotUnique, manifest.Name))
-			}
-			uniqueManifestNames[manifest.Name] = true
-			for _, manifestErr := range validateManifest(manifest) {
-				errs = append(errs, fmt.Errorf(PkgValidateErrManifest, manifestErr))
-			}
-		}
-		for _, actionsErr := range validateActions(component.Actions) {
-			errs = append(errs, fmt.Errorf("%q: %w", component.Name, actionsErr))
-		}
+		errs = append(errs, ValidateComponent(component)...)
 	}
 
+	return errs
+}
+
+// ValidateComponent runs the component-local validation shared by packages and
+// standalone component configs. The component name is used in diagnostics.
+func ValidateComponent(component v1beta1.Component) ValidationErrors {
+	var errs ValidationErrors
+	for _, repository := range component.Repositories {
+		if err := validateGitURL(repository.URL); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	uniqueChartNames := make(map[string]bool)
+	for _, chart := range component.Charts {
+		// ensure chart name is unique
+		if _, ok := uniqueChartNames[chart.Name]; ok {
+			errs = append(errs, fmt.Errorf(PkgValidateErrChartNameNotUnique, chart.Name))
+		}
+		uniqueChartNames[chart.Name] = true
+		for _, chartErr := range validateChart(chart) {
+			errs = append(errs, fmt.Errorf(PkgValidateErrChart, chartErr))
+		}
+	}
+	uniqueManifestNames := make(map[string]bool)
+	for _, manifest := range component.Manifests {
+		// ensure manifest name is unique
+		if _, ok := uniqueManifestNames[manifest.Name]; ok {
+			errs = append(errs, fmt.Errorf(PkgValidateErrManifestNameNotUnique, manifest.Name))
+		}
+		uniqueManifestNames[manifest.Name] = true
+		for _, manifestErr := range validateManifest(manifest) {
+			errs = append(errs, fmt.Errorf(PkgValidateErrManifest, manifestErr))
+		}
+	}
+	for _, actionsErr := range validateActions(component.Actions) {
+		errs = append(errs, fmt.Errorf("%q: %w", component.Name, actionsErr))
+	}
 	return errs
 }
 

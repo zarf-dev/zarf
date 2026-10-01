@@ -94,7 +94,7 @@ type ComponentImageScan struct {
 type DefinitionImageResult struct {
 	ComponentImageScan
 	ImageArchives []api.ImageArchive
-	Target        api.ComponentTarget
+	Target        api.ComponentSelector
 }
 
 // FindDefinitionImages finds all images contained in a component and filters them according to images discovered in
@@ -224,7 +224,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 	var definitionImageResults []DefinitionImageResult
 	var allArchiveImages []string
 	for _, component := range pkg.Components {
-		result := DefinitionImageResult{Target: component.Target}
+		result := DefinitionImageResult{Target: component.Selector}
 		result.ComponentName = component.Name
 		if scan, ok := componentNameScanMap[component.Name]; ok {
 			result.ComponentImageScan = scan

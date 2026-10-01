@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -34,6 +33,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
@@ -46,21 +46,25 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// AssembleOptions are the options for creating a package from a package object
+// AssembleOptions are the options for creating a package from a package object.
 type AssembleOptions struct {
-	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
+	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified.
 	Flavor string
-	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry
-	RegistryOverrides  []images.RegistryOverride
-	SigningKeyPath     string
+	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry.
+	RegistryOverrides []images.RegistryOverride
+	// A nil value leaves the package unsigned; a non-nil value requests signing.
+	SignBlobOptions *signing.SignBlobOptions
+	// Deprecated: populate SignBlobOptions.Key directly.
+	SigningKeyPath string
+	// Deprecated: populate SignBlobOptions.Password directly.
 	SigningKeyPassword string
 	SkipSBOM           bool
 	// When DifferentialPackage is set the zarf package created only includes images and repos not in the differential package.
 	DifferentialPackage api.Package
 	OCIConcurrency      int
-	// CachePath is the path to the Zarf cache, used to cache images and charts
+	// CachePath is the path to the Zarf cache, used to cache images and charts.
 	CachePath string
-	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata
+	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata.
 	WithBuildMachineInfo bool
 	types.RemoteOptions
 }
@@ -71,6 +75,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	defer func() {
 		err = errors.Join(err, resolvedPackage.Close())
 	}()
+	if err := resolvedPackage.Definition.Validate(); err != nil {
+		return nil, err
+	}
 
 	l := logger.From(ctx)
 	packagePath, err := resolvedPackage.Resources.Root()
@@ -112,6 +119,11 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			err = errors.Join(err, os.RemoveAll(buildPath))
+		}
+	}()
 	for _, component := range pkg.Components {
 		err := assemblePackageComponent(ctx, component, resolvedPackage.Resources, buildPath, opts.CachePath, opts.RemoteOptions)
 		if err != nil {
@@ -219,22 +231,36 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 
-	// Sign the package with the provided options
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = opts.SigningKeyPath
-	signOpts.Password = opts.SigningKeyPassword
+	signOpts := opts.SignBlobOptions
+	if signOpts != nil && ((signOpts.Key == "" && opts.SigningKeyPath != "") || (signOpts.Password == "" && opts.SigningKeyPassword != "")) {
+		copied := *signOpts
+		signOpts = &copied
+	}
+	if signOpts == nil && opts.SigningKeyPath != "" {
+		defaults := signing.DefaultSignBlobOptions()
+		signOpts = &defaults
+	}
+	if signOpts != nil {
+		if signOpts.Key == "" {
+			signOpts.Key = opts.SigningKeyPath
+		}
+		if signOpts.Password == "" {
+			signOpts.Password = opts.SigningKeyPassword
+		}
+	}
 
-	err = pkgLayout.SignPackage(ctx, signOpts)
-	if err != nil {
+	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
 		return nil, err
 	}
 
 	return pkgLayout, nil
 }
 
-// AssembleSkeletonOptions are the options for creating a skeleton package
+// AssembleSkeletonOptions are the options for creating a skeleton package.
 type AssembleSkeletonOptions struct {
-	SigningKeyPath       string
+	// Deprecated: use PackageLayout.SignPackage or the sign command.
+	SigningKeyPath string
+	// Deprecated: use PackageLayout.SignPackage or the sign command.
 	SigningKeyPassword   string
 	Flavor               string
 	WithBuildMachineInfo bool
@@ -242,6 +268,9 @@ type AssembleSkeletonOptions struct {
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
 func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
+	if err := resolvedPackage.Definition.Validate(); err != nil {
+		return nil, err
+	}
 	if resolvedPackage.Definition.GetAPIVersion() != v1alpha1.APIVersion {
 		return nil, fmt.Errorf("skeleton packages are only supported for apiVersion %s, got %s", v1alpha1.APIVersion, resolvedPackage.Definition.GetAPIVersion())
 	}
@@ -271,7 +300,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	//     url: oci://ghcr.io/zarf-dev/packages/init:v0.58.0-upstream
 	//     is indicating that you are importing the "upstream" flavor of the zarf init package
 	for i := range definition.Components {
-		definition.Components[i].Target.Flavor = ""
+		definition.Components[i].Selector.Flavor = ""
 		err := assembleSkeletonComponent(ctx, definition.Components[i], resolvedPackage.Resources, buildPath)
 		if err != nil {
 			return nil, err
@@ -304,13 +333,14 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, fmt.Errorf("unable to load skeleton: %w", err)
 	}
 
-	// Sign the package with the provided options
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = opts.SigningKeyPath
-	signOpts.Password = opts.SigningKeyPassword
-
-	err = pkgLayout.SignPackage(ctx, signOpts)
-	if err != nil {
+	var signOpts *signing.SignBlobOptions
+	if opts.SigningKeyPath != "" {
+		defaults := signing.DefaultSignBlobOptions()
+		defaults.Key = opts.SigningKeyPath
+		defaults.Password = opts.SigningKeyPassword
+		signOpts = &defaults
+	}
+	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
 		return nil, err
 	}
 
@@ -362,6 +392,19 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 	if err != nil {
 		return err
 	}
+	onCreate := component.Actions.OnCreate
+	defer func() {
+		if err == nil {
+			if successErr := actions.Run(ctx, packagePath, onCreate.OnSuccess, actions.RunOptions{DefaultConfig: onCreate.Defaults}); successErr != nil {
+				err = fmt.Errorf("unable to run component success action: %w", successErr)
+			}
+		}
+		if err != nil {
+			if failureErr := actions.Run(ctx, packagePath, onCreate.OnFailure, actions.RunOptions{DefaultConfig: onCreate.Defaults}); failureErr != nil {
+				err = errors.Join(err, fmt.Errorf("unable to run component failure action: %w", failureErr))
+			}
+		}
+	}()
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -375,7 +418,6 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 		return err
 	}
 
-	onCreate := component.Actions.OnCreate
 	if err := actions.Run(ctx, packagePath, onCreate.Before, actions.RunOptions{DefaultConfig: onCreate.Defaults}); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}

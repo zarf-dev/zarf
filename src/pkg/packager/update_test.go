@@ -22,7 +22,7 @@ func TestUpdateImagesV1Beta1PreservesAuthoredFields(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		manifest string
-		target   api.ComponentTarget
+		target   api.ComponentSelector
 		check    func(*testing.T, []byte)
 	}{
 		{
@@ -47,7 +47,7 @@ func TestUpdateImagesV1Beta1PreservesAuthoredFields(t *testing.T) {
 		},
 		{
 			name:     "selects matching package variant",
-			target:   api.ComponentTarget{Architecture: "amd64"},
+			target:   api.ComponentSelector{Architecture: "amd64"},
 			manifest: "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: example\ncomponents:\n  - name: app\n    selector:\n      architecture: amd64\n    images:\n      - name: example.com/old:1\n        source: daemon\n  - name: app\n    selector:\n      architecture: arm64\n    images:\n      - name: example.com/arm:1\n      - name: example.com/arm-other:1\n",
 			check: func(t *testing.T, b []byte) {
 				var pkg v1beta1.Package

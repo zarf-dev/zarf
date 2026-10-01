@@ -55,34 +55,15 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 }
 
 func metadataToGeneric(m v1beta1.PackageMetadata) api.PackageMetadata {
-	annotations := maps.Clone(m.Annotations)
-	meta := api.PackageMetadata{
+	return api.PackageMetadata{
 		Name:                     m.Name,
 		Description:              m.Description,
 		Version:                  m.Version,
 		Uncompressed:             m.Uncompressed,
 		Architecture:             m.Architecture,
-		Annotations:              annotations,
+		Annotations:              maps.Clone(m.Annotations),
 		PreventNamespaceOverride: m.PreventNamespaceOverride,
 	}
-	consume := map[string]*string{
-		"url":           &meta.URL,
-		"image":         &meta.Image,
-		"authors":       &meta.Authors,
-		"documentation": &meta.Documentation,
-		"source":        &meta.Source,
-		"vendor":        &meta.Vendor,
-	}
-	for key, target := range consume {
-		if value, ok := annotations[key]; ok {
-			*target = value
-			delete(annotations, key)
-		}
-	}
-	if len(annotations) == 0 {
-		meta.Annotations = nil
-	}
-	return meta
 }
 
 func componentToGeneric(c v1beta1.Component) api.Component {
@@ -90,13 +71,15 @@ func componentToGeneric(c v1beta1.Component) api.Component {
 		Name:         c.Name,
 		Description:  c.Description,
 		Optional:     c.Optional,
-		Service:      string(c.Service),
+		Service:      api.Service(c.Service),
 		Repositories: repositoriesToGeneric(c.Repositories),
 		StateAccess:  stateAccessToGeneric(c.StateAccess),
-		Target: api.ComponentTarget{
-			OS:           c.Target.OS,
+		Selector: api.ComponentSelector{
 			Architecture: c.Selector.Architecture,
 			Flavor:       c.Selector.Flavor,
+		},
+		Target: api.ComponentTarget{
+			OS: c.Target.OS,
 		},
 		Import:  importToGeneric(c.Import),
 		Actions: actionsToGeneric(c.Actions),
@@ -326,32 +309,26 @@ func PackageToV1beta1(g api.Package) v1beta1.Package {
 	}
 
 	// v1beta1 has no Kind ZarfInitConfig; collapse the v1alpha1 init kind into the normal package kind.
-	// Component services are only inferred for packages that were init configs.
-	isInit := g.Kind == api.ZarfInitConfig
-	if isInit {
+	if g.Kind == api.ZarfInitConfig {
 		pkg.Kind = v1beta1.ZarfPackageConfig
 	}
 
 	for _, c := range g.Components {
-		pkg.Components = append(pkg.Components, componentFromGeneric(c, isInit))
+		pkg.Components = append(pkg.Components, componentFromGeneric(c))
 	}
 
 	return pkg
 }
 
 func metadataFromGeneric(m api.PackageMetadata) v1beta1.PackageMetadata {
-	var annotations map[string]string
-	if m.Annotations != nil {
-		annotations = make(map[string]string, len(m.Annotations))
-		maps.Copy(annotations, m.Annotations)
-	}
 	meta := v1beta1.PackageMetadata{
-		Name:         m.Name,
-		Description:  m.Description,
-		Version:      m.Version,
-		Uncompressed: m.Uncompressed,
-		Architecture: m.Architecture,
-		Annotations:  annotations,
+		Name:                     m.Name,
+		Description:              m.Description,
+		Version:                  m.Version,
+		Uncompressed:             m.Uncompressed,
+		Architecture:             m.Architecture,
+		Annotations:              maps.Clone(m.Annotations),
+		PreventNamespaceOverride: m.PreventNamespaceOverride,
 	}
 	for key, value := range map[string]string{
 		"url":           m.URL,
@@ -371,9 +348,6 @@ func metadataFromGeneric(m api.PackageMetadata) v1beta1.PackageMetadata {
 			meta.Annotations[key] = value
 		}
 	}
-
-	meta.PreventNamespaceOverride = m.PreventNamespaceOverride
-
 	return meta
 }
 
@@ -405,14 +379,14 @@ func buildFromGeneric(b api.BuildData) v1beta1.BuildData {
 	return out
 }
 
-func componentFromGeneric(c api.Component, isInit bool) v1beta1.Component {
+func componentFromGeneric(c api.Component) v1beta1.Component {
 	bc := v1beta1.Component{
 		Name:        c.Name,
 		Description: c.Description,
 		Optional:    c.Optional,
 		Selector: v1beta1.ComponentSelector{
-			Architecture: c.Target.Architecture,
-			Flavor:       c.Target.Flavor,
+			Architecture: c.Selector.Architecture,
+			Flavor:       c.Selector.Flavor,
 		},
 		ComponentSpec: v1beta1.ComponentSpec{
 			Repositories: repositoriesFromGeneric(c.Repositories),
@@ -421,7 +395,7 @@ func componentFromGeneric(c api.Component, isInit bool) v1beta1.Component {
 				OS: c.Target.OS,
 			},
 			Import:  importFromGeneric(c.Import),
-			Service: serviceFromGeneric(c, isInit),
+			Service: v1beta1.Service(c.Service),
 			Actions: actionsFromGeneric(c.Actions),
 		},
 	}
@@ -474,30 +448,6 @@ func componentFromGeneric(c api.Component, isInit bool) v1beta1.Component {
 	}
 
 	return bc
-}
-
-func serviceFromGeneric(c api.Component, isInit bool) v1beta1.Service {
-	if c.Service != "" {
-		return v1beta1.Service(c.Service)
-	}
-	// Services only exist on init packages, so don't infer them otherwise.
-	if !isInit {
-		return ""
-	}
-	// Infer the v1beta1 Service from well-known v1alpha1 component names.
-	switch c.Name {
-	case "zarf-registry":
-		return v1beta1.ServiceRegistry
-	case "zarf-seed-registry":
-		return v1beta1.ServiceSeedRegistry
-	case "zarf-injector":
-		return v1beta1.ServiceInjector
-	case "zarf-agent":
-		return v1beta1.ServiceAgent
-	case "git-server":
-		return v1beta1.ServiceGitServer
-	}
-	return ""
 }
 
 func importFromGeneric(imp api.ComponentImport) v1beta1.ComponentImport {

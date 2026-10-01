@@ -106,6 +106,15 @@ const (
 	VPkgCreateMaxPackageSize       = "package.create.max_package_size"
 	VPkgCreateSigningKey           = "package.create.signing_key"
 	VPkgCreateSigningKeyPassword   = "package.create.signing_key_password"
+	VPkgCreateKeyless              = "package.create.keyless"
+	VPkgCreateIdentityToken        = "package.create.identity_token"
+	VPkgCreateFulcioURL            = "package.create.fulcio_url"
+	VPkgCreateFulcioAuthFlow       = "package.create.fulcio_auth_flow"
+	VPkgCreateOIDCIssuer           = "package.create.oidc_issuer"
+	VPkgCreateOIDCClientID         = "package.create.oidc_client_id"
+	VPkgCreateRekorURL             = "package.create.rekor_url"
+	VPkgCreateTlogUpload           = "package.create.tlog_upload"
+	VPkgCreateTSAServerURL         = "package.create.tsa_server_url"
 	VPkgCreateDifferential         = "package.create.differential"
 	VPkgCreateRegistryOverride     = "package.create.registry_override"
 	VPkgCreateFlavor               = "package.create.flavor"
@@ -291,6 +300,12 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault(VPkgSignOIDCIssuer, "https://oauth2.sigstore.dev/auth")
 	v.SetDefault(VPkgSignOIDCClientID, "sigstore")
 	v.SetDefault(VPkgSignRekorURL, "https://rekor.sigstore.dev")
+
+	// Package create keyless defaults
+	v.SetDefault(VPkgCreateFulcioURL, "https://fulcio.sigstore.dev")
+	v.SetDefault(VPkgCreateOIDCIssuer, "https://oauth2.sigstore.dev/auth")
+	v.SetDefault(VPkgCreateOIDCClientID, "sigstore")
+	v.SetDefault(VPkgCreateRekorURL, "https://rekor.sigstore.dev")
 
 	// Dev deploy defaults
 	v.SetDefault(VDevDeployConnected, true)
