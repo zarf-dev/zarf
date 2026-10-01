@@ -1107,7 +1107,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		componentDefinition = "\ncomponent:\n"
 	}
 	for _, finding := range definitionImageResults {
-		if !isComponentConfig && len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts)+len(finding.ImageArchives) > 0 {
+		if !isComponentConfig && len(finding.Matches)+len(finding.ImageArchives) > 0 {
 			componentDefinition += fmt.Sprintf("  - name: %s\n", finding.ComponentName)
 		}
 		indent := "    "
@@ -1117,62 +1117,25 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 			imageIndent = "    "
 		}
 
-		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts) > 0 {
+		if len(finding.Matches) > 0 {
 			componentDefinition += indent + "images:\n"
 		}
-		sourcedByRef := make(map[string]api.Image, len(finding.SourcedImages))
-		for _, image := range finding.SourcedImages {
-			ref, err := transform.ParseImageRef(image.Name)
-			if err != nil {
-				return fmt.Errorf("invalid sourced image %q in component %q: %w", image.Name, finding.ComponentName, err)
-			}
-			sourcedByRef[ref.Reference] = image
-		}
-		printedSourced := map[string]struct{}{}
-		formatScanImage := func(name string) (string, error) {
-			if len(sourcedByRef) > 0 {
-				ref, err := transform.ParseImageRef(name)
-				if err != nil {
-					return "", fmt.Errorf("invalid scanned image %q in component %q: %w", name, finding.ComponentName, err)
+		for _, matchType := range []packager.MatchType{packager.MatchDefinite, packager.MatchPossible, packager.MatchCosign} {
+			commentPrinted := false
+			for _, match := range finding.Matches {
+				if match.MatchType != matchType {
+					continue
 				}
-				if image, found := sourcedByRef[ref.Reference]; found {
-					if _, printed := printedSourced[ref.Reference]; printed {
-						return "", nil
+				if !commentPrinted {
+					switch matchType {
+					case packager.MatchPossible:
+						componentDefinition += indent + fmt.Sprintf("# Possible images - %s\n", finding.ComponentName)
+					case packager.MatchCosign:
+						componentDefinition += indent + fmt.Sprintf("# Cosign artifacts for images - %s\n", finding.ComponentName)
 					}
-					printedSourced[ref.Reference] = struct{}{}
-					return formatFoundImage(imageIndent, image, isBeta), nil
+					commentPrinted = true
 				}
-			}
-			return formatFoundImage(imageIndent, api.Image{Name: name}, isBeta), nil
-		}
-
-		if len(finding.Matches) > 0 {
-			for _, image := range finding.Matches {
-				formatted, err := formatScanImage(image)
-				if err != nil {
-					return err
-				}
-				componentDefinition += formatted
-			}
-		}
-		if len(finding.PotentialMatches) > 0 {
-			componentDefinition += indent + fmt.Sprintf("# Possible images - %s\n", finding.ComponentName)
-			for _, image := range finding.PotentialMatches {
-				formatted, err := formatScanImage(image)
-				if err != nil {
-					return err
-				}
-				componentDefinition += formatted
-			}
-		}
-		if len(finding.CosignArtifacts) > 0 {
-			componentDefinition += indent + fmt.Sprintf("# Cosign artifacts for images - %s\n", finding.ComponentName)
-			for _, cosignArtifact := range finding.CosignArtifacts {
-				formatted, err := formatScanImage(cosignArtifact)
-				if err != nil {
-					return err
-				}
-				componentDefinition += formatted
+				componentDefinition += formatFoundImage(imageIndent, match.Image, isBeta)
 			}
 		}
 		if len(finding.ImageArchives) > 0 {

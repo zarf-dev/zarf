@@ -119,10 +119,11 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 			}
 			existing[ref.Reference] = image
 		}
-		foundImages := slices.Concat(result.Matches, result.PotentialMatches, result.CosignArtifacts)
+		foundImages := result.Matches
 		newImages := []v1beta1.Image{}
 		seen := map[string]struct{}{}
-		for _, name := range foundImages {
+		for _, match := range foundImages {
+			name := match.Image.Name
 			ref, err := transform.ParseImageRef(name)
 			if err != nil {
 				return fmt.Errorf("invalid discovered image %q in component %q: %w", name, component.Name, err)
@@ -263,7 +264,7 @@ func createImageUpdate(zarfPackage v1alpha1.ZarfPackage, definitionImageResults 
 	}
 
 	for _, result := range definitionImageResults {
-		if len(result.Matches)+len(result.PotentialMatches)+len(result.CosignArtifacts)+len(result.ImageArchives) == 0 {
+		if len(result.Matches)+len(result.ImageArchives) == 0 {
 			continue
 		}
 
@@ -272,7 +273,7 @@ func createImageUpdate(zarfPackage v1alpha1.ZarfPackage, definitionImageResults 
 			continue
 		}
 
-		combined := slices.Concat(result.Matches, result.PotentialMatches, result.CosignArtifacts)
+		combined := imageMatchNames(result.Matches)
 
 		patch := make(map[string]any)
 
@@ -340,7 +341,8 @@ func imageUpdateNeeded(zarfPackage v1alpha1.ZarfPackage, definitionImageResults 
 		// Check regular images: package definition vs image scan
 		// Scanned images that also appear in archives are excluded (they're accounted for above)
 		scannedImages := make(map[string]struct{})
-		for _, img := range slices.Concat(result.Matches, result.PotentialMatches, result.CosignArtifacts) {
+		for _, match := range result.Matches {
+			img := match.Image.Name
 			if _, inArchive := archiveScannedImages[img]; !inArchive {
 				scannedImages[img] = struct{}{}
 			}

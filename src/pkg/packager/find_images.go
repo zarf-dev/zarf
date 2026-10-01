@@ -76,16 +76,36 @@ type FindImagesOptions struct {
 	types.RemoteOptions
 }
 
-// ComponentImageScan contains the results of FindImages for a component
+// MatchType identifies how an image was found.
+type MatchType string
+
+const (
+	// MatchDefinite is an image identified directly in a resource or chart annotation.
+	MatchDefinite MatchType = "definite"
+	// MatchPossible is an image inferred from resource text and confirmed in a registry.
+	MatchPossible MatchType = "possible"
+	// MatchCosign is a signature or attestation image found for another match.
+	MatchCosign MatchType = "cosign"
+)
+
+// ImageMatch is an image found in a component's resources.
+type ImageMatch struct {
+	Image     api.Image
+	MatchType MatchType
+}
+
+func imageMatchNames(matches []ImageMatch) []string {
+	names := make([]string, 0, len(matches))
+	for _, match := range matches {
+		names = append(names, match.Image.Name)
+	}
+	return names
+}
+
+// ComponentImageScan contains the results of FindImages for a component.
 type ComponentImageScan struct {
-	// ComponentName is the name of the component where the images were found
 	ComponentName string
-	// Matches contains definitively identified container images, such as those in an image: field
-	Matches []string
-	// PotentialMatches contains potential container images found by a regex
-	PotentialMatches []string
-	// CosignArtifacts contains found cosign artifacts for images
-	CosignArtifacts []string
+	Matches       []ImageMatch
 	// WhyResources contains the resources where specific images were found (when Why option is used)
 	WhyResources []Resource
 }
@@ -94,8 +114,6 @@ type ComponentImageScan struct {
 type DefinitionImageResult struct {
 	ComponentImageScan
 	ImageArchives []api.ImageArchive
-	// SourcedImages are resolved images whose source was explicitly configured.
-	SourcedImages []api.Image
 	Selector      api.ComponentSelector
 }
 
@@ -199,9 +217,9 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 	var allScanArtifacts []string
 	for _, scan := range imageScans {
 		componentNameScanMap[scan.ComponentName] = scan
-		allScanArtifacts = append(allScanArtifacts, scan.Matches...)
-		allScanArtifacts = append(allScanArtifacts, scan.PotentialMatches...)
-		allScanArtifacts = append(allScanArtifacts, scan.CosignArtifacts...)
+		for _, match := range scan.Matches {
+			allScanArtifacts = append(allScanArtifacts, match.Image.Name)
+		}
 	}
 
 	var definitionImageResults []DefinitionImageResult
@@ -212,12 +230,6 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 		if scan, ok := componentNameScanMap[component.Name]; ok {
 			result.ComponentImageScan = scan
 		}
-		for _, image := range component.Images {
-			if image.Source != "" {
-				result.SourcedImages = append(result.SourcedImages, image)
-			}
-		}
-
 		for _, archive := range component.ImageArchives {
 			archivePath, err := resources.Path(archive.Path)
 			if err != nil {
@@ -244,19 +256,34 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 
 	// Remove scan artifacts if those artifacts are present in any imageArchives
 	for i := range definitionImageResults {
-		definitionImageResults[i].Matches = slices.DeleteFunc(definitionImageResults[i].Matches, func(s string) bool {
-			return slices.Contains(allArchiveImages, s)
-		})
-		definitionImageResults[i].PotentialMatches = slices.DeleteFunc(definitionImageResults[i].PotentialMatches, func(s string) bool {
-			return slices.Contains(allArchiveImages, s)
-		})
-		definitionImageResults[i].CosignArtifacts = slices.DeleteFunc(definitionImageResults[i].CosignArtifacts, func(s string) bool {
-			return slices.Contains(allArchiveImages, s)
+		definitionImageResults[i].Matches = slices.DeleteFunc(definitionImageResults[i].Matches, func(match ImageMatch) bool {
+			return slices.Contains(allArchiveImages, match.Image.Name)
 		})
 		for j := range definitionImageResults[i].ImageArchives {
 			definitionImageResults[i].ImageArchives[j].Images = slices.DeleteFunc(definitionImageResults[i].ImageArchives[j].Images, func(s string) bool {
 				return !slices.Contains(allScanArtifacts, s)
 			})
+		}
+		sourcedByRef := make(map[string]api.Image)
+		for _, image := range pkg.Components[i].Images {
+			if image.Source == "" {
+				continue
+			}
+			ref, err := transform.ParseImageRef(image.Name)
+			if err != nil {
+				return nil, fmt.Errorf("invalid sourced image %q in component %q: %w", image.Name, pkg.Components[i].Name, err)
+			}
+			sourcedByRef[ref.Reference] = image
+		}
+		for j := range definitionImageResults[i].Matches {
+			match := &definitionImageResults[i].Matches[j]
+			ref, err := transform.ParseImageRef(match.Image.Name)
+			if err != nil {
+				return nil, fmt.Errorf("invalid scanned image %q in component %q: %w", match.Image.Name, pkg.Components[i].Name, err)
+			}
+			if image, found := sourcedByRef[ref.Reference]; found {
+				match.Image = image
+			}
 		}
 	}
 
@@ -426,11 +453,10 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 			if err != nil {
 				return nil, fmt.Errorf("could not parse image reference for matched image %s: %w", image, err)
 			}
-			scan.Matches = append(scan.Matches, imageReference.Reference)
+			scan.Matches = append(scan.Matches, ImageMatch{Image: api.Image{Name: imageReference.Reference}, MatchType: MatchDefinite})
 		}
 
 		// Handle the "maybes"
-		var validMaybeImages []string
 		if len(sortedExpectedImages) > 0 {
 			for _, image := range sortedExpectedImages {
 				if descriptor, err := crane.Head(image, images.WithGlobalInsecureFlag(opts.InsecureSkipTLSVerify)...); err != nil {
@@ -443,11 +469,10 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 					if err != nil {
 						return nil, err
 					}
-					validMaybeImages = append(validMaybeImages, imageReference.Reference)
+					scan.Matches = append(scan.Matches, ImageMatch{Image: api.Image{Name: imageReference.Reference}, MatchType: MatchPossible})
 				}
 			}
 		}
-		scan.PotentialMatches = validMaybeImages
 
 		l.Debug("done looking for images in component",
 			"name", component.Name,
@@ -456,22 +481,12 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 
 		if !opts.SkipCosign {
 			cosignHosts := map[string]struct{}{}
-			addCosignHosts := func(images []string) error {
-				for _, image := range images {
-					parsed, parseErr := transform.ParseImageRef(image)
-					if parseErr != nil {
-						return fmt.Errorf("could not parse image reference for cosign pre-auth %s: %w", image, parseErr)
-					}
-					cosignHosts[parsed.Host] = struct{}{}
+			for _, match := range scan.Matches {
+				parsed, parseErr := transform.ParseImageRef(match.Image.Name)
+				if parseErr != nil {
+					return nil, fmt.Errorf("could not parse image reference for cosign pre-auth %s: %w", match.Image.Name, parseErr)
 				}
-
-				return nil
-			}
-			if err := addCosignHosts(scan.Matches); err != nil {
-				return nil, err
-			}
-			if err := addCosignHosts(scan.PotentialMatches); err != nil {
-				return nil, err
+				cosignHosts[parsed.Host] = struct{}{}
 			}
 
 			cosignClient, err := images.NewAuthClientFromDocker(ctx, opts.InsecureSkipTLSVerify, 0, cosignHosts)
@@ -480,27 +495,22 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 			}
 
 			// Handle cosign artifact lookups
-			if len(scan.Matches) > 0 || len(scan.PotentialMatches) > 0 {
+			if len(scan.Matches) > 0 {
 				imgStart := time.Now()
-				l.Info("looking up cosign artifacts for discovered images", "count", len(scan.Matches)+len(scan.PotentialMatches))
+				l.Info("looking up cosign artifacts for discovered images", "count", len(scan.Matches))
 
-				for _, image := range scan.Matches {
-					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient, opts.RemoteOptions)
+				var cosignMatches []ImageMatch
+				for _, match := range scan.Matches {
+					l.Debug("looking up cosign artifacts for image", "name", match.Image.Name)
+					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, match.Image.Name, cosignClient, opts.RemoteOptions)
 					if err != nil {
-						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
+						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", match.Image.Name, err)
 					}
-					scan.CosignArtifacts = append(scan.CosignArtifacts, cosignArtifacts...)
-				}
-
-				for _, image := range scan.PotentialMatches {
-					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient, opts.RemoteOptions)
-					if err != nil {
-						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
+					for _, artifact := range cosignArtifacts {
+						cosignMatches = append(cosignMatches, ImageMatch{Image: api.Image{Name: artifact}, MatchType: MatchCosign})
 					}
-					scan.CosignArtifacts = append(scan.CosignArtifacts, cosignArtifacts...)
 				}
+				scan.Matches = append(scan.Matches, cosignMatches...)
 				l.Debug("done looking up cosign artifacts for discovered images", "duration", time.Since(imgStart))
 			}
 		}

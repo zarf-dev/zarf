@@ -108,7 +108,7 @@ func TestUpdateImagesV1Beta1PreservesSourceForShorthandName(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, contents, 0o600))
 	results := []DefinitionImageResult{{ComponentImageScan: ComponentImageScan{
 		ComponentName: "app",
-		Matches:       []string{"docker.io/library/nginx:1.27", newImage.Name},
+		Matches:       scanMatches([]string{"docker.io/library/nginx:1.27", newImage.Name}, nil, nil),
 	}}}
 
 	require.NoError(t, UpdateImages(context.Background(), path, results))
@@ -191,7 +191,7 @@ func updateImagesInDefinition(t *testing.T, definition any, selector api.Compone
 	path := filepath.Join(t.TempDir(), "definition.yaml")
 	require.NoError(t, os.WriteFile(path, b, 0o600))
 	result := DefinitionImageResult{
-		ComponentImageScan: ComponentImageScan{ComponentName: "app", Matches: []string{"example.com/old:1", "example.com/new:1"}},
+		ComponentImageScan: ComponentImageScan{ComponentName: "app", Matches: scanMatches([]string{"example.com/old:1", "example.com/new:1"}, nil, nil)},
 		Selector:           selector,
 	}
 	require.NoError(t, UpdateImages(context.Background(), path, []DefinitionImageResult{result}))
@@ -219,7 +219,7 @@ func TestUpdateImagesV1Beta1KeepsArchiveImagesOutOfImageList(t *testing.T) {
 	result := DefinitionImageResult{
 		ComponentImageScan: ComponentImageScan{
 			ComponentName: "app",
-			Matches:       []string{"docker.io/library/nginx:1.27", "example.com/new:1"},
+			Matches:       scanMatches([]string{"docker.io/library/nginx:1.27", "example.com/new:1"}, nil, nil),
 		},
 		ImageArchives: []api.ImageArchive{{Path: archive.Path, Images: archive.Images}},
 	}
@@ -327,23 +327,21 @@ func TestImageUpdateNeeded(t *testing.T) {
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "podinfo",
-						Matches: []string{
+						Matches: scanMatches([]string{
 							"ghcr.io/stefanprodan/podinfo:6.4.0",
-						},
+						}, nil, nil),
 					},
 				},
 				{
 					ComponentImageScan: ComponentImageScan{
-
 						ComponentName: "argocd",
-						Matches: []string{
+						Matches: scanMatches([]string{
 							"docker.io/library/redis:7.0.15-alpine",
 							"quay.io/argoproj/argocd:v2.9.6",
-						},
-						CosignArtifacts: []string{
+						}, nil, []string{
 							"quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.sig",
 							"quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.att",
-						},
+						}),
 					},
 				},
 			},
@@ -365,12 +363,11 @@ func TestImageUpdateNeeded(t *testing.T) {
 			definitionImageResults: []DefinitionImageResult{
 				{
 					ComponentImageScan: ComponentImageScan{
-
 						ComponentName: "argocd",
-						Matches: []string{
+						Matches: scanMatches([]string{
 							"docker.io/library/redis:7.0.15-alpine",
 							"quay.io/argoproj/argocd:v2.9.6",
-						},
+						}, nil, nil),
 					},
 				},
 			},
@@ -393,9 +390,9 @@ func TestImageUpdateNeeded(t *testing.T) {
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "argocd",
-						Matches: []string{
+						Matches: scanMatches([]string{
 							"docker.io/library/redis:7.0.14-alpine",
-						},
+						}, nil, nil),
 					},
 				},
 			},
@@ -417,10 +414,10 @@ func TestImageUpdateNeeded(t *testing.T) {
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "argocd",
-						Matches: []string{
+						Matches: scanMatches([]string{
 							"docker.io/library/redis:7.0.14-alpine",
 							"quay.io/argoproj/argocd:v2.8.6",
-						},
+						}, nil, nil),
 					},
 				},
 			},
@@ -656,22 +653,21 @@ func TestCreateImageUpdate(t *testing.T) {
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "flux",
-						Matches: []string{
+						Matches: scanMatches([]string{
 							"ghcr.io/fluxcd/helm-controller:v1.1.0",
-						},
-						CosignArtifacts: []string{
+						}, nil, []string{
 							"ghcr.io/fluxcd/helm-controller:sha256-4c75ca6c24ceb1f1bd7e935d9287a93e4f925c512f206763ec5a47de3ef3ff48.sig",
 							"ghcr.io/fluxcd/helm-controller:sha256-4c75ca6c24ceb1f1bd7e935d9287a93e4f925c512f206763ec5a47de3ef3ff48.att",
 							"ghcr.io/fluxcd/image-automation-controller:sha256-5b6c2e97055cfe69fe8996f48b53db039c136210dbc98c5631864a9e573d0e20.sig",
 							"ghcr.io/fluxcd/image-automation-controller:sha256-5b6c2e97055cfe69fe8996f48b53db039c136210dbc98c5631864a9e573d0e20.att",
-						},
+						}),
 					},
 				},
 
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "podinfo",
-						Matches:       []string{"ghcr.io/stefanprodan/podinfo:6.4.0"},
+						Matches:       scanMatches([]string{"ghcr.io/stefanprodan/podinfo:6.4.0"}, nil, nil),
 					},
 				},
 				{
