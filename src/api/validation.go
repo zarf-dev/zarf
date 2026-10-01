@@ -64,9 +64,6 @@ func (p Package) Validate() error {
 				}
 			}
 		case v1beta1.APIVersion:
-			if component.Service != "" && p.Kind != ZarfInitConfig {
-				errs = append(errs, fmt.Errorf("%s.service requires kind ZarfInitConfig", path))
-			}
 			if component.Default {
 				add(path + ".default")
 			}
