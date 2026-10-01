@@ -46,9 +46,9 @@ spec:
         runAsGroup: {{ .Values.securityContext.runAsGroup }}
         seccompProfile:
           type: "RuntimeDefault"
-{{- if .Values.securityContext.seLinuxOptions.level }}
+{{- with .Values.securityContext.seLinuxOptions }}
         seLinuxOptions:
-          level: {{ .Values.securityContext.seLinuxOptions.level | quote }}
+{{ toYaml . | indent 10 }}
 {{- end }}
       containers:
         - name: {{ .Chart.Name }}
