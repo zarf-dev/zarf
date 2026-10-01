@@ -90,7 +90,7 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 	}
 	byComponent := make(map[componentKey]DefinitionImageResult, len(results))
 	for _, result := range results {
-		key := componentKey{result.ComponentName, result.Target.Architecture, result.Target.Flavor}
+		key := componentKey{result.ComponentName, result.Selector.Architecture, result.Selector.Flavor}
 		byComponent[key] = result
 	}
 	changed := false

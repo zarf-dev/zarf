@@ -19,55 +19,88 @@ import (
 
 func TestUpdateImagesV1Beta1PreservesAuthoredFields(t *testing.T) {
 	t.Parallel()
-	for _, tc := range []struct {
-		name     string
-		manifest string
-		target   api.ComponentSelector
-		check    func(*testing.T, []byte)
-	}{
-		{
-			name:     "package",
-			manifest: "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: example\ncomponents:\n  - name: app\n    import:\n      local:\n        - path: app.yaml\n    images:\n      - name: example.com/old:1\n        source: daemon\n",
-			check: func(t *testing.T, b []byte) {
-				var pkg v1beta1.Package
-				require.NoError(t, yaml.Unmarshal(b, &pkg))
-				require.Equal(t, []v1beta1.Image{{Name: "example.com/old:1", Source: "daemon"}, {Name: "example.com/new:1"}}, pkg.Components[0].Images)
-				require.Equal(t, "app.yaml", pkg.Components[0].Import.Local[0].Path)
+	oldImage := v1beta1.Image{Name: "example.com/old:1", Source: "daemon"}
+	newImage := v1beta1.Image{Name: "example.com/new:1"}
+	componentImport := v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "app.yaml"}}}
+
+	t.Run("package", func(t *testing.T) {
+		definition := v1beta1.Package{
+			APIVersion: v1beta1.APIVersion,
+			Kind:       v1beta1.ZarfPackageConfig,
+			Metadata:   v1beta1.PackageMetadata{Name: "example"},
+			Components: []v1beta1.Component{{
+				Name: "app",
+				ComponentSpec: v1beta1.ComponentSpec{
+					Import: componentImport,
+					Images: []v1beta1.Image{oldImage},
+				},
+			}},
+		}
+		b := updateImagesInDefinition(t, definition, api.ComponentSelector{})
+		var updated v1beta1.Package
+		require.NoError(t, yaml.Unmarshal(b, &updated))
+		require.Equal(t, []v1beta1.Image{oldImage, newImage}, updated.Components[0].Images)
+		require.Equal(t, componentImport, updated.Components[0].Import)
+	})
+
+	t.Run("component config", func(t *testing.T) {
+		definition := v1beta1.ComponentConfig{
+			APIVersion: v1beta1.APIVersion,
+			Kind:       v1beta1.ZarfComponentConfig,
+			Metadata:   v1beta1.ComponentMetadata{Name: "app"},
+			Component: v1beta1.ComponentSpec{
+				Import: componentImport,
+				Images: []v1beta1.Image{oldImage},
 			},
-		},
-		{
-			name:     "component config",
-			manifest: "apiVersion: zarf.dev/v1beta1\nkind: ZarfComponentConfig\nmetadata:\n  name: app\ncomponent:\n  import:\n    local:\n      - path: app.yaml\n  images:\n    - name: example.com/old:1\n      source: daemon\n",
-			check: func(t *testing.T, b []byte) {
-				var config v1beta1.ComponentConfig
-				require.NoError(t, yaml.Unmarshal(b, &config))
-				require.Equal(t, []v1beta1.Image{{Name: "example.com/old:1", Source: "daemon"}, {Name: "example.com/new:1"}}, config.Component.Images)
-				require.Equal(t, "app.yaml", config.Component.Import.Local[0].Path)
+		}
+		b := updateImagesInDefinition(t, definition, api.ComponentSelector{})
+		var updated v1beta1.ComponentConfig
+		require.NoError(t, yaml.Unmarshal(b, &updated))
+		require.Equal(t, []v1beta1.Image{oldImage, newImage}, updated.Component.Images)
+		require.Equal(t, componentImport, updated.Component.Import)
+	})
+
+	t.Run("selects matching package variant", func(t *testing.T) {
+		armImages := []v1beta1.Image{{Name: "example.com/arm:1"}, {Name: "example.com/arm-other:1"}}
+		definition := v1beta1.Package{
+			APIVersion: v1beta1.APIVersion,
+			Kind:       v1beta1.ZarfPackageConfig,
+			Metadata:   v1beta1.PackageMetadata{Name: "example"},
+			Components: []v1beta1.Component{
+				{
+					Name:          "app",
+					Selector:      v1beta1.ComponentSelector{Architecture: "amd64"},
+					ComponentSpec: v1beta1.ComponentSpec{Images: []v1beta1.Image{oldImage}},
+				},
+				{
+					Name:          "app",
+					Selector:      v1beta1.ComponentSelector{Architecture: "arm64"},
+					ComponentSpec: v1beta1.ComponentSpec{Images: armImages},
+				},
 			},
-		},
-		{
-			name:     "selects matching package variant",
-			target:   api.ComponentSelector{Architecture: "amd64"},
-			manifest: "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: example\ncomponents:\n  - name: app\n    selector:\n      architecture: amd64\n    images:\n      - name: example.com/old:1\n        source: daemon\n  - name: app\n    selector:\n      architecture: arm64\n    images:\n      - name: example.com/arm:1\n      - name: example.com/arm-other:1\n",
-			check: func(t *testing.T, b []byte) {
-				var pkg v1beta1.Package
-				require.NoError(t, yaml.Unmarshal(b, &pkg))
-				require.Equal(t, []v1beta1.Image{{Name: "example.com/old:1", Source: "daemon"}, {Name: "example.com/new:1"}}, pkg.Components[0].Images)
-				require.Equal(t, []v1beta1.Image{{Name: "example.com/arm:1"}, {Name: "example.com/arm-other:1"}}, pkg.Components[1].Images)
-			},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			path := filepath.Join(t.TempDir(), "definition.yaml")
-			require.NoError(t, os.WriteFile(path, []byte(tc.manifest), 0o600))
-			result := DefinitionImageResult{ComponentImageScan: ComponentImageScan{ComponentName: "app", Matches: []string{"example.com/old:1", "example.com/new:1"}}, Target: tc.target}
-			results := []DefinitionImageResult{result}
-			require.NoError(t, UpdateImages(context.Background(), path, results))
-			b, err := os.ReadFile(path)
-			require.NoError(t, err)
-			tc.check(t, b)
-		})
+		}
+		b := updateImagesInDefinition(t, definition, api.ComponentSelector{Architecture: "amd64"})
+		var updated v1beta1.Package
+		require.NoError(t, yaml.Unmarshal(b, &updated))
+		require.Equal(t, []v1beta1.Image{oldImage, newImage}, updated.Components[0].Images)
+		require.Equal(t, armImages, updated.Components[1].Images)
+	})
+}
+
+func updateImagesInDefinition(t *testing.T, definition any, selector api.ComponentSelector) []byte {
+	t.Helper()
+	b, err := yaml.Marshal(definition)
+	require.NoError(t, err)
+	path := filepath.Join(t.TempDir(), "definition.yaml")
+	require.NoError(t, os.WriteFile(path, b, 0o600))
+	result := DefinitionImageResult{
+		ComponentImageScan: ComponentImageScan{ComponentName: "app", Matches: []string{"example.com/old:1", "example.com/new:1"}},
+		Selector:           selector,
 	}
+	require.NoError(t, UpdateImages(context.Background(), path, []DefinitionImageResult{result}))
+	updated, err := os.ReadFile(path)
+	require.NoError(t, err)
+	return updated
 }
 
 func TestImageUpdateNeeded(t *testing.T) {
