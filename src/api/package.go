@@ -312,7 +312,7 @@ func (c FileChecksum) GetAlgorithm() ChecksumAlgorithm {
 
 // IsSet reports whether a file checksum was provided.
 func (c FileChecksum) IsSet() bool {
-	return c.Digest != "" || c.Algorithm != ""
+	return c.Digest != ""
 }
 
 // String returns the checksum in the package definition's wire format.
