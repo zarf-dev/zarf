@@ -15,6 +15,8 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 func TestUpdateImagesV1Beta1PreservesAuthoredFields(t *testing.T) {
@@ -168,6 +170,67 @@ func TestUpdateImagesV1Beta1KeepsArchiveImagesOutOfImageList(t *testing.T) {
 	require.NoError(t, yaml.Unmarshal(updatedBytes, &updated))
 	require.Equal(t, []v1beta1.Image{{Name: "example.com/new:1"}}, updated.Components[0].Images)
 	require.Equal(t, []v1beta1.ImageArchive{archive}, updated.Components[0].ImageArchives)
+}
+
+func TestUpdateImagesV1Beta1DoesNotCopyImportedArchives(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	fixture := filepath.Join("testdata", "find-images", "multiple-image-archives")
+	require.NoError(t, os.CopyFS(dir, os.DirFS(fixture)))
+	child := `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component:
+  manifests:
+    - name: scratch
+      files:
+        - deployment.yaml
+  imageArchives:
+    - path: sub/scratch.tar
+      images: []
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "component.yaml"), []byte(child), 0o600))
+	parent := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: archive-import
+components:
+  - name: app
+    import:
+      local:
+        - path: component.yaml
+    manifests:
+      - name: scratch-other
+        files:
+          - deployment-scratch-other.yaml
+    imageArchives:
+      - path: scratch-other.tar
+        images: []
+`
+	packagePath := filepath.Join(dir, "zarf.yaml")
+	require.NoError(t, os.WriteFile(packagePath, []byte(parent), 0o600))
+
+	results, err := FindDefinitionImages(ctx, packagePath, FindImagesOptions{SkipCosign: true})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	require.Len(t, results[0].ImageArchives, 2)
+	require.NoError(t, UpdateImages(ctx, packagePath, results))
+
+	updatedBytes, err := os.ReadFile(packagePath)
+	require.NoError(t, err)
+	var updated v1beta1.Package
+	require.NoError(t, yaml.Unmarshal(updatedBytes, &updated))
+	require.Len(t, updated.Components, 1)
+	require.Equal(t, []v1beta1.ImageArchive{{Path: "scratch-other.tar", Images: []string{"docker.io/library/scratch:other"}}}, updated.Components[0].ImageArchives)
+
+	loaded, err := load.Package(ctx, packagePath, load.PackageOptions{})
+	require.NoError(t, err)
+	require.Len(t, loaded.Definition.Components[0].ImageArchives, 2)
+	require.Equal(t, "sub/scratch.tar", loaded.Definition.Components[0].ImageArchives[0].Path)
+	require.Equal(t, "scratch-other.tar", loaded.Definition.Components[0].ImageArchives[1].Path)
+	require.NoError(t, loaded.Close())
 }
 
 func TestImageUpdateNeeded(t *testing.T) {

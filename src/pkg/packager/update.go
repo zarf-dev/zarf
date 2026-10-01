@@ -140,7 +140,17 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 			newImages = append(newImages, image)
 		}
 		imagesEqual := slices.EqualFunc(component.Images, newImages, func(a, b v1beta1.Image) bool { return a == b })
-		archivesEqual := slices.EqualFunc(component.ImageArchives, result.ImageArchives, func(a v1beta1.ImageArchive, b api.ImageArchive) bool {
+		// Import resolution appends archives authored here after inherited archives.
+		if len(result.ImageArchives) < len(component.ImageArchives) {
+			return fmt.Errorf("component %q has fewer scanned archives than authored archives", component.Name)
+		}
+		authoredArchiveResults := result.ImageArchives[len(result.ImageArchives)-len(component.ImageArchives):]
+		for i, archive := range component.ImageArchives {
+			if archive.Path != authoredArchiveResults[i].Path {
+				return fmt.Errorf("component %q archive %d: expected %q, got %q", component.Name, i, archive.Path, authoredArchiveResults[i].Path)
+			}
+		}
+		archivesEqual := slices.EqualFunc(component.ImageArchives, authoredArchiveResults, func(a v1beta1.ImageArchive, b api.ImageArchive) bool {
 			return a.Path == b.Path && slices.Equal(a.Images, b.Images)
 		})
 		if imagesEqual && archivesEqual {
@@ -151,7 +161,7 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 			patch["images"] = newImages
 		}
 		if !archivesEqual {
-			patch["imageArchives"] = result.ImageArchives
+			patch["imageArchives"] = authoredArchiveResults
 		}
 		pathString := fmt.Sprintf("$.components[%d]", index)
 		if componentConfig {
