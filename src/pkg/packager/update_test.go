@@ -124,6 +124,66 @@ func TestUpdateImagesV1Beta1PreservesSourceForShorthandName(t *testing.T) {
 	require.Equal(t, updatedBytes, secondUpdate)
 }
 
+func TestUpdateImagesV1Beta1ReplacesOnlyWhenImagesFound(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	manifest := `apiVersion: v1
+kind: Pod
+metadata:
+  name: app
+spec:
+  containers:
+    - name: app
+      image: nginx:1.27
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "pod.yaml"), []byte(manifest), 0o600))
+	configMap := `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: no-images
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "configmap.yaml"), []byte(configMap), 0o600))
+	definition := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: images
+components:
+  - name: image-only
+    images:
+      - name: example.com/manual:1
+        source: daemon
+  - name: scanned
+    images:
+      - name: example.com/hidden:1
+    manifests:
+      - name: app
+        files:
+          - pod.yaml
+  - name: scanned-without-images
+    images:
+      - name: example.com/stale:1
+    manifests:
+      - name: no-images
+        files:
+          - configmap.yaml
+`
+	path := filepath.Join(dir, "zarf.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(definition), 0o600))
+
+	results, err := FindDefinitionImages(ctx, path, FindImagesOptions{SkipCosign: true})
+	require.NoError(t, err)
+	require.NoError(t, UpdateImages(ctx, path, results))
+
+	updatedBytes, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var updated v1beta1.Package
+	require.NoError(t, yaml.Unmarshal(updatedBytes, &updated))
+	require.Equal(t, []v1beta1.Image{{Name: "example.com/manual:1", Source: "daemon"}}, updated.Components[0].Images)
+	require.Equal(t, []v1beta1.Image{{Name: "docker.io/library/nginx:1.27"}}, updated.Components[1].Images)
+	require.Equal(t, []v1beta1.Image{{Name: "example.com/stale:1"}}, updated.Components[2].Images)
+}
+
 func updateImagesInDefinition(t *testing.T, definition any, selector api.ComponentSelector) []byte {
 	t.Helper()
 	b, err := yaml.Marshal(definition)
