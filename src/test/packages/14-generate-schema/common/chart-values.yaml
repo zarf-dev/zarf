@@ -1,0 +1,11 @@
+native:
+  object:
+  array:
+  boolean:
+  integer:
+  number:
+  nullable:
+    enabled: true
+  overlayOnly: true
+
+valuesFileOverride: overlay

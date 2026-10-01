@@ -74,6 +74,9 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 		return registry.Reference{}, fmt.Errorf("unable to resolve component imports: %w", err)
 	}
 	component = resolved.Component
+	if err := load.ValidateRemoteKustomizeRestrictions(component.Component); err != nil {
+		return registry.Reference{}, err
+	}
 	resourceSet, err := resolved.MaterializeResources(ctx, componentPath)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to materialize imported component resources: %w", err)
@@ -135,7 +138,6 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if err := store.Tag(ctx, manifest, manifest.Digest.String()); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to stage component artifact: %w", err)
 	}
-
 	remote, err := zoci.NewRemoteWithOptions(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Variant.Architecture}, zoci.RemoteClientOptions{
 		RemoteOptions: opts.RemoteOptions,
 	})

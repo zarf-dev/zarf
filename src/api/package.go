@@ -81,6 +81,7 @@ type Component struct {
 	Name          string
 	Description   string
 	Optional      bool
+	Selector      ComponentSelector
 	Target        ComponentTarget
 	Import        ComponentImport
 	Service       Service
@@ -112,11 +113,15 @@ const (
 	ServiceGitServer    Service = "git-server"
 )
 
-// ComponentTarget filters a component to a target OS/arch/flavor.
-type ComponentTarget struct {
-	OS           string
+// ComponentSelector filters a component during package creation.
+type ComponentSelector struct {
 	Architecture string
 	Flavor       string
+}
+
+// ComponentTarget filters a component to a target OS at deploy time.
+type ComponentTarget struct {
+	OS string
 }
 
 // ComponentImport carries imports from any API version.

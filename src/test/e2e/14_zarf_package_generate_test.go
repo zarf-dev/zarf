@@ -71,7 +71,7 @@ func TestZarfDevGenerate(t *testing.T) {
 
 		aReplicas, ok := appProps["replicas"].(map[string]any)
 		require.True(t, ok)
-		require.Equal(t, "number", aReplicas["type"])
+		require.Equal(t, "integer", aReplicas["type"])
 		// .app.replicas should take the description from the parent values.schema.json
 		require.Equal(t, "Replica count", aReplicas["description"])
 
@@ -89,9 +89,41 @@ func TestZarfDevGenerate(t *testing.T) {
 
 		bReplicas, ok := backendProps["replicaCount"].(map[string]any)
 		require.True(t, ok)
-		require.Equal(t, "number", bReplicas["type"])
+		require.Equal(t, "integer", bReplicas["type"])
 		// .backend.replicas should take the description from the child values.schema.json
 		require.Equal(t, "Replica count", bReplicas["description"])
+
+		packageOverride, ok := backendProps["packageOverride"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, "string", packageOverride["type"])
+
+		packageNull, ok := backendProps["packageNull"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, "boolean", packageNull["type"])
+
+		valuesFileOverride, ok := backendProps["valuesFileOverride"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, "string", valuesFileOverride["type"])
+
+		native, ok := backendProps["native"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"object":  map[string]any{"type": "object"},
+				"array":   map[string]any{"type": "array"},
+				"boolean": map[string]any{"type": "boolean"},
+				"integer": map[string]any{"type": "number"},
+				"number":  map[string]any{"type": "number"},
+				"nullable": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"enabled": map[string]any{"type": "boolean"},
+					},
+				},
+				"overlayOnly": map[string]any{"type": "boolean"},
+			},
+		}, native)
 
 		// .backend.service.port should be pulled in from the child's mapped chart
 		bService, ok := backendProps["service"].(map[string]any)
@@ -131,9 +163,14 @@ func TestZarfDevGenerate(t *testing.T) {
 		require.NotContains(t, fallback, "type")
 		require.Equal(t, "Value without an inferred type", fallback["description"])
 
-		// .backend.image should be dropped because it is excluded from the chart mapping.
-		_, hasExcludedImage := backendProps["image"]
-		require.False(t, hasExcludedImage)
+		require.Equal(t, map[string]any{}, props["credentials"])
+
+		image, ok := backendProps["image"].(map[string]any)
+		require.True(t, ok)
+		imageProps, ok := image["properties"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, map[string]any{"type": "string"}, imageProps["ref"])
+		require.NotContains(t, backendProps, "excludedOnly")
 
 		// .oldField should be dropped from the values.schema.json
 		_, hasOldField := props["oldField"]
