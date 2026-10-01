@@ -43,6 +43,17 @@ func TestPackageValidateVersionFields(t *testing.T) {
 			}, Components: []api.Component{{Images: []api.Image{{Name: "example.com/app:1", Source: "daemon"}}}}},
 		},
 		{
+			name: "v1beta1 init package accepts service",
+			pkg: api.Package{APIVersion: v1beta1.APIVersion, Kind: api.ZarfInitConfig,
+				Components: []api.Component{{Service: api.ServiceRegistry}}},
+		},
+		{
+			name: "v1beta1 ordinary package rejects service",
+			pkg: api.Package{APIVersion: v1beta1.APIVersion, Kind: api.ZarfPackageConfig,
+				Components: []api.Component{{Service: api.ServiceRegistry}}},
+			wantErr: "components[0].service requires kind ZarfInitConfig",
+		},
+		{
 			name:    "v1beta1 rejects legacy URL",
 			pkg:     api.Package{APIVersion: v1beta1.APIVersion, Metadata: api.PackageMetadata{URL: "https://example.com"}},
 			wantErr: "metadata.url is not supported in " + v1beta1.APIVersion,

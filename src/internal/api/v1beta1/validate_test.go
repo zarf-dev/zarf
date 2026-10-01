@@ -55,6 +55,23 @@ func TestValidatePackage(t *testing.T) {
 			expectedErrs: nil,
 		},
 		{
+			name: "init package with service",
+			pkg: v1beta1.Package{Kind: v1beta1.ZarfInitConfig, Components: []v1beta1.Component{{
+				Name: "registry", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.ServiceRegistry},
+			}}},
+		},
+		{
+			name: "init package without service",
+			pkg:  v1beta1.Package{Kind: v1beta1.ZarfInitConfig, Components: []v1beta1.Component{{Name: "custom"}}},
+		},
+		{
+			name: "ordinary package with service",
+			pkg: v1beta1.Package{Kind: v1beta1.ZarfPackageConfig, Components: []v1beta1.Component{{
+				Name: "registry", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.ServiceRegistry},
+			}}},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrServiceRequiresInit, "registry", v1beta1.ServiceRegistry)},
+		},
+		{
 			name: "no components",
 			pkg: v1beta1.Package{
 				Kind: v1beta1.ZarfPackageConfig,
