@@ -15,6 +15,8 @@ import (
 func TestSBOMResourcePathRoundTrip(t *testing.T) {
 	t.Parallel()
 
+	require.Equal(t, "sboms/files/metrics.json", SBOMResourcePath("component:metrics"))
+
 	for _, key := range []string{
 		"component:metrics",
 		"image:registry.example/app:1.2.3/linux/amd64",

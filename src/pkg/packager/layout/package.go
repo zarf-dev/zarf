@@ -564,15 +564,16 @@ func (p *PackageLayout) GetSBOMResources(ctx context.Context, destPath string, k
 	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf("creating SBOM output directory: %w", err)
 	}
+	resourceRoot := filepath.Join(p.dirPath, SBOMResourcesDir)
 	if len(keys) == 0 {
-		return filepath.WalkDir(filepath.Join(p.dirPath, SBOMResourcesDir), func(sourcePath string, entry fs.DirEntry, err error) error {
+		return filepath.WalkDir(resourceRoot, func(sourcePath string, entry fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
 			if entry.IsDir() {
 				return nil
 			}
-			return copyResourceFile(sourcePath, filepath.Join(destPath, entry.Name()))
+			return copySBOMResource(resourceRoot, destPath, sourcePath)
 		})
 	}
 
@@ -582,7 +583,7 @@ func (p *PackageLayout) GetSBOMResources(ctx context.Context, destPath string, k
 			return err
 		}
 		sourcePath := filepath.Join(p.dirPath, filepath.FromSlash(resourcePath))
-		if err := copyResourceFile(sourcePath, filepath.Join(destPath, filepath.Base(resourcePath))); err != nil {
+		if err := copySBOMResource(resourceRoot, destPath, sourcePath); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("SBOM resource key %q not found in package", key)
 			}
@@ -590,6 +591,17 @@ func (p *PackageLayout) GetSBOMResources(ctx context.Context, destPath string, k
 		}
 	}
 	return nil
+}
+
+func copySBOMResource(resourceRoot, destPath, sourcePath string) error {
+	relativePath, err := filepath.Rel(resourceRoot, sourcePath)
+	if err != nil {
+		return fmt.Errorf("calculating SBOM resource path: %w", err)
+	}
+	if relativePath == ".." || strings.HasPrefix(relativePath, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("SBOM resource %q is outside resource root", sourcePath)
+	}
+	return copyResourceFile(sourcePath, filepath.Join(destPath, relativePath))
 }
 
 func sbomResourcePathForKey(key string) (string, error) {

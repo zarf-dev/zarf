@@ -42,7 +42,7 @@ func DocumentationResourcePath(fileName string) string {
 // SBOMResourcePath returns the v1beta1 package-relative path for an SBOM resource key.
 func SBOMResourcePath(key string) string {
 	if componentName, ok := strings.CutPrefix(key, "component:"); ok {
-		return path.Join(SBOMResourcesDir, "components", componentName+".json")
+		return path.Join(SBOMResourcesDir, "files", componentName+".json")
 	}
 	return path.Join(SBOMResourcesDir, "images", base64.RawURLEncoding.EncodeToString([]byte(key))+".json")
 }
@@ -50,7 +50,7 @@ func SBOMResourcePath(key string) string {
 // SBOMResourceKey returns the resource key encoded in a v1beta1 SBOM resource path.
 func SBOMResourceKey(resourcePath string) (string, bool) {
 	switch path.Dir(resourcePath) {
-	case path.Join(SBOMResourcesDir, "components"):
+	case path.Join(SBOMResourcesDir, "files"):
 		componentName := strings.TrimSuffix(path.Base(resourcePath), ".json")
 		if componentName == "" || path.Ext(resourcePath) != ".json" {
 			return "", false

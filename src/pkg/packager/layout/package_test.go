@@ -106,9 +106,47 @@ func TestGetSBOMResourcesV1Beta1(t *testing.T) {
 	}
 	outputDir := t.TempDir()
 	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{"component:metrics"}))
-	require.FileExists(t, filepath.Join(outputDir, "metrics.json"))
+	require.FileExists(t, filepath.Join(outputDir, "files", "metrics.json"))
 	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, nil))
 	require.ErrorContains(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{"component:missing"}), "not found")
+}
+
+func TestGetSBOMResourcesV1Beta1PreservesResourceKinds(t *testing.T) {
+	t.Parallel()
+
+	const (
+		imageKey      = "image:foo"
+		componentName = "aW1hZ2U6Zm9v"
+	)
+	dir := t.TempDir()
+	for resourceKey, contents := range map[string]string{
+		"component:" + componentName: "component SBOM",
+		imageKey:                     "image SBOM",
+	} {
+		resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath(resourceKey)))
+		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o600))
+	}
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: componentName, Files: []api.File{{Source: "component.yaml"}}}},
+		},
+	}
+
+	for _, keys := range [][]string{nil, {"component:" + componentName, imageKey}} {
+		outputDir := t.TempDir()
+		require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, keys))
+
+		componentContents, err := os.ReadFile(filepath.Join(outputDir, "files", componentName+".json"))
+		require.NoError(t, err)
+		require.Equal(t, "component SBOM", string(componentContents))
+		imageContents, err := os.ReadFile(filepath.Join(outputDir, "images", filepath.Base(SBOMResourcePath(imageKey))))
+		require.NoError(t, err)
+		require.Equal(t, "image SBOM", string(imageContents))
+	}
 }
 
 func TestPackageLayoutMutators(t *testing.T) {
