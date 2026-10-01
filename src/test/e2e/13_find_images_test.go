@@ -41,7 +41,10 @@ func TestFindImages(t *testing.T) {
 				want: `components:
   - name: app
     images:
-      - name: docker.io/library/nginx:1.27`,
+      - name: nginx:1.27
+        source: daemon
+      - name: example.com/manual:1
+        source: registry`,
 			},
 			{
 				name: "v1beta1 component",
@@ -76,7 +79,7 @@ func TestFindImages(t *testing.T) {
 			var updated v1beta1.Package
 			require.NoError(t, yaml.Unmarshal(b, &updated))
 			require.Len(t, updated.Components, 1)
-			require.Equal(t, []v1beta1.Image{{Name: image}}, updated.Components[0].Images)
+			require.Equal(t, []v1beta1.Image{{Name: "nginx:1.27", Source: "daemon"}}, updated.Components[0].Images)
 		})
 
 		t.Run("v1beta1 component", func(t *testing.T) {

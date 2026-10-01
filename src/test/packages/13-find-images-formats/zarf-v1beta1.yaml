@@ -7,3 +7,8 @@ components:
     import:
       local:
         - path: component.yaml
+    images:
+      - name: nginx:1.27
+        source: daemon
+      - name: example.com/manual:1
+        source: registry

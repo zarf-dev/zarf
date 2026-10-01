@@ -94,6 +94,8 @@ type ComponentImageScan struct {
 type DefinitionImageResult struct {
 	ComponentImageScan
 	ImageArchives []api.ImageArchive
+	// SourcedImages are resolved images whose source was explicitly configured.
+	SourcedImages []api.Image
 	Selector      api.ComponentSelector
 }
 
@@ -209,6 +211,11 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 		result.ComponentName = component.Name
 		if scan, ok := componentNameScanMap[component.Name]; ok {
 			result.ComponentImageScan = scan
+		}
+		for _, image := range component.Images {
+			if image.Source != "" {
+				result.SourcedImages = append(result.SourcedImages, image)
+			}
 		}
 
 		for _, archive := range component.ImageArchives {
