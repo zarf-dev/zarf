@@ -176,37 +176,17 @@ func loadImageDefinition(ctx context.Context, source string, opts load.PackageOp
 	if header.Kind != string(v1beta1.ZarfComponentConfig) {
 		return load.Package(ctx, source, opts)
 	}
-	component, err := load.ComponentConfig(resolvedPath.ManifestFile)
+	component, err := load.Component(ctx, resolvedPath.ManifestFile, opts.RemoteOptions)
 	if err != nil {
 		return nil, err
-	}
-	resolved, err := load.ResolveComponentConfigImports(ctx, component, resolvedPath.ManifestFile, opts.RemoteOptions)
-	if err != nil {
-		return nil, err
-	}
-	resources, err := resolved.MaterializeResources(ctx, resolvedPath.ManifestFile)
-	if err != nil {
-		return nil, err
-	}
-	valuesPaths := make([]string, 0, len(resolved.Component.Values.Files))
-	for _, valuePath := range resolved.Component.Values.Files {
-		physical, pathErr := resources.Path(valuePath)
-		if pathErr != nil {
-			return nil, errors.Join(pathErr, resources.Close())
-		}
-		valuesPaths = append(valuesPaths, physical)
-	}
-	values, err := value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
-	if err != nil {
-		return nil, errors.Join(err, resources.Close())
 	}
 	definition := convert.PackageFromV1beta1(v1beta1.Package{
 		APIVersion: v1beta1.APIVersion,
 		Kind:       v1beta1.ZarfPackageConfig,
-		Metadata:   v1beta1.PackageMetadata{Name: component.Metadata.Name},
-		Components: []v1beta1.Component{{Name: component.Metadata.Name, ComponentSpec: resolved.Component.Component}},
+		Metadata:   v1beta1.PackageMetadata{Name: component.Definition.Metadata.Name},
+		Components: []v1beta1.Component{{Name: component.Definition.Metadata.Name, ComponentSpec: component.Definition.Component}},
 	})
-	return &load.ResolvedPackage{Definition: definition, Resources: resources, Values: values}, nil
+	return &load.ResolvedPackage{Definition: definition, Resources: component.Resources, Values: component.Values}, nil
 }
 
 // filterImagesFoundInArchives merges scan results with each component's imageArchives.
