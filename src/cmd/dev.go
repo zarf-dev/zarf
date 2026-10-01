@@ -1107,7 +1107,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		componentDefinition = "\ncomponent:\n"
 	}
 	for _, finding := range definitionImageResults {
-		if !isComponentConfig && len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts)+len(finding.ImageArchives)+len(finding.SourcedImages) > 0 {
+		if !isComponentConfig && len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts)+len(finding.ImageArchives) > 0 {
 			componentDefinition += fmt.Sprintf("  - name: %s\n", finding.ComponentName)
 		}
 		indent := "    "
@@ -1117,7 +1117,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 			imageIndent = "    "
 		}
 
-		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts)+len(finding.SourcedImages) > 0 {
+		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts) > 0 {
 			componentDefinition += indent + "images:\n"
 		}
 		sourcedByRef := make(map[string]api.Image, len(finding.SourcedImages))
@@ -1174,17 +1174,6 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 				}
 				componentDefinition += formatted
 			}
-		}
-		for _, image := range finding.SourcedImages {
-			ref, err := transform.ParseImageRef(image.Name)
-			if err != nil {
-				return fmt.Errorf("invalid sourced image %q in component %q: %w", image.Name, finding.ComponentName, err)
-			}
-			if _, printed := printedSourced[ref.Reference]; printed {
-				continue
-			}
-			printedSourced[ref.Reference] = struct{}{}
-			componentDefinition += formatFoundImage(imageIndent, image, isBeta)
 		}
 		if len(finding.ImageArchives) > 0 {
 			componentDefinition += indent + fmt.Sprintf("# Archive images - %s\n", finding.ComponentName)

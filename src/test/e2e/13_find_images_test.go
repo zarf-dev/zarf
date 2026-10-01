@@ -42,9 +42,7 @@ func TestFindImages(t *testing.T) {
   - name: app
     images:
       - name: nginx:1.27
-        source: daemon
-      - name: example.com/manual:1
-        source: registry`,
+        source: daemon`,
 			},
 			{
 				name: "v1beta1 component",
@@ -58,6 +56,9 @@ func TestFindImages(t *testing.T) {
 				stdOut, stdErr, err := e2e.Zarf(t, "dev", "find-images", tc.path, "--skip-cosign")
 				require.NoError(t, err, stdOut, stdErr)
 				require.Contains(t, stdOut, tc.want)
+				if tc.name == "v1beta1 package" {
+					require.NotContains(t, stdOut, "example.com/manual:1")
+				}
 			})
 		}
 	})
