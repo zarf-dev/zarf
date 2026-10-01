@@ -103,6 +103,38 @@ func updateImagesInDefinition(t *testing.T, definition any, selector api.Compone
 	return updated
 }
 
+func TestUpdateImagesV1Beta1KeepsArchiveImagesOutOfImageList(t *testing.T) {
+	t.Parallel()
+	archive := v1beta1.ImageArchive{Path: "app.tar", Images: []string{"example.com/app:1"}}
+	definition := v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
+		Metadata:   v1beta1.PackageMetadata{Name: "example"},
+		Components: []v1beta1.Component{{
+			Name:          "app",
+			ComponentSpec: v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archive}},
+		}},
+	}
+	b, err := yaml.Marshal(definition)
+	require.NoError(t, err)
+	path := filepath.Join(t.TempDir(), "definition.yaml")
+	require.NoError(t, os.WriteFile(path, b, 0o600))
+	result := DefinitionImageResult{
+		ComponentImageScan: ComponentImageScan{
+			ComponentName: "app",
+			Matches:       []string{"example.com/app:1", "example.com/new:1"},
+		},
+		ImageArchives: []api.ImageArchive{{Path: archive.Path, Images: archive.Images}},
+	}
+	require.NoError(t, UpdateImages(context.Background(), path, []DefinitionImageResult{result}))
+	updatedBytes, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var updated v1beta1.Package
+	require.NoError(t, yaml.Unmarshal(updatedBytes, &updated))
+	require.Equal(t, []v1beta1.Image{{Name: "example.com/new:1"}}, updated.Components[0].Images)
+	require.Equal(t, []v1beta1.ImageArchive{archive}, updated.Components[0].ImageArchives)
+}
+
 func TestImageUpdateNeeded(t *testing.T) {
 	t.Parallel()
 
