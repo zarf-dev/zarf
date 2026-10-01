@@ -1094,11 +1094,8 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	var definitionHeader struct {
-		APIVersion string `json:"apiVersion"`
-		Kind       string `json:"kind"`
-	}
-	if err := goyaml.Unmarshal(definitionBytes, &definitionHeader); err != nil {
+	definitionHeader, err := load.ParseDefinitionHeader(definitionBytes)
+	if err != nil {
 		return err
 	}
 	isBeta := definitionHeader.APIVersion == v1beta1.APIVersion

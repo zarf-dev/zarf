@@ -167,10 +167,8 @@ func loadImageDefinition(ctx context.Context, source string, opts load.PackageOp
 	if err != nil {
 		return nil, err
 	}
-	var header struct {
-		Kind string `json:"kind"`
-	}
-	if err := yaml.Unmarshal(contents, &header); err != nil {
+	header, err := load.ParseDefinitionHeader(contents)
+	if err != nil {
 		return nil, err
 	}
 	if header.Kind != string(v1beta1.ZarfComponentConfig) {

@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 )
 
 // UpdateSchema updates the values.schema field in a zarf.yaml to point to the given relative schema filename.
@@ -44,14 +45,12 @@ func UpdateImages(ctx context.Context, packagePath string, definitionImageResult
 	if err != nil {
 		return err
 	}
-	var header struct {
-		APIVersion string `json:"apiVersion"`
-	}
-	if err := yaml.Unmarshal(contents, &header); err != nil {
+	header, err := load.ParseDefinitionHeader(contents)
+	if err != nil {
 		return err
 	}
 	if header.APIVersion == v1beta1.APIVersion {
-		return updateBetaImages(pkgPath.ManifestFile, contents, definitionImageResults)
+		return updateBetaImages(pkgPath.ManifestFile, contents, header.Kind, definitionImageResults)
 	}
 	return modifyManifest(packagePath, func(zarfPackage v1alpha1.ZarfPackage, astFile *ast.File, manifestPath string) (bool, error) {
 		if !imageUpdateNeeded(zarfPackage, definitionImageResults) {
@@ -66,15 +65,9 @@ func UpdateImages(ctx context.Context, packagePath string, definitionImageResult
 	})
 }
 
-func updateBetaImages(manifestPath string, contents []byte, results []DefinitionImageResult) error {
-	var header struct {
-		Kind string `json:"kind"`
-	}
-	if err := yaml.Unmarshal(contents, &header); err != nil {
-		return err
-	}
+func updateBetaImages(manifestPath string, contents []byte, kind string, results []DefinitionImageResult) error {
 	var components []v1beta1.Component
-	componentConfig := header.Kind == string(v1beta1.ZarfComponentConfig)
+	componentConfig := kind == string(v1beta1.ZarfComponentConfig)
 	if componentConfig {
 		var config v1beta1.ComponentConfig
 		if err := yaml.Unmarshal(contents, &config); err != nil {
