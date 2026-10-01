@@ -127,6 +127,10 @@ variables:
     description: Used to set a SELinux MCS Level on registry pods to prevent permission errors on the shared volume
     default: ""
 
+  - name: REGISTRY_SECURITY_CONTEXT_SELINUX_TYPE
+    description: Used to set a SELinux Type on registry pods, defaults to random assignment at runtime. 
+    default: ""
+
 constants:
   - name: REGISTRY_IMAGE
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE###"
@@ -178,7 +182,7 @@ components:
       - name: docker-registry
         releaseName: zarf-docker-registry
         localPath: chart
-        version: 1.0.1
+        version: 1.0.2
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
@@ -205,7 +209,7 @@ components:
       - name: docker-registry
         releaseName: zarf-docker-registry
         localPath: chart
-        version: 1.0.1
+        version: 1.0.2
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
