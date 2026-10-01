@@ -43,7 +43,7 @@ func Component(ctx context.Context, componentPath string, opts ComponentOptions)
 	if err != nil {
 		return nil, err
 	}
-	resolved, err := resolveComponentConfigImports(ctx, component, componentPath, opts.RemoteOptions, opts.CachePath)
+	resolved, err := ResolveComponentConfigImports(ctx, component, componentPath, opts.RemoteOptions, opts.CachePath)
 	if err != nil {
 		return nil, err
 	}
