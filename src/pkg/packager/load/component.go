@@ -16,9 +16,10 @@ import (
 // ResolvedComponent is a component config with its imports, resources, and values loaded.
 // Call Close when resource access is no longer needed.
 type ResolvedComponent struct {
-	Definition v1beta1.ComponentConfig
-	Resources  *ResourceSet
-	Values     value.Values
+	Definition   v1beta1.ComponentConfig
+	Resources    *ResourceSet
+	Values       value.Values
+	ValuesSchema value.SchemaDocument
 }
 
 // ComponentOptions configures resource-ready component loading.
@@ -58,15 +59,11 @@ func Component(ctx context.Context, componentPath string, opts ComponentOptions)
 		}
 	}()
 
-	valuesPaths := make([]string, 0, len(loaded.Definition.Values.Files))
-	for _, valuePath := range loaded.Definition.Values.Files {
-		physical, pathErr := resources.Path(valuePath)
-		if pathErr != nil {
-			return nil, pathErr
-		}
-		valuesPaths = append(valuesPaths, physical)
+	plan := valuePlan{
+		files:   loaded.Definition.Values.Files,
+		schemas: schemaSources(loaded.Definition.Values.Schema, resolved.ImportedSchemas),
 	}
-	loaded.Values, err = value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
+	loaded.Values, loaded.ValuesSchema, err = loadValues(ctx, resources, plan, false)
 	if err != nil {
 		return nil, err
 	}
