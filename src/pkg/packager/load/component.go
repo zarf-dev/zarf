@@ -21,6 +21,13 @@ type ResolvedComponent struct {
 	Values     value.Values
 }
 
+// ComponentOptions configures resource-ready component loading.
+type ComponentOptions struct {
+	// CachePath stores remote component layers locally when non-empty.
+	CachePath string
+	types.RemoteOptions
+}
+
 // Close removes temporary resources materialized while loading the component.
 func (c *ResolvedComponent) Close() error {
 	if c == nil || c.Resources == nil {
@@ -30,13 +37,13 @@ func (c *ResolvedComponent) Close() error {
 }
 
 // Component loads a v1beta1 component config and makes imported resources available.
-func Component(ctx context.Context, componentPath string, remoteOptions types.RemoteOptions) (_ *ResolvedComponent, err error) {
+func Component(ctx context.Context, componentPath string, opts ComponentOptions) (_ *ResolvedComponent, err error) {
 	componentPath = filepath.Clean(componentPath)
 	component, err := ComponentConfig(componentPath)
 	if err != nil {
 		return nil, err
 	}
-	resolved, err := ResolveComponentConfigImports(ctx, component, componentPath, remoteOptions)
+	resolved, err := resolveComponentConfigImports(ctx, component, componentPath, opts.RemoteOptions, opts.CachePath)
 	if err != nil {
 		return nil, err
 	}

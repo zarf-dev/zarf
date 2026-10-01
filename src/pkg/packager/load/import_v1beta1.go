@@ -103,8 +103,12 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 // ResolveComponentConfigImports resolves imports in a v1beta1 component config using
 // the supplied registry options for remote component imports.
 func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath string, remoteOptions types.RemoteOptions) (ComponentConfigImportResolution, error) {
+	return resolveComponentConfigImports(ctx, component, componentPath, remoteOptions, "")
+}
+
+func resolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath string, remoteOptions types.RemoteOptions, cachePath string) (ComponentConfigImportResolution, error) {
 	componentPath = filepath.Clean(componentPath)
-	resolvedSpec, importedVals, remoteResources, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Variant.Architecture, component.Variant.Flavor, []string{componentPath}, remoteOptions, "", remoteReferenceCache{})
+	resolvedSpec, importedVals, remoteResources, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Variant.Architecture, component.Variant.Flavor, []string{componentPath}, remoteOptions, cachePath, remoteReferenceCache{})
 	if err != nil {
 		return ComponentConfigImportResolution{}, err
 	}

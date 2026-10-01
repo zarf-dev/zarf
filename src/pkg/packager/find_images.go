@@ -174,7 +174,10 @@ func loadImageDefinition(ctx context.Context, source string, opts load.PackageOp
 	if header.Kind != string(v1beta1.ZarfComponentConfig) {
 		return load.Package(ctx, source, opts)
 	}
-	component, err := load.Component(ctx, resolvedPath.ManifestFile, opts.RemoteOptions)
+	component, err := load.Component(ctx, resolvedPath.ManifestFile, load.ComponentOptions{
+		CachePath:     opts.CachePath,
+		RemoteOptions: opts.RemoteOptions,
+	})
 	if err != nil {
 		return nil, err
 	}
