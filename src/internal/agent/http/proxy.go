@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -40,7 +41,28 @@ func ProxyHandler(ctx context.Context, cluster *cluster.Cluster) http.HandlerFun
 			w.Write([]byte("unable to transform the provided request, see the Zarf HTTP proxy logs for more details"))
 			return
 		}
-		proxy := &httputil.ReverseProxy{Director: func(_ *http.Request) {}, ModifyResponse: proxyResponseTransform}
+		proxy := &httputil.ReverseProxy{
+			// proxyRequestTransform has already rewritten r in place, so there
+			// is nothing left to rewrite here. The func still has to restore the
+			// forwarding headers: ReverseProxy deletes every client-supplied
+			// X-Forwarded-* header from the outbound request before calling
+			// Rewrite, which would drop the X-Forwarded-Host proxyRequestTransform
+			// recorded and that proxyResponseTransform rewrites response links
+			// with. SetXForwarded is no help for that - it reports r.Host, which
+			// by now holds the upstream host rather than the one the client asked
+			// for - so both headers are carried over by hand.
+			Rewrite: func(pr *httputil.ProxyRequest) {
+				pr.Out.Header["X-Forwarded-Host"] = pr.In.Header["X-Forwarded-Host"]
+				forwardedFor := pr.In.Header.Values("X-Forwarded-For")
+				if clientIP, _, err := net.SplitHostPort(pr.In.RemoteAddr); err == nil {
+					forwardedFor = append(forwardedFor, clientIP)
+				}
+				if len(forwardedFor) > 0 {
+					pr.Out.Header.Set("X-Forwarded-For", strings.Join(forwardedFor, ", "))
+				}
+			},
+			ModifyResponse: proxyResponseTransform,
+		}
 		proxy.ServeHTTP(w, r)
 	}
 }
