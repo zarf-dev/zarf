@@ -87,6 +87,41 @@ func TestUpdateImagesV1Beta1PreservesAuthoredFields(t *testing.T) {
 	})
 }
 
+func TestUpdateImagesV1Beta1PreservesSourceForShorthandName(t *testing.T) {
+	t.Parallel()
+	authored := v1beta1.Image{Name: "nginx:1.27", Source: "daemon"}
+	newImage := v1beta1.Image{Name: "example.com/new:1"}
+	definition := v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
+		Metadata:   v1beta1.PackageMetadata{Name: "example"},
+		Components: []v1beta1.Component{{
+			Name:          "app",
+			ComponentSpec: v1beta1.ComponentSpec{Images: []v1beta1.Image{authored}},
+		}},
+	}
+	contents, err := yaml.Marshal(definition)
+	require.NoError(t, err)
+	path := filepath.Join(t.TempDir(), "definition.yaml")
+	require.NoError(t, os.WriteFile(path, contents, 0o600))
+	results := []DefinitionImageResult{{ComponentImageScan: ComponentImageScan{
+		ComponentName: "app",
+		Matches:       []string{"docker.io/library/nginx:1.27", newImage.Name},
+	}}}
+
+	require.NoError(t, UpdateImages(context.Background(), path, results))
+	updatedBytes, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var updated v1beta1.Package
+	require.NoError(t, yaml.Unmarshal(updatedBytes, &updated))
+	require.Equal(t, []v1beta1.Image{authored, newImage}, updated.Components[0].Images)
+
+	require.NoError(t, UpdateImages(context.Background(), path, results))
+	secondUpdate, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.Equal(t, updatedBytes, secondUpdate)
+}
+
 func updateImagesInDefinition(t *testing.T, definition any, selector api.ComponentSelector) []byte {
 	t.Helper()
 	b, err := yaml.Marshal(definition)
@@ -105,7 +140,7 @@ func updateImagesInDefinition(t *testing.T, definition any, selector api.Compone
 
 func TestUpdateImagesV1Beta1KeepsArchiveImagesOutOfImageList(t *testing.T) {
 	t.Parallel()
-	archive := v1beta1.ImageArchive{Path: "app.tar", Images: []string{"example.com/app:1"}}
+	archive := v1beta1.ImageArchive{Path: "app.tar", Images: []string{"nginx:1.27"}}
 	definition := v1beta1.Package{
 		APIVersion: v1beta1.APIVersion,
 		Kind:       v1beta1.ZarfPackageConfig,
@@ -122,7 +157,7 @@ func TestUpdateImagesV1Beta1KeepsArchiveImagesOutOfImageList(t *testing.T) {
 	result := DefinitionImageResult{
 		ComponentImageScan: ComponentImageScan{
 			ComponentName: "app",
-			Matches:       []string{"example.com/app:1", "example.com/new:1"},
+			Matches:       []string{"docker.io/library/nginx:1.27", "example.com/new:1"},
 		},
 		ImageArchives: []api.ImageArchive{{Path: archive.Path, Images: archive.Images}},
 	}

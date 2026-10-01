@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 // UpdateSchema updates the values.schema field in a zarf.yaml to point to the given relative schema filename.
@@ -103,24 +104,36 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 		archives := map[string]struct{}{}
 		for _, archive := range result.ImageArchives {
 			for _, image := range archive.Images {
-				archives[image] = struct{}{}
+				ref, err := transform.ParseImageRef(image)
+				if err != nil {
+					return fmt.Errorf("invalid image %q in archive %q: %w", image, archive.Path, err)
+				}
+				archives[ref.Reference] = struct{}{}
 			}
 		}
 		existing := make(map[string]v1beta1.Image, len(component.Images))
 		for _, image := range component.Images {
-			existing[image.Name] = image
+			ref, err := transform.ParseImageRef(image.Name)
+			if err != nil {
+				return fmt.Errorf("invalid image %q in component %q: %w", image.Name, component.Name, err)
+			}
+			existing[ref.Reference] = image
 		}
 		newImages := []v1beta1.Image{}
 		seen := map[string]struct{}{}
 		for _, name := range slices.Concat(result.Matches, result.PotentialMatches, result.CosignArtifacts) {
-			if _, archived := archives[name]; archived {
+			ref, err := transform.ParseImageRef(name)
+			if err != nil {
+				return fmt.Errorf("invalid discovered image %q in component %q: %w", name, component.Name, err)
+			}
+			if _, archived := archives[ref.Reference]; archived {
 				continue
 			}
-			if _, duplicate := seen[name]; duplicate {
+			if _, duplicate := seen[ref.Reference]; duplicate {
 				continue
 			}
-			seen[name] = struct{}{}
-			image, found := existing[name]
+			seen[ref.Reference] = struct{}{}
+			image, found := existing[ref.Reference]
 			if !found {
 				image = v1beta1.Image{Name: name}
 			}
