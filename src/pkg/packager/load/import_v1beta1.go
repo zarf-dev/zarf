@@ -277,7 +277,7 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 		if descriptor.MediaType == ocispec.MediaTypeEmptyJSON {
 			continue
 		}
-		mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
+		mountPath := descriptor.Annotations[layout.ResourceMountPathAnnotation]
 		if !validResourcePath(mountPath) {
 			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an invalid resource layer", importURL)
 		}

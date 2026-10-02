@@ -249,8 +249,8 @@ func stageComponentResources(ctx context.Context, store content.Storage, resourc
 			return nil, fmt.Errorf("unable to read component resource %q: %w", rel, err)
 		}
 		descriptor.Annotations = map[string]string{
-			ocispec.AnnotationTitle:                     rel,
-			layout.ComponentResourceMountPathAnnotation: rel,
+			ocispec.AnnotationTitle:            rel,
+			layout.ResourceMountPathAnnotation: rel,
 		}
 		exists, err := store.Exists(ctx, descriptor)
 		if err != nil {

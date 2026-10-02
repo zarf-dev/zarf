@@ -1013,7 +1013,7 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
+		LayerSelection:       zoci.LayerSelection{Types: []zoci.LayerType{zoci.ComponentLayers}},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1122,7 +1122,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
+		LayerSelection:       zoci.LayerSelection{Types: []zoci.LayerType{zoci.ComponentLayers}},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1169,6 +1169,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 // packageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
 type packageInspectSBOMOptions struct {
 	outputDir      string
+	keys           []string
 	ociConcurrency int
 	packageVerifyFlags
 }
@@ -1183,8 +1184,15 @@ func newPackageInspectSBOMOptions() *packageInspectSBOMOptions {
 func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectSBOMOptions()
 	cmd := &cobra.Command{
-		Use:     "sbom [ PACKAGE ]",
-		Short:   "Output the package SBOM (Software Bill Of Materials) to the specified directory",
+		Use:   "sbom [ PACKAGE ]",
+		Short: "Output the package SBOM (Software Bill Of Materials) to the specified directory",
+		Long: `Output package SBOMs to the specified directory.
+
+For v1beta1 packages, --keys selects named resources:
+  component:<component-name> identifies the file SBOM for a component.
+  image:<reference> identifies an image SBOM.
+
+v1alpha1 packages store all SBOMs in sboms.tar and cannot be filtered by --keys.`,
 		Example: lang.CmdPackageInspectSBOMExample,
 		Args:    cobra.MaximumNArgs(1),
 		PreRunE: o.preRunE,
@@ -1193,6 +1201,7 @@ func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
+	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "v1beta1 SBOM resource keys: component:<name> or image:<reference>[-<os>-<architecture>[-<variant>]]")
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
@@ -1215,11 +1224,16 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerTypes:           []zoci.LayerType{zoci.SbomLayers},
-		Filter:               filters.Empty(),
-		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
-		CachePath:            cachePath,
+		LayerSelection: zoci.LayerSelection{
+			Types: []zoci.LayerType{zoci.SbomLayers},
+			ResourceKeys: map[zoci.LayerType][]string{
+				zoci.SbomLayers: o.keys,
+			},
+		},
+		Filter:         filters.Empty(),
+		OCIConcurrency: o.ociConcurrency,
+		RemoteOptions:  defaultRemoteOptions(),
+		CachePath:      cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -1231,7 +1245,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	}()
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
 	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.Definition().Metadata.Name))
-	err = pkgLayout.GetSBOM(ctx, outputPath)
+	err = pkgLayout.GetSBOMResources(ctx, outputPath, o.keys)
 	if err != nil {
 		return fmt.Errorf("could not get SBOM: %w", err)
 	}
@@ -1364,7 +1378,12 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayerTypes:           []zoci.LayerType{zoci.DocLayers},
+		LayerSelection: zoci.LayerSelection{
+			Types: []zoci.LayerType{zoci.DocLayers},
+			ResourceKeys: map[zoci.LayerType][]string{
+				zoci.DocLayers: o.keys,
+			},
+		},
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -2155,7 +2174,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayerTypes:           []zoci.LayerType{zoci.MetadataLayers},
+		LayerSelection:       zoci.LayerSelection{Types: []zoci.LayerType{zoci.MetadataLayers}},
 	}
 
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)

@@ -171,7 +171,7 @@ func publishRemoteComponentConfig(ctx context.Context, t *testing.T, ref registr
 		resourceContents := []byte(resourcePath)
 		resourceDescriptor := content.NewDescriptorFromBytes(layout.ZarfLayerMediaTypeBlob, resourceContents)
 		resourceDescriptor.Annotations = map[string]string{
-			layout.ComponentResourceMountPathAnnotation: resourcePath,
+			layout.ResourceMountPathAnnotation: resourcePath,
 		}
 		require.NoError(t, store.Push(ctx, resourceDescriptor, bytes.NewReader(resourceContents)))
 		layers = append(layers, resourceDescriptor)

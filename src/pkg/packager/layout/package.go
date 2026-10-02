@@ -278,12 +278,16 @@ func (e *NoSBOMAvailableError) Error() string {
 	return fmt.Sprintf("zarf package %s does not have an SBOM available", e.pkgName)
 }
 
-// ContainsSBOM checks if a package includes an SBOM
+// ContainsSBOM checks if a package includes an SBOM.
 func (p *PackageLayout) ContainsSBOM() bool {
 	if !p.pkg.IsSBOMAble() {
 		return false
 	}
-	return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
+	if !UsesGranularResourceLayout(p.pkg) {
+		return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
+	}
+	entries, err := os.ReadDir(filepath.Join(p.dirPath, SBOMResourcesDir))
+	return err == nil && len(entries) > 0
 }
 
 // SignPackage signs the zarf package using cosign with the provided options.
@@ -546,18 +550,151 @@ func (p *PackageLayout) IsSigned() bool {
 	return false
 }
 
-// GetSBOM outputs the SBOM data from the package to the given destination path.
+// GetSBOM outputs all SBOM data from the package to the given destination path.
 func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
+	return p.GetSBOMResources(ctx, destPath, nil)
+}
+
+// GetSBOMResources outputs selected SBOM resources from the package to the given destination path.
+func (p *PackageLayout) GetSBOMResources(ctx context.Context, destPath string, keys []string) error {
 	if !p.ContainsSBOM() {
 		return &NoSBOMAvailableError{pkgName: p.Definition().Metadata.Name}
 	}
+	if !UsesGranularResourceLayout(p.pkg) {
+		return archive.Decompress(ctx, filepath.Join(p.dirPath, SBOMTar), destPath, archive.DecompressOpts{})
+	}
 
-	// locate the sboms archive under the layout directory
-	sbomArchive := filepath.Join(p.dirPath, SBOMTar)
-
-	err := archive.Decompress(ctx, sbomArchive, destPath, archive.DecompressOpts{})
+	resources, err := p.sbomResources(keys)
 	if err != nil {
 		return err
+	}
+	destinationPaths, err := sbomResourceDestinationPaths(destPath, resources)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
+		return fmt.Errorf("creating SBOM output directory: %w", err)
+	}
+	for index, resource := range resources {
+		if err := copyResourceFile(resource.sourcePath, destinationPaths[index]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type sbomResource struct {
+	key          string
+	resourcePath string
+	sourcePath   string
+}
+
+func (p *PackageLayout) sbomResources(keys []string) ([]sbomResource, error) {
+	resourceRoot := filepath.Join(p.dirPath, SBOMResourcesDir)
+	if len(keys) == 0 {
+		resources := []sbomResource{}
+		err := filepath.WalkDir(resourceRoot, func(sourcePath string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			resourcePath, err := filepath.Rel(p.dirPath, sourcePath)
+			if err != nil {
+				return fmt.Errorf("calculating SBOM resource path: %w", err)
+			}
+			resourcePath = filepath.ToSlash(resourcePath)
+			key, ok := SBOMResourceKey(resourcePath)
+			if !ok {
+				return fmt.Errorf("invalid SBOM resource path %q", resourcePath)
+			}
+			resources = append(resources, sbomResource{
+				key:          key,
+				resourcePath: resourcePath,
+				sourcePath:   sourcePath,
+			})
+			return nil
+		})
+		return resources, err
+	}
+
+	resources := make([]sbomResource, 0, len(keys))
+	for _, key := range keys {
+		resourcePath, err := sbomResourcePathForKey(key)
+		if err != nil {
+			return nil, err
+		}
+		sourcePath := filepath.Join(p.dirPath, filepath.FromSlash(resourcePath))
+		if _, err := os.Stat(sourcePath); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil, fmt.Errorf("SBOM resource key %q not found in package", key)
+			}
+			return nil, fmt.Errorf("checking SBOM resource key %q: %w", key, err)
+		}
+		resources = append(resources, sbomResource{
+			key:          key,
+			resourcePath: resourcePath,
+			sourcePath:   sourcePath,
+		})
+	}
+	return resources, nil
+}
+
+func sbomResourceDestinationPaths(destRoot string, resources []sbomResource) ([]string, error) {
+	destinationPaths := make([]string, len(resources))
+	resourceKeysByDestination := make(map[string]string, len(resources))
+	for index, resource := range resources {
+		relativePath, err := sbomResourceOutputPath(resource.resourcePath, resource.key)
+		if err != nil {
+			return nil, err
+		}
+		if conflictingKey, exists := resourceKeysByDestination[relativePath]; exists && conflictingKey != resource.key {
+			return nil, fmt.Errorf("SBOM resource keys %q and %q both normalize to %q", conflictingKey, resource.key, filepath.ToSlash(relativePath))
+		}
+		resourceKeysByDestination[relativePath] = resource.key
+		destinationPath, err := resourceDestinationPath(destRoot, relativePath)
+		if err != nil {
+			return nil, fmt.Errorf("invalid SBOM output path %q: %w", relativePath, err)
+		}
+		destinationPaths[index] = destinationPath
+	}
+	return destinationPaths, nil
+}
+
+func sbomResourceOutputPath(resourcePath, key string) (string, error) {
+	relativePath, found := strings.CutPrefix(resourcePath, SBOMResourcesDir+"/")
+	if !found {
+		return "", fmt.Errorf("SBOM resource path %q is outside resource root", resourcePath)
+	}
+	if imageIdentifier, ok := strings.CutPrefix(key, "image:"); ok {
+		return filepath.Join("images", NormalizeSBOMFilename(imageIdentifier+".json")), nil
+	}
+	return filepath.FromSlash(relativePath), nil
+}
+
+func resourceDestinationPath(destRoot, resourcePath string) (string, error) {
+	destinationPath := filepath.Join(destRoot, resourcePath)
+	relativePath, err := filepath.Rel(destRoot, destinationPath)
+	if err != nil {
+		return "", fmt.Errorf("calculating resource destination path: %w", err)
+	}
+	if relativePath == ".." || strings.HasPrefix(relativePath, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("resource path %q escapes destination directory", resourcePath)
+	}
+	return destinationPath, nil
+}
+
+func sbomResourcePathForKey(key string) (string, error) {
+	if componentName, ok := strings.CutPrefix(key, "component:"); ok && !isCleanPath(componentName) {
+		return "", fmt.Errorf("invalid SBOM component key %q", key)
+	}
+	return SBOMResourcePath(key), nil
+}
+
+func copyResourceFile(sourcePath, destPath string) error {
+	if err := helpers.CreatePathAndCopy(sourcePath, destPath); err != nil {
+		return fmt.Errorf("copying package resource: %w", err)
 	}
 	return nil
 }
@@ -567,16 +704,14 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 // If keys are provided, only those specific documentation files are extracted.
 func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) (err error) {
 	l := logger.From(ctx)
-
 	if len(p.pkg.Documentation) == 0 {
 		return fmt.Errorf("no documentation files found in package")
 	}
 
-	tarPath := filepath.Join(p.dirPath, DocumentationTar)
-	if _, err := os.Stat(tarPath); os.IsNotExist(err) {
-		return fmt.Errorf("documentation.tar not found in package")
+	fileNames, err := GetDocumentationFileNames(p.pkg.Documentation)
+	if err != nil {
+		return err
 	}
-
 	keysToExtract := maps.Clone(p.pkg.Documentation)
 	if len(keys) > 0 {
 		keysToExtract = make(map[string]string)
@@ -589,32 +724,37 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		}
 	}
 
-	// Extract tar to temp directory
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return fmt.Errorf("failed to create temp directory: %w", err)
-	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(tmpDir))
-	}()
-
-	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
-	if err != nil {
-		return fmt.Errorf("failed to extract documentation.tar: %w", err)
+	sourceDir := filepath.Join(p.dirPath, DocumentationDir)
+	if !UsesGranularResourceLayout(p.pkg) {
+		tarPath := filepath.Join(p.dirPath, DocumentationTar)
+		if _, err := os.Stat(tarPath); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("documentation.tar not found in package")
+			}
+			return err
+		}
+		sourceDir, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return fmt.Errorf("failed to create temp directory: %w", err)
+		}
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(sourceDir))
+		}()
+		if err := archive.Decompress(ctx, tarPath, sourceDir, archive.DecompressOpts{}); err != nil {
+			return fmt.Errorf("failed to extract documentation.tar: %w", err)
+		}
 	}
 
 	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
 	}
-
-	fileNames := GetDocumentationFileNames(p.pkg.Documentation)
-
 	for key, file := range keysToExtract {
 		docFileName := fileNames[key]
-
-		srcPath := filepath.Join(tmpDir, docFileName)
-		dstPath := filepath.Join(destPath, docFileName)
-		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
+		destinationPath, err := resourceDestinationPath(destPath, docFileName)
+		if err != nil {
+			return fmt.Errorf("invalid documentation output path: %w", err)
+		}
+		if err := copyResourceFile(filepath.Join(sourceDir, docFileName), destinationPath); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", file, err)
 		}
 	}
@@ -623,30 +763,38 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 	return nil
 }
 
-// FormatDocumentFileName for storing the document in the package or presenting it to the user
+// FormatDocumentFileName returns the stored filename for a documentation file whose basename collides with another document.
 func FormatDocumentFileName(key, file string) string {
 	return fmt.Sprintf("%s-%s", key, filepath.Base(file))
 }
 
-// GetDocumentationFileNames returns a map of documentation keys to their final filenames.
-// Filenames are deconflicted: if multiple keys have the same basename, they get prefixed with the key.
-func GetDocumentationFileNames(documentation map[string]string) map[string]string {
-	basenameCounts := make(map[string]int)
-	for _, file := range documentation {
+// GetDocumentationFileNames returns the validated package filenames for documentation keys.
+// Filenames are deconflicted: if multiple keys have the same basename, they are prefixed with the key.
+func GetDocumentationFileNames(documentation map[string]string) (map[string]string, error) {
+	basenameCounts := make(map[string]int, len(documentation))
+	basenames := make(map[string]string, len(documentation))
+	for key, file := range documentation {
+		if !isCleanDocumentationKey(key) {
+			return nil, fmt.Errorf("documentation key %q would result in an invalid path", key)
+		}
 		basename := filepath.Base(file)
+		if !isCleanDocumentationFileName(basename) {
+			return nil, fmt.Errorf("documentation file %q would result in an invalid path", file)
+		}
+		basenames[key] = basename
 		basenameCounts[basename]++
 	}
 
-	result := make(map[string]string)
+	result := make(map[string]string, len(documentation))
 	for key, file := range documentation {
-		basename := filepath.Base(file)
+		basename := basenames[key]
 		if basenameCounts[basename] == 1 {
 			result[key] = basename
 		} else {
 			result[key] = FormatDocumentFileName(key, file)
 		}
 	}
-	return result
+	return result, nil
 }
 
 // GetComponentDir returns a path to the directory in the given component.
@@ -912,6 +1060,9 @@ func validatePackagePaths(pkg api.Package) error {
 			}
 		}
 	}
+	if _, err := GetDocumentationFileNames(pkg.Documentation); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -919,4 +1070,12 @@ func validatePackagePaths(pkg api.Package) error {
 // it must not be ".." and must not contain path separators.
 func isCleanPath(s string) bool {
 	return s != ".." && !strings.ContainsAny(s, `/\`)
+}
+
+func isCleanDocumentationKey(key string) bool {
+	return key != "" && key != "." && isCleanPath(key)
+}
+
+func isCleanDocumentationFileName(fileName string) bool {
+	return fileName != "" && fileName != "." && isCleanPath(fileName)
 }

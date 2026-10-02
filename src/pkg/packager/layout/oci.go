@@ -37,8 +37,8 @@ const (
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
 	// ZarfComponentConfigMediaType is the media type for a v1beta1 Zarf component config OCI artifact.
 	ZarfComponentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
-	// ComponentResourceMountPathAnnotation identifies where a component resource is mounted in its OCI artifact.
-	ComponentResourceMountPathAnnotation = "dev.zarf.mountPath"
+	// ResourceMountPathAnnotation identifies where a package resource is mounted in its OCI artifact.
+	ResourceMountPathAnnotation = "dev.zarf.mountPath"
 	// OCITimestampFormat is the format used for the OCI timestamp annotation
 	OCITimestampFormat = time.RFC3339
 )
@@ -81,6 +81,41 @@ func AnnotationsFromMetadata(pkg api.Package) map[string]string {
 	return annotations
 }
 
+func documentationResourceKeys(documentation map[string]string) (map[string]string, error) {
+	fileNames, err := GetDocumentationFileNames(documentation)
+	if err != nil {
+		return nil, err
+	}
+	resourceKeys := make(map[string]string, len(fileNames))
+	for key, fileName := range fileNames {
+		resourceKeys[DocumentationResourcePath(fileName)] = key
+	}
+	return resourceKeys, nil
+}
+
+func resourceAnnotations(resourcePath string, pkg api.Package, documentationKeys map[string]string) map[string]string {
+	annotations := map[string]string{
+		ocispec.AnnotationTitle: resourcePath,
+	}
+	if !UsesGranularResourceLayout(pkg) {
+		return annotations
+	}
+
+	if key, ok := documentationKeys[resourcePath]; ok {
+		annotations[ResourceMountPathAnnotation] = resourcePath
+		annotations[ResourceKindAnnotation] = ResourceKindDocumentation
+		annotations[ResourceKeyAnnotation] = key
+		return annotations
+	}
+
+	if key, ok := SBOMResourceKey(resourcePath); ok {
+		annotations[ResourceMountPathAnnotation] = resourcePath
+		annotations[ResourceKindAnnotation] = ResourceKindSBOM
+		annotations[ResourceKeyAnnotation] = key
+	}
+	return annotations
+}
+
 // computeManifest builds the OCI manifest for this layout, caches the result,
 // and sets p.digest.
 //
@@ -106,6 +141,22 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		checksumMap[parts[1]] = parts[0] // relpath → sha256hex
 	}
 
+	// Read the zarf.yaml from disk rather than using the in-memory package
+	// definition, which may have been component-filtered or otherwise mutated
+	// after load.
+	zarfYAMLBytes, err := os.ReadFile(filepath.Join(p.dirPath, ZarfYAML))
+	if err != nil {
+		return fmt.Errorf("reading %s for manifest: %w", ZarfYAML, err)
+	}
+	configDefinition, configPackage, err := pkgcfg.ParseMultiDocNative(ctx, zarfYAMLBytes)
+	if err != nil {
+		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
+	}
+	documentationKeys, err := documentationResourceKeys(configPackage.Documentation)
+	if err != nil {
+		return fmt.Errorf("validating documentation resource paths: %w", err)
+	}
+
 	files, err := p.Files()
 	if err != nil {
 		return err
@@ -116,7 +167,7 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		totalLayerSize int64
 		blobs          = map[godigest.Digest]string{}
 	)
-	for filePath, name := range files {
+	for filePath := range files {
 		rel, err := filepath.Rel(p.dirPath, filePath)
 		if err != nil {
 			return err
@@ -162,12 +213,10 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		}
 
 		descs = append(descs, ocispec.Descriptor{
-			MediaType: ZarfLayerMediaTypeBlob,
-			Digest:    fileDigest,
-			Size:      fileSize,
-			Annotations: map[string]string{
-				ocispec.AnnotationTitle: name,
-			},
+			MediaType:   ZarfLayerMediaTypeBlob,
+			Digest:      fileDigest,
+			Size:        fileSize,
+			Annotations: resourceAnnotations(rel, configPackage, documentationKeys),
 		})
 		blobs[fileDigest] = filePath
 		totalLayerSize += fileSize
@@ -178,17 +227,6 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		return descs[i].Digest.String() < descs[j].Digest.String()
 	})
 
-	// Read the zarf.yaml from disk rather than using the in-memory package
-	// definition, which may have been component-filtered or otherwise mutated
-	// after load.
-	zarfYAMLBytes, err := os.ReadFile(filepath.Join(p.dirPath, ZarfYAML))
-	if err != nil {
-		return fmt.Errorf("reading %s for manifest: %w", ZarfYAML, err)
-	}
-	configDefinition, configPackage, err := pkgcfg.ParseMultiDocNative(ctx, zarfYAMLBytes)
-	if err != nil {
-		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
-	}
 	configBytes, err := json.Marshal(configDefinition)
 	if err != nil {
 		return err
