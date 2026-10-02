@@ -62,8 +62,8 @@ func (p Package) Validate() error {
 				add(path + ".import (multiple sources)")
 			}
 			for j, image := range component.Images {
-				if image.Source != "" && image.Source != ImageSourceRegistryDaemonFallback {
-					errs = append(errs, fmt.Errorf("%s.images[%d].source must be empty or %q in %s", path, j, ImageSourceRegistryDaemonFallback, version))
+				if image.Source != ImageSourceRegistryDaemonFallback {
+					errs = append(errs, fmt.Errorf("%s.images[%d].source must be %q in %s", path, j, ImageSourceRegistryDaemonFallback, version))
 				}
 			}
 		case v1beta1.APIVersion:
