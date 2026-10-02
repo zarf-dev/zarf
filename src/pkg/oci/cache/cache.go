@@ -6,12 +6,14 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"io"
 	"sync"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
+	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -53,6 +55,11 @@ func (target *target) cacheReader(ctx context.Context, reader io.ReadCloser, des
 	wg.Go(func() {
 		defer wg.Done()
 		pushErr = target.cache.Push(ctx, descriptor, pipedReader)
+		if errors.Is(pushErr, errdef.ErrAlreadyExists) {
+			// Another pull populated this digest. Drain the pipe so the source
+			// still reaches the caller even if Push did not consume it.
+			_, pushErr = io.Copy(io.Discard, pipedReader)
+		}
 		if pushErr != nil {
 			_ = pipedReader.CloseWithError(pushErr)
 		}
