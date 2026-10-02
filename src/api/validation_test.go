@@ -21,8 +21,9 @@ func TestPackageValidateVersionFields(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "legacy package with omitted apiVersion",
-			pkg:  api.Package{Components: []api.Component{{Images: []api.Image{{Name: "example.com/app:1"}}}}},
+			name:    "legacy package with omitted apiVersion rejects omitted image source",
+			pkg:     api.Package{Components: []api.Component{{Images: []api.Image{{Name: "example.com/app:1"}}}}},
+			wantErr: "components[0].images[0].source must be \"registry-daemon-fallback\" in " + v1alpha1.APIVersion,
 		},
 		{
 			name: "v1alpha1 accepts registry daemon fallback",
@@ -33,7 +34,7 @@ func TestPackageValidateVersionFields(t *testing.T) {
 		{
 			name:    "v1alpha1 rejects registry image source",
 			pkg:     api.Package{APIVersion: v1alpha1.APIVersion, Components: []api.Component{{Images: []api.Image{{Name: "example.com/app:1", Source: api.ImageSourceRegistry}}}}},
-			wantErr: "components[0].images[0].source must be empty or \"registry-daemon-fallback\" in " + v1alpha1.APIVersion,
+			wantErr: "components[0].images[0].source must be \"registry-daemon-fallback\" in " + v1alpha1.APIVersion,
 		},
 		{
 			name: "v1alpha1 rejects multiple imports",
