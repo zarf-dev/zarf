@@ -65,3 +65,46 @@ values:
 		})
 	}
 }
+
+func TestComponentValidatesResolvedDefinition(t *testing.T) {
+	t.Parallel()
+
+	const duplicateManifests = `  manifests:
+    - name: duplicate
+      files:
+        - first.yaml
+    - name: duplicate
+      files:
+        - second.yaml
+`
+	for _, tc := range []struct {
+		name      string
+		component string
+	}{
+		{name: "direct component", component: duplicateManifests},
+		{name: "imported component", component: "  import:\n    local:\n      - path: child.yaml\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			child := `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: child
+component:
+` + duplicateManifests
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "child.yaml"), []byte(child), 0o600))
+			config := `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: parent
+component:
+` + tc.component
+			path := filepath.Join(dir, "component.yaml")
+			require.NoError(t, os.WriteFile(path, []byte(config), 0o600))
+
+			_, err := Component(testutil.TestContext(t), path, ComponentOptions{})
+			require.ErrorContains(t, err, `manifest name "duplicate" is not unique`)
+		})
+	}
+}

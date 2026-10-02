@@ -6,9 +6,11 @@ package load
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -47,6 +49,12 @@ func Component(ctx context.Context, componentPath string, opts ComponentOptions)
 	resolved, err := ResolveComponentConfigImports(ctx, component, componentPath, opts.RemoteOptions, opts.CachePath)
 	if err != nil {
 		return nil, err
+	}
+	if validationErrs := internalv1beta1.ValidateComponent(v1beta1.Component{
+		Name:          resolved.Component.Metadata.Name,
+		ComponentSpec: resolved.Component.Component,
+	}); len(validationErrs) > 0 {
+		return nil, fmt.Errorf("component validation failed:\n%w", validationErrs)
 	}
 	resources, err := resolved.MaterializeResources(ctx, componentPath)
 	if err != nil {
