@@ -15,10 +15,14 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8syaml "sigs.k8s.io/yaml"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -484,17 +488,35 @@ func TestFindDefinitionImagesComponentConfig(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 	dir := t.TempDir()
-	manifest := "apiVersion: v1\nkind: Pod\nmetadata:\n  name: app\nspec:\n  containers:\n    - name: app\n      image: docker.io/library/nginx:1.27\n"
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "pod.yaml"), []byte(manifest), 0o600))
-	config := "apiVersion: zarf.dev/v1beta1\nkind: ZarfComponentConfig\nmetadata:\n  name: app\ncomponent:\n  manifests:\n    - name: app\n      files:\n        - pod.yaml\n"
+	image := "docker.io/library/nginx:1.27"
+	pod := corev1.Pod{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Pod"},
+		ObjectMeta: metav1.ObjectMeta{Name: "app"},
+		Spec: corev1.PodSpec{Containers: []corev1.Container{
+			{Name: "app", Image: image},
+		}},
+	}
+	manifest, err := k8syaml.Marshal(pod)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "pod.yaml"), manifest, 0o600))
+	config := v1beta1.ComponentConfig{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfComponentConfig,
+		Metadata:   v1beta1.ComponentMetadata{Name: "app"},
+		Component: v1beta1.ComponentSpec{Manifests: []v1beta1.Manifest{
+			{Name: "app", Files: []string{"pod.yaml"}},
+		}},
+	}
+	configBytes, err := yaml.Marshal(config)
+	require.NoError(t, err)
 	configPath := filepath.Join(dir, "app.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(config), 0o600))
+	require.NoError(t, os.WriteFile(configPath, configBytes, 0o600))
 	results, err := FindDefinitionImages(ctx, configPath, FindImagesOptions{SkipCosign: true})
 	require.NoError(t, err)
 	require.Len(t, results, 1)
-	require.Equal(t, "app", results[0].ComponentName)
+	require.Equal(t, config.Metadata.Name, results[0].ComponentName)
 	require.Equal(t, []ImageMatch{
-		{Image: api.Image{Name: "docker.io/library/nginx:1.27"}, MatchType: MatchDefinite},
+		{Image: api.Image{Name: image}, MatchType: MatchDefinite},
 	}, results[0].Matches)
 }
 
