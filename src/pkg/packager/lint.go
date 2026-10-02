@@ -12,7 +12,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -61,12 +60,6 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) (err error)
 		defer func() {
 			err = errors.Join(err, component.Close())
 		}()
-		if validationErrs := internalv1beta1.ValidateComponent(v1beta1.Component{
-			Name:          component.Definition.Metadata.Name,
-			ComponentSpec: component.Definition.Component,
-		}); len(validationErrs) > 0 {
-			return fmt.Errorf("component validation failed:\n%w", validationErrs)
-		}
 		findings := lint.CheckComponentValuesV1Beta1(component.Definition.Component, ".component")
 		if len(findings) == 0 {
 			return nil
