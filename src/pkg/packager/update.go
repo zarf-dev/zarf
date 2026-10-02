@@ -121,7 +121,7 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 		}
 		foundImages := result.Matches
 		newImages := []v1beta1.Image{}
-		seen := map[string]struct{}{}
+		newByRef := make(map[string]v1beta1.Image, len(foundImages))
 		for _, match := range foundImages {
 			name := match.Image.Name
 			ref, err := transform.ParseImageRef(name)
@@ -131,18 +131,18 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 			if _, archived := archives[ref.Reference]; archived {
 				continue
 			}
-			if _, duplicate := seen[ref.Reference]; duplicate {
+			if _, duplicate := newByRef[ref.Reference]; duplicate {
 				continue
 			}
-			seen[ref.Reference] = struct{}{}
 			image, found := existing[ref.Reference]
 			if !found {
 				image = v1beta1.Image{Name: name}
 			}
+			newByRef[ref.Reference] = image
 			newImages = append(newImages, image)
 		}
-		// Match v1alpha1: an empty scan does not replace authored images.
-		imagesUpToDate := len(foundImages) == 0 || slices.EqualFunc(component.Images, newImages, func(a, b v1beta1.Image) bool { return a == b })
+		// An empty scan does not replace authored images.
+		imagesUpToDate := len(foundImages) == 0 || (len(component.Images) == len(newImages) && maps.Equal(existing, newByRef))
 		// Import resolution appends archives authored here after inherited archives.
 		if len(result.ImageArchives) < len(component.ImageArchives) {
 			return fmt.Errorf("component %q has fewer scanned archives than authored archives", component.Name)

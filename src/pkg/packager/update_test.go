@@ -127,6 +127,35 @@ func TestUpdateImagesV1Beta1PreservesSourceForShorthandName(t *testing.T) {
 	require.Equal(t, updatedBytes, secondUpdate)
 }
 
+func TestUpdateImagesV1Beta1KeepsEquivalentAuthoredOrder(t *testing.T) {
+	t.Parallel()
+	definition := `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component:
+  images:
+    # Keep this intentional order and its comment.
+    - name: example.com/z:1
+    - name: nginx:1.27
+      source: daemon
+`
+	path := filepath.Join(t.TempDir(), "component.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(definition), 0o600))
+	results := []DefinitionImageResult{{ComponentImageScan: ComponentImageScan{
+		ComponentName: "app",
+		Matches: []ImageMatch{
+			{Image: api.Image{Name: "docker.io/library/nginx:1.27"}, MatchType: MatchDefinite},
+			{Image: api.Image{Name: "example.com/z:1"}, MatchType: MatchDefinite},
+		},
+	}}}
+
+	require.NoError(t, UpdateImages(context.Background(), path, results))
+	updated, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.Equal(t, definition, string(updated))
+}
+
 func TestUpdateImagesV1Beta1ReplacesOnlyWhenImagesFound(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
