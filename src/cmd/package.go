@@ -510,6 +510,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Filter:               filter,
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
+		Retries:              o.retries,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
 		Connected:            o.connected,
@@ -779,6 +780,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		Filter:               filter,
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
+		Retries:              o.retries,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
 	}
@@ -1834,6 +1836,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 			Architecture:         config.GetArch(),
 			OCIConcurrency:       o.ociConcurrency,
+			Retries:              o.retries,
 			RemoteOptions:        defaultRemoteOptions(),
 			CachePath:            cachePath,
 		})
@@ -1849,6 +1852,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
+		Retries:              o.retries,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
 	}
@@ -1880,6 +1884,7 @@ type packagePullOptions struct {
 	shasum          string
 	outputDirectory string
 	ociConcurrency  int
+	retries         int
 	packageVerifyFlags
 }
 
@@ -1896,6 +1901,7 @@ func newPackagePullCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackagePullFlagRetries)
 	cmd.Flags().StringVar(&o.shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
 	cmd.Flags().StringVarP(&o.outputDirectory, "output-directory", "o", v.GetString(VPkgPullOutputDir), lang.CmdPackagePullFlagOutputDirectory)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
@@ -1926,6 +1932,7 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
+		Retries:              o.retries,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
 	})
@@ -2039,6 +2046,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
+		Retries:              o.retries,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
 		VerificationStrategy: layout.VerifyNever,

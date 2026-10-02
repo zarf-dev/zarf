@@ -68,6 +68,9 @@ type PublishOptions struct {
 type RemoteClientOptions struct {
 	// CachePath stores OCI layers locally when non-empty.
 	CachePath string
+	// Retries is the maximum attempts for individual OCI pull requests. A zero
+	// value leaves the default transport retry policy in place.
+	Retries int
 	// Transport configures HTTP transport behavior such as proxies and mTLS.
 	// It is cloned before use and is never modified.
 	Transport *http.Transport
@@ -89,8 +92,14 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 // NewRemoteWithOptions returns an ORAS remote repository configured with Zarf's
 // cache and transport options.
 func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Platform, options RemoteClientOptions) (*Remote, error) {
+	if options.Retries < 0 {
+		return nil, fmt.Errorf("retries cannot be negative")
+	}
 	modifiers := []oci.Modifier{
 		oci.WithInsecureSkipVerify(options.InsecureSkipTLSVerify),
+	}
+	if options.Retries > 0 {
+		modifiers = append(modifiers, oci.WithRetryAttempts(options.Retries))
 	}
 	if options.Transport != nil {
 		modifiers = append(modifiers, oci.WithTransport(options.Transport))

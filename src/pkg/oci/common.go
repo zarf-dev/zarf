@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
@@ -74,6 +75,29 @@ func WithTransport(transport *http.Transport) Modifier {
 			applyInsecureSkipVerify(transport, *o.insecureSkipVerify)
 		}
 		o.progTransport.Base = transport
+	}
+}
+
+// WithRetryAttempts configures the maximum attempts for registry requests.
+// Non-positive values retain the default ORAS policy.
+func WithRetryAttempts(attempts int) Modifier {
+	return func(o *OrasRemote) {
+		if attempts <= 0 {
+			return
+		}
+		backoff := retry.ExponentialBackoff(500*time.Millisecond, 2, 0.1)
+		o.progTransport.Policy = func() retry.Policy {
+			return &retry.GenericPolicy{
+				Retryable: retry.DefaultPredicate,
+				Backoff: func(attempt int, resp *http.Response) time.Duration {
+					// 500ms * 2^4 reaches MaxWait; bound the exponent to avoid overflow.
+					return backoff(min(attempt, 4), resp)
+				},
+				MinWait:  500 * time.Millisecond,
+				MaxWait:  8 * time.Second,
+				MaxRetry: attempts - 1,
+			}
+		}
 	}
 }
 

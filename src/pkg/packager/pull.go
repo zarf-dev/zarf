@@ -44,6 +44,8 @@ type PullOptions struct {
 	VerifyBlobOptions *signing.VerifyBlobOptions
 	// OCIConcurrency is the number of layers pulled in parallel
 	OCIConcurrency int
+	// Retries is the maximum attempts for OCI package pull requests.
+	Retries int
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
 	types.RemoteOptions
@@ -95,6 +97,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 		VerificationStrategy: opts.VerificationStrategy,
 		Output:               destination,
 		OCIConcurrency:       opts.OCIConcurrency,
+		Retries:              opts.Retries,
 		RemoteOptions:        opts.RemoteOptions,
 		CachePath:            opts.CachePath,
 	})
@@ -117,6 +120,7 @@ type pullOCIOptions struct {
 	Source            string
 	Shasum            string
 	Architecture      string
+	Retries           int
 	LayerTypes        []zoci.LayerType
 	Filter            filters.ComponentFilterStrategy
 	OCIConcurrency    int
@@ -135,6 +139,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	platform := oci.PlatformForArch(opts.Architecture)
 	remote, err := zoci.NewRemoteWithOptions(ctx, opts.Source, platform, zoci.RemoteClientOptions{
 		CachePath:     opts.CachePath,
+		Retries:       opts.Retries,
 		RemoteOptions: opts.RemoteOptions,
 	})
 	if err != nil {

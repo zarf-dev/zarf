@@ -897,6 +897,7 @@ func (o *clearCacheOptions) run(cmd *cobra.Command, _ []string) error {
 type downloadInitOptions struct {
 	version         string
 	outputDirectory string
+	retries         int
 }
 
 func newDownloadInitCommand() *cobra.Command {
@@ -910,6 +911,7 @@ func newDownloadInitCommand() *cobra.Command {
 
 	cmd.Flags().StringVarP(&o.outputDirectory, "output-directory", "o", "", lang.CmdToolsDownloadInitFlagOutputDirectory)
 	cmd.Flags().StringVarP(&o.version, "version", "v", o.version, "Specify version to download (defaults to current CLI version)")
+	cmd.Flags().IntVar(&o.retries, "retries", getViper().GetInt(VPkgRetries), lang.CmdPackagePullFlagRetries)
 	return cmd
 }
 
@@ -946,6 +948,7 @@ func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 
 	pullOptions := packager.PullOptions{
 		Architecture: config.GetArch(),
+		Retries:      o.retries,
 		CachePath:    cachePath,
 	}
 
