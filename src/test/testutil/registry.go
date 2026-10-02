@@ -15,12 +15,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 )
 
@@ -41,7 +41,11 @@ func SetupInMemoryRegistry(ctx context.Context, t *testing.T, port int) string {
 	config.Log.Level = "error"
 	logrus.SetOutput(io.Discard)
 	config.HTTP.DrainTimeout = 10 * time.Second
-	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
+	config.Catalog.MaxEntries = 1000
+	config.Storage = map[string]configuration.Parameters{
+		"inmemory": {},
+		"delete":   {"enabled": true},
+	}
 	ref, err := registry.NewRegistry(ctx, config)
 	require.NoError(t, err)
 	//nolint:errcheck // ignore

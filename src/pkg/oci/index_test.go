@@ -13,9 +13,7 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/memory"
@@ -32,9 +30,7 @@ func TestUpdateIndexWithDescriptor(t *testing.T) {
 		Repository: "components",
 		Reference:  "example",
 	}
-	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
-		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
-	})
+	remote, err := NewOrasRemote(ref.String(), ocispec.Platform{}, WithPlainHTTP(true))
 	require.NoError(t, err)
 
 	amd64First := pushManifest(ctx, t, remote, "amd64-first")
@@ -114,7 +110,7 @@ func (c staticResponseClient) Do(request *http.Request) (*http.Response, error) 
 	}, nil
 }
 
-func pushManifest(ctx context.Context, t *testing.T, remote *zoci.Remote, contents string) ocispec.Descriptor {
+func pushManifest(ctx context.Context, t *testing.T, remote *OrasRemote, contents string) ocispec.Descriptor {
 	t.Helper()
 
 	store := memory.New()
@@ -129,12 +125,12 @@ func pushManifest(ctx context.Context, t *testing.T, remote *zoci.Remote, conten
 	require.NoError(t, err)
 	return manifest
 }
-func tagDescriptor(ctx context.Context, t *testing.T, remote *zoci.Remote, descriptor ocispec.Descriptor, tag string) {
+func tagDescriptor(ctx context.Context, t *testing.T, remote *OrasRemote, descriptor ocispec.Descriptor, tag string) {
 	t.Helper()
 	require.NoError(t, remote.Repo().Tag(ctx, descriptor, tag))
 }
 
-func resolveDescriptor(ctx context.Context, t *testing.T, remote *zoci.Remote, tag string) ocispec.Descriptor {
+func resolveDescriptor(ctx context.Context, t *testing.T, remote *OrasRemote, tag string) ocispec.Descriptor {
 	t.Helper()
 
 	descriptor, err := remote.Repo().Resolve(ctx, tag)
@@ -142,7 +138,7 @@ func resolveDescriptor(ctx context.Context, t *testing.T, remote *zoci.Remote, t
 	return descriptor
 }
 
-func readIndex(ctx context.Context, t *testing.T, remote *zoci.Remote, tag string) ocispec.Index {
+func readIndex(ctx context.Context, t *testing.T, remote *OrasRemote, tag string) ocispec.Index {
 	t.Helper()
 
 	descriptor, reader, err := remote.Repo().FetchReference(ctx, tag)

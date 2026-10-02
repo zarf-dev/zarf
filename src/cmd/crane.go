@@ -387,6 +387,9 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 	// Determine which image digests are currently used by Zarf packages
 	pkgImages := map[string]bool{}
 	for _, depPkg := range zarfPackages {
+		if depPkg.GetPackageConnectivity() == state.PackageConnectivityConnected {
+			continue
+		}
 		deployedComponents := map[string]bool{}
 		for _, depComponent := range depPkg.DeployedComponents {
 			deployedComponents[depComponent.Name] = true
