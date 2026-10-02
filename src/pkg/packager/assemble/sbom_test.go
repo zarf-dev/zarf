@@ -33,13 +33,19 @@ func TestCreateImageSBOM(t *testing.T) {
 
 	outputPath := t.TempDir()
 	img := empty.Image
-	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest", false)
+	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
 
 	fileContent, err := os.ReadFile(filepath.Join(outputPath, "docker.io_foo_bar_latest.json"))
 	require.NoError(t, err)
 	require.Equal(t, fileContent, b)
+
+	betaOutputPath := t.TempDir()
+	betaSBOM, err := createImageSBOMResource(ctx, t.TempDir(), betaOutputPath, img, "docker.io/foo/bar:latest")
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.SBOMResourcePath("image:docker.io/foo/bar:latest"))))
+	require.NotEmpty(t, betaSBOM)
 }
 
 func TestCreateImageSBOMNonExistentCachePath(t *testing.T) {
@@ -51,7 +57,7 @@ func TestCreateImageSBOMNonExistentCachePath(t *testing.T) {
 	// Cache path that doesn't exist yet
 	cachePath := filepath.Join(t.TempDir(), "non-existent-cache")
 	img := empty.Image
-	b, err := createImageSBOM(ctx, cachePath, outputPath, img, "docker.io/foo/bar:latest", false)
+	b, err := createImageSBOM(ctx, cachePath, outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
 }
@@ -110,7 +116,7 @@ L:Zlib
 	require.NoError(t, err)
 
 	outputPath := t.TempDir()
-	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest", false)
+	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
 
 	var doc model.Document
@@ -162,7 +168,7 @@ func TestCreateFileSBOMContents(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(componentsDir, component.Name+".tar"), buf.Bytes(), 0o644))
 
 	outputPath := t.TempDir()
-	b, err := createFileSBOM(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], outputPath, buildPath, false)
+	b, err := createFileSBOM(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], outputPath, buildPath)
 	require.NoError(t, err)
 
 	var doc model.Document
@@ -185,7 +191,7 @@ func TestCreateFileSBOMContents(t *testing.T) {
 	require.Equal(t, fileContent, b)
 
 	betaOutputPath := t.TempDir()
-	_, err = createFileSBOM(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], betaOutputPath, buildPath, true)
+	_, err = createFileSBOMResource(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], betaOutputPath, buildPath)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.SBOMResourcePath("component:test-component"))))
 }

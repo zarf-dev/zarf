@@ -51,101 +51,131 @@ const componentPrefix = "zarf-component-"
 var viewerAssets embed.FS
 var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
-func generateSBOM(ctx context.Context, pkg api.Package, buildPath string, images []transform.Image, cachePath string) (err error) {
-	l := logger.From(ctx)
-	betaLayout := layout.UsesGranularResourceLayout(pkg)
-	outputPath := buildPath
-	if !betaLayout {
-		outputPath, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			err = errors.Join(err, os.RemoveAll(outputPath))
-		}()
-	}
+type imageSBOMTarget struct {
+	img        v1.Image
+	identifier string
+}
 
-	sbomViewerEnabled := !betaLayout && feature.IsEnabled(feature.SBOMViewer)
-	componentSBOMs := []string{}
-	if sbomViewerEnabled {
-		for _, comp := range pkg.Components {
-			if len(comp.Files) > 0 || len(comp.DataInjections) > 0 {
-				componentSBOMs = append(componentSBOMs, comp.Name)
-			}
-		}
+func generateSBOM(ctx context.Context, pkg api.Package, buildPath string, images []transform.Image, cachePath string) error {
+	targets, err := imageSBOMTargets(buildPath, images)
+	if err != nil {
+		return err
 	}
-	type imageSBOMTarget struct {
-		img        v1.Image
-		identifier string
+	if layout.UsesGranularResourceLayout(pkg) {
+		return generateGranularSBOMs(ctx, pkg, buildPath, targets, cachePath)
 	}
-	var targets []imageSBOMTarget
+	return generateArchivedSBOMs(ctx, pkg, buildPath, targets, cachePath)
+}
+
+func imageSBOMTargets(buildPath string, images []transform.Image) ([]imageSBOMTarget, error) {
+	targets := make([]imageSBOMTarget, 0, len(images))
 	for _, refInfo := range images {
 		platformImages, err := loadOCIImagePlatforms(filepath.Join(buildPath, string(layout.ImagesDir)), refInfo)
 		if err != nil {
-			return fmt.Errorf("failed to load OCI image: %w", err)
+			return nil, fmt.Errorf("failed to load OCI image: %w", err)
 		}
-		for _, pi := range platformImages {
+		for _, platformImage := range platformImages {
 			identifier := refInfo.Reference
-			if pi.platform != nil && pi.platform.Architecture != "" {
-				identifier = fmt.Sprintf("%s-%s-%s", refInfo.Reference, pi.platform.OS, pi.platform.Architecture)
-				if pi.platform.Variant != "" {
-					identifier = fmt.Sprintf("%s-%s", identifier, pi.platform.Variant)
+			if platformImage.platform != nil && platformImage.platform.Architecture != "" {
+				identifier = fmt.Sprintf("%s-%s-%s", refInfo.Reference, platformImage.platform.OS, platformImage.platform.Architecture)
+				if platformImage.platform.Variant != "" {
+					identifier = fmt.Sprintf("%s-%s", identifier, platformImage.platform.Variant)
 				}
 			}
-			targets = append(targets, imageSBOMTarget{img: pi.image, identifier: identifier})
+			targets = append(targets, imageSBOMTarget{img: platformImage.image, identifier: identifier})
 		}
 	}
+	return targets, nil
+}
 
+func generateGranularSBOMs(ctx context.Context, pkg api.Package, buildPath string, targets []imageSBOMTarget, cachePath string) error {
+	l := logger.From(ctx)
+	for index, target := range targets {
+		l.Info("creating image SBOM", "reference", target.identifier, "count", fmt.Sprintf("%d/%d", index+1, len(targets)))
+		if _, err := createImageSBOMResource(ctx, cachePath, buildPath, target.img, target.identifier); err != nil {
+			return fmt.Errorf("failed to create image sbom: %w", err)
+		}
+	}
+	for _, component := range pkg.Components {
+		if len(component.Files) == 0 {
+			continue
+		}
+		if _, err := createFileSBOMResource(ctx, component, buildPath, buildPath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func generateArchivedSBOMs(ctx context.Context, pkg api.Package, buildPath string, targets []imageSBOMTarget, cachePath string) (err error) {
+	outputPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(outputPath))
+	}()
+
+	sbomViewerEnabled := feature.IsEnabled(feature.SBOMViewer)
 	var jsonList []byte
 	if sbomViewerEnabled {
+		componentSBOMs := make([]string, 0, len(pkg.Components))
+		for _, component := range pkg.Components {
+			if len(component.Files) > 0 || len(component.DataInjections) > 0 {
+				componentSBOMs = append(componentSBOMs, component.Name)
+			}
+		}
 		identifiers := make([]string, 0, len(targets))
-		for _, t := range targets {
-			identifiers = append(identifiers, t.identifier)
+		for _, target := range targets {
+			identifiers = append(identifiers, target.identifier)
 		}
 		jsonList, err = generateJSONList(componentSBOMs, identifiers)
 		if err != nil {
 			return err
 		}
 	}
-	for index, t := range targets {
-		l.Info("creating image SBOM", "reference", t.identifier, "count", fmt.Sprintf("%d/%d", index+1, len(targets)))
 
-		b, err := createImageSBOM(ctx, cachePath, outputPath, t.img, t.identifier, betaLayout)
+	l := logger.From(ctx)
+	for index, target := range targets {
+		l.Info("creating image SBOM", "reference", target.identifier, "count", fmt.Sprintf("%d/%d", index+1, len(targets)))
+		jsonData, err := createImageSBOM(ctx, cachePath, outputPath, target.img, target.identifier)
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
 		}
 		if sbomViewerEnabled {
-			err = createSBOMViewerAsset(outputPath, t.identifier, b, jsonList)
-			if err != nil {
+			if err := createSBOMViewerAsset(outputPath, target.identifier, jsonData, jsonList); err != nil {
 				return err
 			}
 		}
 	}
-
-	// Generate SBOM for each component.
-	for _, comp := range pkg.Components {
-		if len(comp.DataInjections) == 0 && len(comp.Files) == 0 {
+	for _, component := range pkg.Components {
+		if len(component.Files) == 0 && len(component.DataInjections) == 0 {
 			continue
 		}
-		jsonData, err := createFileSBOM(ctx, comp, outputPath, buildPath, betaLayout)
+		jsonData, err := createFileSBOM(ctx, component, outputPath, buildPath)
 		if err != nil {
 			return err
 		}
 		if sbomViewerEnabled {
-			err = createSBOMViewerAsset(outputPath, fmt.Sprintf("%s%s", componentPrefix, comp.Name), jsonData, jsonList)
-			if err != nil {
+			if err := createSBOMViewerAsset(outputPath, fmt.Sprintf("%s%s", componentPrefix, component.Name), jsonData, jsonList); err != nil {
 				return err
 			}
 		}
 	}
-
-	if betaLayout {
-		return nil
-	}
 	return createReproducibleTarballFromDir(outputPath, "", filepath.Join(buildPath, layout.SBOMTar), false)
 }
 
-func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, identifier string, betaLayout bool) ([]byte, error) {
+func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, identifier string) ([]byte, error) {
+	filename := getNormalizedFileName(fmt.Sprintf("%s.json", identifier))
+	return createImageSBOMAtPath(ctx, cachePath, filepath.Join(outputPath, filename), img, identifier)
+}
+
+func createImageSBOMResource(ctx context.Context, cachePath, outputPath string, img v1.Image, identifier string) ([]byte, error) {
+	resourcePath := filepath.FromSlash(layout.SBOMResourcePath("image:" + identifier))
+	return createImageSBOMAtPath(ctx, cachePath, filepath.Join(outputPath, resourcePath), img, identifier)
+}
+
+func createImageSBOMAtPath(ctx context.Context, cachePath, sbomPath string, img v1.Image, identifier string) ([]byte, error) {
 	imageCachePath := filepath.Join(cachePath, layout.ImagesDir)
 
 	// This is a write cache
@@ -171,22 +201,26 @@ func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.I
 		return nil, err
 	}
 
-	filename := getNormalizedFileName(fmt.Sprintf("%s.json", identifier))
-	if betaLayout {
-		filename = filepath.FromSlash(layout.SBOMResourcePath("image:" + identifier))
-	}
-	path := filepath.Join(outputPath, filename)
-	if err := os.MkdirAll(filepath.Dir(path), helpers.ReadWriteExecuteUser); err != nil {
+	if err := os.MkdirAll(filepath.Dir(sbomPath), helpers.ReadWriteExecuteUser); err != nil {
 		return nil, fmt.Errorf("creating SBOM resource directory: %w", err)
 	}
-	err = os.WriteFile(path, jsonData, 0o666)
-	if err != nil {
+	if err := os.WriteFile(sbomPath, jsonData, 0o666); err != nil {
 		return nil, err
 	}
 	return jsonData, nil
 }
 
-func createFileSBOM(ctx context.Context, component api.Component, outputPath, buildPath string, betaLayout bool) (_ []byte, err error) {
+func createFileSBOM(ctx context.Context, component api.Component, outputPath, buildPath string) ([]byte, error) {
+	filename := getNormalizedFileName(fmt.Sprintf("%s%s.json", componentPrefix, component.Name))
+	return createFileSBOMAtPath(ctx, component, buildPath, filepath.Join(outputPath, filename))
+}
+
+func createFileSBOMResource(ctx context.Context, component api.Component, outputPath, buildPath string) ([]byte, error) {
+	resourcePath := filepath.FromSlash(layout.SBOMResourcePath("component:" + component.Name))
+	return createFileSBOMAtPath(ctx, component, buildPath, filepath.Join(outputPath, resourcePath))
+}
+
+func createFileSBOMAtPath(ctx context.Context, component api.Component, buildPath, sbomPath string) (_ []byte, err error) {
 	l := logger.From(ctx)
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -296,16 +330,10 @@ func createFileSBOM(ctx context.Context, component api.Component, outputPath, bu
 		return nil, err
 	}
 
-	filename := getNormalizedFileName(fmt.Sprintf("%s%s.json", componentPrefix, component.Name))
-	if betaLayout {
-		filename = filepath.FromSlash(layout.SBOMResourcePath("component:" + component.Name))
-	}
-	path := filepath.Join(outputPath, filename)
-	if err := os.MkdirAll(filepath.Dir(path), helpers.ReadWriteExecuteUser); err != nil {
+	if err := os.MkdirAll(filepath.Dir(sbomPath), helpers.ReadWriteExecuteUser); err != nil {
 		return nil, fmt.Errorf("creating SBOM resource directory: %w", err)
 	}
-	err = os.WriteFile(path, jsonData, 0o666)
-	if err != nil {
+	if err := os.WriteFile(sbomPath, jsonData, 0o666); err != nil {
 		return nil, err
 	}
 	return jsonData, nil
