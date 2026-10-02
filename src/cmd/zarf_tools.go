@@ -786,6 +786,11 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	if newState.GitServer.IsInternal() && gitTLSRequested {
 		newState.GitServer.Address = state.ZarfInClusterGitURL(newState.GitServer.TLSMode)
 	}
+	if o.rotateTLS || (gitTLSRequested && newState.GitServer.IsInternal() && newState.GitServer.TLSMode.Enabled()) {
+		if err := c.RequireGitServerTLSCapability(ctx); err != nil {
+			return err
+		}
+	}
 	var rollbackTLS *pki.GeneratedPKI
 	if gitTLSRequested && oldState.GitServer.TLSMode.Enabled() && oldState.GitServer.TLSCertManagement == state.GitTLSCertUserManaged {
 		previousTLS, err := c.GetGitServerTLS(ctx)

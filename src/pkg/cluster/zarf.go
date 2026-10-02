@@ -61,6 +61,39 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]state.Deployed
 	return deployedPackages, nil
 }
 
+// RequireGitServerTLSCapability checks that the installed init package can
+// serve Git over TLS before the Git server certificate or protocol is changed.
+func (c *Cluster) RequireGitServerTLSCapability(ctx context.Context) error {
+	packages, err := c.GetDeployedZarfPackages(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to inspect deployed init packages: %w", err)
+	}
+
+	foundGitServer := false
+	for _, deployed := range packages {
+		definition, err := deployed.Definition()
+		if err != nil {
+			return fmt.Errorf("unable to inspect deployed package %q: %w", deployed.Name, err)
+		}
+		if !definition.IsInitConfig() {
+			continue
+		}
+		for _, component := range definition.Components {
+			if component.Service != api.ServiceGitServer {
+				continue
+			}
+			foundGitServer = true
+			if !definition.SupportsGitServerTLS() {
+				return fmt.Errorf("deployed init package %q does not declare %s=%s; upgrade the init package before changing Git server TLS", deployed.Name, api.GitServerTLSCapabilityAnnotation, api.GitServerTLSCapabilityV1)
+			}
+		}
+	}
+	if !foundGitServer {
+		return fmt.Errorf("no deployed init package with a git-server component was found; deploy a Git TLS-capable init package before changing Git server TLS")
+	}
+	return nil
+}
+
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
 func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {

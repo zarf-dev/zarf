@@ -109,6 +109,51 @@ func TestRecordPackageDefinitionDeployment(t *testing.T) {
 	require.Equal(t, convert.PackageToV1beta1(definition), convert.PackageToV1beta1(loadedDefinition))
 }
 
+func TestRequireGitServerTLSCapability(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name       string
+		annotation string
+		deployed   bool
+		legacyData bool
+		wantError  string
+	}{
+		{name: "no deployed Git server", wantError: "no deployed init package with a git-server component"},
+		{name: "older init package", deployed: true, legacyData: true, wantError: "zarf.dev/git-server-tls=v1"},
+		{name: "unsupported capability", annotation: "v2", deployed: true, wantError: "zarf.dev/git-server-tls=v1"},
+		{name: "TLS-capable init package without deployment status", annotation: api.GitServerTLSCapabilityV1, deployed: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := t.Context()
+			c := &Cluster{Clientset: fake.NewClientset()}
+			if tc.deployed {
+				metadata := api.PackageMetadata{Name: "init"}
+				if tc.annotation != "" {
+					metadata.Annotations = map[string]string{api.GitServerTLSCapabilityAnnotation: tc.annotation}
+				}
+				deployed, err := c.RecordPackageDeployment(ctx, api.Package{
+					Kind:       api.ZarfInitConfig,
+					Metadata:   metadata,
+					Components: []api.Component{{Name: "git-server", Service: api.ServiceGitServer}},
+				}, "sha256:abc", nil, 1)
+				require.NoError(t, err)
+				if tc.legacyData {
+					deployed.PackageData = nil
+					require.NoError(t, c.UpdateDeployedPackage(ctx, *deployed))
+				}
+			}
+			err := c.RequireGitServerTLSCapability(ctx)
+			if tc.wantError == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tc.wantError)
+			}
+		})
+	}
+}
+
 func TestGetInstalledChartsForComponentNamespaceOverride(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
