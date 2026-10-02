@@ -1006,7 +1006,7 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
+		LayerSelection:       zoci.LayerSelection{Types: []zoci.LayerType{zoci.ComponentLayers}},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1115,7 +1115,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
+		LayerSelection:       zoci.LayerSelection{Types: []zoci.LayerType{zoci.ComponentLayers}},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1210,12 +1210,16 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerTypes:           []zoci.LayerType{zoci.SbomLayers},
-		SBOMKeys:             o.keys,
-		Filter:               filters.Empty(),
-		OCIConcurrency:       o.ociConcurrency,
-		RemoteOptions:        defaultRemoteOptions(),
-		CachePath:            cachePath,
+		LayerSelection: zoci.LayerSelection{
+			Types: []zoci.LayerType{zoci.SbomLayers},
+			ResourceKeys: map[zoci.LayerType][]string{
+				zoci.SbomLayers: o.keys,
+			},
+		},
+		Filter:         filters.Empty(),
+		OCIConcurrency: o.ociConcurrency,
+		RemoteOptions:  defaultRemoteOptions(),
+		CachePath:      cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -1360,8 +1364,12 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayerTypes:           []zoci.LayerType{zoci.DocLayers},
-		DocumentationKeys:    o.keys,
+		LayerSelection: zoci.LayerSelection{
+			Types: []zoci.LayerType{zoci.DocLayers},
+			ResourceKeys: map[zoci.LayerType][]string{
+				zoci.DocLayers: o.keys,
+			},
+		},
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -2148,7 +2156,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayerTypes:           []zoci.LayerType{zoci.MetadataLayers},
+		LayerSelection:       zoci.LayerSelection{Types: []zoci.LayerType{zoci.MetadataLayers}},
 	}
 
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)

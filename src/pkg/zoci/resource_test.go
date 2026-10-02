@@ -20,7 +20,13 @@ func TestGranularResourceLayersSelectsKeys(t *testing.T) {
 		{Annotations: map[string]string{layout.ResourceKindAnnotation: layout.ResourceKindSBOM, layout.ResourceKeyAnnotation: "component:logging"}},
 	}}}
 
-	layers, err := granularResourceLayers(root, layout.ResourceKindSBOM, []string{"component:metrics"})
+	selection := LayerSelection{
+		Types: []LayerType{SbomLayers},
+		ResourceKeys: map[LayerType][]string{
+			SbomLayers: {"component:metrics"},
+		},
+	}
+	layers, err := granularResourceLayers(root, layout.ResourceKindSBOM, selection.ResourceKeys[SbomLayers])
 	require.NoError(t, err)
 	require.Len(t, layers, 1)
 	require.Equal(t, "component:metrics", layers[0].Annotations[layout.ResourceKeyAnnotation])

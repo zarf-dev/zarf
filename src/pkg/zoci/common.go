@@ -25,11 +25,11 @@ import (
 // LayerType specifies a category of layers in a Zarf OCI package.
 type LayerType string
 
-// LayerSelection identifies OCI package layer categories and individual granular resources to pull.
+// LayerSelection identifies OCI package layer categories and granular resources to pull.
+// A missing ResourceKeys entry selects all resources of that layer type.
 type LayerSelection struct {
-	Types             []LayerType
-	DocumentationKeys []string
-	SBOMKeys          []string
+	Types        []LayerType
+	ResourceKeys map[LayerType][]string
 }
 
 const (

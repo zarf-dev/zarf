@@ -118,7 +118,7 @@ func AssembleLayersWithSelection(ctx context.Context, root *oci.Manifest, fetche
 
 	if slices.Contains(include, SbomLayers) {
 		if layout.UsesGranularResourceLayout(pkg) {
-			resources, err := granularResourceLayers(root, layout.ResourceKindSBOM, selection.SBOMKeys)
+			resources, err := granularResourceLayers(root, layout.ResourceKindSBOM, selection.ResourceKeys[SbomLayers])
 			if err != nil {
 				return nil, err
 			}
@@ -130,7 +130,7 @@ func AssembleLayersWithSelection(ctx context.Context, root *oci.Manifest, fetche
 
 	if slices.Contains(include, DocLayers) && len(pkg.Documentation) > 0 {
 		if layout.UsesGranularResourceLayout(pkg) {
-			resources, err := granularResourceLayers(root, layout.ResourceKindDocumentation, selection.DocumentationKeys)
+			resources, err := granularResourceLayers(root, layout.ResourceKindDocumentation, selection.ResourceKeys[DocLayers])
 			if err != nil {
 				return nil, err
 			}
