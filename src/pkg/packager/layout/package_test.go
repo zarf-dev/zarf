@@ -177,10 +177,60 @@ func TestGetSBOMResourcesV1Beta1PreservesResourceKinds(t *testing.T) {
 		componentContents, err := os.ReadFile(filepath.Join(outputDir, "files", componentName+".json"))
 		require.NoError(t, err)
 		require.Equal(t, "component SBOM", string(componentContents))
-		imageContents, err := os.ReadFile(filepath.Join(outputDir, "images", filepath.Base(SBOMResourcePath(imageKey))))
+		imageContents, err := os.ReadFile(filepath.Join(outputDir, "images", "foo.json"))
 		require.NoError(t, err)
 		require.Equal(t, "image SBOM", string(imageContents))
 	}
+}
+
+func TestGetSBOMResourcesV1Beta1UsesLegacyImageFilenames(t *testing.T) {
+	t.Parallel()
+
+	const imageKey = "image:ghcr.io/acme/app:1.4.0-linux-amd64"
+	dir := t.TempDir()
+	resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath(imageKey)))
+	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+	require.NoError(t, os.WriteFile(resourcePath, []byte("image SBOM"), 0o600))
+
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}}},
+		},
+	}
+	outputDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{imageKey}))
+	contents, err := os.ReadFile(filepath.Join(outputDir, "images", "ghcr.io_acme_app_1.4.0-linux-amd64.json"))
+	require.NoError(t, err)
+	require.Equal(t, "image SBOM", string(contents))
+}
+
+func TestGetSBOMResourcesV1Beta1RejectsLegacyImageFilenameCollisions(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	for resourceKey, contents := range map[string]string{
+		"image:a/b:c": "first image SBOM",
+		"image:a_b:c": "second image SBOM",
+	} {
+		resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath(resourceKey)))
+		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o600))
+	}
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}}},
+		},
+	}
+	outputDir := t.TempDir()
+	err := pkgLayout.GetSBOMResources(t.Context(), outputDir, nil)
+	require.ErrorContains(t, err, `both normalize to "images/a_b_c.json"`)
+	require.NoFileExists(t, filepath.Join(outputDir, "images", "a_b_c.json"))
 }
 
 func TestPackageLayoutMutators(t *testing.T) {

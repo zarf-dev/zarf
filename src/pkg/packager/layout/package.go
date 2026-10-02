@@ -564,48 +564,113 @@ func (p *PackageLayout) GetSBOMResources(ctx context.Context, destPath string, k
 		return archive.Decompress(ctx, filepath.Join(p.dirPath, SBOMTar), destPath, archive.DecompressOpts{})
 	}
 
+	resources, err := p.sbomResources(keys)
+	if err != nil {
+		return err
+	}
+	destinationPaths, err := sbomResourceDestinationPaths(destPath, resources)
+	if err != nil {
+		return err
+	}
 	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf("creating SBOM output directory: %w", err)
 	}
-	resourceRoot := filepath.Join(p.dirPath, SBOMResourcesDir)
-	if len(keys) == 0 {
-		return filepath.WalkDir(resourceRoot, func(sourcePath string, entry fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if entry.IsDir() {
-				return nil
-			}
-			return copySBOMResource(resourceRoot, destPath, sourcePath)
-		})
-	}
-
-	for _, key := range keys {
-		resourcePath, err := sbomResourcePathForKey(key)
-		if err != nil {
-			return err
-		}
-		sourcePath := filepath.Join(p.dirPath, filepath.FromSlash(resourcePath))
-		if err := copySBOMResource(resourceRoot, destPath, sourcePath); err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("SBOM resource key %q not found in package", key)
-			}
+	for index, resource := range resources {
+		if err := copyResourceFile(resource.sourcePath, destinationPaths[index]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func copySBOMResource(resourceRoot, destPath, sourcePath string) error {
-	relativePath, err := filepath.Rel(resourceRoot, sourcePath)
-	if err != nil {
-		return fmt.Errorf("calculating SBOM resource path: %w", err)
+type sbomResource struct {
+	key          string
+	resourcePath string
+	sourcePath   string
+}
+
+func (p *PackageLayout) sbomResources(keys []string) ([]sbomResource, error) {
+	resourceRoot := filepath.Join(p.dirPath, SBOMResourcesDir)
+	if len(keys) == 0 {
+		resources := []sbomResource{}
+		err := filepath.WalkDir(resourceRoot, func(sourcePath string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			resourcePath, err := filepath.Rel(p.dirPath, sourcePath)
+			if err != nil {
+				return fmt.Errorf("calculating SBOM resource path: %w", err)
+			}
+			resourcePath = filepath.ToSlash(resourcePath)
+			key, ok := SBOMResourceKey(resourcePath)
+			if !ok {
+				return fmt.Errorf("invalid SBOM resource path %q", resourcePath)
+			}
+			resources = append(resources, sbomResource{
+				key:          key,
+				resourcePath: resourcePath,
+				sourcePath:   sourcePath,
+			})
+			return nil
+		})
+		return resources, err
 	}
-	destinationPath, err := resourceDestinationPath(destPath, relativePath)
-	if err != nil {
-		return fmt.Errorf("SBOM resource %q is outside resource root: %w", sourcePath, err)
+
+	resources := make([]sbomResource, 0, len(keys))
+	for _, key := range keys {
+		resourcePath, err := sbomResourcePathForKey(key)
+		if err != nil {
+			return nil, err
+		}
+		sourcePath := filepath.Join(p.dirPath, filepath.FromSlash(resourcePath))
+		if _, err := os.Stat(sourcePath); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil, fmt.Errorf("SBOM resource key %q not found in package", key)
+			}
+			return nil, fmt.Errorf("checking SBOM resource key %q: %w", key, err)
+		}
+		resources = append(resources, sbomResource{
+			key:          key,
+			resourcePath: resourcePath,
+			sourcePath:   sourcePath,
+		})
 	}
-	return copyResourceFile(sourcePath, destinationPath)
+	return resources, nil
+}
+
+func sbomResourceDestinationPaths(destRoot string, resources []sbomResource) ([]string, error) {
+	destinationPaths := make([]string, len(resources))
+	resourceKeysByDestination := make(map[string]string, len(resources))
+	for index, resource := range resources {
+		relativePath, err := sbomResourceOutputPath(resource.resourcePath, resource.key)
+		if err != nil {
+			return nil, err
+		}
+		if conflictingKey, exists := resourceKeysByDestination[relativePath]; exists && conflictingKey != resource.key {
+			return nil, fmt.Errorf("SBOM resource keys %q and %q both normalize to %q", conflictingKey, resource.key, relativePath)
+		}
+		resourceKeysByDestination[relativePath] = resource.key
+		destinationPath, err := resourceDestinationPath(destRoot, relativePath)
+		if err != nil {
+			return nil, fmt.Errorf("invalid SBOM output path %q: %w", relativePath, err)
+		}
+		destinationPaths[index] = destinationPath
+	}
+	return destinationPaths, nil
+}
+
+func sbomResourceOutputPath(resourcePath, key string) (string, error) {
+	relativePath, found := strings.CutPrefix(resourcePath, SBOMResourcesDir+"/")
+	if !found {
+		return "", fmt.Errorf("SBOM resource path %q is outside resource root", resourcePath)
+	}
+	if imageIdentifier, ok := strings.CutPrefix(key, "image:"); ok {
+		return filepath.Join("images", NormalizeSBOMFilename(imageIdentifier+".json")), nil
+	}
+	return filepath.FromSlash(relativePath), nil
 }
 
 func resourceDestinationPath(destRoot, resourcePath string) (string, error) {

@@ -6,6 +6,7 @@ package layout
 import (
 	"encoding/base64"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api"
@@ -69,4 +70,11 @@ func SBOMResourceKey(resourcePath string) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+var legacySBOMFilenamePattern = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
+
+// NormalizeSBOMFilename returns the filename used for archive-backed SBOMs.
+func NormalizeSBOMFilename(identifier string) string {
+	return legacySBOMFilenamePattern.ReplaceAllString(identifier, "_")
 }

@@ -12,7 +12,6 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 
 	"github.com/anchore/stereoscope/pkg/file"
@@ -49,7 +48,6 @@ const componentPrefix = "zarf-component-"
 
 //go:embed viewer/*
 var viewerAssets embed.FS
-var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
 type imageSBOMTarget struct {
 	img        v1.Image
@@ -166,7 +164,7 @@ func generateArchivedSBOMs(ctx context.Context, pkg api.Package, buildPath strin
 }
 
 func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, identifier string) ([]byte, error) {
-	filename := getNormalizedFileName(fmt.Sprintf("%s.json", identifier))
+	filename := layout.NormalizeSBOMFilename(fmt.Sprintf("%s.json", identifier))
 	return createImageSBOMAtPath(ctx, cachePath, filepath.Join(outputPath, filename), img, identifier)
 }
 
@@ -211,7 +209,7 @@ func createImageSBOMAtPath(ctx context.Context, cachePath, sbomPath string, img 
 }
 
 func createFileSBOM(ctx context.Context, component api.Component, outputPath, buildPath string) ([]byte, error) {
-	filename := getNormalizedFileName(fmt.Sprintf("%s%s.json", componentPrefix, component.Name))
+	filename := layout.NormalizeSBOMFilename(fmt.Sprintf("%s%s.json", componentPrefix, component.Name))
 	return createFileSBOMAtPath(ctx, component, buildPath, filepath.Join(outputPath, filename))
 }
 
@@ -340,12 +338,12 @@ func createFileSBOMAtPath(ctx context.Context, component api.Component, buildPat
 }
 
 func createSBOMViewerAsset(outputDir, identifier string, jsonData, jsonList []byte) error {
-	filename := fmt.Sprintf("sbom-viewer-%s.html", getNormalizedFileName(identifier))
+	filename := fmt.Sprintf("sbom-viewer-%s.html", layout.NormalizeSBOMFilename(identifier))
 	return createSBOMHTML(outputDir, filename, "viewer/template.gohtml", jsonData, jsonList)
 }
 
 func createSBOMHTML(outputDir, filename, goTemplate string, jsonData, jsonList []byte) error {
-	path := filepath.Join(outputDir, getNormalizedFileName(filename))
+	path := filepath.Join(outputDir, layout.NormalizeSBOMFilename(filename))
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -413,17 +411,13 @@ func loadFileJS(name string) (template.JS, error) {
 	return template.JS(data), nil
 }
 
-func getNormalizedFileName(identifier string) string {
-	return transformRegex.ReplaceAllString(identifier, "_")
-}
-
 func generateJSONList(components []string, imageIdentifiers []string) ([]byte, error) {
 	var jsonList []string
 	for _, id := range imageIdentifiers {
-		jsonList = append(jsonList, getNormalizedFileName(id))
+		jsonList = append(jsonList, layout.NormalizeSBOMFilename(id))
 	}
 	for _, k := range components {
-		normalized := getNormalizedFileName(fmt.Sprintf("%s%s", componentPrefix, k))
+		normalized := layout.NormalizeSBOMFilename(fmt.Sprintf("%s%s", componentPrefix, k))
 		jsonList = append(jsonList, normalized)
 	}
 	return json.Marshal(jsonList)
