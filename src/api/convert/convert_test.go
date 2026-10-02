@@ -118,6 +118,7 @@ func TestV1Alpha1PkgToV1Beta1_ImageSource(t *testing.T) {
 
 	normalized := PackageFromV1alpha1(pkg)
 	require.Equal(t, api.ImageSourceRegistryDaemonFallback, normalized.Components[0].Images[0].Source)
+	require.NoError(t, normalized.Validate())
 	require.Equal(t, pkg.Components[0].Images, PackageToV1alpha1(normalized).Components[0].Images)
 	require.Equal(t, v1beta1.ImageSourceRegistry, PackageToV1beta1(normalized).Components[0].Images[0].Source)
 }
