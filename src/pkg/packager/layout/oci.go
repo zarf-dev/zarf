@@ -81,7 +81,19 @@ func AnnotationsFromMetadata(pkg api.Package) map[string]string {
 	return annotations
 }
 
-func resourceAnnotations(resourcePath string, pkg api.Package) map[string]string {
+func documentationResourceKeys(documentation map[string]string) (map[string]string, error) {
+	fileNames, err := GetDocumentationFileNames(documentation)
+	if err != nil {
+		return nil, err
+	}
+	resourceKeys := make(map[string]string, len(fileNames))
+	for key, fileName := range fileNames {
+		resourceKeys[DocumentationResourcePath(fileName)] = key
+	}
+	return resourceKeys, nil
+}
+
+func resourceAnnotations(resourcePath string, pkg api.Package, documentationKeys map[string]string) map[string]string {
 	annotations := map[string]string{
 		ocispec.AnnotationTitle: resourcePath,
 	}
@@ -89,10 +101,7 @@ func resourceAnnotations(resourcePath string, pkg api.Package) map[string]string
 		return annotations
 	}
 
-	for key, fileName := range GetDocumentationFileNames(pkg.Documentation) {
-		if resourcePath != DocumentationResourcePath(fileName) {
-			continue
-		}
+	if key, ok := documentationKeys[resourcePath]; ok {
 		annotations[ResourceMountPathAnnotation] = resourcePath
 		annotations[ResourceKindAnnotation] = ResourceKindDocumentation
 		annotations[ResourceKeyAnnotation] = key
@@ -142,6 +151,10 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	configDefinition, configPackage, err := pkgcfg.ParseMultiDocNative(ctx, zarfYAMLBytes)
 	if err != nil {
 		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
+	}
+	documentationKeys, err := documentationResourceKeys(configPackage.Documentation)
+	if err != nil {
+		return fmt.Errorf("validating documentation resource paths: %w", err)
 	}
 
 	files, err := p.Files()
@@ -203,7 +216,7 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 			MediaType:   ZarfLayerMediaTypeBlob,
 			Digest:      fileDigest,
 			Size:        fileSize,
-			Annotations: resourceAnnotations(rel, configPackage),
+			Annotations: resourceAnnotations(rel, configPackage, documentationKeys),
 		})
 		blobs[fileDigest] = filePath
 		totalLayerSize += fileSize

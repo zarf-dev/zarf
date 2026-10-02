@@ -601,10 +601,23 @@ func copySBOMResource(resourceRoot, destPath, sourcePath string) error {
 	if err != nil {
 		return fmt.Errorf("calculating SBOM resource path: %w", err)
 	}
-	if relativePath == ".." || strings.HasPrefix(relativePath, ".."+string(filepath.Separator)) {
-		return fmt.Errorf("SBOM resource %q is outside resource root", sourcePath)
+	destinationPath, err := resourceDestinationPath(destPath, relativePath)
+	if err != nil {
+		return fmt.Errorf("SBOM resource %q is outside resource root: %w", sourcePath, err)
 	}
-	return copyResourceFile(sourcePath, filepath.Join(destPath, relativePath))
+	return copyResourceFile(sourcePath, destinationPath)
+}
+
+func resourceDestinationPath(destRoot, resourcePath string) (string, error) {
+	destinationPath := filepath.Join(destRoot, resourcePath)
+	relativePath, err := filepath.Rel(destRoot, destinationPath)
+	if err != nil {
+		return "", fmt.Errorf("calculating resource destination path: %w", err)
+	}
+	if relativePath == ".." || strings.HasPrefix(relativePath, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("resource path %q escapes destination directory", resourcePath)
+	}
+	return destinationPath, nil
 }
 
 func sbomResourcePathForKey(key string) (string, error) {
@@ -630,6 +643,10 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("no documentation files found in package")
 	}
 
+	fileNames, err := GetDocumentationFileNames(p.pkg.Documentation)
+	if err != nil {
+		return err
+	}
 	keysToExtract := maps.Clone(p.pkg.Documentation)
 	if len(keys) > 0 {
 		keysToExtract = make(map[string]string)
@@ -666,10 +683,13 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
 	}
-	fileNames := GetDocumentationFileNames(p.pkg.Documentation)
 	for key, file := range keysToExtract {
 		docFileName := fileNames[key]
-		if err := copyResourceFile(filepath.Join(sourceDir, docFileName), filepath.Join(destPath, docFileName)); err != nil {
+		destinationPath, err := resourceDestinationPath(destPath, docFileName)
+		if err != nil {
+			return fmt.Errorf("invalid documentation output path: %w", err)
+		}
+		if err := copyResourceFile(filepath.Join(sourceDir, docFileName), destinationPath); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", file, err)
 		}
 	}
@@ -678,30 +698,38 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 	return nil
 }
 
-// FormatDocumentFileName for storing the document in the package or presenting it to the user
+// FormatDocumentFileName returns the stored filename for a documentation file whose basename collides with another document.
 func FormatDocumentFileName(key, file string) string {
 	return fmt.Sprintf("%s-%s", key, filepath.Base(file))
 }
 
-// GetDocumentationFileNames returns a map of documentation keys to their final filenames.
-// Filenames are deconflicted: if multiple keys have the same basename, they get prefixed with the key.
-func GetDocumentationFileNames(documentation map[string]string) map[string]string {
-	basenameCounts := make(map[string]int)
-	for _, file := range documentation {
+// GetDocumentationFileNames returns the validated package filenames for documentation keys.
+// Filenames are deconflicted: if multiple keys have the same basename, they are prefixed with the key.
+func GetDocumentationFileNames(documentation map[string]string) (map[string]string, error) {
+	basenameCounts := make(map[string]int, len(documentation))
+	basenames := make(map[string]string, len(documentation))
+	for key, file := range documentation {
+		if !isCleanDocumentationKey(key) {
+			return nil, fmt.Errorf("documentation key %q would result in an invalid path", key)
+		}
 		basename := filepath.Base(file)
+		if !isCleanDocumentationFileName(basename) {
+			return nil, fmt.Errorf("documentation file %q would result in an invalid path", file)
+		}
+		basenames[key] = basename
 		basenameCounts[basename]++
 	}
 
-	result := make(map[string]string)
+	result := make(map[string]string, len(documentation))
 	for key, file := range documentation {
-		basename := filepath.Base(file)
+		basename := basenames[key]
 		if basenameCounts[basename] == 1 {
 			result[key] = basename
 		} else {
 			result[key] = FormatDocumentFileName(key, file)
 		}
 	}
-	return result
+	return result, nil
 }
 
 // GetComponentDir returns a path to the directory in the given component.
@@ -967,6 +995,9 @@ func validatePackagePaths(pkg api.Package) error {
 			}
 		}
 	}
+	if _, err := GetDocumentationFileNames(pkg.Documentation); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -974,4 +1005,12 @@ func validatePackagePaths(pkg api.Package) error {
 // it must not be ".." and must not contain path separators.
 func isCleanPath(s string) bool {
 	return s != ".." && !strings.ContainsAny(s, `/\`)
+}
+
+func isCleanDocumentationKey(key string) bool {
+	return key != "" && key != "." && isCleanPath(key)
+}
+
+func isCleanDocumentationFileName(fileName string) bool {
+	return fileName != "" && fileName != "." && isCleanPath(fileName)
 }

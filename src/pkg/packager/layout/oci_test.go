@@ -91,13 +91,15 @@ func TestResourceAnnotations(t *testing.T) {
 	t.Parallel()
 
 	pkg := api.Package{APIVersion: v1beta1.APIVersion, Documentation: map[string]string{"readme": "README.md"}}
+	documentationKeys, err := documentationResourceKeys(pkg.Documentation)
+	require.NoError(t, err)
 	documentationPath := DocumentationResourcePath("README.md")
 	require.Equal(t, map[string]string{
 		ocispec.AnnotationTitle:     documentationPath,
 		ResourceMountPathAnnotation: documentationPath,
 		ResourceKindAnnotation:      ResourceKindDocumentation,
 		ResourceKeyAnnotation:       "readme",
-	}, resourceAnnotations(documentationPath, pkg))
+	}, resourceAnnotations(documentationPath, pkg, documentationKeys))
 
 	sbomKey := "component:metrics"
 	sbomPath := SBOMResourcePath(sbomKey)
@@ -106,7 +108,7 @@ func TestResourceAnnotations(t *testing.T) {
 		ResourceMountPathAnnotation: sbomPath,
 		ResourceKindAnnotation:      ResourceKindSBOM,
 		ResourceKeyAnnotation:       sbomKey,
-	}, resourceAnnotations(sbomPath, pkg))
+	}, resourceAnnotations(sbomPath, pkg, documentationKeys))
 }
 
 func TestComputeManifestAnnotatesV1Beta1Resources(t *testing.T) {

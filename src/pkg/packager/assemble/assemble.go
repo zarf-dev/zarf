@@ -1117,6 +1117,11 @@ func stageDocumentation(pkg api.Package, resources *load.ResourceSet, buildPath 
 		return nil
 	}
 
+	// Get the mapping of keys to their final filenames (with deduplication logic).
+	fileNames, err := layout.GetDocumentationFileNames(pkg.Documentation)
+	if err != nil {
+		return fmt.Errorf("validating documentation filenames: %w", err)
+	}
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to create temp directory for documentation: %w", err)
@@ -1124,9 +1129,6 @@ func stageDocumentation(pkg api.Package, resources *load.ResourceSet, buildPath 
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
-
-	// Get the mapping of keys to their final filenames (with deduplication logic).
-	fileNames := layout.GetDocumentationFileNames(pkg.Documentation)
 	for key, file := range pkg.Documentation {
 		src, err := resources.Path(file)
 		if err != nil {

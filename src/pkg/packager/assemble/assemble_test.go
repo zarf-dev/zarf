@@ -696,6 +696,23 @@ components:
 	require.NoFileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationTar))
 }
 
+func TestStageDocumentationRejectsUnsafeKeys(t *testing.T) {
+	t.Parallel()
+
+	for _, apiVersion := range []string{v1alpha1.APIVersion, v1beta1.APIVersion} {
+		t.Run(apiVersion, func(t *testing.T) {
+			buildPath := t.TempDir()
+			err := stageDocumentation(api.Package{
+				APIVersion:    apiVersion,
+				Documentation: map[string]string{"../escape": "first/README.md", "readme": "second/README.md"},
+			}, load.NewResourceSet(t.TempDir()), buildPath)
+
+			require.EqualError(t, err, `validating documentation filenames: documentation key "../escape" would result in an invalid path`)
+			require.NoFileExists(t, filepath.Join(filepath.Dir(buildPath), "escape-README.md"))
+		})
+	}
+}
+
 func TestAssemblePackageV1Alpha1DoesNotWriteV1Beta1Definition(t *testing.T) {
 	t.Parallel()
 

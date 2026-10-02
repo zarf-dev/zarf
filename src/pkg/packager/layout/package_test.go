@@ -1450,6 +1450,39 @@ func TestGetDocumentation(t *testing.T) {
 
 		assertFileContent(t, filepath.Join(outputDir, "readme1-README.md"), "readme1 content")
 	})
+
+	t.Run("rejects documentation keys that escape output directory", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{
+				"../escape": "first/README.md",
+				"readme":    "second/README.md",
+			},
+			nil,
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		require.EqualError(t, err, `documentation key "../escape" would result in an invalid path`)
+		require.NoFileExists(t, filepath.Join(filepath.Dir(outputDir), "escape-README.md"))
+	})
+}
+
+func TestGetDocumentationFileNamesRejectsUnsafePaths(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]map[string]string{
+		"empty key":               {"": "README.md"},
+		"current directory key":   {".": "README.md"},
+		"parent directory key":    {"..": "README.md"},
+		"slash in key":            {"docs/readme": "README.md"},
+		"backslash in key":        {`docs\readme`: "README.md"},
+		"parent directory source": {"readme": ".."},
+	}
+	for name, documentation := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := GetDocumentationFileNames(documentation)
+			require.ErrorContains(t, err, "would result in an invalid path")
+		})
+	}
 }
 
 func TestLoadFromDir_VerificationStrategies(t *testing.T) {
