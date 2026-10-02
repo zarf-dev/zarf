@@ -16,10 +16,10 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Masterminds/semver/v3"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/config"
@@ -98,16 +98,11 @@ func (o *getCredsOptions) run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	// TODO: Determine if this is actually needed.
-	if s.Distro == "" {
-		return errors.New("state.Distro empty, did not load from cluster")
-	}
 
 	if len(args) > 0 {
 		// If a component name is provided, only show that component's credentials
 		// Printing both the pterm output and slogger for now
-		printComponentCredential(ctx, s, args[0], o.outputWriter)
-		return nil
+		return printComponentCredential(ctx, s, args[0], o.outputWriter)
 	}
 
 	if s.ArtifactServer.IsConfigured() {
@@ -124,13 +119,10 @@ type credentialInfo struct {
 	GetCredsKey string `json:"getCredsKey"`
 }
 
-// TODO Zarf state should be changed to have empty values when a service is not in use
-// Once this change is in place, this function should check if the git server, artifact server, or registry server
-// information is empty and avoid printing that service if so
 func printCredentialTable(s *state.State, outputFormat outputFormat, out io.Writer) error {
-	var credentials []credentialInfo
+	credentials := []credentialInfo{}
 
-	if s.RegistryInfo.IsInternal() {
+	if s.RegistryInfo.IsConfigured() {
 		credentials = append(credentials,
 			credentialInfo{
 				Application: "Registry",
@@ -149,29 +141,34 @@ func printCredentialTable(s *state.State, outputFormat outputFormat, out io.Writ
 		)
 	}
 
-	credentials = append(credentials,
-		credentialInfo{
+	if s.GitServer.IsConfigured() {
+		credentials = append(credentials, credentialInfo{
 			Application: "Git",
 			Username:    s.GitServer.PushUsername,
 			Password:    s.GitServer.PushPassword,
 			Connect:     "zarf connect git",
 			GetCredsKey: gitKey,
-		},
-		credentialInfo{
+		}, credentialInfo{
 			Application: "Git (read-only)",
 			Username:    s.GitServer.PullUsername,
 			Password:    s.GitServer.PullPassword,
 			Connect:     "zarf connect git",
 			GetCredsKey: gitReadKey,
-		},
-		credentialInfo{
+		})
+	}
+
+	if s.ArtifactServer.IsConfigured() {
+		credentials = append(credentials, credentialInfo{
 			Application: "Artifact Token",
 			Username:    s.ArtifactServer.PushUsername,
 			Password:    s.ArtifactServer.PushToken,
 			Connect:     "zarf connect git",
 			GetCredsKey: artifactKey,
-		},
-	)
+		})
+	}
+	if len(credentials) == 0 {
+		return errors.New("no services configured")
+	}
 
 	switch outputFormat {
 	case outputJSON:
@@ -201,28 +198,44 @@ func printCredentialTable(s *state.State, outputFormat outputFormat, out io.Writ
 	return nil
 }
 
-func printComponentCredential(ctx context.Context, s *state.State, componentName string, out io.Writer) {
+func printComponentCredential(ctx context.Context, s *state.State, componentName string, out io.Writer) error {
 	l := logger.From(ctx)
 	switch strings.ToLower(componentName) {
 	case gitKey:
+		if !s.GitServer.IsConfigured() {
+			return fmt.Errorf("service %q not found", componentName)
+		}
 		l.Info("Git server push password", "username", s.GitServer.PushUsername)
 		fmt.Fprintln(out, s.GitServer.PushPassword)
 	case gitReadKey:
+		if !s.GitServer.IsConfigured() {
+			return fmt.Errorf("service %q not found", componentName)
+		}
 		l.Info("Git server (read-only) password", "username", s.GitServer.PullUsername)
 		fmt.Fprintln(out, s.GitServer.PullPassword)
 	case artifactKey:
+		if !s.ArtifactServer.IsConfigured() {
+			return fmt.Errorf("service %q not found", componentName)
+		}
 		logger.From(ctx).Warn(lang.ArtifactServerDeprecated)
 		l.Info("artifact server token", "username", s.ArtifactServer.PushUsername)
 		fmt.Fprintln(out, s.ArtifactServer.PushToken)
 	case registryKey:
+		if !s.RegistryInfo.IsConfigured() {
+			return fmt.Errorf("service %q not found", componentName)
+		}
 		l.Info("image registry password", "username", s.RegistryInfo.PushUsername)
 		fmt.Fprintln(out, s.RegistryInfo.PushPassword)
 	case registryReadKey:
+		if !s.RegistryInfo.IsConfigured() {
+			return fmt.Errorf("service %q not found", componentName)
+		}
 		l.Info("image registry (read-only) password", "username", s.RegistryInfo.PullUsername)
 		fmt.Fprintln(out, s.RegistryInfo.PullPassword)
 	default:
-		l.Warn("unknown component", "component", componentName)
+		return fmt.Errorf("service %q not found", componentName)
 	}
+	return nil
 }
 
 type updateCredsOptions struct {

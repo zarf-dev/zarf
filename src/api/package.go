@@ -79,9 +79,10 @@ type Component struct {
 	Name          string
 	Description   string
 	Optional      bool
+	Selector      ComponentSelector
 	Target        ComponentTarget
 	Import        ComponentImport
-	Service       string
+	Service       Service
 	Manifests     []Manifest
 	Charts        []Chart
 	Files         []File
@@ -98,11 +99,27 @@ type Component struct {
 	Distros        []string
 }
 
-// ComponentTarget filters a component to a target OS/arch/flavor.
-type ComponentTarget struct {
-	OS           string
+// Service identifies a Zarf-managed cluster service provided by a component.
+type Service string
+
+// Service identifiers used by components that provide Zarf-managed cluster services.
+const (
+	ServiceRegistry     Service = "registry"
+	ServiceSeedRegistry Service = "seed-registry"
+	ServiceInjector     Service = "injector"
+	ServiceAgent        Service = "agent"
+	ServiceGitServer    Service = "git-server"
+)
+
+// ComponentSelector filters a component during package creation.
+type ComponentSelector struct {
 	Architecture string
 	Flavor       string
+}
+
+// ComponentTarget filters a component to a target OS at deploy time.
+type ComponentTarget struct {
+	OS string
 }
 
 // ComponentImport carries imports from any API version.

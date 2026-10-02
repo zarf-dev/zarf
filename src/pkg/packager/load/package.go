@@ -7,12 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
@@ -221,6 +221,5 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 }
 
 func validResourcePath(value string) bool {
-	clean := path.Clean(value)
-	return value != "" && !path.IsAbs(value) && clean == value && value != "." && !strings.HasPrefix(value, "../") && !strings.Contains(value, "/../")
+	return value != "." && fs.ValidPath(value) && !strings.ContainsAny(value, `\:`)
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText: 2024-Present Defense Unicorns
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 package oci
 
@@ -10,12 +10,9 @@ import (
 	"io"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/pkg/oci/cache"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
-
-	orasCache "github.com/defenseunicorns/pkg/oci/cache"
-
-	goyaml "github.com/goccy/go-yaml"
 )
 
 // ResolveRoot returns the root descriptor for the remote repository
@@ -71,7 +68,7 @@ func (o *OrasRemote) FetchManifest(ctx context.Context, desc ocispec.Descriptor)
 // layer cache when one is configured.
 func (o *OrasRemote) src() oras.ReadOnlyTarget {
 	if o.cache != nil {
-		return orasCache.New(o.repo, o.cache)
+		return cache.New(o.repo, o.cache)
 	}
 	return o.repo
 }
@@ -104,15 +101,6 @@ func FetchJSONFile[T any](ctx context.Context, fetcher content.Fetcher, manifest
 		return result, fmt.Errorf("unable to find %s in the manifest", path)
 	}
 	return FetchUnmarshal[T](ctx, fetcher, json.Unmarshal, descriptor)
-}
-
-// FetchYAMLFile fetches and unmarshals the YAML file at path, located via the manifest.
-func FetchYAMLFile[T any](ctx context.Context, fetcher content.Fetcher, manifest *Manifest, path string) (result T, err error) {
-	descriptor := manifest.Locate(path)
-	if IsEmptyDescriptor(descriptor) {
-		return result, fmt.Errorf("unable to find %s in the manifest", path)
-	}
-	return FetchUnmarshal[T](ctx, fetcher, goyaml.Unmarshal, descriptor)
 }
 
 // FetchUnmarshal fetches (and digest-verifies, via content.FetchAll) the descriptor and unmarshals it.

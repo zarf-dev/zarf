@@ -15,8 +15,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
@@ -137,6 +137,9 @@ const (
 
 // MarshalPackageDefinition returns deterministic zarf.yaml bytes for a package definition.
 func MarshalPackageDefinition(definition api.Package) ([]byte, error) {
+	if err := definition.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid package definition: %w", err)
+	}
 	alpha, err := goyaml.Marshal(convert.PackageToV1alpha1(definition))
 	if err != nil {
 		return nil, err

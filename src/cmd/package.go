@@ -20,11 +20,11 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/api"
@@ -565,7 +565,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 			return nil, err
 		}
 	}
-	err := confirmDeploy(ctx, pkgLayout, setVariables, opts.IsInteractive)
+	err := confirmDeploy(ctx, pkgLayout, setVariables, opts.IsInteractive, opts.Connected)
 	if err != nil {
 		return nil, err
 	}
@@ -589,11 +589,18 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	return result.DeployedComponents, nil
 }
 
-func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, isInteractive bool) (err error) {
+func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, isInteractive bool, connected bool) (err error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
 
-	displayPackage, err := packageForDisplay(pkg)
+	displayPkg := pkg
+	// Operate on temp package so IsSbomAble still works
+	if connected || pkg.Metadata.YOLO {
+		displayPkg.Components = slices.Clone(pkg.Components)
+		displayPkg.RemoveImages()
+		displayPkg.RemoveRepositories()
+	}
+	displayPackage, err := packageForDisplay(displayPkg)
 	if err != nil {
 		return err
 	}
@@ -1517,16 +1524,20 @@ func (o *packageListOptions) run(ctx context.Context, args []string) error {
 	}
 
 	var packageList []packageListInfo
-	for _, pkg := range deployedZarfPackages {
+	for _, depPkg := range deployedZarfPackages {
 		var components []string
-		for _, component := range pkg.DeployedComponents {
+		for _, component := range depPkg.DeployedComponents {
 			components = append(components, component.Name)
 		}
+		pkg, err := depPkg.Definition()
+		if err != nil {
+			return err
+		}
 		packageList = append(packageList, packageListInfo{
-			Package:           pkg.Name,
-			NamespaceOverride: pkg.NamespaceOverride,
-			Version:           pkg.Data.Metadata.Version,
-			Connectivity:      pkg.GetPackageConnectivity(),
+			Package:           depPkg.Name,
+			NamespaceOverride: depPkg.NamespaceOverride,
+			Version:           pkg.Metadata.Version,
+			Connectivity:      depPkg.GetPackageConnectivity(),
 			Components:        components,
 		})
 	}

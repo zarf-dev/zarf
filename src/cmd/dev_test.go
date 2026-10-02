@@ -213,12 +213,28 @@ func TestDevInspectValuesFiles(t *testing.T) {
 			packageName:    "chart",
 			definitionDir:  filepath.Join("testdata", "inspect-values-files", "chart"),
 			expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart", "expected.yaml"),
-			components:     "demo-helm-charts,different-values-set",
 			setVariables: map[string]string{
 				"REPLICAS":    "2",
 				"DESCRIPTION": ".chart.variables takes priority",
 				"PORT":        "8080",
 			},
+		},
+		{
+			name:           "chart inspect with one component",
+			definitionDir:  filepath.Join("testdata", "inspect-values-files", "chart"),
+			expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart", "expected-httpd-component.yaml"),
+			components:     "httpd-local",
+			setVariables: map[string]string{
+				"REPLICAS":    "2",
+				"DESCRIPTION": ".chart.variables takes priority",
+				"PORT":        "8080",
+			},
+		},
+		{
+			name:          "unknown component",
+			definitionDir: filepath.Join("testdata", "inspect-values-files", "chart"),
+			components:    "does-not-exist",
+			expectedErr:   "no components matched",
 		},
 		{
 			name:          "manifest inspect -> fail with no values-files",
@@ -254,6 +270,7 @@ func TestDevInspectValuesFiles(t *testing.T) {
 				deploySetVariables: tc.setVariables,
 				valuesFiles:        tc.valuesFiles,
 				setValues:          tc.setValues,
+				components:         tc.components,
 			}
 			err := opts.run(context.Background(), []string{tc.definitionDir})
 			if tc.expectedErr != "" {

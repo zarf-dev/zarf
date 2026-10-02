@@ -5,6 +5,7 @@ package git
 
 import (
 	"fmt"
+	"hash/crc32"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -19,9 +20,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/stretchr/testify/require"
-
-	"github.com/defenseunicorns/pkg/helpers/v2"
-
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -45,7 +43,7 @@ func TestRepository(t *testing.T) {
 	rootPath := t.TempDir()
 	repoName := "test"
 	repoAddress := fmt.Sprintf("%s/%s.git", srv.URL, repoName)
-	checksum := helpers.GetCRCHash(repoAddress)
+	checksum := crc32.ChecksumIEEE([]byte(repoAddress))
 	expectedPath := fmt.Sprintf("%s-%d", repoName, checksum)
 
 	storer := memory.NewStorage()
@@ -106,7 +104,7 @@ func TestRepository(t *testing.T) {
 	tagSource := api.Repository{URL: repoAddress + "@legacy-tag", Ref: &api.GitRef{Tag: "v1.0.0"}}
 	tagRepo, err := Clone(ctx, rootPath, tagSource, false)
 	require.NoError(t, err)
-	tagChecksum := helpers.GetCRCHash(repoAddress + "@v1.0.0")
+	tagChecksum := crc32.ChecksumIEEE([]byte(repoAddress + "@v1.0.0"))
 	require.Equal(t, filepath.Join(rootPath, fmt.Sprintf("%s-%d", repoName, tagChecksum)), tagRepo.Path())
 
 	tagRepo, err = Open(rootPath, tagSource)
@@ -120,7 +118,7 @@ func TestRepository(t *testing.T) {
 	}
 	legacyRepo, err := Clone(ctx, rootPath, legacySource, false)
 	require.NoError(t, err)
-	legacyChecksum := helpers.GetCRCHash(repoAddress + "@+v1.0.0")
+	legacyChecksum := crc32.ChecksumIEEE([]byte(repoAddress + "@+v1.0.0"))
 	require.Equal(t, filepath.Join(rootPath, fmt.Sprintf("%s-%d", repoName, legacyChecksum)), legacyRepo.Path())
 
 	legacyRepo, err = Open(rootPath, legacySource)
