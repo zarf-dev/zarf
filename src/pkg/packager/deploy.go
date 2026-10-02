@@ -79,6 +79,8 @@ type DeployOptions struct {
 	InjectorImage  string
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// GitServerTLS allows providing user-managed TLS certificates for the internal Git server.
+	GitServerTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
 	AgentMutationPolicy state.MutationPolicy
 
@@ -161,6 +163,24 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		pkgLayout.RemoveRepositories()
 	}
 	pkg = pkgLayout.Definition()
+	if pkg.IsInitConfig() && !pkg.SupportsCapability(api.CapabilityGitServerTLSV1) && slices.ContainsFunc(pkg.Components, func(component api.Component) bool {
+		return component.Service == api.ServiceGitServer
+	}) {
+		gitTLSEnabled := opts.GitServer.TLSMode.Enabled()
+		if !gitTLSEnabled {
+			c, err := cluster.New(ctx)
+			if err == nil {
+				s, err := c.LoadState(ctx)
+				if err != nil && !kerrors.IsNotFound(err) {
+					return DeployResult{}, fmt.Errorf("unable to load existing Zarf state: %w", err)
+				}
+				gitTLSEnabled = s != nil && s.GitServer.IsInternal() && s.GitServer.TLSMode.Enabled()
+			}
+		}
+		if gitTLSEnabled {
+			return DeployResult{}, fmt.Errorf("init package %q does not declare %s=%s; use a Git TLS-capable init package", pkg.Metadata.Name, api.CapabilityGitServerTLSV1, api.CapabilityEnabled)
+		}
+	}
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 	if err != nil {
@@ -404,6 +424,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			StorageClass:        opts.StorageClass,
 			InjectorPort:        opts.InjectorPort,
 			AgentTLS:            opts.AgentTLS,
+			GitServerTLS:        opts.GitServerTLS,
 			AgentMutationPolicy: opts.AgentMutationPolicy,
 			InternalServices:    internalServicesFor(pkg.Components, opts),
 		})

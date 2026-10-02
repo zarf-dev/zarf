@@ -113,6 +113,18 @@ func TestValidateVersionRequirements(t *testing.T) {
 			cliVersion:  "v0.65.0",
 			expectError: false,
 		},
+		{
+			name: "released CLI before Git TLS does not meet init requirement",
+			pkg: api.Package{
+				Kind: api.ZarfInitConfig,
+				Metadata: api.PackageMetadata{Annotations: map[string]string{
+					string(api.CapabilityGitServerTLSV1): api.CapabilityEnabled,
+				}},
+				Build: api.BuildData{VersionRequirements: []api.VersionRequirement{{Version: api.GitServerTLSMinimumCLIVersion}}},
+			},
+			cliVersion:  "v0.87.0",
+			expectError: true,
+		},
 	}
 
 	for _, tt := range tests {

@@ -19,14 +19,15 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
@@ -699,8 +700,14 @@ func (o *updateRegistryCredsOptions) applyState(ctx context.Context, c *cluster.
 }
 
 type updateGitCredsOptions struct {
-	confirm   bool
-	gitServer state.GitServerInfo
+	confirm        bool
+	forceConflicts bool
+	rotateTLS      bool
+	gitTLSMode     string
+	gitServer      state.GitServerInfo
+	gitTLSCAPath   string
+	gitTLSCertPath string
+	gitTLSKeyPath  string
 }
 
 func newUpdateGitCredsCommand(v *viper.Viper) *cobra.Command {
@@ -716,11 +723,18 @@ func newUpdateGitCredsCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsUpdateCredsConfirmFlag)
+	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
+	cmd.Flags().BoolVar(&o.rotateTLS, "rotate-tls", false, "Rotate Zarf-managed internal Git server TLS certificates")
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
 	cmd.Flags().StringVar(&o.gitServer.PushUsername, "git-push-username", v.GetString(VInitGitPushUser), lang.CmdInitFlagGitPushUser)
 	cmd.Flags().StringVar(&o.gitServer.PushPassword, "git-push-password", v.GetString(VInitGitPushPass), lang.CmdInitFlagGitPushPass)
 	cmd.Flags().StringVar(&o.gitServer.PullUsername, "git-pull-username", v.GetString(VInitGitPullUser), lang.CmdInitFlagGitPullUser)
 	cmd.Flags().StringVar(&o.gitServer.PullPassword, "git-pull-password", v.GetString(VInitGitPullPass), lang.CmdInitFlagGitPullPass)
+	cmd.Flags().StringVar(&o.gitTLSMode, "git-tls-mode", v.GetString(VInitGitTLSMode), "Git TLS mode: disabled or tls-enabled. Certificate files automatically enable user-managed TLS")
+	cmd.Flags().StringVar(&o.gitTLSCAPath, "git-tls-ca", v.GetString(VInitGitTLSCA), "Path to a PEM-encoded CA certificate for the Git server")
+	cmd.Flags().StringVar(&o.gitTLSCertPath, "git-tls-cert", v.GetString(VInitGitTLSCert), "Path to a PEM-encoded TLS certificate for the Git server")
+	cmd.Flags().StringVar(&o.gitTLSKeyPath, "git-tls-key", v.GetString(VInitGitTLSKey), "Path to a PEM-encoded TLS private key for the Git server")
+	cmd.MarkFlagsRequiredTogether("git-tls-ca", "git-tls-cert", "git-tls-key")
 
 	return cmd
 }
@@ -735,6 +749,33 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	if !oldState.GitServer.IsConfigured() {
 		return errors.New("no Git server is configured in the Zarf state; nothing to update")
 	}
+	gitTLSRequested := optionIsExplicitlySet(cmd, getViper(), "git-tls-mode", VInitGitTLSMode) || o.gitTLSCAPath != "" || o.gitTLSCertPath != "" || o.gitTLSKeyPath != ""
+	mode := state.GitTLSMode("")
+	management := state.GitTLSCertManagement("")
+	if gitTLSRequested {
+		mode, management, err = resolveGitTLSMode(o.gitTLSMode, o.gitTLSCAPath, o.gitTLSCertPath, o.gitTLSKeyPath)
+		if err != nil {
+			return err
+		}
+	}
+	if gitTLSRequested {
+		o.gitServer.TLSMode = mode
+		o.gitServer.TLSCertManagement = management
+	}
+	if o.gitServer.Address != "" && mode.Enabled() {
+		return errors.New("git TLS options cannot be used with --git-url")
+	}
+	if o.rotateTLS && (!oldState.GitServer.TLSMode.Enabled() || oldState.GitServer.TLSCertManagement != state.GitTLSCertZarfManaged || gitTLSRequested && (mode != state.GitTLSEnabled || management != state.GitTLSCertZarfManaged)) {
+		return errors.New("--rotate-tls requires an internal Git server with zarf-managed TLS")
+	}
+	var gitTLS *pki.GeneratedPKI
+	if o.gitTLSCAPath != "" {
+		loadedTLS, err := loadAndValidateGitTLS(o.gitTLSCAPath, o.gitTLSCertPath, o.gitTLSKeyPath)
+		if err != nil {
+			return fmt.Errorf("invalid Git server TLS certificates: %w", err)
+		}
+		gitTLS = &loadedTLS
+	}
 
 	newState, err := state.Merge(oldState, state.MergeOptions{
 		GitServer: o.gitServer,
@@ -742,6 +783,22 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update Git server credentials: %w", err)
+	}
+	if newState.GitServer.IsInternal() && gitTLSRequested {
+		newState.GitServer.Address = state.ZarfInClusterGitURL(newState.GitServer.TLSMode)
+	}
+	if o.rotateTLS || (gitTLSRequested && newState.GitServer.IsInternal() && newState.GitServer.TLSMode.Enabled()) {
+		if err := c.RequireServiceCapability(ctx, api.ServiceGitServer, api.CapabilityGitServerTLSV1); err != nil {
+			return err
+		}
+	}
+	var rollbackTLS *pki.GeneratedPKI
+	if gitTLSRequested && oldState.GitServer.TLSMode.Enabled() && oldState.GitServer.TLSCertManagement == state.GitTLSCertUserManaged {
+		previousTLS, err := c.GetGitServerTLS(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to read existing Git server TLS certificates: %w", err)
+		}
+		rollbackTLS = &previousTLS
 	}
 
 	confirm, err := confirmCredentialUpdate(ctx, oldState, newState, state.GitKey, o.confirm)
@@ -753,19 +810,50 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	return runWithRollback(ctx, "Git server",
-		func() error { return o.applyState(ctx, c, oldState, newState) },
-		func() error { return o.applyState(ctx, c, newState, oldState) },
+		func() error { return o.applyState(ctx, c, oldState, newState, gitTLS) },
+		func() error { return o.applyState(ctx, c, newState, oldState, rollbackTLS) },
 	)
 }
 
-func (o *updateGitCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, fromState, toState *state.State) error {
+func (o *updateGitCredsOptions) applyState(ctx context.Context, c *cluster.Cluster, fromState, toState *state.State, userTLSBundles ...*pki.GeneratedPKI) error {
+	var userTLS *pki.GeneratedPKI
+	if len(userTLSBundles) > 0 {
+		userTLS = userTLSBundles[0]
+	}
+	// Update credentials while the listener still has the source state's
+	// protocol and certificate. This keeps migrations and rotations reachable.
 	if toState.GitServer.IsInternal() {
 		if err := c.UpdateInternalGitServerSecret(ctx, fromState.GitServer, toState.GitServer); err != nil {
 			return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
 		}
 	}
+	if toState.GitServer.IsInternal() && toState.GitServer.TLSMode.Enabled() {
+		certs := userTLS
+		if certs == nil && (o.rotateTLS || fromState.GitServer.TLSMode != toState.GitServer.TLSMode || fromState.GitServer.TLSCertManagement != toState.GitServer.TLSCertManagement) && toState.GitServer.TLSCertManagement == state.GitTLSCertZarfManaged {
+			generated, err := pki.GeneratePKI(state.ZarfInClusterGitServiceHost, state.ZarfGitServerTLSHosts...)
+			if err != nil {
+				return err
+			}
+			certs = &generated
+		}
+		if certs != nil {
+			if err := c.ApplyGitServerTLS(ctx, *certs); err != nil {
+				return err
+			}
+		}
+	}
+	// Distribute trust before rolling Gitea onto a new certificate.
 	if err := c.UpdateZarfManagedGitSecrets(ctx, toState); err != nil {
 		return err
+	}
+	if toState.GitServer.IsInternal() && (fromState.GitServer.TLSMode != toState.GitServer.TLSMode || fromState.GitServer.TLSCertManagement != toState.GitServer.TLSCertManagement || o.rotateTLS || userTLS != nil) {
+		helmOpts := helm.InstallUpgradeOptions{
+			VariableConfig: template.GetZarfVariableConfig(ctx, !o.confirm), State: toState, Cluster: c,
+			Timeout: config.ZarfDefaultTimeout, IsInteractive: !o.confirm, ForceConflicts: o.forceConflicts,
+		}
+		if err := helm.UpdateZarfGitServerValues(ctx, helmOpts); err != nil {
+			return err
+		}
 	}
 	if err := c.SaveState(ctx, toState); err != nil {
 		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)

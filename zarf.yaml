@@ -3,6 +3,8 @@ metadata:
   name: init
   description: Used to establish a new Zarf cluster
   allowNamespaceOverride: false
+  annotations:
+    git-server-tls/v1: enabled
 
 documentation:
   zarf.cli.openvex.json: .vex/zarf.cli.openvex.json

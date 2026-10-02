@@ -61,6 +61,36 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]state.Deployed
 	return deployedPackages, nil
 }
 
+// RequireServiceCapability checks that deployed packages providing a service
+// declare the requested capability in their package metadata annotations.
+func (c *Cluster) RequireServiceCapability(ctx context.Context, service api.Service, capability api.Capability) error {
+	packages, err := c.GetDeployedZarfPackages(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to inspect deployed packages: %w", err)
+	}
+
+	foundService := false
+	for _, deployed := range packages {
+		definition, err := deployed.Definition()
+		if err != nil {
+			return fmt.Errorf("unable to inspect deployed package %q: %w", deployed.Name, err)
+		}
+		for _, component := range definition.Components {
+			if component.Service != service {
+				continue
+			}
+			foundService = true
+			if !definition.SupportsCapability(capability) {
+				return fmt.Errorf("deployed package %q providing service %q does not declare %s=%s; upgrade the package before using this capability", deployed.Name, service, capability, api.CapabilityEnabled)
+			}
+		}
+	}
+	if !foundService {
+		return fmt.Errorf("no deployed package providing service %q was found", service)
+	}
+	return nil
+}
+
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
 func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
@@ -223,7 +253,7 @@ func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageNam
 
 // UpdateInternalArtifactServerToken updates the the artifact server token on the internal gitea server and returns it
 func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitServer state.GitServerInfo) (string, error) {
-	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort, WithScheme(oldGitServer.URLScheme()))
 	if err != nil {
 		return "", err
 	}
@@ -233,11 +263,15 @@ func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitS
 	}
 	defer tunnel.Close()
 	// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
-	tunnelURLs := tunnel.HTTPEndpoints()
+	tunnelURLs := tunnel.URLEndpoints()
 	if len(tunnelURLs) == 0 {
 		return "", errors.New("no tunnel endpoints found")
 	}
-	giteaClient, err := gitea.NewClient(tunnelURLs[0], oldGitServer.PushUsername, oldGitServer.PushPassword)
+	caBundle, err := c.gitServerCABundle(ctx, oldGitServer)
+	if err != nil {
+		return "", err
+	}
+	giteaClient, err := gitea.NewClient(tunnelURLs[0], oldGitServer.PushUsername, oldGitServer.PushPassword, caBundle)
 	if err != nil {
 		return "", err
 	}
@@ -257,7 +291,7 @@ func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitS
 
 // UpdateInternalGitServerSecret updates the internal gitea server secrets with the new git server info
 func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServer state.GitServerInfo, newGitServer state.GitServerInfo) error {
-	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort, WithScheme(oldGitServer.URLScheme()))
 	if err != nil {
 		return err
 	}
@@ -267,11 +301,15 @@ func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServe
 	}
 	defer tunnel.Close()
 	// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
-	tunnelURLs := tunnel.HTTPEndpoints()
+	tunnelURLs := tunnel.URLEndpoints()
 	if len(tunnelURLs) == 0 {
 		return errors.New("no tunnel endpoints found")
 	}
-	giteaClient, err := gitea.NewClient(tunnelURLs[0], oldGitServer.PushUsername, oldGitServer.PushPassword)
+	caBundle, err := c.gitServerCABundle(ctx, oldGitServer)
+	if err != nil {
+		return err
+	}
+	giteaClient, err := gitea.NewClient(tunnelURLs[0], oldGitServer.PushUsername, oldGitServer.PushPassword, caBundle)
 	if err != nil {
 		return err
 	}
@@ -290,6 +328,23 @@ func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServe
 		return err
 	}
 	return nil
+}
+
+func (c *Cluster) gitServerCABundle(ctx context.Context, gitServer state.GitServerInfo) ([]byte, error) {
+	if !gitServer.IsInternal() || !gitServer.TLSMode.Enabled() {
+		return nil, nil
+	}
+	certs, err := c.GetGitServerTLS(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return certs.CA, nil
+}
+
+// GitServerCABundle returns the CA needed to authenticate the internal Git
+// server, or nil when it uses legacy HTTP.
+func (c *Cluster) GitServerCABundle(ctx context.Context, gitServer state.GitServerInfo) ([]byte, error) {
+	return c.gitServerCABundle(ctx, gitServer)
 }
 
 // InternalGitServerExists checks if the Zarf internal git server exists in the cluster.
