@@ -28,12 +28,12 @@ type LintOptions struct {
 }
 
 // Lint lints a Zarf package or component config.
-func Lint(ctx context.Context, packagePath string, opts LintOptions) (err error) {
+func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	if packagePath == "" {
 		return errors.New("package path is required")
 	}
 
-	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	cachePath, err := utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return err
 	}
@@ -50,60 +50,52 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) (err error)
 		return err
 	}
 	if header.Kind == string(v1beta1.ZarfComponentConfig) {
-		component, err := load.Component(ctx, path.ManifestFile, load.ComponentOptions{
-			CachePath:     opts.CachePath,
+		component, err := load.ComponentDefinition(ctx, path.ManifestFile, load.ComponentOptions{
+			CachePath:     cachePath,
 			RemoteOptions: opts.RemoteOptions,
 		})
 		if err != nil {
 			return err
 		}
-		defer func() {
-			err = errors.Join(err, component.Close())
-		}()
-		findings := lint.CheckComponentValuesV1Beta1(component.Definition.Component, ".component")
+		findings := lint.CheckComponentValuesV1Beta1(component.Component, ".component")
 		if len(findings) == 0 {
 			return nil
 		}
-		return &lint.LintError{PackageName: component.Definition.Metadata.Name, Findings: findings}
+		return &lint.LintError{PackageName: component.Metadata.Name, Findings: findings}
 	}
 
-	loadOpts := load.PackageOptions{
-		DefinitionOptions: load.DefinitionOptions{
-			Flavor:           opts.Flavor,
-			SetVariables:     opts.SetVariables,
-			CachePath:        opts.CachePath,
-			IsInteractive:    false,
-			SkipVersionCheck: true,
-			RemoteOptions:    opts.RemoteOptions,
-		},
+	loadOpts := load.DefinitionOptions{
+		Flavor:           opts.Flavor,
+		SetVariables:     opts.SetVariables,
+		CachePath:        cachePath,
+		IsInteractive:    false,
+		SkipVersionCheck: true,
+		RemoteOptions:    opts.RemoteOptions,
 	}
-	loaded, err := load.Package(ctx, packagePath, loadOpts)
+	definition, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err = errors.Join(err, loaded.Close())
-	}()
 	findings := []lint.PackageFinding{}
-	switch loaded.Definition.GetAPIVersion() {
+	switch definition.GetAPIVersion() {
 	case v1alpha1.APIVersion:
-		pkg := convert.PackageToV1alpha1(loaded.Definition)
+		pkg := convert.PackageToV1alpha1(definition)
 		for i, component := range pkg.Components {
 			findings = append(findings, lint.CheckComponentValues(component, i)...)
 		}
 	case v1beta1.APIVersion:
-		pkg := convert.PackageToV1beta1(loaded.Definition)
+		pkg := convert.PackageToV1beta1(definition)
 		for i, component := range pkg.Components {
 			findings = append(findings, lint.CheckComponentValuesV1Beta1(component.ComponentSpec, fmt.Sprintf(".components.[%d]", i))...)
 		}
 	default:
-		return fmt.Errorf("linting packages with apiVersion %q is not supported", loaded.Definition.GetAPIVersion())
+		return fmt.Errorf("linting packages with apiVersion %q is not supported", definition.GetAPIVersion())
 	}
 	if len(findings) == 0 {
 		return nil
 	}
 	return &lint.LintError{
-		PackageName: loaded.Definition.Metadata.Name,
+		PackageName: definition.Metadata.Name,
 		Findings:    findings,
 	}
 }
