@@ -347,6 +347,39 @@ func TestCollectVersionRequirements(t *testing.T) {
 	}
 }
 
+func TestAssembleTLSInitPackageDeclaresMinimumCLIVersion(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	writePackageToDisk(t, v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfInitConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name: "init",
+			Annotations: map[string]string{
+				api.GitServerTLSCapabilityAnnotation: api.GitServerTLSCapabilityV1,
+			},
+		},
+		Components: []v1alpha1.ZarfComponent{{Name: "git-server"}},
+	}, dir)
+
+	loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+	require.NoError(t, err)
+	pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	data, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
+	require.NoError(t, err)
+	built, err := pkgcfg.ParseAs(ctx, data, pkgcfg.V1Alpha1)
+	require.NoError(t, err)
+	require.Equal(t, api.GitServerTLSCapabilityV1, built.Metadata.Annotations[api.GitServerTLSCapabilityAnnotation])
+	require.Contains(t, built.Build.VersionRequirements, v1alpha1.VersionRequirement{
+		Version: api.GitServerTLSMinimumCLIVersion,
+		Reason:  "This init package supports Git server TLS, which requires Zarf v0.88.0+",
+	})
+}
+
 func TestImageLayoutHasIndex(t *testing.T) {
 	t.Parallel()
 

@@ -42,6 +42,7 @@ type initOptions struct {
 	valuesFiles                []string
 	setValues                  map[string]string
 	optionalComponents         string
+	skipVersionCheck           bool
 	skipValuesSchemaValidation bool
 	storageClass               string
 	gitServer                  state.GitServerInfo
@@ -149,6 +150,8 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 	cmd.Flags().BoolVar(&o.skipValuesSchemaValidation, "skip-values-schema-validation", false, lang.CmdPackageDeployFlagSkipValuesSchema)
+	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the init package")
+	_ = cmd.Flags().MarkHidden("skip-version-check")
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
@@ -286,6 +289,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		GitServerTLS:               gitTLS,
 		AgentMutationPolicy:        state.MutationPolicy(o.agentMutationPolicy),
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
+		SkipVersionCheck:           o.skipVersionCheck,
 	}
 	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {

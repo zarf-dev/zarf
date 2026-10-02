@@ -163,6 +163,24 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		pkgLayout.RemoveRepositories()
 	}
 	pkg = pkgLayout.Definition()
+	if pkg.IsInitConfig() && !pkg.SupportsGitServerTLS() && slices.ContainsFunc(pkg.Components, func(component api.Component) bool {
+		return component.Service == api.ServiceGitServer
+	}) {
+		gitTLSEnabled := opts.GitServer.TLSMode.Enabled()
+		if !gitTLSEnabled {
+			c, err := cluster.New(ctx)
+			if err == nil {
+				s, err := c.LoadState(ctx)
+				if err != nil && !kerrors.IsNotFound(err) {
+					return DeployResult{}, fmt.Errorf("unable to load existing Zarf state: %w", err)
+				}
+				gitTLSEnabled = s != nil && s.GitServer.IsInternal() && s.GitServer.TLSMode.Enabled()
+			}
+		}
+		if gitTLSEnabled {
+			return DeployResult{}, fmt.Errorf("init package %q does not declare %s=%s; use a Git TLS-capable init package", pkg.Metadata.Name, api.GitServerTLSCapabilityAnnotation, api.GitServerTLSCapabilityV1)
+		}
+	}
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 	if err != nil {
