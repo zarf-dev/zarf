@@ -28,6 +28,7 @@ import (
 	"github.com/moby/moby/client"
 	"github.com/moby/moby/client/pkg/versions"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"golang.org/x/sync/errgroup"
 	"oras.land/oras-go/v2"
@@ -453,7 +454,7 @@ func craneSaveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst
 		if fi.IsDir() {
 			return nil
 		}
-		hash, err := helpers.GetSHA256OfFile(path)
+		hash, err := checksum.GetSHA256OfFile(path)
 		if err != nil {
 			return err
 		}

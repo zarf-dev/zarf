@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -38,6 +39,7 @@ const (
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrGitURLWithRef           = "git URL %q must not contain an embedded ref; use the ref field instead"
+	PkgValidateErrFileChecksumAlgorithm   = "component %q file %q has unsupported checksum algorithm %q (expected sha256 or sha512)"
 )
 
 // ValidationErrors contains all errors found during package validation.
@@ -87,6 +89,12 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 // standalone component configs. The component name is used in diagnostics.
 func ValidateComponent(component v1beta1.Component) ValidationErrors {
 	var errs ValidationErrors
+	for _, file := range component.Files {
+		if algorithm, _, hasPrefix := strings.Cut(file.Checksum, ":"); hasPrefix &&
+			algorithm != string(api.ChecksumSHA256) && algorithm != string(api.ChecksumSHA512) {
+			errs = append(errs, fmt.Errorf(PkgValidateErrFileChecksumAlgorithm, component.Name, file.Source, algorithm))
+		}
+	}
 	for _, repository := range component.Repositories {
 		if err := validateGitURL(repository.URL); err != nil {
 			errs = append(errs, err)

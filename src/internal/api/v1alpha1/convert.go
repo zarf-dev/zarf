@@ -138,7 +138,7 @@ func componentToGeneric(c v1alpha1.ZarfComponent) api.Component {
 	for _, f := range c.Files {
 		gc.Files = append(gc.Files, api.File{
 			Source:           f.Source,
-			Checksum:         f.Shasum,
+			Checksum:         api.ParseFileChecksum(f.Shasum),
 			Destination:      f.Target,
 			Executable:       f.Executable,
 			Symlinks:         f.Symlinks,
@@ -520,7 +520,7 @@ func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 	for _, f := range c.Files {
 		af := v1alpha1.ZarfFile{
 			Source:      f.Source,
-			Shasum:      f.Checksum,
+			Shasum:      f.Checksum.String(),
 			Target:      f.Destination,
 			Executable:  f.Executable,
 			Symlinks:    f.Symlinks,

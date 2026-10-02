@@ -29,6 +29,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
@@ -502,8 +503,8 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 		}
 
 		// Abort packaging on invalid shasum (if one is specified).
-		if file.Checksum != "" {
-			if err := helpers.SHAsMatch(dst, file.Checksum); err != nil {
+		if file.Checksum.IsSet() {
+			if err := checksum.VerifyFile(dst, file.Checksum.GetAlgorithm(), file.Checksum.Digest); err != nil {
 				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
@@ -749,8 +750,8 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 		component.Files[filesIdx].ExtractPath = ""
 
 		// Abort packaging on invalid shasum (if one is specified).
-		if file.Checksum != "" {
-			if err := helpers.SHAsMatch(dst, file.Checksum); err != nil {
+		if file.Checksum.IsSet() {
+			if err := checksum.VerifyFile(dst, file.Checksum.GetAlgorithm(), file.Checksum.Digest); err != nil {
 				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
@@ -982,7 +983,7 @@ func getChecksum(dirPath string) (string, string, error) {
 		if rel == layout.ZarfYAML || rel == layout.Checksums {
 			return nil
 		}
-		sum, err := helpers.GetSHA256OfFile(path)
+		sum, err := checksum.GetSHA256OfFile(path)
 		if err != nil {
 			return err
 		}

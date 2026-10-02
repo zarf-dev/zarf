@@ -12,9 +12,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/split"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -70,7 +71,7 @@ func TestMultiPartPackage(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, pkgData.Bytes, fullFileInfo.Size())
 	// Ensure that the pkgData shasum was correct (should be checked during deploy as well, but this is to double check)
-	err = helpers.SHAsMatch(parts[0], pkgData.Sha256Sum)
+	err = checksum.VerifyFile(parts[0], api.ChecksumSHA256, pkgData.Sha256Sum)
 	require.NoError(t, err)
 
 	e2e.CleanFiles(t, parts...)
@@ -157,13 +158,13 @@ func TestDeterministicOCIPull(t *testing.T) {
 	require.FileExists(t, pkg3Path)
 
 	// Calculate checksums
-	checksum1, err := helpers.GetSHA256OfFile(pkg1Path)
+	checksum1, err := checksum.GetSHA256OfFile(pkg1Path)
 	require.NoError(t, err)
 
-	checksum2, err := helpers.GetSHA256OfFile(pkg2Path)
+	checksum2, err := checksum.GetSHA256OfFile(pkg2Path)
 	require.NoError(t, err)
 
-	checksum3, err := helpers.GetSHA256OfFile(pkg3Path)
+	checksum3, err := checksum.GetSHA256OfFile(pkg3Path)
 	require.NoError(t, err)
 
 	// Assert all three pulls produced identical checksums
