@@ -93,10 +93,10 @@ func CheckComponentValues(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 func CheckComponentValuesV1Beta1(c v1beta1.ComponentSpec, path string) []PackageFinding {
 	var findings []PackageFinding
 	for i, repo := range c.Repositories {
-		if repo.Ref == nil || repo.Ref.Tag == "" && repo.Ref.Branch == "" && repo.Ref.Commit == "" {
+		if repo.Ref == nil || repo.Ref.Commit == "" {
 			findings = append(findings, PackageFinding{
 				YqPath:      fmt.Sprintf("%s.repositories.[%d]", path, i),
-				Description: "Unpinned repository",
+				Description: "Repository is not pinned to a commit",
 				Item:        repo.URL,
 				Severity:    SevWarn,
 			})

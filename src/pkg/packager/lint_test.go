@@ -165,7 +165,7 @@ component:
 			var lintErr *lint.LintError
 			require.ErrorAs(t, err, &lintErr)
 			require.ElementsMatch(t, []lint.PackageFinding{
-				{YqPath: tc.prefix + ".repositories.[0]", Description: "Unpinned repository", Item: "https://example.com/repo.git", Severity: lint.SevWarn},
+				{YqPath: tc.prefix + ".repositories.[0]", Description: "Repository is not pinned to a commit", Item: "https://example.com/repo.git", Severity: lint.SevWarn},
 				{YqPath: tc.prefix + ".images.[0]", Description: "Image not pinned with digest", Item: "busybox:1.0", Severity: lint.SevWarn},
 				{YqPath: tc.prefix + ".images.[0]", Description: "Image reference does not specify a registry domain", Item: "busybox:1.0", Severity: lint.SevWarn},
 				{YqPath: tc.prefix + ".files.[0]", Description: "No shasum for remote file", Item: "https://example.com/file.zip", Severity: lint.SevWarn},
