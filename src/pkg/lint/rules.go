@@ -9,24 +9,30 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 func isPinnedImage(image string) (bool, error) {
-	transformedImage, err := transform.ParseImageRef(image)
+	pinned, err := isPinnedImageReference(image)
 	if err != nil {
 		if strings.Contains(image, v1alpha1.ZarfPackageTemplatePrefix) ||
 			strings.Contains(image, v1alpha1.ZarfPackageVariablePrefix) {
 			return true, nil
 		}
+	}
+	return pinned, err
+}
+
+func isPinnedImageReference(image string) (bool, error) {
+	transformedImage, err := transform.ParseImageRef(image)
+	if err != nil {
 		return false, err
 	}
 	if isCosignSignature(transformedImage.Tag) || isCosignAttestation(transformedImage.Tag) {
 		return true, nil
 	}
-	return (transformedImage.Digest != ""), err
+	return transformedImage.Digest != "", nil
 }
 
 func isCosignSignature(image string) bool {
@@ -85,58 +91,6 @@ func CheckComponentValues(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	findings = append(findings, checkForUnpinnedFiles(c, i)...)
 	findings = append(findings, checkForImagesWithoutDomain(c, i)...)
 	findings = append(findings, checkForImageArchivesWithoutInternalDomain(c, i)...)
-	return findings
-}
-
-// CheckComponentValuesV1Beta1 checks recommended practices on a resolved v1beta1 component.
-// path is the component's location in the source definition.
-func CheckComponentValuesV1Beta1(c v1beta1.ComponentSpec, path string) []PackageFinding {
-	var findings []PackageFinding
-	for i, repo := range c.Repositories {
-		if repo.Ref == nil || repo.Ref.Commit == "" {
-			findings = append(findings, PackageFinding{
-				YqPath:      fmt.Sprintf("%s.repositories.[%d]", path, i),
-				Description: "Repository is not pinned to a commit",
-				Item:        repo.URL,
-				Severity:    SevWarn,
-			})
-		}
-	}
-	for i, image := range c.Images {
-		imagePath := fmt.Sprintf("%s.images.[%d]", path, i)
-		pinned, err := isPinnedImage(image.Name)
-		switch {
-		case err != nil:
-			findings = append(findings, PackageFinding{YqPath: imagePath, Description: "Failed to parse image reference", Item: image.Name, Severity: SevWarn})
-		case !pinned:
-			findings = append(findings, PackageFinding{YqPath: imagePath, Description: "Image not pinned with digest", Item: image.Name, Severity: SevWarn})
-		}
-		if !isTemplatedImage(image.Name) && imageDomain(image.Name) == "" {
-			findings = append(findings, PackageFinding{YqPath: imagePath, Description: "Image reference does not specify a registry domain", Item: image.Name, Severity: SevWarn})
-		}
-	}
-	for i, file := range c.Files {
-		if file.Checksum == "" && helpers.IsURL(file.Source) {
-			findings = append(findings, PackageFinding{
-				YqPath:      fmt.Sprintf("%s.files.[%d]", path, i),
-				Description: "No shasum for remote file",
-				Item:        file.Source,
-				Severity:    SevWarn,
-			})
-		}
-	}
-	for i, archive := range c.ImageArchives {
-		for j, image := range archive.Images {
-			if !isTemplatedImage(image) && !hasInternalDomain(image) {
-				findings = append(findings, PackageFinding{
-					YqPath:      fmt.Sprintf("%s.imageArchives.[%d].images.[%d]", path, i, j),
-					Description: "Image archive image should use a .internal domain to avoid resolving to a public registry",
-					Item:        image,
-					Severity:    SevWarn,
-				})
-			}
-		}
-	}
 	return findings
 }
 
