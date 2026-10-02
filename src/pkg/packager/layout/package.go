@@ -650,7 +650,7 @@ func sbomResourceDestinationPaths(destRoot string, resources []sbomResource) ([]
 			return nil, err
 		}
 		if conflictingKey, exists := resourceKeysByDestination[relativePath]; exists && conflictingKey != resource.key {
-			return nil, fmt.Errorf("SBOM resource keys %q and %q both normalize to %q", conflictingKey, resource.key, relativePath)
+			return nil, fmt.Errorf("SBOM resource keys %q and %q both normalize to %q", conflictingKey, resource.key, filepath.ToSlash(relativePath))
 		}
 		resourceKeysByDestination[relativePath] = resource.key
 		destinationPath, err := resourceDestinationPath(destRoot, relativePath)
