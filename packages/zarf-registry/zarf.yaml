@@ -123,13 +123,10 @@ variables:
     description: The group ID to run the registry as
     default: "2000"
 
-  - name: REGISTRY_SECURITY_CONTEXT_SELINUX_LEVEL
-    description: Used to set a SELinux MCS Level on registry pods to prevent permission errors on the shared volume
+  - name: REGISTRY_SECURITY_CONTEXT_SELINUX_OPTIONS
+    description: Optional map of seLinuxOptions for the registry pods. 
     default: ""
-
-  - name: REGISTRY_SECURITY_CONTEXT_SELINUX_TYPE
-    description: Used to set a SELinux Type on registry pods, defaults to random assignment at runtime. 
-    default: ""
+    autoIndent: true
 
 constants:
   - name: REGISTRY_IMAGE

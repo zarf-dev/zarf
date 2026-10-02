@@ -204,7 +204,7 @@
           "type": "integer"
         },
         "seLinuxOptions" : {
-          "type": "object",
+          "type": ["object", "null"],
           "properties": {
             "level": {
               "type": "string"
