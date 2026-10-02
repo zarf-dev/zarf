@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.87.0](https://github.com/zarf-dev/zarf/compare/v0.86.0...v0.87.0) (2026-09-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove images and repositories from package secret during connected deploys ([#5402](https://github.com/zarf-dev/zarf/issues/5402))
+* **helm:** only label pod templates of built-in workload kinds ([#5360](https://github.com/zarf-dev/zarf/issues/5360))
+* disable artifact server by default ([#5417](https://github.com/zarf-dev/zarf/issues/5417))
+* migrate SignBlobOptions to a pointer ([#5411](https://github.com/zarf-dev/zarf/issues/5411))
+* **package:** move signing out of publish ([#5387](https://github.com/zarf-dev/zarf/issues/5387))
+* switch to api.Package from v1alpha1.ZarfPackage throughout repository ([#5379](https://github.com/zarf-dev/zarf/issues/5379))
+* public operational type ([#5345](https://github.com/zarf-dev/zarf/issues/5345))
+
+### Features
+
+* add explicit git server mode to state ([#5395](https://github.com/zarf-dev/zarf/issues/5395)) ([a8e695d](https://github.com/zarf-dev/zarf/commit/a8e695dc638e2e8931e105e7dc723c80b87a959d))
+* add validation for api package ([#5393](https://github.com/zarf-dev/zarf/issues/5393)) ([cebc6ee](https://github.com/zarf-dev/zarf/commit/cebc6ee612ba031252636761bd5da10043ec014b))
+* component sign and verify ([#5358](https://github.com/zarf-dev/zarf/issues/5358)) ([9c58f59](https://github.com/zarf-dev/zarf/commit/9c58f5971b482b3304816bb6891fd1df4e13aca6))
+* **component:** sign published manifests ([#5386](https://github.com/zarf-dev/zarf/issues/5386)) ([0c61d2f](https://github.com/zarf-dev/zarf/commit/0c61d2f631f20bab24485907bc8051ed44dafa57))
+* **dev:** add --components flag to dev inspect values-files ([#5413](https://github.com/zarf-dev/zarf/issues/5413)) ([13b7af6](https://github.com/zarf-dev/zarf/commit/13b7af66943f4a7f4bd40dd2010110df0ac5f9a8))
+* disable artifact server by default ([#5417](https://github.com/zarf-dev/zarf/issues/5417)) ([720f29e](https://github.com/zarf-dev/zarf/commit/720f29e89a56052a94ab9f9cf3f0a0bf9c6c9794))
+* migrate SignBlobOptions to a pointer ([#5411](https://github.com/zarf-dev/zarf/issues/5411)) ([b94f06b](https://github.com/zarf-dev/zarf/commit/b94f06b9b21e78bdde6ffaf9870bfcae2a351264))
+* **package:** move signing out of publish ([#5387](https://github.com/zarf-dev/zarf/issues/5387)) ([438b6c5](https://github.com/zarf-dev/zarf/commit/438b6c57f5500d8c2b87215c443297fe347bfd69))
+* public operational type ([#5345](https://github.com/zarf-dev/zarf/issues/5345)) ([6c9d7ce](https://github.com/zarf-dev/zarf/commit/6c9d7ce2af3e54fc24f5cf6a7d809b98a7e74d68))
+* remove migrated fields on api.Package ([#5390](https://github.com/zarf-dev/zarf/issues/5390)) ([ed97710](https://github.com/zarf-dev/zarf/commit/ed97710f1588dc3ef8f4da145e0c2defd6c87b4e))
+* **signing:** unify signing option handling ([#5385](https://github.com/zarf-dev/zarf/issues/5385)) ([4ee0d5c](https://github.com/zarf-dev/zarf/commit/4ee0d5c8d984b5e4c875bee86d2940186c206ebf))
+* **v1beta1:** componet import validation ([#5384](https://github.com/zarf-dev/zarf/issues/5384)) ([ce0abd9](https://github.com/zarf-dev/zarf/commit/ce0abd96d249c29c19c10f40fd0bc58f6dd1f3cd))
+* **v1beta1:** store multiple API versions in Deployed packages ([#5250](https://github.com/zarf-dev/zarf/issues/5250)) ([bcfbc65](https://github.com/zarf-dev/zarf/commit/bcfbc653ea501de2f90252698b7ac7e2d0a94f08))
+
+
+### Bug Fixes
+
+* **assemble:** cleanup temporary directory on error ([#5407](https://github.com/zarf-dev/zarf/issues/5407)) ([d07690e](https://github.com/zarf-dev/zarf/commit/d07690ec7a8768d738ad6add4e93cce611fe03d3))
+* **create:** run OnSuccess and OnFailure actions during create ([#5406](https://github.com/zarf-dev/zarf/issues/5406)) ([dd7301b](https://github.com/zarf-dev/zarf/commit/dd7301bd14175a967753730d078472b6d5983e6c))
+* **helm:** handle charts that render resources inside list kinds ([#5344](https://github.com/zarf-dev/zarf/issues/5344)) ([1f7bbc9](https://github.com/zarf-dev/zarf/commit/1f7bbc9fba04918af1b1a47cb958fb24b1fda5cd))
+* **helm:** only label pod templates of built-in workload kinds ([#5360](https://github.com/zarf-dev/zarf/issues/5360)) ([7be076a](https://github.com/zarf-dev/zarf/commit/7be076aba8563dcbb71c99657712fabeaf7576e0))
+* **init:** propagate secret updates on init mode changes ([#5398](https://github.com/zarf-dev/zarf/issues/5398)) ([c18603a](https://github.com/zarf-dev/zarf/commit/c18603a918f293b0e92f22d939c3bddd9170ca3c))
+* remove images and repositories from package secret during connected deploys ([#5402](https://github.com/zarf-dev/zarf/issues/5402)) ([1653ca2](https://github.com/zarf-dev/zarf/commit/1653ca220620d0461a24247a39a75f098932151b))
+* replace github.com/defenseunicorns/pkg with local versions ([#5324](https://github.com/zarf-dev/zarf/issues/5324)) ([379379a](https://github.com/zarf-dev/zarf/commit/379379a2b707179517e9e3aa75037acf9873ad2b))
+* **values:** preserve inferred types across null overlays ([#5412](https://github.com/zarf-dev/zarf/issues/5412)) ([9213afd](https://github.com/zarf-dev/zarf/commit/9213afdc9859c3fd35a1c20280539de27f005bec))
+
+
+### Refactoring
+
+* switch to api.Package from v1alpha1.ZarfPackage throughout repository ([#5379](https://github.com/zarf-dev/zarf/issues/5379)) ([9ce36bb](https://github.com/zarf-dev/zarf/commit/9ce36bbb06e68afe9c0cf923da5caf0910acd3ac))
+
 ## [0.86.0](https://github.com/zarf-dev/zarf/compare/v0.85.0...v0.86.0) (2026-09-17)
 
 

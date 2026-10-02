@@ -11,6 +11,7 @@ import (
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -18,8 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
-
-var supportedAPIVersions = []string{v1alpha1.APIVersion, v1beta1.APIVersion}
 
 type devUpgradeSchemaOptions struct {
 	to string
@@ -102,7 +101,7 @@ func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
 func validateVersionUpgrade(from, to string) error {
 	fromIdx := -1
 	toIdx := -1
-	for i, v := range supportedAPIVersions {
+	for i, v := range api.KnownAPIVersions() {
 		if v == from {
 			fromIdx = i
 		}

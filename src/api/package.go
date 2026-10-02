@@ -79,9 +79,10 @@ type Component struct {
 	Name          string
 	Description   string
 	Optional      bool
+	Selector      ComponentSelector
 	Target        ComponentTarget
 	Import        ComponentImport
-	Service       string
+	Service       Service
 	Manifests     []Manifest
 	Charts        []Chart
 	Files         []File
@@ -91,30 +92,34 @@ type Component struct {
 	StateAccess   []StateAccessKey
 	Actions       ComponentActions
 
-	Default           bool
-	Group             string
-	DataInjections    []ZarfDataInjection
-	HealthChecks      []NamespacedObjectKindReference
-	Distros           []string
-	DeprecatedScripts DeprecatedComponentScripts
+	Default        bool
+	Group          string
+	DataInjections []ZarfDataInjection
+	HealthChecks   []NamespacedObjectKindReference
+	Distros        []string
 }
 
-// DeprecatedComponentScripts is the v1alpha1-only pre-actions scripts block, preserved for lossless
-// round-trip.
-type DeprecatedComponentScripts struct {
-	ShowOutput     bool
-	TimeoutSeconds int
-	Retry          bool
-	Prepare        []string
-	Before         []string
-	After          []string
-}
+// Service identifies a Zarf-managed cluster service provided by a component.
+type Service string
 
-// ComponentTarget filters a component to a target OS/arch/flavor.
-type ComponentTarget struct {
-	OS           string
+// Service identifiers used by components that provide Zarf-managed cluster services.
+const (
+	ServiceRegistry     Service = "registry"
+	ServiceSeedRegistry Service = "seed-registry"
+	ServiceInjector     Service = "injector"
+	ServiceAgent        Service = "agent"
+	ServiceGitServer    Service = "git-server"
+)
+
+// ComponentSelector filters a component during package creation.
+type ComponentSelector struct {
 	Architecture string
 	Flavor       string
+}
+
+// ComponentTarget filters a component to a target OS at deploy time.
+type ComponentTarget struct {
+	OS string
 }
 
 // ComponentImport carries imports from any API version.
@@ -348,8 +353,6 @@ type Action struct {
 	Description      string
 	Wait             *ActionWait
 	EnableTemplating bool
-	// DeprecatedSetVariable is required to execute legacy v1alpha1 packages.
-	DeprecatedSetVariable string
 }
 
 // SetValue declares how command output is stored in the package values map.

@@ -23,7 +23,7 @@ import (
 // time (currently <20s) with coverage.
 const defaultFuzzIterations = 20
 
-func TestPackageFromV1beta1NormalizesMetadataAnnotations(t *testing.T) {
+func TestPackageFromV1beta1PreservesMetadataAnnotations(t *testing.T) {
 	pkg := PackageFromV1beta1(v1beta1.Package{
 		Metadata: v1beta1.PackageMetadata{Annotations: map[string]string{
 			"url":           "url-value",
@@ -36,13 +36,21 @@ func TestPackageFromV1beta1NormalizesMetadataAnnotations(t *testing.T) {
 		}},
 	})
 
-	require.Equal(t, "url-value", pkg.Metadata.URL)
-	require.Equal(t, "image-value", pkg.Metadata.Image)
-	require.Equal(t, "authors-value", pkg.Metadata.Authors)
-	require.Equal(t, "documentation-value", pkg.Metadata.Documentation)
-	require.Equal(t, "source-value", pkg.Metadata.Source)
-	require.Equal(t, "vendor-value", pkg.Metadata.Vendor)
-	require.Equal(t, map[string]string{"custom": "custom-value"}, pkg.Metadata.Annotations)
+	require.Empty(t, pkg.Metadata.URL)
+	require.Empty(t, pkg.Metadata.Image)
+	require.Empty(t, pkg.Metadata.Authors)
+	require.Empty(t, pkg.Metadata.Documentation)
+	require.Empty(t, pkg.Metadata.Source)
+	require.Empty(t, pkg.Metadata.Vendor)
+	require.Equal(t, map[string]string{
+		"url":           "url-value",
+		"image":         "image-value",
+		"authors":       "authors-value",
+		"documentation": "documentation-value",
+		"source":        "source-value",
+		"vendor":        "vendor-value",
+		"custom":        "custom-value",
+	}, pkg.Metadata.Annotations)
 }
 
 func TestPackageToV1beta1OmitsEmptyActionDefaults(t *testing.T) {
@@ -383,6 +391,7 @@ func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
 // ignores only these fields when comparing the result.
 //
 //   - package.apiVersion and package.kind are canonicalized to the target API.
+//   - v1alpha1 conversion records its action migrations in build.migrations.
 //   - component.import has separate local and remote lists in v1beta1, while v1alpha1 has one
 //     import object; component.service has no v1alpha1 equivalent.
 //   - image.source distinguishes registry and daemon sources in v1beta1, v1alpha1 images always fallback
@@ -395,6 +404,7 @@ func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
 func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1beta1.Package{}, "APIVersion", "Kind"),
+		cmpopts.IgnoreFields(v1beta1.BuildData{}, "Migrations"),
 		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
 		cmpopts.IgnoreFields(v1beta1.Image{}, "Source"),
 		cmpopts.IgnoreFields(v1beta1.Chart{}, "ValuesFiles"),

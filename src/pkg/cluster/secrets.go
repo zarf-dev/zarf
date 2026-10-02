@@ -5,6 +5,7 @@
 package cluster
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -141,6 +142,11 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, s *state.St
 		newRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, namespace.Name, config.ZarfImagePullSecretName, s.RegistryInfo)
 		if err != nil {
 			return err
+		}
+		// Avoid writes when the credentials already match the target registry state.
+		if currentRegistrySecret.Type == corev1.SecretTypeDockerConfigJson &&
+			bytes.Equal(currentRegistrySecret.Data[".dockerconfigjson"], newRegistrySecret.Data[".dockerconfigjson"]) {
+			continue
 		}
 		l.Info("applying Zarf managed registry secret for namespace", "name", namespace.Name)
 		_, err = c.Clientset.CoreV1().Secrets(*newRegistrySecret.Namespace).Apply(ctx, newRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})

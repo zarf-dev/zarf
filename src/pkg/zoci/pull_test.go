@@ -14,13 +14,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/images"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -278,9 +279,11 @@ components:
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "values.schema.json"), []byte(`{"type":"object"}`), 0o644))
 
 	tmpdir := t.TempDir()
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = "testdata/cosign.key"
 	packagePath, err := packager.Create(ctx, dir, tmpdir, packager.CreateOptions{
-		CachePath:      tmpdir,
-		SigningKeyPath: "testdata/cosign.key",
+		CachePath:       tmpdir,
+		SignBlobOptions: &signOpts,
 	})
 	require.NoError(t, err)
 

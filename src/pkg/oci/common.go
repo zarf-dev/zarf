@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText: 2024-Present Defense Unicorns
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package oci provides tools for interacting with artifacts stored in OCI registries
+// Package oci provides Zarf's ORAS registry client and OCI descriptor helpers.
 package oci
 
 import (
@@ -12,13 +12,13 @@ import (
 	"strings"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2/content/oci"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
+	orasOCI "oras.land/oras-go/v2/content/oci"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
-
-	"github.com/defenseunicorns/pkg/helpers/v2"
+	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
 const (
@@ -26,12 +26,12 @@ const (
 	MultiOS = "multi"
 )
 
-// OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
+// OrasRemote is a wrapper around the Oras remote repository.
 type OrasRemote struct {
 	repo               *remote.Repository
-	cache              *oci.Store
+	cache              *orasOCI.Store
 	root               *Manifest
-	progTransport      *helpers.Transport
+	progTransport      *retry.Transport
 	targetPlatform     *ocispec.Platform
 	insecureSkipVerify *bool
 	log                *slog.Logger
@@ -42,9 +42,7 @@ type Modifier func(*OrasRemote)
 
 // WithPlainHTTP sets the plain HTTP flag for the remote
 func WithPlainHTTP(plainHTTP bool) Modifier {
-	return func(o *OrasRemote) {
-		o.repo.PlainHTTP = plainHTTP
-	}
+	return func(o *OrasRemote) { o.repo.PlainHTTP = plainHTTP }
 }
 
 // WithInsecureSkipVerify sets the insecure TLS flag for the remote.
@@ -68,21 +66,14 @@ func WithInsecureSkipVerify(insecure bool) Modifier {
 // WithTransport sets the HTTP transport for the remote.
 func WithTransport(transport *http.Transport) Modifier {
 	return func(o *OrasRemote) {
-		if transport != nil {
-			transport = transport.Clone()
-			if o.insecureSkipVerify != nil {
-				applyInsecureSkipVerify(transport, *o.insecureSkipVerify)
-			}
-			o.progTransport.Base = transport
+		if transport == nil {
+			return
 		}
-	}
-}
-
-// PlatformForArch sets the target architecture for the remote
-func PlatformForArch(arch string) ocispec.Platform {
-	return ocispec.Platform{
-		OS:           MultiOS,
-		Architecture: arch,
+		transport = transport.Clone()
+		if o.insecureSkipVerify != nil {
+			applyInsecureSkipVerify(transport, *o.insecureSkipVerify)
+		}
+		o.progTransport.Base = transport
 	}
 }
 
@@ -102,38 +93,39 @@ func WithUserAgent(userAgent string) Modifier {
 
 // WithLogger sets the logger for the remote
 func WithLogger(logger *slog.Logger) Modifier {
-	return func(o *OrasRemote) {
-		o.log = logger
-	}
+	return func(o *OrasRemote) { o.log = logger }
 }
 
 // WithCache sets the cache for the remote
-func WithCache(cache *oci.Store) Modifier {
-	return func(o *OrasRemote) {
-		o.cache = cache
+func WithCache(cache *orasOCI.Store) Modifier {
+	return func(o *OrasRemote) { o.cache = cache }
+}
+
+// PlatformForArch sets the target architecture for the remote
+func PlatformForArch(arch string) ocispec.Platform {
+	return ocispec.Platform{
+		OS:           MultiOS,
+		Architecture: arch,
 	}
 }
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
 // Registry auth is handled by the Docker CLI's credential store and checked before returning the client
-func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*OrasRemote, error) {
+func NewOrasRemote(url string, platform ocispec.Platform, modifiers ...Modifier) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
 	}
-	httpTransport, ok := http.DefaultTransport.(*http.Transport)
+	defaultTransport, ok := http.DefaultTransport.(*http.Transport)
 	if !ok {
 		return nil, fmt.Errorf("http.DefaultTransport is not an *http.Transport, something mutated global net/http variables")
 	}
-	transport := httpTransport.Clone()
-	progTransport := helpers.NewTransport(transport, nil)
+	progTransport := retry.NewTransport(defaultTransport.Clone())
 	client := &auth.Client{
 		Client: &http.Client{Transport: progTransport},
-		Header: http.Header{
-			"User-Agent": {"oras-go"},
-		},
-		Cache: auth.NewCache(),
+		Header: http.Header{"User-Agent": {"oras-go"}},
+		Cache:  auth.NewCache(),
 	}
 	o := &OrasRemote{
 		repo:           &remote.Repository{Client: client},
@@ -141,42 +133,13 @@ func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*Or
 		targetPlatform: &platform,
 		log:            slog.Default(),
 	}
-
-	for _, mod := range mods {
-		mod(o)
+	for _, modifier := range modifiers {
+		modifier(o)
 	}
-
 	if err := o.setRepository(ref); err != nil {
 		return nil, err
 	}
-
 	return o, nil
-}
-
-// SetProgressWriter sets the progress writer for the remote
-func (o *OrasRemote) SetProgressWriter(bar helpers.ProgressWriter) {
-	o.progTransport.ProgressBar = bar
-	client, ok := o.repo.Client.(*auth.Client)
-	if ok {
-		client.Client.Transport = o.progTransport
-		return
-	}
-	if o.log != nil {
-		o.log.Warn("unable to set progress writer, client is not an auth.Client")
-	}
-}
-
-// ClearProgressWriter clears the progress writer for the remote
-func (o *OrasRemote) ClearProgressWriter() {
-	o.progTransport.ProgressBar = nil
-	client, ok := o.repo.Client.(*auth.Client)
-	if ok {
-		client.Client.Transport = o.progTransport
-		return
-	}
-	if o.log != nil {
-		o.log.Warn("unable to clear progress writer, client is not an auth.Client")
-	}
 }
 
 // Repo gives you access to the underlying remote repository
@@ -213,7 +176,7 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 	}
 	client.Credential = credentials.Credential(credStore)
 	if o.log != nil {
-		o.log.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
+		o.log.Debug("gathering credentials from default Docker config file", "credentialsConfigured", credStore.IsAuthConfigured())
 	}
 
 	o.repo.Reference = ref

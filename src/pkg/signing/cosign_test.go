@@ -52,32 +52,6 @@ func TestCosignSignManifestPublishesOCIReferrer(t *testing.T) {
 	require.Len(t, manifest.Manifests, 1)
 }
 
-func TestShouldSign_KeyRefAlias(t *testing.T) {
-	t.Parallel()
-
-	t.Run("KeyRef alone triggers signing", func(t *testing.T) {
-		opts := SignBlobOptions{}
-		opts.KeyRef = "/path/to/key"
-		require.True(t, opts.ShouldSign())
-	})
-
-	t.Run("Key alone triggers signing", func(t *testing.T) {
-		opts := SignBlobOptions{}
-		opts.Key = "/path/to/key"
-		require.True(t, opts.ShouldSign())
-	})
-
-	t.Run("Keyless alone triggers signing", func(t *testing.T) {
-		opts := SignBlobOptions{}
-		opts.Keyless = true
-		require.True(t, opts.ShouldSign())
-	})
-
-	t.Run("empty options skip signing", func(t *testing.T) {
-		require.False(t, SignBlobOptions{}.ShouldSign())
-	})
-}
-
 // TestCosignSignVerifyRoundTrip exercises CosignSignBlobWithOptions and
 // CosignVerifyBlobWithOptions for both the bundle format (cosign v3.1.1+ default)
 // and the legacy .sig format.

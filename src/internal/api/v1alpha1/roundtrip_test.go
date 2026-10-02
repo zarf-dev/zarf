@@ -199,6 +199,7 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 		pkg.APIVersion = v1alpha1.APIVersion
 		pkg.Kind = v1alpha1.ZarfPackageConfig
 		populateValidV1alpha1ChartSources(&pkg, rng, i)
+		pkg, _ = migrateDeprecated(pkg)
 
 		roundTripped := PackageToV1alpha1(PackageFromV1alpha1(pkg))
 		require.Emptyf(t, cmp.Diff(pkg, roundTripped, v1alpha1GenericRoundTripExclusions()...), "round-trip diverged on iteration %d", i)
@@ -213,14 +214,16 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 //   - chart.schemaValidation: nil and true both enable schema validation.
 //   - a Git chart's legacy Version fallback is canonically represented as an inline URL ref.
 //   - manifest.template, file.template, and action.template: nil and false all disable templating.
+//   - scripts and setVariable are migrated to actions and setVariables before conversion.
 func v1alpha1GenericRoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1alpha1.ZarfMetadata{}, "AllowNamespaceOverride"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponent{}, "Required"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfComponent{}, "DeprecatedScripts"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfChart{}, "SchemaValidation"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfManifest{}, "Template"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfFile{}, "Template"),
-		cmpopts.IgnoreFields(v1alpha1.ZarfComponentAction{}, "Template"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfComponentAction{}, "DeprecatedSetVariable", "Template"),
 		cmp.Transformer("canonicalizeLegacyGitChartVersionRef", canonicalizeLegacyGitChartVersionRef),
 	}
 }
@@ -246,9 +249,11 @@ func TestConvertV1alpha1V1beta1RoundTripFuzz(t *testing.T) {
 		var pkg v1alpha1.ZarfPackage
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
 		populateValidV1alpha1ChartSources(&pkg, rng, i)
+		pkg, _ = migrateDeprecated(pkg)
 
 		v1beta1Pkg := internalv1beta1.PackageToV1beta1(PackageFromV1alpha1(pkg))
 		roundTripped := PackageToV1alpha1(internalv1beta1.PackageFromV1beta1(v1beta1Pkg))
+		require.Equal(t, v1beta1Pkg.Metadata.Annotations, roundTripped.Metadata.Annotations)
 		require.Emptyf(t, cmp.Diff(pkg, roundTripped, v1alpha1V1beta1RoundTripExclusions()...), "cross-version round-trip diverged on iteration %d", i)
 	}
 }
@@ -292,13 +297,15 @@ func populateValidV1alpha1ChartSources(pkg *v1alpha1.ZarfPackage, rng *rand.Rand
 }
 
 // v1alpha1V1beta1RoundTripExclusions lists the v1alpha1 fields that v1beta1 cannot represent.
-// The fuzz test replaces chart sources with schema-valid generated values and ignores only these
-// fields when comparing the result.
+// The fuzz test replaces chart sources with schema-valid generated values and checks annotations
+// separately because legacy metadata fields are projected into the v1beta1 annotations map.
 //
 //   - fields removed from v1beta1: package.constants, package.variables, metadata.yolo,
 //     build.differentialMissing, component.default, component.group, component.dataInjections,
 //     component.deprecatedScripts, component.only.cluster.distros, component.import.name, and
 //     chart.variables.
+//   - metadata.url, image, authors, documentation, source, and vendor become annotations,
+//     and are not restored as fields when converting back to v1alpha1.
 //   - boolean pointer presence is lost: metadata.allowNamespaceOverride is projected to the inverse
 //     PreventNamespaceOverride bool; component.required to optional; chart.schemaValidation to
 //     SkipSchemaValidation; and manifest.template and file.template to EnableTemplating. In each
@@ -316,7 +323,7 @@ func populateValidV1alpha1ChartSources(pkg *v1alpha1.ZarfPackage, rng *rand.Rand
 func v1alpha1V1beta1RoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1alpha1.ZarfPackage{}, "APIVersion", "Kind", "Constants", "Variables"),
-		cmpopts.IgnoreFields(v1alpha1.ZarfMetadata{}, "YOLO", "AllowNamespaceOverride"),
+		cmpopts.IgnoreFields(v1alpha1.ZarfMetadata{}, "URL", "Image", "Authors", "Documentation", "Source", "Vendor", "YOLO", "AllowNamespaceOverride", "Annotations"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfBuildData{}, "DifferentialMissing"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponent{}, "Default", "Required", "DeprecatedGroup", "DataInjections", "DeprecatedScripts", "HealthChecks"),
 		cmpopts.IgnoreFields(v1alpha1.ZarfComponentOnlyCluster{}, "Distros"),

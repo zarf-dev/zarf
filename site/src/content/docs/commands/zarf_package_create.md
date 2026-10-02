@@ -26,17 +26,26 @@ zarf package create [ DIRECTORY ] [flags]
   -c, --confirm                     Confirm package creation without prompting
       --differential string         Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package
   -f, --flavor string               The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
+      --fulcio-auth-flow string     Fulcio OAuth flow: normal (browser), device (device code), token, client_credentials
+      --fulcio-url string           Fulcio certificate authority URL. Override for private Sigstore deployments. (default "https://fulcio.sigstore.dev")
   -h, --help                        help for create
+      --identity-token string       Pre-acquired OIDC identity token (or path to a file containing one) for non-interactive keyless signing
+      --keyless                     Sign without a private key using Sigstore's keyless flow (Fulcio/OIDC)
   -m, --max-package-size int        Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts to be loaded onto smaller media (i.e. DVDs). Use 0 to disable splitting.
       --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --oidc-client-id string       OIDC client ID used when requesting an identity token. Override for private Sigstore deployments. (default "sigstore")
+      --oidc-issuer string          OIDC issuer URL used to obtain an identity token for keyless signing. Override for private Sigstore deployments. (default "https://oauth2.sigstore.dev/auth")
   -o, --output string               Specify the output (either a directory or an oci:// URL) for the created Zarf package
       --registry-override strings   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
+      --rekor-url string            Rekor transparency log URL. Override for private Sigstore deployments. (default "https://rekor.sigstore.dev")
   -s, --sbom                        View SBOM contents after creating the package
       --sbom-out string             Specify an output directory for the SBOMs from the created Zarf package
       --set stringToString          Specify package templates to set on the command line (KEY=value) (default [])
       --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
       --signing-key-pass string     Password to the private key used for signing packages
       --skip-sbom                   Skip generating SBOM for this package
+      --tlog-upload                 Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (allows for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window).
+      --tsa-server-url string       RFC3161 timestamp authority URL (e.g. https://timestamp.sigstore.dev/api/v1/timestamp). When set, a signed timestamp is embedded in the bundle as an alternative or complement to --tlog-upload for proving the signature was made while the Fulcio certificate was valid.
       --with-build-machine-info     Include build machine information (hostname and username) in the package metadata
 ```
 

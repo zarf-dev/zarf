@@ -17,6 +17,8 @@ import (
 
 // PackageFromV1alpha1 converts a v1alpha1 ZarfPackage to the internal generic representation.
 func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
+	// Direct conversions need the same legacy action migration as decoded packages.
+	pkg, _ = migrateDeprecated(pkg)
 	g := api.Package{
 		APIVersion: pkg.APIVersion,
 		Kind:       api.PackageKind(pkg.Kind),
@@ -69,28 +71,50 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 	}
 
 	for _, c := range pkg.Components {
-		g.Components = append(g.Components, componentToGeneric(c))
+		component := componentToGeneric(c)
+		if pkg.Kind == v1alpha1.ZarfInitConfig {
+			component.Service = serviceForComponentName(c.Name)
+		}
+		g.Components = append(g.Components, component)
 	}
 
 	return g
 }
 
+func serviceForComponentName(name string) api.Service {
+	switch name {
+	case "zarf-registry":
+		return api.ServiceRegistry
+	case "zarf-seed-registry":
+		return api.ServiceSeedRegistry
+	case "zarf-injector":
+		return api.ServiceInjector
+	case "zarf-agent":
+		return api.ServiceAgent
+	case "git-server":
+		return api.ServiceGitServer
+	default:
+		return ""
+	}
+}
+
 func componentToGeneric(c v1alpha1.ZarfComponent) api.Component {
 	gc := api.Component{
-		Name:              c.Name,
-		Description:       c.Description,
-		Default:           c.Default,
-		Optional:          !c.IsRequired(),
-		Group:             c.DeprecatedGroup,
-		DataInjections:    dataInjectionsToGeneric(c.DataInjections),
-		HealthChecks:      healthChecksToGeneric(c.HealthChecks),
-		DeprecatedScripts: scriptsToGeneric(c.DeprecatedScripts),
-		Repositories:      reposToGeneric(c.Repos),
-		StateAccess:       stateAccessToGeneric(c.StateAccess),
-		Target: api.ComponentTarget{
-			OS:           c.Only.LocalOS,
+		Name:           c.Name,
+		Description:    c.Description,
+		Default:        c.Default,
+		Optional:       !c.IsRequired(),
+		Group:          c.DeprecatedGroup,
+		DataInjections: dataInjectionsToGeneric(c.DataInjections),
+		HealthChecks:   healthChecksToGeneric(c.HealthChecks),
+		Repositories:   reposToGeneric(c.Repos),
+		StateAccess:    stateAccessToGeneric(c.StateAccess),
+		Selector: api.ComponentSelector{
 			Architecture: c.Only.Cluster.Architecture,
 			Flavor:       c.Only.Flavor,
+		},
+		Target: api.ComponentTarget{
+			OS: c.Only.LocalOS,
 		},
 		Distros: c.Only.Cluster.Distros,
 		Import:  api.ComponentImport{Name: c.Import.Name},
@@ -306,15 +330,14 @@ func actionSliceToGeneric(actions []v1alpha1.ZarfComponentAction) []api.Action {
 
 func actionToGeneric(a v1alpha1.ZarfComponentAction) api.Action {
 	ga := api.Action{
-		Silent:                a.Mute,
-		Dir:                   a.Dir,
-		Env:                   a.Env,
-		Cmd:                   a.Cmd,
-		Description:           a.Description,
-		Wait:                  waitToGeneric(a.Wait),
-		EnableTemplating:      derefBool(a.Template),
-		SetVariables:          variablesToGeneric(a.SetVariables),
-		DeprecatedSetVariable: a.DeprecatedSetVariable,
+		Silent:           a.Mute,
+		Dir:              a.Dir,
+		Env:              a.Env,
+		Cmd:              a.Cmd,
+		Description:      a.Description,
+		Wait:             waitToGeneric(a.Wait),
+		EnableTemplating: derefBool(a.Template),
+		SetVariables:     variablesToGeneric(a.SetVariables),
 	}
 
 	if a.MaxTotalSeconds != nil {
@@ -456,47 +479,24 @@ func buildFromGeneric(b api.BuildData) v1alpha1.ZarfBuildData {
 	return out
 }
 
-func scriptsToGeneric(s v1alpha1.DeprecatedZarfComponentScripts) api.DeprecatedComponentScripts {
-	return api.DeprecatedComponentScripts{
-		ShowOutput:     s.ShowOutput,
-		TimeoutSeconds: s.TimeoutSeconds,
-		Retry:          s.Retry,
-		Prepare:        s.Prepare,
-		Before:         s.Before,
-		After:          s.After,
-	}
-}
-
-func scriptsFromGeneric(s api.DeprecatedComponentScripts) v1alpha1.DeprecatedZarfComponentScripts {
-	return v1alpha1.DeprecatedZarfComponentScripts{
-		ShowOutput:     s.ShowOutput,
-		TimeoutSeconds: s.TimeoutSeconds,
-		Retry:          s.Retry,
-		Prepare:        s.Prepare,
-		Before:         s.Before,
-		After:          s.After,
-	}
-}
-
 func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 	ac := v1alpha1.ZarfComponent{
-		Name:              c.Name,
-		Description:       c.Description,
-		Default:           c.Default,
-		Required:          requiredFromGeneric(c.Optional),
-		DeprecatedGroup:   c.Group,
-		DataInjections:    dataInjectionsFromGeneric(c.DataInjections),
-		HealthChecks:      healthChecksFromGeneric(c.HealthChecks),
-		DeprecatedScripts: scriptsFromGeneric(c.DeprecatedScripts),
-		Repos:             reposFromGeneric(c.Repositories),
-		StateAccess:       stateAccessFromGeneric(c.StateAccess),
+		Name:            c.Name,
+		Description:     c.Description,
+		Default:         c.Default,
+		Required:        requiredFromGeneric(c.Optional),
+		DeprecatedGroup: c.Group,
+		DataInjections:  dataInjectionsFromGeneric(c.DataInjections),
+		HealthChecks:    healthChecksFromGeneric(c.HealthChecks),
+		Repos:           reposFromGeneric(c.Repositories),
+		StateAccess:     stateAccessFromGeneric(c.StateAccess),
 		Only: v1alpha1.ZarfComponentOnlyTarget{
 			LocalOS: c.Target.OS,
 			Cluster: v1alpha1.ZarfComponentOnlyCluster{
-				Architecture: c.Target.Architecture,
+				Architecture: c.Selector.Architecture,
 				Distros:      c.Distros,
 			},
-			Flavor: c.Target.Flavor,
+			Flavor: c.Selector.Flavor,
 		},
 		Import:  v1alpha1.ZarfComponentImport{Name: c.Import.Name},
 		Actions: actionsFromGeneric(c.Actions),
@@ -666,15 +666,14 @@ func actionSliceFromGeneric(actions []api.Action) []v1alpha1.ZarfComponentAction
 
 func actionFromGeneric(a api.Action) v1alpha1.ZarfComponentAction {
 	aa := v1alpha1.ZarfComponentAction{
-		Mute:                  a.Silent,
-		Dir:                   a.Dir,
-		Env:                   a.Env,
-		Cmd:                   a.Cmd,
-		Description:           a.Description,
-		Wait:                  waitFromGeneric(a.Wait),
-		SetVariables:          variablesFromGeneric(a.SetVariables),
-		DeprecatedSetVariable: a.DeprecatedSetVariable,
-		Template:              boolPointer(a.EnableTemplating),
+		Mute:         a.Silent,
+		Dir:          a.Dir,
+		Env:          a.Env,
+		Cmd:          a.Cmd,
+		Description:  a.Description,
+		Wait:         waitFromGeneric(a.Wait),
+		SetVariables: variablesFromGeneric(a.SetVariables),
+		Template:     boolPointer(a.EnableTemplating),
 	}
 
 	if a.MaxTotalSeconds != nil {
