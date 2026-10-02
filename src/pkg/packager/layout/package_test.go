@@ -183,10 +183,10 @@ func TestGetSBOMResourcesV1Beta1PreservesResourceKinds(t *testing.T) {
 	}
 }
 
-func TestGetSBOMResourcesV1Beta1UsesLegacyImageFilenames(t *testing.T) {
+func TestGetSBOMResourcesV1Beta1UsesDeclaredImageReference(t *testing.T) {
 	t.Parallel()
 
-	const imageKey = "image:ghcr.io/acme/app:1.4.0-linux-amd64"
+	const imageKey = "image:nginx"
 	dir := t.TempDir()
 	resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath(imageKey)))
 	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
@@ -202,7 +202,7 @@ func TestGetSBOMResourcesV1Beta1UsesLegacyImageFilenames(t *testing.T) {
 	}
 	outputDir := t.TempDir()
 	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{imageKey}))
-	contents, err := os.ReadFile(filepath.Join(outputDir, "images", "ghcr.io_acme_app_1.4.0-linux-amd64.json"))
+	contents, err := os.ReadFile(filepath.Join(outputDir, "images", "nginx.json"))
 	require.NoError(t, err)
 	require.Equal(t, "image SBOM", string(contents))
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -40,11 +41,10 @@ func TestCreateImageSBOM(t *testing.T) {
 	fileContent, err := os.ReadFile(filepath.Join(outputPath, "docker.io_foo_bar_latest.json"))
 	require.NoError(t, err)
 	require.Equal(t, fileContent, b)
-
 	betaOutputPath := t.TempDir()
-	betaSBOM, err := createImageSBOMResource(ctx, t.TempDir(), betaOutputPath, img, "docker.io/foo/bar:latest")
+	betaSBOM, err := createImageSBOMResource(ctx, t.TempDir(), betaOutputPath, img, "nginx")
 	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.SBOMResourcePath("image:docker.io/foo/bar:latest"))))
+	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.SBOMResourcePath("image:nginx"))))
 	require.NotEmpty(t, betaSBOM)
 }
 
@@ -60,6 +60,41 @@ func TestCreateImageSBOMNonExistentCachePath(t *testing.T) {
 	b, err := createImageSBOM(ctx, cachePath, outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
+}
+
+func TestSBOMImageIdentifier(t *testing.T) {
+	t.Parallel()
+
+	canonical, err := transform.ParseImageRef("nginx")
+	require.NoError(t, err)
+
+	t.Run("uses the declared beta reference", func(t *testing.T) {
+		identifier, err := sbomImageIdentifier(canonical, map[string]string{canonical.Reference: "nginx"}, true)
+		require.NoError(t, err)
+		require.Equal(t, "nginx", identifier)
+	})
+	t.Run("uses the canonical alpha reference", func(t *testing.T) {
+		identifier, err := sbomImageIdentifier(canonical, nil, false)
+		require.NoError(t, err)
+		require.Equal(t, "docker.io/library/nginx:latest", identifier)
+	})
+	t.Run("rejects missing beta declaration", func(t *testing.T) {
+		_, err := sbomImageIdentifier(canonical, nil, true)
+		require.EqualError(t, err, `no declared reference found for image "docker.io/library/nginx:latest"`)
+	})
+}
+
+func TestAddDeclaredSBOMImageReferenceRejectsDuplicateCanonicalImages(t *testing.T) {
+	t.Parallel()
+
+	canonical, err := transform.ParseImageRef("nginx")
+	require.NoError(t, err)
+	declaredReferences := map[string]string{}
+	require.NoError(t, addDeclaredSBOMImageReference(declaredReferences, "nginx", canonical))
+	require.Equal(t, map[string]string{canonical.Reference: "nginx"}, declaredReferences)
+
+	err = addDeclaredSBOMImageReference(declaredReferences, "docker.io/library/nginx:latest", canonical)
+	require.EqualError(t, err, `image declarations "nginx" and "docker.io/library/nginx:latest" resolve to the same image identity "docker.io/library/nginx:latest"`)
 }
 
 // findArtifact looks a package up by name in a syft document. Decoding into

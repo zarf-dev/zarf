@@ -132,12 +132,24 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	}
 
 	componentImages := []transform.Image{}
+	declaredImageReferences := map[string]string{}
 	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
 			imageArchive.Path, err = resolvedPackage.Resources.Path(imageArchive.Path)
 			if err != nil {
 				return nil, err
+			}
+			if layout.UsesGranularResourceLayout(pkg) && !opts.SkipSBOM {
+				for _, image := range imageArchive.Images {
+					refInfo, err := transform.ParseImageRef(image)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create ref for image %s: %w", image, err)
+					}
+					if err := addDeclaredSBOMImageReference(declaredImageReferences, image, refInfo); err != nil {
+						return nil, err
+					}
+				}
 			}
 
 			archiveImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, layout.ImagesDir), pkg.Metadata.Architecture)
@@ -150,6 +162,11 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 			refInfo, err := transform.ParseImageRef(image.Name)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create ref for image %s: %w", image.Name, err)
+			}
+			if layout.UsesGranularResourceLayout(pkg) && !opts.SkipSBOM {
+				if err := addDeclaredSBOMImageReference(declaredImageReferences, image.Name, refInfo); err != nil {
+					return nil, err
+				}
 			}
 			if slices.Contains(componentImages, refInfo) {
 				continue
@@ -188,7 +205,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 
 	if !opts.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
-		err := generateSBOM(ctx, pkg, buildPath, sbomImageList, opts.CachePath)
+		err := generateSBOM(ctx, pkg, buildPath, sbomImageList, declaredImageReferences, opts.CachePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}
@@ -345,6 +362,14 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	}
 
 	return pkgLayout, nil
+}
+
+func addDeclaredSBOMImageReference(declaredReferences map[string]string, declaredReference string, canonicalReference transform.Image) error {
+	if existingReference, found := declaredReferences[canonicalReference.Reference]; found && existingReference != declaredReference {
+		return fmt.Errorf("image declarations %q and %q resolve to the same image identity %q", existingReference, declaredReference, canonicalReference.Reference)
+	}
+	declaredReferences[canonicalReference.Reference] = declaredReference
+	return nil
 }
 
 // validateImageArchivesNoDuplicates ensures no image appears in multiple image archives
