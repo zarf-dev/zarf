@@ -38,6 +38,7 @@ const (
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrGitURLWithRef           = "git URL %q must not contain an embedded ref; use the ref field instead"
+	PkgValidateErrServiceRequiresInit     = "component %q declares service %q, but only ZarfInitConfig packages may declare services"
 )
 
 // ValidationErrors contains all errors found during package validation.
@@ -71,6 +72,9 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 	}
 	uniqueComponentNames := make(map[string]bool)
 	for _, component := range pkg.Components {
+		if component.Service != "" && pkg.Kind != v1beta1.ZarfInitConfig {
+			errs = append(errs, fmt.Errorf(PkgValidateErrServiceRequiresInit, component.Name, component.Service))
+		}
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
 			errs = append(errs, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))

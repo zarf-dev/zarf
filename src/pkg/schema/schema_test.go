@@ -38,14 +38,24 @@ func TestCombinedSchemaSelectsVersionByAPIVersion(t *testing.T) {
 			valid: true,
 		},
 		{
-			name: "v1beta1 init kind rejected by v1beta1 branch",
+			name: "v1beta1 init kind accepted by v1beta1 branch",
 			doc: map[string]any{
 				"apiVersion": "zarf.dev/v1beta1",
 				"kind":       "ZarfInitConfig",
 				"metadata":   map[string]any{"name": "test"},
 				"components": []any{map[string]any{"name": "first"}},
 			},
-			valid: false,
+			valid: true,
+		},
+		{
+			name: "v1beta1 init service accepted",
+			doc: map[string]any{
+				"apiVersion": "zarf.dev/v1beta1",
+				"kind":       "ZarfInitConfig",
+				"metadata":   map[string]any{"name": "test"},
+				"components": []any{map[string]any{"name": "registry", "service": "registry"}},
+			},
+			valid: true,
 		},
 	}
 
