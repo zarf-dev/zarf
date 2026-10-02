@@ -46,20 +46,10 @@ func (pkg Package) GetComponent(name string) (Component, error) {
 	return Component{}, fmt.Errorf("no component named %q in package %q", name, pkg.Metadata.Name)
 }
 
-// HasImages returns true if one of the components contains an image.
+// HasImages returns true if one of the components contains an image or image archive.
 func (pkg Package) HasImages() bool {
 	for _, component := range pkg.Components {
-		if len(component.Images) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
-// IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or image archives).
-func (pkg Package) IsSBOMAble() bool {
-	for _, c := range pkg.Components {
-		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.ImageArchives) > 0 {
+		if len(component.Images) > 0 || len(component.ImageArchives) > 0 {
 			return true
 		}
 	}

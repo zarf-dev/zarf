@@ -28,11 +28,6 @@ func (c Component) GetImages() []string {
 	return images
 }
 
-// RequiresCluster returns true if the component requires a cluster connection to deploy.
-func (c Component) RequiresCluster() bool {
-	return len(c.Images) > 0 || len(c.Charts) > 0 || len(c.Manifests) > 0 || len(c.Repositories) > 0
-}
-
 // ComponentTarget filters a component to only apply for a given local OS at deploy time.
 type ComponentTarget struct {
 	// Only deploy component to specified OS.
@@ -239,12 +234,22 @@ type File struct {
 	EnableTemplating bool `json:"enableTemplating,omitempty"`
 }
 
+// ImageSource identifies where an image is read during package creation.
+type ImageSource string
+
+const (
+	// ImageSourceRegistry reads an image from a registry.
+	ImageSourceRegistry ImageSource = "registry"
+	// ImageSourceDaemon reads an image from the local container daemon.
+	ImageSourceDaemon ImageSource = "daemon"
+)
+
 // Image defines an OCI image to include in the package.
 type Image struct {
 	// The image reference.
 	Name string `json:"name"`
 	// The source to pull the image from. Defaults to "registry".
-	Source string `json:"source,omitempty" jsonschema:"enum=registry,enum=daemon,default=registry"`
+	Source ImageSource `json:"source,omitempty" jsonschema:"enum=registry,enum=daemon,default=registry"`
 }
 
 // ImageArchive defines a tar archive of images to include in the package.
