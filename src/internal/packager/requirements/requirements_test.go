@@ -118,7 +118,7 @@ func TestValidateVersionRequirements(t *testing.T) {
 			pkg: api.Package{
 				Kind: api.ZarfInitConfig,
 				Metadata: api.PackageMetadata{Annotations: map[string]string{
-					api.GitServerTLSCapabilityAnnotation: api.GitServerTLSCapabilityV1,
+					string(api.CapabilityGitServerTLSV1): api.CapabilityEnabled,
 				}},
 				Build: api.BuildData{VersionRequirements: []api.VersionRequirement{{Version: api.GitServerTLSMinimumCLIVersion}}},
 			},

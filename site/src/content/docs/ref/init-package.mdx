@@ -256,6 +256,18 @@ To see a full list of `variables` you can view the [zarf.yaml that defines the g
 
 :::
 
+### Git server TLS capability
+
+An init package whose `git-server` component supports TLS declares:
+
+```yaml
+metadata:
+  annotations:
+    git-server-tls/v1: enabled
+```
+
+This capability means the component configures an HTTPS listener and mounts the Git server TLS Secret. Packages with this annotation require Zarf v0.88.0 or later. Before enabling or rotating Git server TLS on an existing cluster, deploy a TLS-capable init package with the `git-server` component selected. Zarf checks the capability recorded for the deployed Git server before changing TLS settings.
+
 ## Putting it All Together
 
 The package definition 'init' is similar to writing any other Zarf Package, but with a few key differences:

@@ -163,7 +163,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		pkgLayout.RemoveRepositories()
 	}
 	pkg = pkgLayout.Definition()
-	if pkg.IsInitConfig() && !pkg.SupportsGitServerTLS() && slices.ContainsFunc(pkg.Components, func(component api.Component) bool {
+	if pkg.IsInitConfig() && !pkg.SupportsCapability(api.CapabilityGitServerTLSV1) && slices.ContainsFunc(pkg.Components, func(component api.Component) bool {
 		return component.Service == api.ServiceGitServer
 	}) {
 		gitTLSEnabled := opts.GitServer.TLSMode.Enabled()
@@ -178,7 +178,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 			}
 		}
 		if gitTLSEnabled {
-			return DeployResult{}, fmt.Errorf("init package %q does not declare %s=%s; use a Git TLS-capable init package", pkg.Metadata.Name, api.GitServerTLSCapabilityAnnotation, api.GitServerTLSCapabilityV1)
+			return DeployResult{}, fmt.Errorf("init package %q does not declare %s=%s; use a Git TLS-capable init package", pkg.Metadata.Name, api.CapabilityGitServerTLSV1, api.CapabilityEnabled)
 		}
 	}
 

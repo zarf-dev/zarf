@@ -20,20 +20,22 @@ type Package struct {
 	Constants []Constant
 }
 
-// GitServerTLSCapabilityAnnotation declares that an init package can deploy
-// the internal Git server with Zarf-managed or user-managed TLS certificates.
-// FIXME: change to enabled
-const GitServerTLSCapabilityAnnotation = "zarf.dev/git-server-tls"
+// Capability identifies a package capability declared by metadata annotation.
+type Capability string
 
-// GitServerTLSCapabilityV1 identifies the first Git server TLS package contract.
-const GitServerTLSCapabilityV1 = "v1"
+const (
+	// CapabilityGitServerTLSV1 declares support for TLS on the internal Git server.
+	CapabilityGitServerTLSV1 Capability = "git-server-tls/v1"
+	// CapabilityEnabled is the annotation value used to declare a capability.
+	CapabilityEnabled = "enabled"
+)
 
 // GitServerTLSMinimumCLIVersion is the first release that understands this contract.
 const GitServerTLSMinimumCLIVersion = "v0.88.0"
 
-// SupportsGitServerTLS reports whether the package declares the Git server TLS contract.
-func (p Package) SupportsGitServerTLS() bool {
-	return p.Metadata.Annotations[GitServerTLSCapabilityAnnotation] == GitServerTLSCapabilityV1
+// SupportsCapability reports whether the package declares the given capability.
+func (p Package) SupportsCapability(capability Capability) bool {
+	return p.Metadata.Annotations[string(capability)] == CapabilityEnabled
 }
 
 // PackageMetadata contains metadata from all supported package API versions.

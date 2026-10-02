@@ -61,35 +61,32 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]state.Deployed
 	return deployedPackages, nil
 }
 
-// RequireGitServerTLSCapability checks that the installed init package can
-// serve Git over TLS before the Git server certificate or protocol is changed.
-func (c *Cluster) RequireGitServerTLSCapability(ctx context.Context) error {
+// RequireServiceCapability checks that deployed packages providing a service
+// declare the requested capability in their package metadata annotations.
+func (c *Cluster) RequireServiceCapability(ctx context.Context, service api.Service, capability api.Capability) error {
 	packages, err := c.GetDeployedZarfPackages(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to inspect deployed init packages: %w", err)
+		return fmt.Errorf("unable to inspect deployed packages: %w", err)
 	}
 
-	foundGitServer := false
+	foundService := false
 	for _, deployed := range packages {
 		definition, err := deployed.Definition()
 		if err != nil {
 			return fmt.Errorf("unable to inspect deployed package %q: %w", deployed.Name, err)
 		}
-		if !definition.IsInitConfig() {
-			continue
-		}
 		for _, component := range definition.Components {
-			if component.Service != api.ServiceGitServer {
+			if component.Service != service {
 				continue
 			}
-			foundGitServer = true
-			if !definition.SupportsGitServerTLS() {
-				return fmt.Errorf("deployed init package %q does not declare %s=%s; upgrade the init package before changing Git server TLS", deployed.Name, api.GitServerTLSCapabilityAnnotation, api.GitServerTLSCapabilityV1)
+			foundService = true
+			if !definition.SupportsCapability(capability) {
+				return fmt.Errorf("deployed package %q providing service %q does not declare %s=%s; upgrade the package before using this capability", deployed.Name, service, capability, api.CapabilityEnabled)
 			}
 		}
 	}
-	if !foundGitServer {
-		return fmt.Errorf("no deployed init package with a git-server component was found; deploy a Git TLS-capable init package before changing Git server TLS")
+	if !foundService {
+		return fmt.Errorf("no deployed package providing service %q was found", service)
 	}
 	return nil
 }

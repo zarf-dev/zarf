@@ -357,7 +357,7 @@ func TestAssembleTLSInitPackageDeclaresMinimumCLIVersion(t *testing.T) {
 		Metadata: v1alpha1.ZarfMetadata{
 			Name: "init",
 			Annotations: map[string]string{
-				api.GitServerTLSCapabilityAnnotation: api.GitServerTLSCapabilityV1,
+				string(api.CapabilityGitServerTLSV1): api.CapabilityEnabled,
 			},
 		},
 		Components: []v1alpha1.ZarfComponent{{Name: "git-server"}},
@@ -373,7 +373,7 @@ func TestAssembleTLSInitPackageDeclaresMinimumCLIVersion(t *testing.T) {
 	require.NoError(t, err)
 	built, err := pkgcfg.ParseAs(ctx, data, pkgcfg.V1Alpha1)
 	require.NoError(t, err)
-	require.Equal(t, api.GitServerTLSCapabilityV1, built.Metadata.Annotations[api.GitServerTLSCapabilityAnnotation])
+	require.Equal(t, api.CapabilityEnabled, built.Metadata.Annotations[string(api.CapabilityGitServerTLSV1)])
 	require.Contains(t, built.Build.VersionRequirements, v1alpha1.VersionRequirement{
 		Version: api.GitServerTLSMinimumCLIVersion,
 		Reason:  "This init package supports Git server TLS, which requires Zarf v0.88.0+",

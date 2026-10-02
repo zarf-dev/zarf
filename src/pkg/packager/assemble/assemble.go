@@ -919,7 +919,7 @@ func recordPackageMetadata(definition *api.Package, flavor string, registryOverr
 
 func collectVersionRequirements(pkg api.Package, hasIndex bool) []api.VersionRequirement {
 	var reqs []api.VersionRequirement
-	if pkg.IsInitConfig() && pkg.SupportsGitServerTLS() {
+	if pkg.IsInitConfig() && pkg.SupportsCapability(api.CapabilityGitServerTLSV1) {
 		reqs = append(reqs, api.VersionRequirement{
 			Version: api.GitServerTLSMinimumCLIVersion,
 			Reason:  "This init package supports Git server TLS, which requires Zarf v0.88.0+",

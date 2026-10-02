@@ -19,14 +19,15 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
@@ -787,7 +788,7 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 		newState.GitServer.Address = state.ZarfInClusterGitURL(newState.GitServer.TLSMode)
 	}
 	if o.rotateTLS || (gitTLSRequested && newState.GitServer.IsInternal() && newState.GitServer.TLSMode.Enabled()) {
-		if err := c.RequireGitServerTLSCapability(ctx); err != nil {
+		if err := c.RequireServiceCapability(ctx, api.ServiceGitServer, api.CapabilityGitServerTLSV1); err != nil {
 			return err
 		}
 	}
