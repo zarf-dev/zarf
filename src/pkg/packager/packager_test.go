@@ -6,11 +6,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func genericChart(chart v1alpha1.ZarfChart) api.Chart {
+	return convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{{Charts: []v1alpha1.ZarfChart{chart}}}}).Components[0].Charts[0]
+}
 
 func Test_generateValuesOverrides(t *testing.T) {
 	tests := []struct {
@@ -285,7 +291,7 @@ func Test_generateValuesOverrides(t *testing.T) {
 			t.Parallel()
 			ctx := testutil.TestContext(t)
 
-			result, err := generateValuesOverrides(ctx, tt.chart, tt.componentName, tt.opts)
+			result, err := generateValuesOverrides(ctx, genericChart(tt.chart), tt.componentName, tt.opts)
 			require.NoError(t, err)
 			require.Equal(t, tt.expect, result)
 		})
@@ -405,7 +411,7 @@ func Test_generateValuesOverrides_Errors(t *testing.T) {
 			t.Parallel()
 			ctx := testutil.TestContext(t)
 
-			result, err := generateValuesOverrides(ctx, tt.chart, tt.componentName, tt.opts)
+			result, err := generateValuesOverrides(ctx, genericChart(tt.chart), tt.componentName, tt.opts)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.errSubstr)
 			require.Nil(t, result)
@@ -435,7 +441,7 @@ func Test_generateValuesOverrides_ExcludePathsDoNotMutateSource(t *testing.T) {
 		valuesOverridesMap: ValuesOverrides{},
 	}
 
-	_, err := generateValuesOverrides(ctx, chart, "test-component", opts)
+	_, err := generateValuesOverrides(ctx, genericChart(chart), "test-component", opts)
 	require.NoError(t, err)
 
 	// The excluded key must still be present in the shared source values.
@@ -478,11 +484,11 @@ func Test_generateValuesOverrides_ExcludeDoesNotAffectOtherCharts(t *testing.T) 
 		},
 	}
 
-	aResult, err := generateValuesOverrides(ctx, excludingChart, "test-component", newOpts())
+	aResult, err := generateValuesOverrides(ctx, genericChart(excludingChart), "test-component", newOpts())
 	require.NoError(t, err)
 	require.Equal(t, map[string]any{"replicas": 3}, aResult)
 
-	bResult, err := generateValuesOverrides(ctx, mappingChart, "test-component", newOpts())
+	bResult, err := generateValuesOverrides(ctx, genericChart(mappingChart), "test-component", newOpts())
 	require.NoError(t, err)
 	require.Equal(t, map[string]any{
 		"replicas": 3,

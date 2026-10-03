@@ -207,6 +207,8 @@ const (
 	RegistryProxy          Name = "registry-proxy"
 	Values                 Name = "values"
 	DockerDaemonDirectPull Name = "docker-daemon-direct-pull"
+	SBOMViewer             Name = "sbom-viewer"
+	ArtifactServer         Name = "artifact-server"
 )
 
 func init() {
@@ -251,6 +253,20 @@ func init() {
 			Enabled: true,
 			Since:   "v0.80.0",
 			Stage:   GA,
+		},
+		{
+			Name:        SBOMViewer,
+			Description: "Enables deprecated SBOM viewer HTML generation during package creation.",
+			Enabled:     false,
+			Since:       "v0.86.0",
+			Stage:       Deprecated,
+		},
+		{
+			Name:        ArtifactServer,
+			Description: "Creates the deprecated artifact server during Zarf init when the git-server component is deployed.",
+			Enabled:     false,
+			Since:       "v0.87.0",
+			Stage:       Deprecated,
 		},
 	}
 

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
@@ -28,7 +28,7 @@ func TestInternalServicesFor(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		components []v1alpha1.ZarfComponent
+		components []api.Component
 		opts       DeployOptions
 		expected   state.ServiceSet
 	}{
@@ -38,8 +38,8 @@ func TestInternalServicesFor(t *testing.T) {
 			expected:   state.NewServiceSet(),
 		},
 		{
-			name: "full init package with no external URLs populates all four",
-			components: []v1alpha1.ZarfComponent{
+			name: "full init package with no external URLs populates enabled services",
+			components: []api.Component{
 				{Name: "k3s"},
 				{Name: "zarf-injector"},
 				{Name: "zarf-seed-registry"},
@@ -47,11 +47,11 @@ func TestInternalServicesFor(t *testing.T) {
 				{Name: "zarf-agent"},
 				{Name: "git-server"},
 			},
-			expected: state.NewServiceSet(state.RegistryKey, state.AgentKey, state.GitKey, state.ArtifactKey),
+			expected: state.NewServiceSet(state.RegistryKey, state.AgentKey, state.GitKey),
 		},
 		{
 			name: "external registry URL drops registry key even though registry components are present",
-			components: []v1alpha1.ZarfComponent{
+			components: []api.Component{
 				{Name: "zarf-injector"},
 				{Name: "zarf-seed-registry"},
 				{Name: "zarf-registry"},
@@ -61,11 +61,11 @@ func TestInternalServicesFor(t *testing.T) {
 			opts: DeployOptions{
 				RegistryInfo: state.RegistryInfo{Address: "https://registry.example.com"},
 			},
-			expected: state.NewServiceSet(state.AgentKey, state.GitKey, state.ArtifactKey),
+			expected: state.NewServiceSet(state.AgentKey, state.GitKey),
 		},
 		{
-			name: "external git URL does not drop git or artifact keys — git-server deploys regardless",
-			components: []v1alpha1.ZarfComponent{
+			name: "external git and artifact URLs do not change internally deployed services",
+			components: []api.Component{
 				{Name: "zarf-registry"},
 				{Name: "git-server"},
 			},
@@ -73,11 +73,11 @@ func TestInternalServicesFor(t *testing.T) {
 				GitServer:      state.GitServerInfo{Address: "https://git.example.com"},
 				ArtifactServer: state.ArtifactServerInfo{Address: "https://artifact.example.com"},
 			},
-			expected: state.NewServiceSet(state.RegistryKey, state.GitKey, state.ArtifactKey),
+			expected: state.NewServiceSet(state.RegistryKey, state.GitKey),
 		},
 		{
 			name: "registry components dedupe to registry key",
-			components: []v1alpha1.ZarfComponent{
+			components: []api.Component{
 				{Name: "zarf-injector"},
 				{Name: "zarf-seed-registry"},
 				{Name: "zarf-registry"},
@@ -86,7 +86,7 @@ func TestInternalServicesFor(t *testing.T) {
 		},
 		{
 			name: "unknown components ignored",
-			components: []v1alpha1.ZarfComponent{
+			components: []api.Component{
 				{Name: "k3s"},
 				{Name: "some-custom-component"},
 			},

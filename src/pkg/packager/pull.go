@@ -21,12 +21,11 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
 	"github.com/mholt/archives"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 
-	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -151,12 +150,10 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		return nil, err
 	}
 	if supportsFiltering(desc.Platform) {
-		definition := api.NewPackageDefinitionFromV1alpha1(pkg)
-		definition, err = filters.Apply(definition, opts.Filter)
+		pkg, err = filters.Apply(pkg, opts.Filter)
 		if err != nil {
 			return nil, err
 		}
-		pkg = definition.AsV1alpha1()
 	}
 
 	// Get all the layers for relevant components, exclude images if it's a skeleton or connected package

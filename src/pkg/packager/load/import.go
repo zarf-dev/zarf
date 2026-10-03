@@ -21,11 +21,12 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/types"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	ocistore "oras.land/oras-go/v2/content/oci"
 
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
@@ -131,21 +132,22 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				}
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
-			importedPkg, err = remote.FetchZarfYAML(ctx)
+			fetchedPkg, err := remote.FetchZarfYAML(ctx)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, nil, err
 			}
 
-			if len(importedPkg.Values.Files) > 0 || importedPkg.Values.Schema != "" {
+			if len(fetchedPkg.Values.Files) > 0 || fetchedPkg.Values.Schema != "" {
 				return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("imported skeleton %s declares values which are not yet supported", component.Import.URL)
 			}
 
 			if !skipVersionCheck {
 				// Validate skeleton package is compatible with new package
-				if err := pkgvalidate.ValidateVersionRequirements(importedPkg); err != nil {
+				if err := pkgvalidate.ValidateVersionRequirements(fetchedPkg); err != nil {
 					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("package %s has unmet requirements: %w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", component.Import.URL, err)
 				}
 			}
+			importedPkg = convert.PackageToV1alpha1(fetchedPkg)
 		}
 
 		name := getComponentToImportName(component)

@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -105,12 +105,10 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 				return component, normalizedComponentResources{}, err
 			}
 		}
-		if manifest.Kustomize != nil {
-			for j := range manifest.Kustomize.Files {
-				manifest.Kustomize.Files[j], err = addResource(&normalizer, manifest.Kustomize.Files[j])
-				if err != nil {
-					return component, normalizedComponentResources{}, err
-				}
+		for j := range manifest.Kustomize.Files {
+			manifest.Kustomize.Files[j], err = addResource(&normalizer, manifest.Kustomize.Files[j])
+			if err != nil {
+				return component, normalizedComponentResources{}, err
 			}
 		}
 	}
@@ -122,7 +120,7 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 		}
 	}
 
-	if hasActions(component.Component.Actions.OnCreate) {
+	if load.HasActionSet(component.Component.Actions.OnCreate) {
 		return component, normalizedComponentResources{}, fmt.Errorf("onCreate actions are not supported for published remote components")
 	}
 
@@ -142,10 +140,6 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 		imageArchives: imageArchives,
 		architecture:  component.Variant.Architecture,
 	}, nil
-}
-
-func hasActions(actionSet v1beta1.ComponentActionSet) bool {
-	return actionSet.Defaults != nil || len(actionSet.Before) > 0 || len(actionSet.OnSuccess) > 0 || len(actionSet.OnFailure) > 0
 }
 
 // addResource stages a local resource and leaves a remote URL for package creation to fetch.

@@ -20,6 +20,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -161,7 +162,7 @@ func TestCreateFileSBOMContents(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(componentsDir, component.Name+".tar"), buf.Bytes(), 0o644))
 
 	outputPath := t.TempDir()
-	b, err := createFileSBOM(ctx, component, outputPath, buildPath)
+	b, err := createFileSBOM(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], outputPath, buildPath)
 	require.NoError(t, err)
 
 	var doc model.Document

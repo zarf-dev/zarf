@@ -11,7 +11,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -123,7 +123,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	pkg := pkgLayout.AsV1alpha1()
+	pkg := pkgLayout.Definition()
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, false)
 	if err != nil {
@@ -146,7 +146,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 			return err
 		}
 
-		requiresCluster := slices.ContainsFunc(pkg.Components, func(c v1alpha1.ZarfComponent) bool {
+		requiresCluster := slices.ContainsFunc(pkg.Components, func(c api.Component) bool {
 			return c.RequiresCluster()
 		})
 		if requiresCluster {

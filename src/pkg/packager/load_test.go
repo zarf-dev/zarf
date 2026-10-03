@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -49,9 +51,9 @@ func TestLoadPackage(t *testing.T) {
 				pkgLayout, err := LoadPackage(ctx, tt.source, opt)
 				require.NoError(t, err)
 
-				require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
-				require.Equal(t, "0.0.1", pkgLayout.AsV1alpha1().Metadata.Version)
-				require.Len(t, pkgLayout.AsV1alpha1().Components, 1)
+				require.Equal(t, "test", pkgLayout.Definition().Metadata.Name)
+				require.Equal(t, "0.0.1", pkgLayout.Definition().Metadata.Version)
+				require.Len(t, pkgLayout.Definition().Components, 1)
 			}
 
 			opt := LoadOptions{
@@ -80,7 +82,7 @@ func TestLoadPackage(t *testing.T) {
 		}
 		pkgLayout, err := LoadPackage(ctx, tarPath, opt)
 		require.NoError(t, err)
-		require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test", pkgLayout.Definition().Metadata.Name)
 
 		// VerifyIfPossible with no material should warn but continue on unsigned package
 		opt = LoadOptions{
@@ -89,7 +91,7 @@ func TestLoadPackage(t *testing.T) {
 		}
 		pkgLayout, err = LoadPackage(ctx, tarPath, opt)
 		require.NoError(t, err)
-		require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test", pkgLayout.Definition().Metadata.Name)
 
 		// VerifyIfPossible with a key against an unsigned package is always fatal
 		opt = LoadOptions{
@@ -230,14 +232,19 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	pkgPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
 	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, pkgPath, "", LoadOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "test", pkg.AsV1alpha1().Metadata.Name)
+	require.Equal(t, "test", pkg.Metadata.Name)
 
 	c := &cluster.Cluster{
 		Clientset: fake.NewClientset(),
 	}
-	_, err = c.RecordPackageDeployment(ctx, pkg.AsV1alpha1(), "sha256:abcdeadbeef", nil, 1)
+	betaPkg := convert.PackageFromV1beta1(v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Metadata:   v1beta1.PackageMetadata{Name: "beta-test"},
+	})
+	_, err = c.RecordPackageDeployment(ctx, betaPkg, "sha256:abcdeadbeef", nil, 1)
 	require.NoError(t, err)
-	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", "", LoadOptions{})
+	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "beta-test", "", LoadOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "test", pkg.AsV1alpha1().Metadata.Name)
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
+	require.Equal(t, "beta-test", pkg.Metadata.Name)
 }

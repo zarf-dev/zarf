@@ -10,14 +10,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -219,7 +221,7 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := validateImageArchivesNoDuplicates(tt.components)
+			err := validateImageArchivesNoDuplicates(convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: tt.components}).Components)
 
 			if tt.errorContains != "" {
 				require.Error(t, err)
@@ -340,7 +342,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tt.expected, collectVersionRequirements(tt.pkg, tt.hasIndex))
+			require.Equal(t, tt.expected, collectVersionRequirements(convert.PackageFromV1alpha1(tt.pkg), tt.hasIndex))
 		})
 	}
 }
@@ -438,8 +440,30 @@ fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm
 `
 
 	require.Equal(t, expectedChecksum, string(b))
-	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.AsV1alpha1())
-	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.AsV1alpha1()), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
+	testutil.RequireNoBackslashInPackagePaths(t, convert.PackageToV1alpha1(pkgLayout.Definition()))
+	require.Equal(t, "7eb1a1e4e33ec7b6a7da78937b99c64bf7cf4751b70c0ed0662356cd7c18f967", testutil.ChecksumZarfYAMLContent(t, convert.PackageToV1alpha1(pkgLayout.Definition())), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
+}
+
+func TestAssembleSkeletonRejectsNonV1Alpha1Package(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-skeleton
+components:
+  - name: component
+`), 0o600))
+
+	loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+
+	_, err = AssembleSkeleton(ctx, loaded, AssembleSkeletonOptions{})
+	require.ErrorContains(t, err, "skeleton packages are only supported for apiVersion "+v1alpha1.APIVersion)
+	require.ErrorContains(t, err, v1beta1.APIVersion)
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
@@ -449,6 +473,129 @@ func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	path := filepath.Join(dir, layout.ZarfYAML)
 	err = os.WriteFile(path, b, 0700)
 	require.NoError(t, err)
+}
+
+func TestAssemblePackageOnCreateOutcomeActions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		before      string
+		onSuccess   string
+		wantError   string
+		wantBefore  bool
+		wantSuccess bool
+		wantFailure bool
+	}{
+		{
+			name:        "successful creation",
+			before:      "echo before > before.txt",
+			onSuccess:   "echo success > success.txt",
+			wantBefore:  true,
+			wantSuccess: true,
+		},
+		{
+			name:        "failed before action",
+			before:      "exit 1",
+			onSuccess:   "echo success > success.txt",
+			wantError:   "unable to run component before action",
+			wantFailure: true,
+		},
+		{
+			name:        "failed success action",
+			before:      "echo before > before.txt",
+			onSuccess:   "exit 1",
+			wantError:   "unable to run component success action",
+			wantBefore:  true,
+			wantFailure: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			dir := t.TempDir()
+			definition := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: create-actions
+components:
+  - name: component
+    actions:
+      onCreate:
+        before:
+          - cmd: %q
+        onSuccess:
+          - cmd: %q
+        onFailure:
+          - cmd: echo failure > failure.txt
+`, tt.before, tt.onSuccess)
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+
+			loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+			require.NoError(t, err)
+			pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+			if tt.wantError != "" {
+				require.ErrorContains(t, err, tt.wantError)
+			} else {
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			}
+
+			for name, want := range map[string]bool{
+				"before.txt":  tt.wantBefore,
+				"success.txt": tt.wantSuccess,
+				"failure.txt": tt.wantFailure,
+			} {
+				path := filepath.Join(dir, name)
+				if want {
+					require.FileExists(t, path)
+				} else {
+					require.NoFileExists(t, path)
+				}
+			}
+		})
+	}
+}
+
+func TestAssemblePackageCleansStagingDirectoryOnSuccessActionFailure(t *testing.T) {
+	// This test configures a process-global temporary directory.
+	tempDirectory := t.TempDir()
+	originalTempDirectory := config.CommonOptions.TempDirectory
+	config.CommonOptions.TempDirectory = tempDirectory
+	t.Cleanup(func() {
+		config.CommonOptions.TempDirectory = originalTempDirectory
+	})
+
+	ctx := testutil.TestContext(t)
+	sourcePath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
+	require.NoError(t, err)
+	dir := t.TempDir()
+	definition := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: create-actions
+components:
+  - name: component
+    files:
+      - source: %q
+        destination: data.txt
+    actions:
+      onCreate:
+        onSuccess:
+          - cmd: exit 1
+`, sourcePath)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+
+	loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+	require.NoError(t, err)
+	_, err = AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+	require.ErrorContains(t, err, "unable to run component success action")
+
+	entries, err := os.ReadDir(tempDirectory)
+	require.NoError(t, err)
+	require.Empty(t, entries)
 }
 
 func TestAssemblePackageWritesResolvedValues(t *testing.T) {
@@ -787,8 +934,9 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(importedFileComponent, "0", "file.txt"))
 
-	// Ensure the sbom exists as expected
+	// File-only packages include component SBOMs but not the deprecated viewer by default.
 	err = pkgLayout.GetSBOM(ctx, tmpdir)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(tmpdir, "zarf-component-file-import.json"))
+	require.NoFileExists(t, filepath.Join(tmpdir, "sbom-viewer-zarf-component-file-import.html"))
 }

@@ -8,16 +8,17 @@ tableOfContents: false
 
 ## zarf package list
 
-Lists out all of the packages that have been deployed to the cluster (runs offline)
+Lists packages that have been deployed to the cluster (runs offline)
 
 ```
-zarf package list [flags]
+zarf package list [PACKAGE_NAME] [flags]
 ```
 
 ### Options
 
 ```
   -h, --help                         help for list
+  -n, --namespace string             [Alpha] Filter by namespace override when listing packages or select it for a named deployed package
   -o, --output-format outputFormat   Prints the output in the specified format. Valid options: table, json, yaml (default table)
 ```
 

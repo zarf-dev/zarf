@@ -15,15 +15,19 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 	registryremote "oras.land/oras-go/v2/registry/remote"
 )
@@ -71,7 +75,7 @@ func TestPublishComponentAndAssembleRemoteImportResources(t *testing.T) {
 		Values:     v1beta1.Values{Files: []string{"values.yaml"}, Schema: "schema.json"},
 		Component: v1beta1.ComponentSpec{
 			Charts:    []v1beta1.Chart{{Name: "test", Namespace: "default", Local: &v1beta1.LocalSource{Path: "chart"}, ValuesFiles: []v1beta1.ValuesFile{{Path: "chart-values.yaml"}}}},
-			Manifests: []v1beta1.Manifest{{Name: "manifest", Files: []string{"manifest.yaml"}}, {Name: "kustomize", Kustomize: &v1beta1.KustomizeManifest{Files: []string{"kustomize"}}}},
+			Manifests: []v1beta1.Manifest{{Name: "manifest", Files: []string{"manifest.yaml"}}, {Name: "kustomize", Kustomize: v1beta1.KustomizeManifest{Files: []string{"kustomize"}}}},
 			Files:     []v1beta1.File{{Source: "file.txt", Destination: "/tmp/file.txt"}},
 		},
 	}
@@ -99,7 +103,7 @@ components:
 	loaded, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{CachePath: cachePath, RemoteOptions: defaultTestRemoteOptions()}})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
-	resourcePath, err := loaded.Resources.Path(loaded.Definition.AsV1alpha1().Components[0].Files[0].Source)
+	resourcePath, err := loaded.Resources.Path(convert.PackageToV1alpha1(loaded.Definition).Components[0].Files[0].Source)
 	require.NoError(t, err)
 
 	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{CachePath: cachePath, SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
@@ -131,7 +135,8 @@ func TestPublishComponent(t *testing.T) {
 
 	ctx := context.Background()
 	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
-		RemoteOptions: defaultTestRemoteOptions(),
+		SignManifestOptions: nil,
+		RemoteOptions:       defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
 
@@ -171,6 +176,51 @@ func TestPublishComponent(t *testing.T) {
 	} {
 		require.NotContains(t, layerTitles, remotePath)
 	}
+}
+
+func TestPublishComponentSignsManifest(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.key")
+	signOpts.Password = "test"
+	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
+		SignManifestOptions: &signOpts,
+		RemoteOptions:       defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+
+	verifyOpts := signing.DefaultVerifyManifestOptions()
+	verifyOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.pub")
+	require.NoError(t, signing.VerifyManifest(ctx, published.String(), verifyOpts, defaultTestRemoteOptions()))
+}
+
+func TestPublishComponentDoesNotTagOnSigningFailure(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	componentPath := filepath.Join("testdata", "publish-component-v1beta1", "component.yaml")
+	destination := createRegistry(ctx, t)
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = filepath.Join(t.TempDir(), "missing.key")
+
+	_, err := Publish(ctx, componentPath, destination, PublishOptions{
+		SignManifestOptions: &signOpts,
+		RemoteOptions:       defaultTestRemoteOptions(),
+	})
+	require.Error(t, err)
+
+	config, err := load.ComponentConfig(componentPath)
+	require.NoError(t, err)
+	componentRef, err := componentReference(destination, config)
+	require.NoError(t, err)
+	remote, err := zoci.NewRemoteWithOptions(ctx, componentRef.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+	_, err = remote.Repo().Resolve(ctx, componentRef.Reference)
+	require.ErrorIs(t, err, errdef.ErrNotFound)
 }
 
 func TestPublishComponentFlavor(t *testing.T) {
@@ -488,6 +538,10 @@ func TestPublishComponentArchitectureIndexImportsMatchingFlavorVariant(t *testin
 	destination := createRegistry(ctx, t)
 	const flavor = "hardened"
 
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.key")
+	signOpts.Password = "test"
+
 	for _, architecture := range []string{"amd64", "arm64"} {
 		componentPath := filepath.Join(root, architecture+".yaml")
 		require.NoError(t, os.WriteFile(filepath.Join(root, architecture+".txt"), []byte(architecture), 0o600))
@@ -505,7 +559,10 @@ component:
       destination: /tmp/variant.txt
 `, flavor, architecture, architecture)
 		require.NoError(t, os.WriteFile(componentPath, []byte(componentYAML), 0o600))
-		published, err := Publish(ctx, componentPath, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+		published, err := Publish(ctx, componentPath, destination, PublishOptions{
+			SignManifestOptions: &signOpts,
+			RemoteOptions:       defaultTestRemoteOptions(),
+		})
 		require.NoError(t, err)
 		require.Equal(t, "0.0.1-hardened", published.Reference)
 	}
@@ -518,6 +575,10 @@ component:
 	rootDescriptor, err := repo.Resolve(ctx, published.Reference)
 	require.NoError(t, err)
 	require.Equal(t, ocispec.MediaTypeImageIndex, rootDescriptor.MediaType)
+
+	verifyOpts := signing.DefaultVerifyManifestOptions()
+	verifyOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.pub")
+	require.NoError(t, signing.VerifyManifest(ctx, published.String(), verifyOpts, defaultTestRemoteOptions()))
 
 	packagePath := filepath.Join(root, "zarf.yaml")
 	packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
@@ -532,11 +593,15 @@ components:
         - url: oci://%s
 `, published.String())
 	require.NoError(t, os.WriteFile(packagePath, []byte(packageYAML), 0o600))
-	loaded, err := load.Package(ctx, root, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{Flavor: flavor, RemoteOptions: defaultTestRemoteOptions()}})
+	loaded, err := load.Package(ctx, root, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{
+		CachePath:     t.TempDir(),
+		Flavor:        flavor,
+		RemoteOptions: defaultTestRemoteOptions(),
+	}})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 
-	contents, err := loaded.Resources.ReadFile(loaded.Definition.AsV1beta1().Components[0].Files[0].Source)
+	contents, err := loaded.Resources.ReadFile(convert.PackageToV1beta1(loaded.Definition).Components[0].Files[0].Source)
 	require.NoError(t, err)
 	require.Equal(t, "arm64", string(contents))
 }
@@ -606,7 +671,7 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 			}},
 			Manifests: []v1beta1.Manifest{{
 				Files:     []string{filepath.Join(externalDir, "manifest.yaml")},
-				Kustomize: &v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
+				Kustomize: v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
 			}},
 			Files: []v1beta1.File{{Source: filepath.Join(externalDir, "file.txt"), Destination: "/tmp/file.txt"}},
 		},
@@ -664,6 +729,30 @@ component:
 
 	_, err := Publish(context.Background(), componentPath, createRegistry(context.Background(), t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.EqualError(t, err, "onCreate actions are not supported for published remote components")
+}
+
+func TestPublishComponentRejectsAllowAnyDirectory(t *testing.T) {
+	t.Parallel()
+
+	componentPath := filepath.Join(t.TempDir(), "component.yaml")
+	componentYAML := []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: unrestricted
+  version: 0.0.1
+component:
+  manifests:
+    - name: app
+      kustomize:
+        files:
+          - kustomize
+        allowAnyDirectory: true
+`)
+	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
+
+	ctx := context.Background()
+	_, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.ErrorContains(t, err, `manifest "app" uses kustomize.allowAnyDirectory`)
 }
 
 func getPublishedComponent(ctx context.Context, t *testing.T, published registry.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {
@@ -753,7 +842,7 @@ func TestComponentResourcesAllowsSupportedRemoteSources(t *testing.T) {
 			Charts: []v1beta1.Chart{{ValuesFiles: []v1beta1.ValuesFile{{Path: "https://example.com/chart-values.yaml"}}}},
 			Manifests: []v1beta1.Manifest{{
 				Files:     []string{"https://example.com/manifest.yaml"},
-				Kustomize: &v1beta1.KustomizeManifest{Files: []string{"https://example.com/kustomization.yaml"}},
+				Kustomize: v1beta1.KustomizeManifest{Files: []string{"https://example.com/kustomization.yaml"}},
 			}},
 			Files: []v1beta1.File{{Source: "https://example.com/file.txt"}},
 		},

@@ -114,17 +114,13 @@ func mergeManifests(base, head []v1beta1.Manifest) []v1beta1.Manifest {
 			m.Namespace = h.Namespace
 		}
 		m.Files = append(m.Files, h.Files...)
-		if h.Kustomize != nil {
-			if m.Kustomize == nil {
-				m.Kustomize = h.Kustomize
-			} else {
-				m.Kustomize.Files = append(m.Kustomize.Files, h.Kustomize.Files...)
-				if h.Kustomize.AllowAnyDirectory {
-					m.Kustomize.AllowAnyDirectory = true
-				}
-				if h.Kustomize.EnablePlugins {
-					m.Kustomize.EnablePlugins = true
-				}
+		if len(h.Kustomize.Files) > 0 || h.Kustomize.AllowAnyDirectory || h.Kustomize.EnablePlugins {
+			m.Kustomize.Files = append(m.Kustomize.Files, h.Kustomize.Files...)
+			if h.Kustomize.AllowAnyDirectory {
+				m.Kustomize.AllowAnyDirectory = true
+			}
+			if h.Kustomize.EnablePlugins {
+				m.Kustomize.EnablePlugins = true
 			}
 		}
 		if h.ServerSideApply != "" {
@@ -180,10 +176,8 @@ func fixPathsV1Beta1(spec v1beta1.ComponentSpec, relativeToHead string) v1beta1.
 		for j := range spec.Manifests[i].Files {
 			spec.Manifests[i].Files[j] = makePathRelativeTo(spec.Manifests[i].Files[j], relativeToHead)
 		}
-		if spec.Manifests[i].Kustomize != nil {
-			for j := range spec.Manifests[i].Kustomize.Files {
-				spec.Manifests[i].Kustomize.Files[j] = makePathRelativeTo(spec.Manifests[i].Kustomize.Files[j], relativeToHead)
-			}
+		for j := range spec.Manifests[i].Kustomize.Files {
+			spec.Manifests[i].Kustomize.Files[j] = makePathRelativeTo(spec.Manifests[i].Kustomize.Files[j], relativeToHead)
 		}
 	}
 

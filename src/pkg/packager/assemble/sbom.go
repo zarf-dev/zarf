@@ -29,14 +29,15 @@ import (
 	"github.com/anchore/syft/syft/source/directorysource"
 	"github.com/anchore/syft/syft/source/filesource"
 	"github.com/anchore/syft/syft/source/stereoscopesource"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -50,7 +51,7 @@ const componentPrefix = "zarf-component-"
 var viewerAssets embed.FS
 var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
-func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath string, images []transform.Image, cachePath string) (err error) {
+func generateSBOM(ctx context.Context, pkg api.Package, buildPath string, images []transform.Image, cachePath string) (err error) {
 	l := logger.From(ctx)
 	outputPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -60,10 +61,13 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		err = errors.Join(err, os.RemoveAll(outputPath))
 	}()
 
+	sbomViewerEnabled := feature.IsEnabled(feature.SBOMViewer)
 	componentSBOMs := []string{}
-	for _, comp := range pkg.Components {
-		if len(comp.Files) > 0 || len(comp.DataInjections) > 0 {
-			componentSBOMs = append(componentSBOMs, comp.Name)
+	if sbomViewerEnabled {
+		for _, comp := range pkg.Components {
+			if len(comp.Files) > 0 || len(comp.DataInjections) > 0 {
+				componentSBOMs = append(componentSBOMs, comp.Name)
+			}
 		}
 	}
 	type imageSBOMTarget struct {
@@ -88,13 +92,16 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		}
 	}
 
-	identifiers := make([]string, 0, len(targets))
-	for _, t := range targets {
-		identifiers = append(identifiers, t.identifier)
-	}
-	jsonList, err := generateJSONList(componentSBOMs, identifiers)
-	if err != nil {
-		return err
+	var jsonList []byte
+	if sbomViewerEnabled {
+		identifiers := make([]string, 0, len(targets))
+		for _, t := range targets {
+			identifiers = append(identifiers, t.identifier)
+		}
+		jsonList, err = generateJSONList(componentSBOMs, identifiers)
+		if err != nil {
+			return err
+		}
 	}
 
 	for index, t := range targets {
@@ -103,13 +110,15 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
 		}
-		err = createSBOMViewerAsset(outputPath, t.identifier, b, jsonList)
-		if err != nil {
-			return err
+		if sbomViewerEnabled {
+			err = createSBOMViewerAsset(outputPath, t.identifier, b, jsonList)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	// Generate SBOM for each component
+	// Generate SBOM for each component.
 	for _, comp := range pkg.Components {
 		if len(comp.DataInjections) == 0 && len(comp.Files) == 0 {
 			continue
@@ -118,9 +127,11 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		if err != nil {
 			return err
 		}
-		err = createSBOMViewerAsset(outputPath, fmt.Sprintf("%s%s", componentPrefix, comp.Name), jsonData, jsonList)
-		if err != nil {
-			return err
+		if sbomViewerEnabled {
+			err = createSBOMViewerAsset(outputPath, fmt.Sprintf("%s%s", componentPrefix, comp.Name), jsonData, jsonList)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -167,7 +178,7 @@ func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.I
 	return jsonData, nil
 }
 
-func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outputPath, buildPath string) (_ []byte, err error) {
+func createFileSBOM(ctx context.Context, component api.Component, outputPath, buildPath string) (_ []byte, err error) {
 	l := logger.From(ctx)
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -195,7 +206,7 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 		return nil
 	}
 	for i, file := range component.Files {
-		path := filepath.Join(tmpDir, component.Name, string(layout.FilesComponentDir), layout.ComponentFileRelPath(i, file.Target))
+		path := filepath.Join(tmpDir, component.Name, string(layout.FilesComponentDir), layout.ComponentFileRelPath(i, file.Destination))
 		err := appendSBOMFiles(path)
 		if err != nil {
 			return nil, err

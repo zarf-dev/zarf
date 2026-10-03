@@ -9,24 +9,29 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// CreateOptions are the optional parameters to create
+// CreateOptions are the optional parameters to create.
 type CreateOptions struct {
-	Flavor                  string
-	RegistryOverrides       []images.RegistryOverride
-	SigningKeyPath          string
+	Flavor            string
+	RegistryOverrides []images.RegistryOverride
+	// A nil value leaves the package unsigned; a non-nil value requests signing.
+	SignBlobOptions *signing.SignBlobOptions
+	// Deprecated: populate SignBlobOptions.Key directly.
+	SigningKeyPath string
+	// Deprecated: populate SignBlobOptions.Password directly.
 	SigningKeyPassword      string
 	SetVariables            map[string]string
 	MaxPackageSizeMB        int
@@ -72,9 +77,9 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
-	pkg := loaded.Definition.AsV1alpha1()
+	pkg := loaded.Definition
 
-	var differentialPkg v1alpha1.ZarfPackage
+	var differentialPkg api.Package
 	if opts.DifferentialPackagePath != "" {
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
 			Architecture:   pkg.Metadata.Architecture,
@@ -89,7 +94,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err := pkgLayout.Cleanup(); err != nil {
 			return "", err
 		}
-		differentialPkg = pkgLayout.AsV1alpha1()
+		differentialPkg = pkgLayout.Definition()
 	}
 
 	assembleOpt := assemble.AssembleOptions{
@@ -98,6 +103,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		DifferentialPackage:  differentialPkg,
 		Flavor:               opts.Flavor,
 		RegistryOverrides:    opts.RegistryOverrides,
+		SignBlobOptions:      opts.SignBlobOptions,
 		SigningKeyPath:       opts.SigningKeyPath,
 		SigningKeyPassword:   opts.SigningKeyPassword,
 		CachePath:            opts.CachePath,
@@ -114,7 +120,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 
 	var packageLocation string
 	if helpers.IsOCIURL(output) {
-		pkg := pkgLayout.AsV1alpha1()
+		pkg := pkgLayout.Definition()
 		ref, err := zoci.ReferenceFromMetadata(output, pkg)
 		if err != nil {
 			return "", err
@@ -144,7 +150,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 
 	if opts.SBOMOut != "" {
 		// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
-		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, filepath.Base(pkgLayout.AsV1alpha1().Metadata.Name)))
+		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, filepath.Base(pkgLayout.Definition().Metadata.Name)))
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {
