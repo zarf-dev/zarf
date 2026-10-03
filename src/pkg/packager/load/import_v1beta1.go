@@ -15,6 +15,7 @@ import (
 
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -128,7 +129,6 @@ func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.Compone
 	if err := validateComponentImportV1Beta1(spec.Import); err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
-	// TODO, when resolving a remote component make sure that any maliciously crafted component configs will error
 	if len(spec.Import.Local) == 0 && len(spec.Import.Remote) == 0 {
 		// End of this import chain: there are no deeper imported values to inherit.
 		return spec, importedValues{}, nil, nil
@@ -256,6 +256,16 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
+	if err := ValidateRemoteKustomizeRestrictions(config.Component); err != nil {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
+	}
+	// Remote components are barred from oncreate actions, this ensures a component wasn't maliciously published with them
+	if HasActionSet(config.Component.Actions.OnCreate) {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q contains unsupported onCreate actions", importURL)
+	}
+	if len(config.Component.Import.Local) != 0 || len(config.Component.Import.Remote) != 0 {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q contains unresolved imports", importURL)
+	}
 	if !variantMatchesOCIPlatform(config.Variant, root.Platform) {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q variant architecture does not match its OCI platform", importURL)
 	}
@@ -268,7 +278,7 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 			continue
 		}
 		mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
-		if !validRemoteMountPath(mountPath) {
+		if !validResourcePath(mountPath) {
 			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an invalid resource layer", importURL)
 		}
 		if _, exists := seenMountPaths[mountPath]; exists {
@@ -277,11 +287,91 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 		seenMountPaths[mountPath] = struct{}{}
 		resources = append(resources, remoteResource{remote: remote, descriptor: descriptor, importRoot: importRoot, mountPath: mountPath})
 	}
+	if err := validateRemoteComponentResources(config, seenMountPaths); err != nil {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
+	}
 	return loadedComponentConfig{config: config, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
 }
 
-func validRemoteMountPath(mountPath string) bool {
-	return mountPath != "" && !path.IsAbs(mountPath) && path.Clean(mountPath) == mountPath && mountPath != "." && !strings.HasPrefix(mountPath, "../") && !strings.Contains(mountPath, "/../")
+// ValidateRemoteKustomizeRestrictions rejects unrestricted Kustomize builds for remote components.
+func ValidateRemoteKustomizeRestrictions(spec v1beta1.ComponentSpec) error {
+	for _, manifest := range spec.Manifests {
+		if manifest.Kustomize.AllowAnyDirectory {
+			return fmt.Errorf("manifest %q uses kustomize.allowAnyDirectory, which is not supported for remote components", manifest.Name)
+		}
+	}
+	return nil
+}
+
+// validateRemoteComponentResources keeps a fetched component from reading paths on the
+// importing machine. Local sources must refer to files or directories supplied by its OCI layers.
+func validateRemoteComponentResources(config v1beta1.ComponentConfig, mountPaths map[string]struct{}) error {
+	check := func(field, source string, allowURL bool) error {
+		if source == "" {
+			return nil
+		}
+		if allowURL && helpers.IsURL(source) {
+			return nil
+		}
+		if !validResourcePath(source) {
+			return fmt.Errorf("%s has invalid local resource path %q", field, source)
+		}
+		for mountPath := range mountPaths {
+			if source == mountPath || strings.HasPrefix(mountPath, source+"/") {
+				return nil
+			}
+		}
+		return fmt.Errorf("%s references local resource %q absent from artifact layers", field, source)
+	}
+
+	for i, source := range config.Values.Files {
+		if err := check(fmt.Sprintf("values.files[%d]", i), source, false); err != nil {
+			return err
+		}
+	}
+	if err := check("values.schema", config.Values.Schema, false); err != nil {
+		return err
+	}
+	for i, chart := range config.Component.Charts {
+		if chart.Local != nil {
+			if err := check(fmt.Sprintf("component.charts[%d].local.path", i), chart.Local.Path, false); err != nil {
+				return err
+			}
+		}
+		for j, valuesFile := range chart.ValuesFiles {
+			if err := check(fmt.Sprintf("component.charts[%d].valuesFiles[%d].path", i, j), valuesFile.Path, true); err != nil {
+				return err
+			}
+		}
+	}
+	for i, manifest := range config.Component.Manifests {
+		for j, source := range manifest.Files {
+			if err := check(fmt.Sprintf("component.manifests[%d].files[%d]", i, j), source, true); err != nil {
+				return err
+			}
+		}
+		for j, source := range manifest.Kustomize.Files {
+			if err := check(fmt.Sprintf("component.manifests[%d].kustomize.files[%d]", i, j), source, true); err != nil {
+				return err
+			}
+		}
+	}
+	for i, file := range config.Component.Files {
+		if err := check(fmt.Sprintf("component.files[%d].source", i), file.Source, true); err != nil {
+			return err
+		}
+	}
+	for i, archive := range config.Component.ImageArchives {
+		if err := check(fmt.Sprintf("component.imageArchives[%d].path", i), archive.Path, false); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// HasActionSet reports whether an action set contains actions or defaults.
+func HasActionSet(actions v1beta1.ComponentActionSet) bool {
+	return actions.Defaults != nil || len(actions.Before) != 0 || len(actions.OnSuccess) != 0 || len(actions.OnFailure) != 0
 }
 
 // ComponentConfig reads and schema-validates a v1beta1 ZarfComponentConfig file.

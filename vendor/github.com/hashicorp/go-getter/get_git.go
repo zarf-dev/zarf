@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2015, 2025
+// Copyright IBM Corp. 2015, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package getter
@@ -431,17 +431,18 @@ func checkGitVersion(ctx context.Context, min string) error {
 	return nil
 }
 
-// removeCaseInsensitiveGitDirectory removes all .git directory variations
+// removeCaseInsensitiveGitDirectory removes any .git entry (directory,
+// regular file used as a gitdir pointer, or symlink) in dst so that a
+// previously-planted .git cannot influence the subsequent `git init`.
 func removeCaseInsensitiveGitDirectory(dst string) error {
 	files, err := os.ReadDir(dst)
 	if err != nil {
 		return fmt.Errorf("failed to read the destination directory %s during git update", dst)
 	}
 	for _, f := range files {
-		if strings.EqualFold(f.Name(), ".git") && f.IsDir() {
-			err := os.RemoveAll(filepath.Join(dst, f.Name()))
-			if err != nil {
-				return fmt.Errorf("failed to remove the .git directory in the destination directory %s during git update", dst)
+		if strings.EqualFold(f.Name(), ".git") {
+			if err := os.RemoveAll(filepath.Join(dst, f.Name())); err != nil {
+				return fmt.Errorf("failed to remove .git entry in the destination directory %s during git update", dst)
 			}
 		}
 	}

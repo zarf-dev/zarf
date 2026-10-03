@@ -26,6 +26,8 @@ components:
             targetPath: ".configMap.annotations"
           - sourcePath: ".configMap.labels"
             targetPath: ".configMap.labels"
+          - sourcePath: ".fallback"
+            targetPath: ".fallback"
   
   - name: backend-chart
     required: true

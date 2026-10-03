@@ -18,16 +18,18 @@ import (
 	"sort"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	zarfoci "github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -46,6 +48,9 @@ type PublishOptions struct {
 	OCIConcurrency int
 	// Retries is the number of attempts to make when publishing fails.
 	Retries int
+	// SignManifestOptions configures an optional signature published after the component artifact.
+	// A nil value publishes without signing.
+	SignManifestOptions *signing.SignManifestOptions
 	types.RemoteOptions
 }
 
@@ -69,6 +74,9 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 		return registry.Reference{}, fmt.Errorf("unable to resolve component imports: %w", err)
 	}
 	component = resolved.Component
+	if err := load.ValidateRemoteKustomizeRestrictions(component.Component); err != nil {
+		return registry.Reference{}, err
+	}
 	resourceSet, err := resolved.MaterializeResources(ctx, componentPath)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to materialize imported component resources: %w", err)
@@ -130,7 +138,6 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if err := store.Tag(ctx, manifest, manifest.Digest.String()); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to stage component artifact: %w", err)
 	}
-
 	remote, err := zoci.NewRemoteWithOptions(ctx, componentRef.String(), ocispec.Platform{Architecture: component.Variant.Architecture}, zoci.RemoteClientOptions{
 		RemoteOptions: opts.RemoteOptions,
 	})
@@ -142,9 +149,18 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	for _, layer := range layers {
 		totalSize += layer.Size
 	}
-	_, err = pushComponentArtifact(ctx, store, manifest.Digest.String(), remote, componentRef, component.Variant.Architecture, totalSize, opts)
+	published, err := pushComponentArtifact(ctx, store, manifest.Digest.String(), remote, componentRef, component.Variant.Architecture, totalSize, opts)
 	if err != nil {
 		return registry.Reference{}, err
+	}
+	if opts.SignManifestOptions != nil {
+		immutableRef := fmt.Sprintf("%s/%s@%s", componentRef.Registry, componentRef.Repository, published.Digest)
+		if err := signing.SignManifest(ctx, immutableRef, *opts.SignManifestOptions, opts.RemoteOptions); err != nil {
+			return registry.Reference{}, fmt.Errorf("failed to sign published component: %w", err)
+		}
+	}
+	if err := remote.Repo().Tag(ctx, published, componentRef.Reference); err != nil {
+		return registry.Reference{}, fmt.Errorf("tag published component: %w", err)
 	}
 	logger.From(ctx).Info("published component", "destination", helpers.OCIURLPrefix+componentRef.String())
 	return componentRef, nil
@@ -183,16 +199,22 @@ func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourc
 			defer trackedRemote.StopReporting()
 
 			var copyErr error
-			destinationRef := componentRef.Reference
-			if architecture != "" {
-				destinationRef = ""
-			}
-			published, copyErr = oras.Copy(ctx, store, sourceRef, trackedRemote, destinationRef, copyOpts)
+			published, copyErr = oras.Copy(ctx, store, sourceRef, trackedRemote, "", copyOpts)
 			if copyErr != nil {
 				return copyErr
 			}
 			if architecture != "" {
-				return remote.UpdateIndex(ctx, componentRef.Reference, published)
+				indexDescriptor, err := zarfoci.UpdateIndexWithDescriptor(
+					ctx,
+					remote.Repo(),
+					componentRef.Reference,
+					ocispec.Platform{Architecture: architecture},
+					published,
+				)
+				if err != nil {
+					return err
+				}
+				published = indexDescriptor
 			}
 			return nil
 		},
@@ -306,7 +328,7 @@ func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchiv
 
 	imageDir := filepath.Join(tempDir, layout.ImagesDir)
 	for _, archive := range archives {
-		_, err := images.Unpack(ctx, v1alpha1.ImageArchive{Path: archive.Path, Images: archive.Images}, imageDir, architecture)
+		_, err := images.Unpack(ctx, api.ImageArchive{Path: archive.Path, Images: archive.Images}, imageDir, architecture)
 		if err != nil {
 			return nil, fmt.Errorf("unable to unpack image archive %q: %w", archive.Path, err)
 		}

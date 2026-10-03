@@ -37,7 +37,7 @@ const (
 // Zarf CLI commands.
 const (
 	// root zarf command
-	RootCmdShort = "The Airgap Native Packager Manager for Kubernetes"
+	RootCmdShort = "The Airgap Native Package Manager for Kubernetes"
 	RootCmdLong  = "Zarf eliminates the complexity of airgap software delivery for Kubernetes clusters and cloud native workloads\n" +
 		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
@@ -284,7 +284,8 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 
 	CmdPackageInspectShort = "Commands for gathering information from a built package"
 
-	CmdPackageListShort         = "Lists out all of the packages that have been deployed to the cluster (runs offline)"
+	CmdPackageListShort         = "Lists packages that have been deployed to the cluster (runs offline)"
+	CmdPackageListFlagNamespace = "[Alpha] Filter by namespace override when listing packages or select it for a named deployed package"
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
 
 	CmdPackageCreateFlagConfirm               = "Confirm package creation without prompting"
@@ -425,17 +426,36 @@ $ zarf package publish oci://source-registry.com/my-namespace/my-package:1.0.0 o
 # Publish a package with a specific tag different from the package metadata.version
 $ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry.com/my-namespace --tag v0.0.1
 `
-	CmdPackagePublishFlagSigningKey         = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider"
-	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key used for publishing packages"
-	CmdPackagePublishFlagConfirm            = "Confirms package publish without prompting. Skips prompt for the signing key password"
-	CmdPackagePublishFlagFlavor             = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
-	CmdPackagePublishFlagTag                = "The tag to be used in the OCI reference for the package in the registry"
+	CmdPackagePublishFlagSigningKey           = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider"
+	CmdPackagePublishFlagSigningKeyPassword   = "Password to the private key used for publishing packages"
+	CmdPackagePublishFlagConfirm              = "Confirms package publish without prompting. Skips prompt for the signing key password"
+	CmdPackagePublishFlagFlavor               = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
+	CmdPackagePublishFlagTag                  = "The tag to be used in the OCI reference for the package in the registry"
+	CmdPackagePublishSigningDeprecation       = "This flag is deprecated. Use signing during package creation or 'zarf package sign' before publishing when applicable."
+	CmdPackagePublishSigningConfigDeprecation = "package.publish signing configuration is deprecated. Use signing during package creation or 'zarf package sign' before publishing."
 
 	CmdComponentShort          = "Commands for reusable Zarf components"
 	CmdComponentPublishShort   = "Publishes a v1beta1 Zarf component to a remote registry"
 	CmdComponentPublishExample = `
 # Publish a v1beta1 component config to a remote registry
 $ zarf component publish monitoring.yaml oci://ghcr.io/my-org/components
+`
+	CmdComponentSignShort   = "Signs an already published Zarf component"
+	CmdComponentSignExample = `
+# Sign a published component with a private key
+$ zarf component sign ghcr.io/my-org/my-component:1.0 --signing-key ./private-key.pem
+
+# Sign a published component using Sigstore keyless signing
+$ zarf component sign ghcr.io/my-org/my-component:1.0 --keyless --confirm
+`
+	CmdComponentVerifyShort   = "Verifies a published Zarf component signature"
+	CmdComponentVerifyLong    = "Verifies the Sigstore signature stored as an OCI referrer of a published Zarf component manifest."
+	CmdComponentVerifyExample = `
+# Verify a published component with a public key
+$ zarf component verify ghcr.io/my-org/my-component:1.0 --key ./public-key.pem
+
+# Verify a keyless signature by its certificate identity
+$ zarf component verify ghcr.io/my-org/my-component:1.0 --certificate-identity signer@example.com --certificate-oidc-issuer https://token.actions.githubusercontent.com
 `
 	CmdPackageSignShort   = "Signs an existing Zarf package"
 	CmdPackageSignLong    = "Signs an existing Zarf package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the zarf.yaml file and does not modify the package checksums."

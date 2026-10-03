@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
@@ -37,7 +37,7 @@ func isCosignAttestation(image string) bool {
 }
 
 func isPinnedRepo(repo string) bool {
-	return (strings.Contains(repo, "@"))
+	return strings.Contains(repo, "@")
 }
 
 // isTemplatedImage returns true if the image reference contains a Zarf template

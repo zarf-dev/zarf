@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: list-kinds
+  version: 0.1.0
+
+components:
+  - name: list-kinds
+    required: true
+    charts:
+      - name: list-kinds
+        version: 0.1.0
+        namespace: list-kinds
+        localPath: chart
