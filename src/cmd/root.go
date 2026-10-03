@@ -79,9 +79,16 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	// When the user has not chosen explicitly (via the --no-color flag,
+	// ZARF_NO_COLOR, or a config file), disable color if the terminal
+	// cannot render it. This must run before anything is printed.
+	if !IsColorDisabled && !cmd.Flags().Changed("no-color") && !getViper().IsSet(VNoColor) {
+		IsColorDisabled = !detectColorEnvironment().supportsColor()
+	}
+
 	// Implement "axolotl-mode"
 	if feature.IsEnabled(feature.AxolotlMode) {
-		if _, err = fmt.Fprintln(os.Stderr, logo()); err != nil {
+		if _, err = fmt.Fprintln(os.Stderr, renderLogo(!IsColorDisabled)); err != nil {
 			return err
 		}
 	}
@@ -89,13 +96,6 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	// Skip for vendor only commands
 	if checkVendorOnlyFromPath(cmd) {
 		return nil
-	}
-
-	// When the user has not chosen explicitly (via the --no-color flag,
-	// ZARF_NO_COLOR, or a config file), disable color if the terminal
-	// cannot render it.
-	if !IsColorDisabled && !cmd.Flags().Changed("no-color") && !getViper().IsSet(VNoColor) {
-		IsColorDisabled = !detectColorEnvironment().supportsColor()
 	}
 
 	// Configure logger and add it to cmd context. We flip NoColor because setLogger wants "isColor"
