@@ -371,6 +371,51 @@ components:
 	})
 }
 
+func TestDevLintV1Beta1(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name     string
+		filename string
+		content  string
+	}{
+		{
+			name:     "package",
+			filename: "zarf.yaml",
+			content: `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: lint-package
+components:
+  - name: app
+    images:
+      - name: busybox:1.0
+`,
+		},
+		{
+			name:     "component config",
+			filename: "component.yaml",
+			content: `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: lint-component
+component:
+  images:
+    - name: busybox:1.0
+`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			path := filepath.Join(t.TempDir(), tc.filename)
+			require.NoError(t, os.WriteFile(path, []byte(tc.content), 0o600))
+			stdOut, stdErr, err := e2e.Zarf(t, "dev", "lint", path)
+			require.NoError(t, err, stdOut, stdErr)
+			require.Contains(t, stdOut+stdErr, "Image not pinned with digest")
+		})
+	}
+}
+
 func TestBuildMachineInfo(t *testing.T) {
 	t.Parallel()
 

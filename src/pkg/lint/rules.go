@@ -14,18 +14,25 @@ import (
 )
 
 func isPinnedImage(image string) (bool, error) {
-	transformedImage, err := transform.ParseImageRef(image)
+	pinned, err := isPinnedImageReference(image)
 	if err != nil {
 		if strings.Contains(image, v1alpha1.ZarfPackageTemplatePrefix) ||
 			strings.Contains(image, v1alpha1.ZarfPackageVariablePrefix) {
 			return true, nil
 		}
+	}
+	return pinned, err
+}
+
+func isPinnedImageReference(image string) (bool, error) {
+	transformedImage, err := transform.ParseImageRef(image)
+	if err != nil {
 		return false, err
 	}
 	if isCosignSignature(transformedImage.Tag) || isCosignAttestation(transformedImage.Tag) {
 		return true, nil
 	}
-	return (transformedImage.Digest != ""), err
+	return transformedImage.Digest != "", nil
 }
 
 func isCosignSignature(image string) bool {
