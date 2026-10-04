@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.87.1](https://github.com/zarf-dev/zarf/compare/v0.87.0...v0.87.1) (2026-10-04)
+
+
+### Features
+
+* add init chart values schemas ([#5347](https://github.com/zarf-dev/zarf/issues/5347)) ([4c238cc](https://github.com/zarf-dev/zarf/commit/4c238ccb4f610a680608a41f6cd40ff1ff1ad85f))
+* **get-creds:** only print credentials for configured services ([#5418](https://github.com/zarf-dev/zarf/issues/5418)) ([1f4b42a](https://github.com/zarf-dev/zarf/commit/1f4b42a35df05bd296840b810b9ac2a37d53b336))
+
 ## [0.87.0](https://github.com/zarf-dev/zarf/compare/v0.86.0...v0.87.0) (2026-09-30)
 
 
