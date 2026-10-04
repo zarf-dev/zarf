@@ -142,43 +142,9 @@ func Package(ctx context.Context, packagePath string, opts PackageOptions) (_ *R
 		}
 	}()
 
-	valuesPaths := make([]string, 0, len(resolved.values.files))
-	for _, source := range resolved.values.files {
-		physical, err := resources.Path(source)
-		if err != nil {
-			return nil, err
-		}
-		valuesPaths = append(valuesPaths, physical)
-	}
-	if len(valuesPaths) > 0 {
-		loaded.Values, err = value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse package values files: %w", err)
-		}
-	} else {
-		loaded.Values = value.Values{}
-	}
-
-	schemas := make([]value.SchemaDocument, 0, len(resolved.values.schemas))
-	for _, source := range resolved.values.schemas {
-		contents, err := resources.ReadFile(source)
-		if err != nil {
-			return nil, fmt.Errorf("reading values schema %q: %w", source, err)
-		}
-		schema, err := value.ParseSchemaDocument(source, contents)
-		if err != nil {
-			return nil, err
-		}
-		schemas = append(schemas, schema)
-	}
-	loaded.ValuesSchema, err = value.MergeSchemaDocuments(schemas)
+	loaded.Values, loaded.ValuesSchema, err = loadValues(ctx, resources, resolved.values, opts.SkipValuesSchemaValidation)
 	if err != nil {
 		return nil, err
-	}
-	if loaded.ValuesSchema != nil && !opts.SkipValuesSchemaValidation {
-		if err := loaded.Values.ValidateAgainstSchema(ctx, loaded.ValuesSchema, "resolved package values schema", value.ValidateOptions{SkipRequired: true}); err != nil {
-			return nil, fmt.Errorf("values validation failed: %w", err)
-		}
 	}
 
 	return loaded, nil
