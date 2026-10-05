@@ -174,7 +174,7 @@ components:
       - name: docker-registry
         releaseName: zarf-docker-registry
         localPath: chart
-        version: 1.0.1
+        version: 1.0.2
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
@@ -201,7 +201,7 @@ components:
       - name: docker-registry
         releaseName: zarf-docker-registry
         localPath: chart
-        version: 1.0.1
+        version: 1.0.2
         namespace: zarf
         valuesFiles:
           - registry-values.yaml

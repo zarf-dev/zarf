@@ -40,6 +40,7 @@ const (
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrGitURLWithRef           = "git URL %q must not contain an embedded ref; use the ref field instead"
 	PkgValidateErrFileChecksumAlgorithm   = "component %q file %q has unsupported checksum algorithm %q (expected sha256 or sha512)"
+	PkgValidateErrImageConflictingSources = "image %q has conflicting sources %q and %q"
 )
 
 // ValidationErrors contains all errors found during package validation.
@@ -72,12 +73,31 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 		errs = append(errs, errors.New(PkgValidateErrNoComponents))
 	}
 	uniqueComponentNames := make(map[string]bool)
+	seenSources := make(map[string]v1beta1.ImageSource)
 	for _, component := range pkg.Components {
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
 			errs = append(errs, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
 		}
 		uniqueComponentNames[component.Name] = true
+		for _, image := range component.Images {
+			ref, err := transform.ParseImageRef(image.Name)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("invalid image %q: %w", image.Name, err))
+				continue
+			}
+			source := image.Source
+			if source == "" {
+				source = v1beta1.ImageSourceRegistry
+			}
+			if previous, exists := seenSources[ref.Reference]; exists {
+				if previous != source {
+					errs = append(errs, fmt.Errorf(PkgValidateErrImageConflictingSources, ref.Reference, previous, source))
+				}
+				continue
+			}
+			seenSources[ref.Reference] = source
+		}
 
 		errs = append(errs, ValidateComponent(component)...)
 	}
