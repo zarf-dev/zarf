@@ -25,14 +25,15 @@ func TestFetchCachePushError(t *testing.T) {
 
 	pushFailure := errors.New("cache write failed")
 	for _, tt := range []struct {
-		name    string
-		pushErr error
-		consume int64
+		name        string
+		pushErr     error
+		consume     int64
+		expectedErr error
 	}{
 		{name: "already exists", pushErr: errdef.ErrAlreadyExists},
 		{name: "wrapped already exists", pushErr: fmt.Errorf("blob: %w", errdef.ErrAlreadyExists)},
 		{name: "already exists after partial read", pushErr: errdef.ErrAlreadyExists, consume: 7},
-		{name: "other error", pushErr: pushFailure},
+		{name: "other error", pushErr: pushFailure, expectedErr: pushFailure},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -57,13 +58,10 @@ func TestFetchCachePushError(t *testing.T) {
 			require.NoError(t, err)
 			got, readErr := io.ReadAll(reader)
 			closeErr := reader.Close()
-			if errors.Is(tt.pushErr, errdef.ErrAlreadyExists) {
-				require.NoError(t, readErr)
-				require.NoError(t, closeErr)
+			require.ErrorIs(t, readErr, tt.expectedErr)
+			require.ErrorIs(t, closeErr, tt.expectedErr)
+			if tt.expectedErr == nil {
 				require.Equal(t, data, got)
-			} else {
-				require.ErrorIs(t, readErr, pushFailure)
-				require.ErrorIs(t, closeErr, pushFailure)
 			}
 		})
 	}
