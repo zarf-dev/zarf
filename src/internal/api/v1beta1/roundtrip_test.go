@@ -312,6 +312,15 @@ func TestConvertV1beta1V1alpha1RoundTripFuzz(t *testing.T) {
 		populateValidV1beta1Repositories(&pkg, rng)
 		// Valid chart with one only source so it can round trip
 		populateValidV1beta1ChartSources(&pkg, rng, i)
+		// v1alpha1 has no way to retain whether v1beta1 omitted the SHA-256 prefix.
+		for ci := range pkg.Components {
+			for fi := range pkg.Components[ci].Files {
+				file := &pkg.Components[ci].Files[fi]
+				if file.Checksum != "" {
+					file.Checksum = string(api.ChecksumSHA256) + ":" + file.Checksum
+				}
+			}
+		}
 
 		v1alpha1Pkg := internalv1alpha1.PackageToV1alpha1(PackageFromV1beta1(pkg))
 		roundTripped := PackageToV1beta1(internalv1alpha1.PackageFromV1alpha1(v1alpha1Pkg))

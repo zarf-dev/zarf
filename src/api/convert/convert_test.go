@@ -1055,12 +1055,56 @@ func TestV1Alpha1PkgToV1Beta1_Files(t *testing.T) {
 	require.Len(t, result.Components[0].Files, 1)
 	f := result.Components[0].Files[0]
 	require.Equal(t, "https://example.com/file.tar.gz", f.Source)
-	require.Equal(t, "deadbeef", f.Checksum)
+	require.Equal(t, "sha256:deadbeef", f.Checksum)
 	require.Equal(t, "/opt/file.tar.gz", f.Destination)
 	require.True(t, f.Executable)
 	require.Equal(t, []string{"/usr/local/bin/file"}, f.Symlinks)
 	require.Equal(t, "bin/file", f.ExtractPath)
 	require.True(t, f.EnableTemplating)
+}
+
+func TestPackageFileChecksumConversion(t *testing.T) {
+	t.Parallel()
+
+	wire := v1beta1.Package{
+		Components: []v1beta1.Component{{
+			ComponentSpec: v1beta1.ComponentSpec{
+				Files: []v1beta1.File{
+					{Checksum: "abc123"},
+					{Checksum: "sha256:abc123"},
+					{Checksum: "sha512:def456"},
+				},
+			},
+		}},
+	}
+
+	pkg := PackageFromV1beta1(wire)
+	require.Equal(t, api.FileChecksum{Digest: "abc123"}, pkg.Components[0].Files[0].Checksum)
+	require.Equal(t, api.ChecksumSHA256, pkg.Components[0].Files[0].Checksum.GetAlgorithm())
+	require.Equal(t, api.FileChecksum{Algorithm: api.ChecksumSHA256, Digest: "abc123"}, pkg.Components[0].Files[1].Checksum)
+	require.Equal(t, api.FileChecksum{Algorithm: api.ChecksumSHA512, Digest: "def456"}, pkg.Components[0].Files[2].Checksum)
+
+	roundTripped := PackageToV1beta1(pkg)
+	require.Equal(t, "abc123", roundTripped.Components[0].Files[0].Checksum)
+	require.Equal(t, "sha256:abc123", roundTripped.Components[0].Files[1].Checksum)
+	require.Equal(t, "sha512:def456", roundTripped.Components[0].Files[2].Checksum)
+
+	legacy := PackageToV1alpha1(pkg)
+	require.Equal(t, "abc123", legacy.Components[0].Files[0].Shasum)
+	require.Equal(t, "abc123", legacy.Components[0].Files[1].Shasum)
+	require.Empty(t, legacy.Components[0].Files[2].Shasum)
+}
+
+func TestPackageFromV1alpha1TreatsShasumAsSHA256(t *testing.T) {
+	t.Parallel()
+
+	wire := v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{{
+		Files: []v1alpha1.ZarfFile{{Shasum: "abc123"}, {}},
+	}}}
+
+	files := PackageFromV1alpha1(wire).Components[0].Files
+	require.Equal(t, api.FileChecksum{Algorithm: api.ChecksumSHA256, Digest: "abc123"}, files[0].Checksum)
+	require.Empty(t, files[1].Checksum)
 }
 
 func TestV1Alpha1PkgToV1Beta1_ValuesAndDocumentation(t *testing.T) {
