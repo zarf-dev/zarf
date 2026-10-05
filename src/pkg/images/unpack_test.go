@@ -359,7 +359,7 @@ func TestUnpackImageIndexes(t *testing.T) {
 			require.NoError(t, err)
 
 			layoutDir := t.TempDir()
-			_, err = Pull(ctx, []transform.Image{refInfo}, layoutDir, PullOptions{
+			_, err = Pull(ctx, []ImageRequest{{Image: refInfo}}, layoutDir, PullOptions{
 				Arch:           "amd64",
 				CacheDirectory: t.TempDir(),
 				PlainHTTP:      true,
@@ -412,7 +412,7 @@ func TestUnpackTaggedIndexFiltersToPlatform(t *testing.T) {
 	require.NoError(t, err)
 
 	layoutDir := t.TempDir()
-	_, err = Pull(ctx, []transform.Image{digestRefInfo}, layoutDir, PullOptions{
+	_, err = Pull(ctx, []ImageRequest{{Image: digestRefInfo}}, layoutDir, PullOptions{
 		Arch:           "amd64",
 		CacheDirectory: t.TempDir(),
 		PlainHTTP:      true,
@@ -474,7 +474,7 @@ func TestUnpackTaggedIndexPreservesAllPlatformsWithoutArchitecture(t *testing.T)
 	require.NoError(t, err)
 
 	layoutDir := t.TempDir()
-	_, err = Pull(ctx, []transform.Image{digestRefInfo}, layoutDir, PullOptions{
+	_, err = Pull(ctx, []ImageRequest{{Image: digestRefInfo}}, layoutDir, PullOptions{
 		Arch:           "amd64",
 		CacheDirectory: t.TempDir(),
 		PlainHTTP:      true,
