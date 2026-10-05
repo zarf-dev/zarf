@@ -39,6 +39,14 @@ const (
 	ZarfComponentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
 	// ResourceMountPathAnnotation identifies where a package resource is mounted in its OCI artifact.
 	ResourceMountPathAnnotation = "dev.zarf.mountPath"
+	// ResourceKindAnnotation identifies the kind of a granular package resource.
+	ResourceKindAnnotation = "dev.zarf.resource.kind"
+	// ResourceKeyAnnotation identifies a granular package resource within its kind.
+	ResourceKeyAnnotation = "dev.zarf.resource.key"
+	// ResourceKindDocumentation identifies a documentation resource.
+	ResourceKindDocumentation = "documentation"
+	// ResourceKindSBOM identifies an SBOM resource.
+	ResourceKindSBOM = "sbom"
 	// OCITimestampFormat is the format used for the OCI timestamp annotation
 	OCITimestampFormat = time.RFC3339
 )
