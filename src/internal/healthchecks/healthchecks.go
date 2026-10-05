@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/zarf-dev/zarf/src/api"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,8 +72,12 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 		RESTScopeStrategy: watcher.RESTScopeNamespace,
 	})
 	statusCollector := collector.NewResourceStatusCollector(objs)
+	var terminalStatuses map[object.ObjMetadata]*event.ResourceStatus
 	done := statusCollector.ListenWithObserver(eventCh, collector.ObserverFunc(
 		func(statusCollector *collector.ResourceStatusCollector, _ event.Event) {
+			if terminalStatuses != nil {
+				return
+			}
 			rss := []*event.ResourceStatus{}
 			for _, rs := range statusCollector.ResourceStatuses {
 				if rs == nil {
@@ -81,6 +86,7 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 				// Failed is a terminal state. This check ensures we don't wait forever for a resource
 				// that has already failed, as intervention is required to resolve the failure.
 				if rs.Status == status.FailedStatus {
+					terminalStatuses = maps.Clone(statusCollector.ResourceStatuses)
 					cancel()
 					return
 				}
@@ -88,6 +94,7 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 			}
 			desired := status.CurrentStatus
 			if aggregator.AggregateStatus(rss, desired) == desired {
+				terminalStatuses = maps.Clone(statusCollector.ResourceStatuses)
 				cancel()
 				return
 			}
@@ -95,13 +102,19 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 	)
 	<-done
 
-	if statusCollector.Error != nil {
+	if terminalStatuses == nil && statusCollector.Error != nil {
 		return statusCollector.Error
 	}
 
+	// In-flight updates may still arrive after cancellation. Preserve the statuses
+	// that stopped the wait instead of letting those updates change its outcome.
+	resourceStatuses := statusCollector.ResourceStatuses
+	if terminalStatuses != nil {
+		resourceStatuses = terminalStatuses
+	}
 	errs := []error{}
 	for _, id := range objs {
-		rs := statusCollector.ResourceStatuses[id]
+		rs := resourceStatuses[id]
 		if rs.Status != status.CurrentStatus {
 			errs = append(errs, fmt.Errorf("%s: %s not ready, status is %s, message: %s", rs.Identifier.Name, rs.Identifier.GroupKind.Kind, rs.Status, rs.Message))
 		}

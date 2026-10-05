@@ -26,7 +26,10 @@ import (
 	clientfeatures "k8s.io/client-go/features"
 	clientfeaturestesting "k8s.io/client-go/features/testing"
 	"k8s.io/kubectl/pkg/scheme"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
+	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/cli-utils/pkg/testutil"
 )
 
@@ -259,4 +262,56 @@ func assertResourceWatchNamespaces(t *testing.T, fakeClient *dynamicfake.FakeDyn
 	}
 
 	require.ElementsMatch(t, expected, slices.Collect(maps.Keys(actual)))
+}
+
+// cancellationWatcher drains an in-flight update after the wait cancels its watch.
+type cancellationWatcher struct {
+	initial  status.Status
+	trailing status.Status
+}
+
+func (w cancellationWatcher) Watch(ctx context.Context, ids object.ObjMetadataSet, _ watcher.Options) <-chan event.Event {
+	events := make(chan event.Event)
+	go func() {
+		defer close(events)
+		send := func(s status.Status) {
+			events <- event.Event{Type: event.ResourceUpdateEvent, Resource: &event.ResourceStatus{
+				Identifier: ids[0], Status: s, Message: "status update",
+			}}
+		}
+		send(w.initial)
+		<-ctx.Done()
+		send(w.trailing)
+	}()
+	return events
+}
+
+func TestWaitForReadyPreservesCancellationResult(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		initial   status.Status
+		trailing  status.Status
+		wantError bool
+	}{
+		{name: "ready then in progress", initial: status.CurrentStatus, trailing: status.InProgressStatus},
+		{name: "ready then failed", initial: status.CurrentStatus, trailing: status.FailedStatus},
+		{name: "failed then ready", initial: status.FailedStatus, trailing: status.CurrentStatus, wantError: true},
+		{name: "failed then in progress", initial: status.FailedStatus, trailing: status.InProgressStatus, wantError: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			id := object.ObjMetadata{GroupKind: schema.GroupKind{Group: "uds.dev", Kind: "Package"}, Name: "example", Namespace: "apps"}
+			err := WaitForReady(ctx, cancellationWatcher{initial: tt.initial, trailing: tt.trailing}, []object.ObjMetadata{id})
+			require.NoError(t, ctx.Err(), "the wait should stop on the terminal status, before its timeout")
+			if tt.wantError {
+				require.EqualError(t, err, "example: Package not ready, status is Failed, message: status update")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
