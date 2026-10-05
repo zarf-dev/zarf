@@ -5,6 +5,7 @@ package assemble
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,8 +19,8 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -68,7 +69,7 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	err = createReproducibleTarballFromDir(tmpDir, "", tarPath, true)
 	require.NoError(t, err)
 
-	shaSum, err := helpers.GetSHA256OfFile(tarPath)
+	shaSum, err := checksum.GetSHA256OfFile(tarPath)
 	require.NoError(t, err)
 	require.Equal(t, "c09d17f612f241cdf549e5fb97c9e063a8ad18ae7a9f3af066332ed6b38556ad", shaSum)
 }
@@ -664,6 +665,10 @@ func TestAssemblePackageV1Beta1WritesMultiDocDefinition(t *testing.T) {
 	dataPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
 	require.NoError(t, err)
 
+	data, err := os.ReadFile(dataPath)
+	require.NoError(t, err)
+	checksum := fmt.Sprintf("sha256:%x", sha256.Sum256(data))
+
 	zarfYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
@@ -674,8 +679,9 @@ components:
   - name: beta-component
     files:
       - source: %q
+        checksum: %q
         destination: data.txt
-`, dataPath, dataPath)
+`, dataPath, dataPath, checksum)
 	require.NoError(t, os.WriteFile(filepath.Join(tmpdir, layout.ZarfYAML), []byte(zarfYAML), 0o600))
 
 	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})

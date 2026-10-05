@@ -136,9 +136,13 @@ func componentToGeneric(c v1alpha1.ZarfComponent) api.Component {
 	}
 
 	for _, f := range c.Files {
+		var fileChecksum api.FileChecksum
+		if f.Shasum != "" {
+			fileChecksum = api.FileChecksum{Algorithm: api.ChecksumSHA256, Digest: f.Shasum}
+		}
 		gc.Files = append(gc.Files, api.File{
 			Source:           f.Source,
-			Checksum:         f.Shasum,
+			Checksum:         fileChecksum,
 			Destination:      f.Target,
 			Executable:       f.Executable,
 			Symlinks:         f.Symlinks,
@@ -520,12 +524,15 @@ func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 	for _, f := range c.Files {
 		af := v1alpha1.ZarfFile{
 			Source:      f.Source,
-			Shasum:      f.Checksum,
 			Target:      f.Destination,
 			Executable:  f.Executable,
 			Symlinks:    f.Symlinks,
 			ExtractPath: f.ExtractPath,
 			Template:    boolPointer(f.EnableTemplating),
+		}
+		// v1alpha1 shasum stores only an unprefixed SHA-256 digest.
+		if f.Checksum.GetAlgorithm() == api.ChecksumSHA256 {
+			af.Shasum = f.Checksum.Digest
 		}
 		ac.Files = append(ac.Files, af)
 	}

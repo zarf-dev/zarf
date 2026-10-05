@@ -20,8 +20,8 @@ import (
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"oras.land/oras-go/v2"
@@ -213,7 +213,7 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		default:
 			// zarf.yaml and post-signing provenance files (signature, bundle) are
 			// small — read from disk.
-			hex, err := helpers.GetSHA256OfFile(filePath)
+			hex, err := checksum.GetSHA256OfFile(filePath)
 			if err != nil {
 				return err
 			}

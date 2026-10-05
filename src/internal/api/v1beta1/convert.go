@@ -96,7 +96,7 @@ func componentToGeneric(c v1beta1.Component) api.Component {
 	for _, f := range c.Files {
 		gc.Files = append(gc.Files, api.File{
 			Source:           f.Source,
-			Checksum:         f.Checksum,
+			Checksum:         api.ParseFileChecksum(f.Checksum),
 			Destination:      f.Destination,
 			Executable:       f.Executable,
 			Symlinks:         f.Symlinks,
@@ -411,7 +411,7 @@ func componentFromGeneric(c api.Component) v1beta1.Component {
 	for _, f := range c.Files {
 		bc.Files = append(bc.Files, v1beta1.File{
 			Source:           f.Source,
-			Checksum:         f.Checksum,
+			Checksum:         f.Checksum.String(),
 			Destination:      f.Destination,
 			Executable:       f.Executable,
 			Symlinks:         f.Symlinks,

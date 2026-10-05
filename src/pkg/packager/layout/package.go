@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
@@ -956,7 +957,7 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 	if err != nil {
 		return err
 	}
-	err = helpers.SHAsMatch(filepath.Join(pkgLayout.dirPath, Checksums), pkg.Build.AggregateChecksum)
+	err = checksum.VerifyFile(filepath.Join(pkgLayout.dirPath, Checksums), api.ChecksumSHA256, pkg.Build.AggregateChecksum)
 	if err != nil {
 		return err
 	}
@@ -1012,7 +1013,7 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 		if !ok {
 			return fmt.Errorf("file %s from checksum missing in layout", rel)
 		}
-		err = helpers.SHAsMatch(path, sha)
+		err = checksum.VerifyFile(path, api.ChecksumSHA256, sha)
 		if err != nil {
 			return err
 		}
