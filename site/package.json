@@ -20,10 +20,10 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.9.9",
-    "@astrojs/markdown-remark": "^7.2.0",
+    "@astrojs/markdown-remark": "^7.3.0",
     "@astrojs/starlight": "^0.41.3",
     "@fontsource/source-code-pro": "^5.0.17",
-    "astro": "^7.2.0",
+    "astro": "^7.3.2",
     "mermaid": "^10.9.8",
     "rehype-autolink-headings": "^7.1.0",
     "sharp": "^0.35.4",
@@ -38,6 +38,6 @@
     "yaml": "^2.8.3"
   },
   "engines": {
-    "node": ">=26.0.0"
+    "node": ">=22.12.0"
   }
 }
