@@ -131,8 +131,8 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		}
 	}
 
-	componentImages := []transform.Image{}
 	declaredImageReferences := map[string]string{}
+	componentImages := []images.ImageRequest{}
 	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
@@ -168,10 +168,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 					return nil, err
 				}
 			}
-			if slices.Contains(componentImages, refInfo) {
-				continue
-			}
-			componentImages = append(componentImages, refInfo)
+			componentImages = append(componentImages, images.ImageRequest{Image: refInfo, Source: image.Source.GetSource()})
 		}
 	}
 	sbomImageList := []transform.Image{}

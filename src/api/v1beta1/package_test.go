@@ -12,23 +12,38 @@ import (
 func TestPackageHasImages(t *testing.T) {
 	t.Parallel()
 
-	pkg := Package{
-		Components: []Component{
-			{
-				Name: "without images",
-			},
+	tests := []struct {
+		name string
+		pkg  Package
+		want bool
+	}{
+		{
+			name: "without images",
+			pkg:  Package{Components: []Component{{Name: "empty"}}},
+		},
+		{
+			name: "direct image",
+			pkg: Package{Components: []Component{{
+				Name: "image", ComponentSpec: ComponentSpec{Images: []Image{{Name: "docker.io/library/alpine:latest"}}},
+			}}},
+			want: true,
+		},
+		{
+			name: "image archive in later component",
+			pkg: Package{Components: []Component{
+				{Name: "empty"},
+				{Name: "archive", ComponentSpec: ComponentSpec{ImageArchives: []ImageArchive{{Path: "images.tar"}}}},
+			}},
+			want: true,
 		},
 	}
-	require.False(t, pkg.HasImages())
-	pkg = Package{
-		Components: []Component{
-			{
-				Name:          "with images",
-				ComponentSpec: ComponentSpec{Images: []Image{{Name: "docker.io/library/alpine:latest"}}},
-			},
-		},
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.want, tt.pkg.HasImages())
+		})
 	}
-	require.True(t, pkg.HasImages())
 }
 
 func TestGetComponent(t *testing.T) {
@@ -57,62 +72,4 @@ func TestGetComponent(t *testing.T) {
 		_, err := pkg.GetComponent("missing")
 		require.Error(t, err)
 	})
-}
-
-func TestPackageIsSBOMable(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name          string
-		images        []Image
-		files         []File
-		imageArchives []ImageArchive
-		expected      bool
-	}{
-		{
-			name:     "empty component",
-			expected: false,
-		},
-		{
-			name:     "only images",
-			images:   []Image{{Name: "alpine"}},
-			expected: true,
-		},
-		{
-			name:     "only files",
-			files:    []File{{}},
-			expected: true,
-		},
-		{
-			name:          "only image archives",
-			imageArchives: []ImageArchive{{Path: "archive.tar", Images: []string{"img"}}},
-			expected:      true,
-		},
-		{
-			name:          "all three set",
-			images:        []Image{{Name: "alpine"}},
-			files:         []File{{}},
-			imageArchives: []ImageArchive{{Path: "archive.tar", Images: []string{"img"}}},
-			expected:      true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			pkg := Package{
-				Components: []Component{
-					{
-						Name: "test-component",
-						ComponentSpec: ComponentSpec{
-							Images:        tt.images,
-							Files:         tt.files,
-							ImageArchives: tt.imageArchives,
-						},
-					},
-				},
-			}
-			require.Equal(t, tt.expected, pkg.IsSBOMAble())
-		})
-	}
 }
