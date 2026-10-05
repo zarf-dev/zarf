@@ -168,10 +168,13 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 					return nil, err
 				}
 			}
-			componentImages = append(componentImages, images.ImageRequest{Image: refInfo, Source: image.Source.GetSource()})
+			componentImages = append(componentImages, images.ImageRequest{
+				Image:             refInfo,
+				Source:            image.Source.GetSource(),
+				DeclaredReference: image.Name,
+			})
 		}
 	}
-	sbomImageList := []transform.Image{}
 	if len(componentImages) > 0 {
 		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
@@ -188,12 +191,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		manifests = append(manifests, imageManifests...)
 	}
 
-	for _, pulled := range manifests {
-		sbomImageList = append(sbomImageList, pulled.Image)
-
+	if len(manifests) > 0 {
 		// Sort images index to make build reproducible.
-		err = utils.SortImagesIndex(filepath.Join(buildPath, layout.ImagesDir))
-		if err != nil {
+		if err := utils.SortImagesIndex(filepath.Join(buildPath, layout.ImagesDir)); err != nil {
 			return nil, err
 		}
 	}
@@ -202,7 +202,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 
 	if !opts.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
-		err := generateSBOM(ctx, pkg, buildPath, sbomImageList, declaredImageReferences, opts.CachePath)
+		err := generateSBOM(ctx, pkg, buildPath, manifests, opts.CachePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}

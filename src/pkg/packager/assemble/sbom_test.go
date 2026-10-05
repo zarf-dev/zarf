@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -69,17 +70,23 @@ func TestSBOMImageIdentifier(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("uses the declared beta reference", func(t *testing.T) {
-		identifier, err := sbomImageIdentifier(canonical, map[string]string{canonical.Reference: "nginx"}, true)
+		identifier, err := sbomImageIdentifier(images.ImageRequest{
+			Image:             canonical,
+			DeclaredReference: "nginx",
+		}, true)
 		require.NoError(t, err)
 		require.Equal(t, "nginx", identifier)
 	})
 	t.Run("uses the canonical alpha reference", func(t *testing.T) {
-		identifier, err := sbomImageIdentifier(canonical, nil, false)
+		identifier, err := sbomImageIdentifier(images.ImageRequest{
+			Image:             canonical,
+			DeclaredReference: "nginx",
+		}, false)
 		require.NoError(t, err)
 		require.Equal(t, "docker.io/library/nginx:latest", identifier)
 	})
 	t.Run("rejects missing beta declaration", func(t *testing.T) {
-		_, err := sbomImageIdentifier(canonical, nil, true)
+		_, err := sbomImageIdentifier(images.ImageRequest{Image: canonical}, true)
 		require.EqualError(t, err, `no declared reference found for image "docker.io/library/nginx:latest"`)
 	})
 }
