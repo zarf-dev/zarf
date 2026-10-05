@@ -5,9 +5,9 @@
 package checksum
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"crypto/sha512"
-	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -37,7 +37,7 @@ func VerifyFile(path string, algorithm api.ChecksumAlgorithm, digest string) err
 	if err != nil {
 		return err
 	}
-	if subtle.ConstantTimeCompare(found, want) != 1 {
+	if !bytes.Equal(found, want) {
 		return fmt.Errorf("expected %s of %s to be %s, found %x", algorithm, path, digest, found)
 	}
 	return nil
