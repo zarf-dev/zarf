@@ -142,6 +142,9 @@ documentation:
 	require.Equal(t, ResourceKindDocumentation, descriptors[DocumentationResourcePath("README.md")].Annotations[ResourceKindAnnotation])
 	require.Equal(t, "component:metrics", descriptors[SBOMResourcePath("component:metrics")].Annotations[ResourceKeyAnnotation])
 	require.Equal(t, ResourceKindSBOM, descriptors[SBOMResourcePath("component:metrics")].Annotations[ResourceKindAnnotation])
+	require.Equal(t, ZarfLayerMediaTypeBlob, descriptors[DocumentationResourcePath("README.md")].MediaType)
+	//nolint:testifylint // application/vnd.syft+json is a media type, not encoded JSON.
+	require.Equal(t, SBOMMediaTypeSyftJSON, descriptors[SBOMResourcePath("component:metrics")].MediaType)
 }
 
 // newTestLayout creates a minimal PackageLayout with a computed manifest.

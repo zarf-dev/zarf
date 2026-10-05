@@ -123,6 +123,14 @@ func resourceAnnotations(resourcePath string, pkg api.Package, documentationKeys
 	}
 	return annotations
 }
+func resourceMediaType(resourcePath string, pkg api.Package) string {
+	if UsesGranularResourceLayout(pkg) {
+		if _, ok := SBOMResourceKey(resourcePath); ok {
+			return SBOMMediaTypeSyftJSON
+		}
+	}
+	return ZarfLayerMediaTypeBlob
+}
 
 // computeManifest builds the OCI manifest for this layout, caches the result,
 // and sets p.digest.
@@ -221,7 +229,7 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		}
 
 		descs = append(descs, ocispec.Descriptor{
-			MediaType:   ZarfLayerMediaTypeBlob,
+			MediaType:   resourceMediaType(rel, configPackage),
 			Digest:      fileDigest,
 			Size:        fileSize,
 			Annotations: resourceAnnotations(rel, configPackage, documentationKeys),

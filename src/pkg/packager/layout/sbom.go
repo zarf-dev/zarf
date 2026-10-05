@@ -13,6 +13,8 @@ import (
 const (
 	// SBOMResourcesDir contains individually-addressable SBOM resources in v1beta1 packages.
 	SBOMResourcesDir = "sboms"
+	// SBOMMediaTypeSyftJSON identifies an SBOM encoded in Syft's JSON format.
+	SBOMMediaTypeSyftJSON = "application/vnd.syft+json"
 )
 
 // SBOMResourcePath returns the v1beta1 package-relative path for an SBOM resource key.

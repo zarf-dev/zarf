@@ -149,11 +149,19 @@ func granularResourceLayers(root *oci.Manifest, kind string, keys []string) ([]o
 	filtering := len(keys) > 0
 
 	layers := make([]ocispec.Descriptor, 0)
+	resourceKeys := make(map[string]struct{})
 	for _, descriptor := range root.Layers {
 		if descriptor.Annotations[layout.ResourceKindAnnotation] != kind {
 			continue
 		}
 		key := descriptor.Annotations[layout.ResourceKeyAnnotation]
+		if key == "" {
+			return nil, fmt.Errorf("%s resource has no key", kind)
+		}
+		if _, exists := resourceKeys[key]; exists {
+			return nil, fmt.Errorf("%s resource key %q is duplicated in package", kind, key)
+		}
+		resourceKeys[key] = struct{}{}
 		if !filtering {
 			layers = append(layers, descriptor)
 			continue

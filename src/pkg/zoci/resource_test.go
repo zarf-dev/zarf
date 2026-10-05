@@ -35,3 +35,26 @@ func TestGranularResourceLayersSelectsKeys(t *testing.T) {
 		return err
 	}(), "component:missing")
 }
+
+func TestGranularResourceLayersRejectsDuplicateKeys(t *testing.T) {
+	t.Parallel()
+
+	root := &oci.Manifest{Manifest: ocispec.Manifest{Layers: []ocispec.Descriptor{
+		{Annotations: map[string]string{layout.ResourceKindAnnotation: layout.ResourceKindSBOM, layout.ResourceKeyAnnotation: "image:nginx:1.27"}},
+		{Annotations: map[string]string{layout.ResourceKindAnnotation: layout.ResourceKindSBOM, layout.ResourceKeyAnnotation: "image:nginx:1.27"}},
+	}}}
+
+	_, err := granularResourceLayers(root, layout.ResourceKindSBOM, nil)
+	require.EqualError(t, err, `sbom resource key "image:nginx:1.27" is duplicated in package`)
+}
+
+func TestGranularResourceLayersRejectsMissingKey(t *testing.T) {
+	t.Parallel()
+
+	root := &oci.Manifest{Manifest: ocispec.Manifest{Layers: []ocispec.Descriptor{
+		{Annotations: map[string]string{layout.ResourceKindAnnotation: layout.ResourceKindSBOM}},
+	}}}
+
+	_, err := granularResourceLayers(root, layout.ResourceKindSBOM, nil)
+	require.EqualError(t, err, "sbom resource has no key")
+}
