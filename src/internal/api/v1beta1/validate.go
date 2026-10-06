@@ -37,6 +37,7 @@ const (
 	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
+	PkgValidateErrManifestNamePath        = "manifest %q must not contain path separators"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrGitURLWithRef           = "git URL %q must not contain an embedded ref; use the ref field instead"
 	PkgValidateErrFileChecksumAlgorithm   = "component %q file %q has unsupported checksum algorithm %q (expected sha256 or sha512)"
@@ -293,6 +294,10 @@ func validateManifest(manifest v1beta1.Manifest) ValidationErrors {
 
 	if len(manifest.Name) > ZarfMaxChartNameLength {
 		errs = append(errs, fmt.Errorf(PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
+	}
+
+	if strings.ContainsAny(manifest.Name, `/\`) {
+		errs = append(errs, fmt.Errorf(PkgValidateErrManifestNamePath, manifest.Name))
 	}
 
 	if len(manifest.Files) < 1 && len(manifest.Kustomize.Files) < 1 {

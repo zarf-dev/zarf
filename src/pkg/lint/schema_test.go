@@ -316,6 +316,28 @@ func TestV1Beta1SourceOneOfSchema(t *testing.T) {
 			}),
 			valid: false,
 		},
+		{
+			name: "manifest rejects forward path separators",
+			doc: baseDoc(map[string]any{
+				"name": "component",
+				"manifests": []any{map[string]any{
+					"name":  "nested/manifest",
+					"files": []any{"manifest.yaml"},
+				}},
+			}),
+			valid: false,
+		},
+		{
+			name: "manifest rejects path separators",
+			doc: baseDoc(map[string]any{
+				"name": "component",
+				"manifests": []any{map[string]any{
+					"name":  `nested\manifest`,
+					"files": []any{"manifest.yaml"},
+				}},
+			}),
+			valid: false,
+		},
 	}
 
 	for _, tt := range tests {

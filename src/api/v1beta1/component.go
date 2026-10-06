@@ -103,7 +103,7 @@ type KustomizeManifest struct {
 // Manifest defines raw manifests Zarf will deploy as a helm chart.
 type Manifest struct {
 	// A name to give this collection of manifests; this will become the name of the dynamically-created helm chart.
-	Name string `json:"name" jsonschema:"maxLength=40"`
+	Name string `json:"name" jsonschema:"maxLength=40,pattern=^[^/\\\\]*$"`
 	// The namespace to deploy the manifests to.
 	Namespace string `json:"namespace,omitempty"`
 	// List of local K8s YAML files or remote URLs to deploy (in order).

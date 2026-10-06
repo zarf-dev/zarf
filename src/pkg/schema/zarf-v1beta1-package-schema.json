@@ -945,6 +945,7 @@
         "name": {
           "description": "A name to give this collection of manifests; this will become the name of the dynamically-created helm chart.",
           "maxLength": 40,
+          "pattern": "^[^/\\\\]*$",
           "type": "string"
         },
         "namespace": {
