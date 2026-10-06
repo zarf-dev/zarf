@@ -46,6 +46,7 @@ const (
 	PkgValidateErrChartValueExcludePath   = "chart %q excludePath %q must be a descendant of sourcePath %q"
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
+	PkgValidateErrManifestNamePath        = "manifest %q must not contain path separators"
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
@@ -327,6 +328,10 @@ func validateManifest(manifest v1alpha1.ZarfManifest) error {
 
 	if len(manifest.Name) > ZarfMaxChartNameLength {
 		err = errors.Join(err, fmt.Errorf(PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
+	}
+
+	if strings.ContainsAny(manifest.Name, `/\`) {
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrManifestNamePath, manifest.Name))
 	}
 
 	if len(manifest.Files) < 1 && len(manifest.Kustomizations) < 1 {

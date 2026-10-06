@@ -172,6 +172,16 @@ func TestValidateManifest(t *testing.T) {
 			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
 		},
 		{
+			name:         "name contains forward path separator",
+			manifest:     v1alpha1.ZarfManifest{Name: "nested/manifest", Files: []string{"a-file"}},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNamePath, "nested/manifest")},
+		},
+		{
+			name:         "name contains backslash path separator",
+			manifest:     v1alpha1.ZarfManifest{Name: `nested\manifest`, Files: []string{"a-file"}},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNamePath, `nested\manifest`)},
+		},
+		{
 			name:         "no files or kustomize",
 			manifest:     v1alpha1.ZarfManifest{Name: "nothing-there"},
 			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestFileOrKustomize, "nothing-there")},

@@ -58,6 +58,50 @@ fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9 foo
 	require.Equal(t, "7c554cf67e1c2b50a1b728299c368cd56d53588300c37479623f29a52812ca3f", checksumHash)
 }
 
+func TestPackageManifestRejectsNamesWithPathSeparators(t *testing.T) {
+	t.Parallel()
+
+	componentDir := filepath.Join(t.TempDir(), "component")
+	resources := load.NewResourceSet(t.TempDir())
+	tests := []struct {
+		name     string
+		manifest api.Manifest
+	}{
+		{
+			name:     "raw manifest",
+			manifest: api.Manifest{Name: "../escaped", Files: []string{"manifest.yaml"}},
+		},
+		{
+			name: "kustomization",
+			manifest: api.Manifest{
+				Name:      `nested\manifest`,
+				Kustomize: api.KustomizeManifest{Files: []string{"kustomize"}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := PackageManifest(testutil.TestContext(t), tt.manifest, componentDir, resources)
+			require.ErrorContains(t, err, "must not contain path separators")
+			require.NoDirExists(t, filepath.Join(componentDir, string(layout.ManifestsComponentDir)))
+			require.NoFileExists(t, filepath.Join(componentDir, "escaped-0.yaml"))
+		})
+	}
+}
+
+func TestManifestOutputPathStaysWithinManifestDirectory(t *testing.T) {
+	t.Parallel()
+
+	componentDir := t.TempDir()
+	destination, err := manifestOutputPath(componentDir, "manifest-0.yaml")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(componentDir, string(layout.ManifestsComponentDir), "manifest-0.yaml"), destination)
+
+	_, err = manifestOutputPath(componentDir, "../escaped-0.yaml")
+	require.ErrorContains(t, err, "escapes")
+}
+
 func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	t.Parallel()
 

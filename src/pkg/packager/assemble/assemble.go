@@ -586,9 +586,15 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
 func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath string, resources *load.ResourceSet) error {
+	if err := validateManifestName(manifest.Name); err != nil {
+		return err
+	}
+
 	for fileIdx, path := range manifest.Files {
-		rel := filepath.Join(string(layout.ManifestsComponentDir), layout.ManifestFileName(manifest.Name, fileIdx))
-		dst := filepath.Join(compBuildPath, rel)
+		dst, err := manifestOutputPath(compBuildPath, layout.ManifestFileName(manifest.Name, fileIdx))
+		if err != nil {
+			return err
+		}
 
 		// Copy manifests without any processing.
 		if helpers.IsURL(path) {
@@ -608,12 +614,12 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 
 	for kustomizeIdx, path := range manifest.Kustomize.Files {
 		// Generate manifests from kustomizations and place in the package.
-		kname := layout.KustomizationFileName(manifest.Name, kustomizeIdx)
-		rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
-		dst := filepath.Join(compBuildPath, rel)
+		dst, err := manifestOutputPath(compBuildPath, layout.KustomizationFileName(manifest.Name, kustomizeIdx))
+		if err != nil {
+			return err
+		}
 
 		if !helpers.IsURL(path) {
-			var err error
 			path, err = resources.Path(path)
 			if err != nil {
 				return err
@@ -624,6 +630,23 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 		}
 	}
 	return nil
+}
+
+func validateManifestName(name string) error {
+	if strings.ContainsAny(name, `/\`) {
+		return fmt.Errorf("manifest name %q must not contain path separators", name)
+	}
+	return nil
+}
+
+func manifestOutputPath(compBuildPath, filename string) (string, error) {
+	manifestDir := filepath.Join(compBuildPath, string(layout.ManifestsComponentDir))
+	destination := filepath.Join(manifestDir, filename)
+	relative, err := filepath.Rel(manifestDir, destination)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("manifest output path %q escapes %q", destination, manifestDir)
+	}
+	return destination, nil
 }
 
 // PackageChart takes a Zarf Chart definition and packs it into a package layout
