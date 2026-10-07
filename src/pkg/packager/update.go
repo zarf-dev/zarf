@@ -69,18 +69,22 @@ func UpdateImages(ctx context.Context, packagePath string, definitionImageResult
 func updateBetaImages(manifestPath string, contents []byte, kind string, results []DefinitionImageResult) error {
 	var components []v1beta1.Component
 	componentConfig := kind == string(v1beta1.ZarfComponentConfig)
-	if componentConfig {
+	switch kind {
+	case string(v1beta1.ZarfComponentConfig):
 		var config v1beta1.ComponentConfig
 		if err := yaml.Unmarshal(contents, &config); err != nil {
 			return err
 		}
 		components = []v1beta1.Component{{Name: config.Metadata.Name, ComponentSpec: config.Component}}
-	} else {
+	// TODO, when we add v1beta1 init configs, we'll have to allow that here as well
+	case string(v1beta1.ZarfPackageConfig):
 		var pkg v1beta1.Package
 		if err := yaml.Unmarshal(contents, &pkg); err != nil {
 			return err
 		}
 		components = pkg.Components
+	default:
+		return fmt.Errorf("invalid kind %q", kind)
 	}
 	astFile, err := parser.ParseBytes(contents, parser.ParseComments)
 	if err != nil {

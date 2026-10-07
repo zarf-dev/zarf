@@ -19,6 +19,28 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
+func TestUpdateImagesV1Beta1RejectsInvalidKind(t *testing.T) {
+	t.Parallel()
+	for _, kind := range []string{"InvalidConfig", ""} {
+		t.Run(kind, func(t *testing.T) {
+			t.Parallel()
+			contents, err := yaml.Marshal(v1beta1.Package{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.PackageKind(kind),
+			})
+			require.NoError(t, err)
+			path := filepath.Join(t.TempDir(), "zarf.yaml")
+			require.NoError(t, os.WriteFile(path, contents, 0o600))
+
+			err = UpdateImages(context.Background(), path, nil)
+			require.ErrorContains(t, err, "invalid kind")
+			updated, err := os.ReadFile(path)
+			require.NoError(t, err)
+			require.Equal(t, contents, updated)
+		})
+	}
+}
+
 func TestUpdateImagesV1Beta1PreservesAuthoredFields(t *testing.T) {
 	t.Parallel()
 	oldImage := v1beta1.Image{Name: "example.com/old:1", Source: "daemon"}
