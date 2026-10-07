@@ -9,8 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 )
 
@@ -108,19 +106,107 @@ func TestLintPackageWithImports(t *testing.T) {
 	}
 }
 
-func TestLintRejectsNonV1Alpha1Package(t *testing.T) {
+func TestLintV1Beta1PackageAndComponentConfig(t *testing.T) {
 	t.Parallel()
 
-	packagePath := t.TempDir()
-	packageYAML := `apiVersion: zarf.dev/v1beta1
+	const packageYAML = `apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: v1beta1-package
 components:
-  - name: component
+  - name: app
+    images:
+      - name: busybox:1.0
+    repositories:
+      - url: https://example.com/repo.git
+    files:
+      - source: https://example.com/file.zip
+        destination: /tmp/file.zip
+    imageArchives:
+      - path: images.tar
+        images:
+          - example.com/app:1.0
 `
-	require.NoError(t, os.WriteFile(filepath.Join(packagePath, "zarf.yaml"), []byte(packageYAML), 0o600))
+	const componentYAML = `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component:
+  images:
+    - name: busybox:1.0
+  repositories:
+    - url: https://example.com/repo.git
+  files:
+    - source: https://example.com/file.zip
+      destination: /tmp/file.zip
+  imageArchives:
+    - path: images.tar
+      images:
+        - example.com/app:1.0
+`
+	for _, tc := range []struct {
+		name     string
+		filename string
+		contents string
+		prefix   string
+	}{
+		{name: "package directory", filename: "zarf.yaml", contents: packageYAML, prefix: ".components.[0]"},
+		{name: "component file", filename: "component.yaml", contents: componentYAML, prefix: ".component"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			path := filepath.Join(dir, tc.filename)
+			require.NoError(t, os.WriteFile(path, []byte(tc.contents), 0o600))
+			if tc.filename == "zarf.yaml" {
+				path = dir
+			}
+			err := Lint(context.Background(), path, LintOptions{})
+			var lintErr *lint.LintError
+			require.ErrorAs(t, err, &lintErr)
+			require.ElementsMatch(t, []lint.PackageFinding{
+				{YqPath: tc.prefix + ".repositories.[0]", Description: "Repository is not pinned to a commit", Item: "https://example.com/repo.git", Severity: lint.SevWarn},
+				{YqPath: tc.prefix + ".images.[0]", Description: "Image not pinned with digest", Item: "busybox:1.0", Severity: lint.SevWarn},
+				{YqPath: tc.prefix + ".images.[0]", Description: "Image reference does not specify a registry domain", Item: "busybox:1.0", Severity: lint.SevWarn},
+				{YqPath: tc.prefix + ".files.[0]", Description: "No checksum for remote file", Item: "https://example.com/file.zip", Severity: lint.SevWarn},
+				{YqPath: tc.prefix + ".imageArchives.[0].images.[0]", Description: "Image archive image should use a .internal domain to avoid resolving to a public registry", Item: "example.com/app:1.0", Severity: lint.SevWarn},
+			}, lintErr.Findings)
+			require.True(t, lintErr.OnlyWarnings())
+		})
+	}
+}
 
-	err := Lint(context.Background(), packagePath, LintOptions{})
-	require.EqualError(t, err, "linting packages with apiVersion \""+v1beta1.APIVersion+"\" is not yet supported; only "+v1alpha1.APIVersion+" is supported")
+func TestLintV1Beta1ComponentConfigWithImport(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	child := `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: child
+component:
+  images:
+    - name: busybox:1.0
+`
+	parent := `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: parent
+component:
+  import:
+    local:
+      - path: child.yaml
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "child.yaml"), []byte(child), 0o600))
+	parentPath := filepath.Join(dir, "parent.yaml")
+	require.NoError(t, os.WriteFile(parentPath, []byte(parent), 0o600))
+
+	err := Lint(context.Background(), parentPath, LintOptions{})
+	var lintErr *lint.LintError
+	require.ErrorAs(t, err, &lintErr)
+	require.Equal(t, "parent", lintErr.PackageName)
+	require.ElementsMatch(t, []lint.PackageFinding{
+		{YqPath: ".component.images.[0]", Description: "Image not pinned with digest", Item: "busybox:1.0", Severity: lint.SevWarn},
+		{YqPath: ".component.images.[0]", Description: "Image reference does not specify a registry domain", Item: "busybox:1.0", Severity: lint.SevWarn},
+	}, lintErr.Findings)
 }

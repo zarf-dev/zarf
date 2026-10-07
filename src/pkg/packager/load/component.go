@@ -24,7 +24,7 @@ type ResolvedComponent struct {
 	ValuesSchema value.SchemaDocument
 }
 
-// ComponentOptions configures resource-ready component loading.
+// ComponentOptions configures component loading.
 type ComponentOptions struct {
 	// CachePath stores remote component layers locally when non-empty.
 	CachePath string
@@ -39,22 +39,22 @@ func (c *ResolvedComponent) Close() error {
 	return c.Resources.Close()
 }
 
+// ComponentDefinition returns a structurally validated component config after imports are resolved.
+// It does not read component resource contents or values files.
+func ComponentDefinition(ctx context.Context, componentPath string, opts ComponentOptions) (v1beta1.ComponentConfig, error) {
+	resolved, err := resolveComponent(ctx, filepath.Clean(componentPath), opts)
+	if err != nil {
+		return v1beta1.ComponentConfig{}, err
+	}
+	return resolved.Component, nil
+}
+
 // Component loads a v1beta1 component config and makes imported resources available.
 func Component(ctx context.Context, componentPath string, opts ComponentOptions) (_ *ResolvedComponent, err error) {
 	componentPath = filepath.Clean(componentPath)
-	component, err := ComponentConfig(componentPath)
+	resolved, err := resolveComponent(ctx, componentPath, opts)
 	if err != nil {
 		return nil, err
-	}
-	resolved, err := ResolveComponentConfigImports(ctx, component, componentPath, opts.RemoteOptions, opts.CachePath)
-	if err != nil {
-		return nil, err
-	}
-	if validationErrs := internalv1beta1.ValidateComponent(v1beta1.Component{
-		Name:          resolved.Component.Metadata.Name,
-		ComponentSpec: resolved.Component.Component,
-	}); len(validationErrs) > 0 {
-		return nil, fmt.Errorf("component validation failed:\n%w", validationErrs)
 	}
 	resources, err := resolved.MaterializeResources(ctx, componentPath)
 	if err != nil {
@@ -76,4 +76,22 @@ func Component(ctx context.Context, componentPath string, opts ComponentOptions)
 		return nil, err
 	}
 	return loaded, nil
+}
+
+func resolveComponent(ctx context.Context, componentPath string, opts ComponentOptions) (ComponentConfigImportResolution, error) {
+	component, err := ComponentConfig(componentPath)
+	if err != nil {
+		return ComponentConfigImportResolution{}, err
+	}
+	resolved, err := ResolveComponentConfigImports(ctx, component, componentPath, opts.RemoteOptions, opts.CachePath)
+	if err != nil {
+		return ComponentConfigImportResolution{}, err
+	}
+	if validationErrs := internalv1beta1.ValidateComponent(v1beta1.Component{
+		Name:          resolved.Component.Metadata.Name,
+		ComponentSpec: resolved.Component.Component,
+	}); len(validationErrs) > 0 {
+		return ComponentConfigImportResolution{}, fmt.Errorf("component validation failed:\n%w", validationErrs)
+	}
+	return resolved, nil
 }
