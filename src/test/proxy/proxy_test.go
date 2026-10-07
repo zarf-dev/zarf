@@ -41,8 +41,12 @@ func (suite *RegistryProxyTestSuite) SetupSuite() {
 func (suite *RegistryProxyTestSuite) Test_0_RegistryProxyAndGitTLSInit() {
 	ctx := suite.T().Context()
 
-	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--registry-mode=proxy", "--git-tls-mode=tls-enabled", "--components=git-server", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--registry-mode=proxy", "--git-tls-mode=tls-enabled", "--features=git-server-tls=true", "--components=git-server", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Kubectl(suite.T(), "get", "deployment", "-n", state.ZarfNamespaceName,
+		"-l", "app.kubernetes.io/instance=zarf-gitea", `-o=jsonpath={.items[0].spec.template.spec.volumes[?(@.name=="gitea-tls")].secret.optional}`)
+	suite.NoError(err, stdOut, stdErr)
+	suite.Equal("false", stdOut, "TLS-enabled init must require its certificate secret")
 
 	// Verify the registry proxy TLS secrets were created
 	_, err = suite.cluster.Clientset.CoreV1().Secrets("zarf").Get(ctx, state.RegistryServerTLSSecret, metav1.GetOptions{})

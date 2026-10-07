@@ -63,13 +63,14 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
 
 			// Git server info
-			"GIT_PUSH":            gitInfo.PushUsername,
-			"GIT_AUTH_PUSH":       gitInfo.PushPassword,
-			"GIT_PULL":            gitInfo.PullUsername,
-			"GIT_AUTH_PULL":       gitInfo.PullPassword,
-			"GIT_SERVER_PROTOCOL": gitInfo.URLScheme(),
-			"GIT_SERVER_ROOT_URL": gitInfo.Address,
-			"GIT_TLS_ENABLED":     fmt.Sprintf("%t", gitInfo.TLSMode.Enabled()),
+			"GIT_PUSH":                gitInfo.PushUsername,
+			"GIT_AUTH_PUSH":           gitInfo.PushPassword,
+			"GIT_PULL":                gitInfo.PullUsername,
+			"GIT_AUTH_PULL":           gitInfo.PullPassword,
+			"GIT_SERVER_PROTOCOL":     gitInfo.URLScheme(),
+			"GIT_SERVER_ROOT_URL":     gitInfo.Address,
+			"GIT_TLS_ENABLED":         fmt.Sprintf("%t", gitInfo.TLSMode.Enabled()),
+			"GIT_TLS_SECRET_OPTIONAL": fmt.Sprintf("%t", !gitInfo.TLSMode.Enabled()),
 		}
 
 		builtinMap[depMarker] = config.GetDataInjectionMarker()

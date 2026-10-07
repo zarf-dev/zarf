@@ -304,9 +304,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 	}
 
-	// The chart mounts this Secret even in HTTP mode. Ensure it exists before
-	// deploying the Git component, including upgrades from pre-TLS releases.
-	if opts.InternalServices.Has(state.GitKey) && s.GitServer.IsInternal() {
+	// Ensure certificates exist before deploying the TLS-enabled Git component.
+	if opts.InternalServices.Has(state.GitKey) && s.GitServer.IsInternal() && s.GitServer.TLSMode.Enabled() {
 		_, err := c.GetGitServerTLS(ctx)
 		if kerrors.IsNotFound(err) {
 			certs := opts.GitServerTLS

@@ -16,6 +16,7 @@ import (
 	"helm.sh/helm/v4/pkg/chart"
 	"helm.sh/helm/v4/pkg/release"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
 
@@ -116,7 +117,38 @@ func UpdateZarfGitServerValues(ctx context.Context, opts InstallUpgradeOptions) 
 		certDigest = hex.EncodeToString(digest[:])
 	}
 	chart := api.Chart{Namespace: state.ZarfNamespaceName, ReleaseName: "zarf-gitea"}
+	// FIXME: make this it's own function
+	actionConfig, err := createActionConfig(ctx, chart.Namespace)
+	if err != nil {
+		return fmt.Errorf("initializing Gitea Helm client: %w", err)
+	}
+	getValues := action.NewGetValues(actionConfig)
+	getValues.AllValues = true
+	currentValues, err := getValues.Run(chart.ReleaseName)
+	if err != nil {
+		return fmt.Errorf("getting Gitea release values: %w", err)
+	}
+	volumes, _, err := unstructured.NestedSlice(currentValues, "extraVolumes")
+	if err != nil {
+		return fmt.Errorf("getting Gitea extra volumes: %w", err)
+	}
+	foundTLSVolume := false
+	for _, entry := range volumes {
+		volume, ok := entry.(map[string]interface{})
+		if !ok || volume["name"] != "gitea-tls" {
+			continue
+		}
+		if err := unstructured.SetNestedField(volume, !opts.State.GitServer.TLSMode.Enabled(), "secret", "optional"); err != nil {
+			return fmt.Errorf("setting Git TLS secret optionality: %w", err)
+		}
+		foundTLSVolume = true
+	}
+	if !foundTLSVolume {
+		return fmt.Errorf("gitea release has no Git TLS volume; re-run init with an updated init package before changing Git TLS settings")
+	}
 	values := map[string]interface{}{
+		// Helm replaces lists, so retain the other configured volumes.
+		"extraVolumes": volumes,
 		"podAnnotations": map[string]interface{}{
 			"zarf.dev/git-tls-sha256": certDigest,
 		},

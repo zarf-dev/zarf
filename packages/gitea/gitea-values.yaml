@@ -84,6 +84,7 @@ extraVolumes:
   - name: gitea-tls
     secret:
       secretName: zarf-git-server-tls
+      optional: ###ZARF_GIT_TLS_SECRET_OPTIONAL###
 
 extraContainerVolumeMounts:
   - name: gitea-tls

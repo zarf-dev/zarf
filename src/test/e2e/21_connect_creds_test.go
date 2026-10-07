@@ -7,16 +7,21 @@ package test
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type RegistryResponse struct {
@@ -58,6 +63,69 @@ func TestConnectAndCreds(t *testing.T) {
 	require.NotEqual(t, oldState.GitServer.PushPassword, newState.GitServer.PushPassword)
 
 	connectToZarfServices(ctx, t)
+}
+
+func TestGitTLSModeSwitch(t *testing.T) {
+	ctx := t.Context()
+	c, err := cluster.New(ctx)
+	require.NoError(t, err)
+	for _, mode := range []state.GitTLSMode{state.GitTLSDisabled, state.GitTLSEnabled, state.GitTLSDisabled} {
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "git", "--git-tls-mode="+string(mode), "--features=git-server-tls=true", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+
+		deployments, err := c.Clientset.AppsV1().Deployments(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{
+			LabelSelector: "app.kubernetes.io/instance=zarf-gitea",
+		})
+		require.NoError(t, err)
+		require.Len(t, deployments.Items, 1)
+		foundTLSVolume := false
+		for _, volume := range deployments.Items[0].Spec.Template.Spec.Volumes {
+			if volume.Secret == nil || volume.Secret.SecretName != state.GitServerTLSSecret {
+				continue
+			}
+			foundTLSVolume = true
+			require.NotNil(t, volume.Secret.Optional)
+			require.Equal(t, !mode.Enabled(), *volume.Secret.Optional)
+		}
+		require.True(t, foundTLSVolume, "Gitea must mount the Git TLS secret")
+
+		roots := x509.NewCertPool()
+		if mode.Enabled() {
+			certs, err := c.GetGitServerTLS(ctx)
+			require.NoError(t, err)
+			require.True(t, roots.AppendCertsFromPEM(certs.CA))
+		} else {
+			// HTTP must keep working when the unused TLS secret is absent.
+			if err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Delete(ctx, state.GitServerTLSSecret, metav1.DeleteOptions{}); !kerrors.IsNotFound(err) {
+				require.NoError(t, err)
+			}
+			stdOut, stdErr, err = e2e.Kubectl(t, "rollout", "restart", "deployment/"+deployments.Items[0].Name, "-n", state.ZarfNamespaceName)
+			require.NoError(t, err, stdOut, stdErr)
+			stdOut, stdErr, err = e2e.Kubectl(t, "rollout", "status", "deployment/"+deployments.Items[0].Name, "-n", state.ZarfNamespaceName, "--timeout=2m")
+			require.NoError(t, err, stdOut, stdErr)
+		}
+
+		tunnel, err := c.Connect(ctx, cluster.ZarfGit)
+		require.NoError(t, err)
+		t.Cleanup(tunnel.Close)
+		endpoints := tunnel.URLEndpoints()
+		require.Len(t, endpoints, 1)
+		if mode.Enabled() {
+			require.Regexp(t, "^https://", endpoints[0])
+		} else {
+			require.Regexp(t, "^http://", endpoints[0])
+		}
+		transport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}}
+		client := &http.Client{Timeout: 10 * time.Second, Transport: transport}
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoints[0]+"/explore/repos", nil)
+		require.NoError(t, err)
+		response, err := client.Do(request)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, response.StatusCode)
+		require.NoError(t, response.Body.Close())
+		transport.CloseIdleConnections()
+		tunnel.Close()
+	}
 }
 
 func TestMetrics(t *testing.T) {
