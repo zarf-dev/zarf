@@ -86,6 +86,19 @@ Zarf provides a few options that can provide control over how a deployment of a 
 - **Optional Components** -  Allows for components to be optionally chosen when they are needed for a subset of environments.
 - **Components Groups** - Provides a choice of one component from a defined set of components in the same component group.
 
+## Deploying with Architecture Emulation
+
+By default, Zarf rejects single-architecture image packages when no cluster node reports the package architecture. For development and testing, use `--skip-architecture-check` to allow an application package to deploy to nodes configured to emulate that architecture.
+
+```shell
+zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst \
+  --architecture=amd64 --skip-architecture-check --confirm
+```
+
+`--architecture` selects the package architecture; it does not override cluster compatibility checks. `--skip-architecture-check` permits a mismatch and logs a warning. It does not install or detect an emulator, change node labels, or alter image architecture. Configure and verify emulation on the target nodes first. For example, OrbStack on Apple Silicon can use Rosetta to run amd64 containers while cluster services remain native arm64.
+
+This option is not recommended for production and is not supported for init packages. Initialize the cluster with its native architecture. Workload node selectors and affinity still apply; an amd64 node selector will not match an arm64 node merely because emulation is enabled.
+
 ## Additional Deployment-modes
 
 Zarf normally expects to operate against a Kubernetes cluster that has been [Zarf initialized](/tutorials/1-initializing-a-k8s-cluster/), but there are additional modes that can be configured by package creators including:

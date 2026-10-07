@@ -89,6 +89,9 @@ type DeployOptions struct {
 	IsInteractive bool
 	// SkipValuesSchemaValidation skips validation of the merged package values against the package schema.
 	SkipValuesSchemaValidation bool
+	// SkipArchitectureCheck allows application images to deploy to nodes with a different architecture.
+	// The operator must configure emulation on the target nodes.
+	SkipArchitectureCheck bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
 }
@@ -115,6 +118,10 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	pkg := pkgLayout.Definition()
 	if opts.Connected && pkg.IsInitConfig() {
 		return DeployResult{}, fmt.Errorf("--connected is not supported for init packages")
+	}
+
+	if opts.SkipArchitectureCheck && pkg.IsInitConfig() {
+		return DeployResult{}, fmt.Errorf("--skip-architecture-check is not supported for init packages")
 	}
 
 	// Validate operational requirements before proceeding
@@ -258,7 +265,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				if err != nil {
 					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 				}
-				if err := d.verifyPackageIsDeployable(ctx, pkgLayout); err != nil {
+				if err := d.verifyPackageIsDeployable(ctx, pkgLayout, opts.SkipArchitectureCheck); err != nil {
 					return nil, fmt.Errorf("package is not deployable to this system: %w", err)
 				}
 			}
@@ -795,8 +802,8 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 	return installedCharts, nil
 }
 
-func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkgLayout *layout.PackageLayout) error {
-	if err := verifyClusterCompatibility(ctx, d.c, pkgLayout); err != nil {
+func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkgLayout *layout.PackageLayout, skipArchitectureCheck bool) error {
+	if err := verifyClusterCompatibility(ctx, d.c, pkgLayout, skipArchitectureCheck); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
 			logger.From(ctx).Warn("unable to validate package architecture", "error", err)
 		} else {
@@ -841,7 +848,7 @@ func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state
 	return s, nil
 }
 
-func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout) error {
+func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, skipArchitectureCheck bool) error {
 	pkg := pkgLayout.Definition()
 	// Ignore this check if the package contains no images
 	if !pkg.HasImages() {
@@ -875,7 +882,11 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayo
 
 	// Check if the package architecture and the cluster architecture are the same.
 	if !slices.Contains(architectures, pkg.Metadata.Architecture) {
-		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, pkg.Metadata.Architecture, strings.Join(architectures, ", "))
+		if !skipArchitectureCheck {
+			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, pkg.Metadata.Architecture, strings.Join(architectures, ", "))
+		}
+		logger.From(ctx).Warn("Architecture mismatch allowed. The target nodes must support emulation. Intended for development and testing; not recommended for production.",
+			"packageArchitecture", pkg.Metadata.Architecture, "nodeArchitectures", architectures)
 	}
 
 	return nil
