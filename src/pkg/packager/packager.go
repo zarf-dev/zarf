@@ -119,8 +119,9 @@ func loadDefinition(ctx context.Context, source string, opts load.PackageOptions
 		return load.Package(ctx, source, opts)
 	}
 	component, err := load.Component(ctx, resolvedPath.ManifestFile, load.ComponentOptions{
-		CachePath:     opts.CachePath,
-		RemoteOptions: opts.RemoteOptions,
+		CachePath:                  opts.CachePath,
+		RemoteOptions:              opts.RemoteOptions,
+		SkipValuesSchemaValidation: opts.SkipValuesSchemaValidation,
 	})
 	if err != nil {
 		return nil, err
@@ -129,6 +130,7 @@ func loadDefinition(ctx context.Context, source string, opts load.PackageOptions
 		APIVersion: v1beta1.APIVersion,
 		Kind:       v1beta1.ZarfPackageConfig,
 		Metadata:   v1beta1.PackageMetadata{Name: component.Definition.Metadata.Name},
+		Values:     component.Definition.Values,
 		Components: []v1beta1.Component{{Name: component.Definition.Metadata.Name, ComponentSpec: component.Definition.Component}},
 	})
 	return &load.ResolvedPackage{

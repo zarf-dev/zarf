@@ -41,6 +41,54 @@ func TestZarfDevGenerate(t *testing.T) {
 		require.NotEmpty(t, zarfPackage.Components[0].Images)
 	})
 
+	t.Run("Test generate-schema updates beta packages and components", func(t *testing.T) {
+		for _, tc := range []struct {
+			kind       string
+			components string
+		}{
+			{
+				kind: "ZarfPackageConfig",
+				components: `components:
+  - name: app
+`,
+			},
+			{
+				kind: "ZarfComponentConfig",
+				components: `component: {}
+`,
+			},
+		} {
+			t.Run(tc.kind, func(t *testing.T) {
+				dir := t.TempDir()
+				definition := `apiVersion: zarf.dev/v1beta1
+kind: ` + tc.kind + `
+metadata:
+  name: schema-test
+values:
+  files:
+    - values.yaml
+` + tc.components
+				path := filepath.Join(dir, "definition.yaml")
+				require.NoError(t, os.WriteFile(path, []byte(definition), 0o600))
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "values.yaml"), []byte("replicas: 2\n"), 0o600))
+				stdOut, stdErr, err := e2e.Zarf(t, "dev", "generate-schema", path, "--update")
+				require.NoError(t, err, stdOut, stdErr)
+				schema, _, err := value.LoadValidatedSchema(dir, filepath.Join(dir, "values.schema.json"))
+				require.NoError(t, err)
+				replicas, found, err := value.ExtractJSONSchema(schema, ".replicas")
+				require.NoError(t, err)
+				require.True(t, found)
+				require.Equal(t, "integer", replicas["type"])
+				var updated struct {
+					Values v1alpha1.ZarfValues `json:"values"`
+				}
+				require.NoError(t, utils.ReadYaml(path, &updated))
+				require.Equal(t, "values.schema.json", updated.Values.Schema)
+				require.Equal(t, []string{"values.yaml"}, updated.Values.Files)
+			})
+		}
+	})
+
 	t.Run("Test generate-schema merges inferred data into existing schema", func(t *testing.T) {
 		packagePath := t.TempDir()
 		err := helpers.CreatePathAndCopy("src/test/packages/14-generate-schema", packagePath)
