@@ -39,6 +39,41 @@ func TestChartPaths(t *testing.T) {
 	require.Equal(t, filepath.Join("build", "values", "podinfo-6.4.0-1"), paths.ValuesFile("podinfo", "6.4.0", 1))
 }
 
+func TestChartPathsRejectUnsafeComponents(t *testing.T) {
+	t.Parallel()
+
+	paths := ChartPaths{ChartsDir: filepath.Join("build", "charts"), ValuesDir: filepath.Join("build", "values")}
+	tests := []struct {
+		name    string
+		pathFor func() (string, error)
+	}{
+		{name: "archive name", pathFor: func() (string, error) { return paths.ArchivePath("../chart", "1.0.0") }},
+		{name: "archive version", pathFor: func() (string, error) { return paths.ArchivePath("chart", `nested\version`) }},
+		{name: "values name", pathFor: func() (string, error) { return paths.ValuesFilePath("nested/chart", "1.0.0", 0) }},
+		{name: "values version", pathFor: func() (string, error) { return paths.ValuesFilePath("chart", "../version", 0) }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tt.pathFor()
+			require.ErrorContains(t, err, "must not")
+		})
+	}
+}
+
+func TestChartPathsStayWithinArtifactDirectories(t *testing.T) {
+	t.Parallel()
+
+	paths := ChartPaths{ChartsDir: filepath.Join("build", "charts"), ValuesDir: filepath.Join("build", "values")}
+	archive, err := paths.ArchivePath("chart", "1.0.0")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join("build", "charts", "chart-1.0.0.tgz"), archive)
+
+	values, err := paths.ValuesFilePath("chart", "1.0.0", 2)
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join("build", "values", "chart-1.0.0-2"), values)
+}
+
 func TestManifestFileNames(t *testing.T) {
 	t.Parallel()
 

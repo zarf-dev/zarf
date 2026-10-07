@@ -58,6 +58,27 @@ const (
 	ValuesComponentDir    ComponentDir = "values"
 )
 
+// ValidatePathComponent ensures a package-derived value is safe to use in an internal path.
+func ValidatePathComponent(field, value string) error {
+	if value == ".." {
+		return fmt.Errorf("%s %q must not be a traversal path", field, value)
+	}
+	if strings.ContainsAny(value, `/\`) {
+		return fmt.Errorf("%s %q must not contain path separators", field, value)
+	}
+	return nil
+}
+
+// PathWithinDirectory resolves filename under directory and rejects paths that escape it.
+func PathWithinDirectory(directory, field, filename string) (string, error) {
+	destination := filepath.Join(directory, filename)
+	relative, err := filepath.Rel(directory, destination)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("%s path %q escapes %q", field, destination, directory)
+	}
+	return destination, nil
+}
+
 // ManifestFileName returns the file name, within a component's manifests directory, that stores the
 // idx-th file of the named manifest.
 func ManifestFileName(manifestName string, idx int) string {
@@ -116,4 +137,26 @@ func (p ChartPaths) Archive(name, version string) string {
 // ValuesFile returns the full path to the idx-th values file for the named chart.
 func (p ChartPaths) ValuesFile(name, version string, idx int) string {
 	return filepath.Join(p.ValuesDir, ChartValuesFileName(name, version, idx))
+}
+
+// ArchivePath returns the contained path for a chart archive.
+func (p ChartPaths) ArchivePath(name, version string) (string, error) {
+	if err := ValidatePathComponent("chart name", name); err != nil {
+		return "", err
+	}
+	if err := ValidatePathComponent("chart version", version); err != nil {
+		return "", err
+	}
+	return PathWithinDirectory(p.ChartsDir, "chart archive", ChartArchiveName(name, version))
+}
+
+// ValuesFilePath returns the contained path for a packaged chart values file.
+func (p ChartPaths) ValuesFilePath(name, version string, idx int) (string, error) {
+	if err := ValidatePathComponent("chart name", name); err != nil {
+		return "", err
+	}
+	if err := ValidatePathComponent("chart version", version); err != nil {
+		return "", err
+	}
+	return PathWithinDirectory(p.ValuesDir, "chart values", ChartValuesFileName(name, version, idx))
 }

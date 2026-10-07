@@ -26,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 	_ "modernc.org/sqlite"
 )
 
@@ -95,12 +96,36 @@ func TestManifestOutputPathStaysWithinManifestDirectory(t *testing.T) {
 
 	componentDir := t.TempDir()
 	manifestDir := filepath.Join(componentDir, string(layout.ManifestsComponentDir))
-	destination, err := pathWithinDirectory(manifestDir, "manifest output", "manifest-0.yaml")
+	destination, err := layout.PathWithinDirectory(manifestDir, "manifest output", "manifest-0.yaml")
 	require.NoError(t, err)
 	require.Equal(t, filepath.Join(manifestDir, "manifest-0.yaml"), destination)
 
-	_, err = pathWithinDirectory(manifestDir, "manifest output", "../escaped-0.yaml")
+	_, err = layout.PathWithinDirectory(manifestDir, "manifest output", "../escaped-0.yaml")
 	require.ErrorContains(t, err, "escapes")
+}
+
+func TestPackageChartRejectsUnsafeArtifactComponents(t *testing.T) {
+	t.Parallel()
+
+	paths := layout.ChartPaths{
+		ChartsDir: filepath.Join(t.TempDir(), "charts"),
+		ValuesDir: filepath.Join(t.TempDir(), "values"),
+	}
+	err := PackageChart(testutil.TestContext(t), api.Chart{Name: "../escape"}, load.NewResourceSet(t.TempDir()), paths, "", types.RemoteOptions{})
+	require.ErrorContains(t, err, "chart name")
+	require.NoFileExists(t, filepath.Join(filepath.Dir(paths.ChartsDir), "escape.tgz"))
+}
+
+func TestAssembleSkeletonComponentRejectsUnsafeChartArtifactComponents(t *testing.T) {
+	t.Parallel()
+
+	buildPath := t.TempDir()
+	err := assembleSkeletonComponent(testutil.TestContext(t), api.Component{
+		Name:   "component",
+		Charts: []api.Chart{{Name: `nested\chart`}},
+	}, load.NewResourceSet(t.TempDir()), buildPath)
+	require.ErrorContains(t, err, "chart name")
+	require.NoDirExists(t, filepath.Join(buildPath, "component", string(layout.ChartsComponentDir)))
 }
 
 func TestCreateDocumentationTarRejectsPathKeys(t *testing.T) {
@@ -122,11 +147,11 @@ func TestDocumentationOutputPathStaysWithinDocumentationDirectory(t *testing.T) 
 	t.Parallel()
 
 	documentationDir := t.TempDir()
-	destination, err := pathWithinDirectory(documentationDir, "documentation output", "readme.md")
+	destination, err := layout.PathWithinDirectory(documentationDir, "documentation output", "readme.md")
 	require.NoError(t, err)
 	require.Equal(t, filepath.Join(documentationDir, "readme.md"), destination)
 
-	_, err = pathWithinDirectory(documentationDir, "documentation output", "../escape-readme.md")
+	_, err = layout.PathWithinDirectory(documentationDir, "documentation output", "../escape-readme.md")
 	require.ErrorContains(t, err, "escapes")
 }
 
