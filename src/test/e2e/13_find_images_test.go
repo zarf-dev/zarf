@@ -5,15 +5,91 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
 
 func TestFindImages(t *testing.T) {
 	t.Log("E2E: Find Images")
+
+	t.Run("package and component config formats", func(t *testing.T) {
+		t.Parallel()
+		packagePath := filepath.Join("src", "test", "packages", "13-find-images-formats")
+		for _, tc := range []struct {
+			name string
+			path string
+			want string
+		}{
+			{
+				name: "v1alpha1 package",
+				path: packagePath,
+				want: `components:
+  - name: app
+    images:
+      - docker.io/library/nginx:1.27`,
+			},
+			{
+				name: "v1beta1 package",
+				path: filepath.Join(packagePath, "zarf-v1beta1.yaml"),
+				want: `components:
+  - name: app
+    images:
+      - name: nginx:1.27
+        source: daemon`,
+			},
+			{
+				name: "v1beta1 component",
+				path: filepath.Join(packagePath, "component.yaml"),
+				want: `component:
+  images:
+    - name: docker.io/library/nginx:1.27`,
+			},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				stdOut, stdErr, err := e2e.Zarf(t, "dev", "find-images", tc.path, "--skip-cosign")
+				require.NoError(t, err, stdOut, stdErr)
+				require.Contains(t, stdOut, tc.want)
+				if tc.name == "v1beta1 package" {
+					require.NotContains(t, stdOut, "example.com/manual:1")
+				}
+			})
+		}
+	})
+
+	t.Run("update package and component config formats", func(t *testing.T) {
+		t.Parallel()
+		image := "docker.io/library/nginx:1.27"
+
+		t.Run("v1alpha1 package", func(t *testing.T) {
+			b := updateFindImagesFixture(t, "zarf.yaml")
+			var updated v1alpha1.ZarfPackage
+			require.NoError(t, yaml.Unmarshal(b, &updated))
+			require.Len(t, updated.Components, 1)
+			require.Equal(t, []string{image}, updated.Components[0].Images)
+		})
+
+		t.Run("v1beta1 package", func(t *testing.T) {
+			b := updateFindImagesFixture(t, "zarf-v1beta1.yaml")
+			var updated v1beta1.Package
+			require.NoError(t, yaml.Unmarshal(b, &updated))
+			require.Len(t, updated.Components, 1)
+			require.Equal(t, []v1beta1.Image{{Name: "nginx:1.27", Source: "daemon"}}, updated.Components[0].Images)
+		})
+
+		t.Run("v1beta1 component", func(t *testing.T) {
+			b := updateFindImagesFixture(t, "component.yaml")
+			var updated v1beta1.ComponentConfig
+			require.NoError(t, yaml.Unmarshal(b, &updated))
+			require.Equal(t, []v1beta1.Image{{Name: image}}, updated.Component.Images)
+		})
+	})
 
 	t.Run("zarf prepare find-images", func(t *testing.T) {
 		t.Parallel()
@@ -87,4 +163,17 @@ func TestFindImages(t *testing.T) {
 		require.Contains(t, stdOut, "manifest: simple-httpd-deployment")
 		require.Contains(t, stdOut, "image: httpd:alpine3.18")
 	})
+}
+
+func updateFindImagesFixture(t *testing.T, filename string) []byte {
+	t.Helper()
+	fixturePath := filepath.Join("src", "test", "packages", "13-find-images-formats")
+	dir := t.TempDir()
+	require.NoError(t, os.CopyFS(dir, os.DirFS(fixturePath)))
+	path := filepath.Join(dir, filename)
+	stdOut, stdErr, err := e2e.Zarf(t, "dev", "find-images", path, "--update", "--skip-cosign")
+	require.NoError(t, err, stdOut, stdErr)
+	b, err := os.ReadFile(path)
+	require.NoError(t, err)
+	return b
 }

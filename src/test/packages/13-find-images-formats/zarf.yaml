@@ -1,0 +1,10 @@
+kind: ZarfPackageConfig
+metadata:
+  name: find-images-formats
+components:
+  - name: app
+    required: true
+    manifests:
+      - name: app
+        files:
+          - pod.yaml

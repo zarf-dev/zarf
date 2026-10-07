@@ -570,7 +570,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdDevFlagRegistry                     = "Override the ###ZARF_REGISTRY### value"
 	CmdDevFlagFindImagesWhy                = "Prints the source manifest for the specified image"
 	CmdDevFlagFindImagesSkipCosign         = "Skip searching for cosign artifacts related to discovered images"
-	CmdDevFlagFindImagesUpdate             = "Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change."
+	CmdDevFlagFindImagesUpdate             = "Update the images in the zarf file if needed. Formatting such as comments and newlines may change."
 	CmdDevFlagGenerateSchemaUpdate         = "Update the existing schema. Formatting such as ordering and newlines may change."
 	CmdDevFlagGenerateSchemaDeleteNotFound = "Remove existing schema keys when they are not found in the mapped values"
 

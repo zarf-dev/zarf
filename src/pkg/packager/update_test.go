@@ -4,13 +4,332 @@
 package packager
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/parser"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestUpdateImagesV1Beta1PreservesAuthoredFields(t *testing.T) {
+	t.Parallel()
+	oldImage := v1beta1.Image{Name: "example.com/old:1", Source: "daemon"}
+	newImage := v1beta1.Image{Name: "example.com/new:1"}
+	componentImport := v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "app.yaml"}}}
+
+	t.Run("package", func(t *testing.T) {
+		definition := v1beta1.Package{
+			APIVersion: v1beta1.APIVersion,
+			Kind:       v1beta1.ZarfPackageConfig,
+			Metadata:   v1beta1.PackageMetadata{Name: "example"},
+			Components: []v1beta1.Component{{
+				Name: "app",
+				ComponentSpec: v1beta1.ComponentSpec{
+					Import: componentImport,
+					Images: []v1beta1.Image{oldImage},
+				},
+			}},
+		}
+		b := updateImagesInDefinition(t, definition, api.ComponentSelector{})
+		var updated v1beta1.Package
+		require.NoError(t, yaml.Unmarshal(b, &updated))
+		require.Equal(t, []v1beta1.Image{oldImage, newImage}, updated.Components[0].Images)
+		require.Equal(t, componentImport, updated.Components[0].Import)
+	})
+
+	t.Run("component config", func(t *testing.T) {
+		definition := v1beta1.ComponentConfig{
+			APIVersion: v1beta1.APIVersion,
+			Kind:       v1beta1.ZarfComponentConfig,
+			Metadata:   v1beta1.ComponentMetadata{Name: "app"},
+			Component: v1beta1.ComponentSpec{
+				Import: componentImport,
+				Images: []v1beta1.Image{oldImage},
+			},
+		}
+		b := updateImagesInDefinition(t, definition, api.ComponentSelector{})
+		var updated v1beta1.ComponentConfig
+		require.NoError(t, yaml.Unmarshal(b, &updated))
+		require.Equal(t, []v1beta1.Image{oldImage, newImage}, updated.Component.Images)
+		require.Equal(t, componentImport, updated.Component.Import)
+	})
+
+	t.Run("selects matching package variant", func(t *testing.T) {
+		armImages := []v1beta1.Image{{Name: "example.com/arm:1"}, {Name: "example.com/arm-other:1"}}
+		definition := v1beta1.Package{
+			APIVersion: v1beta1.APIVersion,
+			Kind:       v1beta1.ZarfPackageConfig,
+			Metadata:   v1beta1.PackageMetadata{Name: "example"},
+			Components: []v1beta1.Component{
+				{
+					Name:          "app",
+					Selector:      v1beta1.ComponentSelector{Architecture: "amd64"},
+					ComponentSpec: v1beta1.ComponentSpec{Images: []v1beta1.Image{oldImage}},
+				},
+				{
+					Name:          "app",
+					Selector:      v1beta1.ComponentSelector{Architecture: "arm64"},
+					ComponentSpec: v1beta1.ComponentSpec{Images: armImages},
+				},
+			},
+		}
+		b := updateImagesInDefinition(t, definition, api.ComponentSelector{Architecture: "amd64"})
+		var updated v1beta1.Package
+		require.NoError(t, yaml.Unmarshal(b, &updated))
+		require.Equal(t, []v1beta1.Image{oldImage, newImage}, updated.Components[0].Images)
+		require.Equal(t, armImages, updated.Components[1].Images)
+	})
+}
+
+func TestUpdateImagesV1Beta1PreservesSourceForShorthandName(t *testing.T) {
+	t.Parallel()
+	authored := v1beta1.Image{Name: "nginx:1.27", Source: "daemon"}
+	newImage := v1beta1.Image{Name: "example.com/new:1"}
+	definition := v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
+		Metadata:   v1beta1.PackageMetadata{Name: "example"},
+		Components: []v1beta1.Component{{
+			Name:          "app",
+			ComponentSpec: v1beta1.ComponentSpec{Images: []v1beta1.Image{authored}},
+		}},
+	}
+	contents, err := yaml.Marshal(definition)
+	require.NoError(t, err)
+	path := filepath.Join(t.TempDir(), "definition.yaml")
+	require.NoError(t, os.WriteFile(path, contents, 0o600))
+	results := []DefinitionImageResult{{ComponentImageScan: ComponentImageScan{
+		ComponentName: "app",
+		Matches: []ImageMatch{
+			{Image: api.Image{Name: "docker.io/library/nginx:1.27"}, MatchType: MatchDefinite},
+			{Image: api.Image{Name: newImage.Name}, MatchType: MatchDefinite},
+		},
+	}}}
+
+	require.NoError(t, UpdateImages(context.Background(), path, results))
+	updatedBytes, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var updated v1beta1.Package
+	require.NoError(t, yaml.Unmarshal(updatedBytes, &updated))
+	require.Equal(t, []v1beta1.Image{authored, newImage}, updated.Components[0].Images)
+
+	require.NoError(t, UpdateImages(context.Background(), path, results))
+	secondUpdate, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.Equal(t, updatedBytes, secondUpdate)
+}
+
+func TestUpdateImagesV1Beta1KeepsEquivalentAuthoredOrder(t *testing.T) {
+	t.Parallel()
+	definition := `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component:
+  images:
+    # Keep this intentional order and its comment.
+    - name: example.com/z:1
+    - name: nginx:1.27
+      source: daemon
+`
+	path := filepath.Join(t.TempDir(), "component.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(definition), 0o600))
+	results := []DefinitionImageResult{{ComponentImageScan: ComponentImageScan{
+		ComponentName: "app",
+		Matches: []ImageMatch{
+			{Image: api.Image{Name: "docker.io/library/nginx:1.27"}, MatchType: MatchDefinite},
+			{Image: api.Image{Name: "example.com/z:1"}, MatchType: MatchDefinite},
+		},
+	}}}
+
+	require.NoError(t, UpdateImages(context.Background(), path, results))
+	updated, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.Equal(t, definition, string(updated))
+}
+
+func TestUpdateImagesV1Beta1ReplacesOnlyWhenImagesFound(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	manifest := `apiVersion: v1
+kind: Pod
+metadata:
+  name: app
+spec:
+  containers:
+    - name: app
+      image: nginx:1.27
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "pod.yaml"), []byte(manifest), 0o600))
+	configMap := `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: no-images
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "configmap.yaml"), []byte(configMap), 0o600))
+	definition := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: images
+components:
+  - name: image-only
+    images:
+      - name: example.com/manual:1
+        source: daemon
+  - name: scanned
+    images:
+      - name: example.com/hidden:1
+    manifests:
+      - name: app
+        files:
+          - pod.yaml
+  - name: scanned-without-images
+    images:
+      - name: example.com/stale:1
+    manifests:
+      - name: no-images
+        files:
+          - configmap.yaml
+`
+	path := filepath.Join(dir, "zarf.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(definition), 0o600))
+
+	results, err := FindDefinitionImages(ctx, path, FindImagesOptions{SkipCosign: true})
+	require.NoError(t, err)
+	require.NoError(t, UpdateImages(ctx, path, results))
+
+	updatedBytes, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var updated v1beta1.Package
+	require.NoError(t, yaml.Unmarshal(updatedBytes, &updated))
+	require.Equal(t, []v1beta1.Image{{Name: "example.com/manual:1", Source: "daemon"}}, updated.Components[0].Images)
+	require.Equal(t, []v1beta1.Image{{Name: "docker.io/library/nginx:1.27"}}, updated.Components[1].Images)
+	require.Equal(t, []v1beta1.Image{{Name: "example.com/stale:1"}}, updated.Components[2].Images)
+}
+
+func updateImagesInDefinition(t *testing.T, definition any, selector api.ComponentSelector) []byte {
+	t.Helper()
+	b, err := yaml.Marshal(definition)
+	require.NoError(t, err)
+	path := filepath.Join(t.TempDir(), "definition.yaml")
+	require.NoError(t, os.WriteFile(path, b, 0o600))
+	result := DefinitionImageResult{
+		ComponentImageScan: ComponentImageScan{ComponentName: "app", Matches: []ImageMatch{
+			{Image: api.Image{Name: "example.com/old:1"}, MatchType: MatchDefinite},
+			{Image: api.Image{Name: "example.com/new:1"}, MatchType: MatchDefinite},
+		}},
+		Selector: selector,
+	}
+	require.NoError(t, UpdateImages(context.Background(), path, []DefinitionImageResult{result}))
+	updated, err := os.ReadFile(path)
+	require.NoError(t, err)
+	return updated
+}
+
+func TestUpdateImagesV1Beta1KeepsArchiveImagesOutOfImageList(t *testing.T) {
+	t.Parallel()
+	archive := v1beta1.ImageArchive{Path: "app.tar", Images: []string{"nginx:1.27"}}
+	definition := v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
+		Metadata:   v1beta1.PackageMetadata{Name: "example"},
+		Components: []v1beta1.Component{{
+			Name:          "app",
+			ComponentSpec: v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archive}},
+		}},
+	}
+	b, err := yaml.Marshal(definition)
+	require.NoError(t, err)
+	path := filepath.Join(t.TempDir(), "definition.yaml")
+	require.NoError(t, os.WriteFile(path, b, 0o600))
+	result := DefinitionImageResult{
+		ComponentImageScan: ComponentImageScan{
+			ComponentName: "app",
+			Matches: []ImageMatch{
+				{Image: api.Image{Name: "docker.io/library/nginx:1.27"}, MatchType: MatchDefinite},
+				{Image: api.Image{Name: "example.com/new:1"}, MatchType: MatchDefinite},
+			},
+		},
+		ImageArchives: []api.ImageArchive{{Path: archive.Path, Images: archive.Images}},
+	}
+	require.NoError(t, UpdateImages(context.Background(), path, []DefinitionImageResult{result}))
+	updatedBytes, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var updated v1beta1.Package
+	require.NoError(t, yaml.Unmarshal(updatedBytes, &updated))
+	require.Equal(t, []v1beta1.Image{{Name: "example.com/new:1"}}, updated.Components[0].Images)
+	require.Equal(t, []v1beta1.ImageArchive{archive}, updated.Components[0].ImageArchives)
+}
+
+func TestUpdateImagesV1Beta1DoesNotCopyImportedArchives(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	fixture := filepath.Join("testdata", "find-images", "multiple-image-archives")
+	require.NoError(t, os.CopyFS(dir, os.DirFS(fixture)))
+	child := `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component:
+  manifests:
+    - name: scratch
+      files:
+        - deployment.yaml
+  imageArchives:
+    - path: sub/scratch.tar
+      images: []
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "component.yaml"), []byte(child), 0o600))
+	parent := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: archive-import
+components:
+  - name: app
+    import:
+      local:
+        - path: component.yaml
+    manifests:
+      - name: scratch-other
+        files:
+          - deployment-scratch-other.yaml
+    imageArchives:
+      - path: scratch-other.tar
+        images: []
+`
+	packagePath := filepath.Join(dir, "zarf.yaml")
+	require.NoError(t, os.WriteFile(packagePath, []byte(parent), 0o600))
+
+	results, err := FindDefinitionImages(ctx, packagePath, FindImagesOptions{SkipCosign: true})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	require.Len(t, results[0].ImageArchives, 2)
+	require.NoError(t, UpdateImages(ctx, packagePath, results))
+
+	updatedBytes, err := os.ReadFile(packagePath)
+	require.NoError(t, err)
+	var updated v1beta1.Package
+	require.NoError(t, yaml.Unmarshal(updatedBytes, &updated))
+	require.Len(t, updated.Components, 1)
+	require.Equal(t, []v1beta1.ImageArchive{{Path: "scratch-other.tar", Images: []string{"docker.io/library/scratch:other"}}}, updated.Components[0].ImageArchives)
+
+	loaded, err := load.Package(ctx, packagePath, load.PackageOptions{})
+	require.NoError(t, err)
+	require.Len(t, loaded.Definition.Components[0].ImageArchives, 2)
+	require.Equal(t, "sub/scratch.tar", loaded.Definition.Components[0].ImageArchives[0].Path)
+	require.Equal(t, "scratch-other.tar", loaded.Definition.Components[0].ImageArchives[1].Path)
+	require.NoError(t, loaded.Close())
+}
 
 func TestImageUpdateNeeded(t *testing.T) {
 	t.Parallel()
@@ -46,22 +365,19 @@ func TestImageUpdateNeeded(t *testing.T) {
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "podinfo",
-						Matches: []string{
-							"ghcr.io/stefanprodan/podinfo:6.4.0",
+						Matches: []ImageMatch{
+							{Image: api.Image{Name: "ghcr.io/stefanprodan/podinfo:6.4.0"}, MatchType: MatchDefinite},
 						},
 					},
 				},
 				{
 					ComponentImageScan: ComponentImageScan{
-
 						ComponentName: "argocd",
-						Matches: []string{
-							"docker.io/library/redis:7.0.15-alpine",
-							"quay.io/argoproj/argocd:v2.9.6",
-						},
-						CosignArtifacts: []string{
-							"quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.sig",
-							"quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.att",
+						Matches: []ImageMatch{
+							{Image: api.Image{Name: "docker.io/library/redis:7.0.15-alpine"}, MatchType: MatchDefinite},
+							{Image: api.Image{Name: "quay.io/argoproj/argocd:v2.9.6"}, MatchType: MatchDefinite},
+							{Image: api.Image{Name: "quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.sig"}, MatchType: MatchCosign},
+							{Image: api.Image{Name: "quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.att"}, MatchType: MatchCosign},
 						},
 					},
 				},
@@ -84,11 +400,10 @@ func TestImageUpdateNeeded(t *testing.T) {
 			definitionImageResults: []DefinitionImageResult{
 				{
 					ComponentImageScan: ComponentImageScan{
-
 						ComponentName: "argocd",
-						Matches: []string{
-							"docker.io/library/redis:7.0.15-alpine",
-							"quay.io/argoproj/argocd:v2.9.6",
+						Matches: []ImageMatch{
+							{Image: api.Image{Name: "docker.io/library/redis:7.0.15-alpine"}, MatchType: MatchDefinite},
+							{Image: api.Image{Name: "quay.io/argoproj/argocd:v2.9.6"}, MatchType: MatchDefinite},
 						},
 					},
 				},
@@ -112,8 +427,8 @@ func TestImageUpdateNeeded(t *testing.T) {
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "argocd",
-						Matches: []string{
-							"docker.io/library/redis:7.0.14-alpine",
+						Matches: []ImageMatch{
+							{Image: api.Image{Name: "docker.io/library/redis:7.0.14-alpine"}, MatchType: MatchDefinite},
 						},
 					},
 				},
@@ -136,9 +451,9 @@ func TestImageUpdateNeeded(t *testing.T) {
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "argocd",
-						Matches: []string{
-							"docker.io/library/redis:7.0.14-alpine",
-							"quay.io/argoproj/argocd:v2.8.6",
+						Matches: []ImageMatch{
+							{Image: api.Image{Name: "docker.io/library/redis:7.0.14-alpine"}, MatchType: MatchDefinite},
+							{Image: api.Image{Name: "quay.io/argoproj/argocd:v2.8.6"}, MatchType: MatchDefinite},
 						},
 					},
 				},
@@ -375,14 +690,12 @@ func TestCreateImageUpdate(t *testing.T) {
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "flux",
-						Matches: []string{
-							"ghcr.io/fluxcd/helm-controller:v1.1.0",
-						},
-						CosignArtifacts: []string{
-							"ghcr.io/fluxcd/helm-controller:sha256-4c75ca6c24ceb1f1bd7e935d9287a93e4f925c512f206763ec5a47de3ef3ff48.sig",
-							"ghcr.io/fluxcd/helm-controller:sha256-4c75ca6c24ceb1f1bd7e935d9287a93e4f925c512f206763ec5a47de3ef3ff48.att",
-							"ghcr.io/fluxcd/image-automation-controller:sha256-5b6c2e97055cfe69fe8996f48b53db039c136210dbc98c5631864a9e573d0e20.sig",
-							"ghcr.io/fluxcd/image-automation-controller:sha256-5b6c2e97055cfe69fe8996f48b53db039c136210dbc98c5631864a9e573d0e20.att",
+						Matches: []ImageMatch{
+							{Image: api.Image{Name: "ghcr.io/fluxcd/helm-controller:v1.1.0"}, MatchType: MatchDefinite},
+							{Image: api.Image{Name: "ghcr.io/fluxcd/helm-controller:sha256-4c75ca6c24ceb1f1bd7e935d9287a93e4f925c512f206763ec5a47de3ef3ff48.sig"}, MatchType: MatchCosign},
+							{Image: api.Image{Name: "ghcr.io/fluxcd/helm-controller:sha256-4c75ca6c24ceb1f1bd7e935d9287a93e4f925c512f206763ec5a47de3ef3ff48.att"}, MatchType: MatchCosign},
+							{Image: api.Image{Name: "ghcr.io/fluxcd/image-automation-controller:sha256-5b6c2e97055cfe69fe8996f48b53db039c136210dbc98c5631864a9e573d0e20.sig"}, MatchType: MatchCosign},
+							{Image: api.Image{Name: "ghcr.io/fluxcd/image-automation-controller:sha256-5b6c2e97055cfe69fe8996f48b53db039c136210dbc98c5631864a9e573d0e20.att"}, MatchType: MatchCosign},
 						},
 					},
 				},
@@ -390,7 +703,9 @@ func TestCreateImageUpdate(t *testing.T) {
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "podinfo",
-						Matches:       []string{"ghcr.io/stefanprodan/podinfo:6.4.0"},
+						Matches: []ImageMatch{
+							{Image: api.Image{Name: "ghcr.io/stefanprodan/podinfo:6.4.0"}, MatchType: MatchDefinite},
+						},
 					},
 				},
 				{
