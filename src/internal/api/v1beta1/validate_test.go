@@ -154,14 +154,22 @@ func TestValidatePackageFileChecksumAlgorithm(t *testing.T) {
 func TestValidatePackageDocumentationKeys(t *testing.T) {
 	t.Parallel()
 
-	for _, key := range []string{"nested/document", `nested\document`} {
-		t.Run(key, func(t *testing.T) {
+	tests := []struct {
+		key     string
+		wantErr string
+	}{
+		{key: "nested/document", wantErr: PkgValidateErrDocumentationKeyPath},
+		{key: `nested\document`, wantErr: PkgValidateErrDocumentationKeyPath},
+		{key: "..", wantErr: PkgValidateErrDocumentationKeyTraversal},
+	}
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
 			t.Parallel()
 			errs := ValidatePackage(v1beta1.Package{
 				Components:    []v1beta1.Component{{Name: "component"}},
-				Documentation: map[string]string{key: "readme.md"},
+				Documentation: map[string]string{tt.key: "readme.md"},
 			})
-			require.ErrorContains(t, errs, fmt.Sprintf(PkgValidateErrDocumentationKeyPath, key))
+			require.ErrorContains(t, errs, fmt.Sprintf(tt.wantErr, tt.key))
 		})
 	}
 }

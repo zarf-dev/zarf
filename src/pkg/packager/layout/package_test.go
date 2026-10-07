@@ -2043,6 +2043,14 @@ func TestValidatePackagePaths(t *testing.T) {
 			},
 			wantErr: `documentation key "../docs" would result in an invalid path`,
 		},
+		{
+			name: "documentation key is traversal",
+			pkg: api.Package{
+				Metadata:      api.PackageMetadata{Name: "pkg"},
+				Documentation: map[string]string{"..": "readme.md"},
+			},
+			wantErr: `documentation key ".." would result in an invalid path`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

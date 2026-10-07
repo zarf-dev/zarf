@@ -156,14 +156,22 @@ func TestZarfPackageValidate(t *testing.T) {
 func TestValidatePackageDocumentationKeys(t *testing.T) {
 	t.Parallel()
 
-	for _, key := range []string{"nested/document", `nested\document`} {
-		t.Run(key, func(t *testing.T) {
+	tests := []struct {
+		key     string
+		wantErr string
+	}{
+		{key: "nested/document", wantErr: PkgValidateErrDocumentationKeyPath},
+		{key: `nested\document`, wantErr: PkgValidateErrDocumentationKeyPath},
+		{key: "..", wantErr: PkgValidateErrDocumentationKeyTraversal},
+	}
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
 			t.Parallel()
 			err := ValidatePackage(v1alpha1.ZarfPackage{
 				Components:    []v1alpha1.ZarfComponent{{Name: "component"}},
-				Documentation: map[string]string{key: "readme.md"},
+				Documentation: map[string]string{tt.key: "readme.md"},
 			})
-			require.ErrorContains(t, err, fmt.Sprintf(PkgValidateErrDocumentationKeyPath, key))
+			require.ErrorContains(t, err, fmt.Sprintf(tt.wantErr, tt.key))
 		})
 	}
 }

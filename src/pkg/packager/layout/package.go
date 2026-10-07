@@ -951,7 +951,7 @@ func ValidatePackagePaths(pkg api.Package) error {
 		}
 	}
 	for key := range pkg.Documentation {
-		if strings.ContainsAny(key, `/\`) {
+		if !isCleanPath(key) {
 			return fmt.Errorf("documentation key %q would result in an invalid path", key)
 		}
 	}

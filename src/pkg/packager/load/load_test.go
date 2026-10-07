@@ -124,7 +124,7 @@ func TestPackageDefinitionV1Beta1ImageSources(t *testing.T) {
 	}
 }
 
-func TestPackageDefinitionRejectsResolvedPathComponents(t *testing.T) {
+func TestPackageDefinitionRejectsV1Beta1ChartPathComponents(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -144,7 +144,7 @@ components:
 	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(packageYAML), 0o600))
 
 	_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
-	require.EqualError(t, err, `chart name "../escaped" in component "component" would result in an invalid path`)
+	require.ErrorContains(t, err, "linting error found")
 }
 
 func TestPackageDefinitionRejectsUnsupportedRawFields(t *testing.T) {

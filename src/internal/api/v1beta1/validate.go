@@ -23,26 +23,27 @@ const (
 
 // Package errors found during validation.
 const (
-	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
-	PkgValidateErrChartNameNotUnique      = "chart name %q is not unique"
-	PkgValidateErrChart                   = "invalid chart definition: %w"
-	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
-	PkgValidateErrManifest                = "invalid manifest definition: %w"
-	PkgValidateErrAction                  = "invalid action: %w"
-	PkgValidateErrActionCmdWait           = "action %q cannot be both a command and wait action"
-	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
-	PkgValidateErrActionSetValueOnDeploy  = "setValues is not supported in onCreate actions"
-	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
-	PkgValidateErrChartName               = "chart %q exceed the maximum length of %d characters"
-	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
-	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
-	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
-	PkgValidateErrManifestNamePath        = "manifest %q must not contain path separators"
-	PkgValidateErrDocumentationKeyPath    = "documentation key %q must not contain path separators"
-	PkgValidateErrNoComponents            = "package does not contain any compatible components"
-	PkgValidateErrGitURLWithRef           = "git URL %q must not contain an embedded ref; use the ref field instead"
-	PkgValidateErrFileChecksumAlgorithm   = "component %q file %q has unsupported checksum algorithm %q (expected sha256 or sha512)"
-	PkgValidateErrImageConflictingSources = "image %q has conflicting sources %q and %q"
+	PkgValidateErrComponentNameNotUnique    = "component name %q is not unique"
+	PkgValidateErrChartNameNotUnique        = "chart name %q is not unique"
+	PkgValidateErrChart                     = "invalid chart definition: %w"
+	PkgValidateErrManifestNameNotUnique     = "manifest name %q is not unique"
+	PkgValidateErrManifest                  = "invalid manifest definition: %w"
+	PkgValidateErrAction                    = "invalid action: %w"
+	PkgValidateErrActionCmdWait             = "action %q cannot be both a command and wait action"
+	PkgValidateErrActionClusterNetwork      = "a single wait action must contain only one of cluster or network"
+	PkgValidateErrActionSetValueOnDeploy    = "setValues is not supported in onCreate actions"
+	PkgValidateErrActionTemplateOnCreate    = "templating is not supported in onCreate actions"
+	PkgValidateErrChartName                 = "chart %q exceed the maximum length of %d characters"
+	PkgValidateErrChartNamespaceMissing     = "chart %q must include a namespace"
+	PkgValidateErrManifestFileOrKustomize   = "manifest %q must have at least one file or kustomization"
+	PkgValidateErrManifestNameLength        = "manifest %q exceed the maximum length of %d characters"
+	PkgValidateErrManifestNamePath          = "manifest %q must not contain path separators"
+	PkgValidateErrDocumentationKeyPath      = "documentation key %q must not contain path separators"
+	PkgValidateErrDocumentationKeyTraversal = "documentation key %q must not be a traversal path"
+	PkgValidateErrNoComponents              = "package does not contain any compatible components"
+	PkgValidateErrGitURLWithRef             = "git URL %q must not contain an embedded ref; use the ref field instead"
+	PkgValidateErrFileChecksumAlgorithm     = "component %q file %q has unsupported checksum algorithm %q (expected sha256 or sha512)"
+	PkgValidateErrImageConflictingSources   = "image %q has conflicting sources %q and %q"
 )
 
 // ValidationErrors contains all errors found during package validation.
@@ -75,7 +76,9 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 		errs = append(errs, errors.New(PkgValidateErrNoComponents))
 	}
 	for key := range pkg.Documentation {
-		if strings.ContainsAny(key, `/\`) {
+		if key == ".." {
+			errs = append(errs, fmt.Errorf(PkgValidateErrDocumentationKeyTraversal, key))
+		} else if strings.ContainsAny(key, `/\`) {
 			errs = append(errs, fmt.Errorf(PkgValidateErrDocumentationKeyPath, key))
 		}
 	}
