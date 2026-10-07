@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strings"
 	"testing"
@@ -20,6 +21,9 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
+	"helm.sh/helm/v4/pkg/storage"
+	"helm.sh/helm/v4/pkg/storage/driver"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -63,6 +67,72 @@ func TestConnectAndCreds(t *testing.T) {
 	require.NotEqual(t, oldState.GitServer.PushPassword, newState.GitServer.PushPassword)
 
 	connectToZarfServices(ctx, t)
+}
+
+// FIXME: not super happy with this test
+func TestGitCredsLegacyHTTP(t *testing.T) {
+	ctx := t.Context()
+	c, err := cluster.New(ctx)
+	require.NoError(t, err)
+	s, err := c.LoadState(ctx)
+	require.NoError(t, err)
+	require.True(t, s.GitServer.IsInternal())
+	require.False(t, s.GitServer.TLSMode.Enabled())
+
+	// Model an older Helm release without Git TLS values.
+	releases := storage.Init(driver.NewSecrets(c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName)))
+	storedRelease, err := releases.Last("zarf-gitea")
+	require.NoError(t, err)
+	giteaRelease, ok := storedRelease.(*releasev1.Release)
+	require.True(t, ok)
+	originalValues := giteaRelease.Config
+	giteaRelease.Config = maps.Clone(originalValues)
+	giteaRelease.Config["extraVolumes"] = []any{}
+	t.Cleanup(func() {
+		giteaRelease.Config = originalValues
+		require.NoError(t, releases.Update(giteaRelease))
+	})
+	require.NoError(t, releases.Update(giteaRelease))
+
+	for _, tc := range []struct {
+		name       string
+		mode       state.GitTLSMode
+		management state.GitTLSCertManagement
+	}{
+		{name: "legacy HTTP mode"},
+		{name: "HTTP ignores certificate ownership", mode: state.GitTLSDisabled, management: state.GitTLSCertZarfManaged},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := c.LoadState(ctx)
+			require.NoError(t, err)
+			s.GitServer.TLSMode = tc.mode
+			s.GitServer.TLSCertManagement = tc.management
+			require.NoError(t, c.SaveState(ctx, s))
+
+			stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "git", "--git-tls-mode=disabled", "--confirm")
+			require.NoError(t, err, stdOut, stdErr)
+			updated, err := c.LoadState(ctx)
+			require.NoError(t, err)
+			require.Equal(t, state.GitTLSDisabled, updated.GitServer.TLSMode)
+			require.Empty(t, updated.GitServer.TLSCertManagement)
+			require.NotEqual(t, s.GitServer.PushPassword, updated.GitServer.PushPassword)
+
+			tunnel, err := c.Connect(ctx, cluster.ZarfGit)
+			require.NoError(t, err)
+			t.Cleanup(tunnel.Close)
+			endpoints := tunnel.URLEndpoints()
+			require.Len(t, endpoints, 1)
+			require.Regexp(t, "^http://", endpoints[0])
+			request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoints[0]+"/api/v1/user", nil)
+			require.NoError(t, err)
+			request.SetBasicAuth(updated.GitServer.PushUsername, updated.GitServer.PushPassword)
+			client := &http.Client{Timeout: 10 * time.Second}
+			response, err := client.Do(request)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, response.Body.Close()) })
+			require.Equal(t, http.StatusOK, response.StatusCode)
+		})
+	}
 }
 
 func TestGitTLSModeSwitch(t *testing.T) {

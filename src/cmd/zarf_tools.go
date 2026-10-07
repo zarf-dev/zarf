@@ -817,6 +817,9 @@ func (o *updateGitCredsOptions) applyState(ctx context.Context, c *cluster.Clust
 	if len(userTLSBundles) > 0 {
 		userTLS = userTLSBundles[0]
 	}
+	tlsEnabled := toState.GitServer.TLSMode.Enabled()
+	tlsChanged := fromState.GitServer.TLSMode.Enabled() != tlsEnabled ||
+		tlsEnabled && fromState.GitServer.TLSCertManagement != toState.GitServer.TLSCertManagement
 	// Update credentials while the listener still has the source state's
 	// protocol and certificate. This keeps migrations and rotations reachable.
 	if toState.GitServer.IsInternal() {
@@ -824,9 +827,9 @@ func (o *updateGitCredsOptions) applyState(ctx context.Context, c *cluster.Clust
 			return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
 		}
 	}
-	if toState.GitServer.IsInternal() && toState.GitServer.TLSMode.Enabled() {
+	if toState.GitServer.IsInternal() && tlsEnabled {
 		certs := userTLS
-		if certs == nil && (o.rotateTLS || fromState.GitServer.TLSMode != toState.GitServer.TLSMode || fromState.GitServer.TLSCertManagement != toState.GitServer.TLSCertManagement) && toState.GitServer.TLSCertManagement == state.GitTLSCertZarfManaged {
+		if certs == nil && (o.rotateTLS || tlsChanged) && toState.GitServer.TLSCertManagement == state.GitTLSCertZarfManaged {
 			generated, err := pki.GeneratePKI(state.ZarfInClusterGitServiceHost, state.ZarfGitServerTLSHosts...)
 			if err != nil {
 				return err
@@ -843,7 +846,7 @@ func (o *updateGitCredsOptions) applyState(ctx context.Context, c *cluster.Clust
 	if err := c.UpdateZarfManagedGitSecrets(ctx, toState); err != nil {
 		return err
 	}
-	if toState.GitServer.IsInternal() && (fromState.GitServer.TLSMode != toState.GitServer.TLSMode || fromState.GitServer.TLSCertManagement != toState.GitServer.TLSCertManagement || o.rotateTLS || userTLS != nil) {
+	if toState.GitServer.IsInternal() && (tlsChanged || tlsEnabled && (o.rotateTLS || userTLS != nil)) {
 		helmOpts := helm.InstallUpgradeOptions{
 			VariableConfig: template.GetZarfVariableConfig(ctx, !o.confirm), State: toState, Cluster: c,
 			Timeout: config.ZarfDefaultTimeout, IsInteractive: !o.confirm, ForceConflicts: o.forceConflicts,
