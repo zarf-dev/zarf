@@ -44,56 +44,17 @@ func CreateParentDirectory(destination string) error {
 	return CreateDirectory(filepath.Dir(destination), ReadWriteExecuteUser)
 }
 
-// SymlinkPolicy controls how CreatePathAndCopy handles source symlinks.
-type SymlinkPolicy uint8
-
-const (
-	// SymlinkPolicyReject rejects source trees containing symlinks.
-	SymlinkPolicyReject SymlinkPolicy = iota
-	// SymlinkPolicyFollow materializes source symlink targets at the destination.
-	SymlinkPolicyFollow
-)
-
-type copyPathOptions struct {
-	symlinkPolicy SymlinkPolicy
-}
-
-// CopyPathOption configures CreatePathAndCopy.
-type CopyPathOption func(*copyPathOptions)
-
-// WithSymlinkPolicy sets how CreatePathAndCopy handles source symlinks.
-func WithSymlinkPolicy(policy SymlinkPolicy) CopyPathOption {
-	return func(options *copyPathOptions) {
-		options.symlinkPolicy = policy
-	}
-}
-
 // CreatePathAndCopy creates the parent directory for the given file path and copies the source to the destination.
-// Source symlinks are rejected unless the caller explicitly opts into following them.
-func CreatePathAndCopy(source, destination string, options ...CopyPathOption) error {
-	config := copyPathOptions{symlinkPolicy: SymlinkPolicyReject}
-	for _, option := range options {
-		option(&config)
-	}
-
-	copyOptions := copy.Options{}
-	switch config.symlinkPolicy {
-	case SymlinkPolicyReject:
-		if err := rejectSymlinks(source); err != nil {
-			return err
-		}
-	case SymlinkPolicyFollow:
-		copyOptions.OnSymlink = func(string) copy.SymlinkAction {
-			return copy.Deep
-		}
-	default:
-		return fmt.Errorf("unsupported symlink policy %d", config.symlinkPolicy)
+// Source symlinks are rejected so callers never dereference package-controlled links.
+func CreatePathAndCopy(source, destination string) error {
+	if err := rejectSymlinks(source); err != nil {
+		return err
 	}
 
 	if err := CreateParentDirectory(destination); err != nil {
 		return err
 	}
-	if err := copy.Copy(source, destination, copyOptions); err != nil {
+	if err := copy.Copy(source, destination); err != nil {
 		return err
 	}
 	if InvalidPath(destination) {

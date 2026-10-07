@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"maps"
 	"os"
@@ -608,20 +609,56 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
 	}
 
+	sourceRoot, err := os.OpenRoot(tmpDir)
+	if err != nil {
+		return fmt.Errorf("failed to open extracted documentation root: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, sourceRoot.Close())
+	}()
+
+	destinationRoot, err := os.OpenRoot(destPath)
+	if err != nil {
+		return fmt.Errorf("failed to open documentation output root: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, destinationRoot.Close())
+	}()
+
 	fileNames := GetDocumentationFileNames(p.pkg.Documentation)
 
 	for key, file := range keysToExtract {
 		docFileName := fileNames[key]
-
-		srcPath := filepath.Join(tmpDir, docFileName)
-		dstPath := filepath.Join(destPath, docFileName)
-		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
+		if err := copyDocumentationFile(sourceRoot, destinationRoot, docFileName); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", file, err)
 		}
 	}
 
 	l.Info("documentation successfully extracted", "path", destPath)
 	return nil
+}
+
+func copyDocumentationFile(sourceRoot, destinationRoot *os.Root, name string) error {
+	info, err := sourceRoot.Lstat(name)
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("documentation file %q is not a regular file", name)
+	}
+
+	source, err := sourceRoot.Open(name)
+	if err != nil {
+		return err
+	}
+
+	destination, err := destinationRoot.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, helpers.ReadAllWriteUser)
+	if err != nil {
+		return errors.Join(err, source.Close())
+	}
+
+	_, err = io.Copy(destination, source)
+	return errors.Join(err, source.Close(), destination.Close())
 }
 
 // FormatDocumentFileName for storing the document in the package or presenting it to the user

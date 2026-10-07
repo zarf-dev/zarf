@@ -17,27 +17,6 @@ func TestReadFileByChunksRejectsInvalidSize(t *testing.T) {
 	require.ErrorContains(t, err, "chunk size")
 }
 
-func TestCreatePathAndCopyFollowsSymlinks(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Windows symlink creation requires elevated privileges")
-	}
-
-	externalFile := filepath.Join(t.TempDir(), "external.txt")
-	require.NoError(t, os.WriteFile(externalFile, []byte("external"), ReadAllWriteUser))
-
-	source := filepath.Join(t.TempDir(), "source.txt")
-	require.NoError(t, os.Symlink(externalFile, source))
-	destination := filepath.Join(t.TempDir(), "nested", "destination.txt")
-
-	require.NoError(t, CreatePathAndCopy(source, destination, WithSymlinkPolicy(SymlinkPolicyFollow)))
-	info, err := os.Lstat(destination)
-	require.NoError(t, err)
-	require.Equal(t, os.FileMode(0), info.Mode()&os.ModeSymlink)
-	content, err := os.ReadFile(destination)
-	require.NoError(t, err)
-	require.Equal(t, "external", string(content))
-}
-
 func TestCreatePathAndCopyRejectsSymlinksByDefault(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Windows symlink creation requires elevated privileges")
@@ -86,9 +65,4 @@ func TestCreatePathAndCopyRejectsSymlinksByDefault(t *testing.T) {
 			require.NoFileExists(t, destination)
 		})
 	}
-}
-
-func TestCreatePathAndCopyRejectsUnknownSymlinkPolicy(t *testing.T) {
-	err := CreatePathAndCopy("unused", filepath.Join(t.TempDir(), "destination"), WithSymlinkPolicy(SymlinkPolicy(99)))
-	require.ErrorContains(t, err, "unsupported symlink policy")
 }
