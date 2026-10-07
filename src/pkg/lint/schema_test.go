@@ -338,6 +338,26 @@ func TestV1Beta1SourceOneOfSchema(t *testing.T) {
 			}),
 			valid: false,
 		},
+		{
+			name: "chart rejects forward path separators",
+			doc: baseDoc(chartComponent(map[string]any{
+				"name": "nested/chart",
+				"local": map[string]any{
+					"path": "chart",
+				},
+			})),
+			valid: false,
+		},
+		{
+			name: "chart rejects backslash path separators",
+			doc: baseDoc(chartComponent(map[string]any{
+				"name": `nested\chart`,
+				"local": map[string]any{
+					"path": "chart",
+				},
+			})),
+			valid: false,
+		},
 	}
 
 	for _, tt := range tests {

@@ -130,6 +130,7 @@
         },
         "name": {
           "description": "The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repository.",
+          "pattern": "^[^/\\\\]*$",
           "type": "string"
         },
         "namespace": {

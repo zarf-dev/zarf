@@ -121,7 +121,7 @@ type Manifest struct {
 // Chart defines a helm chart to be deployed.
 type Chart struct {
 	// The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repository.
-	Name string `json:"name"`
+	Name string `json:"name" jsonschema:"pattern=^[^/\\\\]*$"`
 	// The Helm repository where the chart is stored.
 	HelmRepository *HelmRepositorySource `json:"helmRepository,omitempty" jsonschema:"oneof_required=helmRepository"`
 	// The Git repository where the chart is stored.
