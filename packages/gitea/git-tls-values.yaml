@@ -1,0 +1,9 @@
+certificates:
+  protocol: "###ZARF_GIT_SERVER_PROTOCOL###"
+  ca: |
+    ###ZARF_VAR_GIT_SERVER_TLS_CA###
+  cert: |
+    ###ZARF_VAR_GIT_SERVER_TLS_CERT###
+  key: |
+    ###ZARF_VAR_GIT_SERVER_TLS_KEY###
+rotate: ###ZARF_VAR_GIT_SERVER_TLS_ROTATE###

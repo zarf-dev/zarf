@@ -55,6 +55,10 @@ const (
 	VInitGitPushPass = "init.git.push_password"
 	VInitGitPullUser = "init.git.pull_username"
 	VInitGitPullPass = "init.git.pull_password"
+	VInitGitTLSMode  = "init.git.tls_mode"
+	VInitGitTLSCA    = "init.git.tls_ca"
+	VInitGitTLSCert  = "init.git.tls_cert"
+	VInitGitTLSKey   = "init.git.tls_key"
 
 	// Init Registry config keys
 

@@ -63,6 +63,9 @@ func shouldForceConflicts(ssa api.ServerSideApplyMode, lastRelease release.Acces
 type InstallUpgradeOptions struct {
 	// TakeOwnership is true if the chart should adopt existing resources and namespaces
 	TakeOwnership bool
+	// AdoptGitServerTLSSecret migrates the ownerless Secret from older init packages
+	// when this chart or manifest contains the named Secret.
+	AdoptGitServerTLSSecret bool
 	// ForceConflicts causes Helm to take ownership of conflicting fields during Server-Side Apply
 	ForceConflicts bool
 	// VariableConfig is used to template the variables in the chart
@@ -112,6 +115,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart api.Chart, chart *char
 	if err != nil {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to create helm renderer: %w", err)
 	}
+	postRender.adoptGitServerTLSSecret = opts.AdoptGitServerTLSSecret
 	histClient := action.NewHistory(actionConfig)
 
 	helmCtx, helmCtxCancel := context.WithTimeout(ctx, opts.Timeout)

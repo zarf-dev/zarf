@@ -128,6 +128,12 @@ $ zarf init
 # Initializing w/ Zarfs internal git server:
 $ zarf init --components=git-server
 
+# Initializing internal Git with package-managed TLS:
+$ zarf init --components=git-server --git-tls-mode=tls-enabled
+
+# Initializing internal Git with a supplied TLS certificate:
+$ zarf init --components=git-server --git-tls-mode=tls-enabled --set-variables=GIT_SERVER_TLS_CA=ca.pem,GIT_SERVER_TLS_CERT=cert.pem,GIT_SERVER_TLS_KEY=key.pem
+
 # Initializing w/ Zarfs with a custom init package:
 $ zarf init oci://ghcr.io/zarf-dev/packages/init:v0.69.0
 

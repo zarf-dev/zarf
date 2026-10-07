@@ -32,12 +32,13 @@ import (
 type renderer struct {
 	chart api.Chart
 
-	takeOwnership   bool
-	cluster         *cluster.Cluster
-	connectedDeploy bool
-	state           *state.State
-	actionConfig    *action.Configuration
-	variableConfig  *variables.VariableConfig
+	takeOwnership           bool
+	adoptGitServerTLSSecret bool
+	cluster                 *cluster.Cluster
+	connectedDeploy         bool
+	state                   *state.State
+	actionConfig            *action.Configuration
+	variableConfig          *variables.VariableConfig
 
 	connectStrings    state.ConnectStrings
 	namespaces        map[string]*corev1.Namespace
@@ -167,7 +168,10 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			}
 		}
 		if r.state.GitServer.IsConfigured() {
-			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
+			gitServerSecret, err := c.GenerateGitPullCreds(ctx, name, config.ZarfGitServerSecretName, r.state.GitServer)
+			if err != nil {
+				return fmt.Errorf("problem generating git server secret for the %s namespace: %w", name, err)
+			}
 			_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 			if err != nil {
 				return fmt.Errorf("problem applying git server secret for the %s namespace: %w", name, err)
@@ -256,6 +260,11 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 		}
 
 		namespace := rawData.GetNamespace()
+		if r.adoptGitServerTLSSecret && rawData.GetKind() == "Secret" && rawData.GetName() == state.GitServerTLSSecret && (namespace == "" && r.chart.Namespace == state.ZarfNamespaceName || namespace == state.ZarfNamespaceName) {
+			if err := r.adoptOwnerlessGitServerTLSSecret(ctx); err != nil {
+				return err
+			}
+		}
 		if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
 			// if this is the first time seeing this ns, we need to track that to create it as well
 			r.namespaces[namespace] = cluster.NewZarfManagedNamespace(namespace)
@@ -263,6 +272,36 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 
 		// Finally place this back onto the output buffer
 		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
+	}
+	return nil
+}
+
+// adoptOwnerlessGitServerTLSSecret transfers the Secret written directly by
+// older Zarf versions to whichever init package release now declares it.
+func (r *renderer) adoptOwnerlessGitServerTLSSecret(ctx context.Context) error {
+	secrets := r.cluster.Clientset.CoreV1().Secrets(state.ZarfNamespaceName)
+	secret, err := secrets.Get(ctx, state.GitServerTLSSecret, metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("unable to inspect Git server TLS Secret ownership: %w", err)
+	}
+	if secret.Annotations["meta.helm.sh/release-name"] != "" {
+		return nil
+	}
+	secret = secret.DeepCopy()
+	if secret.Annotations == nil {
+		secret.Annotations = map[string]string{}
+	}
+	if secret.Labels == nil {
+		secret.Labels = map[string]string{}
+	}
+	secret.Annotations["meta.helm.sh/release-name"] = r.chart.ReleaseName
+	secret.Annotations["meta.helm.sh/release-namespace"] = r.chart.Namespace
+	secret.Labels["app.kubernetes.io/managed-by"] = "Helm"
+	if _, err := secrets.Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
+		return fmt.Errorf("unable to transfer Git server TLS Secret ownership: %w", err)
 	}
 	return nil
 }

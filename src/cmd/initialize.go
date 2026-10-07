@@ -44,6 +44,7 @@ type initOptions struct {
 	skipValuesSchemaValidation bool
 	storageClass               string
 	gitServer                  state.GitServerInfo
+	gitTLSMode                 string
 	registryInfo               state.RegistryInfo
 	artifactServer             state.ArtifactServerInfo
 	injectorPort               int
@@ -76,6 +77,10 @@ func newInitCommand() *cobra.Command {
 	}
 
 	v := getViper()
+	gitTLSMode := v.GetString(VInitGitTLSMode)
+	if gitTLSMode == "" {
+		gitTLSMode = string(state.GitTLSDisabled)
+	}
 
 	// Init package set variable flags
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
@@ -102,6 +107,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.gitServer.PushPassword, "git-push-password", v.GetString(VInitGitPushPass), lang.CmdInitFlagGitPushPass)
 	cmd.Flags().StringVar(&o.gitServer.PullUsername, "git-pull-username", v.GetString(VInitGitPullUser), lang.CmdInitFlagGitPullUser)
 	cmd.Flags().StringVar(&o.gitServer.PullPassword, "git-pull-password", v.GetString(VInitGitPullPass), lang.CmdInitFlagGitPullPass)
+	cmd.Flags().StringVar(&o.gitTLSMode, "git-tls-mode", gitTLSMode, "Git TLS mode for the internal server: disabled or tls-enabled. The init package must provide the matching server configuration and TLS Secret")
 
 	// Flags for using an external registry
 	cmd.Flags().StringVar(&o.registryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
@@ -173,7 +179,6 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		}
 		agentTLS = &loadedTLS
 	}
-
 	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer, agentTLS)
 	if err != nil {
 		return err
@@ -240,6 +245,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 
 	opts := packager.DeployOptions{
 		GitServer:                  o.gitServer,
+		GitTLSModeExplicit:         optionIsExplicitlySet(cmd, getViper(), "git-tls-mode", VInitGitTLSMode),
 		RegistryInfo:               o.registryInfo,
 		ArtifactServer:             o.artifactServer,
 		TakeOwnership:              o.takeOwnership,
@@ -373,6 +379,10 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 		return err
 	}
 
+	// The init package controls the listener. An explicit mode change is applied
+	// when its git-server component is redeployed.
+	gitServer.TLSMode = ""
+	gitServer.TLSCertManagement = ""
 	if helpers.IsNotZeroAndNotEqual(gitServer, s.GitServer) {
 		return fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
 	}
@@ -426,12 +436,30 @@ func loadAndValidateAgentTLS(caPath, certPath, keyPath string) (pki.GeneratedPKI
 	return pki.GeneratedPKI{CA: ca, Cert: cert, Key: key}, nil
 }
 
+func resolveGitTLSMode(selection string) (state.GitTLSMode, error) {
+	if selection != "" && selection != string(state.GitTLSDisabled) && selection != string(state.GitTLSEnabled) {
+		return "", fmt.Errorf("invalid Git TLS mode %q: must be %q or %q", selection, state.GitTLSDisabled, state.GitTLSEnabled)
+	}
+	if selection == string(state.GitTLSEnabled) {
+		return state.GitTLSEnabled, nil
+	}
+	return state.GitTLSDisabled, nil
+}
+
 func (o *initOptions) validateInitFlags() error {
 	// If 'git-url' is provided, make sure they provided values for the username and password of the push user
 	if o.gitServer.Address != "" {
 		if o.gitServer.PushUsername == "" || o.gitServer.PushPassword == "" {
 			return fmt.Errorf(lang.CmdInitErrValidateGit)
 		}
+	}
+	mode, err := resolveGitTLSMode(o.gitTLSMode)
+	if err != nil {
+		return err
+	}
+	o.gitServer.TLSMode = mode
+	if o.gitServer.Address != "" && mode.Enabled() {
+		return errors.New("git TLS options cannot be used with --git-url")
 	}
 
 	// If 'registry-url' is provided, make sure they provided values for the username and password of the push user
