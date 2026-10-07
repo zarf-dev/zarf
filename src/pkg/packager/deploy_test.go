@@ -5,7 +5,10 @@ package packager
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,6 +19,9 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/template"
+	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -136,4 +142,59 @@ func TestDeploySkipsValuesSchemaValidationWhenConfigured(t *testing.T) {
 
 	_, err = Deploy(ctx, pkgLayout, DeployOptions{SkipValuesSchemaValidation: true})
 	require.NoError(t, err)
+}
+
+func TestProcessComponentFilesCreatesDeclaredSymlinks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation requires elevated privileges")
+	}
+
+	ctx := testutil.TestContext(t)
+	packageDir := t.TempDir()
+	source := filepath.Join(packageDir, "source.bin")
+	content := []byte{0, 0xff}
+	require.NoError(t, os.WriteFile(source, content, 0o600))
+
+	destination := filepath.Join(t.TempDir(), "installed.bin")
+	symlink := filepath.Join(t.TempDir(), "installed-link")
+	definition := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: symlink-deploy
+components:
+  - name: component
+    files:
+      - source: source.bin
+        destination: %q
+        symlinks:
+          - %q
+`, destination, symlink)
+	require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(definition), 0o600))
+
+	loaded, err := load.Package(ctx, packageDir, load.PackageOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, loaded.Close())
+	})
+
+	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, pkgLayout.Cleanup())
+	})
+
+	component := pkgLayout.Definition().Components[0]
+	err = processComponentFiles(ctx, pkgLayout, component, variables.New("", nil, nil), value.Values{}, template.StateAccess{})
+	require.NoError(t, err)
+
+	deployed, err := os.ReadFile(destination)
+	require.NoError(t, err)
+	require.Equal(t, content, deployed)
+
+	info, err := os.Lstat(symlink)
+	require.NoError(t, err)
+	require.NotZero(t, info.Mode()&os.ModeSymlink)
+	target, err := os.Readlink(symlink)
+	require.NoError(t, err)
+	require.Equal(t, destination, target)
 }
