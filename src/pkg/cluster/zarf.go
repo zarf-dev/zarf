@@ -61,36 +61,6 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]state.Deployed
 	return deployedPackages, nil
 }
 
-// RequireServiceCapability checks that deployed packages providing a service
-// declare the requested capability in their package metadata annotations.
-func (c *Cluster) RequireServiceCapability(ctx context.Context, service api.Service, capability api.Capability) error {
-	packages, err := c.GetDeployedZarfPackages(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to inspect deployed packages: %w", err)
-	}
-
-	foundService := false
-	for _, deployed := range packages {
-		definition, err := deployed.Definition()
-		if err != nil {
-			return fmt.Errorf("unable to inspect deployed package %q: %w", deployed.Name, err)
-		}
-		for _, component := range definition.Components {
-			if component.Service != service {
-				continue
-			}
-			foundService = true
-			if !definition.SupportsCapability(capability) {
-				return fmt.Errorf("deployed package %q providing service %q does not declare %s=%s; upgrade the package before using this capability", deployed.Name, service, capability, api.CapabilityEnabled)
-			}
-		}
-	}
-	if !foundService {
-		return fmt.Errorf("no deployed package providing service %q was found", service)
-	}
-	return nil
-}
-
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
 func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {

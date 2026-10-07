@@ -21,7 +21,6 @@ import (
 	"github.com/spf13/viper"
 
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -786,11 +785,6 @@ func (o *updateGitCredsOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 	if newState.GitServer.IsInternal() && gitTLSRequested {
 		newState.GitServer.Address = state.ZarfInClusterGitURL(newState.GitServer.TLSMode)
-	}
-	if o.rotateTLS || (gitTLSRequested && newState.GitServer.IsInternal() && newState.GitServer.TLSMode.Enabled()) {
-		if err := c.RequireServiceCapability(ctx, api.ServiceGitServer, api.CapabilityGitServerTLSV1); err != nil {
-			return err
-		}
 	}
 	var rollbackTLS *pki.GeneratedPKI
 	if gitTLSRequested && oldState.GitServer.TLSMode.Enabled() && oldState.GitServer.TLSCertManagement == state.GitTLSCertUserManaged {
