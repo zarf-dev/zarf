@@ -877,12 +877,12 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 		return fmt.Errorf("package contains additional files not present in the checksum %s", strings.Join(filePaths, ", "))
 	}
 
-	return validatePackagePaths(pkg)
+	return ValidatePackagePaths(pkg)
 }
 
-// validatePackagePaths checks that package config fields used as filesystem
+// ValidatePackagePaths checks that package config fields used as filesystem
 // path components do not contain path traversal sequences or separators.
-func validatePackagePaths(pkg api.Package) error {
+func ValidatePackagePaths(pkg api.Package) error {
 	if !isCleanPath(pkg.Metadata.Name) {
 		return fmt.Errorf("package metadata name %q would result in an invalid path", pkg.Metadata.Name)
 	}
@@ -911,6 +911,11 @@ func validatePackagePaths(pkg api.Package) error {
 			if !isCleanPath(manifest.Name) {
 				return fmt.Errorf("manifest name %q in component %q would result in an invalid path", manifest.Name, comp.Name)
 			}
+		}
+	}
+	for key := range pkg.Documentation {
+		if strings.ContainsAny(key, `/\`) {
+			return fmt.Errorf("documentation key %q would result in an invalid path", key)
 		}
 	}
 	return nil

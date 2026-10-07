@@ -1992,11 +1992,19 @@ func TestValidatePackagePaths(t *testing.T) {
 			},
 			wantErr: `manifest name ".." in component "comp" would result in an invalid path`,
 		},
+		{
+			name: "documentation key traversal",
+			pkg: api.Package{
+				Metadata:      api.PackageMetadata{Name: "pkg"},
+				Documentation: map[string]string{"../docs": "readme.md"},
+			},
+			wantErr: `documentation key "../docs" would result in an invalid path`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := validatePackagePaths(tt.pkg)
+			err := ValidatePackagePaths(tt.pkg)
 			if tt.wantErr == "" {
 				require.NoError(t, err)
 			} else {

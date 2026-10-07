@@ -115,6 +115,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		definition.Build.Differential = true
 		definition.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
 	}
+	if err := layout.ValidatePackagePaths(definition); err != nil {
+		return nil, err
+	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -278,6 +281,9 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	}
 	definition := resolvedPackage.Definition
 	definition.Metadata.Architecture = v1alpha1.SkeletonArch
+	if err := layout.ValidatePackagePaths(definition); err != nil {
+		return nil, err
+	}
 
 	// Creating skeleton packages with the values feature is not yet supported
 	if len(definition.Values.Files) > 0 || resolvedPackage.ValuesSchema != nil {
