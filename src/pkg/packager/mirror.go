@@ -123,7 +123,7 @@ func pushComponentReposToRegistry(ctx context.Context, component api.Component,
 		err = retry.Do(func() error {
 			if !dns.IsServiceURL(gitInfo.Address) {
 				l.Info("pushing repository to server", "repo", repo.URL, "server", gitInfo.Address)
-				err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword)
+				err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword, nil)
 				if err != nil {
 					return err
 				}

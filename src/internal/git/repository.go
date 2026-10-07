@@ -176,7 +176,7 @@ func (r *Repository) Path() string {
 }
 
 // Push pushes the repository to the remote git server.
-func (r *Repository) Push(ctx context.Context, address, username, password string, caBundles ...[]byte) error {
+func (r *Repository) Push(ctx context.Context, address, username, password string, caBundle []byte) error {
 	l := logger.From(ctx)
 	repo, err := git.PlainOpen(r.path)
 	if err != nil {
@@ -212,10 +212,6 @@ func (r *Repository) Push(ctx context.Context, address, username, password strin
 	gitCred := http.BasicAuth{
 		Username: username,
 		Password: password,
-	}
-	var caBundle []byte
-	if len(caBundles) > 0 {
-		caBundle = caBundles[0]
 	}
 
 	// Fetch remote offline refs in case of old update or if multiple refs are specified in one package
