@@ -100,7 +100,7 @@ func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
 	o := &devGenerateSchemaOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "generate-schema [ DIRECTORY ]",
+		Use:   "generate-schema [ PATH ]",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Generates a JSON schema for Zarf values based on the package definition, chart defaults, and chart schemas",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -123,6 +123,10 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	if err != nil {
 		return err
 	}
+	packagePath, err := layout.ResolvePackagePath(basePath)
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -141,7 +145,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 		SkipValuesSchemaValidation: true,
 	}
 
-	loaded, err := load.Package(ctx, basePath, loadOpts)
+	loaded, err := load.Package(ctx, packagePath.ManifestFile, loadOpts)
 	if err != nil {
 		return err
 	}
@@ -286,22 +290,22 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	fmt.Println(string(b))
 
 	if o.update {
-		outputFileName := filepath.Join(basePath, "values.schema.json")
-		if pkg.Values.Schema != "" {
-			if !filepath.IsAbs(pkg.Values.Schema) {
-				outputFileName = filepath.Join(basePath, pkg.Values.Schema)
-			} else {
-				outputFileName = pkg.Values.Schema
-			}
-		} else {
-			if err := packager.UpdateSchema(ctx, basePath, "values.schema.json"); err != nil {
-				return fmt.Errorf("unable to update zarf.yaml with schema path: %w", err)
-			}
+		schemaPath := pkg.Values.Schema
+		if schemaPath == "" {
+			schemaPath = "values.schema.json"
+		}
+		outputFileName := schemaPath
+		if !filepath.IsAbs(outputFileName) {
+			outputFileName = filepath.Join(packagePath.BaseDir, outputFileName)
 		}
 
-		err = os.WriteFile(outputFileName, b, helpers.ReadAllWriteUser)
-		if err != nil {
+		if err := os.WriteFile(outputFileName, b, helpers.ReadAllWriteUser); err != nil {
 			return fmt.Errorf("unable to write schema file: %w", err)
+		}
+		if pkg.Values.Schema == "" {
+			if err := packager.UpdateSchema(ctx, packagePath.ManifestFile, schemaPath); err != nil {
+				return fmt.Errorf("unable to update package definition with schema path: %w", err)
+			}
 		}
 
 		l.Info("Schema successfully generated", "filename", outputFileName)
@@ -334,7 +338,7 @@ func mapSchemaToSource(mappedSchema, schema map[string]any, sourcePath value.Pat
 func newDevInspectCommand(v *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect",
-		Short: "Commands to gather information about a Zarf package using its package definition",
+		Short: "Commands to gather information about a Zarf package from its definition",
 	}
 
 	cmd.AddCommand(newDevInspectDefinitionCommand(v))
@@ -352,10 +356,10 @@ func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	o := &devInspectDefinitionOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "definition [ DIRECTORY ]",
+		Use:   "definition [ PATH ]",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Displays the fully rendered package definition",
-		Long:  "Displays the 'zarf.yaml' definition of a Zarf after package templating, flavors, and component imports are applied",
+		Long:  "Displays a package definition after package templating, flavor selection, and component imports are applied",
 		RunE:  o.run,
 	}
 
@@ -386,12 +390,39 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	if err != nil {
 		return err
 	}
-	definition, err := load.PackageDefinition(ctx, basePath, loadOpts)
-	var lintErr *lint.LintError
-	if errors.As(err, &lintErr) {
-		PrintFindings(ctx, lintErr)
-	}
+	path, err := layout.ResolvePackagePath(basePath)
 	if err != nil {
+		return err
+	}
+	contents, err := os.ReadFile(path.ManifestFile)
+	if err != nil {
+		return err
+	}
+	header, err := load.ParseDefinitionHeader(contents)
+	if err != nil {
+		return err
+	}
+	printLintFindings := func(err error) {
+		var lintErr *lint.LintError
+		if errors.As(err, &lintErr) {
+			PrintFindings(ctx, lintErr)
+		}
+	}
+	if header.Kind == string(v1beta1.ZarfComponentConfig) {
+		component, err := load.ComponentDefinition(ctx, path.ManifestFile, load.ComponentOptions{
+			CachePath:     cachePath,
+			RemoteOptions: defaultRemoteOptions(),
+		})
+		if err != nil {
+			printLintFindings(err)
+			return err
+		}
+		component.PublishData = v1beta1.ComponentPublishData{}
+		return utils.ColorPrintYAML(component, nil, false)
+	}
+	definition, err := load.PackageDefinition(ctx, basePath, loadOpts)
+	if err != nil {
+		printLintFindings(err)
 		return err
 	}
 
@@ -426,9 +457,9 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	o := newDevInspectManifestsOptions()
 
 	cmd := &cobra.Command{
-		Use:   "manifests [ DIRECTORY ]",
+		Use:   "manifests [ PATH ]",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Template and output all manifests and charts referenced by the package definition",
+		Short: "Template and output manifests and charts referenced by a package",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd.Context(), args)
 		},
@@ -523,10 +554,10 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	o := newDevInspectValuesFilesOptions()
 
 	cmd := &cobra.Command{
-		Use:   "values-files [ DIRECTORY ]",
+		Use:   "values-files [ PATH ]",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Creates, templates, and outputs the values-files to be sent to each chart",
-		Long:  "Creates, templates, and outputs the values-files to be sent to each chart. Does not consider values files builtin to charts",
+		Short: "Creates, templates, and outputs chart values files from a package definition",
+		Long:  "Creates, templates, and outputs the values files to be sent to each chart. Does not consider values files builtin to charts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd.Context(), args)
 		},
@@ -976,7 +1007,7 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	o := &devFindImagesOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "find-images [ DIRECTORY ]",
+		Use:     "find-images [ PATH ]",
 		Aliases: []string{"f"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   lang.CmdDevFindImagesShort,
@@ -1221,7 +1252,7 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 	o := &devLintOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "lint [ DIRECTORY ]",
+		Use:     "lint [ PATH ]",
 		Args:    cobra.MaximumNArgs(1),
 		Aliases: []string{"l"},
 		Short:   lang.CmdDevLintShort,

@@ -1,0 +1,9 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: inspect-component
+components:
+  - name: published-component
+    import:
+      local:
+        - path: component.yaml

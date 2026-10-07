@@ -15,7 +15,7 @@ Lints the given package for valid schema and recommended practices
 Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files
 
 ```
-zarf dev lint [ DIRECTORY ] [flags]
+zarf dev lint [ PATH ] [flags]
 ```
 
 ### Options

@@ -232,7 +232,7 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	o := &packageCreateOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "create [ DIRECTORY ]",
+		Use:     "create [ PATH ]",
 		Aliases: []string{"c"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   lang.CmdPackageCreateShort,
