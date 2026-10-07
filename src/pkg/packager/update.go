@@ -13,10 +13,14 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 // UpdateSchema updates the values.schema field in a zarf.yaml to point to the given relative schema filename.
@@ -34,6 +38,21 @@ func UpdateSchema(ctx context.Context, packagePath string, schemaFilename string
 // UpdateImages updates the images field for components in a zarf.yaml.
 func UpdateImages(ctx context.Context, packagePath string, definitionImageResults []DefinitionImageResult) error {
 	l := logger.From(ctx)
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
+	if err != nil {
+		return err
+	}
+	contents, err := os.ReadFile(pkgPath.ManifestFile)
+	if err != nil {
+		return err
+	}
+	header, err := load.ParseDefinitionHeader(contents)
+	if err != nil {
+		return err
+	}
+	if header.APIVersion == v1beta1.APIVersion {
+		return updateBetaImages(pkgPath.ManifestFile, contents, header.Kind, definitionImageResults)
+	}
 	return modifyManifest(packagePath, func(zarfPackage v1alpha1.ZarfPackage, astFile *ast.File, manifestPath string) (bool, error) {
 		if !imageUpdateNeeded(zarfPackage, definitionImageResults) {
 			l.Info("no update needed, images are already up to date", "path", manifestPath)
@@ -45,6 +64,133 @@ func UpdateImages(ctx context.Context, packagePath string, definitionImageResult
 		l.Info("successfully updated images", "path", manifestPath)
 		return true, nil
 	})
+}
+
+func updateBetaImages(manifestPath string, contents []byte, kind string, results []DefinitionImageResult) error {
+	var components []v1beta1.Component
+	componentConfig := kind == string(v1beta1.ZarfComponentConfig)
+	switch kind {
+	case string(v1beta1.ZarfComponentConfig):
+		var config v1beta1.ComponentConfig
+		if err := yaml.Unmarshal(contents, &config); err != nil {
+			return err
+		}
+		components = []v1beta1.Component{{Name: config.Metadata.Name, ComponentSpec: config.Component}}
+	// TODO, when we add v1beta1 init configs, we'll have to allow that here as well
+	case string(v1beta1.ZarfPackageConfig):
+		var pkg v1beta1.Package
+		if err := yaml.Unmarshal(contents, &pkg); err != nil {
+			return err
+		}
+		components = pkg.Components
+	default:
+		return fmt.Errorf("invalid kind %q", kind)
+	}
+	astFile, err := parser.ParseBytes(contents, parser.ParseComments)
+	if err != nil {
+		return err
+	}
+	type componentKey struct {
+		name, architecture, flavor string
+	}
+	byComponent := make(map[componentKey]DefinitionImageResult, len(results))
+	for _, result := range results {
+		key := componentKey{result.ComponentName, result.Selector.Architecture, result.Selector.Flavor}
+		byComponent[key] = result
+	}
+	changed := false
+	for index, component := range components {
+		key := componentKey{component.Name, component.Selector.Architecture, component.Selector.Flavor}
+		result, found := byComponent[key]
+		if !found {
+			continue
+		}
+		archives := map[string]struct{}{}
+		for _, archive := range result.ImageArchives {
+			for _, image := range archive.Images {
+				ref, err := transform.ParseImageRef(image)
+				if err != nil {
+					return fmt.Errorf("invalid image %q in archive %q: %w", image, archive.Path, err)
+				}
+				archives[ref.Reference] = struct{}{}
+			}
+		}
+		existing := make(map[string]v1beta1.Image, len(component.Images))
+		for _, image := range component.Images {
+			ref, err := transform.ParseImageRef(image.Name)
+			if err != nil {
+				return fmt.Errorf("invalid image %q in component %q: %w", image.Name, component.Name, err)
+			}
+			existing[ref.Reference] = image
+		}
+		foundImages := result.Matches
+		newImages := []v1beta1.Image{}
+		newByRef := make(map[string]v1beta1.Image, len(foundImages))
+		for _, match := range foundImages {
+			name := match.Image.Name
+			ref, err := transform.ParseImageRef(name)
+			if err != nil {
+				return fmt.Errorf("invalid discovered image %q in component %q: %w", name, component.Name, err)
+			}
+			if _, archived := archives[ref.Reference]; archived {
+				continue
+			}
+			if _, duplicate := newByRef[ref.Reference]; duplicate {
+				continue
+			}
+			image, found := existing[ref.Reference]
+			if !found {
+				image = v1beta1.Image{Name: name}
+			}
+			newByRef[ref.Reference] = image
+			newImages = append(newImages, image)
+		}
+		// An empty scan does not replace authored images.
+		imagesUpToDate := len(foundImages) == 0 || (len(component.Images) == len(newImages) && maps.Equal(existing, newByRef))
+		// Import resolution appends archives authored here after inherited archives.
+		if len(result.ImageArchives) < len(component.ImageArchives) {
+			return fmt.Errorf("component %q has fewer scanned archives than authored archives", component.Name)
+		}
+		authoredArchiveResults := result.ImageArchives[len(result.ImageArchives)-len(component.ImageArchives):]
+		for i, archive := range component.ImageArchives {
+			if archive.Path != authoredArchiveResults[i].Path {
+				return fmt.Errorf("component %q archive %d: expected %q, got %q", component.Name, i, archive.Path, authoredArchiveResults[i].Path)
+			}
+		}
+		archivesEqual := slices.EqualFunc(component.ImageArchives, authoredArchiveResults, func(a v1beta1.ImageArchive, b api.ImageArchive) bool {
+			return a.Path == b.Path && slices.Equal(a.Images, b.Images)
+		})
+		if imagesUpToDate && archivesEqual {
+			continue
+		}
+		patch := map[string]any{}
+		if !imagesUpToDate {
+			patch["images"] = newImages
+		}
+		if !archivesEqual {
+			patch["imageArchives"] = authoredArchiveResults
+		}
+		pathString := fmt.Sprintf("$.components[%d]", index)
+		if componentConfig {
+			pathString = "$.component"
+		}
+		node, err := yaml.ValueToNode(patch, yaml.IndentSequence(true))
+		if err != nil {
+			return err
+		}
+		path, err := yaml.PathString(pathString)
+		if err != nil {
+			return err
+		}
+		if err := path.MergeFromNode(astFile, node); err != nil {
+			return err
+		}
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
+	return os.WriteFile(manifestPath, []byte(astFile.String()), helpers.ReadAllWriteUser)
 }
 
 // modifyManifest loads the zarf.yaml at packagePath, calls fn with the parsed package and AST,
@@ -122,7 +268,7 @@ func createImageUpdate(zarfPackage v1alpha1.ZarfPackage, definitionImageResults 
 	}
 
 	for _, result := range definitionImageResults {
-		if len(result.Matches)+len(result.PotentialMatches)+len(result.CosignArtifacts)+len(result.ImageArchives) == 0 {
+		if len(result.Matches)+len(result.ImageArchives) == 0 {
 			continue
 		}
 
@@ -131,7 +277,7 @@ func createImageUpdate(zarfPackage v1alpha1.ZarfPackage, definitionImageResults 
 			continue
 		}
 
-		combined := slices.Concat(result.Matches, result.PotentialMatches, result.CosignArtifacts)
+		combined := imageMatchNames(result.Matches)
 
 		patch := make(map[string]any)
 
@@ -199,7 +345,8 @@ func imageUpdateNeeded(zarfPackage v1alpha1.ZarfPackage, definitionImageResults 
 		// Check regular images: package definition vs image scan
 		// Scanned images that also appear in archives are excluded (they're accounted for above)
 		scannedImages := make(map[string]struct{})
-		for _, img := range slices.Concat(result.Matches, result.PotentialMatches, result.CosignArtifacts) {
+		for _, match := range result.Matches {
+			img := match.Image.Name
 			if _, inArchive := archiveScannedImages[img]; !inArchive {
 				scannedImages[img] = struct{}{}
 			}

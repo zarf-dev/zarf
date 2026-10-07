@@ -35,7 +35,7 @@ zarf dev find-images [ DIRECTORY ] [flags]
   -p, --repo-chart-path string                If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"
       --set-values stringToString             Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
       --skip-cosign                           Skip searching for cosign artifacts related to discovered images
-  -u, --update                                Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change.
+  -u, --update                                Update the images in the zarf file if needed. Formatting such as comments and newlines may change.
       --values strings                        [beta] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
       --why string                            Prints the source manifest for the specified image
 ```
