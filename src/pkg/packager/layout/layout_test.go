@@ -46,16 +46,18 @@ func TestChartPathsRejectUnsafeComponents(t *testing.T) {
 	tests := []struct {
 		name    string
 		pathFor func() (string, error)
+		wantErr string
 	}{
-		{name: "archive name", pathFor: func() (string, error) { return paths.ArchivePath("../chart", "1.0.0") }},
-		{name: "archive version", pathFor: func() (string, error) { return paths.ArchivePath("chart", `nested\version`) }},
-		{name: "values name", pathFor: func() (string, error) { return paths.ValuesFilePath("nested/chart", "1.0.0", 0) }},
-		{name: "values version", pathFor: func() (string, error) { return paths.ValuesFilePath("chart", "../version", 0) }},
+		{name: "archive name", pathFor: func() (string, error) { return paths.ArchivePath("../chart", "1.0.0") }, wantErr: "chart name validation failed"},
+		{name: "archive version", pathFor: func() (string, error) { return paths.ArchivePath("chart", `nested\version`) }, wantErr: "chart version validation failed"},
+		{name: "values name", pathFor: func() (string, error) { return paths.ValuesFilePath("nested/chart", "1.0.0", 0) }, wantErr: "chart name validation failed"},
+		{name: "values version", pathFor: func() (string, error) { return paths.ValuesFilePath("chart", "../version", 0) }, wantErr: "chart version validation failed"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := tt.pathFor()
+			require.ErrorContains(t, err, tt.wantErr)
 			require.ErrorContains(t, err, "must not")
 		})
 	}

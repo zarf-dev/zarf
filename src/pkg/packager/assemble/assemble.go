@@ -592,15 +592,15 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
 func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath string, resources *load.ResourceSet) error {
-	if err := layout.ValidatePathComponent("manifest name", manifest.Name); err != nil {
-		return err
+	if err := layout.ValidatePathComponent(manifest.Name); err != nil {
+		return fmt.Errorf("manifest name validation failed: %w", err)
 	}
 
 	manifestDir := filepath.Join(compBuildPath, string(layout.ManifestsComponentDir))
 	for fileIdx, path := range manifest.Files {
-		dst, err := layout.PathWithinDirectory(manifestDir, "manifest output", layout.ManifestFileName(manifest.Name, fileIdx))
+		dst, err := layout.PathWithinDirectory(manifestDir, layout.ManifestFileName(manifest.Name, fileIdx))
 		if err != nil {
-			return err
+			return fmt.Errorf("manifest output validation failed: %w", err)
 		}
 
 		// Copy manifests without any processing.
@@ -621,9 +621,9 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 
 	for kustomizeIdx, path := range manifest.Kustomize.Files {
 		// Generate manifests from kustomizations and place in the package.
-		dst, err := layout.PathWithinDirectory(manifestDir, "manifest output", layout.KustomizationFileName(manifest.Name, kustomizeIdx))
+		dst, err := layout.PathWithinDirectory(manifestDir, layout.KustomizationFileName(manifest.Name, kustomizeIdx))
 		if err != nil {
-			return err
+			return fmt.Errorf("manifest output validation failed: %w", err)
 		}
 
 		if !helpers.IsURL(path) {
@@ -690,18 +690,18 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 	}
 
 	for chartIdx, chart := range component.Charts {
-		if err := layout.ValidatePathComponent("chart name", chart.Name); err != nil {
-			return err
+		if err := layout.ValidatePathComponent(chart.Name); err != nil {
+			return fmt.Errorf("chart name validation failed: %w", err)
 		}
-		if err := layout.ValidatePathComponent("chart version", chart.LegacyVersion); err != nil {
-			return err
+		if err := layout.ValidatePathComponent(chart.LegacyVersion); err != nil {
+			return fmt.Errorf("chart version validation failed: %w", err)
 		}
 
 		if chart.Local != nil {
 			chartsDir := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
-			dst, err := layout.PathWithinDirectory(chartsDir, "skeleton chart", fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+			dst, err := layout.PathWithinDirectory(chartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			if err != nil {
-				return err
+				return fmt.Errorf("skeleton chart validation failed: %w", err)
 			}
 			rel, err := filepath.Rel(compBuildPath, dst)
 			if err != nil {
@@ -726,9 +726,9 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 			}
 
 			valuesDir := filepath.Join(compBuildPath, string(layout.ValuesComponentDir))
-			dst, err := layout.PathWithinDirectory(valuesDir, "skeleton chart values", layout.ChartValuesFileName(chart.Name, chart.LegacyVersion, valuesIdx))
+			dst, err := layout.PathWithinDirectory(valuesDir, layout.ChartValuesFileName(chart.Name, chart.LegacyVersion, valuesIdx))
 			if err != nil {
-				return err
+				return fmt.Errorf("skeleton chart values validation failed: %w", err)
 			}
 			rel, err := filepath.Rel(compBuildPath, dst)
 			if err != nil {
@@ -1155,8 +1155,8 @@ func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildP
 		return nil
 	}
 	for key := range pkg.Documentation {
-		if err := layout.ValidatePathComponent("documentation key", key); err != nil {
-			return err
+		if err := layout.ValidatePathComponent(key); err != nil {
+			return fmt.Errorf("documentation key validation failed: %w", err)
 		}
 	}
 
@@ -1178,9 +1178,9 @@ func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildP
 		}
 
 		docFilename := fileNames[key]
-		dst, err := layout.PathWithinDirectory(tmpDir, "documentation output", docFilename)
+		dst, err := layout.PathWithinDirectory(tmpDir, docFilename)
 		if err != nil {
-			return err
+			return fmt.Errorf("documentation output validation failed: %w", err)
 		}
 
 		if err := helpers.CreatePathAndCopy(src, dst); err != nil {

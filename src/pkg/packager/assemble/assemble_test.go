@@ -86,6 +86,7 @@ func TestPackageManifestRejectsNamesWithPathSeparators(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := PackageManifest(testutil.TestContext(t), tt.manifest, componentDir, resources)
+			require.ErrorContains(t, err, "manifest name validation failed")
 			require.ErrorContains(t, err, "must not contain path separators")
 			require.NoDirExists(t, filepath.Join(componentDir, string(layout.ManifestsComponentDir)))
 			require.NoFileExists(t, filepath.Join(componentDir, "escaped-0.yaml"))
@@ -98,11 +99,11 @@ func TestManifestOutputPathStaysWithinManifestDirectory(t *testing.T) {
 
 	componentDir := t.TempDir()
 	manifestDir := filepath.Join(componentDir, string(layout.ManifestsComponentDir))
-	destination, err := layout.PathWithinDirectory(manifestDir, "manifest output", "manifest-0.yaml")
+	destination, err := layout.PathWithinDirectory(manifestDir, "manifest-0.yaml")
 	require.NoError(t, err)
 	require.Equal(t, filepath.Join(manifestDir, "manifest-0.yaml"), destination)
 
-	_, err = layout.PathWithinDirectory(manifestDir, "manifest output", "../escaped-0.yaml")
+	_, err = layout.PathWithinDirectory(manifestDir, "../escaped-0.yaml")
 	require.ErrorContains(t, err, "escapes")
 }
 
@@ -171,11 +172,11 @@ func TestDocumentationOutputPathStaysWithinDocumentationDirectory(t *testing.T) 
 	t.Parallel()
 
 	documentationDir := t.TempDir()
-	destination, err := layout.PathWithinDirectory(documentationDir, "documentation output", "readme.md")
+	destination, err := layout.PathWithinDirectory(documentationDir, "readme.md")
 	require.NoError(t, err)
 	require.Equal(t, filepath.Join(documentationDir, "readme.md"), destination)
 
-	_, err = layout.PathWithinDirectory(documentationDir, "documentation output", "../escape-readme.md")
+	_, err = layout.PathWithinDirectory(documentationDir, "../escape-readme.md")
 	require.ErrorContains(t, err, "escapes")
 }
 
