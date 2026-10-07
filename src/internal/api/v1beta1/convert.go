@@ -32,6 +32,7 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 			Signed:                     pkg.Build.Signed,
 			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
 			AggregateChecksum:          pkg.Build.AggregateChecksum,
+			VersionRequirements:        VersionRequirementsToGeneric(pkg.Build.VersionRequirements),
 		},
 		Values: api.Values{
 			Files:  pkg.Values.Files,
@@ -40,18 +41,26 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 		Documentation: pkg.Documentation,
 	}
 
-	for _, vr := range pkg.Build.VersionRequirements {
-		g.Build.VersionRequirements = append(g.Build.VersionRequirements, api.VersionRequirement{
-			Version: vr.Version,
-			Reason:  vr.Reason,
-		})
-	}
-
 	for _, c := range pkg.Components {
 		g.Components = append(g.Components, componentToGeneric(c))
 	}
 
 	return g
+}
+
+// VersionRequirementsToGeneric converts v1beta1 minimum-version requirements to the operational model.
+func VersionRequirementsToGeneric(requirements []v1beta1.VersionRequirement) []api.VersionRequirement {
+	if len(requirements) == 0 {
+		return nil
+	}
+	converted := make([]api.VersionRequirement, 0, len(requirements))
+	for _, requirement := range requirements {
+		converted = append(converted, api.VersionRequirement{
+			Version: requirement.Version,
+			Reason:  requirement.Reason,
+		})
+	}
+	return converted
 }
 
 func metadataToGeneric(m v1beta1.PackageMetadata) api.PackageMetadata {

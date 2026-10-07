@@ -100,19 +100,42 @@ func ParseAs[T any](ctx context.Context, b []byte, d Decoder[T]) (T, error) {
 	return zero, fmt.Errorf("no %q document found in package definition", d.version)
 }
 
-// SelectVersion returns the apiVersion Zarf will decode from a package definition that may contain
-// multiple documents; the highest-priority known version wins. Use it to pick the decode target
-// before calling ParseAs.
-func SelectVersion(ctx context.Context, b []byte) (string, error) {
+// Document retains a selected definition's fields before decoding or migration.
+type Document struct {
+	decoder erasedDecoder
+	node    ast.Node
+}
+
+// APIVersion returns the selected document's normalized API version.
+func (d Document) APIVersion() string {
+	return d.decoder.version
+}
+
+// Unmarshal reads the selected document, retaining unknown fields when v is untyped.
+func (d Document) Unmarshal(v any) error {
+	return goyaml.NodeToValue(d.node, v)
+}
+
+// DecodeAs decodes a selected document into the decoder's native package type.
+func DecodeAs[T any](ctx context.Context, document Document, decoder Decoder[T]) (T, error) {
+	if document.APIVersion() != decoder.version {
+		var zero T
+		return zero, fmt.Errorf("cannot decode %q document as %q", document.APIVersion(), decoder.version)
+	}
+	return decoder.decode(ctx, document.node)
+}
+
+// SelectDocument parses a definition and selects the highest-priority known API version.
+func SelectDocument(ctx context.Context, b []byte) (Document, error) {
 	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
-		return "", err
+		return Document{}, err
 	}
-	d, _, err := selectDecoder(ctx, docs)
+	d, node, err := selectDecoder(ctx, docs)
 	if err != nil {
-		return "", err
+		return Document{}, err
 	}
-	return d.version, nil
+	return Document{decoder: d, node: node}, nil
 }
 
 // ParseMultiDoc parses a multi doc zarf.yaml file into an operational Package.
@@ -125,15 +148,11 @@ func ParseMultiDoc(ctx context.Context, b []byte) (api.Package, error) {
 // ParseMultiDocNative parses a multi-document zarf.yaml once and returns both the selected native
 // wire definition and its operational representation.
 func ParseMultiDocNative(ctx context.Context, b []byte) (any, api.Package, error) {
-	docs, err := parseZarfYAMLDocs(b)
+	document, err := SelectDocument(ctx, b)
 	if err != nil {
 		return nil, api.Package{}, err
 	}
-	d, node, err := selectDecoder(ctx, docs)
-	if err != nil {
-		return nil, api.Package{}, err
-	}
-	return d.decode(ctx, node)
+	return document.decoder.decode(ctx, document.node)
 }
 
 func decodeV1Alpha1(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, error) {

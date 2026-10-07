@@ -6,42 +6,22 @@ package lint
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/xeipuuv/gojsonschema"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/schema"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
-// ValidatePackageSchemaAtPath checks the Zarf package against the Zarf schema
-// If path is a directory, it will look for layout.ZarfYAML within it.
-// If path is a file, it will use that file directly.
-func ValidatePackageSchemaAtPath(path string, setVariables map[string]string) ([]PackageFinding, error) {
-	pkgPath, err := layout.ResolvePackagePath(path)
-	if err != nil {
-		return nil, fmt.Errorf("unable to access path %q: %w", path, err)
-	}
-	b, err := os.ReadFile(pkgPath.ManifestFile)
-	if err != nil {
+// ValidatePackageSchemaV1Alpha1 validates a package's fields against the v1alpha1 schema.
+// Use an untyped value to retain unknown fields for validation.
+func ValidatePackageSchemaV1Alpha1(pkg any, setVariables map[string]string) ([]PackageFinding, error) {
+	if err := templateZarfObj(&pkg, setVariables); err != nil {
 		return nil, err
 	}
-	return ValidatePackageSchemaBytesV1Alpha1(b, setVariables)
-}
-
-// ValidatePackageSchemaBytesV1Alpha1 checks v1alpha1 Zarf package bytes against the v1alpha1 package schema.
-func ValidatePackageSchemaBytesV1Alpha1(b []byte, setVariables map[string]string) ([]PackageFinding, error) {
-	var untypedZarfPackage interface{}
-	if err := goyaml.Unmarshal(b, &untypedZarfPackage); err != nil {
-		return nil, err
-	}
-	if err := templateZarfObj(&untypedZarfPackage, setVariables); err != nil {
-		return nil, err
-	}
-	return getSchemaFindings(schema.GetV1Alpha1Schema(), untypedZarfPackage)
+	return getSchemaFindings(schema.GetV1Alpha1Schema(), pkg)
 }
 
 // ValidatePackageSchemaBytesV1Beta1 checks v1beta1 Zarf package bytes against the v1beta1 package schema.
@@ -50,7 +30,13 @@ func ValidatePackageSchemaBytesV1Beta1(b []byte) ([]PackageFinding, error) {
 	if err := goyaml.Unmarshal(b, &untypedZarfPackage); err != nil {
 		return nil, err
 	}
-	return getSchemaFindings(schema.GetV1Beta1Schema(), untypedZarfPackage)
+	return ValidatePackageSchemaV1Beta1(untypedZarfPackage)
+}
+
+// ValidatePackageSchemaV1Beta1 validates a package's fields against the v1beta1 schema.
+// Use an untyped value to retain unknown fields for validation.
+func ValidatePackageSchemaV1Beta1(pkg any) ([]PackageFinding, error) {
+	return getSchemaFindings(schema.GetV1Beta1Schema(), pkg)
 }
 
 // ValidateComponentConfigSchemaBytesV1Beta1 checks a v1beta1 Zarf component config against the v1beta1 component schema.

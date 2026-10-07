@@ -5,12 +5,18 @@ package packager
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -22,6 +28,52 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
+
+func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		apiVersion        string
+		duringHook, final state.ComponentStatus
+	}{
+		{v1alpha1.APIVersion, state.ComponentStatusSucceeded, state.ComponentStatusSucceeded},
+		{v1beta1.APIVersion, state.ComponentStatusDeploying, state.ComponentStatusFailed},
+	} {
+		t.Run(tt.apiVersion, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			c := &cluster.Cluster{Clientset: fake.NewClientset()}
+			srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+				deployed, err := c.GetDeployedPackage(ctx, "success-hooks")
+				if assert.NoError(t, err) {
+					assert.Equal(t, tt.duringHook, deployed.DeployedComponents[0].Status)
+				}
+			}))
+			t.Cleanup(srv.Close)
+			timeout := 5
+			pkg := api.Package{
+				APIVersion: tt.apiVersion,
+				Kind:       api.ZarfPackageConfig,
+				Metadata:   api.PackageMetadata{Name: "success-hooks"},
+				Components: []api.Component{{Name: "component", Actions: api.ComponentActions{OnDeploy: api.ActionSet{
+					OnSuccess: []api.Action{
+						{MaxTotalSeconds: &timeout, Wait: &api.ActionWait{Network: &api.ActionWaitNetwork{Protocol: "http", Address: srv.Listener.Addr().String()}}},
+						{Cmd: "exit 1"},
+					},
+				}}}},
+			}
+			pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			d := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
+			_, err = d.deployComponents(ctx, pkgLayout, DeployOptions{})
+			require.ErrorContains(t, err, `command "exit 1" failed`)
+			deployed, err := c.GetDeployedPackage(ctx, pkg.Metadata.Name)
+			require.NoError(t, err)
+			require.Equal(t, tt.final, deployed.DeployedComponents[0].Status)
+		})
+	}
+}
 
 func TestInternalServicesFor(t *testing.T) {
 	t.Parallel()

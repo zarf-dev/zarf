@@ -47,7 +47,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 	l := logger.From(ctx)
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
-		if err := requirements.ValidateVersionRequirements(definition); err != nil {
+		if err := requirements.ValidateVersionRequirements(definition.Build.VersionRequirements); err != nil {
 			return fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", err)
 		}
 	}

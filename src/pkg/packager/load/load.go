@@ -40,7 +40,6 @@ type DefinitionOptions struct {
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
-	// TODO: implement version requirements for v1beta1 remote resources
 	SkipVersionCheck bool
 	types.RemoteOptions
 }
@@ -88,19 +87,23 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 		return resolution{}, err
 	}
 
-	version, err := pkgcfg.SelectVersion(ctx, b)
+	document, err := pkgcfg.SelectDocument(ctx, b)
 	if err != nil {
 		return resolution{}, err
 	}
+	var rawPackage any
+	if err := document.Unmarshal(&rawPackage); err != nil {
+		return resolution{}, fmt.Errorf("unable to check schema: %w", err)
+	}
 
 	var defined resolution
-	switch version {
+	switch document.APIVersion() {
 	case v1beta1.APIVersion:
-		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
+		pkg, err := pkgcfg.DecodeAs(ctx, document, pkgcfg.V1Beta1)
 		if err != nil {
 			return resolution{}, err
 		}
-		if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, b); err != nil {
+		if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, rawPackage); err != nil {
 			return resolution{}, err
 		}
 		defined, err = v1beta1Resolution(ctx, pkg, pkgPath, opts)
@@ -108,11 +111,11 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 			return resolution{}, err
 		}
 	case v1alpha1.APIVersion:
-		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
+		pkg, err := pkgcfg.DecodeAs(ctx, document, pkgcfg.V1Alpha1)
 		if err != nil {
 			return resolution{}, err
 		}
-		defined, err = v1alpha1Resolution(ctx, pkg, pkgPath, b, opts)
+		defined, err = v1alpha1Resolution(ctx, pkg, pkgPath, rawPackage, opts)
 		if err != nil {
 			return resolution{}, err
 		}
@@ -124,7 +127,7 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 	return defined, nil
 }
 
-func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, rawPackage []byte, opts DefinitionOptions) (resolution, error) {
+func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, rawPackage any, opts DefinitionOptions) (resolution, error) {
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 	var err error
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
@@ -173,7 +176,7 @@ func v1beta1Resolution(ctx context.Context, pkg v1beta1.Package, pkgPath layout.
 		return resolution{}, err
 	}
 
-	imported, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor, opts.RemoteOptions, cachePath)
+	imported, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor, opts.SkipVersionCheck, opts.RemoteOptions, cachePath)
 	if err != nil {
 		return resolution{}, err
 	}
@@ -245,11 +248,7 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 	}
 
 	// Validate after import just in case
-	resolvedPackage, err := goyaml.Marshal(pkg)
-	if err != nil {
-		return fmt.Errorf("unable to marshal resolved package: %w", err)
-	}
-	if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, resolvedPackage); err != nil {
+	if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, pkg); err != nil {
 		return err
 	}
 
@@ -261,8 +260,8 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 	return nil
 }
 
-func validatePackageSchemaV1Alpha1(pkgName string, b []byte, setVariables map[string]string) error {
-	findings, err := lint.ValidatePackageSchemaBytesV1Alpha1(b, setVariables)
+func validatePackageSchemaV1Alpha1(pkgName string, pkg any, setVariables map[string]string) error {
+	findings, err := lint.ValidatePackageSchemaV1Alpha1(pkg, setVariables)
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
@@ -275,8 +274,8 @@ func validatePackageSchemaV1Alpha1(pkgName string, b []byte, setVariables map[st
 	}
 }
 
-func validatePackageSchemaV1Beta1(pkgName string, b []byte) error {
-	findings, err := lint.ValidatePackageSchemaBytesV1Beta1(b)
+func validatePackageSchemaV1Beta1(pkgName string, pkg any) error {
+	findings, err := lint.ValidatePackageSchemaV1Beta1(pkg)
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
