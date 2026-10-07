@@ -15,6 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
@@ -136,4 +137,43 @@ func TestDeploySkipsValuesSchemaValidationWhenConfigured(t *testing.T) {
 
 	_, err = Deploy(ctx, pkgLayout, DeployOptions{SkipValuesSchemaValidation: true})
 	require.NoError(t, err)
+}
+
+func TestDeployGitServerTLSRequiresFeature(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	loaded, err := load.Package(ctx, filepath.Join("load", "testdata", "package-with-invalid-values"), load.PackageOptions{SkipValuesSchemaValidation: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	for _, tc := range []struct {
+		name      string
+		gitServer state.GitServerInfo
+		certs     *pki.GeneratedPKI
+		wantError bool
+	}{
+		{name: "default HTTP"},
+		{name: "explicitly disabled", gitServer: state.GitServerInfo{TLSMode: state.GitTLSDisabled}},
+		{name: "external HTTPS", gitServer: state.GitServerInfo{Address: "https://git.example.com"}},
+		{name: "Zarf-managed TLS", gitServer: state.GitServerInfo{TLSMode: state.GitTLSEnabled}, wantError: true},
+		{name: "certificate bundle without mode", certs: &pki.GeneratedPKI{}, wantError: true},
+		{name: "user-managed TLS", gitServer: state.GitServerInfo{TLSMode: state.GitTLSEnabled}, certs: &pki.GeneratedPKI{}, wantError: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := Deploy(ctx, pkgLayout, DeployOptions{
+				GitServer:                  tc.gitServer,
+				GitServerTLS:               tc.certs,
+				SkipValuesSchemaValidation: true,
+			})
+			if tc.wantError {
+				require.ErrorContains(t, err, "--features=git-server-tls=true")
+				require.Empty(t, result.DeployedComponents)
+			} else {
+				require.NoError(t, err)
+				require.Len(t, result.DeployedComponents, 1)
+			}
+		})
+	}
 }

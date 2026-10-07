@@ -115,6 +115,9 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.gitTLSCAPath, "git-tls-ca", v.GetString(VInitGitTLSCA), "Path to a PEM-encoded CA certificate for the Git server")
 	cmd.Flags().StringVar(&o.gitTLSCertPath, "git-tls-cert", v.GetString(VInitGitTLSCert), "Path to a PEM-encoded TLS certificate for the Git server")
 	cmd.Flags().StringVar(&o.gitTLSKeyPath, "git-tls-key", v.GetString(VInitGitTLSKey), "Path to a PEM-encoded TLS private key for the Git server")
+	for _, flag := range []string{"git-tls-mode", "git-tls-ca", "git-tls-cert", "git-tls-key"} {
+		_ = cmd.Flags().MarkHidden(flag)
+	}
 
 	// Flags for using an external registry
 	cmd.Flags().StringVar(&o.registryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)

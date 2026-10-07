@@ -25,12 +25,6 @@ zarf tools update-creds git [flags]
 # Autogenerate new git server credentials:
 $ zarf tools update-creds git
 
-# Enable Zarf-managed TLS for the internal Git server:
-$ zarf tools update-creds git --git-tls-mode=tls-enabled
-
-# Use a user-managed TLS certificate for the internal Git server:
-$ zarf tools update-creds git --git-tls-ca=ca.pem --git-tls-cert=cert.pem --git-tls-key=key.pem
-
 # Set credentials for an external git server:
 $ zarf tools update-creds git --git-push-username={USERNAME} --git-push-password={PASSWORD}
 
@@ -47,13 +41,8 @@ $ zarf tools update-creds git --git-push-username={USERNAME} --git-push-password
       --git-pull-username string   Username for pull-only access to the git server
       --git-push-password string   Password for the push-user to access the git server
       --git-push-username string   Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
-      --git-tls-ca string          Path to a PEM-encoded CA certificate for the Git server
-      --git-tls-cert string        Path to a PEM-encoded TLS certificate for the Git server
-      --git-tls-key string         Path to a PEM-encoded TLS private key for the Git server
-      --git-tls-mode string        Git TLS mode: disabled or tls-enabled. Certificate files automatically enable user-managed TLS
       --git-url string             External git server url to use for this Zarf cluster
   -h, --help                       help for git
-      --rotate-tls                 Rotate Zarf-managed internal Git server TLS certificates
 ```
 
 ### Options inherited from parent commands

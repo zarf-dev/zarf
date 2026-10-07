@@ -734,6 +734,9 @@ func newUpdateGitCredsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.gitTLSCertPath, "git-tls-cert", v.GetString(VInitGitTLSCert), "Path to a PEM-encoded TLS certificate for the Git server")
 	cmd.Flags().StringVar(&o.gitTLSKeyPath, "git-tls-key", v.GetString(VInitGitTLSKey), "Path to a PEM-encoded TLS private key for the Git server")
 	cmd.MarkFlagsRequiredTogether("git-tls-ca", "git-tls-cert", "git-tls-key")
+	for _, flag := range []string{"git-tls-mode", "git-tls-ca", "git-tls-cert", "git-tls-key", "rotate-tls"} {
+		_ = cmd.Flags().MarkHidden(flag)
+	}
 
 	return cmd
 }

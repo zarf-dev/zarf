@@ -128,6 +128,9 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	if !feature.IsEnabled(feature.RegistryProxy) && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 		return DeployResult{}, fmt.Errorf("the registry proxy feature gate is not enabled")
 	}
+	if !feature.IsEnabled(feature.GitServerTLS) && (opts.GitServer.TLSMode.Enabled() || opts.GitServerTLS != nil) {
+		return DeployResult{}, fmt.Errorf("internal Git server TLS requested but %q feature is not enabled; run again with --features=%s=true", feature.GitServerTLS, feature.GitServerTLS)
+	}
 
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkg.Metadata.Name)

@@ -128,12 +128,6 @@ $ zarf init
 # Initializing w/ Zarfs internal git server:
 $ zarf init --components=git-server
 
-# Initializing internal Git with Zarf-managed TLS:
-$ zarf init --components=git-server --git-tls-mode=tls-enabled
-
-# Initializing internal Git with a user-managed TLS certificate:
-$ zarf init --components=git-server --git-tls-ca=ca.pem --git-tls-cert=cert.pem --git-tls-key=key.pem
-
 # Initializing w/ Zarfs with a custom init package:
 $ zarf init oci://ghcr.io/zarf-dev/packages/init:v0.69.0
 
@@ -904,12 +898,6 @@ $ zarf tools update-creds registry --registry-push-username={USERNAME} --registr
 	CmdToolsUpdateCredsGitExample = `
 # Autogenerate new git server credentials:
 $ zarf tools update-creds git
-
-# Enable Zarf-managed TLS for the internal Git server:
-$ zarf tools update-creds git --git-tls-mode=tls-enabled
-
-# Use a user-managed TLS certificate for the internal Git server:
-$ zarf tools update-creds git --git-tls-ca=ca.pem --git-tls-cert=cert.pem --git-tls-key=key.pem
 
 # Set credentials for an external git server:
 $ zarf tools update-creds git --git-push-username={USERNAME} --git-push-password={PASSWORD}
