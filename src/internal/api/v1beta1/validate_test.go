@@ -151,6 +151,21 @@ func TestValidatePackageFileChecksumAlgorithm(t *testing.T) {
 	}
 }
 
+func TestValidatePackageDocumentationKeys(t *testing.T) {
+	t.Parallel()
+
+	for _, key := range []string{"nested/document", `nested\document`} {
+		t.Run(key, func(t *testing.T) {
+			t.Parallel()
+			errs := ValidatePackage(v1beta1.Package{
+				Components:    []v1beta1.Component{{Name: "component"}},
+				Documentation: map[string]string{key: "readme.md"},
+			})
+			require.ErrorContains(t, errs, fmt.Sprintf(PkgValidateErrDocumentationKeyPath, key))
+		})
+	}
+}
+
 func TestValidateManifest(t *testing.T) {
 	t.Parallel()
 	longName := strings.Repeat("a", ZarfMaxChartNameLength+1)

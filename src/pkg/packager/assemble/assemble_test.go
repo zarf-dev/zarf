@@ -94,11 +94,39 @@ func TestManifestOutputPathStaysWithinManifestDirectory(t *testing.T) {
 	t.Parallel()
 
 	componentDir := t.TempDir()
-	destination, err := manifestOutputPath(componentDir, "manifest-0.yaml")
+	manifestDir := filepath.Join(componentDir, string(layout.ManifestsComponentDir))
+	destination, err := pathWithinDirectory(manifestDir, "manifest output", "manifest-0.yaml")
 	require.NoError(t, err)
-	require.Equal(t, filepath.Join(componentDir, string(layout.ManifestsComponentDir), "manifest-0.yaml"), destination)
+	require.Equal(t, filepath.Join(manifestDir, "manifest-0.yaml"), destination)
 
-	_, err = manifestOutputPath(componentDir, "../escaped-0.yaml")
+	_, err = pathWithinDirectory(manifestDir, "manifest output", "../escaped-0.yaml")
+	require.ErrorContains(t, err, "escapes")
+}
+
+func TestCreateDocumentationTarRejectsPathKeys(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{
+		Documentation: map[string]string{
+			"../escape": "first/readme.md",
+			"witness":   "second/readme.md",
+		},
+	}
+	buildPath := t.TempDir()
+	err := createDocumentationTar(pkg, load.NewResourceSet(t.TempDir()), buildPath)
+	require.ErrorContains(t, err, "documentation key")
+	require.NoFileExists(t, filepath.Join(buildPath, layout.DocumentationTar))
+}
+
+func TestDocumentationOutputPathStaysWithinDocumentationDirectory(t *testing.T) {
+	t.Parallel()
+
+	documentationDir := t.TempDir()
+	destination, err := pathWithinDirectory(documentationDir, "documentation output", "readme.md")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(documentationDir, "readme.md"), destination)
+
+	_, err = pathWithinDirectory(documentationDir, "documentation output", "../escape-readme.md")
 	require.ErrorContains(t, err, "escapes")
 }
 

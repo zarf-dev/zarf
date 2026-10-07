@@ -586,12 +586,12 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
 func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath string, resources *load.ResourceSet) error {
-	if err := validateManifestName(manifest.Name); err != nil {
+	if err := validatePathComponent("manifest name", manifest.Name); err != nil {
 		return err
 	}
 
 	for fileIdx, path := range manifest.Files {
-		dst, err := manifestOutputPath(compBuildPath, layout.ManifestFileName(manifest.Name, fileIdx))
+		dst, err := pathWithinDirectory(filepath.Join(compBuildPath, string(layout.ManifestsComponentDir)), "manifest output", layout.ManifestFileName(manifest.Name, fileIdx))
 		if err != nil {
 			return err
 		}
@@ -614,7 +614,7 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 
 	for kustomizeIdx, path := range manifest.Kustomize.Files {
 		// Generate manifests from kustomizations and place in the package.
-		dst, err := manifestOutputPath(compBuildPath, layout.KustomizationFileName(manifest.Name, kustomizeIdx))
+		dst, err := pathWithinDirectory(filepath.Join(compBuildPath, string(layout.ManifestsComponentDir)), "manifest output", layout.KustomizationFileName(manifest.Name, kustomizeIdx))
 		if err != nil {
 			return err
 		}
@@ -632,19 +632,18 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 	return nil
 }
 
-func validateManifestName(name string) error {
-	if strings.ContainsAny(name, `/\`) {
-		return fmt.Errorf("manifest name %q must not contain path separators", name)
+func validatePathComponent(field, value string) error {
+	if strings.ContainsAny(value, `/\`) {
+		return fmt.Errorf("%s %q must not contain path separators", field, value)
 	}
 	return nil
 }
 
-func manifestOutputPath(compBuildPath, filename string) (string, error) {
-	manifestDir := filepath.Join(compBuildPath, string(layout.ManifestsComponentDir))
-	destination := filepath.Join(manifestDir, filename)
-	relative, err := filepath.Rel(manifestDir, destination)
+func pathWithinDirectory(directory, field, filename string) (string, error) {
+	destination := filepath.Join(directory, filename)
+	relative, err := filepath.Rel(directory, destination)
 	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		return "", fmt.Errorf("manifest output path %q escapes %q", destination, manifestDir)
+		return "", fmt.Errorf("%s path %q escapes %q", field, destination, directory)
 	}
 	return destination, nil
 }
@@ -1137,6 +1136,11 @@ func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildP
 	if len(pkg.Documentation) == 0 {
 		return nil
 	}
+	for key := range pkg.Documentation {
+		if err := validatePathComponent("documentation key", key); err != nil {
+			return err
+		}
+	}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -1145,7 +1149,6 @@ func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildP
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
-
 	// Get the mapping of keys to their final filenames (with deduplication logic)
 	fileNames := layout.GetDocumentationFileNames(pkg.Documentation)
 
@@ -1156,7 +1159,10 @@ func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildP
 		}
 
 		docFilename := fileNames[key]
-		dst := filepath.Join(tmpDir, docFilename)
+		dst, err := pathWithinDirectory(tmpDir, "documentation output", docFilename)
+		if err != nil {
+			return err
+		}
 
 		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", src, err)

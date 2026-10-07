@@ -38,6 +38,7 @@ const (
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrManifestNamePath        = "manifest %q must not contain path separators"
+	PkgValidateErrDocumentationKeyPath    = "documentation key %q must not contain path separators"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrGitURLWithRef           = "git URL %q must not contain an embedded ref; use the ref field instead"
 	PkgValidateErrFileChecksumAlgorithm   = "component %q file %q has unsupported checksum algorithm %q (expected sha256 or sha512)"
@@ -72,6 +73,11 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 	var errs ValidationErrors
 	if len(pkg.Components) == 0 {
 		errs = append(errs, errors.New(PkgValidateErrNoComponents))
+	}
+	for key := range pkg.Documentation {
+		if strings.ContainsAny(key, `/\`) {
+			errs = append(errs, fmt.Errorf(PkgValidateErrDocumentationKeyPath, key))
+		}
 	}
 	uniqueComponentNames := make(map[string]bool)
 	seenSources := make(map[string]v1beta1.ImageSource)

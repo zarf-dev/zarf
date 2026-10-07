@@ -47,7 +47,7 @@ const (
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrManifestNamePath        = "manifest %q must not contain path separators"
-	PkgValidateErrVariable                = "invalid package variable: %w"
+	PkgValidateErrDocumentationKeyPath    = "documentation key %q must not contain path separators"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
 )
@@ -64,6 +64,11 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	for _, constant := range pkg.Constants {
 		if varErr := constant.Validate(); varErr != nil {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrConstant, varErr))
+		}
+	}
+	for key := range pkg.Documentation {
+		if strings.ContainsAny(key, `/\`) {
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrDocumentationKeyPath, key))
 		}
 	}
 	uniqueComponentNames := make(map[string]bool)
