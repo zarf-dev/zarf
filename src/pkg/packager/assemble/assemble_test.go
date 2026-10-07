@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -21,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -140,6 +142,28 @@ func TestCreateDocumentationTarRejectsPathKeys(t *testing.T) {
 	buildPath := t.TempDir()
 	err := createDocumentationTar(pkg, load.NewResourceSet(t.TempDir()), buildPath)
 	require.ErrorContains(t, err, "documentation key")
+	require.NoFileExists(t, filepath.Join(buildPath, layout.DocumentationTar))
+}
+
+func TestCreateDocumentationTarRejectsSymlinkSource(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation requires elevated privileges")
+	}
+
+	resourceRoot := t.TempDir()
+	externalFile := filepath.Join(t.TempDir(), "external.txt")
+	require.NoError(t, os.WriteFile(externalFile, []byte("external"), helpers.ReadAllWriteUser))
+	require.NoError(t, os.Symlink(externalFile, filepath.Join(resourceRoot, "readme.md")))
+
+	buildPath := t.TempDir()
+	err := createDocumentationTar(api.Package{
+		Documentation: map[string]string{"readme": "readme.md"},
+	}, load.NewResourceSet(resourceRoot), buildPath)
+	require.ErrorContains(t, err, "contains unsupported symlink")
+
+	info, err := os.Stat(externalFile)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(helpers.ReadAllWriteUser), info.Mode().Perm())
 	require.NoFileExists(t, filepath.Join(buildPath, layout.DocumentationTar))
 }
 

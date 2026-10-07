@@ -44,12 +44,56 @@ func CreateParentDirectory(destination string) error {
 	return CreateDirectory(filepath.Dir(destination), ReadWriteExecuteUser)
 }
 
-// CreatePathAndCopy creates the parent directory for the given file path and copies the source file to the destination.
-func CreatePathAndCopy(source, destination string) error {
+// SymlinkPolicy controls how CreatePathAndCopy handles source symlinks.
+type SymlinkPolicy uint8
+
+const (
+	// SymlinkPolicyReject rejects source trees containing symlinks.
+	SymlinkPolicyReject SymlinkPolicy = iota
+	// SymlinkPolicyFollow materializes source symlink targets at the destination.
+	SymlinkPolicyFollow
+)
+
+type copyPathOptions struct {
+	symlinkPolicy SymlinkPolicy
+}
+
+// CopyPathOption configures CreatePathAndCopy.
+type CopyPathOption func(*copyPathOptions)
+
+// WithSymlinkPolicy sets how CreatePathAndCopy handles source symlinks.
+func WithSymlinkPolicy(policy SymlinkPolicy) CopyPathOption {
+	return func(options *copyPathOptions) {
+		options.symlinkPolicy = policy
+	}
+}
+
+// CreatePathAndCopy creates the parent directory for the given file path and copies the source to the destination.
+// Source symlinks are rejected unless the caller explicitly opts into following them.
+func CreatePathAndCopy(source, destination string, options ...CopyPathOption) error {
+	config := copyPathOptions{symlinkPolicy: SymlinkPolicyReject}
+	for _, option := range options {
+		option(&config)
+	}
+
+	copyOptions := copy.Options{}
+	switch config.symlinkPolicy {
+	case SymlinkPolicyReject:
+		if err := rejectSymlinks(source); err != nil {
+			return err
+		}
+	case SymlinkPolicyFollow:
+		copyOptions.OnSymlink = func(string) copy.SymlinkAction {
+			return copy.Deep
+		}
+	default:
+		return fmt.Errorf("unsupported symlink policy %d", config.symlinkPolicy)
+	}
+
 	if err := CreateParentDirectory(destination); err != nil {
 		return err
 	}
-	if err := copy.Copy(source, destination); err != nil {
+	if err := copy.Copy(source, destination, copyOptions); err != nil {
 		return err
 	}
 	if InvalidPath(destination) {
@@ -60,6 +104,18 @@ func CreatePathAndCopy(source, destination string) error {
 		return file.Close()
 	}
 	return nil
+}
+
+func rejectSymlinks(source string) error {
+	return filepath.WalkDir(source, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			return fmt.Errorf("source %q contains unsupported symlink %q", source, path)
+		}
+		return nil
+	})
 }
 
 // InvalidPath checks if the given path is valid (if it is a permissions error it is there we just don't have access)
