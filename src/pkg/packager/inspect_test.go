@@ -3,6 +3,7 @@
 package packager
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -13,6 +14,49 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestInspectDefinitionResourcesComponentValuesSchema(t *testing.T) {
+	setupInspectTests(t)
+	dir := t.TempDir()
+	for name, contents := range map[string]string{
+		"zarf.yaml": `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: sample
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
+component:
+  manifests:
+    - name: example
+      files:
+        - manifest.yaml
+`,
+		"values.yaml": `replicas: 1
+`,
+		"values.schema.json": `{"type":"object","properties":{"replicas":{"type":"integer"}}}`,
+		"manifest.yaml": `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example
+`,
+	} {
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(contents), 0o600))
+	}
+
+	resources, err := InspectDefinitionResources(t.Context(), dir, InspectDefinitionResourcesOptions{
+		Values: value.Values{"replicas": 2},
+	})
+	require.NoError(t, err)
+	require.Len(t, resources, 1)
+	require.Contains(t, resources[0].Content, "name: example")
+
+	_, err = InspectDefinitionResources(t.Context(), dir, InspectDefinitionResourcesOptions{
+		Values: value.Values{"replicas": "invalid"},
+	})
+	require.ErrorContains(t, err, "inspect values validation failed")
+}
 
 var testDataRoot = "testdata/inspect"
 

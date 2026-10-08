@@ -22,19 +22,18 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
-	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
-	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -99,7 +98,7 @@ func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
 	o := &devGenerateSchemaOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "generate-schema [ DIRECTORY ]",
+		Use:   "generate-schema [ PATH ]",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Generates a JSON schema for Zarf values based on the package definition, chart defaults, and chart schemas",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -116,19 +115,15 @@ func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error {
-	l := logger.From(ctx)
-
 	basePath, err := setBaseDirectory(args)
 	if err != nil {
 		return err
 	}
-
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
-
-	loadOpts := load.PackageOptions{
+	schema, err := packager.GenerateValuesSchema(ctx, basePath, packager.GenerateValuesSchemaOptions{
 		DefinitionOptions: load.DefinitionOptions{
 			Flavor:           o.flavor,
 			SetVariables:     o.setPkgTmpl,
@@ -137,203 +132,24 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 			CachePath:        cachePath,
 			RemoteOptions:    defaultRemoteOptions(),
 		},
-		SkipValuesSchemaValidation: true,
-	}
-
-	loaded, err := load.Package(ctx, basePath, loadOpts)
+		Update:         o.update,
+		DeleteNotFound: o.deleteNotFound,
+	})
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if closeErr := loaded.Close(); closeErr != nil {
-			l.Warn("unable to close loaded package", "error", closeErr)
-		}
-	}()
-	pkg := loaded.Definition
-
-	// Step 1: Copy package defaults
-	packageValues := loaded.Values.DeepCopy()
-
-	var mappedSchemas []map[string]any
-	var mappedInferredSchemas []map[string]any
-
-	// Step 2: Collect chart value schemas
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			l.Warn("unable to clean up temporary directory", "path", tmpDir, "error", err.Error())
-		}
-	}()
-
-	for _, component := range pkg.Components {
-		for _, chart := range component.Charts {
-			chartPaths := layout.ChartPaths{
-				ChartsDir: filepath.Join(tmpDir, "charts", chart.Name),
-				ValuesDir: filepath.Join(tmpDir, "values"),
-			}
-
-			err := assemble.PackageChart(ctx, chart, loaded.Resources, chartPaths, cachePath, defaultRemoteOptions())
-			if err != nil {
-				return fmt.Errorf("unable to package chart %q for schema generation: %w", chart.Name, err)
-			}
-
-			helmChart, valuesFilesValues, err := helm.LoadChartData(chart, chartPaths, nil)
-			if err != nil {
-				return fmt.Errorf("unable to load default values for chart %q: %w", chart.Name, err)
-			}
-
-			appliedValues := helpers.MergeMapRecursive(helmChart.Values, valuesFilesValues)
-			inferredSchema := value.GenerateJSONSchema(value.Values(helmChart.Values))
-			valuesFilesSchema := value.GenerateJSONSchema(value.Values(valuesFilesValues))
-			if err := value.MergeJSONSchemaAtPath(inferredSchema, value.Path("."), valuesFilesSchema); err != nil {
-				return fmt.Errorf("unable to apply valuesFiles for chart %q: %w", chart.Name, err)
-			}
-			var chartSchema map[string]any
-			if len(helmChart.Schema) > 0 {
-				if err := json.Unmarshal(helmChart.Schema, &chartSchema); err != nil {
-					l.Warn("unable to parse Helm chart values schema; falling back to inferred types", "chart", chart.Name, "error", err)
-					chartSchema = nil
-				} else {
-					chartSchema = value.FilterChartSchema(chartSchema)
-					if chartSchema != nil {
-						if err := value.ValidateSchemaDocument(chartSchema); err != nil {
-							l.Warn("unable to validate Helm chart values schema; falling back to inferred types", "chart", chart.Name, "error", err)
-							chartSchema = nil
-						}
-					}
-				}
-			}
-
-			// Map chart schemas from target paths to package value source paths.
-			for _, cv := range chart.Values {
-				if cv.SourcePath == "" || cv.TargetPath == "" {
-					return fmt.Errorf("chart %q value mapping has empty sourcePath or targetPath", chart.Name)
-				}
-				mappedValue, err := value.Values(appliedValues).Extract(value.Path(cv.TargetPath))
-				if err != nil {
-					return fmt.Errorf("unable to extract chart %q value at targetPath %q: %w", chart.Name, cv.TargetPath, err)
-				}
-				targetInferredSchema, found, err := value.ExtractJSONSchema(inferredSchema, value.Path(cv.TargetPath))
-				if err != nil {
-					return fmt.Errorf("unable to inspect chart %q values at targetPath %q: %w", chart.Name, cv.TargetPath, err)
-				}
-				if found {
-					mappedValues := value.Values{}
-					if err := mappedValues.Set(value.Path(cv.SourcePath), mappedValue); err != nil {
-						return fmt.Errorf("unable to set chart %q value at sourcePath %q: %w", chart.Name, cv.SourcePath, err)
-					}
-					mappedSchema := value.GenerateJSONSchema(mappedValues)
-					mappedSchema, err = mapSchemaToSource(mappedSchema, targetInferredSchema, value.Path(cv.SourcePath), cv.ExcludePaths)
-					if err != nil {
-						return fmt.Errorf("unable to map inferred schema for chart %q: %w", chart.Name, err)
-					}
-					mappedInferredSchemas = append(mappedInferredSchemas, mappedSchema)
-				}
-
-				if chartSchema != nil {
-					targetSchema, found, err := value.ExtractJSONSchema(chartSchema, value.Path(cv.TargetPath))
-					if err != nil {
-						return fmt.Errorf("unable to inspect chart %q schema at targetPath %q: %w", chart.Name, cv.TargetPath, err)
-					}
-					if found {
-						mappedSchema, err := mapSchemaToSource(nil, targetSchema, value.Path(cv.SourcePath), cv.ExcludePaths)
-						if err != nil {
-							return fmt.Errorf("unable to map Helm schema for chart %q: %w", chart.Name, err)
-						}
-						mappedSchemas = append(mappedSchemas, mappedSchema)
-					} else {
-						l.Warn("chart values schema does not define mapped target; falling back to inferred types", "chart", chart.Name, "targetPath", cv.TargetPath)
-					}
-				}
-			}
-		}
-	}
-
-	// Step 3: Merge inferred and chart schemas
-	generatedSchema := value.GenerateJSONSchema(value.Values{})
-	for _, mapped := range mappedInferredSchemas {
-		if err := value.MergeGeneratedJSONSchemaAtPath(generatedSchema, value.Path("."), mapped); err != nil {
-			return fmt.Errorf("unable to apply inferred chart values: %w", err)
-		}
-	}
-	if err := value.MergeGeneratedJSONSchemaAtPath(generatedSchema, value.Path("."), value.GenerateJSONSchema(packageValues)); err != nil {
-		return fmt.Errorf("unable to apply package defaults: %w", err)
-	}
-
-	for _, mapped := range mappedSchemas {
-		if err := value.MergeGeneratedJSONSchemaAtPath(generatedSchema, value.Path("."), mapped); err != nil {
-			return fmt.Errorf("unable to apply Helm schema: %w", err)
-		}
-	}
-
-	// Step 4: Merge and reconcile any existing schema
-	existingSchema := loaded.ValuesSchema
-
-	if existingSchema != nil {
-		generatedSchema = value.ReconcileJSONSchema(existingSchema, generatedSchema, o.deleteNotFound)
-	}
-
-	// Step 5: Save the resulting schema
-	b, err := json.MarshalIndent(generatedSchema, "", "  ")
+	b, err := json.MarshalIndent(schema, "", "  ")
 	if err != nil {
 		return fmt.Errorf("unable to marshal schema to JSON: %w", err)
 	}
-
 	fmt.Println(string(b))
-
-	if o.update {
-		outputFileName := filepath.Join(basePath, "values.schema.json")
-		if pkg.Values.Schema != "" {
-			if !filepath.IsAbs(pkg.Values.Schema) {
-				outputFileName = filepath.Join(basePath, pkg.Values.Schema)
-			} else {
-				outputFileName = pkg.Values.Schema
-			}
-		} else {
-			if err := packager.UpdateSchema(ctx, basePath, "values.schema.json"); err != nil {
-				return fmt.Errorf("unable to update zarf.yaml with schema path: %w", err)
-			}
-		}
-
-		err = os.WriteFile(outputFileName, b, helpers.ReadAllWriteUser)
-		if err != nil {
-			return fmt.Errorf("unable to write schema file: %w", err)
-		}
-
-		l.Info("Schema successfully generated", "filename", outputFileName)
-	}
 	return nil
-}
-
-func mapSchemaToSource(mappedSchema, schema map[string]any, sourcePath value.Path, excludePaths []string) (map[string]any, error) {
-	if mappedSchema == nil {
-		mappedValues := value.Values{}
-		if sourcePath != "." {
-			if err := mappedValues.Set(sourcePath, nil); err != nil {
-				return nil, fmt.Errorf("unable to set sourcePath %q: %w", sourcePath, err)
-			}
-		}
-		mappedSchema = value.GenerateJSONSchema(mappedValues)
-	}
-
-	if err := value.MergeJSONSchemaAtPath(mappedSchema, sourcePath, schema); err != nil {
-		return nil, fmt.Errorf("unable to apply schema at sourcePath %q: %w", sourcePath, err)
-	}
-	for _, excludePath := range excludePaths {
-		if err := value.DeleteJSONSchemaAtPath(mappedSchema, value.Path(excludePath)); err != nil {
-			return nil, fmt.Errorf("unable to exclude schema path %q: %w", excludePath, err)
-		}
-	}
-	return mappedSchema, nil
 }
 
 func newDevInspectCommand(v *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect",
-		Short: "Commands to gather information about a Zarf package using its package definition",
+		Short: "Commands to gather information about a Zarf package from its definition",
 	}
 
 	cmd.AddCommand(newDevInspectDefinitionCommand(v))
@@ -351,10 +167,10 @@ func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	o := &devInspectDefinitionOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "definition [ DIRECTORY ]",
+		Use:   "definition [ PATH ]",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Displays the fully rendered package definition",
-		Long:  "Displays the 'zarf.yaml' definition of a Zarf after package templating, flavors, and component imports are applied",
+		Long:  "Displays a package definition after package templating, flavor selection, and component imports are applied",
 		RunE:  o.run,
 	}
 
@@ -385,12 +201,39 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	if err != nil {
 		return err
 	}
-	definition, err := load.PackageDefinition(ctx, basePath, loadOpts)
-	var lintErr *lint.LintError
-	if errors.As(err, &lintErr) {
-		PrintFindings(ctx, lintErr)
-	}
+	path, err := layout.ResolvePackagePath(basePath)
 	if err != nil {
+		return err
+	}
+	contents, err := os.ReadFile(path.ManifestFile)
+	if err != nil {
+		return err
+	}
+	header, err := load.ParseDefinitionHeader(contents)
+	if err != nil {
+		return err
+	}
+	printLintFindings := func(err error) {
+		var lintErr *lint.LintError
+		if errors.As(err, &lintErr) {
+			PrintFindings(ctx, lintErr)
+		}
+	}
+	if header.Kind == string(v1beta1.ZarfComponentConfig) {
+		component, err := load.ComponentDefinition(ctx, path.ManifestFile, load.ComponentOptions{
+			CachePath:     cachePath,
+			RemoteOptions: defaultRemoteOptions(),
+		})
+		if err != nil {
+			printLintFindings(err)
+			return err
+		}
+		component.PublishData = v1beta1.ComponentPublishData{}
+		return utils.ColorPrintYAML(component, nil, false)
+	}
+	definition, err := load.PackageDefinition(ctx, basePath, loadOpts)
+	if err != nil {
+		printLintFindings(err)
 		return err
 	}
 
@@ -425,9 +268,9 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	o := newDevInspectManifestsOptions()
 
 	cmd := &cobra.Command{
-		Use:   "manifests [ DIRECTORY ]",
+		Use:   "manifests [ PATH ]",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Template and output all manifests and charts referenced by the package definition",
+		Short: "Template and output manifests and charts referenced by a package",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd.Context(), args)
 		},
@@ -522,10 +365,10 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	o := newDevInspectValuesFilesOptions()
 
 	cmd := &cobra.Command{
-		Use:   "values-files [ DIRECTORY ]",
+		Use:   "values-files [ PATH ]",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Creates, templates, and outputs the values-files to be sent to each chart",
-		Long:  "Creates, templates, and outputs the values-files to be sent to each chart. Does not consider values files builtin to charts",
+		Short: "Creates, templates, and outputs chart values files from a package definition",
+		Long:  "Creates, templates, and outputs the values files to be sent to each chart. Does not consider values files builtin to charts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd.Context(), args)
 		},
@@ -975,7 +818,7 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	o := &devFindImagesOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "find-images [ DIRECTORY ]",
+		Use:     "find-images [ PATH ]",
 		Aliases: []string{"f"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   lang.CmdDevFindImagesShort,
@@ -1087,48 +930,71 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to filter images included in imageArchives: %w", err)
 	}
+	definitionPath, err := layout.ResolvePackagePath(basePath)
+	if err != nil {
+		return err
+	}
+	definitionBytes, err := os.ReadFile(definitionPath.ManifestFile)
+	if err != nil {
+		return err
+	}
+	definitionHeader, err := load.ParseDefinitionHeader(definitionBytes)
+	if err != nil {
+		return err
+	}
+	isBeta := definitionHeader.APIVersion == v1beta1.APIVersion
+	isComponentConfig := definitionHeader.Kind == string(v1beta1.ZarfComponentConfig)
 
 	componentDefinition := "\ncomponents:\n"
+	if isComponentConfig {
+		componentDefinition = "\ncomponent:\n"
+	}
 	for _, finding := range definitionImageResults {
-		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts)+len(finding.ImageArchives) > 0 {
+		if !isComponentConfig && len(finding.Matches)+len(finding.ImageArchives) > 0 {
 			componentDefinition += fmt.Sprintf("  - name: %s\n", finding.ComponentName)
 		}
-
-		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts) > 0 {
-			componentDefinition += "    images:\n"
+		indent := "    "
+		imageIndent := "      "
+		if isComponentConfig {
+			indent = "  "
+			imageIndent = "    "
 		}
 
 		if len(finding.Matches) > 0 {
-			for _, image := range finding.Matches {
-				componentDefinition += fmt.Sprintf("      - %s\n", image)
-			}
+			componentDefinition += indent + "images:\n"
 		}
-		if len(finding.PotentialMatches) > 0 {
-			componentDefinition += fmt.Sprintf("      # Possible images - %s\n", finding.ComponentName)
-			for _, image := range finding.PotentialMatches {
-				componentDefinition += fmt.Sprintf("      - %s\n", image)
-			}
-		}
-		if len(finding.CosignArtifacts) > 0 {
-			componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s\n", finding.ComponentName)
-			for _, cosignArtifact := range finding.CosignArtifacts {
-				componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
+		for _, matchType := range []packager.MatchType{packager.MatchDefinite, packager.MatchPossible, packager.MatchCosign} {
+			commentPrinted := false
+			for _, match := range finding.Matches {
+				if match.MatchType != matchType {
+					continue
+				}
+				if !commentPrinted {
+					switch matchType {
+					case packager.MatchPossible:
+						componentDefinition += indent + fmt.Sprintf("# Possible images - %s\n", finding.ComponentName)
+					case packager.MatchCosign:
+						componentDefinition += indent + fmt.Sprintf("# Cosign artifacts for images - %s\n", finding.ComponentName)
+					}
+					commentPrinted = true
+				}
+				componentDefinition += formatFoundImage(imageIndent, match.Image, isBeta)
 			}
 		}
 		if len(finding.ImageArchives) > 0 {
-			componentDefinition += fmt.Sprintf("  # Archive images - %s\n", finding.ComponentName)
-			componentDefinition += "    imageArchives:\n"
+			componentDefinition += indent + fmt.Sprintf("# Archive images - %s\n", finding.ComponentName)
+			componentDefinition += indent + "imageArchives:\n"
 		}
 		for _, archive := range finding.ImageArchives {
-			componentDefinition += fmt.Sprintf("      - path: %s\n", archive.Path)
+			componentDefinition += imageIndent + fmt.Sprintf("- path: %s\n", archive.Path)
 			if len(archive.Images) > 0 {
-				componentDefinition += "        images:\n"
+				componentDefinition += imageIndent + "  images:\n"
 				for _, image := range archive.Images {
-					componentDefinition += fmt.Sprintf("          - %s\n", image)
+					componentDefinition += imageIndent + fmt.Sprintf("    - %s\n", image)
 				}
 				continue
 			}
-			componentDefinition += "        images: []\n"
+			componentDefinition += imageIndent + "  images: []\n"
 		}
 	}
 
@@ -1141,6 +1007,18 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func formatFoundImage(indent string, image api.Image, beta bool) string {
+	if !beta {
+		return fmt.Sprintf("%s- %s\n", indent, image.Name)
+	}
+
+	formatted := fmt.Sprintf("%s- name: %s\n", indent, image.Name)
+	if image.Source != "" {
+		formatted += fmt.Sprintf("%s  source: %s\n", indent, image.Source)
+	}
+	return formatted
 }
 
 type devGenerateConfigOptions struct{}
@@ -1185,7 +1063,7 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 	o := &devLintOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "lint [ DIRECTORY ]",
+		Use:     "lint [ PATH ]",
 		Args:    cobra.MaximumNArgs(1),
 		Aliases: []string{"l"},
 		Short:   lang.CmdDevLintShort,

@@ -44,6 +44,8 @@ const componentLayerMediaType = "application/vnd.zarf.component.layer.v1.blob"
 
 // PublishOptions declares parameters for publishing a v1beta1 component config.
 type PublishOptions struct {
+	// CachePath stores remote component imports locally when non-empty.
+	CachePath string
 	// OCIConcurrency configures the number of blobs pushed in parallel.
 	OCIConcurrency int
 	// Retries is the number of attempts to make when publishing fails.
@@ -69,7 +71,7 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if component.Metadata.Version == "" {
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
-	resolved, err := load.ResolveComponentConfigImports(ctx, component, componentPath, opts.RemoteOptions)
+	resolved, err := load.ResolveComponentConfigImports(ctx, component, componentPath, opts.RemoteOptions, opts.CachePath)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to resolve component imports: %w", err)
 	}

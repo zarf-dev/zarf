@@ -79,6 +79,35 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, string(b))
 	})
 
+	t.Run("zarf dev inspect v1beta1 component and package resources", func(t *testing.T) {
+		t.Parallel()
+		base := filepath.Join("src", "test", "packages", "15-component-publish-v1beta1")
+		sources := []string{
+			filepath.Join(base, "component.yaml"),
+			filepath.Join(base, "zarf-inspect.yaml"),
+		}
+		for _, source := range sources {
+			t.Run(filepath.Base(source), func(t *testing.T) {
+				t.Parallel()
+				stdOut, stdErr, err := e2e.Zarf(t, "dev", "inspect", "manifests", source)
+				require.NoError(t, err, stdOut, stdErr)
+				require.Contains(t, stdOut, "name: published-component")
+				require.Contains(t, stdOut, "name: local-chart")
+
+				stdOut, stdErr, err = e2e.Zarf(t, "dev", "inspect", "values-files", source, "--components=published-component")
+				require.NoError(t, err, stdOut, stdErr)
+				require.Contains(t, stdOut, "# associated chart: local-chart")
+				require.Contains(t, stdOut, "replicaCount: 1")
+			})
+		}
+
+		stdOut, stdErr, err := e2e.Zarf(t, "dev", "inspect", "definition", sources[0])
+		require.NoError(t, err, stdOut, stdErr)
+		require.Contains(t, stdOut, "kind: ZarfComponentConfig")
+		require.Contains(t, stdOut, "name: published-component")
+		require.Contains(t, stdOut, "name: local-chart")
+	})
+
 	t.Run("zarf dev inspect values-files with components", func(t *testing.T) {
 		t.Parallel()
 		pathToPackage := filepath.Join("src", "cmd", "testdata", "inspect-values-files", "chart")
@@ -369,6 +398,51 @@ components:
 		require.NoError(t, err)
 		require.Equal(t, "4\n", stdOut)
 	})
+}
+
+func TestDevLintV1Beta1(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name     string
+		filename string
+		content  string
+	}{
+		{
+			name:     "package",
+			filename: "zarf.yaml",
+			content: `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: lint-package
+components:
+  - name: app
+    images:
+      - name: busybox:1.0
+`,
+		},
+		{
+			name:     "component config",
+			filename: "component.yaml",
+			content: `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: lint-component
+component:
+  images:
+    - name: busybox:1.0
+`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			path := filepath.Join(t.TempDir(), tc.filename)
+			require.NoError(t, os.WriteFile(path, []byte(tc.content), 0o600))
+			stdOut, stdErr, err := e2e.Zarf(t, "dev", "lint", path)
+			require.NoError(t, err, stdOut, stdErr)
+			require.Contains(t, stdOut+stdErr, "Image not pinned with digest")
+		})
+	}
 }
 
 func TestBuildMachineInfo(t *testing.T) {

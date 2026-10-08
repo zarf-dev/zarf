@@ -8,10 +8,10 @@ tableOfContents: false
 
 ## zarf dev inspect manifests
 
-Template and output all manifests and charts referenced by the package definition
+Template and output manifests and charts referenced by a package
 
 ```
-zarf dev inspect manifests [ DIRECTORY ] [flags]
+zarf dev inspect manifests [ PATH ] [flags]
 ```
 
 ### Options
@@ -42,5 +42,5 @@ zarf dev inspect manifests [ DIRECTORY ] [flags]
 
 ### SEE ALSO
 
-* [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to gather information about a Zarf package using its package definition
+* [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to gather information about a Zarf package from its definition
 
