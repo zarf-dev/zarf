@@ -149,7 +149,7 @@ INIT_V1BETA1_TEMPLATE_VALUES ?= packages/v1beta1-init/template-values.yaml
 INIT_V1BETA1_TEMPLATE_SET ?=
 INIT_V1BETA1_OUTPUT ?= build/v1beta1-init
 
-.PHONY: template-init-package-v1beta1 init-package-v1beta1
+.PHONY: template-init-package-v1beta1 init-package-v1beta1 release-init-package-v1beta1
 template-init-package-v1beta1: ## Render the v1beta1 init package and publishable component definitions
 	@test -s $(ZARF_BIN) || $(MAKE) $(BUILD_CLI_FOR_SYSTEM)
 	@case "$(ARCH)" in amd64|arm64) ;; *) echo "v1beta1 init supports amd64 and arm64"; exit 1 ;; esac
@@ -158,13 +158,19 @@ template-init-package-v1beta1: ## Render the v1beta1 init package and publishabl
 			$(if $(INIT_V1BETA1_TEMPLATE_SET),--set '$(INIT_V1BETA1_TEMPLATE_SET)') --set architecture=$(ARCH) || exit; \
 	done
 
-init-package-v1beta1: template-init-package-v1beta1 ## Create the v1beta1 init package in build/v1beta1-init
-# FIXME: don't like having to yq it
-	@agent_image=$$($(ZARF_BIN) tools yq '.component.images[0].name' packages/v1beta1-init/agent/zarf.gen.yaml); \
-		agent_source=$$($(ZARF_BIN) tools yq '.component.images[0].source' packages/v1beta1-init/agent/zarf.gen.yaml); \
-		if [ "$$agent_image" = "ghcr.io/zarf-dev/zarf/agent:local" ] && [ "$$agent_source" = "daemon" ]; then \
-			$(MAKE) $(if $(filter arm64,$(ARCH)),build-cli-linux-arm,build-cli-linux-amd) && $(MAKE) build-local-agent-image; \
-		fi
+init-package-v1beta1: ## Build the local agent and create the v1beta1 init package
+	$(MAKE) $(sort $(BUILD_CLI_FOR_SYSTEM) $(if $(filter arm64,$(ARCH)),build-cli-linux-arm,build-cli-linux-amd))
+	$(MAKE) build-local-agent-image
+	$(MAKE) template-init-package-v1beta1
+	$(ZARF_BIN) package create packages/v1beta1-init -o "$(INIT_V1BETA1_OUTPUT)" -a $(ARCH)
+
+release-init-package-v1beta1: ## Create the v1beta1 init package with a released agent image
+	@test -n "$(AGENT_IMAGE_TAG)" || { echo "Set AGENT_IMAGE_TAG to the released agent tag"; exit 1; }
+	@template_set='agent.image=ghcr.io/zarf-dev/zarf/agent:$(AGENT_IMAGE_TAG),agent.source=registry'; \
+		if [ -n '$(INIT_V1BETA1_TEMPLATE_SET)' ]; then \
+			template_set="$$template_set,"'$(INIT_V1BETA1_TEMPLATE_SET)'; \
+		fi; \
+		$(MAKE) template-init-package-v1beta1 INIT_V1BETA1_TEMPLATE_SET="$$template_set"
 	$(ZARF_BIN) package create packages/v1beta1-init -o "$(INIT_V1BETA1_OUTPUT)" -a $(ARCH)
 
 ## Build the Zarf CLI for all platforms aligned with the release process
