@@ -1,3 +1,5 @@
+{{- $tlsEnabled := get .State.Git "TLSEnabled" | default false -}}
+{{- $protocol := ternary "https" "http" $tlsEnabled -}}
 persistence:
   storageClass: "###ZARF_STORAGE_CLASS###"
   claimName: "###ZARF_VAR_GIT_SERVER_EXISTING_PVC###"
@@ -18,8 +20,8 @@ gitea:
     server:
       DISABLE_SSH: true
       OFFLINE_MODE: true
-      PROTOCOL: "###ZARF_GIT_SERVER_PROTOCOL###"
-      ROOT_URL: "###ZARF_GIT_SERVER_ROOT_URL###"
+      PROTOCOL: {{ $protocol | quote }}
+      ROOT_URL: {{ printf "%s://zarf-gitea-http.zarf.svc.cluster.local:3000" $protocol | quote }}
       CERT_FILE: /etc/gitea-tls/tls.crt
       KEY_FILE: /etc/gitea-tls/tls.key
     database:
@@ -84,7 +86,7 @@ extraVolumes:
   - name: gitea-tls
     secret:
       secretName: zarf-git-server-tls
-      optional: ###ZARF_GIT_TLS_SECRET_OPTIONAL###
+      optional: {{ not $tlsEnabled }}
 
 extraContainerVolumeMounts:
   - name: gitea-tls

@@ -130,6 +130,7 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		"PushUsername": s.GitServer.PushUsername,
 		"PullUsername": s.GitServer.PullUsername,
 		"IsInternal":   s.GitServer.IsInternal(),
+		"TLSEnabled":   s.GitServer.TLSMode.Enabled(),
 	}
 	injector := map[string]any{
 		"Image":             s.InjectorInfo.Image,
