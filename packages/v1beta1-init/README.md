@@ -12,7 +12,7 @@ and `k3s/`. The seed registry and shared registry base live under `registry/`.
 Build the CLI from this branch before using these targets. v1beta1 and
 `zarf dev template` are still under development. This package requires a CLI with
 v1beta1 init services, component imports, state access, and the Gitea helper's
-`--pvc-name` flag, plus the `imageRepository` and `imageTag` template functions.
+`--pvc-name` flag, plus the `imageRepository` and `imageTagOrDigest` template functions.
 Older CLIs should continue using the root init package and
 `make init-package`. Existing v1alpha1 packages and targets retain their behavior.
 
@@ -50,17 +50,23 @@ make init-package-v1beta1 \
   INIT_V1BETA1_TEMPLATE_SET='agent.image=ghcr.io/zarf-dev/zarf/agent:v0.87.0,agent.source=registry'
 ```
 
-Use a tagged image for the agent, registry, and proxy. Their chart
-repositories and tags are derived from the packaged images, so build-time overrides
-also affect deployment. The `imageRepository` and `imageTag` functions parse these
-references, including registry ports and Docker Hub shorthand. Digest references
-cannot supply the tag required by these charts. Set `agent.source=registry` for a
-released image;
+The agent, registry, and proxy accept tagged or digest-pinned images. Their full
+chart references are derived from the packaged images using `imageRepository` and
+`imageTagOrDigest`, including registry ports and Docker Hub shorthand. Build-time
+overrides also affect deployment; a digest takes precedence when a reference
+contains both a tag and a digest. Set `agent.source=registry` for a released image;
 `agent.source=daemon` reads a locally available Docker image. Only the default
 `ghcr.io/zarf-dev/zarf/agent:local` image is built automatically by Make.
 
 The new target's template settings are independent of the legacy
 `[package.create.set]` settings in `zarf-config.toml` and `AGENT_IMAGE_TAG`.
+
+The reused agent and registry charts accept an optional `image.reference` with a
+complete image reference. The registry chart also accepts `proxy.image.reference`
+and `proxy.registry.image.reference`. When the proxy is enabled, the latter
+overrides `image.reference` to select the seed registry. Empty reference fields
+retain the existing repository/tag behavior, including the proxy registry
+repository override. Existing chart consumers require no migration.
 
 ## Deployment values
 
