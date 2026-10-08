@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"maps"
 	"os"
@@ -608,20 +609,56 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
 	}
 
+	sourceRoot, err := os.OpenRoot(tmpDir)
+	if err != nil {
+		return fmt.Errorf("failed to open extracted documentation root: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, sourceRoot.Close())
+	}()
+
+	destinationRoot, err := os.OpenRoot(destPath)
+	if err != nil {
+		return fmt.Errorf("failed to open documentation output root: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, destinationRoot.Close())
+	}()
+
 	fileNames := GetDocumentationFileNames(p.pkg.Documentation)
 
 	for key, file := range keysToExtract {
 		docFileName := fileNames[key]
-
-		srcPath := filepath.Join(tmpDir, docFileName)
-		dstPath := filepath.Join(destPath, docFileName)
-		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
+		if err := copyDocumentationFile(sourceRoot, destinationRoot, docFileName); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", file, err)
 		}
 	}
 
 	l.Info("documentation successfully extracted", "path", destPath)
 	return nil
+}
+
+func copyDocumentationFile(sourceRoot, destinationRoot *os.Root, name string) error {
+	info, err := sourceRoot.Lstat(name)
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("documentation file %q is not a regular file", name)
+	}
+
+	source, err := sourceRoot.Open(name)
+	if err != nil {
+		return err
+	}
+
+	destination, err := destinationRoot.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, helpers.ReadAllWriteUser)
+	if err != nil {
+		return errors.Join(err, source.Close())
+	}
+
+	_, err = io.Copy(destination, source)
+	return errors.Join(err, source.Close(), destination.Close())
 }
 
 // FormatDocumentFileName for storing the document in the package or presenting it to the user
@@ -877,12 +914,12 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 		return fmt.Errorf("package contains additional files not present in the checksum %s", strings.Join(filePaths, ", "))
 	}
 
-	return validatePackagePaths(pkg)
+	return ValidatePackagePaths(pkg)
 }
 
-// validatePackagePaths checks that package config fields used as filesystem
+// ValidatePackagePaths checks that package config fields used as filesystem
 // path components do not contain path traversal sequences or separators.
-func validatePackagePaths(pkg api.Package) error {
+func ValidatePackagePaths(pkg api.Package) error {
 	if !isCleanPath(pkg.Metadata.Name) {
 		return fmt.Errorf("package metadata name %q would result in an invalid path", pkg.Metadata.Name)
 	}
@@ -911,6 +948,11 @@ func validatePackagePaths(pkg api.Package) error {
 			if !isCleanPath(manifest.Name) {
 				return fmt.Errorf("manifest name %q in component %q would result in an invalid path", manifest.Name, comp.Name)
 			}
+		}
+	}
+	for key := range pkg.Documentation {
+		if !isCleanPath(key) {
+			return fmt.Errorf("documentation key %q would result in an invalid path", key)
 		}
 	}
 	return nil

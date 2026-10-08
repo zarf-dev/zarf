@@ -2371,6 +2371,7 @@
                     },
                     "name": {
                       "description": "The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repository.",
+                      "pattern": "^[^/\\\\]*$",
                       "type": "string"
                     },
                     "namespace": {
@@ -2745,6 +2746,7 @@
                     "name": {
                       "description": "A name to give this collection of manifests; this will become the name of the dynamically-created helm chart.",
                       "maxLength": 40,
+                      "pattern": "^[^/\\\\]*$",
                       "type": "string"
                     },
                     "namespace": {

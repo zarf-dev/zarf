@@ -79,8 +79,11 @@ func ChartFromZarfManifest(manifest api.Manifest, manifestPath, packageName, com
 
 // loadChartFromTarball returns a helm chart from a tarball.
 func loadChartFromTarball(chart api.Chart, paths layout.ChartPaths) (*chartv2.Chart, error) {
-	// Load the loadedChart tarball
-	loadedChart, err := loader.Load(paths.Archive(chart.Name, chart.LegacyVersion))
+	archivePath, err := paths.ArchivePath(chart.Name, chart.LegacyVersion)
+	if err != nil {
+		return nil, err
+	}
+	loadedChart, err := loader.Load(archivePath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load helm chart archive: %w", err)
 	}
@@ -97,7 +100,11 @@ func parseChartValues(chart api.Chart, paths layout.ChartPaths, valuesOverrides 
 	valueOpts := &values.Options{}
 
 	for i := range chart.ValuesFiles {
-		valueOpts.ValueFiles = append(valueOpts.ValueFiles, paths.ValuesFile(chart.Name, chart.LegacyVersion, i))
+		valuePath, err := paths.ValuesFilePath(chart.Name, chart.LegacyVersion, i)
+		if err != nil {
+			return nil, err
+		}
+		valueOpts.ValueFiles = append(valueOpts.ValueFiles, valuePath)
 	}
 
 	httpProvider := getter.Provider{

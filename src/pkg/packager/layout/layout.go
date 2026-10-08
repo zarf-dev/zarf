@@ -58,6 +58,27 @@ const (
 	ValuesComponentDir    ComponentDir = "values"
 )
 
+// ValidatePathComponent ensures a package-derived value is safe to use in an internal path.
+func ValidatePathComponent(value string) error {
+	if value == ".." {
+		return fmt.Errorf("%q must not be a traversal path", value)
+	}
+	if strings.ContainsAny(value, `/\`) {
+		return fmt.Errorf("%q must not contain path separators", value)
+	}
+	return nil
+}
+
+// PathWithinDirectory resolves filename under directory and rejects paths that escape it.
+func PathWithinDirectory(directory, filename string) (string, error) {
+	destination := filepath.Join(directory, filename)
+	relative, err := filepath.Rel(directory, destination)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("path %q escapes %q", destination, directory)
+	}
+	return destination, nil
+}
+
 // ManifestFileName returns the file name, within a component's manifests directory, that stores the
 // idx-th file of the named manifest.
 func ManifestFileName(manifestName string, idx int) string {
@@ -116,4 +137,34 @@ func (p ChartPaths) Archive(name, version string) string {
 // ValuesFile returns the full path to the idx-th values file for the named chart.
 func (p ChartPaths) ValuesFile(name, version string, idx int) string {
 	return filepath.Join(p.ValuesDir, ChartValuesFileName(name, version, idx))
+}
+
+// ArchivePath returns the contained path for a chart archive.
+func (p ChartPaths) ArchivePath(name, version string) (string, error) {
+	if err := ValidatePathComponent(name); err != nil {
+		return "", fmt.Errorf("chart name validation failed: %w", err)
+	}
+	if err := ValidatePathComponent(version); err != nil {
+		return "", fmt.Errorf("chart version validation failed: %w", err)
+	}
+	archivePath, err := PathWithinDirectory(p.ChartsDir, ChartArchiveName(name, version))
+	if err != nil {
+		return "", fmt.Errorf("chart archive validation failed: %w", err)
+	}
+	return archivePath, nil
+}
+
+// ValuesFilePath returns the contained path for a packaged chart values file.
+func (p ChartPaths) ValuesFilePath(name, version string, idx int) (string, error) {
+	if err := ValidatePathComponent(name); err != nil {
+		return "", fmt.Errorf("chart name validation failed: %w", err)
+	}
+	if err := ValidatePathComponent(version); err != nil {
+		return "", fmt.Errorf("chart version validation failed: %w", err)
+	}
+	valuesPath, err := PathWithinDirectory(p.ValuesDir, ChartValuesFileName(name, version, idx))
+	if err != nil {
+		return "", fmt.Errorf("chart values validation failed: %w", err)
+	}
+	return valuesPath, nil
 }

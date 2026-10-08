@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -1370,6 +1371,48 @@ func TestGetDocumentation(t *testing.T) {
 
 		assertFileContent(t, filepath.Join(outputDir, "readme1-README.md"), "readme1 content")
 	})
+	t.Run("does not write through an output symlink", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("Windows symlink creation requires elevated privileges")
+		}
+
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{"readme": "README.md"},
+			map[string]string{"README.md": "documentation content"},
+		)
+		require.NoError(t, os.MkdirAll(outputDir, 0o700))
+
+		externalPath := filepath.Join(t.TempDir(), "external.md")
+		require.NoError(t, os.WriteFile(externalPath, []byte("unchanged"), 0o600))
+		require.NoError(t, os.Symlink(externalPath, filepath.Join(outputDir, "README.md")))
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		require.Error(t, err)
+
+		content, err := os.ReadFile(externalPath)
+		require.NoError(t, err)
+		require.Equal(t, "unchanged", string(content))
+	})
+}
+
+func TestCopyDocumentationFileConfinesSourcePath(t *testing.T) {
+	sourceRootPath := filepath.Join(t.TempDir(), "source")
+	require.NoError(t, os.Mkdir(sourceRootPath, 0o700))
+
+	sourceRoot, err := os.OpenRoot(sourceRootPath)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, sourceRoot.Close())
+	})
+
+	destinationRoot, err := os.OpenRoot(t.TempDir())
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, destinationRoot.Close())
+	})
+
+	err = copyDocumentationFile(sourceRoot, destinationRoot, "../outside.md")
+	require.Error(t, err)
 }
 
 func TestLoadFromDir_VerificationStrategies(t *testing.T) {
@@ -1992,11 +2035,27 @@ func TestValidatePackagePaths(t *testing.T) {
 			},
 			wantErr: `manifest name ".." in component "comp" would result in an invalid path`,
 		},
+		{
+			name: "documentation key traversal",
+			pkg: api.Package{
+				Metadata:      api.PackageMetadata{Name: "pkg"},
+				Documentation: map[string]string{"../docs": "readme.md"},
+			},
+			wantErr: `documentation key "../docs" would result in an invalid path`,
+		},
+		{
+			name: "documentation key is traversal",
+			pkg: api.Package{
+				Metadata:      api.PackageMetadata{Name: "pkg"},
+				Documentation: map[string]string{"..": "readme.md"},
+			},
+			wantErr: `documentation key ".." would result in an invalid path`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := validatePackagePaths(tt.pkg)
+			err := ValidatePackagePaths(tt.pkg)
 			if tt.wantErr == "" {
 				require.NoError(t, err)
 			} else {
