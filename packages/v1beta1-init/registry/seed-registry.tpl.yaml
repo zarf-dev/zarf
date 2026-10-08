@@ -1,0 +1,18 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: zarf-seed-registry
+  version: "[[ .cli.version ]]"
+  description: Bootstrap the registry from the injected registry image
+component:
+  service: seed-registry
+  import:
+    local:
+      - path: registry-base.gen.yaml
+  charts:
+    - name: docker-registry
+      local:
+        path: ../../zarf-registry/chart
+      valuesFiles:
+        - path: seed-registry-state-values.yaml
+          enableTemplating: true

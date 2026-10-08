@@ -1,0 +1,26 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: zarf-registry-base
+  version: "[[ .cli.version ]]"
+values:
+  files:
+    - registry-values.yaml
+component:
+  stateAccess:
+    - registryCredentials
+  images:
+    - name: "[[ .registry.image ]]"
+    - name: "[[ .proxy.image ]]"
+  charts:
+    - name: docker-registry
+      releaseName: zarf-docker-registry
+      namespace: zarf
+      local:
+        path: ../../zarf-registry/chart
+      valuesFiles:
+        - path: registry-common-state-values.yaml
+          enableTemplating: true
+      values:
+        - sourcePath: .registry
+          targetPath: .
