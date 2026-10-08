@@ -141,7 +141,7 @@ func validateTemplateSchema(path string, rendered []byte, kind v1beta1.PackageKi
 		err      error
 	)
 	switch kind {
-	case "", v1beta1.ZarfPackageConfig:
+	case "", v1beta1.ZarfPackageConfig, v1beta1.ZarfInitConfig:
 		findings, err = lint.ValidatePackageSchemaBytesV1Beta1(rendered)
 	case v1beta1.ZarfComponentConfig:
 		findings, err = lint.ValidateComponentConfigSchemaBytesV1Beta1(rendered)

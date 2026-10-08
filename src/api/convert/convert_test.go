@@ -380,6 +380,7 @@ func TestV1Alpha1PkgToV1Beta1_ServiceInference(t *testing.T) {
 			require.Equal(t, api.Service(tt.service), definition.Components[0].Service)
 
 			result := PackageToV1beta1(definition)
+			require.Equal(t, v1beta1.ZarfInitConfig, result.Kind)
 			require.Len(t, result.Components, 1)
 			require.Equal(t, tt.service, result.Components[0].Service)
 		})
@@ -402,6 +403,7 @@ func TestV1Alpha1PkgToV1Beta1_NoServiceInferenceForNonInit(t *testing.T) {
 	require.Empty(t, definition.Components[1].Service)
 
 	result := PackageToV1beta1(definition)
+	require.Equal(t, v1beta1.ZarfPackageConfig, result.Kind)
 	require.Len(t, result.Components, 2)
 	require.Empty(t, result.Components[0].Service)
 	require.Empty(t, result.Components[1].Service)
@@ -419,27 +421,30 @@ func TestPackageToV1beta1_DoesNotInferServiceFromComponentName(t *testing.T) {
 	}
 
 	result := PackageToV1beta1(definition)
+	require.Equal(t, v1beta1.ZarfInitConfig, result.Kind)
 	require.Len(t, result.Components, 2)
 	require.Empty(t, result.Components[0].Service)
 	require.Empty(t, result.Components[1].Service)
 }
 
-func TestV1Beta1PkgToV1Alpha1_ServiceMarksInitPackage(t *testing.T) {
+func TestV1Beta1PkgToV1Alpha1_PreservesInitKind(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name         string
+		kind         v1beta1.PackageKind
 		service      v1beta1.Service
 		expectedKind v1alpha1.ZarfPackageKind
 	}{
-		{name: "with service", service: v1beta1.ServiceRegistry, expectedKind: v1alpha1.ZarfInitConfig},
-		{name: "without service", service: "", expectedKind: v1alpha1.ZarfPackageConfig},
+		{name: "init with service", kind: v1beta1.ZarfInitConfig, service: v1beta1.ServiceRegistry, expectedKind: v1alpha1.ZarfInitConfig},
+		{name: "init without service", kind: v1beta1.ZarfInitConfig, expectedKind: v1alpha1.ZarfInitConfig},
+		{name: "ordinary package", kind: v1beta1.ZarfPackageConfig, expectedKind: v1alpha1.ZarfPackageConfig},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			pkg := v1beta1.Package{
 				APIVersion: v1beta1.APIVersion,
-				Kind:       v1beta1.ZarfPackageConfig,
+				Kind:       tt.kind,
 				Components: []v1beta1.Component{
 					{
 						Name:          "zarf-registry",

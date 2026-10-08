@@ -22,9 +22,6 @@ func (p Package) Validate() error {
 	}
 
 	if version == v1beta1.APIVersion {
-		if p.Kind == ZarfInitConfig {
-			add("kind ZarfInitConfig")
-		}
 		for _, field := range []struct {
 			name  string
 			value string
