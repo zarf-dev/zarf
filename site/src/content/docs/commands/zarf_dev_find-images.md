@@ -20,7 +20,7 @@ chart. Components that have git repositories that host helm charts can be proces
 --repo-chart-path.
 
 ```
-zarf dev find-images [ DIRECTORY ] [flags]
+zarf dev find-images [ PATH ] [flags]
 ```
 
 ### Options

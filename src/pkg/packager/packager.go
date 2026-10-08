@@ -131,5 +131,10 @@ func loadDefinition(ctx context.Context, source string, opts load.PackageOptions
 		Metadata:   v1beta1.PackageMetadata{Name: component.Definition.Metadata.Name},
 		Components: []v1beta1.Component{{Name: component.Definition.Metadata.Name, ComponentSpec: component.Definition.Component}},
 	})
-	return &load.ResolvedPackage{Definition: definition, Resources: component.Resources, Values: component.Values}, nil
+	return &load.ResolvedPackage{
+		Definition:   definition,
+		Resources:    component.Resources,
+		Values:       component.Values,
+		ValuesSchema: component.ValuesSchema,
+	}, nil
 }
