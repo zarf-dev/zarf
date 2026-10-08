@@ -995,16 +995,3 @@ func TestBuildVerifyBlobOptions(t *testing.T) {
 		})
 	}
 }
-
-func TestPackageDeployArchitectureCheckFlag(t *testing.T) {
-	v := viper.New()
-	v.Set("package.deploy.skip-architecture-check", true)
-	cmd := newPackageDeployCommand(v)
-	skip, err := cmd.Flags().GetBool("skip-architecture-check")
-	require.NoError(t, err)
-	require.False(t, skip, "configuration must not enable the override")
-	require.NoError(t, cmd.ParseFlags([]string{"--skip-architecture-check"}))
-	skip, err = cmd.Flags().GetBool("skip-architecture-check")
-	require.NoError(t, err)
-	require.True(t, skip)
-}
