@@ -3,14 +3,14 @@
 {{- $registry := (index .Images 0).Name }}
 {{- $proxy := (index .Images 1).Name }}
 image:
-  repository: {{ printf "%s/%s" $.State.Registry.SeedAddress (regexReplaceAll ":[^:]+$" (regexReplaceAll "^[^/]+/" $registry "") "") | quote }}
-  tag: {{ regexFind "[^:]+$" $registry | quote }}
+  repository: {{ printf "%s/%s" $.State.Registry.SeedAddress (imageRepository $registry) | quote }}
+  tag: {{ imageTag $registry | quote }}
 proxy:
   image:
-    repository: {{ printf "%s/%s" $.State.Registry.SeedAddress (regexReplaceAll ":[^:]+$" (regexReplaceAll "^[^/]+/" $proxy "") "") | quote }}
-    tag: {{ regexFind "[^:]+$" $proxy | quote }}
+    repository: {{ printf "%s/%s" $.State.Registry.SeedAddress (imageRepository $proxy) | quote }}
+    tag: {{ imageTag $proxy | quote }}
   registry:
     image:
-      repository: {{ printf "%s/%s" $.State.Registry.SeedAddress (regexReplaceAll ":[^:]+$" (regexReplaceAll "^[^/]+/" $registry "") "") | quote }}
+      repository: {{ printf "%s/%s" $.State.Registry.SeedAddress (imageRepository $registry) | quote }}
 {{- end }}
 {{- end }}
