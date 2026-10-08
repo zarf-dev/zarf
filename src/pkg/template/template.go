@@ -237,17 +237,19 @@ func funcMap() ttmpl.FuncMap {
 	// live DNS lookup could leak templating context
 	delete(m, "getHostByName")
 	extras := ttmpl.FuncMap{
-		"toToml":        toTOML,
-		"fromToml":      fromTOML,
-		"toYaml":        toYAML,
-		"mustToYaml":    mustToYAML,
-		"toYamlPretty":  toYAMLPretty,
-		"fromYaml":      fromYAML,
-		"fromYamlArray": fromYAMLArray,
-		"toJson":        toJSON,
-		"mustToJson":    mustToJSON,
-		"fromJson":      fromJSON,
-		"fromJsonArray": fromJSONArray,
+		"imageRepository": imageRepository,
+		"imageTag":        imageTag,
+		"toToml":          toTOML,
+		"fromToml":        fromTOML,
+		"toYaml":          toYAML,
+		"mustToYaml":      mustToYAML,
+		"toYamlPretty":    toYAMLPretty,
+		"fromYaml":        fromYAML,
+		"fromYamlArray":   fromYAMLArray,
+		"toJson":          toJSON,
+		"mustToJson":      mustToJSON,
+		"fromJson":        fromJSON,
+		"fromJsonArray":   fromJSONArray,
 	}
 	maps.Copy(m, extras)
 	return m

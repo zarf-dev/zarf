@@ -2,10 +2,9 @@
 {{- range .Pkg.Components }}
 {{- if eq .Service "agent" }}
 {{- $image := (index .Images 0).Name }}
-# FIXME: can we make this simpler, additional functions might help?
 image:
-  repository: {{ printf "%s/%s" $.State.Registry.Address (regexReplaceAll ":[^:]+$" (regexReplaceAll "^[^/]+/" $image "") "") | quote }}
-  tag: {{ regexFind "[^:]+$" $image | quote }}
+  repository: {{ printf "%s/%s" $.State.Registry.Address (imageRepository $image) | quote }}
+  tag: {{ imageTag $image | quote }}
 {{- end }}
 {{- end }}
 secret:

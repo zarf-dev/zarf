@@ -30,6 +30,9 @@ func TestInitV1Beta1(t *testing.T) {
 			Repository string
 			Tag        string
 		}
+		Proxy struct {
+			Image struct{ Repository string }
+		}
 		Persistence  struct{ Size string }
 		Secrets      struct{ Htpasswd string }
 		NodeSelector map[string]string `yaml:"nodeSelector"`
@@ -47,7 +50,7 @@ func TestInitV1Beta1(t *testing.T) {
 			templates = append(templates, filepath.Join(packageDir, "zarf.tpl.yaml"))
 			for _, template := range templates {
 				stdout, stderr, err := e2e.Zarf(t, "dev", "template", template, "--set-file", filepath.Join(packageDir, "template-values.yaml"),
-					"--set", "architecture="+arch+",agent.image=registry.example:5443/team/agent:custom,agent.source=registry")
+					"--set", "architecture="+arch+",agent.image=registry.example:5443/team/agent:custom,agent.source=registry,registry.image=library/registry:3.1.1,proxy.image=alpine/socat:1.8.0.3")
 				require.NoError(t, err, stdout, stderr)
 			}
 
@@ -117,6 +120,7 @@ func TestInitV1Beta1(t *testing.T) {
 			require.Equal(t, "127.0.0.1:31999/library/registry", registry.Image.Repository)
 			for _, values := range []chartValues{seed, registry} {
 				require.Equal(t, "40Gi", values.Persistence.Size)
+				require.Equal(t, "127.0.0.1:0/alpine/socat", values.Proxy.Image.Repository)
 				htpasswd := values.Secrets.Htpasswd
 				require.Contains(t, htpasswd, "\nzarf-pull:")
 				require.NotContains(t, htpasswd, `\n`)
