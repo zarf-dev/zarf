@@ -1,0 +1,15 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: zarf-injector
+  version: "[[ .cli.version ]]"
+  description: Inject the seed registry into a running cluster pod
+variant:
+  architecture: "[[ .architecture ]]"
+component:
+  service: injector
+  files:
+    - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.3.0/zarf-injector-[[ .architecture ]]
+      destination: "###ZARF_TEMP###/zarf-injector"
+      checksum: "[[ if eq .architecture "amd64" ]]54c37ca19a101c795786510cb89cf4fe2aa7504d4c399985606a3d8f58f42119[[ else ]]7a677809accc0d3d9b1cddc8d6be07ebf0a883a1db887e50828bb3df0e824577[[ end ]]"
+      executable: true

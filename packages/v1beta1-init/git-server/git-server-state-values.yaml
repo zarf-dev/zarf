@@ -1,0 +1,12 @@
+persistence:
+  storageClass: {{ .State.StorageClass | quote }}
+gitea:
+  admin:
+    username: {{ .State.Git.PushUsername | quote }}
+    password: {{ .State.Git.PushPassword | quote }}
+{{- range .Pkg.Components }}
+{{- if eq .Service "git-server" }}
+image:
+  fullOverride: {{ (index .Images 0).Name | quote }}
+{{- end }}
+{{- end }}

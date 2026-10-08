@@ -1,0 +1,12 @@
+agent:
+  nodeSelector:
+    role: infra
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: infra
+      effect: NoSchedule
+gitServer:
+  persistence:
+    accessModes:
+      - ReadWriteMany
