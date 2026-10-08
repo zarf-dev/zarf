@@ -44,13 +44,38 @@ func CreateParentDirectory(destination string) error {
 	return CreateDirectory(filepath.Dir(destination), ReadWriteExecuteUser)
 }
 
-// CreatePathAndCopy creates the parent directory for the given file path and copies the source to the destination.
-// Source symlinks are rejected so callers never dereference package-controlled links.
-func CreatePathAndCopy(source, destination string) error {
-	if err := rejectSymlinks(source); err != nil {
-		return err
-	}
+// MaterializeOptions controls contained source symlink materialization.
+type MaterializeOptions struct {
+	// SourceRoot bounds symbolic-link targets during materialization.
+	SourceRoot string
+	// OnMaterializedSymlink receives the source link and its resolved target.
+	OnMaterializedSymlink func(source, target string)
+}
 
+// CreatePathAndCopy creates the parent directory for the given file path and copies the source to the destination.
+func CreatePathAndCopy(source, destination string) error {
+	return copyPath(source, destination)
+}
+
+// MaterializePathAndCopy resolves contained source symlinks and copies their
+// targets as regular files or directories instead of preserving links in the
+// destination.
+func MaterializePathAndCopy(source, destination string, opts MaterializeOptions) error {
+	if opts.SourceRoot == "" {
+		return fmt.Errorf("source root is required when materializing symlinks")
+	}
+	root, err := filepath.EvalSymlinks(opts.SourceRoot)
+	if err != nil {
+		return fmt.Errorf("resolving source root %q: %w", opts.SourceRoot, err)
+	}
+	root, err = filepath.Abs(root)
+	if err != nil {
+		return fmt.Errorf("getting absolute source root %q: %w", root, err)
+	}
+	return materializePath(source, destination, root, opts, make(map[string]struct{}))
+}
+
+func copyPath(source, destination string) error {
 	if err := CreateParentDirectory(destination); err != nil {
 		return err
 	}
@@ -67,16 +92,79 @@ func CreatePathAndCopy(source, destination string) error {
 	return nil
 }
 
-func rejectSymlinks(source string) error {
-	return filepath.WalkDir(source, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
+func materializePath(source, destination, sourceRoot string, opts MaterializeOptions, ancestors map[string]struct{}) error {
+	info, err := os.Lstat(source)
+	if err != nil {
+		return err
+	}
+
+	if info.Mode()&os.ModeSymlink != 0 {
+		target, err := filepath.EvalSymlinks(source)
+		if err != nil {
+			return fmt.Errorf("resolving symlink %q: %w", source, err)
 		}
-		if entry.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("source %q contains unsupported symlink %q", source, path)
+		target, err = filepath.Abs(target)
+		if err != nil {
+			return fmt.Errorf("getting absolute symlink target %q: %w", target, err)
+		}
+		if err := requirePathWithinRoot(sourceRoot, target); err != nil {
+			return fmt.Errorf("symlink %q: %w", source, err)
+		}
+		if opts.OnMaterializedSymlink != nil {
+			opts.OnMaterializedSymlink(source, target)
+		}
+		return materializePath(target, destination, sourceRoot, opts, ancestors)
+	}
+
+	resolvedSource, err := filepath.EvalSymlinks(source)
+	if err != nil {
+		return fmt.Errorf("resolving source %q: %w", source, err)
+	}
+	resolvedSource, err = filepath.Abs(resolvedSource)
+	if err != nil {
+		return fmt.Errorf("getting absolute source %q: %w", resolvedSource, err)
+	}
+
+	switch {
+	case info.Mode().IsRegular():
+		return copyPath(source, destination)
+	case info.IsDir():
+		if _, found := ancestors[resolvedSource]; found {
+			return fmt.Errorf("symlink cycle includes %q", source)
+		}
+		ancestors[resolvedSource] = struct{}{}
+		defer delete(ancestors, resolvedSource)
+
+		if err := os.MkdirAll(destination, info.Mode().Perm()); err != nil {
+			return err
+		}
+		if err := os.Chmod(destination, info.Mode().Perm()); err != nil {
+			return err
+		}
+		entries, err := os.ReadDir(source)
+		if err != nil {
+			return err
+		}
+		for _, entry := range entries {
+			if err := materializePath(filepath.Join(source, entry.Name()), filepath.Join(destination, entry.Name()), sourceRoot, opts, ancestors); err != nil {
+				return err
+			}
 		}
 		return nil
-	})
+	default:
+		return fmt.Errorf("source %q has unsupported file type %s", source, info.Mode().Type())
+	}
+}
+
+func requirePathWithinRoot(root, candidate string) error {
+	rel, err := filepath.Rel(root, candidate)
+	if err != nil {
+		return err
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+		return fmt.Errorf("resolves outside source root %q", root)
+	}
+	return nil
 }
 
 // InvalidPath checks if the given path is valid (if it is a permissions error it is there we just don't have access)
