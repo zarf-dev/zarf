@@ -73,7 +73,29 @@ values:
 }
 ```
 
+### Generating a Schema
+
 Generate a schema that includes each package value using `zarf dev generate-schema`.
+When a mapped Helm chart provides a `values.schema.json`, the command uses its
+supported schema information. For values not described by a chart schema, the
+command infers types from package defaults and mapped Helm values.
+
+Without applicable chart schema information, some values may remain
+unconstrained or receive broader inferred types when their defaults are null,
+templated, or unavailable. Package authors can provide typed defaults for
+values that are part of the package's supported interface:
+
+```yaml
+# zarf-values.yaml
+app:
+  replicaCount: 1
+  hostNetwork: false
+```
+
+These defaults allow schema generation to infer `integer` and `boolean` while
+remaining overridable at deployment through Zarf Values. Package defaults are
+runtime defaults, not schema-only type hints, so define only values whose
+defaults and behavior the package intends to own.
 
 ## Using Values
 
