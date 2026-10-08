@@ -92,10 +92,10 @@ By default, Zarf rejects single-architecture image packages when no cluster node
 
 ```shell
 zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst \
-  --architecture=amd64 --skip-architecture-check --confirm
+  --skip-architecture-check --confirm
 ```
 
-`--architecture` selects the package architecture; it does not override cluster compatibility checks. `--skip-architecture-check` permits a mismatch and logs a warning. It does not install or detect an emulator, change node labels, or alter image architecture. Configure and verify emulation on the target nodes first. For example, OrbStack on Apple Silicon can use Rosetta to run amd64 containers while cluster services remain native arm64.
+When deploying from an OCI source, `--architecture` selects the package architecture. Local archives use the architecture recorded in the package. `--architecture` does not override cluster compatibility checks. `--skip-architecture-check` permits a mismatch and logs a warning. It does not install or detect an emulator, change node labels, or alter image architecture. Configure and verify emulation on the target nodes first. For example, OrbStack on Apple Silicon can use Rosetta to run amd64 containers while cluster services remain native arm64.
 
 This option is not recommended for production and is not supported for init packages. Initialize the cluster with its native architecture. Workload node selectors and affinity still apply; an amd64 node selector will not match an arm64 node merely because emulation is enabled.
 
