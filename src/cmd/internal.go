@@ -348,6 +348,7 @@ func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ [
 
 type internalUpdateGiteaPVCOptions struct {
 	rollback bool
+	pvcName  string
 }
 
 func newInternalUpdateGiteaPVCCommand() *cobra.Command {
@@ -361,20 +362,19 @@ func newInternalUpdateGiteaPVCCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&o.rollback, "rollback", "r", false, lang.CmdInternalFlagUpdateGiteaPVCRollback)
+	cmd.Flags().StringVar(&o.pvcName, "pvc-name", os.Getenv("ZARF_VAR_GIT_SERVER_EXISTING_PVC"), "Name of the Gitea persistent volume claim")
 
 	return cmd
 }
 
 func (o *internalUpdateGiteaPVCOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
-	pvcName := os.Getenv("ZARF_VAR_GIT_SERVER_EXISTING_PVC")
-
 	c, err := cluster.New(ctx)
 	if err != nil {
 		return err
 	}
 	// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
-	helmShouldCreate, err := c.UpdateGiteaPVC(ctx, pvcName, o.rollback)
+	helmShouldCreate, err := c.UpdateGiteaPVC(ctx, o.pvcName, o.rollback)
 	if err != nil {
 		logger.From(ctx).Warn("Unable to update the existing Gitea persistent volume claim", "error", err.Error())
 	}

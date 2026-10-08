@@ -1,0 +1,70 @@
+# FIXME: Honestly probably easier to read as separate variants
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: k3s
+  version: "[[ .cli.version ]]"
+  description: Install K3s for appliance mode; requires root on Linux
+variant:
+  architecture: "[[ .architecture ]]"
+values:
+  files:
+    - k3s-values.yaml
+component:
+  target:
+    os: linux
+  files:
+    # K3s removal script
+    - source: ../../distros/k3s/zarf-clean-k3s.sh
+      destination: /opt/zarf/zarf-clean-k3s.sh
+      executable: true
+    # The K3s systemd service definition
+    - source: k3s.service
+      enableTemplating: true
+      destination: /etc/systemd/system/k3s.service
+      symlinks:
+        - /etc/systemd/system/multi-user.target.wants/k3s.service
+    # Include the actual K3s binary
+    - source: https://github.com/k3s-io/k3s/releases/download/v1.34.3+k3s1/k3s[[ if eq .architecture "arm64" ]]-arm64[[ end ]]
+      checksum: "[[ if eq .architecture "amd64" ]]f95350e3997165974d1d1406f01aabaf869aed7ca790cc2d83a92a82f26a06c5[[ else ]]fa37b06df7ae82b46de6679a8682b6ece2adf531709bed6299086716c1038147[[ end ]]"
+      destination: /usr/sbin/k3s
+      executable: true
+      # K3s magic provides these tools when symlinking
+      symlinks:
+        - /usr/sbin/kubectl
+        - /usr/sbin/ctr
+        - /usr/sbin/crictl
+    # Transfer the K3s images for containerd to pick them up
+    - source: https://github.com/k3s-io/k3s/releases/download/v1.34.3+k3s1/k3s-airgap-images-[[ .architecture ]].tar.zst
+      checksum: "[[ if eq .architecture "amd64" ]]b8dff3265568e1be66ab72ac0ded68bd266fa37a32c010f1253dba6547a49ce8[[ else ]]b6cb3c06f19859d3a5fba54b305097e89d2a86b5bce9e8360a46b9d2e67da565[[ end ]]"
+      destination: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
+  actions:
+    onDeploy:
+      defaults:
+        retries: 5
+      before:
+        - cmd: [[ if eq .architecture "amd64" ]]if [ "$(uname -m)" != "x86_64" ];[[ else ]]if [ "$(uname -m)" != "aarch64" ] && [ "$(uname -m)" != "arm64" ];[[ end ]] then echo "this package architecture is [[ .architecture ]], but the target system has a different architecture. These architectures must be the same" && exit 1; fi
+          description: Check that the host architecture matches the package architecture
+          retries: 0
+        - cmd: ./zarf internal is-valid-hostname
+          retries: 0
+          description: Check if the current system has a, RFC1123 compliant hostname
+        # If running RHEL variant, disable firewalld
+        # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
+        # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
+        - cmd: "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
+          description: If running a RHEL variant, disable 'firewalld' per k3s docs
+      onSuccess:
+        # Configure K3s systemd service
+        - cmd: systemctl daemon-reload
+          description: Reload the system services
+        - cmd: systemctl enable k3s
+          description: Enable 'k3s' to run at system boot
+        - cmd: systemctl restart k3s
+          description: Start the 'k3s' system service
+    onRemove:
+      before:
+        - cmd: /opt/zarf/zarf-clean-k3s.sh
+          description: Remove 'k3s' from the system
+        - cmd: rm /opt/zarf/zarf-clean-k3s.sh
+          description: Remove the cleanup script
