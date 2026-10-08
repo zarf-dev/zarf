@@ -1,0 +1,6 @@
+agent:
+  affinity: {}
+  tolerations: []
+  nodeSelector: {}
+  webhookAnnotations: {}
+  mutationExclusions: []

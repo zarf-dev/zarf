@@ -1,0 +1,41 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfInitConfig
+metadata:
+  name: init
+  description: Used to establish a new Zarf cluster
+  # FIXME: do we need .cli.version? is it not auto set?
+  version: "[[ .cli.version ]]"
+  # FIXME: does it make sense to have architecture
+  architecture: "[[ .architecture ]]"
+  preventNamespaceOverride: true
+
+documentation:
+  zarf.cli.openvex.json: ../../.vex/zarf.cli.openvex.json
+
+components:
+  - name: k3s
+    optional: true
+    import:
+      local:
+        - path: k3s/zarf.gen.yaml
+  - name: zarf-injector
+    import:
+      local:
+        - path: injector/zarf.gen.yaml
+  - name: zarf-seed-registry
+    import:
+      local:
+        - path: registry/seed-registry.gen.yaml
+  - name: zarf-registry
+    import:
+      local:
+        - path: registry/zarf.gen.yaml
+  - name: zarf-agent
+    import:
+      local:
+        - path: agent/zarf.gen.yaml
+  - name: git-server
+    optional: true
+    import:
+      local:
+        - path: git-server/zarf.gen.yaml

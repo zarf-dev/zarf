@@ -1,0 +1,28 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: zarf-agent
+  version: "[[ .cli.version ]]"
+  description: Mutating webhook for container images and GitOps repository references
+values:
+  files:
+    - agent-values.yaml
+component:
+  service: agent
+  stateAccess:
+    - agentCerts
+  images:
+    - name: "[[ .agent.image ]]"
+      source: "[[ .agent.source ]]"
+  charts:
+    - name: zarf-agent
+      releaseName: zarf-d2db14ef40305397791454e883b26fc94ad9615d
+      namespace: zarf
+      local:
+        path: ../../zarf-agent/chart
+      valuesFiles:
+        - path: agent-state-values.yaml
+          enableTemplating: true
+      values:
+        - sourcePath: .agent
+          targetPath: .
