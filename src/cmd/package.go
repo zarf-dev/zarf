@@ -420,6 +420,7 @@ type packageDeployOptions struct {
 	optionalComponents         string
 	shasum                     string
 	skipValuesSchemaValidation bool
+	skipArchitectureCheck      bool
 	skipVersionCheck           bool
 	ociConcurrency             int
 	packageVerifyFlags
@@ -461,6 +462,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipValuesSchemaValidation, "skip-values-schema-validation", false, lang.CmdPackageDeployFlagSkipValuesSchema)
+	cmd.Flags().BoolVar(&o.skipArchitectureCheck, "skip-architecture-check", false, lang.CmdPackageDeployFlagSkipArchitectureCheck)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
@@ -535,6 +537,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		RemoteOptions:              defaultRemoteOptions(),
 		IsInteractive:              !o.confirm,
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
+		SkipArchitectureCheck:      o.skipArchitectureCheck,
 		SkipVersionCheck:           o.skipVersionCheck,
 	}
 

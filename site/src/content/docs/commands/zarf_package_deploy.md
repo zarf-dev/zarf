@@ -57,6 +57,7 @@ $ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst.part000 --confirm
       --set-values stringToString               Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
       --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
       --shasum string                           Shasum of the package to deploy. Required if deploying a remote https package.
+      --skip-architecture-check                 Allow application images to deploy to nodes with a different architecture. Requires node emulation support; intended for development and testing, not recommended for production.
       --skip-values-schema-validation           Skip validation of package values against the values schema.
       --take-ownership                          Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --timeout duration                        Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
