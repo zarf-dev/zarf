@@ -3,14 +3,12 @@
 {{- $registry := (index .Images 0).Name }}
 {{- $proxy := (index .Images 1).Name }}
 image:
-  repository: {{ printf "%s/%s" $.State.Registry.SeedAddress (imageRepository $registry) | quote }}
-  tag: {{ imageTag $registry | quote }}
+  reference: {{ printf "%s/%s%s" $.State.Registry.SeedAddress (imageRepository $registry) (imageTagOrDigest $registry) | quote }}
 proxy:
   image:
-    repository: {{ printf "%s/%s" $.State.Registry.SeedAddress (imageRepository $proxy) | quote }}
-    tag: {{ imageTag $proxy | quote }}
+    reference: {{ printf "%s/%s%s" $.State.Registry.SeedAddress (imageRepository $proxy) (imageTagOrDigest $proxy) | quote }}
   registry:
     image:
-      repository: {{ printf "%s/%s" $.State.Registry.SeedAddress (imageRepository $registry) | quote }}
+      reference: {{ printf "%s/%s%s" $.State.Registry.SeedAddress (imageRepository $registry) (imageTagOrDigest $registry) | quote }}
 {{- end }}
 {{- end }}

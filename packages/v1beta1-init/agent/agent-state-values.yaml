@@ -3,8 +3,7 @@
 {{- if eq .Service "agent" }}
 {{- $image := (index .Images 0).Name }}
 image:
-  repository: {{ printf "%s/%s" $.State.Registry.Address (imageRepository $image) | quote }}
-  tag: {{ imageTag $image | quote }}
+  reference: {{ printf "%s/%s%s" $.State.Registry.Address (imageRepository $image) (imageTagOrDigest $image) | quote }}
 {{- end }}
 {{- end }}
 secret:
