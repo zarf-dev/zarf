@@ -172,4 +172,6 @@ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst \
 
 When deploying from an OCI source, `--architecture` selects the package architecture. Local archives use the architecture recorded in the package. `--architecture` does not override cluster compatibility checks. `--skip-architecture-check` permits a mismatch and logs a warning. Configure emulation on the target nodes first. For example, OrbStack on Apple Silicon can use Rosetta to run amd64 containers while cluster services remain native arm64.
 
+For creating and deploying a package in one step, use [`zarf dev deploy --connected=false`](/ref/dev/#zarf-dev-deploy) with `--skip-architecture-check`.
+
 This option is not recommended for production and is not supported for init packages. Automatic injector selection during node-port bootstrap independently requires a node with the package architecture. Initialize the cluster with its native architecture. Workload node selectors and affinity still apply; an amd64 node selector will not match an arm64 node merely because emulation is enabled.

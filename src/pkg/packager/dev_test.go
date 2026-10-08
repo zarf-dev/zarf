@@ -92,3 +92,34 @@ func TestDevDeploy_appliesValues(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "from-deploy-values\n", string(contents))
 }
+
+func TestDevDeployRejectsArchitectureOverrideForInit(t *testing.T) {
+	for _, airgapMode := range []bool{false, true} {
+		name := "connected"
+		if airgapMode {
+			name = "airgap"
+		}
+		t.Run(name, func(t *testing.T) {
+			packageDir := t.TempDir()
+			pkg := v1alpha1.ZarfPackage{
+				APIVersion: v1alpha1.APIVersion,
+				Kind:       v1alpha1.ZarfInitConfig,
+				Metadata:   v1alpha1.ZarfMetadata{Name: "init-architecture-override"},
+				Components: []v1alpha1.ZarfComponent{{
+					Name:   "application",
+					Images: []string{"example.invalid/application:latest"},
+				}},
+			}
+			b, err := goyaml.Marshal(pkg)
+			require.NoError(t, err)
+			require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), b, 0o600))
+
+			err = DevDeploy(testutil.TestContext(t), packageDir, DevDeployOptions{
+				AirgapMode:            airgapMode,
+				CachePath:             filepath.Join(packageDir, "cache"),
+				SkipArchitectureCheck: true,
+			})
+			require.ErrorContains(t, err, "--skip-architecture-check is not supported for init packages")
+		})
+	}
+}

@@ -54,6 +54,9 @@ type DevDeployOptions struct {
 	CachePath      string
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// SkipArchitectureCheck allows application images to deploy to nodes with a different architecture.
+	// The operator must configure emulation on the target nodes. Only applies in airgap mode.
+	SkipArchitectureCheck bool
 	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
 	TakeOwnership bool
 	types.RemoteOptions
@@ -93,6 +96,9 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
+	if opts.SkipArchitectureCheck && loaded.Definition.IsInitConfig() {
+		return fmt.Errorf("--skip-architecture-check is not supported for init packages")
+	}
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.ForDeploy(opts.OptionalComponents, false),
@@ -176,14 +182,15 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOptions{
-		SetVariables:   opts.DeploySetVariables,
-		Values:         opts.Values,
-		Timeout:        opts.Timeout,
-		Retries:        opts.Retries,
-		Connected:      !opts.AirgapMode,
-		OCIConcurrency: opts.OCIConcurrency,
-		RemoteOptions:  opts.RemoteOptions,
-		TakeOwnership:  opts.TakeOwnership,
+		SetVariables:          opts.DeploySetVariables,
+		Values:                opts.Values,
+		Timeout:               opts.Timeout,
+		Retries:               opts.Retries,
+		Connected:             !opts.AirgapMode,
+		OCIConcurrency:        opts.OCIConcurrency,
+		RemoteOptions:         opts.RemoteOptions,
+		TakeOwnership:         opts.TakeOwnership,
+		SkipArchitectureCheck: opts.SkipArchitectureCheck,
 	})
 	if err != nil {
 		return err
