@@ -14,7 +14,8 @@ Build the CLI from this branch before using these targets. v1beta1 and
 v1beta1 init services, component imports, state access, and the Gitea helper's
 `--pvc-name` flag, plus the `imageRepository` and `imageTagOrDigest` template functions.
 Older CLIs should continue using the root init package and
-`make init-package`. Existing v1alpha1 packages and targets retain their behavior.
+`make init-package`. The existing `release-init-package` target continues building
+the legacy init package for its current release workflows.
 
 ## Build
 
@@ -25,9 +26,10 @@ make build
 make init-package-v1beta1
 ```
 
-The target renders `zarf.tpl.yaml` and `{injector,agent,registry,git-server,k3s}/*.tpl.yaml` with
-`zarf dev template`, builds the default local agent image, and creates the package
-with SBOMs under `build/v1beta1-init`. Docker is required for the default agent.
+The target rebuilds the CLI and local agent image for `ARCH`, renders `zarf.tpl.yaml`
+and `{injector,agent,registry,git-server,k3s}/*.tpl.yaml` with `zarf dev template`,
+and creates the package with SBOMs under `build/v1beta1-init`. This target always
+builds the local agent and requires Docker.
 Generated `*.gen.yaml` definitions are ignored by Git and regenerated on every build.
 The package and component versions come from `[[ .cli.version ]]`.
 
@@ -41,13 +43,24 @@ make template-init-package-v1beta1 ARCH=arm64
 previous generated definitions. Run builds for different architectures sequentially.
 `INIT_V1BETA1_OUTPUT` changes the package output directory.
 
-Build-time image settings come from `template-values.yaml`. Override dotted keys
-through `INIT_V1BETA1_TEMPLATE_SET`, or supply a complete values file through
-`INIT_V1BETA1_TEMPLATE_VALUES`:
+Create a package using a released agent image without building the local agent:
 
 ```sh
-make init-package-v1beta1 \
-  INIT_V1BETA1_TEMPLATE_SET='agent.image=ghcr.io/zarf-dev/zarf/agent:v0.87.0,agent.source=registry'
+make release-init-package-v1beta1 AGENT_IMAGE_TAG=v0.87.0
+```
+
+This target defaults `agent.image` to `ghcr.io/zarf-dev/zarf/agent:<AGENT_IMAGE_TAG>`
+and `agent.source` to `registry`. It requires `AGENT_IMAGE_TAG` and creates the
+package with SBOMs under `INIT_V1BETA1_OUTPUT`. It does not publish anything.
+
+Build-time image settings come from `template-values.yaml`. Override dotted keys
+through `INIT_V1BETA1_TEMPLATE_SET`, or supply a complete values file through
+`INIT_V1BETA1_TEMPLATE_VALUES`. The release target applies its agent defaults after
+the values file, followed by `INIT_V1BETA1_TEMPLATE_SET` overrides:
+
+```sh
+make release-init-package-v1beta1 AGENT_IMAGE_TAG=v0.87.0 \
+  INIT_V1BETA1_TEMPLATE_SET='registry.image=docker.io/library/registry:3.1.1'
 ```
 
 The agent, registry, and proxy accept tagged or digest-pinned images. Their full
@@ -55,11 +68,13 @@ chart references are derived from the packaged images using `imageRepository` an
 `imageTagOrDigest`, including registry ports and Docker Hub shorthand. Build-time
 overrides also affect deployment; a digest takes precedence when a reference
 contains both a tag and a digest. Set `agent.source=registry` for a released image;
-`agent.source=daemon` reads a locally available Docker image. Only the default
-`ghcr.io/zarf-dev/zarf/agent:local` image is built automatically by Make.
+`agent.source=daemon` reads a locally available Docker image.
+`init-package-v1beta1` always builds `ghcr.io/zarf-dev/zarf/agent:local`; the release
+target uses the selected image without building it.
 
-The new target's template settings are independent of the legacy
-`[package.create.set]` settings in `zarf-config.toml` and `AGENT_IMAGE_TAG`.
+The v1beta1 targets use `zarf dev template` settings rather than the legacy
+`[package.create.set]` settings in `zarf-config.toml`. The release target maps
+`AGENT_IMAGE_TAG` to the agent template value.
 
 The reused agent and registry charts accept an optional `image.reference` with a
 complete image reference. The registry chart also accepts `proxy.image.reference`
