@@ -385,3 +385,18 @@ func reloadComponentTemplatesInPackage(zarfPackage *v1alpha1.ZarfPackage) error 
 	}
 	return nil
 }
+
+// DefinitionHeader identifies the API version and kind declared by a config file.
+type DefinitionHeader struct {
+	APIVersion string `json:"apiVersion"`
+	Kind       string `json:"kind"`
+}
+
+// ParseDefinitionHeader reads the identifying fields without loading the full definition.
+func ParseDefinitionHeader(contents []byte) (DefinitionHeader, error) {
+	var header DefinitionHeader
+	if err := goyaml.Unmarshal(contents, &header); err != nil {
+		return DefinitionHeader{}, err
+	}
+	return header, nil
+}

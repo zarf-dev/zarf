@@ -8,16 +8,16 @@ tableOfContents: false
 
 ## zarf package create
 
-Creates a Zarf package from a given directory or the current directory
+Creates a Zarf package from a definition file or directory
 
 ### Synopsis
 
-Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.
+Builds an archive of resources and dependencies defined by the package definition at the given file or directory.
 Private registries and repositories are accessed via credentials in your local '~/.docker/config.json', '~/.git-credentials' and '~/.netrc'.
 
 
 ```
-zarf package create [ DIRECTORY ] [flags]
+zarf package create [ PATH ] [flags]
 ```
 
 ### Options

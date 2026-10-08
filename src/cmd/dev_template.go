@@ -36,7 +36,7 @@ type devTemplateOptions struct {
 func newDevTemplateCommand(v *viper.Viper) *cobra.Command {
 	o := &devTemplateOptions{}
 	cmd := &cobra.Command{
-		Use:   "template [ TEMPLATE_FILE | DIRECTORY ]",
+		Use:   "template [ PATH ]",
 		Short: "Renders a template into a generated definition",
 		// Once v1beta1 is released this command should be unhidden
 		Hidden: true,

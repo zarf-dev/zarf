@@ -89,9 +89,7 @@ func Generate(ctx context.Context, packageName, url, version string, opts Genera
 		l.Error("failed to find images", "error", err.Error())
 	}
 	for i, imageScan := range imagesScans {
-		pkg.Components[i].Images = append(pkg.Components[i].Images, imageScan.Matches...)
-		pkg.Components[i].Images = append(pkg.Components[i].Images, imageScan.PotentialMatches...)
-		pkg.Components[i].Images = append(pkg.Components[i].Images, imageScan.CosignArtifacts...)
+		pkg.Components[i].Images = append(pkg.Components[i].Images, imageMatchNames(imageScan.Matches)...)
 	}
 
 	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
