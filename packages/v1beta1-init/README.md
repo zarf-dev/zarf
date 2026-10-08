@@ -12,7 +12,8 @@ and `k3s/`. The seed registry and shared registry base live under `registry/`.
 Build the CLI from this branch before using these targets. v1beta1 and
 `zarf dev template` are still under development. This package requires a CLI with
 v1beta1 init services, component imports, state access, and the Gitea helper's
-`--pvc-name` flag. Older CLIs should continue using the root init package and
+`--pvc-name` flag, plus the `imageRepository` and `imageTag` template functions.
+Older CLIs should continue using the root init package and
 `make init-package`. Existing v1alpha1 packages and targets retain their behavior.
 
 ## Build
@@ -49,9 +50,12 @@ make init-package-v1beta1 \
   INIT_V1BETA1_TEMPLATE_SET='agent.image=ghcr.io/zarf-dev/zarf/agent:v0.87.0,agent.source=registry'
 ```
 
-Use a fully qualified, tagged image for the agent, registry, and proxy. Their chart
+Use a tagged image for the agent, registry, and proxy. Their chart
 repositories and tags are derived from the packaged images, so build-time overrides
-also affect deployment. Set `agent.source=registry` for a released image;
+also affect deployment. The `imageRepository` and `imageTag` functions parse these
+references, including registry ports and Docker Hub shorthand. Digest references
+cannot supply the tag required by these charts. Set `agent.source=registry` for a
+released image;
 `agent.source=daemon` reads a locally available Docker image. Only the default
 `ghcr.io/zarf-dev/zarf/agent:local` image is built automatically by Make.
 
