@@ -291,6 +291,7 @@ The `.State` object exposes Zarf cluster state.
 | `.State.Git.PushUsername` | Git push username (cf. `###ZARF_GIT_PUSH###`) |
 | `.State.Git.PullUsername` | Git pull username (cf. `###ZARF_GIT_PULL###`) |
 | `.State.Git.IsInternal` | `bool` |
+| `.State.Git.TLSEnabled` | `bool`: whether the internal Git server serves HTTPS |
 | `.State.Injector.Image` | Injector container image (cf. `###ZARF_INJECTOR_IMAGE###`) |
 | `.State.Injector.Port` | Injector host port (cf. `###ZARF_INJECTOR_HOSTPORT###`) |
 | `.State.Injector.PayloadConfigMaps` | Number of payload ConfigMaps (cf. `###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###`) |

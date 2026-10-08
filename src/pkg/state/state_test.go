@@ -135,6 +135,58 @@ func TestStateReconcile(t *testing.T) {
 	require.Equal(t, 1234, s.RegistryInfo.NodePort)
 }
 
+func TestGitServerInfoInternalTLSURLs(t *testing.T) {
+	t.Parallel()
+
+	legacy := GitServerInfo{Address: ZarfInClusterGitServiceURL}
+	tls := GitServerInfo{Address: ZarfInClusterGitURL(GitTLSEnabled), TLSMode: GitTLSEnabled}
+
+	require.True(t, legacy.IsInternal())
+	require.Equal(t, "http", legacy.URLScheme())
+	require.True(t, tls.IsInternal())
+	require.Equal(t, "https", tls.URLScheme())
+	require.NoError(t, tls.FillInEmptyValues())
+	require.Equal(t, GitServerModeInternal, tls.GitServerMode)
+	require.False(t, (GitServerInfo{Address: "https://gitea.example.com:3000"}).IsInternal())
+}
+
+func TestMergeGitTLSConfiguration(t *testing.T) {
+	t.Parallel()
+
+	old := &State{GitServer: GitServerInfo{
+		Address:           ZarfInClusterGitURL(GitTLSEnabled),
+		TLSMode:           GitTLSEnabled,
+		TLSCertManagement: GitTLSCertUserManaged,
+	}}
+	for _, tc := range []struct {
+		name           string
+		input          GitServerInfo
+		wantMode       GitTLSMode
+		wantManagement GitTLSCertManagement
+	}{
+		{name: "credential update preserves TLS settings", wantMode: GitTLSEnabled, wantManagement: GitTLSCertUserManaged},
+		{name: "disable TLS clears ownership", input: GitServerInfo{TLSMode: GitTLSDisabled}, wantMode: GitTLSDisabled},
+		{name: "switch to Zarf-managed certificate", input: GitServerInfo{TLSMode: GitTLSEnabled, TLSCertManagement: GitTLSCertZarfManaged}, wantMode: GitTLSEnabled, wantManagement: GitTLSCertZarfManaged},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := Merge(old, MergeOptions{GitServer: tc.input, Services: NewServiceSet(GitKey)})
+			require.NoError(t, err)
+			require.Equal(t, tc.wantMode, got.GitServer.TLSMode)
+			require.Equal(t, tc.wantManagement, got.GitServer.TLSCertManagement)
+		})
+	}
+}
+
+func TestGitServerCertSecretDataRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	want := pki.GeneratedPKI{CA: []byte("ca"), Cert: []byte("cert"), Key: []byte("key")}
+	got, err := GitServerCertFromSecretData(GitServerCertSecretData(want))
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
 func TestRegistryInfoKnownPlainHTTP(t *testing.T) {
 	t.Parallel()
 

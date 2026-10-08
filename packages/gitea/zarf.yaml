@@ -80,6 +80,7 @@ components:
     manifests:
       - name: git-connect
         namespace: zarf
+        template: true
         files:
           - connect.yaml
     charts:
@@ -88,7 +89,7 @@ components:
         url: oci://registry-1.docker.io/giteacharts/gitea
         version: 12.7.0
         namespace: zarf
-        valuesFiles:
+        templatedValuesFiles:
           - gitea-values.yaml
     actions:
       onDeploy:

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"regexp"
 
 	"github.com/zarf-dev/zarf/src/api"
@@ -134,7 +135,8 @@ const (
 	ZarfGitReadUser = "zarf-git-read-user"
 	ZarfAgentHost   = "agent-hook.zarf.svc"
 
-	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+	ZarfInClusterGitServiceHost     = "zarf-gitea-http.zarf.svc.cluster.local"
+	ZarfInClusterGitServiceURL      = "http://" + ZarfInClusterGitServiceHost + ":3000"
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 
 	// ZarfRegistryMTLSServerCommonName is the common name for the registry server certificate
@@ -143,6 +145,63 @@ const (
 	ZarfRegistryMTLSClientCommonName = "zarf-registry-client"
 	ZarfRegistryMTLSCASubject        = "Zarf Registry CA"
 )
+
+// GitServerTLSSecret holds the certificate served by the internal Git server.
+const (
+	GitServerTLSSecret  = "zarf-git-server-tls"
+	GitServerTLSCAKey   = "ca.crt"
+	GitServerTLSCertKey = "tls.crt"
+	GitServerTLSKey     = "tls.key"
+)
+
+// GitTLSMode defines the transport security used by the internal Git server.
+type GitTLSMode string
+
+const (
+	// GitTLSDisabled retains the legacy HTTP listener.
+	GitTLSDisabled GitTLSMode = "disabled"
+	// GitTLSEnabled serves HTTPS.
+	GitTLSEnabled GitTLSMode = "tls-enabled"
+)
+
+// GitTLSCertManagement records who manages the internal Git server certificate.
+type GitTLSCertManagement string
+
+const (
+	// GitTLSCertZarfManaged means Zarf generates and rotates the certificate.
+	GitTLSCertZarfManaged GitTLSCertManagement = "zarf-managed"
+	// GitTLSCertUserManaged means the operator supplies the certificate.
+	GitTLSCertUserManaged GitTLSCertManagement = "user-managed"
+)
+
+// IsValid reports whether mode is a supported Git TLS mode. The empty mode is
+// retained for state written before Git TLS existed.
+func (m GitTLSMode) IsValid() bool {
+	return m == "" || m == GitTLSDisabled || m == GitTLSEnabled
+}
+
+// Enabled reports whether the Git server should serve HTTPS.
+func (m GitTLSMode) Enabled() bool {
+	return m == GitTLSEnabled
+}
+
+// ZarfInClusterGitURL returns the canonical internal Git URL for mode.
+func ZarfInClusterGitURL(mode GitTLSMode) string {
+	if mode.Enabled() {
+		return "https://" + ZarfInClusterGitServiceHost + ":3000"
+	}
+	return ZarfInClusterGitServiceURL
+}
+
+// ZarfGitServerTLSHosts is the complete set of names used by in-cluster and
+// port-forward clients of the internal Git server.
+var ZarfGitServerTLSHosts = []string{
+	"zarf-gitea-http",
+	"zarf-gitea-http.zarf",
+	"zarf-gitea-http.zarf.svc",
+	ZarfInClusterGitServiceHost,
+	"localhost",
+}
 
 // ZarfRegistryMTLSServerHosts is the list of DNS names and IPs for the registry server certificate
 var ZarfRegistryMTLSServerHosts = []string{
@@ -282,6 +341,11 @@ type GitServerInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the git server
 	Address string `json:"address"`
+	// TLSMode controls transport security for the internal Git server.
+	TLSMode GitTLSMode `json:"tlsMode,omitempty"`
+	// TLSCertManagement records who manages the certificate. Certificate material
+	// is stored only in Kubernetes, never in state.
+	TLSCertManagement GitTLSCertManagement `json:"tlsCertManagement,omitempty"`
 	// GitServerMode identifies whether Zarf manages the git server.
 	GitServerMode GitServerMode `json:"gitServerMode,omitempty"`
 }
@@ -291,11 +355,32 @@ func (gs GitServerInfo) IsInternal() bool {
 	if gs.GitServerMode != "" {
 		return gs.GitServerMode == GitServerModeInternal
 	}
-	return gs.Address == ZarfInClusterGitServiceURL
+	return isInternalGitURL(gs.Address)
+}
+
+// URLScheme returns the connection scheme encoded by state, falling back to
+// HTTP for legacy and external addresses that omit one.
+func (gs GitServerInfo) URLScheme() string {
+	u, err := url.Parse(gs.Address)
+	if err == nil && u.Scheme != "" {
+		return u.Scheme
+	}
+	if gs.TLSMode.Enabled() && gs.IsInternal() {
+		return "https"
+	}
+	return "http"
+}
+
+func isInternalGitURL(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() != ZarfInClusterGitServiceHost || u.Port() != "3000" {
+		return false
+	}
+	return u.EscapedPath() == "" || u.EscapedPath() == "/"
 }
 
 func gitServerModeForAddress(address string) GitServerMode {
-	if address == ZarfInClusterGitServiceURL {
+	if isInternalGitURL(address) {
 		return GitServerModeInternal
 	}
 	return GitServerModeExternal
@@ -313,7 +398,7 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 	var err error
 	// Set default svc url if an external repository was not provided
 	if gs.Address == "" {
-		gs.Address = ZarfInClusterGitServiceURL
+		gs.Address = ZarfInClusterGitURL(gs.TLSMode)
 	}
 	if gs.GitServerMode == "" {
 		gs.GitServerMode = gitServerModeForAddress(gs.Address)
@@ -428,6 +513,30 @@ func RegistryCertSecretData(certs pki.GeneratedPKI) map[string][]byte {
 		RegistrySecretCAPath:   certs.CA,
 		RegistrySecretCertPath: certs.Cert,
 		RegistrySecretKeyPath:  certs.Key,
+	}
+}
+
+// GitServerCertFromSecretData reads an internal Git server TLS keypair from
+// Kubernetes Secret data.
+func GitServerCertFromSecretData(data map[string][]byte) (pki.GeneratedPKI, error) {
+	certs := pki.GeneratedPKI{
+		CA:   data[GitServerTLSCAKey],
+		Cert: data[GitServerTLSCertKey],
+		Key:  data[GitServerTLSKey],
+	}
+	if len(certs.CA) == 0 || len(certs.Cert) == 0 || len(certs.Key) == 0 {
+		return pki.GeneratedPKI{}, fmt.Errorf("git server TLS secret is incomplete")
+	}
+	return certs, nil
+}
+
+// GitServerCertSecretData lays an internal Git server TLS keypair out as
+// Kubernetes TLS Secret data.
+func GitServerCertSecretData(certs pki.GeneratedPKI) map[string][]byte {
+	return map[string][]byte{
+		GitServerTLSCAKey:   certs.CA,
+		GitServerTLSCertKey: certs.Cert,
+		GitServerTLSKey:     certs.Key,
 	}
 }
 
@@ -704,6 +813,9 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	if opts.Services.Has(GitKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, opts.GitServer)
+		if opts.GitServer.TLSMode != "" {
+			newState.GitServer.TLSCertManagement = opts.GitServer.TLSCertManagement
+		}
 		if opts.GitServer.Address != "" && opts.GitServer.GitServerMode == "" {
 			newState.GitServer.GitServerMode = gitServerModeForAddress(newState.GitServer.Address)
 		}

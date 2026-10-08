@@ -595,6 +595,69 @@ func newFakeInitStateCluster(ctx context.Context, t *testing.T, existing *state.
 	return c
 }
 
+func TestInitStateGitServerHTTP(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		existing   *state.State
+		incomplete bool
+	}{
+		{name: "new HTTP server"},
+		{name: "existing HTTP server", existing: &state.State{GitServer: state.GitServerInfo{Address: state.ZarfInClusterGitURL(state.GitTLSDisabled)}}},
+		{name: "unused incomplete certificate", incomplete: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
+			c := newFakeInitStateCluster(ctx, t, tc.existing)
+			if tc.incomplete {
+				_, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: state.GitServerTLSSecret, Namespace: state.ZarfNamespaceName},
+				}, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+			_, err := c.InitState(ctx, InitStateOptions{InternalServices: state.NewServiceSet(state.GitKey)})
+			require.NoError(t, err)
+			secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.GitServerTLSSecret, metav1.GetOptions{})
+			if tc.incomplete {
+				require.NoError(t, err)
+				require.Empty(t, secret.Data)
+			} else {
+				require.True(t, kerrors.IsNotFound(err))
+			}
+		})
+	}
+}
+
+func TestInitStateGitServerTLS(t *testing.T) {
+	ctx := context.Background()
+	c := newFakeInitStateCluster(ctx, t, &state.State{
+		Distro: DistroIsK3d,
+		GitServer: state.GitServerInfo{
+			Address: state.ZarfInClusterGitURL(state.GitTLSEnabled),
+			TLSMode: state.GitTLSEnabled,
+		},
+	})
+	opts := InitStateOptions{InternalServices: state.NewServiceSet(state.GitKey)}
+	_, err := c.InitState(ctx, opts)
+	require.NoError(t, err)
+
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.GitServerTLSSecret, metav1.GetOptions{})
+	require.NoError(t, err)
+	certs, err := state.GitServerCertFromSecretData(secret.Data)
+	require.NoError(t, err)
+	require.NotEmpty(t, certs.CA)
+
+	_, err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Create(ctx, &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "zarf-ip-family-test", Namespace: state.ZarfNamespaceName},
+		Spec:       corev1.ServiceSpec{IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol}},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
+	_, err = c.InitState(ctx, opts)
+	require.NoError(t, err)
+	secretAfterReinit, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.GitServerTLSSecret, metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, secret.Data, secretAfterReinit.Data)
+}
+
 func TestInitStateServicesGating(t *testing.T) {
 	t.Run("new cluster without git service leaves git and artifact empty", func(t *testing.T) {
 		ctx := context.Background()

@@ -15,7 +15,7 @@ import (
 func TestNewClient(t *testing.T) {
 	t.Parallel()
 
-	c, err := NewClient("https://example.com", "foo", "bar")
+	c, err := NewClient("https://example.com", "foo", "bar", nil)
 	require.NoError(t, err)
 	require.Equal(t, "https", c.endpoint.Scheme)
 	require.Equal(t, "foo", c.username)
@@ -44,7 +44,7 @@ func TestUpdateGitUser(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			c, err := NewClient(srv.URL, "admin", "password")
+			c, err := NewClient(srv.URL, "admin", "password", nil)
 			require.NoError(t, err)
 
 			err = c.UpdateGitUser(context.Background(), "zarf-git-user", "new-password")

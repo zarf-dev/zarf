@@ -15,6 +15,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -44,6 +45,10 @@ type initOptions struct {
 	skipValuesSchemaValidation bool
 	storageClass               string
 	gitServer                  state.GitServerInfo
+	gitTLSMode                 string
+	gitTLSCAPath               string
+	gitTLSCertPath             string
+	gitTLSKeyPath              string
 	registryInfo               state.RegistryInfo
 	artifactServer             state.ArtifactServerInfo
 	injectorPort               int
@@ -76,6 +81,10 @@ func newInitCommand() *cobra.Command {
 	}
 
 	v := getViper()
+	gitTLSMode := v.GetString(VInitGitTLSMode)
+	if gitTLSMode == "" {
+		gitTLSMode = string(state.GitTLSDisabled)
+	}
 
 	// Init package set variable flags
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
@@ -102,6 +111,13 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.gitServer.PushPassword, "git-push-password", v.GetString(VInitGitPushPass), lang.CmdInitFlagGitPushPass)
 	cmd.Flags().StringVar(&o.gitServer.PullUsername, "git-pull-username", v.GetString(VInitGitPullUser), lang.CmdInitFlagGitPullUser)
 	cmd.Flags().StringVar(&o.gitServer.PullPassword, "git-pull-password", v.GetString(VInitGitPullPass), lang.CmdInitFlagGitPullPass)
+	cmd.Flags().StringVar(&o.gitTLSMode, "git-tls-mode", gitTLSMode, "Git TLS mode: disabled or tls-enabled. Certificate files automatically enable user-managed TLS")
+	cmd.Flags().StringVar(&o.gitTLSCAPath, "git-tls-ca", v.GetString(VInitGitTLSCA), "Path to a PEM-encoded CA certificate for the Git server")
+	cmd.Flags().StringVar(&o.gitTLSCertPath, "git-tls-cert", v.GetString(VInitGitTLSCert), "Path to a PEM-encoded TLS certificate for the Git server")
+	cmd.Flags().StringVar(&o.gitTLSKeyPath, "git-tls-key", v.GetString(VInitGitTLSKey), "Path to a PEM-encoded TLS private key for the Git server")
+	for _, flag := range []string{"git-tls-mode", "git-tls-ca", "git-tls-cert", "git-tls-key"} {
+		_ = cmd.Flags().MarkHidden(flag)
+	}
 
 	// Flags for using an external registry
 	cmd.Flags().StringVar(&o.registryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
@@ -143,6 +159,7 @@ func newInitCommand() *cobra.Command {
 
 	// Agent TLS flags must all be provided together
 	cmd.MarkFlagsRequiredTogether("agent-tls-ca", "agent-tls-cert", "agent-tls-key")
+	cmd.MarkFlagsRequiredTogether("git-tls-ca", "git-tls-cert", "git-tls-key")
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-port")
@@ -173,8 +190,22 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		}
 		agentTLS = &loadedTLS
 	}
+	var gitTLS *pki.GeneratedPKI
+	if o.gitTLSCAPath != "" {
+		loadedTLS, err := loadAndValidateGitTLS(o.gitTLSCAPath, o.gitTLSCertPath, o.gitTLSKeyPath)
+		if err != nil {
+			return fmt.Errorf("invalid Git server TLS certificates: %w", err)
+		}
+		gitTLS = &loadedTLS
+	}
 
-	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer, agentTLS)
+	gitServerForValidation := o.gitServer
+	// A defaulted disabled mode is not an attempt to change a pre-TLS cluster;
+	// only an explicitly selected TLS setting participates in re-init validation.
+	if !optionIsExplicitlySet(cmd, getViper(), "git-tls-mode", VInitGitTLSMode) && o.gitTLSCAPath == "" {
+		gitServerForValidation.TLSMode = ""
+	}
+	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, gitServerForValidation, o.artifactServer, agentTLS)
 	if err != nil {
 		return err
 	}
@@ -255,6 +286,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:              defaultRemoteOptions(),
 		IsInteractive:              !o.confirm,
 		AgentTLS:                   agentTLS,
+		GitServerTLS:               gitTLS,
 		AgentMutationPolicy:        state.MutationPolicy(o.agentMutationPolicy),
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
 	}
@@ -392,38 +424,81 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 	return nil
 }
 
-// loadAndValidateAgentTLS reads agent TLS files from disk and validates them.
+// FIXME: maybe add minValidity to agent
 func loadAndValidateAgentTLS(caPath, certPath, keyPath string) (pki.GeneratedPKI, error) {
+	return loadAndValidateTLS(caPath, certPath, keyPath, state.ZarfAgentHost, nil, 0)
+}
+
+// loadAndValidateGitTLS validates a server certificate before any cluster
+// mutation. Port forwarding exposes the raw Gitea listener, so all service and
+// loopback SANs are mandatory.
+func loadAndValidateGitTLS(caPath, certPath, keyPath string) (pki.GeneratedPKI, error) {
+	hostnames := slices.Concat(state.ZarfGitServerTLSHosts, []string{"127.0.0.1", "::1"})
+	return loadAndValidateTLS(caPath, certPath, keyPath, state.ZarfInClusterGitServiceHost, hostnames, 24*time.Hour)
+}
+
+func loadAndValidateTLS(caPath, certPath, keyPath, hostname string, requiredSANs []string, minValidity time.Duration) (pki.GeneratedPKI, error) {
 	ca, err := os.ReadFile(caPath)
 	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("unable to read agent TLS CA: %w", err)
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read TLS CA: %w", err)
 	}
 	cert, err := os.ReadFile(certPath)
 	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("unable to read agent TLS cert: %w", err)
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read TLS cert: %w", err)
 	}
 	key, err := os.ReadFile(keyPath)
 	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("unable to read agent TLS key: %w", err)
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read TLS key: %w", err)
 	}
 	if _, err := tls.X509KeyPair(cert, key); err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("agent TLS cert and key do not match: %w", err)
+		return pki.GeneratedPKI{}, fmt.Errorf("TLS cert and key do not match: %w", err)
 	}
 	parsed, err := pki.ParseCertFromPEM(cert)
 	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse agent TLS certificate: %w", err)
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse TLS certificate: %w", err)
 	}
 	caPool := x509.NewCertPool()
 	if !caPool.AppendCertsFromPEM(ca) {
 		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse provided CA certificate")
 	}
 	if _, err := parsed.Verify(x509.VerifyOptions{
-		Roots:   caPool,
-		DNSName: state.ZarfAgentHost,
+		Roots:     caPool,
+		DNSName:   hostname,
+		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}); err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("agent TLS certificate failed validation: %w", err)
+		return pki.GeneratedPKI{}, fmt.Errorf("TLS certificate failed validation: %w", err)
+	}
+	for _, requiredSAN := range requiredSANs {
+		if err := parsed.VerifyHostname(requiredSAN); err != nil {
+			return pki.GeneratedPKI{}, fmt.Errorf("TLS certificate is missing required SAN %q: %w", requiredSAN, err)
+		}
+	}
+	if minValidity > 0 && parsed.NotAfter.Before(time.Now().Add(minValidity)) {
+		return pki.GeneratedPKI{}, fmt.Errorf("TLS certificate expires too soon: %s", parsed.NotAfter)
 	}
 	return pki.GeneratedPKI{CA: ca, Cert: cert, Key: key}, nil
+}
+
+func resolveGitTLSMode(selection, caPath, certPath, keyPath string) (state.GitTLSMode, state.GitTLSCertManagement, error) {
+	if selection != "" && selection != string(state.GitTLSDisabled) && selection != string(state.GitTLSEnabled) {
+		return "", "", fmt.Errorf("invalid Git TLS mode %q: must be %q or %q", selection, state.GitTLSDisabled, state.GitTLSEnabled)
+	}
+	provided := 0
+	for _, path := range []string{caPath, certPath, keyPath} {
+		if path != "" {
+			provided++
+		}
+	}
+	if provided != 0 && provided != 3 {
+		return "", "", errors.New("--git-tls-ca, --git-tls-cert, and --git-tls-key must be provided together")
+	}
+	if provided == 3 {
+		return state.GitTLSEnabled, state.GitTLSCertUserManaged, nil
+	}
+	if selection == string(state.GitTLSEnabled) {
+		return state.GitTLSEnabled, state.GitTLSCertZarfManaged, nil
+	}
+	return state.GitTLSDisabled, "", nil
 }
 
 func (o *initOptions) validateInitFlags() error {
@@ -432,6 +507,15 @@ func (o *initOptions) validateInitFlags() error {
 		if o.gitServer.PushUsername == "" || o.gitServer.PushPassword == "" {
 			return fmt.Errorf(lang.CmdInitErrValidateGit)
 		}
+	}
+	mode, management, err := resolveGitTLSMode(o.gitTLSMode, o.gitTLSCAPath, o.gitTLSCertPath, o.gitTLSKeyPath)
+	if err != nil {
+		return err
+	}
+	o.gitServer.TLSMode = mode
+	o.gitServer.TLSCertManagement = management
+	if o.gitServer.Address != "" && mode.Enabled() {
+		return errors.New("git TLS options cannot be used with --git-url")
 	}
 
 	// If 'registry-url' is provided, make sure they provided values for the username and password of the push user

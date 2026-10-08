@@ -36,6 +36,7 @@ $ zarf tools update-creds git --git-push-username={USERNAME} --git-push-password
 
 ```
   -c, --confirm                    Confirm updating credentials without prompting
+      --force-conflicts            Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources.
       --git-pull-password string   Password for the pull-only user to access the git server
       --git-pull-username string   Username for pull-only access to the git server
       --git-push-password string   Password for the push-user to access the git server

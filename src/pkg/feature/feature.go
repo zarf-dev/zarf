@@ -205,6 +205,7 @@ const (
 	// AxolotlMode declares the "axolotl-mode" feature
 	AxolotlMode            Name = "axolotl-mode"
 	RegistryProxy          Name = "registry-proxy"
+	GitServerTLS           Name = "git-server-tls"
 	Values                 Name = "values"
 	DockerDaemonDirectPull Name = "docker-daemon-direct-pull"
 	SBOMViewer             Name = "sbom-viewer"
@@ -235,6 +236,13 @@ func init() {
 			Description: "Enables the registry proxy feature during Zarf init",
 			Enabled:     true,
 			Since:       "v0.65.0",
+			Stage:       Alpha,
+		},
+		{
+			Name:        GitServerTLS,
+			Description: "Enables TLS for the internal Git server during Zarf init.",
+			Enabled:     false,
+			Since:       "v0.88.0",
 			Stage:       Alpha,
 		},
 		{

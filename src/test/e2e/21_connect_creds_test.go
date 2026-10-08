@@ -7,16 +7,25 @@ package test
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
+	"helm.sh/helm/v4/pkg/storage"
+	"helm.sh/helm/v4/pkg/storage/driver"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type RegistryResponse struct {
@@ -58,6 +67,135 @@ func TestConnectAndCreds(t *testing.T) {
 	require.NotEqual(t, oldState.GitServer.PushPassword, newState.GitServer.PushPassword)
 
 	connectToZarfServices(ctx, t)
+}
+
+// FIXME: not super happy with this test
+func TestGitCredsLegacyHTTP(t *testing.T) {
+	ctx := t.Context()
+	c, err := cluster.New(ctx)
+	require.NoError(t, err)
+	s, err := c.LoadState(ctx)
+	require.NoError(t, err)
+	require.True(t, s.GitServer.IsInternal())
+	require.False(t, s.GitServer.TLSMode.Enabled())
+
+	// Model an older Helm release without Git TLS values.
+	releases := storage.Init(driver.NewSecrets(c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName)))
+	storedRelease, err := releases.Last("zarf-gitea")
+	require.NoError(t, err)
+	giteaRelease, ok := storedRelease.(*releasev1.Release)
+	require.True(t, ok)
+	originalValues := giteaRelease.Config
+	giteaRelease.Config = maps.Clone(originalValues)
+	giteaRelease.Config["extraVolumes"] = []any{}
+	t.Cleanup(func() {
+		giteaRelease.Config = originalValues
+		require.NoError(t, releases.Update(giteaRelease))
+	})
+	require.NoError(t, releases.Update(giteaRelease))
+
+	for _, tc := range []struct {
+		name       string
+		mode       state.GitTLSMode
+		management state.GitTLSCertManagement
+	}{
+		{name: "legacy HTTP mode"},
+		{name: "HTTP ignores certificate ownership", mode: state.GitTLSDisabled, management: state.GitTLSCertZarfManaged},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := c.LoadState(ctx)
+			require.NoError(t, err)
+			s.GitServer.TLSMode = tc.mode
+			s.GitServer.TLSCertManagement = tc.management
+			require.NoError(t, c.SaveState(ctx, s))
+
+			stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "git", "--git-tls-mode=disabled", "--confirm")
+			require.NoError(t, err, stdOut, stdErr)
+			updated, err := c.LoadState(ctx)
+			require.NoError(t, err)
+			require.Equal(t, state.GitTLSDisabled, updated.GitServer.TLSMode)
+			require.Empty(t, updated.GitServer.TLSCertManagement)
+			require.NotEqual(t, s.GitServer.PushPassword, updated.GitServer.PushPassword)
+
+			tunnel, err := c.Connect(ctx, cluster.ZarfGit)
+			require.NoError(t, err)
+			t.Cleanup(tunnel.Close)
+			endpoints := tunnel.URLEndpoints()
+			require.Len(t, endpoints, 1)
+			require.Regexp(t, "^http://", endpoints[0])
+			request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoints[0]+"/api/v1/user", nil)
+			require.NoError(t, err)
+			request.SetBasicAuth(updated.GitServer.PushUsername, updated.GitServer.PushPassword)
+			client := &http.Client{Timeout: 10 * time.Second}
+			response, err := client.Do(request)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, response.Body.Close()) })
+			require.Equal(t, http.StatusOK, response.StatusCode)
+		})
+	}
+}
+
+func TestGitTLSModeSwitch(t *testing.T) {
+	ctx := t.Context()
+	c, err := cluster.New(ctx)
+	require.NoError(t, err)
+	for _, mode := range []state.GitTLSMode{state.GitTLSDisabled, state.GitTLSEnabled, state.GitTLSDisabled} {
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "git", "--git-tls-mode="+string(mode), "--features=git-server-tls=true", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+
+		deployments, err := c.Clientset.AppsV1().Deployments(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{
+			LabelSelector: "app.kubernetes.io/instance=zarf-gitea",
+		})
+		require.NoError(t, err)
+		require.Len(t, deployments.Items, 1)
+		foundTLSVolume := false
+		for _, volume := range deployments.Items[0].Spec.Template.Spec.Volumes {
+			if volume.Secret == nil || volume.Secret.SecretName != state.GitServerTLSSecret {
+				continue
+			}
+			foundTLSVolume = true
+			require.NotNil(t, volume.Secret.Optional)
+			require.Equal(t, !mode.Enabled(), *volume.Secret.Optional)
+		}
+		require.True(t, foundTLSVolume, "Gitea must mount the Git TLS secret")
+
+		roots := x509.NewCertPool()
+		if mode.Enabled() {
+			certs, err := c.GetGitServerTLS(ctx)
+			require.NoError(t, err)
+			require.True(t, roots.AppendCertsFromPEM(certs.CA))
+		} else {
+			// HTTP must keep working when the unused TLS secret is absent.
+			if err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Delete(ctx, state.GitServerTLSSecret, metav1.DeleteOptions{}); !kerrors.IsNotFound(err) {
+				require.NoError(t, err)
+			}
+			stdOut, stdErr, err = e2e.Kubectl(t, "rollout", "restart", "deployment/"+deployments.Items[0].Name, "-n", state.ZarfNamespaceName)
+			require.NoError(t, err, stdOut, stdErr)
+			stdOut, stdErr, err = e2e.Kubectl(t, "rollout", "status", "deployment/"+deployments.Items[0].Name, "-n", state.ZarfNamespaceName, "--timeout=2m")
+			require.NoError(t, err, stdOut, stdErr)
+		}
+
+		tunnel, err := c.Connect(ctx, cluster.ZarfGit)
+		require.NoError(t, err)
+		t.Cleanup(tunnel.Close)
+		endpoints := tunnel.URLEndpoints()
+		require.Len(t, endpoints, 1)
+		if mode.Enabled() {
+			require.Regexp(t, "^https://", endpoints[0])
+		} else {
+			require.Regexp(t, "^http://", endpoints[0])
+		}
+		transport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}}
+		client := &http.Client{Timeout: 10 * time.Second, Transport: transport}
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoints[0]+"/explore/repos", nil)
+		require.NoError(t, err)
+		response, err := client.Do(request)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, response.StatusCode)
+		require.NoError(t, response.Body.Close())
+		transport.CloseIdleConnections()
+		tunnel.Close()
+	}
 }
 
 func TestMetrics(t *testing.T) {

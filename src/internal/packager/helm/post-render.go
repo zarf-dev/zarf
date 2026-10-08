@@ -167,7 +167,10 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			}
 		}
 		if r.state.GitServer.IsConfigured() {
-			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
+			gitServerSecret, err := c.GenerateGitPullCreds(ctx, name, config.ZarfGitServerSecretName, r.state.GitServer)
+			if err != nil {
+				return fmt.Errorf("problem generating git server secret for the %s namespace: %w", name, err)
+			}
 			_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 			if err != nil {
 				return fmt.Errorf("problem applying git server secret for the %s namespace: %w", name, err)

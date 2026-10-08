@@ -5,14 +5,19 @@
 package proxy
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
@@ -33,11 +38,15 @@ func (suite *RegistryProxyTestSuite) SetupSuite() {
 	suite.NoError(err)
 }
 
-func (suite *RegistryProxyTestSuite) Test_0_RegistryProxyInit() {
+func (suite *RegistryProxyTestSuite) Test_0_RegistryProxyAndGitTLSInit() {
 	ctx := suite.T().Context()
 
-	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--registry-mode=proxy", "--components=git-server", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--registry-mode=proxy", "--git-tls-mode=tls-enabled", "--features=git-server-tls=true", "--components=git-server", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Kubectl(suite.T(), "get", "deployment", "-n", state.ZarfNamespaceName,
+		"-l", "app.kubernetes.io/instance=zarf-gitea", `-o=jsonpath={.items[0].spec.template.spec.volumes[?(@.name=="gitea-tls")].secret.optional}`)
+	suite.NoError(err, stdOut, stdErr)
+	suite.Equal("false", stdOut, "TLS-enabled init must require its certificate secret")
 
 	// Verify the registry proxy TLS secrets were created
 	_, err = suite.cluster.Clientset.CoreV1().Secrets("zarf").Get(ctx, state.RegistryServerTLSSecret, metav1.GetOptions{})
@@ -45,6 +54,32 @@ func (suite *RegistryProxyTestSuite) Test_0_RegistryProxyInit() {
 
 	_, err = suite.cluster.Clientset.CoreV1().Secrets("zarf").Get(ctx, state.RegistryClientTLSSecret, metav1.GetOptions{})
 	suite.NoError(err, "zarf-registry-client-tls secret should exist")
+
+	gitTLS, err := suite.cluster.GetGitServerTLS(ctx)
+	suite.NoError(err)
+	roots := x509.NewCertPool()
+	suite.True(roots.AppendCertsFromPEM(gitTLS.CA))
+
+	tunnel, err := suite.cluster.Connect(ctx, cluster.ZarfGit)
+	suite.NoError(err)
+	defer tunnel.Close()
+	endpoints := tunnel.URLEndpoints()
+	suite.Len(endpoints, 1)
+	suite.Regexp("^https://", endpoints[0])
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{TLSClientConfig: &tls.Config{
+			RootCAs:    roots,
+			MinVersion: tls.VersionTLS12,
+		}},
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoints[0]+"/explore/repos", nil)
+	suite.NoError(err)
+	response, err := client.Do(request)
+	suite.NoError(err)
+	defer func() { suite.NoError(response.Body.Close()) }()
+	suite.Equal(http.StatusOK, response.StatusCode)
 }
 
 func (suite *RegistryProxyTestSuite) Test_1_DeployRegularPackage() {
@@ -84,13 +119,23 @@ func (suite *RegistryProxyTestSuite) Test_2_UpdateCredsUpdatesMTLSSecrets() {
 	suite.Equal(updatedPKI.Cert, updatedNamespaceSecret.Data[state.RegistrySecretCertPath])
 }
 
-func (suite *RegistryProxyTestSuite) Test_3_OCIOpsPackage() {
+func (suite *RegistryProxyTestSuite) Test_3_FluxPackage() {
 	tmpdir := suite.T().TempDir()
 	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "create", "examples/podinfo-flux", "-o", tmpdir)
 	suite.NoError(err, stdOut, stdErr)
 
 	deployPath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", runtime.GOARCH))
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "deploy", deployPath, "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Kubectl(suite.T(), "get", "gitrepository", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
+	suite.NoError(err, stdOut, stdErr)
+	suite.Contains(stdOut, state.ZarfInClusterGitURL(state.GitTLSEnabled))
+	gitSecret, err := suite.cluster.Clientset.CoreV1().Secrets("flux-system").Get(suite.T().Context(), config.ZarfGitServerSecretName, metav1.GetOptions{})
+	suite.NoError(err)
+	gitTLS, err := suite.cluster.GetGitServerTLS(suite.T().Context())
+	suite.NoError(err)
+	suite.Equal(gitTLS.CA, gitSecret.Data[state.GitServerTLSCAKey])
+	stdOut, stdErr, err = e2e.Kubectl(suite.T(), "wait", "--for=condition=Ready", "gitrepository/podinfo", "-n", "flux-system", "--timeout=5m")
 	suite.NoError(err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "remove", deployPath, "--confirm")

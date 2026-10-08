@@ -80,6 +80,8 @@ type DeployOptions struct {
 	InjectorImage  string
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// GitServerTLS allows providing user-managed TLS certificates for the internal Git server.
+	GitServerTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
 	AgentMutationPolicy state.MutationPolicy
 
@@ -126,6 +128,9 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 	if !feature.IsEnabled(feature.RegistryProxy) && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 		return DeployResult{}, fmt.Errorf("the registry proxy feature gate is not enabled")
+	}
+	if !feature.IsEnabled(feature.GitServerTLS) && (opts.GitServer.TLSMode.Enabled() || opts.GitServerTLS != nil) {
+		return DeployResult{}, fmt.Errorf("internal Git server TLS requested but %q feature is not enabled; run again with --features=%s=true", feature.GitServerTLS, feature.GitServerTLS)
 	}
 
 	l := logger.From(ctx)
@@ -405,6 +410,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			StorageClass:        opts.StorageClass,
 			InjectorPort:        opts.InjectorPort,
 			AgentTLS:            opts.AgentTLS,
+			GitServerTLS:        opts.GitServerTLS,
 			AgentMutationPolicy: opts.AgentMutationPolicy,
 			InternalServices:    internalServicesFor(pkg.Components, opts),
 		})

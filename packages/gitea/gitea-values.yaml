@@ -1,3 +1,5 @@
+{{- $tlsEnabled := get .State.Git "TLSEnabled" | default false -}}
+{{- $protocol := ternary "https" "http" $tlsEnabled -}}
 persistence:
   storageClass: "###ZARF_STORAGE_CLASS###"
   claimName: "###ZARF_VAR_GIT_SERVER_EXISTING_PVC###"
@@ -18,7 +20,10 @@ gitea:
     server:
       DISABLE_SSH: true
       OFFLINE_MODE: true
-      ROOT_URL: http://zarf-gitea-http.zarf.svc.cluster.local:3000
+      PROTOCOL: {{ $protocol | quote }}
+      ROOT_URL: {{ printf "%s://zarf-gitea-http.zarf.svc.cluster.local:3000" $protocol | quote }}
+      CERT_FILE: /etc/gitea-tls/tls.crt
+      KEY_FILE: /etc/gitea-tls/tls.key
     database:
       DB_TYPE: sqlite3
       # Note that the init script checks to see if the IP & port of the database service is accessible, so make sure you set those to something that resolves as successful (since sqlite uses files on disk setting the port & ip won't affect the running of gitea).
@@ -76,6 +81,17 @@ valkey-cluster:
 
 strategy:
   type: "Recreate"
+
+extraVolumes:
+  - name: gitea-tls
+    secret:
+      secretName: zarf-git-server-tls
+      optional: {{ not $tlsEnabled }}
+
+extraContainerVolumeMounts:
+  - name: gitea-tls
+    mountPath: /etc/gitea-tls
+    readOnly: true
 
 affinity:
   ###ZARF_VAR_GIT_SERVER_AFFINITY###
