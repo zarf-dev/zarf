@@ -6,25 +6,32 @@ package template
 import (
 	"fmt"
 
-	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 func imageRepository(image string) (string, error) {
-	ref, err := name.ParseReference(image)
+	ref, err := transform.ParseImageRef(image)
 	if err != nil {
-		return "", fmt.Errorf("parsing image reference %q: %w", image, err)
+		return "", err
 	}
-	return ref.Context().RepositoryStr(), nil
+	return ref.Path, nil
 }
 
 func imageTag(image string) (string, error) {
-	ref, err := name.ParseReference(image)
+	ref, err := transform.ParseImageRef(image)
 	if err != nil {
-		return "", fmt.Errorf("parsing image reference %q: %w", image, err)
+		return "", err
 	}
-	tag, ok := ref.(name.Tag)
-	if !ok {
-		return "", fmt.Errorf("image reference %q has no tag", image)
+	if ref.Digest != "" {
+		return "", fmt.Errorf("image reference %q requires a digest suffix", image)
 	}
-	return tag.TagStr(), nil
+	return ref.Tag, nil
+}
+
+func imageTagOrDigest(image string) (string, error) {
+	ref, err := transform.ParseImageRef(image)
+	if err != nil {
+		return "", err
+	}
+	return ref.TagOrDigest, nil
 }

@@ -26,6 +26,8 @@ deployment:
   replicaCount: 2
 
 image:
+  # A complete tag or digest reference overrides repository and tag when set.
+  reference: ""
   repository: "###ZARF_REGISTRY###/###ZARF_CONST_AGENT_IMAGE###"
   tag: "###ZARF_CONST_AGENT_IMAGE_TAG###"
   pullSecret: private-registry

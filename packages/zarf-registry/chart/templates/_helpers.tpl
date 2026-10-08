@@ -102,14 +102,16 @@ false
 {{- end -}}
 
 {{/*
-Get the appropriate image repository based on proxy configuration
+Resolve the registry image, using the seed registry when the proxy is enabled.
 */}}
-{{- define "registry.image.repository" -}}
+{{- define "registry.image" -}}
+{{- $reference := .Values.image.reference -}}
+{{- $repository := .Values.image.repository -}}
 {{- if .Values.proxy.enabled -}}
-{{ .Values.proxy.registry.image.repository }}
-{{- else -}}
-{{ .Values.image.repository }}
+{{- $reference = default $reference .Values.proxy.registry.image.reference -}}
+{{- $repository = .Values.proxy.registry.image.repository -}}
 {{- end -}}
+{{- default (printf "%s:%s" $repository (toString .Values.image.tag)) $reference -}}
 {{- end -}}
 
 {{/*

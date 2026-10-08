@@ -71,3 +71,34 @@ func TestApplyImageTag(t *testing.T) {
 		})
 	}
 }
+
+func TestApplyImageTagOrDigest(t *testing.T) {
+	t.Parallel()
+	digest := "sha256:" + strings.Repeat("a", 64)
+	for _, tt := range []struct {
+		image    string
+		expected string
+	}{
+		{image: "ghcr.io/team/agent:v1.2.3", expected: "offline.example/team/agent:v1.2.3"},
+		{image: "registry.example:5443/team/agent:v1.2.3", expected: "offline.example/team/agent:v1.2.3"},
+		{image: "registry.example:5443/team/agent", expected: "offline.example/team/agent:latest"},
+		{image: "nginx", expected: "offline.example/library/nginx:latest"},
+		{image: "nginx@" + digest, expected: "offline.example/library/nginx@" + digest},
+		{image: "nginx:1.27@" + digest, expected: "offline.example/library/nginx@" + digest},
+		{image: ""},
+		{image: "nginx:"},
+		{image: "https://ghcr.io/team/agent:v1.2.3"},
+		{image: "nginx@sha256:invalid"},
+	} {
+		t.Run(tt.image, func(t *testing.T) {
+			t.Parallel()
+			result, err := Apply(t.Context(), `{{ printf "offline.example/%s%s" (imageRepository .Values.image) (imageTagOrDigest .Values.image) }}`, NewObjects(value.Values{"image": tt.image}))
+			if tt.expected == "" {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
