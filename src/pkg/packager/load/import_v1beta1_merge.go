@@ -158,6 +158,11 @@ func mergeActionSet(base, head v1beta1.ComponentActionSet) v1beta1.ComponentActi
 // fixPathsV1Beta1 rebases a component spec's relative resource paths to be relative to the head node,
 // where relativeToHead is the imported config's directory relative to the importing component.
 func fixPathsV1Beta1(spec v1beta1.ComponentSpec, relativeToHead string) v1beta1.ComponentSpec {
+	// Imported configs may be reused from the reference cache; keep their paths unchanged.
+	spec.Files = slices.Clone(spec.Files)
+	spec.ImageArchives = slices.Clone(spec.ImageArchives)
+	spec.Charts = slices.Clone(spec.Charts)
+	spec.Manifests = slices.Clone(spec.Manifests)
 	for i := range spec.Files {
 		spec.Files[i].Source = makePathRelativeTo(spec.Files[i].Source, relativeToHead)
 	}
@@ -166,13 +171,18 @@ func fixPathsV1Beta1(spec v1beta1.ComponentSpec, relativeToHead string) v1beta1.
 	}
 	for i := range spec.Charts {
 		if spec.Charts[i].Local != nil {
+			local := *spec.Charts[i].Local
+			spec.Charts[i].Local = &local
 			spec.Charts[i].Local.Path = makePathRelativeTo(spec.Charts[i].Local.Path, relativeToHead)
 		}
+		spec.Charts[i].ValuesFiles = slices.Clone(spec.Charts[i].ValuesFiles)
 		for j := range spec.Charts[i].ValuesFiles {
 			spec.Charts[i].ValuesFiles[j].Path = makePathRelativeTo(spec.Charts[i].ValuesFiles[j].Path, relativeToHead)
 		}
 	}
 	for i := range spec.Manifests {
+		spec.Manifests[i].Files = slices.Clone(spec.Manifests[i].Files)
+		spec.Manifests[i].Kustomize.Files = slices.Clone(spec.Manifests[i].Kustomize.Files)
 		for j := range spec.Manifests[i].Files {
 			spec.Manifests[i].Files[j] = makePathRelativeTo(spec.Manifests[i].Files[j], relativeToHead)
 		}
@@ -193,6 +203,7 @@ func fixPathsV1Beta1(spec v1beta1.ComponentSpec, relativeToHead string) v1beta1.
 }
 
 func fixActionPathsV1Beta1(actions []v1beta1.ComponentAction, defaultDir, relativeToHead string) []v1beta1.ComponentAction {
+	actions = slices.Clone(actions)
 	for i := range actions {
 		var composed string
 		if actions[i].Dir != nil {

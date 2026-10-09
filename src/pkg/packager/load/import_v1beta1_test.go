@@ -339,6 +339,63 @@ components:
 	}
 }
 
+func TestPackageRemoteComponentImageLayers(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name    string
+		paths   []string
+		wantErr string
+	}{
+		{name: "image layout", paths: []string{"images/index.json"}},
+		{name: "missing image layout", wantErr: "absent from artifact layers"},
+		{name: "unsafe path", paths: []string{"images/../outside"}, wantErr: "invalid image layout path"},
+		{name: "non-image resource", paths: []string{"resources/file.txt"}, wantErr: "invalid image layout path"},
+		{name: "duplicate image path", paths: []string{"images/index.json", "images/index.json"}, wantErr: "duplicate image layout paths"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			ref := registry.Reference{Registry: testutil.SetupInMemoryRegistryDynamic(ctx, t), Repository: "components", Reference: "image-layers"}
+			component := v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfComponentConfig,
+				Metadata:   v1beta1.ComponentMetadata{Name: "image-layers"},
+				Component:  v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{{Path: "images", Images: []string{"example.com/image:1"}}}},
+			}
+			var contents bytes.Buffer
+			require.NoError(t, tar.NewWriter(&contents).Close())
+			store := memory.New()
+			archiveDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentLayerMediaTypeTar, contents.Bytes())
+			require.NoError(t, store.Push(ctx, archiveDescriptor, bytes.NewReader(contents.Bytes())))
+			layers := []ocispec.Descriptor{archiveDescriptor}
+			for _, imagePath := range tt.paths {
+				payload := []byte(imagePath)
+				descriptor := content.NewDescriptorFromBytes(layout.ZarfComponentLayerMediaTypeBlob, payload)
+				descriptor.Annotations = map[string]string{layout.ComponentResourceMountPathAnnotation: imagePath}
+				if exists, err := store.Exists(ctx, descriptor); !exists {
+					require.NoError(t, err)
+					require.NoError(t, store.Push(ctx, descriptor, bytes.NewReader(payload)))
+				}
+				layers = append(layers, descriptor)
+			}
+			publishRemoteComponentArtifact(ctx, t, ref, component, store, layers)
+			dir := t.TempDir()
+			writeRemoteImportPackage(t, dir, ref)
+			loaded, err := Package(ctx, dir, PackageOptions{DefinitionOptions: DefinitionOptions{CachePath: t.TempDir(), RemoteOptions: types.RemoteOptions{PlainHTTP: true}}})
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+			imageDir := loaded.Definition.Components[0].ImageArchives[0].Path
+			payload, err := loaded.Resources.ReadFile(imageDir + "/index.json")
+			require.NoError(t, err)
+			require.Equal(t, "images/index.json", string(payload))
+		})
+	}
+}
+
 func TestRemoteImportRejectsUnbundledLocalResources(t *testing.T) {
 	t.Parallel()
 
@@ -479,7 +536,7 @@ func TestPackageRejectsUnsafeComponentArchivePaths(t *testing.T) {
 			publishRemoteComponentConfig(ctx, t, ref, component, tt.mountPath)
 			dir := t.TempDir()
 			writeRemoteImportPackage(t, dir, ref)
-			_, err := Package(ctx, dir, PackageOptions{DefinitionOptions: DefinitionOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}}})
+			_, err := Package(ctx, dir, PackageOptions{DefinitionOptions: DefinitionOptions{CachePath: t.TempDir(), RemoteOptions: types.RemoteOptions{PlainHTTP: true}}})
 			require.ErrorContains(t, err, "extracting remote component archive")
 		})
 	}

@@ -316,12 +316,16 @@ metadata:
   name: image-archive-component
   version: 0.0.1
 component:
+  files:
+    - source: file.txt
+      destination: /tmp/file.txt
   imageArchives:
     - path: %q
       images:
         - ghcr.io/zarf-dev/images/hello-world:latest
 `, archivePath))
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(filepath.Dir(componentPath), "file.txt"), []byte("component file"), 0o600))
 
 	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
@@ -330,10 +334,74 @@ component:
 	require.Equal(t, "images", component.Component.ImageArchives[0].Path)
 
 	resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
-	require.Contains(t, resourceFiles, "images/oci-layout")
-	require.Contains(t, resourceFiles, "images/index.json")
-	require.NotContains(t, resourceFiles, "images.tar")
-	require.Contains(t, resourceFiles, "images/blobs/sha256/03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c")
+	require.Equal(t, "component file", resourceFiles["resources/0/file.txt"])
+	for filename := range resourceFiles {
+		require.NotContains(t, filename, "images/")
+	}
+	imageLayers := map[string]ocispec.Descriptor{}
+	for _, layer := range manifest.Layers {
+		if layer.MediaType == layout.ZarfComponentLayerMediaTypeTar {
+			continue
+		}
+		require.Equal(t, layout.ZarfComponentLayerMediaTypeBlob, layer.MediaType)
+		mountPath := layer.Annotations[layout.ComponentResourceMountPathAnnotation]
+		require.Equal(t, mountPath, layer.Annotations[ocispec.AnnotationTitle])
+		imageLayers[mountPath] = layer
+	}
+	require.Contains(t, imageLayers, "images/oci-layout")
+	require.Contains(t, imageLayers, "images/index.json")
+	manifestPath := "images/blobs/sha256/03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c"
+	require.Contains(t, imageLayers, manifestPath)
+
+	packageDir := t.TempDir()
+	packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: image-archive-import
+components:
+  - name: imported
+    import:
+      remote:
+        - url: oci://%s
+`, published.String())
+	packagePath := filepath.Join(packageDir, layout.ZarfYAML)
+	require.NoError(t, os.WriteFile(packagePath, []byte(packageYAML), 0o600))
+	loaded, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()}})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	imagePath := loaded.Definition.Components[0].ImageArchives[0].Path
+	manifestContents, err := loaded.Resources.ReadFile(imagePath + strings.TrimPrefix(manifestPath, "images"))
+	require.NoError(t, err)
+	originalManifest, err := os.ReadFile(filepath.Join(imageLayout, filepath.FromSlash(strings.TrimPrefix(manifestPath, "images/"))))
+	require.NoError(t, err)
+	require.Equal(t, originalManifest, manifestContents)
+
+	loaded.Definition.Metadata.Architecture = "amd64"
+	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+	assembledManifest, err := os.ReadFile(filepath.Join(pkgLayout.GetImageDirPath(), filepath.FromSlash(strings.TrimPrefix(manifestPath, "images/"))))
+	require.NoError(t, err)
+	require.Equal(t, originalManifest, assembledManifest)
+
+	// Repeated imports share the materialized layout.
+	packageYAML += fmt.Sprintf(`  - name: imported-again
+    import:
+      remote:
+        - url: oci://%s
+`, published.String())
+	require.NoError(t, os.WriteFile(packagePath, []byte(packageYAML), 0o600))
+	repeated, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()}})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, repeated.Close()) })
+	for _, component := range repeated.Definition.Components {
+		contents, err := repeated.Resources.ReadFile(component.ImageArchives[0].Path + strings.TrimPrefix(manifestPath, "images"))
+		require.NoError(t, err)
+		require.Equal(t, originalManifest, contents)
+		file, err := repeated.Resources.ReadFile(component.Files[0].Source)
+		require.NoError(t, err)
+		require.Equal(t, "component file", string(file))
+	}
 }
 
 func TestPublishComponentResolvesLocalImports(t *testing.T) {
@@ -751,9 +819,14 @@ component:
 func getPublishedResourceFiles(ctx context.Context, t *testing.T, published registry.Reference, manifest ocispec.Manifest) map[string]string {
 	t.Helper()
 
-	require.Len(t, manifest.Layers, 1)
-	layer := manifest.Layers[0]
-	require.Equal(t, layout.ZarfComponentLayerMediaTypeTar, layer.MediaType)
+	var archives []ocispec.Descriptor
+	for _, layer := range manifest.Layers {
+		if layer.MediaType == layout.ZarfComponentLayerMediaTypeTar {
+			archives = append(archives, layer)
+		}
+	}
+	require.Len(t, archives, 1)
+	layer := archives[0]
 	require.Equal(t, layout.ComponentTar, layer.Annotations[ocispec.AnnotationTitle])
 	repo, err := registryremote.NewRepository(published.Registry + "/" + published.Repository)
 	require.NoError(t, err)

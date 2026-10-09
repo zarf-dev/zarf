@@ -27,11 +27,12 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// remoteResource is the resource archive of a remotely imported component.
+// remoteResource contains the resource archive and image layout of a remotely imported component.
 // Its import root and required paths are artifact-relative.
 type remoteResource struct {
 	remote        *zoci.Remote
 	descriptor    ocispec.Descriptor
+	imageLayers   []ocispec.Descriptor
 	importRoot    string
 	requiredPaths []componentResourceReference
 }
@@ -278,15 +279,40 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q variant architecture does not match its OCI platform", importURL)
 	}
 	importRoot := path.Join(".zarf", "remote-components", strings.ReplaceAll(root.Digest.String(), ":", "-"))
-	if len(manifest.Layers) != 1 || manifest.Layers[0].MediaType != layout.ZarfComponentLayerMediaTypeTar {
-		return loadedComponentConfig{}, fmt.Errorf("remote component %q must contain a single resource archive", importURL)
+	var archiveDescriptor ocispec.Descriptor
+	var imageLayers []ocispec.Descriptor
+	seenImagePaths := map[string]struct{}{}
+	for _, descriptor := range manifest.Layers {
+		switch descriptor.MediaType {
+		case layout.ZarfComponentLayerMediaTypeTar:
+			if archiveDescriptor.Digest != "" {
+				return loadedComponentConfig{}, fmt.Errorf("remote component %q has multiple resource archives", importURL)
+			}
+			archiveDescriptor = descriptor
+		case layout.ZarfComponentLayerMediaTypeBlob:
+			mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
+			if !validResourcePath(mountPath) || !strings.HasPrefix(mountPath, layout.ImagesDir+"/") {
+				return loadedComponentConfig{}, fmt.Errorf("remote component %q has an invalid image layout path", importURL)
+			}
+			if _, exists := seenImagePaths[mountPath]; exists {
+				return loadedComponentConfig{}, fmt.Errorf("remote component %q has duplicate image layout paths", importURL)
+			}
+			seenImagePaths[mountPath] = struct{}{}
+			imageLayers = append(imageLayers, descriptor)
+		default:
+			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an unsupported resource layer", importURL)
+		}
+	}
+	// FIXME: what if there is only an image archive?
+	if archiveDescriptor.Digest == "" {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q has no resource archive", importURL)
 	}
 	references := componentResourceReferences(config)
 	// Validate path syntax now; presence is checked after materializing the tar.
 	if err := validateRemoteComponentResources(references, nil); err != nil {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
 	}
-	resources := []remoteResource{{remote: remote, descriptor: manifest.Layers[0], importRoot: importRoot, requiredPaths: references}}
+	resources := []remoteResource{{remote: remote, descriptor: archiveDescriptor, imageLayers: imageLayers, importRoot: importRoot, requiredPaths: references}}
 	return loadedComponentConfig{config: config, remote: true, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
 }
 

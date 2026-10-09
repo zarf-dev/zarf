@@ -39,6 +39,10 @@ const (
 	ZarfComponentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
 	// ZarfComponentLayerMediaTypeTar identifies a tar containing normalized component resources.
 	ZarfComponentLayerMediaTypeTar = "application/vnd.zarf.component.layer.v1.tar"
+	// ZarfComponentLayerMediaTypeBlob identifies an individual component image layout file.
+	ZarfComponentLayerMediaTypeBlob = "application/vnd.zarf.component.layer.v1.blob"
+	// ComponentResourceMountPathAnnotation identifies the artifact-relative path of an image layout file.
+	ComponentResourceMountPathAnnotation = "dev.zarf.mountPath"
 	// ComponentTar is the resource archive in a published component artifact.
 	ComponentTar = "component.tar"
 	// OCITimestampFormat is the format used for the OCI timestamp annotation

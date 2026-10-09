@@ -12,6 +12,7 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -93,5 +94,61 @@ func TestComponentPublish(t *testing.T) {
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(manifestsDir, "local-manifest-0.yaml"))
 		require.FileExists(t, filepath.Join(manifestsDir, "kustomization-local-kustomization-0.yaml"))
+	})
+	t.Run("image archive layers", func(t *testing.T) {
+		componentDir := t.TempDir()
+		imageArchive := filepath.Join(componentDir, "images.tar")
+		imageLayout := filepath.Join("src", "pkg", "images", "testdata", "oras-oci-layout", "images")
+		require.NoError(t, archive.Compress(t.Context(), []string{imageLayout}, imageArchive, archive.CompressOpts{}))
+		componentPath := filepath.Join(componentDir, "component.yaml")
+		require.NoError(t, os.WriteFile(componentPath, []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: published-image-archive
+  version: 0.0.1
+component:
+  imageArchives:
+    - path: images.tar
+      images:
+        - ghcr.io/zarf-dev/images/hello-world:latest
+`), 0o600))
+		stdOut, stdErr, err := e2e.Zarf(t, "component", "publish", componentPath, "oci://"+registryURL, "--plain-http")
+		require.NoError(t, err, stdOut, stdErr)
+		source := registryURL + "/published-image-archive:0.0.1"
+		remote, err := zoci.NewRemoteWithOptions(t.Context(), source, ocispec.Platform{}, zoci.RemoteClientOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
+		require.NoError(t, err)
+		manifest, err := remote.FetchRoot(t.Context())
+		require.NoError(t, err)
+		layerNames := make([]string, 0, len(manifest.Layers))
+		for _, layer := range manifest.Layers {
+			layerNames = append(layerNames, layer.Annotations[ocispec.AnnotationTitle])
+		}
+		require.Contains(t, layerNames, layout.ComponentTar)
+		require.Contains(t, layerNames, "images/index.json")
+		require.Contains(t, layerNames, "images/oci-layout")
+		imageManifest := "blobs/sha256/03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c"
+		require.Contains(t, layerNames, "images/"+imageManifest)
+
+		packageDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: image-archive-import
+components:
+  - name: imported
+    import:
+      remote:
+        - url: oci://`+source+"\n"), 0o600))
+		output := t.TempDir()
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "create", packageDir, "-o", output, "--architecture", "amd64", "--plain-http", "--skip-sbom", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+		pkgLayout, err := layout.LoadFromTar(t.Context(), filepath.Join(output, "zarf-package-image-archive-import-amd64.tar.zst"), layout.PackageLayoutOptions{})
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+		original, err := os.ReadFile(filepath.Join(imageLayout, filepath.FromSlash(imageManifest)))
+		require.NoError(t, err)
+		assembled, err := os.ReadFile(filepath.Join(pkgLayout.GetImageDirPath(), filepath.FromSlash(imageManifest)))
+		require.NoError(t, err)
+		require.Equal(t, original, assembled)
 	})
 }
