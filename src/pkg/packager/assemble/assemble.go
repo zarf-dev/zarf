@@ -133,6 +133,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		}
 	}
 
+	declaredImageReferences := map[string]string{}
 	componentImages := []images.ImageRequest{}
 	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
@@ -140,6 +141,17 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 			imageArchive.Path, err = resolvedPackage.Resources.Path(imageArchive.Path)
 			if err != nil {
 				return nil, err
+			}
+			if layout.UsesGranularResourceLayout(pkg) && !opts.SkipSBOM {
+				for _, image := range imageArchive.Images {
+					refInfo, err := transform.ParseImageRef(image)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create ref for image %s: %w", image, err)
+					}
+					if err := addDeclaredSBOMImageReference(declaredImageReferences, image, refInfo); err != nil {
+						return nil, err
+					}
+				}
 			}
 
 			archiveImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, layout.ImagesDir), pkg.Metadata.Architecture)
@@ -153,10 +165,18 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 			if err != nil {
 				return nil, fmt.Errorf("failed to create ref for image %s: %w", image.Name, err)
 			}
-			componentImages = append(componentImages, images.ImageRequest{Image: refInfo, Source: image.Source.GetSource()})
+			if layout.UsesGranularResourceLayout(pkg) && !opts.SkipSBOM {
+				if err := addDeclaredSBOMImageReference(declaredImageReferences, image.Name, refInfo); err != nil {
+					return nil, err
+				}
+			}
+			componentImages = append(componentImages, images.ImageRequest{
+				Image:             refInfo,
+				Source:            image.Source.GetSource(),
+				DeclaredReference: image.Name,
+			})
 		}
 	}
-	sbomImageList := []transform.Image{}
 	if len(componentImages) > 0 {
 		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
@@ -173,12 +193,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		manifests = append(manifests, imageManifests...)
 	}
 
-	for _, pulled := range manifests {
-		sbomImageList = append(sbomImageList, pulled.Image)
-
+	if len(manifests) > 0 {
 		// Sort images index to make build reproducible.
-		err = utils.SortImagesIndex(filepath.Join(buildPath, layout.ImagesDir))
-		if err != nil {
+		if err := utils.SortImagesIndex(filepath.Join(buildPath, layout.ImagesDir)); err != nil {
 			return nil, err
 		}
 	}
@@ -187,7 +204,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 
 	if !opts.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
-		err := generateSBOM(ctx, pkg, buildPath, sbomImageList, opts.CachePath)
+		err := generateSBOM(ctx, pkg, buildPath, manifests, opts.CachePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}
@@ -202,7 +219,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 
-	if err = createDocumentationTar(pkg, resolvedPackage.Resources, buildPath); err != nil {
+	if err = stageDocumentation(pkg, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -290,7 +307,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, err
 	}
 
-	if err = createDocumentationTar(definition, resolvedPackage.Resources, buildPath); err != nil {
+	if err = stageDocumentation(definition, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -344,6 +361,14 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	}
 
 	return pkgLayout, nil
+}
+
+func addDeclaredSBOMImageReference(declaredReferences map[string]string, declaredReference string, canonicalReference transform.Image) error {
+	if existingReference, found := declaredReferences[canonicalReference.Reference]; found && existingReference != declaredReference {
+		return fmt.Errorf("image declarations %q and %q resolve to the same image identity %q", existingReference, declaredReference, canonicalReference.Reference)
+	}
+	declaredReferences[canonicalReference.Reference] = declaredReference
+	return nil
 }
 
 // validateImageArchivesNoDuplicates ensures no image appears in multiple image archives
@@ -1152,11 +1177,16 @@ func writeValuesSchema(buildPath string, schema value.SchemaDocument) error {
 	return nil
 }
 
-func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
+func stageDocumentation(pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
 	if len(pkg.Documentation) == 0 {
 		return nil
 	}
 
+	// Get the mapping of keys to their final filenames (with deduplication logic).
+	fileNames, err := layout.GetDocumentationFileNames(pkg.Documentation)
+	if err != nil {
+		return fmt.Errorf("validating documentation filenames: %w", err)
+	}
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to create temp directory for documentation: %w", err)
@@ -1164,10 +1194,6 @@ func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildP
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
-
-	// Get the mapping of keys to their final filenames (with deduplication logic)
-	fileNames := layout.GetDocumentationFileNames(pkg.Documentation)
-
 	for key, file := range pkg.Documentation {
 		src, err := resources.Path(file)
 		if err != nil {
@@ -1175,21 +1201,30 @@ func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildP
 		}
 
 		docFilename := fileNames[key]
-		dst := filepath.Join(tmpDir, docFilename)
+		dstDir := tmpDir
+		if layout.UsesGranularResourceLayout(pkg) {
+			dstDir = filepath.Join(buildPath, layout.DocumentationDir)
+		}
+		if err := os.MkdirAll(dstDir, helpers.ReadWriteExecuteUser); err != nil {
+			return fmt.Errorf("failed to create documentation directory: %w", err)
+		}
+		dst := filepath.Join(dstDir, docFilename)
 
 		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
 		}
-
 		if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
 			return fmt.Errorf("failed to set permissions on documentation file %s: %w", dst, err)
 		}
+	}
+
+	if layout.UsesGranularResourceLayout(pkg) {
+		return nil
 	}
 
 	tarPath := filepath.Join(buildPath, layout.DocumentationTar)
 	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
 		return fmt.Errorf("failed to create documentation tarball: %w", err)
 	}
-
 	return nil
 }

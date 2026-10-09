@@ -32,31 +32,36 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 
 	copyOpts := r.OrasRemote.GetDefaultCopyOpts()
 	copyOpts.Concurrency = opts.OCIConcurrency
+	// log the manifest descriptor size to monitor for any reported errors >4mb
+	manifestDesc, err := pkgLayout.Resolve(ctx, pkgLayout.Digest())
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("resolving package manifest: %w", err)
+	}
 
 	totalSize := pkgLayout.TotalSize()
+	l.Info("pushing package to registry", "destination", r.Repo().Reference.String(),
+		"architecture", pkgLayout.Definition().Build.Architecture,
+		"size", utils.ByteFormat(float64(totalSize), 2),
+		"manifestSize", utils.ByteFormat(float64(manifestDesc.Size), 2))
 
 	var publishedDesc ocispec.Descriptor
-	err = Retry(ctx, opts.Retries,
-		func() error {
-			l.Info("pushing package to registry", "destination", r.Repo().Reference.String(),
-				"architecture", pkgLayout.Definition().Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
+	err = Retry(ctx, opts.Retries, func() error {
+		trackedRemote := images.NewTrackedTarget(
+			r.Repo(),
+			totalSize,
+			images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()),
+		)
+		trackedRemote.StartReporting(ctx)
+		defer trackedRemote.StopReporting()
 
-			trackedRemote := images.NewTrackedTarget(
-				r.Repo(),
-				totalSize,
-				images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()),
-			)
-			trackedRemote.StartReporting(ctx)
-			defer trackedRemote.StopReporting()
+		var copyErr error
+		publishedDesc, copyErr = oras.Copy(ctx, pkgLayout, pkgLayout.Digest(), trackedRemote, "", copyOpts)
+		if copyErr != nil {
+			return copyErr
+		}
 
-			var copyErr error
-			publishedDesc, copyErr = oras.Copy(ctx, pkgLayout, pkgLayout.Digest(), trackedRemote, "", copyOpts)
-			if copyErr != nil {
-				return copyErr
-			}
-
-			return r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
-		},
+		return r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
+	},
 	)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("publish failed: %w", err)

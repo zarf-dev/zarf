@@ -117,7 +117,7 @@ type pullOCIOptions struct {
 	Source            string
 	Shasum            string
 	Architecture      string
-	LayerTypes        []zoci.LayerType
+	LayerSelection    zoci.LayerSelection
 	Filter            filters.ComponentFilterStrategy
 	OCIConcurrency    int
 	CachePath         string
@@ -156,17 +156,17 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		}
 	}
 
-	// Get all the layers for relevant components, exclude images if it's a skeleton or connected package
-	layerTypes := opts.LayerTypes
+	// Get all the layers for relevant components, excluding images for skeleton or connected packages.
+	selection := opts.LayerSelection
 	if opts.Connected || isSkeleton(desc.Platform) {
-		if len(layerTypes) == 0 {
-			layerTypes = zoci.GetAllLayerTypes()
+		if len(selection.Types) == 0 {
+			selection.Types = zoci.GetAllLayerTypes()
 		}
-		layerTypes = slices.DeleteFunc(layerTypes, func(lt zoci.LayerType) bool {
+		selection.Types = slices.DeleteFunc(selection.Types, func(lt zoci.LayerType) bool {
 			return lt == zoci.ImageLayers
 		})
 	}
-	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, layerTypes...)
+	layersToPull, err := remote.AssembleLayersWithSelection(ctx, pkg.Components, selection)
 	if err != nil {
 		return nil, err
 	}

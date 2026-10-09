@@ -236,7 +236,11 @@ func TestPull(t *testing.T) {
 			for _, ref := range tc.refs {
 				image, err := transform.ParseImageRef(ref)
 				require.NoError(t, err)
-				images = append(images, ImageRequest{Image: image})
+				images = append(images, ImageRequest{
+					Image:             image,
+					Source:            api.ImageSourceRegistry,
+					DeclaredReference: ref,
+				})
 			}
 
 			destDir := t.TempDir()
@@ -255,6 +259,10 @@ func TestPull(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Len(t, pulled, len(images))
+			for _, pulledImage := range pulled {
+				require.Contains(t, images, pulledImage.Request)
+				require.Equal(t, ImageOriginRegistry, pulledImage.Origin)
+			}
 
 			idx, err := getIndexFromOCILayout(filepath.Join(destDir))
 			require.NoError(t, err)
