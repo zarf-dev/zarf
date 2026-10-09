@@ -6,11 +6,21 @@ package git
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-git/go-git/v5/plumbing"
 
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
+
+func (r *Repository) gitFetchCommitFallback(ctx context.Context, commit string) error {
+	_, stderr, err := exec.CmdWithContext(ctx, exec.Config{Dir: r.path}, "git",
+		"fetch", "--depth", "1", "--no-tags", onlineRemoteName, commit)
+	if err != nil {
+		return fmt.Errorf("unable to fetch commit %s: %w: %s", commit, err, stderr)
+	}
+	return nil
+}
 
 // gitCloneFallback is a fallback if go-git fails to clone a repo.
 func (r *Repository) gitCloneFallback(ctx context.Context, gitURL string, ref plumbing.ReferenceName, shallow bool) error {

@@ -162,6 +162,58 @@ documenttaion:
 	}
 }
 
+func TestPackageDefinitionValidatesSelectedDocument(t *testing.T) {
+	t.Parallel()
+	alpha := "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\ncomponents:\n  - name: component\n"
+	beta := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta
+  description: |+
+    selected beta
+
+components:
+  - name: component
+`
+	future := "apiVersion: zarf.dev/v99\n"
+	unknownField := "unsupported: true\n"
+	for _, tt := range []struct {
+		name       string
+		definition string
+		wantName   string
+		wantError  bool
+	}{
+		{name: "alpha then beta", definition: alpha + "---\n" + beta, wantName: "beta"},
+		{name: "beta then alpha", definition: beta + "---\n" + alpha, wantName: "beta"},
+		{name: "future then alpha", definition: future + "---\n" + alpha, wantName: "alpha"},
+		{name: "alpha then future", definition: alpha + "---\n" + future, wantName: "alpha"},
+		{name: "unknown beta field after alpha", definition: alpha + "---\n" + beta + unknownField, wantName: "beta", wantError: true},
+		{name: "unknown beta field before alpha", definition: beta + unknownField + "---\n" + alpha, wantName: "beta", wantError: true},
+		{name: "unknown alpha field after future", definition: future + "---\n" + alpha + unknownField, wantName: "alpha", wantError: true},
+		{name: "unknown alpha field before future", definition: alpha + unknownField + "---\n" + future, wantName: "alpha", wantError: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(tt.definition), 0o600))
+			pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+			if tt.wantError {
+				var lintErr *lint.LintError
+				require.ErrorAs(t, err, &lintErr)
+				require.Equal(t, tt.wantName, lintErr.PackageName)
+				require.Len(t, lintErr.Findings, 1)
+				require.Contains(t, lintErr.Findings[0].Description, "unsupported")
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantName, pkg.Metadata.Name)
+			if tt.wantName == "beta" {
+				require.Equal(t, "selected beta\n\n", pkg.Metadata.Description)
+			}
+		})
+	}
+}
+
 func TestPackageDefinitionValidatesV1Beta1RepositoryGitReferences(t *testing.T) {
 	t.Parallel()
 

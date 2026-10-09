@@ -280,6 +280,9 @@ func runWaitClusterAction(ctx context.Context, cluster *api.ActionWaitCluster, t
 	}
 	l.Info("running wait action", "description", desc)
 
+	if condition == "" && cluster.Condition.Default == api.WaitForReadiness {
+		return wait.ForResourceDefaultReady(ctx, kind, identifier, condition, namespace, timeout)
+	}
 	return wait.ForResource(ctx, kind, identifier, condition, namespace, timeout)
 }
 

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
@@ -119,7 +120,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
-		if err := requirements.ValidateVersionRequirements(pkg); err != nil {
+		if err := requirements.ValidateVersionRequirements(pkg.Build.VersionRequirements); err != nil {
 			return DeployResult{}, fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", err)
 		}
 	}
@@ -300,6 +301,20 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		}
 
 		onDeploy := component.Actions.OnDeploy
+		onSuccess := func() error {
+			if err := actions.Run(ctx, cwd, onDeploy.OnSuccess, actions.RunOptions{
+				DefaultConfig:  onDeploy.Defaults,
+				VariableConfig: d.vc,
+				Values:         d.vals,
+				StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
+			}); err != nil {
+				return fmt.Errorf("unable to run component success action: %w", err)
+			}
+			return nil
+		}
+		if deployErr == nil && pkg.GetAPIVersion() != v1alpha1.APIVersion {
+			deployErr = onSuccess()
+		}
 
 		onFailure := func() {
 			if err := actions.Run(ctx, cwd, onDeploy.OnFailure, actions.RunOptions{
@@ -344,14 +359,12 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 
-		if err := actions.Run(ctx, cwd, onDeploy.OnSuccess, actions.RunOptions{
-			DefaultConfig:  onDeploy.Defaults,
-			VariableConfig: d.vc,
-			Values:         d.vals,
-			StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
-		}); err != nil {
-			onFailure()
-			return nil, fmt.Errorf("unable to run component success action: %w", err)
+		// Alpha success hooks observe the saved successful deployment
+		if pkg.GetAPIVersion() == v1alpha1.APIVersion {
+			if err := onSuccess(); err != nil {
+				onFailure()
+				return nil, err
+			}
 		}
 	}
 

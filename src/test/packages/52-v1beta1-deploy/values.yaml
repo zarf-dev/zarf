@@ -1,0 +1,4 @@
+message: from-package
+mapped:
+  included: from-mapping
+  excluded: should-not-appear

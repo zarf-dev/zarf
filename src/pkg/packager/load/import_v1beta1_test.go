@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -195,6 +197,67 @@ func publishRemoteComponentConfig(ctx context.Context, t *testing.T, ref registr
 	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
 	require.NoError(t, err)
 	return ref
+}
+
+func TestPackageDefinitionEnforcesRemoteComponentVersionRequirements(t *testing.T) {
+	originalVersion := config.CLIVersion
+	t.Cleanup(func() { config.CLIVersion = originalVersion })
+	config.CLIVersion = "v0.88.0"
+
+	ctx := testutil.TestContext(t)
+	ref := registry.Reference{
+		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+		Repository: "components",
+		Reference:  "requires-newer-cli",
+	}
+	publishRemoteComponentConfig(ctx, t, ref, v1beta1.ComponentConfig{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfComponentConfig,
+		Metadata:   v1beta1.ComponentMetadata{Name: "requires-newer-cli"},
+		Component: v1beta1.ComponentSpec{
+			Actions: v1beta1.ComponentActions{OnDeploy: v1beta1.ComponentActionSet{
+				Before: []v1beta1.ComponentAction{{Cmd: "echo remote"}},
+			}},
+		},
+		PublishData: v1beta1.ComponentPublishData{
+			VersionRequirements: []v1beta1.VersionRequirement{
+				{Version: "v0.87.0", Reason: "supported feature"},
+				{Version: "v0.89.0", Reason: "requires newer feature"},
+			},
+		},
+	})
+
+	dir := t.TempDir()
+	definition := []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: remote-requirements
+components:
+  - name: remote
+    import:
+      remote:
+        - url: oci://` + ref.String() + `
+`)
+	packagePath := filepath.Join(dir, layout.ZarfYAML)
+	require.NoError(t, os.WriteFile(packagePath, definition, 0o600))
+	opts := DefinitionOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}}
+
+	_, err := PackageDefinition(ctx, packagePath, opts)
+	var requirementErr *requirements.VersionRequirementsError
+	require.ErrorAs(t, err, &requirementErr)
+	require.Equal(t, "v0.89.0", requirementErr.RequiredVersion)
+	require.Equal(t, "v0.88.0", requirementErr.CurrentVersion)
+	require.ErrorContains(t, err, "requires newer feature")
+	require.ErrorContains(t, err, ref.String())
+
+	opts.SkipVersionCheck = true
+	_, err = PackageDefinition(ctx, packagePath, opts)
+	require.NoError(t, err)
+
+	opts.SkipVersionCheck = false
+	config.CLIVersion = "v0.89.0"
+	_, err = PackageDefinition(ctx, packagePath, opts)
+	require.NoError(t, err)
 }
 
 func TestRemoteImportRejectsUnbundledLocalResources(t *testing.T) {
@@ -379,7 +442,7 @@ components:
 	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), writePackage, 0o600))
 
 	pkg := loadV1Beta1Package(t, dir)
-	resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{PlainHTTP: true}, "")
+	resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{PlainHTTP: true}, "")
 	require.NoError(t, err)
 	require.Len(t, resolution.pkg.Components, 1)
 	require.Equal(t, []v1beta1.ComponentAction{{Cmd: "echo remote"}}, resolution.pkg.Components[0].Actions.OnDeploy.Before)
@@ -412,7 +475,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "single")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		require.NoError(t, err)
 
 		require.Len(t, resolution.pkg.Components, 1)
@@ -439,7 +502,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "mixed")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		require.NoError(t, err)
 
 		require.Len(t, resolution.pkg.Components, 3)
@@ -457,7 +520,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "nested")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		require.NoError(t, err)
 
 		require.Len(t, resolution.pkg.Components, 1)
@@ -486,7 +549,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "cycle")
 		pkg := loadV1Beta1Package(t, dir)
 
-		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "cycle")
 	})
 
@@ -495,7 +558,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "variants")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "apache", types.RemoteOptions{}, "")
+		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "apache", false, types.RemoteOptions{}, "")
 		require.NoError(t, err)
 
 		require.Len(t, resolution.pkg.Components, 1)
@@ -507,7 +570,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "variants")
 		pkg := loadV1Beta1Package(t, dir)
 
-		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "no imported component")
 	})
 
@@ -516,7 +579,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "single-incompatible")
 		pkg := loadV1Beta1Package(t, dir)
 
-		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "nginx", types.RemoteOptions{}, "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "nginx", false, types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "no imported component")
 	})
 
@@ -525,7 +588,7 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		dir := filepath.Join("testdata", "import-v1beta1", "merge")
 		pkg := loadV1Beta1Package(t, dir)
 
-		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		require.NoError(t, err)
 
 		comp := resolution.pkg.Components[0]
@@ -594,7 +657,7 @@ components:
         - path: does-not-exist.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "does-not-exist.yaml")
 	})
 
@@ -613,7 +676,7 @@ components:
         - path: child
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		require.Error(t, err)
 	})
 
@@ -636,7 +699,7 @@ components:
         - path: child.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "kind")
 	})
 
@@ -661,7 +724,7 @@ components:
         - path: child.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
 	})
 
@@ -687,7 +750,7 @@ components:
         - path: child.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
 	})
 
@@ -718,7 +781,7 @@ components:
         - path: b.yaml
 `)
 		pkg := loadV1Beta1Package(t, dir)
-		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", types.RemoteOptions{}, "")
+		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "multiple")
 	})
 }
