@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.88.0](https://github.com/zarf-dev/zarf/compare/v0.87.0...v0.88.0) (2026-10-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* cleanup v1beta1 edge cases and add e2e test ([#5443](https://github.com/zarf-dev/zarf/issues/5443))
+* implement find images for v1beta1 package and component config ([#5428](https://github.com/zarf-dev/zarf/issues/5428))
+
+### Features
+
+* add init chart values schemas ([#5347](https://github.com/zarf-dev/zarf/issues/5347)) ([4c238cc](https://github.com/zarf-dev/zarf/commit/4c238ccb4f610a680608a41f6cd40ff1ff1ad85f))
+* cleanup v1beta1 edge cases and add e2e test ([#5443](https://github.com/zarf-dev/zarf/issues/5443)) ([02264d6](https://github.com/zarf-dev/zarf/commit/02264d65315bbe4f21ae21ca47c7bc8d313ce917))
+* **get-creds:** only print credentials for configured services ([#5418](https://github.com/zarf-dev/zarf/issues/5418)) ([1f4b42a](https://github.com/zarf-dev/zarf/commit/1f4b42a35df05bd296840b810b9ac2a37d53b336))
+* implement find images for v1beta1 package and component config ([#5428](https://github.com/zarf-dev/zarf/issues/5428)) ([a12d5ab](https://github.com/zarf-dev/zarf/commit/a12d5ab4f63692a7670727f208088a156f3e38bf))
+* implement zarf dev generate-schema for  v1beta1 packages and component configs ([#5442](https://github.com/zarf-dev/zarf/issues/5442)) ([562f5c0](https://github.com/zarf-dev/zarf/commit/562f5c082ec67469e8bdf3eaea4815594d66a09a))
+* implement zarf dev lint for v1beta1 packages and component configs ([#5431](https://github.com/zarf-dev/zarf/issues/5431)) ([c3c98c1](https://github.com/zarf-dev/zarf/commit/c3c98c1493c15f2cd7cf635ecf0a2a861e6a7776))
+* v1beta1 and component config `zarf dev inspect` implementations ([#5438](https://github.com/zarf-dev/zarf/issues/5438)) ([2430007](https://github.com/zarf-dev/zarf/commit/2430007d1ba8c8d8c6f313fc205fb367338f61b2))
+* **v1beta1:** honor image sources ([#5394](https://github.com/zarf-dev/zarf/issues/5394)) ([5062461](https://github.com/zarf-dev/zarf/commit/50624610373dd1974093e6c678bd5434e8cd5796))
+* **v1beta1:** sha256/sha512 verification checksum verification ([#5399](https://github.com/zarf-dev/zarf/issues/5399)) ([0e61e0e](https://github.com/zarf-dev/zarf/commit/0e61e0edf209339962536f161409daa869f287c8))
+
+
+### Bug Fixes
+
+* preserve healthcheck result during watcher cancellation ([#5437](https://github.com/zarf-dev/zarf/issues/5437)) ([5222087](https://github.com/zarf-dev/zarf/commit/522208754569d259347c011e7447ac7b5160a187))
+* prevent cache race from causing errors in concurrent zarf process OCI package loads ([#5439](https://github.com/zarf-dev/zarf/issues/5439)) ([ef88af0](https://github.com/zarf-dev/zarf/commit/ef88af0754a8ce859b244290ca3ca22ae9d1cc23))
+
 ## [0.87.0](https://github.com/zarf-dev/zarf/compare/v0.86.0...v0.87.0) (2026-09-30)
 
 
