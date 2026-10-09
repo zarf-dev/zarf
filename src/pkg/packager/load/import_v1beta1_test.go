@@ -162,6 +162,9 @@ func publishRemoteComponentToReference(ctx context.Context, t *testing.T, ref re
 			Actions: v1beta1.ComponentActions{OnDeploy: v1beta1.ComponentActionSet{Before: []v1beta1.ComponentAction{{Cmd: "echo remote"}}}},
 		},
 	}
+	for _, resourcePath := range resourcePaths {
+		component.Component.Files = append(component.Component.Files, v1beta1.File{Source: resourcePath, Destination: "/tmp/" + filepath.Base(resourcePath)})
+	}
 	return publishRemoteComponentConfig(ctx, t, ref, component, resourcePaths...)
 }
 
@@ -169,17 +172,19 @@ func publishRemoteComponentConfig(ctx context.Context, t *testing.T, ref registr
 	t.Helper()
 
 	store := memory.New()
-	layers := make([]ocispec.Descriptor, 0, len(resourcePaths))
+	var contents bytes.Buffer
+	writer := tar.NewWriter(&contents)
 	for _, resourcePath := range resourcePaths {
-		resourceContents := []byte(resourcePath)
-		resourceDescriptor := content.NewDescriptorFromBytes(layout.ZarfLayerMediaTypeBlob, resourceContents)
-		resourceDescriptor.Annotations = map[string]string{
-			layout.ComponentResourceMountPathAnnotation: resourcePath,
-		}
-		require.NoError(t, store.Push(ctx, resourceDescriptor, bytes.NewReader(resourceContents)))
-		layers = append(layers, resourceDescriptor)
+		payload := []byte(resourcePath)
+		require.NoError(t, writer.WriteHeader(&tar.Header{Name: resourcePath, Mode: 0o600, Size: int64(len(payload)), Typeflag: tar.TypeReg}))
+		_, err := writer.Write(payload)
+		require.NoError(t, err)
 	}
-	return publishRemoteComponentArtifact(ctx, t, ref, component, store, layers)
+	require.NoError(t, writer.Close())
+	descriptor := content.NewDescriptorFromBytes(layout.ZarfComponentLayerMediaTypeTar, contents.Bytes())
+	descriptor.Annotations = map[string]string{ocispec.AnnotationTitle: layout.ComponentTar}
+	require.NoError(t, store.Push(ctx, descriptor, bytes.NewReader(contents.Bytes())))
+	return publishRemoteComponentArtifact(ctx, t, ref, component, store, []ocispec.Descriptor{descriptor})
 }
 
 func publishRemoteComponentArtifact(ctx context.Context, t *testing.T, ref registry.Reference, component v1beta1.ComponentConfig, store *memory.Store, layers []ocispec.Descriptor) registry.Reference {
@@ -274,9 +279,7 @@ func TestPackageRemoteComponentArchive(t *testing.T) {
 		entryPath string
 		source    string
 		wantErr   string
-		legacy    bool
 	}{
-		{name: "legacy individual file", entryPath: "resources/file.txt", source: "resources/file.txt", legacy: true},
 		{name: "bundled file", entryPath: "resources/file.txt", source: "resources/file.txt"},
 		{name: "missing file", entryPath: "resources/other.txt", source: "resources/file.txt", wantErr: "absent from artifact layers"},
 		{name: "unsafe archive path", entryPath: "../outside.txt", source: "resources/file.txt", wantErr: ".."},
@@ -306,13 +309,7 @@ func TestPackageRemoteComponentArchive(t *testing.T) {
 			store := memory.New()
 			descriptor := content.NewDescriptorFromBytes(layout.ZarfComponentLayerMediaTypeTar, contents.Bytes())
 			descriptor.Annotations = map[string]string{ocispec.AnnotationTitle: layout.ComponentTar}
-			blob := contents.Bytes()
-			if tt.legacy {
-				blob = payload
-				descriptor = content.NewDescriptorFromBytes("application/vnd.zarf.component.layer.v1.blob", blob)
-				descriptor.Annotations = map[string]string{layout.ComponentResourceMountPathAnnotation: tt.entryPath}
-			}
-			require.NoError(t, store.Push(ctx, descriptor, bytes.NewReader(blob)))
+			require.NoError(t, store.Push(ctx, descriptor, bytes.NewReader(contents.Bytes())))
 			publishRemoteComponentArtifact(ctx, t, ref, component, store, []ocispec.Descriptor{descriptor})
 
 			dir := t.TempDir()
@@ -403,10 +400,10 @@ components:
         - url: oci://` + ref.String() + "\n")
 			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), manifest, 0o600))
 
-			_, err := PackageDefinition(ctx, dir, DefinitionOptions{
+			_, err := Package(ctx, dir, PackageOptions{DefinitionOptions: DefinitionOptions{
 				CachePath:     t.TempDir(),
 				RemoteOptions: types.RemoteOptions{PlainHTTP: true},
-			})
+			}})
 			require.ErrorContains(t, err, tt.field)
 			require.ErrorContains(t, err, tt.reason)
 		})
@@ -454,7 +451,7 @@ components:
 	require.ErrorContains(t, err, `manifest "app" uses kustomize.allowAnyDirectory`)
 }
 
-func TestRemoteComponentConfigRejectsUnsafeResourceMountPaths(t *testing.T) {
+func TestPackageRejectsUnsafeComponentArchivePaths(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct {
@@ -477,9 +474,13 @@ func TestRemoteComponentConfigRejectsUnsafeResourceMountPaths(t *testing.T) {
 			t.Parallel()
 
 			ctx := testutil.TestContext(t)
-			ref := publishRemoteComponent(ctx, t, tt.name, tt.mountPath)
-			_, err := remoteComponentConfig(ctx, "oci://"+ref.String(), "amd64", types.RemoteOptions{PlainHTTP: true}, "")
-			require.ErrorContains(t, err, "invalid resource layer")
+			ref := registry.Reference{Registry: testutil.SetupInMemoryRegistryDynamic(ctx, t), Repository: "components", Reference: tt.name}
+			component := v1beta1.ComponentConfig{APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfComponentConfig, Metadata: v1beta1.ComponentMetadata{Name: tt.name}}
+			publishRemoteComponentConfig(ctx, t, ref, component, tt.mountPath)
+			dir := t.TempDir()
+			writeRemoteImportPackage(t, dir, ref)
+			_, err := Package(ctx, dir, PackageOptions{DefinitionOptions: DefinitionOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}}})
+			require.ErrorContains(t, err, "extracting remote component archive")
 		})
 	}
 }
@@ -507,10 +508,8 @@ func TestRemoteImportResolutionPinsReferencesForOneInvocation(t *testing.T) {
 	require.Equal(t, first.resources, second.resources)
 }
 
-func resolveRemoteImport(ctx context.Context, t *testing.T, ref registry.Reference) v1beta1ImportResolution {
+func writeRemoteImportPackage(t *testing.T, dir string, ref registry.Reference) {
 	t.Helper()
-
-	dir := t.TempDir()
 	writePackage := []byte(`apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
@@ -519,16 +518,20 @@ components:
   - name: remote
     import:
       remote:
-        - url: oci://` + ref.String() + `
-`)
+        - url: oci://` + ref.String() + "\n")
 	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), writePackage, 0o600))
+}
 
-	pkg := loadV1Beta1Package(t, dir)
-	resolution, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{PlainHTTP: true}, "")
+func loadRemoteImport(ctx context.Context, t *testing.T, ref registry.Reference) *ResolvedPackage {
+	t.Helper()
+	dir := t.TempDir()
+	writeRemoteImportPackage(t, dir, ref)
+	loaded, err := Package(ctx, dir, PackageOptions{DefinitionOptions: DefinitionOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}}})
 	require.NoError(t, err)
-	require.Len(t, resolution.pkg.Components, 1)
-	require.Equal(t, []v1beta1.ComponentAction{{Cmd: "echo remote"}}, resolution.pkg.Components[0].Actions.OnDeploy.Before)
-	return resolution
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	require.Len(t, loaded.Definition.Components, 1)
+	require.Equal(t, "echo remote", loaded.Definition.Components[0].Actions.OnDeploy.Before[0].Cmd)
+	return loaded
 }
 
 func TestResolveImportsV1Beta1(t *testing.T) {
@@ -539,17 +542,18 @@ func TestResolveImportsV1Beta1(t *testing.T) {
 		t.Parallel()
 
 		ref := publishRemoteComponent(ctx, t, "remote-import", "resources/0/resource.txt")
-		resolution := resolveRemoteImport(ctx, t, ref)
-		require.Len(t, resolution.remoteResources, 1)
-		require.Equal(t, "resources/0/resource.txt", resolution.remoteResources[0].mountPath)
+		loaded := loadRemoteImport(ctx, t, ref)
+		contents, err := loaded.Resources.ReadFile(loaded.Definition.Components[0].Files[0].Source)
+		require.NoError(t, err)
+		require.Equal(t, "resources/0/resource.txt", string(contents))
 	})
 
 	t.Run("remote import without resources", func(t *testing.T) {
 		t.Parallel()
 
 		ref := publishRemoteComponent(ctx, t, "remote-import-no-resources")
-		resolution := resolveRemoteImport(ctx, t, ref)
-		require.Empty(t, resolution.remoteResources)
+		loaded := loadRemoteImport(ctx, t, ref)
+		require.Empty(t, loaded.Definition.Components[0].Files)
 	})
 
 	t.Run("single local import rebases paths and collects values", func(t *testing.T) {

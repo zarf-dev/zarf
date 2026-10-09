@@ -27,13 +27,12 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// remoteResource is a blob needed by a remotely imported component. Its import
-// and mount paths are artifact-relative, never source filesystem paths.
+// remoteResource is the resource archive of a remotely imported component.
+// Its import root and required paths are artifact-relative.
 type remoteResource struct {
 	remote        *zoci.Remote
 	descriptor    ocispec.Descriptor
 	importRoot    string
-	mountPath     string
 	requiredPaths []componentResourceReference
 }
 
@@ -279,43 +278,15 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q variant architecture does not match its OCI platform", importURL)
 	}
 	importRoot := path.Join(".zarf", "remote-components", strings.ReplaceAll(root.Digest.String(), ":", "-"))
-	resources := make([]remoteResource, 0, len(manifest.Layers))
-	seenMountPaths := make(map[string]struct{}, len(manifest.Layers))
-	hasArchive := false
-	for _, descriptor := range manifest.Layers {
-		// An import with only remote resources may have no layers and oras will then create this fake layer
-		if descriptor.MediaType == ocispec.MediaTypeEmptyJSON {
-			continue
-		}
-		if descriptor.MediaType == layout.ZarfComponentLayerMediaTypeTar {
-			// FIXME: we can assume there are no existing published components yet as they are not released
-			if hasArchive {
-				return loadedComponentConfig{}, fmt.Errorf("remote component %q has multiple resource archives", importURL)
-			}
-			hasArchive = true
-			resources = append(resources, remoteResource{remote: remote, descriptor: descriptor, importRoot: importRoot, requiredPaths: componentResourceReferences(config)})
-			continue
-		}
-		mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
-		if !validResourcePath(mountPath) {
-			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an invalid resource layer", importURL)
-		}
-		if _, exists := seenMountPaths[mountPath]; exists {
-			return loadedComponentConfig{}, fmt.Errorf("remote component %q has duplicate resource layers", importURL)
-		}
-		seenMountPaths[mountPath] = struct{}{}
-		resources = append(resources, remoteResource{remote: remote, descriptor: descriptor, importRoot: importRoot, mountPath: mountPath})
+	if len(manifest.Layers) != 1 || manifest.Layers[0].MediaType != layout.ZarfComponentLayerMediaTypeTar {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q must contain a single resource archive", importURL)
 	}
-	if hasArchive {
-		if len(seenMountPaths) > 0 {
-			return loadedComponentConfig{}, fmt.Errorf("remote component %q mixes resource archives and individual resource layers", importURL)
-		}
-		// Validate path syntax now; presence is checked after materializing the tar.
-		seenMountPaths = nil
-	}
-	if err := validateRemoteComponentResources(componentResourceReferences(config), seenMountPaths); err != nil {
+	references := componentResourceReferences(config)
+	// Validate path syntax now; presence is checked after materializing the tar.
+	if err := validateRemoteComponentResources(references, nil); err != nil {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
 	}
+	resources := []remoteResource{{remote: remote, descriptor: manifest.Layers[0], importRoot: importRoot, requiredPaths: references}}
 	return loadedComponentConfig{config: config, remote: true, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
 }
 

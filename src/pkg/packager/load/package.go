@@ -17,8 +17,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
-	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"oras.land/oras-go/v2/content"
@@ -171,26 +169,12 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 	}()
 
 	for _, resource := range remoteResources {
-		if !validResourcePath(resource.importRoot) || (resource.descriptor.MediaType != layout.ZarfComponentLayerMediaTypeTar && !validResourcePath(resource.mountPath)) {
+		if !validResourcePath(resource.importRoot) {
 			return nil, fmt.Errorf("remote component has an invalid resource path")
 		}
 		resourceSet.remoteRoots[resource.importRoot] = struct{}{}
-		if resource.descriptor.MediaType == layout.ZarfComponentLayerMediaTypeTar {
-			destination := filepath.Join(workspace, filepath.FromSlash(resource.importRoot))
-			if err := materializeComponentArchive(ctx, resource, destination); err != nil {
-				return nil, err
-			}
-			continue
-		}
-		destination := filepath.Join(workspace, filepath.FromSlash(resource.importRoot), filepath.FromSlash(resource.mountPath))
-		if err := os.MkdirAll(filepath.Dir(destination), helpers.ReadWriteExecuteUser); err != nil {
-			return nil, err
-		}
-		contents, err := resource.remote.FetchLayer(ctx, resource.descriptor)
-		if err != nil {
-			return nil, err
-		}
-		if err := os.WriteFile(destination, contents, helpers.ReadWriteUser); err != nil {
+		destination := filepath.Join(workspace, filepath.FromSlash(resource.importRoot))
+		if err := materializeComponentArchive(ctx, resource, destination); err != nil {
 			return nil, err
 		}
 	}
