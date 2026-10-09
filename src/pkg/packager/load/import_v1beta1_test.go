@@ -362,12 +362,8 @@ func TestPackageRemoteComponentImageLayers(t *testing.T) {
 				Metadata:   v1beta1.ComponentMetadata{Name: "image-layers"},
 				Component:  v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{{Path: "images", Images: []string{"example.com/image:1"}}}},
 			}
-			var contents bytes.Buffer
-			require.NoError(t, tar.NewWriter(&contents).Close())
 			store := memory.New()
-			archiveDescriptor := content.NewDescriptorFromBytes(layout.ZarfComponentLayerMediaTypeTar, contents.Bytes())
-			require.NoError(t, store.Push(ctx, archiveDescriptor, bytes.NewReader(contents.Bytes())))
-			layers := []ocispec.Descriptor{archiveDescriptor}
+			var layers []ocispec.Descriptor
 			for _, imagePath := range tt.paths {
 				payload := []byte(imagePath)
 				descriptor := content.NewDescriptorFromBytes(layout.ZarfComponentLayerMediaTypeBlob, payload)

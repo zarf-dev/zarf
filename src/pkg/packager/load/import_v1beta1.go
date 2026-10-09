@@ -284,6 +284,9 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	seenImagePaths := map[string]struct{}{}
 	for _, descriptor := range manifest.Layers {
 		switch descriptor.MediaType {
+		case ocispec.MediaTypeEmptyJSON:
+			// ORAS supplies an empty JSON layer for artifacts with no local resources.
+			continue
 		case layout.ZarfComponentLayerMediaTypeTar:
 			if archiveDescriptor.Digest != "" {
 				return loadedComponentConfig{}, fmt.Errorf("remote component %q has multiple resource archives", importURL)
@@ -303,16 +306,20 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an unsupported resource layer", importURL)
 		}
 	}
-	// FIXME: what if there is only an image archive?
-	if archiveDescriptor.Digest == "" {
-		return loadedComponentConfig{}, fmt.Errorf("remote component %q has no resource archive", importURL)
-	}
 	references := componentResourceReferences(config)
-	// Validate path syntax now; presence is checked after materializing the tar.
-	if err := validateRemoteComponentResources(references, nil); err != nil {
+	// Without a tar, the image layers must supply every local resource reference.
+	// Otherwise, check path syntax now and presence after extracting the tar.
+	var mountPaths map[string]struct{}
+	if archiveDescriptor.Digest == "" {
+		mountPaths = seenImagePaths
+	}
+	if err := validateRemoteComponentResources(references, mountPaths); err != nil {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
 	}
-	resources := []remoteResource{{remote: remote, descriptor: archiveDescriptor, imageLayers: imageLayers, importRoot: importRoot, requiredPaths: references}}
+	var resources []remoteResource
+	if archiveDescriptor.Digest != "" || len(imageLayers) > 0 {
+		resources = []remoteResource{{remote: remote, descriptor: archiveDescriptor, imageLayers: imageLayers, importRoot: importRoot, requiredPaths: references}}
+	}
 	return loadedComponentConfig{config: config, remote: true, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
 }
 
