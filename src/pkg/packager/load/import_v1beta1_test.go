@@ -342,11 +342,13 @@ components:
 func TestPackageRemoteComponentImageLayers(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct {
-		name    string
-		paths   []string
-		wantErr string
+		name        string
+		paths       []string
+		wantErr     string
+		omitArchive bool
 	}{
 		{name: "image layout", paths: []string{"images/index.json"}},
+		{name: "missing component tar", paths: []string{"images/index.json"}, omitArchive: true, wantErr: "no resource archive"},
 		{name: "missing image layout", wantErr: "absent from artifact layers"},
 		{name: "unsafe path", paths: []string{"images/../outside"}, wantErr: "invalid image layout path"},
 		{name: "non-image resource", paths: []string{"resources/file.txt"}, wantErr: "invalid image layout path"},
@@ -364,6 +366,14 @@ func TestPackageRemoteComponentImageLayers(t *testing.T) {
 			}
 			store := memory.New()
 			var layers []ocispec.Descriptor
+			if !tt.omitArchive {
+				var contents bytes.Buffer
+				require.NoError(t, tar.NewWriter(&contents).Close())
+				descriptor := content.NewDescriptorFromBytes(layout.ZarfComponentLayerMediaTypeTar, contents.Bytes())
+				descriptor.Annotations = map[string]string{ocispec.AnnotationTitle: layout.ComponentTar}
+				require.NoError(t, store.Push(ctx, descriptor, bytes.NewReader(contents.Bytes())))
+				layers = append(layers, descriptor)
+			}
 			for _, imagePath := range tt.paths {
 				payload := []byte(imagePath)
 				descriptor := content.NewDescriptorFromBytes(layout.ZarfComponentLayerMediaTypeBlob, payload)

@@ -238,18 +238,15 @@ func stageComponentResources(ctx context.Context, store content.Storage, staging
 	}
 	defer cleanupImageLayout()
 
-	var layers []ocispec.Descriptor
-	if len(resources.resources) > 0 {
-		archivePath := filepath.Join(stagingDir, layout.ComponentTar)
-		if err := archiveComponentResources(ctx, archivePath, resources.resources); err != nil {
-			return nil, fmt.Errorf("unable to archive component resources: %w", err)
-		}
-		descriptor, err := stageComponentFile(ctx, store, archivePath, layout.ZarfComponentLayerMediaTypeTar, map[string]string{ocispec.AnnotationTitle: layout.ComponentTar})
-		if err != nil {
-			return nil, fmt.Errorf("unable to stage component archive: %w", err)
-		}
-		layers = append(layers, descriptor)
+	archivePath := filepath.Join(stagingDir, layout.ComponentTar)
+	if err := archiveComponentResources(ctx, archivePath, resources.resources); err != nil {
+		return nil, fmt.Errorf("unable to archive component resources: %w", err)
 	}
+	descriptor, err := stageComponentFile(ctx, store, archivePath, layout.ZarfComponentLayerMediaTypeTar, map[string]string{ocispec.AnnotationTitle: layout.ComponentTar})
+	if err != nil {
+		return nil, fmt.Errorf("unable to stage component archive: %w", err)
+	}
+	layers := []ocispec.Descriptor{descriptor}
 	paths := make([]string, 0, len(imageResources))
 	for rel := range imageResources {
 		paths = append(paths, rel)

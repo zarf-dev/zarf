@@ -123,7 +123,7 @@ component:
 		for _, layer := range manifest.Layers {
 			layerNames = append(layerNames, layer.Annotations[ocispec.AnnotationTitle])
 		}
-		require.NotContains(t, layerNames, layout.ComponentTar)
+		require.Contains(t, layerNames, layout.ComponentTar)
 		require.Contains(t, layerNames, "images/index.json")
 		require.Contains(t, layerNames, "images/oci-layout")
 		imageManifest := "blobs/sha256/03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c"

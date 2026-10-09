@@ -337,16 +337,14 @@ component:%s
 			component, manifest := getPublishedComponent(ctx, t, published)
 			require.Equal(t, "images", component.Component.ImageArchives[0].Path)
 
+			resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
 			if withFiles {
-				resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
 				require.Equal(t, "component file", resourceFiles["resources/0/file.txt"])
-				for filename := range resourceFiles {
-					require.NotContains(t, filename, "images/")
-				}
 			} else {
-				for _, layer := range manifest.Layers {
-					require.NotEqual(t, layout.ZarfComponentLayerMediaTypeTar, layer.MediaType)
-				}
+				require.Empty(t, resourceFiles)
+			}
+			for filename := range resourceFiles {
+				require.NotContains(t, filename, "images/")
 			}
 			imageLayers := map[string]ocispec.Descriptor{}
 			for _, layer := range manifest.Layers {

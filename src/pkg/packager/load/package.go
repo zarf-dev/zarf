@@ -187,13 +187,21 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 }
 
 func materializeComponentResources(ctx context.Context, resource remoteResource, destination string) (err error) {
-	if err := os.MkdirAll(destination, 0o700); err != nil {
+	reader, err := resource.remote.Fetch(ctx, resource.descriptor)
+	if err != nil {
 		return err
 	}
-	if resource.descriptor.Digest != "" {
-		if err := extractComponentArchive(ctx, resource, destination); err != nil {
-			return err
-		}
+	defer func() { err = errors.Join(err, reader.Close()) }()
+	verified := content.NewVerifyReader(reader, resource.descriptor)
+	if err := archive.DecompressStream(ctx, verified, destination, archive.DecompressOpts{Extractor: archives.Tar{}}); err != nil {
+		return fmt.Errorf("extracting remote component archive: %w", err)
+	}
+	// Tar readers stop at the end markers; drain the remaining bytes to verify the OCI digest.
+	if _, err := io.Copy(io.Discard, verified); err != nil {
+		return err
+	}
+	if err := verified.Verify(); err != nil {
+		return err
 	}
 	root, err := os.OpenRoot(destination)
 	if err != nil {
@@ -224,23 +232,6 @@ func materializeComponentResources(ctx context.Context, resource remoteResource,
 		return err
 	}
 	return validateRemoteComponentResources(resource.requiredPaths, mountPaths)
-}
-
-func extractComponentArchive(ctx context.Context, resource remoteResource, destination string) (err error) {
-	reader, err := resource.remote.Fetch(ctx, resource.descriptor)
-	if err != nil {
-		return err
-	}
-	defer func() { err = errors.Join(err, reader.Close()) }()
-	verified := content.NewVerifyReader(reader, resource.descriptor)
-	if err := archive.DecompressStream(ctx, verified, destination, archive.DecompressOpts{Extractor: archives.Tar{}}); err != nil {
-		return fmt.Errorf("extracting remote component archive: %w", err)
-	}
-	// Tar readers stop at the end markers; drain the remaining bytes to verify the OCI digest.
-	if _, err := io.Copy(io.Discard, verified); err != nil {
-		return err
-	}
-	return verified.Verify()
 }
 
 func materializeComponentImageLayer(ctx context.Context, root *os.Root, resource remoteResource, descriptor ocispec.Descriptor) (err error) {
