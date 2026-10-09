@@ -306,9 +306,8 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if archiveDescriptor.Digest == "" {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q has no resource archive", importURL)
 	}
-	references := componentResourceReferences(config)
-	// Validate path syntax now; presence is checked after materializing the resources.
-	if err := validateRemoteComponentResources(references, nil); err != nil {
+	references, err := componentResourceReferences(config)
+	if err != nil {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
 	}
 	resources := []remoteResource{{remote: remote, descriptor: archiveDescriptor, imageLayers: imageLayers, importRoot: importRoot, requiredPaths: references}}
@@ -326,15 +325,18 @@ func ValidateRemoteKustomizeRestrictions(spec v1beta1.ComponentSpec) error {
 }
 
 type componentResourceReference struct {
-	field    string
-	source   string
-	allowURL bool
+	field  string
+	source string
 }
 
-func componentResourceReferences(config v1beta1.ComponentConfig) []componentResourceReference {
+// componentResourceReferences collects and validates local paths before they are rebased for import.
+func componentResourceReferences(config v1beta1.ComponentConfig) ([]componentResourceReference, error) {
 	var references []componentResourceReference
 	add := func(field, source string, allowURL bool) {
-		references = append(references, componentResourceReference{field: field, source: source, allowURL: allowURL})
+		if source == "" || (allowURL && helpers.IsURL(source)) {
+			return
+		}
+		references = append(references, componentResourceReference{field: field, source: source})
 	}
 	for i, source := range config.Values.Files {
 		add(fmt.Sprintf("values.files[%d]", i), source, false)
@@ -362,35 +364,12 @@ func componentResourceReferences(config v1beta1.ComponentConfig) []componentReso
 	for i, archive := range config.Component.ImageArchives {
 		add(fmt.Sprintf("component.imageArchives[%d].path", i), archive.Path, false)
 	}
-	return references
-}
-
-// validateRemoteComponentResources keeps a fetched component from reading paths on the
-// importing machine. A nil mountPaths validates syntax before a resource archive is extracted.
-func validateRemoteComponentResources(references []componentResourceReference, mountPaths map[string]struct{}) error {
 	for _, reference := range references {
-		source := reference.source
-		if source == "" || (reference.allowURL && helpers.IsURL(source)) {
-			continue
-		}
-		if !validResourcePath(source) {
-			return fmt.Errorf("%s has invalid local resource path %q", reference.field, source)
-		}
-		if mountPaths == nil {
-			continue
-		}
-		found := false
-		for mountPath := range mountPaths {
-			if source == mountPath || strings.HasPrefix(mountPath, source+"/") {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("%s references local resource %q absent from artifact layers", reference.field, source)
+		if !validResourcePath(reference.source) {
+			return nil, fmt.Errorf("%s has invalid local resource path %q", reference.field, reference.source)
 		}
 	}
-	return nil
+	return references, nil
 }
 
 // HasActionSet reports whether an action set contains actions or defaults.

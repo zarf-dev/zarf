@@ -213,25 +213,40 @@ func materializeComponentResources(ctx context.Context, resource remoteResource,
 			return err
 		}
 	}
-	mountPaths := map[string]struct{}{}
-	err = filepath.WalkDir(destination, func(filePath string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
+	return validateMaterializedComponentResources(root, resource.requiredPaths)
+}
+
+func validateMaterializedComponentResources(root *os.Root, references []componentResourceReference) error {
+	for _, reference := range references {
+		info, err := root.Lstat(filepath.FromSlash(reference.source))
+		if errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s references local resource %q absent from artifact layers", reference.field, reference.source)
 		}
-		if entry.IsDir() {
-			return nil
-		}
-		rel, err := filepath.Rel(destination, filePath)
 		if err != nil {
-			return err
+			return fmt.Errorf("accessing %s resource %q: %w", reference.field, reference.source, err)
 		}
-		mountPaths[filepath.ToSlash(rel)] = struct{}{}
-		return nil
-	})
-	if err != nil {
-		return err
+		if !info.IsDir() {
+			continue
+		}
+		// A directory reference must contain a bundled file; empty directories do not count.
+		found := false
+		if err := fs.WalkDir(root.FS(), reference.source, func(_ string, entry fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if !entry.IsDir() {
+				found = true
+				return fs.SkipAll
+			}
+			return nil
+		}); err != nil {
+			return fmt.Errorf("accessing %s resource %q: %w", reference.field, reference.source, err)
+		}
+		if !found {
+			return fmt.Errorf("%s references local resource %q absent from artifact layers", reference.field, reference.source)
+		}
 	}
-	return validateRemoteComponentResources(resource.requiredPaths, mountPaths)
+	return nil
 }
 
 func materializeComponentImageLayer(ctx context.Context, root *os.Root, resource remoteResource, descriptor ocispec.Descriptor) (err error) {
