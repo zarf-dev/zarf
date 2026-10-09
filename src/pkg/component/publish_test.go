@@ -4,12 +4,15 @@
 package component
 
 import (
+	"archive/tar"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -153,11 +156,7 @@ func TestPublishComponent(t *testing.T) {
 	require.Equal(t, "resources/5/local-file.txt", component.Component.Files[0].Source)
 	require.Equal(t, "https://example.com/remote-file.txt", component.Component.Files[1].Source)
 
-	layerTitles := make([]string, 0, len(manifest.Layers))
-	for _, layer := range manifest.Layers {
-		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
-		require.Equal(t, layer.Annotations[ocispec.AnnotationTitle], layer.Annotations[layout.ComponentResourceMountPathAnnotation])
-	}
+	resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
 	for _, localPath := range []string{
 		"resources/0/component-values.yaml",
 		"resources/1/component-values.schema.json",
@@ -167,14 +166,17 @@ func TestPublishComponent(t *testing.T) {
 		"resources/4/local-manifest.yaml",
 		"resources/5/local-file.txt",
 	} {
-		require.Contains(t, layerTitles, localPath)
+		require.Contains(t, resourceFiles, localPath)
+		contents, err := os.ReadFile(filepath.Join("testdata", "publish-component-v1beta1", filepath.FromSlash(strings.SplitN(localPath, "/", 3)[2])))
+		require.NoError(t, err)
+		require.Equal(t, string(contents), resourceFiles[localPath])
 	}
 	for _, remotePath := range []string{
 		"https://example.com/remote-chart-values.yaml",
 		"https://example.com/remote-file.txt",
 		"https://example.com/remote-manifest.yaml",
 	} {
-		require.NotContains(t, layerTitles, remotePath)
+		require.NotContains(t, resourceFiles, remotePath)
 	}
 }
 
@@ -297,7 +299,7 @@ component:
 	require.Empty(t, component.Component.Import)
 	require.Equal(t, []v1beta1.File{{Source: "resources/0/remote-file.txt", Destination: "/tmp/remote-file.txt"}}, component.Component.Files)
 	require.Len(t, manifest.Layers, 1)
-	require.Equal(t, "resources/0/remote-file.txt", manifest.Layers[0].Annotations[ocispec.AnnotationTitle])
+	require.Equal(t, "remote file", getPublishedResourceFiles(ctx, t, published, manifest)["resources/0/remote-file.txt"])
 }
 
 func TestPublishComponentImageArchivesUseOCILayout(t *testing.T) {
@@ -327,14 +329,11 @@ component:
 	component, manifest := getPublishedComponent(ctx, t, published)
 	require.Equal(t, "images", component.Component.ImageArchives[0].Path)
 
-	layerTitles := make([]string, 0, len(manifest.Layers))
-	for _, layer := range manifest.Layers {
-		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
-	}
-	require.Contains(t, layerTitles, "images/oci-layout")
-	require.Contains(t, layerTitles, "images/index.json")
-	require.NotContains(t, layerTitles, "images.tar")
-	require.Contains(t, layerTitles, "images/blobs/sha256/03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c")
+	resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
+	require.Contains(t, resourceFiles, "images/oci-layout")
+	require.Contains(t, resourceFiles, "images/index.json")
+	require.NotContains(t, resourceFiles, "images.tar")
+	require.Contains(t, resourceFiles, "images/blobs/sha256/03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c")
 }
 
 func TestPublishComponentResolvesLocalImports(t *testing.T) {
@@ -383,14 +382,11 @@ component:
 	require.Equal(t, []string{"resources/0/child-values.yaml", "resources/1/root-values.yaml"}, component.Values.Files)
 	require.Equal(t, []v1beta1.File{{Source: "resources/2/child-file.txt", Destination: "/tmp/child-file.txt"}}, component.Component.Files)
 
-	layerTitles := make([]string, 0, len(manifest.Layers))
-	for _, layer := range manifest.Layers {
-		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
-	}
-	require.Contains(t, layerTitles, "resources/0/child-values.yaml")
-	require.Contains(t, layerTitles, "resources/1/root-values.yaml")
-	require.Contains(t, layerTitles, "resources/2/child-file.txt")
-	require.NotContains(t, layerTitles, "child/component.yaml")
+	resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
+	require.Contains(t, resourceFiles, "resources/0/child-values.yaml")
+	require.Contains(t, resourceFiles, "resources/1/root-values.yaml")
+	require.Contains(t, resourceFiles, "resources/2/child-file.txt")
+	require.NotContains(t, resourceFiles, "child/component.yaml")
 }
 
 func TestPublishComponentMergesNestedImportedValuesSchemas(t *testing.T) {
@@ -693,10 +689,7 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 	require.Equal(t, "resources/5/kustomize", publishedComponent.Component.Manifests[0].Kustomize.Files[0])
 	require.Equal(t, "resources/6/file.txt", publishedComponent.Component.Files[0].Source)
 
-	layerMounts := make([]string, 0, len(manifest.Layers))
-	for _, layer := range manifest.Layers {
-		layerMounts = append(layerMounts, layer.Annotations[layout.ComponentResourceMountPathAnnotation])
-	}
+	resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
 	for _, mountPath := range []string{
 		"resources/0/values.yaml",
 		"resources/1/schema.json",
@@ -706,7 +699,7 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 		"resources/5/kustomize/kustomization.yaml",
 		"resources/6/file.txt",
 	} {
-		require.Contains(t, layerMounts, mountPath)
+		require.Contains(t, resourceFiles, mountPath)
 	}
 }
 
@@ -753,6 +746,36 @@ component:
 	ctx := context.Background()
 	_, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.ErrorContains(t, err, `manifest "app" uses kustomize.allowAnyDirectory`)
+}
+
+func getPublishedResourceFiles(ctx context.Context, t *testing.T, published registry.Reference, manifest ocispec.Manifest) map[string]string {
+	t.Helper()
+
+	require.Len(t, manifest.Layers, 1)
+	layer := manifest.Layers[0]
+	require.Equal(t, layout.ZarfComponentLayerMediaTypeTar, layer.MediaType)
+	require.Equal(t, layout.ComponentTar, layer.Annotations[ocispec.AnnotationTitle])
+	repo, err := registryremote.NewRepository(published.Registry + "/" + published.Repository)
+	require.NoError(t, err)
+	repo.PlainHTTP = true
+	reader, err := repo.Blobs().Fetch(ctx, layer)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, reader.Close()) }()
+
+	files := map[string]string{}
+	tarReader := tar.NewReader(reader)
+	for {
+		header, err := tarReader.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		require.NoError(t, err)
+		require.Equal(t, byte(tar.TypeReg), header.Typeflag)
+		contents, err := io.ReadAll(tarReader)
+		require.NoError(t, err)
+		files[header.Name] = string(contents)
+	}
+	return files
 }
 
 func getPublishedComponent(ctx context.Context, t *testing.T, published registry.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {

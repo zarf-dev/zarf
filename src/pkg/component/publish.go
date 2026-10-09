@@ -5,6 +5,7 @@
 package component
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -39,8 +40,6 @@ import (
 	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 )
-
-const componentLayerMediaType = "application/vnd.zarf.component.layer.v1.blob"
 
 // PublishOptions declares parameters for publishing a v1beta1 component config.
 type PublishOptions struct {
@@ -121,7 +120,7 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if err := store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to stage component config: %w", err)
 	}
-	layers, err := stageComponentResources(ctx, store, resources)
+	layers, err := stageComponentResources(ctx, store, stagingDir, resources)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -231,57 +230,81 @@ func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourc
 
 // stageComponentResources includes local component resources while leaving remote resources to
 // be fetched when the component is imported during package creation.
-func stageComponentResources(ctx context.Context, store content.Storage, resources normalizedComponentResources) ([]ocispec.Descriptor, error) {
+func stageComponentResources(ctx context.Context, store content.Storage, stagingDir string, resources normalizedComponentResources) ([]ocispec.Descriptor, error) {
 	cleanupImageLayout, err := addComponentImageLayout(ctx, resources.imageArchives, resources.architecture, resources.resources)
 	if err != nil {
 		return nil, err
 	}
 	defer cleanupImageLayout()
-	paths := make([]string, 0, len(resources.resources))
-	for rel := range resources.resources {
+
+	archivePath := filepath.Join(stagingDir, layout.ComponentTar)
+	if err := archiveComponentResources(ctx, archivePath, resources.resources); err != nil {
+		return nil, fmt.Errorf("unable to archive component resources: %w", err)
+	}
+	descriptor, reader, err := componentArchiveDescriptor(archivePath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read component archive: %w", err)
+	}
+	descriptor.Annotations = map[string]string{ocispec.AnnotationTitle: layout.ComponentTar}
+	pushErr := store.Push(ctx, descriptor, reader)
+	if err := errors.Join(pushErr, reader.Close()); err != nil {
+		return nil, fmt.Errorf("unable to stage component archive: %w", err)
+	}
+	return []ocispec.Descriptor{descriptor}, nil
+}
+
+// archiveComponentResources writes normalized paths in a stable order and streams file contents.
+func archiveComponentResources(ctx context.Context, destination string, resources map[string]componentResource) (err error) {
+	file, err := os.Create(destination)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, file.Close()) }()
+	writer := tar.NewWriter(file)
+	defer func() { err = errors.Join(err, writer.Close()) }()
+
+	paths := make([]string, 0, len(resources))
+	for rel := range resources {
 		paths = append(paths, rel)
 	}
 	sort.Strings(paths)
-
-	layers := make([]ocispec.Descriptor, 0, len(paths))
 	for _, rel := range paths {
-		resource := resources.resources[rel]
-		descriptor, reader, err := componentResourceDescriptor(resource)
-		if err != nil {
-			return nil, fmt.Errorf("unable to read component resource %q: %w", rel, err)
+		if err := ctx.Err(); err != nil {
+			return err
 		}
-		descriptor.Annotations = map[string]string{
-			ocispec.AnnotationTitle:                     rel,
-			layout.ComponentResourceMountPathAnnotation: rel,
+		resource := resources[rel]
+		var reader io.ReadCloser
+		size := int64(len(resource.contents))
+		if resource.contents != nil {
+			reader = io.NopCloser(bytes.NewReader(resource.contents))
+		} else {
+			source, err := os.Open(resource.sourcePath)
+			if err != nil {
+				return err
+			}
+			info, statErr := source.Stat()
+			if statErr != nil {
+				return errors.Join(statErr, source.Close())
+			}
+			size = info.Size()
+			reader = source
 		}
-		exists, err := store.Exists(ctx, descriptor)
-		if err != nil {
-			return nil, fmt.Errorf("unable to check component resource %q: %w", rel, err)
+		// Remote resources have always been materialized as private, regular files.
+		headerErr := writer.WriteHeader(&tar.Header{Name: rel, Mode: 0o600, Size: size, Typeflag: tar.TypeReg})
+		var copyErr error
+		if headerErr == nil {
+			_, copyErr = io.Copy(writer, reader)
 		}
-		if !exists {
-			err = store.Push(ctx, descriptor, reader)
+		if err := errors.Join(headerErr, copyErr, reader.Close()); err != nil {
+			return fmt.Errorf("archiving resource %q: %w", rel, err)
 		}
-		closeErr := reader.Close()
-		if err != nil {
-			return nil, fmt.Errorf("unable to stage component resource %q: %w", rel, err)
-		}
-		if closeErr != nil {
-			return nil, fmt.Errorf("unable to close component resource %q: %w", rel, closeErr)
-		}
-		layers = append(layers, descriptor)
 	}
-	return layers, nil
+	return nil
 }
 
-// componentResourceDescriptor creates a descriptor and a fresh reader for a component resource.
-// File-backed resources are hashed and staged as streams so large component artifacts are never
-// retained in process memory.
-func componentResourceDescriptor(resource componentResource) (ocispec.Descriptor, io.ReadCloser, error) {
-	if resource.contents != nil {
-		return content.NewDescriptorFromBytes(componentLayerMediaType, resource.contents), io.NopCloser(bytes.NewReader(resource.contents)), nil
-	}
-
-	file, err := os.Open(resource.sourcePath)
+// componentArchiveDescriptor hashes and stages the archive without retaining it in memory.
+func componentArchiveDescriptor(archivePath string) (ocispec.Descriptor, io.ReadCloser, error) {
+	file, err := os.Open(archivePath)
 	if err != nil {
 		return ocispec.Descriptor{}, nil, err
 	}
@@ -290,23 +313,23 @@ func componentResourceDescriptor(resource componentResource) (ocispec.Descriptor
 	if err := errors.Join(digestErr, closeErr); err != nil {
 		return ocispec.Descriptor{}, nil, err
 	}
-	info, err := os.Stat(resource.sourcePath)
+	info, err := os.Stat(archivePath)
 	if err != nil {
 		return ocispec.Descriptor{}, nil, err
 	}
-	reader, err := os.Open(resource.sourcePath)
+	reader, err := os.Open(archivePath)
 	if err != nil {
 		return ocispec.Descriptor{}, nil, err
 	}
 	return ocispec.Descriptor{
-		MediaType: componentLayerMediaType,
+		MediaType: layout.ZarfComponentLayerMediaTypeTar,
 		Digest:    digestValue,
 		Size:      info.Size(),
 	}, reader, nil
 }
 
 // addComponentImageLayout expands image archives into the OCI layout used by regular packages.
-// The layout is included as artifact layers rather than preserving the source archive itself. An
+// The layout is included in the component tar rather than preserving the source archive itself. An
 // empty architecture preserves every image platform; a selector architecture retains only that platform.
 func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchive, architecture string, resources map[string]componentResource) (_ func(), err error) {
 	if len(archives) == 0 {

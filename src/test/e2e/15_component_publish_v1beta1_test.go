@@ -10,9 +10,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestComponentPublish(t *testing.T) {
@@ -25,6 +28,18 @@ func TestComponentPublish(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	componentSource := registryURL + "/published-component:0.0.1"
+	t.Run("published resource archive", func(t *testing.T) {
+		remote, err := zoci.NewRemoteWithOptions(t.Context(), componentSource, ocispec.Platform{}, zoci.RemoteClientOptions{
+			RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+		})
+		require.NoError(t, err)
+		manifest, err := remote.FetchRoot(t.Context())
+		require.NoError(t, err)
+		require.Equal(t, layout.ZarfComponentConfigMediaType, manifest.Config.MediaType)
+		require.Len(t, manifest.Layers, 1)
+		require.Equal(t, layout.ZarfComponentLayerMediaTypeTar, manifest.Layers[0].MediaType)
+		require.Equal(t, layout.ComponentTar, manifest.Layers[0].Annotations[ocispec.AnnotationTitle])
+	})
 	t.Run("verify published signature", func(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "component", "verify", componentSource, "--plain-http", "--key", publicKey)
 		require.NoError(t, err, stdOut, stdErr)
@@ -58,6 +73,7 @@ func TestComponentPublish(t *testing.T) {
 		packagePath := filepath.Join(packageOutput, fmt.Sprintf("zarf-package-component-remote-import-%s.tar.zst", e2e.Arch))
 		pkgLayout, err := layout.LoadFromTar(t.Context(), packagePath, layout.PackageLayoutOptions{})
 		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 		require.FileExists(t, filepath.Join(pkgLayout.GetImageDirPath(), "index.json"))
 
 		componentExtractDir := t.TempDir()

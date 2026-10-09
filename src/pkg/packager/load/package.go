@@ -7,17 +7,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
-
+	"github.com/mholt/archives"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"oras.land/oras-go/v2/content"
 )
 
 // PackageOptions configures resource-ready package loading.
@@ -167,10 +171,17 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 	}()
 
 	for _, resource := range remoteResources {
-		if !validResourcePath(resource.importRoot) || !validResourcePath(resource.mountPath) {
+		if !validResourcePath(resource.importRoot) || (resource.descriptor.MediaType != layout.ZarfComponentLayerMediaTypeTar && !validResourcePath(resource.mountPath)) {
 			return nil, fmt.Errorf("remote component has an invalid resource path")
 		}
 		resourceSet.remoteRoots[resource.importRoot] = struct{}{}
+		if resource.descriptor.MediaType == layout.ZarfComponentLayerMediaTypeTar {
+			destination := filepath.Join(workspace, filepath.FromSlash(resource.importRoot))
+			if err := materializeComponentArchive(ctx, resource, destination); err != nil {
+				return nil, err
+			}
+			continue
+		}
 		destination := filepath.Join(workspace, filepath.FromSlash(resource.importRoot), filepath.FromSlash(resource.mountPath))
 		if err := os.MkdirAll(filepath.Dir(destination), helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
@@ -184,6 +195,44 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 		}
 	}
 	return resourceSet, nil
+}
+
+func materializeComponentArchive(ctx context.Context, resource remoteResource, destination string) (err error) {
+	reader, err := resource.remote.Fetch(ctx, resource.descriptor)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, reader.Close()) }()
+	verified := content.NewVerifyReader(reader, resource.descriptor)
+	if err := archive.DecompressStream(ctx, verified, destination, archive.DecompressOpts{Extractor: archives.Tar{}}); err != nil {
+		return fmt.Errorf("extracting remote component archive: %w", err)
+	}
+	// Tar readers stop at the end markers; drain the remaining bytes to verify the OCI digest.
+	if _, err := io.Copy(io.Discard, verified); err != nil {
+		return err
+	}
+	if err := verified.Verify(); err != nil {
+		return err
+	}
+	mountPaths := map[string]struct{}{}
+	err = filepath.WalkDir(destination, func(filePath string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(destination, filePath)
+		if err != nil {
+			return err
+		}
+		mountPaths[filepath.ToSlash(rel)] = struct{}{}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return validateRemoteComponentResources(resource.requiredPaths, mountPaths)
 }
 
 func validResourcePath(value string) bool {

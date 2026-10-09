@@ -4,6 +4,7 @@
 package load
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -178,6 +179,11 @@ func publishRemoteComponentConfig(ctx context.Context, t *testing.T, ref registr
 		require.NoError(t, store.Push(ctx, resourceDescriptor, bytes.NewReader(resourceContents)))
 		layers = append(layers, resourceDescriptor)
 	}
+	return publishRemoteComponentArtifact(ctx, t, ref, component, store, layers)
+}
+
+func publishRemoteComponentArtifact(ctx context.Context, t *testing.T, ref registry.Reference, component v1beta1.ComponentConfig, store *memory.Store, layers []ocispec.Descriptor) registry.Reference {
+	t.Helper()
 	componentJSON, err := json.Marshal(component)
 	require.NoError(t, err)
 
@@ -258,6 +264,82 @@ components:
 	config.CLIVersion = "v0.89.0"
 	_, err = PackageDefinition(ctx, packagePath, opts)
 	require.NoError(t, err)
+}
+
+func TestPackageRemoteComponentArchive(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name      string
+		entryPath string
+		source    string
+		wantErr   string
+		legacy    bool
+	}{
+		{name: "legacy individual file", entryPath: "resources/file.txt", source: "resources/file.txt", legacy: true},
+		{name: "bundled file", entryPath: "resources/file.txt", source: "resources/file.txt"},
+		{name: "missing file", entryPath: "resources/other.txt", source: "resources/file.txt", wantErr: "absent from artifact layers"},
+		{name: "unsafe archive path", entryPath: "../outside.txt", source: "resources/file.txt", wantErr: ".."},
+		{name: "unsafe config path", entryPath: "resources/file.txt", source: "../outside.txt", wantErr: "invalid local resource path"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			ref := registry.Reference{
+				Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
+				Repository: "components",
+				Reference:  "archive",
+			}
+			component := v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfComponentConfig,
+				Metadata:   v1beta1.ComponentMetadata{Name: "archive"},
+				Component:  v1beta1.ComponentSpec{Files: []v1beta1.File{{Source: tt.source, Destination: "/tmp/file.txt"}}},
+			}
+			var contents bytes.Buffer
+			writer := tar.NewWriter(&contents)
+			payload := []byte("bundled file contents")
+			require.NoError(t, writer.WriteHeader(&tar.Header{Name: tt.entryPath, Mode: 0o600, Size: int64(len(payload)), Typeflag: tar.TypeReg}))
+			_, err := writer.Write(payload)
+			require.NoError(t, err)
+			require.NoError(t, writer.Close())
+			store := memory.New()
+			descriptor := content.NewDescriptorFromBytes(layout.ZarfComponentLayerMediaTypeTar, contents.Bytes())
+			descriptor.Annotations = map[string]string{ocispec.AnnotationTitle: layout.ComponentTar}
+			blob := contents.Bytes()
+			if tt.legacy {
+				blob = payload
+				descriptor = content.NewDescriptorFromBytes("application/vnd.zarf.component.layer.v1.blob", blob)
+				descriptor.Annotations = map[string]string{layout.ComponentResourceMountPathAnnotation: tt.entryPath}
+			}
+			require.NoError(t, store.Push(ctx, descriptor, bytes.NewReader(blob)))
+			publishRemoteComponentArtifact(ctx, t, ref, component, store, []ocispec.Descriptor{descriptor})
+
+			dir := t.TempDir()
+			manifest := []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: remote
+components:
+  - name: remote
+    import:
+      remote:
+        - url: oci://` + ref.String() + "\n")
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), manifest, 0o600))
+			loaded, err := Package(ctx, dir, PackageOptions{DefinitionOptions: DefinitionOptions{
+				CachePath: t.TempDir(), RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+			}})
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+			data, err := loaded.Resources.ReadFile(loaded.Definition.Components[0].Files[0].Source)
+			require.NoError(t, err)
+			require.Equal(t, payload, data)
+		})
+	}
 }
 
 func TestRemoteImportRejectsUnbundledLocalResources(t *testing.T) {
