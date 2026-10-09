@@ -14,22 +14,28 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
+// ansiColorRegex matches ANSI color codes - https://regex101.com/r/YFyIwC/2
+var ansiColorRegex = regexp.MustCompile(`\x1b\[(.*?)m`)
+
 func sayCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "say",
 		Short: "Print Zarf logo",
 		Long:  "Print out the adorable Zarf logo",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			out := logo()
-			if !message.ColorEnabled() {
-				// Strip ANSI color codes - https://regex101.com/r/YFyIwC/2
-				ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
-				out = ansiRegex.ReplaceAllString(out, "")
-			}
-			_, err := fmt.Fprintln(os.Stderr, out)
+			_, err := fmt.Fprintln(os.Stderr, renderLogo(message.ColorEnabled()))
 			return err
 		},
 	}
+}
+
+// renderLogo returns the Zarf logo, stripped of its ANSI color codes when
+// color is disabled.
+func renderLogo(color bool) string {
+	if color {
+		return logo()
+	}
+	return ansiColorRegex.ReplaceAllString(logo(), "")
 }
 
 func logo() string {
