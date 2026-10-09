@@ -26,3 +26,23 @@ func TestSBOMResourcePathRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+func TestLegacySBOMArchiveFiles(t *testing.T) {
+	t.Parallel()
+
+	files, err := legacySBOMArchiveFiles([]string{
+		"component:metrics",
+		"image:docker.io/library/nginx:1.27-linux-amd64",
+	})
+	require.NoError(t, err)
+	require.Equal(t, []string{
+		"zarf-component-metrics.json",
+		"docker.io_library_nginx_1.27-linux-amd64.json",
+	}, files)
+
+	_, err = legacySBOMArchiveFiles([]string{"component:metrics", "image:zarf-component-metrics"})
+	require.ErrorContains(t, err, `both normalize to "zarf-component-metrics.json"`)
+
+	_, err = legacySBOMArchiveFiles([]string{"image:"})
+	require.ErrorContains(t, err, `invalid legacy SBOM image key "image:"`)
+}

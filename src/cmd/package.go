@@ -1190,9 +1190,11 @@ func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 
 For v1beta1 packages, --keys selects named resources:
   component:<component-name> identifies the file SBOM for a component.
-  image:<reference> identifies an image SBOM.
+  image:<declared-reference> identifies an image SBOM.
 
-v1alpha1 packages store all SBOMs in sboms.tar and cannot be filtered by --keys.`,
+For v1alpha1 packages, --keys filters entries after the complete sboms.tar archive is downloaded:
+  component:<component-name> identifies a component SBOM.
+  image:<canonical-reference> identifies an image SBOM using its legacy canonical reference.`,
 		Example: lang.CmdPackageInspectSBOMExample,
 		Args:    cobra.MaximumNArgs(1),
 		PreRunE: o.preRunE,
@@ -1201,7 +1203,7 @@ v1alpha1 packages store all SBOMs in sboms.tar and cannot be filtered by --keys.
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
-	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "v1beta1 SBOM resource keys: component:<name> or image:<reference>[-<os>-<architecture>[-<variant>]]")
+	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "SBOM keys: component:<name> or image:<reference>[-<os>-<architecture>[-<variant>]]")
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }

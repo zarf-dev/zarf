@@ -366,6 +366,9 @@ $ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --output ./s
 # Extract all SBOMs from a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbom
 
+# Filter a v1alpha1 SBOM archive by a component key
+$ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --keys component:metrics --output ./sbom
+
 # Extract only the file SBOM for a component from a v1beta1 OCI package
 $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --keys component:metrics --output ./sbom
 

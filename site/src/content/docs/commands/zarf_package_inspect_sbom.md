@@ -16,9 +16,11 @@ Output package SBOMs to the specified directory.
 
 For v1beta1 packages, --keys selects named resources:
   component:<component-name> identifies the file SBOM for a component.
-  image:<reference> identifies an image SBOM.
+  image:<declared-reference> identifies an image SBOM.
 
-v1alpha1 packages store all SBOMs in sboms.tar and cannot be filtered by --keys.
+For v1alpha1 packages, --keys filters entries after the complete sboms.tar archive is downloaded:
+  component:<component-name> identifies a component SBOM.
+  image:<canonical-reference> identifies an image SBOM using its legacy canonical reference.
 
 ```
 zarf package inspect sbom [ PACKAGE ] [flags]
@@ -33,6 +35,9 @@ $ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --output ./s
 
 # Extract all SBOMs from a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbom
+
+# Filter a v1alpha1 SBOM archive by a component key
+$ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --keys component:metrics --output ./sbom
 
 # Extract only the file SBOM for a component from a v1beta1 OCI package
 $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --keys component:metrics --output ./sbom
@@ -52,7 +57,7 @@ $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --keys image:g
   -h, --help                                    help for sbom
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
-      --keys strings                            v1beta1 SBOM resource keys: component:<name> or image:<reference>[-<os>-<architecture>[-<variant>]]
+      --keys strings                            SBOM keys: component:<name> or image:<reference>[-<os>-<architecture>[-<variant>]]
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --output string                           Specify an output directory for the SBOMs from the created Zarf package
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.

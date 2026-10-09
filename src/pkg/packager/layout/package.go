@@ -557,12 +557,17 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 }
 
 // GetSBOMResources outputs selected SBOM resources from the package to the given destination path.
+// v1alpha1 packages support output filtering using their legacy archive filename convention.
 func (p *PackageLayout) GetSBOMResources(ctx context.Context, destPath string, keys []string) error {
 	if !p.ContainsSBOM() {
 		return &NoSBOMAvailableError{pkgName: p.Definition().Metadata.Name}
 	}
 	if !UsesGranularResourceLayout(p.pkg) {
-		return archive.Decompress(ctx, filepath.Join(p.dirPath, SBOMTar), destPath, archive.DecompressOpts{})
+		files, err := legacySBOMArchiveFiles(keys)
+		if err != nil {
+			return err
+		}
+		return archive.Decompress(ctx, filepath.Join(p.dirPath, SBOMTar), destPath, archive.DecompressOpts{Files: files})
 	}
 
 	resources, err := p.sbomResources(keys)
