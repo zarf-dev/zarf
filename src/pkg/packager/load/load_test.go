@@ -63,6 +63,61 @@ func TestValidateV1Beta1_FormatsValidationErrors(t *testing.T) {
 	require.EqualError(t, err, "package validation failed:\npackage does not contain any compatible components")
 }
 
+func TestPackageDefinitionV1Beta1InitServices(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		kind     string
+		service  string
+		imported bool
+		wantErr  string
+	}{
+		{name: "init with service", kind: "ZarfInitConfig", service: "registry"},
+		{name: "init without service", kind: "ZarfInitConfig"},
+		{name: "ordinary package with service", kind: "ZarfPackageConfig", service: "registry", wantErr: "only ZarfInitConfig packages may declare services"},
+		{name: "init with imported service", kind: "ZarfInitConfig", imported: true},
+		{name: "ordinary package with imported service", kind: "ZarfPackageConfig", imported: true, wantErr: "only ZarfInitConfig packages may declare services"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			component := "  - name: registry\n"
+			if tt.imported {
+				imported := `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: registry
+component:
+  service: registry
+`
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "registry.yaml"), []byte(imported), 0o600))
+				component += "    import:\n      local:\n        - path: registry.yaml\n"
+			} else if tt.service != "" {
+				component += "    service: " + tt.service + "\n"
+			}
+			definition := "apiVersion: zarf.dev/v1beta1\nkind: " + tt.kind + "\nmetadata:\n  name: init-test\ncomponents:\n" + component
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+
+			pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.kind, string(pkg.Kind))
+			require.Len(t, pkg.Components, 1)
+			if tt.service != "" || tt.imported {
+				require.Equal(t, "registry", string(pkg.Components[0].Service))
+			} else {
+				require.Empty(t, pkg.Components[0].Service)
+			}
+		})
+	}
+}
+
 func TestPackageDefinitionV1Beta1ImageSources(t *testing.T) {
 	t.Parallel()
 

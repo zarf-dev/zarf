@@ -73,6 +73,25 @@ component: {}
 `, string(generated))
 }
 
+func TestDevTemplateRendersInitPackage(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, packageTemplateFilename)
+	definition := `apiVersion: zarf.dev/v1beta1
+kind: ZarfInitConfig
+metadata:
+  name: custom-init
+components:
+  - name: registry
+    service: registry
+`
+	require.NoError(t, os.WriteFile(source, []byte(definition), 0o644))
+
+	require.NoError(t, (&devTemplateOptions{}).run(context.Background(), []string{source}))
+	generated, err := os.ReadFile(filepath.Join(dir, "zarf.gen.yaml"))
+	require.NoError(t, err)
+	require.Equal(t, definition, string(generated))
+}
+
 func TestDevTemplateRequiresV1Beta1API(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, packageTemplateFilename)
