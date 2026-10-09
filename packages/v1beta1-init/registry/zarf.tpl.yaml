@@ -1,0 +1,28 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: zarf-registry
+  version: "[[ .cli.version ]]"
+  description: Self-hosted container registry for the cluster
+component:
+  service: registry
+  import:
+    local:
+      - path: registry-base.gen.yaml
+  manifests:
+    - name: registry-connect
+      namespace: zarf
+      files:
+        - ../../zarf-registry/connect.yaml
+    - name: kep-1755-registry-annotation
+      namespace: zarf
+      enableTemplating: true
+      files:
+        - registry-configmap.yaml
+  charts:
+    - name: docker-registry
+      local:
+        path: ../../zarf-registry/chart
+      valuesFiles:
+        - path: registry-state-values.yaml
+          enableTemplating: true

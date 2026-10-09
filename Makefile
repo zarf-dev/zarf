@@ -144,6 +144,35 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
+# Build-time overrides use zarf dev template's dotted keys, e.g. agent.image and agent.source.
+INIT_V1BETA1_TEMPLATE_VALUES ?= packages/v1beta1-init/template-values.yaml
+INIT_V1BETA1_TEMPLATE_SET ?=
+INIT_V1BETA1_OUTPUT ?= build/v1beta1-init
+
+.PHONY: template-init-package-v1beta1 init-package-v1beta1 release-init-package-v1beta1
+template-init-package-v1beta1: ## Render the v1beta1 init package and publishable component definitions
+	@test -s $(ZARF_BIN) || $(MAKE) $(BUILD_CLI_FOR_SYSTEM)
+	@case "$(ARCH)" in amd64|arm64) ;; *) echo "v1beta1 init supports amd64 and arm64"; exit 1 ;; esac
+	@for template in packages/v1beta1-init/*/*.tpl.yaml packages/v1beta1-init/zarf.tpl.yaml; do \
+		$(ZARF_BIN) dev template "$$template" --set-file "$(INIT_V1BETA1_TEMPLATE_VALUES)" \
+			$(if $(INIT_V1BETA1_TEMPLATE_SET),--set '$(INIT_V1BETA1_TEMPLATE_SET)') --set architecture=$(ARCH) || exit; \
+	done
+
+init-package-v1beta1: ## Build the local agent and create the v1beta1 init package
+	$(MAKE) $(sort $(BUILD_CLI_FOR_SYSTEM) $(if $(filter arm64,$(ARCH)),build-cli-linux-arm,build-cli-linux-amd))
+	$(MAKE) build-local-agent-image
+	$(MAKE) template-init-package-v1beta1
+	$(ZARF_BIN) package create packages/v1beta1-init -o "$(INIT_V1BETA1_OUTPUT)" -a $(ARCH)
+
+release-init-package-v1beta1: ## Create the v1beta1 init package with a released agent image
+	@test -n "$(AGENT_IMAGE_TAG)" || { echo "Set AGENT_IMAGE_TAG to the released agent tag"; exit 1; }
+	@template_set='agent.image=ghcr.io/zarf-dev/zarf/agent:$(AGENT_IMAGE_TAG),agent.source=registry'; \
+		if [ -n '$(INIT_V1BETA1_TEMPLATE_SET)' ]; then \
+			template_set="$$template_set,"'$(INIT_V1BETA1_TEMPLATE_SET)'; \
+		fi; \
+		$(MAKE) template-init-package-v1beta1 INIT_V1BETA1_TEMPLATE_SET="$$template_set"
+	$(ZARF_BIN) package create packages/v1beta1-init -o "$(INIT_V1BETA1_OUTPUT)" -a $(ARCH)
+
 ## Build the Zarf CLI for all platforms aligned with the release process
 ## skipping validation here to allow for building with a dirty git state (IE development)
 goreleaser-build:
@@ -167,27 +196,27 @@ publish-init-package:
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE)
 
-	@test -s ./build/zarf-package-dos-games-$(ARCH)-1.3.0.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-dos-games-$(ARCH)-1.3.0.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH)
 
-	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH)
 
-	@test -s ./build/zarf-package-component-actions-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-actions -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-component-actions-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-actions -o build -a $(ARCH)
 
-	@test -s ./build/zarf-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/variables --set NGINX_VERSION=1.23.3 -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/variables --set NGINX_VERSION=1.23.3 -o build -a $(ARCH)
 
-	@test -s ./build/zarf-package-kiwix-$(ARCH)-3.5.0.tar || $(ZARF_BIN) package create examples/kiwix -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-kiwix-$(ARCH)-3.5.0.tar || $(ZARF_BIN) package create examples/kiwix -o build -a $(ARCH)
 
-	@test -s ./build/zarf-package-git-data-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/git-data -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-git-data-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/git-data -o build -a $(ARCH)
 
-	@test -s ./build/zarf-package-helm-charts-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/helm-charts -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-helm-charts-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/helm-charts -o build -a $(ARCH)
 
-	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH)
 
-	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH) --confirm --features="values=true"
+	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH)
 
-	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH)
 
-	@test -s ./build/zarf-package-values-templating-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/values-templating -o build -a $(ARCH) --confirm --features="values=true"
+	@test -s ./build/zarf-package-values-templating-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/values-templating -o build -a $(ARCH)
 
 ## NOTE: Requires an existing cluster or the env var APPLIANCE_MODE=true
 .PHONY: test-e2e

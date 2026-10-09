@@ -1,0 +1,41 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: k3s
+  version: "[[ .cli.version ]]"
+  description: Install K3s for appliance mode; requires root on Linux
+variant:
+  architecture: amd64
+component:
+  import:
+    local:
+      - path: common.gen.yaml
+  files:
+    # Include the actual K3s binary
+    - source: https://github.com/k3s-io/k3s/releases/download/v1.34.3+k3s1/k3s
+      checksum: f95350e3997165974d1d1406f01aabaf869aed7ca790cc2d83a92a82f26a06c5
+      destination: /usr/sbin/k3s
+      executable: true
+      # K3s magic provides these tools when symlinking
+      symlinks:
+        - /usr/sbin/kubectl
+        - /usr/sbin/ctr
+        - /usr/sbin/crictl
+    # Transfer the K3s images for containerd to pick them up
+    - source: https://github.com/k3s-io/k3s/releases/download/v1.34.3+k3s1/k3s-airgap-images-amd64.tar.zst
+      checksum: b8dff3265568e1be66ab72ac0ded68bd266fa37a32c010f1253dba6547a49ce8
+      destination: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
+  actions:
+    onDeploy:
+      before:
+        - cmd: if [ "$(uname -m)" != "x86_64" ]; then echo "this package architecture is amd64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
+          description: Check that the host architecture matches the package architecture
+          retries: 0
+        - cmd: ./zarf internal is-valid-hostname
+          retries: 0
+          description: Check if the current system has a, RFC1123 compliant hostname
+        # If running RHEL variant, disable firewalld
+        # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
+        # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
+        - cmd: "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
+          description: If running a RHEL variant, disable 'firewalld' per k3s docs

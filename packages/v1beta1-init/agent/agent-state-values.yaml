@@ -1,0 +1,11 @@
+# Derive image settings from the packaged image, including build-time overrides.
+{{- range .Pkg.Components }}
+{{- if eq .Service "agent" }}
+{{- $image := (index .Images 0).Name }}
+image:
+  reference: {{ printf "%s/%s%s" $.State.Registry.Address (imageRepository $image) (imageTagOrDigest $image) | quote }}
+{{- end }}
+{{- end }}
+secret:
+  tlsCrt: {{ .State.Agent.Cert | quote }}
+  tlsKey: {{ .State.Agent.Key | quote }}

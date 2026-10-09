@@ -3,6 +3,8 @@ replicaCount: 1
 podLabels: {}
 
 image:
+  # A complete tag or digest reference overrides repository and tag when set.
+  reference: ""
   repository: registry
   tag: 2.8.3
 
@@ -12,8 +14,12 @@ proxy:
   tolerations: []
   registry:
     image:
+      # Overrides image.reference when proxy.enabled is true.
+      reference: ""
       repository: registry
   image:
+    # A complete tag or digest reference overrides repository and tag when set.
+    reference: ""
     repository: alpine/socat
     tag: 1.8.0.3
   injector:

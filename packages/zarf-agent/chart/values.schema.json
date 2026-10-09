@@ -78,6 +78,10 @@
     "image": {
       "type": "object",
       "properties": {
+        "reference": {
+          "type": "string",
+          "description": "Complete image reference, including a tag or digest. Overrides repository and tag when set."
+        },
         "repository": {
           "type": "string"
         },

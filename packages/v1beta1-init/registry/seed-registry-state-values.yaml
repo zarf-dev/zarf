@@ -1,0 +1,14 @@
+{{- range .Pkg.Components }}
+{{- if eq .Service "seed-registry" }}
+{{- $registry := (index .Images 0).Name }}
+{{- $proxy := (index .Images 1).Name }}
+image:
+  reference: {{ printf "%s/%s%s" $.State.Registry.SeedAddress (imageRepository $registry) (imageTagOrDigest $registry) | quote }}
+proxy:
+  image:
+    reference: {{ printf "%s/%s%s" $.State.Registry.SeedAddress (imageRepository $proxy) (imageTagOrDigest $proxy) | quote }}
+  registry:
+    image:
+      reference: {{ printf "%s/%s%s" $.State.Registry.SeedAddress (imageRepository $registry) (imageTagOrDigest $registry) | quote }}
+{{- end }}
+{{- end }}

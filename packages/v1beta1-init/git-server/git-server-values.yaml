@@ -1,0 +1,69 @@
+gitServer:
+  persistence:
+    claimName: data-zarf-gitea-0
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+    create: true
+  replicaCount: 1
+  gitea:
+    admin:
+      email: zarf@localhost
+    config:
+      APP_NAME: Zarf Gitops Service
+      server:
+        DISABLE_SSH: true
+        OFFLINE_MODE: true
+        ROOT_URL: http://zarf-gitea-http.zarf.svc.cluster.local:3000
+      database:
+        DB_TYPE: sqlite3
+        # Gitea's init script needs a reachable host even when SQLite stores data on disk.
+        HOST: zarf-docker-registry.zarf.svc.cluster.local:5000
+      security:
+        INSTALL_LOCK: true
+      service:
+        DISABLE_REGISTRATION: true
+      repository:
+        ENABLE_PUSH_CREATE_USER: true
+        FORCE_PRIVATE: true
+      session:
+        PROVIDER: memory
+      cache:
+        ADAPTER: memory
+      queue:
+        TYPE: level
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "3"
+      memory: 2Gi
+  image:
+    rootless: true
+  podSecurityContext:
+    fsGroup: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    privileged: false
+    readOnlyRootFilesystem: true
+  serviceAccount:
+    create: true
+    automountServiceAccountToken: false
+  postgresql-ha:
+    enabled: false
+  valkey-cluster:
+    enabled: false
+  strategy:
+    type: Recreate
+  affinity: {}
+  tolerations: []
+  nodeSelector: {}

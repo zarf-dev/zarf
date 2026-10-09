@@ -335,6 +335,26 @@ A subset of [Helm functions](https://helm.sh/docs/chart_template_guide/function_
 - **YAML**: `toYaml`, `mustToYaml`, `toYamlPretty`, `fromYaml`, `fromYamlArray`
 - **JSON**: `toJson`, `mustToJson`, `fromJson`, `fromJsonArray`
 
+Zarf also provides image reference helpers:
+
+- `imageRepository` returns the repository path without the registry, tag, or digest. It expands Docker Hub shorthand: `nginx:1.27` becomes `library/nginx`.
+- `imageTag` returns the tag, defaulting to `latest` when omitted. References containing a digest are rejected.
+- `imageTagOrDigest` returns the suffix including its separator: `:tag` or `@sha256:...`. A digest takes precedence when both are present; an omitted tag defaults to `:latest`.
+
+These functions use Zarf's image reference parser and report invalid references as template errors. Registry ports are supported.
+
+```yaml
+image:
+  repository: {{ printf "%s/%s" .State.Registry.Address (imageRepository .Values.image) | quote }}
+  tag: {{ imageTag .Values.image | quote }}
+```
+
+Use `imageTag` for a chart's tag field when the chart inserts `:` itself. Use `imageTagOrDigest` when composing a complete reference:
+
+```yaml
+image: {{ printf "%s/%s%s" .State.Registry.Address (imageRepository .Values.image) (imageTagOrDigest .Values.image) | quote }}
+```
+
 ## Examples
 
 See the [values-templating example](/ref/examples/values-templating) for a complete working example demonstrating:
