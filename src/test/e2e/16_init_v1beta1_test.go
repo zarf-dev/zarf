@@ -88,8 +88,8 @@ func TestInitV1Beta1(t *testing.T) {
 				// Publish only to an ephemeral test registry, then discard every repository resource.
 				registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
 				filenames := map[string]string{
-					"k3s":                "k3s/zarf.gen.yaml",
-					"zarf-injector":      "injector/zarf.gen.yaml",
+					"k3s":                "k3s/" + arch + ".gen.yaml",
+					"zarf-injector":      "injector/" + arch + ".gen.yaml",
 					"zarf-seed-registry": "registry/seed-registry.gen.yaml",
 					"zarf-registry":      "registry/zarf.gen.yaml",
 					"zarf-agent":         "agent/zarf.gen.yaml",

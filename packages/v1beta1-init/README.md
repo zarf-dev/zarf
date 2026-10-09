@@ -7,7 +7,9 @@ optional; the injector, seed registry, registry, and agent provide the required 
 services.
 
 The component directories are `injector/`, `agent/`, `registry/`, `git-server/`,
-and `k3s/`. The seed registry and shared registry base live under `registry/`.
+and `k3s/`. K3s and the injector have separate `amd64.tpl.yaml` and `arm64.tpl.yaml`
+variants; K3s imports shared files, values, and lifecycle actions from `common.tpl.yaml`.
+The seed registry and shared registry base live under `registry/`.
 
 Build the CLI from this branch before using these targets. v1beta1 and
 `zarf dev template` are still under development. This package requires a CLI with
@@ -163,14 +165,17 @@ make template-init-package-v1beta1 \
   INIT_V1BETA1_TEMPLATE_SET='agent.image=ghcr.io/zarf-dev/zarf/agent:v0.87.0,agent.source=registry'
 ```
 
-Then publish each directory's `zarf.gen.yaml` definition to your chosen OCI
-repository using `zarf component publish <directory>/zarf.gen.yaml oci://<repository>`
-from this directory. Also publish `registry/seed-registry.gen.yaml` for the seed
-registry; `registry/registry-base.gen.yaml` is resolved into both registry components
-and does not need separate publication. K3s and the injector declare an architecture
-variant; render and publish both architectures to the same version to provide both
-variants. The other
-components use images selected for the package architecture at creation time.
+Then publish the agent, registry, and Git server's `zarf.gen.yaml` definitions to
+your chosen OCI repository using
+`zarf component publish <directory>/zarf.gen.yaml oci://<repository>` from this
+directory. Also publish `registry/seed-registry.gen.yaml` for the seed registry.
+For K3s and the injector, publish each directory's `amd64.gen.yaml` and
+`arm64.gen.yaml` to the same repository and version to provide both variants.
+Both variants are rendered on every build, and package imports select the matching
+architecture. Publishing resolves `k3s/common.gen.yaml` and
+`registry/registry-base.gen.yaml` into their consumers; these shared definitions
+do not need separate publication. The other components use images selected for
+the package architecture at creation time.
 
 Consumers can replace a local import with:
 

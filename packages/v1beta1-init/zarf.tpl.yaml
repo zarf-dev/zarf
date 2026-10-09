@@ -3,7 +3,6 @@ kind: ZarfInitConfig
 metadata:
   name: init
   description: Used to establish a new Zarf cluster
-  # FIXME: do we need .cli.version? is it not auto set?
   version: "[[ .cli.version ]]"
   # FIXME: does it make sense to have architecture
   architecture: "[[ .architecture ]]"
@@ -17,11 +16,13 @@ components:
     optional: true
     import:
       local:
-        - path: k3s/zarf.gen.yaml
+        - path: k3s/amd64.gen.yaml
+        - path: k3s/arm64.gen.yaml
   - name: zarf-injector
     import:
       local:
-        - path: injector/zarf.gen.yaml
+        - path: injector/amd64.gen.yaml
+        - path: injector/arm64.gen.yaml
   - name: zarf-seed-registry
     import:
       local:
