@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["agent"],
+  "properties": {
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "tag"],
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Container image for the zarf-agent (without tag)"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Container image tag for the zarf-agent"
+        },
+        "tls": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ca": {
+              "type": "string",
+              "description": "PEM-encoded CA certificate for the Zarf agent"
+            },
+            "cert": {
+              "type": "string",
+              "description": "PEM-encoded TLS certificate for the Zarf agent"
+            },
+            "key": {
+              "type": "string",
+              "description": "PEM-encoded TLS private key for the Zarf agent"
+            }
+          }
+        },
+        "affinity": {
+          "type": "object",
+          "description": "Custom affinity map for the zarf-agent deployment"
+        },
+        "tolerations": {
+          "type": "array",
+          "description": "Custom tolerations array for the zarf-agent deployment",
+          "items": {
+            "type": "object"
+          }
+        },
+        "nodeSelector": {
+          "type": "object",
+          "description": "Custom node selector map for the zarf-agent deployment"
+        }
+      }
+    }
+  }
+}

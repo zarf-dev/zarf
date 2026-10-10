@@ -1,0 +1,20 @@
+injector:
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+
+agent:
+  image: custom.enterprise.org/zarf-dev/zarf/agent
+  tag: v1.0.0
+
+registry:
+  image: custom.enterprise.org/library/registry
+  tag: 3.1.0
+
+proxy:
+  image: custom.enterprise.org/alpine/socat
+  tag: 1.8.0.3
+
+gitea:
+  image: custom.enterprise.org/go-gitea/gitea:1.24.6-rootless

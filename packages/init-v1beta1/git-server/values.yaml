@@ -1,0 +1,12 @@
+gitServer:
+  pvc:
+    existing: data-zarf-gitea-0
+    size: 10Gi
+    accessMode: ReadWriteOnce
+  resources:
+    cpuRequest: 200m
+    memoryRequest: 512Mi
+    cpuLimit: "3"
+    memoryLimit: 2Gi
+  replicaCount: 1
+  disableRegistration: true
