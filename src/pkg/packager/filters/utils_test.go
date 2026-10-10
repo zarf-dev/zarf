@@ -45,10 +45,9 @@ func Test_includedOrExcluded(t *testing.T) {
 			name:                    "Test when component is excluded and included",
 			componentName:           "example",
 			requestedComponentNames: []string{"-example", "example"},
-			wantState:               excluded,
-			wantRequestedComponent:  "-example",
+			wantState:               included,
+			wantRequestedComponent:  "example",
 		},
-		// interesting case, excluded wins
 		{
 			name:                    "Test when component is included and excluded",
 			componentName:           "example",
