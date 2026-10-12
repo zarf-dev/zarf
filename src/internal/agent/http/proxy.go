@@ -40,15 +40,17 @@ func ProxyHandler(ctx context.Context, cluster *cluster.Cluster) http.HandlerFun
 			w.Write([]byte("unable to transform the provided request, see the Zarf HTTP proxy logs for more details"))
 			return
 		}
-		proxy := &httputil.ReverseProxy{Director: func(_ *http.Request) {}, ModifyResponse: proxyResponseTransform}
+		proxy := &httputil.ReverseProxy{
+			Rewrite: func(req *httputil.ProxyRequest) {
+				req.SetXForwarded()
+			},
+			ModifyResponse: proxyResponseTransform,
+		}
 		proxy.ServeHTTP(w, r)
 	}
 }
 
 func proxyRequestTransform(r *http.Request, s *state.State) error {
-	// We add this so that we can use it to rewrite urls in the response if needed
-	r.Header.Add("X-Forwarded-Host", r.Host)
-
 	// We remove this so that go will encode and decode on our behalf (see https://pkg.go.dev/net/http#Transport DisableCompression)
 	r.Header.Del("Accept-Encoding")
 
