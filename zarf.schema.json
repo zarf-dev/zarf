@@ -2294,10 +2294,6 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "url",
-                        "ref"
-                      ],
                       "type": "object"
                     },
                     "helmRepository": {
@@ -2320,10 +2316,6 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "url",
-                        "version"
-                      ],
                       "type": "object"
                     },
                     "local": {
@@ -2395,10 +2387,6 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "url",
-                        "ref"
-                      ],
                       "type": "object"
                     },
                     "releaseName": {

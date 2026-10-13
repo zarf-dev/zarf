@@ -163,7 +163,10 @@ func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.Compone
 		inheritedResources[i].importRoot = makePathRelativeTo(inheritedResources[i].importRoot, relDir)
 	}
 	resources := append(directImport.resources, inheritedResources...)
-	merged := mergeComponentConfigSpec(resolvedImportSpec, spec)
+	merged, err := mergeComponentConfigSpec(resolvedImportSpec, spec)
+	if err != nil {
+		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
+	}
 	merged.Import = v1beta1.ComponentImport{}
 	return merged, vals, resources, nil
 }

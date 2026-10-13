@@ -769,10 +769,6 @@
           "type": "string"
         }
       },
-      "required": [
-        "url",
-        "ref"
-      ],
       "type": "object"
     },
     "HelmRepositorySource": {
@@ -795,10 +791,6 @@
           "type": "string"
         }
       },
-      "required": [
-        "url",
-        "version"
-      ],
       "type": "object"
     },
     "Image": {
@@ -993,10 +985,6 @@
           "type": "string"
         }
       },
-      "required": [
-        "url",
-        "ref"
-      ],
       "type": "object"
     },
     "PackageMetadata": {

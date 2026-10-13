@@ -15,6 +15,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
@@ -257,4 +258,53 @@ components:
 		require.NoError(t, err)
 		require.Equal(t, expected, string(b))
 	}
+}
+
+func TestChartRevisionComposability(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "component.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: base
+component:
+  charts:
+    - name: app
+      namespace: default
+      helmRepository:
+        name: upstream-app
+        url: https://example.com/charts
+        version: 1.0.0
+`), 0o600))
+	definition := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: revision-overrides
+components:
+  - name: app
+    import:
+      local:
+        - path: component.yaml
+    charts:
+      - name: app
+        helmRepository:
+          version: 2.0.0
+`
+	path := filepath.Join(dir, "zarf.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(definition), 0o600))
+	stdOut, stdErr, err := e2e.Zarf(t, "dev", "inspect", "definition", dir)
+	require.NoError(t, err, stdOut, stdErr)
+	var pkg v1beta1.Package
+	require.NoError(t, goyaml.Unmarshal([]byte(stdOut), &pkg))
+	require.Len(t, pkg.Components, 1)
+	require.Len(t, pkg.Components[0].Charts, 1)
+	require.Equal(t, &v1beta1.HelmRepositorySource{
+		Name: "upstream-app", URL: "https://example.com/charts", Version: "2.0.0",
+	}, pkg.Components[0].Charts[0].HelmRepository)
+
+	definition += "          url: https://example.com/other-charts\n"
+	require.NoError(t, os.WriteFile(path, []byte(definition), 0o600))
+	stdOut, stdErr, err = e2e.Zarf(t, "dev", "inspect", "definition", dir)
+	require.Error(t, err, stdOut, stdErr)
+	require.Contains(t, stdErr, "cannot override helmRepository.url")
 }

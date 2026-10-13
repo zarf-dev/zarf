@@ -509,7 +509,7 @@ func TestLoadedPackageCloseInvalidatesResources(t *testing.T) {
 	require.ErrorContains(t, err, "package resources are closed")
 }
 
-func TestV1Beta1PackageDefinitionParentChartSourceTakesPriority(t *testing.T) {
+func TestV1Beta1PackageDefinitionRejectsConflictingChartSources(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 	dir := t.TempDir()
@@ -542,11 +542,8 @@ components:
             tag: 1.0.0
 `), 0o600))
 
-	defined, err := PackageDefinition(ctx, dir, DefinitionOptions{})
-	require.NoError(t, err)
-	chart := convert.PackageToV1beta1(defined).Components[0].Charts[0]
-	require.Nil(t, chart.Local)
-	require.NotNil(t, chart.OCI)
+	_, err := PackageDefinition(ctx, dir, DefinitionOptions{})
+	require.ErrorContains(t, err, `chart "app" must include exactly one source`)
 }
 
 func TestPackageDefinitionErrors(t *testing.T) {

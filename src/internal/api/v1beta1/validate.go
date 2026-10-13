@@ -269,6 +269,30 @@ func validateChart(chart v1beta1.Chart) ValidationErrors {
 	if sources != 1 {
 		errs = append(errs, fmt.Errorf(PkgValidateErrChartSource, chart.Name))
 	}
+	if chart.HelmRepository != nil {
+		if chart.HelmRepository.URL == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include helmRepository.url", chart.Name))
+		}
+		if chart.HelmRepository.Version == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include helmRepository.version", chart.Name))
+		}
+	}
+	if chart.Git != nil {
+		if chart.Git.URL == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include git.url", chart.Name))
+		}
+		if chart.Git.Ref == (v1beta1.GitRef{}) {
+			errs = append(errs, fmt.Errorf("chart %q must include git.ref", chart.Name))
+		}
+	}
+	if chart.OCI != nil {
+		if chart.OCI.URL == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include oci.url", chart.Name))
+		}
+		if chart.OCI.Ref == (v1beta1.OCIRef{}) {
+			errs = append(errs, fmt.Errorf("chart %q must include oci.ref", chart.Name))
+		}
+	}
 
 	if len(chart.Name) > ZarfMaxChartNameLength {
 		errs = append(errs, fmt.Errorf(PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))
