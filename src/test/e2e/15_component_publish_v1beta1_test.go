@@ -21,7 +21,7 @@ func TestComponentPublish(t *testing.T) {
 	registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
 	privateKey := filepath.Join("src", "test", "packages", "zarf-test.prv-key")
 	publicKey := filepath.Join("src", "test", "packages", "zarf-test.pub")
-	stdOut, stdErr, err := e2e.Zarf(t, "component", "publish", componentPath, "oci://"+registryURL, "--plain-http", "--signing-key", privateKey)
+	stdOut, stdErr, err := e2e.Zarf(t, "component", "publish", componentPath, "oci://"+registryURL, "--plain-http", "--signing-key", privateKey, "--features=v1beta1=true")
 	require.NoError(t, err, stdOut, stdErr)
 
 	componentSource := registryURL + "/published-component:0.0.1"
