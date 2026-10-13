@@ -123,13 +123,13 @@ type Chart struct {
 	// The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repository.
 	Name string `json:"name"`
 	// The Helm repository where the chart is stored.
-	HelmRepository *HelmRepositorySource `json:"helmRepository,omitempty" jsonschema:"oneof_required=helmRepository"`
+	HelmRepository *HelmRepositorySource `json:"helmRepository,omitempty"`
 	// The Git repository where the chart is stored.
-	Git *GitSource `json:"git,omitempty" jsonschema:"oneof_required=git"`
+	Git *GitSource `json:"git,omitempty"`
 	// The local path where the chart is stored.
-	Local *LocalSource `json:"local,omitempty" jsonschema:"oneof_required=local"`
+	Local *LocalSource `json:"local,omitempty"`
 	// The OCI registry where the chart is stored.
-	OCI *OCISource `json:"oci,omitempty" jsonschema:"oneof_required=oci"`
+	OCI *OCISource `json:"oci,omitempty"`
 	// The namespace to deploy the chart to.
 	Namespace string `json:"namespace,omitempty"`
 	// The name of the Helm release to create (defaults to the Zarf name of the chart).

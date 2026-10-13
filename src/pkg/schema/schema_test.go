@@ -61,3 +61,38 @@ func TestCombinedSchemaSelectsVersionByAPIVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestV1Beta1SchemaAllowsChartOverrides(t *testing.T) {
+	t.Parallel()
+	for _, sourceSchema := range []struct {
+		name      string
+		schema    []byte
+		component bool
+	}{
+		{name: "package", schema: GetV1Beta1Schema()},
+		{name: "combined", schema: getSchema()},
+		{name: "component", schema: GetV1Beta1ComponentSchema(), component: true},
+	} {
+		t.Run(sourceSchema.name, func(t *testing.T) {
+			t.Parallel()
+			spec := map[string]any{
+				"import": map[string]any{"local": []any{map[string]any{"path": "base.yaml"}}},
+				"charts": []any{map[string]any{"name": "app", "namespace": "override"}},
+			}
+			doc := map[string]any{
+				"apiVersion": "zarf.dev/v1beta1", "kind": "ZarfPackageConfig",
+				"metadata": map[string]any{"name": "app"},
+			}
+			if sourceSchema.component {
+				doc["kind"] = "ZarfComponentConfig"
+				doc["component"] = spec
+			} else {
+				spec["name"] = "app"
+				doc["components"] = []any{spec}
+			}
+			result, err := gojsonschema.Validate(gojsonschema.NewBytesLoader(sourceSchema.schema), gojsonschema.NewGoLoader(doc))
+			require.NoError(t, err)
+			require.True(t, result.Valid(), result.Errors())
+		})
+	}
+}

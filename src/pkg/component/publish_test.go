@@ -81,6 +81,14 @@ func TestPublishComponentAndAssembleRemoteImportResources(t *testing.T) {
 	}
 	componentYAML, err := goyaml.Marshal(component)
 	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(componentDir, "base.yaml"), componentYAML, 0o600))
+	component.Component = v1beta1.ComponentSpec{
+		Import: v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "base.yaml"}}},
+		Charts: []v1beta1.Chart{{Name: "test", Namespace: "overridden", ReleaseName: "custom-release"}},
+	}
+	component.Values = v1beta1.Values{}
+	componentYAML, err = goyaml.Marshal(component)
+	require.NoError(t, err)
 	componentPath := filepath.Join(componentDir, "component.yaml")
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
@@ -109,6 +117,8 @@ components:
 	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{CachePath: cachePath, SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+	require.Equal(t, "overridden", pkgLayout.Definition().Components[0].Charts[0].Namespace)
+	require.Equal(t, "custom-release", pkgLayout.Definition().Components[0].Charts[0].ReleaseName)
 	require.NoFileExists(t, resourcePath)
 
 	assembledComponentDir := t.TempDir()
@@ -666,6 +676,7 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 		Values:     v1beta1.Values{Files: []string{"../external/values.yaml"}, Schema: filepath.Join(externalDir, "schema.json")},
 		Component: v1beta1.ComponentSpec{
 			Charts: []v1beta1.Chart{{
+				Name: "external", Namespace: "default",
 				Local:       &v1beta1.LocalSource{Path: filepath.Join(externalDir, "chart")},
 				ValuesFiles: []v1beta1.ValuesFile{{Path: "../external/chart-values.yaml"}},
 			}},

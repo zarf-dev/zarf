@@ -111,6 +111,12 @@ func ResolveComponentConfigImports(ctx context.Context, component v1beta1.Compon
 		return ComponentConfigImportResolution{}, err
 	}
 	component.Component = resolvedSpec
+	if validationErrs := internalv1beta1.ValidateComponent(v1beta1.Component{
+		Name:          component.Metadata.Name,
+		ComponentSpec: component.Component,
+	}); len(validationErrs) > 0 {
+		return ComponentConfigImportResolution{}, fmt.Errorf("component validation failed:\n%w", validationErrs)
+	}
 	component.Values.Files = dedupePaths(append(importedVals.files, component.Values.Files...))
 	return ComponentConfigImportResolution{
 		Component:       component,
