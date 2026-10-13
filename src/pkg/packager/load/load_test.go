@@ -124,6 +124,29 @@ func TestPackageDefinitionV1Beta1ImageSources(t *testing.T) {
 	}
 }
 
+func TestPackageDefinitionRejectsV1Beta1ChartPathComponents(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	packageYAML := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: path-components
+components:
+  - name: component
+    charts:
+      - name: ../escaped
+        namespace: default
+        releaseName: valid
+        local:
+          path: chart
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(packageYAML), 0o600))
+
+	_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+	require.ErrorContains(t, err, "linting error found")
+}
+
 func TestPackageDefinitionRejectsUnsupportedRawFields(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

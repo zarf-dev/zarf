@@ -151,6 +151,29 @@ func TestValidatePackageFileChecksumAlgorithm(t *testing.T) {
 	}
 }
 
+func TestValidatePackageDocumentationKeys(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		key     string
+		wantErr string
+	}{
+		{key: "nested/document", wantErr: PkgValidateErrDocumentationKeyPath},
+		{key: `nested\document`, wantErr: PkgValidateErrDocumentationKeyPath},
+		{key: "..", wantErr: PkgValidateErrDocumentationKeyTraversal},
+	}
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			t.Parallel()
+			errs := ValidatePackage(v1beta1.Package{
+				Components:    []v1beta1.Component{{Name: "component"}},
+				Documentation: map[string]string{tt.key: "readme.md"},
+			})
+			require.ErrorContains(t, errs, fmt.Sprintf(tt.wantErr, tt.key))
+		})
+	}
+}
+
 func TestValidateManifest(t *testing.T) {
 	t.Parallel()
 	longName := strings.Repeat("a", ZarfMaxChartNameLength+1)
@@ -173,6 +196,16 @@ func TestValidateManifest(t *testing.T) {
 			name:         "long name",
 			manifest:     v1beta1.Manifest{Name: longName, Files: []string{"a-file"}},
 			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
+		},
+		{
+			name:         "name contains forward path separator",
+			manifest:     v1beta1.Manifest{Name: "nested/manifest", Files: []string{"a-file"}},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNamePath, "nested/manifest")},
+		},
+		{
+			name:         "name contains path separator",
+			manifest:     v1beta1.Manifest{Name: `nested\manifest`, Files: []string{"a-file"}},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNamePath, `nested\manifest`)},
 		},
 		{
 			name:         "no files or kustomize",
