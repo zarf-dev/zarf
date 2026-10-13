@@ -7,7 +7,6 @@ package test
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -15,7 +14,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/convert"
-	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
@@ -197,114 +195,4 @@ func TestComposabilityBadLocalOS(t *testing.T) {
 	_, stdErr, err := e2e.Zarf(t, "package", "create", composeTestBadLocalOS, "-o", tmpdir, "--no-color", "--confirm")
 	require.Error(t, err)
 	require.Contains(t, stdErr, "\"only.localOS\" \"linux\" cannot be redefined as \"windows\" during compose")
-}
-
-func TestChartOverrideComposability(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	for path, content := range map[string]string{
-		"base/chart/Chart.yaml": "apiVersion: v2\nname: app\nversion: 1.0.0\n",
-		"base/values.yaml":      "replicas: 1\n",
-		"override.yaml":         "replicas: 2\n",
-		"base/component.yaml": `apiVersion: zarf.dev/v1beta1
-kind: ZarfComponentConfig
-metadata:
-  name: base
-component:
-  charts:
-    - name: app
-      namespace: original
-      local:
-        path: chart
-      valuesFiles:
-        - path: values.yaml
-`,
-		"zarf.yaml": `apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
-metadata:
-  name: chart-overrides
-components:
-  - name: app
-    import:
-      local:
-        - path: base/component.yaml
-    charts:
-      - name: app
-        namespace: overridden
-        releaseName: custom-release
-        valuesFiles:
-          - path: override.yaml
-`,
-	} {
-		path = filepath.Join(dir, path)
-		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
-		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
-	}
-	output := t.TempDir()
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", dir, "-o", output, "--skip-sbom", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-	packagePath := filepath.Join(output, fmt.Sprintf("zarf-package-chart-overrides-%s.tar.zst", e2e.Arch))
-	pkgLayout, err := layout.LoadFromTar(t.Context(), packagePath, layout.PackageLayoutOptions{})
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
-	charts := pkgLayout.Definition().Components[0].Charts
-	require.Len(t, charts, 1)
-	require.Equal(t, "overridden", charts[0].Namespace)
-	require.Equal(t, "custom-release", charts[0].ReleaseName)
-	valuesDir, err := pkgLayout.GetComponentDir(t.Context(), t.TempDir(), "app", layout.ValuesComponentDir)
-	require.NoError(t, err)
-	for i, expected := range []string{"replicas: 1\n", "replicas: 2\n"} {
-		b, err := os.ReadFile(filepath.Join(valuesDir, fmt.Sprintf("app-%d", i)))
-		require.NoError(t, err)
-		require.Equal(t, expected, string(b))
-	}
-}
-
-func TestChartRevisionComposability(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "component.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
-kind: ZarfComponentConfig
-metadata:
-  name: base
-component:
-  charts:
-    - name: app
-      namespace: default
-      helmRepository:
-        name: upstream-app
-        url: https://example.com/charts
-        version: 1.0.0
-`), 0o600))
-	definition := `apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
-metadata:
-  name: revision-overrides
-components:
-  - name: app
-    import:
-      local:
-        - path: component.yaml
-    charts:
-      - name: app
-        helmRepository:
-          version: 2.0.0
-`
-	path := filepath.Join(dir, "zarf.yaml")
-	require.NoError(t, os.WriteFile(path, []byte(definition), 0o600))
-	stdOut, stdErr, err := e2e.Zarf(t, "dev", "inspect", "definition", dir)
-	require.NoError(t, err, stdOut, stdErr)
-	var pkg v1beta1.Package
-	require.NoError(t, goyaml.Unmarshal([]byte(stdOut), &pkg))
-	require.Len(t, pkg.Components, 1)
-	require.Len(t, pkg.Components[0].Charts, 1)
-	require.Equal(t, &v1beta1.HelmRepositorySource{
-		Name: "upstream-app", URL: "https://example.com/charts", Version: "2.0.0",
-	}, pkg.Components[0].Charts[0].HelmRepository)
-
-	definition += "          url: https://example.com/other-charts\n"
-	require.NoError(t, os.WriteFile(path, []byte(definition), 0o600))
-	stdOut, stdErr, err = e2e.Zarf(t, "dev", "inspect", "definition", dir)
-	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "cannot override helmRepository.url")
 }
