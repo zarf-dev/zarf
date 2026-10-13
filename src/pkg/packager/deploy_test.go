@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -75,82 +76,120 @@ func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
 	}
 }
 
-func TestInternalServicesFor(t *testing.T) {
+func TestDeployInitComponentServices(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name       string
-		components []api.Component
-		opts       DeployOptions
-		expected   state.ServiceSet
+	for _, tt := range []struct {
+		name            string
+		components      []api.Component
+		opts            DeployOptions
+		registry        bool
+		agent           bool
+		git             bool
+		failedComponent int
 	}{
 		{
-			name:       "no components",
-			components: nil,
-			expected:   state.NewServiceSet(),
+			name:       "renamed registry",
+			components: []api.Component{{Name: "custom-registry", Service: api.ServiceRegistry}},
+			registry:   true,
 		},
 		{
-			name: "full init package with no external URLs populates enabled services",
+			name: "renamed seed registry",
 			components: []api.Component{
-				{Name: "k3s"},
-				{Name: "zarf-injector"},
-				{Name: "zarf-seed-registry"},
+				{Name: "probe"},
+				{Name: "custom-seed", Service: api.ServiceSeedRegistry},
+			},
+			registry: true,
+		},
+		{
+			name:       "renamed injector",
+			components: []api.Component{{Name: "custom-injector", Service: api.ServiceInjector}},
+			registry:   true,
+		},
+		{
+			name:       "renamed agent",
+			components: []api.Component{{Name: "custom-agent", Service: api.ServiceAgent}},
+			agent:      true,
+		},
+		{
+			name:       "renamed git server",
+			components: []api.Component{{Name: "custom-git", Service: api.ServiceGitServer}},
+			git:        true,
+		},
+		{
+			name: "legacy names without services",
+			components: []api.Component{
 				{Name: "zarf-registry"},
+				{Name: "zarf-seed-registry"},
+				{Name: "zarf-injector"},
 				{Name: "zarf-agent"},
 				{Name: "git-server"},
 			},
-			expected: state.NewServiceSet(state.RegistryKey, state.AgentKey, state.GitKey),
 		},
 		{
-			name: "external registry URL drops registry key even though registry components are present",
+			name: "external registry skips renamed registry services",
 			components: []api.Component{
-				{Name: "zarf-injector"},
-				{Name: "zarf-seed-registry"},
+				{Name: "custom-registry", Service: api.ServiceRegistry},
+				{Name: "custom-seed", Service: api.ServiceSeedRegistry},
+				{Name: "custom-injector", Service: api.ServiceInjector},
 				{Name: "zarf-registry"},
-				{Name: "zarf-agent"},
-				{Name: "git-server"},
+				{Name: "custom-agent", Service: api.ServiceAgent},
+				{Name: "custom-git", Service: api.ServiceGitServer},
 			},
-			opts: DeployOptions{
-				RegistryInfo: state.RegistryInfo{Address: "https://registry.example.com"},
-			},
-			expected: state.NewServiceSet(state.AgentKey, state.GitKey),
+			opts:            DeployOptions{RegistryInfo: state.RegistryInfo{Address: "registry.example.com"}},
+			registry:        true,
+			agent:           true,
+			git:             true,
+			failedComponent: 3,
 		},
-		{
-			name: "external git and artifact URLs do not change internally deployed services",
-			components: []api.Component{
-				{Name: "zarf-registry"},
-				{Name: "git-server"},
-			},
-			opts: DeployOptions{
-				GitServer:      state.GitServerInfo{Address: "https://git.example.com"},
-				ArtifactServer: state.ArtifactServerInfo{Address: "https://artifact.example.com"},
-			},
-			expected: state.NewServiceSet(state.RegistryKey, state.GitKey),
-		},
-		{
-			name: "registry components dedupe to registry key",
-			components: []api.Component{
-				{Name: "zarf-injector"},
-				{Name: "zarf-seed-registry"},
-				{Name: "zarf-registry"},
-			},
-			expected: state.NewServiceSet(state.RegistryKey),
-		},
-		{
-			name: "unknown components ignored",
-			components: []api.Component{
-				{Name: "k3s"},
-				{Name: "some-custom-component"},
-			},
-			expected: state.NewServiceSet(),
-		},
-	}
-
-	for _, tt := range tests {
+	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := internalServicesFor(tt.components, tt.opts)
-			require.Equal(t, tt.expected, got)
+			ctx := testutil.TestContext(t)
+			cs := fake.NewClientset(
+				&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node"}},
+				&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: state.ZarfNamespaceName}},
+				&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "default", Namespace: state.ZarfNamespaceName}},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{Name: "zarf-ip-family-test", Namespace: state.ZarfNamespaceName},
+					Spec:       corev1.ServiceSpec{IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol}},
+				},
+			)
+			c := &cluster.Cluster{Clientset: cs, Watcher: healthchecks.NewImmediateWatcher(status.CurrentStatus)}
+			for i := range tt.components {
+				tt.components[i].Manifests = []api.Manifest{{Name: "probe", Files: []string{"manifest.yaml"}}}
+				tt.components[i].Actions.OnDeploy.Before = []api.Action{{Cmd: "exit 1"}}
+			}
+			pkg := api.Package{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       api.ZarfInitConfig,
+				Metadata:   api.PackageMetadata{Name: "service-init"},
+				Components: tt.components,
+			}
+			dir := t.TempDir()
+			require.NoError(t, layout.WritePackageDefinition(filepath.Join(dir, "zarf.yaml"), pkg))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"), []byte("apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: probe\n"), 0o600))
+			loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+			pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{SkipSBOM: true})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			d := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
+			// Stop before installing resources so the persisted init state and skipped services
+			// can be checked without a live Helm connection.
+			_, err = d.deployComponents(ctx, pkgLayout, tt.opts)
+			require.ErrorContains(t, err, `unable to deploy component "`+tt.components[tt.failedComponent].Name+`"`)
+			require.ErrorContains(t, err, `command "exit 1" failed`)
+
+			s, err := c.LoadState(ctx)
+			require.NoError(t, err)
+			require.Equal(t, tt.registry, s.RegistryInfo.IsConfigured())
+			require.Equal(t, tt.agent, s.AgentInfo.IsConfigured())
+			require.Equal(t, tt.git, s.GitServer.IsConfigured())
+			if tt.opts.RegistryInfo.Address != "" {
+				require.Equal(t, tt.opts.RegistryInfo.Address, s.RegistryInfo.Address)
+			}
 		})
 	}
 }
