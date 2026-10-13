@@ -271,7 +271,7 @@ func init() {
 		},
 		{
 			Name:        V1Beta1,
-			Description: "Enables creation of packages using the experimental zarf.dev/v1beta1 API version.",
+			Description: "Enables package creation and component publishing using the zarf.dev/v1beta1 API version.",
 			Enabled:     false,
 			Since:       "v0.88.0",
 			Stage:       Alpha,
