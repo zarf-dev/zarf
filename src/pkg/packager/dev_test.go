@@ -119,7 +119,7 @@ func TestDevDeployRejectsArchitectureOverrideForInit(t *testing.T) {
 				CachePath:             filepath.Join(packageDir, "cache"),
 				SkipArchitectureCheck: true,
 			})
-			require.ErrorContains(t, err, "--skip-architecture-check is not supported for init packages")
+			require.ErrorContains(t, err, "skipping architecture checks is not supported for init packages")
 		})
 	}
 }

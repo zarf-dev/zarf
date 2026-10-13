@@ -121,7 +121,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	if opts.SkipArchitectureCheck && pkg.IsInitConfig() {
-		return DeployResult{}, fmt.Errorf("--skip-architecture-check is not supported for init packages")
+		return DeployResult{}, fmt.Errorf("skipping architecture checks is not supported for init packages")
 	}
 
 	// Validate operational requirements before proceeding

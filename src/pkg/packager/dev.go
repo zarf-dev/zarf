@@ -97,7 +97,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		err = errors.Join(err, loaded.Close())
 	}()
 	if opts.SkipArchitectureCheck && loaded.Definition.IsInitConfig() {
-		return fmt.Errorf("--skip-architecture-check is not supported for init packages")
+		return fmt.Errorf("skipping architecture checks is not supported for init packages")
 	}
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
