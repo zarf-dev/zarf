@@ -38,9 +38,7 @@ func newDevTemplateCommand(v *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "template [ PATH ]",
 		Short: "Renders a template into a generated definition",
-		// Once v1beta1 is released this command should be unhidden
-		Hidden: true,
-		Args:   cobra.MaximumNArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd.Context(), args)
 		},

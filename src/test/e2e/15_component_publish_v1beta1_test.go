@@ -52,7 +52,7 @@ func TestComponentPublish(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 
 		packageOutput := t.TempDir()
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "create", packageDir, "-o", packageOutput, "--plain-http", "--skip-sbom", "--confirm")
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "create", packageDir, "-o", packageOutput, "--plain-http", "--skip-sbom", "--confirm", "--features=v1beta1=true")
 		require.NoError(t, err, stdOut, stdErr)
 
 		packagePath := filepath.Join(packageOutput, fmt.Sprintf("zarf-package-component-remote-import-%s.tar.zst", e2e.Arch))
