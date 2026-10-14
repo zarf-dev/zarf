@@ -372,11 +372,25 @@ func filterHandler(root *os.Root, wantSet, found map[string]bool) func(_ context
 }
 
 // writeEntry validates and dispatches an archive entry within root.
-// Directory, file, and hardlink operations use os.Root methods, which provide
+// Directory and file operations use os.Root methods, which provide
 // kernel-enforced path traversal and symlink escape protection.
 //
-// Symbolic-link targets retain the archive's original semantics. A later
-// filesystem operation through a link is still constrained by os.Root.
+// The linkTarget parameter is passed separately from f.LinkTarget so
+// callers like stripHandler can adjust it (e.g., strip a path prefix
+// from hardlink targets, which are archive-root-relative in tar).
+//
+// For links, archives.FileInfo.LinkTarget is populated for both symlinks
+// (tar.TypeSymlink) and hardlinks (tar.TypeLink). They require different
+// handling:
+//   - Hardlinks: targets are relative to the archive root. os.Root.Link
+//     validates that both paths stay within root.
+//   - Symlinks: targets are relative to the link's parent directory.
+//     os.Root.Symlink does not validate the target, so validateSymlink
+//     checks that the target resolves within root.
+//
+// For non-tar archives (zip), the type assertion to *tar.Header fails and
+// the entry falls through to the symlink path, which is correct since zip
+// has no hardlink concept.
 func writeEntry(root *os.Root, rel, linkTarget string, f archives.FileInfo, flags int) error {
 	if err := validateEntryName(rel); err != nil {
 		return err
@@ -385,21 +399,19 @@ func writeEntry(root *os.Root, rel, linkTarget string, f archives.FileInfo, flag
 	// slash across MkdirAll, OpenFile, Link, and Symlink alike; tar
 	// directory entries conventionally have one.
 	rel = strings.TrimSuffix(rel, "/")
-	if hdr, ok := f.Header.(*tar.Header); ok {
-		switch hdr.Typeflag {
-		case tar.TypeLink:
-			if err := validateEntryName(linkTarget); err != nil {
-				return err
-			}
-			return root.Link(linkTarget, rel)
-		case tar.TypeSymlink:
-			return root.Symlink(filepath.FromSlash(linkTarget), rel)
-		}
-	}
 	switch {
 	case f.IsDir():
 		return root.MkdirAll(rel, f.Mode().Perm())
-	case f.Mode()&os.ModeSymlink != 0 || linkTarget != "":
+	case linkTarget != "":
+		if err := validateEntryName(linkTarget); err != nil {
+			return err
+		}
+		if hdr, ok := f.Header.(*tar.Header); ok && hdr.Typeflag == tar.TypeLink {
+			return root.Link(linkTarget, rel)
+		}
+		if err := validateSymlink(rel, linkTarget); err != nil {
+			return err
+		}
 		return root.Symlink(filepath.FromSlash(linkTarget), rel)
 	default:
 		return writeFile(root, rel, f, flags)
@@ -454,6 +466,38 @@ func validateEntryName(name string) error {
 		if dot := strings.IndexByte(upper, '.'); dot > 0 && windowsReservedNames[upper[:dot]] {
 			return fmt.Errorf("path component %q uses a reserved device name with extension", part)
 		}
+	}
+	return nil
+}
+
+// validateSymlink checks that a symlink target is relative and resolves within
+// the root directory. It resolves the target from the symlink's parent directory
+// (matching filesystem symlink semantics) and rejects targets that escape.
+func validateSymlink(rel, linkTarget string) error {
+	if linkTarget == "" {
+		return fmt.Errorf("empty symlink target for %q", rel)
+	}
+	// Reject rooted paths first — both /foo and \foo. On Windows,
+	// filepath.IsAbs returns false for /foo (rooted, drive-relative),
+	// so we must check the leading character before calling IsAbs.
+	if linkTarget[0] == '/' || linkTarget[0] == '\\' {
+		return fmt.Errorf("symlink target %q is absolute or rooted, which is not allowed", linkTarget)
+	}
+	if filepath.IsAbs(linkTarget) {
+		return fmt.Errorf("absolute symlink target %q is not allowed", linkTarget)
+	}
+	// Reject drive-letter and UNC paths that filepath.IsAbs may not catch
+	// on all platforms (e.g., C:relative is not "absolute" but carries a
+	// volume prefix that redirects resolution).
+	if filepath.VolumeName(linkTarget) != "" {
+		return fmt.Errorf("symlink target %q contains a volume name", linkTarget)
+	}
+	// Use path (POSIX, forward-slash only) for all archive path arithmetic.
+	// Archive entry names are always POSIX-style; filepath would normalize
+	// separators to backslash on Windows, breaking the escape check.
+	resolved := path.Clean(path.Join(path.Dir(rel), linkTarget))
+	if resolved == ".." || strings.HasPrefix(resolved, "../") {
+		return fmt.Errorf("symlink target %q escapes root directory", linkTarget)
 	}
 	return nil
 }

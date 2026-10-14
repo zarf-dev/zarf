@@ -138,6 +138,53 @@ func TestSymbolicLinksPreserved(t *testing.T) {
 	}
 }
 
+func TestSymlinkTargetsValidated(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		entries []tarEntry
+		opts    DecompressOpts
+	}{
+		{
+			name:    "relative target escapes root",
+			entries: []tarEntry{{name: "link", linkTarget: "../outside"}},
+		},
+		{
+			name:    "absolute target",
+			entries: []tarEntry{{name: "link", linkTarget: "/outside"}},
+		},
+		{
+			name:    "volume target",
+			entries: []tarEntry{{name: "link", linkTarget: "C:outside"}},
+		},
+		{
+			name:    "reserved target",
+			entries: []tarEntry{{name: "link", linkTarget: "NUL"}},
+		},
+		{
+			name:    "strip handler",
+			entries: []tarEntry{{name: "prefix/link", linkTarget: "../outside"}},
+			opts:    DecompressOpts{StripComponents: 1},
+		},
+		{
+			name:    "filter handler",
+			entries: []tarEntry{{name: "link", linkTarget: "../outside"}},
+			opts:    DecompressOpts{Files: []string{"link"}},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			archivePath := filepath.Join(t.TempDir(), "symlink-target.tar.gz")
+			makeTarGz(t, archivePath, tc.entries)
+
+			require.Error(t, Decompress(t.Context(), archivePath, t.TempDir(), tc.opts))
+		})
+	}
+}
+
 // TestNameTraversal_ZipSlip verifies that archive entries with path traversal
 // in NameInArchive (classic Zip Slip) are rejected across all handlers.
 func TestNameTraversal_ZipSlip(t *testing.T) {
@@ -232,13 +279,8 @@ func TestSymlinkOrderingAttack(t *testing.T) {
 			archivePath := filepath.Join(t.TempDir(), "ordering-attack.tar.gz")
 			makeTarGz(t, archivePath, tc.entries)
 			dst := t.TempDir()
-
 			err := Decompress(ctx, archivePath, dst, tc.opts)
-			require.Error(t, err, "symlink ordering attack must fail on the later write")
-
-			info, lstatErr := os.Lstat(filepath.Join(dst, "evil"))
-			require.NoError(t, lstatErr)
-			require.NotZero(t, info.Mode()&os.ModeSymlink)
+			require.Error(t, err, "symlink ordering attack should be rejected")
 
 			// Verify no file was written outside dst.
 			_, statErr := os.Stat(filepath.Join(dst, "..", "escape.txt"))
@@ -261,6 +303,12 @@ func TestSymlinkAliasCannotWriteOutsideRoot(t *testing.T) {
 	err := Decompress(t.Context(), archivePath, dst, DecompressOpts{})
 	require.Error(t, err)
 	require.NoFileExists(t, filepath.Join(filepath.Dir(dst), "outside", "attempt.txt"))
+	info, lstatErr := os.Lstat(filepath.Join(dst, "d"))
+	require.NoError(t, lstatErr)
+	require.NotZero(t, info.Mode()&os.ModeSymlink)
+	info, lstatErr = os.Lstat(filepath.Join(dst, "escape"))
+	require.NoError(t, lstatErr)
+	require.NotZero(t, info.Mode()&os.ModeSymlink)
 }
 
 // TestWindowsReservedNames verifies that archive entries using Windows
@@ -601,7 +649,7 @@ func TestNestedArchivePreservesSymlink(t *testing.T) {
 	require.NoError(t, innerTw.WriteHeader(&tar.Header{
 		Name:     "nested-link",
 		Typeflag: tar.TypeSymlink,
-		Linkname: "../../../outside",
+		Linkname: "target.txt",
 	}))
 	require.NoError(t, innerTw.Close())
 	require.NoError(t, innerF.Close())
@@ -629,7 +677,7 @@ func TestNestedArchivePreservesSymlink(t *testing.T) {
 	require.NoError(t, Decompress(ctx, outerPath, dst, DecompressOpts{UnarchiveAll: true}))
 	target, err := os.Readlink(filepath.Join(dst, "nested-link"))
 	require.NoError(t, err)
-	require.Equal(t, "../../../outside", target)
+	require.Equal(t, "target.txt", target)
 }
 
 func TestValidateEntryName(t *testing.T) {
