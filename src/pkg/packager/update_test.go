@@ -628,63 +628,45 @@ func TestImageUpdateNeeded(t *testing.T) {
 	}
 }
 
-func TestCreateSchemaUpdate(t *testing.T) {
+func TestUpdateSchema(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name           string
-		zarfPackage    v1alpha1.ZarfPackage
-		schemaFilename string
-		inputYAML      string
-		outputYAML     string
-	}{
-		{
-			name:           "adds values.schema when no values key exists",
-			zarfPackage:    v1alpha1.ZarfPackage{},
-			schemaFilename: "values.schema.json",
-			inputYAML: `metadata:
-  name: test-package
+	for _, definition := range []string{
+		"kind: ZarfPackageConfig\n",
+		`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+components:
+  - name: app
+    images:
+      - name: example.com/app:1
+    repositories:
+      - url: https://example.com/app.git
+    charts:
+      - name: app
+        valuesFiles:
+          - path: chart-values.yaml
 `,
-			outputYAML: `metadata:
-  name: test-package
-values:
-  schema: values.schema.json
-`,
-		},
-		{
-			name: "adds schema under existing values while preserving files",
-			zarfPackage: v1alpha1.ZarfPackage{
-				Values: v1alpha1.ZarfValues{
-					Files: []string{"values.yaml"},
-				},
-			},
-			schemaFilename: "values.schema.json",
-			inputYAML: `metadata:
-  name: test-package
-values:
-  files:
-    - values.yaml
-`,
-			outputYAML: `metadata:
-  name: test-package
-values:
-  files:
-    - values.yaml
-  schema: values.schema.json
-`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			astFile, err := parser.ParseBytes([]byte(tt.inputYAML), parser.ParseComments)
+		"apiVersion: zarf.dev/v1beta1\nkind: ZarfComponentConfig\ncomponent: {}\n",
+	} {
+		for _, values := range []string{"", "values: {}\n", "values:\n  files:\n    - values.yaml\n", "values:\n  schema: old.schema.json\n"} {
+			path := filepath.Join(t.TempDir(), "definition.yaml")
+			input := "# Preserve this comment\n" + definition + values
+			require.NoError(t, os.WriteFile(path, []byte(input), 0o600))
+			require.NoError(t, UpdateSchema(t.Context(), path, "values.schema.json"))
+			updated, err := os.ReadFile(path)
 			require.NoError(t, err)
-
-			err = createSchemaUpdate(tt.zarfPackage, tt.schemaFilename, astFile)
-
-			require.NoError(t, err)
-			require.Equal(t, tt.outputYAML, astFile.String())
-		})
+			var before, after map[string]any
+			require.NoError(t, yaml.Unmarshal([]byte(input), &before))
+			require.NoError(t, yaml.Unmarshal(updated, &after))
+			if before["values"] == nil {
+				before["values"] = map[string]any{}
+			}
+			beforeValues, ok := before["values"].(map[string]any)
+			require.True(t, ok)
+			beforeValues["schema"] = "values.schema.json"
+			require.Equal(t, before, after)
+			require.Contains(t, string(updated), "# Preserve this comment")
+		}
 	}
 }
 

@@ -28,6 +28,9 @@ type ResolvedComponent struct {
 type ComponentOptions struct {
 	// CachePath stores remote component layers locally when non-empty.
 	CachePath string
+	// SkipValuesSchemaValidation skips validating merged values against the
+	// resolved schema. Schema parsing and merging still occur.
+	SkipValuesSchemaValidation bool
 	types.RemoteOptions
 }
 
@@ -71,7 +74,7 @@ func Component(ctx context.Context, componentPath string, opts ComponentOptions)
 		files:   loaded.Definition.Values.Files,
 		schemas: schemaSources(loaded.Definition.Values.Schema, resolved.ImportedSchemas),
 	}
-	loaded.Values, loaded.ValuesSchema, err = loadValues(ctx, resources, plan, false)
+	loaded.Values, loaded.ValuesSchema, err = loadValues(ctx, resources, plan, opts.SkipValuesSchemaValidation)
 	if err != nil {
 		return nil, err
 	}

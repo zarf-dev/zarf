@@ -11,7 +11,7 @@ tableOfContents: false
 Generates a JSON schema for Zarf values based on the package definition, chart defaults, and chart schemas
 
 ```
-zarf dev generate-schema [ DIRECTORY ] [flags]
+zarf dev generate-schema [ PATH ] [flags]
 ```
 
 ### Options

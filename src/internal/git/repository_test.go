@@ -24,6 +24,55 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
+func TestClonePinnedToOlderCommit(t *testing.T) {
+	t.Parallel()
+
+	repoDir := filepath.Join(t.TempDir(), "test.git")
+	repo, err := git.PlainInit(repoDir, false)
+	require.NoError(t, err)
+	worktree, err := repo.Worktree()
+	require.NoError(t, err)
+	var commits []plumbing.Hash
+	for _, contents := range []string{"parent", "pinned", "newer"} {
+		require.NoError(t, os.WriteFile(filepath.Join(repoDir, "test.txt"), []byte(contents), 0o600))
+		_, err := worktree.Add("test.txt")
+		require.NoError(t, err)
+		commit, err := worktree.Commit(contents, &git.CommitOptions{Author: &object.Signature{Name: "test", Email: "test@example.com"}})
+		require.NoError(t, err)
+		commits = append(commits, commit)
+	}
+	repoURL := "file://" + filepath.ToSlash(repoDir)
+	for _, advertiseCommitFetch := range []bool{true, false} {
+		t.Run(fmt.Sprintf("advertised commit fetch=%t", advertiseCommitFetch), func(t *testing.T) {
+			cfg, err := repo.Config()
+			require.NoError(t, err)
+			cfg.Raw.Section("uploadpack").SetOption("allowReachableSHA1InWant", fmt.Sprint(advertiseCommitFetch))
+			require.NoError(t, repo.SetConfig(cfg))
+			for _, tt := range []struct {
+				name   string
+				source api.Repository
+			}{
+				{name: "structured commit", source: api.Repository{URL: repoURL, Ref: &api.GitRef{Commit: commits[1].String()}}},
+				{name: "legacy URL", source: api.Repository{URL: repoURL + "@" + commits[1].String()}},
+			} {
+				t.Run(tt.name, func(t *testing.T) {
+					cloned, err := Clone(testutil.TestContext(t), t.TempDir(), tt.source, true)
+					require.NoError(t, err)
+					contents, err := os.ReadFile(filepath.Join(cloned.Path(), "test.txt"))
+					require.NoError(t, err)
+					require.Equal(t, "pinned", string(contents))
+					clonedRepo, err := git.PlainOpen(cloned.Path())
+					require.NoError(t, err)
+					for _, excluded := range []plumbing.Hash{commits[0], commits[2]} {
+						_, err := clonedRepo.CommitObject(excluded)
+						require.ErrorIs(t, err, plumbing.ErrObjectNotFound)
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestRepository(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)

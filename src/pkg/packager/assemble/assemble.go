@@ -27,6 +27,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
@@ -918,6 +919,9 @@ func recordPackageMetadata(definition *api.Package, flavor string, registryOverr
 func collectVersionRequirements(pkg api.Package, hasIndex bool) []api.VersionRequirement {
 	var reqs []api.VersionRequirement
 	var hasImageArchives, hasTemplatedValuesFiles, hasVersionlessChart bool
+	var hasVersionedBetaChart, hasDefaultReadinessWait bool
+	var hasBetaDeploySuccessActions bool
+	isBeta := pkg.GetAPIVersion() == v1beta1.APIVersion
 	for _, comp := range pkg.Components {
 		if !hasImageArchives && len(comp.ImageArchives) > 0 {
 			hasImageArchives = true
@@ -932,9 +936,29 @@ func collectVersionRequirements(pkg api.Package, hasIndex bool) []api.VersionReq
 			if chart.LegacyVersion == "" {
 				hasVersionlessChart = true
 			}
+			// The alpha fallback uses the source version, but beta chart resources
+			// are stored without a version in their filenames.
+			if isBeta && (chart.HelmRepository != nil && chart.HelmRepository.Version != "" ||
+				chart.OCI != nil && chart.OCI.Ref != nil && chart.OCI.Ref.Tag != "") {
+				hasVersionedBetaChart = true
+			}
 		}
-		if hasImageArchives && hasTemplatedValuesFiles && hasVersionlessChart {
-			break
+		if isBeta {
+			if len(comp.Actions.OnDeploy.OnSuccess) > 0 {
+				hasBetaDeploySuccessActions = true
+			}
+			// Creation actions have already run; only runtime waits need protection
+			// from the alpha fallback's existence-only default.
+			for _, set := range []api.ActionSet{comp.Actions.OnDeploy, comp.Actions.OnRemove} {
+				for _, actions := range [][]api.Action{set.Before, set.After, set.OnSuccess, set.OnFailure} {
+					if slices.ContainsFunc(actions, func(action api.Action) bool {
+						return action.Wait != nil && action.Wait.Cluster != nil &&
+							action.Wait.Cluster.Condition.Expression == "" && action.Wait.Cluster.Condition.Default == api.WaitForReadiness
+					}) {
+						hasDefaultReadinessWait = true
+					}
+				}
+			}
 		}
 	}
 	if hasVersionlessChart {
@@ -959,6 +983,24 @@ func collectVersionRequirements(pkg api.Package, hasIndex bool) []api.VersionReq
 		reqs = append(reqs, api.VersionRequirement{
 			Version: "v0.77.0",
 			Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
+		})
+	}
+	if hasVersionedBetaChart {
+		reqs = append(reqs, api.VersionRequirement{
+			Version: "v0.88.0",
+			Reason:  "This package contains v1beta1 versioned charts whose resource filenames require v0.88.0+",
+		})
+	}
+	if hasDefaultReadinessWait {
+		reqs = append(reqs, api.VersionRequirement{
+			Version: "v0.88.0",
+			Reason:  "This package uses v1beta1 default cluster readiness waits which require v0.88.0+",
+		})
+	}
+	if hasBetaDeploySuccessActions {
+		reqs = append(reqs, api.VersionRequirement{
+			Version: "v0.88.0",
+			Reason:  "This package uses v1beta1 deployment success hooks which require v0.88.0+ to run before saving successful state",
 		})
 	}
 	return reqs

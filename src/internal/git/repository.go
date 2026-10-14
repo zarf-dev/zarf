@@ -70,7 +70,6 @@ func Clone(ctx context.Context, rootPath string, source api.Repository, shallow 
 	if err != nil {
 		return nil, err
 	}
-
 	// Parse the ref from the git URL.
 	var ref plumbing.ReferenceName
 	if refPlain != emptyRef {
@@ -128,6 +127,16 @@ func Clone(ctx context.Context, rootPath string, source api.Repository, shallow 
 
 	l.Info("cloning Git repository", "address", address)
 
+	if shallow && plumbing.IsHash(refPlain) {
+		if err := r.cloneCommit(ctx, gitURLNoRef, refPlain, cloneOpts.Auth); err != nil {
+			return nil, err
+		}
+		if err := checkout(refPlain, ref, r); err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+
 	repo, err := git.PlainCloneContext(ctx, r.path, false, cloneOpts)
 	if err != nil {
 		l.Info("falling back to host 'git', failed to clone the repo with Zarf", "url", gitURLNoRef, "error", err)
@@ -163,6 +172,30 @@ func Clone(ctx context.Context, rootPath string, source api.Repository, shallow 
 	}
 
 	return r, nil
+}
+
+// cloneCommit fetches only the pinned commit and its contents, without its history.
+func (r *Repository) cloneCommit(ctx context.Context, address, commit string, auth transport.AuthMethod) error {
+	repo, err := git.PlainInit(r.path, false)
+	if err != nil {
+		return err
+	}
+	_, err = repo.CreateRemote(&config.RemoteConfig{Name: onlineRemoteName, URLs: []string{address}})
+	if err != nil {
+		return err
+	}
+	err = repo.FetchContext(ctx, &git.FetchOptions{
+		RemoteName: onlineRemoteName,
+		RefSpecs:   []config.RefSpec{config.RefSpec(commit + ":refs/remotes/" + onlineRemoteName + "/zarf-ref-" + commit)},
+		Depth:      1,
+		Tags:       git.NoTags,
+		Auth:       auth,
+	})
+	if err == nil || errors.Is(err, git.NoErrAlreadyUpToDate) {
+		return nil
+	}
+	logger.From(ctx).Info("falling back to host 'git', failed to fetch the commit with Zarf", "url", address, "commit", commit, "error", err)
+	return r.gitFetchCommitFallback(ctx, commit)
 }
 
 // Repository manages a local git repository.

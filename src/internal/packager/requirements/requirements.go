@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package requirements validates that Zarf meets the version requirements defined by the package
+// Package requirements validates minimum Zarf versions declared by packages and components.
 package requirements
 
 import (
@@ -20,7 +20,7 @@ type VersionRequirementsError struct {
 }
 
 func (e *VersionRequirementsError) Error() string {
-	msg := fmt.Sprintf("package requires Zarf version '%s' (current version: '%s'):\n",
+	msg := fmt.Sprintf("Zarf version '%s' is required (current version: '%s'):\n",
 		e.RequiredVersion, e.CurrentVersion)
 	for _, req := range e.Requirements {
 		if req.Reason != "" {
@@ -56,9 +56,9 @@ func calculateRequiredVersion(requirements []api.VersionRequirement) (string, er
 	return highestVersion, nil
 }
 
-// ValidateVersionRequirements checks if the config.CLIVersion meets the operational requirements.
-func ValidateVersionRequirements(pkg api.Package) error {
-	if len(pkg.Build.VersionRequirements) == 0 {
+// ValidateVersionRequirements checks if config.CLIVersion meets the given minimum versions.
+func ValidateVersionRequirements(requirements []api.VersionRequirement) error {
+	if len(requirements) == 0 {
 		return nil
 	}
 
@@ -74,7 +74,7 @@ func ValidateVersionRequirements(pkg api.Package) error {
 
 	var unmetRequirements []api.VersionRequirement
 
-	for _, req := range pkg.Build.VersionRequirements {
+	for _, req := range requirements {
 		requiredVer, err := semver.NewVersion(req.Version)
 		if err != nil {
 			return fmt.Errorf("failed to parse required version '%s': %w", req.Version, err)

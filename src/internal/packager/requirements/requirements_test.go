@@ -118,7 +118,7 @@ func TestValidateVersionRequirements(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config.CLIVersion = tt.cliVersion
-			err := ValidateVersionRequirements(tt.pkg)
+			err := ValidateVersionRequirements(tt.pkg.Build.VersionRequirements)
 			if tt.expectError {
 				var orErr *VersionRequirementsError
 				require.ErrorAs(t, err, &orErr)

@@ -348,6 +348,39 @@ func TestCollectVersionRequirements(t *testing.T) {
 	}
 }
 
+func TestCollectVersionRequirementsV1Beta1Charts(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name    string
+		chart   v1beta1.Chart
+		require bool
+	}{
+		{name: "Helm repository version", chart: v1beta1.Chart{HelmRepository: &v1beta1.HelmRepositorySource{Version: "1.0.0"}}, require: true},
+		{name: "OCI tag", chart: v1beta1.Chart{OCI: &v1beta1.OCISource{Ref: v1beta1.OCIRef{Tag: "1.0.0"}}}, require: true},
+		{name: "OCI digest", chart: v1beta1.Chart{OCI: &v1beta1.OCISource{Ref: v1beta1.OCIRef{Digest: "sha256:abc"}}}},
+		{name: "local chart", chart: v1beta1.Chart{Local: &v1beta1.LocalSource{Path: "chart"}}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pkg := convert.PackageFromV1beta1(v1beta1.Package{
+				APIVersion: v1beta1.APIVersion,
+				Components: []v1beta1.Component{{ComponentSpec: v1beta1.ComponentSpec{Charts: []v1beta1.Chart{tt.chart}}}},
+			})
+			reqs := collectVersionRequirements(pkg, false)
+			requirement := api.VersionRequirement{
+				Version: "v0.88.0",
+				Reason:  "This package contains v1beta1 versioned charts whose resource filenames require v0.88.0+",
+			}
+			if tt.require {
+				require.Contains(t, reqs, requirement)
+			} else {
+				require.NotContains(t, reqs, requirement)
+			}
+		})
+	}
+}
+
 func TestImageLayoutHasIndex(t *testing.T) {
 	t.Parallel()
 
@@ -696,6 +729,79 @@ components:
 	require.NoError(t, err)
 	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
 	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
+}
+
+func TestAssemblePackageReadinessVersionRequirement(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name, apiVersion, lifecycle, hook, condition string
+		wantRequirement                              bool
+	}{
+		{name: "deploy before", lifecycle: "onDeploy", hook: "before", wantRequirement: true},
+		{name: "deploy success", lifecycle: "onDeploy", hook: "onSuccess", wantRequirement: true},
+		{name: "deploy failure", lifecycle: "onDeploy", hook: "onFailure", wantRequirement: true},
+		{name: "remove before", lifecycle: "onRemove", hook: "before", wantRequirement: true},
+		{name: "remove success", lifecycle: "onRemove", hook: "onSuccess", wantRequirement: true},
+		{name: "remove failure", lifecycle: "onRemove", hook: "onFailure", wantRequirement: true},
+		{name: "explicit condition", lifecycle: "onDeploy", hook: "before", condition: "available"},
+		{name: "alpha existence wait", apiVersion: v1alpha1.APIVersion, lifecycle: "onDeploy", hook: "before"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			dir := t.TempDir()
+			apiVersion := tt.apiVersion
+			if apiVersion == "" {
+				apiVersion = v1beta1.APIVersion
+			}
+			definition := fmt.Sprintf(`apiVersion: %s
+kind: ZarfPackageConfig
+metadata:
+  name: readiness
+components:
+  - name: component
+    actions:
+      %s:
+        %s:
+          - wait:
+              cluster:
+                kind: Deployment
+                name: app
+                condition: %q
+`, apiVersion, tt.lifecycle, tt.hook, tt.condition)
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+			loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+			pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
+			require.NoError(t, err)
+			alphaPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
+			require.NoError(t, err)
+			var expected []api.VersionRequirement
+			if tt.wantRequirement {
+				expected = []api.VersionRequirement{{
+					Version: "v0.88.0",
+					Reason:  "This package uses v1beta1 default cluster readiness waits which require v0.88.0+",
+				}}
+			}
+			if apiVersion == v1beta1.APIVersion && tt.lifecycle == "onDeploy" && tt.hook == "onSuccess" {
+				expected = append(expected, api.VersionRequirement{
+					Version: "v0.88.0",
+					Reason:  "This package uses v1beta1 deployment success hooks which require v0.88.0+ to run before saving successful state",
+				})
+			}
+			require.Equal(t, expected, convert.PackageFromV1alpha1(alphaPkg).Build.VersionRequirements)
+			if apiVersion == v1beta1.APIVersion {
+				betaPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
+				require.NoError(t, err)
+				require.Equal(t, expected, convert.PackageFromV1beta1(betaPkg).Build.VersionRequirements)
+			}
+		})
+	}
 }
 
 func TestAssemblePackageV1Alpha1DoesNotWriteV1Beta1Definition(t *testing.T) {

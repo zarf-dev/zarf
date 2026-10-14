@@ -26,8 +26,8 @@ import (
 // UpdateSchema updates the values.schema field in a zarf.yaml to point to the given relative schema filename.
 func UpdateSchema(ctx context.Context, packagePath string, schemaFilename string) error {
 	l := logger.From(ctx)
-	return modifyManifest(packagePath, func(zarfPackage v1alpha1.ZarfPackage, astFile *ast.File, manifestPath string) (bool, error) {
-		if err := createSchemaUpdate(zarfPackage, schemaFilename, astFile); err != nil {
+	return modifyManifest(packagePath, func(astFile *ast.File, manifestPath string) (bool, error) {
+		if err := createSchemaUpdate(schemaFilename, astFile); err != nil {
 			return false, fmt.Errorf("failed to create update: %w", err)
 		}
 		l.Info("successfully updated schema path", "path", manifestPath)
@@ -53,7 +53,11 @@ func UpdateImages(ctx context.Context, packagePath string, definitionImageResult
 	if header.APIVersion == v1beta1.APIVersion {
 		return updateBetaImages(pkgPath.ManifestFile, contents, header.Kind, definitionImageResults)
 	}
-	return modifyManifest(packagePath, func(zarfPackage v1alpha1.ZarfPackage, astFile *ast.File, manifestPath string) (bool, error) {
+	return modifyManifest(packagePath, func(astFile *ast.File, manifestPath string) (bool, error) {
+		var zarfPackage v1alpha1.ZarfPackage
+		if err := yaml.NodeToValue(astFile.Docs[0].Body, &zarfPackage); err != nil {
+			return false, fmt.Errorf("failed to parse zarf.yaml: %w", err)
+		}
 		if !imageUpdateNeeded(zarfPackage, definitionImageResults) {
 			l.Info("no update needed, images are already up to date", "path", manifestPath)
 			return false, nil
@@ -193,9 +197,9 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 	return os.WriteFile(manifestPath, []byte(astFile.String()), helpers.ReadAllWriteUser)
 }
 
-// modifyManifest loads the zarf.yaml at packagePath, calls fn with the parsed package and AST,
+// modifyManifest loads the definition at packagePath, calls fn with its AST,
 // and writes the result back only if fn signals that a change was made.
-func modifyManifest(packagePath string, fn func(v1alpha1.ZarfPackage, *ast.File, string) (bool, error)) error {
+func modifyManifest(packagePath string, fn func(*ast.File, string) (bool, error)) error {
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
 		return fmt.Errorf("unable to access package path %q: %w", packagePath, err)
@@ -206,17 +210,16 @@ func modifyManifest(packagePath string, fn func(v1alpha1.ZarfPackage, *ast.File,
 		return fmt.Errorf("failed to read %s: %w", pkgPath.ManifestFile, err)
 	}
 
-	var zarfPackage v1alpha1.ZarfPackage
-	if err := yaml.Unmarshal(b, &zarfPackage); err != nil {
-		return fmt.Errorf("failed to parse zarf.yaml: %w", err)
-	}
-
 	astFile, err := parser.ParseBytes(b, parser.ParseComments)
 	if err != nil {
 		return fmt.Errorf("failed to parse %s as AST: %w", pkgPath.ManifestFile, err)
 	}
 
-	changed, err := fn(zarfPackage, astFile, pkgPath.ManifestFile)
+	if len(astFile.Docs) == 0 || astFile.Docs[0].Body == nil {
+		return fmt.Errorf("definition %s is empty", pkgPath.ManifestFile)
+	}
+
+	changed, err := fn(astFile, pkgPath.ManifestFile)
 	if err != nil {
 		return err
 	}
@@ -230,12 +233,18 @@ func modifyManifest(packagePath string, fn func(v1alpha1.ZarfPackage, *ast.File,
 	return nil
 }
 
-func createSchemaUpdate(zarfPackage v1alpha1.ZarfPackage, schemaFilename string, astFile *ast.File) error {
-	// If values.files exists we must merge only schema into the existing values map to
-	// preserve the files list. Otherwise, create the whole values mapping from scratch.
+func createSchemaUpdate(schemaFilename string, astFile *ast.File) error {
+	// Read only values so unrelated fields can use either API version.
+	var definition struct {
+		Values map[string]any `json:"values"`
+	}
+	if err := yaml.NodeToValue(astFile.Docs[0].Body, &definition); err != nil {
+		return err
+	}
+	// Merge into an existing values map to preserve files and other metadata.
 	var pathStr string
 	var patchValue any
-	if zarfPackage.Values.Files != nil {
+	if definition.Values != nil {
 		pathStr = "$.values"
 		patchValue = map[string]any{"schema": schemaFilename}
 	} else {

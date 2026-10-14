@@ -307,7 +307,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 			RemoteOptions:    opts.RemoteOptions,
 		},
 	}
-	loaded, err := load.Package(ctx, packagePath, loadOpts)
+	loaded, err := loadDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}

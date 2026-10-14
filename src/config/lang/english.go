@@ -228,8 +228,8 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
 	CmdPackageFlagSkipSignatureValidation = "[Deprecated] Skip validating the signature of the Zarf package. Use --verify=never instead."
 	CmdPackageFlagRetries                 = "Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures"
 
-	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
-	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +
+	CmdPackageCreateShort = "Creates a Zarf package from a definition file or directory"
+	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the package definition at the given file or directory.\n" +
 		"Private registries and repositories are accessed via credentials in your local '~/.docker/config.json', " +
 		"'~/.git-credentials' and '~/.netrc'.\n"
 
