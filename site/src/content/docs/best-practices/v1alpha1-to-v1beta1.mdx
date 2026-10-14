@@ -2,17 +2,208 @@
 title: "Migrating v1alpha1 PackageConfig to v1beta1"
 ---
 
-This guide details how to migrate your package from v1alpha1 to v1beta1. V1beta1 is the schema that will have long term support in v1.0.
+This guide migrates a `ZarfPackageConfig` definition from `zarf.dev/v1alpha1` to `zarf.dev/v1beta1`. Existing v1alpha1 definitions remain supported. A definition without `apiVersion` is treated as v1alpha1; v1beta1 requires `apiVersion: zarf.dev/v1beta1`.
 
-V1beta1 removes several existing fields from v1alpha1. As Zarf and the surrounding ecosystem has matured, we've found alternatives to these fields that have a better UX, are more performant, or more secure. Here is a list of the fields removed without direct replacement:
+## Replace removed features
 
-- `.variables`, `.constants`, and `.components.[x].charts.[x].variables` - See [variables to values] for a guide to migrate off of this field.
-- `.components.[x].dataInjections` - See the [data injections migration guide](/best-practices/data-injections-migration/) for details on migrating off of this field.
-- `.metadata.yolo` - Replaced by [connected deploys](link)
-- `.components.[x].group` - We recommend using `components[x].selector.flavor`. This shifts component selection to the create side.
-- `.components.[x].default` This was used to determine the default `.components[x].group`. It also gave the default to the (Y/N) prompt during interactive deploys, this use was secondary and not important enough to keep the field around.
+Before converting, migrate these features while keeping the definition on v1alpha1. `zarf dev upgrade` reports removed features still in use rather than choosing replacements.
 
-Many fields have been restructured or renamed. See [proposal](link) for a list of every field changed. `zarf dev upgrade` will automatically handle migrating each of this fields.
+| v1alpha1 field | Migration |
+| --- | --- |
+| `variables`, `constants`, `components[].charts[].variables` | Follow [Variables to Values](/best-practices/variables-to-values/). Replace references in manifests, files, chart values files, and actions as well as declarations. |
+| Action `setVariable` / `setVariables` | Use `setValues` with `key: .path.to.value`; read the result with `{{ .Values.path.to.value }}`. Supported during deploy and removal, not create. |
+| `components[].dataInjections` | Follow [Data Injections Migration](/best-practices/data-injections-migration/). |
+| `metadata.yolo` | Remove it and deploy with `--connected`. See [Connected Mode](/ref/deploy/#additional-deployment-modes). |
+| `components[].group` | Use `only.flavor` in v1alpha1, converted to `selector.flavor` in v1beta1. Select the flavor during create with `--flavor`; this replaces deploy-time group selection with create-time filtering. |
+| `components[].default` | Remove it. Choose whether each component is required or optional; there is no default group member or default prompt answer. |
+| `components[].only.cluster.distro` | Remove it; this field was unused and has no replacement. |
+| `components[].import.name` | Identify the selected component, then remove the field and extract that component into a component config. See [Component imports](#component-imports). |
+
+Package values use `{{ .Values.key }}` at deploy time. In v1beta1, opt in with `enableTemplating: true` on manifests, files, actions, or chart values file entries. The Variables to Values examples use v1alpha1 field names; apply the conversions below when moving to v1beta1.
+
+## Convert the definition
+
+Write the converted definition:
+
+```bash
+zarf dev upgrade zarf.yaml > zarf-v1beta1.yaml
+```
+
+The command writes YAML to stdout, including the new `apiVersion`. It converts the selected definition only; migrate imported definitions and referenced templates separately. Review the output before replacing `zarf.yaml`; YAML comments and formatting are not preserved.
+
+### Field conversions
+
+These conversions are automatic. Paths below are relative to each component unless prefixed with `metadata` or `build`. `[]` denotes a list entry; `*` denotes `onCreate`, `onDeploy`, or `onRemove`.
+
+| v1alpha1 | v1beta1 |
+| --- | --- |
+| `required` | `optional`, with the boolean inverted. |
+| `only.flavor` | `selector.flavor` |
+| `only.cluster.architecture` | `selector.architecture` |
+| `only.localOS` | `target.os` |
+| `charts[].noWait`, `manifests[].noWait` | `skipWait` on the same entry. |
+| `manifests[].template`, `files[].template`, action `template` | `enableTemplating` on the same entry. |
+| `files[].target` | `files[].destination` |
+| `files[].shasum` | `files[].checksum`, prefixed with `sha256:`. Unprefixed checksums also mean SHA-256. |
+| `manifests[].kustomizations` | `manifests[].kustomize.files` |
+| `manifests[].kustomizeAllowAnyDirectory` | `manifests[].kustomize.allowAnyDirectory` |
+| `manifests[].enableKustomizePlugins` | `manifests[].kustomize.enablePlugins` |
+| Action/default `maxRetries`, `mute` | `retries`, `silent` |
+| `actions.*.after` | Prepended to `actions.*.onSuccess`, before existing success actions. |
+| `charts[].schemaValidation` | `charts[].skipSchemaValidation`, with the boolean inverted. |
+| `metadata.allowNamespaceOverride` | `metadata.preventNamespaceOverride`, with the boolean inverted. |
+| `metadata.image`, `source`, `documentation`, `url`, `authors`, `vendor` | Same keys under `metadata.annotations`. Existing annotation values take precedence. |
+| `metadata.aggregateChecksum` | `build.aggregateChecksum` |
+| `build.terminal` | `build.hostname` |
+
+New v1beta1 components are required by default (`optional: false`). Conversion preserves v1alpha1 selection behavior: an omitted or false `required` becomes `optional: true`. Namespace overrides and chart schema validation remain enabled by default.
+
+`selector` filters components during create; `target.os` filters them during deploy. Include optional components with `zarf package deploy --components <name>`.
+
+{/* FIXME: more realistic example */}
+Update Go templates that read `.Pkg` to use the v1beta1 fields, for example `{{ .Pkg.Metadata.Annotations.source }}` instead of `{{ .Pkg.Metadata.Source }}`.
+
+FIXME: this should be folded into the field conversions
+## Helm charts
+
+Each chart must have exactly one source: `helmRepository`, `git`, `oci`, or `local`. Conversion moves the old source fields into that object:
+
+| v1alpha1 chart source | v1beta1 chart source |
+| --- | --- |
+| Helm repository `url`, `repoName`, `version` | `helmRepository.url`, `helmRepository.name`, `helmRepository.version` |
+| Git `url`, `gitPath`, `version` or URL `@ref` | `git.url`, `git.path`, `git.ref` |
+| OCI `url`, `version` | `oci.url`, `oci.ref.tag`; digest references use `oci.ref.digest`. |
+| `localPath` | `local.path`; remove `version` and use the chart's `Chart.yaml` version. |
+
+Git charts require `ref` with exactly one of `tag`, `branch`, or `commit` (a full 40-character SHA). Conversion treats `refs/heads/<name>` as a branch, a full SHA as a commit, and other refs as tags. If the URL has no ref, the old chart `version` supplies it. Git URLs must no longer contain an `@ref` suffix.
+
+OCI charts require exactly one of `ref.tag` or `ref.digest`; keep the URL free of tag or digest suffixes.
+
+Chart values files become objects. Combine `valuesFiles` and `templatedValuesFiles` into `valuesFiles`, enabling templating only where needed:
+
+```yaml
+# Before: chart entry
+name: app
+namespace: app
+url: oci://ghcr.io/example/charts/app
+version: 1.0.0
+valuesFiles:
+  - chart-values.yaml
+templatedValuesFiles:
+  - runtime-values.yaml
+```
+
+```yaml
+# After: chart entry
+name: app
+namespace: app
+oci:
+  url: oci://ghcr.io/example/charts/app
+  ref:
+    tag: 1.0.0
+valuesFiles:
+  - path: chart-values.yaml
+  - path: runtime-values.yaml
+    enableTemplating: true
+```
+
+Package-value mappings in `charts[].values` keep their `sourcePath` and `targetPath` fields.
+
+{/* FIXME: fold these into the replaced fields */}
+## Images and Git repositories
+
+`images` changes from strings to objects. `repos` becomes `repositories`, with the Git ref separated from the URL:
+
+```yaml
+# Before: component fields
+images:
+  - ghcr.io/example/app:1.0.0
+repos:
+  - https://github.com/example/app.git@refs/heads/main
+```
+
+```yaml
+# After: component fields
+images:
+  - name: ghcr.io/example/app:1.0.0
+repositories:
+  - url: https://github.com/example/app.git
+    ref:
+      branch: main
+```
+
+Images default to `source: registry`. For images built locally, set `source: daemon`; v1beta1 does not fall back to the local daemon after a registry pull fails.
+
+Repository refs follow the same `tag` / `branch` / `commit` rules as Git charts. Omit `ref` to mirror all branches and tags. `imageArchives` is unchanged.
+
+## Actions and readiness checks
+
+Use `before`, `onSuccess`, and `onFailure` for each lifecycle; `after` is removed. During deploy, `onSuccess` runs before the component is recorded as successfully deployed. A failed success action fails the component deployment and invokes `onFailure`.
+
+`healthChecks` becomes wait actions appended to `actions.onDeploy.onSuccess`:
+
+```yaml
+# After: component fields
+actions:
+  onDeploy:
+    onSuccess:
+      - wait:
+          cluster:
+            kind: Deployment.v1.apps
+            name: app
+            namespace: app
+```
+
+For a health check with `apiVersion: apps/v1` and `kind: Deployment`, the wait kind is `Deployment.v1.apps`. Core resources such as `Pod` keep their kind unchanged.
+
+In v1beta1, omitting `wait.cluster.condition` waits for resource readiness using kstatus. Set `condition: exists` to wait only for existence. Conversion adds `exists` to old conditionless wait actions to preserve their behavior; converted health checks omit the condition to retain readiness checks.
+
+## Component imports
+
+Imports now reference `ZarfComponentConfig` files containing one component. A package or directory can no longer be imported directly, and skeleton packages are replaced by published component configs.
+
+1. Convert the source package, then extract each imported component into its own file.
+2. Move its name and description into `metadata`, and its resource and action fields under `component`. Keep `optional` and `selector` on the consuming package component.
+3. Move flavor and architecture restrictions for the imported component into top-level `variant.flavor` and `variant.architecture`. Copy required `values` declarations.
+4. Replace `import.path` with `import.local[].path`, or `import.url` with `import.remote[].url`. Remove `import.name`.
+
+```yaml
+# components/app.yaml
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+  version: 1.0.0
+component:
+  images:
+    - name: ghcr.io/example/app:1.0.0
+```
+
+```yaml
+# In the consuming package's components list
+- name: app
+  import:
+    local:
+      - path: components/app.yaml
+```
+
+When listing multiple imports, exactly one must match the create-time flavor and architecture. Empty variant fields match any target, so avoid overlapping variants. Imported values files are loaded before the package's own files; package values take precedence.
+
+For remote imports, set `metadata.version` and publish the component:
+
+```bash
+zarf component publish components/app.yaml oci://ghcr.io/example/components
+```
+
+Then replace the local import with:
+
+```yaml
+import:
+  remote:
+    - url: oci://ghcr.io/example/components/app:1.0.0
+```
+
+Remote components cannot contain `onCreate` actions or use `kustomize.allowAnyDirectory: true`. Move create actions into the consuming package. Render package templates before publishing, as described below.
 
 ## Package templates to `zarf dev template`
 
@@ -46,3 +237,16 @@ zarf package create zarf.gen.yaml --confirm
 Rendering writes `zarf.gen.yaml` alongside the template and validates the generated schema. Re-render whenever template inputs change.
 
 For local component templates, render each `<name>.tpl.yaml` separately and set `import.local[].path` to `<name>.gen.yaml`; imports are not rendered automatically. Remote components must be fully rendered before publishing and cannot be templated during import.
+
+## Verify the migration
+
+Lint and inspect the migrated definition, supplying the same deploy-time inputs as before:
+
+```bash
+zarf dev lint zarf-v1beta1.yaml
+zarf dev inspect manifests zarf-v1beta1.yaml --values deploy-values.yaml
+```
+
+For package templates, render first and use `zarf.gen.yaml` in these commands.
+
+Compare rendered manifests and Helm values before and after migration, then create and deploy the rebuilt package to verify actions, component selection, and readiness checks. Check the generated `build.versionRequirements` before distributing it to older CLIs; some v1beta1 behavior requires a newer deployer.
