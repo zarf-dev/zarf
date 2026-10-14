@@ -137,9 +137,9 @@ These conversions are automatic. Paths below are relative to each component unle
 | `metadata.aggregateChecksum` | `build.aggregateChecksum` |
 | `build.terminal` | `build.hostname` |
 
-New v1beta1 components are required by default (`optional: false`). Conversion preserves v1alpha1 selection behavior: an omitted or false `required` becomes `optional: true`. Namespace overrides and chart schema validation remain enabled by default.
+New v1beta1 components are required by default (`optional: false`). However, conversion keeps current behavior (i.e. an omitted or false `required` becomes `optional: true`). Namespace overrides and chart schema validation remain enabled by default.
 
-`selector` filters components during create; `target.os` filters them during deploy. Include optional components with `zarf package deploy --components <name>`.
+`selector` filters components during create; `target` filters them during deploy.
 
 ### Helm charts
 
@@ -154,9 +154,9 @@ Each chart must have exactly one source: `helmRepository`, `git`, `oci`, or `loc
 
 Git charts require `ref` with exactly one of `tag`, `branch`, or `commit`. Conversion treats `refs/heads/<name>` as a branch, a full SHA as a commit, and other refs as tags. If the URL has no ref, the old chart `version` supplies it. Git URLs must no longer contain an `@ref` suffix.
 
-OCI charts require exactly one of `ref.tag` or `ref.digest`; keep the URL free of tag or digest suffixes.
+OCI charts require exactly one of `ref.tag` or `ref.digest`. The URL must not contain a reference.
 
-Chart values files become objects. Combine `valuesFiles` and `templatedValuesFiles` into `valuesFiles`, enabling templating only where needed:
+Chart values files become objects. Combine `valuesFiles` and `templatedValuesFiles` into `valuesFiles`:
 
 ```yaml
 # Before: chart entry
