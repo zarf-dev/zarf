@@ -317,11 +317,6 @@ func PackageToV1beta1(g api.Package) v1beta1.Package {
 		pkg.Kind = v1beta1.ZarfPackageConfig
 	}
 
-	// v1beta1 has no Kind ZarfInitConfig; collapse the v1alpha1 init kind into the normal package kind.
-	if g.Kind == api.ZarfInitConfig {
-		pkg.Kind = v1beta1.ZarfPackageConfig
-	}
-
 	for _, c := range g.Components {
 		pkg.Components = append(pkg.Components, componentFromGeneric(c))
 	}
