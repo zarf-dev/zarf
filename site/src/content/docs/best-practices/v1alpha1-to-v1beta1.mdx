@@ -2,7 +2,7 @@
 title: "Migrating v1alpha1 PackageConfig to v1beta1"
 ---
 
-This guide migrates a `ZarfPackageConfig` definition from `zarf.dev/v1alpha1` to `zarf.dev/v1beta1`. Existing v1alpha1 definitions remain supported. A definition without `apiVersion` is treated as v1alpha1; v1beta1 requires `apiVersion: zarf.dev/v1beta1`.
+This guide migrates a `ZarfPackageConfig` definition from `zarf.dev/v1alpha1` to `zarf.dev/v1beta1`. Existing v1alpha1 definitions remain supported. A definition without `apiVersion` is treated as v1alpha1 whereas v1beta1 requires `apiVersion: zarf.dev/v1beta1`.
 
 ## Replace removed features
 
@@ -17,41 +17,17 @@ Before converting, migrate these features while keeping the definition on v1alph
 | `components[].group` | Use `only.flavor` in v1alpha1, converted to `selector.flavor` in v1beta1. Select the flavor during create with `--flavor`; this replaces deploy-time group selection with create-time filtering. |
 | `components[].default` | Remove it. Choose whether each component is required or optional; there is no default group member or default prompt answer. |
 | `components[].only.cluster.distro` | Remove it; this field was unused and has no replacement. |
-| `components[].import.name` | Identify the selected component, then remove the field and extract that component into a component config. See [Component imports](#component-imports). |
-
-Package values use `{{ .Values.key }}` at deploy time. In v1beta1, opt in with `enableTemplating: true` on manifests, files, actions, or chart values file entries. The Variables to Values examples use v1alpha1 field names; apply the [field conversions](#field-conversions) when moving to v1beta1.
+| `components[].import.name` | See [Component imports](#component-imports). |
 
 ## Convert the definition
 
-Write the converted definition:
+The below command preforms all the automatic [field conversions](link).
 
 ```bash
 zarf dev upgrade zarf.yaml > zarf-v1beta1.yaml
 ```
 
-The command writes YAML to stdout, including the new `apiVersion`. It converts the selected definition only; migrate imported definitions and referenced templates separately. Review the output before replacing `zarf.yaml`; YAML comments and formatting are not preserved.
-
-## Actions and readiness checks
-
-Use `before`, `onSuccess`, and `onFailure` for each lifecycle; `after` is removed. During deploy, `onSuccess` runs before the component is recorded as successfully deployed. A failed success action fails the component deployment and invokes `onFailure`.
-
-`healthChecks` becomes wait actions appended to `actions.onDeploy.onSuccess`:
-
-```yaml
-# After: component fields
-actions:
-  onDeploy:
-    onSuccess:
-      - wait:
-          cluster:
-            kind: Deployment.v1.apps
-            name: app
-            namespace: app
-```
-
-For a health check with `apiVersion: apps/v1` and `kind: Deployment`, the wait kind is `Deployment.v1.apps`. Core resources such as `Pod` keep their kind unchanged.
-
-In v1beta1, omitting `wait.cluster.condition` waits for resource readiness using kstatus. Set `condition: exists` to wait only for existence. Conversion adds `exists` to old conditionless wait actions to preserve their behavior; converted health checks omit the condition to retain readiness checks.
+YAML comments and formatting are not preserved. Imported definitions must be migrated separately.
 
 ## Component imports
 
@@ -59,8 +35,9 @@ Imports now reference `ZarfComponentConfig` files containing one component. A pa
 
 1. Convert the source package, then extract each imported component into its own file.
 2. Move its name and description into `metadata`, and its resource and action fields under `component`. Keep `optional` and `selector` on the consuming package component.
-3. Move flavor and architecture restrictions for the imported component into top-level `variant.flavor` and `variant.architecture`. Copy required `values` declarations.
-4. Replace `import.path` with `import.local[].path`, or `import.url` with `import.remote[].url`. Remove `import.name`.
+3. Move flavor and architecture restrictions for the imported component into top-level `variant.flavor` and `variant.architecture`.
+4. Copy required `values` declarations.
+5. Replace `import.path` with `import.local[].path`, or `import.url` with `import.remote[].url`. Remove `import.name`.
 
 ```yaml
 # components/app.yaml
@@ -131,7 +108,7 @@ zarf package create zarf.gen.yaml --confirm
 
 Rendering writes `zarf.gen.yaml` alongside the template and validates the generated schema. Re-render whenever template inputs change.
 
-For local component templates, render each `<name>.tpl.yaml` separately and set `import.local[].path` to `<name>.gen.yaml`; imports are not rendered automatically. Remote components must be fully rendered before publishing and cannot be templated during import.
+For local component templates, render each `<name>.tpl.yaml` separately and set `import.local[].path` to `<name>.gen.yaml`. Remote components must be fully rendered before publishing and cannot be templated during import.
 
 ## Field conversions
 
@@ -153,6 +130,9 @@ These conversions are automatic. Paths below are relative to each component unle
 | Action/default `maxRetries`, `mute` | `retries`, `silent` |
 | `actions.*.after` | Prepended to `actions.*.onSuccess`, before existing success actions. |
 | `charts[].schemaValidation` | `charts[].skipSchemaValidation`, with the boolean inverted. |
+| `charts[]` source fields and values files | Structured sources and values file objects; see [Helm charts](#helm-charts). |
+| `images[]` (string) | Objects with `name` and optional `source`; see [Images](#images). |
+| `repos[]` (string) | `repositories[]` objects with `url` and optional `ref`; see [Git repositories](#git-repositories). |
 | `metadata.allowNamespaceOverride` | `metadata.preventNamespaceOverride`, with the boolean inverted. |
 | `metadata.image`, `source`, `documentation`, `url`, `authors`, `vendor` | Same keys under `metadata.annotations`. Existing annotation values take precedence. |
 | `metadata.aggregateChecksum` | `build.aggregateChecksum` |
@@ -236,15 +216,24 @@ repositories:
 
 Repository refs follow the same `tag` / `branch` / `commit` rules as Git charts. Omit `ref` to mirror all branches and tags.
 
-## Verify the migration
+## Actions and readiness checks
 
-Lint and inspect the migrated definition, supplying the same deploy-time inputs as before:
+Use `before`, `onSuccess`, and `onFailure` for each lifecycle; `after` is removed. During deploy, `onSuccess` runs before the component is recorded as successfully deployed. A failed success action fails the component deployment and invokes `onFailure`.
 
-```bash
-zarf dev lint zarf-v1beta1.yaml
-zarf dev inspect manifests zarf-v1beta1.yaml --values deploy-values.yaml
+`healthChecks` becomes wait actions appended to `actions.onDeploy.onSuccess`:
+
+```yaml
+# After: component fields
+actions:
+  onDeploy:
+    onSuccess:
+      - wait:
+          cluster:
+            kind: Deployment.v1.apps
+            name: app
+            namespace: app
 ```
 
-For package templates, render first and use `zarf.gen.yaml` in these commands.
+For a health check with `apiVersion: apps/v1` and `kind: Deployment`, the wait kind is `Deployment.v1.apps`. Core resources such as `Pod` keep their kind unchanged.
 
-Compare rendered manifests and Helm values before and after migration, then create and deploy the rebuilt package to verify actions, component selection, and readiness checks. Check the generated `build.versionRequirements` before distributing it to older CLIs; some v1beta1 behavior requires a newer deployer.
+In v1beta1, omitting `wait.cluster.condition` waits for resource readiness using kstatus. Set `condition: exists` to wait only for existence. Conversion adds `exists` to old conditionless wait actions to preserve their behavior; converted health checks omit the condition to retain readiness checks.
