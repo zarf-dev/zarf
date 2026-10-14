@@ -20,7 +20,7 @@ Before converting, migrate these features while keeping the definition on v1alph
 
 ## Convert the definition
 
-The command below performs all the automatic [field conversions](#schema-changes-and-field-mappings).
+The command below performs all the automatic [field mappings](#schema-changes-and-field-mappings).
 
 ```bash
 zarf dev upgrade zarf.yaml > zarf-v1beta1.yaml
@@ -129,9 +129,9 @@ These conversions are automatic. Paths below are relative to each component unle
 | Action/default `maxRetries`, `mute` | `retries`, `silent` |
 | `actions.*.after` | Prepended to `actions.*.onSuccess`, before existing success actions. |
 | `charts[].schemaValidation` | `charts[].skipSchemaValidation`, with the boolean inverted. |
-| `charts[]` source fields and values files | Structured sources and values file objects; see [Helm charts](#helm-charts). |
-| `images[]` (string) | Objects with `name` and optional `source`; see [Images](#images). |
-| `repos[]` (string) | `repositories[]` objects with `url` and optional `ref`; see [Git repositories](#git-repositories). |
+| `charts[]` source fields and values files | See [Helm charts](#helm-charts). |
+| `images[]` | See [Images](#images). |
+| `repos[]` | `repositories[]` See [Git repositories](#git-repositories). |
 | `metadata.allowNamespaceOverride` | `metadata.preventNamespaceOverride`, with the boolean inverted. |
 | `metadata.image`, `source`, `documentation`, `url`, `authors`, `vendor` | Same keys under `metadata.annotations`. Existing annotation values take precedence. |
 | `metadata.aggregateChecksum` | `build.aggregateChecksum` |
