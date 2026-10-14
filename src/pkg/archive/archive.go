@@ -121,26 +121,18 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 	if dest == "" {
 		return fmt.Errorf("dest cannot be empty")
 	}
-
-	// Ensure dest parent directories exist
-	err = os.MkdirAll(filepath.Dir(dest), dirPerm)
-	if err != nil {
-		return fmt.Errorf("failed to create parent directory for %s: %w", dest, err)
+	if err := validateCompressionSources(ctx, sources); err != nil {
+		return err
 	}
 
-	out, err := os.Create(dest)
-	if err != nil {
-		return fmt.Errorf("failed to create %s: %w", dest, err)
-	}
-	defer func() { err = errors.Join(err, out.Close()) }()
-
-	// map local paths to archive names
+	// Map local paths to archive names.
 	mapping := make(map[string]string, len(sources))
 	for _, src := range sources {
 		mapping[src] = filepath.Base(src)
 	}
 	files, err := archives.FilesFromDisk(ctx, &archives.FromDiskOptions{
 		ClearAttributes: true,
+		FollowSymlinks:  true,
 	}, mapping)
 	if err != nil {
 		return fmt.Errorf("failed to stat sources: %w", err)
@@ -162,8 +154,76 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 	if err != nil {
 		return err
 	}
+
+	// Ensure dest parent directories exist.
+	if err := os.MkdirAll(filepath.Dir(dest), dirPerm); err != nil {
+		return fmt.Errorf("failed to create parent directory for %s: %w", dest, err)
+	}
+	out, err := os.Create(dest)
+	if err != nil {
+		return fmt.Errorf("failed to create %s: %w", dest, err)
+	}
+	defer func() { err = errors.Join(err, out.Close()) }()
+
 	if err := archiver.Archive(ctx, out, files); err != nil {
 		return fmt.Errorf("archive failed for %q: %w", dest, err)
+	}
+	return nil
+}
+
+// validateCompressionSources rejects source directory symlink cycles before
+// FilesFromDisk follows them while gathering archive entries.
+func validateCompressionSources(ctx context.Context, sources []string) error {
+	for _, source := range sources {
+		if err := validateCompressionSource(ctx, source, make(map[string]struct{})); err != nil {
+			return fmt.Errorf("validating source %q: %w", source, err)
+		}
+	}
+	return nil
+}
+
+func validateCompressionSource(ctx context.Context, source string, ancestors map[string]struct{}) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	info, err := os.Lstat(source)
+	if err != nil {
+		return err
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		target, err := filepath.EvalSymlinks(source)
+		if err != nil {
+			return fmt.Errorf("resolving symlink %q: %w", source, err)
+		}
+		return validateCompressionSource(ctx, target, ancestors)
+	}
+	if !info.IsDir() {
+		return nil
+	}
+
+	resolvedSource, err := filepath.EvalSymlinks(source)
+	if err != nil {
+		return fmt.Errorf("resolving source %q: %w", source, err)
+	}
+	resolvedSource, err = filepath.Abs(resolvedSource)
+	if err != nil {
+		return fmt.Errorf("getting absolute source %q: %w", resolvedSource, err)
+	}
+	if _, found := ancestors[resolvedSource]; found {
+		return fmt.Errorf("symbolic link cycle includes %q", source)
+	}
+	ancestors[resolvedSource] = struct{}{}
+	defer delete(ancestors, resolvedSource)
+
+	entries, err := os.ReadDir(source)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if err := validateCompressionSource(ctx, filepath.Join(source, entry.Name()), ancestors); err != nil {
+			return err
+		}
 	}
 	return nil
 }
