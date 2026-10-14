@@ -19,7 +19,7 @@ Before converting, migrate these features while keeping the definition on v1alph
 | `components[].only.cluster.distro` | Remove it; this field was unused and has no replacement. |
 | `components[].import.name` | Identify the selected component, then remove the field and extract that component into a component config. See [Component imports](#component-imports). |
 
-Package values use `{{ .Values.key }}` at deploy time. In v1beta1, opt in with `enableTemplating: true` on manifests, files, actions, or chart values file entries. The Variables to Values examples use v1alpha1 field names; apply the conversions below when moving to v1beta1.
+Package values use `{{ .Values.key }}` at deploy time. In v1beta1, opt in with `enableTemplating: true` on manifests, files, actions, or chart values file entries. The Variables to Values examples use v1alpha1 field names; apply the [field conversions](#field-conversions) when moving to v1beta1.
 
 ## Convert the definition
 
@@ -30,111 +30,6 @@ zarf dev upgrade zarf.yaml > zarf-v1beta1.yaml
 ```
 
 The command writes YAML to stdout, including the new `apiVersion`. It converts the selected definition only; migrate imported definitions and referenced templates separately. Review the output before replacing `zarf.yaml`; YAML comments and formatting are not preserved.
-
-### Field conversions
-
-These conversions are automatic. Paths below are relative to each component unless prefixed with `metadata` or `build`. `[]` denotes a list entry; `*` denotes `onCreate`, `onDeploy`, or `onRemove`.
-
-| v1alpha1 | v1beta1 |
-| --- | --- |
-| `required` | `optional`, with the boolean inverted. |
-| `only.flavor` | `selector.flavor` |
-| `only.cluster.architecture` | `selector.architecture` |
-| `only.localOS` | `target.os` |
-| `charts[].noWait`, `manifests[].noWait` | `skipWait` on the same entry. |
-| `manifests[].template`, `files[].template`, action `template` | `enableTemplating` on the same entry. |
-| `files[].target` | `files[].destination` |
-| `files[].shasum` | `files[].checksum`, prefixed with `sha256:`. Unprefixed checksums also mean SHA-256. |
-| `manifests[].kustomizations` | `manifests[].kustomize.files` |
-| `manifests[].kustomizeAllowAnyDirectory` | `manifests[].kustomize.allowAnyDirectory` |
-| `manifests[].enableKustomizePlugins` | `manifests[].kustomize.enablePlugins` |
-| Action/default `maxRetries`, `mute` | `retries`, `silent` |
-| `actions.*.after` | Prepended to `actions.*.onSuccess`, before existing success actions. |
-| `charts[].schemaValidation` | `charts[].skipSchemaValidation`, with the boolean inverted. |
-| `metadata.allowNamespaceOverride` | `metadata.preventNamespaceOverride`, with the boolean inverted. |
-| `metadata.image`, `source`, `documentation`, `url`, `authors`, `vendor` | Same keys under `metadata.annotations`. Existing annotation values take precedence. |
-| `metadata.aggregateChecksum` | `build.aggregateChecksum` |
-| `build.terminal` | `build.hostname` |
-
-New v1beta1 components are required by default (`optional: false`). Conversion preserves v1alpha1 selection behavior: an omitted or false `required` becomes `optional: true`. Namespace overrides and chart schema validation remain enabled by default.
-
-`selector` filters components during create; `target.os` filters them during deploy. Include optional components with `zarf package deploy --components <name>`.
-
-{/* FIXME: more realistic example */}
-Update Go templates that read `.Pkg` to use the v1beta1 fields, for example `{{ .Pkg.Metadata.Annotations.source }}` instead of `{{ .Pkg.Metadata.Source }}`.
-
-FIXME: this should be folded into the field conversions
-## Helm charts
-
-Each chart must have exactly one source: `helmRepository`, `git`, `oci`, or `local`. Conversion moves the old source fields into that object:
-
-| v1alpha1 chart source | v1beta1 chart source |
-| --- | --- |
-| Helm repository `url`, `repoName`, `version` | `helmRepository.url`, `helmRepository.name`, `helmRepository.version` |
-| Git `url`, `gitPath`, `version` or URL `@ref` | `git.url`, `git.path`, `git.ref` |
-| OCI `url`, `version` | `oci.url`, `oci.ref.tag`; digest references use `oci.ref.digest`. |
-| `localPath` | `local.path`; remove `version` and use the chart's `Chart.yaml` version. |
-
-Git charts require `ref` with exactly one of `tag`, `branch`, or `commit` (a full 40-character SHA). Conversion treats `refs/heads/<name>` as a branch, a full SHA as a commit, and other refs as tags. If the URL has no ref, the old chart `version` supplies it. Git URLs must no longer contain an `@ref` suffix.
-
-OCI charts require exactly one of `ref.tag` or `ref.digest`; keep the URL free of tag or digest suffixes.
-
-Chart values files become objects. Combine `valuesFiles` and `templatedValuesFiles` into `valuesFiles`, enabling templating only where needed:
-
-```yaml
-# Before: chart entry
-name: app
-namespace: app
-url: oci://ghcr.io/example/charts/app
-version: 1.0.0
-valuesFiles:
-  - chart-values.yaml
-templatedValuesFiles:
-  - runtime-values.yaml
-```
-
-```yaml
-# After: chart entry
-name: app
-namespace: app
-oci:
-  url: oci://ghcr.io/example/charts/app
-  ref:
-    tag: 1.0.0
-valuesFiles:
-  - path: chart-values.yaml
-  - path: runtime-values.yaml
-    enableTemplating: true
-```
-
-Package-value mappings in `charts[].values` keep their `sourcePath` and `targetPath` fields.
-
-{/* FIXME: fold these into the replaced fields */}
-## Images and Git repositories
-
-`images` changes from strings to objects. `repos` becomes `repositories`, with the Git ref separated from the URL:
-
-```yaml
-# Before: component fields
-images:
-  - ghcr.io/example/app:1.0.0
-repos:
-  - https://github.com/example/app.git@refs/heads/main
-```
-
-```yaml
-# After: component fields
-images:
-  - name: ghcr.io/example/app:1.0.0
-repositories:
-  - url: https://github.com/example/app.git
-    ref:
-      branch: main
-```
-
-Images default to `source: registry`. For images built locally, set `source: daemon`; v1beta1 does not fall back to the local daemon after a registry pull fails.
-
-Repository refs follow the same `tag` / `branch` / `commit` rules as Git charts. Omit `ref` to mirror all branches and tags. `imageArchives` is unchanged.
 
 ## Actions and readiness checks
 
@@ -250,3 +145,106 @@ zarf dev inspect manifests zarf-v1beta1.yaml --values deploy-values.yaml
 For package templates, render first and use `zarf.gen.yaml` in these commands.
 
 Compare rendered manifests and Helm values before and after migration, then create and deploy the rebuilt package to verify actions, component selection, and readiness checks. Check the generated `build.versionRequirements` before distributing it to older CLIs; some v1beta1 behavior requires a newer deployer.
+
+## Field conversions
+
+These conversions are automatic. Paths below are relative to each component unless prefixed with `metadata` or `build`. `[]` denotes a list entry; `*` denotes `onCreate`, `onDeploy`, or `onRemove`.
+
+| v1alpha1 | v1beta1 |
+| --- | --- |
+| `required` | `optional`, with the boolean inverted. |
+| `only.flavor` | `selector.flavor` |
+| `only.cluster.architecture` | `selector.architecture` |
+| `only.localOS` | `target.os` |
+| `charts[].noWait`, `manifests[].noWait` | `skipWait` on the same entry. |
+| `manifests[].template`, `files[].template`, action `template` | `enableTemplating` on the same entry. |
+| `files[].target` | `files[].destination` |
+| `files[].shasum` | `files[].checksum`, prefixed with `sha256:`. Unprefixed checksums also mean SHA-256. |
+| `manifests[].kustomizations` | `manifests[].kustomize.files` |
+| `manifests[].kustomizeAllowAnyDirectory` | `manifests[].kustomize.allowAnyDirectory` |
+| `manifests[].enableKustomizePlugins` | `manifests[].kustomize.enablePlugins` |
+| Action/default `maxRetries`, `mute` | `retries`, `silent` |
+| `actions.*.after` | Prepended to `actions.*.onSuccess`, before existing success actions. |
+| `charts[].schemaValidation` | `charts[].skipSchemaValidation`, with the boolean inverted. |
+| `metadata.allowNamespaceOverride` | `metadata.preventNamespaceOverride`, with the boolean inverted. |
+| `metadata.image`, `source`, `documentation`, `url`, `authors`, `vendor` | Same keys under `metadata.annotations`. Existing annotation values take precedence. |
+| `metadata.aggregateChecksum` | `build.aggregateChecksum` |
+| `build.terminal` | `build.hostname` |
+
+New v1beta1 components are required by default (`optional: false`). Conversion preserves v1alpha1 selection behavior: an omitted or false `required` becomes `optional: true`. Namespace overrides and chart schema validation remain enabled by default.
+
+`selector` filters components during create; `target.os` filters them during deploy. Include optional components with `zarf package deploy --components <name>`.
+
+### Helm charts
+
+Each chart must have exactly one source: `helmRepository`, `git`, `oci`, or `local`. Conversion moves the old source fields into that object:
+
+| v1alpha1 chart source | v1beta1 chart source |
+| --- | --- |
+| Helm repository `url`, `repoName`, `version` | `helmRepository.url`, `helmRepository.name`, `helmRepository.version` |
+| Git `url`, `gitPath`, `version` or URL `@ref` | `git.url`, `git.path`, `git.ref` |
+| OCI `url`, `version` | `oci.url`, `oci.ref.tag`; digest references use `oci.ref.digest`. |
+| `localPath` | `local.path`; remove `version` and use the chart's `Chart.yaml` version. |
+
+Git charts require `ref` with exactly one of `tag`, `branch`, or `commit`. Conversion treats `refs/heads/<name>` as a branch, a full SHA as a commit, and other refs as tags. If the URL has no ref, the old chart `version` supplies it. Git URLs must no longer contain an `@ref` suffix.
+
+OCI charts require exactly one of `ref.tag` or `ref.digest`; keep the URL free of tag or digest suffixes.
+
+Chart values files become objects. Combine `valuesFiles` and `templatedValuesFiles` into `valuesFiles`, enabling templating only where needed:
+
+```yaml
+# Before: chart entry
+name: app
+namespace: app
+url: oci://ghcr.io/example/charts/app
+version: 1.0.0
+valuesFiles:
+  - chart-values.yaml
+templatedValuesFiles:
+  - runtime-values.yaml
+```
+
+```yaml
+# After: chart entry
+name: app
+namespace: app
+oci:
+  url: oci://ghcr.io/example/charts/app
+  ref:
+    tag: 1.0.0
+valuesFiles:
+  - path: chart-values.yaml
+  - path: runtime-values.yaml
+    enableTemplating: true
+```
+
+Package-value mappings in `charts[].values` keep their `sourcePath` and `targetPath` fields.
+
+### Images
+
+`images` entries are objects:
+
+```yaml
+# Component fields
+images:
+  - name: ghcr.io/example/app:1.0.0
+    source: registry
+```
+
+Images default to `source: registry`. For images built locally, set `source: daemon`; v1beta1 does not fall back to the local daemon after a registry pull fails.
+
+To read the first image in the `app` component from a `.Pkg` template, use `{{ (index (.Pkg.GetComponent "app").Images 0).Name }}`.
+
+### Git repositories
+
+`repos` becomes `repositories`, with the Git ref separated from the URL:
+
+```yaml
+# Component fields
+repositories:
+  - url: https://github.com/example/app.git
+    ref:
+      branch: main
+```
+
+Repository refs follow the same `tag` / `branch` / `commit` rules as Git charts. Omit `ref` to mirror all branches and tags.
