@@ -2,11 +2,11 @@
 title: "Migrating Packages from v1alpha1 to v1beta1"
 ---
 
-This guide migrates a `ZarfPackageConfig` definition from `zarf.dev/v1alpha1` to `zarf.dev/v1beta1`. Existing v1alpha1 definitions remain supported. A definition without `apiVersion` is treated as v1alpha1 whereas v1beta1 requires `apiVersion: zarf.dev/v1beta1`.
+This guide migrates a `ZarfPackageConfig` definition from `zarf.dev/v1alpha1` to `zarf.dev/v1beta1`. Existing v1alpha1 definitions remain supported. A definition without `apiVersion` is treated as v1alpha1, whereas v1beta1 requires `apiVersion: zarf.dev/v1beta1`.
 
 ## Replace removed features
 
-Before converting, migrate these features while keeping the definition on v1alpha1. `zarf dev upgrade` errors upon finding any of the below fields.
+Before converting, migrate these features while keeping the definition on v1alpha1. `zarf dev upgrade` errors if any of the following removed features are still in use
 
 | v1alpha1 field | Migration |
 | --- | --- |
@@ -16,7 +16,7 @@ Before converting, migrate these features while keeping the definition on v1alph
 | `components[].import.name` | See [Component imports](#component-imports). |
 | `components[].group` | Use `only.flavor` in v1alpha1, converted to `selector.flavor` in v1beta1. This replaces deploy-time group selection with create-time filtering. |
 | `components[].default` | Remove it. Default group members are not applicable and there is no way to set the default prompt answer. |
-| `components[].only.cluster.distro` | Remove it. This field was unused and has no replacement. |
+| `components[].only.cluster.distros` | Remove it. This field was unused and has no replacement. |
 
 ## Convert the definition
 
@@ -109,7 +109,7 @@ Rendering writes `zarf.gen.yaml` alongside the template and validates the genera
 
 For local component templates, render each `<name>.tpl.yaml` separately and set `import.local[].path` to `<name>.gen.yaml`. Remote components must be fully rendered before publishing and cannot be templated during import.
 
-### Readiness checks
+## Readiness checks
 
 `healthChecks` becomes wait actions appended to `actions.onDeploy.onSuccess`:
 
@@ -151,7 +151,7 @@ These conversions are automatic. Paths below are relative to each component unle
 | `charts[].schemaValidation` | `charts[].skipSchemaValidation`, with the boolean inverted. |
 | `charts[]` source fields and values files | See [Helm charts](#helm-charts). |
 | `images[]` | See [Images](#images). |
-| `repos[]` | `repositories[]` See [Git repositories](#git-repositories). |
+| `repos[]` | `repositories[]`. See [Git repositories](#git-repositories). |
 | `metadata.allowNamespaceOverride` | `metadata.preventNamespaceOverride`, with the boolean inverted. |
 | `metadata.image`, `source`, `documentation`, `url`, `authors`, `vendor` | Same keys under `metadata.annotations`. Existing annotation values take precedence. |
 | `metadata.aggregateChecksum` | `build.aggregateChecksum` |
