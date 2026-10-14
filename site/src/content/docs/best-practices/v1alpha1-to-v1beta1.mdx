@@ -6,22 +6,21 @@ This guide migrates a `ZarfPackageConfig` definition from `zarf.dev/v1alpha1` to
 
 ## Replace removed features
 
-Before converting, migrate these features while keeping the definition on v1alpha1. `zarf dev upgrade` reports removed features still in use rather than choosing replacements.
+Before converting, migrate these features while keeping the definition on v1alpha1. `zarf dev upgrade` errors upon finding any of the below fields.
 
 | v1alpha1 field | Migration |
 | --- | --- |
-| `variables`, `constants`, `components[].charts[].variables` | Follow [Variables to Values](/best-practices/variables-to-values/). Replace references in manifests, files, chart values files, and actions as well as declarations. |
-| Action `setVariable` / `setVariables` | Use `setValues` with `key: .path.to.value`; read the result with `{{ .Values.path.to.value }}`. Supported during deploy and removal, not create. |
+| `variables`, `constants`, `components[].charts[].variables`, Action `setVariables` | Follow [Variables to Values](/best-practices/variables-to-values/). Replace references in manifests, files, chart values files, and actions as well as declarations. |
 | `components[].dataInjections` | Follow [Data Injections Migration](/best-practices/data-injections-migration/). |
 | `metadata.yolo` | Remove it and deploy with `--connected`. See [Connected Mode](/ref/deploy/#additional-deployment-modes). |
-| `components[].group` | Use `only.flavor` in v1alpha1, converted to `selector.flavor` in v1beta1. Select the flavor during create with `--flavor`; this replaces deploy-time group selection with create-time filtering. |
-| `components[].default` | Remove it. Choose whether each component is required or optional; there is no default group member or default prompt answer. |
-| `components[].only.cluster.distro` | Remove it; this field was unused and has no replacement. |
 | `components[].import.name` | See [Component imports](#component-imports). |
+| `components[].group` | Use `only.flavor` in v1alpha1, converted to `selector.flavor` in v1beta1. This replaces deploy-time group selection with create-time filtering. |
+| `components[].default` | Remove it. Default group members are not applicable and there is no way to set the default prompt answer. |
+| `components[].only.cluster.distro` | Remove it. This field was unused and has no replacement. |
 
 ## Convert the definition
 
-The below command preforms all the automatic [field conversions](link).
+The command below performs all the automatic [field conversions](#schema-changes-and-field-mappings).
 
 ```bash
 zarf dev upgrade zarf.yaml > zarf-v1beta1.yaml
@@ -59,7 +58,7 @@ component:
       - path: components/app.yaml
 ```
 
-When listing multiple imports, exactly one must match the create-time flavor and architecture. Empty variant fields match any target, so avoid overlapping variants. Imported values files are loaded before the package's own files; package values take precedence.
+When listing multiple imports, exactly one must match the create-time flavor and architecture. Empty variant fields match any target, so avoid overlapping variants.
 
 For remote imports, set `metadata.version` and publish the component:
 
