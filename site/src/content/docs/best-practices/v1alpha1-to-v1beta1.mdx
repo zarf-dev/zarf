@@ -109,9 +109,29 @@ Rendering writes `zarf.gen.yaml` alongside the template and validates the genera
 
 For local component templates, render each `<name>.tpl.yaml` separately and set `import.local[].path` to `<name>.gen.yaml`. Remote components must be fully rendered before publishing and cannot be templated during import.
 
+### Readiness checks
+
+`healthChecks` becomes wait actions appended to `actions.onDeploy.onSuccess`:
+
+```yaml
+# After: component fields
+actions:
+  onDeploy:
+    onSuccess:
+      - wait:
+          cluster:
+            kind: Deployment.v1.apps
+            name: app
+            namespace: app
+```
+
+For a health check with `apiVersion: apps/v1` and `kind: Deployment`, the wait kind is `Deployment.v1.apps`. Core resources such as `Pod` keep their kind unchanged.
+
+In v1beta1, omitting `wait.cluster.condition` waits for resource readiness using kstatus. Set `condition: exists` to wait only for existence. Conversion adds `exists` to old conditionless wait actions to preserve their behavior; converted health checks omit the condition to retain readiness checks.
+
 ## Schema Changes and Field Mappings
 
-These conversions are automatic. Paths below are relative to each component unless prefixed with `metadata` or `build`. `[]` denotes a list entry; `*` denotes `onCreate`, `onDeploy`, or `onRemove`.
+These conversions are automatic. Paths below are relative to each component unless prefixed with `metadata` or `build`. `[]` denotes a list entry.
 
 | v1alpha1 | v1beta1 |
 | --- | --- |
@@ -197,9 +217,7 @@ images:
     source: registry
 ```
 
-Images default to `source: registry`. For images built locally, set `source: daemon`; v1beta1 does not fall back to the local daemon after a registry pull fails.
-
-To read the first image in the `app` component from a `.Pkg` template, use `{{ (index (.Pkg.GetComponent "app").Images 0).Name }}`.
+Images default to `source: registry`. For images stored in the Docker daemon, set `source: daemon`. v1beta1 does not fall back to the local daemon after a registry pull fails.
 
 ### Git repositories
 
@@ -213,26 +231,4 @@ repositories:
       branch: main
 ```
 
-Repository refs follow the same `tag` / `branch` / `commit` rules as Git charts. Omit `ref` to mirror all branches and tags.
-
-## Actions and readiness checks
-
-Use `before`, `onSuccess`, and `onFailure` for each lifecycle; `after` is removed. During deploy, `onSuccess` runs before the component is recorded as successfully deployed. A failed success action fails the component deployment and invokes `onFailure`.
-
-`healthChecks` becomes wait actions appended to `actions.onDeploy.onSuccess`:
-
-```yaml
-# After: component fields
-actions:
-  onDeploy:
-    onSuccess:
-      - wait:
-          cluster:
-            kind: Deployment.v1.apps
-            name: app
-            namespace: app
-```
-
-For a health check with `apiVersion: apps/v1` and `kind: Deployment`, the wait kind is `Deployment.v1.apps`. Core resources such as `Pod` keep their kind unchanged.
-
-In v1beta1, omitting `wait.cluster.condition` waits for resource readiness using kstatus. Set `condition: exists` to wait only for existence. Conversion adds `exists` to old conditionless wait actions to preserve their behavior; converted health checks omit the condition to retain readiness checks.
+Omit `ref` to mirror all branches and tags.
