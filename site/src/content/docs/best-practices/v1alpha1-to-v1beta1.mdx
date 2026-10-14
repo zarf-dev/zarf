@@ -4,6 +4,12 @@ title: "Migrating Packages from v1alpha1 to v1beta1"
 
 This guide migrates a `ZarfPackageConfig` definition from `zarf.dev/v1alpha1` to `zarf.dev/v1beta1`. Existing v1alpha1 definitions remain supported. A definition without `apiVersion` is treated as v1alpha1, whereas v1beta1 requires `apiVersion: zarf.dev/v1beta1`.
 
+:::caution
+
+THe v1beta1 schema is experimental and creating v1beta1 packages is behind feature flag.
+
+:::
+
 ## Replace removed features
 
 Before converting, migrate these features while keeping the definition on v1alpha1. `zarf dev upgrade` errors if any of the following removed features are still in use
