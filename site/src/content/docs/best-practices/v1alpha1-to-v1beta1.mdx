@@ -7,10 +7,42 @@ This guide details how to migrate your package from v1alpha1 to v1beta1. V1beta1
 V1beta1 removes several existing fields from v1alpha1. As Zarf and the surrounding ecosystem has matured, we've found alternatives to these fields that have a better UX, are more performant, or more secure. Here is a list of the fields removed without direct replacement:
 
 - `.variables`, `.constants`, and `.components.[x].charts.[x].variables` - See [variables to values] for a guide to migrate off of this field.
-- `.components.[x].dataInjections` See for https://docs.zarf.dev/best-practices/data-injections-migration/ details migrating off of this field.
+- `.components.[x].dataInjections` - See the [data injections migration guide](/best-practices/data-injections-migration/) for details on migrating off of this field.
 - `.metadata.yolo` - Replaced by [connected deploys](link)
 - `.components.[x].group` - We recommend using `components[x].selector.flavor`. This shifts component selection to the create side.
 - `.components.[x].default` This was used to determine the default `.components[x].group`. It also gave the default to the (Y/N) prompt during interactive deploys, this use was secondary and not important enough to keep the field around.
 
-
 Many fields have been restructured or renamed. See [proposal](link) for a list of every field changed. `zarf dev upgrade` will automatically handle migrating each of this fields.
+
+## Package templates to `zarf dev template`
+
+In v1beta1, package templates are rendered before `zarf package create` using a separate `zarf dev template` step.
+
+1. Rename the migrated package definition from `zarf.yaml` to `zarf.tpl.yaml`.
+2. Replace each `###ZARF_PKG_TMPL_KEY###` with `[[ .KEY ]]`. Keys are case-sensitive and accessed directly, without a `.Values` prefix.
+3. Move template inputs from `zarf package create --set` to `zarf dev template --set KEY=value`, or supply a YAML mapping with `--set-file template-values.yaml`. `--set` overrides file values. Missing template values cause an error instead of an interactive prompt.
+
+For example, a migrated `zarf.tpl.yaml`:
+
+```yaml
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: app
+  version: "[[ .VERSION ]]"
+components:
+  - name: app
+    images:
+      - name: "[[ .IMAGE ]]"
+```
+
+Render it, then create the package:
+
+```bash
+zarf dev template --set VERSION=1.0.0 --set IMAGE=ghcr.io/example/app:1.0.0
+zarf package create zarf.gen.yaml --confirm
+```
+
+Rendering writes `zarf.gen.yaml` alongside the template and validates the generated schema. Re-render whenever template inputs change.
+
+For local component templates, render each `<name>.tpl.yaml` separately and set `import.local[].path` to `<name>.gen.yaml`; imports are not rendered automatically. Remote components must be fully rendered before publishing and cannot be templated during import.
