@@ -5,7 +5,6 @@
 package component
 
 import (
-	"archive/tar"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -24,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/componentarchive"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -293,16 +293,13 @@ func stageComponentFile(ctx context.Context, store content.Storage, filePath, me
 	return descriptor, nil
 }
 
-// archiveComponentResources writes normalized paths in a stable order and streams file contents.
+// archiveComponentResources stages resources using the same copy and tar rules as package assembly.
 func archiveComponentResources(ctx context.Context, destination string, resources map[string]componentResource) (err error) {
-	file, err := os.Create(destination)
+	directory, err := os.MkdirTemp(filepath.Dir(destination), "component-resources-")
 	if err != nil {
 		return err
 	}
-	defer func() { err = errors.Join(err, file.Close()) }()
-	writer := tar.NewWriter(file)
-	defer func() { err = errors.Join(err, writer.Close()) }()
-
+	defer func() { err = errors.Join(err, os.RemoveAll(directory)) }()
 	paths := make([]string, 0, len(resources))
 	for rel := range resources {
 		paths = append(paths, rel)
@@ -313,33 +310,38 @@ func archiveComponentResources(ctx context.Context, destination string, resource
 			return err
 		}
 		resource := resources[rel]
-		var reader io.ReadCloser
-		size := int64(len(resource.contents))
+		target := filepath.Join(directory, filepath.FromSlash(rel))
 		if resource.contents != nil {
-			reader = io.NopCloser(bytes.NewReader(resource.contents))
-		} else {
-			source, err := os.Open(resource.sourcePath)
-			if err != nil {
+			if err := helpers.CreateParentDirectory(target); err != nil {
 				return err
 			}
-			info, statErr := source.Stat()
-			if statErr != nil {
-				return errors.Join(statErr, source.Close())
+			if err := os.WriteFile(target, resource.contents, helpers.ReadWriteUser); err != nil {
+				return err
 			}
-			size = info.Size()
-			reader = source
+		} else {
+			// Component imports support regular files and directories, not filesystem links.
+			if err := filepath.WalkDir(resource.sourcePath, func(_ string, entry fs.DirEntry, walkErr error) error {
+				if walkErr != nil {
+					return walkErr
+				}
+				if !entry.IsDir() && !entry.Type().IsRegular() {
+					return fmt.Errorf("component resource %q contains unsupported file type %s", rel, entry.Type())
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := helpers.CreatePathAndCopy(resource.sourcePath, target); err != nil {
+				return err
+			}
 		}
-		// Remote resources have always been materialized as private, regular files.
-		headerErr := writer.WriteHeader(&tar.Header{Name: rel, Mode: 0o600, Size: size, Typeflag: tar.TypeReg})
-		var copyErr error
-		if headerErr == nil {
-			_, copyErr = io.Copy(writer, reader)
-		}
-		if err := errors.Join(headerErr, copyErr, reader.Close()); err != nil {
-			return fmt.Errorf("archiving resource %q: %w", rel, err)
+		if resource.mode != 0 {
+			if err := os.Chmod(target, resource.mode); err != nil {
+				return err
+			}
 		}
 	}
-	return nil
+	return componentarchive.Create(ctx, directory, "", destination, false)
 }
 
 // unpackComponentImages expands image archives in the staging directory and returns sorted layout paths.

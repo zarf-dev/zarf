@@ -29,6 +29,55 @@ func TestComponentPublish(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	componentSource := registryURL + "/published-component:0.0.1"
+	t.Run("unchanged component layer digest", func(t *testing.T) {
+		componentDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(componentDir, "file.txt"), []byte("shared content\n"), 0o600))
+		componentPath := filepath.Join(componentDir, "component.yaml")
+		require.NoError(t, os.WriteFile(componentPath, []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: shared-layer
+  version: 0.0.1
+component:
+  files:
+    - source: file.txt
+      destination: /tmp/file.txt
+`), 0o600))
+		stdOut, stdErr, err := e2e.Zarf(t, "component", "publish", componentPath, "oci://"+registryURL, "--plain-http")
+		require.NoError(t, err, stdOut, stdErr)
+		source := registryURL + "/shared-layer:0.0.1"
+		remote, err := zoci.NewRemoteWithOptions(t.Context(), source, ocispec.Platform{}, zoci.RemoteClientOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
+		require.NoError(t, err)
+		componentManifest, err := remote.FetchRoot(t.Context())
+		require.NoError(t, err)
+		require.Len(t, componentManifest.Layers, 1)
+		packageDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: shared-component-layer
+components:
+  - name: renamed
+    import:
+      remote:
+        - url: oci://`+source+"\n"), 0o600))
+		output := t.TempDir()
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "create", packageDir, "-o", output, "--plain-http", "--skip-sbom", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+		pkgLayout, err := layout.LoadFromTar(t.Context(), filepath.Join(output, fmt.Sprintf("zarf-package-shared-component-layer-%s.tar.zst", e2e.Arch)), layout.PackageLayoutOptions{})
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+		packageManifest, err := pkgLayout.Manifest()
+		require.NoError(t, err)
+		packageLayer := packageManifest.Locate("components/renamed.tar")
+		require.NotEmpty(t, packageLayer.Digest)
+		require.Equal(t, componentManifest.Layers[0].Digest, packageLayer.Digest)
+		filesDir, err := pkgLayout.GetComponentDir(t.Context(), t.TempDir(), "renamed", layout.FilesComponentDir)
+		require.NoError(t, err)
+		contents, err := os.ReadFile(filepath.Join(filesDir, "0", "file.txt"))
+		require.NoError(t, err)
+		require.Equal(t, "shared content\n", string(contents))
+	})
 	t.Run("published resource archive", func(t *testing.T) {
 		remote, err := zoci.NewRemoteWithOptions(t.Context(), componentSource, ocispec.Platform{}, zoci.RemoteClientOptions{
 			RemoteOptions: types.RemoteOptions{PlainHTTP: true},

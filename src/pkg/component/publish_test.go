@@ -149,25 +149,25 @@ func TestPublishComponent(t *testing.T) {
 	require.Equal(t, []string{"resources/0/component-values.yaml"}, component.Values.Files)
 	require.Equal(t, "resources/1/component-values.schema.json", component.Values.Schema)
 	require.Equal(t, "resources/2/local-chart", component.Component.Charts[0].Local.Path)
-	require.Equal(t, "resources/3/local-chart-values.yaml", component.Component.Charts[0].ValuesFiles[0].Path)
+	require.Equal(t, "values/local-chart-0", component.Component.Charts[0].ValuesFiles[0].Path)
 	require.Equal(t, "https://example.com/remote-chart-values.yaml", component.Component.Charts[0].ValuesFiles[1].Path)
-	require.Equal(t, "resources/4/local-manifest.yaml", component.Component.Manifests[0].Files[0])
+	require.Equal(t, "manifests/local-manifest-0.yaml", component.Component.Manifests[0].Files[0])
 	require.Equal(t, "https://example.com/remote-manifest.yaml", component.Component.Manifests[1].Files[0])
-	require.Equal(t, "resources/5/local-file.txt", component.Component.Files[0].Source)
+	require.Equal(t, "files/0/local-file.txt", component.Component.Files[0].Source)
 	require.Equal(t, "https://example.com/remote-file.txt", component.Component.Files[1].Source)
 
 	resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
-	for _, localPath := range []string{
-		"resources/0/component-values.yaml",
-		"resources/1/component-values.schema.json",
-		"resources/2/local-chart/Chart.yaml",
-		"resources/2/local-chart/templates/configmap.yaml",
-		"resources/3/local-chart-values.yaml",
-		"resources/4/local-manifest.yaml",
-		"resources/5/local-file.txt",
+	for localPath, sourcePath := range map[string]string{
+		"resources/0/component-values.yaml":                "component-values.yaml",
+		"resources/1/component-values.schema.json":         "component-values.schema.json",
+		"resources/2/local-chart/Chart.yaml":               "local-chart/Chart.yaml",
+		"resources/2/local-chart/templates/configmap.yaml": "local-chart/templates/configmap.yaml",
+		"values/local-chart-0":                             "local-chart-values.yaml",
+		"manifests/local-manifest-0.yaml":                  "local-manifest.yaml",
+		"files/0/local-file.txt":                           "local-file.txt",
 	} {
 		require.Contains(t, resourceFiles, localPath)
-		contents, err := os.ReadFile(filepath.Join("testdata", "publish-component-v1beta1", filepath.FromSlash(strings.SplitN(localPath, "/", 3)[2])))
+		contents, err := os.ReadFile(filepath.Join("testdata", "publish-component-v1beta1", filepath.FromSlash(sourcePath)))
 		require.NoError(t, err)
 		require.Equal(t, string(contents), resourceFiles[localPath])
 	}
@@ -177,6 +177,115 @@ func TestPublishComponent(t *testing.T) {
 		"https://example.com/remote-manifest.yaml",
 	} {
 		require.NotContains(t, resourceFiles, remotePath)
+	}
+}
+
+func TestPublishComponentLayerDigestMatchesPackageImport(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	componentDir := t.TempDir()
+	fileContents := []byte("shared component content\n")
+	require.NoError(t, os.WriteFile(filepath.Join(componentDir, "file.txt"), fileContents, 0o600))
+	for relativePath, contents := range map[string]string{
+		"manifest.yaml":               "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: shared\n",
+		"chart/Chart.yaml":            "apiVersion: v2\nname: shared\nversion: 0.1.0\n",
+		"chart/templates/config.yaml": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: chart\n",
+		"chart-values.yaml":           "enabled: true\n",
+		"directory/nested/program.sh": "#!/bin/sh\necho shared\n",
+	} {
+		resourcePath := filepath.Join(componentDir, relativePath)
+		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o755))
+		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o644))
+	}
+	require.NoError(t, os.Chmod(filepath.Join(componentDir, "directory", "nested", "program.sh"), 0o755))
+	require.NoError(t, archive.Compress(ctx, []string{filepath.Join(componentDir, "chart")}, filepath.Join(componentDir, "chart.tgz"), archive.CompressOpts{}))
+	componentPath := filepath.Join(componentDir, "component.yaml")
+	require.NoError(t, os.WriteFile(componentPath, []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: shared-component
+  version: 0.0.1
+component:
+  files:
+    - source: file.txt
+      destination: /tmp/file.txt
+    - source: file.txt
+      destination: /tmp/program.txt
+      executable: true
+    - source: directory
+      destination: /tmp/directory
+  manifests:
+    - name: shared
+      files:
+        - manifest.yaml
+  charts:
+    - name: shared
+      namespace: default
+      local:
+        path: chart.tgz
+      valuesFiles:
+        - path: chart-values.yaml
+`), 0o600))
+
+	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	_, componentManifest := getPublishedComponent(ctx, t, published)
+	require.Len(t, componentManifest.Layers, 1)
+	componentLayer := componentManifest.Layers[0]
+	require.Equal(t, layout.ZarfComponentLayerMediaTypeTar, componentLayer.MediaType)
+
+	for _, tc := range []struct {
+		name       string
+		importYAML string
+	}{
+		{
+			name:       "local config",
+			importYAML: "local:\n        - path: ../component.yaml",
+		},
+		{
+			name:       "published config",
+			importYAML: fmt.Sprintf("remote:\n        - url: oci://%s", published.String()),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			packageDir := filepath.Join(componentDir, tc.name)
+			require.NoError(t, os.Mkdir(packageDir, 0o700))
+			packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: component-layer-digest
+components:
+  - name: files
+    import:
+      %s
+`, tc.importYAML)
+			require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(packageYAML), 0o600))
+			cachePath := t.TempDir()
+			loaded, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{CachePath: cachePath, RemoteOptions: defaultTestRemoteOptions()}})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+			pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{CachePath: cachePath, SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+			filesDir, err := pkgLayout.GetComponentDir(ctx, t.TempDir(), "files", layout.FilesComponentDir)
+			require.NoError(t, err)
+			assembledContents, err := os.ReadFile(filepath.Join(filesDir, "0", "file.txt"))
+			require.NoError(t, err)
+			require.Equal(t, fileContents, assembledContents)
+			require.FileExists(t, filepath.Join(filesDir, "2", "directory", "nested", "program.sh"))
+			chartsDir, err := pkgLayout.GetComponentDir(ctx, t.TempDir(), "files", layout.ChartsComponentDir)
+			require.NoError(t, err)
+			require.FileExists(t, filepath.Join(chartsDir, "shared.tgz"))
+
+			packageManifest, err := pkgLayout.Manifest()
+			require.NoError(t, err)
+			packageLayer := packageManifest.Locate("components/files.tar")
+			require.NotEmpty(t, packageLayer.Digest)
+			require.Equal(t, componentLayer.Digest, packageLayer.Digest,
+				"identical component content must share an OCI layer digest to avoid duplicate registry blobs")
+		})
 	}
 }
 
@@ -297,9 +406,9 @@ component:
 
 	component, manifest := getPublishedComponent(ctx, t, published)
 	require.Empty(t, component.Component.Import)
-	require.Equal(t, []v1beta1.File{{Source: "resources/0/remote-file.txt", Destination: "/tmp/remote-file.txt"}}, component.Component.Files)
+	require.Equal(t, []v1beta1.File{{Source: "files/0/remote-file.txt", Destination: "/tmp/remote-file.txt"}}, component.Component.Files)
 	require.Len(t, manifest.Layers, 1)
-	require.Equal(t, "remote file", getPublishedResourceFiles(ctx, t, published, manifest)["resources/0/remote-file.txt"])
+	require.Equal(t, "remote file", getPublishedResourceFiles(ctx, t, published, manifest)["files/0/remote-file.txt"])
 }
 
 func TestPublishComponentImageArchivesUseOCILayout(t *testing.T) {
@@ -339,7 +448,7 @@ component:%s
 
 			resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
 			if withFiles {
-				require.Equal(t, "component file", resourceFiles["resources/0/file.txt"])
+				require.Equal(t, "component file", resourceFiles["files/0/file.txt"])
 			} else {
 				require.Empty(t, resourceFiles)
 			}
@@ -460,12 +569,12 @@ component:
 	component, manifest := getPublishedComponent(ctx, t, published)
 	require.Empty(t, component.Component.Import)
 	require.Equal(t, []string{"resources/0/child-values.yaml", "resources/1/root-values.yaml"}, component.Values.Files)
-	require.Equal(t, []v1beta1.File{{Source: "resources/2/child-file.txt", Destination: "/tmp/child-file.txt"}}, component.Component.Files)
+	require.Equal(t, []v1beta1.File{{Source: "files/0/child-file.txt", Destination: "/tmp/child-file.txt"}}, component.Component.Files)
 
 	resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
 	require.Contains(t, resourceFiles, "resources/0/child-values.yaml")
 	require.Contains(t, resourceFiles, "resources/1/root-values.yaml")
-	require.Contains(t, resourceFiles, "resources/2/child-file.txt")
+	require.Contains(t, resourceFiles, "files/0/child-file.txt")
 	require.NotContains(t, resourceFiles, "child/component.yaml")
 }
 
@@ -742,10 +851,12 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 		Values:     v1beta1.Values{Files: []string{"../external/values.yaml"}, Schema: filepath.Join(externalDir, "schema.json")},
 		Component: v1beta1.ComponentSpec{
 			Charts: []v1beta1.Chart{{
+				Name:        "chart",
 				Local:       &v1beta1.LocalSource{Path: filepath.Join(externalDir, "chart")},
 				ValuesFiles: []v1beta1.ValuesFile{{Path: "../external/chart-values.yaml"}},
 			}},
 			Manifests: []v1beta1.Manifest{{
+				Name:      "manifest",
 				Files:     []string{filepath.Join(externalDir, "manifest.yaml")},
 				Kustomize: v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
 			}},
@@ -764,20 +875,20 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 	require.Equal(t, "resources/0/values.yaml", publishedComponent.Values.Files[0])
 	require.Equal(t, "resources/1/schema.json", publishedComponent.Values.Schema)
 	require.Equal(t, "resources/2/chart", publishedComponent.Component.Charts[0].Local.Path)
-	require.Equal(t, "resources/3/chart-values.yaml", publishedComponent.Component.Charts[0].ValuesFiles[0].Path)
-	require.Equal(t, "resources/4/manifest.yaml", publishedComponent.Component.Manifests[0].Files[0])
-	require.Equal(t, "resources/5/kustomize", publishedComponent.Component.Manifests[0].Kustomize.Files[0])
-	require.Equal(t, "resources/6/file.txt", publishedComponent.Component.Files[0].Source)
+	require.Equal(t, "values/chart-0", publishedComponent.Component.Charts[0].ValuesFiles[0].Path)
+	require.Equal(t, "manifests/manifest-0.yaml", publishedComponent.Component.Manifests[0].Files[0])
+	require.Equal(t, "resources/3/kustomize", publishedComponent.Component.Manifests[0].Kustomize.Files[0])
+	require.Equal(t, "files/0/file.txt", publishedComponent.Component.Files[0].Source)
 
 	resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
 	for _, mountPath := range []string{
 		"resources/0/values.yaml",
 		"resources/1/schema.json",
 		"resources/2/chart/Chart.yaml",
-		"resources/3/chart-values.yaml",
-		"resources/4/manifest.yaml",
-		"resources/5/kustomize/kustomization.yaml",
-		"resources/6/file.txt",
+		"values/chart-0",
+		"manifests/manifest-0.yaml",
+		"resources/3/kustomize/kustomization.yaml",
+		"files/0/file.txt",
 	} {
 		require.Contains(t, resourceFiles, mountPath)
 	}
@@ -855,6 +966,9 @@ func getPublishedResourceFiles(ctx context.Context, t *testing.T, published regi
 			break
 		}
 		require.NoError(t, err)
+		if header.Typeflag == tar.TypeDir {
+			continue
+		}
 		require.Equal(t, byte(tar.TypeReg), header.Typeflag)
 		contents, err := io.ReadAll(tarReader)
 		require.NoError(t, err)
