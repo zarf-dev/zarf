@@ -25,6 +25,29 @@ func MaterializeSourceToLayout(ctx context.Context, source, destination string) 
 	return materializePath(ctx, source, destination, make(map[string]struct{}))
 }
 
+// resolveMaterializationDestination resolves existing destination parents
+// without creating output that a source walk could consume.
+func resolveMaterializationDestination(destination string) (string, error) {
+	existing, err := filepath.Abs(destination)
+	if err != nil {
+		return "", err
+	}
+
+	var missing string
+	for {
+		resolved, err := filepath.EvalSymlinks(existing)
+		if err == nil {
+			return filepath.Join(resolved, missing), nil
+		}
+		parent := filepath.Dir(existing)
+		if !os.IsNotExist(err) || parent == existing {
+			return "", err
+		}
+		missing = filepath.Join(filepath.Base(existing), missing)
+		existing = parent
+	}
+}
+
 func materializePath(ctx context.Context, source, destination string, ancestors map[string]struct{}) error {
 	info, err := os.Lstat(source)
 	if err != nil {
@@ -62,6 +85,14 @@ func materializePath(ctx context.Context, source, destination string, ancestors 
 		}
 		ancestors[resolvedSource] = struct{}{}
 		defer delete(ancestors, resolvedSource)
+
+		resolvedDestination, err := resolveMaterializationDestination(destination)
+		if err != nil {
+			return fmt.Errorf("resolving destination %q: %w", destination, err)
+		}
+		if rel, err := filepath.Rel(resolvedSource, resolvedDestination); err == nil && filepath.IsLocal(rel) {
+			return fmt.Errorf("cannot materialize source %q into destination %q: destination is within source directory", source, destination)
+		}
 
 		if err := os.MkdirAll(destination, info.Mode().Perm()); err != nil {
 			return err

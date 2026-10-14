@@ -76,3 +76,51 @@ func TestMaterializeSourceToLayoutRejectsCycle(t *testing.T) {
 	err := MaterializeSourceToLayout(testutil.TestContext(t), source, filepath.Join(t.TempDir(), "destination"))
 	require.ErrorContains(t, err, "symlink cycle")
 }
+
+func TestMaterializeSourceToLayoutRejectsDestinationWithinSource(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation requires elevated privileges")
+	}
+
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		destination func(root, source string) (string, error)
+	}{
+		{
+			name: "direct child",
+			destination: func(_ string, source string) (string, error) {
+				return filepath.Join(source, "materialized"), nil
+			},
+		},
+		{
+			name: "symlinked parent",
+			destination: func(root, source string) (string, error) {
+				staging := filepath.Join(root, "staging")
+				if err := os.Mkdir(staging, helpers.ReadWriteExecuteUser); err != nil {
+					return "", err
+				}
+				if err := os.Symlink(source, filepath.Join(staging, "source")); err != nil {
+					return "", err
+				}
+				return filepath.Join(staging, "source", "materialized"), nil
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			source := filepath.Join(root, "source")
+			require.NoError(t, os.Mkdir(source, helpers.ReadWriteExecuteUser))
+			require.NoError(t, os.WriteFile(filepath.Join(source, "file.txt"), []byte("source"), helpers.ReadAllWriteUser))
+
+			destination, err := tt.destination(root, source)
+			require.NoError(t, err)
+			err = MaterializeSourceToLayout(testutil.TestContext(t), source, destination)
+			require.ErrorContains(t, err, "destination is within source directory")
+			require.NoDirExists(t, destination)
+		})
+	}
+}
