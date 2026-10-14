@@ -383,7 +383,7 @@ func DownloadChartFromGitToTemp(ctx context.Context, source api.Repository) (str
 
 func finalizeChartPackage(ctx context.Context, chart api.Chart, paths layout.ChartPaths, saved string) error {
 	// Ensure the name is consistent for deployments
-	err := helpers.CreatePathAndCopy(saved, paths.Archive(chart.Name, chart.LegacyVersion))
+	err := layout.MaterializeSourceToLayout(ctx, saved, paths.Archive(chart.Name, chart.LegacyVersion))
 	if err != nil {
 		return fmt.Errorf("unable to save the final chart tarball: %w", err)
 	}
@@ -404,7 +404,7 @@ func packageValues(ctx context.Context, chart api.Chart, paths layout.ChartPaths
 				return fmt.Errorf(lang.ErrDownloading, valuesFile.Path, err)
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(valuesFile.Path, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, valuesFile.Path, dst); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", valuesFile.Path, err)
 			}
 		}

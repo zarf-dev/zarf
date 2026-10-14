@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package assemble
+package layout
 
 import (
 	"os"
@@ -14,7 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func TestMaterializePackageSourceSymlinks(t *testing.T) {
+func TestMaterializeSourceToLayoutSymlinks(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Windows symlink creation requires elevated privileges")
 	}
@@ -31,7 +31,7 @@ func TestMaterializePackageSourceSymlinks(t *testing.T) {
 		require.NoError(t, os.Symlink(filepath.Join("..", "targets", "directory"), filepath.Join(source, "directory-link")))
 
 		destination := filepath.Join(t.TempDir(), "destination")
-		require.NoError(t, materializePackageSource(testutil.TestContext(t), source, destination))
+		require.NoError(t, MaterializeSourceToLayout(testutil.TestContext(t), source, destination))
 
 		fileInfo, err := os.Lstat(filepath.Join(destination, "file-link"))
 		require.NoError(t, err)
@@ -53,7 +53,7 @@ func TestMaterializePackageSourceSymlinks(t *testing.T) {
 		require.NoError(t, os.Symlink(externalFile, source))
 
 		destination := filepath.Join(t.TempDir(), "destination")
-		require.NoError(t, materializePackageSource(testutil.TestContext(t), source, destination))
+		require.NoError(t, MaterializeSourceToLayout(testutil.TestContext(t), source, destination))
 
 		info, err := os.Lstat(destination)
 		require.NoError(t, err)
@@ -64,7 +64,7 @@ func TestMaterializePackageSourceSymlinks(t *testing.T) {
 	})
 }
 
-func TestMaterializePackageSourceRejectsCycle(t *testing.T) {
+func TestMaterializeSourceToLayoutRejectsCycle(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Windows symlink creation requires elevated privileges")
 	}
@@ -73,6 +73,6 @@ func TestMaterializePackageSourceRejectsCycle(t *testing.T) {
 	require.NoError(t, os.Mkdir(source, helpers.ReadWriteExecuteUser))
 	require.NoError(t, os.Symlink(".", filepath.Join(source, "loop")))
 
-	err := materializePackageSource(testutil.TestContext(t), source, filepath.Join(t.TempDir(), "destination"))
+	err := MaterializeSourceToLayout(testutil.TestContext(t), source, filepath.Join(t.TempDir(), "destination"))
 	require.ErrorContains(t, err, "symlink cycle")
 }

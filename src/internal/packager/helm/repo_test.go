@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -119,4 +121,52 @@ func TestDownloadPublishedChartFromOCI(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.FileExists(t, paths.Archive(chart.Name, chart.LegacyVersion))
+}
+
+func TestLocalChartSourcesMaterializeSymlinks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation requires elevated privileges")
+	}
+
+	t.Run("chart archive", func(t *testing.T) {
+		target := filepath.Join(t.TempDir(), "target.tgz")
+		require.NoError(t, os.WriteFile(target, []byte("chart archive"), 0o600))
+		source := filepath.Join(t.TempDir(), "source.tgz")
+		require.NoError(t, os.Symlink(target, source))
+
+		paths := layout.ChartPaths{ChartsDir: t.TempDir(), ValuesDir: t.TempDir()}
+		chart := api.Chart{Name: "chart", LegacyVersion: "1.0.0"}
+		require.NoError(t, finalizeChartPackage(testutil.TestContext(t), chart, paths, source))
+
+		destination := paths.Archive(chart.Name, chart.LegacyVersion)
+		info, err := os.Lstat(destination)
+		require.NoError(t, err)
+		require.Zero(t, info.Mode()&os.ModeSymlink)
+		content, err := os.ReadFile(destination)
+		require.NoError(t, err)
+		require.Equal(t, "chart archive", string(content))
+	})
+
+	t.Run("values file", func(t *testing.T) {
+		target := filepath.Join(t.TempDir(), "target-values.yaml")
+		require.NoError(t, os.WriteFile(target, []byte("value: materialized\n"), 0o600))
+		source := filepath.Join(t.TempDir(), "source-values.yaml")
+		require.NoError(t, os.Symlink(target, source))
+
+		paths := layout.ChartPaths{ChartsDir: t.TempDir(), ValuesDir: t.TempDir()}
+		chart := api.Chart{
+			Name:          "chart",
+			LegacyVersion: "1.0.0",
+			ValuesFiles:   []api.ValuesFile{{Path: source}},
+		}
+		require.NoError(t, packageValues(testutil.TestContext(t), chart, paths))
+
+		destination := paths.ValuesFile(chart.Name, chart.LegacyVersion, 0)
+		info, err := os.Lstat(destination)
+		require.NoError(t, err)
+		require.Zero(t, info.Mode()&os.ModeSymlink)
+		content, err := os.ReadFile(destination)
+		require.NoError(t, err)
+		require.Equal(t, "value: materialized\n", string(content))
+	})
 }

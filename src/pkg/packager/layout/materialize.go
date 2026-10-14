@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package assemble
+package layout
 
 import (
 	"context"
@@ -13,13 +13,19 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// materializePackageSource resolves source symlinks and writes their targets as
-// regular files or directories in destination.
-func materializePackageSource(ctx context.Context, source, destination string) error {
-	return materializePackagePath(ctx, source, destination, make(map[string]struct{}))
+// MaterializeSourceToLayout resolves symbolic links from a local package source
+// and writes the resulting regular files and directories to destination in
+// package staging.
+//
+// Use it for every local path selected by a package definition before that
+// content enters package staging. Callers must provide a destination already
+// validated as being within staging. Do not use it for generated, downloaded,
+// or archive-extracted content.
+func MaterializeSourceToLayout(ctx context.Context, source, destination string) error {
+	return materializePath(ctx, source, destination, make(map[string]struct{}))
 }
 
-func materializePackagePath(ctx context.Context, source, destination string, ancestors map[string]struct{}) error {
+func materializePath(ctx context.Context, source, destination string, ancestors map[string]struct{}) error {
 	info, err := os.Lstat(source)
 	if err != nil {
 		return err
@@ -34,8 +40,8 @@ func materializePackagePath(ctx context.Context, source, destination string, anc
 		if err != nil {
 			return fmt.Errorf("getting absolute symlink target %q: %w", target, err)
 		}
-		logger.From(ctx).Warn("materializing symlink in package source", "source", source, "target", target)
-		return materializePackagePath(ctx, target, destination, ancestors)
+		logger.From(ctx).Warn("materializing package source symlink", "source", source, "target", target, "destination", destination)
+		return materializePath(ctx, target, destination, ancestors)
 	}
 
 	resolvedSource, err := filepath.EvalSymlinks(source)
@@ -68,7 +74,7 @@ func materializePackagePath(ctx context.Context, source, destination string, anc
 			return err
 		}
 		for _, entry := range entries {
-			if err := materializePackagePath(ctx, filepath.Join(source, entry.Name()), filepath.Join(destination, entry.Name()), ancestors); err != nil {
+			if err := materializePath(ctx, filepath.Join(source, entry.Name()), filepath.Join(destination, entry.Name()), ancestors); err != nil {
 				return err
 			}
 		}
