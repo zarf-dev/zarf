@@ -282,79 +282,34 @@ func TestCompress(t *testing.T) {
 	}
 }
 
-func TestCompressMaterializesSymlinks(t *testing.T) {
+func TestCompressPreservesSymlinks(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("symbolic link creation requires elevated privileges on Windows")
 	}
 
-	t.Run("file", func(t *testing.T) {
-		target := filepath.Join(t.TempDir(), "target.txt")
-		writeTestFile(t, target, "linked file content")
-
-		source := filepath.Join(t.TempDir(), "linked.txt")
-		require.NoError(t, os.Symlink(target, source))
-
-		archivePath := filepath.Join(t.TempDir(), "archive.tar")
-		require.NoError(t, Compress(t.Context(), []string{source}, archivePath, CompressOpts{}))
-
-		outputDir := t.TempDir()
-		require.NoError(t, Decompress(t.Context(), archivePath, outputDir, DecompressOpts{}))
-		info, err := os.Lstat(filepath.Join(outputDir, "linked.txt"))
-		require.NoError(t, err)
-		require.Zero(t, info.Mode()&os.ModeSymlink)
-		require.Equal(t, "linked file content", readTestFile(t, filepath.Join(outputDir, "linked.txt")))
-	})
-
-	t.Run("directory", func(t *testing.T) {
-		targetDir := t.TempDir()
-		writeTestFile(t, filepath.Join(targetDir, "nested.txt"), "linked directory content")
-
-		source := filepath.Join(t.TempDir(), "linked-directory")
-		require.NoError(t, os.Symlink(targetDir, source))
-
-		archivePath := filepath.Join(t.TempDir(), "archive.tar")
-		require.NoError(t, Compress(t.Context(), []string{source}, archivePath, CompressOpts{}))
-
-		outputDir := t.TempDir()
-		require.NoError(t, Decompress(t.Context(), archivePath, outputDir, DecompressOpts{}))
-		info, err := os.Lstat(filepath.Join(outputDir, "linked-directory", "nested.txt"))
-		require.NoError(t, err)
-		require.Zero(t, info.Mode()&os.ModeSymlink)
-		require.Equal(t, "linked directory content", readTestFile(t, filepath.Join(outputDir, "linked-directory", "nested.txt")))
-	})
-}
-
-func TestCompressRejectsInvalidSymlinks(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("symbolic link creation requires elevated privileges on Windows")
-	}
-
-	t.Run("broken link", func(t *testing.T) {
-		source := filepath.Join(t.TempDir(), "broken")
-		require.NoError(t, os.Symlink("missing", source))
-
-		archivePath := filepath.Join(t.TempDir(), "archive.tar")
-		err := Compress(t.Context(), []string{source}, archivePath, CompressOpts{})
-		require.ErrorContains(t, err, "resolving symlink")
-		require.NoFileExists(t, archivePath)
-	})
-
-	for _, tt := range []struct {
-		name string
-		link string
+	tests := []struct {
+		name   string
+		target string
 	}{
-		{name: "self", link: "."},
-		{name: "ancestor", link: ".."},
-	} {
-		t.Run("directory cycle/"+tt.name, func(t *testing.T) {
-			source := filepath.Join(t.TempDir(), "source")
-			require.NoError(t, os.MkdirAll(filepath.Join(source, "child"), testDirPerm))
-			require.NoError(t, os.Symlink(tt.link, filepath.Join(source, "child", "cycle")))
+		{name: "relative file target", target: "target.txt"},
+		{name: "broken target", target: "missing"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			source := filepath.Join(t.TempDir(), "linked")
+			require.NoError(t, os.Symlink(tt.target, source))
 
 			archivePath := filepath.Join(t.TempDir(), "archive.tar")
-			err := Compress(t.Context(), []string{source}, archivePath, CompressOpts{})
-			require.ErrorContains(t, err, "symbolic link cycle")
-			require.NoFileExists(t, archivePath)
+			require.NoError(t, Compress(t.Context(), []string{source}, archivePath, CompressOpts{}))
+
+			outputDir := t.TempDir()
+			require.NoError(t, Decompress(t.Context(), archivePath, outputDir, DecompressOpts{}))
+			info, err := os.Lstat(filepath.Join(outputDir, "linked"))
+			require.NoError(t, err)
+			require.NotZero(t, info.Mode()&os.ModeSymlink)
+			target, err := os.Readlink(filepath.Join(outputDir, "linked"))
+			require.NoError(t, err)
+			require.Equal(t, tt.target, target)
 		})
 	}
 }

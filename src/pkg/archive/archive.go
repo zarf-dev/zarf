@@ -121,9 +121,6 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 	if dest == "" {
 		return fmt.Errorf("dest cannot be empty")
 	}
-	if err := validateCompressionSources(ctx, sources); err != nil {
-		return err
-	}
 
 	// Map local paths to archive names.
 	mapping := make(map[string]string, len(sources))
@@ -132,7 +129,6 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 	}
 	files, err := archives.FilesFromDisk(ctx, &archives.FromDiskOptions{
 		ClearAttributes: true,
-		FollowSymlinks:  true,
 	}, mapping)
 	if err != nil {
 		return fmt.Errorf("failed to stat sources: %w", err)
@@ -167,63 +163,6 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 
 	if err := archiver.Archive(ctx, out, files); err != nil {
 		return fmt.Errorf("archive failed for %q: %w", dest, err)
-	}
-	return nil
-}
-
-// validateCompressionSources rejects source directory symlink cycles before
-// FilesFromDisk follows them while gathering archive entries.
-func validateCompressionSources(ctx context.Context, sources []string) error {
-	for _, source := range sources {
-		if err := validateCompressionSource(ctx, source, make(map[string]struct{})); err != nil {
-			return fmt.Errorf("validating source %q: %w", source, err)
-		}
-	}
-	return nil
-}
-
-func validateCompressionSource(ctx context.Context, source string, ancestors map[string]struct{}) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-
-	info, err := os.Lstat(source)
-	if err != nil {
-		return err
-	}
-	if info.Mode()&os.ModeSymlink != 0 {
-		target, err := filepath.EvalSymlinks(source)
-		if err != nil {
-			return fmt.Errorf("resolving symlink %q: %w", source, err)
-		}
-		return validateCompressionSource(ctx, target, ancestors)
-	}
-	if !info.IsDir() {
-		return nil
-	}
-
-	resolvedSource, err := filepath.EvalSymlinks(source)
-	if err != nil {
-		return fmt.Errorf("resolving source %q: %w", source, err)
-	}
-	resolvedSource, err = filepath.Abs(resolvedSource)
-	if err != nil {
-		return fmt.Errorf("getting absolute source %q: %w", resolvedSource, err)
-	}
-	if _, found := ancestors[resolvedSource]; found {
-		return fmt.Errorf("symbolic link cycle includes %q", source)
-	}
-	ancestors[resolvedSource] = struct{}{}
-	defer delete(ancestors, resolvedSource)
-
-	entries, err := os.ReadDir(source)
-	if err != nil {
-		return err
-	}
-	for _, entry := range entries {
-		if err := validateCompressionSource(ctx, filepath.Join(source, entry.Name()), ancestors); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -433,18 +372,11 @@ func filterHandler(root *os.Root, wantSet, found map[string]bool) func(_ context
 }
 
 // writeEntry validates and dispatches an archive entry within root.
-// Directory and file operations use os.Root methods, which provide
+// Directory, file, and hardlink operations use os.Root methods, which provide
 // kernel-enforced path traversal and symlink escape protection.
 //
-// The linkTarget parameter is passed separately from f.LinkTarget so
-// callers like stripHandler can adjust it (e.g., strip a path prefix
-// from hardlink targets, which are archive-root-relative in tar).
-//
-// Hardlinks are supported because os.Root.Link validates both the archive-root
-// relative source and destination. Symbolic links are rejected because their
-// target is resolved later by filesystem consumers, outside os.Root's
-// containment guarantees. A non-tar entry with a link target is a symbolic
-// link because zip has no hardlink representation.
+// Symbolic-link targets retain the archive's original semantics. A later
+// filesystem operation through a link is still constrained by os.Root.
 func writeEntry(root *os.Root, rel, linkTarget string, f archives.FileInfo, flags int) error {
 	if err := validateEntryName(rel); err != nil {
 		return err
@@ -455,20 +387,20 @@ func writeEntry(root *os.Root, rel, linkTarget string, f archives.FileInfo, flag
 	rel = strings.TrimSuffix(rel, "/")
 	if hdr, ok := f.Header.(*tar.Header); ok {
 		switch hdr.Typeflag {
-		case tar.TypeSymlink:
-			return errors.New("symbolic links in archives are not supported")
 		case tar.TypeLink:
 			if err := validateEntryName(linkTarget); err != nil {
 				return err
 			}
 			return root.Link(linkTarget, rel)
+		case tar.TypeSymlink:
+			return root.Symlink(filepath.FromSlash(linkTarget), rel)
 		}
 	}
 	switch {
 	case f.IsDir():
 		return root.MkdirAll(rel, f.Mode().Perm())
-	case linkTarget != "":
-		return errors.New("symbolic links in archives are not supported")
+	case f.Mode()&os.ModeSymlink != 0 || linkTarget != "":
+		return root.Symlink(filepath.FromSlash(linkTarget), rel)
 	default:
 		return writeFile(root, rel, f, flags)
 	}
