@@ -61,8 +61,26 @@ func TestValidatePackage(t *testing.T) {
 			}}},
 		},
 		{
-			name: "init package without service",
-			pkg:  v1beta1.Package{Kind: v1beta1.ZarfInitConfig, Components: []v1beta1.Component{{Name: "custom"}}},
+			name: "init package without services",
+			pkg: v1beta1.Package{Kind: v1beta1.ZarfInitConfig, Components: []v1beta1.Component{
+				{Name: "first"},
+				{Name: "second"},
+			}},
+		},
+		{
+			name: "init package with distinct services",
+			pkg: v1beta1.Package{Kind: v1beta1.ZarfInitConfig, Components: []v1beta1.Component{
+				{Name: "registry", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.ServiceRegistry}},
+				{Name: "seed-registry", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.ServiceSeedRegistry}},
+			}},
+		},
+		{
+			name: "init package with duplicate service",
+			pkg: v1beta1.Package{Kind: v1beta1.ZarfInitConfig, Components: []v1beta1.Component{
+				{Name: "first", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.ServiceRegistry}},
+				{Name: "second", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.ServiceRegistry}},
+			}},
+			expectedErrs: []string{`service "registry" is declared by multiple components ("first", "second")`},
 		},
 		{
 			name: "ordinary package with service",
