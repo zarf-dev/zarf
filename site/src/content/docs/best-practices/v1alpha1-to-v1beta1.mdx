@@ -133,19 +133,6 @@ Rendering writes `zarf.gen.yaml` alongside the template and validates the genera
 
 For local component templates, render each `<name>.tpl.yaml` separately and set `import.local[].path` to `<name>.gen.yaml`; imports are not rendered automatically. Remote components must be fully rendered before publishing and cannot be templated during import.
 
-## Verify the migration
-
-Lint and inspect the migrated definition, supplying the same deploy-time inputs as before:
-
-```bash
-zarf dev lint zarf-v1beta1.yaml
-zarf dev inspect manifests zarf-v1beta1.yaml --values deploy-values.yaml
-```
-
-For package templates, render first and use `zarf.gen.yaml` in these commands.
-
-Compare rendered manifests and Helm values before and after migration, then create and deploy the rebuilt package to verify actions, component selection, and readiness checks. Check the generated `build.versionRequirements` before distributing it to older CLIs; some v1beta1 behavior requires a newer deployer.
-
 ## Field conversions
 
 These conversions are automatic. Paths below are relative to each component unless prefixed with `metadata` or `build`. `[]` denotes a list entry; `*` denotes `onCreate`, `onDeploy`, or `onRemove`.
@@ -248,3 +235,16 @@ repositories:
 ```
 
 Repository refs follow the same `tag` / `branch` / `commit` rules as Git charts. Omit `ref` to mirror all branches and tags.
+
+## Verify the migration
+
+Lint and inspect the migrated definition, supplying the same deploy-time inputs as before:
+
+```bash
+zarf dev lint zarf-v1beta1.yaml
+zarf dev inspect manifests zarf-v1beta1.yaml --values deploy-values.yaml
+```
+
+For package templates, render first and use `zarf.gen.yaml` in these commands.
+
+Compare rendered manifests and Helm values before and after migration, then create and deploy the rebuilt package to verify actions, component selection, and readiness checks. Check the generated `build.versionRequirements` before distributing it to older CLIs; some v1beta1 behavior requires a newer deployer.
