@@ -1,0 +1,16 @@
+---
+title: "Migrating v1alpha1 PackageConfig to v1beta1"
+---
+
+This guide details how to migrate your package from v1alpha1 to v1beta1. V1beta1 is the schema that will have long term support in v1.0.
+
+V1beta1 removes several existing fields from v1alpha1. As Zarf and the surrounding ecosystem has matured, we've found alternatives to these fields that have a better UX, are more performant, or more secure. Here is a list of the fields removed without direct replacement:
+
+- `.variables`, `.constants`, and `.components.[x].charts.[x].variables` - See [variables to values] for a guide to migrate off of this field.
+- `.components.[x].dataInjections` See for https://docs.zarf.dev/best-practices/data-injections-migration/ details migrating off of this field.
+- `.metadata.yolo` - Replaced by [connected deploys](link)
+- `.components.[x].group` - We recommend using `components[x].selector.flavor`. This shifts component selection to the create side.
+- `.components.[x].default` This was used to determine the default `.components[x].group`. It also gave the default to the (Y/N) prompt during interactive deploys, this use was secondary and not important enough to keep the field around.
+
+
+Many fields have been restructured or renamed. See [proposal](link) for a list of every field changed. `zarf dev upgrade` will automatically handle migrating each of this fields.
