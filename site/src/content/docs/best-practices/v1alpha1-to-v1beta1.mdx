@@ -1,5 +1,5 @@
 ---
-title: "Migrating v1alpha1 PackageConfig to v1beta1"
+title: "Migrating Packages from v1alpha1 to v1beta1"
 ---
 
 This guide migrates a `ZarfPackageConfig` definition from `zarf.dev/v1alpha1` to `zarf.dev/v1beta1`. Existing v1alpha1 definitions remain supported. A definition without `apiVersion` is treated as v1alpha1 whereas v1beta1 requires `apiVersion: zarf.dev/v1beta1`.
@@ -103,14 +103,14 @@ Render it, then create the package:
 
 ```bash
 zarf dev template --set VERSION=1.0.0 --set IMAGE=ghcr.io/example/app:1.0.0
-zarf package create zarf.gen.yaml --confirm
+zarf package create zarf.gen.yaml
 ```
 
 Rendering writes `zarf.gen.yaml` alongside the template and validates the generated schema. Re-render whenever template inputs change.
 
 For local component templates, render each `<name>.tpl.yaml` separately and set `import.local[].path` to `<name>.gen.yaml`. Remote components must be fully rendered before publishing and cannot be templated during import.
 
-## Field conversions
+## Schema Changes and Field Mappings
 
 These conversions are automatic. Paths below are relative to each component unless prefixed with `metadata` or `build`. `[]` denotes a list entry; `*` denotes `onCreate`, `onDeploy`, or `onRemove`.
 
