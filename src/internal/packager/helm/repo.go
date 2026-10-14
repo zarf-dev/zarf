@@ -165,8 +165,9 @@ func PackageChartFromLocalFiles(ctx context.Context, chart api.Chart, paths layo
 		client.Destination = temp
 		saved, err = client.Run(localPath, nil)
 	} else {
-		saved = filepath.Join(temp, filepath.Base(localPath))
-		err = helpers.CreatePathAndCopy(localPath, saved)
+		// Keep the archive at its original path so final staging resolves relative
+		// symbolic-link targets against their source directory.
+		saved = localPath
 	}
 	defer func(l *slog.Logger) {
 		err := os.RemoveAll(temp)

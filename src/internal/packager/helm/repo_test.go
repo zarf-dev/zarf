@@ -128,23 +128,33 @@ func TestLocalChartSourcesMaterializeSymlinks(t *testing.T) {
 		t.Skip("Windows symlink creation requires elevated privileges")
 	}
 
-	t.Run("chart archive", func(t *testing.T) {
-		target := filepath.Join(t.TempDir(), "target.tgz")
-		require.NoError(t, os.WriteFile(target, []byte("chart archive"), 0o600))
-		source := filepath.Join(t.TempDir(), "source.tgz")
-		require.NoError(t, os.Symlink(target, source))
+	t.Run("relative chart archive", func(t *testing.T) {
+		sourceDir := t.TempDir()
+		target, err := chartutil.Save(&chartv2.Chart{Metadata: &chartv2.Metadata{
+			APIVersion: chartv2.APIVersionV1,
+			Name:       "chart",
+			Version:    "1.0.0",
+		}}, sourceDir)
+		require.NoError(t, err)
+
+		source := filepath.Join(sourceDir, "selected.tgz")
+		require.NoError(t, os.Symlink(filepath.Base(target), source))
 
 		paths := layout.ChartPaths{ChartsDir: t.TempDir(), ValuesDir: t.TempDir()}
-		chart := api.Chart{Name: "chart", LegacyVersion: "1.0.0"}
-		require.NoError(t, finalizeChartPackage(testutil.TestContext(t), chart, paths, source))
+		chart := api.Chart{
+			Name:          "chart",
+			LegacyVersion: "1.0.0",
+			Local:         &api.LocalSource{Path: source},
+		}
+		require.NoError(t, PackageChartFromLocalFiles(testutil.TestContext(t), chart, paths, t.TempDir(), types.RemoteOptions{}))
 
 		destination := paths.Archive(chart.Name, chart.LegacyVersion)
 		info, err := os.Lstat(destination)
 		require.NoError(t, err)
 		require.Zero(t, info.Mode()&os.ModeSymlink)
-		content, err := os.ReadFile(destination)
+		_, loaded, err := loadAndValidateChart(destination)
 		require.NoError(t, err)
-		require.Equal(t, "chart archive", string(content))
+		require.Equal(t, "chart", loaded.Metadata.Name)
 	})
 
 	t.Run("values file", func(t *testing.T) {
