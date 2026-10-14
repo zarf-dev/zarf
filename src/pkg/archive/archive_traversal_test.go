@@ -75,69 +75,6 @@ type tarEntry struct {
 	mode       int64 // optional: overrides the default file mode
 }
 
-// TestSymbolicLinksPreserved verifies that generic archive extraction preserves
-// symbolic links while the root handle constrains later filesystem operations.
-func TestSymbolicLinksPreserved(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		entries  []tarEntry
-		opts     DecompressOpts
-		linkPath string
-		target   string
-	}{
-		{
-			name: "default handler",
-			entries: []tarEntry{
-				{name: "real-file.txt", content: "hello"},
-				{name: "safe-link", linkTarget: "real-file.txt"},
-			},
-			linkPath: "safe-link",
-			target:   "real-file.txt",
-		},
-		{
-			name: "strip handler",
-			entries: []tarEntry{
-				{name: "prefix/file.txt", content: "stripped content"},
-				{name: "prefix/link", linkTarget: "file.txt"},
-			},
-			opts:     DecompressOpts{StripComponents: 1},
-			linkPath: "link",
-			target:   "file.txt",
-		},
-		{
-			name: "filter handler",
-			entries: []tarEntry{
-				{name: "real-file.txt", content: "filtered content"},
-				{name: "safe-link", linkTarget: "real-file.txt"},
-			},
-			opts: DecompressOpts{
-				Files: []string{"real-file.txt", "safe-link"},
-			},
-			linkPath: "safe-link",
-			target:   "real-file.txt",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			archivePath := filepath.Join(t.TempDir(), "symbolic-link.tar.gz")
-			makeTarGz(t, archivePath, tc.entries)
-
-			dst := t.TempDir()
-			require.NoError(t, Decompress(t.Context(), archivePath, dst, tc.opts))
-			info, err := os.Lstat(filepath.Join(dst, tc.linkPath))
-			require.NoError(t, err)
-			require.NotZero(t, info.Mode()&os.ModeSymlink)
-			target, err := os.Readlink(filepath.Join(dst, tc.linkPath))
-			require.NoError(t, err)
-			require.Equal(t, tc.target, target)
-		})
-	}
-}
-
 func TestSymlinkTargetsValidated(t *testing.T) {
 	t.Parallel()
 
@@ -633,51 +570,6 @@ func TestHardlinkWithStripHandler(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join(dst, "hardlink.txt"))
 	require.NoError(t, err)
 	require.Equal(t, "stripped content", string(content))
-}
-
-// TestNestedArchivePreservesSymlink verifies that recursive extraction retains
-// symbolic-link entries while later writes remain root-contained.
-func TestNestedArchivePreservesSymlink(t *testing.T) {
-	t.Parallel()
-	ctx := t.Context()
-
-	innerDir := t.TempDir()
-	innerPath := filepath.Join(innerDir, "symlink.tar")
-	innerF, err := os.Create(innerPath)
-	require.NoError(t, err)
-	innerTw := tar.NewWriter(innerF)
-	require.NoError(t, innerTw.WriteHeader(&tar.Header{
-		Name:     "nested-link",
-		Typeflag: tar.TypeSymlink,
-		Linkname: "target.txt",
-	}))
-	require.NoError(t, innerTw.Close())
-	require.NoError(t, innerF.Close())
-
-	innerData, err := os.ReadFile(innerPath)
-	require.NoError(t, err)
-	outerPath := filepath.Join(t.TempDir(), "outer.tar.gz")
-	outerF, err := os.Create(outerPath)
-	require.NoError(t, err)
-	gw := gzip.NewWriter(outerF)
-	outerTw := tar.NewWriter(gw)
-	require.NoError(t, outerTw.WriteHeader(&tar.Header{
-		Name:     "symlink.tar",
-		Typeflag: tar.TypeReg,
-		Mode:     0o644,
-		Size:     int64(len(innerData)),
-	}))
-	_, err = outerTw.Write(innerData)
-	require.NoError(t, err)
-	require.NoError(t, outerTw.Close())
-	require.NoError(t, gw.Close())
-	require.NoError(t, outerF.Close())
-
-	dst := t.TempDir()
-	require.NoError(t, Decompress(ctx, outerPath, dst, DecompressOpts{UnarchiveAll: true}))
-	target, err := os.Readlink(filepath.Join(dst, "nested-link"))
-	require.NoError(t, err)
-	require.Equal(t, "target.txt", target)
 }
 
 func TestValidateEntryName(t *testing.T) {

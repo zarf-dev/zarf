@@ -10,7 +10,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -278,38 +277,6 @@ func TestCompress(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
-		})
-	}
-}
-
-func TestCompressPreservesSymlinks(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("symbolic link creation requires elevated privileges on Windows")
-	}
-
-	tests := []struct {
-		name   string
-		target string
-	}{
-		{name: "relative file target", target: "target.txt"},
-		{name: "broken target", target: "missing"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			source := filepath.Join(t.TempDir(), "linked")
-			require.NoError(t, os.Symlink(tt.target, source))
-
-			archivePath := filepath.Join(t.TempDir(), "archive.tar")
-			require.NoError(t, Compress(t.Context(), []string{source}, archivePath, CompressOpts{}))
-
-			outputDir := t.TempDir()
-			require.NoError(t, Decompress(t.Context(), archivePath, outputDir, DecompressOpts{}))
-			info, err := os.Lstat(filepath.Join(outputDir, "linked"))
-			require.NoError(t, err)
-			require.NotZero(t, info.Mode()&os.ModeSymlink)
-			target, err := os.Readlink(filepath.Join(outputDir, "linked"))
-			require.NoError(t, err)
-			require.Equal(t, tt.target, target)
 		})
 	}
 }

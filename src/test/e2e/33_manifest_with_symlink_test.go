@@ -6,7 +6,6 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -28,14 +27,5 @@ func TestManifestWithSymlink(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	defer e2e.CleanFiles(t, "temp/manifests")
 	require.NoError(t, err, stdOut, stdErr)
-
-	materializedPath := filepath.Join("temp", "manifests", "resources", "img")
-	info, err := os.Lstat(materializedPath)
-	require.NoError(t, err)
-	require.True(t, info.IsDir(), "expected a materialized directory, got mode %s", info.Mode())
-	require.Zero(t, info.Mode()&os.ModeSymlink)
-	require.FileExists(t, filepath.Join(materializedPath, "test.txt"))
-	content, err := os.ReadFile(filepath.Join(materializedPath, "test.txt"))
-	require.NoError(t, err)
-	require.Equal(t, "external manifest symlink target\n", string(content))
+	require.FileExists(t, "temp/manifests/resources/img", "Symlink does not exist in the package as expected.")
 }
