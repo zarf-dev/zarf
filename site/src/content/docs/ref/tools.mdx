@@ -8,6 +8,14 @@ sidebar:
 TODO: finish this page for all embedded CLIs
 */}
 
+For embedded CLIs such as kubectl, Helm, and yq, place Zarf global flags before the tool name. Arguments after the tool name are parsed by that tool:
+
+```shell
+zarf tools --no-color kubectl get pods -l "somelabel=blah"
+```
+
+Zarf's logging flags control Zarf's own log messages, including those from registry commands. Each embedded CLI retains its own logging and color controls. Zarf commands such as `wait-for` (including its `wait` and `w` aliases) use Zarf's logging configuration.
+
 ## yq
 
 > command: [`zarf tools yq`](/commands/zarf_tools_yq)

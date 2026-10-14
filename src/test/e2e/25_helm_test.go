@@ -329,7 +329,7 @@ func TestHelmListKinds(t *testing.T) {
 
 	// the configmaps only exist if helm accepted the list documents, and they only carry the
 	// package label if zarf labeled the items rather than the list wrapping them
-	kubectlOut, _, err := e2e.Kubectl(t, "-n", "list-kinds", "get", "configmaps", "-l", "zarf.dev/package=list-kinds", "-o", "jsonpath={.items[*].metadata.name}")
+	kubectlOut, _, err := e2e.Zarf(t, "tools", "--no-color", "kubectl", "-n", "list-kinds", "get", "configmaps", "-l", "zarf.dev/package=list-kinds", "-o", "jsonpath={.items[*].metadata.name}")
 	require.NoError(t, err)
 	require.Contains(t, kubectlOut, "list-one")
 	require.Contains(t, kubectlOut, "list-two")

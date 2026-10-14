@@ -192,6 +192,7 @@ func initViper() *viper.Viper {
 
 	// Skip viper file setup for vendor-only commands
 	if checkVendorOnlyFromArgs() {
+		setLoggingDefaults(v)
 		return v
 	}
 
@@ -280,10 +281,14 @@ func PrintViperConfigUsed(ctx context.Context) error {
 	return nil
 }
 
+func setLoggingDefaults(v *viper.Viper) {
+	defaults := logger.ConfigDefault()
+	v.SetDefault(VLogLevel, defaults.Level.String())
+	v.SetDefault(VLogFormat, string(defaults.Format))
+}
+
 func setDefaults(v *viper.Viper) {
-	// Root defaults that are non-zero values
-	v.SetDefault(VLogLevel, "info")
-	v.SetDefault(VLogFormat, string(logger.FormatConsole))
+	setLoggingDefaults(v)
 
 	// Package defaults that are non-zero values
 	v.SetDefault(VPkgOCIConcurrency, zoci.DefaultConcurrency)

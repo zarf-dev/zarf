@@ -51,8 +51,6 @@ func newRegistryCommand() *cobra.Command {
 		Aliases: []string{"r"},
 		Short:   lang.CmdToolsRegistryShort,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			// TODO (@austinabro321) once the code in cmd is simplified, we should change this to respect
-			// the log-format flag
 			l := logger.Default()
 			ctx := logger.WithContext(cmd.Context(), l)
 			cmd.SetContext(ctx)

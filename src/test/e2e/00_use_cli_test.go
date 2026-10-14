@@ -5,6 +5,7 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,6 +24,62 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test"
 )
+
+func TestToolsLogging(t *testing.T) {
+	t.Parallel()
+
+	t.Run("registry logging flags", func(t *testing.T) {
+		t.Parallel()
+		for _, tc := range []struct {
+			name  string
+			flags []string
+		}{
+			{name: "no color", flags: []string{"--no-color"}},
+			{name: "json", flags: []string{"--log-format", "json"}},
+			{name: "level filter", flags: []string{"--log-level", "error"}},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+				args := append([]string{"tools"}, tc.flags...)
+				args = append(args, "crane", "version")
+				_, stderr, err := e2e.Zarf(t, args...)
+				require.NoError(t, err, stderr)
+				switch tc.name {
+				case "no color":
+					require.Contains(t, stderr, "'zarf tools crane' is deprecated")
+					require.NotContains(t, stderr, "\x1b[")
+				case "json":
+					var entry struct {
+						Level string `json:"level"`
+						Msg   string `json:"msg"`
+					}
+					require.NoError(t, json.Unmarshal([]byte(stderr), &entry))
+					require.Equal(t, "WARN", entry.Level)
+					require.Contains(t, entry.Msg, "'zarf tools crane' is deprecated")
+				case "level filter":
+					require.Empty(t, stderr)
+				}
+			})
+		}
+	})
+
+	t.Run("wait logging across aliases", func(t *testing.T) {
+		t.Parallel()
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		t.Cleanup(server.Close)
+		for _, name := range []string{"wait-for", "wait", "w"} {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+				_, stderr, err := e2e.Zarf(t, "tools", "--no-color", name, "http", strings.TrimPrefix(server.URL, "http://"), "200", "--timeout=3s")
+				require.NoError(t, err, stderr)
+				require.Contains(t, stderr, "direct use of `zarf tools wait-for` is deprecated")
+				require.NotContains(t, stderr, "\x1b[")
+			})
+		}
+	})
+}
 
 func TestTrustedRootCreate(t *testing.T) {
 	t.Parallel()

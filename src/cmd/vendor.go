@@ -5,12 +5,13 @@
 package cmd
 
 import (
+	"io"
 	"os"
-	"strings"
-
 	"slices"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/config"
 )
 
@@ -23,8 +24,6 @@ var vendorCmds = []string{
 	"k9s",
 	"monitor",
 	"m",
-	"wait",
-	"w",
 	"crane",
 	"registry",
 	"r",
@@ -41,32 +40,74 @@ func checkVendorOnlyFromArgs() bool {
 
 // checkVendorOnlyFromPath checks if the cobra command is a vendor-only command
 func checkVendorOnlyFromPath(cmd *cobra.Command) bool {
-	args := strings.Split(cmd.CommandPath(), " ")
-	// Check for "zarf tools|t <cmd>" where <cmd> is in the vendorCmd list
-	return IsVendorCmd(args, vendorCmds)
+	for cmd.HasParent() {
+		if cmd.Parent().Name() == "tools" {
+			return slices.Contains(vendorCmds, cmd.Name())
+		}
+		cmd = cmd.Parent()
+	}
+	return false
 }
 
 // IsVendorCmd checks if the command is a vendor command.
 func IsVendorCmd(args []string, vendoredCmds []string) bool {
-	if config.ActionsCommandZarfPrefix != "" {
+	invocation, err := parseVendorInvocation(args, vendoredCmds)
+	return err == nil && invocation != nil
+}
+
+type vendorInvocation struct {
+	flags    []string
+	args     []string
+	toolArgs []string
+}
+
+// parseVendorInvocation finds the tool boundary using Zarf's flag definitions.
+// It leaves arguments after the tool name untouched, including tool flags.
+func parseVendorInvocation(args []string, vendoredCmds []string) (*vendorInvocation, error) {
+	if len(args) == 0 {
+		return nil, nil
+	}
+	args = args[1:]
+	if config.ActionsCommandZarfPrefix != "" && len(args) > 0 {
+		args = args[1:]
+	}
+	var completion string
+	if len(args) > 0 && (args[0] == cobra.ShellCompRequestCmd || args[0] == cobra.ShellCompNoDescRequestCmd) {
+		completion = args[0]
 		args = args[1:]
 	}
 
-	// under the hood cobra uses the subcommand "__complete" to populate the various shell commands/arguments
-	// because of that we remove the argument containing the "__complete", then proceed our normal logic.
-	if len(args) > 1 {
-		if args[1] == cobra.ShellCompRequestCmd || args[1] == cobra.ShellCompNoDescRequestCmd {
-			args = args[1:]
-		}
+	var options rootOptions
+	flags := newRootFlagSet(viper.New(), &options)
+	flags.BoolP("help", "h", false, "help for zarf")
+	flags.SetInterspersed(false)
+	flags.SetOutput(io.Discard)
+	// Discovery consumes flag values without applying or validating them. The
+	// selected command's parser validates them before execution.
+	discover := func(*pflag.Flag, string) error { return nil }
+	if err := flags.ParseAll(args, discover); err != nil {
+		return nil, err
 	}
-
-	if len(args) > 2 {
-		if args[1] == "tools" || args[1] == "t" {
-			if slices.Contains(vendoredCmds, args[2]) {
-				return true
-			}
-		}
+	remaining := flags.Args()
+	if flags.ArgsLenAtDash() >= 0 || len(remaining) == 0 || (remaining[0] != "tools" && remaining[0] != "t") {
+		return nil, nil
 	}
-
-	return false
+	prefixFlags := args[:len(args)-len(remaining)]
+	if err := flags.ParseAll(remaining[1:], discover); err != nil {
+		return nil, err
+	}
+	toolArgs := flags.Args()
+	if flags.ArgsLenAtDash() >= 0 || len(toolArgs) == 0 || !slices.Contains(vendoredCmds, toolArgs[0]) {
+		return nil, nil
+	}
+	toolPrefixFlags := remaining[1 : len(remaining)-len(toolArgs)]
+	invocation := &vendorInvocation{
+		flags:    append(slices.Clone(prefixFlags), toolPrefixFlags...),
+		args:     append([]string{remaining[0]}, toolArgs...),
+		toolArgs: slices.Clone(toolArgs),
+	}
+	if completion != "" {
+		invocation.args = append([]string{completion}, invocation.args...)
+	}
+	return invocation, nil
 }

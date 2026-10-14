@@ -16,6 +16,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"helm.sh/helm/v4/pkg/kube"
 
 	"github.com/zarf-dev/zarf/src/config"
@@ -69,7 +70,7 @@ func (o *outputFormat) Type() string {
 	return "outputFormat"
 }
 
-var rootCmd = NewZarfCommand()
+var rootCmd, rootCmdError = newZarfCommand()
 
 func preRun(cmd *cobra.Command, _ []string) error {
 	// This ensures the field manager is set to Zarf during any Helm SDK actions
@@ -179,6 +180,13 @@ func run(cmd *cobra.Command, _ []string) {
 
 // NewZarfCommand creates the `zarf` command and its nested children.
 func NewZarfCommand() *cobra.Command {
+	// Library callers can supply their own arguments with SetArgs; startup
+	// errors from the host process are only relevant to Execute.
+	cmd, _ := newZarfCommand() //nolint:errcheck // Cobra validates library callers' supplied arguments.
+	return cmd
+}
+
+func newZarfCommand() (*cobra.Command, error) {
 	rootCmd := &cobra.Command{
 		Use:          "zarf COMMAND",
 		Short:        lang.RootCmdShort,
@@ -191,12 +199,39 @@ func NewZarfCommand() *cobra.Command {
 		Run:               run,
 	}
 
+	invocation, err := parseVendorInvocation(os.Args, vendorCmds)
+	if invocation != nil {
+		var options rootOptions
+		flags := newRootFlagSet(getViper(), &options)
+		help := flags.BoolP("help", "h", false, "help for zarf")
+		err = flags.Parse(invocation.flags)
+		if err == nil {
+			options.apply()
+			_, err = setupLogger(options.logLevel, options.logFormat, !options.noColor)
+			if options.noColor {
+				pterm.DisableColor()
+			}
+		}
+		if err == nil {
+			if *help {
+				invocation.args = append(invocation.args, "--help")
+				invocation.toolArgs = append(invocation.toolArgs, "--help")
+			}
+			rootCmd.SetArgs(invocation.args)
+		}
+	}
+
+	var toolArgs []string
+	if invocation != nil && err == nil {
+		toolArgs = invocation.toolArgs
+	}
+
 	// Add the tools commands
 	// IMPORTANT: we need to make sure the tools command are added first
 	// to ensure the config defaulting doesn't kick in, and inject values
 	// into zart tools update-creds command
 	// see https://github.com/zarf-dev/zarf/pull/3340#discussion_r1889221826
-	rootCmd.AddCommand(newToolsCommand())
+	rootCmd.AddCommand(newToolsCommand(toolArgs))
 
 	// TODO(soltysh): consider adding command groups
 	rootCmd.AddCommand(newConnectCommand())
@@ -211,32 +246,68 @@ func NewZarfCommand() *cobra.Command {
 	rootCmd.AddCommand(newVersionCommand())
 
 	// Setup flags - skip for vendor-only commands
-	if !checkVendorOnlyFromArgs() {
+	if invocation == nil || err != nil {
 		setupRootFlags(rootCmd)
 	}
 
 	setupGroupedFlagUsage(rootCmd)
 
-	return rootCmd
+	return rootCmd, err
 }
 
-// setupRootFlags sets up the persistent flags for the root command
+type rootOptions struct {
+	features              map[string]string
+	logLevel              string
+	logFormat             string
+	noColor               bool
+	noProgress            bool
+	architecture          string
+	cachePath             string
+	tmpDir                string
+	plainHTTP             bool
+	insecureSkipTLSVerify bool
+}
+
+func (o *rootOptions) apply() {
+	features = o.features
+	LogLevelCLI = o.logLevel
+	LogFormat = o.logFormat
+	IsColorDisabled = o.noColor
+	config.CLIArch = o.architecture
+	config.CommonOptions.CachePath = o.cachePath
+	config.CommonOptions.TempDirectory = o.tmpDir
+	plainHTTP = o.plainHTTP
+	insecureSkipTLSVerify = o.insecureSkipTLSVerify
+}
+
+// setupRootFlags sets up the persistent flags for the root command.
 func setupRootFlags(rootCmd *cobra.Command) {
-	var showNoProgressDeprecation bool
-	vpr := getViper()
+	var options rootOptions
+	rootCmd.PersistentFlags().AddFlagSet(newRootFlagSet(getViper(), &options))
+	options.apply()
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		options.apply()
+		return preRun(cmd, args)
+	}
+}
+
+// newRootFlagSet also supplies the definitions used to find embedded tool arguments,
+// without loading configuration or changing global options.
+func newRootFlagSet(vpr *viper.Viper, o *rootOptions) *pflag.FlagSet {
+	flags := pflag.NewFlagSet("zarf", pflag.ContinueOnError)
 
 	// Features
-	rootCmd.PersistentFlags().StringToStringVar(&features, "features", vpr.GetStringMapString(VFeatures), "Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features \"foo=true,bar=false,baz=true\"")
+	flags.StringToStringVar(&o.features, "features", vpr.GetStringMapString(VFeatures), "Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features \"foo=true,bar=false,baz=true\"")
 
 	// Logs
-	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", vpr.GetString(VLogFormat), "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'.")
-	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", vpr.GetBool(VNoColor), "Disable terminal color codes in logging and stdout prints.")
-	rootCmd.PersistentFlags().BoolVar(&showNoProgressDeprecation, "no-progress", v.GetBool("no_progress"), "Disable fancy UI progress bars, spinners, logos, etc")
-	_ = rootCmd.PersistentFlags().MarkDeprecated("no-progress", "Progress bars and spinners were removed with --log-format=legacy, this flag will be removed in a future version of Zarf.")
+	flags.StringVarP(&o.logLevel, "log-level", "l", vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
+	flags.StringVar(&o.logFormat, "log-format", vpr.GetString(VLogFormat), "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'.")
+	flags.BoolVar(&o.noColor, "no-color", vpr.GetBool(VNoColor), "Disable terminal color codes in logging and stdout prints.")
+	flags.BoolVar(&o.noProgress, "no-progress", vpr.GetBool("no_progress"), "Disable fancy UI progress bars, spinners, logos, etc")
+	_ = flags.MarkDeprecated("no-progress", "Progress bars and spinners were removed with --log-format=legacy, this flag will be removed in a future version of Zarf.")
 
 	// Core functionality
-	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
+	flags.StringVarP(&o.architecture, "architecture", "a", vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
 	cachePath := vpr.GetString(VCache)
 	if cachePath == "" {
 		cachePath = vpr.GetString(VZarfCache)
@@ -244,18 +315,24 @@ func setupRootFlags(rootCmd *cobra.Command) {
 	if cachePath == "" {
 		cachePath = config.ZarfDefaultCachePath
 	}
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", cachePath, lang.RootCmdFlagCachePath)
-	_ = rootCmd.PersistentFlags().MarkDeprecated("zarf-cache", "use --cache instead")
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "cache", cachePath, lang.RootCmdFlagCachePath)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
+	flags.StringVar(&o.cachePath, "zarf-cache", cachePath, lang.RootCmdFlagCachePath)
+	_ = flags.MarkDeprecated("zarf-cache", "use --cache instead")
+	flags.StringVar(&o.cachePath, "cache", cachePath, lang.RootCmdFlagCachePath)
+	flags.StringVar(&o.tmpDir, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
 	// Security
-	rootCmd.PersistentFlags().BoolVar(&plainHTTP, "plain-http", vpr.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
-	rootCmd.PersistentFlags().BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", vpr.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
+	flags.BoolVar(&o.plainHTTP, "plain-http", vpr.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
+	flags.BoolVar(&o.insecureSkipTLSVerify, "insecure-skip-tls-verify", vpr.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
+	return flags
 }
 
 // Execute is the entrypoint for the CLI.
 func Execute(ctx context.Context) error {
+	if rootCmdError != nil {
+		// Prefix errors must be reported before Cobra merges the tool's flags.
+		logger.Default().Error(rootCmdError.Error())
+		return rootCmdError
+	}
 	cmd, err := rootCmd.ExecuteContextC(ctx)
 	if err == nil {
 		return nil
@@ -264,7 +341,7 @@ func Execute(ctx context.Context) error {
 	// Check if we need to use the default err printer
 	defaultPrintCmds := []string{"helm", "yq", "kubectl"}
 	comps := strings.Split(cmd.CommandPath(), " ")
-	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
+	if len(comps) > 2 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
 		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
 		os.Exit(1)
 	}

@@ -14,11 +14,11 @@ import (
 	"helm.sh/helm/v4/pkg/kube"
 )
 
-func newHelmCommand() *cobra.Command {
-	// Truncate Helm's arguments so that it thinks its all alone
-	helmArgs := []string{}
-	if len(os.Args) > 2 {
-		helmArgs = os.Args[3:]
+func newHelmCommand(args []string) *cobra.Command {
+	// Only pass arguments belonging to Helm to its initialization.
+	var helmArgs []string
+	if len(args) > 0 && args[0] == "helm" {
+		helmArgs = args[1:]
 	}
 
 	cmd, err := helmcmd.NewRootCmd(os.Stdout, helmArgs, helmcmd.SetupLogging)

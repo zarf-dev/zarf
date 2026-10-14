@@ -11,7 +11,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
-func newToolsCommand() *cobra.Command {
+func newToolsCommand(toolArgs []string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "tools",
 		Aliases: []string{"t"},
@@ -23,9 +23,9 @@ func newToolsCommand() *cobra.Command {
 	cmd.AddCommand(newArchiverCommand())
 	cmd.AddCommand(newRegistryCommand())
 	cmd.AddCommand(newDeprecatedCraneCommand())
-	cmd.AddCommand(newHelmCommand())
+	cmd.AddCommand(newHelmCommand(toolArgs))
 	cmd.AddCommand(newK9sCommand())
-	cmd.AddCommand(newKubectlCommand())
+	cmd.AddCommand(newKubectlCommand(toolArgs))
 	cmd.AddCommand(newSbomCommand())
 	cmd.AddCommand(newWaitForCommand())
 	cmd.AddCommand(newYQCommand())

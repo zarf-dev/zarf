@@ -23,19 +23,7 @@ const (
 	kubeLong  = "kubectl"
 )
 
-func newKubectlCommand() *cobra.Command {
-	var kubectlCmd *cobra.Command
-
-	argOffset := -1
-	for i, arg := range os.Args {
-		if arg == "tools" || arg == "t" {
-			if i+1 < len(os.Args) && (os.Args[i+1] == kubeLong || os.Args[i+1] == kubeShort) {
-				argOffset = i + 1
-				break
-			}
-		}
-	}
-
+func newKubectlCommand(args []string) *cobra.Command {
 	opts := kubecmd.KubectlOptions{
 		IOStreams: genericiooptions.IOStreams{
 			In:     os.Stdin,
@@ -44,12 +32,12 @@ func newKubectlCommand() *cobra.Command {
 		},
 	}
 
-	if argOffset > -1 {
-		opts.Arguments = os.Args[argOffset:]
+	if len(args) > 0 && (args[0] == kubeLong || args[0] == kubeShort) {
+		opts.Arguments = args
 		opts.PluginHandler = kubecmd.NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes)
 	}
 
-	kubectlCmd = kubecmd.NewDefaultKubectlCommandWithArgs(opts)
+	kubectlCmd := kubecmd.NewDefaultKubectlCommandWithArgs(opts)
 	kubectlCmd.Use = kubeLong
 	kubectlCmd.Aliases = []string{kubeShort}
 	kubectlCmd.SilenceErrors = true
