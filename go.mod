@@ -50,12 +50,12 @@ require (
 	golang.org/x/crypto v0.57.0
 	golang.org/x/sync v0.24.0
 	helm.sh/helm/v4 v4.3.0
-	k8s.io/api v0.37.0
-	k8s.io/apimachinery v0.37.0
-	k8s.io/client-go v0.37.0
+	k8s.io/api v0.37.1
+	k8s.io/apimachinery v0.37.1
+	k8s.io/client-go v0.37.1
 	k8s.io/klog/v2 v2.140.0
-	k8s.io/kubectl v0.37.0
-	k8s.io/streaming v0.37.0
+	k8s.io/kubectl v0.37.1
+	k8s.io/streaming v0.37.1
 	oras.land/oras-go/v2 v2.6.2
 	sigs.k8s.io/cli-utils v0.37.2
 	sigs.k8s.io/kustomize/api v0.21.1
@@ -254,7 +254,7 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	helm.sh/helm/v3 v3.21.3 // indirect
 	howett.net/plist v1.0.1 // indirect
-	k8s.io/component-base v0.37.0 // indirect
+	k8s.io/component-base v0.37.1 // indirect
 	modernc.org/gc/v3 v3.1.4 // indirect
 	modernc.org/strutil v1.2.1 // indirect
 	modernc.org/token v1.1.0 // indirect
@@ -633,10 +633,10 @@ require (
 	gorm.io/gorm v1.31.1 // indirect
 	k8s.io/apiextensions-apiserver v0.37.0 // indirect
 	k8s.io/apiserver v0.37.0 // indirect
-	k8s.io/cli-runtime v0.37.0
-	k8s.io/component-helpers v0.37.0
+	k8s.io/cli-runtime v0.37.1
+	k8s.io/component-helpers v0.37.1
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
-	k8s.io/metrics v0.37.0 // indirect
+	k8s.io/metrics v0.37.1 // indirect
 	k8s.io/utils v0.0.0-20260626114624-be93311217bd
 	modernc.org/libc v1.74.4 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
