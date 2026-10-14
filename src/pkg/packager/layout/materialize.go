@@ -94,10 +94,10 @@ func materializePath(ctx context.Context, source, destination string, ancestors 
 			return fmt.Errorf("cannot materialize source %q into destination %q: destination is within source directory", source, destination)
 		}
 
-		if err := os.MkdirAll(destination, info.Mode().Perm()); err != nil {
+		if err := os.MkdirAll(destination, helpers.ReadWriteExecuteUser); err != nil {
 			return err
 		}
-		if err := os.Chmod(destination, info.Mode().Perm()); err != nil {
+		if err := os.Chmod(destination, helpers.ReadWriteExecuteUser); err != nil {
 			return err
 		}
 		entries, err := os.ReadDir(source)
@@ -108,6 +108,9 @@ func materializePath(ctx context.Context, source, destination string, ancestors 
 			if err := materializePath(ctx, filepath.Join(source, entry.Name()), filepath.Join(destination, entry.Name()), ancestors); err != nil {
 				return err
 			}
+		}
+		if err := os.Chmod(destination, info.Mode().Perm()); err != nil {
+			return err
 		}
 		return nil
 	default:

@@ -4,6 +4,7 @@
 package layout
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -123,4 +124,37 @@ func TestMaterializeSourceToLayoutRejectsDestinationWithinSource(t *testing.T) {
 			require.NoDirExists(t, destination)
 		})
 	}
+}
+
+func TestMaterializeSourceToLayoutPreservesReadonlyDirectory(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows does not preserve POSIX directory permissions")
+	}
+
+	source := filepath.Join(t.TempDir(), "source")
+	require.NoError(t, os.Mkdir(source, helpers.ReadWriteExecuteUser))
+	require.NoError(t, os.WriteFile(filepath.Join(source, "file.txt"), []byte("content"), helpers.ReadAllWriteUser))
+	require.NoError(t, os.Chmod(source, 0o500))
+
+	destination := filepath.Join(t.TempDir(), "destination")
+	t.Cleanup(func() {
+		if err := os.Chmod(source, helpers.ReadWriteExecuteUser); err != nil {
+			t.Errorf("restoring source directory permissions: %v", err)
+		}
+		if err := os.Chmod(destination, helpers.ReadWriteExecuteUser); err != nil && !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("restoring destination directory permissions: %v", err)
+		}
+	})
+
+	require.NoError(t, MaterializeSourceToLayout(testutil.TestContext(t), source, destination))
+
+	info, err := os.Stat(destination)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0o500), info.Mode().Perm())
+	fileInfo, err := os.Lstat(filepath.Join(destination, "file.txt"))
+	require.NoError(t, err)
+	require.Zero(t, fileInfo.Mode()&os.ModeSymlink)
+	content, err := os.ReadFile(filepath.Join(destination, "file.txt"))
+	require.NoError(t, err)
+	require.Equal(t, "content", string(content))
 }
