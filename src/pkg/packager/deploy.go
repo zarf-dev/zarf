@@ -383,17 +383,17 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 	services := state.NewServiceSet()
 	registryExternal := opts.RegistryInfo.Address != ""
 	for _, c := range components {
-		switch c.Name {
-		case "git-server":
+		switch c.Service.Name {
+		case api.ServiceGitServer:
 			services.Add(state.GitKey)
 			if feature.IsEnabled(feature.ArtifactServer) {
 				services.Add(state.ArtifactKey)
 			}
-		case "zarf-registry", "zarf-seed-registry", "zarf-injector":
+		case api.ServiceRegistry, api.ServiceSeedRegistry, api.ServiceInjector:
 			if !registryExternal {
 				services.Add(state.RegistryKey)
 			}
-		case "zarf-agent":
+		case api.ServiceAgent:
 			services.Add(state.AgentKey)
 		}
 	}
@@ -403,10 +403,10 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
-	isSeedRegistry := component.Name == "zarf-seed-registry"
-	isRegistry := component.Name == "zarf-registry"
-	isInjector := component.Name == "zarf-injector"
-	isAgent := component.Name == "zarf-agent"
+	isSeedRegistry := component.Service.Name == api.ServiceSeedRegistry
+	isRegistry := component.Service.Name == api.ServiceRegistry
+	isInjector := component.Service.Name == api.ServiceInjector
+	isAgent := component.Service.Name == api.ServiceAgent
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if component.RequiresCluster() && d.s == nil {
@@ -538,7 +538,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 	}
 
-	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, component.Name, d.s)
+	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, component.Service.Name, d.s)
 	if err != nil {
 		return nil, err
 	}

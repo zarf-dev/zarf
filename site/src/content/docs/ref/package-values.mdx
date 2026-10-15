@@ -73,7 +73,21 @@ values:
 }
 ```
 
+### Generating a Schema
+
 Generate a schema that includes each package value using `zarf dev generate-schema`.
+
+For values mapped to a Helm chart, schema information is applied in the
+following order, from highest to lowest precedence:
+
+1. The chart's `values.schema.json`
+1. Package Values defaults
+1. Chart `valuesFiles`
+1. Chart defaults
+
+Without a chart mapping, only Package Values defaults are considered. If the
+chart schema does not specify a type, a value must have a non-null default in
+the package values or mapped chart values to receive an inferred type constraint.
 
 ## Using Values
 

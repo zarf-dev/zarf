@@ -34,10 +34,10 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 	}
 	initPkgName, err := findPackageWithService(pkgs, api.ServiceRegistry)
 	if err != nil {
-		return fmt.Errorf("error finding init package with zarf-registry component: %w", err)
+		return fmt.Errorf("error finding init package with registry service: %w", err)
 	}
 	if initPkgName == "" {
-		return fmt.Errorf("error finding init package with zarf-registry component")
+		return fmt.Errorf("error finding init package with registry service")
 	}
 	opts.PkgName = initPkgName
 	if opts.State.RegistryInfo.RegistryMode == state.RegistryModeProxy {
@@ -98,10 +98,10 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	}
 	initPkgName, err := findPackageWithService(pkgs, api.ServiceAgent)
 	if err != nil {
-		return fmt.Errorf("error finding init package with zarf-agent component: %w", err)
+		return fmt.Errorf("error finding init package with agent service: %w", err)
 	}
 	if initPkgName == "" {
-		return fmt.Errorf("error finding init package with zarf-agent component")
+		return fmt.Errorf("error finding init package with agent service")
 	}
 	opts.PkgName = initPkgName
 	deployment, err := opts.Cluster.Clientset.AppsV1().Deployments(state.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
@@ -165,7 +165,7 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 					Value: agentImage.Tag,
 				},
 			})
-			applicationTemplates, err := template.GetZarfTemplates(ctx, "zarf-agent", opts.State)
+			applicationTemplates, err := template.GetZarfTemplates(ctx, api.ServiceAgent, opts.State)
 			if err != nil {
 				return fmt.Errorf("error setting up the templates: %w", err)
 			}
@@ -220,14 +220,14 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	return nil
 }
 
-func findPackageWithService(pkgs []state.DeployedPackage, service api.Service) (string, error) {
+func findPackageWithService(pkgs []state.DeployedPackage, service api.ServiceName) (string, error) {
 	for _, deployedPackage := range pkgs {
 		definition, err := deployedPackage.Definition()
 		if err != nil {
 			return "", err
 		}
 		for _, component := range definition.Components {
-			if component.Service == service {
+			if component.Service.Name == service {
 				return deployedPackage.Name, nil
 			}
 		}

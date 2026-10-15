@@ -39,6 +39,8 @@ const (
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrGitURLWithRef           = "git URL %q must not contain an embedded ref; use the ref field instead"
+	PkgValidateErrServiceRequiresInit     = "component %q declares service %q, but only ZarfInitConfig packages may declare services"
+	PkgValidateErrServiceNotUnique        = "service %q is declared by multiple components (%q, %q)"
 	PkgValidateErrFileChecksumAlgorithm   = "component %q file %q has unsupported checksum algorithm %q (expected sha256 or sha512)"
 	PkgValidateErrImageConflictingSources = "image %q has conflicting sources %q and %q"
 )
@@ -73,8 +75,19 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 		errs = append(errs, errors.New(PkgValidateErrNoComponents))
 	}
 	uniqueComponentNames := make(map[string]bool)
+	serviceComponents := make(map[v1beta1.ServiceName]string)
 	seenSources := make(map[string]v1beta1.ImageSource)
 	for _, component := range pkg.Components {
+		if component.Service.Name != "" {
+			if pkg.Kind != v1beta1.ZarfInitConfig {
+				errs = append(errs, fmt.Errorf(PkgValidateErrServiceRequiresInit, component.Name, component.Service.Name))
+			}
+			if previous, exists := serviceComponents[component.Service.Name]; exists {
+				errs = append(errs, fmt.Errorf(PkgValidateErrServiceNotUnique, component.Service.Name, previous, component.Name))
+			} else {
+				serviceComponents[component.Service.Name] = component.Name
+			}
+		}
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
 			errs = append(errs, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
