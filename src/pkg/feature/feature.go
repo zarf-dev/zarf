@@ -209,6 +209,7 @@ const (
 	DockerDaemonDirectPull Name = "docker-daemon-direct-pull"
 	SBOMViewer             Name = "sbom-viewer"
 	ArtifactServer         Name = "artifact-server"
+	V1Beta1                Name = "v1beta1"
 )
 
 func init() {
@@ -267,6 +268,13 @@ func init() {
 			Enabled:     false,
 			Since:       "v0.87.0",
 			Stage:       Deprecated,
+		},
+		{
+			Name:        V1Beta1,
+			Description: "Enables package creation and component publishing using the zarf.dev/v1beta1 API version.",
+			Enabled:     false,
+			Since:       "v0.88.0",
+			Stage:       Alpha,
 		},
 	}
 

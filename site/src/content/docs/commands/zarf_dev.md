@@ -43,4 +43,6 @@ Commands useful for developing packages
 * [zarf dev patch-git](/commands/zarf_dev_patch-git/)	 - Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:
 This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook.
 * [zarf dev sha256sum](/commands/zarf_dev_sha256sum/)	 - Generates a SHA256SUM for the given file
+* [zarf dev template](/commands/zarf_dev_template/)	 - Renders a template into a generated definition
+* [zarf dev upgrade](/commands/zarf_dev_upgrade/)	 - Converts and outputs the existing zarf package config to the given API version. Defaults to latest API version.
 
