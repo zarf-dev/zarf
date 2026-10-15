@@ -116,6 +116,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		definition.Build.Differential = true
 		definition.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
 	}
+	if err := layout.ValidatePackagePaths(definition); err != nil {
+		return nil, err
+	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -279,6 +282,9 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	}
 	definition := resolvedPackage.Definition
 	definition.Metadata.Architecture = v1alpha1.SkeletonArch
+	if err := layout.ValidatePackagePaths(definition); err != nil {
+		return nil, err
+	}
 
 	// Creating skeleton packages with the values feature is not yet supported
 	if len(definition.Values.Files) > 0 || resolvedPackage.ValuesSchema != nil {
@@ -587,9 +593,16 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
 func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath string, resources *load.ResourceSet) error {
+	if err := layout.ValidatePathComponent(manifest.Name); err != nil {
+		return fmt.Errorf("manifest name validation failed: %w", err)
+	}
+
+	manifestDir := filepath.Join(compBuildPath, string(layout.ManifestsComponentDir))
 	for fileIdx, path := range manifest.Files {
-		rel := filepath.Join(string(layout.ManifestsComponentDir), layout.ManifestFileName(manifest.Name, fileIdx))
-		dst := filepath.Join(compBuildPath, rel)
+		dst, err := layout.PathWithinDirectory(manifestDir, layout.ManifestFileName(manifest.Name, fileIdx))
+		if err != nil {
+			return fmt.Errorf("manifest output validation failed: %w", err)
+		}
 
 		// Copy manifests without any processing.
 		if helpers.IsURL(path) {
@@ -609,12 +622,12 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 
 	for kustomizeIdx, path := range manifest.Kustomize.Files {
 		// Generate manifests from kustomizations and place in the package.
-		kname := layout.KustomizationFileName(manifest.Name, kustomizeIdx)
-		rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
-		dst := filepath.Join(compBuildPath, rel)
+		dst, err := layout.PathWithinDirectory(manifestDir, layout.KustomizationFileName(manifest.Name, kustomizeIdx))
+		if err != nil {
+			return fmt.Errorf("manifest output validation failed: %w", err)
+		}
 
 		if !helpers.IsURL(path) {
-			var err error
 			path, err = resources.Path(path)
 			if err != nil {
 				return err
@@ -629,6 +642,10 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 
 // PackageChart takes a Zarf Chart definition and packs it into a package layout
 func PackageChart(ctx context.Context, chart api.Chart, resources *load.ResourceSet, paths layout.ChartPaths, cachePath string, remoteOpts types.RemoteOptions) error {
+	if _, err := paths.ArchivePath(chart.Name, chart.LegacyVersion); err != nil {
+		return err
+	}
+
 	originalValuesFiles := slices.Clone(chart.ValuesFiles)
 	defer func() {
 		copy(chart.ValuesFiles, originalValuesFiles)
@@ -674,9 +691,24 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 	}
 
 	for chartIdx, chart := range component.Charts {
+		if err := layout.ValidatePathComponent(chart.Name); err != nil {
+			return fmt.Errorf("chart name validation failed: %w", err)
+		}
+		if err := layout.ValidatePathComponent(chart.LegacyVersion); err != nil {
+			return fmt.Errorf("chart version validation failed: %w", err)
+		}
+
 		if chart.Local != nil {
-			rel := filepath.ToSlash(filepath.Join(string(layout.ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx)))
-			dst := filepath.Join(compBuildPath, rel)
+			chartsDir := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
+			dst, err := layout.PathWithinDirectory(chartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+			if err != nil {
+				return fmt.Errorf("skeleton chart validation failed: %w", err)
+			}
+			rel, err := filepath.Rel(compBuildPath, dst)
+			if err != nil {
+				return err
+			}
+			rel = filepath.ToSlash(rel)
 
 			file, err := resources.Path(chart.Local.Path)
 			if err != nil {
@@ -694,7 +726,16 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 				continue
 			}
 
-			rel := filepath.ToSlash(filepath.Join(string(layout.ValuesComponentDir), layout.ChartValuesFileName(chart.Name, chart.LegacyVersion, valuesIdx)))
+			valuesDir := filepath.Join(compBuildPath, string(layout.ValuesComponentDir))
+			dst, err := layout.PathWithinDirectory(valuesDir, layout.ChartValuesFileName(chart.Name, chart.LegacyVersion, valuesIdx))
+			if err != nil {
+				return fmt.Errorf("skeleton chart values validation failed: %w", err)
+			}
+			rel, err := filepath.Rel(compBuildPath, dst)
+			if err != nil {
+				return err
+			}
+			rel = filepath.ToSlash(rel)
 			component.Charts[chartIdx].ValuesFiles[valuesIdx].Path = rel
 
 			path, err := resources.Path(valuesFile.Path)
@@ -1156,6 +1197,11 @@ func createDocumentationTar(ctx context.Context, pkg api.Package, resources *loa
 	if len(pkg.Documentation) == 0 {
 		return nil
 	}
+	for key := range pkg.Documentation {
+		if err := layout.ValidatePathComponent(key); err != nil {
+			return fmt.Errorf("documentation key validation failed: %w", err)
+		}
+	}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -1175,7 +1221,10 @@ func createDocumentationTar(ctx context.Context, pkg api.Package, resources *loa
 		}
 
 		docFilename := fileNames[key]
-		dst := filepath.Join(tmpDir, docFilename)
+		dst, err := layout.PathWithinDirectory(tmpDir, docFilename)
+		if err != nil {
+			return fmt.Errorf("documentation output validation failed: %w", err)
+		}
 
 		if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
