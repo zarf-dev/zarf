@@ -180,6 +180,31 @@ func TestCheckForIndex(t *testing.T) {
 	}
 }
 
+func TestPullWithInterruptedCacheIndex(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	manifestDigest := testutil.PushImage(ctx, t, upstream+"/fixtures/interrupted-cache", "v1")
+	image, err := transform.ParseImageRef(upstream + "/fixtures/interrupted-cache:v1")
+	require.NoError(t, err)
+
+	for _, index := range []string{"", `{"schemaVersion":2,"manifests":[`} {
+		t.Run(fmt.Sprintf("index length %d", len(index)), func(t *testing.T) {
+			t.Parallel()
+			cacheDir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(cacheDir, "index.json"), []byte(index), 0o600))
+			destDir := t.TempDir()
+			_, err := Pull(ctx, []ImageRequest{{Image: image}}, destDir, PullOptions{
+				CacheDirectory: cacheDir,
+				Arch:           "amd64",
+				PlainHTTP:      true,
+			})
+			require.NoError(t, err)
+			requireManifestBlobs(t, destDir, manifestDigest)
+		})
+	}
+}
+
 func TestPull(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)

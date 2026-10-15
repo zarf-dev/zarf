@@ -6,12 +6,14 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2/registry"
 )
@@ -118,6 +120,43 @@ func (suite *PullInspectTestSuite) Test_2_Remote_Inspect() {
 	ref := fmt.Sprintf("oci://ghcr.io/zarf-dev/packages/dos-games:1.0.0-%s", e2e.Arch)
 	_, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", ref)
 	suite.NoError(err, stdErr)
+}
+
+func TestPullSharedCache(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	registryURL := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	packageDir := t.TempDir()
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/11-simple-package", "-o", packageDir, "--skip-sbom", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	packageName := fmt.Sprintf("zarf-package-simple-package-%s-0.0.1.tar.zst", e2e.Arch)
+	packagePath := filepath.Join(packageDir, packageName)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "publish", packagePath, "oci://"+registryURL, "--plain-http")
+	require.NoError(t, err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "digest", packagePath)
+	require.NoError(t, err, stdOut, stdErr)
+	expectedDigest := strings.TrimSpace(stdOut)
+
+	cachePath := t.TempDir()
+	cacheDir := filepath.Join(cachePath, zoci.ImageCacheDirectory)
+	require.NoError(t, os.MkdirAll(cacheDir, 0o700))
+	// Simulate an interrupted index write from a previous CLI version.
+	require.NoError(t, os.WriteFile(filepath.Join(cacheDir, "index.json"), []byte(`{"schemaVersion":2,"manifests":[`), 0o600))
+
+	t.Run("concurrent pulls", func(t *testing.T) {
+		for i := range 2 {
+			t.Run(fmt.Sprintf("process %d", i), func(t *testing.T) {
+				t.Parallel()
+				outputDir := t.TempDir()
+				stdOut, stdErr, err := e2e.Zarf(t, "package", "pull", "oci://"+registryURL+"/simple-package:0.0.1", "--plain-http", "--zarf-cache", cachePath, "-o", outputDir)
+				require.NoError(t, err, stdOut, stdErr)
+				pulledPackage := filepath.Join(outputDir, packageName)
+				require.FileExists(t, pulledPackage)
+				stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "digest", pulledPackage)
+				require.NoError(t, err, stdOut, stdErr)
+				require.Equal(t, expectedDigest, strings.TrimSpace(stdOut))
+			})
+		}
+	})
 }
 
 func TestPullInspectSuite(t *testing.T) {
