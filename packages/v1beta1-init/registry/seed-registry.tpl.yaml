@@ -5,7 +5,8 @@ metadata:
   version: "[[ .cli.version ]]"
   description: Bootstrap the registry from the injected registry image
 component:
-  service: seed-registry
+  service:
+    name: seed-registry
   import:
     local:
       - path: registry-base.gen.yaml
