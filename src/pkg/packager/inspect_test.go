@@ -24,7 +24,7 @@ func TestInspectResourcesComponentServices(t *testing.T) {
 		name          string
 		apiVersion    string
 		componentName string
-		service       v1beta1.Service
+		service       v1beta1.ServiceName
 		registry      bool
 		agent         bool
 	}{
@@ -43,7 +43,7 @@ func TestInspectResourcesComponentServices(t *testing.T) {
 			dir := t.TempDir()
 			serviceField := ""
 			if tt.service != "" {
-				serviceField = fmt.Sprintf("    service: %s\n", tt.service)
+				serviceField = fmt.Sprintf("    service:\n      name: %s\n", tt.service)
 			}
 			definition := fmt.Sprintf(`apiVersion: %s
 kind: ZarfInitConfig

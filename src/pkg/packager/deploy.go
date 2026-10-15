@@ -383,7 +383,7 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 	services := state.NewServiceSet()
 	registryExternal := opts.RegistryInfo.Address != ""
 	for _, c := range components {
-		switch c.Service {
+		switch c.Service.Name {
 		case api.ServiceGitServer:
 			services.Add(state.GitKey)
 			if feature.IsEnabled(feature.ArtifactServer) {
@@ -403,10 +403,10 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
-	isSeedRegistry := component.Service == api.ServiceSeedRegistry
-	isRegistry := component.Service == api.ServiceRegistry
-	isInjector := component.Service == api.ServiceInjector
-	isAgent := component.Service == api.ServiceAgent
+	isSeedRegistry := component.Service.Name == api.ServiceSeedRegistry
+	isRegistry := component.Service.Name == api.ServiceRegistry
+	isInjector := component.Service.Name == api.ServiceInjector
+	isAgent := component.Service.Name == api.ServiceAgent
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if component.RequiresCluster() && d.s == nil {
@@ -538,7 +538,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 	}
 
-	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, component.Service, d.s)
+	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, component.Service.Name, d.s)
 	if err != nil {
 		return nil, err
 	}

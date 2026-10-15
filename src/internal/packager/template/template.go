@@ -37,7 +37,7 @@ func GetZarfVariableConfig(ctx context.Context, isInteractive bool) *variables.V
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.
-func GetZarfTemplates(ctx context.Context, service api.Service, s *state.State) (templateMap map[string]*variables.TextTemplate, err error) {
+func GetZarfTemplates(ctx context.Context, service api.ServiceName, s *state.State) (templateMap map[string]*variables.TextTemplate, err error) {
 	templateMap = make(map[string]*variables.TextTemplate)
 
 	if s != nil {

@@ -119,7 +119,7 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 					Target: v1beta1.ComponentTarget{
 						OS: "linux",
 					},
-					Service:      v1beta1.ServiceRegistry,
+					Service:      v1beta1.Service{Name: v1beta1.ServiceRegistry},
 					Repositories: []v1beta1.Repository{{URL: "https://github.com/example/repo"}},
 					StateAccess:  []v1beta1.StateAccessKey{v1beta1.StateAccessRegistryCredentials},
 					Images: []v1beta1.Image{
