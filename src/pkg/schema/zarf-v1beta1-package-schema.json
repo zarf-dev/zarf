@@ -1262,6 +1262,7 @@
       "default": "ZarfPackageConfig",
       "description": "The kind of Zarf package.",
       "enum": [
+        "ZarfInitConfig",
         "ZarfPackageConfig"
       ],
       "type": "string"
