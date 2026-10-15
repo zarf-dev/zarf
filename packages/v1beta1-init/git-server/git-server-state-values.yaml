@@ -4,9 +4,5 @@ gitea:
   admin:
     username: {{ .State.Git.PushUsername | quote }}
     password: {{ .State.Git.PushPassword | quote }}
-{{- range .Pkg.Components }}
-{{- if eq .Service.Name "git-server" }}
 image:
-  fullOverride: {{ (index .Images 0).Name | quote }}
-{{- end }}
-{{- end }}
+  fullOverride: {{ (index (.Pkg.GetComponent "git-server").Images 0).Name | quote }}
