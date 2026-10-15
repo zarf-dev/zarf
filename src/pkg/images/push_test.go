@@ -7,6 +7,7 @@ package images
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -65,12 +66,8 @@ func TestPush(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Push overwrites the index, this code sets it back, this means we can't run these tests in parallel
-			idx, err := getIndexFromOCILayout(tc.SourceDirectory)
-			require.NoError(t, err)
-			defer func() {
-				require.NoError(t, saveIndexToOCILayout(tc.SourceDirectory, idx))
-			}()
+			sourceDirectory := t.TempDir()
+			require.NoError(t, os.CopyFS(sourceDirectory, os.DirFS(tc.SourceDirectory)))
 			ctx := testutil.TestContext(t)
 			address := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 			if tc.namespace != "" {
@@ -91,7 +88,7 @@ func TestPush(t *testing.T) {
 			opts := PushOptions{
 				PlainHTTP: true,
 			}
-			err = Push(ctx, imageList, tc.SourceDirectory, regInfo, opts)
+			err := Push(ctx, imageList, sourceDirectory, regInfo, opts)
 
 			if tc.expectErr {
 				require.Error(t, err, tc.expectErr)

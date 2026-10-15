@@ -122,6 +122,159 @@ func TestPackageLayout(t *testing.T) {
 	}
 }
 
+func TestGetSBOMResourcesV1Beta1(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath("component:metrics")))
+	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+	require.NoError(t, os.WriteFile(resourcePath, []byte("metrics SBOM"), 0o600))
+
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}}},
+		},
+	}
+	outputDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{"component:metrics"}))
+	require.FileExists(t, filepath.Join(outputDir, "files", "metrics.json"))
+	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, nil))
+	require.ErrorContains(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{"component:missing"}), "not found")
+}
+
+func TestGetSBOMResourcesV1Alpha1FiltersArchive(t *testing.T) {
+	t.Parallel()
+
+	packageDir := t.TempDir()
+	sbomSourceDir := t.TempDir()
+	for name, contents := range map[string]string{
+		"zarf-component-metrics.json":                   "component SBOM",
+		"docker.io_library_nginx_1.27-linux-amd64.json": "image SBOM",
+		"unselected.json":                               "unselected SBOM",
+	} {
+		require.NoError(t, os.WriteFile(filepath.Join(sbomSourceDir, name), []byte(contents), 0o600))
+	}
+	sbomTar := filepath.Join(packageDir, SBOMTar)
+	require.NoError(t, archive.Compress(t.Context(), []string{
+		filepath.Join(sbomSourceDir, "zarf-component-metrics.json"),
+		filepath.Join(sbomSourceDir, "docker.io_library_nginx_1.27-linux-amd64.json"),
+		filepath.Join(sbomSourceDir, "unselected.json"),
+	}, sbomTar, archive.CompressOpts{}))
+
+	pkgLayout := &PackageLayout{
+		dirPath: packageDir,
+		pkg: api.Package{
+			Metadata: api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{
+				Name:  "metrics",
+				Files: []api.File{{Source: "metrics.yaml"}},
+			}},
+		},
+	}
+	outputDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{
+		"component:metrics",
+		"image:docker.io/library/nginx:1.27-linux-amd64",
+	}))
+	require.FileExists(t, filepath.Join(outputDir, "zarf-component-metrics.json"))
+	require.FileExists(t, filepath.Join(outputDir, "docker.io_library_nginx_1.27-linux-amd64.json"))
+	require.NoFileExists(t, filepath.Join(outputDir, "unselected.json"))
+
+	err := pkgLayout.GetSBOMResources(t.Context(), t.TempDir(), []string{"component:missing"})
+	require.ErrorContains(t, err, `zarf-component-missing.json`)
+}
+
+func TestGetSBOMResourcesV1Beta1PreservesResourceKinds(t *testing.T) {
+	t.Parallel()
+
+	const (
+		imageKey      = "image:foo"
+		componentName = "aW1hZ2U6Zm9v"
+	)
+	dir := t.TempDir()
+	for resourceKey, contents := range map[string]string{
+		"component:" + componentName: "component SBOM",
+		imageKey:                     "image SBOM",
+	} {
+		resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath(resourceKey)))
+		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o600))
+	}
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: componentName, Files: []api.File{{Source: "component.yaml"}}}},
+		},
+	}
+
+	for _, keys := range [][]string{nil, {"component:" + componentName, imageKey}} {
+		outputDir := t.TempDir()
+		require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, keys))
+
+		componentContents, err := os.ReadFile(filepath.Join(outputDir, "files", componentName+".json"))
+		require.NoError(t, err)
+		require.Equal(t, "component SBOM", string(componentContents))
+		imageContents, err := os.ReadFile(filepath.Join(outputDir, "images", "foo.json"))
+		require.NoError(t, err)
+		require.Equal(t, "image SBOM", string(imageContents))
+	}
+}
+
+func TestGetSBOMResourcesV1Beta1UsesDeclaredImageReference(t *testing.T) {
+	t.Parallel()
+
+	const imageKey = "image:nginx"
+	dir := t.TempDir()
+	resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath(imageKey)))
+	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+	require.NoError(t, os.WriteFile(resourcePath, []byte("image SBOM"), 0o600))
+
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}}},
+		},
+	}
+	outputDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{imageKey}))
+	contents, err := os.ReadFile(filepath.Join(outputDir, "images", "nginx.json"))
+	require.NoError(t, err)
+	require.Equal(t, "image SBOM", string(contents))
+}
+
+func TestGetSBOMResourcesV1Beta1RejectsLegacyImageFilenameCollisions(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	for resourceKey, contents := range map[string]string{
+		"image:a/b:c": "first image SBOM",
+		"image:a_b:c": "second image SBOM",
+	} {
+		resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath(resourceKey)))
+		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o600))
+	}
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}}},
+		},
+	}
+	outputDir := t.TempDir()
+	err := pkgLayout.GetSBOMResources(t.Context(), outputDir, nil)
+	require.ErrorContains(t, err, `both normalize to "images/a_b_c.json"`)
+	require.NoFileExists(t, filepath.Join(outputDir, "images", "a_b_c.json"))
+}
+
 func TestPackageLayoutMutators(t *testing.T) {
 	pkgLayout := &PackageLayout{pkg: api.Package{
 		Metadata: api.PackageMetadata{
@@ -1352,6 +1505,25 @@ func TestGetDocumentation(t *testing.T) {
 		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"nonexistent"})
 		require.ErrorContains(t, err, "not found in package documentation")
 	})
+	t.Run("extract v1beta1 documentation resources", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		pkgDir := filepath.Join(tmpDir, "package")
+		require.NoError(t, os.MkdirAll(filepath.Join(pkgDir, DocumentationDir), 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, DocumentationDir, "README.md"), []byte("readme content"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, DocumentationDir, "LICENSE"), []byte("license content"), 0o600))
+
+		pkgLayout := &PackageLayout{
+			dirPath: pkgDir,
+			pkg: convert.PackageFromV1beta1(v1beta1.Package{
+				APIVersion:    v1beta1.APIVersion,
+				Documentation: map[string]string{"readme": "README.md", "license": "LICENSE"},
+			}),
+		}
+		outputDir := filepath.Join(tmpDir, "output")
+		require.NoError(t, pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"}))
+		assertFileContent(t, filepath.Join(outputDir, "README.md"), "readme content")
+		require.NoFileExists(t, filepath.Join(outputDir, "LICENSE"))
+	})
 
 	t.Run("extract single key when multiple files have same basename", func(t *testing.T) {
 		pkgLayout, outputDir := setupDocTest(t,
@@ -1370,6 +1542,39 @@ func TestGetDocumentation(t *testing.T) {
 
 		assertFileContent(t, filepath.Join(outputDir, "readme1-README.md"), "readme1 content")
 	})
+
+	t.Run("rejects documentation keys that escape output directory", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{
+				"../escape": "first/README.md",
+				"readme":    "second/README.md",
+			},
+			nil,
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		require.EqualError(t, err, `documentation key "../escape" would result in an invalid path`)
+		require.NoFileExists(t, filepath.Join(filepath.Dir(outputDir), "escape-README.md"))
+	})
+}
+
+func TestGetDocumentationFileNamesRejectsUnsafePaths(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]map[string]string{
+		"empty key":               {"": "README.md"},
+		"current directory key":   {".": "README.md"},
+		"parent directory key":    {"..": "README.md"},
+		"slash in key":            {"docs/readme": "README.md"},
+		"backslash in key":        {`docs\readme`: "README.md"},
+		"parent directory source": {"readme": ".."},
+	}
+	for name, documentation := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := GetDocumentationFileNames(documentation)
+			require.ErrorContains(t, err, "would result in an invalid path")
+		})
+	}
 }
 
 func TestLoadFromDir_VerificationStrategies(t *testing.T) {

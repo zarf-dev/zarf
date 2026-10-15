@@ -152,11 +152,10 @@ func TestPublishComponent(t *testing.T) {
 	require.Equal(t, "https://example.com/remote-manifest.yaml", component.Component.Manifests[1].Files[0])
 	require.Equal(t, "resources/5/local-file.txt", component.Component.Files[0].Source)
 	require.Equal(t, "https://example.com/remote-file.txt", component.Component.Files[1].Source)
-
 	layerTitles := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
 		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
-		require.Equal(t, layer.Annotations[ocispec.AnnotationTitle], layer.Annotations[layout.ComponentResourceMountPathAnnotation])
+		require.Equal(t, layer.Annotations[ocispec.AnnotationTitle], layer.Annotations[layout.ResourceMountPathAnnotation])
 	}
 	for _, localPath := range []string{
 		"resources/0/component-values.yaml",
@@ -695,7 +694,7 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 
 	layerMounts := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
-		layerMounts = append(layerMounts, layer.Annotations[layout.ComponentResourceMountPathAnnotation])
+		layerMounts = append(layerMounts, layer.Annotations[layout.ResourceMountPathAnnotation])
 	}
 	for _, mountPath := range []string{
 		"resources/0/values.yaml",

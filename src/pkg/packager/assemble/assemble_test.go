@@ -706,13 +706,15 @@ func TestAssemblePackageV1Beta1WritesMultiDocDefinition(t *testing.T) {
 kind: ZarfPackageConfig
 metadata:
   name: beta-local
+documentation:
+  readme: %q
 components:
   - name: beta-component
     files:
       - source: %q
         checksum: %q
         destination: data.txt
-`, dataPath, checksum)
+`, dataPath, dataPath, checksum)
 	require.NoError(t, os.WriteFile(filepath.Join(tmpdir, layout.ZarfYAML), []byte(zarfYAML), 0o600))
 
 	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
@@ -729,6 +731,25 @@ components:
 	require.NoError(t, err)
 	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
 	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
+	require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationDir, "data.txt"))
+	require.NoFileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationTar))
+}
+
+func TestStageDocumentationRejectsUnsafeKeys(t *testing.T) {
+	t.Parallel()
+
+	for _, apiVersion := range []string{v1alpha1.APIVersion, v1beta1.APIVersion} {
+		t.Run(apiVersion, func(t *testing.T) {
+			buildPath := t.TempDir()
+			err := stageDocumentation(api.Package{
+				APIVersion:    apiVersion,
+				Documentation: map[string]string{"../escape": "first/README.md", "readme": "second/README.md"},
+			}, load.NewResourceSet(t.TempDir()), buildPath)
+
+			require.EqualError(t, err, `validating documentation filenames: documentation key "../escape" would result in an invalid path`)
+			require.NoFileExists(t, filepath.Join(filepath.Dir(buildPath), "escape-README.md"))
+		})
+	}
 }
 
 func TestAssemblePackageReadinessVersionRequirement(t *testing.T) {
