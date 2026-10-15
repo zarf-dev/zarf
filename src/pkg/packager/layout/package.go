@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
+	"github.com/zarf-dev/zarf/src/internal/packager/componentarchive"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
@@ -667,11 +668,11 @@ func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, component
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
-	err = archive.Decompress(ctx, sourcePath, tmpDir, archive.DecompressOpts{})
+	componentRoot, err := componentarchive.Extract(ctx, sourcePath, tmpDir, componentName)
 	if err != nil {
 		return "", err
 	}
-	compPath := filepath.Join(tmpDir, componentName, string(ct))
+	compPath := filepath.Join(componentRoot, string(ct))
 	_, err = os.Stat(compPath)
 	if errors.Is(err, os.ErrNotExist) {
 		return "", fmt.Errorf("component %s could not access a %s directory: %w", componentName, ct, err)

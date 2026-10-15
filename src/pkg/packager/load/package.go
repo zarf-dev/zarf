@@ -7,17 +7,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
-
+	"github.com/mholt/archives"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"oras.land/oras-go/v2/content"
 )
 
 // PackageOptions configures resource-ready package loading.
@@ -167,23 +171,104 @@ func materializeResources(ctx context.Context, packageRoot string, remoteResourc
 	}()
 
 	for _, resource := range remoteResources {
-		if !validResourcePath(resource.importRoot) || !validResourcePath(resource.mountPath) {
+		if !validResourcePath(resource.importRoot) {
 			return nil, fmt.Errorf("remote component has an invalid resource path")
 		}
+		if _, exists := resourceSet.remoteRoots[resource.importRoot]; exists {
+			continue
+		}
 		resourceSet.remoteRoots[resource.importRoot] = struct{}{}
-		destination := filepath.Join(workspace, filepath.FromSlash(resource.importRoot), filepath.FromSlash(resource.mountPath))
-		if err := os.MkdirAll(filepath.Dir(destination), helpers.ReadWriteExecuteUser); err != nil {
-			return nil, err
-		}
-		contents, err := resource.remote.FetchLayer(ctx, resource.descriptor)
-		if err != nil {
-			return nil, err
-		}
-		if err := os.WriteFile(destination, contents, helpers.ReadWriteUser); err != nil {
+		destination := filepath.Join(workspace, filepath.FromSlash(resource.importRoot))
+		if err := materializeComponentResources(ctx, resource, destination); err != nil {
 			return nil, err
 		}
 	}
 	return resourceSet, nil
+}
+
+func materializeComponentResources(ctx context.Context, resource remoteResource, destination string) (err error) {
+	reader, err := resource.remote.Fetch(ctx, resource.descriptor)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, reader.Close()) }()
+	verified := content.NewVerifyReader(reader, resource.descriptor)
+	if err := archive.DecompressStream(ctx, verified, destination, archive.DecompressOpts{Extractor: archives.Tar{}}); err != nil {
+		return fmt.Errorf("extracting remote component archive: %w", err)
+	}
+	// Tar readers stop at the end markers; drain the remaining bytes to verify the OCI digest.
+	if _, err := io.Copy(io.Discard, verified); err != nil {
+		return err
+	}
+	if err := verified.Verify(); err != nil {
+		return err
+	}
+	root, err := os.OpenRoot(destination)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, root.Close()) }()
+	for _, descriptor := range resource.imageLayers {
+		if err := materializeComponentImageLayer(ctx, root, resource, descriptor); err != nil {
+			return err
+		}
+	}
+	return validateMaterializedComponentResources(root, resource.requiredPaths)
+}
+
+func validateMaterializedComponentResources(root *os.Root, references []componentResourceReference) error {
+	for _, reference := range references {
+		info, err := root.Lstat(filepath.FromSlash(reference.source))
+		if errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s references local resource %q absent from artifact layers", reference.field, reference.source)
+		}
+		if err != nil {
+			return fmt.Errorf("accessing %s resource %q: %w", reference.field, reference.source, err)
+		}
+		if !info.IsDir() {
+			continue
+		}
+		// A directory reference must contain a bundled file; empty directories do not count.
+		found := false
+		if err := fs.WalkDir(root.FS(), reference.source, func(_ string, entry fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if !entry.IsDir() {
+				found = true
+				return fs.SkipAll
+			}
+			return nil
+		}); err != nil {
+			return fmt.Errorf("accessing %s resource %q: %w", reference.field, reference.source, err)
+		}
+		if !found {
+			return fmt.Errorf("%s references local resource %q absent from artifact layers", reference.field, reference.source)
+		}
+	}
+	return nil
+}
+
+func materializeComponentImageLayer(ctx context.Context, root *os.Root, resource remoteResource, descriptor ocispec.Descriptor) (err error) {
+	mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
+	if err := root.MkdirAll(filepath.Dir(filepath.FromSlash(mountPath)), 0o700); err != nil {
+		return err
+	}
+	file, err := root.OpenFile(filepath.FromSlash(mountPath), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		return fmt.Errorf("creating image layout file %q: %w", mountPath, err)
+	}
+	defer func() { err = errors.Join(err, file.Close()) }()
+	reader, err := resource.remote.Fetch(ctx, descriptor)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, reader.Close()) }()
+	verified := content.NewVerifyReader(reader, descriptor)
+	if _, err := io.Copy(file, verified); err != nil {
+		return err
+	}
+	return verified.Verify()
 }
 
 func validResourcePath(value string) bool {

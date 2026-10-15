@@ -27,13 +27,14 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// remoteResource is a blob needed by a remotely imported component. Its import
-// and mount paths are artifact-relative, never source filesystem paths.
+// remoteResource contains the resource archive and image layout of a remotely imported component.
+// Its import root and required paths are artifact-relative.
 type remoteResource struct {
-	remote     *zoci.Remote
-	descriptor ocispec.Descriptor
-	importRoot string
-	mountPath  string
+	remote        *zoci.Remote
+	descriptor    ocispec.Descriptor
+	imageLayers   []ocispec.Descriptor
+	importRoot    string
+	requiredPaths []componentResourceReference
 }
 
 // importedValues collects the values files and schemas declared by imported component configs
@@ -278,26 +279,38 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q variant architecture does not match its OCI platform", importURL)
 	}
 	importRoot := path.Join(".zarf", "remote-components", strings.ReplaceAll(root.Digest.String(), ":", "-"))
-	resources := make([]remoteResource, 0, len(manifest.Layers))
-	seenMountPaths := make(map[string]struct{}, len(manifest.Layers))
+	var archiveDescriptor ocispec.Descriptor
+	var imageLayers []ocispec.Descriptor
+	seenImagePaths := map[string]struct{}{}
 	for _, descriptor := range manifest.Layers {
-		// An import with only remote resources may have no layers and oras will then create this fake layer
-		if descriptor.MediaType == ocispec.MediaTypeEmptyJSON {
-			continue
+		switch descriptor.MediaType {
+		case layout.ZarfComponentLayerMediaTypeTar:
+			if archiveDescriptor.Digest != "" {
+				return loadedComponentConfig{}, fmt.Errorf("remote component %q has multiple resource archives", importURL)
+			}
+			archiveDescriptor = descriptor
+		case layout.ZarfComponentLayerMediaTypeBlob:
+			mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
+			if !validResourcePath(mountPath) || !strings.HasPrefix(mountPath, layout.ImagesDir+"/") {
+				return loadedComponentConfig{}, fmt.Errorf("remote component %q has an invalid image layout path", importURL)
+			}
+			if _, exists := seenImagePaths[mountPath]; exists {
+				return loadedComponentConfig{}, fmt.Errorf("remote component %q has duplicate image layout paths", importURL)
+			}
+			seenImagePaths[mountPath] = struct{}{}
+			imageLayers = append(imageLayers, descriptor)
+		default:
+			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an unsupported resource layer", importURL)
 		}
-		mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
-		if !validResourcePath(mountPath) {
-			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an invalid resource layer", importURL)
-		}
-		if _, exists := seenMountPaths[mountPath]; exists {
-			return loadedComponentConfig{}, fmt.Errorf("remote component %q has duplicate resource layers", importURL)
-		}
-		seenMountPaths[mountPath] = struct{}{}
-		resources = append(resources, remoteResource{remote: remote, descriptor: descriptor, importRoot: importRoot, mountPath: mountPath})
 	}
-	if err := validateRemoteComponentResources(config, seenMountPaths); err != nil {
+	if archiveDescriptor.Digest == "" {
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q has no resource archive", importURL)
+	}
+	references, err := componentResourceReferences(config)
+	if err != nil {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
 	}
+	resources := []remoteResource{{remote: remote, descriptor: archiveDescriptor, imageLayers: imageLayers, importRoot: importRoot, requiredPaths: references}}
 	return loadedComponentConfig{config: config, remote: true, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
 }
 
@@ -311,70 +324,52 @@ func ValidateRemoteKustomizeRestrictions(spec v1beta1.ComponentSpec) error {
 	return nil
 }
 
-// validateRemoteComponentResources keeps a fetched component from reading paths on the
-// importing machine. Local sources must refer to files or directories supplied by its OCI layers.
-func validateRemoteComponentResources(config v1beta1.ComponentConfig, mountPaths map[string]struct{}) error {
-	check := func(field, source string, allowURL bool) error {
-		if source == "" {
-			return nil
-		}
-		if allowURL && helpers.IsURL(source) {
-			return nil
-		}
-		if !validResourcePath(source) {
-			return fmt.Errorf("%s has invalid local resource path %q", field, source)
-		}
-		for mountPath := range mountPaths {
-			if source == mountPath || strings.HasPrefix(mountPath, source+"/") {
-				return nil
-			}
-		}
-		return fmt.Errorf("%s references local resource %q absent from artifact layers", field, source)
-	}
+type componentResourceReference struct {
+	field  string
+	source string
+}
 
-	for i, source := range config.Values.Files {
-		if err := check(fmt.Sprintf("values.files[%d]", i), source, false); err != nil {
-			return err
+// componentResourceReferences collects and validates local paths before they are rebased for import.
+func componentResourceReferences(config v1beta1.ComponentConfig) ([]componentResourceReference, error) {
+	var references []componentResourceReference
+	add := func(field, source string, allowURL bool) {
+		if source == "" || (allowURL && helpers.IsURL(source)) {
+			return
 		}
+		references = append(references, componentResourceReference{field: field, source: source})
 	}
-	if err := check("values.schema", config.Values.Schema, false); err != nil {
-		return err
+	for i, source := range config.Values.Files {
+		add(fmt.Sprintf("values.files[%d]", i), source, false)
 	}
+	add("values.schema", config.Values.Schema, false)
 	for i, chart := range config.Component.Charts {
 		if chart.Local != nil {
-			if err := check(fmt.Sprintf("component.charts[%d].local.path", i), chart.Local.Path, false); err != nil {
-				return err
-			}
+			add(fmt.Sprintf("component.charts[%d].local.path", i), chart.Local.Path, false)
 		}
 		for j, valuesFile := range chart.ValuesFiles {
-			if err := check(fmt.Sprintf("component.charts[%d].valuesFiles[%d].path", i, j), valuesFile.Path, true); err != nil {
-				return err
-			}
+			add(fmt.Sprintf("component.charts[%d].valuesFiles[%d].path", i, j), valuesFile.Path, true)
 		}
 	}
 	for i, manifest := range config.Component.Manifests {
 		for j, source := range manifest.Files {
-			if err := check(fmt.Sprintf("component.manifests[%d].files[%d]", i, j), source, true); err != nil {
-				return err
-			}
+			add(fmt.Sprintf("component.manifests[%d].files[%d]", i, j), source, true)
 		}
 		for j, source := range manifest.Kustomize.Files {
-			if err := check(fmt.Sprintf("component.manifests[%d].kustomize.files[%d]", i, j), source, true); err != nil {
-				return err
-			}
+			add(fmt.Sprintf("component.manifests[%d].kustomize.files[%d]", i, j), source, true)
 		}
 	}
 	for i, file := range config.Component.Files {
-		if err := check(fmt.Sprintf("component.files[%d].source", i), file.Source, true); err != nil {
-			return err
-		}
+		add(fmt.Sprintf("component.files[%d].source", i), file.Source, true)
 	}
 	for i, archive := range config.Component.ImageArchives {
-		if err := check(fmt.Sprintf("component.imageArchives[%d].path", i), archive.Path, false); err != nil {
-			return err
+		add(fmt.Sprintf("component.imageArchives[%d].path", i), archive.Path, false)
+	}
+	for _, reference := range references {
+		if !validResourcePath(reference.source) {
+			return nil, fmt.Errorf("%s has invalid local resource path %q", reference.field, reference.source)
 		}
 	}
-	return nil
+	return references, nil
 }
 
 // HasActionSet reports whether an action set contains actions or defaults.

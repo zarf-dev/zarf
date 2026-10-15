@@ -36,7 +36,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/internal/packager/componentarchive"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -135,7 +135,7 @@ func generateSBOM(ctx context.Context, pkg api.Package, buildPath string, images
 		}
 	}
 
-	err = createReproducibleTarballFromDir(outputPath, "", filepath.Join(buildPath, "sboms.tar"), false)
+	err = componentarchive.Create(ctx, outputPath, "", filepath.Join(buildPath, "sboms.tar"), false)
 	if err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func createFileSBOM(ctx context.Context, component api.Component, outputPath, bu
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
 	tarPath := filepath.Join(buildPath, layout.ComponentsDir, component.Name) + ".tar"
-	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
+	componentRoot, err := componentarchive.Extract(ctx, tarPath, tmpDir, component.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -206,14 +206,14 @@ func createFileSBOM(ctx context.Context, component api.Component, outputPath, bu
 		return nil
 	}
 	for i, file := range component.Files {
-		path := filepath.Join(tmpDir, component.Name, string(layout.FilesComponentDir), layout.ComponentFileRelPath(i, file.Destination))
+		path := filepath.Join(componentRoot, string(layout.FilesComponentDir), layout.ComponentFileRelPath(i, file.Destination))
 		err := appendSBOMFiles(path)
 		if err != nil {
 			return nil, err
 		}
 	}
 	for i, data := range component.DataInjections {
-		path := filepath.Join(tmpDir, component.Name, string(layout.DataComponentDir), strconv.Itoa(i), filepath.Base(data.Target.Path))
+		path := filepath.Join(componentRoot, string(layout.DataComponentDir), strconv.Itoa(i), filepath.Base(data.Target.Path))
 		err := appendSBOMFiles(path)
 		if err != nil {
 			return nil, err

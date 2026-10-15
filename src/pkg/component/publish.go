@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/componentarchive"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -39,8 +40,6 @@ import (
 	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 )
-
-const componentLayerMediaType = "application/vnd.zarf.component.layer.v1.blob"
 
 // PublishOptions declares parameters for publishing a v1beta1 component config.
 type PublishOptions struct {
@@ -121,7 +120,7 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if err := store.Push(ctx, configDescriptor, bytes.NewReader(componentJSON)); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to stage component config: %w", err)
 	}
-	layers, err := stageComponentResources(ctx, store, resources)
+	layers, err := stageComponentResources(ctx, store, stagingDir, resources)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -231,104 +230,129 @@ func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourc
 
 // stageComponentResources includes local component resources while leaving remote resources to
 // be fetched when the component is imported during package creation.
-func stageComponentResources(ctx context.Context, store content.Storage, resources normalizedComponentResources) ([]ocispec.Descriptor, error) {
-	cleanupImageLayout, err := addComponentImageLayout(ctx, resources.imageArchives, resources.architecture, resources.resources)
+func stageComponentResources(ctx context.Context, store content.Storage, stagingDir string, resources normalizedComponentResources) ([]ocispec.Descriptor, error) {
+	paths, err := unpackComponentImages(ctx, stagingDir, resources.imageArchives, resources.architecture)
 	if err != nil {
 		return nil, err
 	}
-	defer cleanupImageLayout()
-	paths := make([]string, 0, len(resources.resources))
-	for rel := range resources.resources {
-		paths = append(paths, rel)
-	}
-	sort.Strings(paths)
 
-	layers := make([]ocispec.Descriptor, 0, len(paths))
+	archivePath := filepath.Join(stagingDir, layout.ComponentTar)
+	if err := archiveComponentResources(ctx, archivePath, resources.resources); err != nil {
+		return nil, fmt.Errorf("unable to archive component resources: %w", err)
+	}
+	descriptor, err := stageComponentFile(ctx, store, archivePath, layout.ZarfComponentLayerMediaTypeTar, map[string]string{ocispec.AnnotationTitle: layout.ComponentTar})
+	if err != nil {
+		return nil, fmt.Errorf("unable to stage component archive: %w", err)
+	}
+	layers := []ocispec.Descriptor{descriptor}
 	for _, rel := range paths {
-		resource := resources.resources[rel]
-		descriptor, reader, err := componentResourceDescriptor(resource)
-		if err != nil {
-			return nil, fmt.Errorf("unable to read component resource %q: %w", rel, err)
-		}
-		descriptor.Annotations = map[string]string{
+		descriptor, err := stageComponentFile(ctx, store, filepath.Join(stagingDir, filepath.FromSlash(rel)), layout.ZarfComponentLayerMediaTypeBlob, map[string]string{
 			ocispec.AnnotationTitle:                     rel,
 			layout.ComponentResourceMountPathAnnotation: rel,
-		}
-		exists, err := store.Exists(ctx, descriptor)
+		})
 		if err != nil {
-			return nil, fmt.Errorf("unable to check component resource %q: %w", rel, err)
-		}
-		if !exists {
-			err = store.Push(ctx, descriptor, reader)
-		}
-		closeErr := reader.Close()
-		if err != nil {
-			return nil, fmt.Errorf("unable to stage component resource %q: %w", rel, err)
-		}
-		if closeErr != nil {
-			return nil, fmt.Errorf("unable to close component resource %q: %w", rel, closeErr)
+			return nil, fmt.Errorf("unable to stage component image layout file %q: %w", rel, err)
 		}
 		layers = append(layers, descriptor)
 	}
 	return layers, nil
 }
 
-// componentResourceDescriptor creates a descriptor and a fresh reader for a component resource.
-// File-backed resources are hashed and staged as streams so large component artifacts are never
-// retained in process memory.
-func componentResourceDescriptor(resource componentResource) (ocispec.Descriptor, io.ReadCloser, error) {
-	if resource.contents != nil {
-		return content.NewDescriptorFromBytes(componentLayerMediaType, resource.contents), io.NopCloser(bytes.NewReader(resource.contents)), nil
-	}
-
-	file, err := os.Open(resource.sourcePath)
+func stageComponentFile(ctx context.Context, store content.Storage, filePath, mediaType string, annotations map[string]string) (_ ocispec.Descriptor, err error) {
+	file, err := os.Open(filePath)
 	if err != nil {
-		return ocispec.Descriptor{}, nil, err
+		return ocispec.Descriptor{}, err
 	}
-	digestValue, digestErr := digest.FromReader(file)
-	closeErr := file.Close()
-	if err := errors.Join(digestErr, closeErr); err != nil {
-		return ocispec.Descriptor{}, nil, err
-	}
-	info, err := os.Stat(resource.sourcePath)
+	defer func() { err = errors.Join(err, file.Close()) }()
+	info, err := file.Stat()
 	if err != nil {
-		return ocispec.Descriptor{}, nil, err
+		return ocispec.Descriptor{}, err
 	}
-	reader, err := os.Open(resource.sourcePath)
+	digestValue, err := digest.FromReader(file)
 	if err != nil {
-		return ocispec.Descriptor{}, nil, err
+		return ocispec.Descriptor{}, err
 	}
-	return ocispec.Descriptor{
-		MediaType: componentLayerMediaType,
-		Digest:    digestValue,
-		Size:      info.Size(),
-	}, reader, nil
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return ocispec.Descriptor{}, err
+	}
+	descriptor := ocispec.Descriptor{
+		MediaType:   mediaType,
+		Digest:      digestValue,
+		Size:        info.Size(),
+		Annotations: annotations,
+	}
+	exists, err := store.Exists(ctx, descriptor)
+	if err != nil {
+		return ocispec.Descriptor{}, err
+	}
+	if !exists {
+		if err := store.Push(ctx, descriptor, file); err != nil {
+			return ocispec.Descriptor{}, err
+		}
+	}
+	return descriptor, nil
 }
 
-// addComponentImageLayout expands image archives into the OCI layout used by regular packages.
-// The layout is included as artifact layers rather than preserving the source archive itself. An
-// empty architecture preserves every image platform; a selector architecture retains only that platform.
-func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchive, architecture string, resources map[string]componentResource) (_ func(), err error) {
-	if len(archives) == 0 {
-		return func() {}, nil
-	}
-
-	tempDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+// archiveComponentResources stages resources using the same copy and tar rules as package assembly.
+func archiveComponentResources(ctx context.Context, destination string, resources map[string]componentResource) (err error) {
+	directory, err := os.MkdirTemp(filepath.Dir(destination), "component-resources-")
 	if err != nil {
-		return nil, fmt.Errorf("unable to create image layout: %w", err)
+		return err
 	}
-	cleanup := func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			logger.From(ctx).Warn("unable to remove component image layout", "path", tempDir, "error", err)
+	defer func() { err = errors.Join(err, os.RemoveAll(directory)) }()
+	paths := make([]string, 0, len(resources))
+	for rel := range resources {
+		paths = append(paths, rel)
+	}
+	sort.Strings(paths)
+	for _, rel := range paths {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		resource := resources[rel]
+		target := filepath.Join(directory, filepath.FromSlash(rel))
+		if resource.contents != nil {
+			if err := helpers.CreateParentDirectory(target); err != nil {
+				return err
+			}
+			if err := os.WriteFile(target, resource.contents, helpers.ReadWriteUser); err != nil {
+				return err
+			}
+		} else {
+			// Component imports support regular files and directories, not filesystem links.
+			if err := filepath.WalkDir(resource.sourcePath, func(_ string, entry fs.DirEntry, walkErr error) error {
+				if walkErr != nil {
+					return walkErr
+				}
+				if !entry.IsDir() && !entry.Type().IsRegular() {
+					return fmt.Errorf("component resource %q contains unsupported file type %s", rel, entry.Type())
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := helpers.CreatePathAndCopy(resource.sourcePath, target); err != nil {
+				return err
+			}
+		}
+		if resource.mode != 0 {
+			if err := os.Chmod(target, resource.mode); err != nil {
+				return err
+			}
 		}
 	}
-	defer func() {
-		if err != nil {
-			cleanup()
-		}
-	}()
+	return componentarchive.Create(ctx, directory, "", destination, false)
+}
 
-	imageDir := filepath.Join(tempDir, layout.ImagesDir)
+// unpackComponentImages expands image archives in the staging directory and returns sorted layout paths.
+// Each layout file is published as an individual layer. An
+// empty architecture preserves every image platform; a selector architecture retains only that platform.
+func unpackComponentImages(ctx context.Context, stagingDir string, archives []v1beta1.ImageArchive, architecture string) ([]string, error) {
+	if len(archives) == 0 {
+		return nil, nil
+	}
+
+	imageDir := filepath.Join(stagingDir, layout.ImagesDir)
 	for _, archive := range archives {
 		_, err := images.Unpack(ctx, api.ImageArchive{Path: archive.Path, Images: archive.Images}, imageDir, architecture)
 		if err != nil {
@@ -339,24 +363,26 @@ func addComponentImageLayout(ctx context.Context, archives []v1beta1.ImageArchiv
 		return nil, fmt.Errorf("unable to sort component image layout: %w", err)
 	}
 
-	err = filepath.WalkDir(imageDir, func(path string, entry fs.DirEntry, walkErr error) error {
+	var paths []string
+	err := filepath.WalkDir(imageDir, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
 		if entry.IsDir() {
 			return nil
 		}
-		rel, err := filepath.Rel(tempDir, path)
+		rel, err := filepath.Rel(stagingDir, path)
 		if err != nil {
 			return err
 		}
-		resources[filepath.ToSlash(rel)] = componentResource{sourcePath: path}
+		paths = append(paths, filepath.ToSlash(rel))
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return cleanup, nil
+	sort.Strings(paths)
+	return paths, nil
 }
 
 func componentReference(destination registry.Reference, component v1beta1.ComponentConfig) (registry.Reference, error) {

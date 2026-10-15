@@ -6,7 +6,6 @@ package component
 import (
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,10 +18,11 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
-// componentResource describes a single file staged in a published component artifact.
+// componentResource describes a file or directory staged in a published component artifact.
 type componentResource struct {
 	sourcePath string
 	contents   []byte
+	mode       os.FileMode
 }
 
 type normalizedComponentResources struct {
@@ -84,13 +84,24 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	for i := range component.Component.Charts {
 		chart := &component.Component.Charts[i]
 		if chart.Local != nil {
-			chart.Local.Path, err = addLocalResource(&normalizer, chart.Local.Path)
+			if helpers.IsURL(chart.Local.Path) {
+				return component, normalizedComponentResources{}, fmt.Errorf("resource %q must be local", chart.Local.Path)
+			}
+			localPath, pathErr := resourceSet.Path(chart.Local.Path)
+			if pathErr != nil {
+				return component, normalizedComponentResources{}, pathErr
+			}
+			if helpers.IsDir(localPath) {
+				chart.Local.Path, err = normalizer.add(chart.Local.Path)
+			} else {
+				chart.Local.Path, err = normalizer.addCopiedResource(chart.Local.Path, path.Join(string(layout.ChartsComponentDir), layout.ChartArchiveName(chart.Name, "")), 0)
+			}
 			if err != nil {
 				return component, normalizedComponentResources{}, err
 			}
 		}
 		for j := range chart.ValuesFiles {
-			chart.ValuesFiles[j].Path, err = addResource(&normalizer, chart.ValuesFiles[j].Path)
+			chart.ValuesFiles[j].Path, err = normalizer.addCopiedResource(chart.ValuesFiles[j].Path, path.Join(string(layout.ValuesComponentDir), layout.ChartValuesFileName(chart.Name, "", j)), 0)
 			if err != nil {
 				return component, normalizedComponentResources{}, err
 			}
@@ -100,7 +111,7 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	for i := range component.Component.Manifests {
 		manifest := &component.Component.Manifests[i]
 		for j := range manifest.Files {
-			manifest.Files[j], err = addResource(&normalizer, manifest.Files[j])
+			manifest.Files[j], err = normalizer.addCopiedResource(manifest.Files[j], path.Join(string(layout.ManifestsComponentDir), layout.ManifestFileName(manifest.Name, j)), 0)
 			if err != nil {
 				return component, normalizedComponentResources{}, err
 			}
@@ -114,7 +125,16 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	}
 
 	for i := range component.Component.Files {
-		component.Component.Files[i].Source, err = addResource(&normalizer, component.Component.Files[i].Source)
+		file := &component.Component.Files[i]
+		if file.ExtractPath != "" {
+			file.Source, err = addResource(&normalizer, file.Source)
+		} else {
+			mode := os.FileMode(helpers.ReadWriteUser)
+			if file.Executable {
+				mode = helpers.ReadWriteExecuteUser
+			}
+			file.Source, err = normalizer.addCopiedResource(file.Source, path.Join(string(layout.FilesComponentDir), filepath.ToSlash(layout.ComponentFileRelPath(i, file.Destination))), mode)
+		}
 		if err != nil {
 			return component, normalizedComponentResources{}, err
 		}
@@ -166,36 +186,27 @@ func (n *componentResourceNormalizer) add(resourcePath string) (string, error) {
 	if mountPath, ok := n.sourceMounts[sourcePath]; ok {
 		return mountPath, nil
 	}
-	info, err := os.Stat(sourcePath)
-	if err != nil {
-		return "", fmt.Errorf("unable to access local component resource %q: %w", resourcePath, err)
-	}
-
 	mountPath := path.Join("resources", strconv.Itoa(n.nextID), filepath.Base(sourcePath))
 	n.nextID++
 	n.sourceMounts[sourcePath] = mountPath
-	if !info.IsDir() {
-		n.resources[mountPath] = componentResource{sourcePath: sourcePath}
-		return mountPath, nil
-	}
+	n.resources[mountPath] = componentResource{sourcePath: sourcePath}
+	return mountPath, nil
+}
 
-	err = filepath.WalkDir(sourcePath, func(filePath string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			return nil
-		}
-		rel, err := filepath.Rel(sourcePath, filePath)
-		if err != nil {
-			return err
-		}
-		n.resources[path.Join(mountPath, filepath.ToSlash(rel))] = componentResource{sourcePath: filePath}
-		return nil
-	})
+// addCopiedResource uses the same path and permissions as package assembly for resources copied verbatim.
+// Inputs needing create-time processing retain their source paths under resources/.
+func (n *componentResourceNormalizer) addCopiedResource(resourcePath, mountPath string, mode os.FileMode) (string, error) {
+	if resourcePath == "" || helpers.IsURL(resourcePath) {
+		return resourcePath, nil
+	}
+	sourcePath, err := n.resourceSet.Path(resourcePath)
 	if err != nil {
 		return "", err
 	}
+	if mode != 0 && helpers.IsDir(sourcePath) {
+		mode = helpers.ReadWriteExecuteUser
+	}
+	n.resources[mountPath] = componentResource{sourcePath: sourcePath, mode: mode}
 	return mountPath, nil
 }
 

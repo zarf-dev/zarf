@@ -20,7 +20,9 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
+	"github.com/zarf-dev/zarf/src/internal/packager/componentarchive"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -66,7 +68,7 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	require.NoError(t, err)
 	tarPath := filepath.Join(t.TempDir(), "data.tar")
 
-	err = createReproducibleTarballFromDir(tmpDir, "", tarPath, true)
+	err = componentarchive.Create(t.Context(), tmpDir, "", tarPath, true)
 	require.NoError(t, err)
 
 	shaSum, err := checksum.GetSHA256OfFile(tarPath)
@@ -729,6 +731,12 @@ components:
 	require.NoError(t, err)
 	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
 	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
+	requirement := api.VersionRequirement{
+		Version: "v0.88.0",
+		Reason:  "This package uses name-independent v1beta1 component archives which require v0.88.0+",
+	}
+	require.Contains(t, convert.PackageFromV1alpha1(alphaPkg).Build.VersionRequirements, requirement)
+	require.Contains(t, convert.PackageFromV1beta1(betaPkg).Build.VersionRequirements, requirement)
 }
 
 func TestAssemblePackageReadinessVersionRequirement(t *testing.T) {
@@ -837,6 +845,9 @@ func TestAssemblePackageV1Alpha1DoesNotWriteV1Beta1Definition(t *testing.T) {
 	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
 	_, err = pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
 	require.Error(t, err)
+	extracted := t.TempDir()
+	require.NoError(t, archive.Decompress(ctx, filepath.Join(pkgLayout.DirPath(), layout.ComponentsDir, "alpha-component.tar"), extracted, archive.DecompressOpts{}))
+	require.FileExists(t, filepath.Join(extracted, "alpha-component", "files", "0", "data.txt"))
 }
 
 func TestGetSBOM(t *testing.T) {

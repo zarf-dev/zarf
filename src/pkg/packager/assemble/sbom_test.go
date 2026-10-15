@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -183,4 +184,37 @@ func TestCreateFileSBOMContents(t *testing.T) {
 	fileContent, err := os.ReadFile(filepath.Join(outputPath, "zarf-component-test-component.json"))
 	require.NoError(t, err)
 	require.Equal(t, fileContent, b)
+}
+
+func TestAssemblePackageV1Beta1FileSBOM(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "requirements.txt"), []byte("flask==2.0.1\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-file-sbom
+components:
+  - name: files
+    files:
+      - source: requirements.txt
+        destination: /tmp/requirements.txt
+`), 0o600))
+	loaded, err := load.Package(t.Context(), dir, load.PackageOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+	pkgLayout, err := AssemblePackage(t.Context(), loaded, AssembleOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+	output := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), output))
+	contents, err := os.ReadFile(filepath.Join(output, "zarf-component-files.json"))
+	require.NoError(t, err)
+	var doc model.Document
+	require.NoError(t, json.Unmarshal(contents, &doc))
+	version, pkgType, ok := findArtifact(doc, "flask")
+	require.True(t, ok, "expected flask package in file SBOM artifacts")
+	require.Equal(t, "2.0.1", version)
+	require.Equal(t, pkg.PythonPkg, pkgType)
 }

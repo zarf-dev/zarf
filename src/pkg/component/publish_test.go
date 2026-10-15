@@ -4,12 +4,15 @@
 package component
 
 import (
+	"archive/tar"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -146,35 +149,143 @@ func TestPublishComponent(t *testing.T) {
 	require.Equal(t, []string{"resources/0/component-values.yaml"}, component.Values.Files)
 	require.Equal(t, "resources/1/component-values.schema.json", component.Values.Schema)
 	require.Equal(t, "resources/2/local-chart", component.Component.Charts[0].Local.Path)
-	require.Equal(t, "resources/3/local-chart-values.yaml", component.Component.Charts[0].ValuesFiles[0].Path)
+	require.Equal(t, "values/local-chart-0", component.Component.Charts[0].ValuesFiles[0].Path)
 	require.Equal(t, "https://example.com/remote-chart-values.yaml", component.Component.Charts[0].ValuesFiles[1].Path)
-	require.Equal(t, "resources/4/local-manifest.yaml", component.Component.Manifests[0].Files[0])
+	require.Equal(t, "manifests/local-manifest-0.yaml", component.Component.Manifests[0].Files[0])
 	require.Equal(t, "https://example.com/remote-manifest.yaml", component.Component.Manifests[1].Files[0])
-	require.Equal(t, "resources/5/local-file.txt", component.Component.Files[0].Source)
+	require.Equal(t, "files/0/local-file.txt", component.Component.Files[0].Source)
 	require.Equal(t, "https://example.com/remote-file.txt", component.Component.Files[1].Source)
 
-	layerTitles := make([]string, 0, len(manifest.Layers))
-	for _, layer := range manifest.Layers {
-		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
-		require.Equal(t, layer.Annotations[ocispec.AnnotationTitle], layer.Annotations[layout.ComponentResourceMountPathAnnotation])
-	}
-	for _, localPath := range []string{
-		"resources/0/component-values.yaml",
-		"resources/1/component-values.schema.json",
-		"resources/2/local-chart/Chart.yaml",
-		"resources/2/local-chart/templates/configmap.yaml",
-		"resources/3/local-chart-values.yaml",
-		"resources/4/local-manifest.yaml",
-		"resources/5/local-file.txt",
+	resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
+	for localPath, sourcePath := range map[string]string{
+		"resources/0/component-values.yaml":                "component-values.yaml",
+		"resources/1/component-values.schema.json":         "component-values.schema.json",
+		"resources/2/local-chart/Chart.yaml":               "local-chart/Chart.yaml",
+		"resources/2/local-chart/templates/configmap.yaml": "local-chart/templates/configmap.yaml",
+		"values/local-chart-0":                             "local-chart-values.yaml",
+		"manifests/local-manifest-0.yaml":                  "local-manifest.yaml",
+		"files/0/local-file.txt":                           "local-file.txt",
 	} {
-		require.Contains(t, layerTitles, localPath)
+		require.Contains(t, resourceFiles, localPath)
+		contents, err := os.ReadFile(filepath.Join("testdata", "publish-component-v1beta1", filepath.FromSlash(sourcePath)))
+		require.NoError(t, err)
+		require.Equal(t, string(contents), resourceFiles[localPath])
 	}
 	for _, remotePath := range []string{
 		"https://example.com/remote-chart-values.yaml",
 		"https://example.com/remote-file.txt",
 		"https://example.com/remote-manifest.yaml",
 	} {
-		require.NotContains(t, layerTitles, remotePath)
+		require.NotContains(t, resourceFiles, remotePath)
+	}
+}
+
+func TestPublishComponentLayerDigestMatchesPackageImport(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	componentDir := t.TempDir()
+	fileContents := []byte("shared component content\n")
+	require.NoError(t, os.WriteFile(filepath.Join(componentDir, "file.txt"), fileContents, 0o600))
+	for relativePath, contents := range map[string]string{
+		"manifest.yaml":               "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: shared\n",
+		"chart/Chart.yaml":            "apiVersion: v2\nname: shared\nversion: 0.1.0\n",
+		"chart/templates/config.yaml": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: chart\n",
+		"chart-values.yaml":           "enabled: true\n",
+		"directory/nested/program.sh": "#!/bin/sh\necho shared\n",
+	} {
+		resourcePath := filepath.Join(componentDir, relativePath)
+		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o755))
+		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o644))
+	}
+	require.NoError(t, os.Chmod(filepath.Join(componentDir, "directory", "nested", "program.sh"), 0o755))
+	require.NoError(t, archive.Compress(ctx, []string{filepath.Join(componentDir, "chart")}, filepath.Join(componentDir, "chart.tgz"), archive.CompressOpts{}))
+	componentPath := filepath.Join(componentDir, "component.yaml")
+	require.NoError(t, os.WriteFile(componentPath, []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: shared-component
+  version: 0.0.1
+component:
+  files:
+    - source: file.txt
+      destination: /tmp/file.txt
+    - source: file.txt
+      destination: /tmp/program.txt
+      executable: true
+    - source: directory
+      destination: /tmp/directory
+  manifests:
+    - name: shared
+      files:
+        - manifest.yaml
+  charts:
+    - name: shared
+      namespace: default
+      local:
+        path: chart.tgz
+      valuesFiles:
+        - path: chart-values.yaml
+`), 0o600))
+
+	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	_, componentManifest := getPublishedComponent(ctx, t, published)
+	require.Len(t, componentManifest.Layers, 1)
+	componentLayer := componentManifest.Layers[0]
+	require.Equal(t, layout.ZarfComponentLayerMediaTypeTar, componentLayer.MediaType)
+
+	for _, tc := range []struct {
+		name       string
+		importYAML string
+	}{
+		{
+			name:       "local config",
+			importYAML: "local:\n        - path: ../component.yaml",
+		},
+		{
+			name:       "published config",
+			importYAML: fmt.Sprintf("remote:\n        - url: oci://%s", published.String()),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			packageDir := filepath.Join(componentDir, tc.name)
+			require.NoError(t, os.Mkdir(packageDir, 0o700))
+			packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: component-layer-digest
+components:
+  - name: files
+    import:
+      %s
+`, tc.importYAML)
+			require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(packageYAML), 0o600))
+			cachePath := t.TempDir()
+			loaded, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{CachePath: cachePath, RemoteOptions: defaultTestRemoteOptions()}})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+			pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{CachePath: cachePath, SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+			filesDir, err := pkgLayout.GetComponentDir(ctx, t.TempDir(), "files", layout.FilesComponentDir)
+			require.NoError(t, err)
+			assembledContents, err := os.ReadFile(filepath.Join(filesDir, "0", "file.txt"))
+			require.NoError(t, err)
+			require.Equal(t, fileContents, assembledContents)
+			require.FileExists(t, filepath.Join(filesDir, "2", "directory", "nested", "program.sh"))
+			chartsDir, err := pkgLayout.GetComponentDir(ctx, t.TempDir(), "files", layout.ChartsComponentDir)
+			require.NoError(t, err)
+			require.FileExists(t, filepath.Join(chartsDir, "shared.tgz"))
+
+			packageManifest, err := pkgLayout.Manifest()
+			require.NoError(t, err)
+			packageLayer := packageManifest.Locate("components/files.tar")
+			require.NotEmpty(t, packageLayer.Digest)
+			require.Equal(t, componentLayer.Digest, packageLayer.Digest,
+				"identical component content must share an OCI layer digest to avoid duplicate registry blobs")
+		})
 	}
 }
 
@@ -295,46 +406,123 @@ component:
 
 	component, manifest := getPublishedComponent(ctx, t, published)
 	require.Empty(t, component.Component.Import)
-	require.Equal(t, []v1beta1.File{{Source: "resources/0/remote-file.txt", Destination: "/tmp/remote-file.txt"}}, component.Component.Files)
+	require.Equal(t, []v1beta1.File{{Source: "files/0/remote-file.txt", Destination: "/tmp/remote-file.txt"}}, component.Component.Files)
 	require.Len(t, manifest.Layers, 1)
-	require.Equal(t, "resources/0/remote-file.txt", manifest.Layers[0].Annotations[ocispec.AnnotationTitle])
+	require.Equal(t, "remote file", getPublishedResourceFiles(ctx, t, published, manifest)["files/0/remote-file.txt"])
 }
 
 func TestPublishComponentImageArchivesUseOCILayout(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
-	archivePath := filepath.Join(t.TempDir(), "images.tar")
-	imageLayout := filepath.Join("..", "images", "testdata", "oras-oci-layout", "images")
-	require.NoError(t, archive.Compress(ctx, []string{imageLayout}, archivePath, archive.CompressOpts{}))
-	componentPath := filepath.Join(t.TempDir(), "component.yaml")
-	componentYAML := []byte(fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+	for _, withFiles := range []bool{false, true} {
+		t.Run(fmt.Sprintf("local-files-%t", withFiles), func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			archivePath := filepath.Join(t.TempDir(), "images.tar")
+			imageLayout := filepath.Join("..", "images", "testdata", "oras-oci-layout", "images")
+			require.NoError(t, archive.Compress(ctx, []string{imageLayout}, archivePath, archive.CompressOpts{}))
+			componentPath := filepath.Join(t.TempDir(), "component.yaml")
+			fileSpec := ""
+			if withFiles {
+				fileSpec = "\n  files:\n    - source: file.txt\n      destination: /tmp/file.txt"
+			}
+			componentYAML := []byte(fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
 kind: ZarfComponentConfig
 metadata:
   name: image-archive-component
   version: 0.0.1
-component:
+component:%s
   imageArchives:
     - path: %q
       images:
         - ghcr.io/zarf-dev/images/hello-world:latest
-`, archivePath))
-	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
+`, fileSpec, archivePath))
+			require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
+			require.NoError(t, os.WriteFile(filepath.Join(filepath.Dir(componentPath), "file.txt"), []byte("component file"), 0o600))
 
-	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
-	require.NoError(t, err)
+			published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+			require.NoError(t, err)
 
-	component, manifest := getPublishedComponent(ctx, t, published)
-	require.Equal(t, "images", component.Component.ImageArchives[0].Path)
+			component, manifest := getPublishedComponent(ctx, t, published)
+			require.Equal(t, "images", component.Component.ImageArchives[0].Path)
 
-	layerTitles := make([]string, 0, len(manifest.Layers))
-	for _, layer := range manifest.Layers {
-		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
+			resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
+			if withFiles {
+				require.Equal(t, "component file", resourceFiles["files/0/file.txt"])
+			} else {
+				require.Empty(t, resourceFiles)
+			}
+			for filename := range resourceFiles {
+				require.NotContains(t, filename, "images/")
+			}
+			imageLayers := map[string]ocispec.Descriptor{}
+			for _, layer := range manifest.Layers {
+				if layer.MediaType == layout.ZarfComponentLayerMediaTypeTar {
+					continue
+				}
+				require.Equal(t, layout.ZarfComponentLayerMediaTypeBlob, layer.MediaType)
+				mountPath := layer.Annotations[layout.ComponentResourceMountPathAnnotation]
+				require.Equal(t, mountPath, layer.Annotations[ocispec.AnnotationTitle])
+				imageLayers[mountPath] = layer
+			}
+			require.Contains(t, imageLayers, "images/oci-layout")
+			require.Contains(t, imageLayers, "images/index.json")
+			manifestPath := "images/blobs/sha256/03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c"
+			require.Contains(t, imageLayers, manifestPath)
+
+			packageDir := t.TempDir()
+			packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: image-archive-import
+components:
+  - name: imported
+    import:
+      remote:
+        - url: oci://%s
+`, published.String())
+			packagePath := filepath.Join(packageDir, layout.ZarfYAML)
+			require.NoError(t, os.WriteFile(packagePath, []byte(packageYAML), 0o600))
+			loaded, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()}})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+			imagePath := loaded.Definition.Components[0].ImageArchives[0].Path
+			manifestContents, err := loaded.Resources.ReadFile(imagePath + strings.TrimPrefix(manifestPath, "images"))
+			require.NoError(t, err)
+			originalManifest, err := os.ReadFile(filepath.Join(imageLayout, filepath.FromSlash(strings.TrimPrefix(manifestPath, "images/"))))
+			require.NoError(t, err)
+			require.Equal(t, originalManifest, manifestContents)
+
+			loaded.Definition.Metadata.Architecture = "amd64"
+			pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			assembledManifest, err := os.ReadFile(filepath.Join(pkgLayout.GetImageDirPath(), filepath.FromSlash(strings.TrimPrefix(manifestPath, "images/"))))
+			require.NoError(t, err)
+			require.Equal(t, originalManifest, assembledManifest)
+
+			// Repeated imports share the materialized layout.
+			packageYAML += fmt.Sprintf(`  - name: imported-again
+    import:
+      remote:
+        - url: oci://%s
+`, published.String())
+			require.NoError(t, os.WriteFile(packagePath, []byte(packageYAML), 0o600))
+			repeated, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()}})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, repeated.Close()) })
+			for _, component := range repeated.Definition.Components {
+				contents, err := repeated.Resources.ReadFile(component.ImageArchives[0].Path + strings.TrimPrefix(manifestPath, "images"))
+				require.NoError(t, err)
+				require.Equal(t, originalManifest, contents)
+				if withFiles {
+					file, err := repeated.Resources.ReadFile(component.Files[0].Source)
+					require.NoError(t, err)
+					require.Equal(t, "component file", string(file))
+				}
+			}
+		})
 	}
-	require.Contains(t, layerTitles, "images/oci-layout")
-	require.Contains(t, layerTitles, "images/index.json")
-	require.NotContains(t, layerTitles, "images.tar")
-	require.Contains(t, layerTitles, "images/blobs/sha256/03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c")
 }
 
 func TestPublishComponentResolvesLocalImports(t *testing.T) {
@@ -381,16 +569,13 @@ component:
 	component, manifest := getPublishedComponent(ctx, t, published)
 	require.Empty(t, component.Component.Import)
 	require.Equal(t, []string{"resources/0/child-values.yaml", "resources/1/root-values.yaml"}, component.Values.Files)
-	require.Equal(t, []v1beta1.File{{Source: "resources/2/child-file.txt", Destination: "/tmp/child-file.txt"}}, component.Component.Files)
+	require.Equal(t, []v1beta1.File{{Source: "files/0/child-file.txt", Destination: "/tmp/child-file.txt"}}, component.Component.Files)
 
-	layerTitles := make([]string, 0, len(manifest.Layers))
-	for _, layer := range manifest.Layers {
-		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
-	}
-	require.Contains(t, layerTitles, "resources/0/child-values.yaml")
-	require.Contains(t, layerTitles, "resources/1/root-values.yaml")
-	require.Contains(t, layerTitles, "resources/2/child-file.txt")
-	require.NotContains(t, layerTitles, "child/component.yaml")
+	resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
+	require.Contains(t, resourceFiles, "resources/0/child-values.yaml")
+	require.Contains(t, resourceFiles, "resources/1/root-values.yaml")
+	require.Contains(t, resourceFiles, "files/0/child-file.txt")
+	require.NotContains(t, resourceFiles, "child/component.yaml")
 }
 
 func TestPublishComponentMergesNestedImportedValuesSchemas(t *testing.T) {
@@ -666,10 +851,12 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 		Values:     v1beta1.Values{Files: []string{"../external/values.yaml"}, Schema: filepath.Join(externalDir, "schema.json")},
 		Component: v1beta1.ComponentSpec{
 			Charts: []v1beta1.Chart{{
+				Name:        "chart",
 				Local:       &v1beta1.LocalSource{Path: filepath.Join(externalDir, "chart")},
 				ValuesFiles: []v1beta1.ValuesFile{{Path: "../external/chart-values.yaml"}},
 			}},
 			Manifests: []v1beta1.Manifest{{
+				Name:      "manifest",
 				Files:     []string{filepath.Join(externalDir, "manifest.yaml")},
 				Kustomize: v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
 			}},
@@ -688,25 +875,22 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 	require.Equal(t, "resources/0/values.yaml", publishedComponent.Values.Files[0])
 	require.Equal(t, "resources/1/schema.json", publishedComponent.Values.Schema)
 	require.Equal(t, "resources/2/chart", publishedComponent.Component.Charts[0].Local.Path)
-	require.Equal(t, "resources/3/chart-values.yaml", publishedComponent.Component.Charts[0].ValuesFiles[0].Path)
-	require.Equal(t, "resources/4/manifest.yaml", publishedComponent.Component.Manifests[0].Files[0])
-	require.Equal(t, "resources/5/kustomize", publishedComponent.Component.Manifests[0].Kustomize.Files[0])
-	require.Equal(t, "resources/6/file.txt", publishedComponent.Component.Files[0].Source)
+	require.Equal(t, "values/chart-0", publishedComponent.Component.Charts[0].ValuesFiles[0].Path)
+	require.Equal(t, "manifests/manifest-0.yaml", publishedComponent.Component.Manifests[0].Files[0])
+	require.Equal(t, "resources/3/kustomize", publishedComponent.Component.Manifests[0].Kustomize.Files[0])
+	require.Equal(t, "files/0/file.txt", publishedComponent.Component.Files[0].Source)
 
-	layerMounts := make([]string, 0, len(manifest.Layers))
-	for _, layer := range manifest.Layers {
-		layerMounts = append(layerMounts, layer.Annotations[layout.ComponentResourceMountPathAnnotation])
-	}
+	resourceFiles := getPublishedResourceFiles(ctx, t, published, manifest)
 	for _, mountPath := range []string{
 		"resources/0/values.yaml",
 		"resources/1/schema.json",
 		"resources/2/chart/Chart.yaml",
-		"resources/3/chart-values.yaml",
-		"resources/4/manifest.yaml",
-		"resources/5/kustomize/kustomization.yaml",
-		"resources/6/file.txt",
+		"values/chart-0",
+		"manifests/manifest-0.yaml",
+		"resources/3/kustomize/kustomization.yaml",
+		"files/0/file.txt",
 	} {
-		require.Contains(t, layerMounts, mountPath)
+		require.Contains(t, resourceFiles, mountPath)
 	}
 }
 
@@ -753,6 +937,44 @@ component:
 	ctx := context.Background()
 	_, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.ErrorContains(t, err, `manifest "app" uses kustomize.allowAnyDirectory`)
+}
+
+func getPublishedResourceFiles(ctx context.Context, t *testing.T, published registry.Reference, manifest ocispec.Manifest) map[string]string {
+	t.Helper()
+
+	var archives []ocispec.Descriptor
+	for _, layer := range manifest.Layers {
+		if layer.MediaType == layout.ZarfComponentLayerMediaTypeTar {
+			archives = append(archives, layer)
+		}
+	}
+	require.Len(t, archives, 1)
+	layer := archives[0]
+	require.Equal(t, layout.ComponentTar, layer.Annotations[ocispec.AnnotationTitle])
+	repo, err := registryremote.NewRepository(published.Registry + "/" + published.Repository)
+	require.NoError(t, err)
+	repo.PlainHTTP = true
+	reader, err := repo.Blobs().Fetch(ctx, layer)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, reader.Close()) }()
+
+	files := map[string]string{}
+	tarReader := tar.NewReader(reader)
+	for {
+		header, err := tarReader.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		require.NoError(t, err)
+		if header.Typeflag == tar.TypeDir {
+			continue
+		}
+		require.Equal(t, byte(tar.TypeReg), header.Typeflag)
+		contents, err := io.ReadAll(tarReader)
+		require.NoError(t, err)
+		files[header.Name] = string(contents)
+	}
+	return files
 }
 
 func getPublishedComponent(ctx context.Context, t *testing.T, published registry.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {

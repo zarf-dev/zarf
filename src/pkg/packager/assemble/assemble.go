@@ -8,14 +8,12 @@
 package assemble
 
 import (
-	"archive/tar"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -32,6 +30,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/git"
+	"github.com/zarf-dev/zarf/src/internal/packager/componentarchive"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
@@ -127,7 +126,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		}
 	}()
 	for _, component := range pkg.Components {
-		err := assemblePackageComponent(ctx, component, resolvedPackage.Resources, buildPath, opts.CachePath, opts.RemoteOptions)
+		err := assemblePackageComponent(ctx, component, resolvedPackage.Resources, buildPath, definition.GetAPIVersion(), opts.CachePath, opts.RemoteOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -202,7 +201,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 
-	if err = createDocumentationTar(pkg, resolvedPackage.Resources, buildPath); err != nil {
+	if err = createDocumentationTar(ctx, pkg, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -290,7 +289,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, err
 	}
 
-	if err = createDocumentationTar(definition, resolvedPackage.Resources, buildPath); err != nil {
+	if err = createDocumentationTar(ctx, definition, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -386,7 +385,7 @@ func validateImageArchivesNoDuplicates(components []api.Component) error {
 	return nil
 }
 
-func assemblePackageComponent(ctx context.Context, component api.Component, resources *load.ResourceSet, buildPath, cachePath string, remoteOpts types.RemoteOptions) (err error) {
+func assemblePackageComponent(ctx context.Context, component api.Component, resources *load.ResourceSet, buildPath, apiVersion, cachePath string, remoteOpts types.RemoteOptions) (err error) {
 	packagePath, err := resources.Root()
 	if err != nil {
 		return err
@@ -578,7 +577,11 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 	if err != nil {
 		return err
 	}
-	err = createReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, false)
+	prefix := component.Name
+	if apiVersion == v1beta1.APIVersion {
+		prefix = ""
+	}
+	err = componentarchive.Create(ctx, compBuildPath, prefix, tarPath, false)
 	if err != nil {
 		return err
 	}
@@ -843,7 +846,7 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 	if err != nil {
 		return err
 	}
-	err = createReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, true)
+	err = componentarchive.Create(ctx, compBuildPath, component.Name, tarPath, true)
 	if err != nil {
 		return err
 	}
@@ -889,6 +892,12 @@ func recordPackageMetadata(definition *api.Package, flavor string, registryOverr
 		}
 	}
 	buildData.VersionRequirements = collectVersionRequirements(*definition, hasIndex)
+	if definition.GetAPIVersion() == v1beta1.APIVersion && helpers.IsDir(filepath.Join(buildPath, layout.ComponentsDir)) {
+		buildData.VersionRequirements = append(buildData.VersionRequirements, api.VersionRequirement{
+			Version: "v0.88.0",
+			Reason:  "This package uses name-independent v1beta1 component archives which require v0.88.0+",
+		})
+	}
 
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
@@ -1039,94 +1048,6 @@ func getChecksum(dirPath string) (string, string, error) {
 	return checksumContent, hex.EncodeToString(sha[:]), nil
 }
 
-func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) (err error) {
-	tb, err := os.Create(tarballPath)
-	if err != nil {
-		return fmt.Errorf("error creating tarball: %w", err)
-	}
-	defer func() {
-		err = errors.Join(err, tb.Close())
-	}()
-
-	tw := tar.NewWriter(tb)
-	defer func() {
-		err = errors.Join(err, tw.Close())
-	}()
-
-	// Walk through the directory and process each file
-	return filepath.Walk(dirPath, func(filePath string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		link := ""
-		if info.Mode().Type() == os.ModeSymlink {
-			link, err = os.Readlink(filePath)
-			if err != nil {
-				return fmt.Errorf("error reading symlink: %w", err)
-			}
-		}
-
-		// Create a new header
-		header, err := tar.FileInfoHeader(info, link)
-		if err != nil {
-			return fmt.Errorf("error creating tar header: %w", err)
-		}
-
-		// Strip non-deterministic header data
-		header.ModTime = time.Time{}
-		header.AccessTime = time.Time{}
-		header.ChangeTime = time.Time{}
-		header.Uid = 0
-		header.Gid = 0
-		header.Uname = ""
-		header.Gname = ""
-
-		// When run on windows the header mode will set all permission octals to the same value as the first octal.
-		// A file created with 0o700 will return 0o777 when read back. This discrepancy causes differences between packages
-		// created on Windows and Linux.
-		// https://medium.com/@MichalPristas/go-and-file-perms-on-windows-3c944d55dd44
-		// To mitigate this difference we zero all but the last permission octal when writing files to the tar. Making sure
-		// that when unpackaged files from packages created on Windows and Linux will have the same permissions.
-		// The &^ operator called AND NOT sets the bits to 0 in the left hand if the right hand bits are 1.
-		// https://medium.com/learning-the-go-programming-language/bit-hacking-with-go-e0acee258827
-		if overrideMode {
-			header.Mode = header.Mode &^ 0o077
-		}
-
-		// Ensure the header's name is correctly set relative to the base directory
-		name, err := filepath.Rel(dirPath, filePath)
-		if err != nil {
-			return fmt.Errorf("error getting relative path: %w", err)
-		}
-		name = filepath.Join(dirPrefix, name)
-		name = filepath.ToSlash(name)
-		header.Name = name
-
-		// Write the header to the tarball
-		if err := tw.WriteHeader(header); err != nil {
-			return fmt.Errorf("error writing header: %w", err)
-		}
-
-		// If it's a file, write its content
-		if info.Mode().IsRegular() {
-			file, err := os.Open(filePath)
-			if err != nil {
-				return fmt.Errorf("error opening file: %w", err)
-			}
-			defer func() {
-				err = errors.Join(err, file.Close())
-			}()
-
-			if _, err := io.Copy(tw, file); err != nil {
-				return fmt.Errorf("error writing file to tarball: %w", err)
-			}
-		}
-
-		return nil
-	})
-}
-
 func writeValuesFile(buildPath string, vals value.Values) error {
 	if len(vals) == 0 {
 		return nil
@@ -1152,7 +1073,7 @@ func writeValuesSchema(buildPath string, schema value.SchemaDocument) error {
 	return nil
 }
 
-func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
+func createDocumentationTar(ctx context.Context, pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
 	if len(pkg.Documentation) == 0 {
 		return nil
 	}
@@ -1187,7 +1108,7 @@ func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildP
 	}
 
 	tarPath := filepath.Join(buildPath, layout.DocumentationTar)
-	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
+	if err := componentarchive.Create(ctx, tmpDir, "", tarPath, true); err != nil {
 		return fmt.Errorf("failed to create documentation tarball: %w", err)
 	}
 

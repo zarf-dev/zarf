@@ -4,9 +4,12 @@
 package layout
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -119,6 +122,59 @@ func TestPackageLayout(t *testing.T) {
 		path := filepath.Join(pkgLayout.dirPath, filepath.FromSlash(expectedName))
 		name := files[path]
 		require.Equal(t, expectedName, name)
+	}
+}
+
+func TestPackageLayoutReadsComponentArchiveLayouts(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name, apiVersion, prefix string
+	}{
+		{name: "alpha legacy", apiVersion: v1alpha1.APIVersion, prefix: "files"},
+		{name: "beta legacy", apiVersion: v1beta1.APIVersion, prefix: "files"},
+		{name: "beta name independent", apiVersion: v1beta1.APIVersion},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			contents := []byte("component contents\n")
+			var componentTar bytes.Buffer
+			writer := tar.NewWriter(&componentTar)
+			root := tt.prefix
+			if root == "" {
+				root = "."
+			}
+			require.NoError(t, writer.WriteHeader(&tar.Header{Name: root, Mode: 0o700, Typeflag: tar.TypeDir}))
+			require.NoError(t, writer.WriteHeader(&tar.Header{
+				Name:     filepath.ToSlash(filepath.Join(tt.prefix, "files", "0", "file.txt")),
+				Mode:     0o600,
+				Typeflag: tar.TypeReg,
+				Size:     int64(len(contents)),
+			}))
+			_, err := writer.Write(contents)
+			require.NoError(t, err)
+			require.NoError(t, writer.Close())
+			require.NoError(t, os.Mkdir(filepath.Join(dir, ComponentsDir), 0o700))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, ComponentsDir, "files.tar"), componentTar.Bytes(), 0o600))
+			checksums := []byte(fmt.Sprintf("%x components/files.tar\n", sha256.Sum256(componentTar.Bytes())))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, Checksums), checksums, 0o600))
+			definition := api.Package{
+				APIVersion: tt.apiVersion,
+				Kind:       api.ZarfPackageConfig,
+				Metadata:   api.PackageMetadata{Name: "archive-layout"},
+				Build:      api.BuildData{AggregateChecksum: fmt.Sprintf("%x", sha256.Sum256(checksums))},
+				Components: []api.Component{{Name: "files", Files: []api.File{{Source: "file.txt", Destination: "/tmp/file.txt"}}}},
+			}
+			require.NoError(t, WritePackageDefinition(filepath.Join(dir, ZarfYAML), definition))
+			pkgLayout, err := LoadFromDir(t.Context(), dir, PackageLayoutOptions{VerificationStrategy: VerifyNever})
+			require.NoError(t, err)
+			filesDir, err := pkgLayout.GetComponentDir(t.Context(), t.TempDir(), "files", FilesComponentDir)
+			require.NoError(t, err)
+			actual, err := os.ReadFile(filepath.Join(filesDir, "0", "file.txt"))
+			require.NoError(t, err)
+			require.Equal(t, contents, actual)
+		})
 	}
 }
 
