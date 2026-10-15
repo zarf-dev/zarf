@@ -96,30 +96,30 @@ func TestDeployInitComponentServices(t *testing.T) {
 	}{
 		{
 			name:       "renamed registry",
-			components: []api.Component{{Name: "custom-registry", Service: api.ServiceRegistry}},
+			components: []api.Component{{Name: "custom-registry", Service: api.Service{Name: api.ServiceRegistry}}},
 			registry:   true,
 		},
 		{
 			name: "renamed seed registry",
 			components: []api.Component{
 				{Name: "probe"},
-				{Name: "custom-seed", Service: api.ServiceSeedRegistry},
+				{Name: "custom-seed", Service: api.Service{Name: api.ServiceSeedRegistry}},
 			},
 			registry: true,
 		},
 		{
 			name:       "renamed injector",
-			components: []api.Component{{Name: "custom-injector", Service: api.ServiceInjector}},
+			components: []api.Component{{Name: "custom-injector", Service: api.Service{Name: api.ServiceInjector}}},
 			registry:   true,
 		},
 		{
 			name:       "renamed agent",
-			components: []api.Component{{Name: "custom-agent", Service: api.ServiceAgent}},
+			components: []api.Component{{Name: "custom-agent", Service: api.Service{Name: api.ServiceAgent}}},
 			agent:      true,
 		},
 		{
 			name:       "renamed git server",
-			components: []api.Component{{Name: "custom-git", Service: api.ServiceGitServer}},
+			components: []api.Component{{Name: "custom-git", Service: api.Service{Name: api.ServiceGitServer}}},
 			git:        true,
 		},
 		{
@@ -135,12 +135,12 @@ func TestDeployInitComponentServices(t *testing.T) {
 		{
 			name: "external registry skips renamed registry services",
 			components: []api.Component{
-				{Name: "custom-registry", Service: api.ServiceRegistry},
-				{Name: "custom-seed", Service: api.ServiceSeedRegistry},
-				{Name: "custom-injector", Service: api.ServiceInjector},
+				{Name: "custom-registry", Service: api.Service{Name: api.ServiceRegistry}},
+				{Name: "custom-seed", Service: api.Service{Name: api.ServiceSeedRegistry}},
+				{Name: "custom-injector", Service: api.Service{Name: api.ServiceInjector}},
 				{Name: "zarf-registry"},
-				{Name: "custom-agent", Service: api.ServiceAgent},
-				{Name: "custom-git", Service: api.ServiceGitServer},
+				{Name: "custom-agent", Service: api.Service{Name: api.ServiceAgent}},
+				{Name: "custom-git", Service: api.Service{Name: api.ServiceGitServer}},
 			},
 			opts:            DeployOptions{RegistryInfo: state.RegistryInfo{Address: "registry.example.com"}},
 			registry:        true,

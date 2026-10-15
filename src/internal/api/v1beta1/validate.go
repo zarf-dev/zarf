@@ -75,17 +75,17 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 		errs = append(errs, errors.New(PkgValidateErrNoComponents))
 	}
 	uniqueComponentNames := make(map[string]bool)
-	serviceComponents := make(map[v1beta1.Service]string)
+	serviceComponents := make(map[v1beta1.ServiceName]string)
 	seenSources := make(map[string]v1beta1.ImageSource)
 	for _, component := range pkg.Components {
-		if component.Service != "" {
+		if component.Service.Name != "" {
 			if pkg.Kind != v1beta1.ZarfInitConfig {
-				errs = append(errs, fmt.Errorf(PkgValidateErrServiceRequiresInit, component.Name, component.Service))
+				errs = append(errs, fmt.Errorf(PkgValidateErrServiceRequiresInit, component.Name, component.Service.Name))
 			}
-			if previous, exists := serviceComponents[component.Service]; exists {
-				errs = append(errs, fmt.Errorf(PkgValidateErrServiceNotUnique, component.Service, previous, component.Name))
+			if previous, exists := serviceComponents[component.Service.Name]; exists {
+				errs = append(errs, fmt.Errorf(PkgValidateErrServiceNotUnique, component.Service.Name, previous, component.Name))
 			} else {
-				serviceComponents[component.Service] = component.Name
+				serviceComponents[component.Service.Name] = component.Name
 			}
 		}
 		// ensure component name is unique

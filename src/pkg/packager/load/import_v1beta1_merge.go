@@ -16,7 +16,7 @@ func mergeComponentConfigSpec(imported, override v1beta1.ComponentSpec) v1beta1.
 	if override.Target.OS != "" {
 		merged.Target.OS = override.Target.OS
 	}
-	if override.Service != "" {
+	if override.Service.Name != "" {
 		merged.Service = override.Service
 	}
 

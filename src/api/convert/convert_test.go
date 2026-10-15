@@ -357,7 +357,7 @@ func TestV1Alpha1PkgToV1Beta1_ServiceInference(t *testing.T) {
 	tests := []struct {
 		name     string
 		compName string
-		service  v1beta1.Service
+		service  v1beta1.ServiceName
 	}{
 		{name: "registry", compName: "zarf-registry", service: v1beta1.ServiceRegistry},
 		{name: "seed registry", compName: "zarf-seed-registry", service: v1beta1.ServiceSeedRegistry},
@@ -377,12 +377,12 @@ func TestV1Alpha1PkgToV1Beta1_ServiceInference(t *testing.T) {
 			}
 			definition := PackageFromV1alpha1(pkg)
 			require.Len(t, definition.Components, 1)
-			require.Equal(t, api.Service(tt.service), definition.Components[0].Service)
+			require.Equal(t, api.Service{Name: api.ServiceName(tt.service)}, definition.Components[0].Service)
 
 			result := PackageToV1beta1(definition)
 			require.Equal(t, v1beta1.ZarfInitConfig, result.Kind)
 			require.Len(t, result.Components, 1)
-			require.Equal(t, tt.service, result.Components[0].Service)
+			require.Equal(t, v1beta1.Service{Name: tt.service}, result.Components[0].Service)
 		})
 	}
 }
@@ -432,7 +432,7 @@ func TestV1Beta1PkgToV1Alpha1_PreservesInitKind(t *testing.T) {
 	tests := []struct {
 		name         string
 		kind         v1beta1.PackageKind
-		service      v1beta1.Service
+		service      v1beta1.ServiceName
 		expectedKind v1alpha1.ZarfPackageKind
 	}{
 		{name: "init with service", kind: v1beta1.ZarfInitConfig, service: v1beta1.ServiceRegistry, expectedKind: v1alpha1.ZarfInitConfig},
@@ -448,7 +448,7 @@ func TestV1Beta1PkgToV1Alpha1_PreservesInitKind(t *testing.T) {
 				Components: []v1beta1.Component{
 					{
 						Name:          "zarf-registry",
-						ComponentSpec: v1beta1.ComponentSpec{Service: tt.service},
+						ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.Service{Name: tt.service}},
 					},
 				},
 			}

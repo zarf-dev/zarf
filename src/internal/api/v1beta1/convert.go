@@ -80,7 +80,7 @@ func componentToGeneric(c v1beta1.Component) api.Component {
 		Name:         c.Name,
 		Description:  c.Description,
 		Optional:     c.Optional,
-		Service:      api.Service(c.Service),
+		Service:      api.Service{Name: api.ServiceName(c.Service.Name)},
 		Repositories: repositoriesToGeneric(c.Repositories),
 		StateAccess:  stateAccessToGeneric(c.StateAccess),
 		Selector: api.ComponentSelector{
@@ -399,7 +399,7 @@ func componentFromGeneric(c api.Component) v1beta1.Component {
 				OS: c.Target.OS,
 			},
 			Import:  importFromGeneric(c.Import),
-			Service: v1beta1.Service(c.Service),
+			Service: v1beta1.Service{Name: v1beta1.ServiceName(c.Service.Name)},
 			Actions: actionsFromGeneric(c.Actions),
 		},
 	}

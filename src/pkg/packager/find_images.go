@@ -289,7 +289,7 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 		}
 		scan := ComponentImageScan{ComponentName: component.Name}
 
-		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Service, s)
+		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Service.Name, s)
 		if err != nil {
 			return nil, err
 		}

@@ -82,7 +82,8 @@ metadata:
   name: custom-init
 components:
   - name: registry
-    service: registry
+    service:
+      name: registry
 `
 	require.NoError(t, os.WriteFile(source, []byte(definition), 0o644))
 
