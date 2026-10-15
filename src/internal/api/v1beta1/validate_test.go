@@ -303,6 +303,7 @@ func TestValidateChart(t *testing.T) {
 			name:  "no namespace or source",
 			chart: v1beta1.Chart{Name: "invalid"},
 			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrChartSource, "invalid"),
 				fmt.Sprintf(PkgValidateErrChartNamespaceMissing, "invalid"),
 			},
 		},
@@ -338,6 +339,31 @@ func TestValidateChart(t *testing.T) {
 			} else {
 				require.ElementsMatch(t, tt.expectedErrs, validationErrorMessages(errs))
 			}
+		})
+	}
+}
+
+func TestValidateComponentRequiresResolvedChartSource(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name  string
+		chart v1beta1.Chart
+	}{
+		{name: "missing source", chart: v1beta1.Chart{Name: "app", Namespace: "app"}},
+		{name: "conflicting sources", chart: v1beta1.Chart{
+			Name: "app", Namespace: "app",
+			Local: &v1beta1.LocalSource{Path: "chart"},
+			HelmRepository: &v1beta1.HelmRepositorySource{
+				URL: "https://example.com/charts", Version: "1.0.0",
+			},
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			errs := ValidateComponent(v1beta1.Component{
+				Name: "app", ComponentSpec: v1beta1.ComponentSpec{Charts: []v1beta1.Chart{tc.chart}},
+			})
+			require.ErrorContains(t, errs, fmt.Sprintf(PkgValidateErrChartSource, "app"))
 		})
 	}
 }

@@ -111,6 +111,12 @@ func ResolveComponentConfigImports(ctx context.Context, component v1beta1.Compon
 		return ComponentConfigImportResolution{}, err
 	}
 	component.Component = resolvedSpec
+	if validationErrs := internalv1beta1.ValidateComponent(v1beta1.Component{
+		Name:          component.Metadata.Name,
+		ComponentSpec: component.Component,
+	}); len(validationErrs) > 0 {
+		return ComponentConfigImportResolution{}, fmt.Errorf("component validation failed:\n%w", validationErrs)
+	}
 	component.Values.Files = dedupePaths(append(importedVals.files, component.Values.Files...))
 	return ComponentConfigImportResolution{
 		Component:       component,
@@ -157,7 +163,10 @@ func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.Compone
 		inheritedResources[i].importRoot = makePathRelativeTo(inheritedResources[i].importRoot, relDir)
 	}
 	resources := append(directImport.resources, inheritedResources...)
-	merged := mergeComponentConfigSpec(resolvedImportSpec, spec)
+	merged, err := mergeComponentConfigSpec(resolvedImportSpec, spec)
+	if err != nil {
+		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
+	}
 	merged.Import = v1beta1.ComponentImport{}
 	return merged, vals, resources, nil
 }

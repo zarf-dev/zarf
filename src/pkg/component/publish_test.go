@@ -81,6 +81,14 @@ func TestPublishComponentAndAssembleRemoteImportResources(t *testing.T) {
 	}
 	componentYAML, err := goyaml.Marshal(component)
 	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(componentDir, "base.yaml"), componentYAML, 0o600))
+	component.Component = v1beta1.ComponentSpec{
+		Import: v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "base.yaml"}}},
+		Charts: []v1beta1.Chart{{Name: "test", Namespace: "overridden", ReleaseName: "custom-release"}},
+	}
+	component.Values = v1beta1.Values{}
+	componentYAML, err = goyaml.Marshal(component)
+	require.NoError(t, err)
 	componentPath := filepath.Join(componentDir, "component.yaml")
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
@@ -109,6 +117,8 @@ components:
 	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{CachePath: cachePath, SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+	require.Equal(t, "overridden", pkgLayout.Definition().Components[0].Charts[0].Namespace)
+	require.Equal(t, "custom-release", pkgLayout.Definition().Components[0].Charts[0].ReleaseName)
 	require.NoFileExists(t, resourcePath)
 
 	assembledComponentDir := t.TempDir()
@@ -128,6 +138,66 @@ components:
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(manifestsDir, "manifest-0.yaml"))
 	require.FileExists(t, filepath.Join(manifestsDir, "kustomization-kustomize-0.yaml"))
+}
+
+func TestPublishComponentChartRevisionOverrides(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	dir := t.TempDir()
+	base := v1beta1.ComponentConfig{
+		APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfComponentConfig,
+		Metadata: v1beta1.ComponentMetadata{Name: "base"},
+		Component: v1beta1.ComponentSpec{Charts: []v1beta1.Chart{
+			{Name: "helm", Namespace: "default", HelmRepository: &v1beta1.HelmRepositorySource{
+				Name: "upstream", URL: "https://example.com/charts", Version: "1.0.0",
+			}},
+			{Name: "git", Namespace: "default", Git: &v1beta1.GitSource{
+				URL: "https://example.com/charts.git", Path: "charts/app", Ref: v1beta1.GitRef{Tag: "v1"},
+			}},
+			{Name: "oci", Namespace: "default", OCI: &v1beta1.OCISource{
+				URL: "oci://example.com/chart", Ref: v1beta1.OCIRef{Tag: "v1"},
+			}},
+		}},
+	}
+	writeConfig := func(path string, config v1beta1.ComponentConfig) {
+		t.Helper()
+		b, err := goyaml.Marshal(config)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(path, b, 0o600))
+	}
+	writeConfig(filepath.Join(dir, "base.yaml"), base)
+	parent := v1beta1.ComponentConfig{
+		APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfComponentConfig,
+		Metadata: v1beta1.ComponentMetadata{Name: "revisions", Version: "1.0.0"},
+		Component: v1beta1.ComponentSpec{
+			Import: v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "base.yaml"}}},
+			Charts: []v1beta1.Chart{
+				{Name: "helm", HelmRepository: &v1beta1.HelmRepositorySource{Version: "2.0.0"}},
+				{Name: "git", Git: &v1beta1.GitSource{Ref: v1beta1.GitRef{Branch: "release"}}},
+				{Name: "oci", OCI: &v1beta1.OCISource{Ref: v1beta1.OCIRef{Tag: "v2"}}},
+			},
+		},
+	}
+	path := filepath.Join(dir, "component.yaml")
+	writeConfig(path, parent)
+	published, err := Publish(ctx, path, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	config, _ := getPublishedComponent(ctx, t, published)
+	base.Component.Charts[0].HelmRepository.Version = "2.0.0"
+	base.Component.Charts[1].Git.Ref = v1beta1.GitRef{Branch: "release"}
+	base.Component.Charts[2].OCI.Ref = v1beta1.OCIRef{Tag: "v2"}
+	require.Equal(t, base.Component.Charts, config.Component.Charts)
+
+	parent.Component.Charts[0].HelmRepository.URL = "https://example.com/other-charts"
+	writeConfig(path, parent)
+	_, err = Publish(ctx, path, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.ErrorContains(t, err, "cannot override helmRepository.url")
+
+	parent.Component.Charts[0].HelmRepository.URL = ""
+	parent.Component.Charts[0].OCI = &v1beta1.OCISource{URL: "oci://example.com/chart", Ref: v1beta1.OCIRef{Tag: "v2"}}
+	writeConfig(path, parent)
+	_, err = Publish(ctx, path, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.ErrorContains(t, err, `chart "helm" must include exactly one source`)
 }
 
 func TestPublishComponent(t *testing.T) {
@@ -666,6 +736,7 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 		Values:     v1beta1.Values{Files: []string{"../external/values.yaml"}, Schema: filepath.Join(externalDir, "schema.json")},
 		Component: v1beta1.ComponentSpec{
 			Charts: []v1beta1.Chart{{
+				Name: "external", Namespace: "default",
 				Local:       &v1beta1.LocalSource{Path: filepath.Join(externalDir, "chart")},
 				ValuesFiles: []v1beta1.ValuesFile{{Path: "../external/chart-values.yaml"}},
 			}},

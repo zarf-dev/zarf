@@ -238,8 +238,9 @@ func TestV1Beta1SourceOneOfSchema(t *testing.T) {
 			})),
 			valid: true,
 		},
+		// FIXME: probably can delete this test case
 		{
-			name: "chart rejects multiple sources",
+			name: "chart source count is validated after imports",
 			doc: baseDoc(chartComponent(map[string]any{
 				"name": "chart",
 				"local": map[string]any{
@@ -250,7 +251,7 @@ func TestV1Beta1SourceOneOfSchema(t *testing.T) {
 					"ref": map[string]any{"tag": "1.0.0"},
 				},
 			})),
-			valid: false,
+			valid: true,
 		},
 		{
 			name: "oci ref rejects tag and digest",
