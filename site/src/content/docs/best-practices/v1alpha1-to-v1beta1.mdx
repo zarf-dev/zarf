@@ -6,13 +6,13 @@ This guide migrates a `ZarfPackageConfig` definition from `zarf.dev/v1alpha1` to
 
 :::caution
 
-THe v1beta1 schema is experimental and creating v1beta1 packages is behind feature flag.
+The v1beta1 schema is experimental, and creating v1beta1 packages is behind a feature flag.
 
 :::
 
 ## Replace removed features
 
-Before converting, migrate these features while keeping the definition on v1alpha1. `zarf dev upgrade` errors if any of the following removed features are still in use
+Before converting, migrate these features while keeping the definition on v1alpha1. `zarf dev upgrade` errors if any of the following removed features are still in use:
 
 | v1alpha1 field | Migration |
 | --- | --- |
@@ -163,7 +163,7 @@ These conversions are automatic. Paths below are relative to each component unle
 | `metadata.aggregateChecksum` | `build.aggregateChecksum` |
 | `build.terminal` | `build.hostname` |
 
-New v1beta1 components are required by default (`optional: false`). However, conversion keeps current behavior (i.e. an omitted or false `required` becomes `optional: true`). Namespace overrides and chart schema validation remain enabled by default.
+New v1beta1 components are required by default (`optional: false`). However, conversion keeps current behavior (i.e., an omitted or false `required` becomes `optional: true`). Namespace overrides and chart schema validation remain enabled by default.
 
 `selector` filters components during create; `target` filters them during deploy.
 
