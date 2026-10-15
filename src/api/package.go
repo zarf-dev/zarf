@@ -102,15 +102,20 @@ type Component struct {
 }
 
 // Service identifies a Zarf-managed cluster service provided by a component.
-type Service string
+type Service struct {
+	Name ServiceName
+}
+
+// ServiceName identifies a Zarf-managed cluster service.
+type ServiceName string
 
 // Service identifiers used by components that provide Zarf-managed cluster services.
 const (
-	ServiceRegistry     Service = "registry"
-	ServiceSeedRegistry Service = "seed-registry"
-	ServiceInjector     Service = "injector"
-	ServiceAgent        Service = "agent"
-	ServiceGitServer    Service = "git-server"
+	ServiceRegistry     ServiceName = "registry"
+	ServiceSeedRegistry ServiceName = "seed-registry"
+	ServiceInjector     ServiceName = "injector"
+	ServiceAgent        ServiceName = "agent"
+	ServiceGitServer    ServiceName = "git-server"
 )
 
 // ComponentSelector filters a component during package creation.
