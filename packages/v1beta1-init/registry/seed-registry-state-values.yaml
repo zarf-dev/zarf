@@ -1,5 +1,5 @@
 {{- range .Pkg.Components }}
-{{- if eq .Service "seed-registry" }}
+{{- if eq .Service.Name "seed-registry" }}
 {{- $registry := (index .Images 0).Name }}
 {{- $proxy := (index .Images 1).Name }}
 image:

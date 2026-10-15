@@ -5,7 +5,8 @@ metadata:
   version: "[[ .cli.version ]]"
   description: Self-hosted container registry for the cluster
 component:
-  service: registry
+  service:
+    name: registry
   import:
     local:
       - path: registry-base.gen.yaml

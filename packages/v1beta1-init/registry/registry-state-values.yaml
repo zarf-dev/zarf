@@ -1,5 +1,5 @@
 {{- range .Pkg.Components }}
-{{- if eq .Service "registry" }}
+{{- if eq .Service.Name "registry" }}
 {{- $registry := (index .Images 0).Name }}
 {{- $proxy := (index .Images 1).Name }}
 image:

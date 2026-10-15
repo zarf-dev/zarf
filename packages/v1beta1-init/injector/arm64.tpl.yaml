@@ -7,7 +7,8 @@ metadata:
 variant:
   architecture: arm64
 component:
-  service: injector
+  service:
+    name: injector
   files:
     - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.3.0/zarf-injector-arm64
       destination: "###ZARF_TEMP###/zarf-injector"
