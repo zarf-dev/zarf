@@ -186,6 +186,7 @@ import:
 ```
 
 Import these service components into a `ZarfInitConfig`. Preserve the init service
-order and the conventional names, including `zarf-agent`, because the reused agent
-chart uses component-specific built-ins. Make targets only render and create local
-packages; they do not publish artifacts.
+order and the conventional component names: the image templates use `GetComponent`
+to look up `zarf-agent`, `zarf-registry`, `zarf-seed-registry`, and `git-server`.
+The reused agent chart also uses component-specific built-ins. Make targets only
+render and create local packages; they do not publish artifacts.
