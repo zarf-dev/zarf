@@ -8,7 +8,8 @@ values:
   files:
     - git-server-values.yaml
 component:
-  service: git-server
+  service:
+    name: git-server
   stateAccess:
     - gitCredentials
   images:
