@@ -26,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 	_ "modernc.org/sqlite"
 )
 
@@ -56,6 +57,103 @@ fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9 foo
 `
 	require.Equal(t, expectedContent, checksumContent)
 	require.Equal(t, "7c554cf67e1c2b50a1b728299c368cd56d53588300c37479623f29a52812ca3f", checksumHash)
+}
+
+func TestPackageManifestRejectsNamesWithPathSeparators(t *testing.T) {
+	t.Parallel()
+
+	componentDir := filepath.Join(t.TempDir(), "component")
+	resources := load.NewResourceSet(t.TempDir())
+	tests := []struct {
+		name     string
+		manifest api.Manifest
+	}{
+		{
+			name:     "raw manifest",
+			manifest: api.Manifest{Name: "../escaped", Files: []string{"manifest.yaml"}},
+		},
+		{
+			name: "kustomization",
+			manifest: api.Manifest{
+				Name:      `nested\manifest`,
+				Kustomize: api.KustomizeManifest{Files: []string{"kustomize"}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := PackageManifest(testutil.TestContext(t), tt.manifest, componentDir, resources)
+			require.ErrorContains(t, err, "manifest name validation failed")
+			require.ErrorContains(t, err, "must not contain path separators")
+			require.NoDirExists(t, filepath.Join(componentDir, string(layout.ManifestsComponentDir)))
+			require.NoFileExists(t, filepath.Join(componentDir, "escaped-0.yaml"))
+		})
+	}
+}
+
+func TestManifestOutputPathStaysWithinManifestDirectory(t *testing.T) {
+	t.Parallel()
+
+	componentDir := t.TempDir()
+	manifestDir := filepath.Join(componentDir, string(layout.ManifestsComponentDir))
+	destination, err := layout.PathWithinDirectory(manifestDir, "manifest-0.yaml")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(manifestDir, "manifest-0.yaml"), destination)
+
+	_, err = layout.PathWithinDirectory(manifestDir, "../escaped-0.yaml")
+	require.ErrorContains(t, err, "escapes")
+}
+
+func TestPackageChartRejectsUnsafeArtifactComponents(t *testing.T) {
+	t.Parallel()
+
+	paths := layout.ChartPaths{
+		ChartsDir: filepath.Join(t.TempDir(), "charts"),
+		ValuesDir: filepath.Join(t.TempDir(), "values"),
+	}
+	err := PackageChart(testutil.TestContext(t), api.Chart{Name: "../escape"}, load.NewResourceSet(t.TempDir()), paths, "", types.RemoteOptions{})
+	require.ErrorContains(t, err, "chart name")
+	require.NoFileExists(t, filepath.Join(filepath.Dir(paths.ChartsDir), "escape.tgz"))
+}
+
+func TestAssembleSkeletonComponentRejectsUnsafeChartArtifactComponents(t *testing.T) {
+	t.Parallel()
+
+	buildPath := t.TempDir()
+	err := assembleSkeletonComponent(testutil.TestContext(t), api.Component{
+		Name:   "component",
+		Charts: []api.Chart{{Name: `nested\chart`}},
+	}, load.NewResourceSet(t.TempDir()), buildPath)
+	require.ErrorContains(t, err, "chart name")
+	require.NoDirExists(t, filepath.Join(buildPath, "component", string(layout.ChartsComponentDir)))
+}
+
+func TestCreateDocumentationTarRejectsPathKeys(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{
+		Documentation: map[string]string{
+			"../escape": "first/readme.md",
+			"witness":   "second/readme.md",
+		},
+	}
+	buildPath := t.TempDir()
+	err := createDocumentationTar(pkg, load.NewResourceSet(t.TempDir()), buildPath)
+	require.ErrorContains(t, err, "documentation key")
+	require.NoFileExists(t, filepath.Join(buildPath, layout.DocumentationTar))
+}
+
+func TestDocumentationOutputPathStaysWithinDocumentationDirectory(t *testing.T) {
+	t.Parallel()
+
+	documentationDir := t.TempDir()
+	destination, err := layout.PathWithinDirectory(documentationDir, "readme.md")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(documentationDir, "readme.md"), destination)
+
+	_, err = layout.PathWithinDirectory(documentationDir, "../escape-readme.md")
+	require.ErrorContains(t, err, "escapes")
 }
 
 func TestCreateReproducibleTarballFromDir(t *testing.T) {
