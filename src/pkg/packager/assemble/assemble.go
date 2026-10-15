@@ -205,7 +205,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 
-	if err = createDocumentationTar(pkg, resolvedPackage.Resources, buildPath); err != nil {
+	if err = createDocumentationTar(ctx, pkg, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -296,7 +296,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, err
 	}
 
-	if err = createDocumentationTar(definition, resolvedPackage.Resources, buildPath); err != nil {
+	if err = createDocumentationTar(ctx, definition, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -490,7 +490,7 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err)
 				}
 			} else {
-				if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+				if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 					return fmt.Errorf("unable to copy file %s: %w", src, err)
 				}
 			}
@@ -539,7 +539,7 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 			if err != nil {
 				return err
 			}
-			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 				return fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
 			}
 		}
@@ -614,7 +614,7 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 			if err != nil {
 				return err
 			}
-			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 				return fmt.Errorf("unable to copy manifest %s: %w", src, err)
 			}
 		}
@@ -714,7 +714,7 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 			if err != nil {
 				return err
 			}
-			if err := helpers.CreatePathAndCopy(file, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, file, dst); err != nil {
 				return fmt.Errorf("unable to copy file %s: %w", file, err)
 			}
 
@@ -742,7 +742,7 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 			if err != nil {
 				return err
 			}
-			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, path, filepath.Join(compBuildPath, rel)); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}
@@ -777,7 +777,7 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 				}
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 				return fmt.Errorf("unable to copy file %s: %w", src, err)
 			}
 		}
@@ -816,7 +816,7 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 		if err != nil {
 			return err
 		}
-		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+		if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 			return fmt.Errorf("unable to copy data injection %s: %w", src, err)
 		}
 
@@ -839,7 +839,7 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 			if err != nil {
 				return err
 			}
-			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 				return fmt.Errorf("unable to copy manifest %s: %w", src, err)
 			}
 
@@ -1193,7 +1193,7 @@ func writeValuesSchema(buildPath string, schema value.SchemaDocument) error {
 	return nil
 }
 
-func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
+func createDocumentationTar(ctx context.Context, pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
 	if len(pkg.Documentation) == 0 {
 		return nil
 	}
@@ -1226,7 +1226,7 @@ func createDocumentationTar(pkg api.Package, resources *load.ResourceSet, buildP
 			return fmt.Errorf("documentation output validation failed: %w", err)
 		}
 
-		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+		if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
 		}
 

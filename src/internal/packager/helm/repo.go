@@ -169,8 +169,9 @@ func PackageChartFromLocalFiles(ctx context.Context, chart api.Chart, paths layo
 		client.Destination = temp
 		saved, err = client.Run(localPath, nil)
 	} else {
-		saved = filepath.Join(temp, filepath.Base(localPath))
-		err = helpers.CreatePathAndCopy(localPath, saved)
+		// Keep the archive at its original path so final staging resolves relative
+		// symbolic-link targets against their source directory.
+		saved = localPath
 	}
 	defer func(l *slog.Logger) {
 		err := os.RemoveAll(temp)
@@ -387,12 +388,13 @@ func DownloadChartFromGitToTemp(ctx context.Context, source api.Repository) (str
 
 func finalizeChartPackage(ctx context.Context, chart api.Chart, paths layout.ChartPaths, saved string) error {
 	// Ensure the name is consistent for deployments
+
 	archivePath, err := paths.ArchivePath(chart.Name, chart.LegacyVersion)
 	if err != nil {
 		return err
 	}
-	if err := helpers.CreatePathAndCopy(saved, archivePath); err != nil {
-		return fmt.Errorf("unable to save the final chart tarball: %w", err)
+	if err = layout.MaterializeSourceToLayout(ctx, saved, archivePath); err != nil {
+		return fmt.Errorf("unable to copy chart tarball %s: %w", saved, err)
 	}
 
 	err = packageValues(ctx, chart, paths)
@@ -413,7 +415,7 @@ func packageValues(ctx context.Context, chart api.Chart, paths layout.ChartPaths
 				return fmt.Errorf(lang.ErrDownloading, valuesFile.Path, err)
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(valuesFile.Path, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, valuesFile.Path, dst); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", valuesFile.Path, err)
 			}
 		}
