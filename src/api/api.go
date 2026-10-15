@@ -69,7 +69,7 @@ func (p Package) IsInitConfig() bool {
 func (c Component) RequiresCluster() bool {
 	return len(c.Images) > 0 || len(c.ImageArchives) > 0 || len(c.Charts) > 0 ||
 		len(c.Manifests) > 0 || len(c.Repositories) > 0 || len(c.DataInjections) > 0 ||
-		len(c.HealthChecks) > 0
+		len(c.HealthChecks) > 0 || c.Service.Name != ""
 }
 
 // GetImages returns all images specified by this component, including image archives.
