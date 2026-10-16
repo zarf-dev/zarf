@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -26,7 +27,10 @@ import (
 
 func TestInitV1Beta1(t *testing.T) {
 	type chartValues struct {
-		Image struct{ Reference string }
+		Image struct {
+			Reference    string
+			FullOverride string `yaml:"fullOverride"`
+		}
 		Proxy struct {
 			Image    struct{ Reference string }
 			Registry struct{ Image struct{ Reference string } }
@@ -54,6 +58,10 @@ func TestInitV1Beta1(t *testing.T) {
 				agentSuffix:    "@sha256:" + strings.Repeat("a", 64),
 				registrySuffix: "@sha256:" + strings.Repeat("b", 64), proxySuffix: "@sha256:" + strings.Repeat("c", 64),
 			},
+			{
+				name: "untagged", agentImage: "registry.example:5443/team/agent",
+				agentSuffix: ":latest", registrySuffix: ":3.1.1", proxySuffix: ":1.8.0.3",
+			},
 		} {
 			t.Run(arch+"/"+tc.name, func(t *testing.T) {
 				root := t.TempDir()
@@ -69,6 +77,17 @@ func TestInitV1Beta1(t *testing.T) {
 					require.NoError(t, err, stdout, stderr)
 				}
 
+				// Image IDs must keep registry and proxy references correct when imports reorder images.
+				registryBasePath := filepath.Join(packageDir, "registry", "registry-base.gen.yaml")
+				registryBaseBytes, err := os.ReadFile(registryBasePath)
+				require.NoError(t, err)
+				var registryBase v1beta1.ComponentConfig
+				require.NoError(t, yaml.Unmarshal(registryBaseBytes, &registryBase))
+				slices.Reverse(registryBase.Component.Images)
+				registryBaseBytes, err = yaml.Marshal(registryBase)
+				require.NoError(t, err)
+				require.NoError(t, os.WriteFile(registryBasePath, registryBaseBytes, 0o600))
+
 				stdout, stderr, err := e2e.Zarf(t, "dev", "inspect", "definition", packageDir, "-a", arch)
 				require.NoError(t, err, stdout, stderr)
 				var pkg v1beta1.Package
@@ -83,7 +102,9 @@ func TestInitV1Beta1(t *testing.T) {
 				require.Contains(t, k3s.Files[3].Source, "k3s-airgap-images-"+arch)
 				agent, err := pkg.GetComponent("zarf-agent")
 				require.NoError(t, err)
-				require.Equal(t, tc.agentImage, agent.Images[0].Name)
+				agentImage, err := agent.GetImageByID("agent")
+				require.NoError(t, err)
+				require.Equal(t, tc.agentImage, agentImage.Reference)
 
 				// Publish only to an ephemeral test registry, then discard every repository resource.
 				registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
@@ -97,7 +118,7 @@ func TestInitV1Beta1(t *testing.T) {
 				}
 				for i, component := range pkg.Components {
 					componentPath := filepath.Join(packageDir, filepath.FromSlash(filenames[component.Name]))
-					stdout, stderr, err := e2e.Zarf(t, "component", "publish", componentPath, "oci://"+registryURL, "--plain-http", "-a", arch)
+					stdout, stderr, err := e2e.Zarf(t, "component", "publish", componentPath, "oci://"+registryURL, "--plain-http", "-a", arch, "--features=v1beta1=true")
 					require.NoError(t, err, stdout, stderr)
 					pkg.Components[i] = v1beta1.Component{
 						Name: component.Name, Optional: component.Optional,
@@ -145,6 +166,7 @@ func TestInitV1Beta1(t *testing.T) {
 				require.Equal(t, "infra", agentValues.NodeSelector["role"])
 				require.Len(t, agentValues.Tolerations, 1)
 				require.Equal(t, 2, git.ReplicaCount)
+				require.Equal(t, "ghcr.io/go-gitea/gitea:1.27.3-rootless", git.Image.FullOverride)
 			})
 		}
 	}

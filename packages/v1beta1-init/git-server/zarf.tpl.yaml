@@ -13,7 +13,8 @@ component:
   stateAccess:
     - gitCredentials
   images:
-    - name: "[[ .gitServer.image ]]"
+    - id: git-server
+      name: "[[ .gitServer.image ]]"
   manifests:
     - name: git-connect
       namespace: zarf
