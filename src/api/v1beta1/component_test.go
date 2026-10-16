@@ -37,7 +37,7 @@ func TestGetImageByID(t *testing.T) {
 			}
 			got, err := component.GetImageByID("web")
 			require.NoError(t, err)
-			require.Equal(t, ImageReference{FullRef: tt.ref, Tag: tt.tag, Digest: tt.digest}, got)
+			require.Equal(t, ImageReference{Reference: tt.ref, Tag: tt.tag, Digest: tt.digest}, got)
 		})
 	}
 

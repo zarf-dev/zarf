@@ -26,9 +26,9 @@ type Component struct {
 
 // ImageReference exposes the full image reference and its optional tag and digest.
 type ImageReference struct {
-	FullRef string `json:"fullRef"`
-	Tag     string `json:"tag"`
-	Digest  string `json:"digest"`
+	Reference string `json:"reference"`
+	Tag       string `json:"tag"`
+	Digest    string `json:"digest"`
 }
 
 // GetImageByID returns the reference for the given non-empty image ID.
@@ -40,7 +40,7 @@ func (c Component) GetImageByID(id string) (ImageReference, error) {
 			if err != nil {
 				return ImageReference{}, fmt.Errorf("invalid image reference %q for ID %q in component %q: %w", image.Name, id, c.Name, err)
 			}
-			result := ImageReference{FullRef: image.Name}
+			result := ImageReference{Reference: image.Name}
 			if tagged, ok := ref.(reference.Tagged); ok {
 				result.Tag = tagged.Tag()
 			}
