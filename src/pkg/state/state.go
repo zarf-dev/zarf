@@ -1008,8 +1008,20 @@ func MergeInstalledChartsForComponent(existingCharts, installedCharts []Installe
 	}
 
 	merged := make([]InstalledChart, 0, len(lookup))
-	for _, chart := range lookup {
-		merged = append(merged, chart)
+	// Use the current deployment order, retaining previously recorded charts afterward.
+	for _, chart := range installedCharts {
+		k := key(chart)
+		if chart, ok := lookup[k]; ok {
+			merged = append(merged, chart)
+			delete(lookup, k)
+		}
+	}
+	for _, chart := range existingCharts {
+		k := key(chart)
+		if chart, ok := lookup[k]; ok {
+			merged = append(merged, chart)
+			delete(lookup, k)
+		}
 	}
 
 	return merged
