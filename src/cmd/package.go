@@ -13,7 +13,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -350,12 +349,6 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 	basePath, err := setBaseDirectory(args)
 	if err != nil {
 		return err
-	}
-
-	var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
-	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
-		l.Warn("invalid characters in Zarf cache path, using default", "cfg", config.ZarfDefaultCachePath, "default", config.ZarfDefaultCachePath)
-		config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 	}
 
 	v := getViper()
