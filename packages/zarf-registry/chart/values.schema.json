@@ -38,15 +38,15 @@
     "image": {
       "type": "object",
       "properties": {
-        "reference": {
-          "type": "string",
-          "description": "Complete image reference, including a tag or digest. Overrides repository and tag when set."
-        },
         "repository": {
           "type": "string"
         },
         "tag": {
           "type": "string"
+        },
+        "digest": {
+          "type": "string",
+          "description": "Image digest including its algorithm (e.g. sha256:...). Overrides tag when set."
         }
       }
     },
@@ -77,10 +77,6 @@
             "image": {
               "type": "object",
               "properties": {
-                "reference": {
-                  "type": "string",
-                  "description": "Complete image reference, including a tag or digest. Overrides repository and tag when set."
-                },
                 "repository": {
                   "type": "string"
                 }
@@ -91,15 +87,15 @@
         "image": {
           "type": "object",
           "properties": {
-            "reference": {
-              "type": "string",
-              "description": "Complete image reference, including a tag or digest. Overrides repository and tag when set."
-            },
             "repository": {
               "type": "string"
             },
             "tag": {
               "type": "string"
+            },
+            "digest": {
+              "type": "string",
+              "description": "Image digest including its algorithm (e.g. sha256:...). Overrides tag when set."
             }
           }
         },

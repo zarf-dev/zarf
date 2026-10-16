@@ -105,13 +105,15 @@ false
 Resolve the registry image, using the seed registry when the proxy is enabled.
 */}}
 {{- define "registry.image" -}}
-{{- $reference := .Values.image.reference -}}
 {{- $repository := .Values.image.repository -}}
 {{- if .Values.proxy.enabled -}}
-{{- $reference = default $reference .Values.proxy.registry.image.reference -}}
 {{- $repository = .Values.proxy.registry.image.repository -}}
 {{- end -}}
-{{- default (printf "%s:%s" $repository (toString .Values.image.tag)) $reference -}}
+{{- if .Values.image.digest -}}
+{{- printf "%s@%s" $repository .Values.image.digest -}}
+{{- else -}}
+{{- printf "%s:%s" $repository (toString .Values.image.tag) -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
