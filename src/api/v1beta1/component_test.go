@@ -14,16 +14,17 @@ func TestGetImageByID(t *testing.T) {
 
 	const digest = "sha256:594ceea76b01c592858f803f9ff4d2cb40542cae2060410b2c95f75907d659e1"
 	tests := []struct {
-		name   string
-		ref    string
-		tag    string
-		digest string
+		name       string
+		ref        string
+		repository string
+		tag        string
+		digest     string
 	}{
-		{name: "tag", ref: "docker.io/library/nginx:1.29.2", tag: "1.29.2"},
-		{name: "digest", ref: "docker.io/library/nginx@" + digest, digest: digest},
-		{name: "tag and digest", ref: "docker.io/library/nginx:1.29.2@" + digest, tag: "1.29.2", digest: digest},
-		{name: "no tag or digest", ref: "nginx"},
-		{name: "registry port is not a tag", ref: "localhost:5000/nginx"},
+		{name: "tag", ref: "docker.io/library/nginx:1.29.2", repository: "library/nginx", tag: "1.29.2"},
+		{name: "digest", ref: "docker.io/library/nginx@" + digest, repository: "library/nginx", digest: digest},
+		{name: "tag and digest", ref: "docker.io/library/nginx:1.29.2@" + digest, repository: "library/nginx", tag: "1.29.2", digest: digest},
+		{name: "no tag or digest", ref: "nginx", repository: "library/nginx"},
+		{name: "registry port is not a tag", ref: "localhost:5000/nginx", repository: "nginx"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -37,7 +38,7 @@ func TestGetImageByID(t *testing.T) {
 			}
 			got, err := component.GetImageByID("web")
 			require.NoError(t, err)
-			require.Equal(t, ImageReference{Reference: tt.ref, Tag: tt.tag, Digest: tt.digest}, got)
+			require.Equal(t, ImageReference{Reference: tt.ref, Repository: tt.repository, Tag: tt.tag, Digest: tt.digest}, got)
 		})
 	}
 

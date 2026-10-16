@@ -1,0 +1,11 @@
+# Build-time inputs for zarf dev template. Deployment settings live in each component directory.
+architecture: amd64
+agent:
+  image: ghcr.io/zarf-dev/zarf/agent:local
+  source: daemon
+registry:
+  image: docker.io/library/registry:3.1.1
+proxy:
+  image: docker.io/alpine/socat:1.8.0.3
+gitServer:
+  image: ghcr.io/go-gitea/gitea:1.27.3-rootless

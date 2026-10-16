@@ -5,6 +5,8 @@ podLabels: {}
 image:
   repository: registry
   tag: 2.8.3
+  # When set, the digest takes precedence over the tag.
+  digest: ""
 
 proxy:
   enabled: false
@@ -16,6 +18,8 @@ proxy:
   image:
     repository: alpine/socat
     tag: 1.8.0.3
+    # When set, the digest takes precedence over the tag.
+    digest: ""
   injector:
     image: registry.k8s.io/pause:3.10
     payLoadConfigMapAmount: 0

@@ -86,6 +86,10 @@
         },
         "pullSecret": {
           "type": "string"
+        },
+        "digest": {
+          "type": "string",
+          "description": "Image digest including its algorithm (e.g. sha256:...). Overrides tag when set."
         }
       }
     },
