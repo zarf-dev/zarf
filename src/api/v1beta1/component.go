@@ -31,6 +31,16 @@ type ImageReference struct {
 	Digest    string `json:"digest"`
 }
 
+// Repository returns the repository path without the registry, tag, or digest.
+// Docker Hub shorthand is expanded, so nginx becomes library/nginx.
+func (image ImageReference) Repository() (string, error) {
+	ref, err := reference.ParseNormalizedNamed(image.Reference)
+	if err != nil {
+		return "", fmt.Errorf("invalid image reference %q: %w", image.Reference, err)
+	}
+	return reference.Path(ref), nil
+}
+
 // GetImageByID returns the reference for the given non-empty image ID.
 // Tag and Digest are empty when absent from the image reference.
 func (c Component) GetImageByID(id string) (ImageReference, error) {

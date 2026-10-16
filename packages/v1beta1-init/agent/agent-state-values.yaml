@@ -5,7 +5,7 @@
 {{- $imageSuffix = printf "@%s" $image.Digest }}
 {{- end }}
 image:
-  reference: {{ printf "%s/%s%s" .State.Registry.Address (imageRepository $image.Reference) $imageSuffix | quote }}
+  reference: {{ printf "%s/%s%s" .State.Registry.Address $image.Repository $imageSuffix | quote }}
 secret:
   tlsCrt: {{ .State.Agent.Cert | quote }}
   tlsKey: {{ .State.Agent.Key | quote }}
