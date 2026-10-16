@@ -227,18 +227,17 @@ Images default to `source: registry`. For images stored in the Docker daemon, se
 
 {/* FIXME make this shorter */}
 
-During component imports, images merge by `name` unless a matching non-empty `id` identifies the imported image. Set the same `id` on an imported image and its override to replace the image reference, such as when using an enterprise image in a custom init package:
+During component imports, images merge by `name` unless a matching `id` identifies the imported image. Set the same `id` on an imported image and its override to replace the image reference. For example:
 
 ```yaml
 # Imported component
 images:
   - id: registry
     name: registry:3
-
 # Importing component
 images:
   - id: registry
-    name: enterprise.example.com/registry:3
+    name: enterprise.example.com/registry:3 # final package will have only this image
 ```
 
 Matching IDs take precedence over matching names. Non-empty fields on the importing image take precedence; omitted fields inherit the imported value. Images with neither a matching ID nor a matching name are appended.
