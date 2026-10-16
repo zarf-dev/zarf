@@ -24,21 +24,12 @@ type Component struct {
 	ComponentSpec `json:",inline"`
 }
 
-// ImageReference exposes the full image reference and its optional tag and digest.
+// ImageReference exposes the full image reference, repository path, and optional tag and digest.
 type ImageReference struct {
-	Reference string `json:"reference"`
-	Tag       string `json:"tag"`
-	Digest    string `json:"digest"`
-}
-
-// Repository returns the repository path without the registry, tag, or digest.
-// Docker Hub shorthand is expanded, so nginx becomes library/nginx.
-func (image ImageReference) Repository() (string, error) {
-	ref, err := reference.ParseNormalizedNamed(image.Reference)
-	if err != nil {
-		return "", fmt.Errorf("invalid image reference %q: %w", image.Reference, err)
-	}
-	return reference.Path(ref), nil
+	Reference  string `json:"reference"`
+	Repository string `json:"repository"`
+	Tag        string `json:"tag"`
+	Digest     string `json:"digest"`
 }
 
 // GetImageByID returns the reference for the given non-empty image ID.
@@ -48,11 +39,11 @@ func (c Component) GetImageByID(id string) (ImageReference, error) {
 		return ImageReference{}, fmt.Errorf("image ID must not be empty")
 	}
 	parse := func(name string) (ImageReference, error) {
-		ref, err := reference.Parse(name)
+		ref, err := reference.ParseNormalizedNamed(name)
 		if err != nil {
 			return ImageReference{}, fmt.Errorf("invalid image reference %q for ID %q in component %q: %w", name, id, c.Name, err)
 		}
-		result := ImageReference{Reference: name}
+		result := ImageReference{Reference: name, Repository: reference.Path(ref)}
 		if tagged, ok := ref.(reference.Tagged); ok {
 			result.Tag = tagged.Tag()
 		}
