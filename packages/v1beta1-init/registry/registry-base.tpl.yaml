@@ -10,8 +10,10 @@ component:
   stateAccess:
     - registryCredentials
   images:
-    - name: "[[ .registry.image ]]"
-    - name: "[[ .proxy.image ]]"
+    - id: registry
+      name: "[[ .registry.image ]]"
+    - id: proxy
+      name: "[[ .proxy.image ]]"
   charts:
     - name: docker-registry
       releaseName: zarf-docker-registry

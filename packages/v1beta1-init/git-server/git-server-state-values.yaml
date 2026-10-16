@@ -5,4 +5,4 @@ gitea:
     username: {{ .State.Git.PushUsername | quote }}
     password: {{ .State.Git.PushPassword | quote }}
 image:
-  fullOverride: {{ (index (.Pkg.GetComponent "git-server").Images 0).Name | quote }}
+  fullOverride: {{ ((.Pkg.GetComponent "git-server").GetImageByID "git-server").Reference | quote }}
