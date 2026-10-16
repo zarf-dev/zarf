@@ -790,7 +790,7 @@
       },
       "properties": {
         "id": {
-          "description": "Optional ID; matching non-empty IDs let importing components replace this image.",
+          "description": "Optional ID; matching IDs let importing components replace this image.",
           "type": "string"
         },
         "name": {
