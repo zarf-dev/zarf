@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.89.0](https://github.com/zarf-dev/zarf/compare/v0.88.0...v0.89.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove global cachepath SDK option ([#5473](https://github.com/zarf-dev/zarf/issues/5473))
+
+### Features
+
+* allow R.C. versions to pass version requirements ([#5479](https://github.com/zarf-dev/zarf/issues/5479)) ([5644019](https://github.com/zarf-dev/zarf/commit/5644019f39160e8fcd865becdd9f510987d34d75))
+* remove global cachepath SDK option ([#5473](https://github.com/zarf-dev/zarf/issues/5473)) ([65e8152](https://github.com/zarf-dev/zarf/commit/65e8152c9920337d8bbda2ccce02dbc4dabe8bf9))
+
+
+### Bug Fixes
+
+* ensure chart order is preserved in state ([#5477](https://github.com/zarf-dev/zarf/issues/5477)) ([efdd6a8](https://github.com/zarf-dev/zarf/commit/efdd6a8691f30809bf7a3fd2fe3782fcc7010ef4))
+
 ## [0.88.0](https://github.com/zarf-dev/zarf/compare/v0.87.0...v0.88.0) (2026-10-15)
 
 
