@@ -88,6 +88,8 @@ repository override. Existing chart consumers require no migration.
 
 ## Deployment values
 
+For a short deployer guide, see [Switching from init variables to values](MIGRATION.md), also included in the built package's documentation.
+
 Pass `--features=values=true` when inspecting or deploying this package. Use
 `--values` for structured overrides and `--set-values` for individual settings.
 Defaults live in `*-values.yaml` files in each component directory. Chart settings

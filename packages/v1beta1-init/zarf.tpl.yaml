@@ -9,6 +9,7 @@ metadata:
   preventNamespaceOverride: true
 
 documentation:
+  migration: MIGRATION.md
   zarf.cli.openvex.json: ../../.vex/zarf.cli.openvex.json
 
 components:
