@@ -50,11 +50,11 @@ func TestMain(m *testing.M) {
 		log.Fatalf("zarf binary %s not found: %v", e2e.ZarfBinPath, err)
 	}
 
-	// If APPLIANCE_MODE set to true, warn Mac user and run only non-cluster tests
+	// If APPLIANCE_MODE set to true, warn non-Linux user and run only non-cluster tests
 	if e2e.ApplianceMode && runtime.GOOS != "linux" {
-		log.Println("WARNING: APPLIANCE_MODE=true is only fully supported on Linux. " +
-			"On macOS, only tests that do not require a cluster will run. " +
-			"To run with-cluster tests on macOS, create a local cluster first " +
+		log.Println("\033[1;33mWARNING:\033[0m APPLIANCE_MODE=true is only fully supported on Linux. " +
+			"On non-Linux systems, only tests that do not require a cluster will run. " +
+			"To run with-cluster tests on non-Linux systems, create a local cluster first " +
 			"and run make test-e2e-with-cluster ARCH=arm64 instead.")
 	}
 
@@ -63,7 +63,7 @@ func TestMain(m *testing.M) {
 	if !e2e.ApplianceMode {
 		_, _, err := exec.CmdWithContext(context.Background(), exec.Config{}, e2e.ZarfBinPath, "tools", "kubectl", "cluster-info")
 		if err != nil {
-			log.Println("WARNING: No cluster found - with-cluster tests will fail. " +
+			log.Println("\033[1;33mWARNING:\033[0m No cluster found - with-cluster tests will fail. " +
 				"To run only tests that do not require a cluster use: make test-e2e-without-cluster. " +
 				"To run with-cluster tests, ensure a valid cluster is running.")
 		}

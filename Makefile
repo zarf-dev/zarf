@@ -214,7 +214,7 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 test-external-out-cluster: ## Run only the external out-of-cluster registry tests (registry:3 on port 5001)
 	@test -s $(ZARF_BIN) || $(MAKE)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
-	cd src/test/external && go test -failfast -v -timeout 30m -run TestExtOurClusterTestSuite
+	cd src/test/external && go test -failfast -v -timeout 30m -run TestExtOutClusterTestSuite
 
 .PHONY: test-proxy
 test-proxy:
