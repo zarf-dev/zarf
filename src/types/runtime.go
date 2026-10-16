@@ -12,8 +12,6 @@ type RemoteOptions struct {
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
-	// Path to use to cache images and git repos on package create
-	CachePath string
 	// Location Zarf should use as a staging ground when managing files and images for package creation and deployment
 	TempDirectory string
 	// Whether to prefer using the structured logger over printing to stdout/stderr (i.e. in actions or git repo pulls)

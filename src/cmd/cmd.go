@@ -41,13 +41,14 @@ func defaultRemoteOptions() types.RemoteOptions {
 
 var plainHTTP bool
 var insecureSkipTLSVerify bool
+var cachePath string
 
 var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 
 func getCachePath(ctx context.Context) (string, error) {
-	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
+	if !isCleanPathRegex.MatchString(cachePath) {
 		logger.From(ctx).Warn("invalid characters in Zarf cache path, using default", "cfg", config.ZarfDefaultCachePath, "default", config.ZarfDefaultCachePath)
-		config.CommonOptions.CachePath = config.ZarfDefaultCachePath
+		cachePath = config.ZarfDefaultCachePath
 	}
-	return config.GetAbsCachePath()
+	return config.GetAbsHomePath(cachePath)
 }
