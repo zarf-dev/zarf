@@ -225,6 +225,24 @@ images:
 
 Images default to `source: registry`. For images stored in the Docker daemon, set `source: daemon`. v1beta1 does not fall back to the local daemon after a registry pull fails.
 
+{/* FIXME make this shorter */}
+
+During component imports, images merge by `name` unless a matching non-empty `id` identifies the imported image. Set the same `id` on an imported image and its override to replace the image reference, such as when using an enterprise image in a custom init package:
+
+```yaml
+# Imported component
+images:
+  - id: registry
+    name: registry:3
+
+# Importing component
+images:
+  - id: registry
+    name: enterprise.example.com/registry:3
+```
+
+Matching IDs take precedence over matching names. Non-empty fields on the importing image take precedence; omitted fields inherit the imported value. Images with neither a matching ID nor a matching name are appended.
+
 ### Git repositories
 
 `repos` becomes `repositories`, with the Git ref separated from the URL:
