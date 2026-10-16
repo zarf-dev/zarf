@@ -6,6 +6,7 @@ package requirements
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/zarf-dev/zarf/src/api"
@@ -80,7 +81,13 @@ func ValidateVersionRequirements(requirements []api.VersionRequirement) error {
 			return fmt.Errorf("failed to parse required version '%s': %w", req.Version, err)
 		}
 
-		if currentVer.LessThan(requiredVer) {
+		versionToCheck := currentVer
+		if requiredVer.Prerelease() == "" && strings.HasPrefix(currentVer.Prerelease(), "rc") {
+			// Release candidates include the features required by their corresponding stable release.
+			versionToCheck = semver.New(currentVer.Major(), currentVer.Minor(), currentVer.Patch(), "", "")
+		}
+
+		if versionToCheck.LessThan(requiredVer) {
 			unmetRequirements = append(unmetRequirements, req)
 		}
 	}
