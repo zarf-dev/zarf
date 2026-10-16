@@ -345,7 +345,7 @@ The `.Pkg` object gives access to the package definition. See this used in the [
 - `.Pkg.HasImages` returns whether the package includes any images or image archives.
 - `(.Pkg.GetComponent "<component name>").GetImages` returns the component's image references, including those from image archives.
 - `(.Pkg.GetComponent "<component name>").GetImageByID "<image id>"` returns an object with `.Reference`, `.Repository`, `.Tag`, and `.Digest`. Absent tags/digests are empty, and missing/empty image IDs cause a template error. (v1beta1 only)
-  - For `ghcr.io/zarf-dev/agent:1.2.3@sha256:abc…` the `.Reference` is the full input, `.Repository` is `zarf.dev/zarf`, `.Tag` is `1.2.3`, and `.Digest` is `sha256:abc…`.
+  - For `ghcr.io/zarf-dev/agent:1.2.3@sha256:abc…` the `.Reference` is the full input, `.Repository` is `zarf-dev/agent`, `.Tag` is `1.2.3`, and `.Digest` is `sha256:abc…`.
 
 ### Functions
 
