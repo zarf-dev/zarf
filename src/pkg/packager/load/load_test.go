@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -19,6 +20,115 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestPackageDefinitionV1Beta1ImageIDs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		imported []v1beta1.Image
+		middle   []v1beta1.Image
+		head     []v1beta1.Image
+		want     []v1beta1.Image
+	}{
+		{
+			name:     "matching ID replaces reference and overrides source",
+			imported: []v1beta1.Image{{ID: "registry", Name: "registry:3", Source: "daemon"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "registry"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "registry"}},
+		},
+		{
+			name:     "matching ID inherits omitted source",
+			imported: []v1beta1.Image{{ID: "registry", Name: "registry:3", Source: "daemon"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "daemon"}},
+		},
+		{
+			name:     "matching name inherits ID for later replacement",
+			imported: []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+			middle:   []v1beta1.Image{{Name: "registry:3", Source: "daemon"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "daemon"}},
+		},
+		{
+			name:     "matching name adds ID for later replacement",
+			imported: []v1beta1.Image{{Name: "registry:3", Source: "daemon"}},
+			middle:   []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "daemon"}},
+		},
+		{
+			name:     "matching name overrides different ID",
+			imported: []v1beta1.Image{{ID: "old", Name: "registry:3"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+		},
+		{
+			name:     "empty IDs do not match and new images append",
+			imported: []v1beta1.Image{{Name: "nginx:1.27"}, {ID: "registry", Name: "registry:3"}},
+			head:     []v1beta1.Image{{Name: "redis:7"}, {ID: "app", Name: "example.com/app:1"}},
+			want:     []v1beta1.Image{{Name: "nginx:1.27"}, {ID: "registry", Name: "registry:3"}, {Name: "redis:7"}, {ID: "app", Name: "example.com/app:1"}},
+		},
+		{
+			name:     "ID match takes precedence over earlier name match",
+			imported: []v1beta1.Image{{ID: "other", Name: "enterprise.example.com/registry:3"}, {ID: "registry", Name: "registry:3"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "other", Name: "enterprise.example.com/registry:3"}, {ID: "registry", Name: "enterprise.example.com/registry:3"}},
+		},
+		{
+			name:     "nearest importing component wins in nested imports",
+			imported: []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+			middle:   []v1beta1.Image{{ID: "registry", Name: "mirror.example.com/registry:3"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			writeYAML := func(name string, value any) {
+				t.Helper()
+				data, err := goyaml.MarshalWithOptions(value, goyaml.UseJSONMarshaler())
+				require.NoError(t, err)
+				require.NoError(t, os.WriteFile(filepath.Join(dir, name), data, 0o600))
+			}
+			writeYAML("base.yaml", v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfComponentConfig,
+				Metadata:   v1beta1.ComponentMetadata{Name: "base"},
+				Component:  v1beta1.ComponentSpec{Images: tt.imported},
+			})
+			writeYAML("middle.yaml", v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfComponentConfig,
+				Metadata:   v1beta1.ComponentMetadata{Name: "middle"},
+				Component: v1beta1.ComponentSpec{
+					Import: v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "base.yaml"}}},
+					Images: tt.middle,
+				},
+			})
+			writeYAML(layout.ZarfYAML, v1beta1.Package{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfPackageConfig,
+				Metadata:   v1beta1.PackageMetadata{Name: "image-ids"},
+				Components: []v1beta1.Component{{
+					Name: "app",
+					ComponentSpec: v1beta1.ComponentSpec{
+						Import: v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "middle.yaml"}}},
+						Images: tt.head,
+					},
+				}},
+			})
+
+			pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+			require.NoError(t, err)
+			require.Len(t, pkg.Components, 1)
+			require.Equal(t, tt.want, convert.PackageToV1beta1(pkg).Components[0].Images)
+		})
+	}
+}
 
 func TestLoadPackageWithFlavors(t *testing.T) {
 	t.Parallel()

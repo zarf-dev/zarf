@@ -2611,6 +2611,10 @@
                     "^x-": {}
                   },
                   "properties": {
+                    "id": {
+                      "description": "Optional ID; matching non-empty IDs let importing components replace this image.",
+                      "type": "string"
+                    },
                     "name": {
                       "description": "The image reference.",
                       "type": "string"

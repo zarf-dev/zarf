@@ -254,6 +254,8 @@ const (
 type Image struct {
 	// The image reference.
 	Name string `json:"name"`
+	// Optional ID; matching IDs let importing components replace this image.
+	ID string `json:"id,omitempty"`
 	// The source to pull the image from. Defaults to "registry".
 	Source ImageSource `json:"source,omitempty" jsonschema:"enum=registry,enum=daemon,default=registry"`
 }
