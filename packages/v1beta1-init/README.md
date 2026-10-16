@@ -14,7 +14,7 @@ The seed registry and shared registry base live under `registry/`.
 Build the CLI from this branch before using these targets. v1beta1 and
 `zarf dev template` are still under development. This package requires a CLI with
 v1beta1 init services, component imports, state access, and the Gitea helper's
-`--pvc-name` flag, plus the `imageRepository` and `imageTagOrDigest` template functions.
+`--pvc-name` flag, plus `GetImageByID` and the `imageRepository` template function.
 Older CLIs should continue using the root init package and
 `make init-package`. The existing `release-init-package` target continues building
 the legacy init package for its current release workflows.
@@ -66,8 +66,9 @@ make release-init-package-v1beta1 AGENT_IMAGE_TAG=v0.87.0 \
 ```
 
 The agent, registry, and proxy accept tagged or digest-pinned images. Their full
-chart references are derived from the packaged images using `imageRepository` and
-`imageTagOrDigest`, including registry ports and Docker Hub shorthand. Build-time
+chart references are derived from the packaged images using `GetImageByID`. The
+`imageRepository` helper strips upstream registries and expands Docker Hub shorthand
+before the local registry address is applied. Build-time
 overrides also affect deployment; a digest takes precedence when a reference
 contains both a tag and a digest. Set `agent.source=registry` for a released image;
 `agent.source=daemon` reads a locally available Docker image.
@@ -187,6 +188,7 @@ import:
 
 Import these service components into a `ZarfInitConfig`. Preserve the init service
 order and the conventional component names: the image templates use `GetComponent`
-to look up `zarf-agent`, `zarf-registry`, `zarf-seed-registry`, and `git-server`.
+to look up `zarf-agent`, `zarf-registry`, `zarf-seed-registry`, and `git-server`, then
+`GetImageByID` to select their images independently of list order.
 The reused agent chart also uses component-specific built-ins. Make targets only
 render and create local packages; they do not publish artifacts.

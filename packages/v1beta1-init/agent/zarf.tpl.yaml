@@ -13,7 +13,8 @@ component:
   stateAccess:
     - agentCerts
   images:
-    - name: "[[ .agent.image ]]"
+    - id: agent
+      name: "[[ .agent.image ]]"
       source: "[[ .agent.source ]]"
   charts:
     - name: zarf-agent
