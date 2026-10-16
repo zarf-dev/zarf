@@ -1,19 +1,15 @@
 {{- $component := .Pkg.GetComponent "zarf-registry" }}
 {{- $registry := $component.GetImageByID "registry" }}
 {{- $proxy := $component.GetImageByID "proxy" }}
-{{- $registrySuffix := printf ":%s" (default "latest" $registry.Tag) }}
-{{- if $registry.Digest }}
-{{- $registrySuffix = printf "@%s" $registry.Digest }}
-{{- end }}
-{{- $proxySuffix := printf ":%s" (default "latest" $proxy.Tag) }}
-{{- if $proxy.Digest }}
-{{- $proxySuffix = printf "@%s" $proxy.Digest }}
-{{- end }}
 image:
-  reference: {{ printf "%s/%s%s" .State.Registry.Address $registry.Repository $registrySuffix | quote }}
+  repository: {{ printf "%s/%s" .State.Registry.Address $registry.Repository | quote }}
+  tag: {{ $registry.Tag | default "latest" | quote }}
+  digest: {{ $registry.Digest | quote }}
 proxy:
   image:
-    reference: {{ printf "%s/%s%s" .State.Registry.SeedAddress $proxy.Repository $proxySuffix | quote }}
+    repository: {{ printf "%s/%s" .State.Registry.SeedAddress $proxy.Repository | quote }}
+    tag: {{ $proxy.Tag | default "latest" | quote }}
+    digest: {{ $proxy.Digest | quote }}
   registry:
     image:
-      reference: {{ printf "%s/%s%s" .State.Registry.SeedAddress $registry.Repository $registrySuffix | quote }}
+      repository: {{ printf "%s/%s" .State.Registry.SeedAddress $registry.Repository | quote }}
