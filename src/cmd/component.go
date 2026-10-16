@@ -23,8 +23,6 @@ func newComponentCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "component",
 		Short: lang.CmdComponentShort,
-		// Once v1beta1 is available this should be unhidden
-		Hidden: true,
 	}
 
 	v := getViper()

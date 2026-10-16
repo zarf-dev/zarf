@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -21,6 +22,8 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -139,7 +142,7 @@ func TestCreateDocumentationTarRejectsPathKeys(t *testing.T) {
 		},
 	}
 	buildPath := t.TempDir()
-	err := createDocumentationTar(pkg, load.NewResourceSet(t.TempDir()), buildPath)
+	err := createDocumentationTar(testutil.TestContext(t), pkg, load.NewResourceSet(t.TempDir()), buildPath)
 	require.ErrorContains(t, err, "documentation key")
 	require.NoFileExists(t, filepath.Join(buildPath, layout.DocumentationTar))
 }
@@ -170,6 +173,68 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	shaSum, err := checksum.GetSHA256OfFile(tarPath)
 	require.NoError(t, err)
 	require.Equal(t, "c09d17f612f241cdf549e5fb97c9e063a8ad18ae7a9f3af066332ed6b38556ad", shaSum)
+}
+
+func TestCreateDocumentationTarMaterializesSymlinks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation requires elevated privileges")
+	}
+
+	tests := []struct {
+		name    string
+		target  func(resourceRoot string) (string, error)
+		content string
+	}{
+		{
+			name: "external",
+			target: func(_ string) (string, error) {
+				externalFile := filepath.Join(t.TempDir(), "external.txt")
+				if err := os.WriteFile(externalFile, []byte("external"), helpers.ReadAllWriteUser); err != nil {
+					return "", err
+				}
+				return externalFile, nil
+			},
+			content: "external",
+		},
+		{
+			name: "contained",
+			target: func(resourceRoot string) (string, error) {
+				targetDir := filepath.Join(resourceRoot, "shared")
+				if err := os.Mkdir(targetDir, helpers.ReadWriteExecuteUser); err != nil {
+					return "", err
+				}
+				if err := os.WriteFile(filepath.Join(targetDir, "readme.md"), []byte("materialized"), helpers.ReadAllWriteUser); err != nil {
+					return "", err
+				}
+				return filepath.Join("shared", "readme.md"), nil
+			},
+			content: "materialized",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resourceRoot := t.TempDir()
+			target, err := tt.target(resourceRoot)
+			require.NoError(t, err)
+			require.NoError(t, os.Symlink(target, filepath.Join(resourceRoot, "readme.md")))
+
+			buildPath := t.TempDir()
+			require.NoError(t, createDocumentationTar(testutil.TestContext(t), api.Package{
+				Documentation: map[string]string{"readme": "readme.md"},
+			}, load.NewResourceSet(resourceRoot), buildPath))
+
+			outputDir := t.TempDir()
+			require.NoError(t, archive.Decompress(t.Context(), filepath.Join(buildPath, layout.DocumentationTar), outputDir, archive.DecompressOpts{}))
+			info, err := os.Lstat(filepath.Join(outputDir, "readme.md"))
+			require.NoError(t, err)
+			require.Zero(t, info.Mode()&os.ModeSymlink)
+			require.Equal(t, os.FileMode(helpers.ReadWriteUser), info.Mode().Perm())
+			content, err := os.ReadFile(filepath.Join(outputDir, "readme.md"))
+			require.NoError(t, err)
+			require.Equal(t, tt.content, string(content))
+		})
+	}
 }
 
 func TestValidateImageArchivesNoDuplicates(t *testing.T) {
