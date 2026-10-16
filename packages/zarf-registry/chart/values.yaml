@@ -3,10 +3,10 @@ replicaCount: 1
 podLabels: {}
 
 image:
-  # A complete tag or digest reference overrides repository and tag when set.
-  reference: ""
   repository: registry
   tag: 2.8.3
+  # When set, the digest takes precedence over the tag.
+  digest: ""
 
 proxy:
   enabled: false
@@ -14,14 +14,12 @@ proxy:
   tolerations: []
   registry:
     image:
-      # Overrides image.reference when proxy.enabled is true.
-      reference: ""
       repository: registry
   image:
-    # A complete tag or digest reference overrides repository and tag when set.
-    reference: ""
     repository: alpine/socat
     tag: 1.8.0.3
+    # When set, the digest takes precedence over the tag.
+    digest: ""
   injector:
     image: registry.k8s.io/pause:3.10
     payLoadConfigMapAmount: 0
