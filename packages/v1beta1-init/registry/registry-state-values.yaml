@@ -10,10 +10,10 @@
 {{- $proxySuffix = printf "@%s" $proxy.Digest }}
 {{- end }}
 image:
-  reference: {{ printf "%s/%s%s" .State.Registry.Address (imageRepository $registry.Reference) $registrySuffix | quote }}
+  reference: {{ printf "%s/%s%s" .State.Registry.Address $registry.Repository $registrySuffix | quote }}
 proxy:
   image:
-    reference: {{ printf "%s/%s%s" .State.Registry.SeedAddress (imageRepository $proxy.Reference) $proxySuffix | quote }}
+    reference: {{ printf "%s/%s%s" .State.Registry.SeedAddress $proxy.Repository $proxySuffix | quote }}
   registry:
     image:
-      reference: {{ printf "%s/%s%s" .State.Registry.SeedAddress (imageRepository $registry.Reference) $registrySuffix | quote }}
+      reference: {{ printf "%s/%s%s" .State.Registry.SeedAddress $registry.Repository $registrySuffix | quote }}

@@ -8,10 +8,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
 
-func TestApplyImageRepository(t *testing.T) {
+func TestApplyImageReferenceRepository(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct {
 		image    string
@@ -32,7 +33,14 @@ func TestApplyImageRepository(t *testing.T) {
 	} {
 		t.Run(tt.image, func(t *testing.T) {
 			t.Parallel()
-			result, err := Apply(t.Context(), `{{ imageRepository .Values.image }}`, NewObjects(value.Values{"image": tt.image}))
+			objects := NewObjects(nil).WithPackage(api.Package{
+				APIVersion: v1beta1.APIVersion,
+				Components: []api.Component{{
+					Name:   "web",
+					Images: []api.Image{{ID: "app", Name: tt.image}},
+				}},
+			})
+			result, err := Apply(t.Context(), `{{ ((.Pkg.GetComponent "web").GetImageByID "app").Repository }}`, objects)
 			if tt.expected == "" {
 				require.Error(t, err)
 				return
