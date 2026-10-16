@@ -106,6 +106,9 @@ brews:
           name: homebrew-tap
 
     commit_msg_template: "build(release): upgrade {{ .ProjectName }} to {{ .Tag }}"
+    # Let GitHub sign commits made with the App installation token.
+    commit_author:
+      use_github_app_token: true
     homepage: "https://zarf.dev/"
     description: "Airgap Native Package Manager for Kubernetes"
 
@@ -124,5 +127,7 @@ brews:
           owner: zarf-dev
           name: homebrew-tap
     commit_msg_template: "build(release): {{ .ProjectName }}@{{ .Tag }}"
+    commit_author:
+      use_github_app_token: true
     homepage: "https://zarf.dev/"
     description: "Airgap Native Package Manager for Kubernetes"
