@@ -214,33 +214,22 @@ Package-value mappings in `charts[].values` keep their `sourcePath` and `targetP
 
 ### Images
 
-`images` entries are objects:
+`images` entries require a `name`. The optional `source` defaults to `registry`; `daemon` may be used for local Docker images. Registry pulls no longer fall back to the daemon. Consider [][templating]() if both are required.
 
-```yaml
-# Component fields
-images:
-  - name: ghcr.io/example/app:1.0.0
-    source: registry
-```
-
-Images default to `source: registry`. For images stored in the Docker daemon, set `source: daemon`. v1beta1 does not fall back to the local daemon after a registry pull fails.
-
-{/* FIXME make this shorter */}
-
-During component imports, images merge by `name` unless a matching `id` identifies the imported image. Set the same `id` on an imported image and its override to replace the image reference. For example:
+During imports, matching IDs take precedence over matching names, allowing image references to be replaced:
 
 ```yaml
 # Imported component
 images:
   - id: registry
     name: registry:3
+    source: registry
+---
 # Importing component
 images:
   - id: registry
-    name: enterprise.example.com/registry:3 # final package will have only this image
+    name: enterprise.example.com/registry:3 # The final package will have only this image and will inherit the imported component source as it's undefined here
 ```
-
-Matching IDs take precedence over matching names. Non-empty fields on the importing image take precedence; omitted fields inherit the imported value. Images with neither a matching ID nor a matching name are appended.
 
 ### Git repositories
 
