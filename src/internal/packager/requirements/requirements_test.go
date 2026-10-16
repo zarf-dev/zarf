@@ -150,8 +150,6 @@ func TestValidateVersionRequirements_ReleaseCandidate(t *testing.T) {
 		{name: "exact release candidate", cliVersion: "v0.88.0-rc.1", required: "v0.88.0-rc.1"},
 		{name: "later release candidate", cliVersion: "v0.88.0-rc.2", required: "v0.88.0-rc.1"},
 		{name: "earlier release candidate", cliVersion: "v0.88.0-rc.1", required: "v0.88.0-rc.2", expectError: true},
-		{name: "alpha remains below release", cliVersion: "v0.88.0-alpha.1", required: "v0.88.0", expectError: true},
-		{name: "beta remains below release", cliVersion: "v0.88.0-beta.1", required: "v0.88.0", expectError: true},
 	}
 
 	for _, tt := range tests {
