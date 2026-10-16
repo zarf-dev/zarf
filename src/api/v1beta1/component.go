@@ -3,6 +3,14 @@
 
 package v1beta1
 
+import (
+	_ "crypto/sha256" // Register SHA-256 for image digest validation.
+	_ "crypto/sha512" // Register SHA-384 and SHA-512 for image digest validation.
+	"fmt"
+
+	"github.com/distribution/reference"
+)
+
 // Component is the primary functional grouping of assets to deploy by Zarf.
 type Component struct {
 	// The name of the component.
@@ -14,6 +22,35 @@ type Component struct {
 	// Filter when this component is included during package creation based on architecture or flavor.
 	Selector      ComponentSelector `json:"selector,omitempty"`
 	ComponentSpec `json:",inline"`
+}
+
+// ImageReference exposes the full image reference and its optional tag and digest.
+type ImageReference struct {
+	FullRef string `json:"fullRef"`
+	Tag     string `json:"tag"`
+	Digest  string `json:"digest"`
+}
+
+// GetImageByID returns the reference for the given non-empty image ID.
+// Tag and Digest are empty when absent from the image reference.
+func (c Component) GetImageByID(id string) (ImageReference, error) {
+	for _, image := range c.Images {
+		if id != "" && image.ID == id {
+			ref, err := reference.Parse(image.Name)
+			if err != nil {
+				return ImageReference{}, fmt.Errorf("invalid image reference %q for ID %q in component %q: %w", image.Name, id, c.Name, err)
+			}
+			result := ImageReference{FullRef: image.Name}
+			if tagged, ok := ref.(reference.Tagged); ok {
+				result.Tag = tagged.Tag()
+			}
+			if digested, ok := ref.(reference.Digested); ok {
+				result.Digest = digested.Digest().String()
+			}
+			return result, nil
+		}
+	}
+	return ImageReference{}, fmt.Errorf("no image with ID %q in component %q", id, c.Name)
 }
 
 // GetImages returns all image names specified in the component, including those from ImageArchives.
