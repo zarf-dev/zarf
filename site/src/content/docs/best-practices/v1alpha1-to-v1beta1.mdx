@@ -214,7 +214,7 @@ Package-value mappings in `charts[].values` keep their `sourcePath` and `targetP
 
 ### Images
 
-`images` entries require a `name`. The optional `source` defaults to `registry`; `daemon` may be used for local Docker images. Registry pulls no longer fall back to the daemon. Consider [][templating]() if both are required.
+`images` entries require a `name`. The optional `source` defaults to `registry`; `daemon` may be used for local Docker images. Registry pulls no longer fall back to the daemon. Consider `zarf dev template` if different builds require different sources.
 
 During imports, matching IDs take precedence over matching names, allowing image references to be replaced:
 
