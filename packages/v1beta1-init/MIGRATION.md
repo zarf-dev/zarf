@@ -94,5 +94,6 @@ a file path. Packaged images are selected when the package is built, and runtime
 addresses and credentials are supplied by Zarf; neither needs a deploy-time image
 or credential variable.
 
-`GIT_SERVER_CREATE_PVC` was set by a deployment action, not supplied by deployers.
-Its replacement, `gitServer.persistence.create`, is still set automatically.
+`GIT_SERVER_CREATE_PVC` remains action-managed as `gitServer.persistence.create`.
+The pre-deploy action overwrites any supplied value based on whether the PVC
+exists. Set `gitServer.persistence.claimName` to choose the PVC.
