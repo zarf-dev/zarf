@@ -122,19 +122,7 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 		return fmt.Errorf("dest cannot be empty")
 	}
 
-	// Ensure dest parent directories exist
-	err = os.MkdirAll(filepath.Dir(dest), dirPerm)
-	if err != nil {
-		return fmt.Errorf("failed to create parent directory for %s: %w", dest, err)
-	}
-
-	out, err := os.Create(dest)
-	if err != nil {
-		return fmt.Errorf("failed to create %s: %w", dest, err)
-	}
-	defer func() { err = errors.Join(err, out.Close()) }()
-
-	// map local paths to archive names
+	// Map local paths to archive names.
 	mapping := make(map[string]string, len(sources))
 	for _, src := range sources {
 		mapping[src] = filepath.Base(src)
@@ -162,6 +150,17 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 	if err != nil {
 		return err
 	}
+
+	// Ensure dest parent directories exist.
+	if err := os.MkdirAll(filepath.Dir(dest), dirPerm); err != nil {
+		return fmt.Errorf("failed to create parent directory for %s: %w", dest, err)
+	}
+	out, err := os.Create(dest)
+	if err != nil {
+		return fmt.Errorf("failed to create %s: %w", dest, err)
+	}
+	defer func() { err = errors.Join(err, out.Close()) }()
+
 	if err := archiver.Archive(ctx, out, files); err != nil {
 		return fmt.Errorf("archive failed for %q: %w", dest, err)
 	}
@@ -413,7 +412,6 @@ func writeEntry(root *os.Root, rel, linkTarget string, f archives.FileInfo, flag
 		if err := validateSymlink(rel, linkTarget); err != nil {
 			return err
 		}
-		// Since we're now operating on the filesystem, we need the actual path
 		return root.Symlink(filepath.FromSlash(linkTarget), rel)
 	default:
 		return writeFile(root, rel, f, flags)

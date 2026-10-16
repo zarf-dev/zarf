@@ -72,7 +72,7 @@ func TestV1Beta1Deploy(t *testing.T) {
 	)
 	require.NoError(t, err, "%s\n%s", stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.ZarfInDir(t, workDir, "package", "create", source, "-o", workDir, "--skip-sbom", "--confirm")
+	stdOut, stdErr, err = e2e.ZarfInDir(t, workDir, "package", "create", source, "-o", workDir, "--skip-sbom", "--confirm", "--features=v1beta1=true")
 	require.NoError(t, err, "%s\n%s", stdOut, stdErr)
 	require.Contains(t, stdOut+stdErr, "create-before")
 	require.Contains(t, stdOut+stdErr, "create-success")

@@ -10,10 +10,41 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestPackageCreateRejectsV1Beta1WithoutFeature(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	require.False(t, feature.IsEnabled(feature.V1Beta1))
+	packageDir := t.TempDir()
+	outputDir := t.TempDir()
+	definition := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-feature
+components:
+  - name: empty
+    actions:
+      onCreate:
+        before:
+          - cmd: echo created > created.txt
+`
+	require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(definition), 0o600))
+
+	packagePath, err := Create(ctx, packageDir, outputDir, CreateOptions{
+		CachePath: t.TempDir(),
+		SkipSBOM:  true,
+	})
+	require.ErrorContains(t, err, "--features=v1beta1=true")
+	require.Empty(t, packagePath)
+	require.NoFileExists(t, filepath.Join(packageDir, "created.txt"))
+	entries, err := os.ReadDir(outputDir)
+	require.NoError(t, err)
+	require.Empty(t, entries)
+}
 
 func TestPackageCreatePreservesV1alpha1MetadataAnnotationCollisions(t *testing.T) {
 	ctx := testutil.TestContext(t)
