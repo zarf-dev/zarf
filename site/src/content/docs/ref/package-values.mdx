@@ -339,6 +339,15 @@ See the [values-templating example](/ref/examples/values-templating/) for a work
 
 The `.Pkg` object gives access to the package definition. See this used in the [values-templating](/ref/examples/values-templating) example.
 
+For `v1beta1` packages, the `GetImageByID` function allows looking up an image by its `id`:
+
+```yaml
+{{ $image := (.Pkg.GetComponent "web").GetImageByID "nginx" }}
+image: {{ $image.Reference | quote }}
+```
+
+The object exposes `.Reference`, `.Tag`, and `.Digest`. Tags and digests are empty when absent. Missing components or missing/empty image IDs cause a template error.
+
 ### Functions
 
 [sprig functions](https://masterminds.github.io/sprig/) except for `getHostByName`, `env`, and `expandenv` are included.
