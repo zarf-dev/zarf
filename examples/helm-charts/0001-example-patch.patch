@@ -1,0 +1,25 @@
+From 6a7f74a9717d63033810d0ca3fa96fb8c41f5323 Mon Sep 17 00:00:00 2001
+From: Blake Burkhart <blake@defenseunicorns.com>
+Date: Mon, 20 Apr 2026 12:13:53 -0500
+Subject: [PATCH] example patch
+
+---
+ charts/podinfo/templates/deployment.yaml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/charts/podinfo/templates/deployment.yaml b/charts/podinfo/templates/deployment.yaml
+index 87ed373..4385fb8 100644
+--- a/charts/podinfo/templates/deployment.yaml
++++ b/charts/podinfo/templates/deployment.yaml
+@@ -31,7 +31,7 @@ spec:
+       serviceAccountName: {{ template "podinfo.serviceAccountName" . }}
+       {{- end }}
+       containers:
+-        - name: {{ .Chart.Name }}
++        - name: {{ .Chart.Name }}-patched
+           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+           imagePullPolicy: {{ .Values.image.pullPolicy }}
+           {{- if .Values.securityContext }}
+-- 
+2.50.1 (Apple Git-155)
+
