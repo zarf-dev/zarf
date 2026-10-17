@@ -61,23 +61,6 @@ There are two types of unit tests within Zarf:
 
 Unit tests should always take less than one second. Unit tests should run using `t.Parallel()` unless a specific constraint blocks this.
 
-## Verify Local Environment
-`APPLIANCE_MODE=true` can be used to automatically spin up and configure a Zarf-installed K3s cluster on Linux machines with `sudo` privileges. If not using `APPLIANCE_MODE`, it's a good idea to run a minimal test to verify that all dependencies are functioning and your Kubernetes cluster is properly configured prior to performing a full E2E test run.
-
-Because early cluster connectivity checks in the test suite can fail silently, manually verifying your cluster and running a single test is highly recommended.
-
-```bash
-# Verify cluster connectivity and ensure KUBECONFIG is pointing to a live, clean cluster
-kubectl cluster-info
-
-# Compile the Zarf CLI and Zarf init package to verify Go, Make, Docker, and Buildx are present
-make build
-make init-package
-
-# Run a single test to verify cluster, Zarf binary, and Zarf init package exist locally
-go test ./src/test/e2e/... -v -failfast -run TestZarfInit -count=1
-```
-
 ## CLI End-to-End Tests
 
 ### CLI End-to-End Test Naming Conventions
@@ -92,6 +75,23 @@ The E2E tests files in `src/test/e2e/` are run sequentially and the naming conve
 
 * **Without-Cluster Tests (`00_*` through `19_*`):** These do **not** require a running Kubernetes cluster
 * **With-Cluster Tests (`20_*` through `99_*`):** These **require a running Kubernetes cluster** with a valid `kubeconfig`
+
+### Verify Local Environment for E2E Testing
+For the E2E tests only, `APPLIANCE_MODE=true` can be used to automatically spin up and configure a Zarf-installed K3s cluster on Linux machines with `sudo` privileges. If not using `APPLIANCE_MODE`, it's a good idea to run a minimal test to verify that all dependencies are functioning and your Kubernetes cluster is properly configured prior to performing a full E2E test run.
+
+Because early cluster connectivity checks in the test suite can fail silently, manually verifying your cluster and running a single test is highly recommended.
+
+```bash
+# Verify cluster connectivity and ensure KUBECONFIG is pointing to a live, clean cluster
+kubectl cluster-info
+
+# Compile the Zarf CLI and Zarf init package to verify Go, Make, Docker, and Buildx are present
+make build
+make init-package
+
+# Run a single test to verify cluster, Zarf binary, and Zarf init package exist locally
+go test ./src/test/e2e/... -v -failfast -run TestZarfInit -count=1
+```
 
 There are several ways to run E2E tests depending on your specific situation, such as:
 
@@ -160,9 +160,7 @@ The documentation for this test is still in progress. Please refer to the code f
 Depends on :
 
 - Locally built Zarf binary
-- A **fresh** Kubernetes cluster prepared in one of two ways:
-    - **Zarf Appliance Mode (`APPLIANCE_MODE=true`):** Automates the K3s cluster creation and setup (supported on Linux only)
-    - **Pre-seeded K8s Cluster:** A clean cluster (like K3d) that has been Zarf initialized and has the `6.3.3` baseline upgrade-test package deployed
+- A **fresh**, running Kubernetes cluster (e.g., K3d or K3s) that has been initialized with Zarf and has the `6.3.3` baseline upgrade-test package
 
 The upgrade test deploys real releases onto a cluster and tests Zarf's ability to upgrade components. The upgrade test assumes the Zarf binary has already been built locally and a fresh, running K8s cluster with a valid `kubeconfig` exists. If using a Zarf-installed K3s cluster, Zarf should already have been initialized and the binary exists on the cluster, as well as the 6.3.3 upgrade-test package installed prior to the upgrade test.
 
@@ -239,9 +237,7 @@ Depends on:
 
 - Locally built Zarf binary
 - Docker Compose V2
-- A **fresh** Kubernetes cluster prepared in one of two ways:
-    - **Zarf Appliance Mode (`APPLIANCE_MODE=true`):** Automates the K3s cluster creation and setup (supported on Linux only)
-    - **Pre-seeded K8s Cluster:** A clean cluster (like K3d) that has **not** been initialized with Zarf
+- A **fresh**, running Kubernetes cluster (e.g. K3d or K3s) that **has not** been initialized with Zarf
 
 The external test verifies Zarf's ability to use an external container registry and Git server. The test script automatically deploys mock external Git and registry pods into the cluster, and then initializes Zarf configured to use those external services instead of deploying its own internal registry and Gitea. These mocks are still considered `external` servers since they already exist inside the K8s cluster before the `zarf init` command is executed.
 
