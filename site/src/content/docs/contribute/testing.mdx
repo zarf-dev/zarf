@@ -6,125 +6,139 @@ Currently, we primarily test Zarf through a series of [end-to-end tests](https:/
 
 In addition, Zarf implements unit tests for specific functions where edge cases prove difficult to cover through end-to-end testing alone. Unit tests follow standard Go convention and are `*_test.go` files.
 
+:::note
+Unless otherwise stated, all commands below are to be run from the root of the repository
+:::
+
 ## Dependencies
 
-To run the end-to-end tests locally, you must meet the same prerequisites as those required for building and running Zarf, which include:
+To run the end-to-end (E2E) tests locally, you must meet the same prerequisites as those required for building and running Zarf, which include:
 
-1. GoLang version >= the version specified in the [go.mod](https://github.com/zarf-dev/zarf/blob/main/go.mod)
-2. Make
-3. Any clean K8s cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed K3s cluster
+1. Any clean K3d or K3s Kubernetes cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed K3s cluster (must have K3s installed if using the Zarf-installed cluster)
+2. GoLang version >= the version specified in the [go.mod](https://github.com/zarf-dev/zarf/blob/main/go.mod)
+3. Make
+4. Docker
+5. Docker Buildx
+6. Docker Compose V2
+7. Helm CLI
 
 ## Unit Tests
 
-There are several ways to run tests depending on your specific situation, such as:
+Unit tests execute directly against isolated packages and functions without requiring a Kubernetes cluster. All unit tests should pass locally before submitting a PR. There are several ways to run unit tests, depending on your specific situation, such as:
+
+#### Standard Makefile Workflows
+
+These commands automatically build any missing binary dependencies and run the unit test suite:
 
 ``` bash
-# The default way, from the root directory of the repo. Will run all of the unit tests that are currently defined.
+# Run all unit tests currently defined
 make test-unit
 
-# If you already have everything built, you can run this inside this folder. This lets you customize the test run.
+# Get a single-line ok/fail summary of all the unit tests
+make test-unit 2>&1 | grep -E "^(ok|FAIL)\s"
+```
+
+#### Direct Go Test Workflows
+
+If you already have the Zarf binary and zarf-init package built in the `./build` directory, you can run `go test` directly from the repository root:
+
+```bash
+# Run all unit tests currently defined
 go test ./src/pkg/... -v
 
-# Let's say you only want to run one test. You would run:
+# Run a single specific unit test
 go test ./src/pkg/... -v -run TestFooBarBaz
 ```
 
 ### Adding New Unit Tests
 
-To create a unit test, search for or create a file that ends with `_test.go` in the package of the file that requires testing, such as `auth.go` -> `auth_test.go`. Import the testing library and create test functions as necessary. Generic unit test helper functions can be found in [src/test/testutil](https://github.com/zarf-dev/zarf/tree/main/src/test/testutil).
+To create a new unit test, search for or create a file that ends with `_test.go` in the package of the file that requires testing, such as `auth.go` -> `auth_test.go`. Import the testing library and create test functions as necessary. Generic unit test helper functions can be found in [src/test/testutil](https://github.com/zarf-dev/zarf/tree/main/src/test/testutil).
 
 There are two types of unit tests within Zarf:
 
 1. Standard unit tests on isolated functions or files.
-1. Tests in the [src/cmd](https://github.com/zarf-dev/zarf/tree/main/src/cmd) package, which test an entire command. These have similar properties to e2e tests, but faster iteration loops.
+2. Tests in the [src/cmd](https://github.com/zarf-dev/zarf/tree/main/src/cmd) package, which test an entire command. These have similar properties to E2E tests, but faster iteration loops.
 
 Unit tests should always take less than one second. Unit tests should run using `t.Parallel()` unless a specific constraint blocks this.
 
-
 ## CLI End-to-End Tests
 
-There are several ways to run tests depending on your specific situation, such as:
+### CLI End-to-End Test Naming Conventions
+
+The E2E tests files in `src/test/e2e/` are run sequentially and the naming convention is set intentionally:
+
+- 00-19 tests run prior to `zarf init` (cluster not initialized)
+- 20 is reserved for `zarf init`
+- 22 is reserved for tests required the git-server, which is removed at the end of the test
+- 23-98 are for the remaining tests that only require a basic Zarf cluster without the git-server
+- 99 is reserved for the `zarf destroy` and [YOLO Mode](/ref/examples/yolo/) test
+
+* **Without-Cluster Tests (`00_*` through `19_*`):** These do **not** require a running Kubernetes cluster
+* **With-Cluster Tests (`20_*` through `99_*`):** These **require a running Kubernetes cluster** with a valid `kubeconfig`
+
+### Verify Local Environment for E2E Testing
+For the E2E tests only, `APPLIANCE_MODE=true` can be used to automatically spin up and configure a Zarf-installed K3s cluster on Linux machines with `sudo` privileges. If not using `APPLIANCE_MODE`, it's a good idea to run a minimal test to verify that all dependencies are functioning and your Kubernetes cluster is properly configured prior to performing a full E2E test run.
+
+Because early cluster connectivity checks in the test suite can fail silently, manually verifying your cluster and running a single test is highly recommended.
+
+```bash
+# Verify cluster connectivity and ensure KUBECONFIG is pointing to a live, clean cluster
+kubectl cluster-info
+
+# Compile the Zarf CLI and Zarf init package to verify Go, Make, Docker, and Buildx are present
+make build
+make init-package
+
+# Run a single test to verify cluster, Zarf binary, and Zarf init package exist locally
+go test ./src/test/e2e/... -v -failfast -run TestZarfInit -count=1
+```
+
+There are several ways to run E2E tests depending on your specific situation, such as:
+
+#### Standard Makefile Workflows
+
+These commands automatically build any missing binary dependencies and run the E2E test suite:
 
 ``` bash
 # Note: You can prepend CI=true to these commands to force the --no-progress flag like CI does
 
-# The default way, from the root directory of the repo. Will run all of the tests against your chosen k8s distro. Will automatically build any binary dependencies that don't already exist.
+# Run all E2E tests against your existing running K8s cluster (00-99)
 make test-e2e ARCH="[amd64|arm64]"
 
-# To test against a Zarf-created cluster (on Linux with sudo)
+# Run only tests that do not require a cluster (00-19)
+make test-e2e-without-cluster
+
+# Run all tests against a fresh Zarf-created K3s cluster (Linux only with sudo)
 APPLIANCE_MODE=true make test-e2e ARCH="[amd64|arm64]"
+```
 
-# If you already have everything build, you can run this inside this folder. This lets you customize the test run.
-go test ./src/test/... -v -failfast -count=1
+#### Direct Go Test Workflows
 
-# Let's say you only want to run one test. You would run:
-go test ./src/test/... -v -failfast -run TestFooBarBaz -count=1
+If you already have the Zarf binary and zarf-init package built in the `./build` directory, you can run `go test` directly from the repository root:
+
+``` bash
+# Get a single-line pass/fail summary of all the E2E tests (00-99)
+# Optionally add the -failfast flag to stop the tests at the first failure
+go test ./src/test/e2e/... -v -count=1 2>&1 | grep -E "^\s*--- (PASS|FAIL|SKIP)|^(PASS|FAIL)"
+
+# Get a verbose summary of all the E2E tests (00-99)
+go test ./src/test/e2e/... -v -failfast -count=1
+
+# Get a verbose summary of a single specific E2E test
+go test ./src/test/e2e/... -v -failfast -run TestFooBarBaz -count=1
 ```
 
 :::note
-The `-count=1` flag is the idiomatic way to disable
-test caching explicitly.
+The `-count=1` flag is the idiomatic way to disable test caching explicitly.
 :::
 
 :::note
-The Zarf binary and built packages are required to be stored in the ./build directory. However, if you intend to run tests locally using 'go test ./...', the zarf-init package must also be present in this directory.
+Running `go test ./src/test/e2e/...` directly requires both the Zarf binary and the zarf-init package to be pre-built in the `./build` directory.
 :::
-
-### The Upgrade Test
-
-:::caution
-
-This test is meant to be run on a fresh cluster.
-
-Additionally, the documentation for this test is still in progress. Please refer to the code for more information.
-
-:::
-
-Depends on:
-
-- A locally built Zarf binary.
-- A fresh cluster.
-
-``` bash
-# The default way, from the root directory of the repo. This will automatically build any Zarf related resources if they don't already exist (i.e. binary, init-package, example packages):
-make test-upgrade
-
-# or
-
-# If you are in the root folder of the repository and already have everything built (i.e., the binary, the init-package and the flux-test example package):
-go test ./src/test/upgrade/...
-```
-
-### The External Test
-
-:::caution
-
-This test is meant to be run on a fresh cluster.
-
-Additionally, the documentation for this test is still in progress. Please refer to the code for more information.
-
-:::
-
-Depends on:
-
-- A locally built Zarf binary.
-- A fresh cluster.
-
-> Note: For this test case, we deploy an 'external' Git server and container registry as pods running within the k8s cluster. These are still considered 'external' servers since they already existed inside the k8s cluster before `zarf init` command is executed
-
-``` bash
-# The default way, from the root directory of the repo. This will automatically build any Zarf related resources if they don't already exist (i.e. binary, init-package, example packages):
-make test-external
-
-# or
-
-# If you are in the root folder of the repository and already have everything built (i.e., the binary, the init-package and the flux-test example package):
-go test ./src/test/external/... -v
-```
 
 ### Adding New CLI End-to-End Tests
 
-When adding new tests, there are several requirements that must be followed, including:
+When adding new E2E tests, there are several requirements that must be followed, including:
 
 1. Tests cannot be run in parallel as they utilize the same K8s cluster.
 2. Each test should begin with the entries below for standardization and test setup/teardown:
@@ -137,12 +151,136 @@ func TestFooBarBaz(t *testing.T) {
 }
 ```
 
-### CLI End-to-End Test Naming Conventions
+## The Upgrade Test
 
-The end-to-end tests are run sequentially and the naming convention is set intentionally:
+:::caution
+The documentation for this test is still in progress. Please refer to the code for more information.
+:::
 
-- 00-19 tests run prior to `zarf init` (cluster not initialized).
-- 20 is reserved for `zarf init`.
-- 22 is reserved for tests required the git-server, which is removed at the end of the test.
-- 23-98 are for the remaining tests that only require a basic Zarf cluster without the git-server.
-- 99 is reserved for the `zarf destroy` and Connected mode test.
+Depends on :
+
+- Locally built Zarf binary
+- A **fresh**, running Kubernetes cluster (e.g., K3d or K3s) that has been initialized with Zarf and has the `6.3.3` baseline upgrade-test package
+
+The upgrade test deploys real releases onto a cluster and tests Zarf's ability to upgrade components. The upgrade test assumes the Zarf binary has already been built locally and a fresh, running K8s cluster with a valid `kubeconfig` exists. If using a Zarf-installed K3s cluster, Zarf should already have been initialized and the binary exists on the cluster, as well as the 6.3.3 upgrade-test package installed prior to the upgrade test.
+
+#### Standard Makefile Workflows
+
+These commands automatically build any missing binary dependencies and run the upgrade test suite:
+
+```bash
+# Run the upgrade test
+make test-upgrade
+```
+
+If using a fresh non-Zarf-installed cluster, perform the following steps to initialize Zarf, deploy the baseline package, and perform the upgrade test:
+
+```bash
+# Build the Zarf CLI if not done previously
+make build
+
+# Build the Zarf init package if not done previously
+make init-package
+
+# Initialize Zarf on the cluster
+# Check the name of your Zarf binary in ./build then run
+./build/zarf-<binary_name> init --components=git-server --confirm
+
+# Create the 6.3.3 baseline package
+./build/zarf-<binary_name> package create src/test/upgrade/ --set PODINFO_VERSION=6.3.3 --confirm
+
+# Check the name of your baseline package and deploy the package to your cluster
+./build/zarf-<binary_name> package deploy zarf-package-test-upgrade-package-<arch>-6.3.3.tar.zst --confirm
+
+# Run init again to force Zarf to run its upgrade and credential rotation logic
+./build/zarf-<binary_name> init --components=git-server --confirm
+
+# Run the upgrade test
+make test-upgrade
+
+# Example for macOS
+make build
+make init-package
+./build/zarf-mac-apple init --components=git-server --confirm
+./build/zarf-mac-apple package create src/test/upgrade/ --set PODINFO_VERSION=6.3.3 --confirm
+./build/zarf-mac-apple package deploy zarf-package-test-upgrade-package-arm64-6.3.3.tar.zst --confirm
+./build/zarf-mac-apple init --components=git-server --confirm
+make test-upgrade
+```
+
+#### Direct Go Test Workflows
+
+If you already have the Zarf binary, the zarf-init package, and the upgrade test package built in the `./build` directory, you can run `go test` directly from the repository root:
+
+```bash
+# Run the upgrade test
+go test ./src/test/upgrade/... -v -failfast -count=1
+
+# Get a single-line pass/fail summary of the upgrade test
+go test ./src/test/upgrade/... -v -count=1 2>&1 | grep -E "^\s*--- (PASS|FAIL|SKIP)|^(PASS|FAIL)"
+
+# Get a verbose summary of a single specific upgrade test
+go test ./src/test/upgrade/... -v -run TestFooBarBaz -count=1
+```
+
+:::note
+Running `go test ./src/test/upgrade/...` directly requires both the Zarf binary and the zarf-init package to be pre-built in the `./build` directory.
+:::
+
+## The External Test
+
+:::caution
+The documentation for this test is still in progress. Please refer to the code for more information.
+:::
+
+Depends on:
+
+- Locally built Zarf binary
+- Docker Compose V2
+- A **fresh**, running Kubernetes cluster (e.g. K3d or K3s) that **has not** been initialized with Zarf
+
+The external test verifies Zarf's ability to use an external container registry and Git server. The test script automatically deploys mock external Git and registry pods into the cluster, and then initializes Zarf configured to use those external services instead of deploying its own internal registry and Gitea. These mocks are still considered `external` servers since they already exist inside the K8s cluster before the `zarf init` command is executed.
+
+#### Standard Makefile Workflows
+
+These commands automatically build any missing binary dependencies and run the external test suite:
+
+``` bash
+# Run the external test
+make test-external
+```
+
+#### Direct Go Test Workflows
+
+If you already have the Zarf binary, the zarf-init package, and the external test package built in the `./build` directory, you can run `go test` directly from the repository root:
+
+```bash
+# Run the external test
+go test ./src/test/external/... -v -failfast -count=1
+
+# Run only the in-cluster external services test
+go test ./src/test/external/... -v -run TestExtInClusterTestSuite -count=1
+
+# Run only the out-of-cluster external services test
+go test ./src/test/external/... -v -run TestExtOutClusterTestSuite -count=1
+```
+
+## Troubleshooting
+
+Common local testing issues and resolution steps:
+
+#### Docker & Buildx Issues
+- `unknown flag: load`
+
+    - Cause: Docker Buildx plugin is either not installed or the local CLI symlink is broken
+    - Fix: Ensure Buildx is installed (`docker buildx version`)
+
+#### Kubernetes Cluster Connectivity
+- `dial tcp [::1]:8080: connect: connection refused`
+    - Cause: No local Kubernetes cluster is active or `KUBECONFIG` is pointing to an unreachable host
+    - Fix: Verify active cluster context with `kubectl cluster-info` or ensure the Docker daemon is running
+
+#### Upgrade Suite Errors
+- `Zarf must be initialized and have the 6.3.3 upgrade-test package installed prior to the upgrade test`
+    - Cause: `make test-upgrade` was invoked before initializing Zarf or deploying the 6.3.3 Podinfo baseline test package
+    - Fix: Follow the steps in The Upgrade Test section above to initialize Zarf and deploy the baseline test package
