@@ -15,8 +15,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
-// TestCreateArchitecture is cluster-free and uses only local package resources.
-func TestCreateArchitecture(t *testing.T) {
+// TestCreateArchitectureFlagAndMetadataFallback is cluster-free and uses only local package resources.
+func TestCreateArchitectureFlagAndMetadataFallback(t *testing.T) {
 	t.Setenv("ZARF_ARCHITECTURE", "")
 	configPath := filepath.Join(t.TempDir(), "zarf-config.toml")
 	require.NoError(t, os.WriteFile(configPath, nil, 0o600))

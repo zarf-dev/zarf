@@ -94,7 +94,7 @@ components:
 	require.NoError(t, os.WriteFile(filepath.Join(source, "imported", layout.ZarfYAML), []byte(imported), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(source, layout.ZarfYAML), []byte(root), 0o600))
 
-	for arch, pkg := range createMixedArchitecturePackages(t, source) {
+	for arch, pkg := range assertConcurrentCreateArchitectures(t, source) {
 		require.Equal(t, arch, pkg.Components[0].Description)
 	}
 }
@@ -148,10 +148,10 @@ component:
 	}
 	require.NoError(t, os.WriteFile(filepath.Join(source, layout.ZarfYAML), []byte(root), 0o600))
 
-	createMixedArchitecturePackages(t, source)
+	assertConcurrentCreateArchitectures(t, source)
 }
 
-func createMixedArchitecturePackages(t *testing.T, source string) map[string]api.Package {
+func assertConcurrentCreateArchitectures(t *testing.T, source string) map[string]api.Package {
 	t.Helper()
 	previous := config.CLIArch
 	config.CLIArch = "amd64"
@@ -210,6 +210,61 @@ func createMixedArchitecturePackages(t *testing.T, source string) map[string]api
 	}
 	require.Equal(t, "amd64", config.CLIArch)
 	return packages
+}
+
+func TestCreateDifferentialUsesRequestedArchitecture(t *testing.T) {
+	previous := config.CLIArch
+	config.CLIArch = "amd64"
+	t.Cleanup(func() { config.CLIArch = previous })
+	ctx := testutil.TestContext(t)
+	reg := createRegistry(ctx, t)
+	image := reg.Registry + "/images:1"
+	testutil.PushMultiArchIndex(ctx, t, reg.Registry+"/images", "1", []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"},
+	})
+	source := t.TempDir()
+	baseline := fmt.Sprintf(`kind: ZarfPackageConfig
+metadata:
+  name: baseline
+  version: 0.0.1
+components:
+  - name: empty
+  - name: images
+    only:
+      cluster:
+        architecture: arm64
+    images:
+      - %s
+`, image)
+	require.NoError(t, os.WriteFile(filepath.Join(source, layout.ZarfYAML), []byte(baseline), 0o600))
+	var ref string
+	for _, arch := range []string{"amd64", "arm64"} {
+		var err error
+		ref, err = Create(ctx, source, "oci://"+reg.String(), CreateOptions{Architecture: arch, CachePath: t.TempDir(), SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+		require.NoError(t, err)
+	}
+	updated := fmt.Sprintf(`kind: ZarfPackageConfig
+metadata:
+  name: baseline
+  version: 0.0.2
+components:
+  - name: images
+    images:
+      - %s
+`, image)
+	require.NoError(t, os.WriteFile(filepath.Join(source, layout.ZarfYAML), []byte(updated), 0o600))
+	path, err := Create(ctx, source, t.TempDir(), CreateOptions{Architecture: "arm64", DifferentialPackagePath: "oci://" + ref, CachePath: t.TempDir(), SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	pkgLayout, err := layout.LoadFromTar(ctx, path, layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+	pkg := pkgLayout.Definition()
+	require.Equal(t, "arm64", pkg.Metadata.Architecture)
+	require.Equal(t, "arm64", pkg.Build.Architecture)
+	require.True(t, pkg.Build.Differential)
+	require.Equal(t, "0.0.1", pkg.Build.DifferentialPackageVersion)
+	require.Len(t, pkg.Components, 1)
+	require.Empty(t, pkg.Components[0].Images, "the arm64 baseline already contains this image; the amd64 baseline does not")
 }
 
 func TestPackageCreatePreservesV1alpha1MetadataAnnotationCollisions(t *testing.T) {

@@ -22,7 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func TestPackageDefinitionArchitecture(t *testing.T) {
+func TestPackageDefinitionArchitecturePrecedence(t *testing.T) {
 	previous := config.CLIArch
 	t.Cleanup(func() { config.CLIArch = previous })
 	for _, version := range []string{"v1alpha1", "v1beta1"} {
