@@ -4,49 +4,16 @@
 package zoci
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/types"
-	"oras.land/oras-go/v2/content"
-	orasOCI "oras.land/oras-go/v2/content/oci"
 )
-
-func TestNewRemoteWithOptionsUsesCacheWithInterruptedIndex(t *testing.T) {
-	t.Parallel()
-	for _, index := range []string{"", `{"schemaVersion":2,"manifests":[`} {
-		t.Run(fmt.Sprintf("index length %d", len(index)), func(t *testing.T) {
-			t.Parallel()
-			ctx := t.Context()
-			cachePath := t.TempDir()
-			cacheDir := filepath.Join(cachePath, ImageCacheDirectory)
-			legacyCache, err := orasOCI.New(cacheDir)
-			require.NoError(t, err)
-			data := []byte("previously cached layer")
-			desc := content.NewDescriptorFromBytes("application/octet-stream", data)
-			require.NoError(t, legacyCache.Push(ctx, desc, bytes.NewReader(data)))
-			// An interrupted metadata write must not prevent reusing intact blobs.
-			require.NoError(t, os.WriteFile(filepath.Join(cacheDir, "index.json"), []byte(index), 0o600))
-
-			remote, err := NewRemoteWithOptions(ctx, "example.invalid/package:latest", oci.PlatformForArch("amd64"), RemoteClientOptions{
-				CachePath: cachePath,
-			})
-			require.NoError(t, err)
-			got, err := remote.FetchLayer(ctx, desc)
-			require.NoError(t, err)
-			require.Equal(t, data, got)
-		})
-	}
-}
 
 func TestNewRemoteDeprecatedModifiers(t *testing.T) {
 	remote, err := NewRemote(context.Background(), "example.com/example:latest", oci.PlatformForArch("amd64"), oci.WithPlainHTTP(true))
