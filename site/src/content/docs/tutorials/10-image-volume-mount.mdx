@@ -47,12 +47,16 @@ examples/image-volume-archive
 │       ├── deployment.yaml
 │       ├── hpa.yaml
 │       └── service.yaml
+├── nginx                 # mounts the docs archive as an image volume
+│   ├── configmap.yaml
+│   ├── deployment.yaml
+│   └── service.yaml
 └── zarf.yaml
 ```
 
 The split matters: `fluxcd/deploy` is what Zarf applies, and `fluxcd/podinfo` is what Zarf never looks at — those four files are only ever bytes inside the archive until Flux extracts them in the cluster.
 
-The package has a second component, `docs-archive`, that packs this site's source directory into `zarf.internal/zarf-docs:local` and ships it with no consumer attached. It is there to show the plain build-and-push case — the archive lands in the cluster registry and is ready for a pod to mount as an image volume, or for anything else that can pull an image. The rest of this tutorial follows the `fluxcd-oci-repo` component.
+The package's other component, `docs-archive`, covers the first case: it packs this site's built static output into `zarf.internal/zarf-docs:local` and deploys an nginx `Deployment` that mounts the archive read-only at its document root. See [Serving a static site from an image volume](#serving-a-static-site-from-an-image-volume) below. The rest of this tutorial follows the `fluxcd-oci-repo` component.
 
 ### The component
 
@@ -162,10 +166,10 @@ horizontalpodautoscaler.autoscaling/podinfo   Deployment/podinfo   cpu: 1%/99%  
 
 Nothing in the `podinfo` namespace came from the Zarf package except the namespace itself — the `Deployment`, `Service`, and `HorizontalPodAutoscaler` were all extracted from the image volume archive by Flux.
 
-Confirm the agent rewrote the image reference inside the Flux-applied `Deployment`:
+Confirm the agent rewrote the image reference on the pods Flux created. Read it off a pod rather than the `Deployment`: the agent mutates pods on admission, so the `Deployment` template Flux applied still carries the original `ghcr.io/stefanprodan/podinfo:6.15.0`.
 
 ```bash
-kubectl -n podinfo get deploy podinfo -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+kubectl -n podinfo get po -l app=podinfo -o jsonpath='{.items[0].spec.containers[0].image}{"\n"}'
 ```
 
 ```
@@ -200,6 +204,75 @@ kubectl -n flux-system get ocirepo,ks
 ```
 
 The digest in the `STATUS` column changes and the `Kustomization` reports the new revision. Because `zarf dev iva` pins timestamps and file ownership to fixed values, an unchanged directory rebuilds to the same digest and Flux does nothing at all — reproducibility here is what keeps redeploys from churning the cluster.
+
+## Serving a static site from an image volume
+
+The `docs-archive` component is the image-volume half of the example: it packs a directory of built HTML into an archive and has nginx serve it directly out of the mounted image. Nothing is copied at startup, there is no `PersistentVolumeClaim`, and no init container — the kubelet mounts the OCI image's filesystem at the container's document root.
+
+<ExampleYAML src={import("../../../../../examples/image-volume-archive/zarf.yaml?raw")} component="docs-archive" />
+
+Note what is **not** here: there is no `--max-layers` cap. A pod mounting an image volume sees every layer flattened into one filesystem, so the default batching across up to 127 layers is fine. That cap only matters for the Flux path, which reads a single layer.
+
+The first `onCreate` action builds the site before packing it, because `site/dist` is generated output and is gitignored:
+
+```bash
+site/hack/build-in-docker.sh build
+```
+
+That helper runs the same Astro build Netlify runs, inside a container pinned to `netlify.toml`'s `NODE_VERSION`, so contributors need no local Node install. Pass `versions` instead of `build` for full Netlify parity (Latest plus every archived release), or `dev` to get a live-reload server.
+
+### What the nginx config has to handle
+
+A static site on a read-only volume needs three things that the stock `nginx` image does not do on its own, all set in `nginx/configmap.yaml`:
+
+```nginx
+absolute_redirect off;
+
+location / {
+    try_files $uri $uri/ =404;
+}
+
+error_page 404 /404.html;
+location = /404.html {
+    internal;
+}
+```
+
+- **`absolute_redirect off`** — Astro builds directory-style URLs, so `/ref/create` gets a 301 to `/ref/create/`. nginx's default absolute `Location` header drops the port, which sends `zarf connect` users to `http://localhost/ref/create/` and a dead connection. Relative redirects survive any port-forward or proxy.
+- **`try_files $uri $uri/`** — resolves `/ref/create/` to the   `ref/create/index.html` stored in the volume.
+- **`error_page 404 /404.html`** — serves Astro's own 404 page rather than   nginx's built-in one.
+
+The config arrives in a `ConfigMap`, not in the archive: the image volume is mounted read-only and nginx reads its config from a different path, so only site content travels in the archive.
+
+### Verify it is serving
+
+```bash
+kubectl -n zarf-docs get deploy,po,svc
+zarf connect docs
+```
+
+Confirm the agent rewrote the volume's reference. The agent is a **pod** webhook, so ask the pod — the `Deployment`'s own template still reads `zarf.internal/zarf-docs:local`, and checking it will convince you the mutation failed when it did not:
+
+```bash
+kubectl -n zarf-docs get po -l app=zarf-docs \
+  -o jsonpath='{.items[0].spec.volumes[?(@.name=="docs")].image.reference}{"\n"}'
+```
+
+```
+10.43.36.151:5000/zarf-docs:local-zarf-1941240188
+```
+
+And list what nginx can actually see at its document root:
+
+```bash
+kubectl -n zarf-docs exec deploy/zarf-docs -- ls /usr/share/nginx/html
+```
+
+```
+404.html  _astro  commands  index.html  pagefind  ref  tutorials  ...
+```
+
+If the pod is stuck in `ContainerCreating` with an event about the volume type, the cluster does not support OCI volumes — that is the one hard requirement this component has over the Flux path.
 
 ## Debugging
 
