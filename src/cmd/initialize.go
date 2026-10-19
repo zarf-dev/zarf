@@ -174,8 +174,11 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		agentTLS = &loadedTLS
 	}
 
-	existingState, err := loadAndValidateExistingState(ctx, o.registryInfo, o.gitServer, o.artifactServer, agentTLS)
+	existingState, err := loadExistingState(ctx)
 	if err != nil {
+		return err
+	}
+	if err := validateExistingState(existingState, o.registryInfo, o.gitServer, o.artifactServer, agentTLS); err != nil {
 		return err
 	}
 	registryMode := o.registryInfo.RegistryMode
@@ -369,9 +372,8 @@ func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory st
 	return errors.New(lang.CmdInitPullErrManual)
 }
 
-// Checks if an init has already happened and if so check that none of the Zarf service information has changed
-// FIXME: make loading state a separate function
-func loadAndValidateExistingState(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo, agentTLS *pki.GeneratedPKI) (*state.State, error) {
+// loadExistingState returns nil when the cluster is unavailable or has not been initialized.
+func loadExistingState(ctx context.Context) (*state.State, error) {
 	c, err := cluster.New(ctx)
 	// If there's no cluster available an init has not happened yet, or this is a custom init
 	if err != nil {
@@ -382,27 +384,32 @@ func loadAndValidateExistingState(ctx context.Context, registryInfo state.Regist
 	if kerrors.IsNotFound(err) {
 		return nil, nil
 	}
-	if err != nil {
-		return nil, err
+	return s, err
+}
+
+// validateExistingState prevents changing service information after initialization.
+func validateExistingState(s *state.State, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo, agentTLS *pki.GeneratedPKI) error {
+	if s == nil {
+		return nil
 	}
 
 	if helpers.IsNotZeroAndNotEqual(gitServer, s.GitServer) {
-		return nil, fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
+		return fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
 	}
 	if state.CheckIfRegistryAddressOrCredsChanged(s.RegistryInfo, registryInfo) {
-		return nil, fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
+		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
 	}
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
-		return nil, fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
+		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
 	if agentTLS != nil {
 		if !bytes.Equal(agentTLS.CA, s.AgentInfo.TLS.CA) ||
 			!bytes.Equal(agentTLS.Cert, s.AgentInfo.TLS.Cert) ||
 			!bytes.Equal(agentTLS.Key, s.AgentInfo.TLS.Key) {
-			return nil, fmt.Errorf("cannot change agent TLS certificates after initial init, to update run `zarf tools update-creds agent`")
+			return fmt.Errorf("cannot change agent TLS certificates after initial init, to update run `zarf tools update-creds agent`")
 		}
 	}
-	return s, nil
+	return nil
 }
 
 // loadAndValidateAgentTLS reads agent TLS files from disk and validates them.
