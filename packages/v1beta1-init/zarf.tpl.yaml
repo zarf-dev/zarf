@@ -8,6 +8,9 @@ metadata:
   architecture: "[[ .architecture ]]"
   preventNamespaceOverride: true
 
+values:
+  schema: values.schema.json
+
 documentation:
   migration: MIGRATION.md
   zarf.cli.openvex.json: ../../.vex/zarf.cli.openvex.json

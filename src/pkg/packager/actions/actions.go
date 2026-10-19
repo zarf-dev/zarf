@@ -58,8 +58,11 @@ func runAction(ctx context.Context, basePath string, defaultCfg api.ActionDefaul
 	cmd := action.Cmd
 	l := logger.From(ctx)
 	start := time.Now()
+	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
+	shell, _ := exec.GetOSShell(actionDefaults.Shell)
 
 	tmplObjs, err := template.NewObjects(values).
+		WithShell(shell).
 		WithConstants(variableConfig.GetConstants()).
 		WithVariables(variableConfig.GetSetVariableMap()).
 		WithState(stateAccess)
@@ -92,7 +95,6 @@ func runAction(ctx context.Context, basePath string, defaultCfg api.ActionDefaul
 
 	l.Info("running command", "cmd", cmdEscaped)
 
-	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
 	actionDefaults.Dir = filepath.Join(basePath, actionDefaults.Dir)
 
 	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell, runtime.GOOS); err != nil {
