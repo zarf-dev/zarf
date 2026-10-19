@@ -106,7 +106,7 @@ The pause image is a good choice because it is already available on nodes runnin
 zarf tools kubectl get node <node-name> -o yaml | zarf tools yq -r '.status.images[].names[] | select(contains("pause"))'
 ```
 
-By default, Node status carries the largest 50 images pulled, so the above command may fail to find an image. If necessary, check your distribution's documentation to find its default pause image.
+By default, kubelet reports only the 50 largest images in node status, so this command may return nothing even when the pause image is present. If necessary, check your distribution's documentation to find its default pause image.
 
 :::note
 
