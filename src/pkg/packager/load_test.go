@@ -12,17 +12,80 @@ import (
 	"strings"
 	"testing"
 
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestLoadPackageArchitectureAndDifferential(t *testing.T) {
+	previous := config.CLIArch
+	config.CLIArch = "amd64"
+	t.Cleanup(func() { config.CLIArch = previous })
+	ctx := testutil.TestContext(t)
+	reg := createRegistry(ctx, t)
+	image := reg.Registry + "/images:1"
+	testutil.PushMultiArchIndex(ctx, t, reg.Registry+"/images", "1", []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"},
+	})
+	source := t.TempDir()
+	baseline := fmt.Sprintf(`kind: ZarfPackageConfig
+metadata:
+  name: baseline
+  version: 0.0.1
+components:
+  - name: empty
+  - name: images
+    only:
+      cluster:
+        architecture: arm64
+    images:
+      - %s
+`, image)
+	require.NoError(t, os.WriteFile(filepath.Join(source, layout.ZarfYAML), []byte(baseline), 0o600))
+	var ref string
+	for _, arch := range []string{"amd64", "arm64"} {
+		var err error
+		ref, err = Create(ctx, source, "oci://"+reg.String(), CreateOptions{Architecture: arch, CachePath: t.TempDir(), SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+		require.NoError(t, err)
+	}
+	for _, tt := range []struct{ option, want string }{{"arm64", "arm64"}, {"", "amd64"}} {
+		pkgLayout, err := LoadPackage(ctx, "oci://"+ref, LoadOptions{Architecture: tt.option, CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()})
+		require.NoError(t, err)
+		require.Equal(t, tt.want, pkgLayout.Definition().Metadata.Architecture)
+		require.NoError(t, pkgLayout.Cleanup())
+	}
+	updated := fmt.Sprintf(`kind: ZarfPackageConfig
+metadata:
+  name: baseline
+  version: 0.0.2
+components:
+  - name: images
+    images:
+      - %s
+`, image)
+	require.NoError(t, os.WriteFile(filepath.Join(source, layout.ZarfYAML), []byte(updated), 0o600))
+	path, err := Create(ctx, source, t.TempDir(), CreateOptions{Architecture: "arm64", DifferentialPackagePath: "oci://" + ref, CachePath: t.TempDir(), SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	pkgLayout, err := LoadPackage(ctx, path, LoadOptions{Architecture: "amd64", CachePath: t.TempDir()})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+	pkg := pkgLayout.Definition()
+	require.Equal(t, "arm64", pkg.Metadata.Architecture)
+	require.Equal(t, "arm64", pkg.Build.Architecture)
+	require.True(t, pkg.Build.Differential)
+	require.Equal(t, "0.0.1", pkg.Build.DifferentialPackageVersion)
+	require.Len(t, pkg.Components, 1)
+	require.Empty(t, pkg.Components[0].Images, "the arm64 baseline already contains this image; the amd64 baseline does not")
+}
 
 func TestLoadPackage(t *testing.T) {
 	t.Parallel()

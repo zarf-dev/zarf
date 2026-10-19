@@ -29,7 +29,9 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
-	Shasum       string
+	Shasum string
+	// Architecture selects the target architecture for OCI sources.
+	// Empty uses the default architecture resolution. Ignored for local archives.
 	Architecture string
 	// Deprecated: Use VerifyBlobOptions instead.
 	PublicKeyPath     string
@@ -91,12 +93,16 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 	switch srcType {
 	case "oci":
+		arch := opts.Architecture
+		if arch == "" {
+			arch = config.GetArch()
+		}
 		ociOpts := pullOCIOptions{
 			Source:               source,
 			VerifyBlobOptions:    opts.VerifyBlobOptions,
 			VerificationStrategy: opts.VerificationStrategy,
 			Shasum:               opts.Shasum,
-			Architecture:         config.GetArch(opts.Architecture),
+			Architecture:         arch,
 			Filter:               opts.Filter,
 			LayerTypes:           opts.LayerTypes,
 			OCIConcurrency:       opts.OCIConcurrency,
