@@ -37,7 +37,8 @@ component:
   actions:
     onDeploy:
       before:
-        - cmd: './zarf internal update-gitea-pvc --pvc-name {{ .Values.gitServer.persistence.claimName | quote }}'
+        - cmd: >-
+            ./zarf internal update-gitea-pvc --pvc-name {{ .Shell.Quote .Values.gitServer.persistence.claimName }}
           enableTemplating: true
           setValues:
             - key: .gitServer.persistence.create
@@ -53,5 +54,6 @@ component:
           maxTotalSeconds: 60
           description: Create an artifact registry token
       onFailure:
-        - cmd: './zarf internal update-gitea-pvc --rollback --pvc-name {{ .Values.gitServer.persistence.claimName | quote }}'
+        - cmd: >-
+            ./zarf internal update-gitea-pvc --rollback --pvc-name {{ .Shell.Quote .Values.gitServer.persistence.claimName }}
           enableTemplating: true
