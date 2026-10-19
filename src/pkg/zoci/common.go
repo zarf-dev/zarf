@@ -96,7 +96,7 @@ func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Plat
 		modifiers = append(modifiers, oci.WithTransport(options.Transport))
 	}
 	if options.CachePath != "" {
-		cacheModifier, err := GetOCICacheModifier(ctx, options.CachePath)
+		cacheModifier, err := GetOCICacheModifier(options.CachePath)
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +156,7 @@ func newRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 }
 
 // GetOCICacheModifier takes in a Zarf cachePath and uses it to return an oci.WithCache modifier
-func GetOCICacheModifier(_ context.Context, cachePath string) (oci.Modifier, error) {
+func GetOCICacheModifier(cachePath string) (oci.Modifier, error) {
 	ociCache, err := ociDirectory.NewStorage(filepath.Join(cachePath, ImageCacheDirectory))
 	if err != nil {
 		return nil, err
