@@ -149,20 +149,22 @@ func TestValidatePackage(t *testing.T) {
 	}
 }
 
-func TestValidatePackageFileChecksumAlgorithm(t *testing.T) {
+func TestValidatePackageFileChecksum(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name      string
 		checksum  string
-		wantError bool
+		wantError string
 	}{
 		{name: "omitted checksum"},
 		{name: "checksum without prefix", checksum: "abc123"},
 		{name: "sha256 prefix", checksum: "sha256:abc123"},
 		{name: "sha512 prefix", checksum: "sha512:abc123"},
-		{name: "unsupported prefix", checksum: "sha384:abc123", wantError: true},
-		{name: "empty prefix", checksum: ":abc123", wantError: true},
+		{name: "unsupported prefix", checksum: "sha384:abc123", wantError: "sha256 or sha512"},
+		{name: "empty prefix", checksum: ":abc123", wantError: "sha256 or sha512"},
+		{name: "sha256 empty digest", checksum: "sha256:", wantError: "empty checksum digest"},
+		{name: "sha512 empty digest", checksum: "sha512:", wantError: "empty checksum digest"},
 	}
 
 	for _, tt := range tests {
@@ -176,9 +178,9 @@ func TestValidatePackageFileChecksumAlgorithm(t *testing.T) {
 			}}}
 
 			errs := ValidatePackage(pkg)
-			if tt.wantError {
+			if tt.wantError != "" {
 				require.ErrorContains(t, errs, "file.txt")
-				require.ErrorContains(t, errs, "sha256 or sha512")
+				require.ErrorContains(t, errs, tt.wantError)
 			} else {
 				require.Empty(t, errs)
 			}
