@@ -120,9 +120,8 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 		}
 	}
 
-	reverseDepComps := slices.Clone(depPkg.DeployedComponents)
-	slices.Reverse(reverseDepComps)
-	for _, depComp := range reverseDepComps {
+	for i := len(depPkg.DeployedComponents) - 1; i >= 0; i-- {
+		depComp := &depPkg.DeployedComponents[i]
 		// Only remove the component if it was requested or if we are removing the whole package.
 		comp, ok := componentIdx[depComp.Name]
 		if !ok {
@@ -184,9 +183,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 
 			// remove the component from deploy components slice.
 			if opts.Cluster != nil {
-				depPkg.DeployedComponents = slices.DeleteFunc(depPkg.DeployedComponents, func(t state.DeployedComponent) bool {
-					return t.Name == depComp.Name
-				})
+				depPkg.DeployedComponents = slices.Delete(depPkg.DeployedComponents, i, i+1)
 				err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 				if err != nil {
 					// We warn and ignore errors because we may have removed the cluster that this package was inside of
