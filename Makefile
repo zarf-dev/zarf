@@ -162,7 +162,7 @@ init-package-v1beta1: ## Build the local agent and create the v1beta1 init packa
 	$(MAKE) $(sort $(BUILD_CLI_FOR_SYSTEM) $(if $(filter arm64,$(ARCH)),build-cli-linux-arm,build-cli-linux-amd))
 	$(MAKE) build-local-agent-image
 	$(MAKE) template-init-package-v1beta1
-	$(ZARF_BIN) package create packages/v1beta1-init -o "$(INIT_V1BETA1_OUTPUT)" -a $(ARCH)
+	$(ZARF_BIN) package create packages/v1beta1-init -o "$(INIT_V1BETA1_OUTPUT)" -a $(ARCH) --features=v1beta1=true
 
 release-init-package-v1beta1: ## Create the v1beta1 init package with a released agent image
 	@test -n "$(AGENT_IMAGE_TAG)" || { echo "Set AGENT_IMAGE_TAG to the released agent tag"; exit 1; }
@@ -171,7 +171,7 @@ release-init-package-v1beta1: ## Create the v1beta1 init package with a released
 			template_set="$$template_set,"'$(INIT_V1BETA1_TEMPLATE_SET)'; \
 		fi; \
 		$(MAKE) template-init-package-v1beta1 INIT_V1BETA1_TEMPLATE_SET="$$template_set"
-	$(ZARF_BIN) package create packages/v1beta1-init -o "$(INIT_V1BETA1_OUTPUT)" -a $(ARCH)
+	$(ZARF_BIN) package create packages/v1beta1-init -o "$(INIT_V1BETA1_OUTPUT)" -a $(ARCH) --features=v1beta1=true
 
 ## Build the Zarf CLI for all platforms aligned with the release process
 ## skipping validation here to allow for building with a dirty git state (IE development)
