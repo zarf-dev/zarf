@@ -371,7 +371,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 					RegistryMode: state.RegistryModeNodePort,
 					MTLSStrategy: state.MTLSStrategyNone,
 				},
-				InjectorInfo: state.InjectorInfo{Port: 31999},
+				InjectorInfo: state.InjectorInfo{Port: 31999, Image: "example.com/nodeport-injector:1"},
 			},
 			opts: InitStateOptions{
 				RegistryInfo: state.RegistryInfo{RegistryMode: state.RegistryModeProxy},
@@ -487,7 +487,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 					RegistryMode: state.RegistryModeProxy,
 					MTLSStrategy: state.MTLSStrategyZarfManaged,
 				},
-				InjectorInfo: state.InjectorInfo{Port: 5000},
+				InjectorInfo: state.InjectorInfo{Port: 5000, Image: "example.com/proxy-injector:1"},
 			},
 			opts: InitStateOptions{
 				RegistryInfo: state.RegistryInfo{RegistryMode: state.RegistryModeProxy},
@@ -497,7 +497,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 					RegistryMode: state.RegistryModeProxy,
 					MTLSStrategy: state.MTLSStrategyZarfManaged,
 				},
-				InjectorInfo: state.InjectorInfo{Port: 5000},
+				InjectorInfo: state.InjectorInfo{Port: 5000, Image: "example.com/proxy-injector:1"},
 			},
 		},
 	}

@@ -94,7 +94,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(VInitInjectorPort),
 		"The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
 	cmd.Flags().StringVar(&o.injectorImage, "injector-image", v.GetString(VInitInjectorImage),
-		"Image for the injector. This image must be available on every node")
+		"Image for the injector. Required in proxy mode unless a previous proxy injector image is saved in cluster state. This image must be available on every node")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -174,9 +174,21 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		agentTLS = &loadedTLS
 	}
 
-	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer, agentTLS)
+	existingState, err := loadAndValidateExistingState(ctx, o.registryInfo, o.gitServer, o.artifactServer, agentTLS)
 	if err != nil {
 		return err
+	}
+	registryMode := o.registryInfo.RegistryMode
+	if existingState != nil {
+		if registryMode == "" {
+			registryMode = existingState.RegistryInfo.RegistryMode
+		}
+		if registryMode == state.RegistryModeProxy && o.injectorImage == "" && existingState.RegistryInfo.RegistryMode == state.RegistryModeProxy {
+			o.injectorImage = existingState.InjectorInfo.Image
+		}
+	}
+	if registryMode == state.RegistryModeProxy && o.injectorImage == "" {
+		return fmt.Errorf("--injector-image is required for proxy registry mode when no previous proxy injector image is saved in cluster state")
 	}
 
 	if o.registryInfo.RegistryMode == "" && o.registryInfo.Address != "" {
@@ -358,38 +370,39 @@ func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory st
 }
 
 // Checks if an init has already happened and if so check that none of the Zarf service information has changed
-func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo, agentTLS *pki.GeneratedPKI) error {
+// FIXME: make loading state a separate function
+func loadAndValidateExistingState(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo, agentTLS *pki.GeneratedPKI) (*state.State, error) {
 	c, err := cluster.New(ctx)
 	// If there's no cluster available an init has not happened yet, or this is a custom init
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	s, err := c.LoadState(ctx)
 	// If there is no state found this is the first init on this cluster
 	if kerrors.IsNotFound(err) {
-		return nil
+		return nil, nil
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if helpers.IsNotZeroAndNotEqual(gitServer, s.GitServer) {
-		return fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
+		return nil, fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
 	}
 	if state.CheckIfRegistryAddressOrCredsChanged(s.RegistryInfo, registryInfo) {
-		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
+		return nil, fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
 	}
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
-		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
+		return nil, fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
 	if agentTLS != nil {
 		if !bytes.Equal(agentTLS.CA, s.AgentInfo.TLS.CA) ||
 			!bytes.Equal(agentTLS.Cert, s.AgentInfo.TLS.Cert) ||
 			!bytes.Equal(agentTLS.Key, s.AgentInfo.TLS.Key) {
-			return fmt.Errorf("cannot change agent TLS certificates after initial init, to update run `zarf tools update-creds agent`")
+			return nil, fmt.Errorf("cannot change agent TLS certificates after initial init, to update run `zarf tools update-creds agent`")
 		}
 	}
-	return nil
+	return s, nil
 }
 
 // loadAndValidateAgentTLS reads agent TLS files from disk and validates them.
