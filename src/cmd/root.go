@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -68,8 +67,6 @@ func (o *outputFormat) String() string {
 func (o *outputFormat) Type() string {
 	return "outputFormat"
 }
-
-var rootCmd = NewZarfCommand()
 
 func preRun(cmd *cobra.Command, _ []string) error {
 	// This ensures the field manager is set to Zarf during any Helm SDK actions
@@ -180,11 +177,12 @@ func run(cmd *cobra.Command, _ []string) {
 // NewZarfCommand creates the `zarf` command and its nested children.
 func NewZarfCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:          "zarf COMMAND",
-		Short:        lang.RootCmdShort,
-		Long:         lang.RootCmdLong,
-		Args:         cobra.MaximumNArgs(1),
-		SilenceUsage: true,
+		Use:              "zarf COMMAND",
+		Short:            lang.RootCmdShort,
+		Long:             lang.RootCmdLong,
+		Args:             cobra.MaximumNArgs(1),
+		SilenceUsage:     true,
+		TraverseChildren: true,
 		// We use silence errors so we can print out errors in the Zarf log format
 		SilenceErrors:     true,
 		PersistentPreRunE: preRun,
@@ -210,12 +208,10 @@ func NewZarfCommand() *cobra.Command {
 
 	rootCmd.AddCommand(newVersionCommand())
 
-	// Setup flags - skip for vendor-only commands
-	if !checkVendorOnlyFromArgs() {
-		setupRootFlags(rootCmd)
-	}
+	setupRootFlags(rootCmd)
 
 	setupGroupedFlagUsage(rootCmd)
+	setupEmbeddedToolHelp(rootCmd)
 
 	return rootCmd
 }
@@ -228,23 +224,15 @@ func setupRootFlags(rootCmd *cobra.Command) {
 	// Features
 	rootCmd.PersistentFlags().StringToStringVar(&features, "features", vpr.GetStringMapString(VFeatures), "Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features \"foo=true,bar=false,baz=true\"")
 
-	// A vendored tool defines its own flags, and pflag panics when a shorthand is redefined.
-	// That happens whenever root flags are registered alongside one, i.e. when they are given
-	// before the subcommand: `zarf --log-level info tools helm list`.
-	logShorthand, archShorthand := "l", "a"
-	if vendorCmdInArgs(os.Args) {
-		logShorthand, archShorthand = "", ""
-	}
-
 	// Logs
-	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", logShorthand, vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", vpr.GetString(VLogFormat), "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'.")
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", vpr.GetBool(VNoColor), "Disable terminal color codes in logging and stdout prints.")
 	rootCmd.PersistentFlags().BoolVar(&showNoProgressDeprecation, "no-progress", v.GetBool("no_progress"), "Disable fancy UI progress bars, spinners, logos, etc")
 	_ = rootCmd.PersistentFlags().MarkDeprecated("no-progress", "Progress bars and spinners were removed with --log-format=legacy, this flag will be removed in a future version of Zarf.")
 
 	// Core functionality
-	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", archShorthand, vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
 	cachePath = vpr.GetString(VCache)
 	if cachePath == "" {
 		cachePath = vpr.GetString(VZarfCache)
@@ -264,21 +252,14 @@ func setupRootFlags(rootCmd *cobra.Command) {
 
 // Execute is the entrypoint for the CLI.
 func Execute(ctx context.Context) error {
-	cmd, err := rootCmd.ExecuteContextC(ctx)
-	if err == nil {
-		return nil
+	if tool, args, ok := embeddedToolInvocation(os.Args[1:]); ok {
+		return tool.execute(ctx, args, os.Stdin, os.Stdout, os.Stderr)
 	}
 
-	// Check if we need to use the default err printer
-	defaultPrintCmds := []string{"helm", "yq", "kubectl"}
-	comps := strings.Split(cmd.CommandPath(), " ")
-	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
-		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
-		os.Exit(1)
+	_, err := NewZarfCommand().ExecuteContextC(ctx)
+	if err != nil {
+		logger.Default().Error(err.Error())
 	}
-
-	// Use default logger in case there was an error prior to the logger being setup
-	logger.Default().Error(err.Error())
 	return err
 }
 

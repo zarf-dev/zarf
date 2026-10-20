@@ -10,6 +10,10 @@ tableOfContents: false
 
 Launches a terminal UI to monitor the connected cluster using K9s.
 
+### Synopsis
+
+K9s is a CLI to view and manage your Kubernetes clusters.
+
 ```
 zarf tools monitor [flags]
 ```
@@ -46,14 +50,9 @@ zarf tools monitor [flags]
       --write                          Sets write mode by overriding the readOnly configuration setting
 ```
 
-### Options inherited from parent commands
-
-```
-      --features stringToString   Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
-      --plain-http                Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-```
-
 ### SEE ALSO
 
 * [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools monitor info](/commands/zarf_tools_monitor_info/)	 - List K9s configurations info
+* [zarf tools monitor version](/commands/zarf_tools_monitor_version/)	 - Print version/build info
 

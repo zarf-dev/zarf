@@ -40,7 +40,6 @@ $ zarf tools registry ls reg.example.com/stefanprodan/podinfo
 
 ```
       --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
-      --features stringToString            Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --platform string                    Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64). (default "all")
   -v, --verbose                            Enable debug logs
 ```

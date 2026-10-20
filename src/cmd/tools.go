@@ -23,12 +23,10 @@ func newToolsCommand() *cobra.Command {
 	cmd.AddCommand(newArchiverCommand())
 	cmd.AddCommand(newRegistryCommand())
 	cmd.AddCommand(newDeprecatedCraneCommand())
-	cmd.AddCommand(newHelmCommand())
-	cmd.AddCommand(newK9sCommand())
-	cmd.AddCommand(newKubectlCommand())
-	cmd.AddCommand(newSbomCommand())
+	for _, tool := range embeddedTools {
+		cmd.AddCommand(tool.command())
+	}
 	cmd.AddCommand(newWaitForCommand())
-	cmd.AddCommand(newYQCommand())
 	cmd.AddCommand(newGetCredsCommand())
 	cmd.AddCommand(newUpdateCredsCommand(v))
 	cmd.AddCommand(newClearCacheCommand())

@@ -63,7 +63,6 @@ zarf tools yq completion [bash|zsh|fish|powershell]
       --debug-node-info                   debug node info
   -e, --exit-status                       set exit status if there are no matches or null or false is returned
       --expression string                 forcibly set the expression argument. Useful when yq argument detection thinks your expression is a file.
-      --features stringToString           Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --from-file string                  Load expression from specified file.
   -f, --front-matter string               (extract|process) first input as yaml front-matter. Extract will pull out the yaml content, process will run the expression against the yaml content, leaving the remaining data intact
       --header-preprocess                 Slurp any header comments and separators before processing expression. (default true)
@@ -71,7 +70,6 @@ zarf tools yq completion [bash|zsh|fish|powershell]
       --ini-preserve-quotes               preserve surrounding quotes on INI values during round-trip
   -i, --inplace                           update the file in place of first file given.
   -p, --input-format string               [auto|a|yaml|y|kyaml|ky|json|j|props|p|csv|c|tsv|t|xml|x|base64|uri|toml|hcl|h|lua|l|ini|i] parse format for input. (default "auto")
-      --insecure-skip-tls-verify          Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --lua-globals                       output keys as top-level global variables
       --lua-prefix string                 prefix (default "return ")
       --lua-suffix string                 suffix (default ";\n")
@@ -81,7 +79,6 @@ zarf tools yq completion [bash|zsh|fish|powershell]
   -0, --nul-output                        Use NUL char to separate values. If unwrap scalar is also set, fail if unwrapped scalar contains NUL char.
   -n, --null-input                        Don't read input, simply evaluate the expression given. Useful for creating docs from scratch.
   -o, --output-format string              [auto|a|yaml|y|kyaml|ky|json|j|props|p|csv|c|tsv|t|xml|x|base64|uri|toml|hcl|h|shell|s|lua|l|ini|i] output format type. (default "auto")
-      --plain-http                        Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -P, --prettyPrint                       pretty print, shorthand for '... style = ""'
       --properties-array-brackets         use [x] in array paths (e.g. for SpringBoot)
       --properties-separator string       separator to use between keys and values (default " = ")

@@ -126,17 +126,27 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 	for _, cmd := range o.rootCmd.Commands() {
 		if cmd.Use == "tools" {
 			for _, toolCmd := range cmd.Commands() {
-				// If the command is a vendored command, add a dummy flag to hide root flags from the docs
+				if tool, ok := findEmbeddedTool(toolCmd.Name()); ok {
+					standalone, err := tool.newCommand(nil)
+					if err != nil {
+						return err
+					}
+					standalone.Aliases = tool.aliases
+					cmd.RemoveCommand(toolCmd)
+					cmd.AddCommand(standalone)
+					toolCmd = standalone
+				}
+
+				// Documentation uses a combined tree; hide Zarf flags on independent tools.
 				if checkVendorOnlyFromPath(toolCmd) {
-					addHiddenDummyFlag(toolCmd, "log-level")
-					addHiddenDummyFlag(toolCmd, "log-format")
-					addHiddenDummyFlag(toolCmd, "architecture")
-					addHiddenDummyFlag(toolCmd, "no-log-file")
-					addHiddenDummyFlag(toolCmd, "no-progress")
-					addHiddenDummyFlag(toolCmd, "zarf-cache")
-					addHiddenDummyFlag(toolCmd, "cache")
-					addHiddenDummyFlag(toolCmd, "tmpdir")
-					addHiddenDummyFlag(toolCmd, "no-color")
+					o.rootCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
+						if toolCmd.Flags().Lookup(flag.Name) == nil && toolCmd.PersistentFlags().Lookup(flag.Name) == nil {
+							hidden := *flag
+							hidden.Shorthand = ""
+							hidden.Hidden = true
+							toolCmd.PersistentFlags().AddFlag(&hidden)
+						}
+					})
 				}
 
 				// Remove the docs for the various sub-commands for `kubectl` and `helm`
@@ -209,17 +219,6 @@ tableOfContents: false
 	}
 
 	return doc.GenMarkdownTreeCustom(o.rootCmd, "./site/src/content/docs/commands", prependTitle, linkHandler)
-}
-
-func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
-	if cmd.PersistentFlags().Lookup(flagDummy) == nil {
-		var dummyStr string
-		cmd.PersistentFlags().StringVar(&dummyStr, flagDummy, "", "")
-		err := cmd.PersistentFlags().MarkHidden(flagDummy)
-		if err != nil {
-			logger.From(cmd.Context()).Debug("Unable to add hidden dummy flag", "error", err)
-		}
-	}
 }
 
 type internalCreateReadOnlyGiteaUserOptions struct{}

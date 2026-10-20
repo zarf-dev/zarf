@@ -12,6 +12,8 @@ import (
 
 func newYQCommand() *cobra.Command {
 	cmd := yq.New()
+	// Expressions are valid root arguments as well as explicit eval subcommands.
+	cmd.Args = cobra.ArbitraryArgs
 	cmd.Example = lang.CmdToolsYqExample
 	cmd.Use = "yq"
 	for _, subCmd := range cmd.Commands() {

@@ -5,25 +5,17 @@
 package cmd
 
 import (
-	"log/slog"
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	helmcmd "helm.sh/helm/v4/pkg/cmd"
 	"helm.sh/helm/v4/pkg/kube"
 )
 
-func newHelmCommand() *cobra.Command {
-	// Truncate Helm's arguments so that it thinks its all alone
-	helmArgs := []string{}
-	if len(os.Args) > 2 {
-		helmArgs = os.Args[3:]
-	}
-
-	cmd, err := helmcmd.NewRootCmd(os.Stdout, helmArgs, helmcmd.SetupLogging)
+func newHelmCommand(args []string) (*cobra.Command, error) {
+	cmd, err := helmcmd.NewRootCmd(os.Stdout, args, helmcmd.SetupLogging)
 	if err != nil {
-		logger.Default().Error("Helm command initialization", slog.Any("error", err))
+		return nil, err
 	}
 
 	original := cmd.PersistentPreRun
@@ -39,5 +31,5 @@ func newHelmCommand() *cobra.Command {
 		return cmd.Help()
 	}
 
-	return ReplaceCommandName("helm", "zarf tools helm", cmd)
+	return ReplaceCommandName("helm", "zarf tools helm", cmd), nil
 }
