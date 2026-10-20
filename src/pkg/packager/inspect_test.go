@@ -28,10 +28,10 @@ func TestInspectResourcesComponentServices(t *testing.T) {
 		registry      bool
 		agent         bool
 	}{
-		{name: "renamed registry", apiVersion: v1beta1.APIVersion, componentName: "custom-registry", service: v1beta1.ServiceRegistry, registry: true},
-		{name: "renamed seed registry", apiVersion: v1beta1.APIVersion, componentName: "custom-seed", service: v1beta1.ServiceSeedRegistry, registry: true},
-		{name: "renamed agent", apiVersion: v1beta1.APIVersion, componentName: "custom-agent", service: v1beta1.ServiceAgent, agent: true},
-		{name: "service overrides name", apiVersion: v1beta1.APIVersion, componentName: "zarf-registry", service: v1beta1.ServiceAgent, agent: true},
+		{name: "renamed registry", apiVersion: v1beta1.APIVersion, componentName: "custom-registry", service: v1beta1.ServiceRegistry},
+		{name: "renamed seed registry", apiVersion: v1beta1.APIVersion, componentName: "custom-seed", service: v1beta1.ServiceSeedRegistry},
+		{name: "renamed agent", apiVersion: v1beta1.APIVersion, componentName: "custom-agent", service: v1beta1.ServiceAgent},
+		{name: "service overrides name", apiVersion: v1beta1.APIVersion, componentName: "zarf-registry", service: v1beta1.ServiceAgent},
 		{name: "registry name without service", apiVersion: v1beta1.APIVersion, componentName: "zarf-registry"},
 		{name: "agent name without service", apiVersion: v1beta1.APIVersion, componentName: "zarf-agent"},
 		{name: "legacy init registry", apiVersion: v1alpha1.APIVersion, componentName: "zarf-registry", registry: true},
@@ -65,6 +65,8 @@ stringData:
   seed: "###ZARF_SEED_REGISTRY###"
   htpasswd: "###ZARF_HTPASSWD###"
   agentKey: "###ZARF_AGENT_KEY###"
+  gitPush: "###ZARF_GIT_PUSH###"
+  gitPassword: "###ZARF_GIT_AUTH_PUSH###"
 `), 0o600))
 
 			check := func(t *testing.T, resources []Resource) {
@@ -74,6 +76,8 @@ stringData:
 					"###ZARF_SEED_REGISTRY###": tt.registry,
 					"###ZARF_HTPASSWD###":      tt.registry,
 					"###ZARF_AGENT_KEY###":     tt.agent,
+					"###ZARF_GIT_PUSH###":      tt.apiVersion == v1alpha1.APIVersion,
+					"###ZARF_GIT_AUTH_PUSH###": tt.apiVersion == v1alpha1.APIVersion,
 				} {
 					if rendered {
 						require.NotContains(t, resources[0].Content, marker)

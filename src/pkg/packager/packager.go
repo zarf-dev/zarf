@@ -11,6 +11,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -24,6 +25,9 @@ type ValuesOverrides map[string]map[string]map[string]any
 
 func getPopulatedVariableConfig(ctx context.Context, pkg api.Package, setVariables map[string]string, isInteractive bool) (*variables.VariableConfig, error) {
 	variableConfig := template.GetZarfVariableConfig(ctx, isInteractive)
+	if pkg.GetAPIVersion() != v1alpha1.APIVersion {
+		return variableConfig, nil
+	}
 	variableConfig.SetConstants(pkg.Constants)
 	if err := variableConfig.PopulateVariables(pkg.Variables, setVariables); err != nil {
 		return nil, err

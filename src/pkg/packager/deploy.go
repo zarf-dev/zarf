@@ -538,7 +538,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 	}
 
-	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, component.Service.Name, d.s)
+	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, pkgLayout.Definition().GetAPIVersion(), component.Service.Name, d.s)
 	if err != nil {
 		return nil, err
 	}
@@ -937,8 +937,18 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 			}
 		}
 
-		// Replace temp target directory and home directory
-		target, err := config.GetAbsHomePath(strings.Replace(file.Destination, "###ZARF_TEMP###", pkgLayout.DirPath(), 1))
+		destination := file.Destination
+		if pkg.GetAPIVersion() == v1alpha1.APIVersion {
+			destination = strings.Replace(destination, "###ZARF_TEMP###", pkgLayout.DirPath(), 1)
+		} else {
+			// Resolve the injector destination without enabling templating on its binary contents.
+			objs := template.Objects{"Runtime": map[string]string{"TmpDir": pkgLayout.DirPath()}}
+			destination, err = template.Apply(ctx, destination, objs)
+			if err != nil {
+				return fmt.Errorf("unable to template file destination %q: %w", file.Destination, err)
+			}
+		}
+		target, err := config.GetAbsHomePath(destination)
 		if err != nil {
 			return err
 		}

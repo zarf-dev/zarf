@@ -334,3 +334,89 @@ func TestArchitectureOverridePreservesAgentCertificateCheck(t *testing.T) {
 	err = d.verifyPackageIsDeployable(t.Context(), pkgLayout, true)
 	require.ErrorContains(t, err, "the Zarf agent certificate is expired")
 }
+
+func TestDeployFileTemplatesByAPIVersion(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name, apiVersion, destination, expectedText string
+	}{
+		{"legacy", v1alpha1.APIVersion, "###ZARF_TEMP###/zarf-injector", "supplied\n"},
+		{"beta", v1beta1.APIVersion, "{{ .Runtime.TmpDir }}/zarf-injector", "###ZARF_VAR_INPUT###"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			dir := t.TempDir()
+			binary := []byte{0, 1, 2, 3, 255}
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "injector"), binary, 0o600))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "text"), []byte("###ZARF_VAR_INPUT###"), 0o600))
+			output := t.TempDir()
+			pkg := api.Package{
+				APIVersion: tt.apiVersion,
+				Kind:       api.ZarfPackageConfig,
+				Metadata:   api.PackageMetadata{Name: "file-templates"},
+				Components: []api.Component{{Name: "files", Files: []api.File{
+					{Source: "injector", Destination: tt.destination, Executable: true},
+					{Source: "text", Destination: filepath.Join(output, "text")},
+				}}},
+			}
+			if tt.apiVersion == v1beta1.APIVersion {
+				pkg.Components[0].Files = append(pkg.Components[0].Files, api.File{
+					Source: "text", Destination: filepath.Join(output, "###ZARF_TEMP###", "literal"),
+				})
+			}
+			pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(dir)}, assemble.AssembleOptions{SkipSBOM: true})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			_, err = Deploy(ctx, pkgLayout, DeployOptions{SetVariables: map[string]string{"INPUT": "supplied"}})
+			require.NoError(t, err)
+
+			actualBinary, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "zarf-injector"))
+			require.NoError(t, err)
+			require.Equal(t, binary, actualBinary)
+			text, err := os.ReadFile(filepath.Join(output, "text"))
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedText, string(text))
+			if tt.apiVersion == v1beta1.APIVersion {
+				literal, err := os.ReadFile(filepath.Join(output, "###ZARF_TEMP###", "literal"))
+				require.NoError(t, err)
+				require.Equal(t, tt.expectedText, string(literal))
+			}
+		})
+	}
+}
+
+func TestDeployLegacyBuiltinsByAPIVersion(t *testing.T) {
+	t.Parallel()
+	for _, apiVersion := range []string{v1alpha1.APIVersion, v1beta1.APIVersion} {
+		t.Run(apiVersion, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			dir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "text"), []byte("###ZARF_GIT_AUTH_PUSH###\n{{ .State.Git.PushUsername }}"), 0o600))
+			output := filepath.Join(t.TempDir(), "result")
+			pkg := api.Package{
+				APIVersion: apiVersion,
+				Kind:       api.ZarfPackageConfig,
+				Metadata:   api.PackageMetadata{Name: "builtin-templates"},
+				Components: []api.Component{{Name: "files", Files: []api.File{{Source: "text", Destination: output, EnableTemplating: true}}}},
+			}
+			pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(dir)}, assemble.AssembleOptions{SkipSBOM: true})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			d := deployer{
+				s:  &state.State{GitServer: state.GitServerInfo{PushUsername: "git-user", PushPassword: "secret-password"}},
+				vc: ptmpl.GetZarfVariableConfig(ctx, false),
+			}
+			_, err = d.deployComponents(ctx, pkgLayout, DeployOptions{})
+			require.NoError(t, err)
+			contents, err := os.ReadFile(output)
+			require.NoError(t, err)
+			if apiVersion == v1alpha1.APIVersion {
+				require.Equal(t, "secret-password\ngit-user\n", string(contents))
+			} else {
+				require.Equal(t, "###ZARF_GIT_AUTH_PUSH###\ngit-user", string(contents))
+			}
+		})
+	}
+}
