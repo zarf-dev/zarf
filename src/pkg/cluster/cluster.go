@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -90,45 +91,52 @@ func (o ConnectOptions) loadingRules() *clientcmd.ClientConfigLoadingRules {
 	return rules
 }
 
-// WriteEffectiveKubeconfig resolves opts to a kubeconfig path that can be handed to a
-// subprocess through KUBECONFIG, so that tools Zarf shells out to talk to the same cluster
-// Zarf does. It returns "" when opts selects nothing and the caller should leave the
-// environment alone.
+// KubeconfigEnv resolves opts into a KUBECONFIG value that can be handed to a subprocess, so
+// that tools Zarf shells out to talk to the same cluster Zarf does. It returns an empty value
+// when opts selects nothing and the caller should leave the environment alone.
 //
-// A context selection has no env var equivalent, so it is materialized as a kubeconfig
-// written into dir with current-context set; the caller is responsible for removing it.
-// Selecting only a kubeconfig path needs no file and copies no credentials.
-func WriteEffectiveKubeconfig(opts ConnectOptions, dir string) (string, error) {
+// A context selection has no env var equivalent, so it is expressed as a small overlay file
+// written into dir and placed ahead of the real kubeconfig in the returned list: clientcmd
+// takes current-context from the first file that sets one and everything else from the rest.
+// The overlay therefore holds a context name and no credentials. Its path is returned
+// separately for the caller to remove.
+func KubeconfigEnv(opts ConnectOptions, dir string) (_ string, _ string, err error) {
 	if opts.IsZero() {
-		return "", nil
-	}
-	if opts.Context == "" {
-		return opts.Kubeconfig, nil
+		return "", "", nil
 	}
 
 	rules := opts.loadingRules()
+	if opts.Context == "" {
+		return rules.ExplicitPath, "", nil
+	}
+
 	cfg, err := rules.Load()
 	if err != nil {
-		return "", fmt.Errorf("unable to load kubeconfig: %w", err)
+		return "", "", fmt.Errorf("unable to load kubeconfig: %w", err)
 	}
 	if _, ok := cfg.Contexts[opts.Context]; !ok {
-		return "", fmt.Errorf("context %q does not exist in the kubeconfig", opts.Context)
+		return "", "", fmt.Errorf("context %q does not exist in the kubeconfig", opts.Context)
 	}
-	cfg.CurrentContext = opts.Context
 
-	f, err := os.CreateTemp(dir, "zarf-kubeconfig-")
+	f, err := os.CreateTemp(dir, "zarf-kubecontext-*.yaml")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	path := f.Name()
-	if err := f.Close(); err != nil {
-		return "", err
+	overlay := f.Name()
+	defer func() {
+		err = errors.Join(err, f.Close())
+	}()
+	if _, err := fmt.Fprintf(f, "apiVersion: v1\nkind: Config\ncurrent-context: %q\n", opts.Context); err != nil {
+		return "", "", errors.Join(err, os.Remove(overlay))
 	}
-	// WriteToFile truncates to 0600, so the merged credentials are not world readable.
-	if err := clientcmd.WriteToFile(*cfg, path); err != nil {
-		return "", errors.Join(fmt.Errorf("unable to write kubeconfig for context %q: %w", opts.Context, err), os.Remove(path))
+
+	paths := []string{overlay}
+	if rules.ExplicitPath != "" {
+		paths = append(paths, rules.ExplicitPath)
+	} else {
+		paths = append(paths, rules.Precedence...)
 	}
-	return path, nil
+	return strings.Join(paths, string(os.PathListSeparator)), overlay, nil
 }
 
 // NewWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.

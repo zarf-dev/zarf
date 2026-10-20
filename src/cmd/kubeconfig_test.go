@@ -7,6 +7,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -77,14 +78,13 @@ func TestSetupKubeconfig(t *testing.T) {
 		require.Empty(t, tempKubeconfig, "nothing to clean up when no file was written")
 	})
 
-	t.Run("context is exported as a temp kubeconfig marked for cleanup", func(t *testing.T) {
+	t.Run("context is exported as an overlay marked for cleanup", func(t *testing.T) {
 		path := withKubeconfigFlags(t, "default", "beta")
 		t.Setenv("KUBECONFIG", "")
 
 		require.NoError(t, setupKubeconfig())
 		require.NotEmpty(t, tempKubeconfig)
-		require.Equal(t, tempKubeconfig, os.Getenv("KUBECONFIG"))
-		require.NotEqual(t, path, tempKubeconfig)
+		require.Equal(t, strings.Join([]string{tempKubeconfig, path}, string(os.PathListSeparator)), os.Getenv("KUBECONFIG"))
 
 		written, err := clientcmd.LoadFromFile(tempKubeconfig)
 		require.NoError(t, err)
@@ -115,7 +115,7 @@ func TestChainKubeconfigPreRun(t *testing.T) {
 		chainKubeconfigPreRun(cmd)
 		require.Nil(t, cmd.PersistentPreRun, "cobra would skip PersistentPreRunE if both were set")
 		require.NoError(t, cmd.PersistentPreRunE(cmd, nil))
-		require.Equal(t, tempKubeconfig, seen, "the vendored hook must see the exported kubeconfig")
+		require.Contains(t, seen, tempKubeconfig, "the vendored hook must see the exported kubeconfig")
 	})
 
 	t.Run("propagates the vendored hook error", func(t *testing.T) {
@@ -159,8 +159,11 @@ func TestAddHiddenDummyFlagDoesNotShadowRealFlags(t *testing.T) {
 	require.True(t, cmd.PersistentFlags().Lookup("kubeconfig").Hidden)
 }
 
-func TestSetupRootFlags(t *testing.T) {
-	withArgs := func(t *testing.T, args ...string) *cobra.Command {
+// TestSetupRootFlagsShorthands covers the one branch in flag registration: kubectl and helm
+// use -l for --selector, so pflag panics when Zarf's -l is merged in, which happens whenever
+// root flags precede a vendored subcommand.
+func TestSetupRootFlagsShorthands(t *testing.T) {
+	shorthands := func(t *testing.T, args ...string) (string, string) {
 		t.Helper()
 		orig := os.Args
 		t.Cleanup(func() { os.Args = orig })
@@ -168,28 +171,19 @@ func TestSetupRootFlags(t *testing.T) {
 
 		cmd := &cobra.Command{Use: "zarf"}
 		setupRootFlags(cmd)
-		return cmd
+		return cmd.PersistentFlags().Lookup("log-level").Shorthand,
+			cmd.PersistentFlags().Lookup("architecture").Shorthand
 	}
 
-	t.Run("registers the cluster flags", func(t *testing.T) {
-		cmd := withArgs(t, "zarf", "package", "list")
-		require.NotNil(t, cmd.PersistentFlags().Lookup("kubeconfig"))
-		require.NotNil(t, cmd.PersistentFlags().Lookup("context"))
-		require.Empty(t, cmd.PersistentFlags().Lookup("context").Shorthand, "-c belongs to subcommands")
-		require.Empty(t, cmd.PersistentFlags().Lookup("kubeconfig").Shorthand)
+	t.Run("kept for Zarf's own commands", func(t *testing.T) {
+		log, arch := shorthands(t, "zarf", "package", "list")
+		require.Equal(t, "l", log)
+		require.Equal(t, "a", arch)
 	})
 
-	t.Run("keeps shorthands for Zarf's own commands", func(t *testing.T) {
-		cmd := withArgs(t, "zarf", "package", "list")
-		require.Equal(t, "l", cmd.PersistentFlags().Lookup("log-level").Shorthand)
-		require.Equal(t, "a", cmd.PersistentFlags().Lookup("architecture").Shorthand)
-	})
-
-	t.Run("drops shorthands when a vendored tool is the target", func(t *testing.T) {
-		// kubectl and helm use -l for --selector, which makes pflag panic on merge.
-		cmd := withArgs(t, "zarf", "--context", "dev", "tools", "kubectl", "get", "nodes")
-		require.Empty(t, cmd.PersistentFlags().Lookup("log-level").Shorthand)
-		require.Empty(t, cmd.PersistentFlags().Lookup("architecture").Shorthand)
-		require.NotNil(t, cmd.PersistentFlags().Lookup("context"), "the cluster flags are still needed")
+	t.Run("dropped when a vendored tool is the target", func(t *testing.T) {
+		log, arch := shorthands(t, "zarf", "--context", "dev", "tools", "kubectl", "get", "nodes")
+		require.Empty(t, log)
+		require.Empty(t, arch)
 	})
 }

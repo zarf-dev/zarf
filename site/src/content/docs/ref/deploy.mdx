@@ -95,7 +95,9 @@ By default Zarf connects to the cluster named by the current context of your kub
 
 Both can also be set through a [config file](/ref/config-files/) (`kubeconfig` and `context`) or the `ZARF_KUBECONFIG` and `ZARF_CONTEXT` environment variables.
 
-The selection applies to everything Zarf runs, not just its own Kubernetes calls: `zarf tools kubectl`, `zarf tools helm`, `zarf tools monitor`, and any `kubectl` or `helm` invoked from a package action all see the same cluster. Selecting a context writes a temporary kubeconfig for the life of the command so those tools can be told which context to use; it is removed when the command finishes.
+The selection applies to everything Zarf runs, not just its own Kubernetes calls: `zarf tools kubectl`, `zarf tools helm`, `zarf tools monitor`, and any `kubectl` or `helm` invoked from a package action all see the same cluster. Zarf passes it along through `KUBECONFIG`; selecting a context adds a small file holding only that context name, since `KUBECONFIG` alone cannot express one. Your kubeconfig is never copied.
+
+`zarf tools kubectl --context <name>` still uses kubectl's own flag, as before.
 
 ```bash
 # Deploy to the cluster behind the "staging" context

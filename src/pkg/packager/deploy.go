@@ -112,6 +112,25 @@ type deployer struct {
 	actionEnv []string
 }
 
+// applyConnectOptions points commands that actions shell out to at the same cluster Zarf is
+// deploying to. The CLI has already put this in the process environment; this covers library
+// callers. The returned func removes anything written along the way.
+func (d *deployer) applyConnectOptions(opts cluster.ConnectOptions) (func(), error) {
+	kubeconfig, overlay, err := cluster.KubeconfigEnv(opts, config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+	if kubeconfig != "" {
+		d.actionEnv = append(d.actionEnv, fmt.Sprintf("KUBECONFIG=%s", kubeconfig))
+	}
+	return func() {
+		if overlay != "" {
+			//nolint: errcheck // best effort cleanup of the context overlay written for this deploy
+			os.Remove(overlay)
+		}
+	}, nil
+}
+
 // actionDefaults returns defaults with the deployment's extra action environment applied.
 func (d *deployer) actionDefaults(defaults api.ActionDefaults) api.ActionDefaults {
 	if len(d.actionEnv) == 0 {
@@ -202,21 +221,11 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		vals: vals,
 	}
 
-	// Keep commands that actions shell out to on the same cluster as Zarf itself. The CLI
-	// has already put this in the process environment; this covers library callers.
-	kubeconfig, err := cluster.WriteEffectiveKubeconfig(opts.ConnectOptions, config.CommonOptions.TempDirectory)
+	cleanup, err := d.applyConnectOptions(opts.ConnectOptions)
 	if err != nil {
 		return DeployResult{}, err
 	}
-	if kubeconfig != "" {
-		d.actionEnv = append(d.actionEnv, fmt.Sprintf("KUBECONFIG=%s", kubeconfig))
-		if kubeconfig != opts.ConnectOptions.Kubeconfig {
-			defer func() {
-				//nolint: errcheck // best effort cleanup of the kubeconfig written for this deploy
-				os.Remove(kubeconfig)
-			}()
-		}
-	}
+	defer cleanup()
 
 	l.Debug("variables populated", "time", time.Since(start))
 
