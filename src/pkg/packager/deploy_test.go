@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -532,6 +533,13 @@ func TestDeployerActionDefaults(t *testing.T) {
 // DeployOptions gets the same selection in the environment of anything an action shells out to.
 // The CLI reaches this through the process environment instead, which is covered in src/cmd.
 func TestDeployActionKubeconfig(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// The fixture action reads the variable with POSIX syntax, which PowerShell does not
+		// expand. What is under test, the environment reaching the child process, is not
+		// OS-specific.
+		t.Skip("action fixture uses POSIX shell syntax")
+	}
+
 	kubeconfig := filepath.Join(t.TempDir(), "config")
 	require.NoError(t, os.WriteFile(kubeconfig, []byte("apiVersion: v1\nkind: Config\n"), 0o600))
 
