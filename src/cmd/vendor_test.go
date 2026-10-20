@@ -22,6 +22,7 @@ func TestVendorCmdInArgs(t *testing.T) {
 		{name: "root flag before subcommand", args: []string{"zarf", "--log-level", "info", "tools", "helm", "list"}, expected: true},
 		{name: "tools alias", args: []string{"zarf", "-l", "debug", "t", "helm", "list"}, expected: true},
 		{name: "non-vendored tools subcommand", args: []string{"zarf", "--log-level", "info", "tools", "update-creds"}, expected: false},
+		{name: "wait-for is not vendored", args: []string{"zarf", "tools", "wait", "pod", "foo", "ready"}, expected: false},
 		{name: "tools with nothing after it", args: []string{"zarf", "tools"}, expected: false},
 		{name: "not a tools invocation", args: []string{"zarf", "package", "deploy", "tools"}, expected: false},
 	}
