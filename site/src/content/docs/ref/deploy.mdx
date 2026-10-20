@@ -86,6 +86,25 @@ Zarf provides a few options that can provide control over how a deployment of a 
 - **Optional Components** -  Allows for components to be optionally chosen when they are needed for a subset of environments.
 - **Components Groups** - Provides a choice of one component from a defined set of components in the same component group.
 
+## Selecting a Cluster
+
+By default Zarf connects to the cluster named by the current context of your kubeconfig, found through `$KUBECONFIG` or `~/.kube/config`. Two global flags override that for any Zarf command:
+
+- `--kubeconfig <path>` - use this kubeconfig file instead of the ambient one.
+- `--context <name>` - use this context instead of the kubeconfig's current context. Zarf fails if the named context does not exist, rather than falling back to the current one.
+
+Both can also be set through a [config file](/ref/config-files/) (`kubeconfig` and `context`) or the `ZARF_KUBECONFIG` and `ZARF_CONTEXT` environment variables.
+
+The selection applies to everything Zarf runs, not just its own Kubernetes calls: `zarf tools kubectl`, `zarf tools helm`, `zarf tools monitor`, and any `kubectl` or `helm` invoked from a package action all see the same cluster. Selecting a context writes a temporary kubeconfig for the life of the command so those tools can be told which context to use; it is removed when the command finishes.
+
+```bash
+# Deploy to the cluster behind the "staging" context
+zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst --context staging --confirm
+
+# The vendored tools follow the same flag
+zarf --context staging tools kubectl get nodes
+```
+
 ## Additional Deployment-modes
 
 Zarf normally expects to operate against a Kubernetes cluster that has been [Zarf initialized](/tutorials/1-initializing-a-k8s-cluster/), but there are additional modes that can be configured by package creators including:

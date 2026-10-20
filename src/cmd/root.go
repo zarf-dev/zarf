@@ -86,6 +86,14 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
+	// Point every Kubernetes client at the selected cluster, including the tools Zarf shells
+	// out to. This runs before the vendor-only return below because the root flags are still
+	// registered when they are given ahead of the subcommand, as in
+	// `zarf --context dev tools kubectl get nodes`.
+	if err := setupKubeconfig(); err != nil {
+		return err
+	}
+
 	// Skip for vendor only commands
 	if checkVendorOnlyFromPath(cmd) {
 		return nil
@@ -260,10 +268,64 @@ func setupRootFlags(rootCmd *cobra.Command) {
 	// Security
 	rootCmd.PersistentFlags().BoolVar(&plainHTTP, "plain-http", vpr.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
 	rootCmd.PersistentFlags().BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", vpr.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
+
+	// Cluster connection
+	rootCmd.PersistentFlags().StringVar(&kubeconfigPath, "kubeconfig", vpr.GetString(VKubeconfig), lang.RootCmdFlagKubeconfig)
+	rootCmd.PersistentFlags().StringVar(&kubeContext, "context", vpr.GetString(VKubeContext), lang.RootCmdFlagKubeContext)
+}
+
+// tempKubeconfig is the kubeconfig materialized for --context, removed by Execute.
+var tempKubeconfig string
+
+// setupKubeconfig resolves the --kubeconfig and --context flags into a KUBECONFIG value so
+// that Zarf's own client, the vendored tools and any command an action shells out to all
+// agree on which cluster they are talking to. It is a no-op when neither flag is set.
+func setupKubeconfig() error {
+	path, err := cluster.WriteEffectiveKubeconfig(clusterConnectOptions(), config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	if path == "" {
+		return nil
+	}
+	if path != kubeconfigPath {
+		tempKubeconfig = path
+	}
+	return os.Setenv("KUBECONFIG", path)
+}
+
+// chainKubeconfigPreRun makes a vendored command honor --kubeconfig and --context. Their root
+// commands define their own PersistentPreRun, which shadows Zarf's, so the setup has to be
+// chained in rather than left to preRun.
+func chainKubeconfigPreRun(cmd *cobra.Command) {
+	originalE := cmd.PersistentPreRunE
+	original := cmd.PersistentPreRun
+	// Cobra runs PersistentPreRunE instead of PersistentPreRun when both are set.
+	cmd.PersistentPreRun = nil
+	cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		if err := setupKubeconfig(); err != nil {
+			return err
+		}
+		if originalE != nil {
+			return originalE(cmd, args)
+		}
+		if original != nil {
+			original(cmd, args)
+		}
+		return nil
+	}
 }
 
 // Execute is the entrypoint for the CLI.
 func Execute(ctx context.Context) error {
+	cleanup := func() {
+		if tempKubeconfig != "" {
+			//nolint: errcheck // the command is over, a leftover temp file is not worth failing on
+			os.Remove(tempKubeconfig)
+		}
+	}
+	defer cleanup()
+
 	cmd, err := rootCmd.ExecuteContextC(ctx)
 	if err == nil {
 		return nil
@@ -274,6 +336,7 @@ func Execute(ctx context.Context) error {
 	comps := strings.Split(cmd.CommandPath(), " ")
 	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
 		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
+		cleanup()
 		os.Exit(1)
 	}
 
