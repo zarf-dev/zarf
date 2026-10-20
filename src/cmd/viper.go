@@ -32,6 +32,8 @@ const (
 	VTmpDir                = "tmp_dir"
 	VPlainHTTP             = "plain_http"
 	VInsecureSkipTLSVerify = "insecure_skip_tls_verify"
+	VKubeconfig            = "kubeconfig"
+	VKubeContext           = "context"
 
 	// Root config, Logging
 

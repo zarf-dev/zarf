@@ -22,6 +22,8 @@ While config files set default values, these values can still be overwritten by 
 3. Config file
 4. Default values
 
+Global flags are available under the top level of the config file. For example, `kubeconfig` and `context` set the cluster Zarf connects to, the same as the `--kubeconfig` and `--context` flags described in [Selecting a Cluster](/ref/deploy/#selecting-a-cluster).
+
 ## Config File Location
 
 Zarf searches for the Zarf Config File from either your current working directory or the `~/.zarf/` directory if you don't specify a config file.

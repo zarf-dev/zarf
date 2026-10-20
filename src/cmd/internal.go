@@ -137,6 +137,8 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 					addHiddenDummyFlag(toolCmd, "cache")
 					addHiddenDummyFlag(toolCmd, "tmpdir")
 					addHiddenDummyFlag(toolCmd, "no-color")
+					addHiddenDummyFlag(toolCmd, "kubeconfig")
+					addHiddenDummyFlag(toolCmd, "context")
 				}
 
 				// Remove the docs for the various sub-commands for `kubectl` and `helm`
@@ -212,7 +214,9 @@ tableOfContents: false
 }
 
 func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
-	if cmd.PersistentFlags().Lookup(flagDummy) == nil {
+	// Flags() covers the local set too: k9s registers --kubeconfig and --context locally,
+	// not persistently, and shadowing a real flag would break the command.
+	if cmd.Flags().Lookup(flagDummy) == nil && cmd.PersistentFlags().Lookup(flagDummy) == nil {
 		var dummyStr string
 		cmd.PersistentFlags().StringVar(&dummyStr, flagDummy, "", "")
 		err := cmd.PersistentFlags().MarkHidden(flagDummy)

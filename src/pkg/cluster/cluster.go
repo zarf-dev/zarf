@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"slices"
 	"time"
 
@@ -58,13 +59,85 @@ type Cluster struct {
 	Watcher watcher.StatusWatcher
 }
 
+// ConnectOptions selects which kubeconfig and context a cluster connection uses. The zero
+// value means the ambient default: the KUBECONFIG env var, then ~/.kube/config, and that
+// kubeconfig's current-context.
+type ConnectOptions struct {
+	// Kubeconfig is an explicit path to a kubeconfig file.
+	Kubeconfig string
+	// Context is the name of the kubeconfig context to use.
+	Context string
+}
+
+// IsZero reports whether opts selects nothing, i.e. the ambient default should be used.
+func (o ConnectOptions) IsZero() bool {
+	return o.Kubeconfig == "" && o.Context == ""
+}
+
+func firstConnectOptions(opts []ConnectOptions) ConnectOptions {
+	if len(opts) == 0 {
+		return ConnectOptions{}
+	}
+	return opts[0]
+}
+
+// loadingRules returns the kubeconfig loading rules for opts.
+func (o ConnectOptions) loadingRules() *clientcmd.ClientConfigLoadingRules {
+	rules := clientcmd.NewDefaultClientConfigLoadingRules()
+	if o.Kubeconfig != "" {
+		rules.ExplicitPath = o.Kubeconfig
+	}
+	return rules
+}
+
+// WriteEffectiveKubeconfig resolves opts to a kubeconfig path that can be handed to a
+// subprocess through KUBECONFIG, so that tools Zarf shells out to talk to the same cluster
+// Zarf does. It returns "" when opts selects nothing and the caller should leave the
+// environment alone.
+//
+// A context selection has no env var equivalent, so it is materialized as a kubeconfig
+// written into dir with current-context set; the caller is responsible for removing it.
+// Selecting only a kubeconfig path needs no file and copies no credentials.
+func WriteEffectiveKubeconfig(opts ConnectOptions, dir string) (string, error) {
+	if opts.IsZero() {
+		return "", nil
+	}
+	if opts.Context == "" {
+		return opts.Kubeconfig, nil
+	}
+
+	rules := opts.loadingRules()
+	cfg, err := rules.Load()
+	if err != nil {
+		return "", fmt.Errorf("unable to load kubeconfig: %w", err)
+	}
+	if _, ok := cfg.Contexts[opts.Context]; !ok {
+		return "", fmt.Errorf("context %q does not exist in the kubeconfig", opts.Context)
+	}
+	cfg.CurrentContext = opts.Context
+
+	f, err := os.CreateTemp(dir, "zarf-kubeconfig-")
+	if err != nil {
+		return "", err
+	}
+	path := f.Name()
+	if err := f.Close(); err != nil {
+		return "", err
+	}
+	// WriteToFile truncates to 0600, so the merged credentials are not world readable.
+	if err := clientcmd.WriteToFile(*cfg, path); err != nil {
+		return "", errors.Join(fmt.Errorf("unable to write kubeconfig for context %q: %w", opts.Context, err), os.Remove(path))
+	}
+	return path, nil
+}
+
 // NewWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.
-func NewWithWait(ctx context.Context) (*Cluster, error) {
+func NewWithWait(ctx context.Context, opts ...ConnectOptions) (*Cluster, error) {
 	start := time.Now()
 	l := logger.From(ctx)
 	l.Info("waiting for cluster connection")
 
-	c, err := New(ctx)
+	c, err := New(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -97,9 +170,9 @@ func NewWithWait(ctx context.Context) (*Cluster, error) {
 }
 
 // New creates a new Cluster instance and validates connection to the cluster by fetching the Kubernetes version.
-func New(_ context.Context) (*Cluster, error) {
+func New(_ context.Context, opts ...ConnectOptions) (*Cluster, error) {
 	clusterErr := errors.New("unable to connect to the cluster")
-	clientset, cfg, err := ClientAndConfig()
+	clientset, cfg, err := ClientAndConfig(opts...)
 	if err != nil {
 		return nil, errors.Join(clusterErr, err)
 	}
@@ -121,9 +194,10 @@ func New(_ context.Context) (*Cluster, error) {
 }
 
 // ClientAndConfig returns a Kubernetes client and the rest config used to configure the client.
-func ClientAndConfig() (kubernetes.Interface, *rest.Config, error) {
-	loader := clientcmd.NewDefaultClientConfigLoadingRules()
-	clientCfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, nil)
+func ClientAndConfig(opts ...ConnectOptions) (kubernetes.Interface, *rest.Config, error) {
+	o := firstConnectOptions(opts)
+	loader := o.loadingRules()
+	clientCfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, &clientcmd.ConfigOverrides{CurrentContext: o.Context})
 	cfg, err := clientCfg.ClientConfig()
 	if err != nil {
 		return nil, nil, err

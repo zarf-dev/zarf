@@ -10,12 +10,15 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 )
 
 func TestIsJSONPathWaitType(t *testing.T) {
@@ -340,4 +343,45 @@ func closedLocalTCPAddress(t *testing.T) string {
 
 func neverReadyProbe(context.Context, string, string, string, time.Duration) (bool, error) {
 	return false, nil
+}
+
+// TestForResourceUsesConnectOptions proves the kubeconfig and context given by the caller
+// reach the client, by pointing them at a cluster that cannot resolve and reading the host
+// back out of the failure.
+func TestForResourceUsesConnectOptions(t *testing.T) {
+	kubeconfig := filepath.Join(t.TempDir(), "config")
+	contents := `apiVersion: v1
+kind: Config
+current-context: alpha
+clusters:
+  - name: alpha-cluster
+    cluster: {server: https://alpha.invalid:6443}
+  - name: beta-cluster
+    cluster: {server: https://beta.invalid:6443}
+contexts:
+  - name: alpha
+    context: {cluster: alpha-cluster, user: u}
+  - name: beta
+    context: {cluster: beta-cluster, user: u}
+users:
+  - name: u
+    user: {token: t}
+`
+	require.NoError(t, os.WriteFile(kubeconfig, []byte(contents), 0o600))
+	t.Setenv("KUBECONFIG", kubeconfig)
+
+	err := ForResourceDefaultReady(context.Background(), "pod", "name", "", "default", time.Second)
+	require.ErrorContains(t, err, "alpha.invalid", "defaults to current-context")
+
+	err = ForResourceDefaultReady(context.Background(), "pod", "name", "", "default", time.Second,
+		cluster.ConnectOptions{Context: "beta"})
+	require.ErrorContains(t, err, "beta.invalid")
+
+	t.Setenv("KUBECONFIG", "")
+	err = ForResourceDefaultReady(context.Background(), "pod", "name", "", "default", time.Second,
+		cluster.ConnectOptions{Kubeconfig: kubeconfig, Context: "beta"})
+	require.ErrorContains(t, err, "beta.invalid")
+
+	// ForResource polls until the deadline and reports only the timeout, so the host it tried
+	// is not observable; it takes the same options through the same ClientAndConfig call.
 }

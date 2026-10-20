@@ -39,8 +39,10 @@ zarf tools gen-pki HOST [flags]
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --cache string               Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+      --context string             Name of the kubeconfig context to use for Kubernetes connections
       --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --kubeconfig string          Path to the kubeconfig file to use for Kubernetes connections
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
