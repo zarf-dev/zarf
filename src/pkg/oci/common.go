@@ -161,10 +161,6 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 	if ref.Registry == "docker.io" {
 		ref.Registry = "registry-1.docker.io"
 	}
-	if ref.Registry == "🦄" || ref.Registry == "defenseunicorns" {
-		ref.Registry = "ghcr.io"
-		ref.Repository = "defenseunicorns/packages/" + ref.Repository
-	}
 	storeOpts := credentials.StoreOptions{}
 	credStore, err := credentials.NewStoreFromDocker(storeOpts)
 	if err != nil {
