@@ -63,6 +63,66 @@ func TestValidateV1Beta1_FormatsValidationErrors(t *testing.T) {
 	require.EqualError(t, err, "package validation failed:\npackage does not contain any compatible components")
 }
 
+func TestPackageDefinitionV1Beta1InitServices(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		kind     string
+		service  string
+		imported bool
+		wantErr  string
+	}{
+		{name: "init with service", kind: "ZarfInitConfig", service: "registry"},
+		{name: "init without service", kind: "ZarfInitConfig"},
+		{name: "ordinary package with service", kind: "ZarfPackageConfig", service: "registry", wantErr: "only ZarfInitConfig packages may declare services"},
+		{name: "init with imported service", kind: "ZarfInitConfig", imported: true},
+		{name: "init overrides imported service", kind: "ZarfInitConfig", imported: true, service: "agent"},
+		{name: "ordinary package with imported service", kind: "ZarfPackageConfig", imported: true, wantErr: "only ZarfInitConfig packages may declare services"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			component := "  - name: registry\n"
+			if tt.imported {
+				imported := `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: registry
+component:
+  service:
+    name: registry
+`
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "registry.yaml"), []byte(imported), 0o600))
+				component += "    import:\n      local:\n        - path: registry.yaml\n"
+			}
+			if tt.service != "" {
+				component += "    service:\n      name: " + tt.service + "\n"
+			}
+			definition := "apiVersion: zarf.dev/v1beta1\nkind: " + tt.kind + "\nmetadata:\n  name: init-test\ncomponents:\n" + component
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+
+			pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.kind, string(pkg.Kind))
+			require.Len(t, pkg.Components, 1)
+			if tt.service != "" {
+				require.Equal(t, tt.service, string(pkg.Components[0].Service.Name))
+			} else if tt.imported {
+				require.Equal(t, "registry", string(pkg.Components[0].Service.Name))
+			} else {
+				require.Empty(t, pkg.Components[0].Service)
+			}
+		})
+	}
+}
+
 func TestPackageDefinitionV1Beta1ImageSources(t *testing.T) {
 	t.Parallel()
 
@@ -124,6 +184,29 @@ func TestPackageDefinitionV1Beta1ImageSources(t *testing.T) {
 	}
 }
 
+func TestPackageDefinitionRejectsV1Beta1ChartPathComponents(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	packageYAML := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: path-components
+components:
+  - name: component
+    charts:
+      - name: ../escaped
+        namespace: default
+        releaseName: valid
+        local:
+          path: chart
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(packageYAML), 0o600))
+
+	_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+	require.ErrorContains(t, err, "linting error found")
+}
+
 func TestPackageDefinitionRejectsUnsupportedRawFields(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -158,6 +241,58 @@ documenttaion:
 			var lintErr *lint.LintError
 			require.ErrorAs(t, err, &lintErr)
 			require.NotEmpty(t, lintErr.Findings)
+		})
+	}
+}
+
+func TestPackageDefinitionValidatesSelectedDocument(t *testing.T) {
+	t.Parallel()
+	alpha := "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\ncomponents:\n  - name: component\n"
+	beta := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta
+  description: |+
+    selected beta
+
+components:
+  - name: component
+`
+	future := "apiVersion: zarf.dev/v99\n"
+	unknownField := "unsupported: true\n"
+	for _, tt := range []struct {
+		name       string
+		definition string
+		wantName   string
+		wantError  bool
+	}{
+		{name: "alpha then beta", definition: alpha + "---\n" + beta, wantName: "beta"},
+		{name: "beta then alpha", definition: beta + "---\n" + alpha, wantName: "beta"},
+		{name: "future then alpha", definition: future + "---\n" + alpha, wantName: "alpha"},
+		{name: "alpha then future", definition: alpha + "---\n" + future, wantName: "alpha"},
+		{name: "unknown beta field after alpha", definition: alpha + "---\n" + beta + unknownField, wantName: "beta", wantError: true},
+		{name: "unknown beta field before alpha", definition: beta + unknownField + "---\n" + alpha, wantName: "beta", wantError: true},
+		{name: "unknown alpha field after future", definition: future + "---\n" + alpha + unknownField, wantName: "alpha", wantError: true},
+		{name: "unknown alpha field before future", definition: alpha + unknownField + "---\n" + future, wantName: "alpha", wantError: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(tt.definition), 0o600))
+			pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+			if tt.wantError {
+				var lintErr *lint.LintError
+				require.ErrorAs(t, err, &lintErr)
+				require.Equal(t, tt.wantName, lintErr.PackageName)
+				require.Len(t, lintErr.Findings, 1)
+				require.Contains(t, lintErr.Findings[0].Description, "unsupported")
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantName, pkg.Metadata.Name)
+			if tt.wantName == "beta" {
+				require.Equal(t, "selected beta\n\n", pkg.Metadata.Description)
+			}
 		})
 	}
 }

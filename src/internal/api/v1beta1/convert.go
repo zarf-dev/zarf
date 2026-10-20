@@ -32,6 +32,7 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 			Signed:                     pkg.Build.Signed,
 			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
 			AggregateChecksum:          pkg.Build.AggregateChecksum,
+			VersionRequirements:        VersionRequirementsToGeneric(pkg.Build.VersionRequirements),
 		},
 		Values: api.Values{
 			Files:  pkg.Values.Files,
@@ -40,18 +41,26 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 		Documentation: pkg.Documentation,
 	}
 
-	for _, vr := range pkg.Build.VersionRequirements {
-		g.Build.VersionRequirements = append(g.Build.VersionRequirements, api.VersionRequirement{
-			Version: vr.Version,
-			Reason:  vr.Reason,
-		})
-	}
-
 	for _, c := range pkg.Components {
 		g.Components = append(g.Components, componentToGeneric(c))
 	}
 
 	return g
+}
+
+// VersionRequirementsToGeneric converts v1beta1 minimum-version requirements to the operational model.
+func VersionRequirementsToGeneric(requirements []v1beta1.VersionRequirement) []api.VersionRequirement {
+	if len(requirements) == 0 {
+		return nil
+	}
+	converted := make([]api.VersionRequirement, 0, len(requirements))
+	for _, requirement := range requirements {
+		converted = append(converted, api.VersionRequirement{
+			Version: requirement.Version,
+			Reason:  requirement.Reason,
+		})
+	}
+	return converted
 }
 
 func metadataToGeneric(m v1beta1.PackageMetadata) api.PackageMetadata {
@@ -71,7 +80,7 @@ func componentToGeneric(c v1beta1.Component) api.Component {
 		Name:         c.Name,
 		Description:  c.Description,
 		Optional:     c.Optional,
-		Service:      api.Service(c.Service),
+		Service:      api.Service{Name: api.ServiceName(c.Service.Name)},
 		Repositories: repositoriesToGeneric(c.Repositories),
 		StateAccess:  stateAccessToGeneric(c.StateAccess),
 		Selector: api.ComponentSelector{
@@ -308,11 +317,6 @@ func PackageToV1beta1(g api.Package) v1beta1.Package {
 		pkg.Kind = v1beta1.ZarfPackageConfig
 	}
 
-	// v1beta1 has no Kind ZarfInitConfig; collapse the v1alpha1 init kind into the normal package kind.
-	if g.Kind == api.ZarfInitConfig {
-		pkg.Kind = v1beta1.ZarfPackageConfig
-	}
-
 	for _, c := range g.Components {
 		pkg.Components = append(pkg.Components, componentFromGeneric(c))
 	}
@@ -395,7 +399,7 @@ func componentFromGeneric(c api.Component) v1beta1.Component {
 				OS: c.Target.OS,
 			},
 			Import:  importFromGeneric(c.Import),
-			Service: v1beta1.Service(c.Service),
+			Service: v1beta1.Service{Name: v1beta1.ServiceName(c.Service.Name)},
 			Actions: actionsFromGeneric(c.Actions),
 		},
 	}

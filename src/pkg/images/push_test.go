@@ -66,6 +66,9 @@ func TestPush(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Push rewrites index.json, so each test needs its own copy of the layout.
 			sourceDirectory := t.TempDir()
 			require.NoError(t, os.CopyFS(sourceDirectory, os.DirFS(tc.SourceDirectory)))
 			ctx := testutil.TestContext(t)

@@ -73,7 +73,7 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 	for _, c := range pkg.Components {
 		component := componentToGeneric(c)
 		if pkg.Kind == v1alpha1.ZarfInitConfig {
-			component.Service = serviceForComponentName(c.Name)
+			component.Service.Name = serviceNameForComponent(c.Name)
 		}
 		g.Components = append(g.Components, component)
 	}
@@ -81,7 +81,7 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 	return g
 }
 
-func serviceForComponentName(name string) api.Service {
+func serviceNameForComponent(name string) api.ServiceName {
 	switch name {
 	case "zarf-registry":
 		return api.ServiceRegistry
@@ -420,14 +420,6 @@ func PackageToV1alpha1(g api.Package) v1alpha1.ZarfPackage {
 
 	for _, c := range g.Components {
 		pkg.Components = append(pkg.Components, componentFromGeneric(c))
-	}
-
-	// A component providing a Zarf CLI service marks this as an init package.
-	for _, c := range g.Components {
-		if c.Service != "" {
-			pkg.Kind = v1alpha1.ZarfInitConfig
-			break
-		}
 	}
 
 	return pkg

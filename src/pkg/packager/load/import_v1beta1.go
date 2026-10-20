@@ -18,6 +18,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -61,7 +63,7 @@ type remoteReferenceCache map[string]loadedComponentConfig
 
 // resolveImportsV1Beta1 resolves component config imports into a v1beta1 package definition.
 // Each package component may import one or more ZarfComponentConfig files; filtering compatible components also happens here.
-func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, arch, flavor string, remoteOptions types.RemoteOptions, cachePath string) (v1beta1ImportResolution, error) {
+func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, arch, flavor string, skipVersionCheck bool, remoteOptions types.RemoteOptions, cachePath string) (v1beta1ImportResolution, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start resolveImportsV1Beta1", "pkg", pkg.Metadata.Name, "arch", arch, "flavor", flavor)
@@ -76,7 +78,7 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 		if !compatibleComponentV1Beta1(component.Selector, arch, flavor) {
 			continue
 		}
-		mergedSpec, compVals, compResources, err := resolveComponentConfigSpecImports(ctx, component.ComponentSpec, baseDir, arch, flavor, []string{filepath.Clean(pkgPath.ManifestFile)}, remoteOptions, cachePath, refCache)
+		mergedSpec, compVals, compResources, err := resolveComponentConfigSpecImports(ctx, component.ComponentSpec, baseDir, arch, flavor, []string{filepath.Clean(pkgPath.ManifestFile)}, skipVersionCheck, remoteOptions, cachePath, refCache)
 		if err != nil {
 			return v1beta1ImportResolution{}, fmt.Errorf("component %q: %w", component.Name, err)
 		}
@@ -104,7 +106,7 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 // the supplied registry options and cache path for remote component imports.
 func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath string, remoteOptions types.RemoteOptions, cachePath string) (ComponentConfigImportResolution, error) {
 	componentPath = filepath.Clean(componentPath)
-	resolvedSpec, importedVals, remoteResources, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Variant.Architecture, component.Variant.Flavor, []string{componentPath}, remoteOptions, cachePath, remoteReferenceCache{})
+	resolvedSpec, importedVals, remoteResources, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Variant.Architecture, component.Variant.Flavor, []string{componentPath}, false, remoteOptions, cachePath, remoteReferenceCache{})
 	if err != nil {
 		return ComponentConfigImportResolution{}, err
 	}
@@ -125,7 +127,7 @@ func (r ComponentConfigImportResolution) MaterializeResources(ctx context.Contex
 
 // resolveComponentConfigSpecImports merges component-config imports. Its target always
 // comes from the root component config metadata, never a package-create override.
-func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.ComponentSpec, specDir, arch, flavor string, importStack []string, remoteOptions types.RemoteOptions, cachePath string, refCache remoteReferenceCache) (v1beta1.ComponentSpec, importedValues, []remoteResource, error) {
+func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.ComponentSpec, specDir, arch, flavor string, importStack []string, skipVersionCheck bool, remoteOptions types.RemoteOptions, cachePath string, refCache remoteReferenceCache) (v1beta1.ComponentSpec, importedValues, []remoteResource, error) {
 	if err := validateComponentImportV1Beta1(spec.Import); err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
@@ -138,7 +140,12 @@ func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.Compone
 	if err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
-	resolvedImportSpec, inheritedValues, inheritedResources, err := resolveComponentConfigSpecImports(ctx, directImport.config.Component, directImport.dir, arch, flavor, append(importStack, directImport.path), remoteOptions, cachePath, refCache)
+	if directImport.remote && !skipVersionCheck {
+		if err := requirements.ValidateVersionRequirements(internalv1beta1.VersionRequirementsToGeneric(directImport.config.PublishData.VersionRequirements)); err != nil {
+			return v1beta1.ComponentSpec{}, importedValues{}, nil, fmt.Errorf("remote component %q has unmet version requirements: %w", directImport.path, err)
+		}
+	}
+	resolvedImportSpec, inheritedValues, inheritedResources, err := resolveComponentConfigSpecImports(ctx, directImport.config.Component, directImport.dir, arch, flavor, append(importStack, directImport.path), skipVersionCheck, remoteOptions, cachePath, refCache)
 	if err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
@@ -176,6 +183,7 @@ func mergeImportedValues(directValues v1beta1.Values, inherited importedValues, 
 // loadedComponentConfig pairs a parsed component config with where it was read from.
 type loadedComponentConfig struct {
 	config           v1beta1.ComponentConfig
+	remote           bool
 	dir              string
 	relativeToParent string
 	path             string
@@ -290,7 +298,7 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if err := validateRemoteComponentResources(config, seenMountPaths); err != nil {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
 	}
-	return loadedComponentConfig{config: config, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
+	return loadedComponentConfig{config: config, remote: true, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
 }
 
 // ValidateRemoteKustomizeRestrictions rejects unrestricted Kustomize builds for remote components.

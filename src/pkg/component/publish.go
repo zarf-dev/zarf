@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -60,6 +61,10 @@ type PublishOptions struct {
 // The component config is stored as the artifact's config blob; later remote-import support can
 // retrieve it without treating it as a Zarf package.
 func Publish(ctx context.Context, componentPath string, destination registry.Reference, opts PublishOptions) (registry.Reference, error) {
+	if !feature.IsEnabled(feature.V1Beta1) {
+		return registry.Reference{}, fmt.Errorf("publishing a %s component requires the %q feature. Run again with --features=%s=true",
+			v1beta1.APIVersion, feature.V1Beta1, feature.V1Beta1)
+	}
 	if err := destination.ValidateRegistry(); err != nil {
 		return registry.Reference{}, fmt.Errorf("invalid registry: %w", err)
 	}

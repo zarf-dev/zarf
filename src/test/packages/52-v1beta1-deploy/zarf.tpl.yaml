@@ -1,0 +1,115 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: v1beta1-deploy
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
+documentation:
+  README.md: README.md
+components:
+  - name: resources
+    description: Deploy v1beta1 resources
+    images:
+      - name: ghcr.io/zarf-dev/images/hello-world:latest
+        source: registry
+    repositories:
+      - url: https://github.com/zarf-dev/zarf-public-test.git
+        ref:
+          tag: v0.0.1
+    files:
+      - source: payload.txt
+        checksum: 8456381fc2be81f1fd32c9cfd7d40bb04846402b4d0c21a841a2240072427dc9
+        destination: deployed/payload.txt
+        symlinks:
+          - payload-link.txt
+      - source: template.txt
+        destination: deployed/template.txt
+        enableTemplating: true
+      - source: executable.txt
+        destination: deployed/executable.txt
+        executable: true
+      - source: archive.tar
+        destination: deployed/extracted.txt
+        extractPath: archive/inside.txt
+    actions:
+      onCreate:
+        before:
+          - cmd: echo create-before
+        onSuccess:
+          - cmd: echo create-success
+      onDeploy:
+        defaults:
+          maxTotalSeconds: 30
+          env:
+            - V1BETA1_ACTION=from-default
+        before:
+          - cmd: echo action-value
+            setValues:
+              - key: .actionValue
+                type: string
+          - cmd: echo ${V1BETA1_ACTION}
+            setValues:
+              - key: .actionEnv
+          - cmd: echo "{{ .Values.actionValue }}"
+            enableTemplating: true
+            setValues:
+              - key: .templatedAction
+          - wait:
+              network:
+                protocol: http
+                address: [[ .networkAddress ]]
+                code: 200
+        onSuccess:
+          - wait:
+              cluster:
+                kind: configmap
+                name: v1beta1-manifest
+                namespace: default
+      onRemove:
+        before:
+          - cmd: echo remove-before
+        onSuccess:
+          - cmd: echo remove-success
+    manifests:
+      - name: v1beta1-manifest
+        namespace: default
+        files:
+          - manifest.yaml
+        enableTemplating: true
+        serverSideApply: "true"
+      - name: v1beta1-kustomize
+        namespace: default
+        kustomize:
+          files:
+            - kustomize
+        skipWait: true
+    charts:
+      - name: v1beta1-chart
+        releaseName: v1beta1-chart-release
+        namespace: default
+        git:
+          url: [[ .chartGitURL ]]
+          ref:
+            commit: [[ .chartGitCommit ]]
+        valuesFiles:
+          - path: chart-values.yaml
+            enableTemplating: true
+        values:
+          - sourcePath: .mapped
+            targetPath: .mapped
+            excludePaths:
+              - .mapped.excluded
+        serverSideApply: "false"
+
+  - name: optional-selected
+    description: Exercise optional component selection and create-time architecture selector
+    optional: true
+    selector:
+      architecture: [[ .architecture ]]
+    manifests:
+      - name: v1beta1-optional
+        namespace: default
+        files:
+          - optional.yaml

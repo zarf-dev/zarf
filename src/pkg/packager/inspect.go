@@ -108,7 +108,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 			return nil, err
 		}
 
-		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, s)
+		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Service.Name, s)
 		if err != nil {
 			return nil, err
 		}
@@ -351,7 +351,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 
 	var resources []Resource
 	for _, component := range selectedComponents {
-		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, s)
+		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Service.Name, s)
 		if err != nil {
 			return nil, err
 		}

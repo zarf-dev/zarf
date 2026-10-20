@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: v1beta1-chart
+data:
+  message: {{ .Values.message | quote }}
+  included: {{ .Values.mapped.included | quote }}
+  excluded: {{ .Values.mapped.excluded | quote }}

@@ -27,6 +27,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
@@ -114,6 +115,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		pkg = definition
 		definition.Build.Differential = true
 		definition.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
+	}
+	if err := layout.ValidatePackagePaths(definition); err != nil {
+		return nil, err
 	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -218,7 +222,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 
-	if err = stageDocumentation(pkg, resolvedPackage.Resources, buildPath); err != nil {
+	if err = stageDocumentation(ctx, pkg, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -295,6 +299,9 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	}
 	definition := resolvedPackage.Definition
 	definition.Metadata.Architecture = v1alpha1.SkeletonArch
+	if err := layout.ValidatePackagePaths(definition); err != nil {
+		return nil, err
+	}
 
 	// Creating skeleton packages with the values feature is not yet supported
 	if len(definition.Values.Files) > 0 || resolvedPackage.ValuesSchema != nil {
@@ -306,7 +313,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, err
 	}
 
-	if err = stageDocumentation(definition, resolvedPackage.Resources, buildPath); err != nil {
+	if err = stageDocumentation(ctx, definition, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -508,7 +515,7 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err)
 				}
 			} else {
-				if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+				if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 					return fmt.Errorf("unable to copy file %s: %w", src, err)
 				}
 			}
@@ -557,7 +564,7 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 			if err != nil {
 				return err
 			}
-			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 				return fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
 			}
 		}
@@ -611,9 +618,16 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
 func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath string, resources *load.ResourceSet) error {
+	if err := layout.ValidatePathComponent(manifest.Name); err != nil {
+		return fmt.Errorf("manifest name validation failed: %w", err)
+	}
+
+	manifestDir := filepath.Join(compBuildPath, string(layout.ManifestsComponentDir))
 	for fileIdx, path := range manifest.Files {
-		rel := filepath.Join(string(layout.ManifestsComponentDir), layout.ManifestFileName(manifest.Name, fileIdx))
-		dst := filepath.Join(compBuildPath, rel)
+		dst, err := layout.PathWithinDirectory(manifestDir, layout.ManifestFileName(manifest.Name, fileIdx))
+		if err != nil {
+			return fmt.Errorf("manifest output validation failed: %w", err)
+		}
 
 		// Copy manifests without any processing.
 		if helpers.IsURL(path) {
@@ -625,7 +639,7 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 			if err != nil {
 				return err
 			}
-			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 				return fmt.Errorf("unable to copy manifest %s: %w", src, err)
 			}
 		}
@@ -633,12 +647,12 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 
 	for kustomizeIdx, path := range manifest.Kustomize.Files {
 		// Generate manifests from kustomizations and place in the package.
-		kname := layout.KustomizationFileName(manifest.Name, kustomizeIdx)
-		rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
-		dst := filepath.Join(compBuildPath, rel)
+		dst, err := layout.PathWithinDirectory(manifestDir, layout.KustomizationFileName(manifest.Name, kustomizeIdx))
+		if err != nil {
+			return fmt.Errorf("manifest output validation failed: %w", err)
+		}
 
 		if !helpers.IsURL(path) {
-			var err error
 			path, err = resources.Path(path)
 			if err != nil {
 				return err
@@ -653,6 +667,10 @@ func PackageManifest(ctx context.Context, manifest api.Manifest, compBuildPath s
 
 // PackageChart takes a Zarf Chart definition and packs it into a package layout
 func PackageChart(ctx context.Context, chart api.Chart, resources *load.ResourceSet, paths layout.ChartPaths, cachePath string, remoteOpts types.RemoteOptions) error {
+	if _, err := paths.ArchivePath(chart.Name, chart.LegacyVersion); err != nil {
+		return err
+	}
+
 	originalValuesFiles := slices.Clone(chart.ValuesFiles)
 	defer func() {
 		copy(chart.ValuesFiles, originalValuesFiles)
@@ -698,15 +716,30 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 	}
 
 	for chartIdx, chart := range component.Charts {
+		if err := layout.ValidatePathComponent(chart.Name); err != nil {
+			return fmt.Errorf("chart name validation failed: %w", err)
+		}
+		if err := layout.ValidatePathComponent(chart.LegacyVersion); err != nil {
+			return fmt.Errorf("chart version validation failed: %w", err)
+		}
+
 		if chart.Local != nil {
-			rel := filepath.ToSlash(filepath.Join(string(layout.ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx)))
-			dst := filepath.Join(compBuildPath, rel)
+			chartsDir := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
+			dst, err := layout.PathWithinDirectory(chartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+			if err != nil {
+				return fmt.Errorf("skeleton chart validation failed: %w", err)
+			}
+			rel, err := filepath.Rel(compBuildPath, dst)
+			if err != nil {
+				return err
+			}
+			rel = filepath.ToSlash(rel)
 
 			file, err := resources.Path(chart.Local.Path)
 			if err != nil {
 				return err
 			}
-			if err := helpers.CreatePathAndCopy(file, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, file, dst); err != nil {
 				return fmt.Errorf("unable to copy file %s: %w", file, err)
 			}
 
@@ -718,14 +751,23 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 				continue
 			}
 
-			rel := filepath.ToSlash(filepath.Join(string(layout.ValuesComponentDir), layout.ChartValuesFileName(chart.Name, chart.LegacyVersion, valuesIdx)))
+			valuesDir := filepath.Join(compBuildPath, string(layout.ValuesComponentDir))
+			dst, err := layout.PathWithinDirectory(valuesDir, layout.ChartValuesFileName(chart.Name, chart.LegacyVersion, valuesIdx))
+			if err != nil {
+				return fmt.Errorf("skeleton chart values validation failed: %w", err)
+			}
+			rel, err := filepath.Rel(compBuildPath, dst)
+			if err != nil {
+				return err
+			}
+			rel = filepath.ToSlash(rel)
 			component.Charts[chartIdx].ValuesFiles[valuesIdx].Path = rel
 
 			path, err := resources.Path(valuesFile.Path)
 			if err != nil {
 				return err
 			}
-			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, path, filepath.Join(compBuildPath, rel)); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}
@@ -760,7 +802,7 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 				}
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 				return fmt.Errorf("unable to copy file %s: %w", src, err)
 			}
 		}
@@ -799,7 +841,7 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 		if err != nil {
 			return err
 		}
-		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+		if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 			return fmt.Errorf("unable to copy data injection %s: %w", src, err)
 		}
 
@@ -822,7 +864,7 @@ func assembleSkeletonComponent(ctx context.Context, component api.Component, res
 			if err != nil {
 				return err
 			}
-			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 				return fmt.Errorf("unable to copy manifest %s: %w", src, err)
 			}
 
@@ -943,6 +985,9 @@ func recordPackageMetadata(definition *api.Package, flavor string, registryOverr
 func collectVersionRequirements(pkg api.Package, hasIndex bool) []api.VersionRequirement {
 	var reqs []api.VersionRequirement
 	var hasImageArchives, hasTemplatedValuesFiles, hasVersionlessChart bool
+	var hasVersionedBetaChart, hasDefaultReadinessWait bool
+	var hasBetaDeploySuccessActions bool
+	isBeta := pkg.GetAPIVersion() == v1beta1.APIVersion
 	for _, comp := range pkg.Components {
 		if !hasImageArchives && len(comp.ImageArchives) > 0 {
 			hasImageArchives = true
@@ -957,9 +1002,29 @@ func collectVersionRequirements(pkg api.Package, hasIndex bool) []api.VersionReq
 			if chart.LegacyVersion == "" {
 				hasVersionlessChart = true
 			}
+			// The alpha fallback uses the source version, but beta chart resources
+			// are stored without a version in their filenames.
+			if isBeta && (chart.HelmRepository != nil && chart.HelmRepository.Version != "" ||
+				chart.OCI != nil && chart.OCI.Ref != nil && chart.OCI.Ref.Tag != "") {
+				hasVersionedBetaChart = true
+			}
 		}
-		if hasImageArchives && hasTemplatedValuesFiles && hasVersionlessChart {
-			break
+		if isBeta {
+			if len(comp.Actions.OnDeploy.OnSuccess) > 0 {
+				hasBetaDeploySuccessActions = true
+			}
+			// Creation actions have already run; only runtime waits need protection
+			// from the alpha fallback's existence-only default.
+			for _, set := range []api.ActionSet{comp.Actions.OnDeploy, comp.Actions.OnRemove} {
+				for _, actions := range [][]api.Action{set.Before, set.After, set.OnSuccess, set.OnFailure} {
+					if slices.ContainsFunc(actions, func(action api.Action) bool {
+						return action.Wait != nil && action.Wait.Cluster != nil &&
+							action.Wait.Cluster.Condition.Expression == "" && action.Wait.Cluster.Condition.Default == api.WaitForReadiness
+					}) {
+						hasDefaultReadinessWait = true
+					}
+				}
+			}
 		}
 	}
 	if hasVersionlessChart {
@@ -984,6 +1049,24 @@ func collectVersionRequirements(pkg api.Package, hasIndex bool) []api.VersionReq
 		reqs = append(reqs, api.VersionRequirement{
 			Version: "v0.77.0",
 			Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
+		})
+	}
+	if hasVersionedBetaChart {
+		reqs = append(reqs, api.VersionRequirement{
+			Version: "v0.88.0",
+			Reason:  "This package contains v1beta1 versioned charts whose resource filenames require v0.88.0+",
+		})
+	}
+	if hasDefaultReadinessWait {
+		reqs = append(reqs, api.VersionRequirement{
+			Version: "v0.88.0",
+			Reason:  "This package uses v1beta1 default cluster readiness waits which require v0.88.0+",
+		})
+	}
+	if hasBetaDeploySuccessActions {
+		reqs = append(reqs, api.VersionRequirement{
+			Version: "v0.88.0",
+			Reason:  "This package uses v1beta1 deployment success hooks which require v0.88.0+ to run before saving successful state",
 		})
 	}
 	return reqs
@@ -1135,9 +1218,14 @@ func writeValuesSchema(buildPath string, schema value.SchemaDocument) error {
 	return nil
 }
 
-func stageDocumentation(pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
+func stageDocumentation(ctx context.Context, pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
 	if len(pkg.Documentation) == 0 {
 		return nil
+	}
+	for key := range pkg.Documentation {
+		if err := layout.ValidatePathComponent(key); err != nil {
+			return fmt.Errorf("documentation key validation failed: %w", err)
+		}
 	}
 
 	// Get the mapping of keys to their final filenames (with deduplication logic).
@@ -1166,9 +1254,13 @@ func stageDocumentation(pkg api.Package, resources *load.ResourceSet, buildPath 
 		if err := os.MkdirAll(dstDir, helpers.ReadWriteExecuteUser); err != nil {
 			return fmt.Errorf("failed to create documentation directory: %w", err)
 		}
-		dst := filepath.Join(dstDir, docFilename)
 
-		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+		dst, err := layout.PathWithinDirectory(dstDir, docFilename)
+		if err != nil {
+			return fmt.Errorf("documentation output validation failed: %w", err)
+		}
+
+		if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
 		}
 		if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {

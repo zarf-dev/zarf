@@ -1,3 +1,10 @@
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: test-inspect-definition-v1alpha1
+components:
+  - name: ignored-alpha
+---
 apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:

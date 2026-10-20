@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -31,6 +32,14 @@ import (
 	"oras.land/oras-go/v2/registry"
 	registryremote "oras.land/oras-go/v2/registry/remote"
 )
+
+func TestMain(m *testing.M) {
+	if err := feature.Set([]feature.Feature{{Name: feature.V1Beta1, Enabled: true}}); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
+}
 
 func defaultTestRemoteOptions() types.RemoteOptions {
 	return types.RemoteOptions{PlainHTTP: true}

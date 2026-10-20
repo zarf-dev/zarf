@@ -130,6 +130,7 @@
         },
         "name": {
           "description": "The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repository.",
+          "pattern": "^[^/\\\\]*$",
           "type": "string"
         },
         "namespace": {
@@ -290,15 +291,8 @@
           "description": "Filter when this component is included during package creation based on architecture or flavor."
         },
         "service": {
-          "description": "The Zarf CLI service this component provides, such as the registry, injector, or agent.",
-          "enum": [
-            "registry",
-            "seed-registry",
-            "injector",
-            "agent",
-            "git-server"
-          ],
-          "type": "string"
+          "$ref": "#/$defs/Service",
+          "description": "The Zarf CLI service this component provides, such as the registry, injector, or agent."
         },
         "stateAccess": {
           "description": "Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).\nValid values: \"registryCredentials\", \"gitCredentials\", \"agentCerts\".",
@@ -945,6 +939,7 @@
         "name": {
           "description": "A name to give this collection of manifests; this will become the name of the dynamically-created helm chart.",
           "maxLength": 40,
+          "pattern": "^[^/\\\\]*$",
           "type": "string"
         },
         "namespace": {
@@ -1093,6 +1088,30 @@
       },
       "required": [
         "url"
+      ],
+      "type": "object"
+    },
+    "Service": {
+      "additionalProperties": false,
+      "description": "Service identifies which Zarf CLI service a component provides.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "description": "The name of the Zarf CLI service this component provides.",
+          "enum": [
+            "registry",
+            "seed-registry",
+            "injector",
+            "agent",
+            "git-server"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
       ],
       "type": "object"
     },
@@ -1260,6 +1279,7 @@
       "default": "ZarfPackageConfig",
       "description": "The kind of Zarf package.",
       "enum": [
+        "ZarfInitConfig",
         "ZarfPackageConfig"
       ],
       "type": "string"

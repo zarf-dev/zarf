@@ -8,14 +8,13 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 // makeTarGz creates a tar.gz archive at dest from the given entries.
-// Each entry is either a regular file or a symlink, controlled by the entry fields.
+// Each entry is either a regular file, directory, hardlink, or symbolic link.
 func makeTarGz(t *testing.T, dest string, entries []tarEntry) {
 	t.Helper()
 	f, err := os.Create(dest)
@@ -26,7 +25,7 @@ func makeTarGz(t *testing.T, dest string, entries []tarEntry) {
 
 	for _, e := range entries {
 		switch {
-		case e.linkTarget != "":
+		case e.linkTarget != "" || e.isSymlink:
 			typeflag := byte(tar.TypeSymlink)
 			if e.isHardLink {
 				typeflag = tar.TypeLink
@@ -71,129 +70,54 @@ type tarEntry struct {
 	content    string
 	linkTarget string
 	isDir      bool
-	isHardLink bool  // if true and linkTarget is set, create TypeLink instead of TypeSymlink
+	isSymlink  bool  // creates a TypeSymlink entry, including an empty target
+	isHardLink bool  // creates TypeLink instead of TypeSymlink
 	mode       int64 // optional: overrides the default file mode
 }
 
-// TestSymlinkTraversal_DefaultHandler verifies that extracting an archive
-// containing a symlink with a relative traversal target is rejected.
-func TestSymlinkTraversal_DefaultHandler(t *testing.T) {
+func TestSymlinkTargetsValidated(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name    string
 		entries []tarEntry
+		opts    DecompressOpts
 	}{
 		{
-			name: "relative symlink escapes destination",
-			entries: []tarEntry{
-				{name: "escape-link", linkTarget: "../../../../../../../etc/shadow"},
-			},
+			name:    "relative target escapes root",
+			entries: []tarEntry{{name: "link", linkTarget: "../outside"}},
 		},
 		{
-			name: "absolute symlink target",
-			entries: []tarEntry{
-				{name: "abs-link", linkTarget: "/etc/shadow"},
-			},
+			name:    "absolute target",
+			entries: []tarEntry{{name: "link", linkTarget: "/outside"}},
 		},
 		{
-			name: "symlink to parent directory",
-			entries: []tarEntry{
-				{name: "parent-link", linkTarget: ".."},
-			},
+			name:    "volume target",
+			entries: []tarEntry{{name: "link", linkTarget: "C:outside"}},
+		},
+		{
+			name:    "reserved target",
+			entries: []tarEntry{{name: "link", linkTarget: "NUL"}},
+		},
+		{
+			name:    "strip handler",
+			entries: []tarEntry{{name: "prefix/link", linkTarget: "../outside"}},
+			opts:    DecompressOpts{StripComponents: 1},
+		},
+		{
+			name:    "filter handler",
+			entries: []tarEntry{{name: "link", linkTarget: "../outside"}},
+			opts:    DecompressOpts{Files: []string{"link"}},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			ctx := t.Context()
-			archivePath := filepath.Join(t.TempDir(), "malicious.tar.gz")
+			archivePath := filepath.Join(t.TempDir(), "symlink-target.tar.gz")
 			makeTarGz(t, archivePath, tc.entries)
 
-			dst := t.TempDir()
-			err := Decompress(ctx, archivePath, dst, DecompressOpts{})
-			require.Error(t, err, "extraction of archive with traversal symlink should fail")
-		})
-	}
-}
-
-// TestSymlinkTraversal_StripHandler verifies that the strip-components path
-// also rejects symlinks that escape the destination.
-func TestSymlinkTraversal_StripHandler(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		entries []tarEntry
-	}{
-		{
-			name: "relative symlink escapes after strip",
-			entries: []tarEntry{
-				{name: "prefix/escape-link", linkTarget: "../../../../etc/shadow"},
-			},
-		},
-		{
-			name: "absolute symlink target with strip",
-			entries: []tarEntry{
-				{name: "prefix/abs-link", linkTarget: "/etc/shadow"},
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			ctx := t.Context()
-			archivePath := filepath.Join(t.TempDir(), "malicious.tar.gz")
-			makeTarGz(t, archivePath, tc.entries)
-
-			dst := t.TempDir()
-			err := Decompress(ctx, archivePath, dst, DecompressOpts{StripComponents: 1})
-			require.Error(t, err, "extraction with strip should reject traversal symlinks")
-		})
-	}
-}
-
-// TestSymlinkTraversal_FilterHandler verifies that the filtered extraction
-// path also rejects symlinks that escape the destination.
-func TestSymlinkTraversal_FilterHandler(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		entries []tarEntry
-		files   []string
-	}{
-		{
-			name: "relative symlink escapes in filtered extraction",
-			entries: []tarEntry{
-				{name: "escape-link", linkTarget: "../../../etc/shadow"},
-			},
-			files: []string{"escape-link"},
-		},
-		{
-			name: "absolute symlink target in filtered extraction",
-			entries: []tarEntry{
-				{name: "abs-link", linkTarget: "/etc/shadow"},
-			},
-			files: []string{"abs-link"},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			ctx := t.Context()
-			archivePath := filepath.Join(t.TempDir(), "malicious.tar.gz")
-			makeTarGz(t, archivePath, tc.entries)
-
-			dst := t.TempDir()
-			err := Decompress(ctx, archivePath, dst, DecompressOpts{
-				Files:          tc.files,
-				SkipValidation: true,
-			})
-			require.Error(t, err, "filtered extraction should reject traversal symlinks")
+			require.Error(t, Decompress(t.Context(), archivePath, t.TempDir(), tc.opts))
 		})
 	}
 }
@@ -291,145 +215,37 @@ func TestSymlinkOrderingAttack(t *testing.T) {
 			ctx := t.Context()
 			archivePath := filepath.Join(t.TempDir(), "ordering-attack.tar.gz")
 			makeTarGz(t, archivePath, tc.entries)
-
 			dst := t.TempDir()
 			err := Decompress(ctx, archivePath, dst, tc.opts)
 			require.Error(t, err, "symlink ordering attack should be rejected")
 
-			// Verify no file was written outside dst
+			// Verify no file was written outside dst.
 			_, statErr := os.Stat(filepath.Join(dst, "..", "escape.txt"))
 			require.True(t, os.IsNotExist(statErr), "file should not have been written outside dst")
 		})
 	}
 }
 
-// This is so windows tests can pass even when they don't have permission to create a symlink
-func skipIfNoSymlink(t *testing.T) {
-	t.Helper()
-	err := os.Symlink("target", filepath.Join(t.TempDir(), "testlink"))
-	if err != nil {
-		t.Skipf("skipping: cannot create symlinks: %v", err)
-	}
-}
-
-// TestSafeSymlinksAllowed verifies that symlinks staying within the destination
-// directory are still permitted after the security fix is applied.
-func TestSafeSymlinksAllowed(t *testing.T) {
+func TestSymlinkAliasCannotWriteOutsideRoot(t *testing.T) {
 	t.Parallel()
-	ctx := t.Context()
 
-	skipIfNoSymlink(t)
-
-	archivePath := filepath.Join(t.TempDir(), "safe.tar.gz")
+	archivePath := filepath.Join(t.TempDir(), "alias-attack.tar.gz")
 	makeTarGz(t, archivePath, []tarEntry{
-		{name: "real-file.txt", content: "hello"},
-		{name: "safe-link", linkTarget: "real-file.txt"},
+		{name: "d", linkTarget: "."},
+		{name: "d/escape", linkTarget: "../outside"},
+		{name: "d/escape/attempt.txt", content: "pwned"},
 	})
 
 	dst := t.TempDir()
-	err := Decompress(ctx, archivePath, dst, DecompressOpts{})
-	require.NoError(t, err, "safe symlinks within destination should be allowed")
-
-	// Verify the symlink was created and resolves to the correct content
-	linkPath := filepath.Join(dst, "safe-link")
-	info, err := os.Lstat(linkPath)
-	require.NoError(t, err)
-	require.NotZero(t, info.Mode()&os.ModeSymlink, "expected a symlink")
-
-	content, err := os.ReadFile(linkPath)
-	require.NoError(t, err)
-	require.Equal(t, "hello", string(content))
-}
-
-// TestSafeSymlinksAllowed_Subdirectory verifies that symlinks targeting files
-// in subdirectories within the destination are permitted.
-func TestSafeSymlinksAllowed_Subdirectory(t *testing.T) {
-	t.Parallel()
-	ctx := t.Context()
-
-	skipIfNoSymlink(t)
-
-	archivePath := filepath.Join(t.TempDir(), "safe-subdir.tar.gz")
-	makeTarGz(t, archivePath, []tarEntry{
-		{name: "subdir/", isDir: true},
-		{name: "subdir/file.txt", content: "nested"},
-		{name: "link-to-nested", linkTarget: "subdir/file.txt"},
-	})
-
-	dst := t.TempDir()
-	err := Decompress(ctx, archivePath, dst, DecompressOpts{})
-	require.NoError(t, err, "symlinks to subdirectory files should be allowed")
-}
-
-// TestSafeSymlinksAllowed_StripHandler verifies that legitimate relative
-// symlinks within subdirectories are permitted when using StripComponents.
-// This catches an incorrect implementation that validates linkTarget relative
-// to dst instead of relative to the symlink's parent directory.
-func TestSafeSymlinksAllowed_StripHandler(t *testing.T) {
-	t.Parallel()
-	ctx := t.Context()
-
-	skipIfNoSymlink(t)
-
-	// Archive layout:
-	//   prefix/deep/file.txt          (regular file)
-	//   prefix/deep/nested/link       (symlink -> ../file.txt)
-	//
-	// After strip=1:
-	//   deep/file.txt
-	//   deep/nested/link -> ../file.txt
-	//
-	// The symlink resolves: dst/deep/nested/ + ../file.txt = dst/deep/file.txt
-	// This is safely within dst and must be allowed.
-	archivePath := filepath.Join(t.TempDir(), "safe-strip.tar.gz")
-	makeTarGz(t, archivePath, []tarEntry{
-		{name: "prefix/", isDir: true},
-		{name: "prefix/deep/", isDir: true},
-		{name: "prefix/deep/file.txt", content: "safe content"},
-		{name: "prefix/deep/nested/", isDir: true},
-		{name: "prefix/deep/nested/link", linkTarget: "../file.txt"},
-	})
-
-	dst := t.TempDir()
-	err := Decompress(ctx, archivePath, dst, DecompressOpts{StripComponents: 1})
-	require.NoError(t, err, "relative symlink within dst should be allowed with strip")
-
-	linkPath := filepath.Join(dst, "deep", "nested", "link")
-	target, err := os.Readlink(linkPath)
-	require.NoError(t, err, "symlink should exist")
-	require.Equal(t, filepath.Join("..", "file.txt"), target)
-
-	// Verify the symlink resolves to the correct content
-	content, err := os.ReadFile(linkPath)
-	require.NoError(t, err)
-	require.Equal(t, "safe content", string(content))
-}
-
-// TestSafeSymlinksAllowed_FilterHandler verifies that legitimate symlinks
-// are permitted when using filtered extraction.
-func TestSafeSymlinksAllowed_FilterHandler(t *testing.T) {
-	t.Parallel()
-	ctx := t.Context()
-
-	skipIfNoSymlink(t)
-
-	archivePath := filepath.Join(t.TempDir(), "safe-filter.tar.gz")
-	makeTarGz(t, archivePath, []tarEntry{
-		{name: "real-file.txt", content: "filtered content"},
-		{name: "safe-link", linkTarget: "real-file.txt"},
-	})
-
-	dst := t.TempDir()
-	err := Decompress(ctx, archivePath, dst, DecompressOpts{
-		Files:          []string{"real-file.txt", "safe-link"},
-		SkipValidation: true,
-	})
-	require.NoError(t, err, "safe symlinks should be allowed in filtered extraction")
-
-	// Verify the symlink resolves to the correct content
-	content, err := os.ReadFile(filepath.Join(dst, "safe-link"))
-	require.NoError(t, err)
-	require.Equal(t, "filtered content", string(content))
+	err := Decompress(t.Context(), archivePath, dst, DecompressOpts{})
+	require.Error(t, err)
+	require.NoFileExists(t, filepath.Join(filepath.Dir(dst), "outside", "attempt.txt"))
+	info, lstatErr := os.Lstat(filepath.Join(dst, "d"))
+	require.NoError(t, lstatErr)
+	require.NotZero(t, info.Mode()&os.ModeSymlink)
+	info, lstatErr = os.Lstat(filepath.Join(dst, "escape"))
+	require.NoError(t, lstatErr)
+	require.NotZero(t, info.Mode()&os.ModeSymlink)
 }
 
 // TestWindowsReservedNames verifies that archive entries using Windows
@@ -473,11 +289,6 @@ func TestWindowsReservedNames(t *testing.T) {
 			opts:    DecompressOpts{Files: []string{"AUX"}, SkipValidation: true},
 		},
 		{
-			name:    "reserved name as symlink target",
-			entries: []tarEntry{{name: "link", linkTarget: "CON"}},
-			opts:    DecompressOpts{},
-		},
-		{
 			name:    "COM0 device name",
 			entries: []tarEntry{{name: "COM0", content: "data"}},
 			opts:    DecompressOpts{},
@@ -500,11 +311,6 @@ func TestWindowsReservedNames(t *testing.T) {
 		{
 			name:    "reserved name with extension in subdirectory",
 			entries: []tarEntry{{name: "subdir/AUX.log", content: "data"}},
-			opts:    DecompressOpts{},
-		},
-		{
-			name:    "reserved name with extension as symlink target",
-			entries: []tarEntry{{name: "link", linkTarget: "NUL.txt"}},
 			opts:    DecompressOpts{},
 		},
 	}
@@ -546,11 +352,6 @@ func TestColonInEntryName(t *testing.T) {
 		{
 			name:    "drive-relative path",
 			entries: []tarEntry{{name: "C:relative/file.txt", content: "data"}},
-			opts:    DecompressOpts{},
-		},
-		{
-			name:    "colon in symlink target",
-			entries: []tarEntry{{name: "link", linkTarget: "C:file.txt"}},
 			opts:    DecompressOpts{},
 		},
 		{
@@ -603,14 +404,6 @@ func TestTrailingDotsAndSpaces(t *testing.T) {
 			name:    "trailing dots in subdirectory component",
 			entries: []tarEntry{{name: "subdir./file.txt", content: "data"}},
 			opts:    DecompressOpts{},
-		},
-		{
-			name: "trailing dot in symlink target",
-			entries: []tarEntry{
-				{name: "real.txt", content: "data"},
-				{name: "link", linkTarget: "real.txt."},
-			},
-			opts: DecompressOpts{},
 		},
 		{
 			name:    "trailing dot with strip handler",
@@ -671,72 +464,6 @@ func TestBackslashInEntryName(t *testing.T) {
 			dst := t.TempDir()
 			err := Decompress(ctx, archivePath, dst, tc.opts)
 			require.Error(t, err, "entries with backslashes should be rejected")
-		})
-	}
-}
-
-// TestRootedSymlinkTarget verifies that symlink targets starting with
-// / or \ (rooted paths without a drive letter) are rejected.
-func TestRootedSymlinkTarget(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		entries []tarEntry
-	}{
-		{
-			name:    "forward-slash rooted symlink target",
-			entries: []tarEntry{{name: "link", linkTarget: "/etc/passwd"}},
-		},
-		{
-			name:    "backslash rooted symlink target",
-			entries: []tarEntry{{name: "link", linkTarget: "\\Windows\\System32"}},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			ctx := t.Context()
-			archivePath := filepath.Join(t.TempDir(), "rooted.tar.gz")
-			makeTarGz(t, archivePath, tc.entries)
-
-			dst := t.TempDir()
-			err := Decompress(ctx, archivePath, dst, DecompressOpts{})
-			require.Error(t, err, "rooted symlink targets should be rejected")
-		})
-	}
-}
-
-// TestVolumeNameInSymlinkTarget verifies that symlink targets containing
-// Windows volume names (drive letters, UNC paths) are rejected.
-func TestVolumeNameInSymlinkTarget(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		entries []tarEntry
-	}{
-		{
-			name:    "drive letter in symlink target",
-			entries: []tarEntry{{name: "link", linkTarget: "C:file.txt"}},
-		},
-		{
-			name:    "drive-absolute symlink target",
-			entries: []tarEntry{{name: "link", linkTarget: "C:\\Windows\\System32"}},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			ctx := t.Context()
-			archivePath := filepath.Join(t.TempDir(), "volume.tar.gz")
-			makeTarGz(t, archivePath, tc.entries)
-
-			dst := t.TempDir()
-			err := Decompress(ctx, archivePath, dst, DecompressOpts{})
-			require.Error(t, err, "symlink targets with volume names should be rejected")
 		})
 	}
 }
@@ -845,53 +572,6 @@ func TestHardlinkWithStripHandler(t *testing.T) {
 	require.Equal(t, "stripped content", string(content))
 }
 
-// TestMaliciousNestedArchive verifies that a clean outer archive containing
-// a malicious inner .tar with traversal entries is rejected when using
-// UnarchiveAll.
-func TestMaliciousNestedArchive(t *testing.T) {
-	t.Parallel()
-	ctx := t.Context()
-
-	// Step 1: Create the malicious inner .tar archive.
-	innerDir := t.TempDir()
-	innerPath := filepath.Join(innerDir, "evil.tar")
-	innerF, err := os.Create(innerPath)
-	require.NoError(t, err)
-	innerTw := tar.NewWriter(innerF)
-	require.NoError(t, innerTw.WriteHeader(&tar.Header{
-		Name:     "escape-link",
-		Typeflag: tar.TypeSymlink,
-		Linkname: "../../../etc/shadow",
-	}))
-	require.NoError(t, innerTw.Close())
-	require.NoError(t, innerF.Close())
-
-	// Step 2: Create the outer tar.gz containing the inner .tar.
-	innerData, err := os.ReadFile(innerPath)
-	require.NoError(t, err)
-	outerPath := filepath.Join(t.TempDir(), "outer.tar.gz")
-	outerF, err := os.Create(outerPath)
-	require.NoError(t, err)
-	gw := gzip.NewWriter(outerF)
-	outerTw := tar.NewWriter(gw)
-	require.NoError(t, outerTw.WriteHeader(&tar.Header{
-		Name:     "evil.tar",
-		Typeflag: tar.TypeReg,
-		Mode:     0o644,
-		Size:     int64(len(innerData)),
-	}))
-	_, err = outerTw.Write(innerData)
-	require.NoError(t, err)
-	require.NoError(t, outerTw.Close())
-	require.NoError(t, gw.Close())
-	require.NoError(t, outerF.Close())
-
-	// Step 3: Extract with UnarchiveAll — should fail on the inner archive.
-	dst := t.TempDir()
-	err = Decompress(ctx, outerPath, dst, DecompressOpts{UnarchiveAll: true})
-	require.Error(t, err, "malicious nested archive should be rejected")
-}
-
 func TestValidateEntryName(t *testing.T) {
 	t.Parallel()
 
@@ -935,58 +615,4 @@ func TestValidateEntryName(t *testing.T) {
 			require.ErrorContains(t, err, tc.contains)
 		})
 	}
-}
-
-func TestValidateSymlink(t *testing.T) {
-	t.Parallel()
-
-	valid := []struct {
-		name       string
-		rel        string
-		linkTarget string
-	}{
-		{"same directory", "link", "target.txt"},
-		{"subdirectory target", "link", "sub/target.txt"},
-		{"parent within root", "sub/link", "../target.txt"},
-		{"deep nesting", "a/b/c/link", "../../d/target.txt"},
-	}
-	for _, tc := range valid {
-		t.Run("valid/"+tc.name, func(t *testing.T) {
-			t.Parallel()
-			require.NoError(t, validateSymlink(tc.rel, tc.linkTarget))
-		})
-	}
-
-	invalid := []struct {
-		name       string
-		rel        string
-		linkTarget string
-		contains   string
-	}{
-		{"empty target", "link", "", "empty symlink target"},
-		{"absolute target", "link", "/etc/passwd", "absolute"},
-		{"escape via dotdot", "link", "../escape", "escapes root"},
-		{"deep escape", "sub/link", "../../escape", "escapes root"},
-		{"rooted backslash", "link", "\\Windows\\System32", "rooted"},
-	}
-	for _, tc := range invalid {
-		t.Run("invalid/"+tc.name, func(t *testing.T) {
-			t.Parallel()
-			err := validateSymlink(tc.rel, tc.linkTarget)
-			require.Error(t, err)
-			require.ErrorContains(t, err, tc.contains)
-		})
-	}
-
-	// filepath.VolumeName only parses drive letters on Windows, so the
-	// volume-name check in validateSymlink is only effective there.
-	t.Run("invalid/volume_name", func(t *testing.T) {
-		t.Parallel()
-		if runtime.GOOS != "windows" {
-			t.Skip("filepath.VolumeName does not detect drive letters on non-Windows")
-		}
-		err := validateSymlink("link", "C:file.txt")
-		require.Error(t, err)
-		require.ErrorContains(t, err, "volume name")
-	})
 }

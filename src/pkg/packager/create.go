@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -78,6 +80,10 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		err = errors.Join(err, loaded.Close())
 	}()
 	pkg := loaded.Definition
+	if pkg.GetAPIVersion() == v1beta1.APIVersion && !feature.IsEnabled(feature.V1Beta1) {
+		return "", fmt.Errorf("creating a %s package requires the %q feature. Run again with --features=%s=true",
+			v1beta1.APIVersion, feature.V1Beta1, feature.V1Beta1)
+	}
 
 	var differentialPkg api.Package
 	if opts.DifferentialPackagePath != "" {

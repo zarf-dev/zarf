@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
@@ -89,6 +90,9 @@ type DeployOptions struct {
 	IsInteractive bool
 	// SkipValuesSchemaValidation skips validation of the merged package values against the package schema.
 	SkipValuesSchemaValidation bool
+	// SkipArchitectureCheck allows application images to deploy to nodes with a different architecture.
+	// The operator must configure emulation on the target nodes.
+	SkipArchitectureCheck bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
 }
@@ -117,9 +121,13 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		return DeployResult{}, fmt.Errorf("--connected is not supported for init packages")
 	}
 
+	if opts.SkipArchitectureCheck && pkg.IsInitConfig() {
+		return DeployResult{}, fmt.Errorf("skipping architecture checks is not supported for init packages")
+	}
+
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
-		if err := requirements.ValidateVersionRequirements(pkg); err != nil {
+		if err := requirements.ValidateVersionRequirements(pkg.Build.VersionRequirements); err != nil {
 			return DeployResult{}, fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", err)
 		}
 	}
@@ -258,7 +266,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				if err != nil {
 					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 				}
-				if err := d.verifyPackageIsDeployable(ctx, pkgLayout); err != nil {
+				if err := d.verifyPackageIsDeployable(ctx, pkgLayout, opts.SkipArchitectureCheck); err != nil {
 					return nil, fmt.Errorf("package is not deployable to this system: %w", err)
 				}
 			}
@@ -300,6 +308,20 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		}
 
 		onDeploy := component.Actions.OnDeploy
+		onSuccess := func() error {
+			if err := actions.Run(ctx, cwd, onDeploy.OnSuccess, actions.RunOptions{
+				DefaultConfig:  onDeploy.Defaults,
+				VariableConfig: d.vc,
+				Values:         d.vals,
+				StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
+			}); err != nil {
+				return fmt.Errorf("unable to run component success action: %w", err)
+			}
+			return nil
+		}
+		if deployErr == nil && pkg.GetAPIVersion() != v1alpha1.APIVersion {
+			deployErr = onSuccess()
+		}
 
 		onFailure := func() {
 			if err := actions.Run(ctx, cwd, onDeploy.OnFailure, actions.RunOptions{
@@ -344,14 +366,12 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 
-		if err := actions.Run(ctx, cwd, onDeploy.OnSuccess, actions.RunOptions{
-			DefaultConfig:  onDeploy.Defaults,
-			VariableConfig: d.vc,
-			Values:         d.vals,
-			StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
-		}); err != nil {
-			onFailure()
-			return nil, fmt.Errorf("unable to run component success action: %w", err)
+		// Alpha success hooks observe the saved successful deployment
+		if pkg.GetAPIVersion() == v1alpha1.APIVersion {
+			if err := onSuccess(); err != nil {
+				onFailure()
+				return nil, err
+			}
 		}
 	}
 
@@ -363,17 +383,17 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 	services := state.NewServiceSet()
 	registryExternal := opts.RegistryInfo.Address != ""
 	for _, c := range components {
-		switch c.Name {
-		case "git-server":
+		switch c.Service.Name {
+		case api.ServiceGitServer:
 			services.Add(state.GitKey)
 			if feature.IsEnabled(feature.ArtifactServer) {
 				services.Add(state.ArtifactKey)
 			}
-		case "zarf-registry", "zarf-seed-registry", "zarf-injector":
+		case api.ServiceRegistry, api.ServiceSeedRegistry, api.ServiceInjector:
 			if !registryExternal {
 				services.Add(state.RegistryKey)
 			}
-		case "zarf-agent":
+		case api.ServiceAgent:
 			services.Add(state.AgentKey)
 		}
 	}
@@ -383,10 +403,10 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
-	isSeedRegistry := component.Name == "zarf-seed-registry"
-	isRegistry := component.Name == "zarf-registry"
-	isInjector := component.Name == "zarf-injector"
-	isAgent := component.Name == "zarf-agent"
+	isSeedRegistry := component.Service.Name == api.ServiceSeedRegistry
+	isRegistry := component.Service.Name == api.ServiceRegistry
+	isInjector := component.Service.Name == api.ServiceInjector
+	isAgent := component.Service.Name == api.ServiceAgent
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if component.RequiresCluster() && d.s == nil {
@@ -518,7 +538,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 	}
 
-	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, component.Name, d.s)
+	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, component.Service.Name, d.s)
 	if err != nil {
 		return nil, err
 	}
@@ -795,8 +815,8 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 	return installedCharts, nil
 }
 
-func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkgLayout *layout.PackageLayout) error {
-	if err := verifyClusterCompatibility(ctx, d.c, pkgLayout); err != nil {
+func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkgLayout *layout.PackageLayout, skipArchitectureCheck bool) error {
+	if err := verifyClusterCompatibility(ctx, d.c, pkgLayout, skipArchitectureCheck); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
 			logger.From(ctx).Warn("unable to validate package architecture", "error", err)
 		} else {
@@ -841,7 +861,7 @@ func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state
 	return s, nil
 }
 
-func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout) error {
+func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, skipArchitectureCheck bool) error {
 	pkg := pkgLayout.Definition()
 	// Ignore this check if the package contains no images
 	if !pkg.HasImages() {
@@ -875,7 +895,11 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayo
 
 	// Check if the package architecture and the cluster architecture are the same.
 	if !slices.Contains(architectures, pkg.Metadata.Architecture) {
-		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, pkg.Metadata.Architecture, strings.Join(architectures, ", "))
+		if !skipArchitectureCheck {
+			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, pkg.Metadata.Architecture, strings.Join(architectures, ", "))
+		}
+		logger.From(ctx).Warn("Architecture mismatch allowed. The target nodes must support emulation. Intended for development and testing; not recommended for production.",
+			"packageArchitecture", pkg.Metadata.Architecture, "nodeArchitectures", architectures)
 	}
 
 	return nil
