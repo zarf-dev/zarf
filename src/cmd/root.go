@@ -274,24 +274,22 @@ func setupRootFlags(rootCmd *cobra.Command) {
 	rootCmd.PersistentFlags().StringVar(&kubeContext, "context", vpr.GetString(VKubeContext), lang.RootCmdFlagKubeContext)
 }
 
-// tempKubeconfig is the kubeconfig materialized for --context, removed by Execute.
+// tempKubeconfig is the context overlay written for --context, removed by Execute.
 var tempKubeconfig string
 
 // setupKubeconfig resolves the --kubeconfig and --context flags into a KUBECONFIG value so
 // that Zarf's own client, the vendored tools and any command an action shells out to all
 // agree on which cluster they are talking to. It is a no-op when neither flag is set.
 func setupKubeconfig() error {
-	path, err := cluster.WriteEffectiveKubeconfig(clusterConnectOptions(), config.CommonOptions.TempDirectory)
+	kubeconfig, overlay, err := cluster.KubeconfigEnv(clusterConnectOptions(), config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
 	}
-	if path == "" {
+	if kubeconfig == "" {
 		return nil
 	}
-	if path != kubeconfigPath {
-		tempKubeconfig = path
-	}
-	return os.Setenv("KUBECONFIG", path)
+	tempKubeconfig = overlay
+	return os.Setenv("KUBECONFIG", kubeconfig)
 }
 
 // chainKubeconfigPreRun makes a vendored command honor --kubeconfig and --context. Their root
@@ -318,6 +316,8 @@ func chainKubeconfigPreRun(cmd *cobra.Command) {
 
 // Execute is the entrypoint for the CLI.
 func Execute(ctx context.Context) error {
+	// A vendored tool can call os.Exit itself and skip this, which is survivable: the overlay
+	// holds a context name and no credentials.
 	cleanup := func() {
 		if tempKubeconfig != "" {
 			//nolint: errcheck // the command is over, a leftover temp file is not worth failing on

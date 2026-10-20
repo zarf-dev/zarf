@@ -7,6 +7,7 @@ package cluster
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -48,7 +49,7 @@ func writeKubeconfig(t *testing.T) string {
 	return path
 }
 
-func TestWriteEffectiveKubeconfig(t *testing.T) {
+func TestKubeconfigEnv(t *testing.T) {
 	t.Parallel()
 
 	kubeconfig := writeKubeconfig(t)
@@ -56,50 +57,71 @@ func TestWriteEffectiveKubeconfig(t *testing.T) {
 	t.Run("zero options select nothing", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
-		path, err := WriteEffectiveKubeconfig(ConnectOptions{}, dir)
+		value, overlay, err := KubeconfigEnv(ConnectOptions{}, dir)
 		require.NoError(t, err)
-		require.Empty(t, path)
-		entries, err := os.ReadDir(dir)
-		require.NoError(t, err)
-		require.Empty(t, entries, "no file should be written when nothing is selected")
+		require.Empty(t, value)
+		require.Empty(t, overlay)
+		requireEmptyDir(t, dir)
 	})
 
-	t.Run("path only is passed through without copying credentials", func(t *testing.T) {
+	t.Run("path only is passed through without writing anything", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
-		path, err := WriteEffectiveKubeconfig(ConnectOptions{Kubeconfig: kubeconfig}, dir)
+		value, overlay, err := KubeconfigEnv(ConnectOptions{Kubeconfig: kubeconfig}, dir)
 		require.NoError(t, err)
-		require.Equal(t, kubeconfig, path)
-		entries, err := os.ReadDir(dir)
-		require.NoError(t, err)
-		require.Empty(t, entries)
+		require.Equal(t, kubeconfig, value)
+		require.Empty(t, overlay)
+		requireEmptyDir(t, dir)
 	})
 
-	t.Run("context is materialized as current-context", func(t *testing.T) {
+	t.Run("context becomes an overlay ahead of the real kubeconfig", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
-		path, err := WriteEffectiveKubeconfig(ConnectOptions{Kubeconfig: kubeconfig, Context: "beta"}, dir)
+		value, overlay, err := KubeconfigEnv(ConnectOptions{Kubeconfig: kubeconfig, Context: "beta"}, dir)
 		require.NoError(t, err)
-		require.NotEqual(t, kubeconfig, path)
+		require.NotEmpty(t, overlay)
+		require.Equal(t, strings.Join([]string{overlay, kubeconfig}, string(os.PathListSeparator)), value)
 
-		info, err := os.Stat(path)
+		// The overlay must carry the context and nothing else: it outlives the command when a
+		// vendored tool exits on its own, so it must never hold credentials.
+		contents, err := os.ReadFile(overlay)
 		require.NoError(t, err)
-		require.Equal(t, os.FileMode(0o600), info.Mode().Perm(), "the written kubeconfig holds credentials")
+		require.Contains(t, string(contents), `current-context: "beta"`)
+		require.NotContains(t, string(contents), "token")
+		require.NotContains(t, string(contents), "alpha-cluster")
 
-		written, err := clientcmd.LoadFromFile(path)
+		written, err := clientcmd.LoadFromFile(overlay)
 		require.NoError(t, err)
 		require.Equal(t, "beta", written.CurrentContext)
+		require.Empty(t, written.AuthInfos)
+		require.Empty(t, written.Clusters)
 	})
 
 	t.Run("unknown context is an error, not a silent fallback", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
-		_, err := WriteEffectiveKubeconfig(ConnectOptions{Kubeconfig: kubeconfig, Context: "gamma"}, dir)
+		_, _, err := KubeconfigEnv(ConnectOptions{Kubeconfig: kubeconfig, Context: "gamma"}, dir)
 		require.ErrorContains(t, err, `context "gamma" does not exist`)
-		entries, err := os.ReadDir(dir)
-		require.NoError(t, err)
-		require.Empty(t, entries, "a failed resolution must not leave a kubeconfig behind")
+		requireEmptyDir(t, dir)
 	})
+}
+
+// TestKubeconfigEnvWithoutExplicitPath is separate because it sets KUBECONFIG.
+func TestKubeconfigEnvWithoutExplicitPath(t *testing.T) {
+	kubeconfig := writeKubeconfig(t)
+	dir := t.TempDir()
+	t.Setenv("KUBECONFIG", kubeconfig)
+
+	value, overlay, err := KubeconfigEnv(ConnectOptions{Context: "beta"}, dir)
+	require.NoError(t, err)
+	require.Equal(t, strings.Join([]string{overlay, kubeconfig}, string(os.PathListSeparator)), value)
+}
+
+func requireEmptyDir(t *testing.T, dir string) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	require.Empty(t, entries)
 }
 
 func TestClientAndConfigSelectsContext(t *testing.T) {

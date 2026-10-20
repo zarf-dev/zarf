@@ -183,6 +183,12 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		return fmt.Errorf("package references values that cannot be resolved (value templates must be explicitly defined, even if empty): %w", err)
 	}
 
+	cleanup, err := d.applyConnectOptions(opts.ConnectOptions)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOptions{
 		SetVariables:          opts.DeploySetVariables,
@@ -194,6 +200,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		RemoteOptions:         opts.RemoteOptions,
 		TakeOwnership:         opts.TakeOwnership,
 		SkipArchitectureCheck: opts.SkipArchitectureCheck,
+		ConnectOptions:        opts.ConnectOptions,
 	})
 	if err != nil {
 		return err
