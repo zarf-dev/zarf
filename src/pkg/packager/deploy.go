@@ -751,8 +751,10 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 				return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
 			}
 			// Apply ###ZARF_VAR_*### substitution before Helm sees the file.
-			if err := d.vc.ReplaceTextTemplate(path); err != nil {
-				return installedCharts, fmt.Errorf("error templating manifest %s: %w", path, err)
+			if pkg.GetAPIVersion() == v1alpha1.APIVersion {
+				if err := d.vc.ReplaceTextTemplate(path); err != nil {
+					return installedCharts, fmt.Errorf("error templating manifest %s: %w", path, err)
+				}
 			}
 			if manifest.EnableTemplating {
 				l.Debug("start manifest template", "manifest", manifest.Name, "path", path)
@@ -773,9 +775,11 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 		for idx := range manifest.Kustomize.Files {
 			kustomization := layout.KustomizationFileName(manifest.Name, idx)
 			manifest.Files = append(manifest.Files, kustomization)
-			path := filepath.Join(manifestDir, kustomization)
-			if err := d.vc.ReplaceTextTemplate(path); err != nil {
-				return installedCharts, fmt.Errorf("error templating kustomization %s: %w", path, err)
+			if pkg.GetAPIVersion() == v1alpha1.APIVersion {
+				path := filepath.Join(manifestDir, kustomization)
+				if err := d.vc.ReplaceTextTemplate(path); err != nil {
+					return installedCharts, fmt.Errorf("error templating kustomization %s: %w", path, err)
+				}
 			}
 		}
 
@@ -940,7 +944,7 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 		destination := file.Destination
 		if pkg.GetAPIVersion() == v1alpha1.APIVersion {
 			destination = strings.Replace(destination, "###ZARF_TEMP###", pkgLayout.DirPath(), 1)
-		} else {
+		} else if strings.Contains(destination, "{{") {
 			// Resolve the injector destination without enabling templating on its binary contents.
 			objs := template.Objects{"Runtime": map[string]string{"TmpDir": pkgLayout.DirPath()}}
 			destination, err = template.Apply(ctx, destination, objs)
@@ -954,45 +958,49 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 		}
 		file.Destination = target
 
-		fileList := []string{}
-		if helpers.IsDir(fileLocation) {
-			files, err := helpers.RecursiveFileList(fileLocation, nil, false)
-			if err != nil {
-				return err
-			}
-			fileList = append(fileList, files...)
-		} else {
-			fileList = append(fileList, fileLocation)
-		}
-
-		for _, subFile := range fileList {
-			// Check if the file looks like a text file
-			isText, err := helpers.IsTextFile(subFile)
-			if err != nil {
-				return err
-			}
-
-			// If the file is a text file, template it
-			if isText {
-				l.Debug("template file", "name", file.Destination)
-				if err := variableConfig.ReplaceTextTemplate(subFile); err != nil {
-					return fmt.Errorf("unable to template file %s: %w", subFile, err)
-				}
-			}
-			// If the file has go-templating enabled, apply templates.
-			if file.EnableTemplating {
-				l.Debug("templates enabled, processing file", "name", file.Destination)
-				objs, err := template.NewObjects(values).
-					WithPackage(pkg).
-					WithVariables(variableConfig.GetSetVariableMap()).
-					WithConstants(variableConfig.GetConstants()).
-					WithState(stateAccess)
+		if pkg.GetAPIVersion() == v1alpha1.APIVersion || file.EnableTemplating {
+			fileList := []string{}
+			if helpers.IsDir(fileLocation) {
+				files, err := helpers.RecursiveFileList(fileLocation, nil, false)
 				if err != nil {
 					return err
 				}
-				err = template.ApplyToFile(ctx, subFile, subFile, objs)
-				if err != nil {
-					return err
+				fileList = append(fileList, files...)
+			} else {
+				fileList = append(fileList, fileLocation)
+			}
+
+			for _, subFile := range fileList {
+				if pkg.GetAPIVersion() == v1alpha1.APIVersion {
+					// Check if the file looks like a text file
+					isText, err := helpers.IsTextFile(subFile)
+					if err != nil {
+						return err
+					}
+
+					// If the file is a text file, template it
+					if isText {
+						l.Debug("template file", "name", file.Destination)
+						if err := variableConfig.ReplaceTextTemplate(subFile); err != nil {
+							return fmt.Errorf("unable to template file %s: %w", subFile, err)
+						}
+					}
+				}
+				// If the file has go-templating enabled, apply templates.
+				if file.EnableTemplating {
+					l.Debug("templates enabled, processing file", "name", file.Destination)
+					objs, err := template.NewObjects(values).
+						WithPackage(pkg).
+						WithVariables(variableConfig.GetSetVariableMap()).
+						WithConstants(variableConfig.GetConstants()).
+						WithState(stateAccess)
+					if err != nil {
+						return err
+					}
+					err = template.ApplyToFile(ctx, subFile, subFile, objs)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
