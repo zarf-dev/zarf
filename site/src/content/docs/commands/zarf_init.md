@@ -39,7 +39,7 @@ $ zarf init --components=git-server
 $ zarf init oci://ghcr.io/zarf-dev/packages/init:v0.69.0
 
 # Initializing w/ an internal registry in proxy mode for built-in cross-node mTLS:
-$ zarf init --registry-mode=proxy
+$ zarf init --registry-mode=proxy --injector-image={IMAGE}
 
 # Initializing w/ an internal registry but with a different nodeport:
 $ zarf init --registry-port=30333
@@ -74,7 +74,7 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
       --git-push-username string                Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
       --git-url string                          External git server url to use for this Zarf cluster
   -h, --help                                    help for init
-      --injector-image string                   Image for the injector. This image must be available on every node
+      --injector-image string                   Image for the injector. Required in proxy mode unless a previous proxy injector image is saved in cluster state. This image must be available on every node
       --injector-port int                       The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
