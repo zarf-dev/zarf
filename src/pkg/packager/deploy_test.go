@@ -370,7 +370,6 @@ func TestDeployFileTemplatesByAPIVersion(t *testing.T) {
 				Components: []api.Component{
 					{Name: "files", Files: []api.File{
 						{Source: "injector", Destination: tt.destination, Executable: true, Symlinks: []string{injectorLink}},
-						{Source: "text", Destination: strings.TrimSuffix(tt.destination, "zarf-injector") + layout.ZarfYAML},
 						{Source: "text", Destination: filepath.Join(output, "text")},
 					}},
 					{Name: "consumer", Actions: api.ComponentActions{OnDeploy: api.ActionSet{
@@ -384,9 +383,10 @@ func TestDeployFileTemplatesByAPIVersion(t *testing.T) {
 				pkg.Components[1].Actions.OnDeploy.OnSuccess = append(pkg.Components[1].Actions.OnDeploy.OnSuccess, api.Action{Cmd: "exit 1"})
 			}
 			if tt.apiVersion == v1beta1.APIVersion {
-				pkg.Components[0].Files = append(pkg.Components[0].Files, api.File{
-					Source: "text", Destination: filepath.Join(output, "###ZARF_TEMP###", "literal"),
-				})
+				pkg.Components[0].Files = append(pkg.Components[0].Files,
+					api.File{Source: "text", Destination: "{{ .Runtime.TempDir }}/" + layout.ZarfYAML},
+					api.File{Source: "text", Destination: filepath.Join(output, "###ZARF_TEMP###", "literal")},
+				)
 			}
 			pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(dir)}, assemble.AssembleOptions{SkipSBOM: true})
 			require.NoError(t, err)
@@ -407,9 +407,15 @@ func TestDeployFileTemplatesByAPIVersion(t *testing.T) {
 			definition, err := os.ReadFile(definitionPath)
 			require.NoError(t, err)
 			require.Equal(t, string(originalDefinition), string(definition), "temporary files must not overwrite the package definition")
-			injectorPath, err := os.Readlink(injectorLink)
-			require.NoError(t, err)
-			require.NoDirExists(t, filepath.Dir(injectorPath), "temporary files must be cleaned up after deployment")
+			if tt.apiVersion == v1alpha1.APIVersion {
+				stagedBinary, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "zarf-injector"))
+				require.NoError(t, err, "legacy temporary files must remain in the package layout after deployment")
+				require.Equal(t, binary, stagedBinary)
+			} else {
+				injectorPath, err := os.Readlink(injectorLink)
+				require.NoError(t, err)
+				require.NoDirExists(t, filepath.Dir(injectorPath), "temporary files must be cleaned up after deployment")
+			}
 			text, err := os.ReadFile(filepath.Join(output, "text"))
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedText, string(text))

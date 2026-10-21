@@ -105,7 +105,7 @@ type deployer struct {
 	vc   *variables.VariableConfig
 	vals value.Values
 
-	// runtimeDir holds runtime files across components without modifying the package layout.
+	// runtimeDir holds runtime files across components. v1alpha1 uses the package layout.
 	runtimeDir string
 }
 
@@ -253,13 +253,16 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		return nil, fmt.Errorf("failed to get working directory: %w", err)
 	}
 
-	d.runtimeDir, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return nil, err
+	d.runtimeDir = pkgLayout.DirPath()
+	if pkg.GetAPIVersion() != v1alpha1.APIVersion {
+		d.runtimeDir, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(d.runtimeDir))
+		}()
 	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(d.runtimeDir))
-	}()
 
 	for _, component := range pkg.Components {
 		packageGeneration := 1
