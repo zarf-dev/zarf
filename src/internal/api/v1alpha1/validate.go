@@ -21,34 +21,36 @@ const (
 
 // Package errors found during validation.
 const (
-	PkgValidateErrInitNoYOLO              = "sorry, you can't YOLO an init package"
-	PkgValidateErrConstant                = "invalid package constant: %w"
-	PkgValidateErrYOLONoOCI               = "OCI images not allowed in YOLO"
-	PkgValidateErrYOLONoGit               = "git repos not allowed in YOLO"
-	PkgValidateErrYOLONoArch              = "cluster architecture not allowed in YOLO"
-	PkgValidateErrYOLONoDistro            = "cluster distros not allowed in YOLO"
-	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
-	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"
-	PkgValidateErrComponentReqGrouped     = "component %q cannot be both required and grouped"
-	PkgValidateErrChartNameNotUnique      = "chart name %q is not unique"
-	PkgValidateErrChart                   = "invalid chart definition: %w"
-	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
-	PkgValidateErrManifest                = "invalid manifest definition: %w"
-	PkgValidateErrGroupMultipleDefaults   = "group %q has multiple defaults (%q, %q)"
-	PkgValidateErrGroupOneComponent       = "group %q only has one component (%q)"
-	PkgValidateErrAction                  = "invalid action: %w"
-	PkgValidateErrActionCmdWait           = "action %q cannot be both a command and wait action"
-	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
-	PkgValidateErrChartName               = "chart %q exceed the maximum length of %d characters"
-	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
-	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
-	PkgValidateErrChartVersion            = "chart %q must include a chart version"
-	PkgValidateErrChartValueExcludePath   = "chart %q excludePath %q must be a descendant of sourcePath %q"
-	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
-	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
-	PkgValidateErrVariable                = "invalid package variable: %w"
-	PkgValidateErrNoComponents            = "package does not contain any compatible components"
-	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
+	PkgValidateErrInitNoYOLO                = "sorry, you can't YOLO an init package"
+	PkgValidateErrConstant                  = "invalid package constant: %w"
+	PkgValidateErrYOLONoOCI                 = "OCI images not allowed in YOLO"
+	PkgValidateErrYOLONoGit                 = "git repos not allowed in YOLO"
+	PkgValidateErrYOLONoArch                = "cluster architecture not allowed in YOLO"
+	PkgValidateErrYOLONoDistro              = "cluster distros not allowed in YOLO"
+	PkgValidateErrComponentNameNotUnique    = "component name %q is not unique"
+	PkgValidateErrComponentReqDefault       = "component %q cannot be both required and default"
+	PkgValidateErrComponentReqGrouped       = "component %q cannot be both required and grouped"
+	PkgValidateErrChartNameNotUnique        = "chart name %q is not unique"
+	PkgValidateErrChart                     = "invalid chart definition: %w"
+	PkgValidateErrManifestNameNotUnique     = "manifest name %q is not unique"
+	PkgValidateErrManifest                  = "invalid manifest definition: %w"
+	PkgValidateErrGroupMultipleDefaults     = "group %q has multiple defaults (%q, %q)"
+	PkgValidateErrGroupOneComponent         = "group %q only has one component (%q)"
+	PkgValidateErrAction                    = "invalid action: %w"
+	PkgValidateErrActionCmdWait             = "action %q cannot be both a command and wait action"
+	PkgValidateErrActionClusterNetwork      = "a single wait action must contain only one of cluster or network"
+	PkgValidateErrChartName                 = "chart %q exceed the maximum length of %d characters"
+	PkgValidateErrChartNamespaceMissing     = "chart %q must include a namespace"
+	PkgValidateErrChartURLOrPath            = "chart %q must have either a url or localPath"
+	PkgValidateErrChartVersion              = "chart %q must include a chart version"
+	PkgValidateErrChartValueExcludePath     = "chart %q excludePath %q must be a descendant of sourcePath %q"
+	PkgValidateErrManifestFileOrKustomize   = "manifest %q must have at least one file or kustomization"
+	PkgValidateErrManifestNameLength        = "manifest %q exceed the maximum length of %d characters"
+	PkgValidateErrManifestNamePath          = "manifest %q must not contain path separators"
+	PkgValidateErrDocumentationKeyPath      = "documentation key %q must not contain path separators"
+	PkgValidateErrDocumentationKeyTraversal = "documentation key %q must not be a traversal path"
+	PkgValidateErrNoComponents              = "package does not contain any compatible components"
+	PkgValidateErrActionTemplateOnCreate    = "templating is not supported in onCreate actions"
 )
 
 // ValidatePackage runs all validation checks on the package.
@@ -63,6 +65,13 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	for _, constant := range pkg.Constants {
 		if varErr := constant.Validate(); varErr != nil {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrConstant, varErr))
+		}
+	}
+	for key := range pkg.Documentation {
+		if key == ".." {
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrDocumentationKeyTraversal, key))
+		} else if strings.ContainsAny(key, `/\`) {
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrDocumentationKeyPath, key))
 		}
 	}
 	uniqueComponentNames := make(map[string]bool)
@@ -327,6 +336,10 @@ func validateManifest(manifest v1alpha1.ZarfManifest) error {
 
 	if len(manifest.Name) > ZarfMaxChartNameLength {
 		err = errors.Join(err, fmt.Errorf(PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
+	}
+
+	if strings.ContainsAny(manifest.Name, `/\`) {
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrManifestNamePath, manifest.Name))
 	}
 
 	if len(manifest.Files) < 1 && len(manifest.Kustomizations) < 1 {

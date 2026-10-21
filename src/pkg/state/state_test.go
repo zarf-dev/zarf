@@ -754,6 +754,69 @@ func TestMergeInstalledChartsForComponent(t *testing.T) {
 	}
 }
 
+func TestMergeInstalledChartsForComponentOrder(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		existingCharts  []InstalledChart
+		installedCharts []InstalledChart
+		expectedCharts  []InstalledChart
+	}{
+		{
+			name: "fresh install preserves deployment order",
+			installedCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "policy"},
+				{Namespace: "default", ChartName: "runtime"},
+			},
+			expectedCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "policy"},
+				{Namespace: "default", ChartName: "runtime"},
+			},
+		},
+		{
+			name: "redeployment restores deployment order",
+			existingCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "runtime"},
+				{Namespace: "default", ChartName: "policy"},
+			},
+			installedCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "policy"},
+				{Namespace: "default", ChartName: "runtime"},
+			},
+			expectedCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "policy"},
+				{Namespace: "default", ChartName: "runtime"},
+			},
+		},
+		{
+			name: "old-only charts follow the current deployment",
+			existingCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "runtime"},
+				{Namespace: "default", ChartName: "legacy"},
+				{Namespace: "default", ChartName: "policy"},
+			},
+			installedCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "policy"},
+				{Namespace: "default", ChartName: "runtime"},
+			},
+			expectedCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "policy"},
+				{Namespace: "default", ChartName: "runtime"},
+				{Namespace: "default", ChartName: "legacy"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			actual := MergeInstalledChartsForComponent(tt.existingCharts, tt.installedCharts, false)
+			require.Equal(t, tt.expectedCharts, actual)
+		})
+	}
+}
+
 func TestRegistryCertSecretData(t *testing.T) {
 	t.Parallel()
 

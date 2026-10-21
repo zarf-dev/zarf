@@ -94,7 +94,7 @@ release:
 brews:
   - name: "{{ .Env.BREW_NAME }}"
     repository:
-      owner: defenseunicorns
+      owner: zarf-dev
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
       branch: "{{ .ProjectName }}-{{ .Tag }}"
@@ -102,18 +102,21 @@ brews:
         enabled: true
         base:
           branch: main
-          owner: defenseunicorns
+          owner: zarf-dev
           name: homebrew-tap
 
     commit_msg_template: "build(release): upgrade {{ .ProjectName }} to {{ .Tag }}"
+    # Let GitHub sign commits made with the App installation token.
+    commit_author:
+      use_github_app_token: true
     homepage: "https://zarf.dev/"
-    description: "The Airgap Native Package Manager for Kubernetes"
+    description: "Airgap Native Package Manager for Kubernetes"
 
   # NOTE: We are using .Version instead of .Tag because homebrew has weird semver parsing rules and won't be able to
   #       install versioned releases that has a `v` character before the version number.
   - name: "zarf@{{ .Version }}"
     repository:
-      owner: defenseunicorns
+      owner: zarf-dev
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
       branch: "{{ .ProjectName }}-{{ .Tag }}"
@@ -121,8 +124,10 @@ brews:
         enabled: true
         base:
           branch: main
-          owner: defenseunicorns
+          owner: zarf-dev
           name: homebrew-tap
     commit_msg_template: "build(release): {{ .ProjectName }}@{{ .Tag }}"
+    commit_author:
+      use_github_app_token: true
     homepage: "https://zarf.dev/"
-    description: "The Airgap Native Package Manager for Kubernetes"
+    description: "Airgap Native Package Manager for Kubernetes"

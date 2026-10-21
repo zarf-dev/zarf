@@ -22,7 +22,7 @@ Install hooks with `pre-commit install`; they enforce formatting, linting, crede
 
 ## Testing Guidelines
 
-Add package-local tests for behavior changes, with `TestThing` / `TestThing_condition` names and table cases where useful. Use `testify` assertions. Add or update a numbered `src/test/e2e/` journey for user-visible CLI behavior; avoid cluster requirements unless needed.
+Add package-local tests for behavior changes, with `TestThing` / `TestThing_condition` names and table cases where useful. Use `testify` assertions. Add or update a numbered `src/test/e2e/` journey for new user-visible CLI features; avoid cluster requirements unless needed.
 
 ## Version Compatibility
 

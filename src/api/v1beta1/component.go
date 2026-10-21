@@ -63,19 +63,25 @@ type ComponentImportRemote struct {
 }
 
 // Service identifies which Zarf CLI service a component provides.
-type Service string
+type Service struct {
+	// The name of the Zarf CLI service this component provides.
+	Name ServiceName `json:"name" jsonschema:"enum=registry,enum=seed-registry,enum=injector,enum=agent,enum=git-server"`
+}
+
+// ServiceName identifies a Zarf CLI service.
+type ServiceName string
 
 const (
 	// ServiceRegistry indicates a component that provides the in-cluster registry.
-	ServiceRegistry Service = "registry"
+	ServiceRegistry ServiceName = "registry"
 	// ServiceSeedRegistry indicates a component that provides the seed registry used during init.
-	ServiceSeedRegistry Service = "seed-registry"
+	ServiceSeedRegistry ServiceName = "seed-registry"
 	// ServiceInjector indicates a component that provides the Zarf injector.
-	ServiceInjector Service = "injector"
+	ServiceInjector ServiceName = "injector"
 	// ServiceAgent indicates a component that provides the Zarf agent.
-	ServiceAgent Service = "agent"
+	ServiceAgent ServiceName = "agent"
 	// ServiceGitServer indicates a component that provides the in-cluster git server.
-	ServiceGitServer Service = "git-server"
+	ServiceGitServer ServiceName = "git-server"
 )
 
 // ServerSideApplyMode controls when server-side apply is used during deploy.
@@ -103,7 +109,7 @@ type KustomizeManifest struct {
 // Manifest defines raw manifests Zarf will deploy as a helm chart.
 type Manifest struct {
 	// A name to give this collection of manifests; this will become the name of the dynamically-created helm chart.
-	Name string `json:"name" jsonschema:"maxLength=40"`
+	Name string `json:"name" jsonschema:"maxLength=40,pattern=^[^/\\\\]*$"`
 	// The namespace to deploy the manifests to.
 	Namespace string `json:"namespace,omitempty"`
 	// List of local K8s YAML files or remote URLs to deploy (in order).
@@ -121,7 +127,7 @@ type Manifest struct {
 // Chart defines a helm chart to be deployed.
 type Chart struct {
 	// The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repository.
-	Name string `json:"name"`
+	Name string `json:"name" jsonschema:"pattern=^[^/\\\\]*$"`
 	// The Helm repository where the chart is stored.
 	HelmRepository *HelmRepositorySource `json:"helmRepository,omitempty" jsonschema:"oneof_required=helmRepository"`
 	// The Git repository where the chart is stored.

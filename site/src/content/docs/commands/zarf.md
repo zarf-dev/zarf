@@ -37,6 +37,7 @@ zarf COMMAND [flags]
 ### SEE ALSO
 
 * [zarf completion](/commands/zarf_completion/)	 - Generate the autocompletion script for the specified shell
+* [zarf component](/commands/zarf_component/)	 - Commands for reusable Zarf components
 * [zarf connect](/commands/zarf_connect/)	 - Accesses services or pods deployed in the cluster
 * [zarf destroy](/commands/zarf_destroy/)	 - Tears down Zarf and removes its components from the environment
 * [zarf dev](/commands/zarf_dev/)	 - Commands useful for developing packages

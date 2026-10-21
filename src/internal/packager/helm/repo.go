@@ -153,7 +153,11 @@ func PackageChartFromLocalFiles(ctx context.Context, chart api.Chart, paths layo
 
 	// Handle the chart directory or tarball.
 	var saved string
-	temp := filepath.Join(filepath.Dir(paths.Archive(chart.Name, chart.LegacyVersion)), "temp")
+	archivePath, err := paths.ArchivePath(chart.Name, chart.LegacyVersion)
+	if err != nil {
+		return err
+	}
+	temp := filepath.Join(filepath.Dir(archivePath), "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
 		err = buildChartDependencies(ctx, chart, cachePath, parsed.Metadata.Dependencies, remoteOptions)
 		if err != nil {
@@ -165,8 +169,9 @@ func PackageChartFromLocalFiles(ctx context.Context, chart api.Chart, paths layo
 		client.Destination = temp
 		saved, err = client.Run(localPath, nil)
 	} else {
-		saved = filepath.Join(temp, filepath.Base(localPath))
-		err = helpers.CreatePathAndCopy(localPath, saved)
+		// Keep the archive at its original path so final staging resolves relative
+		// symbolic-link targets against their source directory.
+		saved = localPath
 	}
 	defer func(l *slog.Logger) {
 		err := os.RemoveAll(temp)
@@ -383,9 +388,13 @@ func DownloadChartFromGitToTemp(ctx context.Context, source api.Repository) (str
 
 func finalizeChartPackage(ctx context.Context, chart api.Chart, paths layout.ChartPaths, saved string) error {
 	// Ensure the name is consistent for deployments
-	err := helpers.CreatePathAndCopy(saved, paths.Archive(chart.Name, chart.LegacyVersion))
+
+	archivePath, err := paths.ArchivePath(chart.Name, chart.LegacyVersion)
 	if err != nil {
-		return fmt.Errorf("unable to save the final chart tarball: %w", err)
+		return err
+	}
+	if err = layout.MaterializeSourceToLayout(ctx, saved, archivePath); err != nil {
+		return fmt.Errorf("unable to copy chart tarball %s: %w", saved, err)
 	}
 
 	err = packageValues(ctx, chart, paths)
@@ -397,14 +406,16 @@ func finalizeChartPackage(ctx context.Context, chart api.Chart, paths layout.Cha
 
 func packageValues(ctx context.Context, chart api.Chart, paths layout.ChartPaths) error {
 	for i, valuesFile := range chart.ValuesFiles {
-		dst := paths.ValuesFile(chart.Name, chart.LegacyVersion, i)
-
+		dst, err := paths.ValuesFilePath(chart.Name, chart.LegacyVersion, i)
+		if err != nil {
+			return err
+		}
 		if helpers.IsURL(valuesFile.Path) {
 			if err := utils.DownloadToFile(ctx, valuesFile.Path, dst); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, valuesFile.Path, err)
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(valuesFile.Path, dst); err != nil {
+			if err := layout.MaterializeSourceToLayout(ctx, valuesFile.Path, dst); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", valuesFile.Path, err)
 			}
 		}

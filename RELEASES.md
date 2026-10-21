@@ -66,7 +66,7 @@ Once the prerelease artifacts are published, a Homebrew Tap PR is created. It is
 * [ ] Review the GitHub release:
   * [ ] Add a summary of release updates and any required documentation around updates or breaking changes
 * [ ] Ensure goreleaser workflows execute successfully and review the release assets
-* [ ] Review, approve, and merge the [homebrew-tap](https://github.com/defenseunicorns/homebrew-tap) PR for the zarf release
+* [ ] Review, approve, and merge the [homebrew-tap](https://github.com/zarf-dev/homebrew-tap) PR for the zarf release
 
 ### Embedded TrustedRoot
 
@@ -130,7 +130,7 @@ For cases where you need to manually create a release (e.g., release candidates)
 * [ ] Review the GitHub release:
   * [ ] Add a summary of release updates and any required documentation around updates or breaking changes
 * [ ] Ensure goreleaser workflows execute successfully and review the release assets
-* [ ] Review, approve, and merge the [homebrew-tap](https://github.com/defenseunicorns/homebrew-tap) PR for the zarf release
+* [ ] Review, approve, and merge the [homebrew-tap](https://github.com/zarf-dev/homebrew-tap) PR for the zarf release
 
 ## Release Issues
 

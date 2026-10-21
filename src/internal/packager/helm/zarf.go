@@ -220,14 +220,14 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	return nil
 }
 
-func findPackageWithService(pkgs []state.DeployedPackage, service api.Service) (string, error) {
+func findPackageWithService(pkgs []state.DeployedPackage, service api.ServiceName) (string, error) {
 	for _, deployedPackage := range pkgs {
 		definition, err := deployedPackage.Definition()
 		if err != nil {
 			return "", err
 		}
 		for _, component := range definition.Components {
-			if component.Service == service {
+			if component.Service.Name == service {
 				return deployedPackage.Name, nil
 			}
 		}

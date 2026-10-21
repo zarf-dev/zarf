@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -21,11 +22,14 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 	_ "modernc.org/sqlite"
 )
 
@@ -58,6 +62,103 @@ fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9 foo
 	require.Equal(t, "7c554cf67e1c2b50a1b728299c368cd56d53588300c37479623f29a52812ca3f", checksumHash)
 }
 
+func TestPackageManifestRejectsNamesWithPathSeparators(t *testing.T) {
+	t.Parallel()
+
+	componentDir := filepath.Join(t.TempDir(), "component")
+	resources := load.NewResourceSet(t.TempDir())
+	tests := []struct {
+		name     string
+		manifest api.Manifest
+	}{
+		{
+			name:     "raw manifest",
+			manifest: api.Manifest{Name: "../escaped", Files: []string{"manifest.yaml"}},
+		},
+		{
+			name: "kustomization",
+			manifest: api.Manifest{
+				Name:      `nested\manifest`,
+				Kustomize: api.KustomizeManifest{Files: []string{"kustomize"}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := PackageManifest(testutil.TestContext(t), tt.manifest, componentDir, resources)
+			require.ErrorContains(t, err, "manifest name validation failed")
+			require.ErrorContains(t, err, "must not contain path separators")
+			require.NoDirExists(t, filepath.Join(componentDir, string(layout.ManifestsComponentDir)))
+			require.NoFileExists(t, filepath.Join(componentDir, "escaped-0.yaml"))
+		})
+	}
+}
+
+func TestManifestOutputPathStaysWithinManifestDirectory(t *testing.T) {
+	t.Parallel()
+
+	componentDir := t.TempDir()
+	manifestDir := filepath.Join(componentDir, string(layout.ManifestsComponentDir))
+	destination, err := layout.PathWithinDirectory(manifestDir, "manifest-0.yaml")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(manifestDir, "manifest-0.yaml"), destination)
+
+	_, err = layout.PathWithinDirectory(manifestDir, "../escaped-0.yaml")
+	require.ErrorContains(t, err, "escapes")
+}
+
+func TestPackageChartRejectsUnsafeArtifactComponents(t *testing.T) {
+	t.Parallel()
+
+	paths := layout.ChartPaths{
+		ChartsDir: filepath.Join(t.TempDir(), "charts"),
+		ValuesDir: filepath.Join(t.TempDir(), "values"),
+	}
+	err := PackageChart(testutil.TestContext(t), api.Chart{Name: "../escape"}, load.NewResourceSet(t.TempDir()), paths, "", types.RemoteOptions{})
+	require.ErrorContains(t, err, "chart name")
+	require.NoFileExists(t, filepath.Join(filepath.Dir(paths.ChartsDir), "escape.tgz"))
+}
+
+func TestAssembleSkeletonComponentRejectsUnsafeChartArtifactComponents(t *testing.T) {
+	t.Parallel()
+
+	buildPath := t.TempDir()
+	err := assembleSkeletonComponent(testutil.TestContext(t), api.Component{
+		Name:   "component",
+		Charts: []api.Chart{{Name: `nested\chart`}},
+	}, load.NewResourceSet(t.TempDir()), buildPath)
+	require.ErrorContains(t, err, "chart name")
+	require.NoDirExists(t, filepath.Join(buildPath, "component", string(layout.ChartsComponentDir)))
+}
+
+func TestCreateDocumentationTarRejectsPathKeys(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{
+		Documentation: map[string]string{
+			"../escape": "first/readme.md",
+			"witness":   "second/readme.md",
+		},
+	}
+	buildPath := t.TempDir()
+	err := createDocumentationTar(testutil.TestContext(t), pkg, load.NewResourceSet(t.TempDir()), buildPath)
+	require.ErrorContains(t, err, "documentation key")
+	require.NoFileExists(t, filepath.Join(buildPath, layout.DocumentationTar))
+}
+
+func TestDocumentationOutputPathStaysWithinDocumentationDirectory(t *testing.T) {
+	t.Parallel()
+
+	documentationDir := t.TempDir()
+	destination, err := layout.PathWithinDirectory(documentationDir, "readme.md")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(documentationDir, "readme.md"), destination)
+
+	_, err = layout.PathWithinDirectory(documentationDir, "../escape-readme.md")
+	require.ErrorContains(t, err, "escapes")
+}
+
 func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	t.Parallel()
 
@@ -72,6 +173,68 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	shaSum, err := checksum.GetSHA256OfFile(tarPath)
 	require.NoError(t, err)
 	require.Equal(t, "c09d17f612f241cdf549e5fb97c9e063a8ad18ae7a9f3af066332ed6b38556ad", shaSum)
+}
+
+func TestCreateDocumentationTarMaterializesSymlinks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation requires elevated privileges")
+	}
+
+	tests := []struct {
+		name    string
+		target  func(resourceRoot string) (string, error)
+		content string
+	}{
+		{
+			name: "external",
+			target: func(_ string) (string, error) {
+				externalFile := filepath.Join(t.TempDir(), "external.txt")
+				if err := os.WriteFile(externalFile, []byte("external"), helpers.ReadAllWriteUser); err != nil {
+					return "", err
+				}
+				return externalFile, nil
+			},
+			content: "external",
+		},
+		{
+			name: "contained",
+			target: func(resourceRoot string) (string, error) {
+				targetDir := filepath.Join(resourceRoot, "shared")
+				if err := os.Mkdir(targetDir, helpers.ReadWriteExecuteUser); err != nil {
+					return "", err
+				}
+				if err := os.WriteFile(filepath.Join(targetDir, "readme.md"), []byte("materialized"), helpers.ReadAllWriteUser); err != nil {
+					return "", err
+				}
+				return filepath.Join("shared", "readme.md"), nil
+			},
+			content: "materialized",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resourceRoot := t.TempDir()
+			target, err := tt.target(resourceRoot)
+			require.NoError(t, err)
+			require.NoError(t, os.Symlink(target, filepath.Join(resourceRoot, "readme.md")))
+
+			buildPath := t.TempDir()
+			require.NoError(t, createDocumentationTar(testutil.TestContext(t), api.Package{
+				Documentation: map[string]string{"readme": "readme.md"},
+			}, load.NewResourceSet(resourceRoot), buildPath))
+
+			outputDir := t.TempDir()
+			require.NoError(t, archive.Decompress(t.Context(), filepath.Join(buildPath, layout.DocumentationTar), outputDir, archive.DecompressOpts{}))
+			info, err := os.Lstat(filepath.Join(outputDir, "readme.md"))
+			require.NoError(t, err)
+			require.Zero(t, info.Mode()&os.ModeSymlink)
+			require.Equal(t, os.FileMode(helpers.ReadWriteUser), info.Mode().Perm())
+			content, err := os.ReadFile(filepath.Join(outputDir, "readme.md"))
+			require.NoError(t, err)
+			require.Equal(t, tt.content, string(content))
+		})
+	}
 }
 
 func TestValidateImageArchivesNoDuplicates(t *testing.T) {

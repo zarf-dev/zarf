@@ -91,11 +91,6 @@ func GetDataInjectionMarker() string {
 	return fmt.Sprintf(dataInjectionMarker, operationStartTime)
 }
 
-// GetAbsCachePath gets the absolute cache path for images and git repos.
-func GetAbsCachePath() (string, error) {
-	return GetAbsHomePath(CommonOptions.CachePath)
-}
-
 // GetAbsHomePath replaces ~ with the absolute path to a user's home dir
 func GetAbsHomePath(path string) (string, error) {
 	if strings.HasPrefix(path, "~") {

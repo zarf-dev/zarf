@@ -57,7 +57,7 @@ func TestValidatePackage(t *testing.T) {
 		{
 			name: "init package with service",
 			pkg: v1beta1.Package{Kind: v1beta1.ZarfInitConfig, Components: []v1beta1.Component{{
-				Name: "registry", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.ServiceRegistry},
+				Name: "registry", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.Service{Name: v1beta1.ServiceRegistry}},
 			}}},
 		},
 		{
@@ -70,22 +70,22 @@ func TestValidatePackage(t *testing.T) {
 		{
 			name: "init package with distinct services",
 			pkg: v1beta1.Package{Kind: v1beta1.ZarfInitConfig, Components: []v1beta1.Component{
-				{Name: "registry", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.ServiceRegistry}},
-				{Name: "seed-registry", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.ServiceSeedRegistry}},
+				{Name: "registry", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.Service{Name: v1beta1.ServiceRegistry}}},
+				{Name: "seed-registry", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.Service{Name: v1beta1.ServiceSeedRegistry}}},
 			}},
 		},
 		{
 			name: "init package with duplicate service",
 			pkg: v1beta1.Package{Kind: v1beta1.ZarfInitConfig, Components: []v1beta1.Component{
-				{Name: "first", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.ServiceRegistry}},
-				{Name: "second", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.ServiceRegistry}},
+				{Name: "first", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.Service{Name: v1beta1.ServiceRegistry}}},
+				{Name: "second", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.Service{Name: v1beta1.ServiceRegistry}}},
 			}},
 			expectedErrs: []string{`service "registry" is declared by multiple components ("first", "second")`},
 		},
 		{
 			name: "ordinary package with service",
 			pkg: v1beta1.Package{Kind: v1beta1.ZarfPackageConfig, Components: []v1beta1.Component{{
-				Name: "registry", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.ServiceRegistry},
+				Name: "registry", ComponentSpec: v1beta1.ComponentSpec{Service: v1beta1.Service{Name: v1beta1.ServiceRegistry}},
 			}}},
 			expectedErrs: []string{fmt.Sprintf(PkgValidateErrServiceRequiresInit, "registry", v1beta1.ServiceRegistry)},
 		},
@@ -149,20 +149,22 @@ func TestValidatePackage(t *testing.T) {
 	}
 }
 
-func TestValidatePackageFileChecksumAlgorithm(t *testing.T) {
+func TestValidatePackageFileChecksum(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name      string
 		checksum  string
-		wantError bool
+		wantError string
 	}{
 		{name: "omitted checksum"},
 		{name: "checksum without prefix", checksum: "abc123"},
 		{name: "sha256 prefix", checksum: "sha256:abc123"},
 		{name: "sha512 prefix", checksum: "sha512:abc123"},
-		{name: "unsupported prefix", checksum: "sha384:abc123", wantError: true},
-		{name: "empty prefix", checksum: ":abc123", wantError: true},
+		{name: "unsupported prefix", checksum: "sha384:abc123", wantError: "sha256 or sha512"},
+		{name: "empty prefix", checksum: ":abc123", wantError: "sha256 or sha512"},
+		{name: "sha256 empty digest", checksum: "sha256:", wantError: "empty checksum digest"},
+		{name: "sha512 empty digest", checksum: "sha512:", wantError: "empty checksum digest"},
 	}
 
 	for _, tt := range tests {
@@ -176,12 +178,35 @@ func TestValidatePackageFileChecksumAlgorithm(t *testing.T) {
 			}}}
 
 			errs := ValidatePackage(pkg)
-			if tt.wantError {
+			if tt.wantError != "" {
 				require.ErrorContains(t, errs, "file.txt")
-				require.ErrorContains(t, errs, "sha256 or sha512")
+				require.ErrorContains(t, errs, tt.wantError)
 			} else {
 				require.Empty(t, errs)
 			}
+		})
+	}
+}
+
+func TestValidatePackageDocumentationKeys(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		key     string
+		wantErr string
+	}{
+		{key: "nested/document", wantErr: PkgValidateErrDocumentationKeyPath},
+		{key: `nested\document`, wantErr: PkgValidateErrDocumentationKeyPath},
+		{key: "..", wantErr: PkgValidateErrDocumentationKeyTraversal},
+	}
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			t.Parallel()
+			errs := ValidatePackage(v1beta1.Package{
+				Components:    []v1beta1.Component{{Name: "component"}},
+				Documentation: map[string]string{tt.key: "readme.md"},
+			})
+			require.ErrorContains(t, errs, fmt.Sprintf(tt.wantErr, tt.key))
 		})
 	}
 }
@@ -208,6 +233,16 @@ func TestValidateManifest(t *testing.T) {
 			name:         "long name",
 			manifest:     v1beta1.Manifest{Name: longName, Files: []string{"a-file"}},
 			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
+		},
+		{
+			name:         "name contains forward path separator",
+			manifest:     v1beta1.Manifest{Name: "nested/manifest", Files: []string{"a-file"}},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNamePath, "nested/manifest")},
+		},
+		{
+			name:         "name contains path separator",
+			manifest:     v1beta1.Manifest{Name: `nested\manifest`, Files: []string{"a-file"}},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNamePath, `nested\manifest`)},
 		},
 		{
 			name:         "no files or kustomize",
