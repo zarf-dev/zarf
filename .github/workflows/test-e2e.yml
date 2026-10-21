@@ -174,7 +174,7 @@ jobs:
         # The test deletes the k3s cluster, so this should only run on failure
         if: failure()
 
-  # Run the tests on kind
+  # Run the tests on kind with nftables and localhost NodePorts
   validate-kind-arm64:
     runs-on: ubuntu-24.04-arm
     steps:
@@ -196,7 +196,22 @@ jobs:
 
       - name: Setup Kind
         run: |
-          kind delete cluster && kind create cluster
+          kind delete cluster
+          # Localhost NodePorts in nftables mode require Kubernetes 1.37 or newer.
+          kind create cluster --image kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5 --config=- <<'EOF'
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          networking:
+            kubeProxyMode: nftables
+          kubeadmConfigPatches:
+            - |
+              kind: KubeProxyConfiguration
+              featureGates:
+                KubeProxyNFTablesLocalhostNodePorts: true
+              nodePortAddresses:
+                - primary
+                - localhost
+          EOF
           kubectl scale deploy -n kube-system coredns --replicas=1
 
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
