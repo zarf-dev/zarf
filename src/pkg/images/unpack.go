@@ -121,7 +121,7 @@ func Unpack(ctx context.Context, imageArchive api.ImageArchive, destDir string, 
 		return nil, fmt.Errorf("failed to create source OCI store: %w", err)
 	}
 
-	// Build a map of requested canonical references to their original declarations.
+	// Map each normalized image identity to the reference as written in the package.
 	requestedImages := make(map[string]ImageRequest, len(imageArchive.Images))
 	for _, declaredReference := range imageArchive.Images {
 		ref, err := transform.ParseImageRef(declaredReference)

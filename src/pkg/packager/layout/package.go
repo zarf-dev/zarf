@@ -660,6 +660,13 @@ func resourceDestinationPath(destRoot, resourcePath string) (string, error) {
 }
 
 func copyResourceFile(sourcePath, destPath string) error {
+	info, err := os.Lstat(sourcePath)
+	if err != nil {
+		return fmt.Errorf("stating package resource: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("package resource %q is not a regular file", sourcePath)
+	}
 	if err := helpers.CreatePathAndCopy(sourcePath, destPath); err != nil {
 		return fmt.Errorf("copying package resource: %w", err)
 	}
