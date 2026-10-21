@@ -146,7 +146,7 @@ documentation:
 	documentation := descriptors[DocumentationResourcePath("README.md")]
 	require.Equal(t, "readme", documentation.Annotations[ocispec.AnnotationTitle])
 	require.Equal(t, ResourceKindDocumentation, documentation.Annotations[ResourceKindAnnotation])
-	require.Equal(t, ZarfLayerMediaTypeBlob, documentation.MediaType)
+	require.Equal(t, DocumentationLayerMediaTypeBlob, documentation.MediaType)
 	sbom := descriptors[SBOMResourcePath("component:metrics")]
 	require.Equal(t, "component:metrics", sbom.Annotations[ocispec.AnnotationTitle])
 	require.Equal(t, ResourceKindSBOM, sbom.Annotations[ResourceKindAnnotation])

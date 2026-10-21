@@ -1,61 +1,80 @@
+apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: longhorn
   description: Example package for Longhorn cloud native distributed block storage for Kubernetes
   version: 1.11.2
+build:
+  architecture: ""
+  version: ""
+  migrations:
+  - scripts-to-actions
+  - pluralize-set-variable
+  aggregateChecksum: ""
 components:
+- name: longhorn
+  description: Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io
+  manifests:
+  - name: longhorn-connect
+    namespace: longhorn-system
+    files:
+    - connect.yaml
+  charts:
   - name: longhorn
-    required: true
-    description: Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io
-    actions:
-      # Set the delete confirmation flag for Longhorn
-      onRemove:
-        before:
-          - cmd: './zarf tools kubectl -n longhorn-system patch -p ''{"value": "true"}'' --type=merge lhs deleting-confirmation-flag'
-      onDeploy:
-        after:
-          - description: Longhorn EngineImages to finish deploying on every node
-            maxTotalSeconds: 300
-            wait:
-              cluster:
-                kind: engineimages.longhorn.io
-                name: longhorn.io/component=engine-image
-                namespace: longhorn-system
-                condition: "{.status.state}=deployed"
-          - description: Longhorn InstanceManagers to finish starting on every node
-            maxTotalSeconds: 300
-            wait:
-              cluster:
-                kind: instancemanagers.longhorn.io
-                name: longhorn.io/component=instance-manager
-                namespace: longhorn-system
-                condition: "{.status.currentState}=running"
-    manifests:
-      - name: longhorn-connect
-        namespace: longhorn-system
-        files:
-          - connect.yaml
-    charts:
-      - name: longhorn
-        url: https://charts.longhorn.io
-        version: 1.11.2
-        namespace: longhorn-system
-        valuesFiles:
-          - values.yaml
-    images:
-      - longhornio/csi-attacher:v4.11.0-20260428
-      - longhornio/csi-provisioner:v5.3.0-20260428
-      - longhornio/csi-resizer:v2.1.0-20260428
-      - longhornio/csi-snapshotter:v8.5.0-20260428
-      - longhornio/csi-node-driver-registrar:v2.16.0-20260428
-      - longhornio/livenessprobe:v2.18.0-20260428
-      - longhornio/backing-image-manager:v1.11.2
-      - longhornio/longhorn-engine:v1.11.2
-      - longhornio/longhorn-instance-manager:v1.11.2
-      - longhornio/longhorn-manager:v1.11.2
-      - longhornio/longhorn-share-manager:v1.11.2
-      - longhornio/longhorn-ui:v1.11.2
-      - longhornio/support-bundle-kit:v0.0.84
-
+    helmRepository:
+      url: https://charts.longhorn.io
+      version: 1.11.2
+    namespace: longhorn-system
+    valuesFiles:
+    - path: values.yaml
+  images:
+  - name: longhornio/csi-attacher:v4.11.0-20260428
+    source: registry
+  - name: longhornio/csi-provisioner:v5.3.0-20260428
+    source: registry
+  - name: longhornio/csi-resizer:v2.1.0-20260428
+    source: registry
+  - name: longhornio/csi-snapshotter:v8.5.0-20260428
+    source: registry
+  - name: longhornio/csi-node-driver-registrar:v2.16.0-20260428
+    source: registry
+  - name: longhornio/livenessprobe:v2.18.0-20260428
+    source: registry
+  - name: longhornio/backing-image-manager:v1.11.2
+    source: registry
+  - name: longhornio/longhorn-engine:v1.11.2
+    source: registry
+  - name: longhornio/longhorn-instance-manager:v1.11.2
+    source: registry
+  - name: longhornio/longhorn-manager:v1.11.2
+    source: registry
+  - name: longhornio/longhorn-share-manager:v1.11.2
+    source: registry
+  - name: longhornio/longhorn-ui:v1.11.2
+    source: registry
+  - name: longhornio/support-bundle-kit:v0.0.84
+    source: registry
+  actions:
+    onDeploy:
+      onSuccess:
+      - maxTotalSeconds: 300
+        description: Longhorn EngineImages to finish deploying on every node
+        wait:
+          cluster:
+            kind: engineimages.longhorn.io
+            name: longhorn.io/component=engine-image
+            namespace: longhorn-system
+            condition: "{.status.state}=deployed"
+      - maxTotalSeconds: 300
+        description: Longhorn InstanceManagers to finish starting on every node
+        wait:
+          cluster:
+            kind: instancemanagers.longhorn.io
+            name: longhorn.io/component=instance-manager
+            namespace: longhorn-system
+            condition: "{.status.currentState}=running"
+    onRemove:
+      before:
+      - cmd: "./zarf tools kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
 documentation:
   readme: readme.md

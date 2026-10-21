@@ -33,6 +33,8 @@ import (
 const (
 	// ZarfLayerMediaTypeBlob is the media type for all Zarf package layer blobs.
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
+	// DocumentationLayerMediaTypeBlob is the media type for a v1beta1 documentation resource layer.
+	DocumentationLayerMediaTypeBlob = "application/vnd.zarf.documentation.layer.v1.blob"
 	// ZarfConfigMediaType is the media type for the Zarf package manifest config.
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
 	// ZarfComponentConfigMediaType is the media type for a v1beta1 Zarf component config OCI artifact.
@@ -126,8 +128,13 @@ func documentationResourceKey(resourcePath string, pkg api.Package) (string, boo
 }
 
 func resourceMediaType(resourcePath string, pkg api.Package) string {
-	if UsesGranularResourceLayout(pkg) && strings.HasPrefix(resourcePath, SBOMResourcesDir+"/") {
-		return SBOMMediaTypeSyftJSON
+	if UsesGranularResourceLayout(pkg) {
+		switch {
+		case strings.HasPrefix(resourcePath, DocumentationDir+"/"):
+			return DocumentationLayerMediaTypeBlob
+		case strings.HasPrefix(resourcePath, SBOMResourcesDir+"/"):
+			return SBOMMediaTypeSyftJSON
+		}
 	}
 	return ZarfLayerMediaTypeBlob
 }
