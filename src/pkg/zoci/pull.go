@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
-	"strings"
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -73,15 +72,8 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 
 // AssembleLayers returns the OCI layer descriptors for the requested components.
 // The include parameter specifies which layer types to return.
-// All layers are included if include is empty and Metadata layers are always included
+// All layers are included if include is empty and Metadata layers are always included.
 func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, requestedComponents []api.Component, include ...LayerType) ([]ocispec.Descriptor, error) {
-	return AssembleLayersWithSelection(ctx, root, fetcher, requestedComponents, LayerSelection{Types: include})
-}
-
-// AssembleLayersWithSelection returns the OCI layer descriptors for the requested components and granular resources.
-// All layer types are included when selection.Types is empty. Metadata layers are always included.
-func AssembleLayersWithSelection(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, requestedComponents []api.Component, selection LayerSelection) ([]ocispec.Descriptor, error) {
-	include := selection.Types
 	if len(include) == 0 {
 		include = GetAllLayerTypes()
 	}
@@ -117,11 +109,7 @@ func AssembleLayersWithSelection(ctx context.Context, root *oci.Manifest, fetche
 
 	if slices.Contains(include, SbomLayers) {
 		if layout.UsesGranularResourceLayout(pkg) {
-			resources, err := granularResourceLayers(root, layout.ResourceKindSBOM, selection.ResourceKeys[SbomLayers])
-			if err != nil {
-				return nil, err
-			}
-			layers = append(layers, resources...)
+			layers = append(layers, granularResourceLayers(root, layout.ResourceKindSBOM)...)
 		} else if desc := root.Locate(layout.SBOMTar); !oci.IsEmptyDescriptor(desc) {
 			layers = append(layers, desc)
 		}
@@ -129,11 +117,7 @@ func AssembleLayersWithSelection(ctx context.Context, root *oci.Manifest, fetche
 
 	if slices.Contains(include, DocLayers) && len(pkg.Documentation) > 0 {
 		if layout.UsesGranularResourceLayout(pkg) {
-			resources, err := granularResourceLayers(root, layout.ResourceKindDocumentation, selection.ResourceKeys[DocLayers])
-			if err != nil {
-				return nil, err
-			}
-			layers = append(layers, resources...)
+			layers = append(layers, granularResourceLayers(root, layout.ResourceKindDocumentation)...)
 		} else if desc := root.Locate(layout.DocumentationTar); !oci.IsEmptyDescriptor(desc) {
 			layers = append(layers, desc)
 		}
@@ -141,45 +125,14 @@ func AssembleLayersWithSelection(ctx context.Context, root *oci.Manifest, fetche
 	return layers, nil
 }
 
-func granularResourceLayers(root *oci.Manifest, kind string, keys []string) ([]ocispec.Descriptor, error) {
-	requested := make(map[string]struct{}, len(keys))
-	for _, key := range keys {
-		requested[key] = struct{}{}
-	}
-	filtering := len(keys) > 0
-
+func granularResourceLayers(root *oci.Manifest, kind string) []ocispec.Descriptor {
 	layers := make([]ocispec.Descriptor, 0)
-	resourceKeys := make(map[string]struct{})
 	for _, descriptor := range root.Layers {
-		if descriptor.Annotations[layout.ResourceKindAnnotation] != kind {
-			continue
-		}
-		key := descriptor.Annotations[layout.ResourceKeyAnnotation]
-		if key == "" {
-			return nil, fmt.Errorf("%s resource has no key", kind)
-		}
-		if _, exists := resourceKeys[key]; exists {
-			return nil, fmt.Errorf("%s resource key %q is duplicated in package", kind, key)
-		}
-		resourceKeys[key] = struct{}{}
-		if !filtering {
+		if descriptor.Annotations[layout.ResourceKindAnnotation] == kind {
 			layers = append(layers, descriptor)
-			continue
-		}
-		if _, ok := requested[key]; ok {
-			layers = append(layers, descriptor)
-			delete(requested, key)
 		}
 	}
-	if len(requested) > 0 {
-		missing := make([]string, 0, len(requested))
-		for key := range requested {
-			missing = append(missing, key)
-		}
-		slices.Sort(missing)
-		return nil, fmt.Errorf("%s resource keys not found in package: %s", kind, strings.Join(missing, ", "))
-	}
-	return layers, nil
+	return layers
 }
 
 // LayersFromComponents returns the layers for the requested components and
@@ -311,15 +264,6 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []api.C
 		return nil, err
 	}
 	return AssembleLayers(ctx, root, r, requestedComponents, include...)
-}
-
-// AssembleLayersWithSelection returns OCI layer descriptors for a layer and resource selection.
-func (r *Remote) AssembleLayersWithSelection(ctx context.Context, requestedComponents []api.Component, selection LayerSelection) ([]ocispec.Descriptor, error) {
-	root, err := r.FetchRoot(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return AssembleLayersWithSelection(ctx, root, r, requestedComponents, selection)
 }
 
 // LayersFromComponents returns the layers for the requested components and

@@ -38,8 +38,8 @@ type LoadOptions struct {
 	Output            string
 	// number of layers to pull in parallel
 	OCIConcurrency int
-	// LayerSelection specifies which OCI layers and granular resources to pull.
-	LayerSelection zoci.LayerSelection
+	// LayerTypes specifies which OCI layers to pull.
+	LayerTypes []zoci.LayerType
 	// CachePath is used to cache layers from OCI package pulls.
 	CachePath string
 	// Connected skips pulling image layers from OCI sources
@@ -98,7 +98,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			Shasum:               opts.Shasum,
 			Architecture:         config.GetArch(opts.Architecture),
 			Filter:               opts.Filter,
-			LayerSelection:       opts.LayerSelection,
+			LayerTypes:           opts.LayerTypes,
 			OCIConcurrency:       opts.OCIConcurrency,
 			RemoteOptions:        opts.RemoteOptions,
 			Connected:            opts.Connected,
@@ -235,7 +235,7 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		return definition, nil
 	}
 	// This function only returns the ZarfPackageConfig so we only need the metadata.
-	opts.LayerSelection = zoci.LayerSelection{Types: []zoci.LayerType{zoci.MetadataLayers}}
+	opts.LayerTypes = []zoci.LayerType{zoci.MetadataLayers}
 	pkgLayout, err := LoadPackage(ctx, src, opts)
 	if err != nil {
 		return api.Package{}, err

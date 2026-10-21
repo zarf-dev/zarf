@@ -90,25 +90,20 @@ func TestAnnotationsFromMetadata_PreservesV1alpha1Precedence(t *testing.T) {
 func TestResourceAnnotations(t *testing.T) {
 	t.Parallel()
 
-	pkg := api.Package{APIVersion: v1beta1.APIVersion, Documentation: map[string]string{"readme": "README.md"}}
-	documentationKeys, err := documentationResourceKeys(pkg.Documentation)
-	require.NoError(t, err)
+	pkg := api.Package{APIVersion: v1beta1.APIVersion}
 	documentationPath := DocumentationResourcePath("README.md")
 	require.Equal(t, map[string]string{
 		ocispec.AnnotationTitle:     documentationPath,
 		ResourceMountPathAnnotation: documentationPath,
 		ResourceKindAnnotation:      ResourceKindDocumentation,
-		ResourceKeyAnnotation:       "readme",
-	}, resourceAnnotations(documentationPath, pkg, documentationKeys))
+	}, resourceAnnotations(documentationPath, pkg))
 
-	sbomKey := "component:metrics"
-	sbomPath := SBOMResourcePath(sbomKey)
+	sbomPath := SBOMResourcePath("component:metrics")
 	require.Equal(t, map[string]string{
 		ocispec.AnnotationTitle:     sbomPath,
 		ResourceMountPathAnnotation: sbomPath,
 		ResourceKindAnnotation:      ResourceKindSBOM,
-		ResourceKeyAnnotation:       sbomKey,
-	}, resourceAnnotations(sbomPath, pkg, documentationKeys))
+	}, resourceAnnotations(sbomPath, pkg))
 }
 
 func TestComputeManifestAnnotatesV1Beta1Resources(t *testing.T) {
@@ -138,9 +133,7 @@ documentation:
 	for _, descriptor := range manifest.Layers {
 		descriptors[descriptor.Annotations[ocispec.AnnotationTitle]] = descriptor
 	}
-	require.Equal(t, "readme", descriptors[DocumentationResourcePath("README.md")].Annotations[ResourceKeyAnnotation])
 	require.Equal(t, ResourceKindDocumentation, descriptors[DocumentationResourcePath("README.md")].Annotations[ResourceKindAnnotation])
-	require.Equal(t, "component:metrics", descriptors[SBOMResourcePath("component:metrics")].Annotations[ResourceKeyAnnotation])
 	require.Equal(t, ResourceKindSBOM, descriptors[SBOMResourcePath("component:metrics")].Annotations[ResourceKindAnnotation])
 	require.Equal(t, ZarfLayerMediaTypeBlob, descriptors[DocumentationResourcePath("README.md")].MediaType)
 	//nolint:testifylint // application/vnd.syft+json is a media type, not encoded JSON.

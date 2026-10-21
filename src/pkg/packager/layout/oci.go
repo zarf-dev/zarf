@@ -41,8 +41,6 @@ const (
 	ResourceMountPathAnnotation = "dev.zarf.mountPath"
 	// ResourceKindAnnotation identifies the kind of a granular package resource.
 	ResourceKindAnnotation = "dev.zarf.resource.kind"
-	// ResourceKeyAnnotation identifies a granular package resource within its kind.
-	ResourceKeyAnnotation = "dev.zarf.resource.key"
 	// ResourceKindDocumentation identifies a documentation resource.
 	ResourceKindDocumentation = "documentation"
 	// ResourceKindSBOM identifies an SBOM resource.
@@ -89,19 +87,7 @@ func AnnotationsFromMetadata(pkg api.Package) map[string]string {
 	return annotations
 }
 
-func documentationResourceKeys(documentation map[string]string) (map[string]string, error) {
-	fileNames, err := GetDocumentationFileNames(documentation)
-	if err != nil {
-		return nil, err
-	}
-	resourceKeys := make(map[string]string, len(fileNames))
-	for key, fileName := range fileNames {
-		resourceKeys[DocumentationResourcePath(fileName)] = key
-	}
-	return resourceKeys, nil
-}
-
-func resourceAnnotations(resourcePath string, pkg api.Package, documentationKeys map[string]string) map[string]string {
+func resourceAnnotations(resourcePath string, pkg api.Package) map[string]string {
 	annotations := map[string]string{
 		ocispec.AnnotationTitle: resourcePath,
 	}
@@ -109,25 +95,20 @@ func resourceAnnotations(resourcePath string, pkg api.Package, documentationKeys
 		return annotations
 	}
 
-	if key, ok := documentationKeys[resourcePath]; ok {
+	switch {
+	case strings.HasPrefix(resourcePath, DocumentationDir+"/"):
 		annotations[ResourceMountPathAnnotation] = resourcePath
 		annotations[ResourceKindAnnotation] = ResourceKindDocumentation
-		annotations[ResourceKeyAnnotation] = key
-		return annotations
-	}
-
-	if key, ok := SBOMResourceKey(resourcePath); ok {
+	case strings.HasPrefix(resourcePath, SBOMResourcesDir+"/"):
 		annotations[ResourceMountPathAnnotation] = resourcePath
 		annotations[ResourceKindAnnotation] = ResourceKindSBOM
-		annotations[ResourceKeyAnnotation] = key
 	}
 	return annotations
 }
+
 func resourceMediaType(resourcePath string, pkg api.Package) string {
-	if UsesGranularResourceLayout(pkg) {
-		if _, ok := SBOMResourceKey(resourcePath); ok {
-			return SBOMMediaTypeSyftJSON
-		}
+	if UsesGranularResourceLayout(pkg) && strings.HasPrefix(resourcePath, SBOMResourcesDir+"/") {
+		return SBOMMediaTypeSyftJSON
 	}
 	return ZarfLayerMediaTypeBlob
 }
@@ -167,10 +148,6 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	configDefinition, configPackage, err := pkgcfg.ParseMultiDocNative(ctx, zarfYAMLBytes)
 	if err != nil {
 		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
-	}
-	documentationKeys, err := documentationResourceKeys(configPackage.Documentation)
-	if err != nil {
-		return fmt.Errorf("validating documentation resource paths: %w", err)
 	}
 
 	files, err := p.Files()
@@ -232,7 +209,7 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 			MediaType:   resourceMediaType(rel, configPackage),
 			Digest:      fileDigest,
 			Size:        fileSize,
-			Annotations: resourceAnnotations(rel, configPackage, documentationKeys),
+			Annotations: resourceAnnotations(rel, configPackage),
 		})
 		blobs[fileDigest] = filePath
 		totalLayerSize += fileSize

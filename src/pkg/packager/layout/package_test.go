@@ -123,7 +123,7 @@ func TestPackageLayout(t *testing.T) {
 	}
 }
 
-func TestGetSBOMResourcesV1Beta1(t *testing.T) {
+func TestGetSBOMV1Beta1(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -140,55 +140,11 @@ func TestGetSBOMResourcesV1Beta1(t *testing.T) {
 		},
 	}
 	outputDir := t.TempDir()
-	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{"component:metrics"}))
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir))
 	require.FileExists(t, filepath.Join(outputDir, "files", "metrics.json"))
-	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, nil))
-	require.ErrorContains(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{"component:missing"}), "not found")
 }
 
-func TestGetSBOMResourcesV1Alpha1FiltersArchive(t *testing.T) {
-	t.Parallel()
-
-	packageDir := t.TempDir()
-	sbomSourceDir := t.TempDir()
-	for name, contents := range map[string]string{
-		"zarf-component-metrics.json":                   "component SBOM",
-		"docker.io_library_nginx_1.27-linux-amd64.json": "image SBOM",
-		"unselected.json":                               "unselected SBOM",
-	} {
-		require.NoError(t, os.WriteFile(filepath.Join(sbomSourceDir, name), []byte(contents), 0o600))
-	}
-	sbomTar := filepath.Join(packageDir, SBOMTar)
-	require.NoError(t, archive.Compress(t.Context(), []string{
-		filepath.Join(sbomSourceDir, "zarf-component-metrics.json"),
-		filepath.Join(sbomSourceDir, "docker.io_library_nginx_1.27-linux-amd64.json"),
-		filepath.Join(sbomSourceDir, "unselected.json"),
-	}, sbomTar, archive.CompressOpts{}))
-
-	pkgLayout := &PackageLayout{
-		dirPath: packageDir,
-		pkg: api.Package{
-			Metadata: api.PackageMetadata{Name: "test"},
-			Components: []api.Component{{
-				Name:  "metrics",
-				Files: []api.File{{Source: "metrics.yaml"}},
-			}},
-		},
-	}
-	outputDir := t.TempDir()
-	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{
-		"component:metrics",
-		"image:docker.io/library/nginx:1.27-linux-amd64",
-	}))
-	require.FileExists(t, filepath.Join(outputDir, "zarf-component-metrics.json"))
-	require.FileExists(t, filepath.Join(outputDir, "docker.io_library_nginx_1.27-linux-amd64.json"))
-	require.NoFileExists(t, filepath.Join(outputDir, "unselected.json"))
-
-	err := pkgLayout.GetSBOMResources(t.Context(), t.TempDir(), []string{"component:missing"})
-	require.ErrorContains(t, err, `zarf-component-missing.json`)
-}
-
-func TestGetSBOMResourcesV1Beta1PreservesResourceKinds(t *testing.T) {
+func TestGetSBOMV1Beta1PreservesResourceKinds(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -213,20 +169,18 @@ func TestGetSBOMResourcesV1Beta1PreservesResourceKinds(t *testing.T) {
 		},
 	}
 
-	for _, keys := range [][]string{nil, {"component:" + componentName, imageKey}} {
-		outputDir := t.TempDir()
-		require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, keys))
+	outputDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir))
 
-		componentContents, err := os.ReadFile(filepath.Join(outputDir, "files", componentName+".json"))
-		require.NoError(t, err)
-		require.Equal(t, "component SBOM", string(componentContents))
-		imageContents, err := os.ReadFile(filepath.Join(outputDir, "images", "foo.json"))
-		require.NoError(t, err)
-		require.Equal(t, "image SBOM", string(imageContents))
-	}
+	componentContents, err := os.ReadFile(filepath.Join(outputDir, "files", componentName+".json"))
+	require.NoError(t, err)
+	require.Equal(t, "component SBOM", string(componentContents))
+	imageContents, err := os.ReadFile(filepath.Join(outputDir, "images", "foo.json"))
+	require.NoError(t, err)
+	require.Equal(t, "image SBOM", string(imageContents))
 }
 
-func TestGetSBOMResourcesV1Beta1UsesDeclaredImageReference(t *testing.T) {
+func TestGetSBOMV1Beta1UsesDeclaredImageReference(t *testing.T) {
 	t.Parallel()
 
 	const imageKey = "image:nginx"
@@ -244,13 +198,13 @@ func TestGetSBOMResourcesV1Beta1UsesDeclaredImageReference(t *testing.T) {
 		},
 	}
 	outputDir := t.TempDir()
-	require.NoError(t, pkgLayout.GetSBOMResources(t.Context(), outputDir, []string{imageKey}))
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir))
 	contents, err := os.ReadFile(filepath.Join(outputDir, "images", "nginx.json"))
 	require.NoError(t, err)
 	require.Equal(t, "image SBOM", string(contents))
 }
 
-func TestGetSBOMResourcesV1Beta1RejectsLegacyImageFilenameCollisions(t *testing.T) {
+func TestGetSBOMV1Beta1RejectsLegacyImageFilenameCollisions(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -271,7 +225,7 @@ func TestGetSBOMResourcesV1Beta1RejectsLegacyImageFilenameCollisions(t *testing.
 		},
 	}
 	outputDir := t.TempDir()
-	err := pkgLayout.GetSBOMResources(t.Context(), outputDir, nil)
+	err := pkgLayout.GetSBOM(t.Context(), outputDir)
 	require.ErrorContains(t, err, `both normalize to "images/a_b_c.json"`)
 	require.NoFileExists(t, filepath.Join(outputDir, "images", "a_b_c.json"))
 }
