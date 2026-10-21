@@ -169,10 +169,6 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 	if ref.Registry == "docker.io" {
 		ref.Registry = "registry-1.docker.io"
 	}
-	if ref.Registry == "🦄" || ref.Registry == "defenseunicorns" {
-		ref.Registry = "ghcr.io"
-		ref.Repository = "defenseunicorns/packages/" + ref.Repository
-	}
 	client, ok := o.repo.Client.(*auth.Client)
 	if !ok {
 		return fmt.Errorf("repository client is not an auth client")

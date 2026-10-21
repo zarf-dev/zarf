@@ -133,60 +133,30 @@ func TestNewOrasRemoteCredentialFuncUsesNormalizedRegistry(t *testing.T) {
 	t.Parallel()
 
 	credential := auth.Credential{Username: "registry-user", Password: "registry-password"}
-	for _, tc := range []struct {
-		name       string
-		alias      string
-		registry   string
-		repository string
-	}{
-		{
-			name:       "resolves Docker Hub credentials against its canonical host",
-			alias:      "docker.io",
-			registry:   "registry-1.docker.io",
-			repository: "credential-tests",
-		},
-		{
-			name:       "resolves unicorn alias credentials against GitHub Container Registry",
-			alias:      "🦄",
-			registry:   "ghcr.io",
-			repository: "defenseunicorns/packages/credential-tests",
-		},
-		{
-			name:       "resolves Defense Unicorns alias credentials against GitHub Container Registry",
-			alias:      "defenseunicorns",
-			registry:   "ghcr.io",
-			repository: "defenseunicorns/packages/credential-tests",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			server, descriptor := newCredentialTestRegistry(t, credential, false)
-			defaultTransport, ok := http.DefaultTransport.(*http.Transport)
-			require.True(t, ok)
-			transport := defaultTransport.Clone()
-			transport.Proxy = nil
-			transport.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
-				var dialer net.Dialer
-				return dialer.DialContext(ctx, network, server.Listener.Addr().String())
-			}
-			t.Cleanup(transport.CloseIdleConnections)
-			var credentialHost string
-			remote, err := NewOrasRemote(tc.alias+"/credential-tests:latest", ocispec.Platform{},
-				WithPlainHTTP(true), WithTransport(transport),
-				WithCredentialFunc(func(_ context.Context, hostport string) (auth.Credential, error) {
-					credentialHost = hostport
-					return credential, nil
-				}))
-			require.NoError(t, err)
-
-			resolved, err := remote.Repo().Resolve(context.Background(), "latest")
-			require.NoError(t, err)
-			require.Equal(t, descriptor, resolved)
-			require.Equal(t, tc.registry, credentialHost)
-			require.Equal(t, tc.repository, remote.Repo().Reference.Repository)
-		})
+	server, descriptor := newCredentialTestRegistry(t, credential, false)
+	defaultTransport, ok := http.DefaultTransport.(*http.Transport)
+	require.True(t, ok)
+	transport := defaultTransport.Clone()
+	transport.Proxy = nil
+	transport.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
+		var dialer net.Dialer
+		return dialer.DialContext(ctx, network, server.Listener.Addr().String())
 	}
+	t.Cleanup(transport.CloseIdleConnections)
+	var credentialHost string
+	remote, err := NewOrasRemote("docker.io/credential-tests:latest", ocispec.Platform{},
+		WithPlainHTTP(true), WithTransport(transport),
+		WithCredentialFunc(func(_ context.Context, hostport string) (auth.Credential, error) {
+			credentialHost = hostport
+			return credential, nil
+		}))
+	require.NoError(t, err)
+
+	resolved, err := remote.Repo().Resolve(context.Background(), "latest")
+	require.NoError(t, err)
+	require.Equal(t, descriptor, resolved)
+	require.Equal(t, "registry-1.docker.io", credentialHost)
+	require.Equal(t, "credential-tests", remote.Repo().Reference.Repository)
 }
 
 func newCredentialTestRegistry(t *testing.T, credential auth.Credential, anonymous bool) (*httptest.Server, ocispec.Descriptor) {
