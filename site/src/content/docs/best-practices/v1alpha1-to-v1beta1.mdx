@@ -179,12 +179,6 @@ New v1beta1 components are required by default (`optional: false`). However, con
 
 `selector` filters components during create; `target` filters them during deploy.
 
-### Attachments
-
-The top-level `documentation` map becomes `attachments`. `zarf dev upgrade` renames it automatically. Extract these files with `zarf package inspect attachments`; `zarf package inspect documentation` remains supported and uses the same `<package-name>-documentation` output directory.
-
-This is a breaking change for earlier experimental v1beta1 definitions and packages. Rename their top-level `documentation` key to `attachments` and rebuild packages with the updated CLI. Earlier experimental v1beta1 CLIs do not support `attachments`; use the updated CLI to create and consume these packages. v1alpha1 definitions and packages continue to use `documentation`.
-
 ### Helm charts
 
 Each chart must have exactly one source: `helmRepository`, `git`, `oci`, or `local`. Conversion moves the old source fields into that object:
