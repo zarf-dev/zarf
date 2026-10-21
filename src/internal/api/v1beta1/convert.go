@@ -38,7 +38,7 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 			Files:  pkg.Values.Files,
 			Schema: pkg.Values.Schema,
 		},
-		Documentation: pkg.Documentation,
+		Documentation: pkg.Attachments,
 	}
 
 	for _, c := range pkg.Components {
@@ -305,12 +305,12 @@ func waitToGeneric(w *v1beta1.ComponentActionWait) *api.ActionWait {
 // PackageToV1beta1 converts the internal generic representation to a v1beta1 Package.
 func PackageToV1beta1(g api.Package) v1beta1.Package {
 	pkg := v1beta1.Package{
-		APIVersion:    v1beta1.APIVersion,
-		Kind:          v1beta1.PackageKind(g.Kind),
-		Metadata:      metadataFromGeneric(g.Metadata),
-		Build:         buildFromGeneric(g.Build),
-		Values:        v1beta1.Values{Files: g.Values.Files, Schema: g.Values.Schema},
-		Documentation: g.Documentation,
+		APIVersion:  v1beta1.APIVersion,
+		Kind:        v1beta1.PackageKind(g.Kind),
+		Metadata:    metadataFromGeneric(g.Metadata),
+		Build:       buildFromGeneric(g.Build),
+		Values:      v1beta1.Values{Files: g.Values.Files, Schema: g.Values.Schema},
+		Attachments: g.Documentation,
 	}
 
 	if pkg.Kind == "" {

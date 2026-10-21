@@ -137,10 +137,13 @@ In v1beta1, omitting `wait.cluster.condition` waits for resource readiness using
 
 ## Schema Changes and Field Mappings
 
-These conversions are automatic. Paths below are relative to each component unless prefixed with `metadata` or `build`. `[]` denotes a list entry.
+{/* FIXME don't love this */}
+
+These conversions are automatic. Paths below are relative to each component unless prefixed with `metadata`, `build`, or described as top-level. `[]` denotes a list entry.
 
 | v1alpha1 | v1beta1 |
 | --- | --- |
+| Top-level `documentation` | Top-level `attachments` |
 | `required` | `optional`, with the boolean inverted. |
 | `only.flavor` | `selector.flavor` |
 | `only.cluster.architecture` | `selector.architecture` |
@@ -166,6 +169,12 @@ These conversions are automatic. Paths below are relative to each component unle
 New v1beta1 components are required by default (`optional: false`). However, conversion keeps current behavior (i.e., an omitted or false `required` becomes `optional: true`). Namespace overrides and chart schema validation remain enabled by default.
 
 `selector` filters components during create; `target` filters them during deploy.
+
+### Attachments
+
+The top-level `documentation` map becomes `attachments`. `zarf dev upgrade` renames it automatically. Extract these files with `zarf package inspect attachments`; `zarf package inspect documentation` remains supported and uses the same `<package-name>-documentation` output directory.
+
+This is a breaking change for earlier experimental v1beta1 definitions and packages. Rename their top-level `documentation` key to `attachments` and rebuild packages with the updated CLI. Earlier experimental v1beta1 CLIs do not support `attachments`; use the updated CLI to create and consume these packages. v1alpha1 definitions and packages continue to use `documentation`.
 
 ### Helm charts
 

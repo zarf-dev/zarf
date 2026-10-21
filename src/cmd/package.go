@@ -1326,6 +1326,7 @@ func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectDocumentationOptions()
 	cmd := &cobra.Command{
 		Use:     "documentation [ PACKAGE_SOURCE ]",
+		Aliases: []string{"attachments"},
 		Short:   "Extract documentation files from the package",
 		Example: lang.CmdPackageInspectDocumentationExample,
 		Args:    cobra.MaximumNArgs(1),
