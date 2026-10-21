@@ -90,20 +90,30 @@ func TestAnnotationsFromMetadata_PreservesV1alpha1Precedence(t *testing.T) {
 func TestResourceAnnotations(t *testing.T) {
 	t.Parallel()
 
-	pkg := api.Package{APIVersion: v1beta1.APIVersion}
+	pkg := api.Package{
+		APIVersion:    v1beta1.APIVersion,
+		Documentation: map[string]string{"readme": "README.md"},
+	}
 	documentationPath := DocumentationResourcePath("README.md")
 	require.Equal(t, map[string]string{
-		ocispec.AnnotationTitle:     documentationPath,
+		ocispec.AnnotationTitle:     "readme",
 		ResourceMountPathAnnotation: documentationPath,
 		ResourceKindAnnotation:      ResourceKindDocumentation,
 	}, resourceAnnotations(documentationPath, pkg))
 
 	sbomPath := SBOMResourcePath("component:metrics")
 	require.Equal(t, map[string]string{
-		ocispec.AnnotationTitle:     sbomPath,
+		ocispec.AnnotationTitle:     "component:metrics",
 		ResourceMountPathAnnotation: sbomPath,
 		ResourceKindAnnotation:      ResourceKindSBOM,
 	}, resourceAnnotations(sbomPath, pkg))
+
+	imageSBOMPath := SBOMResourcePath("image:longhornio/longhorn-ui:v1.11.2")
+	require.Equal(t, map[string]string{
+		ocispec.AnnotationTitle:     "image:longhornio/longhorn-ui:v1.11.2",
+		ResourceMountPathAnnotation: imageSBOMPath,
+		ResourceKindAnnotation:      ResourceKindSBOM,
+	}, resourceAnnotations(imageSBOMPath, pkg))
 }
 
 func TestComputeManifestAnnotatesV1Beta1Resources(t *testing.T) {
@@ -131,13 +141,17 @@ documentation:
 
 	descriptors := map[string]ocispec.Descriptor{}
 	for _, descriptor := range manifest.Layers {
-		descriptors[descriptor.Annotations[ocispec.AnnotationTitle]] = descriptor
+		descriptors[descriptor.Annotations[ResourceMountPathAnnotation]] = descriptor
 	}
-	require.Equal(t, ResourceKindDocumentation, descriptors[DocumentationResourcePath("README.md")].Annotations[ResourceKindAnnotation])
-	require.Equal(t, ResourceKindSBOM, descriptors[SBOMResourcePath("component:metrics")].Annotations[ResourceKindAnnotation])
-	require.Equal(t, ZarfLayerMediaTypeBlob, descriptors[DocumentationResourcePath("README.md")].MediaType)
+	documentation := descriptors[DocumentationResourcePath("README.md")]
+	require.Equal(t, "readme", documentation.Annotations[ocispec.AnnotationTitle])
+	require.Equal(t, ResourceKindDocumentation, documentation.Annotations[ResourceKindAnnotation])
+	require.Equal(t, ZarfLayerMediaTypeBlob, documentation.MediaType)
+	sbom := descriptors[SBOMResourcePath("component:metrics")]
+	require.Equal(t, "component:metrics", sbom.Annotations[ocispec.AnnotationTitle])
+	require.Equal(t, ResourceKindSBOM, sbom.Annotations[ResourceKindAnnotation])
 	//nolint:testifylint // application/vnd.syft+json is a media type, not encoded JSON.
-	require.Equal(t, SBOMMediaTypeSyftJSON, descriptors[SBOMResourcePath("component:metrics")].MediaType)
+	require.Equal(t, SBOMMediaTypeSyftJSON, sbom.MediaType)
 }
 
 // newTestLayout creates a minimal PackageLayout with a computed manifest.

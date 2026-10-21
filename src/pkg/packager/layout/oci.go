@@ -38,7 +38,7 @@ const (
 	// ZarfComponentConfigMediaType is the media type for a v1beta1 Zarf component config OCI artifact.
 	ZarfComponentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
 	// ResourceMountPathAnnotation identifies where a package resource is mounted in its OCI artifact.
-	ResourceMountPathAnnotation = "dev.zarf.mountPath"
+	ResourceMountPathAnnotation = oci.ResourceMountPathAnnotation
 	// ResourceKindAnnotation identifies the kind of a granular package resource.
 	ResourceKindAnnotation = "dev.zarf.resource.kind"
 	// ResourceKindDocumentation identifies a documentation resource.
@@ -99,11 +99,30 @@ func resourceAnnotations(resourcePath string, pkg api.Package) map[string]string
 	case strings.HasPrefix(resourcePath, DocumentationDir+"/"):
 		annotations[ResourceMountPathAnnotation] = resourcePath
 		annotations[ResourceKindAnnotation] = ResourceKindDocumentation
+		if key, found := documentationResourceKey(resourcePath, pkg); found {
+			annotations[ocispec.AnnotationTitle] = key
+		}
 	case strings.HasPrefix(resourcePath, SBOMResourcesDir+"/"):
 		annotations[ResourceMountPathAnnotation] = resourcePath
 		annotations[ResourceKindAnnotation] = ResourceKindSBOM
+		if key, found := SBOMResourceKey(resourcePath); found {
+			annotations[ocispec.AnnotationTitle] = key
+		}
 	}
 	return annotations
+}
+
+func documentationResourceKey(resourcePath string, pkg api.Package) (string, bool) {
+	fileNames, err := GetDocumentationFileNames(pkg.Documentation)
+	if err != nil {
+		return "", false
+	}
+	for key, fileName := range fileNames {
+		if DocumentationResourcePath(fileName) == resourcePath {
+			return key, true
+		}
+	}
+	return "", false
 }
 
 func resourceMediaType(resourcePath string, pkg api.Package) string {
