@@ -339,9 +339,11 @@ func TestDeployFileTemplatesByAPIVersion(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct {
 		name, apiVersion, destination, expectedText string
+		fail                                        bool
 	}{
-		{"legacy", v1alpha1.APIVersion, "###ZARF_TEMP###/zarf-injector", "supplied\n"},
-		{"beta", v1beta1.APIVersion, "{{ .Runtime.TmpDir }}/zarf-injector", "###ZARF_VAR_INPUT###"},
+		{"legacy", v1alpha1.APIVersion, "###ZARF_TEMP###/zarf-injector", "supplied\n", false},
+		{"beta", v1beta1.APIVersion, "{{ .Runtime.TempDir }}/zarf-injector", "###ZARF_VAR_INPUT###", false},
+		{"beta failure", v1beta1.APIVersion, "{{ .Runtime.TempDir }}/zarf-injector", "###ZARF_VAR_INPUT###", true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -351,14 +353,35 @@ func TestDeployFileTemplatesByAPIVersion(t *testing.T) {
 			require.NoError(t, os.WriteFile(filepath.Join(dir, "injector"), binary, 0o600))
 			require.NoError(t, os.WriteFile(filepath.Join(dir, "text"), []byte("###ZARF_VAR_INPUT###"), 0o600))
 			output := t.TempDir()
+			injectorLink := filepath.Join(output, "injector-link")
+			observedBinary := filepath.Join(output, "observed-injector")
+			server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+				contents, err := os.ReadFile(injectorLink)
+				if assert.NoError(t, err) {
+					assert.NoError(t, os.WriteFile(observedBinary, contents, 0o600))
+				}
+			}))
+			t.Cleanup(server.Close)
+			timeout := 5
 			pkg := api.Package{
 				APIVersion: tt.apiVersion,
 				Kind:       api.ZarfPackageConfig,
 				Metadata:   api.PackageMetadata{Name: "file-templates"},
-				Components: []api.Component{{Name: "files", Files: []api.File{
-					{Source: "injector", Destination: tt.destination, Executable: true},
-					{Source: "text", Destination: filepath.Join(output, "text")},
-				}}},
+				Components: []api.Component{
+					{Name: "files", Files: []api.File{
+						{Source: "injector", Destination: tt.destination, Executable: true, Symlinks: []string{injectorLink}},
+						{Source: "text", Destination: strings.TrimSuffix(tt.destination, "zarf-injector") + layout.ZarfYAML},
+						{Source: "text", Destination: filepath.Join(output, "text")},
+					}},
+					{Name: "consumer", Actions: api.ComponentActions{OnDeploy: api.ActionSet{
+						OnSuccess: []api.Action{{MaxTotalSeconds: &timeout, Wait: &api.ActionWait{
+							Network: &api.ActionWaitNetwork{Protocol: "http", Address: server.Listener.Addr().String()},
+						}}},
+					}}},
+				},
+			}
+			if tt.fail {
+				pkg.Components[1].Actions.OnDeploy.OnSuccess = append(pkg.Components[1].Actions.OnDeploy.OnSuccess, api.Action{Cmd: "exit 1"})
 			}
 			if tt.apiVersion == v1beta1.APIVersion {
 				pkg.Components[0].Files = append(pkg.Components[0].Files, api.File{
@@ -368,12 +391,25 @@ func TestDeployFileTemplatesByAPIVersion(t *testing.T) {
 			pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(dir)}, assemble.AssembleOptions{SkipSBOM: true})
 			require.NoError(t, err)
 			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
-			_, err = Deploy(ctx, pkgLayout, DeployOptions{SetVariables: map[string]string{"INPUT": "supplied"}})
+			definitionPath := filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML)
+			originalDefinition, err := os.ReadFile(definitionPath)
 			require.NoError(t, err)
+			_, err = Deploy(ctx, pkgLayout, DeployOptions{SetVariables: map[string]string{"INPUT": "supplied"}})
+			if tt.fail {
+				require.ErrorContains(t, err, `command "exit 1" failed`)
+			} else {
+				require.NoError(t, err)
+			}
 
-			actualBinary, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "zarf-injector"))
+			actualBinary, err := os.ReadFile(observedBinary)
 			require.NoError(t, err)
 			require.Equal(t, binary, actualBinary)
+			definition, err := os.ReadFile(definitionPath)
+			require.NoError(t, err)
+			require.Equal(t, string(originalDefinition), string(definition), "temporary files must not overwrite the package definition")
+			injectorPath, err := os.Readlink(injectorLink)
+			require.NoError(t, err)
+			require.NoDirExists(t, filepath.Dir(injectorPath), "temporary files must be cleaned up after deployment")
 			text, err := os.ReadFile(filepath.Join(output, "text"))
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedText, string(text))

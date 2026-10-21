@@ -104,6 +104,9 @@ type deployer struct {
 	c    *cluster.Cluster
 	vc   *variables.VariableConfig
 	vals value.Values
+
+	// runtimeDir holds runtime files across components without modifying the package layout.
+	runtimeDir string
 }
 
 // DeployResult is the result of a successful deploy
@@ -241,14 +244,22 @@ func (d *deployer) isConnectedToCluster() bool {
 	return d.c != nil
 }
 
-func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]state.DeployedComponent, error) {
+func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (deployedComponents []state.DeployedComponent, err error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
-	deployedComponents := []state.DeployedComponent{}
+	deployedComponents = []state.DeployedComponent{}
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory: %w", err)
 	}
+
+	d.runtimeDir, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(d.runtimeDir))
+	}()
 
 	for _, component := range pkg.Components {
 		packageGeneration := 1
@@ -450,14 +461,14 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			}
 			d.s.InjectorInfo.Image = injectorImage
 
-			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkg.Metadata.Name)
+			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, d.runtimeDir, pkgLayout.GetImageDirPath(), component.GetImages(), pkg.Metadata.Name)
 			if err != nil {
 				return nil, err
 			}
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
 		case state.RegistryModeNodePort:
-			seedImage, seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkg.Metadata.Name, pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
+			seedImage, seedPort, err := d.c.StartInjection(ctx, d.runtimeDir, pkgLayout.GetImageDirPath(), component.GetImages(), pkg.Metadata.Name, pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
 				InjectorNodePort: uint16(d.s.InjectorInfo.Port),
 				RegistryNodePort: uint16(d.s.RegistryInfo.Port),
 				IPFamily:         d.s.IPFamily,
@@ -555,7 +566,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	if hasFiles {
-		if err := processComponentFiles(ctx, pkgLayout, component, d.vc, d.vals, template.StateAccess{State: d.s, AccessKeys: component.StateAccess}); err != nil {
+		if err := d.processComponentFiles(ctx, pkgLayout, component); err != nil {
 			return nil, fmt.Errorf("unable to process the component files: %w", err)
 		}
 	}
@@ -909,7 +920,7 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayo
 	return nil
 }
 
-func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) (err error) {
+func (d *deployer) processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component) (err error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
 	start := time.Now()
@@ -943,10 +954,10 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 
 		destination := file.Destination
 		if pkg.GetAPIVersion() == v1alpha1.APIVersion {
-			destination = strings.Replace(destination, "###ZARF_TEMP###", pkgLayout.DirPath(), 1)
+			destination = strings.Replace(destination, "###ZARF_TEMP###", d.runtimeDir, 1)
 		} else if strings.Contains(destination, "{{") {
 			// Resolve the injector destination without enabling templating on its binary contents.
-			objs := template.Objects{"Runtime": map[string]string{"TmpDir": pkgLayout.DirPath()}}
+			objs := template.Objects{"Runtime": map[string]string{"TempDir": d.runtimeDir}}
 			destination, err = template.Apply(ctx, destination, objs)
 			if err != nil {
 				return fmt.Errorf("unable to template file destination %q: %w", file.Destination, err)
@@ -981,7 +992,7 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 					// If the file is a text file, template it
 					if isText {
 						l.Debug("template file", "name", file.Destination)
-						if err := variableConfig.ReplaceTextTemplate(subFile); err != nil {
+						if err := d.vc.ReplaceTextTemplate(subFile); err != nil {
 							return fmt.Errorf("unable to template file %s: %w", subFile, err)
 						}
 					}
@@ -989,11 +1000,11 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 				// If the file has go-templating enabled, apply templates.
 				if file.EnableTemplating {
 					l.Debug("templates enabled, processing file", "name", file.Destination)
-					objs, err := template.NewObjects(values).
+					objs, err := template.NewObjects(d.vals).
 						WithPackage(pkg).
-						WithVariables(variableConfig.GetSetVariableMap()).
-						WithConstants(variableConfig.GetConstants()).
-						WithState(stateAccess)
+						WithVariables(d.vc.GetSetVariableMap()).
+						WithConstants(d.vc.GetConstants()).
+						WithState(template.StateAccess{State: d.s, AccessKeys: component.StateAccess})
 					if err != nil {
 						return err
 					}
