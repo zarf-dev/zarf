@@ -90,27 +90,24 @@ func TestAnnotationsFromMetadata_PreservesV1alpha1Precedence(t *testing.T) {
 func TestResourceAnnotations(t *testing.T) {
 	t.Parallel()
 
-	pkg := api.Package{
-		APIVersion:    v1beta1.APIVersion,
-		Documentation: map[string]string{"readme": "README.md"},
-	}
+	pkg := api.Package{APIVersion: v1beta1.APIVersion}
 	documentationPath := DocumentationResourcePath("README.md")
 	require.Equal(t, map[string]string{
-		ocispec.AnnotationTitle:     "readme",
+		ocispec.AnnotationTitle:     documentationPath,
 		ResourceMountPathAnnotation: documentationPath,
 		ResourceKindAnnotation:      ResourceKindDocumentation,
 	}, resourceAnnotations(documentationPath, pkg))
 
 	sbomPath := SBOMResourcePath("component:metrics")
 	require.Equal(t, map[string]string{
-		ocispec.AnnotationTitle:     "component:metrics",
+		ocispec.AnnotationTitle:     sbomPath,
 		ResourceMountPathAnnotation: sbomPath,
 		ResourceKindAnnotation:      ResourceKindSBOM,
 	}, resourceAnnotations(sbomPath, pkg))
 
 	imageSBOMPath := SBOMResourcePath("image:longhornio/longhorn-ui:v1.11.2")
 	require.Equal(t, map[string]string{
-		ocispec.AnnotationTitle:     "image:longhornio/longhorn-ui:v1.11.2",
+		ocispec.AnnotationTitle:     imageSBOMPath,
 		ResourceMountPathAnnotation: imageSBOMPath,
 		ResourceKindAnnotation:      ResourceKindSBOM,
 	}, resourceAnnotations(imageSBOMPath, pkg))
@@ -144,11 +141,11 @@ documentation:
 		descriptors[descriptor.Annotations[ResourceMountPathAnnotation]] = descriptor
 	}
 	documentation := descriptors[DocumentationResourcePath("README.md")]
-	require.Equal(t, "readme", documentation.Annotations[ocispec.AnnotationTitle])
+	require.Equal(t, DocumentationResourcePath("README.md"), documentation.Annotations[ocispec.AnnotationTitle])
 	require.Equal(t, ResourceKindDocumentation, documentation.Annotations[ResourceKindAnnotation])
 	require.Equal(t, DocumentationLayerMediaTypeBlob, documentation.MediaType)
 	sbom := descriptors[SBOMResourcePath("component:metrics")]
-	require.Equal(t, "component:metrics", sbom.Annotations[ocispec.AnnotationTitle])
+	require.Equal(t, SBOMResourcePath("component:metrics"), sbom.Annotations[ocispec.AnnotationTitle])
 	require.Equal(t, ResourceKindSBOM, sbom.Annotations[ResourceKindAnnotation])
 	//nolint:testifylint // application/vnd.syft+json is a media type, not encoded JSON.
 	require.Equal(t, SBOMMediaTypeSyftJSON, sbom.MediaType)
