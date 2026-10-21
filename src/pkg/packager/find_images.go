@@ -20,6 +20,8 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -115,8 +117,8 @@ type DefinitionImageResult struct {
 	Selector      api.ComponentSelector
 }
 
-// FindDefinitionImages finds all images contained in a component and filters them according to images discovered in
-// imageArchives.
+// FindDefinitionImages finds images in each component's resources and excludes images
+// already provided by imported components or imageArchives.
 // It returns []DefinitionImageResult
 func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []DefinitionImageResult, err error) {
 	cachePath, err := utils.ResolveCachePath(opts.CachePath)
@@ -145,7 +147,124 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 		return nil, err
 	}
 
-	return filterImagesFoundInArchives(ctx, loaded.Definition, loaded.Resources, imageScans)
+	results, err := filterImagesFoundInArchives(ctx, loaded.Definition, loaded.Resources, imageScans)
+	if err != nil {
+		return nil, err
+	}
+	return filterImportedImages(packagePath, loaded.Definition, results, opts.Flavor)
+}
+
+// filterImportedImages leaves images supplied by imported components out of the
+// parent definition suggested by find-images.
+func filterImportedImages(packagePath string, resolved api.Package, results []DefinitionImageResult, flavor string) ([]DefinitionImageResult, error) {
+	path, err := layout.ResolvePackagePath(packagePath)
+	if err != nil {
+		return nil, err
+	}
+	contents, err := os.ReadFile(path.ManifestFile)
+	if err != nil {
+		return nil, err
+	}
+	header, err := load.ParseDefinitionHeader(contents)
+	if err != nil {
+		return nil, err
+	}
+
+	type componentKey struct {
+		name, architecture, flavor string
+	}
+	// Imports precede locally authored images in the resolved v1alpha1 component.
+	// v1beta1 merges images by name, so compare against the locally authored set.
+	authored := make(map[componentKey][]string)
+	importedComponents := make(map[componentKey]bool)
+	switch header.APIVersion {
+	case v1beta1.APIVersion:
+		var components []v1beta1.Component
+		if header.Kind == string(v1beta1.ZarfComponentConfig) {
+			var config v1beta1.ComponentConfig
+			if err := yaml.Unmarshal(contents, &config); err != nil {
+				return nil, err
+			}
+			components = []v1beta1.Component{{Name: config.Metadata.Name, ComponentSpec: config.Component}}
+		} else {
+			var pkg v1beta1.Package
+			if err := yaml.Unmarshal(contents, &pkg); err != nil {
+				return nil, err
+			}
+			components = pkg.Components
+		}
+		for _, component := range components {
+			key := componentKey{component.Name, component.Selector.Architecture, component.Selector.Flavor}
+			importedComponents[key] = len(component.Import.Local)+len(component.Import.Remote) > 0
+			for _, image := range component.Images {
+				authored[key] = append(authored[key], image.Name)
+			}
+		}
+	default:
+		var pkg v1alpha1.ZarfPackage
+		if err := yaml.Unmarshal(contents, &pkg); err != nil {
+			return nil, err
+		}
+		for _, component := range pkg.Components {
+			if component.Only.Cluster.Architecture != "" && component.Only.Cluster.Architecture != resolved.Metadata.Architecture ||
+				component.Only.Flavor != "" && component.Only.Flavor != flavor {
+				continue
+			}
+			key := componentKey{name: component.Name}
+			importedComponents[key] = component.Import.Path != "" || component.Import.URL != ""
+			authored[key] = component.Images
+		}
+	}
+
+	for i := range results {
+		result := &results[i]
+		key := componentKey{result.ComponentName, result.Selector.Architecture, result.Selector.Flavor}
+		if header.APIVersion != v1beta1.APIVersion {
+			key = componentKey{name: result.ComponentName}
+		}
+		if !importedComponents[key] {
+			continue
+		}
+		inherited := make(map[string]bool)
+		for _, component := range resolved.Components {
+			if component.Name != result.ComponentName || component.Selector != result.Selector {
+				continue
+			}
+			images := component.Images
+			localImages := authored[key]
+			if header.APIVersion != v1beta1.APIVersion {
+				inheritedCount := max(0, len(images)-len(localImages))
+				localImages = nil
+				for _, image := range images[inheritedCount:] {
+					localImages = append(localImages, image.Name)
+				}
+				images = images[:inheritedCount]
+			}
+			local := make(map[string]bool, len(localImages))
+			for _, name := range localImages {
+				ref, err := transform.ParseImageRef(name)
+				if err != nil {
+					return nil, fmt.Errorf("invalid authored image %q: %w", name, err)
+				}
+				local[ref.Reference] = true
+			}
+			for _, image := range images {
+				ref, err := transform.ParseImageRef(image.Name)
+				if err != nil {
+					return nil, fmt.Errorf("invalid imported image %q: %w", image.Name, err)
+				}
+				if !local[ref.Reference] {
+					inherited[ref.Reference] = true
+					inherited[image.Name] = true
+				}
+			}
+			break
+		}
+		result.Matches = slices.DeleteFunc(result.Matches, func(match ImageMatch) bool {
+			return inherited[match.Image.Name]
+		})
+	}
+	return results, nil
 }
 
 // FindImages iterates over the manifests and charts within each component to find any container images
