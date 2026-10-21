@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/types"
 	ociDirectory "oras.land/oras-go/v2/content/oci"
+	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 // LayerType specifies a category of layers in a Zarf OCI package.
@@ -68,6 +69,9 @@ type PublishOptions struct {
 type RemoteClientOptions struct {
 	// CachePath stores OCI layers locally when non-empty.
 	CachePath string
+	// CredentialFunc supplies registry credentials.
+	// If nil, the Docker credential store is used instead.
+	CredentialFunc auth.CredentialFunc
 	// Transport configures HTTP transport behavior such as proxies and mTLS.
 	// It is cloned before use and is never modified.
 	Transport *http.Transport
@@ -87,10 +91,13 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 }
 
 // NewRemoteWithOptions returns an ORAS remote repository configured with Zarf's
-// cache and transport options.
+// cache, credential, and transport options.
 func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Platform, options RemoteClientOptions) (*Remote, error) {
 	modifiers := []oci.Modifier{
 		oci.WithInsecureSkipVerify(options.InsecureSkipTLSVerify),
+	}
+	if options.CredentialFunc != nil {
+		modifiers = append(modifiers, oci.WithCredentialFunc(options.CredentialFunc))
 	}
 	if options.Transport != nil {
 		modifiers = append(modifiers, oci.WithTransport(options.Transport))
