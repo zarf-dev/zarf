@@ -116,7 +116,7 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 	}
 
 	if slices.Contains(include, DocLayers) {
-		if len(pkg.Documentation) > 0 {
+		if len(pkg.Attachments) > 0 {
 			desc := root.Locate(layout.DocumentationTar)
 			if !oci.IsEmptyDescriptor(desc) {
 				layers = append(layers, desc)

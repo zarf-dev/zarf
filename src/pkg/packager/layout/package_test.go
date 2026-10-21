@@ -1245,7 +1245,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 	})
 }
 
-func TestGetDocumentation(t *testing.T) {
+func TestGetAttachments(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
@@ -1304,11 +1304,20 @@ func TestGetDocumentation(t *testing.T) {
 			},
 		)
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
-		require.NoError(t, err)
-
-		require.FileExists(t, filepath.Join(outputDir, "README.md"))
-		require.FileExists(t, filepath.Join(outputDir, "LICENSE"))
+		for _, method := range []struct {
+			name    string
+			extract func(context.Context, string, []string) error
+		}{
+			{name: "GetAttachments", extract: pkgLayout.GetAttachments},
+			{name: "GetDocumentation", extract: pkgLayout.GetDocumentation},
+		} {
+			t.Run(method.name, func(t *testing.T) {
+				destPath := filepath.Join(outputDir, method.name)
+				require.NoError(t, method.extract(ctx, destPath, nil))
+				assertFileContent(t, filepath.Join(destPath, "README.md"), "readme content")
+				assertFileContent(t, filepath.Join(destPath, "LICENSE"), "license content")
+			})
+		}
 	})
 
 	t.Run("extract specific documentation keys", func(t *testing.T) {
@@ -1323,7 +1332,7 @@ func TestGetDocumentation(t *testing.T) {
 			},
 		)
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"})
+		err := pkgLayout.GetAttachments(ctx, outputDir, []string{"readme"})
 		require.NoError(t, err)
 
 		require.FileExists(t, filepath.Join(outputDir, "README.md"))
@@ -1336,7 +1345,7 @@ func TestGetDocumentation(t *testing.T) {
 			nil,
 		)
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		err := pkgLayout.GetAttachments(ctx, outputDir, nil)
 		require.ErrorContains(t, err, "no documentation files found in package")
 	})
 
@@ -1350,7 +1359,7 @@ func TestGetDocumentation(t *testing.T) {
 			},
 		)
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"nonexistent"})
+		err := pkgLayout.GetAttachments(ctx, outputDir, []string{"nonexistent"})
 		require.ErrorContains(t, err, "not found in package documentation")
 	})
 
@@ -1366,7 +1375,7 @@ func TestGetDocumentation(t *testing.T) {
 			},
 		)
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme1"})
+		err := pkgLayout.GetAttachments(ctx, outputDir, []string{"readme1"})
 		require.NoError(t, err)
 
 		assertFileContent(t, filepath.Join(outputDir, "readme1-README.md"), "readme1 content")
@@ -1386,7 +1395,7 @@ func TestGetDocumentation(t *testing.T) {
 		require.NoError(t, os.WriteFile(externalPath, []byte("unchanged"), 0o600))
 		require.NoError(t, os.Symlink(externalPath, filepath.Join(outputDir, "README.md")))
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		err := pkgLayout.GetAttachments(ctx, outputDir, nil)
 		require.Error(t, err)
 
 		content, err := os.ReadFile(externalPath)
@@ -2038,16 +2047,16 @@ func TestValidatePackagePaths(t *testing.T) {
 		{
 			name: "documentation key traversal",
 			pkg: api.Package{
-				Metadata:      api.PackageMetadata{Name: "pkg"},
-				Documentation: map[string]string{"../docs": "readme.md"},
+				Metadata:    api.PackageMetadata{Name: "pkg"},
+				Attachments: map[string]string{"../docs": "readme.md"},
 			},
 			wantErr: `documentation key "../docs" would result in an invalid path`,
 		},
 		{
 			name: "documentation key is traversal",
 			pkg: api.Package{
-				Metadata:      api.PackageMetadata{Name: "pkg"},
-				Documentation: map[string]string{"..": "readme.md"},
+				Metadata:    api.PackageMetadata{Name: "pkg"},
+				Attachments: map[string]string{"..": "readme.md"},
 			},
 			wantErr: `documentation key ".." would result in an invalid path`,
 		},

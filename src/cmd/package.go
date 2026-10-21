@@ -605,7 +605,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
 
-	if len(pkg.Documentation) > 0 {
+	if len(pkg.Attachments) > 0 {
 		l.Info("documentation available for this package - use 'zarf package inspect documentation' to view")
 	}
 
@@ -1372,7 +1372,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 	}()
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
 	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", filepath.Base(pkgLayout.Definition().Metadata.Name)))
-	return pkgLayout.GetDocumentation(ctx, outputPath, o.keys)
+	return pkgLayout.GetAttachments(ctx, outputPath, o.keys)
 }
 
 type packageInspectDefinitionOptions struct {

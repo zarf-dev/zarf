@@ -38,7 +38,7 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 			Files:  pkg.Values.Files,
 			Schema: pkg.Values.Schema,
 		},
-		Documentation: pkg.Attachments,
+		Attachments: pkg.Attachments,
 	}
 
 	for _, c := range pkg.Components {
@@ -310,7 +310,7 @@ func PackageToV1beta1(g api.Package) v1beta1.Package {
 		Metadata:    metadataFromGeneric(g.Metadata),
 		Build:       buildFromGeneric(g.Build),
 		Values:      v1beta1.Values{Files: g.Values.Files, Schema: g.Values.Schema},
-		Attachments: g.Documentation,
+		Attachments: g.Attachments,
 	}
 
 	if pkg.Kind == "" {

@@ -136,7 +136,7 @@ func TestCreateDocumentationTarRejectsPathKeys(t *testing.T) {
 	t.Parallel()
 
 	pkg := api.Package{
-		Documentation: map[string]string{
+		Attachments: map[string]string{
 			"../escape": "first/readme.md",
 			"witness":   "second/readme.md",
 		},
@@ -221,7 +221,7 @@ func TestCreateDocumentationTarMaterializesSymlinks(t *testing.T) {
 
 			buildPath := t.TempDir()
 			require.NoError(t, createDocumentationTar(testutil.TestContext(t), api.Package{
-				Documentation: map[string]string{"readme": "readme.md"},
+				Attachments: map[string]string{"readme": "readme.md"},
 			}, load.NewResourceSet(resourceRoot), buildPath))
 
 			outputDir := t.TempDir()
@@ -1123,7 +1123,7 @@ func TestCreateAbsoluteSources(t *testing.T) {
 				require.NoError(t, err)
 			}
 			docsDir := filepath.Join(tmpdir, "docs-dir")
-			err = pkgLayout.GetDocumentation(ctx, docsDir, []string{})
+			err = pkgLayout.GetAttachments(ctx, docsDir, []string{})
 			require.NoError(t, err)
 			require.FileExists(t, filepath.Join(docsDir, "doc.md"))
 
