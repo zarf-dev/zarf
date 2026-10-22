@@ -222,9 +222,12 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		totalLayerSize += fileSize
 	}
 
-	// Sort by digest for deterministic ordering.
+	// Sort by digest and title for deterministic ordering.
 	sort.Slice(descs, func(i, j int) bool {
-		return descs[i].Digest.String() < descs[j].Digest.String()
+		if descs[i].Digest != descs[j].Digest {
+			return descs[i].Digest < descs[j].Digest
+		}
+		return descs[i].Annotations[ocispec.AnnotationTitle] < descs[j].Annotations[ocispec.AnnotationTitle]
 	})
 
 	configBytes, err := json.Marshal(configDefinition)

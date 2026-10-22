@@ -227,6 +227,33 @@ func TestComputeManifestDeterministic(t *testing.T) {
 	assert.Equal(t, first, p.Digest(), "repeated computeManifest calls should produce the same digest")
 }
 
+func TestComputeManifestDeterministicWithDuplicateResourceContent(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, DocumentationDir), 0o700))
+	for _, name := range []string{"first.md", "second.md"} {
+		require.NoError(t, os.WriteFile(filepath.Join(dir, DocumentationDir, name), []byte("identical documentation"), 0o600))
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(dir, Checksums), []byte{}, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: test-pkg
+documentation:
+  first: first.md
+  second: second.md
+`), 0o600))
+
+	p := &PackageLayout{dirPath: dir}
+	require.NoError(t, p.computeManifest(t.Context()))
+	first := p.Digest()
+	for range 100 {
+		require.NoError(t, p.computeManifest(t.Context()))
+		require.Equal(t, first, p.Digest())
+	}
+}
+
 func TestResolve(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
