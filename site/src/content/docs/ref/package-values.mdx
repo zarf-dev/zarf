@@ -309,6 +309,7 @@ The `.State` object exposes Zarf cluster state.
 | `.State.Injector.Port` | Injector host port (cf. `###ZARF_INJECTOR_HOSTPORT###`) |
 | `.State.Injector.PayloadConfigMaps` | Number of payload ConfigMaps (cf. `###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###`) |
 | `.State.Injector.PayloadShaSum` | SHA sum of injector payload (cf. `###ZARF_INJECTOR_SHASUM###`) |
+| `.State.Agent.MutationPolicy` | Agent mutation policy: `"all"` or `"labeled"` |
 
 **Sensitive fields** require a `stateAccess` declaration on the component. Accessing a sensitive field without the corresponding group causes a template error at deploy time:
 
@@ -344,7 +345,8 @@ The `.Pkg` object gives access to the package definition. See this used in the [
 - `.Pkg.GetComponent "<component name>"` returns the named component, or a template error if it does not exist.
 - `.Pkg.HasImages` returns whether the package includes any images or image archives.
 - `(.Pkg.GetComponent "<component name>").GetImages` returns the component's image references, including those from image archives.
-- `(.Pkg.GetComponent "<component name>").GetImageByID "<image id>"` returns an object with `.Reference`, `.Tag`, and `.Digest`.Absent tags/digests are empty, and missing/empty image IDs cause a template error. (v1beta1 only)
+- `(.Pkg.GetComponent "<component name>").GetImageByID "<image id>"` returns an object with `.Reference`, `.Repository`, `.Tag`, and `.Digest`. Absent tags/digests are empty, and missing/empty image IDs cause a template error. (v1beta1 only)
+  - For `ghcr.io/zarf-dev/agent:1.2.3@sha256:abc…` the `.Reference` is the full input, `.Repository` is `zarf-dev/agent`, `.Tag` is `1.2.3`, and `.Digest` is `sha256:abc…`.
 
 ### Functions
 

@@ -30,7 +30,11 @@ spec:
             - TCP4-LISTEN:{{ include "registry.port" . }},reuseaddr,fork
             - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/client/ca.crt,verify=1
           {{- end }}
-          image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
+          {{- if .Values.proxy.image.digest }}
+          image: {{ printf "%s@%s" .Values.proxy.image.repository .Values.proxy.image.digest | quote }}
+          {{- else }}
+          image: {{ printf "%s:%s" .Values.proxy.image.repository (toString .Values.proxy.image.tag) | quote }}
+          {{- end }}
           imagePullPolicy: IfNotPresent
           name: zarf-registry-proxy
           volumeMounts:

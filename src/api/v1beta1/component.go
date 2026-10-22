@@ -24,11 +24,12 @@ type Component struct {
 	ComponentSpec `json:",inline"`
 }
 
-// ImageReference exposes the full image reference and its optional tag and digest.
+// ImageReference exposes the full image reference, repository path, and optional tag and digest.
 type ImageReference struct {
-	Reference string `json:"reference"`
-	Tag       string `json:"tag"`
-	Digest    string `json:"digest"`
+	Reference  string `json:"reference"`
+	Repository string `json:"repository"`
+	Tag        string `json:"tag"`
+	Digest     string `json:"digest"`
 }
 
 // GetImageByID returns the reference for the given non-empty image ID.
@@ -36,11 +37,11 @@ type ImageReference struct {
 func (c Component) GetImageByID(id string) (ImageReference, error) {
 	for _, image := range c.Images {
 		if id != "" && image.ID == id {
-			ref, err := reference.Parse(image.Name)
+			ref, err := reference.ParseNormalizedNamed(image.Name)
 			if err != nil {
 				return ImageReference{}, fmt.Errorf("invalid image reference %q for ID %q in component %q: %w", image.Name, id, c.Name, err)
 			}
-			result := ImageReference{Reference: image.Name}
+			result := ImageReference{Reference: image.Name, Repository: reference.Path(ref)}
 			if tagged, ok := ref.(reference.Tagged); ok {
 				result.Tag = tagged.Tag()
 			}
@@ -321,7 +322,7 @@ const (
 	StateAccessRegistryCredentials StateAccessKey = "registryCredentials"
 	// StateAccessGitCredentials unlocks .State.Git.{PushPassword,PullPassword}.
 	StateAccessGitCredentials StateAccessKey = "gitCredentials"
-	// StateAccessAgentCerts unlocks .State.Agent.{CA,Cert,Key} (base64-encoded) and adds the .State.Agent sub-object.
+	// StateAccessAgentCerts unlocks .State.Agent.{CA,Cert,Key} (base64-encoded).
 	StateAccessAgentCerts StateAccessKey = "agentCerts"
 )
 

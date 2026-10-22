@@ -1,0 +1,26 @@
+proxy:
+  enabled: {{ eq .State.Registry.Mode "proxy" }}
+  injector:
+    hostPort: {{ .State.Injector.Port }}
+    image: {{ .State.Injector.Image | quote }}
+    payLoadConfigMapAmount: {{ .State.Injector.PayloadConfigMaps | quote }}
+    shasum: {{ .State.Injector.PayloadShaSum | quote }}
+persistence:
+  storageClass: {{ .State.StorageClass | quote }}
+imagePullSecrets:
+  - name: private-registry
+mtls:
+  enabled: {{ .State.Registry.MTLSEnabled }}
+secrets:
+  # The state API's htpasswd uses escaped newline separators.
+  htpasswd: {{ .State.Registry.Htpasswd | replace "\\n" "\n" | quote }}
+  configData:
+    http:
+      secret: {{ .State.Registry.Secret | quote }}
+ipv6Only: {{ eq .State.IPFamily "ipv6" }}
+service:
+  registryPort: {{ .State.Registry.Port }}
+  nodePort: {{ .State.Registry.Port }}
+fullnameOverride: zarf-docker-registry
+podLabels:
+  zarf.dev/agent: ignore

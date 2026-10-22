@@ -31,7 +31,11 @@ spec:
       nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
       containers:
         - name: server
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          {{- if .Values.image.digest }}
+          image: {{ printf "%s@%s" .Values.image.repository .Values.image.digest | quote }}
+          {{- else }}
+          image: {{ printf "%s:%s" .Values.image.repository (toString .Values.image.tag) | quote }}
+          {{- end }}
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:

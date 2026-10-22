@@ -28,6 +28,8 @@ deployment:
 image:
   repository: "###ZARF_REGISTRY###/###ZARF_CONST_AGENT_IMAGE###"
   tag: "###ZARF_CONST_AGENT_IMAGE_TAG###"
+  # When set, the digest takes precedence over the tag.
+  digest: ""
   pullSecret: private-registry
 
 resources:
@@ -43,5 +45,6 @@ tolerations: []
 nodeSelector: {}
 webhookAnnotations: {}
 
-mutationPolicy: "###ZARF_AGENT_MUTATION_POLICY###"
+caBundle: ""
+mutationPolicy: all
 mutationExclusions: []
