@@ -120,9 +120,8 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 		}
 	}
 
-	reverseDepComps := slices.Clone(depPkg.DeployedComponents)
-	slices.Reverse(reverseDepComps)
-	for _, depComp := range reverseDepComps {
+	for i := len(depPkg.DeployedComponents) - 1; i >= 0; i-- {
+		depComp := &depPkg.DeployedComponents[i]
 		// Only remove the component if it was requested or if we are removing the whole package.
 		comp, ok := componentIdx[depComp.Name]
 		if !ok {
@@ -140,10 +139,9 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 				return fmt.Errorf("unable to run the before action: %w", err)
 			}
 
-			reverseInstalledCharts := slices.Clone(depComp.InstalledCharts)
-			slices.Reverse(reverseInstalledCharts)
 			if opts.Cluster != nil {
-				for _, chart := range reverseInstalledCharts {
+				for j := len(depComp.InstalledCharts) - 1; j >= 0; j-- {
+					chart := depComp.InstalledCharts[j]
 					err := helm.RemoveChart(ctx, chart.Namespace, chart.ChartName, opts.Timeout)
 					if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
 						return fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w", chart.ChartName, chart.Namespace, err)
@@ -153,9 +151,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 					}
 
 					// remove the helm chart from the installed charts slice.
-					depComp.InstalledCharts = slices.DeleteFunc(depComp.InstalledCharts, func(t state.InstalledChart) bool {
-						return t.ChartName == chart.ChartName
-					})
+					depComp.InstalledCharts = slices.Delete(depComp.InstalledCharts, j, j+1)
 
 					err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 					if err != nil {
@@ -184,9 +180,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 
 			// remove the component from deploy components slice.
 			if opts.Cluster != nil {
-				depPkg.DeployedComponents = slices.DeleteFunc(depPkg.DeployedComponents, func(t state.DeployedComponent) bool {
-					return t.Name == depComp.Name
-				})
+				depPkg.DeployedComponents = slices.Delete(depPkg.DeployedComponents, i, i+1)
 				err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 				if err != nil {
 					// We warn and ignore errors because we may have removed the cluster that this package was inside of
