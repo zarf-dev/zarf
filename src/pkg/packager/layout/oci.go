@@ -39,8 +39,8 @@ const (
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
 	// ZarfComponentConfigMediaType is the media type for a v1beta1 Zarf component config OCI artifact.
 	ZarfComponentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
-	// ResourceMountPathAnnotation identifies where a package resource is mounted in its OCI artifact.
-	ResourceMountPathAnnotation = oci.ResourceMountPathAnnotation
+	// ComponentResourceMountPathAnnotation identifies where a component resource is mounted in its OCI artifact.
+	ComponentResourceMountPathAnnotation = "dev.zarf.mountPath"
 	// ResourceKindAnnotation identifies the kind of a granular package resource.
 	ResourceKindAnnotation = "dev.zarf.resource.kind"
 	// ResourceKindDocumentation identifies a documentation resource.
@@ -99,10 +99,8 @@ func resourceAnnotations(resourcePath string, pkg api.Package) map[string]string
 
 	switch {
 	case strings.HasPrefix(resourcePath, DocumentationDir+"/"):
-		annotations[ResourceMountPathAnnotation] = resourcePath
 		annotations[ResourceKindAnnotation] = ResourceKindDocumentation
 	case strings.HasPrefix(resourcePath, SBOMResourcesDir+"/"):
-		annotations[ResourceMountPathAnnotation] = resourcePath
 		annotations[ResourceKindAnnotation] = ResourceKindSBOM
 	}
 	return annotations

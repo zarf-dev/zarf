@@ -93,23 +93,20 @@ func TestResourceAnnotations(t *testing.T) {
 	pkg := api.Package{APIVersion: v1beta1.APIVersion}
 	documentationPath := DocumentationResourcePath("README.md")
 	require.Equal(t, map[string]string{
-		ocispec.AnnotationTitle:     documentationPath,
-		ResourceMountPathAnnotation: documentationPath,
-		ResourceKindAnnotation:      ResourceKindDocumentation,
+		ocispec.AnnotationTitle: documentationPath,
+		ResourceKindAnnotation:  ResourceKindDocumentation,
 	}, resourceAnnotations(documentationPath, pkg))
 
 	sbomPath := SBOMResourcePath("component:metrics")
 	require.Equal(t, map[string]string{
-		ocispec.AnnotationTitle:     sbomPath,
-		ResourceMountPathAnnotation: sbomPath,
-		ResourceKindAnnotation:      ResourceKindSBOM,
+		ocispec.AnnotationTitle: sbomPath,
+		ResourceKindAnnotation:  ResourceKindSBOM,
 	}, resourceAnnotations(sbomPath, pkg))
 
 	imageSBOMPath := SBOMResourcePath("image:longhornio/longhorn-ui:v1.11.2")
 	require.Equal(t, map[string]string{
-		ocispec.AnnotationTitle:     imageSBOMPath,
-		ResourceMountPathAnnotation: imageSBOMPath,
-		ResourceKindAnnotation:      ResourceKindSBOM,
+		ocispec.AnnotationTitle: imageSBOMPath,
+		ResourceKindAnnotation:  ResourceKindSBOM,
 	}, resourceAnnotations(imageSBOMPath, pkg))
 }
 
@@ -138,7 +135,7 @@ documentation:
 
 	descriptors := map[string]ocispec.Descriptor{}
 	for _, descriptor := range manifest.Layers {
-		descriptors[descriptor.Annotations[ResourceMountPathAnnotation]] = descriptor
+		descriptors[descriptor.Annotations[ocispec.AnnotationTitle]] = descriptor
 	}
 	documentation := descriptors[DocumentationResourcePath("README.md")]
 	require.Equal(t, DocumentationResourcePath("README.md"), documentation.Annotations[ocispec.AnnotationTitle])

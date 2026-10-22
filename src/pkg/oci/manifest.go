@@ -10,17 +10,14 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// ResourceMountPathAnnotation identifies where a Zarf resource is mounted in its OCI artifact.
-const ResourceMountPathAnnotation = "dev.zarf.mountPath"
-
 // Manifest wraps an OCI image manifest.
 type Manifest struct{ v1.Manifest }
 
-// Locate returns the layer whose mount path, title annotation, or digest matches pathOrDigest.
+// Locate returns the layer whose title annotation or digest matches pathOrDigest.
 func (manifest *Manifest) Locate(pathOrDigest string) v1.Descriptor {
 	pathOrDigest = filepath.ToSlash(pathOrDigest)
 	for _, layer := range manifest.Layers {
-		if layer.Annotations[ResourceMountPathAnnotation] == pathOrDigest || layer.Digest.Encoded() == pathOrDigest {
+		if layer.Digest.Encoded() == pathOrDigest {
 			return layer
 		}
 	}

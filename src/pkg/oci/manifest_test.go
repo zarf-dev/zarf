@@ -11,25 +11,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestManifestLocatePrefersMountPath(t *testing.T) {
+func TestManifestLocate(t *testing.T) {
 	t.Parallel()
 
-	mountPath := "sboms/images/aW1hZ2U6bG9uZ2hvcm4.json"
-	titleOnly := ocispec.Descriptor{
-		Digest:      godigest.FromString("title only"),
+	descriptor := ocispec.Descriptor{
+		Digest:      godigest.FromString("resource"),
 		Size:        1,
-		Annotations: map[string]string{ocispec.AnnotationTitle: mountPath},
+		Annotations: map[string]string{ocispec.AnnotationTitle: "sboms/images/resource.json"},
 	}
-	mountedResource := ocispec.Descriptor{
-		Digest: godigest.FromString("mounted resource"),
-		Size:   2,
-		Annotations: map[string]string{
-			ocispec.AnnotationTitle:     "image:longhornio/longhorn-ui:v1.11.2",
-			ResourceMountPathAnnotation: mountPath,
-		},
-	}
-	manifest := &Manifest{Manifest: ocispec.Manifest{Layers: []ocispec.Descriptor{titleOnly, mountedResource}}}
+	manifest := &Manifest{Manifest: ocispec.Manifest{Layers: []ocispec.Descriptor{descriptor}}}
 
-	require.Equal(t, mountedResource, manifest.Locate(mountPath))
-	require.Equal(t, mountedResource, manifest.Locate("image:longhornio/longhorn-ui:v1.11.2"))
+	require.Equal(t, descriptor, manifest.Locate("sboms/images/resource.json"))
+	require.Equal(t, descriptor, manifest.Locate(descriptor.Digest.Encoded()))
+	require.True(t, IsEmptyDescriptor(manifest.Locate("missing")))
 }

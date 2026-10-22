@@ -247,12 +247,12 @@ func checksumVerifiedSBOMLayers(ctx context.Context, root *oci.Manifest, fetcher
 
 	descriptorsByPath := make(map[string]ocispec.Descriptor)
 	for _, descriptor := range root.Layers {
-		resourcePath := descriptor.Annotations[layout.ResourceMountPathAnnotation]
+		resourcePath := descriptor.Annotations[ocispec.AnnotationTitle]
 		if !strings.HasPrefix(resourcePath, layout.SBOMResourcesDir+"/") {
 			continue
 		}
 		if _, found := descriptorsByPath[resourcePath]; found {
-			return nil, fmt.Errorf("multiple OCI descriptors mount SBOM resource %q", resourcePath)
+			return nil, fmt.Errorf("multiple OCI descriptors represent SBOM resource %q", resourcePath)
 		}
 		descriptorsByPath[resourcePath] = descriptor
 	}

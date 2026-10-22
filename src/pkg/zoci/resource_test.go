@@ -41,9 +41,8 @@ func TestChecksumVerifiedSBOMLayersRejectsKindOmission(t *testing.T) {
 	resourcePath := layout.SBOMResourcePath("component:metrics")
 	resource := content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("sbom"))
 	resource.Annotations = map[string]string{
-		ocispec.AnnotationTitle:            resourcePath,
-		layout.ResourceMountPathAnnotation: resourcePath,
-		layout.ResourceKindAnnotation:      layout.ResourceKindSBOM,
+		ocispec.AnnotationTitle:       resourcePath,
+		layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
 	}
 	checksums := []byte(resource.Digest.Encoded() + " " + resourcePath + "\n")
 	aggregateChecksum, err := checksum.GetSHA256Hash(bytes.NewReader(checksums))
@@ -61,8 +60,7 @@ func TestChecksumVerifiedSBOMLayersRejectsKindOmission(t *testing.T) {
 	require.Equal(t, []ocispec.Descriptor{resource}, layers)
 
 	resource.Annotations = map[string]string{
-		ocispec.AnnotationTitle:            resourcePath,
-		layout.ResourceMountPathAnnotation: resourcePath,
+		ocispec.AnnotationTitle: resourcePath,
 	}
 	_, err = checksumVerifiedSBOMLayers(ctx, &oci.Manifest{Manifest: ocispec.Manifest{
 		Layers: []ocispec.Descriptor{checksumDesc, resource},

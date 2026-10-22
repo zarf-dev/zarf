@@ -164,7 +164,7 @@ func TestPublishComponent(t *testing.T) {
 	layerTitles := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
 		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
-		require.Equal(t, layer.Annotations[ocispec.AnnotationTitle], layer.Annotations[layout.ResourceMountPathAnnotation])
+		require.Equal(t, layer.Annotations[ocispec.AnnotationTitle], layer.Annotations[layout.ComponentResourceMountPathAnnotation])
 	}
 	for _, localPath := range []string{
 		"resources/0/component-values.yaml",
@@ -703,7 +703,7 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 
 	layerMounts := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
-		layerMounts = append(layerMounts, layer.Annotations[layout.ResourceMountPathAnnotation])
+		layerMounts = append(layerMounts, layer.Annotations[layout.ComponentResourceMountPathAnnotation])
 	}
 	for _, mountPath := range []string{
 		"resources/0/values.yaml",
