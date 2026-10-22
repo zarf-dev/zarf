@@ -13,7 +13,7 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
-	orasOCI "oras.land/oras-go/v2/content/oci"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -29,7 +29,8 @@ const (
 // OrasRemote is a wrapper around the Oras remote repository.
 type OrasRemote struct {
 	repo               *remote.Repository
-	cache              *orasOCI.Store
+	cache              content.Storage
+	credentialFunc     auth.CredentialFunc
 	root               *Manifest
 	progTransport      *retry.Transport
 	targetPlatform     *ocispec.Platform
@@ -39,6 +40,12 @@ type OrasRemote struct {
 
 // Modifier is a function that modifies an OrasRemote
 type Modifier func(*OrasRemote)
+
+// WithCredentialFunc sets fn as the source of registry credentials.
+// If fn is nil, the Docker credential store is used instead.
+func WithCredentialFunc(fn auth.CredentialFunc) Modifier {
+	return func(o *OrasRemote) { o.credentialFunc = fn }
+}
 
 // WithPlainHTTP sets the plain HTTP flag for the remote
 func WithPlainHTTP(plainHTTP bool) Modifier {
@@ -97,7 +104,7 @@ func WithLogger(logger *slog.Logger) Modifier {
 }
 
 // WithCache sets the cache for the remote
-func WithCache(cache *orasOCI.Store) Modifier {
+func WithCache(cache content.Storage) Modifier {
 	return func(o *OrasRemote) { o.cache = cache }
 }
 
@@ -111,7 +118,8 @@ func PlatformForArch(arch string) ocispec.Platform {
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
-// Registry auth is handled by the Docker CLI's credential store and checked before returning the client
+// Registry credentials come from the Docker credential store by default.
+// Use WithCredentialFunc to provide a different credential source.
 func NewOrasRemote(url string, platform ocispec.Platform, modifiers ...Modifier) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {
@@ -161,25 +169,25 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 	if ref.Registry == "docker.io" {
 		ref.Registry = "registry-1.docker.io"
 	}
-	if ref.Registry == "🦄" || ref.Registry == "defenseunicorns" {
-		ref.Registry = "ghcr.io"
-		ref.Repository = "defenseunicorns/packages/" + ref.Repository
-	}
-	storeOpts := credentials.StoreOptions{}
-	credStore, err := credentials.NewStoreFromDocker(storeOpts)
-	if err != nil {
-		return fmt.Errorf("failed to get credentials: %w", err)
-	}
 	client, ok := o.repo.Client.(*auth.Client)
 	if !ok {
 		return fmt.Errorf("repository client is not an auth client")
+	}
+	o.repo.Reference = ref
+
+	if o.credentialFunc != nil {
+		client.Credential = o.credentialFunc
+		return nil
+	}
+
+	credStore, err := credentials.NewStoreFromDocker(credentials.StoreOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get credentials: %w", err)
 	}
 	client.Credential = credentials.Credential(credStore)
 	if o.log != nil {
 		o.log.Debug("gathering credentials from default Docker config file", "credentialsConfigured", credStore.IsAuthConfigured())
 	}
-
-	o.repo.Reference = ref
 
 	return nil
 }

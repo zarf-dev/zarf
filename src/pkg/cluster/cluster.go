@@ -310,9 +310,10 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 	modeChanged := opts.RegistryInfo.RegistryMode != "" && opts.RegistryInfo.RegistryMode != previousMode
 
-	// If the registry mode is changing the injector will be re-made so the port should be reset
+	// Mode changes recreate the injector; its port and image may not be suitable for the new mode.
 	if modeChanged {
 		s.InjectorInfo.Port = 0
+		s.InjectorInfo.Image = ""
 	}
 
 	switch s.RegistryInfo.RegistryMode {
