@@ -77,7 +77,7 @@ The E2E tests files in `src/test/e2e/` are run sequentially and the naming conve
 * **With-Cluster Tests (`20_*` through `99_*`):** These **require a running Kubernetes cluster** with a valid `kubeconfig`
 
 ### Verify Local Environment for E2E Testing
-For the E2E tests only, `APPLIANCE_MODE=true` can be used to automatically spin up and configure a Zarf-installed K3s cluster on Linux machines with `sudo` privileges. If not using `APPLIANCE_MODE`, it's a good idea to run a minimal test to verify that all dependencies are functioning and your Kubernetes cluster is properly configured prior to performing a full E2E test run.
+For the E2E tests only, `APPLIANCE_MODE=true` can be used to automatically spin up and configure a Zarf-installed k3s cluster on Linux machines with `sudo` privileges. If not using `APPLIANCE_MODE`, it's a good idea to run a minimal test to verify that all dependencies are functioning and your Kubernetes cluster is properly configured prior to performing a full E2E test run.
 
 Because early cluster connectivity checks in the test suite can fail silently, manually verifying your cluster and running a single test is highly recommended.
 
