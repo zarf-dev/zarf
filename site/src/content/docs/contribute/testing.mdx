@@ -236,7 +236,7 @@ The documentation for this test is still in progress. Please refer to the code f
 Depends on:
 
 - Locally built Zarf binary
-- Docker Compose V2
+- Docker with Compose V2 plugin
 - A **fresh**, running Kubernetes cluster (e.g. K3d or K3s) that **has not** been initialized with Zarf
 
 The external test verifies Zarf's ability to use an external container registry and Git server. The test script automatically deploys mock external Git and registry pods into the cluster, and then initializes Zarf configured to use those external services instead of deploying its own internal registry and Gitea. These mocks are still considered `external` servers since they already exist inside the K8s cluster before the `zarf init` command is executed.
