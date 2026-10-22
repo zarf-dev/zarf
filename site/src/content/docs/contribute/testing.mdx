@@ -160,7 +160,7 @@ The documentation for this test is still in progress. Please refer to the code f
 Depends on :
 
 - Locally built Zarf binary
-- A **fresh**, running Kubernetes cluster (e.g., K3d or K3s) that has been initialized with Zarf and has the `6.3.3` baseline upgrade-test package
+- A **fresh**, running Kubernetes cluster (e.g., k3d or k3s) that has been initialized with Zarf and has the `6.3.3` baseline upgrade-test package
 
 The upgrade test deploys real releases onto a cluster and tests Zarf's ability to upgrade components. The upgrade test assumes the Zarf binary has already been built locally and a fresh, running K8s cluster with a valid `kubeconfig` exists. If using a Zarf-installed K3s cluster, Zarf should already have been initialized and the binary exists on the cluster, as well as the 6.3.3 upgrade-test package installed prior to the upgrade test.
 
