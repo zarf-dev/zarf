@@ -311,6 +311,7 @@ The `.State` object exposes Zarf cluster state.
 | `.State.Injector.Port` | Injector host port (cf. `###ZARF_INJECTOR_HOSTPORT###`) |
 | `.State.Injector.PayloadConfigMaps` | Number of payload ConfigMaps (cf. `###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###`) |
 | `.State.Injector.PayloadShaSum` | SHA sum of injector payload (cf. `###ZARF_INJECTOR_SHASUM###`) |
+| `.State.Agent.MutationPolicy` | Agent mutation policy: `"all"` or `"labeled"` |
 
 **Sensitive fields** require a `stateAccess` declaration on the component. Accessing a sensitive field without the corresponding group causes a template error at deploy time:
 

@@ -5,6 +5,7 @@ metadata:
   version: "[[ .cli.version ]]"
   description: Mutating webhook for container images and GitOps repository references
 values:
+  schema: values.schema.json
   files:
     - agent-values.yaml
 component:
