@@ -364,6 +364,7 @@ func (s ImageSource) GetSource() ImageSource {
 
 // Image represents an OCI image in the package.
 type Image struct {
+	ID     string
 	Name   string
 	Source ImageSource
 }
