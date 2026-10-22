@@ -136,7 +136,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		}
 	}
 
-	declaredImageReferences := map[string]string{}
+	declaredImageReferences := map[string][]string{}
 	componentImages := []images.ImageRequest{}
 	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
@@ -151,9 +151,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 					if err != nil {
 						return nil, fmt.Errorf("failed to create ref for image %s: %w", image, err)
 					}
-					if err := addDeclaredSBOMImageReference(declaredImageReferences, image, refInfo); err != nil {
-						return nil, err
-					}
+					addDeclaredSBOMImageReference(declaredImageReferences, image, refInfo)
 				}
 			}
 
@@ -169,14 +167,11 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 				return nil, fmt.Errorf("failed to create ref for image %s: %w", image.Name, err)
 			}
 			if layout.UsesGranularResourceLayout(pkg) && !opts.SkipSBOM {
-				if err := addDeclaredSBOMImageReference(declaredImageReferences, image.Name, refInfo); err != nil {
-					return nil, err
-				}
+				addDeclaredSBOMImageReference(declaredImageReferences, image.Name, refInfo)
 			}
 			componentImages = append(componentImages, images.ImageRequest{
-				Image:             refInfo,
-				Source:            image.Source.GetSource(),
-				DeclaredReference: image.Name,
+				Image:  refInfo,
+				Source: image.Source.GetSource(),
 			})
 		}
 	}
@@ -207,7 +202,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 
 	if !opts.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
-		err := generateSBOM(ctx, pkg, buildPath, manifests, opts.CachePath)
+		err := generateSBOM(ctx, pkg, buildPath, manifests, opts.CachePath, declaredImageReferences)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}
@@ -369,12 +364,11 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	return pkgLayout, nil
 }
 
-func addDeclaredSBOMImageReference(declaredReferences map[string]string, declaredReference string, canonicalReference transform.Image) error {
-	if existingReference, found := declaredReferences[canonicalReference.Reference]; found && existingReference != declaredReference {
-		return fmt.Errorf("image declarations %q and %q resolve to the same image identity %q", existingReference, declaredReference, canonicalReference.Reference)
+func addDeclaredSBOMImageReference(declaredReferences map[string][]string, declaredReference string, canonicalReference transform.Image) {
+	aliases := declaredReferences[canonicalReference.Reference]
+	if !slices.Contains(aliases, declaredReference) {
+		declaredReferences[canonicalReference.Reference] = append(aliases, declaredReference)
 	}
-	declaredReferences[canonicalReference.Reference] = declaredReference
-	return nil
 }
 
 // validateImageArchivesNoDuplicates ensures no image appears in multiple image archives

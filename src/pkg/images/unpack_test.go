@@ -276,7 +276,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 
 			seen := make(map[string]bool)
 			for _, img := range images {
-				seen[img.Request.Image.Reference] = true
+				seen[img.Image.Reference] = true
 			}
 			for _, ref := range tc.requestedImages {
 				require.True(t, seen[ref], "expected pulled image for %s", ref)
@@ -376,9 +376,7 @@ func TestUnpackImageIndexes(t *testing.T) {
 			}, dstDir, "amd64")
 			require.NoError(t, err)
 			require.Len(t, unpacked, 1)
-			require.Equal(t, tc.ref, unpacked[0].Request.Image.Reference)
-			require.Equal(t, tc.ref, unpacked[0].Request.DeclaredReference)
-			require.Equal(t, ImageOriginArchive, unpacked[0].Origin)
+			require.Equal(t, tc.ref, unpacked[0].Image.Reference)
 
 			dstIdx, err := getIndexFromOCILayout(dstDir)
 			require.NoError(t, err)
@@ -438,7 +436,7 @@ func TestUnpackTaggedIndexFiltersToPlatform(t *testing.T) {
 	}, dstDir, "amd64")
 	require.NoError(t, err)
 	require.Len(t, unpacked, 1)
-	require.Equal(t, tagRef, unpacked[0].Request.Image.Reference)
+	require.Equal(t, tagRef, unpacked[0].Image.Reference)
 
 	dstIdx, err := getIndexFromOCILayout(dstDir)
 	require.NoError(t, err)

@@ -54,8 +54,8 @@ type imageSBOMTarget struct {
 	identifier string
 }
 
-func generateSBOM(ctx context.Context, pkg api.Package, buildPath string, images []images.PulledImage, cachePath string) error {
-	targets, err := imageSBOMTargets(buildPath, images, layout.UsesGranularResourceLayout(pkg))
+func generateSBOM(ctx context.Context, pkg api.Package, buildPath string, images []images.PulledImage, cachePath string, declaredImageReferences map[string][]string) error {
+	targets, err := imageSBOMTargets(buildPath, images, layout.UsesGranularResourceLayout(pkg), declaredImageReferences)
 	if err != nil {
 		return err
 	}
@@ -65,38 +65,43 @@ func generateSBOM(ctx context.Context, pkg api.Package, buildPath string, images
 	return generateArchivedSBOMs(ctx, pkg, buildPath, targets, cachePath)
 }
 
-func imageSBOMTargets(buildPath string, images []images.PulledImage, useDeclaredReferences bool) ([]imageSBOMTarget, error) {
+func imageSBOMTargets(buildPath string, images []images.PulledImage, useDeclaredReferences bool, declaredImageReferences map[string][]string) ([]imageSBOMTarget, error) {
 	targets := make([]imageSBOMTarget, 0, len(images))
 	for _, pulled := range images {
-		platformImages, err := loadOCIImagePlatforms(filepath.Join(buildPath, string(layout.ImagesDir)), pulled.Request.Image)
+		platformImages, err := loadOCIImagePlatforms(filepath.Join(buildPath, string(layout.ImagesDir)), pulled.Image)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load OCI image: %w", err)
 		}
-		baseIdentifier, err := sbomImageIdentifier(pulled.Request, useDeclaredReferences)
+		identifiers, err := sbomImageIdentifiers(pulled.Image, useDeclaredReferences, declaredImageReferences)
 		if err != nil {
 			return nil, err
 		}
-		for _, platformImage := range platformImages {
-			identifier := baseIdentifier
-			if platformImage.platform != nil && platformImage.platform.Architecture != "" {
-				identifier = fmt.Sprintf("%s-%s-%s", identifier, platformImage.platform.OS, platformImage.platform.Architecture)
-				if platformImage.platform.Variant != "" {
-					identifier = fmt.Sprintf("%s-%s", identifier, platformImage.platform.Variant)
+		for _, identifier := range identifiers {
+			for _, platformImage := range platformImages {
+				platformIdentifier := identifier
+				if platformImage.platform != nil && platformImage.platform.Architecture != "" {
+					platformIdentifier = fmt.Sprintf("%s-%s-%s", identifier, platformImage.platform.OS, platformImage.platform.Architecture)
+					if platformImage.platform.Variant != "" {
+						platformIdentifier = fmt.Sprintf("%s-%s", platformIdentifier, platformImage.platform.Variant)
+					}
 				}
+				targets = append(targets, imageSBOMTarget{img: platformImage.image, identifier: platformIdentifier})
 			}
-			targets = append(targets, imageSBOMTarget{img: platformImage.image, identifier: identifier})
 		}
 	}
 	return targets, nil
 }
-func sbomImageIdentifier(request images.ImageRequest, useDeclaredReferences bool) (string, error) {
+
+// sbomImageIdentifiers returns the package references used to name image SBOMs.
+func sbomImageIdentifiers(image transform.Image, useDeclaredReferences bool, declaredImageReferences map[string][]string) ([]string, error) {
 	if useDeclaredReferences {
-		if request.DeclaredReference == "" {
-			return "", fmt.Errorf("no declared reference found for image %q", request.Image.Reference)
+		identifiers := declaredImageReferences[image.Reference]
+		if len(identifiers) == 0 {
+			return nil, fmt.Errorf("no declared references found for image %q", image.Reference)
 		}
-		return request.DeclaredReference, nil
+		return identifiers, nil
 	}
-	return request.Image.Reference, nil
+	return []string{image.Reference}, nil
 }
 
 func generateGranularSBOMs(ctx context.Context, pkg api.Package, buildPath string, targets []imageSBOMTarget, cachePath string) error {

@@ -23,22 +23,9 @@ import (
 	"oras.land/oras-go/v2/content/oci"
 )
 
-// ImageOrigin identifies how an image reached the destination OCI layout.
-type ImageOrigin string
-
-const (
-	// ImageOriginRegistry identifies an image copied from a registry.
-	ImageOriginRegistry ImageOrigin = "registry"
-	// ImageOriginDaemon identifies an image exported from a local container daemon.
-	ImageOriginDaemon ImageOrigin = "daemon"
-	// ImageOriginArchive identifies an image copied from an image archive.
-	ImageOriginArchive ImageOrigin = "archive"
-)
-
 // PulledImage describes an image that landed in the destination OCI layout.
 type PulledImage struct {
-	Request ImageRequest
-	Origin  ImageOrigin
+	Image transform.Image
 }
 
 const (
@@ -121,17 +108,14 @@ func Unpack(ctx context.Context, imageArchive api.ImageArchive, destDir string, 
 		return nil, fmt.Errorf("failed to create source OCI store: %w", err)
 	}
 
-	// Map each normalized image identity to the reference as written in the package.
-	requestedImages := make(map[string]ImageRequest, len(imageArchive.Images))
+	// Map each normalized image identity to its parsed image reference.
+	requestedImages := make(map[string]transform.Image, len(imageArchive.Images))
 	for _, declaredReference := range imageArchive.Images {
 		ref, err := transform.ParseImageRef(declaredReference)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse image reference %s: %w", declaredReference, err)
 		}
-		requestedImages[ref.Reference] = ImageRequest{
-			Image:             ref,
-			DeclaredReference: declaredReference,
-		}
+		requestedImages[ref.Reference] = ref
 	}
 
 	var pulledImages []PulledImage
@@ -151,20 +135,20 @@ func Unpack(ctx context.Context, imageArchive api.ImageArchive, destDir string, 
 		if !requested {
 			continue
 		}
-		requestedImages[manifestImg.Reference] = ImageRequest{}
+		requestedImages[manifestImg.Reference] = transform.Image{}
 
 		logger.From(ctx).Info("pulling image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
 		if _, err := copyImageFromOCILayout(ctx, srcStore, dstStore, manifestDesc.Digest.String(), manifestImg, arch, 0); err != nil {
 			return nil, fmt.Errorf("failed to pull image %s from archive %s: %w", manifestImg.Reference, imageArchive.Path, err)
 		}
 
-		pulledImages = append(pulledImages, PulledImage{Request: request, Origin: ImageOriginArchive})
+		pulledImages = append(pulledImages, PulledImage{Image: request})
 	}
 
 	explainErr := fmt.Sprintf("image references are determined by the inclusion of one of the following "+
 		"annotations in the index.json: %s, %s.<registry>, %s", dockerRefAnnotation, containerdDistributionSourcePrefix, ocispec.AnnotationRefName)
 	for imageReference, request := range requestedImages {
-		if request != (ImageRequest{}) {
+		if request != (transform.Image{}) {
 			return nil, fmt.Errorf("could not find image %s: found images %s: %s", imageReference, foundImages, explainErr)
 		}
 	}

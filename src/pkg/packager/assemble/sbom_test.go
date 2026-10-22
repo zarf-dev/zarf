@@ -17,8 +17,10 @@ import (
 	"github.com/anchore/syft/syft/pkg"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
+	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -63,45 +65,63 @@ func TestCreateImageSBOMNonExistentCachePath(t *testing.T) {
 	require.NotEmpty(t, b)
 }
 
-func TestSBOMImageIdentifier(t *testing.T) {
+func TestSBOMImageIdentifiers(t *testing.T) {
 	t.Parallel()
 
 	canonical, err := transform.ParseImageRef("nginx")
 	require.NoError(t, err)
 
-	t.Run("uses the declared beta reference", func(t *testing.T) {
-		identifier, err := sbomImageIdentifier(images.ImageRequest{
-			Image:             canonical,
-			DeclaredReference: "nginx",
-		}, true)
+	t.Run("uses declared beta aliases", func(t *testing.T) {
+		identifiers, err := sbomImageIdentifiers(canonical, true, map[string][]string{
+			canonical.Reference: {"nginx", "docker.io/library/nginx:latest"},
+		})
 		require.NoError(t, err)
-		require.Equal(t, "nginx", identifier)
+		require.Equal(t, []string{"nginx", "docker.io/library/nginx:latest"}, identifiers)
 	})
-	t.Run("uses the canonical alpha reference", func(t *testing.T) {
-		identifier, err := sbomImageIdentifier(images.ImageRequest{
-			Image:             canonical,
-			DeclaredReference: "nginx",
-		}, false)
+	t.Run("uses canonical alpha reference", func(t *testing.T) {
+		identifiers, err := sbomImageIdentifiers(canonical, false, nil)
 		require.NoError(t, err)
-		require.Equal(t, "docker.io/library/nginx:latest", identifier)
+		require.Equal(t, []string{"docker.io/library/nginx:latest"}, identifiers)
 	})
-	t.Run("rejects missing beta declaration", func(t *testing.T) {
-		_, err := sbomImageIdentifier(images.ImageRequest{Image: canonical}, true)
-		require.EqualError(t, err, `no declared reference found for image "docker.io/library/nginx:latest"`)
+	t.Run("rejects missing beta declarations", func(t *testing.T) {
+		_, err := sbomImageIdentifiers(canonical, true, nil)
+		require.EqualError(t, err, `no declared references found for image "docker.io/library/nginx:latest"`)
 	})
 }
 
-func TestAddDeclaredSBOMImageReferenceRejectsDuplicateCanonicalImages(t *testing.T) {
+func TestAddDeclaredSBOMImageReference(t *testing.T) {
 	t.Parallel()
 
 	canonical, err := transform.ParseImageRef("nginx")
 	require.NoError(t, err)
-	declaredReferences := map[string]string{}
-	require.NoError(t, addDeclaredSBOMImageReference(declaredReferences, "nginx", canonical))
-	require.Equal(t, map[string]string{canonical.Reference: "nginx"}, declaredReferences)
+	declaredReferences := map[string][]string{}
+	addDeclaredSBOMImageReference(declaredReferences, "nginx", canonical)
+	addDeclaredSBOMImageReference(declaredReferences, "docker.io/library/nginx:latest", canonical)
+	addDeclaredSBOMImageReference(declaredReferences, "nginx", canonical)
+	require.Equal(t, map[string][]string{
+		canonical.Reference: {"nginx", "docker.io/library/nginx:latest"},
+	}, declaredReferences)
+}
 
-	err = addDeclaredSBOMImageReference(declaredReferences, "docker.io/library/nginx:latest", canonical)
-	require.EqualError(t, err, `image declarations "nginx" and "docker.io/library/nginx:latest" resolve to the same image identity "docker.io/library/nginx:latest"`)
+func TestImageSBOMTargetsExpandDeclaredAliases(t *testing.T) {
+	t.Parallel()
+
+	canonical, err := transform.ParseImageRef("nginx")
+	require.NoError(t, err)
+	buildPath := t.TempDir()
+	imageLayout, err := clayout.Write(filepath.Join(buildPath, string(layout.ImagesDir)), empty.Index)
+	require.NoError(t, err)
+	require.NoError(t, imageLayout.AppendImage(empty.Image, clayout.WithAnnotations(map[string]string{
+		ocispec.AnnotationRefName: canonical.Reference,
+	})))
+
+	targets, err := imageSBOMTargets(buildPath, []images.PulledImage{{Image: canonical}}, true, map[string][]string{
+		canonical.Reference: {"nginx", "docker.io/library/nginx:latest"},
+	})
+	require.NoError(t, err)
+	require.Len(t, targets, 2)
+	require.Equal(t, "nginx", targets[0].identifier)
+	require.Equal(t, "docker.io/library/nginx:latest", targets[1].identifier)
 }
 
 // findArtifact looks a package up by name in a syft document. Decoding into

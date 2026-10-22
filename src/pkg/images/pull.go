@@ -64,9 +64,8 @@ type PullOptions struct {
 
 // ImageRequest identifies an image and how package creation should acquire it.
 type ImageRequest struct {
-	Image             transform.Image
-	Source            api.ImageSource
-	DeclaredReference string
+	Image  transform.Image
+	Source api.ImageSource
 }
 
 type imagePullInfo struct {
@@ -304,10 +303,7 @@ func Pull(ctx context.Context, imageList []ImageRequest, destinationDirectory st
 		if err != nil {
 			return nil, fmt.Errorf("failed to save images: %w", err)
 		}
-		pulledImages = append(pulledImages, PulledImage{
-			Request: imageInfo.request,
-			Origin:  ImageOriginRegistry,
-		})
+		pulledImages = append(pulledImages, PulledImage{Image: imageInfo.request.Image})
 	}
 
 	l.Info("done pulling images", "count", imageCount, "duration", time.Since(pullStart).Round(time.Millisecond*100))
@@ -368,7 +364,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 		if pullErr != nil {
 			return nil, pullErr
 		}
-		pulledImages = append(pulledImages, PulledImage{Request: daemonImage.request, Origin: ImageOriginDaemon})
+		pulledImages = append(pulledImages, PulledImage{Image: daemonImage.request.Image})
 	}
 
 	return pulledImages, nil
