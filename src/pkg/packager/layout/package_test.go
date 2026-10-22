@@ -170,6 +170,33 @@ func TestGetSBOMV1Beta1RejectsSymlinkResource(t *testing.T) {
 	require.NoFileExists(t, filepath.Join(outputDir, "files", "metrics.json"))
 }
 
+func TestGetSBOMV1Beta1DoesNotWriteThroughOutputDirectorySymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation requires elevated privileges")
+	}
+
+	dir := t.TempDir()
+	resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath("image:example")))
+	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+	require.NoError(t, os.WriteFile(resourcePath, []byte("image SBOM"), 0o600))
+
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}}},
+		},
+	}
+	outputDir := t.TempDir()
+	externalDir := t.TempDir()
+	require.NoError(t, os.Symlink(externalDir, filepath.Join(outputDir, "images")))
+
+	err := pkgLayout.GetSBOM(t.Context(), outputDir)
+	require.Error(t, err)
+	require.NoFileExists(t, filepath.Join(externalDir, "example.json"))
+}
+
 func TestGetSBOMV1Beta1PreservesResourceKinds(t *testing.T) {
 	t.Parallel()
 

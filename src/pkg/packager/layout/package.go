@@ -553,7 +553,7 @@ func (p *PackageLayout) IsSigned() bool {
 }
 
 // GetSBOM outputs all SBOM data from the package to the given destination path.
-func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
+func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) (err error) {
 	if !p.ContainsSBOM() {
 		return &NoSBOMAvailableError{pkgName: p.Definition().Metadata.Name}
 	}
@@ -565,15 +565,22 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 	if err != nil {
 		return err
 	}
-	destinationPaths, err := sbomResourceDestinationPaths(destPath, resources)
+	outputPaths, err := sbomResourceOutputPaths(resources)
 	if err != nil {
 		return err
 	}
 	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf("creating SBOM output directory: %w", err)
 	}
+	destinationRoot, err := os.OpenRoot(destPath)
+	if err != nil {
+		return fmt.Errorf("opening SBOM output directory: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, destinationRoot.Close())
+	}()
 	for index, resource := range resources {
-		if err := copyResourceFile(resource.sourcePath, destinationPaths[index]); err != nil {
+		if err := copyResourceFile(resource.sourcePath, destinationRoot, outputPaths[index]); err != nil {
 			return err
 		}
 	}
@@ -615,25 +622,21 @@ func (p *PackageLayout) sbomResources() ([]sbomResource, error) {
 	return resources, err
 }
 
-func sbomResourceDestinationPaths(destRoot string, resources []sbomResource) ([]string, error) {
-	destinationPaths := make([]string, len(resources))
-	resourceKeysByDestination := make(map[string]string, len(resources))
+func sbomResourceOutputPaths(resources []sbomResource) ([]string, error) {
+	outputPaths := make([]string, len(resources))
+	resourceKeysByOutputPath := make(map[string]string, len(resources))
 	for index, resource := range resources {
-		relativePath, err := sbomResourceOutputPath(resource.resourcePath, resource.key)
+		outputPath, err := sbomResourceOutputPath(resource.resourcePath, resource.key)
 		if err != nil {
 			return nil, err
 		}
-		if conflictingKey, exists := resourceKeysByDestination[relativePath]; exists && conflictingKey != resource.key {
-			return nil, fmt.Errorf("SBOM resource keys %q and %q both normalize to %q", conflictingKey, resource.key, filepath.ToSlash(relativePath))
+		if conflictingKey, exists := resourceKeysByOutputPath[outputPath]; exists && conflictingKey != resource.key {
+			return nil, fmt.Errorf("SBOM resource keys %q and %q both normalize to %q", conflictingKey, resource.key, filepath.ToSlash(outputPath))
 		}
-		resourceKeysByDestination[relativePath] = resource.key
-		destinationPath, err := resourceDestinationPath(destRoot, relativePath)
-		if err != nil {
-			return nil, fmt.Errorf("invalid SBOM output path %q: %w", relativePath, err)
-		}
-		destinationPaths[index] = destinationPath
+		resourceKeysByOutputPath[outputPath] = resource.key
+		outputPaths[index] = outputPath
 	}
-	return destinationPaths, nil
+	return outputPaths, nil
 }
 
 func sbomResourceOutputPath(resourcePath, key string) (string, error) {
@@ -647,19 +650,7 @@ func sbomResourceOutputPath(resourcePath, key string) (string, error) {
 	return filepath.FromSlash(relativePath), nil
 }
 
-func resourceDestinationPath(destRoot, resourcePath string) (string, error) {
-	destinationPath := filepath.Join(destRoot, resourcePath)
-	relativePath, err := filepath.Rel(destRoot, destinationPath)
-	if err != nil {
-		return "", fmt.Errorf("calculating resource destination path: %w", err)
-	}
-	if relativePath == ".." || strings.HasPrefix(relativePath, ".."+string(filepath.Separator)) {
-		return "", fmt.Errorf("resource path %q escapes destination directory", resourcePath)
-	}
-	return destinationPath, nil
-}
-
-func copyResourceFile(sourcePath, destPath string) error {
+func copyResourceFile(sourcePath string, destinationRoot *os.Root, outputPath string) (err error) {
 	info, err := os.Lstat(sourcePath)
 	if err != nil {
 		return fmt.Errorf("stating package resource: %w", err)
@@ -667,10 +658,27 @@ func copyResourceFile(sourcePath, destPath string) error {
 	if !info.Mode().IsRegular() {
 		return fmt.Errorf("package resource %q is not a regular file", sourcePath)
 	}
-	if err := helpers.CreatePathAndCopy(sourcePath, destPath); err != nil {
-		return fmt.Errorf("copying package resource: %w", err)
+	if dir := filepath.Dir(outputPath); dir != "." {
+		if err := destinationRoot.MkdirAll(dir, helpers.ReadWriteExecuteUser); err != nil {
+			return fmt.Errorf("creating SBOM output directory: %w", err)
+		}
 	}
-	return nil
+	source, err := os.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("opening package resource: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, source.Close())
+	}()
+	destination, err := destinationRoot.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, helpers.ReadAllWriteUser)
+	if err != nil {
+		return fmt.Errorf("opening SBOM output file: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, destination.Close())
+	}()
+	_, err = io.Copy(destination, source)
+	return err
 }
 
 // GetDocumentation extracts documentation files from the package to the given destination path.
