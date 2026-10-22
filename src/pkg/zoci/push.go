@@ -12,6 +12,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2"
@@ -42,7 +43,7 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 				"architecture", pkgLayout.Definition().Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
 
 			trackedRemote := images.NewTrackedTarget(
-				r.Repo(),
+				oci.NewChunkedTarget(r.Repo()),
 				totalSize,
 				images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()),
 			)

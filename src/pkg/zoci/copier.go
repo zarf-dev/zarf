@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"oras.land/oras-go/v2"
 )
 
@@ -41,8 +42,8 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOpti
 				"ref", srcRef,
 			)
 
-			source := src.Repo()      // implements oras.ReadOnlyTarget
-			destination := dst.Repo() // implements oras.Target
+			source := src.Repo() // implements oras.ReadOnlyTarget
+			destination := oci.NewChunkedTarget(dst.Repo())
 
 			// 1) Copy by digest from source → destination
 			publishedDesc, copyErr := oras.Copy(ctx, source, srcRef, destination, "", copyOpts)

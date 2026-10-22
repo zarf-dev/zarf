@@ -198,7 +198,7 @@ func pushComponentArtifact(ctx context.Context, store oras.ReadOnlyTarget, sourc
 			}
 			l.Info("pushing component to registry", "destination", componentRef.String(), "size", utils.ByteFormat(float64(totalSize), 2))
 			trackedRemote := images.NewTrackedTarget(
-				remote.Repo(),
+				zarfoci.NewChunkedTarget(remote.Repo()),
 				totalSize,
 				images.DefaultReport(l, "component publish in progress", componentRef.String()),
 			)
