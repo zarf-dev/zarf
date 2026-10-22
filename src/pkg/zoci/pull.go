@@ -98,13 +98,15 @@ func restoreDuplicateLayers(destinationDir string, layers []ocispec.Descriptor) 
 
 	for digest, paths := range pathsByDigest {
 		sourcePath := ""
-		for _, path := range paths {
+		sourceIndex := -1
+		for index, path := range paths {
 			info, err := os.Lstat(path)
 			if err == nil {
 				if !info.Mode().IsRegular() {
 					return fmt.Errorf("pulled layer %s at %q is not a regular file", digest, path)
 				}
 				sourcePath = path
+				sourceIndex = index
 				break
 			}
 			if !errors.Is(err, os.ErrNotExist) {
@@ -115,14 +117,17 @@ func restoreDuplicateLayers(destinationDir string, layers []ocispec.Descriptor) 
 			return fmt.Errorf("pulled layer %s was not materialized", digest)
 		}
 
-		for _, destinationPath := range paths {
+		for index, destinationPath := range paths {
 			if destinationPath == sourcePath {
 				continue
 			}
-			if _, err := os.Lstat(destinationPath); err == nil {
-				continue
-			} else if !errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("checking duplicate layer destination %q: %w", destinationPath, err)
+			// Paths before the source were already observed missing while locating it.
+			if index > sourceIndex {
+				if _, err := os.Lstat(destinationPath); err == nil {
+					continue
+				} else if !errors.Is(err, os.ErrNotExist) {
+					return fmt.Errorf("checking duplicate layer destination %q: %w", destinationPath, err)
+				}
 			}
 			if err := helpers.CreateParentDirectory(destinationPath); err != nil {
 				return fmt.Errorf("creating duplicate layer destination for %s: %w", digest, err)

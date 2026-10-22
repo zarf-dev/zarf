@@ -26,8 +26,8 @@ func TestRestoreDuplicateLayers(t *testing.T) {
 
 	digest := godigest.FromBytes(contents)
 	layers := []ocispec.Descriptor{
-		{Digest: digest, Size: int64(len(contents)), Annotations: map[string]string{ocispec.AnnotationTitle: originalTitle}},
 		{Digest: digest, Size: int64(len(contents)), Annotations: map[string]string{ocispec.AnnotationTitle: duplicateTitle}},
+		{Digest: digest, Size: int64(len(contents)), Annotations: map[string]string{ocispec.AnnotationTitle: originalTitle}},
 	}
 
 	require.NoError(t, restoreDuplicateLayers(destination, layers))
