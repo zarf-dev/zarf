@@ -4,6 +4,7 @@ metadata:
   name: k3s-common
   version: "[[ .cli.version ]]"
 values:
+  schema: values.schema.json
   files:
     - k3s-values.yaml
 component:

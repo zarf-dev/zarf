@@ -166,8 +166,7 @@
       "type": "string",
       "enum": [
         "all",
-        "labeled",
-        "###ZARF_AGENT_MUTATION_POLICY###"
+        "labeled"
       ]
     },
     "mutationExclusions": {
@@ -180,6 +179,9 @@
           "flux"
         ]
       }
+    },
+    "caBundle": {
+      "type": "string"
     }
   }
 }

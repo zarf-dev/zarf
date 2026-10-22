@@ -45,5 +45,6 @@ tolerations: []
 nodeSelector: {}
 webhookAnnotations: {}
 
-mutationPolicy: "###ZARF_AGENT_MUTATION_POLICY###"
+caBundle: ""
+mutationPolicy: all
 mutationExclusions: []

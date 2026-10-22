@@ -4,6 +4,7 @@ metadata:
   name: zarf-registry-base
   version: "[[ .cli.version ]]"
 values:
+  schema: values.schema.json
   files:
     - registry-values.yaml
 component:

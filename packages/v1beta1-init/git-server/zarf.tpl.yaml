@@ -5,6 +5,7 @@ metadata:
   version: "[[ .cli.version ]]"
   description: Gitea server for GitOps repositories
 values:
+  schema: values.schema.json
   files:
     - git-server-values.yaml
 component:

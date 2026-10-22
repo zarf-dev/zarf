@@ -6,6 +6,7 @@ package helm
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
@@ -171,7 +172,16 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 			}
 			opts.VariableConfig.SetApplicationTemplates(applicationTemplates)
 
-			err = UpdateReleaseValues(ctx, chart, map[string]interface{}{}, opts)
+			agentTLS := opts.State.AgentInfo.TLS
+			agentValues := map[string]interface{}{
+				"caBundle":       base64.StdEncoding.EncodeToString(agentTLS.CA),
+				"mutationPolicy": string(opts.State.AgentInfo.MutationPolicy),
+				"secret": map[string]interface{}{
+					"tlsCrt": base64.StdEncoding.EncodeToString(agentTLS.Cert),
+					"tlsKey": base64.StdEncoding.EncodeToString(agentTLS.Key),
+				},
+			}
+			err = UpdateReleaseValues(ctx, chart, agentValues, opts)
 			if err != nil {
 				return fmt.Errorf("error updating the release values: %w", err)
 			}
