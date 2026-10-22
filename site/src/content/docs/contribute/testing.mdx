@@ -47,7 +47,7 @@ You can run `go test` directly from the repository root:
 go test ./src/pkg/... -v
 
 # Run a single specific unit test
-go test ./src/pkg/... -v -run TestFooBarBaz
+go test ./src/pkg/... -v -race -run TestFooBarBaz
 ```
 
 ### Adding New Unit Tests
