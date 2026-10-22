@@ -209,7 +209,8 @@ func TestGetSBOMV1Beta1PreservesResourceKinds(t *testing.T) {
 		"component:" + componentName: "component SBOM",
 		imageKey:                     "image SBOM",
 	} {
-		resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath(resourceKey)))
+		resourceRelativePath := SBOMResourcePath(resourceKey)
+		resourcePath := filepath.Join(dir, filepath.FromSlash(resourceRelativePath))
 		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
 		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o600))
 	}
@@ -265,7 +266,8 @@ func TestGetSBOMV1Beta1RejectsLegacyImageFilenameCollisions(t *testing.T) {
 		"image:a/b:c": "first image SBOM",
 		"image:a_b:c": "second image SBOM",
 	} {
-		resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath(resourceKey)))
+		resourceRelativePath := SBOMResourcePath(resourceKey)
+		resourcePath := filepath.Join(dir, filepath.FromSlash(resourceRelativePath))
 		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
 		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o600))
 	}

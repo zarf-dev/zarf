@@ -5,16 +5,19 @@
 package zoci
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -185,7 +188,11 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 
 	if slices.Contains(include, SbomLayers) {
 		if layout.UsesGranularResourceLayout(pkg) {
-			layers = append(layers, granularResourceLayers(root, layout.ResourceKindSBOM)...)
+			sbomLayers, err := checksumVerifiedSBOMLayers(ctx, root, fetcher, pkg)
+			if err != nil {
+				return nil, err
+			}
+			layers = append(layers, sbomLayers...)
 		} else if desc := root.Locate(layout.SBOMTar); !oci.IsEmptyDescriptor(desc) {
 			layers = append(layers, desc)
 		}
@@ -209,6 +216,66 @@ func granularResourceLayers(root *oci.Manifest, kind string) []ocispec.Descripto
 		}
 	}
 	return layers
+}
+
+// checksumVerifiedSBOMLayers selects every checksum-listed SBOM resource from an OCI manifest.
+func checksumVerifiedSBOMLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, pkg api.Package) ([]ocispec.Descriptor, error) {
+	checksumDesc := root.Locate(layout.Checksums)
+	if oci.IsEmptyDescriptor(checksumDesc) {
+		return nil, fmt.Errorf("checksums descriptor not found in OCI manifest")
+	}
+	checksums, err := content.FetchAll(ctx, fetcher, checksumDesc)
+	if err != nil {
+		return nil, fmt.Errorf("fetching checksum inventory: %w", err)
+	}
+	aggregateChecksum, err := checksum.GetSHA256Hash(bytes.NewReader(checksums))
+	if err != nil {
+		return nil, fmt.Errorf("hashing checksum inventory: %w", err)
+	}
+	if aggregateChecksum != pkg.Build.AggregateChecksum {
+		return nil, fmt.Errorf("checksum inventory digest mismatch: expected %s, found %s", pkg.Build.AggregateChecksum, aggregateChecksum)
+	}
+	entries, err := checksum.Parse(checksums)
+	if err != nil {
+		return nil, err
+	}
+
+	descriptorsByPath := make(map[string]ocispec.Descriptor)
+	for _, descriptor := range root.Layers {
+		resourcePath := descriptor.Annotations[layout.ResourceMountPathAnnotation]
+		if !strings.HasPrefix(resourcePath, layout.SBOMResourcesDir+"/") {
+			continue
+		}
+		if _, found := descriptorsByPath[resourcePath]; found {
+			return nil, fmt.Errorf("multiple OCI descriptors mount SBOM resource %q", resourcePath)
+		}
+		descriptorsByPath[resourcePath] = descriptor
+	}
+
+	layers := []ocispec.Descriptor{}
+	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Path, layout.SBOMResourcesDir+"/") {
+			continue
+		}
+		descriptor, found := descriptorsByPath[entry.Path]
+		if !found {
+			return nil, fmt.Errorf("SBOM resource %q is missing from OCI manifest", entry.Path)
+		}
+		if descriptor.Annotations[ocispec.AnnotationTitle] != entry.Path {
+			return nil, fmt.Errorf("SBOM resource %q has an invalid OCI title", entry.Path)
+		}
+		if descriptor.Annotations[layout.ResourceKindAnnotation] != layout.ResourceKindSBOM {
+			return nil, fmt.Errorf("SBOM resource %q has an invalid OCI kind", entry.Path)
+		}
+		if descriptor.MediaType != layout.SBOMMediaTypeSyftJSON {
+			return nil, fmt.Errorf("SBOM resource %q has an invalid OCI media type %q", entry.Path, descriptor.MediaType)
+		}
+		if descriptor.Digest.String() != string(api.ChecksumSHA256)+":"+entry.Digest {
+			return nil, fmt.Errorf("SBOM resource %q has an OCI digest that does not match checksums.txt", entry.Path)
+		}
+		layers = append(layers, descriptor)
+	}
+	return layers, nil
 }
 
 // LayersFromComponents returns the layers for the requested components and

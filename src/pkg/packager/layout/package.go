@@ -1000,37 +1000,25 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 		}
 	}
 
-	b, err := os.ReadFile(filepath.Join(pkgLayout.dirPath, Checksums))
+	checksums, err := os.ReadFile(filepath.Join(pkgLayout.dirPath, Checksums))
 	if err != nil {
 		return err
 	}
-	lines := strings.Split(string(b), "\n")
-	for _, line := range lines {
-		// If the line is empty (i.e. there is no checksum) simply skip it, this can result from a package with no images/components.
-		if line == "" {
-			continue
-		}
-
-		split := strings.Split(line, " ")
-		if len(split) != 2 {
-			return fmt.Errorf("invalid checksum line: %s", line)
-		}
-		sha := split[0]
-		rel := split[1]
-		if sha == "" || rel == "" {
-			return fmt.Errorf("invalid checksum line: %s", line)
-		}
-
-		path := filepath.Join(pkgLayout.dirPath, rel)
+	checksumEntries, err := checksum.Parse(checksums)
+	if err != nil {
+		return err
+	}
+	for _, entry := range checksumEntries {
+		path := filepath.Join(pkgLayout.dirPath, entry.Path)
 		_, ok := packageFiles[path]
 		if !ok && isPartial {
 			delete(packageFiles, path)
 			continue
 		}
 		if !ok {
-			return fmt.Errorf("file %s from checksum missing in layout", rel)
+			return fmt.Errorf("file %s from checksum missing in layout", entry.Path)
 		}
-		err = checksum.VerifyFile(path, api.ChecksumSHA256, sha)
+		err = checksum.VerifyFile(path, api.ChecksumSHA256, entry.Digest)
 		if err != nil {
 			return err
 		}
