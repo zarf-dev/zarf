@@ -127,8 +127,6 @@ Templating can be enabled during `onDeploy` and `onRemove` actions, but **not** 
 
 :::
 
-In templated actions, use `{{ .Shell.Quote .Values.app.name }}` to pass a value as one literal shell argument. It uses the action's selected POSIX shell or PowerShell; unsupported shells, including `cmd`, return a template error
-
 #### Setting Values from Actions
 
 Actions can dynamically set values using the `setValues` field, similar to `setVariables`:
