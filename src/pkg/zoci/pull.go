@@ -8,12 +8,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
@@ -66,8 +68,82 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	if err != nil {
 		return nil, err
 	}
+	if err := restoreDuplicateLayers(destinationDir, layersToPull); err != nil {
+		return nil, err
+	}
+
 	r.Log().Info("finished pulling package layers", "duration", time.Since(start).Round(time.Millisecond*100))
 	return layersToPull, nil
+}
+
+// restoreDuplicateLayers restores each package file represented by duplicate OCI descriptors.
+// ORAS transfers each content digest once, so only one of several differently named files
+// with identical content is guaranteed to be materialized by the file store.
+func restoreDuplicateLayers(destinationDir string, layers []ocispec.Descriptor) error {
+	pathsByDigest := make(map[string][]string, len(layers))
+	for _, layer := range layers {
+		title := layer.Annotations[ocispec.AnnotationTitle]
+		if title == "" {
+			continue
+		}
+		path, err := packageLayerPath(destinationDir, title)
+		if err != nil {
+			return err
+		}
+		pathsByDigest[layer.Digest.String()] = append(pathsByDigest[layer.Digest.String()], path)
+	}
+
+	for digest, paths := range pathsByDigest {
+		sourcePath := ""
+		for _, path := range paths {
+			info, err := os.Lstat(path)
+			if err == nil {
+				if !info.Mode().IsRegular() {
+					return fmt.Errorf("pulled layer %s at %q is not a regular file", digest, path)
+				}
+				sourcePath = path
+				break
+			}
+			if !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("checking pulled layer %s at %q: %w", digest, path, err)
+			}
+		}
+		if sourcePath == "" {
+			return fmt.Errorf("pulled layer %s was not materialized", digest)
+		}
+
+		for _, destinationPath := range paths {
+			if destinationPath == sourcePath {
+				continue
+			}
+			if _, err := os.Lstat(destinationPath); err == nil {
+				continue
+			} else if !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("checking duplicate layer destination %q: %w", destinationPath, err)
+			}
+			if err := helpers.CreateParentDirectory(destinationPath); err != nil {
+				return fmt.Errorf("creating duplicate layer destination for %s: %w", digest, err)
+			}
+			if err := os.Link(sourcePath, destinationPath); err != nil {
+				if err := helpers.CreatePathAndCopy(sourcePath, destinationPath); err != nil {
+					return fmt.Errorf("restoring duplicate layer %s at %q: %w", digest, destinationPath, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func packageLayerPath(destinationDir, title string) (string, error) {
+	path := filepath.Join(destinationDir, filepath.FromSlash(title))
+	relative, err := filepath.Rel(destinationDir, path)
+	if err != nil {
+		return "", fmt.Errorf("calculating package layer path for %q: %w", title, err)
+	}
+	if title == "" || title == "." || !filepath.IsLocal(relative) {
+		return "", fmt.Errorf("invalid package layer title %q", title)
+	}
+	return path, nil
 }
 
 // AssembleLayers returns the OCI layer descriptors for the requested components.
