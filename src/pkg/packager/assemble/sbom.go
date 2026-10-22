@@ -187,7 +187,7 @@ func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.I
 }
 
 func createImageSBOMResource(ctx context.Context, cachePath, outputPath string, img v1.Image, identifier string) ([]byte, error) {
-	resourcePath := filepath.FromSlash(layout.SBOMResourcePath("image:" + identifier))
+	resourcePath := filepath.FromSlash(layout.ImageSBOMResourcePath(identifier))
 	return createImageSBOMAtPath(ctx, cachePath, filepath.Join(outputPath, resourcePath), img, identifier)
 }
 
@@ -232,7 +232,7 @@ func createFileSBOM(ctx context.Context, component api.Component, outputPath, bu
 }
 
 func createFileSBOMResource(ctx context.Context, component api.Component, outputPath, buildPath string) ([]byte, error) {
-	resourcePath := filepath.FromSlash(layout.SBOMResourcePath("component:" + component.Name))
+	resourcePath := filepath.FromSlash(layout.ComponentSBOMResourcePath(component.Name))
 	return createFileSBOMAtPath(ctx, component, buildPath, filepath.Join(outputPath, resourcePath))
 }
 

@@ -588,7 +588,8 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) (err error
 }
 
 type sbomResource struct {
-	key          string
+	kind         SBOMResourceKind
+	identifier   string
 	resourcePath string
 	sourcePath   string
 }
@@ -608,12 +609,13 @@ func (p *PackageLayout) sbomResources() ([]sbomResource, error) {
 			return fmt.Errorf("calculating SBOM resource path: %w", err)
 		}
 		resourcePath = filepath.ToSlash(resourcePath)
-		key, ok := SBOMResourceKey(resourcePath)
+		kind, identifier, ok := ParseSBOMResourcePath(resourcePath)
 		if !ok {
 			return fmt.Errorf("invalid SBOM resource path %q", resourcePath)
 		}
 		resources = append(resources, sbomResource{
-			key:          key,
+			kind:         kind,
+			identifier:   identifier,
 			resourcePath: resourcePath,
 			sourcePath:   sourcePath,
 		})
@@ -624,30 +626,34 @@ func (p *PackageLayout) sbomResources() ([]sbomResource, error) {
 
 func sbomResourceOutputPaths(resources []sbomResource) ([]string, error) {
 	outputPaths := make([]string, len(resources))
-	resourceKeysByOutputPath := make(map[string]string, len(resources))
+	resourcePathsByOutputPath := make(map[string]string, len(resources))
 	for index, resource := range resources {
-		outputPath, err := sbomResourceOutputPath(resource.resourcePath, resource.key)
+		outputPath, err := sbomResourceOutputPath(resource)
 		if err != nil {
 			return nil, err
 		}
-		if conflictingKey, exists := resourceKeysByOutputPath[outputPath]; exists && conflictingKey != resource.key {
-			return nil, fmt.Errorf("SBOM resource keys %q and %q both normalize to %q", conflictingKey, resource.key, filepath.ToSlash(outputPath))
+		if conflictingPath, exists := resourcePathsByOutputPath[outputPath]; exists && conflictingPath != resource.resourcePath {
+			return nil, fmt.Errorf("SBOM resources %q and %q both normalize to %q", conflictingPath, resource.resourcePath, filepath.ToSlash(outputPath))
 		}
-		resourceKeysByOutputPath[outputPath] = resource.key
+		resourcePathsByOutputPath[outputPath] = resource.resourcePath
 		outputPaths[index] = outputPath
 	}
 	return outputPaths, nil
 }
 
-func sbomResourceOutputPath(resourcePath, key string) (string, error) {
-	relativePath, found := strings.CutPrefix(resourcePath, SBOMResourcesDir+"/")
-	if !found {
-		return "", fmt.Errorf("SBOM resource path %q is outside resource root", resourcePath)
+func sbomResourceOutputPath(resource sbomResource) (string, error) {
+	switch resource.kind {
+	case SBOMResourceImage:
+		return filepath.Join("images", NormalizeSBOMFilename(resource.identifier+".json")), nil
+	case SBOMResourceComponent:
+		relativePath, found := strings.CutPrefix(resource.resourcePath, SBOMResourcesDir+"/")
+		if !found {
+			return "", fmt.Errorf("SBOM resource path %q is outside resource root", resource.resourcePath)
+		}
+		return filepath.FromSlash(relativePath), nil
+	default:
+		return "", fmt.Errorf("unsupported SBOM resource kind %q", resource.kind)
 	}
-	if imageIdentifier, ok := strings.CutPrefix(key, "image:"); ok {
-		return filepath.Join("images", NormalizeSBOMFilename(imageIdentifier+".json")), nil
-	}
-	return filepath.FromSlash(relativePath), nil
 }
 
 func copyResourceFile(sourcePath string, destinationRoot *os.Root, outputPath string) (err error) {

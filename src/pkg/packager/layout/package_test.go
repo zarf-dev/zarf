@@ -127,7 +127,7 @@ func TestGetSBOMV1Beta1(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath("component:metrics")))
+	resourcePath := filepath.Join(dir, filepath.FromSlash(ComponentSBOMResourcePath("metrics")))
 	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
 	require.NoError(t, os.WriteFile(resourcePath, []byte("metrics SBOM"), 0o600))
 
@@ -152,7 +152,7 @@ func TestGetSBOMV1Beta1RejectsSymlinkResource(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(t.TempDir(), "outside-sbom.json")
 	require.NoError(t, os.WriteFile(target, []byte("SBOM outside the package"), 0o600))
-	resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath("component:metrics")))
+	resourcePath := filepath.Join(dir, filepath.FromSlash(ComponentSBOMResourcePath("metrics")))
 	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
 	require.NoError(t, os.Symlink(target, resourcePath))
 
@@ -176,7 +176,7 @@ func TestGetSBOMV1Beta1DoesNotWriteThroughOutputDirectorySymlink(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath("image:example")))
+	resourcePath := filepath.Join(dir, filepath.FromSlash(ImageSBOMResourcePath("example")))
 	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
 	require.NoError(t, os.WriteFile(resourcePath, []byte("image SBOM"), 0o600))
 
@@ -200,16 +200,12 @@ func TestGetSBOMV1Beta1DoesNotWriteThroughOutputDirectorySymlink(t *testing.T) {
 func TestGetSBOMV1Beta1PreservesResourceKinds(t *testing.T) {
 	t.Parallel()
 
-	const (
-		imageKey      = "image:foo"
-		componentName = "aW1hZ2U6Zm9v"
-	)
+	const componentName = "aW1hZ2U6Zm9v"
 	dir := t.TempDir()
-	for resourceKey, contents := range map[string]string{
-		"component:" + componentName: "component SBOM",
-		imageKey:                     "image SBOM",
+	for resourceRelativePath, contents := range map[string]string{
+		ComponentSBOMResourcePath(componentName): "component SBOM",
+		ImageSBOMResourcePath("foo"):             "image SBOM",
 	} {
-		resourceRelativePath := SBOMResourcePath(resourceKey)
 		resourcePath := filepath.Join(dir, filepath.FromSlash(resourceRelativePath))
 		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
 		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o600))
@@ -237,9 +233,9 @@ func TestGetSBOMV1Beta1PreservesResourceKinds(t *testing.T) {
 func TestGetSBOMV1Beta1UsesDeclaredImageReference(t *testing.T) {
 	t.Parallel()
 
-	const imageKey = "image:nginx"
+	const imageIdentifier = "nginx"
 	dir := t.TempDir()
-	resourcePath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath(imageKey)))
+	resourcePath := filepath.Join(dir, filepath.FromSlash(ImageSBOMResourcePath(imageIdentifier)))
 	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
 	require.NoError(t, os.WriteFile(resourcePath, []byte("image SBOM"), 0o600))
 
@@ -262,11 +258,10 @@ func TestGetSBOMV1Beta1RejectsLegacyImageFilenameCollisions(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	for resourceKey, contents := range map[string]string{
-		"image:a/b:c": "first image SBOM",
-		"image:a_b:c": "second image SBOM",
+	for resourceRelativePath, contents := range map[string]string{
+		ImageSBOMResourcePath("a/b:c"): "first image SBOM",
+		ImageSBOMResourcePath("a_b:c"): "second image SBOM",
 	} {
-		resourceRelativePath := SBOMResourcePath(resourceKey)
 		resourcePath := filepath.Join(dir, filepath.FromSlash(resourceRelativePath))
 		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
 		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o600))

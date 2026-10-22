@@ -17,35 +17,47 @@ const (
 	SBOMMediaTypeSyftJSON = "application/vnd.syft+json"
 )
 
-// SBOMResourcePath returns the v1beta1 package-relative path for an SBOM resource key.
-func SBOMResourcePath(key string) string {
-	if componentName, ok := strings.CutPrefix(key, "component:"); ok {
-		return path.Join(SBOMResourcesDir, "files", componentName+".json")
-	}
-	return path.Join(SBOMResourcesDir, "images", base64.RawURLEncoding.EncodeToString([]byte(key))+".json")
+// SBOMResourceKind identifies the source represented by an SBOM resource.
+type SBOMResourceKind string
+
+const (
+	// SBOMResourceComponent identifies an SBOM generated from component files.
+	SBOMResourceComponent SBOMResourceKind = "component"
+	// SBOMResourceImage identifies an SBOM generated from an image.
+	SBOMResourceImage SBOMResourceKind = "image"
+)
+
+// ComponentSBOMResourcePath returns the v1beta1 package-relative path for a component SBOM.
+func ComponentSBOMResourcePath(componentName string) string {
+	return path.Join(SBOMResourcesDir, "files", componentName+".json")
 }
 
-// SBOMResourceKey returns the resource key encoded in a v1beta1 SBOM resource path.
-func SBOMResourceKey(resourcePath string) (string, bool) {
+// ImageSBOMResourcePath returns the v1beta1 package-relative path for an image SBOM.
+func ImageSBOMResourcePath(identifier string) string {
+	return path.Join(SBOMResourcesDir, "images", base64.RawURLEncoding.EncodeToString([]byte(identifier))+".json")
+}
+
+// ParseSBOMResourcePath returns the kind and identifier encoded in a v1beta1 SBOM resource path.
+func ParseSBOMResourcePath(resourcePath string) (SBOMResourceKind, string, bool) {
 	switch path.Dir(resourcePath) {
 	case path.Join(SBOMResourcesDir, "files"):
 		componentName := strings.TrimSuffix(path.Base(resourcePath), ".json")
 		if componentName == "" || path.Ext(resourcePath) != ".json" {
-			return "", false
+			return "", "", false
 		}
-		return "component:" + componentName, true
+		return SBOMResourceComponent, componentName, true
 	case path.Join(SBOMResourcesDir, "images"):
 		if path.Ext(resourcePath) != ".json" {
-			return "", false
+			return "", "", false
 		}
-		encodedKey := strings.TrimSuffix(path.Base(resourcePath), ".json")
-		key, err := base64.RawURLEncoding.DecodeString(encodedKey)
-		if err != nil || !strings.HasPrefix(string(key), "image:") {
-			return "", false
+		encodedIdentifier := strings.TrimSuffix(path.Base(resourcePath), ".json")
+		identifier, err := base64.RawURLEncoding.DecodeString(encodedIdentifier)
+		if err != nil || len(identifier) == 0 {
+			return "", "", false
 		}
-		return string(key), true
+		return SBOMResourceImage, string(identifier), true
 	default:
-		return "", false
+		return "", "", false
 	}
 }
 

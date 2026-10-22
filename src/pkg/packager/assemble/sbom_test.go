@@ -47,7 +47,7 @@ func TestCreateImageSBOM(t *testing.T) {
 	betaOutputPath := t.TempDir()
 	betaSBOM, err := createImageSBOMResource(ctx, t.TempDir(), betaOutputPath, img, "nginx")
 	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.SBOMResourcePath("image:nginx"))))
+	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.ImageSBOMResourcePath("nginx"))))
 	require.NotEmpty(t, betaSBOM)
 }
 
@@ -255,5 +255,5 @@ func TestCreateFileSBOMContents(t *testing.T) {
 	betaOutputPath := t.TempDir()
 	_, err = createFileSBOMResource(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], betaOutputPath, buildPath)
 	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.SBOMResourcePath("component:test-component"))))
+	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.ComponentSBOMResourcePath("test-component"))))
 }

@@ -97,13 +97,13 @@ func TestResourceAnnotations(t *testing.T) {
 		ResourceKindAnnotation:  ResourceKindDocumentation,
 	}, resourceAnnotations(documentationPath, pkg))
 
-	sbomPath := SBOMResourcePath("component:metrics")
+	sbomPath := ComponentSBOMResourcePath("metrics")
 	require.Equal(t, map[string]string{
 		ocispec.AnnotationTitle: sbomPath,
 		ResourceKindAnnotation:  ResourceKindSBOM,
 	}, resourceAnnotations(sbomPath, pkg))
 
-	imageSBOMPath := SBOMResourcePath("image:longhornio/longhorn-ui:v1.11.2")
+	imageSBOMPath := ImageSBOMResourcePath("longhornio/longhorn-ui:v1.11.2")
 	require.Equal(t, map[string]string{
 		ocispec.AnnotationTitle: imageSBOMPath,
 		ResourceKindAnnotation:  ResourceKindSBOM,
@@ -116,7 +116,7 @@ func TestComputeManifestAnnotatesV1Beta1Resources(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, DocumentationDir), 0o700))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, DocumentationDir, "README.md"), []byte("documentation"), 0o600))
-	sbomPath := filepath.Join(dir, filepath.FromSlash(SBOMResourcePath("component:metrics")))
+	sbomPath := filepath.Join(dir, filepath.FromSlash(ComponentSBOMResourcePath("metrics")))
 	require.NoError(t, os.MkdirAll(filepath.Dir(sbomPath), 0o700))
 	require.NoError(t, os.WriteFile(sbomPath, []byte("sbom"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, Checksums), []byte{}, 0o600))
@@ -141,8 +141,8 @@ documentation:
 	require.Equal(t, DocumentationResourcePath("README.md"), documentation.Annotations[ocispec.AnnotationTitle])
 	require.Equal(t, ResourceKindDocumentation, documentation.Annotations[ResourceKindAnnotation])
 	require.Equal(t, DocumentationLayerMediaTypeBlob, documentation.MediaType)
-	sbom := descriptors[SBOMResourcePath("component:metrics")]
-	require.Equal(t, SBOMResourcePath("component:metrics"), sbom.Annotations[ocispec.AnnotationTitle])
+	sbom := descriptors[ComponentSBOMResourcePath("metrics")]
+	require.Equal(t, ComponentSBOMResourcePath("metrics"), sbom.Annotations[ocispec.AnnotationTitle])
 	require.Equal(t, ResourceKindSBOM, sbom.Annotations[ResourceKindAnnotation])
 	//nolint:testifylint // application/vnd.syft+json is a media type, not encoded JSON.
 	require.Equal(t, SBOMMediaTypeSyftJSON, sbom.MediaType)

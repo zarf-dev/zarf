@@ -38,7 +38,7 @@ func TestChecksumVerifiedSBOMLayersRejectsKindOmission(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	resourcePath := layout.SBOMResourcePath("component:metrics")
+	resourcePath := layout.ComponentSBOMResourcePath("metrics")
 	resource := content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("sbom"))
 	resource.Annotations = map[string]string{
 		ocispec.AnnotationTitle:       resourcePath,
