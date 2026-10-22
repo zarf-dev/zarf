@@ -14,13 +14,11 @@ Unless otherwise stated, all commands below are to be run from the root of the r
 
 To run the end-to-end (E2E) tests locally, you must meet the same prerequisites as those required for building and running Zarf, which include:
 
-1. Any clean K3d or K3s Kubernetes cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed K3s cluster (must have K3s installed if using the Zarf-installed cluster)
+1. Any clean Kubernetes cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed k3s cluster (must have k3s installed if using the Zarf-installed cluster)
 2. GoLang version >= the version specified in the [go.mod](https://github.com/zarf-dev/zarf/blob/main/go.mod)
 3. Make
-4. Docker
-5. Docker Buildx
-6. Docker Compose V2
-7. Helm CLI
+4. Docker with Buildx and Compose V2 plugins
+5. Helm CLI
 
 ## Unit Tests
 
@@ -44,7 +42,7 @@ You can run `go test` directly from the repository root:
 
 ```bash
 # Run all unit tests currently defined
-go test ./src/pkg/... -v
+go test ./src/pkg/... -v -race
 
 # Run a single specific unit test
 go test ./src/pkg/... -v -race -run TestFooBarBaz
@@ -108,7 +106,7 @@ make test-e2e ARCH="[amd64|arm64]"
 # Run only tests that do not require a cluster (00-19)
 make test-e2e-without-cluster
 
-# Run all tests against a fresh Zarf-created K3s cluster (Linux only with sudo)
+# Run all tests against a fresh Zarf-created k3s cluster (Linux only with sudo)
 APPLIANCE_MODE=true make test-e2e ARCH="[amd64|arm64]"
 ```
 
@@ -237,7 +235,7 @@ Depends on:
 
 - Locally built Zarf binary
 - Docker with Compose V2 plugin
-- A **fresh**, running Kubernetes cluster (e.g. K3d or K3s) that **has not** been initialized with Zarf
+- A **fresh**, running Kubernetes cluster (e.g. k3d or k3s) that **has not** been initialized with Zarf
 
 The external test verifies Zarf's ability to use an external container registry and Git server. The test script automatically deploys mock external Git and registry pods into the cluster, and then initializes Zarf configured to use those external services instead of deploying its own internal registry and Gitea. These mocks are still considered `external` servers since they already exist inside the K8s cluster before the `zarf init` command is executed.
 
