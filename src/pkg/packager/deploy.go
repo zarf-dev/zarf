@@ -96,6 +96,9 @@ type DeployOptions struct {
 	SkipArchitectureCheck bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// ConnectOptions selects the kubeconfig and context used to reach the cluster. The zero
+	// value uses the ambient default.
+	ConnectOptions cluster.ConnectOptions
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -105,6 +108,38 @@ type deployer struct {
 	c    *cluster.Cluster
 	vc   *variables.VariableConfig
 	vals value.Values
+	// actionEnv is extra environment given to every action, used to point commands that
+	// shell out at the same cluster Zarf is deploying to.
+	actionEnv []string
+}
+
+// applyConnectOptions points commands that actions shell out to at the same cluster Zarf is
+// deploying to. The CLI has already put this in the process environment; this covers library
+// callers. The returned func removes anything written along the way.
+func (d *deployer) applyConnectOptions(opts cluster.ConnectOptions) (func(), error) {
+	kubeconfig, overlay, err := cluster.KubeconfigEnv(opts, config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+	if kubeconfig != "" {
+		d.actionEnv = append(d.actionEnv, fmt.Sprintf("KUBECONFIG=%s", kubeconfig))
+	}
+	return func() {
+		if overlay != "" {
+			//nolint: errcheck // best effort cleanup of the context overlay written for this deploy
+			os.Remove(overlay)
+		}
+	}, nil
+}
+
+// actionDefaults returns defaults with the deployment's extra action environment applied.
+func (d *deployer) actionDefaults(defaults api.ActionDefaults) api.ActionDefaults {
+	if len(d.actionEnv) == 0 {
+		return defaults
+	}
+	// exec appends these after os.Environ(), so the later entry wins.
+	defaults.Env = append(slices.Clone(defaults.Env), d.actionEnv...)
+	return defaults
 }
 
 // DeployResult is the result of a successful deploy
@@ -187,6 +222,12 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		vals: vals,
 	}
 
+	cleanup, err := d.applyConnectOptions(opts.ConnectOptions)
+	if err != nil {
+		return DeployResult{}, err
+	}
+	defer cleanup()
+
 	l.Debug("variables populated", "time", time.Since(start))
 
 	// Fail before deploying anything if a templated action, manifest, file, or chart value mapping references a value without a key
@@ -263,7 +304,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				connectCtx, cancel := context.WithTimeout(ctx, timeout)
 				defer cancel()
 				var err error
-				d.c, err = cluster.NewWithWait(connectCtx)
+				d.c, err = cluster.NewWithWait(connectCtx, opts.ConnectOptions)
 				if err != nil {
 					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 				}
@@ -311,7 +352,8 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		onDeploy := component.Actions.OnDeploy
 		onSuccess := func() error {
 			if err := actions.Run(ctx, cwd, onDeploy.OnSuccess, actions.RunOptions{
-				DefaultConfig:  onDeploy.Defaults,
+				DefaultConfig:  d.actionDefaults(onDeploy.Defaults),
+				ConnectOptions: opts.ConnectOptions,
 				VariableConfig: d.vc,
 				Values:         d.vals,
 				StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
@@ -326,7 +368,8 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 		onFailure := func() {
 			if err := actions.Run(ctx, cwd, onDeploy.OnFailure, actions.RunOptions{
-				DefaultConfig:  onDeploy.Defaults,
+				DefaultConfig:  d.actionDefaults(onDeploy.Defaults),
+				ConnectOptions: opts.ConnectOptions,
 				VariableConfig: d.vc,
 				Values:         d.vals,
 				StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
@@ -541,7 +584,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	// Populate objects available to templates in before actions
 	if err := actions.Run(ctx, cwd, onDeploy.Before, actions.RunOptions{
-		DefaultConfig:  onDeploy.Defaults,
+		DefaultConfig:  d.actionDefaults(onDeploy.Defaults),
+		ConnectOptions: opts.ConnectOptions,
 		VariableConfig: d.vc,
 		Values:         d.vals,
 		StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},
@@ -621,7 +665,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	// Populate objects available to templates in after actions
 	if err := actions.Run(ctx, cwd, onDeploy.After, actions.RunOptions{
-		DefaultConfig:  onDeploy.Defaults,
+		DefaultConfig:  d.actionDefaults(onDeploy.Defaults),
+		ConnectOptions: opts.ConnectOptions,
 		VariableConfig: d.vc,
 		Values:         d.vals,
 		StateAccess:    template.StateAccess{State: d.s, AccessKeys: component.StateAccess},

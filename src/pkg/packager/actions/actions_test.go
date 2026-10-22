@@ -6,11 +6,14 @@ package actions
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -331,4 +334,50 @@ func Test_parseAndSetValue_Errors(t *testing.T) {
 			require.Contains(t, err.Error(), tt.errSubstr)
 		})
 	}
+}
+
+// TestRunWaitActionUsesConnectOptions proves RunOptions.ConnectOptions reaches the Kubernetes
+// client a wait action builds, by pointing it at a cluster that cannot resolve.
+func TestRunWaitActionUsesConnectOptions(t *testing.T) {
+	kubeconfig := filepath.Join(t.TempDir(), "config")
+	contents := `apiVersion: v1
+kind: Config
+current-context: alpha
+clusters:
+  - name: alpha-cluster
+    cluster: {server: https://alpha.invalid:6443}
+  - name: beta-cluster
+    cluster: {server: https://beta.invalid:6443}
+contexts:
+  - name: alpha
+    context: {cluster: alpha-cluster, user: u}
+  - name: beta
+    context: {cluster: beta-cluster, user: u}
+users:
+  - name: u
+    user: {token: t}
+`
+	require.NoError(t, os.WriteFile(kubeconfig, []byte(contents), 0o600))
+	t.Setenv("KUBECONFIG", kubeconfig)
+
+	maxSeconds := 1
+	waitAction := []api.Action{{
+		MaxTotalSeconds: &maxSeconds,
+		Wait: &api.ActionWait{
+			Cluster: &api.ActionWaitCluster{
+				Kind:      "pod",
+				Name:      "name",
+				Namespace: "default",
+				Condition: api.WaitCondition{Default: api.WaitForReadiness},
+			},
+		},
+	}}
+
+	err := Run(context.Background(), t.TempDir(), waitAction, RunOptions{})
+	require.ErrorContains(t, err, "alpha.invalid", "defaults to current-context")
+
+	err = Run(context.Background(), t.TempDir(), waitAction, RunOptions{
+		ConnectOptions: cluster.ConnectOptions{Context: "beta"},
+	})
+	require.ErrorContains(t, err, "beta.invalid")
 }
