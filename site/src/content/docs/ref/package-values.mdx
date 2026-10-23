@@ -344,7 +344,7 @@ The `.Pkg` object gives access to the package definition. See this used in the [
 - `.Pkg.GetComponent "<component name>"` returns the named component, or a template error if it does not exist.
 - `.Pkg.HasImages` returns whether the package includes any images or image archives.
 - `(.Pkg.GetComponent "<component name>").GetImages` returns the component's image references, including those from image archives.
-- `(.Pkg.GetComponent "<component name>").GetImageByID "<image id>"` returns an object with `.Reference`, `.Tag`, and `.Digest`.Absent tags/digests are empty, and missing/empty image IDs cause a template error. (v1beta1 only)
+- `(.Pkg.GetComponent "<component name>").GetImageByID "<image id>"` returns an object with `.Reference`, `.Tag`, and `.Digest`. Absent tags/digests are empty, and missing/empty image IDs cause a template error. (v1beta1 only)
 
 ### Functions
 
