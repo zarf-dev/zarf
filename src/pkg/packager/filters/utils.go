@@ -6,6 +6,7 @@ package filters
 
 import (
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -16,6 +17,29 @@ const (
 	included
 	excluded
 )
+
+// NormalizeComponentSelectors canonicalizes a comma-separated component selector list.
+func NormalizeComponentSelectors(selectors string) (string, error) {
+	normalized := make(map[string]struct{})
+	for _, selector := range strings.Split(selectors, ",") {
+		selector = strings.ToLower(strings.TrimSpace(selector))
+		if selector == "" {
+			continue
+		}
+		pattern := strings.TrimPrefix(selector, "-")
+		if _, err := path.Match(pattern, ""); err != nil {
+			return "", err
+		}
+		normalized[selector] = struct{}{}
+	}
+
+	result := make([]string, 0, len(normalized))
+	for selector := range normalized {
+		result = append(result, selector)
+	}
+	slices.Sort(result)
+	return strings.Join(result, ","), nil
+}
 
 func includedOrExcluded(componentName string, requestedComponentNames []string) (selectState, string, error) {
 	// Check if the component has a leading dash indicating it should be excluded - this is done first so that exclusions precede inclusions

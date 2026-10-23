@@ -15,12 +15,19 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
-// ValuesOverrides is a map of component names to chart names containing Helm Chart values to override values on deploy.
-type ValuesOverrides map[string]map[string]map[string]any
+// ValuesOverrides is a compatibility alias for the persisted deploy override type.
+type ValuesOverrides = state.ValuesOverrides
+
+// DeployConfig is a compatibility alias for the persisted deployment configuration.
+type DeployConfig = state.DeployConfig
+
+// RemoveConfig is a compatibility alias for the persisted removal configuration.
+type RemoveConfig = state.RemoveConfig
 
 func getPopulatedVariableConfig(ctx context.Context, pkg api.Package, setVariables map[string]string, isInteractive bool) (*variables.VariableConfig, error) {
 	variableConfig := template.GetZarfVariableConfig(ctx, isInteractive)

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
@@ -20,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
 func TestDeployedPackagePackageDefinition(t *testing.T) {
@@ -924,4 +926,118 @@ func TestRegistryCertSecretData(t *testing.T) {
 		_, err := RegistryCertFromSecretData(nil)
 		require.ErrorContains(t, err, "incomplete")
 	})
+}
+
+func TestDeployedPackageEventsLegacyAndRetention(t *testing.T) {
+	t.Parallel()
+
+	legacyData, err := json.Marshal(DeployedPackage{Name: "legacy"})
+	require.NoError(t, err)
+
+	var legacy DeployedPackage
+	require.NoError(t, json.Unmarshal(legacyData, &legacy))
+	_, ok := legacy.LatestEvent()
+	require.False(t, ok)
+	_, ok = legacy.LastSuccessfulDeploy()
+	require.False(t, ok)
+
+	deployed := DeployedPackage{}
+	for i := range 11 {
+		outcome := EventOutcomeFailed
+		if i == 3 {
+			outcome = EventOutcomeSucceeded
+		}
+		deployed.AppendEvent(PackageEvent{
+			Type:      EventTypeDeploy,
+			Outcome:   outcome,
+			Timestamp: time.Unix(int64(i), 0),
+		})
+	}
+	deployed.AppendEvent(PackageEvent{Type: EventTypeRemove, Outcome: EventOutcomeSucceeded, Timestamp: time.Unix(12, 0)})
+	deployed.AppendEvent(PackageEvent{Type: EventTypeDeploy, Outcome: EventOutcomeCancelled, Timestamp: time.Unix(13, 0)})
+
+	require.Len(t, deployed.Events, 10)
+	require.Equal(t, time.Unix(3, 0), deployed.Events[0].Timestamp)
+	latest, ok := deployed.LatestEvent()
+	require.True(t, ok)
+	require.Equal(t, EventOutcomeCancelled, latest.Outcome)
+	success, ok := deployed.LastSuccessfulDeploy()
+	require.True(t, ok)
+	require.Equal(t, time.Unix(3, 0), success.Timestamp)
+}
+
+func TestConfigDigestNormalizesSelectors(t *testing.T) {
+	t.Parallel()
+
+	deployA := DeployConfig{
+		SetVariables:       map[string]string{"B": "two", "A": "one"},
+		Values:             value.Values{"nested": map[string]any{"enabled": true}},
+		NamespaceOverride:  "namespace",
+		ValuesOverridesMap: ValuesOverrides{"component": {"chart": value.Values{"replicas": 2}}},
+		OptionalComponents: " B, -A,b ",
+		Connected:          true,
+	}
+	deployB := DeployConfig{
+		SetVariables:       map[string]string{"A": "one", "B": "two"},
+		Values:             value.Values{"nested": map[string]any{"enabled": true}},
+		NamespaceOverride:  "namespace",
+		ValuesOverridesMap: ValuesOverrides{"component": {"chart": value.Values{"replicas": 2}}},
+		OptionalComponents: "b,-a",
+		Connected:          true,
+	}
+	deployDigestA, err := deployA.Digest()
+	require.NoError(t, err)
+	deployDigestB, err := deployB.Digest()
+	require.NoError(t, err)
+	require.Equal(t, deployDigestA, deployDigestB)
+	require.True(t, deployDigestA.Algorithm().Available())
+
+	deployB.Connected = false
+	changedDeployDigest, err := deployB.Digest()
+	require.NoError(t, err)
+	require.NotEqual(t, deployDigestA, changedDeployDigest)
+
+	removeA := RemoveConfig{Values: value.Values{"force": true}, NamespaceOverride: "namespace", OptionalComponents: " B, -A,b "}
+	removeB := RemoveConfig{Values: value.Values{"force": true}, NamespaceOverride: "namespace", OptionalComponents: "b,-a"}
+	removeDigestA, err := removeA.Digest()
+	require.NoError(t, err)
+	removeDigestB, err := removeB.Digest()
+	require.NoError(t, err)
+	require.Equal(t, removeDigestA, removeDigestB)
+	require.True(t, removeDigestA.Algorithm().Available())
+
+	_, err = (DeployConfig{Values: value.Values{"invalid": func() {}}}).Digest()
+	require.Error(t, err)
+}
+
+func TestDeployedPackageSetDeployConfigCopiesNestedValues(t *testing.T) {
+	t.Parallel()
+
+	config := DeployConfig{
+		SetVariables: map[string]string{"VARIABLE": "original"},
+		Values:       value.Values{"nested": map[string]any{"value": "original"}},
+		ValuesOverridesMap: ValuesOverrides{
+			"component": {
+				"chart": value.Values{"nested": map[string]any{"value": "original"}},
+			},
+		},
+	}
+	deployed := DeployedPackage{}
+	deployed.SetDeployConfig(config)
+
+	config.SetVariables["VARIABLE"] = "mutated"
+	configValues, ok := config.Values["nested"].(map[string]any)
+	require.True(t, ok)
+	configValues["value"] = "mutated"
+	configOverrides, ok := config.ValuesOverridesMap["component"]["chart"]["nested"].(map[string]any)
+	require.True(t, ok)
+	configOverrides["value"] = "mutated"
+
+	require.Equal(t, "original", deployed.DeployConfig.SetVariables["VARIABLE"])
+	deployedValues, ok := deployed.DeployConfig.Values["nested"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "original", deployedValues["value"])
+	deployedOverrides, ok := deployed.DeployConfig.ValuesOverridesMap["component"]["chart"]["nested"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "original", deployedOverrides["value"])
 }

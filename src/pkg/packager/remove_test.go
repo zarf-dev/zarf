@@ -81,12 +81,15 @@ func TestRemovePersistsChartProgress(t *testing.T) {
 					}},
 				},
 			}
-			_, err := c.RecordPackageDeployment(ctx, pkg, "", []state.DeployedComponent{
+			deployed, err := c.RecordPackageDeployment(ctx, pkg, "", []state.DeployedComponent{
 				{Name: "two-charts", InstalledCharts: []state.InstalledChart{
 					tc.remaining, tc.removed,
 				}},
 			}, 1)
 			require.NoError(t, err)
+			deployed.SetDeployConfig(DeployConfig{SetVariables: map[string]string{"VARIABLE": "value"}})
+			deployed.AppendEvent(state.PackageEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded})
+			require.NoError(t, c.UpdateDeployedPackage(ctx, *deployed))
 			opts := RemoveOptions{Cluster: c}
 
 			// Both the initial failure and a retry must retain only the outstanding chart.
@@ -95,10 +98,68 @@ func TestRemovePersistsChartProgress(t *testing.T) {
 				require.ErrorContains(t, err, "unable to uninstall the helm chart "+tc.remaining.ChartName+" in the namespace "+tc.remaining.Namespace)
 				deployed, err := c.GetDeployedPackage(ctx, pkg.Metadata.Name)
 				require.NoError(t, err)
-				require.Equal(t, []state.DeployedComponent{
-					{Name: "two-charts", InstalledCharts: []state.InstalledChart{tc.remaining}},
-				}, deployed.DeployedComponents)
+				require.Len(t, deployed.DeployedComponents, 1)
+				require.Equal(t, []state.InstalledChart{tc.remaining}, deployed.DeployedComponents[0].InstalledCharts)
+				require.Equal(t, state.ComponentStatusFailed, deployed.DeployedComponents[0].Status) //nolint:staticcheck // Verify legacy status remains persisted.
+				require.Equal(t, state.EventOutcomeFailed, deployed.DeployedComponents[0].LastEvent.Outcome)
+				require.Equal(t, state.EventOutcomeInProgress, deployed.Events[len(deployed.Events)-2].Outcome)
+				require.Equal(t, state.EventOutcomeFailed, deployed.Events[len(deployed.Events)-1].Outcome)
+				require.Equal(t, map[string]string{"VARIABLE": "value"}, deployed.DeployConfig.SetVariables)
 			}
 		})
 	}
+}
+
+func TestRemoveSelectsOnlyRequestedComponents(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/version":
+			_, err := w.Write([]byte(`{"gitVersion":"v1.37.0"}`))
+			assert.NoError(t, err)
+		default:
+			assert.NoError(t, json.NewEncoder(w).Encode(corev1.SecretList{}))
+		}
+	}))
+	t.Cleanup(srv.Close)
+	kubeconfig := filepath.Join(t.TempDir(), "kubeconfig")
+	require.NoError(t, clientcmd.WriteToFile(clientcmdapi.Config{
+		Clusters:       map[string]*clientcmdapi.Cluster{"test": {Server: srv.URL}},
+		Contexts:       map[string]*clientcmdapi.Context{"test": {Cluster: "test"}},
+		CurrentContext: "test",
+	}, kubeconfig))
+	t.Setenv("KUBECONFIG", kubeconfig)
+
+	c := &cluster.Cluster{Clientset: fake.NewClientset()}
+	pkg := api.Package{
+		Kind:     api.ZarfPackageConfig,
+		Metadata: api.PackageMetadata{Name: "partial-remove"},
+		Components: []api.Component{
+			{Name: "one", Charts: []api.Chart{{Name: "one", Namespace: "default", ReleaseName: "one"}}},
+			{Name: "two", Charts: []api.Chart{{Name: "two", Namespace: "default", ReleaseName: "two"}}},
+		},
+	}
+	_, err := c.RecordPackageDeployment(ctx, pkg, "sha256:manifest", []state.DeployedComponent{
+		{Name: "one", InstalledCharts: []state.InstalledChart{{Namespace: "default", ChartName: "one"}}},
+		{Name: "two", InstalledCharts: []state.InstalledChart{{Namespace: "default", ChartName: "two"}}},
+	}, 1)
+	require.NoError(t, err)
+
+	config := RemoveConfig{OptionalComponents: "one"}
+	require.NoError(t, Remove(ctx, pkg, RemoveOptions{Cluster: c, RemoveConfig: config}))
+
+	deployed, err := c.GetDeployedPackage(ctx, pkg.Metadata.Name)
+	require.NoError(t, err)
+	require.Equal(t, []state.DeployedComponent{{
+		Name:            "two",
+		InstalledCharts: []state.InstalledChart{{Namespace: "default", ChartName: "two"}},
+	}}, deployed.DeployedComponents)
+	require.Equal(t, []state.EventOutcome{state.EventOutcomeInProgress, state.EventOutcomeSucceeded}, []state.EventOutcome{
+		deployed.Events[0].Outcome,
+		deployed.Events[1].Outcome,
+	})
+	expectedDigest, err := config.Digest()
+	require.NoError(t, err)
+	require.Equal(t, expectedDigest, deployed.Events[1].ConfigDigest)
 }
