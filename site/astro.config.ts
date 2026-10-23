@@ -131,6 +131,7 @@ export default defineConfig({
         },
       ],
       components: {
+        Head: "./src/components/StarlightHead.astro",
         SkipLink: "./src/components/SkipLink.astro",
         ThemeSelect: "./src/components/ThemeSelect.astro",
         Sidebar: "./src/components/Sidebar.astro",
