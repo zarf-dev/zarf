@@ -125,7 +125,7 @@ components:
     imageArchives:
       - path: images.tar
         images:
-          - example.com/app:1.0
+          - name: example.com/app:1.0
 `
 	const componentYAML = `apiVersion: zarf.dev/v1beta1
 kind: ZarfComponentConfig
@@ -142,7 +142,7 @@ component:
   imageArchives:
     - path: images.tar
       images:
-        - example.com/app:1.0
+        - name: example.com/app:1.0
 `
 	for _, tc := range []struct {
 		name     string
@@ -169,7 +169,7 @@ component:
 				{YqPath: tc.prefix + ".images.[0]", Description: "Image not pinned with digest", Item: "busybox:1.0", Severity: lint.SevWarn},
 				{YqPath: tc.prefix + ".images.[0]", Description: "Image reference does not specify a registry domain", Item: "busybox:1.0", Severity: lint.SevWarn},
 				{YqPath: tc.prefix + ".files.[0]", Description: "No checksum for remote file", Item: "https://example.com/file.zip", Severity: lint.SevWarn},
-				{YqPath: tc.prefix + ".imageArchives.[0].images.[0]", Description: "Image archive image should use a .internal domain to avoid resolving to a public registry", Item: "example.com/app:1.0", Severity: lint.SevWarn},
+				{YqPath: tc.prefix + ".imageArchives.[0].images.[0].name", Description: "Image archive image should use a .internal domain to avoid resolving to a public registry", Item: "example.com/app:1.0", Severity: lint.SevWarn},
 			}, lintErr.Findings)
 			require.True(t, lintErr.OnlyWarnings())
 		})

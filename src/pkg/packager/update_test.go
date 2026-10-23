@@ -259,7 +259,7 @@ func updateImagesInDefinition(t *testing.T, definition any, selector api.Compone
 
 func TestUpdateImagesV1Beta1KeepsArchiveImagesOutOfImageList(t *testing.T) {
 	t.Parallel()
-	archive := v1beta1.ImageArchive{Path: "app.tar", Images: []string{"nginx:1.27"}}
+	archive := v1beta1.ImageArchive{Path: "app.tar", Images: []v1beta1.ArchiveImage{{Name: "nginx:1.27"}}}
 	definition := v1beta1.Package{
 		APIVersion: v1beta1.APIVersion,
 		Kind:       v1beta1.ZarfPackageConfig,
@@ -281,7 +281,7 @@ func TestUpdateImagesV1Beta1KeepsArchiveImagesOutOfImageList(t *testing.T) {
 				{Image: api.Image{Name: "example.com/new:1"}, MatchType: MatchDefinite},
 			},
 		},
-		ImageArchives: []api.ImageArchive{{Path: archive.Path, Images: archive.Images}},
+		ImageArchives: []api.ImageArchive{{Path: archive.Path, Images: []api.ArchiveImage{{Name: "nginx:1.27"}}}},
 	}
 	require.NoError(t, UpdateImages(context.Background(), path, []DefinitionImageResult{result}))
 	updatedBytes, err := os.ReadFile(path)
@@ -309,7 +309,9 @@ component:
         - deployment.yaml
   imageArchives:
     - path: sub/scratch.tar
-      images: []
+      images:
+        - name: scratch:latest
+          id: base
 `
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "component.yaml"), []byte(child), 0o600))
 	parent := `apiVersion: zarf.dev/v1beta1
@@ -327,7 +329,10 @@ components:
           - deployment-scratch-other.yaml
     imageArchives:
       - path: scratch-other.tar
-        images: []
+        images:
+          - name: scratch:other
+            id: app
+          - name: scratch:stale
 `
 	packagePath := filepath.Join(dir, "zarf.yaml")
 	require.NoError(t, os.WriteFile(packagePath, []byte(parent), 0o600))
@@ -343,13 +348,15 @@ components:
 	var updated v1beta1.Package
 	require.NoError(t, yaml.Unmarshal(updatedBytes, &updated))
 	require.Len(t, updated.Components, 1)
-	require.Equal(t, []v1beta1.ImageArchive{{Path: "scratch-other.tar", Images: []string{"docker.io/library/scratch:other"}}}, updated.Components[0].ImageArchives)
+	require.Equal(t, []v1beta1.ImageArchive{{Path: "scratch-other.tar", Images: []v1beta1.ArchiveImage{{Name: "docker.io/library/scratch:other", ID: "app"}}}}, updated.Components[0].ImageArchives)
 
 	loaded, err := load.Package(ctx, packagePath, load.PackageOptions{})
 	require.NoError(t, err)
 	require.Len(t, loaded.Definition.Components[0].ImageArchives, 2)
 	require.Equal(t, "sub/scratch.tar", loaded.Definition.Components[0].ImageArchives[0].Path)
 	require.Equal(t, "scratch-other.tar", loaded.Definition.Components[0].ImageArchives[1].Path)
+	require.Equal(t, "base", loaded.Definition.Components[0].ImageArchives[0].Images[0].ID)
+	require.Equal(t, "app", loaded.Definition.Components[0].ImageArchives[1].Images[0].ID)
 	require.NoError(t, loaded.Close())
 }
 
@@ -508,12 +515,7 @@ func TestImageUpdateNeeded(t *testing.T) {
 					},
 					ImageArchives: []api.ImageArchive{
 						{
-							Images: []string{
-								"docker.io/library/redis:7.0.15-alpine",
-								"quay.io/argoproj/argocd:v2.9.6",
-								"quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.sig",
-								"quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.att",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/redis:7.0.15-alpine"}, {Name: "quay.io/argoproj/argocd:v2.9.6"}, {Name: "quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.sig"}, {Name: "quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.att"}},
 						},
 					},
 				},
@@ -543,9 +545,7 @@ func TestImageUpdateNeeded(t *testing.T) {
 					},
 					ImageArchives: []api.ImageArchive{
 						{
-							Images: []string{
-								"docker.io/library/redis:7.0.15-alpine",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/redis:7.0.15-alpine"}},
 						},
 					},
 				},
@@ -576,9 +576,7 @@ func TestImageUpdateNeeded(t *testing.T) {
 					},
 					ImageArchives: []api.ImageArchive{
 						{
-							Images: []string{
-								"docker.io/library/redis:7.0.14-alpine",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/redis:7.0.14-alpine"}},
 						},
 					},
 				},
@@ -608,10 +606,7 @@ func TestImageUpdateNeeded(t *testing.T) {
 					},
 					ImageArchives: []api.ImageArchive{
 						{
-							Images: []string{
-								"docker.io/library/redis:7.0.14-alpine",
-								"quay.io/argoproj/argocd:v2.9.6",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/redis:7.0.14-alpine"}, {Name: "quay.io/argoproj/argocd:v2.9.6"}},
 						},
 					},
 				},
@@ -718,10 +713,8 @@ func TestCreateImageUpdate(t *testing.T) {
 					},
 					ImageArchives: []api.ImageArchive{
 						{
-							Path: "automation-controller.tar",
-							Images: []string{
-								"ghcr.io/fluxcd/image-automation-controller:v0.39.0",
-							},
+							Path:   "automation-controller.tar",
+							Images: []api.ArchiveImage{{Name: "ghcr.io/fluxcd/image-automation-controller:v0.39.0"}},
 						},
 					},
 				},

@@ -96,11 +96,11 @@ func checkForImageArchivesWithoutInternalDomainV1Beta1(c v1beta1.ComponentSpec, 
 	var findings []PackageFinding
 	for i, archive := range c.ImageArchives {
 		for j, image := range archive.Images {
-			if !hasInternalDomain(image) {
+			if !hasInternalDomain(image.Name) {
 				findings = append(findings, PackageFinding{
-					YqPath:      fmt.Sprintf("%s.imageArchives.[%d].images.[%d]", path, i, j),
+					YqPath:      fmt.Sprintf("%s.imageArchives.[%d].images.[%d].name", path, i, j),
 					Description: "Image archive image should use a .internal domain to avoid resolving to a public registry",
-					Item:        image,
+					Item:        image.Name,
 					Severity:    SevWarn,
 				})
 			}
