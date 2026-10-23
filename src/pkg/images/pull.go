@@ -62,7 +62,7 @@ type PullOptions struct {
 	PlainHTTP bool
 }
 
-// ImageRequest identifies an image and how package creation should acquire it.
+// ImageRequest pairs an image with its source. An empty Source means registry.
 type ImageRequest struct {
 	Image  transform.Image
 	Source api.ImageSource

@@ -91,7 +91,7 @@ func TestResourceAnnotations(t *testing.T) {
 	t.Parallel()
 
 	pkg := api.Package{APIVersion: v1beta1.APIVersion}
-	documentationPath := DocumentationResourcePath("README.md")
+	documentationPath := DocumentationDir + "/README.md"
 	require.Equal(t, map[string]string{
 		ocispec.AnnotationTitle: documentationPath,
 		ResourceKindAnnotation:  ResourceKindDocumentation,
@@ -137,8 +137,8 @@ documentation:
 	for _, descriptor := range manifest.Layers {
 		descriptors[descriptor.Annotations[ocispec.AnnotationTitle]] = descriptor
 	}
-	documentation := descriptors[DocumentationResourcePath("README.md")]
-	require.Equal(t, DocumentationResourcePath("README.md"), documentation.Annotations[ocispec.AnnotationTitle])
+	documentation := descriptors[DocumentationDir+"/README.md"]
+	require.Equal(t, DocumentationDir+"/README.md", documentation.Annotations[ocispec.AnnotationTitle])
 	require.Equal(t, ResourceKindDocumentation, documentation.Annotations[ResourceKindAnnotation])
 	require.Equal(t, DocumentationLayerMediaTypeBlob, documentation.MediaType)
 	sbom := descriptors[ComponentSBOMResourcePath("metrics")]

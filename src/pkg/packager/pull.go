@@ -156,7 +156,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		}
 	}
 
-	// Get all the layers for relevant components, excluding images for skeleton or connected packages.
+	// Get all the layers for relevant components, exclude images if it's a skeleton or connected package
 	layerTypes := opts.LayerTypes
 	if opts.Connected || isSkeleton(desc.Platform) {
 		if len(layerTypes) == 0 {

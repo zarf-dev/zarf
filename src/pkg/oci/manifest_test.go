@@ -19,9 +19,19 @@ func TestManifestLocate(t *testing.T) {
 		Size:        1,
 		Annotations: map[string]string{ocispec.AnnotationTitle: "sboms/images/resource.json"},
 	}
-	manifest := &Manifest{Manifest: ocispec.Manifest{Layers: []ocispec.Descriptor{descriptor}}}
+	digestMatch := ocispec.Descriptor{
+		Digest:      godigest.FromString("digest-match"),
+		Size:        2,
+		Annotations: map[string]string{ocispec.AnnotationTitle: "sboms/images/digest-match.json"},
+	}
+	titleBeforeDigest := ocispec.Descriptor{
+		Digest:      godigest.FromString("title-before-digest"),
+		Size:        3,
+		Annotations: map[string]string{ocispec.AnnotationTitle: digestMatch.Digest.Encoded()},
+	}
+	manifest := &Manifest{Manifest: ocispec.Manifest{Layers: []ocispec.Descriptor{descriptor, titleBeforeDigest, digestMatch}}}
 
 	require.Equal(t, descriptor, manifest.Locate("sboms/images/resource.json"))
-	require.Equal(t, descriptor, manifest.Locate(descriptor.Digest.Encoded()))
+	require.Equal(t, digestMatch, manifest.Locate(digestMatch.Digest.Encoded()))
 	require.True(t, IsEmptyDescriptor(manifest.Locate("missing")))
 }

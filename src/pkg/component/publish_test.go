@@ -161,6 +161,7 @@ func TestPublishComponent(t *testing.T) {
 	require.Equal(t, "https://example.com/remote-manifest.yaml", component.Component.Manifests[1].Files[0])
 	require.Equal(t, "resources/5/local-file.txt", component.Component.Files[0].Source)
 	require.Equal(t, "https://example.com/remote-file.txt", component.Component.Files[1].Source)
+
 	layerTitles := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
 		layerTitles = append(layerTitles, layer.Annotations[ocispec.AnnotationTitle])
