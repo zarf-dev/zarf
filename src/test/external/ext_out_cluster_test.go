@@ -326,6 +326,6 @@ func (suite *ExtOutClusterTestSuite) makeGiteaUserPrivate(baseURL string, userna
 	suite.NoError(err)
 }
 
-func TestExtOurClusterTestSuite(t *testing.T) {
+func TestExtOutClusterTestSuite(t *testing.T) {
 	suite.Run(t, new(ExtOutClusterTestSuite))
 }
