@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -54,7 +55,7 @@ func TestDeployedPackagePackageDefinition(t *testing.T) {
 	require.Equal(t, PackageConnectivityConnected, deployed.PackageConnectivity)
 	require.Equal(t, "override", deployed.NamespaceOverride)
 	require.Equal(t, convert.PackageToV1alpha1(definition), deployed.Data)
-	require.Contains(t, deployed.PackageData, v1alpha1.APIVersion)
+	require.NotContains(t, deployed.PackageData, v1alpha1.APIVersion)
 	require.Contains(t, deployed.PackageData, v1beta1.APIVersion)
 
 	actual, err := deployed.Definition()
@@ -73,6 +74,75 @@ func TestDeployedPackagePackageDefinition_legacyData(t *testing.T) {
 	alpha := convert.PackageToV1alpha1(definition)
 	require.Equal(t, legacy.Metadata.Name, alpha.Metadata.Name)
 	require.True(t, alpha.AllowsNamespaceOverride())
+}
+
+func TestDeployedPackagePackageDefinition_v1alpha1Serialization(t *testing.T) {
+	t.Parallel()
+
+	for _, version := range []string{"", v1alpha1.APIVersion} {
+		t.Run(version, func(t *testing.T) {
+			t.Parallel()
+
+			definition := convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
+				APIVersion: version,
+				Kind:       v1alpha1.ZarfPackageConfig,
+				Metadata:   v1alpha1.ZarfMetadata{Name: "alpha-package"},
+			})
+			deployed, err := NewDeployedPackage(definition, "", "", nil, 1)
+			require.NoError(t, err)
+			serialized, err := json.Marshal(deployed)
+			require.NoError(t, err)
+			var fields map[string]json.RawMessage
+			require.NoError(t, json.Unmarshal(serialized, &fields))
+			require.NotContains(t, fields, "packageData")
+			var legacy v1alpha1.ZarfPackage
+			require.NoError(t, json.Unmarshal(fields["data"], &legacy))
+			require.Equal(t, convert.PackageToV1alpha1(definition), legacy)
+
+			var loaded DeployedPackage
+			require.NoError(t, json.Unmarshal(serialized, &loaded))
+			actual, err := loaded.Definition()
+			require.NoError(t, err)
+			require.Equal(t, definition, actual)
+		})
+	}
+}
+
+func TestDeployedPackageSetPackageDefinition_replacesStoredVersions(t *testing.T) {
+	t.Parallel()
+
+	deployed, err := NewDeployedPackage(api.Package{
+		APIVersion: v1beta1.APIVersion,
+		Metadata:   api.PackageMetadata{Name: "package"},
+	}, "", "", nil, 1)
+	require.NoError(t, err)
+	alpha := convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       v1alpha1.ZarfPackageConfig,
+		Metadata:   v1alpha1.ZarfMetadata{Name: "package", Version: "2.0.0"},
+	})
+	require.NoError(t, deployed.SetPackageDefinition(alpha))
+	actual, err := deployed.Definition()
+	require.NoError(t, err)
+	require.Equal(t, alpha, actual)
+	serialized, err := json.Marshal(deployed)
+	require.NoError(t, err)
+	var fields map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(serialized, &fields))
+	require.NotContains(t, fields, "packageData")
+}
+
+func TestDeployedPackagePackageDefinition_unknownVersionFallsBackToData(t *testing.T) {
+	t.Parallel()
+
+	legacy := v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "future-package"}}
+	deployed := DeployedPackage{
+		Data:        legacy,
+		PackageData: map[string]json.RawMessage{"zarf.dev/v9": []byte(`{}`)},
+	}
+	definition, err := deployed.Definition()
+	require.NoError(t, err)
+	require.Equal(t, convert.PackageFromV1alpha1(legacy), definition)
 }
 
 func TestDeployedPackagePackageDefinition_noSupportedData(t *testing.T) {

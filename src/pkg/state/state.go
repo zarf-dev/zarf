@@ -822,9 +822,10 @@ const (
 type DeployedPackage struct {
 	Name   string `json:"name"`
 	Digest string `json:"digest"`
-	// Deprecated: use PackageData or Definition() instead. This field is kept so older clients can read package deployment state.
-	Data                v1alpha1.ZarfPackage       `json:"data"`
-	PackageData         map[string]json.RawMessage `json:"packageData"`
+	// Data contains the v1alpha1 definition
+	Data v1alpha1.ZarfPackage `json:"data"`
+	// PackageData contains the v1beta1 definition and future definitions
+	PackageData         map[string]json.RawMessage `json:"packageData,omitempty"`
 	CLIVersion          string                     `json:"cliVersion"`
 	Generation          int                        `json:"generation"`
 	DeployedComponents  []DeployedComponent        `json:"deployedComponents"`
@@ -866,16 +867,8 @@ func NewDeployedPackage(definition api.Package, digest, cliVersion string, compo
 // Data always contains the v1alpha1 form to allow older Zarf clients to read the
 // deployed package secret.
 func (d *DeployedPackage) SetPackageDefinition(definition api.Package) error {
-	alpha := convert.PackageToV1alpha1(definition)
-	alphaData, err := json.Marshal(alpha)
-	if err != nil {
-		return fmt.Errorf("marshal %s package data: %w", v1alpha1.APIVersion, err)
-	}
-
-	d.Data = alpha
-	d.PackageData = map[string]json.RawMessage{
-		v1alpha1.APIVersion: alphaData,
-	}
+	d.Data = convert.PackageToV1alpha1(definition)
+	d.PackageData = nil
 
 	switch definition.GetAPIVersion() {
 	case "", v1alpha1.APIVersion:
@@ -885,7 +878,7 @@ func (d *DeployedPackage) SetPackageDefinition(definition api.Package) error {
 		if err != nil {
 			return fmt.Errorf("marshal %s package data: %w", v1beta1.APIVersion, err)
 		}
-		d.PackageData[v1beta1.APIVersion] = betaData
+		d.PackageData = map[string]json.RawMessage{v1beta1.APIVersion: betaData}
 		return nil
 	default:
 		return fmt.Errorf("unsupported package API version %q", definition.APIVersion)
@@ -893,13 +886,8 @@ func (d *DeployedPackage) SetPackageDefinition(definition api.Package) error {
 }
 
 // Definition returns the latest package definition this Zarf version
-// understands. Deployed package secrets written before PackageData was added
-// fall back to their legacy v1alpha1 Data field.
+// understands, falling back to the v1alpha1 Data field.
 func (d DeployedPackage) Definition() (api.Package, error) {
-	if len(d.PackageData) == 0 {
-		return convert.PackageFromV1alpha1(d.Data), nil
-	}
-
 	if data, found := d.PackageData[v1beta1.APIVersion]; found {
 		var pkg v1beta1.Package
 		if err := json.Unmarshal(data, &pkg); err != nil {
@@ -913,6 +901,9 @@ func (d DeployedPackage) Definition() (api.Package, error) {
 			return api.Package{}, fmt.Errorf("unmarshal %s package data: %w", v1alpha1.APIVersion, err)
 		}
 		return convert.PackageFromV1alpha1(pkg), nil
+	}
+	if len(d.PackageData) == 0 || d.Data.Metadata.Name != "" {
+		return convert.PackageFromV1alpha1(d.Data), nil
 	}
 
 	return api.Package{}, fmt.Errorf("deployed package has no supported package data")
