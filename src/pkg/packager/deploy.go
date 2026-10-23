@@ -171,6 +171,9 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		pkgLayout.RemoveRepositories()
 	}
 	pkg = pkgLayout.Definition()
+	if err := validatePackageSecretSize(pkg, pkgLayout.Digest(), state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
+		return DeployResult{}, err
+	}
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 	if err != nil {

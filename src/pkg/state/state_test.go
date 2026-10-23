@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,7 +21,42 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	corev1 "k8s.io/api/core/v1"
 )
+
+func TestDeployedPackageMarshalSecretDataSizeLimit(t *testing.T) {
+	t.Parallel()
+	for _, version := range []string{"", v1alpha1.APIVersion, v1beta1.APIVersion} {
+		t.Run(version, func(t *testing.T) {
+			t.Parallel()
+			deployed, err := NewDeployedPackage(api.Package{
+				APIVersion: version,
+				Metadata:   api.PackageMetadata{Name: "size-limit"},
+			}, "", "", nil, 1)
+			require.NoError(t, err)
+			data, err := deployed.MarshalSecretData()
+			require.NoError(t, err)
+			baseSize := len(data)
+			for _, size := range []int{corev1.MaxSecretSize - 1, corev1.MaxSecretSize, corev1.MaxSecretSize + 1} {
+				t.Run(fmt.Sprint(size), func(t *testing.T) {
+					deployed.Digest = strings.Repeat("a", size-baseSize)
+					data, err := deployed.MarshalSecretData()
+					if size > corev1.MaxSecretSize {
+						require.ErrorContains(t, err, "too large to store in a package secret")
+						require.Nil(t, data)
+						return
+					}
+					require.NoError(t, err)
+					require.Len(t, data, size)
+					var restored DeployedPackage
+					require.NoError(t, json.Unmarshal(data, &restored))
+					require.Equal(t, deployed.Name, restored.Name)
+					require.Equal(t, deployed.Digest, restored.Digest)
+				})
+			}
+		})
+	}
+}
 
 func TestDeployedPackagePackageDefinition(t *testing.T) {
 	t.Parallel()

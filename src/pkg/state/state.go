@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // MutationPolicy controls the agent's default mutation behavior.
@@ -833,6 +834,18 @@ type DeployedPackage struct {
 	PackageConnectivity PackageConnectivity        `json:"packageConnectivity"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
+}
+
+// MarshalSecretData serializes deployment state and checks the Kubernetes Secret data limit.
+func (d DeployedPackage) MarshalSecretData() ([]byte, error) {
+	data, err := json.Marshal(d)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > corev1.MaxSecretSize {
+		return nil, fmt.Errorf("package %q is too large to store in a package secret: %d bytes exceeds the %d byte limit; reduce the package definition size or split it into smaller packages", d.Name, len(data), corev1.MaxSecretSize)
+	}
+	return data, nil
 }
 
 // NewDeployedPackage creates persisted deployment state from a package definition.

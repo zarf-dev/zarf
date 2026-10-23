@@ -84,6 +84,40 @@ func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
 	}
 }
 
+func TestDeployRejectsOversizedPackageBeforeActions(t *testing.T) {
+	t.Parallel()
+	for _, version := range []string{"", v1alpha1.APIVersion, v1beta1.APIVersion} {
+		t.Run(version, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			marker := filepath.Join(t.TempDir(), "deployed")
+			size := corev1.MaxSecretSize
+			if version == v1beta1.APIVersion {
+				// Each definition fits on its own, but the secret contains both API versions.
+				size = corev1.MaxSecretSize * 3 / 5
+			}
+			pkg := api.Package{
+				APIVersion: version,
+				Kind:       api.ZarfPackageConfig,
+				Metadata: api.PackageMetadata{
+					Name:        "oversized",
+					Annotations: map[string]string{"large": strings.Repeat("a", size)},
+				},
+				Components: []api.Component{{Name: "action", Actions: api.ComponentActions{OnDeploy: api.ActionSet{
+					Before: []api.Action{{Cmd: "touch " + marker}},
+				}}}},
+			}
+			pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			result, err := Deploy(ctx, pkgLayout, DeployOptions{})
+			require.ErrorContains(t, err, "too large to store in a package secret")
+			require.Empty(t, result)
+			require.NoFileExists(t, marker)
+		})
+	}
+}
+
 func TestDeployInitComponentServices(t *testing.T) {
 	t.Parallel()
 

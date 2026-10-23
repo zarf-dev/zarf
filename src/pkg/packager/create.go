@@ -123,6 +123,9 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
+	if err := validatePackageSecretSize(pkgLayout.Definition(), pkgLayout.Digest()); err != nil {
+		return "", err
+	}
 
 	var packageLocation string
 	if helpers.IsOCIURL(output) {
