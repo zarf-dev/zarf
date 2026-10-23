@@ -14,6 +14,7 @@ import (
 
 	"helm.sh/helm/v4/pkg/storage/driver"
 
+	"github.com/opencontainers/go-digest"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -30,13 +31,11 @@ import (
 
 // RemoveOptions are the options for Remove.
 type RemoveOptions struct {
+	RemoveConfig
 	Cluster *cluster.Cluster
-	// Timeout for Helm operations
-	Timeout           time.Duration
-	NamespaceOverride string
-	SkipVersionCheck  bool
-	// Values passed in at remove time. They can come from the CLI or set directly by API callers.
-	value.Values
+	// Timeout for Helm operations.
+	Timeout          time.Duration
+	SkipVersionCheck bool
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
@@ -56,7 +55,19 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 		opts.Timeout = config.ZarfDefaultTimeout
 	}
 
-	definition, err := filters.Apply(definition, filters.ByLocalOS(runtime.GOOS))
+	normalizedSelectors, err := filters.NormalizeComponentSelectors(opts.OptionalComponents)
+	if err != nil {
+		return err
+	}
+	opts.OptionalComponents = normalizedSelectors
+	removeConfigDigest, err := opts.RemoveConfig.Digest()
+	if err != nil {
+		return fmt.Errorf("digest remove config: %w", err)
+	}
+	definition, err = filters.Apply(definition, filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.BySelectState(opts.OptionalComponents),
+	))
 	if err != nil {
 		return err
 	}
@@ -107,6 +118,24 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 		}
 	}
 
+	removePackageEvent := func(outcome state.EventOutcome) state.PackageEvent {
+		return state.PackageEvent{
+			Type:         state.EventTypeRemove,
+			Outcome:      outcome,
+			Timestamp:    time.Now(),
+			Version:      definition.Metadata.Version,
+			Flavor:       definition.Build.Flavor,
+			Digest:       digest.Digest(depPkg.Digest),
+			ConfigDigest: removeConfigDigest,
+		}
+	}
+	if requiresCluster {
+		depPkg.AppendEvent(removePackageEvent(state.EventOutcomeInProgress))
+		if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
+			l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
+		}
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get working directory: %w", err)
@@ -126,6 +155,14 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 		comp, ok := componentIdx[depComp.Name]
 		if !ok {
 			continue
+		}
+
+		depComp.Status = state.ComponentStatusRemoving //nolint:staticcheck // Legacy status remains persisted for compatibility.
+		depComp.LastEvent = state.ComponentEvent{Type: state.EventTypeRemove, Outcome: state.EventOutcomeInProgress, Timestamp: time.Now()}
+		if requiresCluster {
+			if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
+				l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
+			}
 		}
 
 		err := func() error {
@@ -190,6 +227,14 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 			return nil
 		}()
 		if err != nil {
+			if requiresCluster {
+				depComp.Status = state.ComponentStatusFailed //nolint:staticcheck // Legacy status remains persisted for compatibility.
+				depComp.LastEvent = state.ComponentEvent{Type: state.EventTypeRemove, Outcome: state.EventOutcomeFailed, Timestamp: time.Now()}
+				depPkg.AppendEvent(removePackageEvent(state.EventOutcomeFailed))
+				if updateErr := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); updateErr != nil {
+					l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", updateErr.Error())
+				}
+			}
 			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
 			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.OnFailure, actions.RunOptions{
 				DefaultConfig: comp.Actions.OnRemove.Defaults,
@@ -203,11 +248,15 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 		}
 	}
 
-	// All the installed components were deleted, therefore this package is no longer actually deployed
-	if opts.Cluster != nil && len(depPkg.DeployedComponents) == 0 {
-		err := opts.Cluster.DeleteDeployedPackage(ctx, *depPkg)
-		if err != nil {
-			l.Warn("unable to delete secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
+	if requiresCluster {
+		depPkg.AppendEvent(removePackageEvent(state.EventOutcomeSucceeded))
+		if len(depPkg.DeployedComponents) == 0 {
+			err := opts.Cluster.DeleteDeployedPackage(ctx, *depPkg)
+			if err != nil {
+				l.Warn("unable to delete secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
+			}
+		} else if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
+			l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 		}
 	}
 
