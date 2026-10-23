@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.89.0](https://github.com/zarf-dev/zarf/compare/v0.88.0...v0.89.0) (2026-10-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* stop duplicating package data in package secret ([#5527](https://github.com/zarf-dev/zarf/issues/5527))
+* simplify image layer caching to avoid concurrency issues ([#5495](https://github.com/zarf-dev/zarf/issues/5495))
+* required injector image in proxy mode ([#5494](https://github.com/zarf-dev/zarf/issues/5494))
+* remove defense unicorn shortcuts from oci package refs ([#5504](https://github.com/zarf-dev/zarf/issues/5504))
+* remove global cachepath SDK option ([#5473](https://github.com/zarf-dev/zarf/issues/5473))
+
+### Features
+
+* allow R.C. versions to pass version requirements ([#5479](https://github.com/zarf-dev/zarf/issues/5479)) ([5644019](https://github.com/zarf-dev/zarf/commit/5644019f39160e8fcd865becdd9f510987d34d75))
+* **oci:** support custom credential providers ([#5502](https://github.com/zarf-dev/zarf/issues/5502)) ([be55273](https://github.com/zarf-dev/zarf/commit/be55273c24899e61215599fd1dbe40ba61ce2e72))
+* remove defense unicorn shortcuts from oci package refs ([#5504](https://github.com/zarf-dev/zarf/issues/5504)) ([2bb9b35](https://github.com/zarf-dev/zarf/commit/2bb9b35ee57cb810e243515985ef5185f5387c43))
+* remove global cachepath SDK option ([#5473](https://github.com/zarf-dev/zarf/issues/5473)) ([65e8152](https://github.com/zarf-dev/zarf/commit/65e8152c9920337d8bbda2ccce02dbc4dabe8bf9))
+* required injector image in proxy mode ([#5494](https://github.com/zarf-dev/zarf/issues/5494)) ([1f36c1c](https://github.com/zarf-dev/zarf/commit/1f36c1c734372a0580afd3ab02a2f396b23ced4f))
+* stop duplicating package data in package secret ([#5527](https://github.com/zarf-dev/zarf/issues/5527)) ([2904d9e](https://github.com/zarf-dev/zarf/commit/2904d9e15a31793537701d0f658e663fc02facd4))
+
+
+### Bug Fixes
+
+* catch and handle empty digests ([#5501](https://github.com/zarf-dev/zarf/issues/5501)) ([bf616d6](https://github.com/zarf-dev/zarf/commit/bf616d60ea5d02c1a46b7092ed68be11ff921477))
+* correctly save chart removal progress after subsequent chart removal fails ([#5492](https://github.com/zarf-dev/zarf/issues/5492)) ([59dc11f](https://github.com/zarf-dev/zarf/commit/59dc11fbb586df70199cbaf4e6d60773ad0d4dd6))
+* ensure chart order is preserved in state ([#5477](https://github.com/zarf-dev/zarf/issues/5477)) ([efdd6a8](https://github.com/zarf-dev/zarf/commit/efdd6a8691f30809bf7a3fd2fe3782fcc7010ef4))
+* simplify image layer caching to avoid concurrency issues ([#5495](https://github.com/zarf-dev/zarf/issues/5495)) ([2ec7419](https://github.com/zarf-dev/zarf/commit/2ec7419409482127e0337f9e18ba344a74ccc206))
+
 ## [0.88.0](https://github.com/zarf-dev/zarf/compare/v0.87.0...v0.88.0) (2026-10-15)
 
 
