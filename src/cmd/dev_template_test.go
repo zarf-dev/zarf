@@ -5,10 +5,12 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/config"
 )
@@ -48,6 +50,149 @@ components:
     images:
       - name: registry.example/app:from-set
 `, string(generated))
+}
+
+func TestDevTemplateRecursive(t *testing.T) {
+	t.Parallel()
+	for _, recursive := range []bool{false, true} {
+		t.Run(fmt.Sprint(recursive), func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			files := map[string]string{
+				"zarf.tpl.yaml": `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: app
+components:
+  - name: app
+    import:
+      local:
+        - path: child/[[ .component ]].gen.yaml
+  - name: shared
+    import:
+      local:
+        - path: leaf.gen.yaml
+  - name: remote
+    import:
+      remote:
+        - url: oci://registry.invalid/component:1.0.0
+`,
+				"child/app.tpl.yaml": `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: child
+  version: "[[ .cli.version ]]"
+component:
+  import:
+    local:
+      - path: ../static.yaml
+`,
+				"static.yaml": `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: static
+component:
+  import:
+    local:
+      - path: leaf.gen.yaml
+`,
+				"leaf.tpl.yaml": `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: leaf
+  description: [[ .environment ]]
+component:
+  images:
+    - name: [[ .image ]]
+`,
+				"leaf.gen.yaml":   "stale generated content\n",
+				"unused.tpl.yaml": "[[ .missing ]]",
+				"values.yaml":     "component: app\nenvironment: development\nimage: registry.example/app:from-file\n",
+			}
+			for name, contents := range files {
+				path := filepath.Join(dir, name)
+				require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+				require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+			}
+			v := viper.New()
+			cmd := newDevTemplateCommand(v)
+			args := []string{dir, "--set-file", filepath.Join(dir, "values.yaml"), "--set", "image=registry.example/app:from-set"}
+			if recursive {
+				args = append(args, "--recursive")
+			}
+			cmd.SetArgs(args)
+			require.NoError(t, cmd.ExecuteContext(t.Context()))
+			require.FileExists(t, filepath.Join(dir, "zarf.gen.yaml"))
+			leaf, err := os.ReadFile(filepath.Join(dir, "leaf.gen.yaml"))
+			require.NoError(t, err)
+			if recursive {
+				require.Contains(t, string(leaf), "description: development")
+				require.Contains(t, string(leaf), "name: registry.example/app:from-set")
+				child, err := os.ReadFile(filepath.Join(dir, "child/app.gen.yaml"))
+				require.NoError(t, err)
+				require.Contains(t, string(child), config.CLIVersion)
+			} else {
+				require.Equal(t, files["leaf.gen.yaml"], string(leaf))
+				require.NoFileExists(t, filepath.Join(dir, "child/app.gen.yaml"))
+			}
+			static, err := os.ReadFile(filepath.Join(dir, "static.yaml"))
+			require.NoError(t, err)
+			require.Equal(t, files["static.yaml"], string(static))
+			require.NoFileExists(t, filepath.Join(dir, "unused.gen.yaml"))
+		})
+	}
+}
+
+func TestDevTemplateRecursiveErrors(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name           string
+		child          string
+		skipValidation bool
+		wantError      string
+	}{
+		{name: "missing source", wantError: "child.tpl.yaml"},
+		{name: "missing value", child: "[[ .missing ]]", wantError: "map has no entry"},
+		{name: "invalid api", child: "apiVersion: zarf.dev/v1alpha1", wantError: "must use apiVersion"},
+		{name: "invalid schema", child: "apiVersion: zarf.dev/v1beta1\nkind: ZarfComponentConfig", wantError: "linting error"},
+		{name: "skip schema", child: "apiVersion: zarf.dev/v1beta1\nkind: ZarfComponentConfig", skipValidation: true},
+		{name: "cycle", child: `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: child
+component:
+  import:
+    local:
+      - path: ./child.gen.yaml
+`, wantError: "imported in cycle"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.tpl.yaml"), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfInitConfig
+metadata:
+  name: init
+components:
+  - name: child
+    import:
+      local:
+        - path: child.gen.yaml
+`), 0o644))
+			if tc.child != "" {
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "child.tpl.yaml"), []byte(tc.child), 0o644))
+			}
+			o := devTemplateOptions{recursive: true, skipValidation: tc.skipValidation}
+			err := o.run(t.Context(), []string{dir})
+			if tc.wantError != "" {
+				require.ErrorContains(t, err, tc.wantError)
+				require.NoFileExists(t, filepath.Join(dir, "zarf.gen.yaml"))
+			} else {
+				require.NoError(t, err)
+				require.FileExists(t, filepath.Join(dir, "child.gen.yaml"))
+			}
+		})
+	}
 }
 
 func TestDevTemplateRendersComponentConfig(t *testing.T) {
