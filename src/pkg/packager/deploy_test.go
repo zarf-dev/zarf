@@ -338,7 +338,8 @@ func TestDeployProxyInjectorImage(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, os.WriteFile(filepath.Join(pkgLayout.DirPath(), "zarf-injector"), []byte("injector"), 0o600))
 			d := deployer{
-				c: &cluster.Cluster{Clientset: fake.NewClientset()},
+				runtimeDir: pkgLayout.DirPath(),
+				c:          &cluster.Cluster{Clientset: fake.NewClientset()},
 				s: &state.State{
 					RegistryInfo: state.RegistryInfo{RegistryMode: state.RegistryModeProxy},
 					InjectorInfo: state.InjectorInfo{Image: tt.saved},
