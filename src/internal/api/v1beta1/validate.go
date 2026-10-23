@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -18,6 +19,8 @@ import (
 const (
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
 	ZarfMaxChartNameLength   = 40
+	maxMapKeyLength          = 256
+	maxAnnotationsSize       = 32 * 1024
 	errChartReleaseNameEmpty = "release name empty, unable to fallback to chart name"
 )
 
@@ -47,6 +50,8 @@ const (
 	PkgValidateErrFileChecksumAlgorithm     = "component %q file %q has unsupported checksum algorithm %q (expected sha256 or sha512)"
 	PkgValidateErrFileChecksumDigest        = "component %q file %q has an empty checksum digest"
 	PkgValidateErrImageConflictingSources   = "image %q has conflicting sources %q and %q"
+	PkgValidateErrMapKeyLength              = "%s key %q exceeds the maximum length of %d characters"
+	PkgValidateErrAnnotationsSize           = "metadata.annotations exceeds the maximum total size of %d bytes"
 )
 
 // ValidationErrors contains all errors found during package validation.
@@ -78,6 +83,9 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 	if len(pkg.Components) == 0 {
 		errs = append(errs, errors.New(PkgValidateErrNoComponents))
 	}
+	errs = append(errs, ValidateAnnotations(pkg.Metadata.Annotations)...)
+	errs = append(errs, validateMapKeys("documentation", pkg.Documentation)...)
+	errs = append(errs, validateMapKeys("build.registryOverrides", pkg.Build.RegistryOverrides)...)
 	for key := range pkg.Documentation {
 		if key == ".." {
 			errs = append(errs, fmt.Errorf(PkgValidateErrDocumentationKeyTraversal, key))
@@ -126,6 +134,29 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 		errs = append(errs, ValidateComponent(component)...)
 	}
 
+	return errs
+}
+
+// ValidateAnnotations checks metadata annotation key lengths and total size.
+func ValidateAnnotations(annotations map[string]string) ValidationErrors {
+	errs := validateMapKeys("metadata.annotations", annotations)
+	var size int
+	for key, value := range annotations {
+		size += len(key) + len(value)
+	}
+	if size > maxAnnotationsSize {
+		errs = append(errs, fmt.Errorf(PkgValidateErrAnnotationsSize, maxAnnotationsSize))
+	}
+	return errs
+}
+
+func validateMapKeys(field string, entries map[string]string) ValidationErrors {
+	var errs ValidationErrors
+	for key := range entries {
+		if utf8.RuneCountInString(key) > maxMapKeyLength {
+			errs = append(errs, fmt.Errorf(PkgValidateErrMapKeyLength, field, key, maxMapKeyLength))
+		}
+	}
 	return errs
 }
 
