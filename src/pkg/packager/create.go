@@ -27,6 +27,9 @@ import (
 
 // CreateOptions are the optional parameters to create.
 type CreateOptions struct {
+	// Architecture overrides global configuration and package metadata.
+	// Empty uses the definition loader's default architecture resolution.
+	Architecture      string
 	Flavor            string
 	RegistryOverrides []images.RegistryOverride
 	// A nil value leaves the package unsigned; a non-nil value requests signing.
@@ -64,6 +67,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 
 	loadOpts := load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     opts.Architecture,
 			Flavor:           opts.Flavor,
 			SetVariables:     opts.SetVariables,
 			CachePath:        opts.CachePath,

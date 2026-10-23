@@ -371,6 +371,7 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	opt := packager.CreateOptions{
+		Architecture:            config.CLIArch,
 		Flavor:                  o.flavor,
 		RegistryOverrides:       overrides,
 		SignBlobOptions:         signOpts,

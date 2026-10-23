@@ -17,12 +17,47 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestLoadPackageOCIArchitecturePrecedence(t *testing.T) {
+	previous := config.CLIArch
+	config.CLIArch = "amd64"
+	t.Cleanup(func() { config.CLIArch = previous })
+	ctx := testutil.TestContext(t)
+	reg := createRegistry(ctx, t)
+	source := t.TempDir()
+	definition := `kind: ZarfPackageConfig
+metadata:
+  name: architecture
+  version: 0.0.1
+components:
+  - name: empty
+`
+	require.NoError(t, os.WriteFile(filepath.Join(source, layout.ZarfYAML), []byte(definition), 0o600))
+	var ref string
+	for _, arch := range []string{"amd64", "arm64"} {
+		var err error
+		ref, err = Create(ctx, source, "oci://"+reg.String(), CreateOptions{Architecture: arch, CachePath: t.TempDir(), SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
+		require.NoError(t, err)
+	}
+	for _, tt := range []struct{ name, option, want string }{
+		{"explicit overrides global", "arm64", "arm64"},
+		{"empty uses global", "", "amd64"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			pkgLayout, err := LoadPackage(ctx, "oci://"+ref, LoadOptions{Architecture: tt.option, CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			require.Equal(t, tt.want, pkgLayout.Definition().Metadata.Architecture)
+		})
+	}
+}
 
 func TestLoadPackage(t *testing.T) {
 	t.Parallel()
@@ -65,6 +100,17 @@ func TestLoadPackage(t *testing.T) {
 			require.ErrorContains(t, err, fmt.Sprintf("to be %s, found %s", opt.Shasum, tt.shasum))
 		})
 	}
+
+	t.Run("architecture option does not rewrite tarball", func(t *testing.T) {
+		t.Parallel()
+
+		tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
+		pkgLayout, err := LoadPackage(ctx, tarPath, LoadOptions{Architecture: "arm64"})
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+		require.Equal(t, "amd64", pkgLayout.Definition().Metadata.Architecture)
+		require.Equal(t, "amd64", pkgLayout.Definition().Build.Architecture)
+	})
 
 	t.Run("VerificationStrategy explicit values", func(t *testing.T) {
 		t.Parallel()
