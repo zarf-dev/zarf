@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: DeploymentList
+items:
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: in-list
+    spec:
+      selector:
+        matchLabels:
+          app: in-list
+      template:
+        metadata:
+          labels:
+            app: in-list
+        spec:
+          containers:
+            - name: app
+              image: ghcr.io/zarf-dev/zarf/agent:v0.68.1
+          initContainers:
+            - name: init
+              image: docker.io/library/alpine:latest
