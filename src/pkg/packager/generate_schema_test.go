@@ -17,7 +17,6 @@ import (
 
 func TestGenerateValuesSchema(t *testing.T) {
 	t.Parallel()
-	setupInspectTests(t)
 
 	for _, kind := range []v1beta1.PackageKind{v1beta1.ZarfPackageConfig, v1beta1.ZarfComponentConfig, "v1alpha1"} {
 		t.Run(string(kind), func(t *testing.T) {
