@@ -135,7 +135,6 @@ func Unpack(ctx context.Context, imageArchive api.ImageArchive, destDir string, 
 		if !requested {
 			continue
 		}
-		requestedImages[manifestImg.Reference] = transform.Image{}
 
 		logger.From(ctx).Info("pulling image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
 		if _, err := copyImageFromOCILayout(ctx, srcStore, dstStore, manifestDesc.Digest.String(), manifestImg, arch, 0); err != nil {
@@ -143,14 +142,13 @@ func Unpack(ctx context.Context, imageArchive api.ImageArchive, destDir string, 
 		}
 
 		pulledImages = append(pulledImages, PulledImage{Image: request})
+		delete(requestedImages, manifestImg.Reference)
 	}
 
 	explainErr := fmt.Sprintf("image references are determined by the inclusion of one of the following "+
 		"annotations in the index.json: %s, %s.<registry>, %s", dockerRefAnnotation, containerdDistributionSourcePrefix, ocispec.AnnotationRefName)
-	for imageReference, request := range requestedImages {
-		if request != (transform.Image{}) {
-			return nil, fmt.Errorf("could not find image %s: found images %s: %s", imageReference, foundImages, explainErr)
-		}
+	for imageReference := range requestedImages {
+		return nil, fmt.Errorf("could not find image %s: found images %s: %s", imageReference, foundImages, explainErr)
 	}
 
 	return pulledImages, nil
