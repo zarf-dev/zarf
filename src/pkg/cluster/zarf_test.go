@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -119,28 +118,6 @@ func TestRecordPackageDefinitionDeployment(t *testing.T) {
 	loadedDefinition, err := loaded.Definition()
 	require.NoError(t, err)
 	require.Equal(t, convert.PackageToV1beta1(definition), convert.PackageToV1beta1(loadedDefinition))
-}
-
-func TestPackageSecretRejectsOversizedDeploymentMetadata(t *testing.T) {
-	t.Parallel()
-	ctx := t.Context()
-	c := &Cluster{Clientset: fake.NewClientset()}
-	pkg := api.Package{Metadata: api.PackageMetadata{Name: "large-metadata"}}
-	components := []state.DeployedComponent{{
-		Name: "component",
-		InstalledCharts: []state.InstalledChart{{
-			ConnectStrings: state.ConnectStrings{"web": {Description: strings.Repeat("a", corev1.MaxSecretSize)}},
-		}},
-	}}
-	_, err := c.RecordPackageDeployment(ctx, pkg, "", components, 1)
-	require.ErrorContains(t, err, "too large to store in a package secret")
-	deployed, err := state.NewDeployedPackage(pkg, "", "", components, 1)
-	require.NoError(t, err)
-	err = c.UpdateDeployedPackage(ctx, *deployed)
-	require.ErrorContains(t, err, "too large to store in a package secret")
-	secrets, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-	require.NoError(t, err)
-	require.Empty(t, secrets.Items)
 }
 
 func TestGetInstalledChartsForComponentNamespaceOverride(t *testing.T) {

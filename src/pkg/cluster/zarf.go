@@ -103,7 +103,7 @@ func warnOnUnrecognizedPackageAPIVersions(ctx context.Context, deployedPackage s
 
 // UpdateDeployedPackage updates the deployed package metadata.
 func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
-	packageSecretData, err := depPkg.MarshalSecretData()
+	packageSecretData, err := json.Marshal(depPkg)
 	if err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg api.Package, 
 		return nil, err
 	}
 
-	packageData, err := deployedPackage.MarshalSecretData()
+	packageData, err := json.Marshal(deployedPackage)
 	if err != nil {
 		return nil, err
 	}

@@ -84,7 +84,7 @@ func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
 	}
 }
 
-func TestDeployRejectsOversizedPackageBeforeActions(t *testing.T) {
+func TestDeployAllowsOversizedPackage(t *testing.T) {
 	t.Parallel()
 	for _, version := range []string{"", v1alpha1.APIVersion, v1beta1.APIVersion} {
 		t.Run(version, func(t *testing.T) {
@@ -111,9 +111,10 @@ func TestDeployRejectsOversizedPackageBeforeActions(t *testing.T) {
 			require.NoError(t, err)
 			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 			result, err := Deploy(ctx, pkgLayout, DeployOptions{})
-			require.ErrorContains(t, err, "too large to store in a package secret")
-			require.Empty(t, result)
-			require.NoFileExists(t, marker)
+			require.NoError(t, err)
+			require.Len(t, result.DeployedComponents, 1)
+			require.Equal(t, state.ComponentStatusSucceeded, result.DeployedComponents[0].Status)
+			require.FileExists(t, marker)
 		})
 	}
 }

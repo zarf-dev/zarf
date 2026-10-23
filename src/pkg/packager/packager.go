@@ -25,8 +25,8 @@ import (
 type ValuesOverrides map[string]map[string]map[string]any
 
 // Check the persisted definition, including compatibility copies and component status,
-// before output or deployment. Runtime chart and connection metadata is checked when saved.
-func validatePackageSecretSize(pkg api.Package, digest string, opts ...state.DeployedPackageOptions) error {
+// before writing a created package.
+func validatePackageSecretSize(pkg api.Package, digest string) error {
 	components := make([]state.DeployedComponent, 0, len(pkg.Components))
 	for _, component := range pkg.Components {
 		components = append(components, state.DeployedComponent{
@@ -35,7 +35,7 @@ func validatePackageSecretSize(pkg api.Package, digest string, opts ...state.Dep
 			ObservedGeneration: 1,
 		})
 	}
-	deployed, err := state.NewDeployedPackage(pkg, digest, config.CLIVersion, components, 1, opts...)
+	deployed, err := state.NewDeployedPackage(pkg, digest, config.CLIVersion, components, 1)
 	if err != nil {
 		return err
 	}
