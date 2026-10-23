@@ -1,5 +1,26 @@
 {
   "$defs": {
+    "ArchiveImage": {
+      "additionalProperties": false,
+      "description": "ArchiveImage identifies an image selected from an archive.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "id": {
+          "description": "Optional ID, unique across regular and archive images in the component. Does not enable import overrides.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The image reference contained in the archive.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
     "Chart": {
       "additionalProperties": false,
       "description": "Chart defines a helm chart to be deployed.",
@@ -790,7 +811,7 @@
       },
       "properties": {
         "id": {
-          "description": "Optional ID; matching IDs let importing components replace this image.",
+          "description": "Optional ID, unique within the component; matching IDs let importing components replace regular images.",
           "type": "string"
         },
         "name": {
@@ -822,7 +843,7 @@
         "images": {
           "description": "The list of images contained in the archive.",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/ArchiveImage"
           },
           "type": "array"
         },

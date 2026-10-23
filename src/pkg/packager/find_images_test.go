@@ -411,9 +411,7 @@ func TestFindDefinitionImages(t *testing.T) {
 					},
 					ImageArchives: []api.ImageArchive{
 						{
-							Images: []string{
-								"docker.io/library/scratch:latest",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/scratch:latest"}},
 						},
 					},
 				},
@@ -447,14 +445,10 @@ func TestFindDefinitionImages(t *testing.T) {
 					},
 					ImageArchives: []api.ImageArchive{
 						{
-							Images: []string{
-								"docker.io/library/scratch:latest",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/scratch:latest"}},
 						},
 						{
-							Images: []string{
-								"docker.io/library/scratch:other",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/scratch:other"}},
 						},
 					},
 				},

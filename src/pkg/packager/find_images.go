@@ -209,9 +209,17 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 			if err != nil {
 				return nil, fmt.Errorf("failed to find images in archive %s: %w", archive.Path, err)
 			}
-			imageArchive := api.ImageArchive{
-				Images: archiveImages,
-				Path:   archive.Path,
+			authored := make(map[string]api.ArchiveImage, len(archive.Images))
+			for _, image := range archive.Images {
+				ref, err := transform.ParseImageRef(image.Name)
+				if err != nil {
+					return nil, fmt.Errorf("invalid image %q in archive %q: %w", image.Name, archive.Path, err)
+				}
+				authored[ref.Reference] = image
+			}
+			imageArchive := api.ImageArchive{Path: archive.Path}
+			for _, name := range archiveImages {
+				imageArchive.Images = append(imageArchive.Images, api.ArchiveImage{Name: name, ID: authored[name].ID})
 			}
 			result.ImageArchives = append(result.ImageArchives, imageArchive)
 			allArchiveImages = append(allArchiveImages, archiveImages...)
@@ -226,8 +234,8 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 			return slices.Contains(allArchiveImages, match.Image.Name)
 		})
 		for j := range definitionImageResults[i].ImageArchives {
-			definitionImageResults[i].ImageArchives[j].Images = slices.DeleteFunc(definitionImageResults[i].ImageArchives[j].Images, func(s string) bool {
-				return !slices.Contains(allScanArtifacts, s)
+			definitionImageResults[i].ImageArchives[j].Images = slices.DeleteFunc(definitionImageResults[i].ImageArchives[j].Images, func(image api.ArchiveImage) bool {
+				return !slices.Contains(allScanArtifacts, image.Name)
 			})
 		}
 		sourcedByRef := make(map[string]api.Image)

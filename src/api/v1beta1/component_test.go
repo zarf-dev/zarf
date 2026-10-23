@@ -38,6 +38,15 @@ func TestGetImageByID(t *testing.T) {
 			got, err := component.GetImageByID("web")
 			require.NoError(t, err)
 			require.Equal(t, ImageReference{Reference: tt.ref, Tag: tt.tag, Digest: tt.digest}, got)
+
+			component.Images = nil
+			component.ImageArchives = []ImageArchive{
+				{Path: "first.tar", Images: []ArchiveImage{{Name: "busybox:latest"}}},
+				{Path: "second.tar", Images: []ArchiveImage{{ID: "web", Name: tt.ref}}},
+			}
+			got, err = component.GetImageByID("web")
+			require.NoError(t, err)
+			require.Equal(t, ImageReference{Reference: tt.ref, Tag: tt.tag, Digest: tt.digest}, got)
 		})
 	}
 
@@ -110,11 +119,8 @@ func TestGetImages(t *testing.T) {
 				ComponentSpec: ComponentSpec{
 					ImageArchives: []ImageArchive{
 						{
-							Path: "/tmp/images.tar",
-							Images: []string{
-								"docker.io/library/redis:latest",
-								"docker.io/library/postgres:14",
-							},
+							Path:   "/tmp/images.tar",
+							Images: []ArchiveImage{{Name: "docker.io/library/redis:latest"}, {Name: "docker.io/library/postgres:14"}},
 						},
 					},
 				},
@@ -134,17 +140,12 @@ func TestGetImages(t *testing.T) {
 					},
 					ImageArchives: []ImageArchive{
 						{
-							Path: "/tmp/images1.tar",
-							Images: []string{
-								"docker.io/library/redis:latest",
-							},
+							Path:   "/tmp/images1.tar",
+							Images: []ArchiveImage{{Name: "docker.io/library/redis:latest"}},
 						},
 						{
-							Path: "/tmp/images2.tar",
-							Images: []string{
-								"docker.io/library/postgres:14",
-								"ghcr.io/zarf-dev/zarf:v0.32.6",
-							},
+							Path:   "/tmp/images2.tar",
+							Images: []ArchiveImage{{Name: "docker.io/library/postgres:14"}, {Name: "ghcr.io/zarf-dev/zarf:v0.32.6"}},
 						},
 					},
 				},

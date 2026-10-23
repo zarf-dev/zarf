@@ -126,7 +126,7 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 						{ID: "web", Name: "nginx:latest", Source: "registry"},
 					},
 					ImageArchives: []v1beta1.ImageArchive{
-						{Path: "images.tar", Images: []string{"busybox:1.36"}},
+						{Path: "images.tar", Images: []v1beta1.ArchiveImage{{Name: "busybox:1.36", ID: "busybox"}}},
 					},
 					Charts: []v1beta1.Chart{
 						{
@@ -417,6 +417,7 @@ func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 		cmpopts.IgnoreFields(v1beta1.BuildData{}, "Migrations"),
 		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
 		cmpopts.IgnoreFields(v1beta1.Image{}, "ID", "Source"),
+		cmpopts.IgnoreFields(v1beta1.ArchiveImage{}, "ID"),
 		cmpopts.IgnoreFields(v1beta1.Chart{}, "ValuesFiles"),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionWaitCluster{}, "Condition"),

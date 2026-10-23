@@ -128,6 +128,9 @@ func (r ComponentConfigImportResolution) MaterializeResources(ctx context.Contex
 // resolveComponentConfigSpecImports merges component-config imports. Its target always
 // comes from the root component config metadata, never a package-create override.
 func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.ComponentSpec, specDir, arch, flavor string, importStack []string, skipVersionCheck bool, remoteOptions types.RemoteOptions, cachePath string, refCache remoteReferenceCache) (v1beta1.ComponentSpec, importedValues, []remoteResource, error) {
+	if errs := internalv1beta1.ValidateImageIDs(spec); len(errs) > 0 {
+		return v1beta1.ComponentSpec{}, importedValues{}, nil, fmt.Errorf("component definition %q: %w", importStack[len(importStack)-1], errs)
+	}
 	if err := validateComponentImportV1Beta1(spec.Import); err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
@@ -158,6 +161,10 @@ func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.Compone
 	}
 	resources := append(directImport.resources, inheritedResources...)
 	merged := mergeComponentConfigSpec(resolvedImportSpec, spec)
+	// FIXME: is this necessary? Is there not already a component wide validation?
+	if errs := internalv1beta1.ValidateImageIDs(merged); len(errs) > 0 {
+		return v1beta1.ComponentSpec{}, importedValues{}, nil, fmt.Errorf("resolved component definition %q: %w", importStack[len(importStack)-1], errs)
+	}
 	merged.Import = v1beta1.ComponentImport{}
 	return merged, vals, resources, nil
 }

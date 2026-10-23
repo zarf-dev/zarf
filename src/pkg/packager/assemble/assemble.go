@@ -360,9 +360,9 @@ func validateImageArchivesNoDuplicates(components []api.Component) error {
 	for _, comp := range components {
 		for _, archive := range comp.ImageArchives {
 			for _, image := range archive.Images {
-				refInfo, err := transform.ParseImageRef(image)
+				refInfo, err := transform.ParseImageRef(image.Name)
 				if err != nil {
-					return fmt.Errorf("failed to parse image ref %s in archive %s: %w", image, archive.Path, err)
+					return fmt.Errorf("failed to parse image ref %s in archive %s: %w", image.Name, archive.Path, err)
 				}
 
 				if existingArchivePath, exists := imageToArchive[refInfo.Reference]; exists {

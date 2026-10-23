@@ -111,9 +111,9 @@ func Unpack(ctx context.Context, imageArchive api.ImageArchive, destDir string, 
 	// Build a set of requested images for filtering
 	requestedImages := make(map[string]bool)
 	for _, img := range imageArchive.Images {
-		ref, err := transform.ParseImageRef(img)
+		ref, err := transform.ParseImageRef(img.Name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse image reference %s: %w", img, err)
+			return nil, fmt.Errorf("failed to parse image reference %s: %w", img.Name, err)
 		}
 		requestedImages[ref.Reference] = false
 	}

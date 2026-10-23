@@ -993,7 +993,14 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 			if len(archive.Images) > 0 {
 				componentDefinition += imageIndent + "  images:\n"
 				for _, image := range archive.Images {
-					componentDefinition += imageIndent + fmt.Sprintf("    - %s\n", image)
+					if isBeta {
+						componentDefinition += imageIndent + fmt.Sprintf("    - name: %s\n", image.Name)
+						if image.ID != "" {
+							componentDefinition += imageIndent + fmt.Sprintf("      id: %q\n", image.ID)
+						}
+					} else {
+						componentDefinition += imageIndent + fmt.Sprintf("    - %s\n", image.Name)
+					}
 				}
 				continue
 			}

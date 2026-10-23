@@ -326,7 +326,8 @@ component:
   imageArchives:
     - path: %q
       images:
-        - ghcr.io/zarf-dev/images/hello-world:latest
+        - name: ghcr.io/zarf-dev/images/hello-world:latest
+          id: hello
 `, archivePath))
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
@@ -335,6 +336,24 @@ component:
 
 	component, manifest := getPublishedComponent(ctx, t, published)
 	require.Equal(t, "images", component.Component.ImageArchives[0].Path)
+	require.Equal(t, "hello", component.Component.ImageArchives[0].Images[0].ID)
+	packagePath := filepath.Join(t.TempDir(), "zarf.yaml")
+	packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: archive-import
+components:
+  - name: app
+    import:
+      remote:
+        - url: oci://%s
+`, published.String())
+	require.NoError(t, os.WriteFile(packagePath, []byte(packageYAML), 0o600))
+	resolved, err := load.PackageDefinition(ctx, packagePath, load.DefinitionOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	image, err := convert.PackageToV1beta1(resolved).Components[0].GetImageByID("hello")
+	require.NoError(t, err)
+	require.Equal(t, "ghcr.io/zarf-dev/images/hello-world:latest", image.Reference)
 
 	layerTitles := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {

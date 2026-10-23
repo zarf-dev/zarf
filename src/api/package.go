@@ -372,7 +372,13 @@ type Image struct {
 // ImageArchive defines a tar archive of images to include in the package.
 type ImageArchive struct {
 	Path   string
-	Images []string
+	Images []ArchiveImage
+}
+
+// ArchiveImage identifies an image selected from an archive.
+type ArchiveImage struct {
+	Name string
+	ID   string
 }
 
 // ComponentActions are the actions associated with each package lifecycle operation.
