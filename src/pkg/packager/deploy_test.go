@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	ocilayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
@@ -318,6 +320,48 @@ func TestDeployRejectsArchitectureOverrideForInit(t *testing.T) {
 	pkgLayout := architectureTestLayout(t, api.ZarfInitConfig, true)
 	_, err := Deploy(t.Context(), pkgLayout, DeployOptions{SkipArchitectureCheck: true})
 	require.ErrorContains(t, err, "skipping architecture checks is not supported for init packages")
+}
+
+func TestDeployProxyInjectorImage(t *testing.T) {
+	for _, tt := range []struct {
+		name, saved, requested, want string
+	}{
+		{name: "requires an image when none is saved"},
+		{name: "reuses the saved image", saved: "example.com/injector:1", want: "example.com/injector:1"},
+		{name: "uses an explicit image on first init", requested: "example.com/injector:2", want: "example.com/injector:2"},
+		{name: "explicit image overrides the saved image", saved: "example.com/injector:1", requested: "example.com/injector:2", want: "example.com/injector:2"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := testutil.TestContext(t)
+			pkgLayout := loadTestPackageLayout(t, nil)
+			_, err := ocilayout.Write(filepath.Join(pkgLayout.DirPath(), "seed-images"), empty.Index)
+			require.NoError(t, err)
+			require.NoError(t, os.WriteFile(filepath.Join(pkgLayout.DirPath(), "zarf-injector"), []byte("injector"), 0o600))
+			d := deployer{
+				c: &cluster.Cluster{Clientset: fake.NewClientset()},
+				s: &state.State{
+					RegistryInfo: state.RegistryInfo{RegistryMode: state.RegistryModeProxy},
+					InjectorInfo: state.InjectorInfo{Image: tt.saved},
+				},
+				vc: ptmpl.GetZarfVariableConfig(ctx, false),
+			}
+			component := api.Component{
+				Name:    "seed",
+				Service: api.Service{Name: api.ServiceSeedRegistry},
+				Actions: api.ComponentActions{OnDeploy: api.ActionSet{Before: []api.Action{{Cmd: "exit 1"}}}},
+			}
+			_, err = d.deployInitComponent(ctx, pkgLayout, component, DeployOptions{InjectorImage: tt.requested})
+			if tt.want == "" {
+				require.ErrorContains(t, err, "injector image is required for proxy registry mode")
+				return
+			}
+			// Stop before Helm installation and verify the injector image persisted for the chart and future re-inits.
+			require.ErrorContains(t, err, `command "exit 1" failed`)
+			s, err := d.c.LoadState(ctx)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, s.InjectorInfo.Image)
+		})
+	}
 }
 
 func TestArchitectureOverridePreservesAgentCertificateCheck(t *testing.T) {

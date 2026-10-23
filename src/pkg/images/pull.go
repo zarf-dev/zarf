@@ -560,9 +560,9 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, index, count int, op
 	}
 	logArgs = append(logArgs, "count", fmt.Sprintf("%d/%d", index, count))
 	l.Info("saving image", logArgs...)
-	localCache, err := oci.NewWithContext(ctx, opts.CacheDirectory)
+	localCache, err := oci.NewStorage(opts.CacheDirectory)
 	if err != nil {
-		return fmt.Errorf("failed to create oci formatted directory: %w", err)
+		return fmt.Errorf("failed to create oci cache storage: %w", err)
 	}
 	pullSrc = orasCache.New(repo, localCache)
 	var desc ocispec.Descriptor

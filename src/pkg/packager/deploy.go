@@ -78,7 +78,8 @@ type DeployOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	StorageClass   string
 	InjectorPort   int
-	InjectorImage  string
+	// InjectorImage is the injector container image. Proxy mode defaults to the image saved in cluster state and requires an image on first init.
+	InjectorImage string
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
@@ -458,11 +459,12 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	if isSeedRegistry {
 		switch d.s.RegistryInfo.RegistryMode {
 		case state.RegistryModeProxy:
-			injectorImage, err := injectorDaemonsetImage(ctx, d.c, opts.InjectorImage)
-			if err != nil {
-				return nil, err
+			if opts.InjectorImage != "" {
+				d.s.InjectorInfo.Image = opts.InjectorImage
 			}
-			d.s.InjectorInfo.Image = injectorImage
+			if d.s.InjectorInfo.Image == "" {
+				return nil, fmt.Errorf("injector image is required for proxy registry mode when no previous proxy injector image is saved in cluster state; provide --injector-image")
+			}
 
 			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, d.runtimeDir, pkgLayout.GetImageDirPath(), component.GetImages(), pkg.Metadata.Name)
 			if err != nil {
@@ -514,13 +516,6 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	}
 
 	return charts, nil
-}
-
-func injectorDaemonsetImage(ctx context.Context, c *cluster.Cluster, requestedImage string) (string, error) {
-	if requestedImage != "" {
-		return requestedImage, nil
-	}
-	return c.GetInjectorDaemonsetImage(ctx)
 }
 
 func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {
