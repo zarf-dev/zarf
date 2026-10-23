@@ -6,7 +6,7 @@ values:
   files:
     - values.yaml
   schema: values.schema.json
-documentation:
+attachments:
   README.md: README.md
 components:
   - name: resources

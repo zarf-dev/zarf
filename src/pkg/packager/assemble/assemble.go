@@ -1194,10 +1194,10 @@ func writeValuesSchema(buildPath string, schema value.SchemaDocument) error {
 }
 
 func createDocumentationTar(ctx context.Context, pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
-	if len(pkg.Documentation) == 0 {
+	if len(pkg.Attachments) == 0 {
 		return nil
 	}
-	for key := range pkg.Documentation {
+	for key := range pkg.Attachments {
 		if err := layout.ValidatePathComponent(key); err != nil {
 			return fmt.Errorf("documentation key validation failed: %w", err)
 		}
@@ -1212,9 +1212,9 @@ func createDocumentationTar(ctx context.Context, pkg api.Package, resources *loa
 	}()
 
 	// Get the mapping of keys to their final filenames (with deduplication logic)
-	fileNames := layout.GetDocumentationFileNames(pkg.Documentation)
+	fileNames := layout.GetDocumentationFileNames(pkg.Attachments)
 
-	for key, file := range pkg.Documentation {
+	for key, file := range pkg.Attachments {
 		src, err := resources.Path(file)
 		if err != nil {
 			return err
