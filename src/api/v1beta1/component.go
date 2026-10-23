@@ -34,37 +34,36 @@ type ImageReference struct {
 // GetImageByID returns the reference for the given non-empty image ID.
 // Tag and Digest are empty when absent from the image reference.
 func (c Component) GetImageByID(id string) (ImageReference, error) {
-	// FIXME: smarter implementation
-	var name string
+	if id == "" {
+		return ImageReference{}, fmt.Errorf("no image with ID %q in component %q", id, c.Name)
+	}
+	parse := func(name string) (ImageReference, error) {
+		ref, err := reference.Parse(name)
+		if err != nil {
+			return ImageReference{}, fmt.Errorf("invalid image reference %q for ID %q in component %q: %w", name, id, c.Name, err)
+		}
+		result := ImageReference{Reference: name}
+		if tagged, ok := ref.(reference.Tagged); ok {
+			result.Tag = tagged.Tag()
+		}
+		if digested, ok := ref.(reference.Digested); ok {
+			result.Digest = digested.Digest().String()
+		}
+		return result, nil
+	}
 	for _, image := range c.Images {
-		if id != "" && image.ID == id {
-			name = image.Name
-			break
+		if image.ID == id {
+			return parse(image.Name)
 		}
 	}
 	for _, archive := range c.ImageArchives {
 		for _, image := range archive.Images {
-			if id != "" && image.ID == id {
-				name = image.Name
-				break
+			if image.ID == id {
+				return parse(image.Name)
 			}
 		}
 	}
-	if name == "" {
-		return ImageReference{}, fmt.Errorf("no image with ID %q in component %q", id, c.Name)
-	}
-	ref, err := reference.Parse(name)
-	if err != nil {
-		return ImageReference{}, fmt.Errorf("invalid image reference %q for ID %q in component %q: %w", name, id, c.Name, err)
-	}
-	result := ImageReference{Reference: name}
-	if tagged, ok := ref.(reference.Tagged); ok {
-		result.Tag = tagged.Tag()
-	}
-	if digested, ok := ref.(reference.Digested); ok {
-		result.Digest = digested.Digest().String()
-	}
-	return result, nil
+	return ImageReference{}, fmt.Errorf("no image with ID %q in component %q", id, c.Name)
 }
 
 // GetImages returns all image names specified in the component, including those from ImageArchives.

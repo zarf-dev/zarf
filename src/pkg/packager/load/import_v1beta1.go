@@ -103,7 +103,8 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 }
 
 // ResolveComponentConfigImports resolves imports in a v1beta1 component config using
-// the supplied registry options and cache path for remote component imports.
+// the supplied registry options and cache path for remote component imports, then
+// validates the resolved component.
 func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath string, remoteOptions types.RemoteOptions, cachePath string) (ComponentConfigImportResolution, error) {
 	componentPath = filepath.Clean(componentPath)
 	resolvedSpec, importedVals, remoteResources, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Variant.Architecture, component.Variant.Flavor, []string{componentPath}, false, remoteOptions, cachePath, remoteReferenceCache{})
@@ -111,6 +112,13 @@ func ResolveComponentConfigImports(ctx context.Context, component v1beta1.Compon
 		return ComponentConfigImportResolution{}, err
 	}
 	component.Component = resolvedSpec
+	// FIXME: does this break any existing behavior
+	if errs := internalv1beta1.ValidateComponent(v1beta1.Component{
+		Name:          component.Metadata.Name,
+		ComponentSpec: component.Component,
+	}); len(errs) > 0 {
+		return ComponentConfigImportResolution{}, fmt.Errorf("component validation failed:\n%w", errs)
+	}
 	component.Values.Files = dedupePaths(append(importedVals.files, component.Values.Files...))
 	return ComponentConfigImportResolution{
 		Component:       component,
@@ -161,10 +169,6 @@ func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.Compone
 	}
 	resources := append(directImport.resources, inheritedResources...)
 	merged := mergeComponentConfigSpec(resolvedImportSpec, spec)
-	// FIXME: is this necessary? Is there not already a component wide validation?
-	if errs := internalv1beta1.ValidateImageIDs(merged); len(errs) > 0 {
-		return v1beta1.ComponentSpec{}, importedValues{}, nil, fmt.Errorf("resolved component definition %q: %w", importStack[len(importStack)-1], errs)
-	}
 	merged.Import = v1beta1.ComponentImport{}
 	return merged, vals, resources, nil
 }

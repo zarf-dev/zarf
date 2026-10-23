@@ -181,8 +181,8 @@ func ValidateComponent(component v1beta1.Component) ValidationErrors {
 }
 
 // ValidateImageIDs checks that non-empty IDs are unique across all images in a component.
-// Import resolution uses this both before and after merging to distinguish overrides
-// from duplicate IDs within an authored definition.
+// Import resolution checks authored definitions before merging; component validation
+// checks the resolved result so regular-image overrides remain allowed.
 func ValidateImageIDs(spec v1beta1.ComponentSpec) ValidationErrors {
 	var errs ValidationErrors
 	seen := make(map[string]string)

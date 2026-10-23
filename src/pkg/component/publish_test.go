@@ -187,6 +187,24 @@ func TestPublishComponent(t *testing.T) {
 	}
 }
 
+func TestPublishComponentValidatesResolvedDefinition(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.CopyFS(dir, os.DirFS(filepath.Join("testdata", "publish-component-v1beta1"))))
+	componentPath := filepath.Join(dir, "component.yaml")
+	component, err := load.ComponentConfig(componentPath)
+	require.NoError(t, err)
+	component.Component.Manifests = append(component.Component.Manifests, component.Component.Manifests[0])
+	b, err := goyaml.Marshal(component)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(componentPath, b, 0o600))
+
+	ctx := t.Context()
+	_, err = Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.ErrorContains(t, err, `manifest name "local-manifest" is not unique`)
+}
+
 func TestPublishComponentSignsManifest(t *testing.T) {
 	t.Parallel()
 
@@ -694,10 +712,13 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 		Values:     v1beta1.Values{Files: []string{"../external/values.yaml"}, Schema: filepath.Join(externalDir, "schema.json")},
 		Component: v1beta1.ComponentSpec{
 			Charts: []v1beta1.Chart{{
+				Name:        "test",
+				Namespace:   "default",
 				Local:       &v1beta1.LocalSource{Path: filepath.Join(externalDir, "chart")},
 				ValuesFiles: []v1beta1.ValuesFile{{Path: "../external/chart-values.yaml"}},
 			}},
 			Manifests: []v1beta1.Manifest{{
+				Name:      "test",
 				Files:     []string{filepath.Join(externalDir, "manifest.yaml")},
 				Kustomize: v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
 			}},
