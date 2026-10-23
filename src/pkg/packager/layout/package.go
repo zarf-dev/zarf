@@ -801,9 +801,15 @@ func GetDocumentationFileNames(documentation map[string]string) (map[string]stri
 		if !isCleanDocumentationKey(key) {
 			return nil, fmt.Errorf("documentation key %q would result in an invalid path", key)
 		}
+		if strings.Contains(key, " ") {
+			return nil, fmt.Errorf("documentation key %q must not contain spaces", key)
+		}
 		basename := filepath.Base(file)
 		if !isCleanDocumentationFileName(basename) {
 			return nil, fmt.Errorf("documentation file %q would result in an invalid path", file)
+		}
+		if strings.Contains(basename, " ") {
+			return nil, fmt.Errorf("documentation file %q produces final filename %q, which must not contain spaces", file, basename)
 		}
 		basenames[key] = basename
 		basenameCounts[basename]++

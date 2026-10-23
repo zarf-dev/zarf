@@ -1604,6 +1604,60 @@ func TestGetDocumentationFileNamesRejectsUnsafePaths(t *testing.T) {
 	}
 }
 
+func TestValidatePackagePathsRejectsSpacesInDocumentation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		apiVersion    string
+		documentation map[string]string
+		wantErr       string
+	}{
+		{
+			name:          "legacy documentation key",
+			apiVersion:    v1alpha1.APIVersion,
+			documentation: map[string]string{"release notes": "README.md"},
+			wantErr:       `documentation key "release notes" must not contain spaces`,
+		},
+		{
+			name:          "legacy documentation filename",
+			apiVersion:    v1alpha1.APIVersion,
+			documentation: map[string]string{"readme": "docs/release notes.md"},
+			wantErr:       `documentation file "docs/release notes.md" produces final filename "release notes.md", which must not contain spaces`,
+		},
+		{
+			name:          "granular documentation key",
+			apiVersion:    v1beta1.APIVersion,
+			documentation: map[string]string{"release notes": "README.md"},
+			wantErr:       `documentation key "release notes" must not contain spaces`,
+		},
+		{
+			name:          "granular documentation filename",
+			apiVersion:    v1beta1.APIVersion,
+			documentation: map[string]string{"readme": "docs/release notes.md"},
+			wantErr:       `documentation file "docs/release notes.md" produces final filename "release notes.md", which must not contain spaces`,
+		},
+		{
+			name:          "documentation source directory",
+			apiVersion:    v1beta1.APIVersion,
+			documentation: map[string]string{"readme": "release notes/README.md"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := ValidatePackagePaths(api.Package{
+				APIVersion:    test.apiVersion,
+				Documentation: test.documentation,
+			})
+			if test.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.EqualError(t, err, test.wantErr)
+		})
+	}
+}
+
 func TestCopyDocumentationFileConfinesSourcePath(t *testing.T) {
 	sourceRootPath := filepath.Join(t.TempDir(), "source")
 	require.NoError(t, os.Mkdir(sourceRootPath, 0o700))
