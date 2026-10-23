@@ -83,6 +83,7 @@ func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		result := convert.PackageV1alpha1ToV1beta1(pkg)
+		result.Build = v1beta1.BuildData{}
 		out, err := goyaml.Marshal(result)
 		if err != nil {
 			return fmt.Errorf("marshaling %s package: %w", o.to, err)

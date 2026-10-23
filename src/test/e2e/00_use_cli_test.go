@@ -56,6 +56,36 @@ func TestTrustedRootCreate(t *testing.T) {
 func TestUseCLI(t *testing.T) {
 	t.Parallel()
 
+	t.Run("zarf dev upgrade", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(`apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: upgrade
+  version: 1.0.0
+components:
+  - name: app
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+`), 0o600))
+
+		stdOut, stdErr, err := e2e.Zarf(t, "dev", "upgrade", dir)
+		require.NoError(t, err, stdOut, stdErr)
+		require.YAMLEq(t, `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: upgrade
+  version: 1.0.0
+components:
+  - name: app
+    optional: true
+    images:
+      - name: ghcr.io/stefanprodan/podinfo:6.4.0
+        source: registry
+`, stdOut)
+	})
+
 	// TODO once cmd is refactored to accept an io.Writer, move this test to DevInspectDefinitionOptions.Run()
 	t.Run("zarf dev inspect definition", func(t *testing.T) {
 		t.Parallel()
