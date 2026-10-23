@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,6 +16,30 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestPackageCreateRejectsDefinitionOverOneMB(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	packageDir := t.TempDir()
+	outputDir := t.TempDir()
+	definition := fmt.Sprintf(`kind: ZarfPackageConfig
+metadata:
+  name: oversized
+  description: %s
+components:
+  - name: empty
+`, strings.Repeat("a", 1_000_000))
+	require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(definition), 0o600))
+	packagePath, err := Create(ctx, packageDir, outputDir, CreateOptions{
+		CachePath: t.TempDir(),
+		SkipSBOM:  true,
+	})
+	require.ErrorContains(t, err, "1000000 byte limit")
+	require.Empty(t, packagePath)
+	entries, err := os.ReadDir(outputDir)
+	require.NoError(t, err)
+	require.Empty(t, entries)
+}
 
 func TestPackageCreateRejectsV1Beta1WithoutFeature(t *testing.T) {
 	ctx := testutil.TestContext(t)

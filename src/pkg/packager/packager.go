@@ -12,36 +12,15 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
 // ValuesOverrides is a map of component names to chart names containing Helm Chart values to override values on deploy.
 type ValuesOverrides map[string]map[string]map[string]any
-
-// Check the persisted definition, including compatibility copies and component status,
-// before writing a created package.
-func validatePackageSecretSize(pkg api.Package, digest string) error {
-	components := make([]state.DeployedComponent, 0, len(pkg.Components))
-	for _, component := range pkg.Components {
-		components = append(components, state.DeployedComponent{
-			Name:               component.Name,
-			Status:             state.ComponentStatusSucceeded,
-			ObservedGeneration: 1,
-		})
-	}
-	deployed, err := state.NewDeployedPackage(pkg, digest, config.CLIVersion, components, 1)
-	if err != nil {
-		return err
-	}
-	_, err = deployed.MarshalSecretData()
-	return err
-}
 
 func getPopulatedVariableConfig(ctx context.Context, pkg api.Package, setVariables map[string]string, isInteractive bool) (*variables.VariableConfig, error) {
 	variableConfig := template.GetZarfVariableConfig(ctx, isInteractive)
