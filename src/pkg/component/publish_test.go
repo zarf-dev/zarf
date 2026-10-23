@@ -187,7 +187,7 @@ func TestPublishComponent(t *testing.T) {
 	}
 }
 
-func TestPublishComponentValidatesResolvedDefinition(t *testing.T) {
+func TestPublishComponentAllowsDeferredChartNamespace(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -195,14 +195,18 @@ func TestPublishComponentValidatesResolvedDefinition(t *testing.T) {
 	componentPath := filepath.Join(dir, "component.yaml")
 	component, err := load.ComponentConfig(componentPath)
 	require.NoError(t, err)
-	component.Component.Manifests = append(component.Component.Manifests, component.Component.Manifests[0])
+	component.Component.Charts[0].Namespace = ""
 	b, err := goyaml.Marshal(component)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(componentPath, b, 0o600))
 
 	ctx := t.Context()
-	_, err = Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
-	require.ErrorContains(t, err, `manifest name "local-manifest" is not unique`)
+	_, err = load.ComponentDefinition(ctx, componentPath, load.ComponentOptions{})
+	require.ErrorContains(t, err, `chart "local-chart" must include a namespace`)
+	published, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	publishedComponent, _ := getPublishedComponent(ctx, t, published)
+	require.Empty(t, publishedComponent.Component.Charts[0].Namespace)
 }
 
 func TestPublishComponentSignsManifest(t *testing.T) {
