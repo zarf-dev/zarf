@@ -993,14 +993,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 			if len(archive.Images) > 0 {
 				componentDefinition += imageIndent + "  images:\n"
 				for _, image := range archive.Images {
-					if isBeta {
-						componentDefinition += imageIndent + fmt.Sprintf("    - name: %s\n", image.Name)
-						if image.ID != "" {
-							componentDefinition += imageIndent + fmt.Sprintf("      id: %q\n", image.ID)
-						}
-					} else {
-						componentDefinition += imageIndent + fmt.Sprintf("    - %s\n", image.Name)
-					}
+					componentDefinition += formatFoundImage(imageIndent+"    ", api.Image{Name: image.Name, ID: image.ID}, isBeta)
 				}
 				continue
 			}
@@ -1025,6 +1018,9 @@ func formatFoundImage(indent string, image api.Image, beta bool) string {
 	}
 
 	formatted := fmt.Sprintf("%s- name: %s\n", indent, image.Name)
+	if image.ID != "" {
+		formatted += fmt.Sprintf("%s  id: %q\n", indent, image.ID)
+	}
 	if image.Source != "" {
 		formatted += fmt.Sprintf("%s  source: %s\n", indent, image.Source)
 	}

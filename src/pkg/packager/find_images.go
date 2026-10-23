@@ -238,16 +238,16 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 				return !slices.Contains(allScanArtifacts, image.Name)
 			})
 		}
-		sourcedByRef := make(map[string]api.Image)
+		authoredByRef := make(map[string]api.Image)
 		for _, image := range pkg.Components[i].Images {
-			if image.Source == "" {
+			if image.Source == "" && image.ID == "" {
 				continue
 			}
 			ref, err := transform.ParseImageRef(image.Name)
 			if err != nil {
-				return nil, fmt.Errorf("invalid sourced image %q in component %q: %w", image.Name, pkg.Components[i].Name, err)
+				return nil, fmt.Errorf("invalid authored image %q in component %q: %w", image.Name, pkg.Components[i].Name, err)
 			}
-			sourcedByRef[ref.Reference] = image
+			authoredByRef[ref.Reference] = image
 		}
 		for j := range definitionImageResults[i].Matches {
 			match := &definitionImageResults[i].Matches[j]
@@ -255,7 +255,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 			if err != nil {
 				return nil, fmt.Errorf("invalid scanned image %q in component %q: %w", match.Image.Name, pkg.Components[i].Name, err)
 			}
-			if image, found := sourcedByRef[ref.Reference]; found {
+			if image, found := authoredByRef[ref.Reference]; found {
 				match.Image = image
 			}
 		}

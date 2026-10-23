@@ -44,6 +44,7 @@ func TestFindImages(t *testing.T) {
   - name: app
     images:
       - name: nginx:1.27
+        id: "web"
         source: daemon`,
 			},
 			{
@@ -51,7 +52,8 @@ func TestFindImages(t *testing.T) {
 				path: filepath.Join(packagePath, "component.yaml"),
 				want: `component:
   images:
-    - name: docker.io/library/nginx:1.27`,
+    - name: nginx:1.27
+      id: "web"`,
 			},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
@@ -82,14 +84,14 @@ func TestFindImages(t *testing.T) {
 			var updated v1beta1.Package
 			require.NoError(t, yaml.Unmarshal(b, &updated))
 			require.Len(t, updated.Components, 1)
-			require.Equal(t, []v1beta1.Image{{Name: "nginx:1.27", Source: "daemon"}}, updated.Components[0].Images)
+			require.Equal(t, []v1beta1.Image{{Name: "nginx:1.27", ID: "web", Source: "daemon"}}, updated.Components[0].Images)
 		})
 
 		t.Run("v1beta1 component", func(t *testing.T) {
 			b := updateFindImagesFixture(t, "component.yaml")
 			var updated v1beta1.ComponentConfig
 			require.NoError(t, yaml.Unmarshal(b, &updated))
-			require.Equal(t, []v1beta1.Image{{Name: image}}, updated.Component.Images)
+			require.Equal(t, []v1beta1.Image{{Name: "nginx:1.27", ID: "web"}}, updated.Component.Images)
 		})
 	})
 

@@ -9,6 +9,7 @@ components:
         - path: component.yaml
     images:
       - name: nginx:1.27
+        id: web
         source: daemon
       - name: example.com/manual:1
         source: registry
