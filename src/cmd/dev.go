@@ -643,6 +643,7 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 
 type devPatchGitOptions struct {
 	gitPushUsername string
+	confirm         bool
 }
 
 func newDevPatchGitCommand() *cobra.Command {
@@ -657,6 +658,8 @@ func newDevPatchGitCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.gitPushUsername, "git-account", state.ZarfGitPushUser, lang.CmdDevFlagGitAccount)
+	// Always require the confirm flag to be passed explicitly (no viper)
+	cmd.Flags().BoolVar(&o.confirm, "confirm", false, "Confirm the overwrite of FILE without prompting")
 
 	return cmd
 }
@@ -681,13 +684,15 @@ func (o *devPatchGitOptions) run(cmd *cobra.Command, args []string) error {
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	pterm.Println(dmp.DiffPrettyText(diffs))
 
-	// Ask the user before this destructive action
-	confirm := false
-	prompt := &survey.Confirm{
-		Message: fmt.Sprintf(lang.CmdDevPatchGitOverwritePrompt, fileName),
-	}
-	if err := survey.AskOne(prompt, &confirm); err != nil {
-		return fmt.Errorf("confirm overwrite canceled: %w", err)
+	// Ask the user before this destructive action, unless --confirm was passed
+	confirm := o.confirm
+	if !confirm {
+		prompt := &survey.Confirm{
+			Message: fmt.Sprintf(lang.CmdDevPatchGitOverwritePrompt, fileName),
+		}
+		if err := survey.AskOne(prompt, &confirm); err != nil {
+			return fmt.Errorf("confirm overwrite canceled: %w", err)
+		}
 	}
 
 	if confirm {
