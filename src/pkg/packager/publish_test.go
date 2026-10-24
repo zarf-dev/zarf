@@ -235,6 +235,19 @@ func TestPublishSkeleton(t *testing.T) {
 	}
 }
 
+func TestSkeletonImportExample(t *testing.T) {
+	t.Parallel()
+	ref := registry.Reference{Registry: "localhost:5000", Repository: "skeletons/test", Reference: "0.0.1"}
+	pkg := api.Package{Components: []api.Component{{Name: "first"}, {Name: "second", Description: "not copied"}}}
+
+	url := "oci://localhost:5000/skeletons/test:0.0.1"
+	expected := []api.Component{
+		{Name: "import-first", Import: api.ComponentImport{Name: "first", Remote: []api.ComponentImportRemote{{URL: url}}}},
+		{Name: "import-second", Import: api.ComponentImport{Name: "second", Remote: []api.ComponentImportRemote{{URL: url}}}},
+	}
+	require.Equal(t, expected, SkeletonImportExample(pkg, ref))
+}
+
 func TestPublishPackage(t *testing.T) {
 	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")

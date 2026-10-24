@@ -276,23 +276,22 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
-	ex := []api.Component{}
-	for _, c := range pkgLayout.Definition().Components {
+	return pkgRef, nil
+}
+
+// SkeletonImportExample returns components that import each component of pkg from the skeleton published at ref.
+func SkeletonImportExample(pkg api.Package, ref registry.Reference) []api.Component {
+	ex := make([]api.Component, 0, len(pkg.Components))
+	for _, c := range pkg.Components {
 		ex = append(ex, api.Component{
 			Name: fmt.Sprintf("import-%s", c.Name),
 			Import: api.ComponentImport{
 				Name:   c.Name,
-				Remote: []api.ComponentImportRemote{{URL: helpers.OCIURLPrefix + pkgRef.String()}},
+				Remote: []api.ComponentImportRemote{{URL: helpers.OCIURLPrefix + ref.String()}},
 			},
 		})
 	}
-	err = utils.ColorPrintYAML(ex, nil, false)
-	if err != nil {
-		return registry.Reference{}, err
-	}
-	l.Info("find more info on skeleton packages at https://docs.zarf.dev/faq/#what-is-a-skeleton-zarf-package")
-	return pkgRef, nil
+	return ex
 }
 
 // pushToRemote pushes a package to the given reference
