@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	zarfOCI "github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -160,10 +161,10 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			}
 			if tunnel != nil {
 				return tunnel.Wrap(func() error {
-					return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency)
+					return copyImage(ctx, src, zarfOCI.NewChunkedTarget(remoteRepo), srcName, dstName, ociConcurrency)
 				})
 			}
-			return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency)
+			return copyImage(ctx, src, zarfOCI.NewChunkedTarget(remoteRepo), srcName, dstName, ociConcurrency)
 		}
 		pushed := []string{}
 		// Delete the images that were already successfully pushed so that they aren't attempted on the next retry

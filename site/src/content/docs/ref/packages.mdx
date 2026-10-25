@@ -77,6 +77,8 @@ A remote tarball is a Zarf package tarball that is hosted on a web server that i
 
 An OCI package is one that has been published to an OCI compatible registry using `zarf package publish` or the `-o` option on `zarf package create`.  These packages live within a given registry and you can learn more about them in our [Publish & Deploy Packages w/OCI Tutorial](/tutorials/6-publish-and-deploy/).
 
+When publishing components, publishing or copying packages, or pushing images during deploy and mirror, Zarf uploads blobs larger than 16 MiB in 16 MiB OCI upload chunks. Smaller blobs use a single upload request. Chunking limits individual request sizes without changing package contents or image digests. If a registry requires larger chunks or reports chunked uploads as unsupported, Zarf falls back to a single upload request for that blob. Existing retry settings still apply; a failed upload may restart the blob from the beginning.
+
 :::note
 
 In addition to the traditional sources outlined above, there is also a special "Cluster" source available on `inspect` and `remove` that allows for referencing a deployed package via its name:
