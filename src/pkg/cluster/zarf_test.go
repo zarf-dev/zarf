@@ -28,16 +28,15 @@ func TestGetDeployedPackageWarnsOnUnrecognizedAPIVersion(t *testing.T) {
 	t.Parallel()
 
 	const futureVersion = "zarf.dev/v9"
-	knownDefinition, err := json.Marshal(v1alpha1.ZarfPackage{
+	legacy := v1alpha1.ZarfPackage{
 		APIVersion: v1alpha1.APIVersion,
 		Metadata:   v1alpha1.ZarfMetadata{Name: "future-package"},
-	})
-	require.NoError(t, err)
+	}
 	deployed := state.DeployedPackage{
 		Name: "future-package",
+		Data: legacy,
 		PackageData: map[string]json.RawMessage{
-			v1alpha1.APIVersion: knownDefinition,
-			futureVersion:       json.RawMessage(`{"apiVersion":"zarf.dev/v9"}`),
+			futureVersion: json.RawMessage(`{"apiVersion":"zarf.dev/v9"}`),
 		},
 	}
 	secretData, err := json.Marshal(deployed)
@@ -55,7 +54,7 @@ func TestGetDeployedPackageWarnsOnUnrecognizedAPIVersion(t *testing.T) {
 	ctx := logger.WithContext(t.Context(), slog.New(slog.NewJSONHandler(&logs, nil)))
 	known := deployed
 	known.Name = "known-package"
-	known.PackageData = map[string]json.RawMessage{v1alpha1.APIVersion: knownDefinition}
+	known.PackageData = nil
 	knownData, err := json.Marshal(known)
 	require.NoError(t, err)
 	knownSecret := secret.DeepCopy()
@@ -99,8 +98,20 @@ func TestRecordPackageDefinitionDeployment(t *testing.T) {
 	recordedDefinition, err := recorded.Definition()
 	require.NoError(t, err)
 	require.Equal(t, convert.PackageToV1alpha1(definition), convert.PackageToV1alpha1(recordedDefinition))
-	require.Contains(t, recorded.PackageData, v1alpha1.APIVersion)
+	require.NotContains(t, recorded.PackageData, v1alpha1.APIVersion)
 	require.Contains(t, recorded.PackageData, v1beta1.APIVersion)
+	require.Equal(t, convert.PackageToV1alpha1(definition), recorded.Data)
+
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, recorded.GetSecretName(), metav1.GetOptions{})
+	require.NoError(t, err)
+	var serialized struct {
+		Data        v1alpha1.ZarfPackage       `json:"data"`
+		PackageData map[string]json.RawMessage `json:"packageData"`
+	}
+	require.NoError(t, json.Unmarshal(secret.Data["data"], &serialized))
+	require.Equal(t, convert.PackageToV1alpha1(definition), serialized.Data)
+	require.Len(t, serialized.PackageData, 1)
+	require.Contains(t, serialized.PackageData, v1beta1.APIVersion)
 
 	loaded, err := c.GetDeployedPackage(ctx, "beta-package")
 	require.NoError(t, err)

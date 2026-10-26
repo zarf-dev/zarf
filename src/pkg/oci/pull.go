@@ -5,7 +5,6 @@ package oci
 
 import (
 	"context"
-	"slices"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
@@ -13,13 +12,12 @@ import (
 
 // CopyToTarget copies the given layers from the remote repository to the given target
 func (o *OrasRemote) CopyToTarget(ctx context.Context, layers []ocispec.Descriptor, target oras.Target, copyOpts oras.CopyOptions) error {
-	shas := []string{}
+	layerDigests := make(map[string]struct{}, len(layers))
 	for _, layer := range layers {
 		if len(layer.Digest.String()) > 0 {
-			shas = append(shas, layer.Digest.Encoded())
+			layerDigests[layer.Digest.Encoded()] = struct{}{}
 		}
 	}
-
 	preCopy := copyOpts.PreCopy
 	copyOpts.PreCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 		if preCopy != nil {
@@ -28,7 +26,7 @@ func (o *OrasRemote) CopyToTarget(ctx context.Context, layers []ocispec.Descript
 			}
 		}
 
-		if slices.Contains(shas, desc.Digest.Encoded()) {
+		if _, found := layerDigests[desc.Digest.Encoded()]; found {
 			return nil
 		}
 

@@ -14,9 +14,33 @@ import (
 	"hash"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/zarf-dev/zarf/src/api"
 )
+
+// Entry identifies a checksummed package file.
+type Entry struct {
+	Digest string
+	Path   string
+}
+
+// Parse returns the checksum entries encoded in a checksums.txt file.
+func Parse(data []byte) ([]Entry, error) {
+	entries := []Entry{}
+	for _, line := range strings.Split(string(data), "\n") {
+		// An empty line can result from a package with no checksum-eligible contents.
+		if line == "" {
+			continue
+		}
+		split := strings.Split(line, " ")
+		if len(split) != 2 || split[0] == "" || split[1] == "" {
+			return nil, fmt.Errorf("invalid checksum line: %s", line)
+		}
+		entries = append(entries, Entry{Digest: split[0], Path: split[1]})
+	}
+	return entries, nil
+}
 
 // VerifyFile checks a file against the expected digest using the given algorithm.
 func VerifyFile(path string, algorithm api.ChecksumAlgorithm, digest string) error {
