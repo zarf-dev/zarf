@@ -39,7 +39,7 @@ type LoadOptions struct {
 	// number of layers to pull in parallel
 	OCIConcurrency int
 	// LayerSelection specifies which optional package resources to pull from OCI.
-	// A nil value selects every resource.
+	// A nil value selects every resource while an empty value selects only the metadata resources.
 	LayerSelection *zoci.LayerSelection
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
