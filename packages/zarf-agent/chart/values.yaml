@@ -45,6 +45,7 @@ tolerations: []
 nodeSelector: {}
 webhookAnnotations: {}
 
-caBundle: ""
+# Keep the placeholder in chart defaults so older CLIs can rotate the CA.
+caBundle: "###ZARF_AGENT_CA###"
 mutationPolicy: all
 mutationExclusions: []

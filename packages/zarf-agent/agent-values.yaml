@@ -1,4 +1,3 @@
-caBundle: "###ZARF_AGENT_CA###"
 mutationPolicy: "###ZARF_AGENT_MUTATION_POLICY###"
 
 affinity:
