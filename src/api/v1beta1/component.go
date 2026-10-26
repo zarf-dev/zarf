@@ -3,6 +3,14 @@
 
 package v1beta1
 
+import (
+	_ "crypto/sha256" // Register SHA-256 for image digest validation.
+	_ "crypto/sha512" // Register SHA-384 and SHA-512 for image digest validation.
+	"fmt"
+
+	"github.com/distribution/reference"
+)
+
 // Component is the primary functional grouping of assets to deploy by Zarf.
 type Component struct {
 	// The name of the component.
@@ -16,6 +24,48 @@ type Component struct {
 	ComponentSpec `json:",inline"`
 }
 
+// ImageReference exposes the full image reference and its optional tag and digest.
+type ImageReference struct {
+	Reference string `json:"reference"`
+	Tag       string `json:"tag"`
+	Digest    string `json:"digest"`
+}
+
+// GetImageByID returns the reference for the given non-empty image ID.
+// Tag and Digest are empty when absent from the image reference.
+func (c Component) GetImageByID(id string) (ImageReference, error) {
+	if id == "" {
+		return ImageReference{}, fmt.Errorf("image ID must not be empty")
+	}
+	parse := func(name string) (ImageReference, error) {
+		ref, err := reference.Parse(name)
+		if err != nil {
+			return ImageReference{}, fmt.Errorf("invalid image reference %q for ID %q in component %q: %w", name, id, c.Name, err)
+		}
+		result := ImageReference{Reference: name}
+		if tagged, ok := ref.(reference.Tagged); ok {
+			result.Tag = tagged.Tag()
+		}
+		if digested, ok := ref.(reference.Digested); ok {
+			result.Digest = digested.Digest().String()
+		}
+		return result, nil
+	}
+	for _, image := range c.Images {
+		if image.ID == id {
+			return parse(image.Name)
+		}
+	}
+	for _, archive := range c.ImageArchives {
+		for _, image := range archive.Images {
+			if image.ID == id {
+				return parse(image.Name)
+			}
+		}
+	}
+	return ImageReference{}, fmt.Errorf("no image with ID %q in component %q", id, c.Name)
+}
+
 // GetImages returns all image names specified in the component, including those from ImageArchives.
 func (c Component) GetImages() []string {
 	images := []string{}
@@ -23,7 +73,9 @@ func (c Component) GetImages() []string {
 		images = append(images, img.Name)
 	}
 	for _, ia := range c.ImageArchives {
-		images = append(images, ia.Images...)
+		for _, image := range ia.Images {
+			images = append(images, image.Name)
+		}
 	}
 	return images
 }
@@ -255,6 +307,8 @@ const (
 type Image struct {
 	// The image reference.
 	Name string `json:"name"`
+	// Optional ID, unique within the component; matching IDs let importing components replace regular images.
+	ID string `json:"id,omitempty"`
 	// The source to pull the image from. Defaults to "registry".
 	Source ImageSource `json:"source,omitempty" jsonschema:"enum=registry,enum=daemon,default=registry"`
 }
@@ -264,7 +318,15 @@ type ImageArchive struct {
 	// The path to the tar archive.
 	Path string `json:"path"`
 	// The list of images contained in the archive.
-	Images []string `json:"images"`
+	Images []ArchiveImage `json:"images"`
+}
+
+// ArchiveImage identifies an image selected from an archive.
+type ArchiveImage struct {
+	// The image reference contained in the archive.
+	Name string `json:"name"`
+	// Optional ID, unique across regular and archive images in the component. Does not enable import overrides.
+	ID string `json:"id,omitempty"`
 }
 
 // Repository defines a git repository to include in the package.

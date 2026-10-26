@@ -38,14 +38,26 @@ func mergeComponentConfigSpec(imported, override v1beta1.ComponentSpec) (v1beta1
 	return merged, nil
 }
 
-// mergeImages merges images by name. The head value of source (and future fields) wins when set.
+// mergeImages matches non-empty IDs first, then names. Non-empty head fields take precedence.
 func mergeImages(base, head []v1beta1.Image) []v1beta1.Image {
 	out := slices.Clone(base)
 	for _, h := range head {
-		idx := slices.IndexFunc(out, func(img v1beta1.Image) bool { return img.Name == h.Name })
+		idx := -1
+		if h.ID != "" {
+			idx = slices.IndexFunc(out, func(img v1beta1.Image) bool { return img.ID == h.ID })
+		}
+		if idx == -1 {
+			idx = slices.IndexFunc(out, func(img v1beta1.Image) bool { return img.Name == h.Name })
+		}
 		if idx == -1 {
 			out = append(out, h)
 			continue
+		}
+		if h.ID != "" {
+			out[idx].ID = h.ID
+		}
+		if h.Name != "" {
+			out[idx].Name = h.Name
 		}
 		if h.Source != "" {
 			out[idx].Source = h.Source

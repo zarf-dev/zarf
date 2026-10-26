@@ -134,6 +134,9 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 // standalone component configs. The component name is used in diagnostics.
 func ValidateComponent(component v1beta1.Component) ValidationErrors {
 	var errs ValidationErrors
+	for _, err := range ValidateImageIDs(component.ComponentSpec) {
+		errs = append(errs, fmt.Errorf("component %q: %w", component.Name, err))
+	}
 	for _, file := range component.Files {
 		algorithm, digest, hasPrefix := strings.Cut(file.Checksum, ":")
 		if !hasPrefix {
@@ -174,6 +177,33 @@ func ValidateComponent(component v1beta1.Component) ValidationErrors {
 	}
 	for _, actionsErr := range validateActions(component.Actions) {
 		errs = append(errs, fmt.Errorf("%q: %w", component.Name, actionsErr))
+	}
+	return errs
+}
+
+// ValidateImageIDs checks that non-empty IDs are unique across all images in a component.
+// Import resolution checks authored definitions before merging; component validation
+// checks the resolved result so regular-image overrides remain allowed.
+func ValidateImageIDs(spec v1beta1.ComponentSpec) ValidationErrors {
+	var errs ValidationErrors
+	seen := make(map[string]string)
+	check := func(id, path string) {
+		if id == "" {
+			return
+		}
+		if previous, exists := seen[id]; exists {
+			errs = append(errs, fmt.Errorf("image ID %q is not unique (%s and %s)", id, previous, path))
+			return
+		}
+		seen[id] = path
+	}
+	for i, image := range spec.Images {
+		check(image.ID, fmt.Sprintf("images[%d]", i))
+	}
+	for i, archive := range spec.ImageArchives {
+		for j, image := range archive.Images {
+			check(image.ID, fmt.Sprintf("imageArchives[%d].images[%d]", i, j))
+		}
 	}
 	return errs
 }

@@ -261,9 +261,9 @@ func TestUnpackMultipleImages(t *testing.T) {
 			err := archive.Compress(ctx, []string{tc.srcDir}, tarFile, archive.CompressOpts{})
 			require.NoError(t, err)
 			dstDir := t.TempDir()
-			imageArchives := api.ImageArchive{
-				Path:   tarFile,
-				Images: tc.requestedImages,
+			imageArchives := api.ImageArchive{Path: tarFile}
+			for _, name := range tc.requestedImages {
+				imageArchives.Images = append(imageArchives.Images, api.ArchiveImage{Name: name})
 			}
 
 			// Run
@@ -310,16 +310,50 @@ func TestUnpackMultipleImages(t *testing.T) {
 	}
 }
 
+func TestUnpackSkipsEquivalentArchiveReferences(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	sourceArchive := filepath.Join(t.TempDir(), "source.tar")
+	require.NoError(t, archive.Compress(ctx, []string{filepath.Join("testdata", "docker-graph-driver-image-store")}, sourceArchive, archive.CompressOpts{}))
+
+	sourceDir := t.TempDir()
+	require.NoError(t, archive.Decompress(ctx, sourceArchive, sourceDir, archive.DecompressOpts{}))
+	imageDir, err := determineImageDirectory(sourceDir)
+	require.NoError(t, err)
+
+	index, err := getIndexFromOCILayout(imageDir)
+	require.NoError(t, err)
+	require.Len(t, index.Manifests, 1)
+	alias := index.Manifests[0]
+	alias.Annotations = make(map[string]string, len(index.Manifests[0].Annotations))
+	for key, value := range index.Manifests[0].Annotations {
+		alias.Annotations[key] = value
+	}
+	alias.Annotations[dockerRefAnnotation] = "hello-world:linux"
+	index.Manifests = append(index.Manifests, alias)
+	require.NoError(t, saveIndexToOCILayout(imageDir, index))
+
+	imageArchivePath := filepath.Join(t.TempDir(), "images.tar")
+	require.NoError(t, archive.Compress(ctx, []string{imageDir}, imageArchivePath, archive.CompressOpts{}))
+
+	pulledImages, err := Unpack(ctx, api.ImageArchive{
+		Path:   imageArchivePath,
+		Images: []api.ArchiveImage{{Name: "hello-world:linux"}},
+	}, t.TempDir(), "amd64")
+	require.NoError(t, err)
+	require.Len(t, pulledImages, 1)
+	require.Equal(t, "docker.io/library/hello-world:linux", pulledImages[0].Image.Reference)
+}
+
 func TestUnpackOCILayoutDirectory(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
 	destination := t.TempDir()
 	_, err := Unpack(ctx, api.ImageArchive{
-		Path: filepath.Join("testdata", "oras-oci-layout", "images"),
-		Images: []string{
-			"ghcr.io/zarf-dev/images/hello-world:latest",
-		},
+		Path:   filepath.Join("testdata", "oras-oci-layout", "images"),
+		Images: []api.ArchiveImage{{Name: "ghcr.io/zarf-dev/images/hello-world:latest"}},
 	}, destination, "amd64")
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(destination, "index.json"))
@@ -372,7 +406,7 @@ func TestUnpackImageIndexes(t *testing.T) {
 			dstDir := t.TempDir()
 			unpacked, err := Unpack(ctx, api.ImageArchive{
 				Path:   tarFile,
-				Images: []string{tc.ref},
+				Images: []api.ArchiveImage{{Name: tc.ref}},
 			}, dstDir, "amd64")
 			require.NoError(t, err)
 			require.Len(t, unpacked, 1)
@@ -432,7 +466,7 @@ func TestUnpackTaggedIndexFiltersToPlatform(t *testing.T) {
 	dstDir := t.TempDir()
 	unpacked, err := Unpack(ctx, api.ImageArchive{
 		Path:   tarFile,
-		Images: []string{tagRef},
+		Images: []api.ArchiveImage{{Name: tagRef}},
 	}, dstDir, "amd64")
 	require.NoError(t, err)
 	require.Len(t, unpacked, 1)
@@ -492,7 +526,7 @@ func TestUnpackTaggedIndexPreservesAllPlatformsWithoutArchitecture(t *testing.T)
 	require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
 
 	dstDir := t.TempDir()
-	_, err = Unpack(ctx, api.ImageArchive{Path: tarFile, Images: []string{tagRef}}, dstDir, "")
+	_, err = Unpack(ctx, api.ImageArchive{Path: tarFile, Images: []api.ArchiveImage{{Name: tagRef}}}, dstDir, "")
 	require.NoError(t, err)
 
 	dstIdx, err := getIndexFromOCILayout(dstDir)

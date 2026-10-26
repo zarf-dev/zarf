@@ -257,6 +257,26 @@ func TestPublishComponent(t *testing.T) {
 	}
 }
 
+func TestPublishComponentRequiresChartNamespace(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.CopyFS(dir, os.DirFS(filepath.Join("testdata", "publish-component-v1beta1"))))
+	componentPath := filepath.Join(dir, "component.yaml")
+	component, err := load.ComponentConfig(componentPath)
+	require.NoError(t, err)
+	component.Component.Charts[0].Namespace = ""
+	b, err := goyaml.Marshal(component)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(componentPath, b, 0o600))
+
+	ctx := t.Context()
+	_, err = load.ComponentDefinition(ctx, componentPath, load.ComponentOptions{})
+	require.ErrorContains(t, err, `chart "local-chart" must include a namespace`)
+	_, err = Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.ErrorContains(t, err, `chart "local-chart" must include a namespace`)
+}
+
 func TestPublishComponentSignsManifest(t *testing.T) {
 	t.Parallel()
 
@@ -396,7 +416,8 @@ component:
   imageArchives:
     - path: %q
       images:
-        - ghcr.io/zarf-dev/images/hello-world:latest
+        - name: ghcr.io/zarf-dev/images/hello-world:latest
+          id: hello
 `, archivePath))
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
@@ -405,6 +426,24 @@ component:
 
 	component, manifest := getPublishedComponent(ctx, t, published)
 	require.Equal(t, "images", component.Component.ImageArchives[0].Path)
+	require.Equal(t, "hello", component.Component.ImageArchives[0].Images[0].ID)
+	packagePath := filepath.Join(t.TempDir(), "zarf.yaml")
+	packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: archive-import
+components:
+  - name: app
+    import:
+      remote:
+        - url: oci://%s
+`, published.String())
+	require.NoError(t, os.WriteFile(packagePath, []byte(packageYAML), 0o600))
+	resolved, err := load.PackageDefinition(ctx, packagePath, load.DefinitionOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	image, err := convert.PackageToV1beta1(resolved).Components[0].GetImageByID("hello")
+	require.NoError(t, err)
+	require.Equal(t, "ghcr.io/zarf-dev/images/hello-world:latest", image.Reference)
 
 	layerTitles := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
@@ -745,11 +784,13 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 		Values:     v1beta1.Values{Files: []string{"../external/values.yaml"}, Schema: filepath.Join(externalDir, "schema.json")},
 		Component: v1beta1.ComponentSpec{
 			Charts: []v1beta1.Chart{{
-				Name: "external", Namespace: "default",
+				Name:        "test",
+				Namespace:   "default",
 				Local:       &v1beta1.LocalSource{Path: filepath.Join(externalDir, "chart")},
 				ValuesFiles: []v1beta1.ValuesFile{{Path: "../external/chart-values.yaml"}},
 			}},
 			Manifests: []v1beta1.Manifest{{
+				Name:      "test",
 				Files:     []string{filepath.Join(externalDir, "manifest.yaml")},
 				Kustomize: v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
 			}},
