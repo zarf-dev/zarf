@@ -110,10 +110,10 @@ func Unpack(ctx context.Context, imageArchive api.ImageArchive, destDir string, 
 
 	// Map each normalized image identity to its parsed image reference.
 	requestedImages := make(map[string]transform.Image, len(imageArchive.Images))
-	for _, declaredReference := range imageArchive.Images {
-		ref, err := transform.ParseImageRef(declaredReference)
+	for _, img := range imageArchive.Images {
+		ref, err := transform.ParseImageRef(img.Name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse image reference %s: %w", declaredReference, err)
+			return nil, fmt.Errorf("failed to parse image reference %s: %w", img.Name, err)
 		}
 		requestedImages[ref.Reference] = ref
 	}

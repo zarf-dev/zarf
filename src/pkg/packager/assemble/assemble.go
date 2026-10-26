@@ -147,11 +147,11 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 			}
 			if layout.UsesGranularResourceLayout(pkg) && !opts.SkipSBOM {
 				for _, image := range imageArchive.Images {
-					refInfo, err := transform.ParseImageRef(image)
+					refInfo, err := transform.ParseImageRef(image.Name)
 					if err != nil {
-						return nil, fmt.Errorf("failed to create ref for image %s: %w", image, err)
+						return nil, fmt.Errorf("failed to create ref for image %s: %w", image.Name, err)
 					}
-					addDeclaredSBOMImageReference(declaredImageReferences, image, refInfo)
+					addDeclaredSBOMImageReference(declaredImageReferences, image.Name, refInfo)
 				}
 			}
 
@@ -379,9 +379,9 @@ func validateImageArchivesNoDuplicates(components []api.Component) error {
 	for _, comp := range components {
 		for _, archive := range comp.ImageArchives {
 			for _, image := range archive.Images {
-				refInfo, err := transform.ParseImageRef(image)
+				refInfo, err := transform.ParseImageRef(image.Name)
 				if err != nil {
-					return fmt.Errorf("failed to parse image ref %s in archive %s: %w", image, archive.Path, err)
+					return fmt.Errorf("failed to parse image ref %s in archive %s: %w", image.Name, archive.Path, err)
 				}
 
 				if existingArchivePath, exists := imageToArchive[refInfo.Reference]; exists {
