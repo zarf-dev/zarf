@@ -35,6 +35,20 @@ func TestGetSHA256Hash(t *testing.T) {
 	require.ErrorIs(t, err, readErr)
 }
 
+func TestParse(t *testing.T) {
+	t.Parallel()
+
+	entries, err := checksum.Parse([]byte("abc path/one\ndef path/two\n"))
+	require.NoError(t, err)
+	require.Equal(t, []checksum.Entry{
+		{Digest: "abc", Path: "path/one"},
+		{Digest: "def", Path: "path/two"},
+	}, entries)
+
+	_, err = checksum.Parse([]byte("missing-path"))
+	require.EqualError(t, err, "invalid checksum line: missing-path")
+}
+
 func TestGetSHA256OfFile(t *testing.T) {
 	t.Parallel()
 

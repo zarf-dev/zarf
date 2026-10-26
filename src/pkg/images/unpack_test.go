@@ -310,6 +310,42 @@ func TestUnpackMultipleImages(t *testing.T) {
 	}
 }
 
+func TestUnpackSkipsEquivalentArchiveReferences(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	sourceArchive := filepath.Join(t.TempDir(), "source.tar")
+	require.NoError(t, archive.Compress(ctx, []string{filepath.Join("testdata", "docker-graph-driver-image-store")}, sourceArchive, archive.CompressOpts{}))
+
+	sourceDir := t.TempDir()
+	require.NoError(t, archive.Decompress(ctx, sourceArchive, sourceDir, archive.DecompressOpts{}))
+	imageDir, err := determineImageDirectory(sourceDir)
+	require.NoError(t, err)
+
+	index, err := getIndexFromOCILayout(imageDir)
+	require.NoError(t, err)
+	require.Len(t, index.Manifests, 1)
+	alias := index.Manifests[0]
+	alias.Annotations = make(map[string]string, len(index.Manifests[0].Annotations))
+	for key, value := range index.Manifests[0].Annotations {
+		alias.Annotations[key] = value
+	}
+	alias.Annotations[dockerRefAnnotation] = "hello-world:linux"
+	index.Manifests = append(index.Manifests, alias)
+	require.NoError(t, saveIndexToOCILayout(imageDir, index))
+
+	imageArchivePath := filepath.Join(t.TempDir(), "images.tar")
+	require.NoError(t, archive.Compress(ctx, []string{imageDir}, imageArchivePath, archive.CompressOpts{}))
+
+	pulledImages, err := Unpack(ctx, api.ImageArchive{
+		Path:   imageArchivePath,
+		Images: []string{"hello-world:linux"},
+	}, t.TempDir(), "amd64")
+	require.NoError(t, err)
+	require.Len(t, pulledImages, 1)
+	require.Equal(t, "docker.io/library/hello-world:linux", pulledImages[0].Image.Reference)
+}
+
 func TestUnpackOCILayoutDirectory(t *testing.T) {
 	t.Parallel()
 
