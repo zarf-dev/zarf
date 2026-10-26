@@ -1189,7 +1189,8 @@ func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated component names or image references for SBOMs to extract")
+	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated component names or image references for SBOMs to extract. "+
+		"This has no effect on v1alpha1 packages.")
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
@@ -1227,6 +1228,11 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
+
+	if len(o.keys) > 0 && pkgLayout.Definition().GetAPIVersion() == v1alpha1.APIVersion {
+		logger.From(ctx).Warn("--keys cannot select individual SBOMs from v1alpha1 packages; " +
+			"extracting the entire legacy SBOM archive")
+	}
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
 	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.Definition().Metadata.Name))
 	err = pkgLayout.GetSBOM(ctx, outputPath)
