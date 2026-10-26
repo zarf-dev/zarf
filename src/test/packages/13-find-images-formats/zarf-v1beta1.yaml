@@ -11,5 +11,8 @@ components:
       - name: nginx:1.27
         id: web
         source: daemon
+      - name: docker.io/library/nginx:1.27
+        id: worker
+        source: daemon
       - name: example.com/manual:1
         source: registry

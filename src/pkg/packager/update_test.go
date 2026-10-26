@@ -149,6 +149,125 @@ func TestUpdateImagesV1Beta1PreservesSourceForShorthandName(t *testing.T) {
 	require.Equal(t, updatedBytes, secondUpdate)
 }
 
+func TestFindAndUpdateImagesV1Beta1PreservesSharedReferenceIDs(t *testing.T) {
+	t.Parallel()
+
+	for _, kind := range []v1beta1.PackageKind{v1beta1.ZarfPackageConfig, v1beta1.ZarfComponentConfig} {
+		for _, archived := range []bool{false, true} {
+			name := string(kind) + "/regular"
+			if archived {
+				name = string(kind) + "/archive"
+			}
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+				ctx := testutil.TestContext(t)
+				dir := t.TempDir()
+				fixture := filepath.Join("testdata", "find-images", "image-archives")
+				require.NoError(t, os.CopyFS(dir, os.DirFS(fixture)))
+				const reference = "docker.io/library/scratch:latest"
+				manifest := `apiVersion: v1
+kind: Pod
+metadata:
+  name: app
+spec:
+  containers:
+    - name: web
+      image: scratch:latest
+    - name: worker
+      image: docker.io/library/scratch:latest
+`
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "deployment.yaml"), []byte(manifest), 0o600))
+				spec := v1beta1.ComponentSpec{
+					Manifests: []v1beta1.Manifest{{Name: "app", Files: []string{"deployment.yaml"}}},
+				}
+				wantImages := []v1beta1.Image{
+					{Name: "scratch:latest", ID: "web", Source: "daemon"},
+					{Name: reference, ID: "worker", Source: "daemon"},
+				}
+				wantArchives := []v1beta1.ImageArchive{{Path: "scratch.tar", Images: []v1beta1.ArchiveImage{
+					{Name: reference, ID: "web"},
+					{Name: reference, ID: "worker"},
+				}}}
+				if archived {
+					spec.ImageArchives = []v1beta1.ImageArchive{{Path: "scratch.tar", Images: []v1beta1.ArchiveImage{
+						{Name: "scratch:latest", ID: "web"},
+						{Name: reference, ID: "worker"},
+						{Name: "scratch:stale", ID: "stale"},
+					}}}
+				} else {
+					spec.Images = append(spec.Images, wantImages...)
+					spec.Images = append(spec.Images, v1beta1.Image{Name: "scratch:stale", ID: "stale"})
+				}
+				var definition any
+				if kind == v1beta1.ZarfComponentConfig {
+					definition = v1beta1.ComponentConfig{
+						APIVersion: v1beta1.APIVersion, Kind: kind,
+						Metadata: v1beta1.ComponentMetadata{Name: "app"}, Component: spec,
+					}
+				} else {
+					definition = v1beta1.Package{
+						APIVersion: v1beta1.APIVersion, Kind: kind,
+						Metadata:   v1beta1.PackageMetadata{Name: "shared-image-ids"},
+						Components: []v1beta1.Component{{Name: "app", ComponentSpec: spec}},
+					}
+				}
+				contents, err := yaml.Marshal(definition)
+				require.NoError(t, err)
+				path := filepath.Join(dir, "zarf.yaml")
+				require.NoError(t, os.WriteFile(path, contents, 0o600))
+
+				results, err := FindDefinitionImages(ctx, path, FindImagesOptions{SkipCosign: true})
+				require.NoError(t, err)
+				require.Len(t, results, 1)
+				if archived {
+					require.Empty(t, results[0].Matches)
+					require.Equal(t, []api.ImageArchive{{Path: "scratch.tar", Images: []api.ArchiveImage{
+						{Name: reference, ID: "web"}, {Name: reference, ID: "worker"},
+					}}}, results[0].ImageArchives)
+				} else {
+					require.Equal(t, []ImageMatch{
+						{Image: api.Image{Name: "scratch:latest", ID: "web", Source: "daemon"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: reference, ID: "worker", Source: "daemon"}, MatchType: MatchDefinite},
+					}, results[0].Matches)
+				}
+				require.NoError(t, UpdateImages(ctx, path, results))
+				updated, err := os.ReadFile(path)
+				require.NoError(t, err)
+				var component v1beta1.Component
+				if kind == v1beta1.ZarfComponentConfig {
+					var config v1beta1.ComponentConfig
+					require.NoError(t, yaml.Unmarshal(updated, &config))
+					component = v1beta1.Component{Name: config.Metadata.Name, ComponentSpec: config.Component}
+				} else {
+					var pkg v1beta1.Package
+					require.NoError(t, yaml.Unmarshal(updated, &pkg))
+					component, err = pkg.GetComponent("app")
+					require.NoError(t, err)
+				}
+				if archived {
+					require.Equal(t, wantArchives, component.ImageArchives)
+				} else {
+					require.Equal(t, wantImages, component.Images)
+				}
+				for _, id := range []string{"web", "worker"} {
+					image, err := component.GetImageByID(id)
+					require.NoError(t, err)
+					require.Equal(t, "latest", image.Tag)
+				}
+				_, err = component.GetImageByID("stale")
+				require.Error(t, err)
+
+				results, err = FindDefinitionImages(ctx, path, FindImagesOptions{SkipCosign: true})
+				require.NoError(t, err)
+				require.NoError(t, UpdateImages(ctx, path, results))
+				secondUpdate, err := os.ReadFile(path)
+				require.NoError(t, err)
+				require.Equal(t, updated, secondUpdate)
+			})
+		}
+	}
+}
+
 func TestUpdateImagesV1Beta1KeepsEquivalentAuthoredOrder(t *testing.T) {
 	t.Parallel()
 	definition := `apiVersion: zarf.dev/v1beta1

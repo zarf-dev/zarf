@@ -209,17 +209,28 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 			if err != nil {
 				return nil, fmt.Errorf("failed to find images in archive %s: %w", archive.Path, err)
 			}
-			authored := make(map[string]api.ArchiveImage, len(archive.Images))
+			authored := make(map[string][]api.ArchiveImage, len(archive.Images))
 			for _, image := range archive.Images {
 				ref, err := transform.ParseImageRef(image.Name)
 				if err != nil {
 					return nil, fmt.Errorf("invalid image %q in archive %q: %w", image.Name, archive.Path, err)
 				}
-				authored[ref.Reference] = image
+				authored[ref.Reference] = append(authored[ref.Reference], image)
 			}
 			imageArchive := api.ImageArchive{Path: archive.Path}
+			seen := make(map[string]bool, len(archiveImages))
 			for _, name := range archiveImages {
-				imageArchive.Images = append(imageArchive.Images, api.ArchiveImage{Name: name, ID: authored[name].ID})
+				if seen[name] {
+					continue
+				}
+				seen[name] = true
+				if selected := authored[name]; len(selected) > 0 {
+					for _, image := range selected {
+						imageArchive.Images = append(imageArchive.Images, api.ArchiveImage{Name: name, ID: image.ID})
+					}
+				} else {
+					imageArchive.Images = append(imageArchive.Images, api.ArchiveImage{Name: name})
+				}
 			}
 			result.ImageArchives = append(result.ImageArchives, imageArchive)
 			allArchiveImages = append(allArchiveImages, archiveImages...)
@@ -238,7 +249,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 				return !slices.Contains(allScanArtifacts, image.Name)
 			})
 		}
-		authoredByRef := make(map[string]api.Image)
+		authoredByRef := make(map[string][]api.Image)
 		for _, image := range pkg.Components[i].Images {
 			if image.Source == "" && image.ID == "" {
 				continue
@@ -247,18 +258,28 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 			if err != nil {
 				return nil, fmt.Errorf("invalid authored image %q in component %q: %w", image.Name, pkg.Components[i].Name, err)
 			}
-			authoredByRef[ref.Reference] = image
+			authoredByRef[ref.Reference] = append(authoredByRef[ref.Reference], image)
 		}
-		for j := range definitionImageResults[i].Matches {
-			match := &definitionImageResults[i].Matches[j]
+		var matches []ImageMatch
+		seen := make(map[string]bool)
+		for _, match := range definitionImageResults[i].Matches {
 			ref, err := transform.ParseImageRef(match.Image.Name)
 			if err != nil {
 				return nil, fmt.Errorf("invalid scanned image %q in component %q: %w", match.Image.Name, pkg.Components[i].Name, err)
 			}
-			if image, found := authoredByRef[ref.Reference]; found {
-				match.Image = image
+			if seen[ref.Reference] {
+				continue
+			}
+			seen[ref.Reference] = true
+			if authored, found := authoredByRef[ref.Reference]; found {
+				for _, image := range authored {
+					matches = append(matches, ImageMatch{Image: image, MatchType: match.MatchType})
+				}
+			} else {
+				matches = append(matches, match)
 			}
 		}
+		definitionImageResults[i].Matches = matches
 	}
 
 	return definitionImageResults, nil

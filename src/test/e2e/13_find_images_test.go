@@ -45,6 +45,9 @@ func TestFindImages(t *testing.T) {
     images:
       - name: nginx:1.27
         id: "web"
+        source: daemon
+      - name: docker.io/library/nginx:1.27
+        id: "worker"
         source: daemon`,
 			},
 			{
@@ -53,7 +56,9 @@ func TestFindImages(t *testing.T) {
 				want: `component:
   images:
     - name: nginx:1.27
-      id: "web"`,
+      id: "web"
+    - name: docker.io/library/nginx:1.27
+      id: "worker"`,
 			},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
@@ -84,14 +89,20 @@ func TestFindImages(t *testing.T) {
 			var updated v1beta1.Package
 			require.NoError(t, yaml.Unmarshal(b, &updated))
 			require.Len(t, updated.Components, 1)
-			require.Equal(t, []v1beta1.Image{{Name: "nginx:1.27", ID: "web", Source: "daemon"}}, updated.Components[0].Images)
+			require.Equal(t, []v1beta1.Image{
+				{Name: "nginx:1.27", ID: "web", Source: "daemon"},
+				{Name: image, ID: "worker", Source: "daemon"},
+			}, updated.Components[0].Images)
 		})
 
 		t.Run("v1beta1 component", func(t *testing.T) {
 			b := updateFindImagesFixture(t, "component.yaml")
 			var updated v1beta1.ComponentConfig
 			require.NoError(t, yaml.Unmarshal(b, &updated))
-			require.Equal(t, []v1beta1.Image{{Name: "nginx:1.27", ID: "web"}}, updated.Component.Images)
+			require.Equal(t, []v1beta1.Image{
+				{Name: "nginx:1.27", ID: "web"},
+				{Name: image, ID: "worker"},
+			}, updated.Component.Images)
 		})
 	})
 
@@ -204,6 +215,8 @@ components:
         images:
           - name: scratch:latest
             id: app
+          - name: docker.io/library/scratch:latest
+            id: worker
           - name: scratch:stale
 `
 	definitionPath := filepath.Join(source, "zarf.yaml")
@@ -212,7 +225,10 @@ components:
 	require.NoError(t, err, "%s\n%s", stdout, stderr)
 	var found v1beta1.Package
 	require.NoError(t, yaml.Unmarshal([]byte(stdout), &found))
-	want := []v1beta1.ArchiveImage{{Name: "docker.io/library/scratch:latest", ID: "app"}}
+	want := []v1beta1.ArchiveImage{
+		{Name: "docker.io/library/scratch:latest", ID: "app"},
+		{Name: "docker.io/library/scratch:latest", ID: "worker"},
+	}
 	require.Equal(t, want, found.Components[0].ImageArchives[0].Images)
 	updated, err := os.ReadFile(definitionPath)
 	require.NoError(t, err)
@@ -231,10 +247,12 @@ components:
 	require.NoError(t, err)
 	beta, err := pkgcfg.ParseAs(t.Context(), b, pkgcfg.V1Beta1)
 	require.NoError(t, err)
-	image, err := beta.Components[0].GetImageByID("app")
-	require.NoError(t, err)
-	require.Equal(t, "docker.io/library/scratch:latest", image.Reference)
+	for _, id := range []string{"app", "worker"} {
+		image, err := beta.Components[0].GetImageByID(id)
+		require.NoError(t, err)
+		require.Equal(t, "docker.io/library/scratch:latest", image.Reference)
+	}
 	alpha, err := pkgcfg.ParseAs(t.Context(), b, pkgcfg.V1Alpha1)
 	require.NoError(t, err)
-	require.Equal(t, []string{image.Reference}, alpha.Components[0].ImageArchives[0].Images)
+	require.Equal(t, []string{"docker.io/library/scratch:latest", "docker.io/library/scratch:latest"}, alpha.Components[0].ImageArchives[0].Images)
 }
