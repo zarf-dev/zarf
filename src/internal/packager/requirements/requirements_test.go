@@ -129,6 +129,47 @@ func TestValidateVersionRequirements(t *testing.T) {
 	}
 }
 
+func TestValidateVersionRequirements_ReleaseCandidate(t *testing.T) {
+	originalVersion := config.CLIVersion
+	t.Cleanup(func() { config.CLIVersion = originalVersion })
+
+	tests := []struct {
+		name        string
+		cliVersion  string
+		required    string
+		expectError bool
+	}{
+		{name: "matching release", cliVersion: "v0.88.0-rc1", required: "v0.88.0"},
+		{name: "dotted release candidate", cliVersion: "v0.88.0-rc.1", required: "v0.88.0"},
+		{name: "build metadata", cliVersion: "v0.88.0-rc1+build.123", required: "v0.88.0"},
+		{name: "matching patch release", cliVersion: "v0.88.1-rc1", required: "v0.88.1"},
+		{name: "older requirement", cliVersion: "v0.88.0-rc1", required: "v0.87.0"},
+		{name: "newer patch required", cliVersion: "v0.88.0-rc1", required: "v0.88.1", expectError: true},
+		{name: "newer minor required", cliVersion: "v0.88.0-rc1", required: "v0.89.0", expectError: true},
+		{name: "newer major required", cliVersion: "v0.88.0-rc1", required: "v1.88.0", expectError: true},
+		{name: "exact release candidate", cliVersion: "v0.88.0-rc.1", required: "v0.88.0-rc.1"},
+		{name: "later release candidate", cliVersion: "v0.88.0-rc.2", required: "v0.88.0-rc.1"},
+		{name: "earlier release candidate", cliVersion: "v0.88.0-rc.1", required: "v0.88.0-rc.2", expectError: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config.CLIVersion = tt.cliVersion
+			reqs := []api.VersionRequirement{{Version: tt.required, Reason: "required feature"}}
+			err := ValidateVersionRequirements(reqs)
+			if tt.expectError {
+				var requirementErr *VersionRequirementsError
+				require.ErrorAs(t, err, &requirementErr)
+				require.Equal(t, tt.required, requirementErr.RequiredVersion)
+				require.Equal(t, tt.cliVersion, requirementErr.CurrentVersion)
+				require.Equal(t, reqs, requirementErr.Requirements)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestVersionRequirementsError_HighestVersion(t *testing.T) {
 	tests := []struct {
 		name         string

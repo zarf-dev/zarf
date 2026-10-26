@@ -78,7 +78,8 @@ type DeployOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	StorageClass   string
 	InjectorPort   int
-	InjectorImage  string
+	// InjectorImage is the injector container image. Proxy mode defaults to the image saved in cluster state and requires an image on first init.
+	InjectorImage string
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
@@ -90,6 +91,9 @@ type DeployOptions struct {
 	IsInteractive bool
 	// SkipValuesSchemaValidation skips validation of the merged package values against the package schema.
 	SkipValuesSchemaValidation bool
+	// SkipArchitectureCheck allows application images to deploy to nodes with a different architecture.
+	// The operator must configure emulation on the target nodes.
+	SkipArchitectureCheck bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
 }
@@ -116,6 +120,10 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	pkg := pkgLayout.Definition()
 	if opts.Connected && pkg.IsInitConfig() {
 		return DeployResult{}, fmt.Errorf("--connected is not supported for init packages")
+	}
+
+	if opts.SkipArchitectureCheck && pkg.IsInitConfig() {
+		return DeployResult{}, fmt.Errorf("skipping architecture checks is not supported for init packages")
 	}
 
 	// Validate operational requirements before proceeding
@@ -259,7 +267,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				if err != nil {
 					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 				}
-				if err := d.verifyPackageIsDeployable(ctx, pkgLayout); err != nil {
+				if err := d.verifyPackageIsDeployable(ctx, pkgLayout, opts.SkipArchitectureCheck); err != nil {
 					return nil, fmt.Errorf("package is not deployable to this system: %w", err)
 				}
 			}
@@ -376,17 +384,17 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 	services := state.NewServiceSet()
 	registryExternal := opts.RegistryInfo.Address != ""
 	for _, c := range components {
-		switch c.Name {
-		case "git-server":
+		switch c.Service.Name {
+		case api.ServiceGitServer:
 			services.Add(state.GitKey)
 			if feature.IsEnabled(feature.ArtifactServer) {
 				services.Add(state.ArtifactKey)
 			}
-		case "zarf-registry", "zarf-seed-registry", "zarf-injector":
+		case api.ServiceRegistry, api.ServiceSeedRegistry, api.ServiceInjector:
 			if !registryExternal {
 				services.Add(state.RegistryKey)
 			}
-		case "zarf-agent":
+		case api.ServiceAgent:
 			services.Add(state.AgentKey)
 		}
 	}
@@ -396,10 +404,10 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
-	isSeedRegistry := component.Name == "zarf-seed-registry"
-	isRegistry := component.Name == "zarf-registry"
-	isInjector := component.Name == "zarf-injector"
-	isAgent := component.Name == "zarf-agent"
+	isSeedRegistry := component.Service.Name == api.ServiceSeedRegistry
+	isRegistry := component.Service.Name == api.ServiceRegistry
+	isInjector := component.Service.Name == api.ServiceInjector
+	isAgent := component.Service.Name == api.ServiceAgent
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if component.RequiresCluster() && d.s == nil {
@@ -437,11 +445,12 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	if isSeedRegistry {
 		switch d.s.RegistryInfo.RegistryMode {
 		case state.RegistryModeProxy:
-			injectorImage, err := injectorDaemonsetImage(ctx, d.c, opts.InjectorImage)
-			if err != nil {
-				return nil, err
+			if opts.InjectorImage != "" {
+				d.s.InjectorInfo.Image = opts.InjectorImage
 			}
-			d.s.InjectorInfo.Image = injectorImage
+			if d.s.InjectorInfo.Image == "" {
+				return nil, fmt.Errorf("injector image is required for proxy registry mode when no previous proxy injector image is saved in cluster state; provide --injector-image")
+			}
 
 			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkg.Metadata.Name)
 			if err != nil {
@@ -495,13 +504,6 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	return charts, nil
 }
 
-func injectorDaemonsetImage(ctx context.Context, c *cluster.Cluster, requestedImage string) (string, error) {
-	if requestedImage != "" {
-		return requestedImage, nil
-	}
-	return c.GetInjectorDaemonsetImage(ctx)
-}
-
 func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
@@ -531,7 +533,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 	}
 
-	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, component.Name, d.s)
+	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, component.Service.Name, d.s)
 	if err != nil {
 		return nil, err
 	}
@@ -808,8 +810,8 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 	return installedCharts, nil
 }
 
-func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkgLayout *layout.PackageLayout) error {
-	if err := verifyClusterCompatibility(ctx, d.c, pkgLayout); err != nil {
+func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkgLayout *layout.PackageLayout, skipArchitectureCheck bool) error {
+	if err := verifyClusterCompatibility(ctx, d.c, pkgLayout, skipArchitectureCheck); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
 			logger.From(ctx).Warn("unable to validate package architecture", "error", err)
 		} else {
@@ -854,7 +856,7 @@ func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state
 	return s, nil
 }
 
-func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout) error {
+func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, skipArchitectureCheck bool) error {
 	pkg := pkgLayout.Definition()
 	// Ignore this check if the package contains no images
 	if !pkg.HasImages() {
@@ -888,7 +890,11 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayo
 
 	// Check if the package architecture and the cluster architecture are the same.
 	if !slices.Contains(architectures, pkg.Metadata.Architecture) {
-		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, pkg.Metadata.Architecture, strings.Join(architectures, ", "))
+		if !skipArchitectureCheck {
+			return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, pkg.Metadata.Architecture, strings.Join(architectures, ", "))
+		}
+		logger.From(ctx).Warn("Architecture mismatch allowed. The target nodes must support emulation. Intended for development and testing; not recommended for production.",
+			"packageArchitecture", pkg.Metadata.Architecture, "nodeArchitectures", architectures)
 	}
 
 	return nil

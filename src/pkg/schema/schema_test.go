@@ -38,14 +38,24 @@ func TestCombinedSchemaSelectsVersionByAPIVersion(t *testing.T) {
 			valid: true,
 		},
 		{
-			name: "v1beta1 init kind rejected by v1beta1 branch",
+			name: "v1beta1 init kind accepted by v1beta1 branch",
 			doc: map[string]any{
 				"apiVersion": "zarf.dev/v1beta1",
 				"kind":       "ZarfInitConfig",
 				"metadata":   map[string]any{"name": "test"},
 				"components": []any{map[string]any{"name": "first"}},
 			},
-			valid: false,
+			valid: true,
+		},
+		{
+			name: "v1beta1 init service accepted",
+			doc: map[string]any{
+				"apiVersion": "zarf.dev/v1beta1",
+				"kind":       "ZarfInitConfig",
+				"metadata":   map[string]any{"name": "test"},
+				"components": []any{map[string]any{"name": "registry", "service": map[string]any{"name": "registry"}}},
+			},
+			valid: true,
 		},
 	}
 
@@ -93,6 +103,56 @@ func TestV1Beta1SchemaAllowsChartOverrides(t *testing.T) {
 			result, err := gojsonschema.Validate(gojsonschema.NewBytesLoader(sourceSchema.schema), gojsonschema.NewGoLoader(doc))
 			require.NoError(t, err)
 			require.True(t, result.Valid(), result.Errors())
+		})
+	}
+}
+
+func TestV1Beta1ServiceSchema(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name    string
+		service any
+		valid   bool
+	}{
+		{name: "registry", service: map[string]any{"name": "registry"}, valid: true},
+		{name: "seed registry", service: map[string]any{"name": "seed-registry"}, valid: true},
+		{name: "injector", service: map[string]any{"name": "injector"}, valid: true},
+		{name: "agent", service: map[string]any{"name": "agent"}, valid: true},
+		{name: "git server", service: map[string]any{"name": "git-server"}, valid: true},
+		{name: "scalar", service: "registry"},
+		{name: "missing name", service: map[string]any{}},
+		{name: "empty name", service: map[string]any{"name": ""}},
+		{name: "unknown name", service: map[string]any{"name": "unknown"}},
+		{name: "unknown field", service: map[string]any{"name": "registry", "other": true}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			component := map[string]any{"service": tt.service}
+			pkgComponent := map[string]any{"name": "custom-service", "service": tt.service}
+			pkg := map[string]any{
+				"apiVersion": "zarf.dev/v1beta1",
+				"kind":       "ZarfInitConfig",
+				"metadata":   map[string]any{"name": "test"},
+				"components": []any{pkgComponent},
+			}
+			componentConfig := map[string]any{
+				"apiVersion": "zarf.dev/v1beta1",
+				"kind":       "ZarfComponentConfig",
+				"metadata":   map[string]any{"name": "test"},
+				"component":  component,
+			}
+			for _, schema := range []struct {
+				schema []byte
+				doc    any
+			}{
+				{getSchema(), pkg},
+				{GetV1Beta1Schema(), pkg},
+				{GetV1Beta1ComponentSchema(), componentConfig},
+			} {
+				result, err := gojsonschema.Validate(gojsonschema.NewBytesLoader(schema.schema), gojsonschema.NewGoLoader(schema.doc))
+				require.NoError(t, err)
+				require.Equal(t, tt.valid, result.Valid(), result.Errors())
+			}
 		})
 	}
 }

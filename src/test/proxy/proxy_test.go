@@ -20,6 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const injectorImage = "ghcr.io/zarf-dev/images/alpine:3.21.3"
+
 type RegistryProxyTestSuite struct {
 	suite.Suite
 	*require.Assertions
@@ -36,8 +38,12 @@ func (suite *RegistryProxyTestSuite) SetupSuite() {
 func (suite *RegistryProxyTestSuite) Test_0_RegistryProxyInit() {
 	ctx := suite.T().Context()
 
-	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--registry-mode=proxy", "--components=git-server", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--registry-mode=proxy", "--injector-image="+injectorImage, "--components=git-server", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
+
+	injector, err := suite.cluster.Clientset.AppsV1().DaemonSets("zarf").Get(ctx, "zarf-injector", metav1.GetOptions{})
+	suite.NoError(err)
+	suite.Equal(injectorImage, injector.Spec.Template.Spec.Containers[0].Image)
 
 	// Verify the registry proxy TLS secrets were created
 	_, err = suite.cluster.Clientset.CoreV1().Secrets("zarf").Get(ctx, state.RegistryServerTLSSecret, metav1.GetOptions{})
@@ -124,7 +130,7 @@ func (suite *RegistryProxyTestSuite) Test_4_SwitchBetweenNodePort() {
 	_, err = suite.cluster.Clientset.AppsV1().DaemonSets("zarf").Get(ctx, "zarf-registry-proxy", metav1.GetOptions{})
 	suite.True(kerrors.IsNotFound(err))
 
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "init", "--registry-mode=proxy", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "init", "--registry-mode=proxy", "--injector-image="+injectorImage, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Verify that the svc zarf-docker-registry is not a nodeport svc

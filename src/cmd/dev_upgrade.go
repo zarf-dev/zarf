@@ -24,7 +24,6 @@ type devUpgradeSchemaOptions struct {
 	to string
 }
 
-// This command will be unhidden once v1beta1 is ready for use
 func newDevUpgradeSchemaCommand() *cobra.Command {
 	o := &devUpgradeSchemaOptions{}
 
@@ -32,7 +31,6 @@ func newDevUpgradeSchemaCommand() *cobra.Command {
 		Use:     "upgrade [ PATH ]",
 		Short:   "Converts and outputs the existing zarf package config to the given API version. Defaults to latest API version.",
 		Example: "zarf dev upgrade . > zarf-v1beta1.yaml",
-		Hidden:  true,
 		Args:    cobra.MaximumNArgs(1),
 		RunE:    o.run,
 	}

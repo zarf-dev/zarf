@@ -78,6 +78,15 @@ $ zarf init --confirm
 $ zarf dev deploy examples/dos-games --connected=false
 ```
 
+For development with architecture emulation, use `--skip-architecture-check` with `--connected=false`:
+
+```bash
+$ zarf dev deploy ./my-package --connected=false \
+  --architecture=amd64 --skip-architecture-check
+```
+
+`--architecture` selects the architecture during package creation. Configure emulation on the target nodes first. The override permits a package-to-cluster architecture mismatch and logs a warning. It has no effect in default connected mode, which excludes packaged images. Init packages do not support this override; initialize the cluster with its native architecture.
+
 ## `zarf dev find-images`
 
 Evaluates components in a `zarf.yaml` to identify images specified in their helm charts and manifests.

@@ -37,7 +37,7 @@ func GetZarfVariableConfig(ctx context.Context, isInteractive bool) *variables.V
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.
-func GetZarfTemplates(ctx context.Context, componentName string, s *state.State) (templateMap map[string]*variables.TextTemplate, err error) {
+func GetZarfTemplates(ctx context.Context, service api.ServiceName, s *state.State) (templateMap map[string]*variables.TextTemplate, err error) {
 	templateMap = make(map[string]*variables.TextTemplate)
 
 	if s != nil {
@@ -72,15 +72,15 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 		builtinMap[depMarker] = config.GetDataInjectionMarker()
 
 		// Don't template component-specific variables for every component
-		switch componentName {
-		case "zarf-agent":
+		switch service {
+		case api.ServiceAgent:
 			agentTLS := s.AgentInfo.TLS
 			builtinMap["AGENT_CRT"] = base64.StdEncoding.EncodeToString(agentTLS.Cert)
 			builtinMap["AGENT_KEY"] = base64.StdEncoding.EncodeToString(agentTLS.Key)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
 			builtinMap["AGENT_MUTATION_POLICY"] = string(s.AgentInfo.MutationPolicy)
 
-		case "zarf-seed-registry", "zarf-registry":
+		case api.ServiceSeedRegistry, api.ServiceRegistry:
 			builtinMap["SEED_REGISTRY"] = state.LocalhostRegistryAddress(s.IPFamily, s.InjectorInfo.Port)
 			htpasswd, err := regInfo.Htpasswd()
 			if err != nil {

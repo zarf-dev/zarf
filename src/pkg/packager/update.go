@@ -80,8 +80,7 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 			return err
 		}
 		components = []v1beta1.Component{{Name: config.Metadata.Name, ComponentSpec: config.Component}}
-	// TODO, when we add v1beta1 init configs, we'll have to allow that here as well
-	case string(v1beta1.ZarfPackageConfig):
+	case string(v1beta1.ZarfPackageConfig), string(v1beta1.ZarfInitConfig):
 		var pkg v1beta1.Package
 		if err := yaml.Unmarshal(contents, &pkg); err != nil {
 			return err

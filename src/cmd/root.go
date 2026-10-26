@@ -237,16 +237,16 @@ func setupRootFlags(rootCmd *cobra.Command) {
 
 	// Core functionality
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
-	cachePath := vpr.GetString(VCache)
+	cachePath = vpr.GetString(VCache)
 	if cachePath == "" {
 		cachePath = vpr.GetString(VZarfCache)
 	}
 	if cachePath == "" {
 		cachePath = config.ZarfDefaultCachePath
 	}
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", cachePath, lang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&cachePath, "zarf-cache", cachePath, lang.RootCmdFlagCachePath)
 	_ = rootCmd.PersistentFlags().MarkDeprecated("zarf-cache", "use --cache instead")
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "cache", cachePath, lang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&cachePath, "cache", cachePath, lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
 	// Security

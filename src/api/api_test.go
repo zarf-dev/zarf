@@ -39,6 +39,28 @@ func TestPackageGetAPIVersion(t *testing.T) {
 	}
 }
 
+func TestFileChecksumIsSet(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		checksum api.FileChecksum
+		want     bool
+	}{
+		{name: "omitted checksum"},
+		{name: "algorithm without digest", checksum: api.ParseFileChecksum("sha256:"), want: true},
+		{name: "digest without algorithm", checksum: api.FileChecksum{Digest: "abc123"}, want: true},
+		{name: "algorithm and digest", checksum: api.FileChecksum{Algorithm: api.ChecksumSHA512, Digest: "abc123"}, want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.want, tt.checksum.IsSet())
+		})
+	}
+}
+
 func TestPackageHasImages(t *testing.T) {
 	t.Parallel()
 
