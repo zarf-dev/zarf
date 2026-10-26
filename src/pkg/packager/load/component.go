@@ -90,11 +90,11 @@ func resolveComponent(ctx context.Context, componentPath string, opts ComponentO
 	if err != nil {
 		return ComponentConfigImportResolution{}, err
 	}
-	if validationErrs := internalv1beta1.ValidateComponent(v1beta1.Component{
+	if errs := internalv1beta1.ValidateComponent(v1beta1.Component{
 		Name:          resolved.Component.Metadata.Name,
 		ComponentSpec: resolved.Component.Component,
-	}); len(validationErrs) > 0 {
-		return ComponentConfigImportResolution{}, fmt.Errorf("component validation failed:\n%w", validationErrs)
+	}); len(errs) > 0 {
+		return ComponentConfigImportResolution{}, fmt.Errorf("component validation failed:\n%w", errs)
 	}
 	return resolved, nil
 }

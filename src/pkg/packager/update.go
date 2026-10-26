@@ -111,24 +111,24 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 		archives := map[string]struct{}{}
 		for _, archive := range result.ImageArchives {
 			for _, image := range archive.Images {
-				ref, err := transform.ParseImageRef(image)
+				ref, err := transform.ParseImageRef(image.Name)
 				if err != nil {
-					return fmt.Errorf("invalid image %q in archive %q: %w", image, archive.Path, err)
+					return fmt.Errorf("invalid image %q in archive %q: %w", image.Name, archive.Path, err)
 				}
 				archives[ref.Reference] = struct{}{}
 			}
 		}
-		existing := make(map[string]v1beta1.Image, len(component.Images))
+		existing := make(map[string][]v1beta1.Image, len(component.Images))
 		for _, image := range component.Images {
 			ref, err := transform.ParseImageRef(image.Name)
 			if err != nil {
 				return fmt.Errorf("invalid image %q in component %q: %w", image.Name, component.Name, err)
 			}
-			existing[ref.Reference] = image
+			existing[ref.Reference] = append(existing[ref.Reference], image)
 		}
 		foundImages := result.Matches
 		newImages := []v1beta1.Image{}
-		newByRef := make(map[string]v1beta1.Image, len(foundImages))
+		newByRef := make(map[string][]v1beta1.Image, len(foundImages))
 		for _, match := range foundImages {
 			name := match.Image.Name
 			ref, err := transform.ParseImageRef(name)
@@ -141,15 +141,15 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 			if _, duplicate := newByRef[ref.Reference]; duplicate {
 				continue
 			}
-			image, found := existing[ref.Reference]
+			images, found := existing[ref.Reference]
 			if !found {
-				image = v1beta1.Image{Name: name}
+				images = []v1beta1.Image{{Name: name}}
 			}
-			newByRef[ref.Reference] = image
-			newImages = append(newImages, image)
+			newByRef[ref.Reference] = images
+			newImages = append(newImages, images...)
 		}
 		// An empty scan does not replace authored images.
-		imagesUpToDate := len(foundImages) == 0 || (len(component.Images) == len(newImages) && maps.Equal(existing, newByRef))
+		imagesUpToDate := len(foundImages) == 0 || maps.EqualFunc(existing, newByRef, slices.Equal)
 		// Import resolution appends archives authored here after inherited archives.
 		if len(result.ImageArchives) < len(component.ImageArchives) {
 			return fmt.Errorf("component %q has fewer scanned archives than authored archives", component.Name)
@@ -161,7 +161,9 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 			}
 		}
 		archivesEqual := slices.EqualFunc(component.ImageArchives, authoredArchiveResults, func(a v1beta1.ImageArchive, b api.ImageArchive) bool {
-			return a.Path == b.Path && slices.Equal(a.Images, b.Images)
+			return a.Path == b.Path && slices.EqualFunc(a.Images, b.Images, func(a v1beta1.ArchiveImage, b api.ArchiveImage) bool {
+				return a.Name == b.Name && a.ID == b.ID
+			})
 		})
 		if imagesUpToDate && archivesEqual {
 			continue
@@ -171,7 +173,15 @@ func updateBetaImages(manifestPath string, contents []byte, kind string, results
 			patch["images"] = newImages
 		}
 		if !archivesEqual {
-			patch["imageArchives"] = authoredArchiveResults
+			archives := make([]v1beta1.ImageArchive, 0, len(authoredArchiveResults))
+			for _, archive := range authoredArchiveResults {
+				converted := v1beta1.ImageArchive{Path: archive.Path, Images: []v1beta1.ArchiveImage{}}
+				for _, image := range archive.Images {
+					converted.Images = append(converted.Images, v1beta1.ArchiveImage{Name: image.Name, ID: image.ID})
+				}
+				archives = append(archives, converted)
+			}
+			patch["imageArchives"] = archives
 		}
 		pathString := fmt.Sprintf("$.components[%d]", index)
 		if componentConfig {
@@ -294,7 +304,15 @@ func createImageUpdate(zarfPackage v1alpha1.ZarfPackage, definitionImageResults 
 		}
 
 		if len(result.ImageArchives) > 0 {
-			patch["imageArchives"] = result.ImageArchives
+			archives := make([]v1alpha1.ImageArchive, 0, len(result.ImageArchives))
+			for _, archive := range result.ImageArchives {
+				converted := v1alpha1.ImageArchive{Path: archive.Path, Images: []string{}}
+				for _, image := range archive.Images {
+					converted.Images = append(converted.Images, image.Name)
+				}
+				archives = append(archives, converted)
+			}
+			patch["imageArchives"] = archives
 		}
 
 		if err := patchComponent(patch, result.ComponentName, componentIndex, astFile); err != nil {
@@ -335,7 +353,7 @@ func imageUpdateNeeded(zarfPackage v1alpha1.ZarfPackage, definitionImageResults 
 		archiveScannedImages := make(map[string]struct{})
 		for _, ia := range result.ImageArchives {
 			for _, img := range ia.Images {
-				archiveScannedImages[img] = struct{}{}
+				archiveScannedImages[img.Name] = struct{}{}
 			}
 		}
 

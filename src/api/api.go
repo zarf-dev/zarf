@@ -79,7 +79,9 @@ func (c Component) GetImages() []string {
 		images = append(images, image.Name)
 	}
 	for _, archive := range c.ImageArchives {
-		images = append(images, archive.Images...)
+		for _, image := range archive.Images {
+			images = append(images, image.Name)
+		}
 	}
 	return images
 }

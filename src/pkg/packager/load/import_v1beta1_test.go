@@ -288,7 +288,7 @@ func TestRemoteImportRejectsUnbundledLocalResources(t *testing.T) {
 			c.Component.Manifests = []v1beta1.Manifest{{Name: "manifest", Files: []string{source}}}
 		}, field: "component.manifests[0].files[0]", reason: "invalid local resource path"},
 		{name: "absolute image archive path", set: func(c *v1beta1.ComponentConfig, source string) {
-			c.Component.ImageArchives = []v1beta1.ImageArchive{{Path: source, Images: []string{"example.com/image:1"}}}
+			c.Component.ImageArchives = []v1beta1.ImageArchive{{Path: source, Images: []v1beta1.ArchiveImage{{Name: "example.com/image:1"}}}}
 		}, field: "component.imageArchives[0].path", reason: "invalid local resource path"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

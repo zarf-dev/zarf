@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -19,6 +20,248 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestPackageDefinitionV1Beta1ImageIDs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		imported []v1beta1.Image
+		middle   []v1beta1.Image
+		head     []v1beta1.Image
+		want     []v1beta1.Image
+	}{
+		{
+			name:     "matching ID replaces reference and overrides source",
+			imported: []v1beta1.Image{{ID: "registry", Name: "registry:3", Source: "daemon"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "registry"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "registry"}},
+		},
+		{
+			name:     "matching ID inherits omitted source",
+			imported: []v1beta1.Image{{ID: "registry", Name: "registry:3", Source: "daemon"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "daemon"}},
+		},
+		{
+			name:     "matching name inherits ID for later replacement",
+			imported: []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+			middle:   []v1beta1.Image{{Name: "registry:3", Source: "daemon"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "daemon"}},
+		},
+		{
+			name:     "matching name adds ID for later replacement",
+			imported: []v1beta1.Image{{Name: "registry:3", Source: "daemon"}},
+			middle:   []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "daemon"}},
+		},
+		{
+			name:     "matching name overrides different ID",
+			imported: []v1beta1.Image{{ID: "old", Name: "registry:3"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+		},
+		{
+			name:     "empty IDs do not match and new images append",
+			imported: []v1beta1.Image{{Name: "nginx:1.27"}, {ID: "registry", Name: "registry:3"}},
+			head:     []v1beta1.Image{{Name: "redis:7"}, {ID: "app", Name: "example.com/app:1"}},
+			want:     []v1beta1.Image{{Name: "nginx:1.27"}, {ID: "registry", Name: "registry:3"}, {Name: "redis:7"}, {ID: "app", Name: "example.com/app:1"}},
+		},
+		{
+			name:     "ID match takes precedence over earlier name match",
+			imported: []v1beta1.Image{{ID: "other", Name: "enterprise.example.com/registry:3"}, {ID: "registry", Name: "registry:3"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "other", Name: "enterprise.example.com/registry:3"}, {ID: "registry", Name: "enterprise.example.com/registry:3"}},
+		},
+		{
+			name:     "nearest importing component wins in nested imports",
+			imported: []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+			middle:   []v1beta1.Image{{ID: "registry", Name: "mirror.example.com/registry:3"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			writeYAML := func(name string, value any) {
+				t.Helper()
+				data, err := goyaml.MarshalWithOptions(value, goyaml.UseJSONMarshaler())
+				require.NoError(t, err)
+				require.NoError(t, os.WriteFile(filepath.Join(dir, name), data, 0o600))
+			}
+			writeYAML("base.yaml", v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfComponentConfig,
+				Metadata:   v1beta1.ComponentMetadata{Name: "base"},
+				Component:  v1beta1.ComponentSpec{Images: tt.imported},
+			})
+			writeYAML("middle.yaml", v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfComponentConfig,
+				Metadata:   v1beta1.ComponentMetadata{Name: "middle"},
+				Component: v1beta1.ComponentSpec{
+					Import: v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "base.yaml"}}},
+					Images: tt.middle,
+				},
+			})
+			writeYAML(layout.ZarfYAML, v1beta1.Package{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfPackageConfig,
+				Metadata:   v1beta1.PackageMetadata{Name: "image-ids"},
+				Components: []v1beta1.Component{{
+					Name: "app",
+					ComponentSpec: v1beta1.ComponentSpec{
+						Import: v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "middle.yaml"}}},
+						Images: tt.head,
+					},
+				}},
+			})
+
+			pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+			require.NoError(t, err)
+			require.Len(t, pkg.Components, 1)
+			require.Equal(t, tt.want, convert.PackageToV1beta1(pkg).Components[0].Images)
+		})
+	}
+}
+
+func TestV1Beta1ComponentImageIDs(t *testing.T) {
+	t.Parallel()
+
+	regular := func(id, name string) v1beta1.Image { return v1beta1.Image{ID: id, Name: name} }
+	archived := func(path, id, name string) v1beta1.ImageArchive {
+		return v1beta1.ImageArchive{Path: path, Images: []v1beta1.ArchiveImage{{ID: id, Name: name}}}
+	}
+	for _, tc := range []struct {
+		name     string
+		imported v1beta1.ComponentSpec
+		head     v1beta1.ComponentSpec
+		wantErr  bool
+	}{
+		{
+			name:     "regular image overrides imported regular image",
+			imported: v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:1")}},
+			head:     v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:2")}},
+		},
+		{
+			name:     "archive image is available by ID after import",
+			imported: v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("images.tar", "app", "app.internal/app:1")}},
+		},
+		{
+			name:     "regular image cannot override imported archive image",
+			imported: v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("images.tar", "app", "app.internal/app:1")}},
+			head:     v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:2")}},
+			wantErr:  true,
+		},
+		{
+			name:     "archive image cannot override imported regular image",
+			imported: v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:1")}},
+			head:     v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("images.tar", "app", "app.internal/app:2")}},
+			wantErr:  true,
+		},
+		{
+			name:     "archive images cannot override imported archive images",
+			imported: v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("images.tar", "app", "app.internal/app:1")}},
+			head:     v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("replacement.tar", "app", "app.internal/app:2")}},
+			wantErr:  true,
+		},
+		{
+			name:     "duplicate authored regular IDs cannot merge away",
+			imported: v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:1")}},
+			head:     v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:2"), regular("app", "example.com/app:3")}},
+			wantErr:  true,
+		},
+		{
+			name:     "duplicate imported regular IDs cannot be overridden away",
+			imported: v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:1"), regular("app", "example.com/app:2")}},
+			head:     v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:3")}},
+			wantErr:  true,
+		},
+		{
+			name: "duplicate IDs within an archive",
+			head: v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{{Path: "images.tar", Images: []v1beta1.ArchiveImage{
+				{ID: "app", Name: "app.internal/app:1"}, {ID: "app", Name: "app.internal/app:2"},
+			}}}},
+			wantErr: true,
+		},
+		{
+			name:    "duplicate IDs across authored archives",
+			head:    v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("one.tar", "app", "app.internal/app:1"), archived("two.tar", "app", "app.internal/app:2")}},
+			wantErr: true,
+		},
+		{
+			name: "duplicate IDs across authored regular and archive images",
+			head: v1beta1.ComponentSpec{
+				Images:        []v1beta1.Image{regular("app", "example.com/app:1")},
+				ImageArchives: []v1beta1.ImageArchive{archived("images.tar", "app", "app.internal/app:2")},
+			},
+			wantErr: true,
+		},
+		{
+			name:     "empty IDs are allowed across all image sources",
+			imported: v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("", "example.com/app:1")}},
+			head:     v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("one.tar", "", "app.internal/app:1"), archived("two.tar", "", "app.internal/app:2")}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			write := func(name string, definition any) string {
+				t.Helper()
+				b, err := goyaml.Marshal(definition)
+				require.NoError(t, err)
+				path := filepath.Join(dir, name)
+				require.NoError(t, os.WriteFile(path, b, 0o600))
+				return path
+			}
+			write("base.yaml", v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfComponentConfig,
+				Metadata: v1beta1.ComponentMetadata{Name: "base"}, Component: tc.imported,
+			})
+			head := tc.head
+			head.Import.Local = []v1beta1.ComponentImportLocal{{Path: "base.yaml"}}
+			componentPath := write("component.yaml", v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfComponentConfig,
+				Metadata: v1beta1.ComponentMetadata{Name: "app"}, Component: head,
+			})
+			packagePath := write("zarf.yaml", v1beta1.Package{
+				APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfPackageConfig,
+				Metadata: v1beta1.PackageMetadata{Name: "image-ids"},
+				Components: []v1beta1.Component{
+					{Name: "app", ComponentSpec: head},
+					// IDs are scoped to a component, not to the package.
+					{Name: "other", ComponentSpec: v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/other:1")}}},
+				},
+			})
+			ctx := testutil.TestContext(t)
+			pkg, packageErr := PackageDefinition(ctx, packagePath, DefinitionOptions{})
+			component, componentErr := ComponentDefinition(ctx, componentPath, ComponentOptions{})
+			if tc.wantErr {
+				for _, err := range []error{packageErr, componentErr} {
+					require.ErrorContains(t, err, `image ID "app" is not unique`)
+				}
+				return
+			}
+			require.NoError(t, packageErr)
+			require.NoError(t, componentErr)
+			resolved := convert.PackageToV1beta1(pkg).Components[0]
+			require.Equal(t, component.Component, resolved.ComponentSpec)
+			if tc.name == "regular image overrides imported regular image" {
+				require.Equal(t, tc.head.Images, resolved.Images)
+			}
+			if tc.name == "archive image is available by ID after import" {
+				image, err := resolved.GetImageByID("app")
+				require.NoError(t, err)
+				require.Equal(t, "app.internal/app:1", image.Reference)
+			}
+		})
+	}
+}
 
 func TestLoadPackageWithFlavors(t *testing.T) {
 	t.Parallel()
