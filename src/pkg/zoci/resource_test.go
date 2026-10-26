@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"testing"
+
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
@@ -14,7 +16,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/memory"
-	"testing"
 )
 
 func TestDocumentationResourceLayers(t *testing.T) {
@@ -132,17 +133,26 @@ func TestDocumentationResourceLayers(t *testing.T) {
 	}
 }
 
-func TestChecksumVerifiedSBOMLayersRejectsKindOmission(t *testing.T) {
+func TestChecksumVerifiedSBOMLayersSelectsRequestedKeys(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	resourcePath := layout.ComponentSBOMResourcePath("metrics")
-	resource := content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("sbom"))
+	resource := content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("metrics sbom"))
 	resource.Annotations = map[string]string{
 		ocispec.AnnotationTitle:       resourcePath,
 		layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
 	}
-	checksums := []byte(resource.Digest.Encoded() + " " + resourcePath + "\n")
+	unselectedResourcePath := layout.ComponentSBOMResourcePath("logs")
+	unselectedResource := content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("logs sbom"))
+	unselectedResource.Annotations = map[string]string{
+		ocispec.AnnotationTitle:       unselectedResourcePath,
+		layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
+	}
+	checksums := []byte(fmt.Sprintf("%s %s\n%s %s\n",
+		resource.Digest.Encoded(), resourcePath,
+		unselectedResource.Digest.Encoded(), unselectedResourcePath,
+	))
 	aggregateChecksum, err := checksum.GetSHA256Hash(bytes.NewReader(checksums))
 	require.NoError(t, err)
 
@@ -162,18 +172,29 @@ build:
 	require.NoError(t, store.Push(ctx, checksumDesc, bytes.NewReader(checksums)))
 
 	root := &oci.Manifest{Manifest: ocispec.Manifest{
-		Layers: []ocispec.Descriptor{zarfYAMLDesc, checksumDesc, resource},
+		Layers: []ocispec.Descriptor{zarfYAMLDesc, checksumDesc, resource, unselectedResource},
 	}}
-	layers, err := AssembleLayers(ctx, root, store, nil, LayerSelection{SBOMs: true})
+	selection := LayerSelection{SBOMs: &SBOMSelection{Keys: []string{resourcePath}}}
+	layers, err := AssembleLayers(ctx, root, store, nil, selection)
 	require.NoError(t, err)
 	require.Equal(t, []ocispec.Descriptor{zarfYAMLDesc, checksumDesc, resource}, layers)
 
-	resource.Annotations = map[string]string{
-		ocispec.AnnotationTitle: resourcePath,
+	unselectedResource.Annotations = map[string]string{
+		ocispec.AnnotationTitle: unselectedResourcePath,
 	}
-	root.Layers[2] = resource
-	_, err = AssembleLayers(ctx, root, store, nil, LayerSelection{SBOMs: true})
-	require.ErrorContains(t, err, `SBOM resource "`+resourcePath+`" has an invalid OCI kind`)
+	root.Layers[3] = unselectedResource
+	_, err = AssembleLayers(ctx, root, store, nil, selection)
+	require.ErrorContains(t, err, `SBOM resource "`+unselectedResourcePath+`" has an invalid OCI kind`)
+
+	root.Layers[3] = content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("logs sbom"))
+	root.Layers[3].Annotations = map[string]string{
+		ocispec.AnnotationTitle:       unselectedResourcePath,
+		layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
+	}
+	_, err = AssembleLayers(ctx, root, store, nil, LayerSelection{
+		SBOMs: &SBOMSelection{Keys: []string{layout.ComponentSBOMResourcePath("missing")}},
+	})
+	require.ErrorContains(t, err, `SBOM resource "`+layout.ComponentSBOMResourcePath("missing")+`" not found in package checksums`)
 }
 
 func TestAssembleLayersSelectsLegacyResourceArchives(t *testing.T) {
@@ -205,7 +226,7 @@ documentation:
 	require.NoError(t, err)
 	require.Equal(t, []ocispec.Descriptor{zarfYAMLDesc, documentationDesc}, documentationLayers)
 
-	sbomLayers, err := AssembleLayers(ctx, root, store, nil, LayerSelection{SBOMs: true})
+	sbomLayers, err := AssembleLayers(ctx, root, store, nil, LayerSelection{SBOMs: &SBOMSelection{}})
 	require.NoError(t, err)
 	require.Equal(t, []ocispec.Descriptor{zarfYAMLDesc, sbomDesc}, sbomLayers)
 }

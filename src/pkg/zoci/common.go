@@ -28,8 +28,15 @@ import (
 type LayerSelection struct {
 	Components    bool
 	Images        bool
-	SBOMs         bool
+	SBOMs         *SBOMSelection
 	Documentation *DocumentationSelection
+}
+
+// SBOMSelection specifies which checksum-declared SBOM resources to retrieve.
+// Keys are canonical package-relative SBOM resource paths.
+// An empty key set selects every declared SBOM.
+type SBOMSelection struct {
+	Keys []string
 }
 
 // DocumentationSelection specifies which declared documentation resources to retrieve.
@@ -43,7 +50,7 @@ func AllLayerSelection() LayerSelection {
 	return LayerSelection{
 		Components:    true,
 		Images:        true,
-		SBOMs:         true,
+		SBOMs:         &SBOMSelection{},
 		Documentation: &DocumentationSelection{},
 	}
 }

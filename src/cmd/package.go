@@ -1211,7 +1211,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerSelection:       &zoci.LayerSelection{SBOMs: true},
+		LayerSelection:       &zoci.LayerSelection{SBOMs: &zoci.SBOMSelection{}},
 		Filter:               filters.Empty(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),

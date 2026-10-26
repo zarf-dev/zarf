@@ -188,9 +188,9 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		}
 	}
 
-	if selection.SBOMs {
+	if selection.SBOMs != nil {
 		if layout.UsesGranularResourceLayout(pkg) {
-			sbomLayers, err := checksumVerifiedSBOMLayers(ctx, root, fetcher, pkg)
+			sbomLayers, err := checksumVerifiedSBOMLayers(ctx, root, fetcher, pkg, selection.SBOMs.Keys)
 			if err != nil {
 				return nil, err
 			}
@@ -269,8 +269,8 @@ func documentationResourceLayers(root *oci.Manifest, documentation map[string]st
 	return layers, nil
 }
 
-// checksumVerifiedSBOMLayers selects every checksum-listed SBOM resource from an OCI manifest.
-func checksumVerifiedSBOMLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, pkg api.Package) ([]ocispec.Descriptor, error) {
+// checksumVerifiedSBOMLayers validates every checksum-listed SBOM resource before selecting requested resources.
+func checksumVerifiedSBOMLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, pkg api.Package, keys []string) ([]ocispec.Descriptor, error) {
 	checksumDesc := root.Locate(layout.Checksums)
 	if oci.IsEmptyDescriptor(checksumDesc) {
 		return nil, fmt.Errorf("checksums descriptor not found in OCI manifest")
@@ -303,6 +303,11 @@ func checksumVerifiedSBOMLayers(ctx context.Context, root *oci.Manifest, fetcher
 		descriptorsByPath[resourcePath] = descriptor
 	}
 
+	requested := make(map[string]struct{}, len(keys))
+	for _, key := range keys {
+		requested[key] = struct{}{}
+	}
+	foundRequested := make(map[string]struct{}, len(requested))
 	layers := []ocispec.Descriptor{}
 	for _, entry := range entries {
 		if !strings.HasPrefix(entry.Path, layout.SBOMResourcesDir+"/") {
@@ -324,7 +329,19 @@ func checksumVerifiedSBOMLayers(ctx context.Context, root *oci.Manifest, fetcher
 		if descriptor.Digest.String() != string(api.ChecksumSHA256)+":"+entry.Digest {
 			return nil, fmt.Errorf("SBOM resource %q has an OCI digest that does not match checksums.txt", entry.Path)
 		}
-		layers = append(layers, descriptor)
+		if len(requested) == 0 {
+			layers = append(layers, descriptor)
+			continue
+		}
+		if _, selected := requested[entry.Path]; selected {
+			layers = append(layers, descriptor)
+			foundRequested[entry.Path] = struct{}{}
+		}
+	}
+	for _, key := range keys {
+		if _, found := foundRequested[key]; !found {
+			return nil, fmt.Errorf("SBOM resource %q not found in package checksums", key)
+		}
 	}
 	return layers, nil
 }

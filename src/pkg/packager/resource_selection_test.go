@@ -28,11 +28,13 @@ func TestLoadPackageSelectsGranularResources(t *testing.T) {
 	firstDocumentationPath := path.Join(layout.DocumentationDir, "first-README.md")
 	secondDocumentationPath := path.Join(layout.DocumentationDir, "second-README.md")
 	sbomResourcePath := layout.ComponentSBOMResourcePath("metrics")
+	unselectedSBOMResourcePath := layout.ComponentSBOMResourcePath("logs")
 	resources := map[string][]byte{
-		firstDocumentationPath:  []byte("first documentation"),
-		secondDocumentationPath: []byte("second documentation"),
-		sbomResourcePath:        []byte(`{"artifacts":[]}`),
-		"metrics.txt":           []byte("metrics"),
+		firstDocumentationPath:     []byte("first documentation"),
+		secondDocumentationPath:    []byte("second documentation"),
+		sbomResourcePath:           []byte(`{"artifacts":[]}`),
+		unselectedSBOMResourcePath: []byte(`{"artifacts":[{"name":"logs"}]}`),
+		"metrics.txt":              []byte("metrics"),
 	}
 	for resourcePath, contents := range resources {
 		filePath := filepath.Join(sourceDir, filepath.FromSlash(resourcePath))
@@ -41,7 +43,7 @@ func TestLoadPackageSelectsGranularResources(t *testing.T) {
 	}
 
 	checksums := make([]byte, 0)
-	for _, resourcePath := range []string{firstDocumentationPath, secondDocumentationPath, sbomResourcePath, "metrics.txt"} {
+	for _, resourcePath := range []string{firstDocumentationPath, secondDocumentationPath, sbomResourcePath, unselectedSBOMResourcePath, "metrics.txt"} {
 		digest, err := checksum.GetSHA256Hash(bytes.NewReader(resources[resourcePath]))
 		require.NoError(t, err)
 		checksums = append(checksums, fmt.Sprintf("%s %s\n", digest, resourcePath)...)
@@ -102,6 +104,7 @@ components:
 	require.FileExists(t, filepath.Join(documentationLayout.DirPath(), firstDocumentationPath))
 	require.NoFileExists(t, filepath.Join(documentationLayout.DirPath(), secondDocumentationPath))
 	require.NoFileExists(t, filepath.Join(documentationLayout.DirPath(), filepath.FromSlash(sbomResourcePath)))
+	require.NoFileExists(t, filepath.Join(documentationLayout.DirPath(), filepath.FromSlash(unselectedSBOMResourcePath)))
 
 	documentationOutput := t.TempDir()
 	require.NoError(t, documentationLayout.GetDocumentation(ctx, documentationOutput, []string{"first"}))
@@ -110,10 +113,13 @@ components:
 	require.Equal(t, resources[firstDocumentationPath], documentationContents)
 	require.NoFileExists(t, filepath.Join(documentationOutput, "second-README.md"))
 
-	sbomLayout, err := LoadPackage(ctx, packageRef.String(), loadOptions(zoci.LayerSelection{SBOMs: true}))
+	sbomLayout, err := LoadPackage(ctx, packageRef.String(), loadOptions(zoci.LayerSelection{
+		SBOMs: &zoci.SBOMSelection{Keys: []string{sbomResourcePath}},
+	}))
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, sbomLayout.Cleanup()) })
 	require.FileExists(t, filepath.Join(sbomLayout.DirPath(), filepath.FromSlash(sbomResourcePath)))
+	require.NoFileExists(t, filepath.Join(sbomLayout.DirPath(), filepath.FromSlash(unselectedSBOMResourcePath)))
 	require.NoFileExists(t, filepath.Join(sbomLayout.DirPath(), firstDocumentationPath))
 	require.NoFileExists(t, filepath.Join(sbomLayout.DirPath(), secondDocumentationPath))
 
@@ -122,4 +128,5 @@ components:
 	sbomContents, err := os.ReadFile(filepath.Join(sbomOutput, "files", "metrics.json"))
 	require.NoError(t, err)
 	require.Equal(t, resources[sbomResourcePath], sbomContents)
+	require.NoFileExists(t, filepath.Join(sbomOutput, "files", "logs.json"))
 }
