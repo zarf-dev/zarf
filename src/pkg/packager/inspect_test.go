@@ -362,7 +362,6 @@ func TestInspectDefinitionResources(t *testing.T) {
 
 func TestInspectDefinitionResources_Errors(t *testing.T) {
 	t.Parallel()
-
 	tests := []struct {
 		name       string
 		packageDir string
