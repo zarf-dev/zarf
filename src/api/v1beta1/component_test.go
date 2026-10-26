@@ -57,13 +57,18 @@ func TestGetImageByID(t *testing.T) {
 			{ID: "web", Name: "nginx:1.29.2"},
 		}},
 	}
-	for _, id := range []string{"missing", "", "nginx:1.29.2"} {
+	for _, id := range []string{"missing", "nginx:1.29.2"} {
 		t.Run("rejects ID "+id, func(t *testing.T) {
 			_, err := component.GetImageByID(id)
 			require.ErrorContains(t, err, "no image with ID")
 			require.ErrorContains(t, err, `component "example"`)
 		})
 	}
+
+	t.Run("empty ID", func(t *testing.T) {
+		_, err := component.GetImageByID("")
+		require.EqualError(t, err, "image ID must not be empty")
+	})
 
 	t.Run("component without images", func(t *testing.T) {
 		_, err := (Component{Name: "empty"}).GetImageByID("web")

@@ -35,7 +35,7 @@ type ImageReference struct {
 // Tag and Digest are empty when absent from the image reference.
 func (c Component) GetImageByID(id string) (ImageReference, error) {
 	if id == "" {
-		return ImageReference{}, fmt.Errorf("no image with ID %q in component %q", id, c.Name)
+		return ImageReference{}, fmt.Errorf("image ID must not be empty")
 	}
 	parse := func(name string) (ImageReference, error) {
 		ref, err := reference.Parse(name)
