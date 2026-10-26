@@ -132,7 +132,7 @@ func TestAssembleSkeletonComponentRejectsUnsafeChartArtifactComponents(t *testin
 	require.NoDirExists(t, filepath.Join(buildPath, "component", string(layout.ChartsComponentDir)))
 }
 
-func TestCreateDocumentationTarRejectsPathKeys(t *testing.T) {
+func TestStageDocumentationRejectsPathKeys(t *testing.T) {
 	t.Parallel()
 
 	pkg := api.Package{
@@ -142,7 +142,7 @@ func TestCreateDocumentationTarRejectsPathKeys(t *testing.T) {
 		},
 	}
 	buildPath := t.TempDir()
-	err := createDocumentationTar(testutil.TestContext(t), pkg, load.NewResourceSet(t.TempDir()), buildPath)
+	err := stageDocumentation(testutil.TestContext(t), pkg, load.NewResourceSet(t.TempDir()), buildPath)
 	require.ErrorContains(t, err, "documentation key")
 	require.NoFileExists(t, filepath.Join(buildPath, layout.DocumentationTar))
 }
@@ -175,7 +175,7 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	require.Equal(t, "c09d17f612f241cdf549e5fb97c9e063a8ad18ae7a9f3af066332ed6b38556ad", shaSum)
 }
 
-func TestCreateDocumentationTarMaterializesSymlinks(t *testing.T) {
+func TestStageDocumentationMaterializesSymlinks(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Windows symlink creation requires elevated privileges")
 	}
@@ -220,7 +220,7 @@ func TestCreateDocumentationTarMaterializesSymlinks(t *testing.T) {
 			require.NoError(t, os.Symlink(target, filepath.Join(resourceRoot, "readme.md")))
 
 			buildPath := t.TempDir()
-			require.NoError(t, createDocumentationTar(testutil.TestContext(t), api.Package{
+			require.NoError(t, stageDocumentation(testutil.TestContext(t), api.Package{
 				Attachments: map[string]string{"readme": "readme.md"},
 			}, load.NewResourceSet(resourceRoot), buildPath))
 
@@ -869,13 +869,15 @@ func TestAssemblePackageV1Beta1WritesMultiDocDefinition(t *testing.T) {
 kind: ZarfPackageConfig
 metadata:
   name: beta-local
+attachments:
+  readme: %q
 components:
   - name: beta-component
     files:
       - source: %q
         checksum: %q
         destination: data.txt
-`, dataPath, checksum)
+`, dataPath, dataPath, checksum)
 	require.NoError(t, os.WriteFile(filepath.Join(tmpdir, layout.ZarfYAML), []byte(zarfYAML), 0o600))
 
 	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
@@ -892,6 +894,25 @@ components:
 	require.NoError(t, err)
 	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
 	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
+	require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationDir, "data.txt"))
+	require.NoFileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationTar))
+}
+
+func TestStageDocumentationRejectsUnsafeKeys(t *testing.T) {
+	t.Parallel()
+
+	for _, apiVersion := range []string{v1alpha1.APIVersion, v1beta1.APIVersion} {
+		t.Run(apiVersion, func(t *testing.T) {
+			buildPath := t.TempDir()
+			err := stageDocumentation(t.Context(), api.Package{
+				APIVersion:  apiVersion,
+				Attachments: map[string]string{"../escape": "first/README.md", "readme": "second/README.md"},
+			}, load.NewResourceSet(t.TempDir()), buildPath)
+
+			require.EqualError(t, err, `documentation key validation failed: "../escape" must not contain path separators`)
+			require.NoFileExists(t, filepath.Join(filepath.Dir(buildPath), "escape-README.md"))
+		})
+	}
 }
 
 func TestAssemblePackageReadinessVersionRequirement(t *testing.T) {

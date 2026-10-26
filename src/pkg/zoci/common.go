@@ -31,7 +31,7 @@ const (
 	DefaultConcurrency = 6
 	//DefaultRetries is the default number of retries for operations
 	DefaultRetries = 1
-	// ImageCacheDirectory is the directory within the Zarf cache containing an OCI store
+	// ImageCacheDirectory is the directory within the Zarf cache containing OCI blobs.
 	ImageCacheDirectory = "images"
 	// MetadataLayers includes zarf.yaml, signature, and checksums.
 	MetadataLayers LayerType = "metadata"
@@ -103,7 +103,7 @@ func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Plat
 		modifiers = append(modifiers, oci.WithTransport(options.Transport))
 	}
 	if options.CachePath != "" {
-		cacheModifier, err := GetOCICacheModifier(ctx, options.CachePath)
+		cacheModifier, err := GetOCICacheModifier(options.CachePath)
 		if err != nil {
 			return nil, err
 		}
@@ -163,8 +163,8 @@ func newRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 }
 
 // GetOCICacheModifier takes in a Zarf cachePath and uses it to return an oci.WithCache modifier
-func GetOCICacheModifier(ctx context.Context, cachePath string) (oci.Modifier, error) {
-	ociCache, err := ociDirectory.NewWithContext(ctx, filepath.Join(cachePath, ImageCacheDirectory))
+func GetOCICacheModifier(cachePath string) (oci.Modifier, error) {
+	ociCache, err := ociDirectory.NewStorage(filepath.Join(cachePath, ImageCacheDirectory))
 	if err != nil {
 		return nil, err
 	}
