@@ -243,6 +243,7 @@ test-e2e: test-e2e-without-cluster test-e2e-with-cluster  ## Run all of the core
 .PHONY: test-e2e-with-cluster
 test-e2e-with-cluster: ## Run all of the core Zarf CLI E2E tests that DO require a cluster
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
+	@test -s ./build/v1beta1-init/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package-v1beta1
 	cd src/test/e2e && go test ./main_test.go ./[2-9]*.go -failfast -v -timeout 35m
 
 .PHONY: test-e2e-without-cluster

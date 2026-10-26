@@ -124,30 +124,9 @@ func TestZarfInit(t *testing.T) {
 	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--registry-push-password", "new-password", "--confirm")
 	require.Error(t, err)
 
-	initPackageV1beta1Source := filepath.Join("packages", "v1beta1-init")
-	for _, template := range []string{
-		"agent/zarf.tpl.yaml",
-		"git-server/zarf.tpl.yaml",
-		"injector/amd64.tpl.yaml",
-		"injector/arm64.tpl.yaml",
-		"k3s/common.tpl.yaml",
-		"k3s/amd64.tpl.yaml",
-		"k3s/arm64.tpl.yaml",
-		"registry/registry-base.tpl.yaml",
-		"registry/seed-registry.tpl.yaml",
-		"registry/zarf.tpl.yaml",
-		"zarf.tpl.yaml",
-	} {
-		stdOut, stdErr, err := e2e.Zarf(t, "dev", "template", filepath.Join(initPackageV1beta1Source, template), "--set-file", filepath.Join(initPackageV1beta1Source, "template-values.yaml"))
-		require.NoError(t, err, stdOut, stdErr)
-	}
-	initPackageV1beta1Dir := t.TempDir()
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", initPackageV1beta1Source, "-o", initPackageV1beta1Dir, "--architecture", e2e.Arch, "--features=v1beta1=true", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-
 	// Upgrade the v1alpha1 init installation to the v1beta1 init package.
-	initPackageV1beta1 := filepath.Join(initPackageV1beta1Dir, fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, initPackageVersion))
-	stdOut, stdErr, err = e2e.Zarf(t, "init", initPackageV1beta1, "--components="+initComponents, "--features=v1beta1=true,values=true", "--confirm")
+	initPackageV1beta1 := filepath.Join("build", "v1beta1-init", fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, initPackageVersion))
+	stdOut, stdErr, err := e2e.Zarf(t, "init", initPackageV1beta1, "--components="+initComponents, "--features=v1beta1=true,values=true", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	verifyZarfNamespaceLabels(t)
