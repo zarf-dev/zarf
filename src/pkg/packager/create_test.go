@@ -29,7 +29,8 @@ func TestPackageCreateSecretSize(t *testing.T) {
 		{name: "implicit-alpha-over-limit", description: strings.Repeat("a", 1_000_000), wantError: true},
 		{name: "alpha-below-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 900_000)},
 		{name: "alpha-over-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 1_000_000), wantError: true},
-		{name: "alpha-json-escaping-exceeds-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("<", 180_000), wantError: true},
+		// Ampersands exercise JSON escaping and remain quoted when the definition is written as YAML.
+		{name: "alpha-json-escaping-exceeds-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("&", 180_000), wantError: true},
 		{name: "beta-below-limit", apiVersion: v1beta1.APIVersion, description: strings.Repeat("a", 450_000)},
 		// The beta definition fits alone, but its alpha compatibility copy pushes the secret over the limit.
 		{name: "beta-compatibility-copy-exceeds-limit", apiVersion: v1beta1.APIVersion, description: strings.Repeat("a", 600_000), wantError: true},

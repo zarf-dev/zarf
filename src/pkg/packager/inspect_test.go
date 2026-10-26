@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -99,6 +100,7 @@ stringData:
 }
 
 func TestInspectDefinitionResourcesComponentValuesSchema(t *testing.T) {
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
 	dir := t.TempDir()
 	for name, contents := range map[string]string{
 		"zarf.yaml": `apiVersion: zarf.dev/v1beta1
@@ -160,6 +162,7 @@ func assertContainsAll(t *testing.T, resources []Resource, expectedContent []str
 }
 
 func TestInspectPackageResourcesSkipsValuesSchemaValidationWhenConfigured(t *testing.T) {
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
 	ctx := testutil.TestContext(t)
 	srcDir := filepath.Join("load", "testdata", "package-with-invalid-values")
 	loaded, err := load.Package(ctx, srcDir, load.PackageOptions{SkipValuesSchemaValidation: true})
@@ -180,6 +183,7 @@ func TestInspectPackageResourcesSkipsValuesSchemaValidationWhenConfigured(t *tes
 
 func TestInspectDefinitionResources(t *testing.T) {
 	t.Parallel()
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
 
 	tests := []struct {
 		name              string
@@ -362,6 +366,7 @@ func TestInspectDefinitionResources(t *testing.T) {
 
 func TestInspectDefinitionResources_Errors(t *testing.T) {
 	t.Parallel()
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
 	tests := []struct {
 		name       string
 		packageDir string
