@@ -34,6 +34,7 @@ jobs:
       packages: write
     env:
       CLI_VERSION: ${{ inputs.version }}
+      AGENT_IMAGE_TAG: ${{ inputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -58,7 +59,7 @@ jobs:
       - name: Build v1beta1 Init Packages
         run: |
           for arch in amd64 arm64; do
-            make release-init-package-v1beta1 ARCH="$arch" AGENT_IMAGE_TAG="$CLI_VERSION"
+            make release-init-package-v1beta1 ARCH="$arch"
           done
 
       - name: Sign v1beta1 Init Packages
@@ -73,3 +74,6 @@ jobs:
           for arch in amd64 arm64; do
             make publish-init-package-v1beta1 ARCH="$arch" REPOSITORY_URL=ghcr.io/zarf-dev/packages/v1beta1
           done
+
+      - name: Publish v1beta1 Init Component Configs
+        run: make publish-init-components-v1beta1 REPOSITORY_URL=ghcr.io/zarf-dev/components/init

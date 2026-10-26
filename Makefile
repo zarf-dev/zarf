@@ -144,19 +144,26 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
-# Build-time overrides use zarf dev template's dotted keys, e.g. agent.image and agent.source.
+# Build-time image defaults for zarf dev template.
 INIT_V1BETA1_TEMPLATE_VALUES ?= packages/v1beta1-init/template-values.yaml
-INIT_V1BETA1_TEMPLATE_SET ?=
 INIT_V1BETA1_OUTPUT ?= build/v1beta1-init
 
 .PHONY: template-init-package-v1beta1 init-package-v1beta1 release-init-package-v1beta1
 template-init-package-v1beta1: ## Render the v1beta1 init package and publishable component definitions
 	@test -s $(ZARF_BIN) || $(MAKE) $(BUILD_CLI_FOR_SYSTEM)
 	@case "$(ARCH)" in amd64|arm64) ;; *) echo "v1beta1 init supports amd64 and arm64"; exit 1 ;; esac
-	@for template in packages/v1beta1-init/*/*.tpl.yaml packages/v1beta1-init/zarf.tpl.yaml; do \
-		$(ZARF_BIN) dev template "$$template" --set-file "$(INIT_V1BETA1_TEMPLATE_VALUES)" \
-			$(if $(INIT_V1BETA1_TEMPLATE_SET),--set '$(INIT_V1BETA1_TEMPLATE_SET)') || exit; \
-	done
+	$(ZARF_BIN) dev template packages/v1beta1-init/agent/zarf.tpl.yaml --set-file "$(INIT_V1BETA1_TEMPLATE_VALUES)" \
+		$(if $(AGENT_IMAGE_TAG),--set 'agent.image=ghcr.io/zarf-dev/zarf/agent:$(AGENT_IMAGE_TAG)' --set agent.source=registry)
+	$(ZARF_BIN) dev template packages/v1beta1-init/git-server/zarf.tpl.yaml --set-file "$(INIT_V1BETA1_TEMPLATE_VALUES)"
+	$(ZARF_BIN) dev template packages/v1beta1-init/injector/amd64.tpl.yaml
+	$(ZARF_BIN) dev template packages/v1beta1-init/injector/arm64.tpl.yaml
+	$(ZARF_BIN) dev template packages/v1beta1-init/k3s/common.tpl.yaml
+	$(ZARF_BIN) dev template packages/v1beta1-init/k3s/amd64.tpl.yaml
+	$(ZARF_BIN) dev template packages/v1beta1-init/k3s/arm64.tpl.yaml
+	$(ZARF_BIN) dev template packages/v1beta1-init/registry/registry-base.tpl.yaml --set-file "$(INIT_V1BETA1_TEMPLATE_VALUES)"
+	$(ZARF_BIN) dev template packages/v1beta1-init/registry/seed-registry.tpl.yaml
+	$(ZARF_BIN) dev template packages/v1beta1-init/registry/zarf.tpl.yaml
+	$(ZARF_BIN) dev template packages/v1beta1-init/zarf.tpl.yaml
 
 init-package-v1beta1: ## Build the local agent and create the v1beta1 init package
 	$(MAKE) $(sort $(BUILD_CLI_FOR_SYSTEM) $(if $(filter arm64,$(ARCH)),build-cli-linux-arm,build-cli-linux-amd))
@@ -166,11 +173,7 @@ init-package-v1beta1: ## Build the local agent and create the v1beta1 init packa
 
 release-init-package-v1beta1: ## Create the v1beta1 init package with a released agent image
 	@test -n "$(AGENT_IMAGE_TAG)" || { echo "Set AGENT_IMAGE_TAG to the released agent tag"; exit 1; }
-	@template_set='agent.image=ghcr.io/zarf-dev/zarf/agent:$(AGENT_IMAGE_TAG),agent.source=registry'; \
-		if [ -n '$(INIT_V1BETA1_TEMPLATE_SET)' ]; then \
-			template_set="$$template_set,"'$(INIT_V1BETA1_TEMPLATE_SET)'; \
-		fi; \
-		$(MAKE) template-init-package-v1beta1 INIT_V1BETA1_TEMPLATE_SET="$$template_set"
+	$(MAKE) template-init-package-v1beta1
 	$(ZARF_BIN) package create packages/v1beta1-init -o "$(INIT_V1BETA1_OUTPUT)" -a $(ARCH) --features=v1beta1=true
 
 ## Build the Zarf CLI for all platforms aligned with the release process
@@ -193,9 +196,20 @@ publish-init-package:
 	$(ZARF_BIN) package publish build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst oci://$(REPOSITORY_URL)
 	$(ZARF_BIN) package publish . oci://$(REPOSITORY_URL)
 
-.PHONY: publish-init-package-v1beta1
 publish-init-package-v1beta1: ## Publish the built v1beta1 init package to an OCI registry
 	$(ZARF_BIN) package publish "$(INIT_V1BETA1_OUTPUT)/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst" "oci://$(REPOSITORY_URL)"
+
+publish-init-components-v1beta1: template-init-package-v1beta1 ## Render and publish the v1beta1 init component configs to an OCI registry
+	$(ZARF_BIN) component publish packages/v1beta1-init/agent/zarf.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
+	$(ZARF_BIN) component publish packages/v1beta1-init/git-server/zarf.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
+	$(ZARF_BIN) component publish packages/v1beta1-init/injector/amd64.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
+	$(ZARF_BIN) component publish packages/v1beta1-init/injector/arm64.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
+	$(ZARF_BIN) component publish packages/v1beta1-init/k3s/common.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
+	$(ZARF_BIN) component publish packages/v1beta1-init/k3s/amd64.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
+	$(ZARF_BIN) component publish packages/v1beta1-init/k3s/arm64.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
+	$(ZARF_BIN) component publish packages/v1beta1-init/registry/registry-base.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
+	$(ZARF_BIN) component publish packages/v1beta1-init/registry/seed-registry.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
+	$(ZARF_BIN) component publish packages/v1beta1-init/registry/zarf.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
 
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE)
