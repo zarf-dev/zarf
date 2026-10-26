@@ -33,7 +33,7 @@ type LayerSelection struct {
 }
 
 // SBOMSelection specifies which checksum-declared SBOM resources to retrieve.
-// Keys are canonical package-relative SBOM resource paths.
+// Keys are exact component names or image references. A key selects every matching resource.
 // An empty key set selects every declared SBOM.
 type SBOMSelection struct {
 	Keys []string

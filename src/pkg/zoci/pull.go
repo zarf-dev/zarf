@@ -333,14 +333,17 @@ func checksumVerifiedSBOMLayers(ctx context.Context, root *oci.Manifest, fetcher
 			layers = append(layers, descriptor)
 			continue
 		}
-		if _, selected := requested[entry.Path]; selected {
-			layers = append(layers, descriptor)
-			foundRequested[entry.Path] = struct{}{}
+		_, key, supported := layout.ParseSBOMResourcePath(entry.Path)
+		if supported {
+			if _, selected := requested[key]; selected {
+				layers = append(layers, descriptor)
+				foundRequested[key] = struct{}{}
+			}
 		}
 	}
 	for _, key := range keys {
 		if _, found := foundRequested[key]; !found {
-			return nil, fmt.Errorf("SBOM resource %q not found in package checksums", key)
+			return nil, fmt.Errorf("SBOM key %q not found in package", key)
 		}
 	}
 	return layers, nil

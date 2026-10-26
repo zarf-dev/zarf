@@ -114,7 +114,7 @@ components:
 	require.NoFileExists(t, filepath.Join(documentationOutput, "second-README.md"))
 
 	sbomLayout, err := LoadPackage(ctx, packageRef.String(), loadOptions(zoci.LayerSelection{
-		SBOMs: &zoci.SBOMSelection{Keys: []string{sbomResourcePath}},
+		SBOMs: &zoci.SBOMSelection{Keys: []string{"metrics"}},
 	}))
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, sbomLayout.Cleanup()) })

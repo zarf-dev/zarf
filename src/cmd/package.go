@@ -1164,6 +1164,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 
 // packageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
 type packageInspectSBOMOptions struct {
+	keys           []string
 	outputDir      string
 	ociConcurrency int
 	packageVerifyFlags
@@ -1188,6 +1189,7 @@ func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated component names or image references for SBOMs to extract")
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
@@ -1211,7 +1213,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerSelection:       &zoci.LayerSelection{SBOMs: &zoci.SBOMSelection{}},
+		LayerSelection:       &zoci.LayerSelection{SBOMs: &zoci.SBOMSelection{Keys: o.keys}},
 		Filter:               filters.Empty(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),

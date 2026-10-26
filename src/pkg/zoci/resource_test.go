@@ -137,10 +137,23 @@ func TestChecksumVerifiedSBOMLayersSelectsRequestedKeys(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	resourcePath := layout.ComponentSBOMResourcePath("metrics")
-	resource := content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("metrics sbom"))
-	resource.Annotations = map[string]string{
-		ocispec.AnnotationTitle:       resourcePath,
+	componentResourcePath := layout.ComponentSBOMResourcePath("metrics")
+	componentResource := content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("component metrics sbom"))
+	componentResource.Annotations = map[string]string{
+		ocispec.AnnotationTitle:       componentResourcePath,
+		layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
+	}
+	imageResourcePath := layout.ImageSBOMResourcePath("metrics")
+	imageResource := content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("image metrics sbom"))
+	imageResource.Annotations = map[string]string{
+		ocispec.AnnotationTitle:       imageResourcePath,
+		layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
+	}
+	imageReference := "ghcr.io/acme/api:v1.4.2"
+	imageReferenceResourcePath := layout.ImageSBOMResourcePath(imageReference)
+	imageReferenceResource := content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("api sbom"))
+	imageReferenceResource.Annotations = map[string]string{
+		ocispec.AnnotationTitle:       imageReferenceResourcePath,
 		layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
 	}
 	unselectedResourcePath := layout.ComponentSBOMResourcePath("logs")
@@ -149,8 +162,10 @@ func TestChecksumVerifiedSBOMLayersSelectsRequestedKeys(t *testing.T) {
 		ocispec.AnnotationTitle:       unselectedResourcePath,
 		layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
 	}
-	checksums := []byte(fmt.Sprintf("%s %s\n%s %s\n",
-		resource.Digest.Encoded(), resourcePath,
+	checksums := []byte(fmt.Sprintf("%s %s\n%s %s\n%s %s\n%s %s\n",
+		componentResource.Digest.Encoded(), componentResourcePath,
+		imageResource.Digest.Encoded(), imageResourcePath,
+		imageReferenceResource.Digest.Encoded(), imageReferenceResourcePath,
 		unselectedResource.Digest.Encoded(), unselectedResourcePath,
 	))
 	aggregateChecksum, err := checksum.GetSHA256Hash(bytes.NewReader(checksums))
@@ -172,29 +187,42 @@ build:
 	require.NoError(t, store.Push(ctx, checksumDesc, bytes.NewReader(checksums)))
 
 	root := &oci.Manifest{Manifest: ocispec.Manifest{
-		Layers: []ocispec.Descriptor{zarfYAMLDesc, checksumDesc, resource, unselectedResource},
+		Layers: []ocispec.Descriptor{
+			zarfYAMLDesc,
+			checksumDesc,
+			componentResource,
+			imageResource,
+			imageReferenceResource,
+			unselectedResource,
+		},
 	}}
-	selection := LayerSelection{SBOMs: &SBOMSelection{Keys: []string{resourcePath}}}
+	selection := LayerSelection{SBOMs: &SBOMSelection{Keys: []string{"metrics"}}}
 	layers, err := AssembleLayers(ctx, root, store, nil, selection)
 	require.NoError(t, err)
-	require.Equal(t, []ocispec.Descriptor{zarfYAMLDesc, checksumDesc, resource}, layers)
+	require.Equal(t, []ocispec.Descriptor{zarfYAMLDesc, checksumDesc, componentResource, imageResource}, layers)
+
+	imageLayers, err := AssembleLayers(ctx, root, store, nil, LayerSelection{
+		SBOMs: &SBOMSelection{Keys: []string{imageReference}},
+	})
+	require.NoError(t, err)
+	require.Equal(t, []ocispec.Descriptor{zarfYAMLDesc, checksumDesc, imageReferenceResource}, imageLayers)
 
 	unselectedResource.Annotations = map[string]string{
 		ocispec.AnnotationTitle: unselectedResourcePath,
 	}
-	root.Layers[3] = unselectedResource
+	root.Layers[5] = unselectedResource
 	_, err = AssembleLayers(ctx, root, store, nil, selection)
 	require.ErrorContains(t, err, `SBOM resource "`+unselectedResourcePath+`" has an invalid OCI kind`)
 
-	root.Layers[3] = content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("logs sbom"))
-	root.Layers[3].Annotations = map[string]string{
+	root.Layers[5] = content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("logs sbom"))
+	root.Layers[5].Annotations = map[string]string{
 		ocispec.AnnotationTitle:       unselectedResourcePath,
 		layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
 	}
 	_, err = AssembleLayers(ctx, root, store, nil, LayerSelection{
-		SBOMs: &SBOMSelection{Keys: []string{layout.ComponentSBOMResourcePath("missing")}},
+		SBOMs: &SBOMSelection{Keys: []string{"missing"}},
 	})
-	require.ErrorContains(t, err, `SBOM resource "`+layout.ComponentSBOMResourcePath("missing")+`" not found in package checksums`)
+	require.ErrorContains(t, err, `SBOM key "missing" not found in package`)
 }
 
 func TestAssembleLayersSelectsLegacyResourceArchives(t *testing.T) {
