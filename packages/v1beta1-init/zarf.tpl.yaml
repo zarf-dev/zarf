@@ -4,8 +4,6 @@ metadata:
   name: init
   description: Used to establish a new Zarf cluster
   version: "[[ .cli.version ]]"
-  # FIXME: does it make sense to have architecture
-  architecture: "[[ .architecture ]]"
   preventNamespaceOverride: true
 
 documentation:

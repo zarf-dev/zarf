@@ -155,7 +155,7 @@ template-init-package-v1beta1: ## Render the v1beta1 init package and publishabl
 	@case "$(ARCH)" in amd64|arm64) ;; *) echo "v1beta1 init supports amd64 and arm64"; exit 1 ;; esac
 	@for template in packages/v1beta1-init/*/*.tpl.yaml packages/v1beta1-init/zarf.tpl.yaml; do \
 		$(ZARF_BIN) dev template "$$template" --set-file "$(INIT_V1BETA1_TEMPLATE_VALUES)" \
-			$(if $(INIT_V1BETA1_TEMPLATE_SET),--set '$(INIT_V1BETA1_TEMPLATE_SET)') --set architecture=$(ARCH) || exit; \
+			$(if $(INIT_V1BETA1_TEMPLATE_SET),--set '$(INIT_V1BETA1_TEMPLATE_SET)') || exit; \
 	done
 
 init-package-v1beta1: ## Build the local agent and create the v1beta1 init package

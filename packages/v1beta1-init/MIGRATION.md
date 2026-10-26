@@ -81,7 +81,7 @@ gitServer:
 Deploy with your v1beta1 init package filename:
 
 ```sh
-zarf init ./zarf-init-amd64-VERSION.tar.zst --confirm \
+zarf init ./zarf-init-ARCHITECTURE-VERSION.tar.zst --confirm \
   --features=values=true --values init-values.yaml
 ```
 
