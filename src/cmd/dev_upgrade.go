@@ -84,6 +84,7 @@ func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		result := convert.PackageV1alpha1ToV1beta1(pkg)
+		result.Build = v1beta1.BuildData{}
 		for ci := range result.Components {
 			for fi := range result.Components[ci].Files {
 				file := &result.Components[ci].Files[fi]
