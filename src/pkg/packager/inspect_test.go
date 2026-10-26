@@ -100,7 +100,7 @@ stringData:
 }
 
 func TestInspectDefinitionResourcesComponentValuesSchema(t *testing.T) {
-	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
+	setupInspectTests(t)
 	dir := t.TempDir()
 	for name, contents := range map[string]string{
 		"zarf.yaml": `apiVersion: zarf.dev/v1beta1
@@ -144,6 +144,11 @@ metadata:
 
 var testDataRoot = "testdata/inspect"
 
+func setupInspectTests(t *testing.T) {
+	t.Helper()
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
+}
+
 func inspectTestDataPath(parts ...string) string {
 	return filepath.Join(append([]string{testDataRoot}, parts...)...)
 }
@@ -162,7 +167,7 @@ func assertContainsAll(t *testing.T, resources []Resource, expectedContent []str
 }
 
 func TestInspectPackageResourcesSkipsValuesSchemaValidationWhenConfigured(t *testing.T) {
-	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
+	setupInspectTests(t)
 	ctx := testutil.TestContext(t)
 	srcDir := filepath.Join("load", "testdata", "package-with-invalid-values")
 	loaded, err := load.Package(ctx, srcDir, load.PackageOptions{SkipValuesSchemaValidation: true})
@@ -183,7 +188,7 @@ func TestInspectPackageResourcesSkipsValuesSchemaValidationWhenConfigured(t *tes
 
 func TestInspectDefinitionResources(t *testing.T) {
 	t.Parallel()
-	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
+	setupInspectTests(t)
 
 	tests := []struct {
 		name              string
@@ -366,7 +371,7 @@ func TestInspectDefinitionResources(t *testing.T) {
 
 func TestInspectDefinitionResources_Errors(t *testing.T) {
 	t.Parallel()
-	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
+	setupInspectTests(t)
 	tests := []struct {
 		name       string
 		packageDir string
