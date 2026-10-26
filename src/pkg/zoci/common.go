@@ -23,32 +23,39 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
-// LayerType specifies a category of layers in a Zarf OCI package.
-type LayerType string
+// LayerSelection specifies package layer categories to retrieve.
+// Metadata is always retrieved and is not represented here.
+type LayerSelection struct {
+	Components    bool
+	Images        bool
+	SBOMs         bool
+	Documentation *DocumentationSelection
+}
+
+// DocumentationSelection specifies which declared documentation resources to retrieve.
+// An empty key set selects every declared document.
+type DocumentationSelection struct {
+	Keys []string
+}
+
+// AllLayerSelection returns a selection for every package resource.
+func AllLayerSelection() LayerSelection {
+	return LayerSelection{
+		Components:    true,
+		Images:        true,
+		SBOMs:         true,
+		Documentation: &DocumentationSelection{},
+	}
+}
 
 const (
-	// DefaultConcurrency is the default concurrency used for operations
+	// DefaultConcurrency is the default concurrency used for operations.
 	DefaultConcurrency = 6
-	//DefaultRetries is the default number of retries for operations
+	// DefaultRetries is the default number of retries for operations.
 	DefaultRetries = 1
 	// ImageCacheDirectory is the directory within the Zarf cache containing OCI blobs.
 	ImageCacheDirectory = "images"
-	// MetadataLayers includes zarf.yaml, signature, and checksums.
-	MetadataLayers LayerType = "metadata"
-	// ComponentLayers includes component tarballs.
-	ComponentLayers LayerType = "components"
-	// ImageLayers includes container image blobs.
-	ImageLayers LayerType = "images"
-	// SbomLayers includes the SBOM tarball.
-	SbomLayers LayerType = "sbom"
-	// DocLayers includes the documentation tarball.
-	DocLayers LayerType = "documentation"
 )
-
-// GetAllLayerTypes returns the complete set of layer types in a Zarf OCI package.
-func GetAllLayerTypes() []LayerType {
-	return []LayerType{MetadataLayers, ComponentLayers, ImageLayers, SbomLayers, DocLayers}
-}
 
 const (
 	defaultDelayTime    = 500 * time.Millisecond

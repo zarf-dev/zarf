@@ -696,20 +696,9 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("no documentation files found in package")
 	}
 
-	fileNames, err := GetDocumentationFileNames(p.pkg.Documentation)
+	fileNames, err := GetDocumentationFileNames(p.pkg.Documentation, keys)
 	if err != nil {
 		return err
-	}
-	keysToExtract := maps.Clone(p.pkg.Documentation)
-	if len(keys) > 0 {
-		keysToExtract = make(map[string]string)
-		for _, key := range keys {
-			if filePath, ok := p.pkg.Documentation[key]; ok {
-				keysToExtract[key] = filePath
-			} else {
-				return fmt.Errorf("key %s not found in package documentation", key)
-			}
-		}
 	}
 
 	sourceDir := filepath.Join(p.dirPath, DocumentationDir)
@@ -753,10 +742,9 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		err = errors.Join(err, destinationRoot.Close())
 	}()
 
-	for key, file := range keysToExtract {
-		docFileName := fileNames[key]
+	for key, docFileName := range fileNames {
 		if err := copyDocumentationFile(sourceRoot, destinationRoot, docFileName); err != nil {
-			return fmt.Errorf("failed to copy documentation file %s: %w", file, err)
+			return fmt.Errorf("failed to copy documentation file %s: %w", p.pkg.Documentation[key], err)
 		}
 	}
 
@@ -792,9 +780,9 @@ func FormatDocumentFileName(key, file string) string {
 	return fmt.Sprintf("%s-%s", key, filepath.Base(file))
 }
 
-// GetDocumentationFileNames returns the validated package filenames for documentation keys.
-// Filenames are deconflicted: if multiple keys have the same basename, they are prefixed with the key.
-func GetDocumentationFileNames(documentation map[string]string) (map[string]string, error) {
+// GetDocumentationFileNames returns validated stored filenames for the requested documentation keys.
+// Filenames are deconflicted before selection: if multiple keys have the same basename, they are prefixed with the key.
+func GetDocumentationFileNames(documentation map[string]string, keys []string) (map[string]string, error) {
 	basenameCounts := make(map[string]int, len(documentation))
 	basenames := make(map[string]string, len(documentation))
 	for key, file := range documentation {
@@ -815,16 +803,28 @@ func GetDocumentationFileNames(documentation map[string]string) (map[string]stri
 		basenameCounts[basename]++
 	}
 
-	result := make(map[string]string, len(documentation))
+	fileNames := make(map[string]string, len(documentation))
 	for key, file := range documentation {
 		basename := basenames[key]
 		if basenameCounts[basename] == 1 {
-			result[key] = basename
+			fileNames[key] = basename
 		} else {
-			result[key] = FormatDocumentFileName(key, file)
+			fileNames[key] = FormatDocumentFileName(key, file)
 		}
 	}
-	return result, nil
+	if len(keys) == 0 {
+		return fileNames, nil
+	}
+
+	selected := make(map[string]string, len(keys))
+	for _, key := range keys {
+		fileName, found := fileNames[key]
+		if !found {
+			return nil, fmt.Errorf("key %s not found in package documentation", key)
+		}
+		selected[key] = fileName
+	}
+	return selected, nil
 }
 
 // GetComponentDir returns a path to the directory in the given component.
@@ -1078,7 +1078,7 @@ func ValidatePackagePaths(pkg api.Package) error {
 			}
 		}
 	}
-	if _, err := GetDocumentationFileNames(pkg.Documentation); err != nil {
+	if _, err := GetDocumentationFileNames(pkg.Documentation, nil); err != nil {
 		return err
 	}
 	return nil

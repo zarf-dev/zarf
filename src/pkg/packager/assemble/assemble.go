@@ -1223,7 +1223,7 @@ func stageDocumentation(ctx context.Context, pkg api.Package, resources *load.Re
 	}
 
 	// Get the mapping of keys to their final filenames (with deduplication logic).
-	fileNames, err := layout.GetDocumentationFileNames(pkg.Documentation)
+	fileNames, err := layout.GetDocumentationFileNames(pkg.Documentation, nil)
 	if err != nil {
 		return fmt.Errorf("validating documentation filenames: %w", err)
 	}

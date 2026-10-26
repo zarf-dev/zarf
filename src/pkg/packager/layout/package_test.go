@@ -1598,7 +1598,7 @@ func TestGetDocumentationFileNamesRejectsUnsafePaths(t *testing.T) {
 	}
 	for name, documentation := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := GetDocumentationFileNames(documentation)
+			_, err := GetDocumentationFileNames(documentation, nil)
 			require.ErrorContains(t, err, "would result in an invalid path")
 		})
 	}

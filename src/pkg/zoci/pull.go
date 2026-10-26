@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -154,13 +155,9 @@ func packageLayerPath(destinationDir, title string) (string, error) {
 	return path, nil
 }
 
-// AssembleLayers returns the OCI layer descriptors for the requested components.
-// The include parameter specifies which layer types to return.
-// All layers are included if include is empty and Metadata layers are always included.
-func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, requestedComponents []api.Component, include ...LayerType) ([]ocispec.Descriptor, error) {
-	if len(include) == 0 {
-		include = GetAllLayerTypes()
-	}
+// AssembleLayers returns the OCI layer descriptors for the requested package resources.
+// Metadata layers are always included.
+func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, requestedComponents []api.Component, selection LayerSelection) ([]ocispec.Descriptor, error) {
 	layers := make([]ocispec.Descriptor, 0)
 	for _, path := range PackageAlwaysPull {
 		desc := root.Locate(path)
@@ -174,15 +171,15 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		return nil, err
 	}
 
-	if slices.Contains(include, ComponentLayers) || slices.Contains(include, ImageLayers) {
+	if selection.Components || selection.Images {
 		componentLayers, images, err := LayersFromComponents(root, pkg, requestedComponents)
 		if err != nil {
 			return nil, err
 		}
-		if slices.Contains(include, ComponentLayers) {
+		if selection.Components {
 			layers = append(layers, componentLayers...)
 		}
-		if slices.Contains(include, ImageLayers) && len(images) > 0 {
+		if selection.Images && len(images) > 0 {
 			imageLayers, err := LayersFromImages(ctx, root, fetcher, images)
 			if err != nil {
 				return nil, err
@@ -191,7 +188,7 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		}
 	}
 
-	if slices.Contains(include, SbomLayers) {
+	if selection.SBOMs {
 		if layout.UsesGranularResourceLayout(pkg) {
 			sbomLayers, err := checksumVerifiedSBOMLayers(ctx, root, fetcher, pkg)
 			if err != nil {
@@ -203,24 +200,73 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		}
 	}
 
-	if slices.Contains(include, DocLayers) && len(pkg.Documentation) > 0 {
+	if selection.Documentation != nil {
 		if layout.UsesGranularResourceLayout(pkg) {
-			layers = append(layers, granularResourceLayers(root, layout.ResourceKindDocumentation)...)
-		} else if desc := root.Locate(layout.DocumentationTar); !oci.IsEmptyDescriptor(desc) {
-			layers = append(layers, desc)
+			documentationLayers, err := documentationResourceLayers(root, pkg.Documentation, selection.Documentation.Keys)
+			if err != nil {
+				return nil, err
+			}
+			layers = append(layers, documentationLayers...)
+		} else if len(pkg.Documentation) > 0 {
+			if desc := root.Locate(layout.DocumentationTar); !oci.IsEmptyDescriptor(desc) {
+				layers = append(layers, desc)
+			}
 		}
 	}
 	return layers, nil
 }
 
-func granularResourceLayers(root *oci.Manifest, kind string) []ocispec.Descriptor {
-	layers := make([]ocispec.Descriptor, 0)
+// documentationResourceLayers validates every declared documentation resource before selecting the requested descriptors.
+func documentationResourceLayers(root *oci.Manifest, documentation map[string]string, keys []string) ([]ocispec.Descriptor, error) {
+	allFileNames, err := layout.GetDocumentationFileNames(documentation, nil)
+	if err != nil {
+		return nil, err
+	}
+	selectedFileNames, err := layout.GetDocumentationFileNames(documentation, keys)
+	if err != nil {
+		return nil, err
+	}
+
+	declaredTitles := make(map[string]struct{}, len(allFileNames))
+	for _, fileName := range allFileNames {
+		declaredTitles[path.Join(layout.DocumentationDir, fileName)] = struct{}{}
+	}
+	selectedTitles := make(map[string]struct{}, len(selectedFileNames))
+	for _, fileName := range selectedFileNames {
+		selectedTitles[path.Join(layout.DocumentationDir, fileName)] = struct{}{}
+	}
+
+	descriptorsByTitle := make(map[string]ocispec.Descriptor, len(declaredTitles))
 	for _, descriptor := range root.Layers {
-		if descriptor.Annotations[layout.ResourceKindAnnotation] == kind {
+		title := descriptor.Annotations[ocispec.AnnotationTitle]
+		if _, declared := declaredTitles[title]; declared {
+			if _, found := descriptorsByTitle[title]; found {
+				return nil, fmt.Errorf("multiple OCI descriptors represent documentation resource %q", title)
+			}
+			descriptorsByTitle[title] = descriptor
+			if descriptor.Annotations[layout.ResourceKindAnnotation] != layout.ResourceKindDocumentation {
+				return nil, fmt.Errorf("documentation resource %q has an invalid OCI kind", title)
+			}
+			if descriptor.MediaType != layout.DocumentationLayerMediaTypeBlob {
+				return nil, fmt.Errorf("documentation resource %q has an invalid OCI media type %q", title, descriptor.MediaType)
+			}
+		} else if descriptor.Annotations[layout.ResourceKindAnnotation] == layout.ResourceKindDocumentation {
+			return nil, fmt.Errorf("documentation resource %q is not declared by the package", title)
+		}
+	}
+	for title := range declaredTitles {
+		if _, found := descriptorsByTitle[title]; !found {
+			return nil, fmt.Errorf("documentation resource %q is missing from OCI manifest", title)
+		}
+	}
+
+	layers := make([]ocispec.Descriptor, 0, len(selectedTitles))
+	for _, descriptor := range root.Layers {
+		if _, selected := selectedTitles[descriptor.Annotations[ocispec.AnnotationTitle]]; selected {
 			layers = append(layers, descriptor)
 		}
 	}
-	return layers
+	return layers, nil
 }
 
 // checksumVerifiedSBOMLayers selects every checksum-listed SBOM resource from an OCI manifest.
@@ -403,15 +449,13 @@ func layersFromIndexChildren(ctx context.Context, root *oci.Manifest, fetcher co
 	return layers, nil
 }
 
-// AssembleLayers returns the OCI layer descriptors for the requested components.
-// The include parameter specifies which layer types to return.
-// All layers are included if include is empty and Metadata layers are always included
-func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []api.Component, include ...LayerType) ([]ocispec.Descriptor, error) {
+// AssembleLayers returns the OCI layer descriptors for the requested package resources.
+func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []api.Component, selection LayerSelection) ([]ocispec.Descriptor, error) {
 	root, err := r.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return AssembleLayers(ctx, root, r, requestedComponents, include...)
+	return AssembleLayers(ctx, root, r, requestedComponents, selection)
 }
 
 // LayersFromComponents returns the layers for the requested components and

@@ -79,11 +79,11 @@ func TestAllLayersRespectsRequestedComponents(t *testing.T) {
 	alpineOnly := []api.Component{{Name: "alpine"}}
 	bothComponents := pkgLayout.Definition().Components
 
-	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents, zoci.GetAllLayerTypes()...)
+	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents, zoci.AllLayerSelection())
 	require.NoError(t, err)
 	require.Len(t, allLayersFull, 4)
 
-	allLayersSubset, err := remote.AssembleLayers(ctx, alpineOnly, zoci.GetAllLayerTypes()...)
+	allLayersSubset, err := remote.AssembleLayers(ctx, alpineOnly, zoci.AllLayerSelection())
 	require.NoError(t, err)
 	require.Len(t, allLayersSubset, 3)
 }
@@ -206,40 +206,40 @@ func TestAssembleLayers(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		include     []zoci.LayerType
+		selection   zoci.LayerSelection
 		expectedLen int
 	}{
 		{
-			name:        "all layers (default)",
-			include:     nil,
+			name:        "all layers",
+			selection:   zoci.AllLayerSelection(),
 			expectedLen: 9,
 		},
 		{
 			name:        "image layers",
-			include:     []zoci.LayerType{zoci.ImageLayers},
+			selection:   zoci.LayerSelection{Images: true},
 			expectedLen: 7,
 		},
 		{
 			name:        "component layers",
-			include:     []zoci.LayerType{zoci.ComponentLayers},
+			selection:   zoci.LayerSelection{Components: true},
 			expectedLen: 3,
 		},
 		{
 			name:        "documentation layers",
-			include:     []zoci.LayerType{zoci.DocLayers},
+			selection:   zoci.LayerSelection{Documentation: &zoci.DocumentationSelection{}},
 			expectedLen: 3,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			layers, err := remote.AssembleLayers(ctx, components, tt.include...)
+			layers, err := remote.AssembleLayers(ctx, components, tt.selection)
 			require.NoError(t, err)
 			require.Len(t, layers, tt.expectedLen)
 		})
 	}
 
 	// Verify image-walking logic against known digests instead of upstream-drifting ones.
-	imageLayers, err := remote.AssembleLayers(ctx, components, zoci.ImageLayers)
+	imageLayers, err := remote.AssembleLayers(ctx, components, zoci.LayerSelection{Images: true})
 	require.NoError(t, err)
 	digests := map[string]struct{}{}
 	for _, l := range imageLayers {
@@ -294,7 +294,7 @@ components:
 	root, err := remote.FetchRoot(ctx)
 	require.NoError(t, err)
 
-	pulled, err := remote.AssembleLayers(ctx, components, zoci.GetAllLayerTypes()...)
+	pulled, err := remote.AssembleLayers(ctx, components, zoci.AllLayerSelection())
 	require.NoError(t, err)
 	pulledDigests := map[string]struct{}{}
 	for _, l := range pulled {
