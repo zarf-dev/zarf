@@ -192,9 +192,7 @@ jobs:
           mv build/zarf-arm build/zarf
 
       - name: Build init package
-        run: |
-          make init-package ARCH=arm64
-          make init-package-v1beta1 ARCH=arm64
+        run: make init-package ARCH=arm64
 
       - name: Setup Kind
         run: |

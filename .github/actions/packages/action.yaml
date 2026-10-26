@@ -23,6 +23,5 @@ runs:
       shell: ${{ inputs.shell }}
     - run: |
         make init-package ARCH=amd64
-        make init-package-v1beta1 ARCH=amd64
       shell: ${{ inputs.shell }}
       if: ${{ inputs.init-package == 'true' }}
