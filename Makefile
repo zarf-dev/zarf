@@ -193,6 +193,10 @@ publish-init-package:
 	$(ZARF_BIN) package publish build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst oci://$(REPOSITORY_URL)
 	$(ZARF_BIN) package publish . oci://$(REPOSITORY_URL)
 
+.PHONY: publish-init-package-v1beta1
+publish-init-package-v1beta1: ## Publish the built v1beta1 init package to an OCI registry
+	$(ZARF_BIN) package publish "$(INIT_V1BETA1_OUTPUT)/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst" "oci://$(REPOSITORY_URL)"
+
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE)
 

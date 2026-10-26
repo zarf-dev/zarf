@@ -144,6 +144,16 @@ jobs:
           path: build/
           retention-days: 1
 
+  publish-v1beta1-init:
+    needs: build-release
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    uses: ./.github/workflows/publish-v1beta1-init-package.yml
+    with:
+      version: ${{ needs.build-release.outputs.cli_version }}
+
   validate-release:
     needs: [repo-gate, build-release]
     if: ${{ needs.repo-gate.outputs.should_run == 'true' }}
