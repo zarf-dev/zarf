@@ -203,7 +203,7 @@
         "runAsGroup": {
           "type": "integer"
         },
-        "seLinuxOptions" : {
+        "seLinuxOptions": {
           "type": ["object", "null"],
           "properties": {
             "level": {

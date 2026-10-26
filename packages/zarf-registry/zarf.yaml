@@ -124,7 +124,7 @@ variables:
     default: "2000"
 
   - name: REGISTRY_SECURITY_CONTEXT_SELINUX_OPTIONS
-    description: Optional map of seLinuxOptions for the registry pods. 
+    description: Optional map of seLinuxOption to use for the registry
     default: ""
     autoIndent: true
 
