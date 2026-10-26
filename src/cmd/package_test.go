@@ -999,18 +999,23 @@ func TestBuildVerifyBlobOptions(t *testing.T) {
 	}
 }
 
-func TestSkeletonImportExampleForDisplay(t *testing.T) {
+func TestSkeletonImportExample(t *testing.T) {
 	t.Parallel()
 	ref := registry.Reference{Registry: "localhost:5000", Repository: "skeletons/test", Reference: "0.0.1"}
-	pkg := api.Package{Components: []api.Component{{Name: "first"}}}
+	pkg := api.Package{Components: []api.Component{{Name: "first"}, {Name: "second", Description: "not copied"}}}
 
-	data, err := goyaml.Marshal(skeletonImportExampleForDisplay(pkg, ref))
+	data, err := goyaml.Marshal(skeletonImportExample(pkg, ref))
 	require.NoError(t, err)
 
 	expected := `- name: import-first
   required: true
   import:
     name: first
+    url: oci://localhost:5000/skeletons/test:0.0.1
+- name: import-second
+  required: true
+  import:
+    name: second
     url: oci://localhost:5000/skeletons/test:0.0.1
 `
 	require.Equal(t, expected, string(data))

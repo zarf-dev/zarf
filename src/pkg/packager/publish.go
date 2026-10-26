@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -18,7 +17,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -277,21 +275,6 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return registry.Reference{}, err
 	}
 	return pkgRef, nil
-}
-
-// SkeletonImportExample returns components that import each component of pkg from the skeleton published at ref.
-func SkeletonImportExample(pkg api.Package, ref registry.Reference) []api.Component {
-	ex := make([]api.Component, 0, len(pkg.Components))
-	for _, c := range pkg.Components {
-		ex = append(ex, api.Component{
-			Name: fmt.Sprintf("import-%s", c.Name),
-			Import: api.ComponentImport{
-				Name:   c.Name,
-				Remote: []api.ComponentImportRemote{{URL: helpers.OCIURLPrefix + ref.String()}},
-			},
-		})
-	}
-	return ex
 }
 
 // pushToRemote pushes a package to the given reference

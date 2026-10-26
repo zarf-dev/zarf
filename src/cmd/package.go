@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -1885,31 +1884,39 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 // It reads the definition back from the registry so it matches what was published without resolving imports again.
 func printSkeletonImportExample(ctx context.Context, pkgRef registry.Reference, remoteOpts types.RemoteOptions) error {
 	l := logger.From(ctx)
-	// Parsing logs the definition's warnings, which were already shown during publish.
-	fetchCtx := logger.WithContext(ctx, slog.New(slog.DiscardHandler))
-	remote, err := zoci.NewRemoteWithOptions(fetchCtx, pkgRef.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemoteWithOptions(ctx, pkgRef.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
 		RemoteOptions: remoteOpts,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create remote for %s: %w", pkgRef, err)
 	}
-	pkg, err := remote.FetchZarfYAML(fetchCtx)
+	pkg, err := remote.FetchZarfYAML(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to fetch the published package definition: %w", err)
 	}
 	l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
-	if err := utils.ColorPrintYAML(skeletonImportExampleForDisplay(pkg, pkgRef), nil, false); err != nil {
+	if err := utils.ColorPrintYAML(skeletonImportExample(pkg, pkgRef), nil, false); err != nil {
 		return fmt.Errorf("unable to print the import example: %w", err)
 	}
 	l.Info("find more info on skeleton packages at https://docs.zarf.dev/faq/#what-is-a-skeleton-zarf-package")
 	return nil
 }
 
-// skeletonImportExampleForDisplay converts the import example to v1alpha1 for user-facing serialization.
-// Skeletons are v1alpha1-only, so this does not branch on apiVersion like packageForDisplay.
-func skeletonImportExampleForDisplay(pkg api.Package, ref registry.Reference) []v1alpha1.ZarfComponent {
-	ex := packager.SkeletonImportExample(pkg, ref)
-	return convert.PackageToV1alpha1(api.Package{Components: ex}).Components
+// skeletonImportExample returns components that import each component of pkg from the skeleton published at ref,
+// converted to v1alpha1 for user-facing serialization. Skeletons are v1alpha1-only, so this does not branch on
+// apiVersion like packageForDisplay.
+func skeletonImportExample(pkg api.Package, ref registry.Reference) []v1alpha1.ZarfComponent {
+	ex := api.Package{Components: make([]api.Component, 0, len(pkg.Components))}
+	for _, c := range pkg.Components {
+		ex.Components = append(ex.Components, api.Component{
+			Name: fmt.Sprintf("import-%s", c.Name),
+			Import: api.ComponentImport{
+				Name:   c.Name,
+				Remote: []api.ComponentImportRemote{{URL: helpers.OCIURLPrefix + ref.String()}},
+			},
+		})
+	}
+	return convert.PackageToV1alpha1(ex).Components
 }
 
 type packagePullOptions struct {
