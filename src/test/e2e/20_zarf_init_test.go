@@ -116,10 +116,6 @@ func TestZarfInit(t *testing.T) {
 	require.True(t, s.ArtifactServer.IsInternal())
 	require.NotEmpty(t, s.ArtifactServer.PushToken)
 
-	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
-	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1") //nolint:errcheck
-	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")     //nolint:errcheck
-
 	// Zarf should fail since registry credentials are changing on a subsequent init
 	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--registry-push-password", "new-password", "--confirm")
 	require.Error(t, err)
@@ -133,6 +129,10 @@ func TestZarfInit(t *testing.T) {
 	verifyZarfSecretLabels(t)
 	verifyZarfPodLabels(t)
 	verifyZarfServiceLabels(t)
+
+	// Reduce CI resource usage after the upgrade so scale field ownership does not conflict with Helm.
+	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1") //nolint:errcheck
+	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")     //nolint:errcheck
 }
 
 func verifyZarfNamespaceLabels(t *testing.T) {
