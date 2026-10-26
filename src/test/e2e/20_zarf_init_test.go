@@ -7,6 +7,7 @@ package test
 import (
 	"encoding/base64"
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -122,6 +123,16 @@ func TestZarfInit(t *testing.T) {
 	// Zarf should fail since registry credentials are changing on a subsequent init
 	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--registry-push-password", "new-password", "--confirm")
 	require.Error(t, err)
+
+	// Upgrade the v1alpha1 init installation to the v1beta1 init package.
+	initPackageV1beta1 := filepath.Join("build", "v1beta1-init", fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, initPackageVersion))
+	stdOut, stdErr, err := e2e.Zarf(t, "init", initPackageV1beta1, "--components="+initComponents, "--features=v1beta1=true,values=true", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	verifyZarfNamespaceLabels(t)
+	verifyZarfSecretLabels(t)
+	verifyZarfPodLabels(t)
+	verifyZarfServiceLabels(t)
 }
 
 func verifyZarfNamespaceLabels(t *testing.T) {
