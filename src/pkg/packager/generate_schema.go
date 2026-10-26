@@ -81,7 +81,7 @@ func GenerateValuesSchema(ctx context.Context, source string, opts GenerateValue
 	}()
 
 	for _, component := range pkg.Components {
-		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Service.Name, s)
+		applicationTemplates, err := template.GetZarfTemplates(ctx, pkg.GetAPIVersion(), component.Service.Name, s)
 		if err != nil {
 			return nil, err
 		}
