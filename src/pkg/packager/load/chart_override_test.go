@@ -106,6 +106,7 @@ func TestChartSourceOverrides(t *testing.T) {
 		}{
 			{name: "Helm version", base: helm(url, "1.0.0", "upstream"), override: helm("", "2.0.0", ""), want: helm(url, "2.0.0", "upstream")},
 			{name: "Helm version with repeated URL", base: helm(url, "1.0.0", "upstream"), override: helm(url, "2.0.0", ""), want: helm(url, "2.0.0", "upstream")},
+			{name: "Helm version with explicit default name", base: helm(url, "1.0.0", ""), override: helm(url, "2.0.0", "app"), want: helm(url, "2.0.0", "")},
 			{name: "reject Helm URL", base: helm(url, "1.0.0", "upstream"), override: helm(url+"/other", "2.0.0", ""), wantErr: "cannot override helmRepository.url"},
 			{name: "reject Helm name", base: helm(url, "1.0.0", "upstream"), override: helm("", "2.0.0", "other"), wantErr: "cannot override helmRepository.name"},
 			{name: "reject default Helm name", base: helm(url, "1.0.0", ""), override: helm("", "2.0.0", "other"), wantErr: "cannot override helmRepository.name"},

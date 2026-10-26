@@ -128,9 +128,13 @@ func validateChartSourceOverride(base, head v1beta1.Chart) error {
 	}
 	var fields []fieldOverride
 	if base.HelmRepository != nil && head.HelmRepository != nil {
+		name := base.HelmRepository.Name
+		if name == "" {
+			name = base.Name
+		}
 		fields = append(fields,
 			fieldOverride{"helmRepository.url", base.HelmRepository.URL, head.HelmRepository.URL},
-			fieldOverride{"helmRepository.name", base.HelmRepository.Name, head.HelmRepository.Name},
+			fieldOverride{"helmRepository.name", name, head.HelmRepository.Name},
 		)
 	}
 	if base.Git != nil && head.Git != nil {
