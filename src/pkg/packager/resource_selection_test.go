@@ -60,7 +60,7 @@ metadata:
 build:
   architecture: amd64
   aggregateChecksum: %s
-documentation:
+attachments:
   first: docs/README.md
   second: other/README.md
 components:
