@@ -226,16 +226,22 @@ Package-value mappings in `charts[].values` keep their `sourcePath` and `targetP
 
 ### Images
 
-`images` entries are objects:
+The full image reference now lives under `name`. The optional `source` defaults to `registry`; `daemon` may be used for local Docker images. Registry pulls no longer fall back to the daemon. Consider `zarf dev template` if different builds require different sources.
+
+During imports, matching IDs take precedence over matching names, allowing image references to be replaced:
 
 ```yaml
-# Component fields
+# Imported component
 images:
-  - name: ghcr.io/example/app:1.0.0
+  - id: registry
+    name: registry:3
     source: registry
+---
+# Importing component
+images:
+  - id: registry
+    name: enterprise.example.com/registry:3 #  Only this image is packaged. Source is inherited as it's undefined.
 ```
-
-Images default to `source: registry`. For images stored in the Docker daemon, set `source: daemon`. v1beta1 does not fall back to the local daemon after a registry pull fails.
 
 ### Git repositories
 

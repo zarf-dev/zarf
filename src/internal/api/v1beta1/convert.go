@@ -116,16 +116,18 @@ func componentToGeneric(c v1beta1.Component) api.Component {
 
 	for _, img := range c.Images {
 		gc.Images = append(gc.Images, api.Image{
+			ID:     img.ID,
 			Name:   img.Name,
 			Source: api.ImageSource(img.Source),
 		})
 	}
 
 	for _, ia := range c.ImageArchives {
-		gc.ImageArchives = append(gc.ImageArchives, api.ImageArchive{
-			Path:   ia.Path,
-			Images: ia.Images,
-		})
+		archive := api.ImageArchive{Path: ia.Path}
+		for _, image := range ia.Images {
+			archive.Images = append(archive.Images, api.ArchiveImage{Name: image.Name, ID: image.ID})
+		}
+		gc.ImageArchives = append(gc.ImageArchives, archive)
 	}
 
 	return gc
@@ -431,16 +433,18 @@ func componentFromGeneric(c api.Component) v1beta1.Component {
 			source = api.ImageSourceRegistry
 		}
 		bc.Images = append(bc.Images, v1beta1.Image{
+			ID:     img.ID,
 			Name:   img.Name,
 			Source: v1beta1.ImageSource(source),
 		})
 	}
 
 	for _, ia := range c.ImageArchives {
-		bc.ImageArchives = append(bc.ImageArchives, v1beta1.ImageArchive{
-			Path:   ia.Path,
-			Images: ia.Images,
-		})
+		archive := v1beta1.ImageArchive{Path: ia.Path}
+		for _, image := range ia.Images {
+			archive.Images = append(archive.Images, v1beta1.ArchiveImage{Name: image.Name, ID: image.ID})
+		}
+		bc.ImageArchives = append(bc.ImageArchives, archive)
 	}
 
 	// Convert v1alpha1 HealthChecks into onDeploy onSuccess wait actions.

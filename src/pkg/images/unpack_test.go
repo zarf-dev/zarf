@@ -261,9 +261,9 @@ func TestUnpackMultipleImages(t *testing.T) {
 			err := archive.Compress(ctx, []string{tc.srcDir}, tarFile, archive.CompressOpts{})
 			require.NoError(t, err)
 			dstDir := t.TempDir()
-			imageArchives := api.ImageArchive{
-				Path:   tarFile,
-				Images: tc.requestedImages,
+			imageArchives := api.ImageArchive{Path: tarFile}
+			for _, name := range tc.requestedImages {
+				imageArchives.Images = append(imageArchives.Images, api.ArchiveImage{Name: name})
 			}
 
 			// Run
@@ -339,7 +339,7 @@ func TestUnpackSkipsEquivalentArchiveReferences(t *testing.T) {
 
 	pulledImages, err := Unpack(ctx, api.ImageArchive{
 		Path:   imageArchivePath,
-		Images: []string{"hello-world:linux"},
+		Images: []api.ArchiveImage{{Name: "hello-world:linux"}},
 	}, t.TempDir(), "amd64")
 	require.NoError(t, err)
 	require.Len(t, pulledImages, 1)
@@ -352,10 +352,8 @@ func TestUnpackOCILayoutDirectory(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	destination := t.TempDir()
 	_, err := Unpack(ctx, api.ImageArchive{
-		Path: filepath.Join("testdata", "oras-oci-layout", "images"),
-		Images: []string{
-			"ghcr.io/zarf-dev/images/hello-world:latest",
-		},
+		Path:   filepath.Join("testdata", "oras-oci-layout", "images"),
+		Images: []api.ArchiveImage{{Name: "ghcr.io/zarf-dev/images/hello-world:latest"}},
 	}, destination, "amd64")
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(destination, "index.json"))
@@ -408,7 +406,7 @@ func TestUnpackImageIndexes(t *testing.T) {
 			dstDir := t.TempDir()
 			unpacked, err := Unpack(ctx, api.ImageArchive{
 				Path:   tarFile,
-				Images: []string{tc.ref},
+				Images: []api.ArchiveImage{{Name: tc.ref}},
 			}, dstDir, "amd64")
 			require.NoError(t, err)
 			require.Len(t, unpacked, 1)
@@ -468,7 +466,7 @@ func TestUnpackTaggedIndexFiltersToPlatform(t *testing.T) {
 	dstDir := t.TempDir()
 	unpacked, err := Unpack(ctx, api.ImageArchive{
 		Path:   tarFile,
-		Images: []string{tagRef},
+		Images: []api.ArchiveImage{{Name: tagRef}},
 	}, dstDir, "amd64")
 	require.NoError(t, err)
 	require.Len(t, unpacked, 1)
@@ -528,7 +526,7 @@ func TestUnpackTaggedIndexPreservesAllPlatformsWithoutArchitecture(t *testing.T)
 	require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
 
 	dstDir := t.TempDir()
-	_, err = Unpack(ctx, api.ImageArchive{Path: tarFile, Images: []string{tagRef}}, dstDir, "")
+	_, err = Unpack(ctx, api.ImageArchive{Path: tarFile, Images: []api.ArchiveImage{{Name: tagRef}}}, dstDir, "")
 	require.NoError(t, err)
 
 	dstIdx, err := getIndexFromOCILayout(dstDir)

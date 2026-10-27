@@ -125,8 +125,8 @@ func TestComponentGetImages(t *testing.T) {
 	component := api.Component{
 		Images: []api.Image{{Name: "registry.example/direct:1.0.0"}},
 		ImageArchives: []api.ImageArchive{
-			{Path: "first.tar", Images: []string{"registry.example/first:1.0.0"}},
-			{Path: "second.tar", Images: []string{"registry.example/second:1.0.0", "registry.example/third:1.0.0"}},
+			{Path: "first.tar", Images: []api.ArchiveImage{{Name: "registry.example/first:1.0.0"}}},
+			{Path: "second.tar", Images: []api.ArchiveImage{{Name: "registry.example/second:1.0.0"}, {Name: "registry.example/third:1.0.0"}}},
 		},
 	}
 
