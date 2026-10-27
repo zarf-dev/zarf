@@ -124,7 +124,7 @@ func TestComputeManifestAnnotatesV1Beta1Resources(t *testing.T) {
 kind: ZarfPackageConfig
 metadata:
   name: test-pkg
-documentation:
+attachments:
   readme: README.md
 `), 0o600))
 
@@ -237,7 +237,7 @@ func TestComputeManifestDeterministicWithDuplicateResourceContent(t *testing.T) 
 kind: ZarfPackageConfig
 metadata:
   name: test-pkg
-documentation:
+attachments:
   first: first.md
   second: second.md
 `), 0o600))

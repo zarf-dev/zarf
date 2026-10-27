@@ -9,13 +9,13 @@ import "strings"
 // Package is the version-neutral representation used by package operations and converters.
 type Package struct {
 	// APIVersion identifies the source package schema. An empty value is the legacy v1alpha1 form.
-	APIVersion    string
-	Kind          PackageKind
-	Metadata      PackageMetadata
-	Build         BuildData
-	Components    []Component
-	Values        Values
-	Documentation map[string]string
+	APIVersion  string
+	Kind        PackageKind
+	Metadata    PackageMetadata
+	Build       BuildData
+	Components  []Component
+	Values      Values
+	Attachments map[string]string
 
 	// v1alpha1-only fields
 	Variables []InteractiveVariable

@@ -688,15 +688,22 @@ func copyResourceFile(sourcePath string, destinationRoot *os.Root, outputPath st
 }
 
 // GetDocumentation extracts documentation files from the package to the given destination path.
-// If keys is empty, all documentation files are extracted.
-// If keys are provided, only those specific documentation files are extracted.
-func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) (err error) {
+//
+// Deprecated: Use GetAttachments instead.
+func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) error {
+	return p.GetAttachments(ctx, destPath, keys)
+}
+
+// GetAttachments extracts "attachments" (documentation in v1alpha1) files from the package to the given destination path.
+// If keys is empty, all attachments are extracted.
+// If keys are provided, only those specific attachments are extracted.
+func (p *PackageLayout) GetAttachments(ctx context.Context, destPath string, keys []string) (err error) {
 	l := logger.From(ctx)
-	if len(p.pkg.Documentation) == 0 {
+	if len(p.pkg.Attachments) == 0 {
 		return fmt.Errorf("no documentation files found in package")
 	}
 
-	fileNames, err := GetDocumentationFileNames(p.pkg.Documentation, keys)
+	fileNames, err := GetDocumentationFileNames(p.pkg.Attachments, keys)
 	if err != nil {
 		return err
 	}
@@ -744,7 +751,7 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 
 	for key, docFileName := range fileNames {
 		if err := copyDocumentationFile(sourceRoot, destinationRoot, docFileName); err != nil {
-			return fmt.Errorf("failed to copy documentation file %s: %w", p.pkg.Documentation[key], err)
+			return fmt.Errorf("failed to copy documentation file %s: %w", p.pkg.Attachments[key], err)
 		}
 	}
 
@@ -1078,7 +1085,7 @@ func ValidatePackagePaths(pkg api.Package) error {
 			}
 		}
 	}
-	if _, err := GetDocumentationFileNames(pkg.Documentation, nil); err != nil {
+	if _, err := GetDocumentationFileNames(pkg.Attachments, nil); err != nil {
 		return err
 	}
 	return nil
