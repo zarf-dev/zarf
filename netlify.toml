@@ -5,6 +5,7 @@
 
 [build.environment]
   NODE_VERSION = "22.12.0"
+  PUBLIC_POSTHOG_PROJECT_TOKEN="phc_CZohXgLUPDpYf8y6aSBf7PucLn7SHos492h5LgDVkXxu"
 
 [[redirects]]
 from = "/docs/the-zarf-cli/cli-commands/*"
@@ -25,6 +26,4 @@ to = "/ref/examples/:splat"
 [[redirects]]
 from = "/docs/:page"
 to = "/:page"
-
-[context.production.environment]
-  PUBLIC_POSTHOG_PROJECT_TOKEN="phc_CZohXgLUPDpYf8y6aSBf7PucLn7SHos492h5LgDVkXxu"
+  
