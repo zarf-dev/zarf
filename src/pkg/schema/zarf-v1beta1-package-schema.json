@@ -107,32 +107,6 @@
     "Chart": {
       "additionalProperties": false,
       "description": "Chart defines a helm chart to be deployed.",
-      "oneOf": [
-        {
-          "required": [
-            "helmRepository"
-          ],
-          "title": "helmRepository"
-        },
-        {
-          "required": [
-            "git"
-          ],
-          "title": "git"
-        },
-        {
-          "required": [
-            "local"
-          ],
-          "title": "local"
-        },
-        {
-          "required": [
-            "oci"
-          ],
-          "title": "oci"
-        }
-      ],
       "patternProperties": {
         "^x-": {}
       },
@@ -810,10 +784,6 @@
           "type": "string"
         }
       },
-      "required": [
-        "url",
-        "ref"
-      ],
       "type": "object"
     },
     "HelmRepositorySource": {
@@ -836,10 +806,6 @@
           "type": "string"
         }
       },
-      "required": [
-        "url",
-        "version"
-      ],
       "type": "object"
     },
     "Image": {
@@ -1039,10 +1005,6 @@
           "type": "string"
         }
       },
-      "required": [
-        "url",
-        "ref"
-      ],
       "type": "object"
     },
     "PackageMetadata": {

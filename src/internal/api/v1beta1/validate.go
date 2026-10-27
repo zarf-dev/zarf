@@ -37,6 +37,7 @@ const (
 	PkgValidateErrActionSetValueOnDeploy  = "setValues is not supported in onCreate actions"
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
 	PkgValidateErrChartName               = "chart %q exceed the maximum length of %d characters"
+	PkgValidateErrChartSource             = "chart %q must include exactly one source (helmRepository, git, local, or oci)"
 	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
@@ -348,6 +349,40 @@ func validateReleaseName(chartName, releaseName string) error {
 // validateChart runs all validation checks on a chart.
 func validateChart(chart v1beta1.Chart) ValidationErrors {
 	var errs ValidationErrors
+
+	sources := 0
+	for _, set := range []bool{chart.HelmRepository != nil, chart.Git != nil, chart.Local != nil, chart.OCI != nil} {
+		if set {
+			sources++
+		}
+	}
+	if sources != 1 {
+		errs = append(errs, fmt.Errorf(PkgValidateErrChartSource, chart.Name))
+	}
+	if chart.HelmRepository != nil {
+		if chart.HelmRepository.URL == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include helmRepository.url", chart.Name))
+		}
+		if chart.HelmRepository.Version == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include helmRepository.version", chart.Name))
+		}
+	}
+	if chart.Git != nil {
+		if chart.Git.URL == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include git.url", chart.Name))
+		}
+		if chart.Git.Ref == (v1beta1.GitRef{}) {
+			errs = append(errs, fmt.Errorf("chart %q must include git.ref", chart.Name))
+		}
+	}
+	if chart.OCI != nil {
+		if chart.OCI.URL == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include oci.url", chart.Name))
+		}
+		if chart.OCI.Ref == (v1beta1.OCIRef{}) {
+			errs = append(errs, fmt.Errorf("chart %q must include oci.ref", chart.Name))
+		}
+	}
 
 	if len(chart.Name) > ZarfMaxChartNameLength {
 		errs = append(errs, fmt.Errorf(PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))
