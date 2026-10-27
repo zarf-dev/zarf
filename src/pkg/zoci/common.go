@@ -26,10 +26,10 @@ import (
 // LayerSelection specifies package layer categories to retrieve.
 // Metadata is always retrieved and is not represented here.
 type LayerSelection struct {
-	Components    bool
-	Images        bool
-	SBOMs         *SBOMSelection
-	Documentation *DocumentationSelection
+	Components  bool
+	Images      bool
+	SBOMs       *SBOMSelection
+	Attachments *AttachmentSelection
 }
 
 // SBOMSelection specifies which checksum-declared SBOM resources to retrieve.
@@ -39,19 +39,19 @@ type SBOMSelection struct {
 	Keys []string
 }
 
-// DocumentationSelection specifies which declared documentation resources to retrieve.
-// An empty key set selects every declared document.
-type DocumentationSelection struct {
+// AttachmentSelection specifies which declared attachment resources to retrieve.
+// An empty key set selects every declared attachment.
+type AttachmentSelection struct {
 	Keys []string
 }
 
 // AllLayerSelection returns a selection for every package resource.
 func AllLayerSelection() LayerSelection {
 	return LayerSelection{
-		Components:    true,
-		Images:        true,
-		SBOMs:         &SBOMSelection{},
-		Documentation: &DocumentationSelection{},
+		Components:  true,
+		Images:      true,
+		SBOMs:       &SBOMSelection{},
+		Attachments: &AttachmentSelection{},
 	}
 }
 

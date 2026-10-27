@@ -200,13 +200,13 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		}
 	}
 
-	if selection.Documentation != nil {
+	if selection.Attachments != nil {
 		if layout.UsesGranularResourceLayout(pkg) {
-			documentationLayers, err := documentationResourceLayers(root, pkg.Attachments, selection.Documentation.Keys)
+			attachmentLayers, err := attachmentResourceLayers(root, pkg.Attachments, selection.Attachments.Keys)
 			if err != nil {
 				return nil, err
 			}
-			layers = append(layers, documentationLayers...)
+			layers = append(layers, attachmentLayers...)
 		} else if len(pkg.Attachments) > 0 {
 			if desc := root.Locate(layout.DocumentationTar); !oci.IsEmptyDescriptor(desc) {
 				layers = append(layers, desc)
@@ -216,13 +216,13 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 	return layers, nil
 }
 
-// documentationResourceLayers validates every declared documentation resource before selecting the requested descriptors.
-func documentationResourceLayers(root *oci.Manifest, documentation map[string]string, keys []string) ([]ocispec.Descriptor, error) {
-	allFileNames, err := layout.GetDocumentationFileNames(documentation, nil)
+// attachmentResourceLayers validates every declared attachment resource before selecting the requested descriptors.
+func attachmentResourceLayers(root *oci.Manifest, attachments map[string]string, keys []string) ([]ocispec.Descriptor, error) {
+	allFileNames, err := layout.GetAttachmentFileNames(attachments, nil)
 	if err != nil {
 		return nil, err
 	}
-	selectedFileNames, err := layout.GetDocumentationFileNames(documentation, keys)
+	selectedFileNames, err := layout.GetAttachmentFileNames(attachments, keys)
 	if err != nil {
 		return nil, err
 	}
@@ -241,22 +241,22 @@ func documentationResourceLayers(root *oci.Manifest, documentation map[string]st
 		title := descriptor.Annotations[ocispec.AnnotationTitle]
 		if _, declared := declaredTitles[title]; declared {
 			if _, found := descriptorsByTitle[title]; found {
-				return nil, fmt.Errorf("multiple OCI descriptors represent documentation resource %q", title)
+				return nil, fmt.Errorf("multiple OCI descriptors represent attachment resource %q", title)
 			}
 			descriptorsByTitle[title] = descriptor
-			if descriptor.Annotations[layout.ResourceKindAnnotation] != layout.ResourceKindDocumentation {
-				return nil, fmt.Errorf("documentation resource %q has an invalid OCI kind", title)
+			if descriptor.Annotations[layout.ResourceKindAnnotation] != layout.ResourceKindAttachment {
+				return nil, fmt.Errorf("attachment resource %q has an invalid OCI kind", title)
 			}
-			if descriptor.MediaType != layout.DocumentationLayerMediaTypeBlob {
-				return nil, fmt.Errorf("documentation resource %q has an invalid OCI media type %q", title, descriptor.MediaType)
+			if descriptor.MediaType != layout.AttachmentLayerMediaTypeBlob {
+				return nil, fmt.Errorf("attachment resource %q has an invalid OCI media type %q", title, descriptor.MediaType)
 			}
-		} else if descriptor.Annotations[layout.ResourceKindAnnotation] == layout.ResourceKindDocumentation {
-			return nil, fmt.Errorf("documentation resource %q is not declared by the package", title)
+		} else if descriptor.Annotations[layout.ResourceKindAnnotation] == layout.ResourceKindAttachment {
+			return nil, fmt.Errorf("attachment resource %q is not declared by the package", title)
 		}
 	}
 	for title := range declaredTitles {
 		if _, found := descriptorsByTitle[title]; !found {
-			return nil, fmt.Errorf("documentation resource %q is missing from OCI manifest", title)
+			return nil, fmt.Errorf("attachment resource %q is missing from OCI manifest", title)
 		}
 	}
 

@@ -33,8 +33,8 @@ import (
 const (
 	// ZarfLayerMediaTypeBlob is the media type for all Zarf package layer blobs.
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
-	// DocumentationLayerMediaTypeBlob is the media type for a v1beta1 documentation resource layer.
-	DocumentationLayerMediaTypeBlob = "application/vnd.zarf.documentation.layer.v1.blob"
+	// AttachmentLayerMediaTypeBlob is the media type for a granular attachment resource layer.
+	AttachmentLayerMediaTypeBlob = "application/vnd.zarf.attachment.layer.v1.blob"
 	// ZarfConfigMediaType is the media type for the Zarf package manifest config.
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
 	// ZarfComponentConfigMediaType is the media type for a v1beta1 Zarf component config OCI artifact.
@@ -43,8 +43,8 @@ const (
 	ComponentResourceMountPathAnnotation = "dev.zarf.mountPath"
 	// ResourceKindAnnotation identifies the kind of a granular package resource.
 	ResourceKindAnnotation = "dev.zarf.resource.kind"
-	// ResourceKindDocumentation identifies a documentation resource.
-	ResourceKindDocumentation = "documentation"
+	// ResourceKindAttachment identifies an attachment resource.
+	ResourceKindAttachment = "attachment"
 	// ResourceKindSBOM identifies an SBOM resource.
 	ResourceKindSBOM = "sbom"
 	// OCITimestampFormat is the format used for the OCI timestamp annotation
@@ -99,7 +99,7 @@ func resourceAnnotations(resourcePath string, pkg api.Package) map[string]string
 
 	switch {
 	case strings.HasPrefix(resourcePath, AttachmentsDir+"/"):
-		annotations[ResourceKindAnnotation] = ResourceKindDocumentation
+		annotations[ResourceKindAnnotation] = ResourceKindAttachment
 	case strings.HasPrefix(resourcePath, SBOMResourcesDir+"/"):
 		annotations[ResourceKindAnnotation] = ResourceKindSBOM
 	}
@@ -110,7 +110,7 @@ func resourceMediaType(resourcePath string, pkg api.Package) string {
 	if UsesGranularResourceLayout(pkg) {
 		switch {
 		case strings.HasPrefix(resourcePath, AttachmentsDir+"/"):
-			return DocumentationLayerMediaTypeBlob
+			return AttachmentLayerMediaTypeBlob
 		case strings.HasPrefix(resourcePath, SBOMResourcesDir+"/"):
 			return SBOMMediaTypeSyftJSON
 		}

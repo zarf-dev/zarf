@@ -94,7 +94,7 @@ func TestResourceAnnotations(t *testing.T) {
 	attachmentPath := AttachmentsDir + "/README.md"
 	require.Equal(t, map[string]string{
 		ocispec.AnnotationTitle: attachmentPath,
-		ResourceKindAnnotation:  ResourceKindDocumentation,
+		ResourceKindAnnotation:  ResourceKindAttachment,
 	}, resourceAnnotations(attachmentPath, pkg))
 
 	sbomPath := ComponentSBOMResourcePath("metrics")
@@ -139,8 +139,8 @@ attachments:
 	}
 	attachment := descriptors[AttachmentsDir+"/README.md"]
 	require.Equal(t, AttachmentsDir+"/README.md", attachment.Annotations[ocispec.AnnotationTitle])
-	require.Equal(t, ResourceKindDocumentation, attachment.Annotations[ResourceKindAnnotation])
-	require.Equal(t, DocumentationLayerMediaTypeBlob, attachment.MediaType)
+	require.Equal(t, ResourceKindAttachment, attachment.Annotations[ResourceKindAnnotation])
+	require.Equal(t, AttachmentLayerMediaTypeBlob, attachment.MediaType)
 	sbom := descriptors[ComponentSBOMResourcePath("metrics")]
 	require.Equal(t, ComponentSBOMResourcePath("metrics"), sbom.Annotations[ocispec.AnnotationTitle])
 	require.Equal(t, ResourceKindSBOM, sbom.Annotations[ResourceKindAnnotation])

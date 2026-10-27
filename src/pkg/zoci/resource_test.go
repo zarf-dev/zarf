@@ -18,111 +18,111 @@ import (
 	"oras.land/oras-go/v2/content/memory"
 )
 
-func TestDocumentationResourceLayers(t *testing.T) {
+func TestAttachmentResourceLayers(t *testing.T) {
 	t.Parallel()
 
-	documentationDescriptor := func(title string) ocispec.Descriptor {
+	attachmentDescriptor := func(title string) ocispec.Descriptor {
 		return ocispec.Descriptor{
-			MediaType: layout.DocumentationLayerMediaTypeBlob,
+			MediaType: layout.AttachmentLayerMediaTypeBlob,
 			Annotations: map[string]string{
 				ocispec.AnnotationTitle:       title,
-				layout.ResourceKindAnnotation: layout.ResourceKindDocumentation,
+				layout.ResourceKindAnnotation: layout.ResourceKindAttachment,
 			},
 		}
 	}
-	documentation := map[string]string{"readme": "README.md", "license": "LICENSE"}
-	readme := documentationDescriptor("attachments/README.md")
-	license := documentationDescriptor("attachments/LICENSE")
+	attachments := map[string]string{"readme": "README.md", "license": "LICENSE"}
+	readme := attachmentDescriptor("attachments/README.md")
+	license := attachmentDescriptor("attachments/LICENSE")
 
 	tests := []struct {
 		name          string
-		documentation map[string]string
+		attachments   map[string]string
 		keys          []string
 		layers        []ocispec.Descriptor
 		expected      []ocispec.Descriptor
 		errorContains string
 	}{
 		{
-			name:          "all documents",
-			documentation: documentation,
-			layers:        []ocispec.Descriptor{readme, license},
-			expected:      []ocispec.Descriptor{readme, license},
+			name:        "all attachments",
+			attachments: attachments,
+			layers:      []ocispec.Descriptor{readme, license},
+			expected:    []ocispec.Descriptor{readme, license},
 		},
 		{
-			name:          "single requested key",
-			documentation: documentation,
-			keys:          []string{"readme"},
-			layers:        []ocispec.Descriptor{readme, license},
-			expected:      []ocispec.Descriptor{readme},
+			name:        "single requested key",
+			attachments: attachments,
+			keys:        []string{"readme"},
+			layers:      []ocispec.Descriptor{readme, license},
+			expected:    []ocispec.Descriptor{readme},
 		},
 		{
-			name:          "colliding source basenames",
-			documentation: map[string]string{"first": "docs/README.md", "second": "other/README.md"},
-			keys:          []string{"second"},
+			name:        "colliding source basenames",
+			attachments: map[string]string{"first": "docs/README.md", "second": "other/README.md"},
+			keys:        []string{"second"},
 			layers: []ocispec.Descriptor{
-				documentationDescriptor("attachments/first-README.md"),
-				documentationDescriptor("attachments/second-README.md"),
+				attachmentDescriptor("attachments/first-README.md"),
+				attachmentDescriptor("attachments/second-README.md"),
 			},
-			expected: []ocispec.Descriptor{documentationDescriptor("attachments/second-README.md")},
+			expected: []ocispec.Descriptor{attachmentDescriptor("attachments/second-README.md")},
 		},
 		{
 			name:          "unknown key",
-			documentation: documentation,
+			attachments:   attachments,
 			keys:          []string{"missing"},
 			layers:        []ocispec.Descriptor{readme, license},
-			errorContains: "key missing not found in package documentation",
+			errorContains: "attachment key missing not found in package",
 		},
 		{
 			name:          "missing title",
-			documentation: documentation,
+			attachments:   attachments,
 			layers:        []ocispec.Descriptor{readme},
-			errorContains: `documentation resource "attachments/LICENSE" is missing from OCI manifest`,
+			errorContains: `attachment resource "attachments/LICENSE" is missing from OCI manifest`,
 		},
 		{
 			name:          "duplicate title",
-			documentation: map[string]string{"readme": "README.md"},
+			attachments:   map[string]string{"readme": "README.md"},
 			layers:        []ocispec.Descriptor{readme, readme},
-			errorContains: `multiple OCI descriptors represent documentation resource "attachments/README.md"`,
+			errorContains: `multiple OCI descriptors represent attachment resource "attachments/README.md"`,
 		},
 		{
-			name:          "invalid kind",
-			documentation: map[string]string{"readme": "README.md"},
+			name:        "invalid kind",
+			attachments: map[string]string{"readme": "README.md"},
 			layers: []ocispec.Descriptor{{
-				MediaType: layout.DocumentationLayerMediaTypeBlob,
+				MediaType: layout.AttachmentLayerMediaTypeBlob,
 				Annotations: map[string]string{
 					ocispec.AnnotationTitle:       "attachments/README.md",
 					layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
 				},
 			}},
-			errorContains: `documentation resource "attachments/README.md" has an invalid OCI kind`,
+			errorContains: `attachment resource "attachments/README.md" has an invalid OCI kind`,
 		},
 		{
-			name:          "invalid media type",
-			documentation: map[string]string{"readme": "README.md"},
+			name:        "invalid media type",
+			attachments: map[string]string{"readme": "README.md"},
 			layers: []ocispec.Descriptor{{
 				MediaType: layout.ZarfLayerMediaTypeBlob,
 				Annotations: map[string]string{
 					ocispec.AnnotationTitle:       "attachments/README.md",
-					layout.ResourceKindAnnotation: layout.ResourceKindDocumentation,
+					layout.ResourceKindAnnotation: layout.ResourceKindAttachment,
 				},
 			}},
-			errorContains: `documentation resource "attachments/README.md" has an invalid OCI media type`,
+			errorContains: `attachment resource "attachments/README.md" has an invalid OCI media type`,
 		},
 		{
-			name:          "undeclared documentation kind",
-			documentation: map[string]string{"readme": "README.md"},
+			name:        "undeclared attachment kind",
+			attachments: map[string]string{"readme": "README.md"},
 			layers: []ocispec.Descriptor{
 				readme,
-				documentationDescriptor("attachments/EXTRA.md"),
+				attachmentDescriptor("attachments/EXTRA.md"),
 			},
-			errorContains: `documentation resource "attachments/EXTRA.md" is not declared by the package`,
+			errorContains: `attachment resource "attachments/EXTRA.md" is not declared by the package`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			root := &oci.Manifest{Manifest: ocispec.Manifest{Layers: tt.layers}}
-			layers, err := documentationResourceLayers(root, tt.documentation, tt.keys)
+			layers, err := attachmentResourceLayers(root, tt.attachments, tt.keys)
 			if tt.errorContains != "" {
 				require.ErrorContains(t, err, tt.errorContains)
 				return
@@ -248,11 +248,11 @@ documentation:
 		Layers: []ocispec.Descriptor{zarfYAMLDesc, documentationDesc, sbomDesc},
 	}}
 
-	documentationLayers, err := AssembleLayers(ctx, root, store, nil, LayerSelection{
-		Documentation: &DocumentationSelection{},
+	attachmentLayers, err := AssembleLayers(ctx, root, store, nil, LayerSelection{
+		Attachments: &AttachmentSelection{},
 	})
 	require.NoError(t, err)
-	require.Equal(t, []ocispec.Descriptor{zarfYAMLDesc, documentationDesc}, documentationLayers)
+	require.Equal(t, []ocispec.Descriptor{zarfYAMLDesc, documentationDesc}, attachmentLayers)
 
 	sbomLayers, err := AssembleLayers(ctx, root, store, nil, LayerSelection{SBOMs: &SBOMSelection{}})
 	require.NoError(t, err)

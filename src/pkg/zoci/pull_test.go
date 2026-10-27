@@ -225,8 +225,8 @@ func TestAssembleLayers(t *testing.T) {
 			expectedLen: 3,
 		},
 		{
-			name:        "documentation layers",
-			selection:   zoci.LayerSelection{Documentation: &zoci.DocumentationSelection{}},
+			name:        "attachment layers",
+			selection:   zoci.LayerSelection{Attachments: &zoci.AttachmentSelection{}},
 			expectedLen: 3,
 		},
 	}

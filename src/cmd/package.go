@@ -1369,7 +1369,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayerSelection:       &zoci.LayerSelection{Documentation: &zoci.DocumentationSelection{Keys: o.keys}},
+		LayerSelection:       &zoci.LayerSelection{Attachments: &zoci.AttachmentSelection{Keys: o.keys}},
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {

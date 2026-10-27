@@ -694,16 +694,16 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 	return p.GetAttachments(ctx, destPath, keys)
 }
 
-// GetAttachments extracts "attachments" (documentation in v1alpha1) files from the package to the given destination path.
+// GetAttachments extracts attachment files (documentation in v1alpha1) to the given destination path.
 // If keys is empty, all attachments are extracted.
 // If keys are provided, only those specific attachments are extracted.
 func (p *PackageLayout) GetAttachments(ctx context.Context, destPath string, keys []string) (err error) {
 	l := logger.From(ctx)
 	if len(p.pkg.Attachments) == 0 {
-		return fmt.Errorf("no documentation files found in package")
+		return fmt.Errorf("no attachments found in package")
 	}
 
-	fileNames, err := GetDocumentationFileNames(p.pkg.Attachments, keys)
+	fileNames, err := GetAttachmentFileNames(p.pkg.Attachments, keys)
 	if err != nil {
 		return err
 	}
@@ -735,7 +735,7 @@ func (p *PackageLayout) GetAttachments(ctx context.Context, destPath string, key
 
 	sourceRoot, err := os.OpenRoot(sourceDir)
 	if err != nil {
-		return fmt.Errorf("opening package documentation root: %w", err)
+		return fmt.Errorf("opening package attachment root: %w", err)
 	}
 	defer func() {
 		err = errors.Join(err, sourceRoot.Close())
@@ -743,29 +743,28 @@ func (p *PackageLayout) GetAttachments(ctx context.Context, destPath string, key
 
 	destinationRoot, err := os.OpenRoot(destPath)
 	if err != nil {
-		return fmt.Errorf("failed to open documentation output root: %w", err)
+		return fmt.Errorf("failed to open attachment output root: %w", err)
 	}
 	defer func() {
 		err = errors.Join(err, destinationRoot.Close())
 	}()
-
-	for key, docFileName := range fileNames {
-		if err := copyDocumentationFile(sourceRoot, destinationRoot, docFileName); err != nil {
-			return fmt.Errorf("failed to copy documentation file %s: %w", p.pkg.Attachments[key], err)
+	for key, attachmentFileName := range fileNames {
+		if err := copyAttachmentFile(sourceRoot, destinationRoot, attachmentFileName); err != nil {
+			return fmt.Errorf("failed to copy attachment file %s: %w", p.pkg.Attachments[key], err)
 		}
 	}
 
-	l.Info("documentation successfully extracted", "path", destPath)
+	l.Info("attachments successfully extracted", "path", destPath)
 	return nil
 }
 
-func copyDocumentationFile(sourceRoot, destinationRoot *os.Root, name string) error {
+func copyAttachmentFile(sourceRoot, destinationRoot *os.Root, name string) error {
 	info, err := sourceRoot.Lstat(name)
 	if err != nil {
 		return err
 	}
 	if !info.Mode().IsRegular() {
-		return fmt.Errorf("documentation file %q is not a regular file", name)
+		return fmt.Errorf("attachment file %q is not a regular file", name)
 	}
 
 	source, err := sourceRoot.Open(name)
@@ -782,41 +781,55 @@ func copyDocumentationFile(sourceRoot, destinationRoot *os.Root, name string) er
 	return errors.Join(err, source.Close(), destination.Close())
 }
 
-// FormatDocumentFileName returns the stored filename for a documentation file whose basename collides with another document.
-func FormatDocumentFileName(key, file string) string {
+// FormatAttachmentFileName returns the stored filename for an attachment whose basename collides with another attachment.
+func FormatAttachmentFileName(key, file string) string {
 	return fmt.Sprintf("%s-%s", key, filepath.Base(file))
 }
 
+// FormatDocumentFileName returns the stored filename for a documentation file whose basename collides with another document.
+//
+// Deprecated: Use FormatAttachmentFileName.
+func FormatDocumentFileName(key, file string) string {
+	return FormatAttachmentFileName(key, file)
+}
+
 // GetDocumentationFileNames returns validated stored filenames for the requested documentation keys.
-// Filenames are deconflicted before selection: if multiple keys have the same basename, they are prefixed with the key.
+//
+// Deprecated: Use GetAttachmentFileNames.
 func GetDocumentationFileNames(documentation map[string]string, keys []string) (map[string]string, error) {
-	basenameCounts := make(map[string]int, len(documentation))
-	basenames := make(map[string]string, len(documentation))
-	for key, file := range documentation {
-		if !isCleanDocumentationKey(key) {
-			return nil, fmt.Errorf("documentation key %q would result in an invalid path", key)
+	return GetAttachmentFileNames(documentation, keys)
+}
+
+// GetAttachmentFileNames returns validated stored filenames for the requested attachment keys.
+// Filenames are deconflicted before selection: if multiple keys have the same basename, they are prefixed with the key.
+func GetAttachmentFileNames(attachments map[string]string, keys []string) (map[string]string, error) {
+	basenameCounts := make(map[string]int, len(attachments))
+	basenames := make(map[string]string, len(attachments))
+	for key, file := range attachments {
+		if !isCleanAttachmentKey(key) {
+			return nil, fmt.Errorf("attachment key %q would result in an invalid path", key)
 		}
 		if strings.Contains(key, " ") {
-			return nil, fmt.Errorf("documentation key %q must not contain spaces", key)
+			return nil, fmt.Errorf("attachment key %q must not contain spaces", key)
 		}
 		basename := filepath.Base(file)
-		if !isCleanDocumentationFileName(basename) {
-			return nil, fmt.Errorf("documentation file %q would result in an invalid path", file)
+		if !isCleanAttachmentFileName(basename) {
+			return nil, fmt.Errorf("attachment file %q would result in an invalid path", file)
 		}
 		if strings.Contains(basename, " ") {
-			return nil, fmt.Errorf("documentation file %q produces final filename %q, which must not contain spaces", file, basename)
+			return nil, fmt.Errorf("attachment file %q produces final filename %q, which must not contain spaces", file, basename)
 		}
 		basenames[key] = basename
 		basenameCounts[basename]++
 	}
 
-	fileNames := make(map[string]string, len(documentation))
-	for key, file := range documentation {
+	fileNames := make(map[string]string, len(attachments))
+	for key, file := range attachments {
 		basename := basenames[key]
 		if basenameCounts[basename] == 1 {
 			fileNames[key] = basename
 		} else {
-			fileNames[key] = FormatDocumentFileName(key, file)
+			fileNames[key] = FormatAttachmentFileName(key, file)
 		}
 	}
 	if len(keys) == 0 {
@@ -827,7 +840,7 @@ func GetDocumentationFileNames(documentation map[string]string, keys []string) (
 	for _, key := range keys {
 		fileName, found := fileNames[key]
 		if !found {
-			return nil, fmt.Errorf("key %s not found in package documentation", key)
+			return nil, fmt.Errorf("attachment key %s not found in package", key)
 		}
 		selected[key] = fileName
 	}
@@ -1085,7 +1098,7 @@ func ValidatePackagePaths(pkg api.Package) error {
 			}
 		}
 	}
-	if _, err := GetDocumentationFileNames(pkg.Attachments, nil); err != nil {
+	if _, err := GetAttachmentFileNames(pkg.Attachments, nil); err != nil {
 		return err
 	}
 	return nil
@@ -1097,10 +1110,10 @@ func isCleanPath(s string) bool {
 	return s != ".." && !strings.ContainsAny(s, `/\`)
 }
 
-func isCleanDocumentationKey(key string) bool {
+func isCleanAttachmentKey(key string) bool {
 	return key != "" && key != "." && isCleanPath(key)
 }
 
-func isCleanDocumentationFileName(fileName string) bool {
+func isCleanAttachmentFileName(fileName string) bool {
 	return fileName != "" && fileName != "." && isCleanPath(fileName)
 }
