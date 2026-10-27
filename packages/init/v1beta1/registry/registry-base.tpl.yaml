@@ -20,7 +20,7 @@ component:
       releaseName: zarf-docker-registry
       namespace: zarf
       local:
-        path: ../../zarf-registry/chart
+        path: ../../v1alpha1/zarf-registry/chart
       valuesFiles:
         - path: registry-common-state-values.yaml
           enableTemplating: true

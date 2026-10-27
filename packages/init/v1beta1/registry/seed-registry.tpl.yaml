@@ -13,7 +13,7 @@ component:
   charts:
     - name: docker-registry
       local:
-        path: ../../zarf-registry/chart
+        path: ../../v1alpha1/zarf-registry/chart
       valuesFiles:
         - path: seed-registry-state-values.yaml
           enableTemplating: true

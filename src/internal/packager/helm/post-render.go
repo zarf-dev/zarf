@@ -396,7 +396,7 @@ func ensureLabelsAt(obj *unstructured.Unstructured, path []string) (map[string]s
 
 // agentMutatedKinds maps resources mutated by the Zarf agent webhook to the
 // label paths where the ignore label should be applied.
-// These come from the webhook configuration in packages/zarf-agent/chart/templates/webhook.yaml.
+// These come from the webhook configuration in packages/init/v1alpha1/zarf-agent/chart/templates/webhook.yaml.
 var agentMutatedKinds = map[schema.GroupKind][][]string{
 	{Group: "", Kind: "Pod"}:                                    {{"metadata", "labels"}},
 	{Group: "apps", Kind: "Deployment"}:                         {{"spec", "template", "metadata", "labels"}},

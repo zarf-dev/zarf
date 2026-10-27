@@ -12,7 +12,7 @@ component:
     os: linux
   files:
     # K3s removal script
-    - source: ../../distros/k3s/zarf-clean-k3s.sh
+    - source: ../../../distros/k3s/zarf-clean-k3s.sh
       destination: /opt/zarf/zarf-clean-k3s.sh
       executable: true
     # The K3s systemd service definition

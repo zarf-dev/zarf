@@ -2,6 +2,16 @@
 
 This folder contains packages maintained by the [Zarf team](https://github.com/zarf-dev/zarf/graphs/contributors).  Some of these packages are used by `zarf init` for new cluster initialization.
 
+## Init packages
+
+Init package definitions are grouped by API version under `init/`:
+
+- [`init/v1alpha1/zarf.yaml`](./init/v1alpha1/zarf.yaml) is the legacy init package, built with `make init-package`.
+- [`init/v1beta1/zarf.tpl.yaml`](./init/v1beta1/zarf.tpl.yaml) is the v1beta1 init package, rendered with `make template-init-package-v1beta1` and built with `make init-package-v1beta1`.
+
+Run these targets from the repository root. The legacy component packages and their charts are in `init/v1alpha1/`; v1beta1 templates also reference these charts. Distro packages remain in `distros/`.
+For direct CLI builds or skeleton publishing, use `packages/init/v1alpha1` in place of the repository root and `packages/init/v1beta1` in place of `packages/v1beta1-init`.
+
 ## Distros
 
 The distros package adds optional capabilities for spinning up and tearing down clusters.  Currently, the following distros are supported:

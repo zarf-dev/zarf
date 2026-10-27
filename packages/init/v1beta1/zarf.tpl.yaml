@@ -8,7 +8,7 @@ metadata:
 
 documentation:
   migration: MIGRATION.md
-  zarf.cli.openvex.json: ../../.vex/zarf.cli.openvex.json
+  zarf.cli.openvex.json: ../../../.vex/zarf.cli.openvex.json
 
 components:
   - name: k3s

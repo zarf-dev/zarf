@@ -14,7 +14,7 @@ component:
     - name: registry-connect
       namespace: zarf
       files:
-        - ../../zarf-registry/connect.yaml
+        - ../../v1alpha1/zarf-registry/connect.yaml
     - name: kep-1755-registry-annotation
       namespace: zarf
       enableTemplating: true
@@ -23,7 +23,7 @@ component:
   charts:
     - name: docker-registry
       local:
-        path: ../../zarf-registry/chart
+        path: ../../v1alpha1/zarf-registry/chart
       valuesFiles:
         - path: registry-state-values.yaml
           enableTemplating: true

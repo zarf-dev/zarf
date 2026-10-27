@@ -20,7 +20,7 @@ component:
     - name: git-connect
       namespace: zarf
       files:
-        - ../../gitea/connect.yaml
+        - ../../v1alpha1/gitea/connect.yaml
   charts:
     - name: gitea
       releaseName: zarf-gitea
