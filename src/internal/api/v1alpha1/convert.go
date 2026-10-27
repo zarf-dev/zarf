@@ -39,20 +39,18 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 			Vendor:                   pkg.Metadata.Vendor,
 		},
 		Build: api.BuildData{
-			Hostname:                   pkg.Build.Terminal,
-			User:                       pkg.Build.User,
-			Architecture:               pkg.Build.Architecture,
-			Timestamp:                  pkg.Build.Timestamp,
-			Version:                    pkg.Build.Version,
-			Migrations:                 pkg.Build.Migrations,
-			RegistryOverrides:          pkg.Build.RegistryOverrides,
-			Differential:               pkg.Build.Differential,
-			DifferentialPackageVersion: pkg.Build.DifferentialPackageVersion,
-			Flavor:                     pkg.Build.Flavor,
-			Signed:                     pkg.Build.Signed,
-			DifferentialMissing:        pkg.Build.DifferentialMissing,
-			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
-			AggregateChecksum:          pkg.Metadata.AggregateChecksum,
+			Hostname:            pkg.Build.Terminal,
+			User:                pkg.Build.User,
+			Architecture:        pkg.Build.Architecture,
+			Timestamp:           pkg.Build.Timestamp,
+			Version:             pkg.Build.Version,
+			Migrations:          pkg.Build.Migrations,
+			RegistryOverrides:   pkg.Build.RegistryOverrides,
+			Flavor:              pkg.Build.Flavor,
+			Signed:              pkg.Build.Signed,
+			DifferentialMissing: pkg.Build.DifferentialMissing,
+			ProvenanceFiles:     pkg.Build.ProvenanceFiles,
+			AggregateChecksum:   pkg.Metadata.AggregateChecksum,
 		},
 		Values: api.Values{
 			Files:  pkg.Values.Files,
@@ -61,6 +59,11 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 		Attachments: pkg.Documentation,
 		Variables:   interactiveVarsToGeneric(pkg.Variables),
 		Constants:   constantsToGeneric(pkg.Constants),
+	}
+	if pkg.Build.Differential {
+		g.Build.Differential = &api.Differential{
+			DifferentialPackageVersion: pkg.Build.DifferentialPackageVersion,
+		}
 	}
 
 	for _, vr := range pkg.Build.VersionRequirements {
@@ -451,19 +454,21 @@ func metadataFromGeneric(m api.PackageMetadata, b api.BuildData) v1alpha1.ZarfMe
 
 func buildFromGeneric(b api.BuildData) v1alpha1.ZarfBuildData {
 	out := v1alpha1.ZarfBuildData{
-		Terminal:                   b.Hostname,
-		User:                       b.User,
-		Architecture:               b.Architecture,
-		Timestamp:                  b.Timestamp,
-		Version:                    b.Version,
-		Migrations:                 b.Migrations,
-		RegistryOverrides:          b.RegistryOverrides,
-		Differential:               b.Differential,
-		DifferentialPackageVersion: b.DifferentialPackageVersion,
-		DifferentialMissing:        b.DifferentialMissing,
-		Flavor:                     b.Flavor,
-		Signed:                     b.Signed,
-		ProvenanceFiles:            b.ProvenanceFiles,
+		Terminal:            b.Hostname,
+		User:                b.User,
+		Architecture:        b.Architecture,
+		Timestamp:           b.Timestamp,
+		Version:             b.Version,
+		Migrations:          b.Migrations,
+		RegistryOverrides:   b.RegistryOverrides,
+		DifferentialMissing: b.DifferentialMissing,
+		Flavor:              b.Flavor,
+		Signed:              b.Signed,
+		ProvenanceFiles:     b.ProvenanceFiles,
+	}
+	if b.Differential != nil {
+		out.Differential = true
+		out.DifferentialPackageVersion = b.Differential.DifferentialPackageVersion
 	}
 
 	for _, vr := range b.VersionRequirements {

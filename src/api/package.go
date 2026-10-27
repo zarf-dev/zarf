@@ -45,23 +45,28 @@ type PackageMetadata struct {
 // BuildData contains build metadata shared across package API versions.
 type BuildData struct {
 	// Hostname is the v1beta1 name (v1alpha1: Terminal).
-	Hostname                   string
-	User                       string
-	Architecture               string
-	Timestamp                  string
-	Version                    string
-	Migrations                 []string
-	RegistryOverrides          map[string]string
-	Differential               bool
-	DifferentialPackageVersion string
-	Flavor                     string
-	Signed                     *bool
-	VersionRequirements        []VersionRequirement
-	ProvenanceFiles            []string
-	AggregateChecksum          string
+	Hostname            string
+	User                string
+	Architecture        string
+	Timestamp           string
+	Version             string
+	Migrations          []string
+	RegistryOverrides   map[string]string
+	Differential        *Differential
+	Flavor              string
+	Signed              *bool
+	VersionRequirements []VersionRequirement
+	ProvenanceFiles     []string
+	AggregateChecksum   string
 
 	// v1alpha1-only build fields.
 	DifferentialMissing []string
+}
+
+// Differential identifies the base package used to create a differential package.
+// A nil Differential indicates a full package.
+type Differential struct {
+	DifferentialPackageVersion string
 }
 
 // VersionRequirement specifies a minimum Zarf version needed.
