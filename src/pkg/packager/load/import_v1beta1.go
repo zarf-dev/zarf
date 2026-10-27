@@ -417,6 +417,9 @@ func componentConfigFromBytes(path string, b []byte) (v1beta1.ComponentConfig, e
 	if err := validateComponentConfigSchemaV1Beta1(path, b); err != nil {
 		return v1beta1.ComponentConfig{}, err
 	}
+	if errs := internalv1beta1.ValidateAnnotations(config.Metadata.Annotations); len(errs) > 0 {
+		return v1beta1.ComponentConfig{}, fmt.Errorf("component config %q validation failed:\n%w", path, errs)
+	}
 	return config, nil
 }
 
