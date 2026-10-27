@@ -148,6 +148,8 @@ These conversions are automatic. `[]` denotes a list entry.
 | `metadata.image`, `metadata.source`, `metadata.documentation`, `metadata.url`, `metadata.authors`, `metadata.vendor` | Same keys under `metadata.annotations`. Existing annotation values take precedence. |
 | `metadata.aggregateChecksum` | `build.aggregateChecksum` |
 | `build.terminal` | `build.hostname` |
+| `build.differential` | Becomes an object when true |
+| `build.differentialPackageVersion` | `build.differential.fromVersion` |
 
 Namespace overrides remain enabled by default.
 
