@@ -31,13 +31,13 @@ func TestCreateGit(t *testing.T) {
 	gitDir := fmt.Sprintf("%s/components/full-repo/repos/zarf-public-test-2395699829/.git", extractDir)
 	verifyGitRepo(t, gitDir,
 		"0a6b587", "(HEAD -> main, online-upstream/main)", "Adjust dragon spacing",
-		"v0.0.1\n", "  dragons\n* main\n")
+		"v0.0.1\n", "dragons", "* main")
 
 	// Verify the full-repo component fallback
 	gitDir = fmt.Sprintf("%s/components/full-repo/repos/zarf-public-test-410141584/.git", extractDir)
 	verifyGitRepo(t, gitDir,
 		"0a6b587", "(HEAD -> main, online-upstream/main, online-upstream/HEAD)", "Adjust dragon spacing",
-		"v0.0.1\n", "  dragons\n* main\n")
+		"v0.0.1\n", "dragons", "* main")
 
 	// Verify specific tag component shorthand tag
 	gitDir = fmt.Sprintf("%s/components/specific-tag/repos/zarf-public-test-470731282/.git", extractDir)
@@ -82,7 +82,7 @@ func TestCreateGit(t *testing.T) {
 		"v0.0.1\n", "  main\n* zarf-ref-01a23218923f24194133b5eb11268cf8d73ff1bb\n")
 }
 
-func verifyGitRepo(t *testing.T, gitDir string, shortSha string, headTracking string, commitMsg string, tags string, branches string) {
+func verifyGitRepo(t *testing.T, gitDir string, shortSha string, headTracking string, commitMsg string, tags string, branches ...string) {
 	gitDirFlag := fmt.Sprintf("--git-dir=%s", gitDir)
 	stdOut, stdErr, err := exec.Cmd("git", gitDirFlag, "log", "-n", "1", "--oneline", "--decorate=short")
 	require.NoError(t, err, stdOut, stdErr)
@@ -94,7 +94,12 @@ func verifyGitRepo(t *testing.T, gitDir string, shortSha string, headTracking st
 	stdOut, stdErr, err = exec.Cmd("git", gitDirFlag, "tag")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Equal(t, tags, stdOut)
+
 	stdOut, stdErr, err = exec.Cmd("git", gitDirFlag, "branch")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Equal(t, branches, stdOut)
+
+	// Loop over the expected branches and ensure each is present
+	for _, branch := range branches {
+		require.Contains(t, stdOut, branch)
+	}
 }

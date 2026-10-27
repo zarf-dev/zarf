@@ -214,7 +214,7 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 test-external-out-cluster: ## Run only the external out-of-cluster registry tests (registry:3 on port 5001)
 	@test -s $(ZARF_BIN) || $(MAKE)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
-	cd src/test/external && go test -failfast -v -timeout 30m -run TestExtOurClusterTestSuite
+	cd src/test/external && go test -failfast -v -timeout 30m -run TestExtOutClusterTestSuite
 
 .PHONY: test-proxy
 test-proxy:
@@ -226,9 +226,9 @@ test-proxy:
 .PHONY: test-upgrade
 test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE)
-	[ -n "$(shell zarf version)" ] || (echo "Zarf must be installed prior to the upgrade test" && exit 1)
-	[ -n "$(shell zarf package list 2>&1 | grep test-upgrade-package)" ] || (echo "Zarf must be initialized and have the 6.3.3 upgrade-test package installed prior to the upgrade test" && exit 1)
-	@test -s "zarf-package-test-upgrade-package-amd64-6.3.4.tar.zst" || zarf package create src/test/upgrade/ --set PODINFO_VERSION=6.3.4 --confirm
+	[ -n "$$($(ZARF_BIN) version)" ] || (echo "Zarf must be installed prior to the upgrade test" && exit 1)
+	[ -n "$$($(ZARF_BIN) package list 2>&1 | grep test-upgrade-package)" ] || (echo "Zarf must be initialized and have the 6.3.3 upgrade-test package installed prior to the upgrade test" && exit 1)
+	@test -s "zarf-package-test-upgrade-package-$(ARCH)-6.3.4.tar.zst" || $(ZARF_BIN) package create src/test/upgrade/ -a $(ARCH) --set PODINFO_VERSION=6.3.4 --confirm
 	cd src/test/upgrade && go test -failfast -v -timeout 30m
 
 .PHONY: test-unit
