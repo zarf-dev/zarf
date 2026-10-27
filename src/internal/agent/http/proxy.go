@@ -40,7 +40,7 @@ func ProxyHandler(ctx context.Context, cluster *cluster.Cluster) http.HandlerFun
 			w.Write([]byte("unable to transform the provided request, see the Zarf HTTP proxy logs for more details"))
 			return
 		}
-		proxy := &httputil.ReverseProxy{Director: func(_ *http.Request) {}, ModifyResponse: proxyResponseTransform}
+		proxy := &httputil.ReverseProxy{Director: func(_ *http.Request) {}, ModifyResponse: proxyResponseTransform} //nolint:staticcheck // The deprecated HTTP proxy will be removed soon.
 		proxy.ServeHTTP(w, r)
 	}
 }

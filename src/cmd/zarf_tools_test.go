@@ -73,7 +73,7 @@ func TestGetCreds(t *testing.T) {
 					PullPassword: "pull-password",
 					PushPassword: "push-password",
 					Address:      "127.0.0.1:30001",
-					NodePort:     30001,
+					Port:         30001,
 				},
 				Distro: "test",
 			}
@@ -335,7 +335,6 @@ func internalRegistryState(pullPassword string) *state.State {
 			RegistryMode: state.RegistryModeNodePort,
 			Address:      "127.0.0.1:31999",
 			Port:         31999,
-			NodePort:     31999,
 			PullUsername: "pull-user",
 			PullPassword: pullPassword,
 			PushUsername: "push-user",
