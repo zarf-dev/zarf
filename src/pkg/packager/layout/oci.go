@@ -98,7 +98,7 @@ func resourceAnnotations(resourcePath string, pkg api.Package) map[string]string
 	}
 
 	switch {
-	case strings.HasPrefix(resourcePath, DocumentationDir+"/"):
+	case strings.HasPrefix(resourcePath, AttachmentsDir+"/"):
 		annotations[ResourceKindAnnotation] = ResourceKindDocumentation
 	case strings.HasPrefix(resourcePath, SBOMResourcesDir+"/"):
 		annotations[ResourceKindAnnotation] = ResourceKindSBOM
@@ -109,7 +109,7 @@ func resourceAnnotations(resourcePath string, pkg api.Package) map[string]string
 func resourceMediaType(resourcePath string, pkg api.Package) string {
 	if UsesGranularResourceLayout(pkg) {
 		switch {
-		case strings.HasPrefix(resourcePath, DocumentationDir+"/"):
+		case strings.HasPrefix(resourcePath, AttachmentsDir+"/"):
 			return DocumentationLayerMediaTypeBlob
 		case strings.HasPrefix(resourcePath, SBOMResourcesDir+"/"):
 			return SBOMMediaTypeSyftJSON

@@ -894,7 +894,7 @@ components:
 	require.NoError(t, err)
 	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
 	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
-	require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationDir, "data.txt"))
+	require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.AttachmentsDir, "data.txt"))
 	require.NoFileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationTar))
 }
 

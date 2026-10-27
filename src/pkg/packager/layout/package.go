@@ -708,7 +708,7 @@ func (p *PackageLayout) GetAttachments(ctx context.Context, destPath string, key
 		return err
 	}
 
-	sourceDir := filepath.Join(p.dirPath, DocumentationDir)
+	sourceDir := filepath.Join(p.dirPath, AttachmentsDir)
 	if !UsesGranularResourceLayout(p.pkg) {
 		tarPath := filepath.Join(p.dirPath, DocumentationTar)
 		if _, err := os.Stat(tarPath); err != nil {

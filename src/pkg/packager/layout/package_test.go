@@ -1522,9 +1522,9 @@ func TestGetAttachments(t *testing.T) {
 	t.Run("extract v1beta1 documentation resources", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		pkgDir := filepath.Join(tmpDir, "package")
-		require.NoError(t, os.MkdirAll(filepath.Join(pkgDir, DocumentationDir), 0o700))
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, DocumentationDir, "README.md"), []byte("readme content"), 0o600))
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, DocumentationDir, "LICENSE"), []byte("license content"), 0o600))
+		require.NoError(t, os.MkdirAll(filepath.Join(pkgDir, AttachmentsDir), 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, AttachmentsDir, "README.md"), []byte("readme content"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, AttachmentsDir, "LICENSE"), []byte("license content"), 0o600))
 
 		pkgLayout := &PackageLayout{
 			dirPath: pkgDir,

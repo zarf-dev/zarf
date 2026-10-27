@@ -1243,7 +1243,7 @@ func stageDocumentation(ctx context.Context, pkg api.Package, resources *load.Re
 		docFilename := fileNames[key]
 		dstDir := tmpDir
 		if layout.UsesGranularResourceLayout(pkg) {
-			dstDir = filepath.Join(buildPath, layout.DocumentationDir)
+			dstDir = filepath.Join(buildPath, layout.AttachmentsDir)
 		}
 		if err := os.MkdirAll(dstDir, helpers.ReadWriteExecuteUser); err != nil {
 			return fmt.Errorf("failed to create documentation directory: %w", err)

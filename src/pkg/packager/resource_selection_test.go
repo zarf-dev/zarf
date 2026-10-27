@@ -25,8 +25,8 @@ func TestLoadPackageSelectsGranularResources(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 	sourceDir := t.TempDir()
-	firstDocumentationPath := path.Join(layout.DocumentationDir, "first-README.md")
-	secondDocumentationPath := path.Join(layout.DocumentationDir, "second-README.md")
+	firstDocumentationPath := path.Join(layout.AttachmentsDir, "first-README.md")
+	secondDocumentationPath := path.Join(layout.AttachmentsDir, "second-README.md")
 	sbomResourcePath := layout.ComponentSBOMResourcePath("metrics")
 	unselectedSBOMResourcePath := layout.ComponentSBOMResourcePath("logs")
 	resources := map[string][]byte{
@@ -96,22 +96,22 @@ components:
 		}
 	}
 
-	documentationLayout, err := LoadPackage(ctx, packageRef.String(), loadOptions(zoci.LayerSelection{
+	attachmentsLayout, err := LoadPackage(ctx, packageRef.String(), loadOptions(zoci.LayerSelection{
 		Documentation: &zoci.DocumentationSelection{Keys: []string{"first"}},
 	}))
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, documentationLayout.Cleanup()) })
-	require.FileExists(t, filepath.Join(documentationLayout.DirPath(), firstDocumentationPath))
-	require.NoFileExists(t, filepath.Join(documentationLayout.DirPath(), secondDocumentationPath))
-	require.NoFileExists(t, filepath.Join(documentationLayout.DirPath(), filepath.FromSlash(sbomResourcePath)))
-	require.NoFileExists(t, filepath.Join(documentationLayout.DirPath(), filepath.FromSlash(unselectedSBOMResourcePath)))
+	t.Cleanup(func() { require.NoError(t, attachmentsLayout.Cleanup()) })
+	require.FileExists(t, filepath.Join(attachmentsLayout.DirPath(), firstDocumentationPath))
+	require.NoFileExists(t, filepath.Join(attachmentsLayout.DirPath(), secondDocumentationPath))
+	require.NoFileExists(t, filepath.Join(attachmentsLayout.DirPath(), filepath.FromSlash(sbomResourcePath)))
+	require.NoFileExists(t, filepath.Join(attachmentsLayout.DirPath(), filepath.FromSlash(unselectedSBOMResourcePath)))
 
-	documentationOutput := t.TempDir()
-	require.NoError(t, documentationLayout.GetDocumentation(ctx, documentationOutput, []string{"first"}))
-	documentationContents, err := os.ReadFile(filepath.Join(documentationOutput, "first-README.md"))
+	attachmentsOutput := t.TempDir()
+	require.NoError(t, attachmentsLayout.GetAttachments(ctx, attachmentsOutput, []string{"first"}))
+	attachmentsContents, err := os.ReadFile(filepath.Join(attachmentsOutput, "first-README.md"))
 	require.NoError(t, err)
-	require.Equal(t, resources[firstDocumentationPath], documentationContents)
-	require.NoFileExists(t, filepath.Join(documentationOutput, "second-README.md"))
+	require.Equal(t, resources[firstDocumentationPath], attachmentsContents)
+	require.NoFileExists(t, filepath.Join(attachmentsOutput, "second-README.md"))
 
 	sbomLayout, err := LoadPackage(ctx, packageRef.String(), loadOptions(zoci.LayerSelection{
 		SBOMs: &zoci.SBOMSelection{Keys: []string{"metrics"}},

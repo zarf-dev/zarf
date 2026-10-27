@@ -229,11 +229,11 @@ func documentationResourceLayers(root *oci.Manifest, documentation map[string]st
 
 	declaredTitles := make(map[string]struct{}, len(allFileNames))
 	for _, fileName := range allFileNames {
-		declaredTitles[path.Join(layout.DocumentationDir, fileName)] = struct{}{}
+		declaredTitles[path.Join(layout.AttachmentsDir, fileName)] = struct{}{}
 	}
 	selectedTitles := make(map[string]struct{}, len(selectedFileNames))
 	for _, fileName := range selectedFileNames {
-		selectedTitles[path.Join(layout.DocumentationDir, fileName)] = struct{}{}
+		selectedTitles[path.Join(layout.AttachmentsDir, fileName)] = struct{}{}
 	}
 
 	descriptorsByTitle := make(map[string]ocispec.Descriptor, len(declaredTitles))

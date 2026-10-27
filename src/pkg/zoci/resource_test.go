@@ -31,8 +31,8 @@ func TestDocumentationResourceLayers(t *testing.T) {
 		}
 	}
 	documentation := map[string]string{"readme": "README.md", "license": "LICENSE"}
-	readme := documentationDescriptor("documentation/README.md")
-	license := documentationDescriptor("documentation/LICENSE")
+	readme := documentationDescriptor("attachments/README.md")
+	license := documentationDescriptor("attachments/LICENSE")
 
 	tests := []struct {
 		name          string
@@ -60,10 +60,10 @@ func TestDocumentationResourceLayers(t *testing.T) {
 			documentation: map[string]string{"first": "docs/README.md", "second": "other/README.md"},
 			keys:          []string{"second"},
 			layers: []ocispec.Descriptor{
-				documentationDescriptor("documentation/first-README.md"),
-				documentationDescriptor("documentation/second-README.md"),
+				documentationDescriptor("attachments/first-README.md"),
+				documentationDescriptor("attachments/second-README.md"),
 			},
-			expected: []ocispec.Descriptor{documentationDescriptor("documentation/second-README.md")},
+			expected: []ocispec.Descriptor{documentationDescriptor("attachments/second-README.md")},
 		},
 		{
 			name:          "unknown key",
@@ -76,13 +76,13 @@ func TestDocumentationResourceLayers(t *testing.T) {
 			name:          "missing title",
 			documentation: documentation,
 			layers:        []ocispec.Descriptor{readme},
-			errorContains: `documentation resource "documentation/LICENSE" is missing from OCI manifest`,
+			errorContains: `documentation resource "attachments/LICENSE" is missing from OCI manifest`,
 		},
 		{
 			name:          "duplicate title",
 			documentation: map[string]string{"readme": "README.md"},
 			layers:        []ocispec.Descriptor{readme, readme},
-			errorContains: `multiple OCI descriptors represent documentation resource "documentation/README.md"`,
+			errorContains: `multiple OCI descriptors represent documentation resource "attachments/README.md"`,
 		},
 		{
 			name:          "invalid kind",
@@ -90,11 +90,11 @@ func TestDocumentationResourceLayers(t *testing.T) {
 			layers: []ocispec.Descriptor{{
 				MediaType: layout.DocumentationLayerMediaTypeBlob,
 				Annotations: map[string]string{
-					ocispec.AnnotationTitle:       "documentation/README.md",
+					ocispec.AnnotationTitle:       "attachments/README.md",
 					layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
 				},
 			}},
-			errorContains: `documentation resource "documentation/README.md" has an invalid OCI kind`,
+			errorContains: `documentation resource "attachments/README.md" has an invalid OCI kind`,
 		},
 		{
 			name:          "invalid media type",
@@ -102,20 +102,20 @@ func TestDocumentationResourceLayers(t *testing.T) {
 			layers: []ocispec.Descriptor{{
 				MediaType: layout.ZarfLayerMediaTypeBlob,
 				Annotations: map[string]string{
-					ocispec.AnnotationTitle:       "documentation/README.md",
+					ocispec.AnnotationTitle:       "attachments/README.md",
 					layout.ResourceKindAnnotation: layout.ResourceKindDocumentation,
 				},
 			}},
-			errorContains: `documentation resource "documentation/README.md" has an invalid OCI media type`,
+			errorContains: `documentation resource "attachments/README.md" has an invalid OCI media type`,
 		},
 		{
 			name:          "undeclared documentation kind",
 			documentation: map[string]string{"readme": "README.md"},
 			layers: []ocispec.Descriptor{
 				readme,
-				documentationDescriptor("documentation/EXTRA.md"),
+				documentationDescriptor("attachments/EXTRA.md"),
 			},
-			errorContains: `documentation resource "documentation/EXTRA.md" is not declared by the package`,
+			errorContains: `documentation resource "attachments/EXTRA.md" is not declared by the package`,
 		},
 	}
 

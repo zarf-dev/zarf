@@ -91,11 +91,11 @@ func TestResourceAnnotations(t *testing.T) {
 	t.Parallel()
 
 	pkg := api.Package{APIVersion: v1beta1.APIVersion}
-	documentationPath := DocumentationDir + "/README.md"
+	attachmentPath := AttachmentsDir + "/README.md"
 	require.Equal(t, map[string]string{
-		ocispec.AnnotationTitle: documentationPath,
+		ocispec.AnnotationTitle: attachmentPath,
 		ResourceKindAnnotation:  ResourceKindDocumentation,
-	}, resourceAnnotations(documentationPath, pkg))
+	}, resourceAnnotations(attachmentPath, pkg))
 
 	sbomPath := ComponentSBOMResourcePath("metrics")
 	require.Equal(t, map[string]string{
@@ -114,8 +114,8 @@ func TestComputeManifestAnnotatesV1Beta1Resources(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, DocumentationDir), 0o700))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, DocumentationDir, "README.md"), []byte("documentation"), 0o600))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, AttachmentsDir), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, AttachmentsDir, "README.md"), []byte("documentation"), 0o600))
 	sbomPath := filepath.Join(dir, filepath.FromSlash(ComponentSBOMResourcePath("metrics")))
 	require.NoError(t, os.MkdirAll(filepath.Dir(sbomPath), 0o700))
 	require.NoError(t, os.WriteFile(sbomPath, []byte("sbom"), 0o600))
@@ -137,10 +137,10 @@ attachments:
 	for _, descriptor := range manifest.Layers {
 		descriptors[descriptor.Annotations[ocispec.AnnotationTitle]] = descriptor
 	}
-	documentation := descriptors[DocumentationDir+"/README.md"]
-	require.Equal(t, DocumentationDir+"/README.md", documentation.Annotations[ocispec.AnnotationTitle])
-	require.Equal(t, ResourceKindDocumentation, documentation.Annotations[ResourceKindAnnotation])
-	require.Equal(t, DocumentationLayerMediaTypeBlob, documentation.MediaType)
+	attachment := descriptors[AttachmentsDir+"/README.md"]
+	require.Equal(t, AttachmentsDir+"/README.md", attachment.Annotations[ocispec.AnnotationTitle])
+	require.Equal(t, ResourceKindDocumentation, attachment.Annotations[ResourceKindAnnotation])
+	require.Equal(t, DocumentationLayerMediaTypeBlob, attachment.MediaType)
 	sbom := descriptors[ComponentSBOMResourcePath("metrics")]
 	require.Equal(t, ComponentSBOMResourcePath("metrics"), sbom.Annotations[ocispec.AnnotationTitle])
 	require.Equal(t, ResourceKindSBOM, sbom.Annotations[ResourceKindAnnotation])
@@ -228,9 +228,9 @@ func TestComputeManifestDeterministicWithDuplicateResourceContent(t *testing.T) 
 	t.Parallel()
 
 	dir := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, DocumentationDir), 0o700))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, AttachmentsDir), 0o700))
 	for _, name := range []string{"first.md", "second.md"} {
-		require.NoError(t, os.WriteFile(filepath.Join(dir, DocumentationDir, name), []byte("identical documentation"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, AttachmentsDir, name), []byte("identical documentation"), 0o600))
 	}
 	require.NoError(t, os.WriteFile(filepath.Join(dir, Checksums), []byte{}, 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
