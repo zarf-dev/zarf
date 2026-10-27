@@ -146,7 +146,6 @@ release-init-package:
 
 # Build-time image defaults for zarf dev template.
 INIT_V1BETA1_TEMPLATE_VALUES ?= packages/init/v1beta1/template-values.yaml
-INIT_V1BETA1_OUTPUT ?= build/v1beta1-init
 
 .PHONY: template-init-package-v1beta1 init-package-v1beta1 release-init-package-v1beta1
 template-init-package-v1beta1: ## Render the v1beta1 init package and publishable component definitions
@@ -169,12 +168,12 @@ init-package-v1beta1: ## Build the local agent and create the v1beta1 init packa
 	$(MAKE) $(sort $(BUILD_CLI_FOR_SYSTEM) $(if $(filter arm64,$(ARCH)),build-cli-linux-arm,build-cli-linux-amd))
 	$(MAKE) build-local-agent-image
 	$(MAKE) template-init-package-v1beta1
-	$(ZARF_BIN) package create packages/init/v1beta1 -o "$(INIT_V1BETA1_OUTPUT)" -a $(ARCH) --features=v1beta1=true
+	$(ZARF_BIN) package create packages/init/v1beta1 -o build/v1beta1-init -a $(ARCH) --features=v1beta1=true
 
 release-init-package-v1beta1: ## Create the v1beta1 init package with a released agent image
 	@test -n "$(AGENT_IMAGE_TAG)" || { echo "Set AGENT_IMAGE_TAG to the released agent tag"; exit 1; }
 	$(MAKE) template-init-package-v1beta1
-	$(ZARF_BIN) package create packages/init/v1beta1 -o "$(INIT_V1BETA1_OUTPUT)" -a $(ARCH) --features=v1beta1=true
+	$(ZARF_BIN) package create packages/init/v1beta1 -o build/v1beta1-init -a $(ARCH) --features=v1beta1=true
 
 ## Build the Zarf CLI for all platforms aligned with the release process
 ## skipping validation here to allow for building with a dirty git state (IE development)
@@ -197,7 +196,7 @@ publish-init-package:
 	$(ZARF_BIN) package publish packages/init/v1alpha1 oci://$(REPOSITORY_URL)
 
 publish-init-package-v1beta1: ## Publish the built v1beta1 init package to an OCI registry
-	$(ZARF_BIN) package publish "$(INIT_V1BETA1_OUTPUT)/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst" "oci://$(REPOSITORY_URL)"
+	$(ZARF_BIN) package publish "build/v1beta1-init/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst" "oci://$(REPOSITORY_URL)"
 
 publish-init-components-v1beta1: template-init-package-v1beta1 ## Render and publish the v1beta1 init component configs to an OCI registry
 	$(ZARF_BIN) component publish packages/init/v1beta1/agent/zarf.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
