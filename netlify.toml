@@ -25,3 +25,6 @@ to = "/ref/examples/:splat"
 [[redirects]]
 from = "/docs/:page"
 to = "/:page"
+
+[context.production.environment]
+  PUBLIC_POSTHOG_PROJECT_TOKEN="phc_CZohXgLUPDpYf8y6aSBf7PucLn7SHos492h5LgDVkXxu"
