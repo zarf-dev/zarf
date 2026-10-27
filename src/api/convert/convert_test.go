@@ -1112,7 +1112,7 @@ func TestPackageFromV1alpha1TreatsShasumAsSHA256(t *testing.T) {
 	require.Empty(t, files[1].Checksum)
 }
 
-func TestV1Alpha1PkgToV1Beta1_ValuesAndDocumentation(t *testing.T) {
+func TestV1Alpha1PkgToV1Beta1_ValuesAndAttachments(t *testing.T) {
 	t.Parallel()
 	pkg := v1alpha1.ZarfPackage{
 		Kind: v1alpha1.ZarfPackageConfig,
@@ -1129,7 +1129,8 @@ func TestV1Alpha1PkgToV1Beta1_ValuesAndDocumentation(t *testing.T) {
 
 	require.Equal(t, []string{"values.yaml"}, result.Values.Files)
 	require.Equal(t, "values.schema.json", result.Values.Schema)
-	require.Equal(t, "# Hello", result.Documentation["readme"])
+	require.Equal(t, pkg.Documentation, result.Attachments)
+	require.Equal(t, pkg.Documentation, PackageV1beta1ToV1alpha1(result).Documentation)
 }
 
 // --- v1beta1 → v1alpha1 tests ---

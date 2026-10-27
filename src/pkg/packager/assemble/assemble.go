@@ -1213,17 +1213,17 @@ func writeValuesSchema(buildPath string, schema value.SchemaDocument) error {
 }
 
 func stageDocumentation(ctx context.Context, pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
-	if len(pkg.Documentation) == 0 {
+	if len(pkg.Attachments) == 0 {
 		return nil
 	}
-	for key := range pkg.Documentation {
+	for key := range pkg.Attachments {
 		if err := layout.ValidatePathComponent(key); err != nil {
 			return fmt.Errorf("documentation key validation failed: %w", err)
 		}
 	}
 
 	// Get the mapping of keys to their final filenames (with deduplication logic).
-	fileNames, err := layout.GetDocumentationFileNames(pkg.Documentation)
+	fileNames, err := layout.GetDocumentationFileNames(pkg.Attachments)
 	if err != nil {
 		return fmt.Errorf("validating documentation filenames: %w", err)
 	}
@@ -1234,7 +1234,7 @@ func stageDocumentation(ctx context.Context, pkg api.Package, resources *load.Re
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
-	for key, file := range pkg.Documentation {
+	for key, file := range pkg.Attachments {
 		src, err := resources.Path(file)
 		if err != nil {
 			return err

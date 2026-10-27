@@ -34,8 +34,8 @@ type Package struct {
 	Components []Component `json:"components" jsonschema:"minItems=1"`
 	// Values imports Zarf values files for templating and overriding Helm values.
 	Values Values `json:"values,omitempty"`
-	// Documentation files included in the package.
-	Documentation map[string]string `json:"documentation,omitempty"`
+	// Attachments are files included in the package.
+	Attachments map[string]string `json:"attachments,omitempty"`
 }
 
 // GetComponent returns the component with the given name, or an error if no such component exists.

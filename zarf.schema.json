@@ -29,6 +29,13 @@
           ],
           "type": "string"
         },
+        "attachments": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Attachments are files included in the package.",
+          "type": "object"
+        },
         "build": {
           "additionalProperties": false,
           "description": "Zarf-generated package build data.",
@@ -2918,13 +2925,6 @@
           },
           "minItems": 1,
           "type": "array"
-        },
-        "documentation": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Documentation files included in the package.",
-          "type": "object"
         },
         "kind": {
           "default": "ZarfPackageConfig",
