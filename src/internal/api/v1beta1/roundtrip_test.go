@@ -94,7 +94,7 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 			Version:             "v0.30.0",
 			Migrations:          []string{"scripts-to-actions", "pluralize-set-variable"},
 			RegistryOverrides:   map[string]string{"reg": "override"},
-			Differential:        &v1beta1.Differential{DifferentialPackageVersion: "1.2.2"},
+			Differential:        &v1beta1.Differential{FromVersion: "1.2.2"},
 			Flavor:              "prod",
 			Signed:              b(true),
 			VersionRequirements: []v1beta1.VersionRequirement{{Version: ">=1.0.0", Reason: "needs feature"}},

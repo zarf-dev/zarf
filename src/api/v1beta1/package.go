@@ -109,7 +109,7 @@ type BuildData struct {
 // Differential identifies the base package used to create a differential package.
 type Differential struct {
 	// Version of a previously built package used as the basis for creating this differential package.
-	DifferentialPackageVersion string `json:"differentialPackageVersion"`
+	FromVersion string `json:"fromVersion"`
 }
 
 // VersionRequirement specifies a minimum Zarf version needed and the reason for the requirement.

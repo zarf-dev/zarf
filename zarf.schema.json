@@ -58,13 +58,13 @@
                 "^x-": {}
               },
               "properties": {
-                "differentialPackageVersion": {
+                "fromVersion": {
                   "description": "Version of a previously built package used as the basis for creating this differential package.",
                   "type": "string"
                 }
               },
               "required": [
-                "differentialPackageVersion"
+                "fromVersion"
               ],
               "type": "object"
             },

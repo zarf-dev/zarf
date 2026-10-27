@@ -40,7 +40,7 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 	}
 	if pkg.Build.Differential != nil {
 		g.Build.Differential = &api.Differential{
-			DifferentialPackageVersion: pkg.Build.Differential.DifferentialPackageVersion,
+			FromVersion: pkg.Build.Differential.FromVersion,
 		}
 	}
 
@@ -375,7 +375,7 @@ func buildFromGeneric(b api.BuildData) v1beta1.BuildData {
 	}
 	if b.Differential != nil {
 		out.Differential = &v1beta1.Differential{
-			DifferentialPackageVersion: b.Differential.DifferentialPackageVersion,
+			FromVersion: b.Differential.FromVersion,
 		}
 	}
 

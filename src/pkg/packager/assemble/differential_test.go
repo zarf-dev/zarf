@@ -215,7 +215,7 @@ components:
 
 	definition := pkgLayout.Definition()
 	require.NotNil(t, definition.Build.Differential)
-	require.Equal(t, previous.Metadata.Version, definition.Build.Differential.DifferentialPackageVersion)
+	require.Equal(t, previous.Metadata.Version, definition.Build.Differential.FromVersion)
 	filename, err := pkgLayout.FileName()
 	require.NoError(t, err)
 	require.Contains(t, filename, "-0.0.1-differential-0.0.2.tar.zst")
@@ -229,5 +229,5 @@ components:
 	beta, err := pkgcfg.ParseAs(ctx, data, pkgcfg.V1Beta1)
 	require.NoError(t, err)
 	require.NotNil(t, beta.Build.Differential)
-	require.Equal(t, previous.Metadata.Version, beta.Build.Differential.DifferentialPackageVersion)
+	require.Equal(t, previous.Metadata.Version, beta.Build.Differential.FromVersion)
 }

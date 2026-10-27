@@ -66,7 +66,7 @@ type BuildData struct {
 // Differential identifies the base package used to create a differential package.
 // A nil Differential indicates a full package.
 type Differential struct {
-	DifferentialPackageVersion string
+	FromVersion string
 }
 
 // VersionRequirement specifies a minimum Zarf version needed.

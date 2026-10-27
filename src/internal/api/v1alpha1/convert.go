@@ -62,7 +62,7 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 	}
 	if pkg.Build.Differential {
 		g.Build.Differential = &api.Differential{
-			DifferentialPackageVersion: pkg.Build.DifferentialPackageVersion,
+			FromVersion: pkg.Build.DifferentialPackageVersion,
 		}
 	}
 
@@ -468,7 +468,7 @@ func buildFromGeneric(b api.BuildData) v1alpha1.ZarfBuildData {
 	}
 	if b.Differential != nil {
 		out.Differential = true
-		out.DifferentialPackageVersion = b.Differential.DifferentialPackageVersion
+		out.DifferentialPackageVersion = b.Differential.FromVersion
 	}
 
 	for _, vr := range b.VersionRequirements {

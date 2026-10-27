@@ -175,7 +175,7 @@ func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
 	require.Equal(t, "arm64", result.Build.Architecture)
 	require.Equal(t, "v0.30.0", result.Build.Version)
 	require.NotNil(t, result.Build.Differential)
-	require.Equal(t, "0.29.0", result.Build.Differential.DifferentialPackageVersion)
+	require.Equal(t, "0.29.0", result.Build.Differential.FromVersion)
 	require.Equal(t, "vanilla", result.Build.Flavor)
 	require.NotNil(t, result.Build.Signed)
 	require.True(t, *result.Build.Signed)
@@ -207,9 +207,9 @@ func TestPackageDifferentialConversion(t *testing.T) {
 			beta := PackageToV1beta1(generic)
 			if tt.differential {
 				require.NotNil(t, generic.Build.Differential)
-				require.Equal(t, tt.version, generic.Build.Differential.DifferentialPackageVersion)
+				require.Equal(t, tt.version, generic.Build.Differential.FromVersion)
 				require.NotNil(t, beta.Build.Differential)
-				require.Equal(t, tt.version, beta.Build.Differential.DifferentialPackageVersion)
+				require.Equal(t, tt.version, beta.Build.Differential.FromVersion)
 			} else {
 				require.Nil(t, generic.Build.Differential)
 				require.Nil(t, beta.Build.Differential)
@@ -1242,7 +1242,7 @@ func TestV1Beta1PkgToV1Alpha1_Build(t *testing.T) {
 			Version:           "v0.30.0",
 			Migrations:        []string{"migration1"},
 			RegistryOverrides: map[string]string{"docker.io": "internal.registry"},
-			Differential:      &v1beta1.Differential{DifferentialPackageVersion: "0.29.0"},
+			Differential:      &v1beta1.Differential{FromVersion: "0.29.0"},
 			Flavor:            "vanilla",
 			Signed:            &signed,
 			VersionRequirements: []v1beta1.VersionRequirement{

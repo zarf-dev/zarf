@@ -91,7 +91,7 @@ func TestV1Beta1DifferentialSchema(t *testing.T) {
 			}{
 				{name: "full package", valid: true},
 				{name: "differential object", fields: map[string]any{
-					"differential": map[string]any{"differentialPackageVersion": "1.0.0"},
+					"differential": map[string]any{"fromVersion": "1.0.0"},
 				}, valid: true},
 				{name: "boolean", fields: map[string]any{"differential": true}},
 				{name: "missing base version", fields: map[string]any{"differential": map[string]any{}}},
