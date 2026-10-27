@@ -37,12 +37,8 @@
           "type": "string"
         },
         "differential": {
-          "description": "Whether this package was created with differential components.",
-          "type": "boolean"
-        },
-        "differentialPackageVersion": {
-          "description": "Version of a previously built package used as the basis for creating this differential package.",
-          "type": "string"
+          "$ref": "#/$defs/Differential",
+          "description": "Reference package and resources omitted during differential creation."
         },
         "flavor": {
           "description": "The flavor of Zarf used to build this package.",
@@ -700,6 +696,38 @@
           "type": "string"
         }
       },
+      "type": "object"
+    },
+    "Differential": {
+      "additionalProperties": false,
+      "description": "Differential records the reference package and resources omitted during differential creation.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "excludedImages": {
+          "description": "Images excluded because they are already present in the reference package.",
+          "items": {
+            "$ref": "#/$defs/Image"
+          },
+          "type": "array"
+        },
+        "excludedRepositories": {
+          "description": "Git repositories excluded because they are already present in the reference package.",
+          "items": {
+            "$ref": "#/$defs/Repository"
+          },
+          "type": "array"
+        },
+        "packageVersion": {
+          "description": "Version of the previously built reference package.",
+          "pattern": "^[^/\\\\]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "packageVersion"
+      ],
       "type": "object"
     },
     "File": {

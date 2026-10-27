@@ -92,10 +92,8 @@ type BuildData struct {
 	Migrations []string `json:"migrations,omitempty"`
 	// Any registry domains that were overridden on package create when pulling images.
 	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
-	// Whether this package was created with differential components.
-	Differential bool `json:"differential,omitempty"`
-	// Version of a previously built package used as the basis for creating this differential package.
-	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
+	// Reference package and resources omitted during differential creation.
+	Differential *Differential `json:"differential,omitempty"`
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
 	// Whether this package was signed.
@@ -106,6 +104,16 @@ type BuildData struct {
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
 	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
 	AggregateChecksum string `json:"aggregateChecksum"`
+}
+
+// Differential records the reference package and resources omitted during differential creation.
+type Differential struct {
+	// Version of the previously built reference package.
+	PackageVersion string `json:"packageVersion" jsonschema:"pattern=^[^/\\\\]*$"`
+	// Images excluded because they are already present in the reference package.
+	ExcludedImages []Image `json:"excludedImages,omitempty"`
+	// Git repositories excluded because they are already present in the reference package.
+	ExcludedRepositories []Repository `json:"excludedRepositories,omitempty"`
 }
 
 // VersionRequirement specifies a minimum Zarf version needed and the reason for the requirement.

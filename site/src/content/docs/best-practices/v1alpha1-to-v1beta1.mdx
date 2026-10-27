@@ -162,6 +162,8 @@ These conversions are automatic. Paths below are relative to each component unle
 | `metadata.image`, `source`, `documentation`, `url`, `authors`, `vendor` | Same keys under `metadata.annotations`. Existing annotation values take precedence. |
 | `metadata.aggregateChecksum` | `build.aggregateChecksum` |
 | `build.terminal` | `build.hostname` |
+| `build.differentialPackageVersion` | `build.differential.packageVersion` |
+| `build.differential` | Optional object instead of a boolean. The `build.differential` object now includes sub-fields `excludedImages` and `excludedRepositories`. |
 
 New v1beta1 components are required by default (`optional: false`). However, conversion keeps current behavior (i.e., an omitted or false `required` becomes `optional: true`). Namespace overrides and chart schema validation remain enabled by default.
 

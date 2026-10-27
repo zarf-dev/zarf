@@ -190,6 +190,18 @@ func TestAssemblePackageDifferentialV1beta1(t *testing.T) {
 			Name:    "differential-test",
 			Version: "0.0.1",
 		},
+		Components: []api.Component{{
+			Name: "previous",
+			Images: []api.Image{
+				{Name: "registry.example.com/excluded:v1"},
+				{Name: "registry.example.com/previous-only:v1"},
+			},
+			Repositories: []api.Repository{
+				{URL: "https://example.com/repo.git", Ref: &api.GitRef{Tag: "v1"}},
+				{URL: "https://example.com/repo.git", Ref: &api.GitRef{Commit: "524980951ff16e19dc25232e9aea8fd693989ba6"}},
+				{URL: "https://example.com/previous-only.git", Ref: &api.GitRef{Tag: "v1"}},
+			},
+		}},
 	}
 
 	packageDir := t.TempDir()
@@ -200,6 +212,17 @@ metadata:
   version: 0.0.2
 components:
   - name: current
+    images:
+      - name: registry.example.com/excluded:v1
+        id: excluded-image
+        source: daemon
+    repositories:
+      - url: https://example.com/repo.git
+        ref:
+          tag: v1
+      - url: https://example.com/repo.git
+        ref:
+          commit: 524980951ff16e19dc25232e9aea8fd693989ba6
 `), 0o600))
 	loaded, err := load.Package(ctx, packageDir, load.PackageOptions{})
 	require.NoError(t, err)
@@ -212,6 +235,18 @@ components:
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 
 	definition := pkgLayout.Definition()
-	require.True(t, definition.Build.Differential)
-	require.Equal(t, previous.Metadata.Version, definition.Build.DifferentialPackageVersion)
+	require.Equal(t, &api.Differential{
+		PackageVersion: previous.Metadata.Version,
+		ExcludedImages: []api.Image{{
+			Name:   "registry.example.com/excluded:v1",
+			ID:     "excluded-image",
+			Source: api.ImageSourceDaemon,
+		}},
+		ExcludedRepositories: []api.Repository{
+			{URL: "https://example.com/repo.git", Ref: &api.GitRef{Tag: "v1"}},
+			{URL: "https://example.com/repo.git", Ref: &api.GitRef{Commit: "524980951ff16e19dc25232e9aea8fd693989ba6"}},
+		},
+	}, definition.Build.Differential)
+	require.Empty(t, definition.Components[0].Images)
+	require.Empty(t, definition.Components[0].Repositories)
 }

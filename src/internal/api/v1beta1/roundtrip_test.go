@@ -87,20 +87,26 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 			PreventNamespaceOverride: true,
 		},
 		Build: v1beta1.BuildData{
-			Hostname:                   "host",
-			User:                       "user",
-			Architecture:               "arm64",
-			Timestamp:                  "Mon, 02 Jan 2006 15:04:05 -0700",
-			Version:                    "v0.30.0",
-			Migrations:                 []string{"scripts-to-actions", "pluralize-set-variable"},
-			RegistryOverrides:          map[string]string{"reg": "override"},
-			Differential:               true,
-			DifferentialPackageVersion: "1.2.2",
-			Flavor:                     "prod",
-			Signed:                     b(true),
-			VersionRequirements:        []v1beta1.VersionRequirement{{Version: ">=1.0.0", Reason: "needs feature"}},
-			ProvenanceFiles:            []string{"prov.json"},
-			AggregateChecksum:          "checksum",
+			Hostname:          "host",
+			User:              "user",
+			Architecture:      "arm64",
+			Timestamp:         "Mon, 02 Jan 2006 15:04:05 -0700",
+			Version:           "v0.30.0",
+			Migrations:        []string{"scripts-to-actions", "pluralize-set-variable"},
+			RegistryOverrides: map[string]string{"reg": "override"},
+			Differential: &v1beta1.Differential{
+				PackageVersion: "1.2.2",
+				ExcludedImages: []v1beta1.Image{{Name: "example.com/old:v1", ID: "old-image", Source: v1beta1.ImageSourceDaemon}},
+				ExcludedRepositories: []v1beta1.Repository{
+					{URL: "https://example.com/tag.git", Ref: &v1beta1.GitRef{Tag: "v1"}},
+					{URL: "https://example.com/commit.git", Ref: &v1beta1.GitRef{Commit: "524980951ff16e19dc25232e9aea8fd693989ba6"}},
+				},
+			},
+			Flavor:              "prod",
+			Signed:              b(true),
+			VersionRequirements: []v1beta1.VersionRequirement{{Version: ">=1.0.0", Reason: "needs feature"}},
+			ProvenanceFiles:     []string{"prov.json"},
+			AggregateChecksum:   "checksum",
 		},
 		Components: []v1beta1.Component{
 			{
@@ -401,6 +407,7 @@ func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
 //
 //   - package.apiVersion and package.kind are canonicalized to the target API.
 //   - v1alpha1 conversion records its action migrations in build.migrations.
+//   - differential.excludedImages and differential.excludedRepositories have no v1alpha1 equivalent.
 //   - component.import has separate local and remote lists in v1beta1, while v1alpha1 has one
 //     import object; component.service has no v1alpha1 equivalent.
 //   - image.source distinguishes registry and daemon sources in v1beta1, v1alpha1 images always fallback
@@ -415,6 +422,7 @@ func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 	return cmp.Options{
 		cmpopts.IgnoreFields(v1beta1.Package{}, "APIVersion", "Kind"),
 		cmpopts.IgnoreFields(v1beta1.BuildData{}, "Migrations"),
+		cmpopts.IgnoreFields(v1beta1.Differential{}, "ExcludedImages", "ExcludedRepositories"),
 		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
 		cmpopts.IgnoreFields(v1beta1.Image{}, "ID", "Source"),
 		cmpopts.IgnoreFields(v1beta1.ArchiveImage{}, "ID"),

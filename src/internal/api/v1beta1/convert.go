@@ -19,26 +19,31 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 		Kind:       api.PackageKind(pkg.Kind),
 		Metadata:   metadataToGeneric(pkg.Metadata),
 		Build: api.BuildData{
-			Hostname:                   pkg.Build.Hostname,
-			User:                       pkg.Build.User,
-			Architecture:               pkg.Build.Architecture,
-			Timestamp:                  pkg.Build.Timestamp,
-			Version:                    pkg.Build.Version,
-			Migrations:                 pkg.Build.Migrations,
-			RegistryOverrides:          pkg.Build.RegistryOverrides,
-			Differential:               pkg.Build.Differential,
-			DifferentialPackageVersion: pkg.Build.DifferentialPackageVersion,
-			Flavor:                     pkg.Build.Flavor,
-			Signed:                     pkg.Build.Signed,
-			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
-			AggregateChecksum:          pkg.Build.AggregateChecksum,
-			VersionRequirements:        VersionRequirementsToGeneric(pkg.Build.VersionRequirements),
+			Hostname:            pkg.Build.Hostname,
+			User:                pkg.Build.User,
+			Architecture:        pkg.Build.Architecture,
+			Timestamp:           pkg.Build.Timestamp,
+			Version:             pkg.Build.Version,
+			Migrations:          pkg.Build.Migrations,
+			RegistryOverrides:   pkg.Build.RegistryOverrides,
+			Flavor:              pkg.Build.Flavor,
+			Signed:              pkg.Build.Signed,
+			ProvenanceFiles:     pkg.Build.ProvenanceFiles,
+			AggregateChecksum:   pkg.Build.AggregateChecksum,
+			VersionRequirements: VersionRequirementsToGeneric(pkg.Build.VersionRequirements),
 		},
 		Values: api.Values{
 			Files:  pkg.Values.Files,
 			Schema: pkg.Values.Schema,
 		},
 		Documentation: pkg.Documentation,
+	}
+	if d := pkg.Build.Differential; d != nil {
+		g.Build.Differential = &api.Differential{
+			PackageVersion:       d.PackageVersion,
+			ExcludedImages:       imagesToGeneric(d.ExcludedImages),
+			ExcludedRepositories: repositoriesToGeneric(d.ExcludedRepositories),
+		}
 	}
 
 	for _, c := range pkg.Components {
@@ -114,13 +119,7 @@ func componentToGeneric(c v1beta1.Component) api.Component {
 		})
 	}
 
-	for _, img := range c.Images {
-		gc.Images = append(gc.Images, api.Image{
-			ID:     img.ID,
-			Name:   img.Name,
-			Source: api.ImageSource(img.Source),
-		})
-	}
+	gc.Images = imagesToGeneric(c.Images)
 
 	for _, ia := range c.ImageArchives {
 		archive := api.ImageArchive{Path: ia.Path}
@@ -359,18 +358,23 @@ func metadataFromGeneric(m api.PackageMetadata) v1beta1.PackageMetadata {
 
 func buildFromGeneric(b api.BuildData) v1beta1.BuildData {
 	out := v1beta1.BuildData{
-		Hostname:                   b.Hostname,
-		User:                       b.User,
-		Architecture:               b.Architecture,
-		Timestamp:                  b.Timestamp,
-		Version:                    b.Version,
-		Migrations:                 b.Migrations,
-		RegistryOverrides:          b.RegistryOverrides,
-		Differential:               b.Differential,
-		DifferentialPackageVersion: b.DifferentialPackageVersion,
-		Flavor:                     b.Flavor,
-		Signed:                     b.Signed,
-		ProvenanceFiles:            b.ProvenanceFiles,
+		Hostname:          b.Hostname,
+		User:              b.User,
+		Architecture:      b.Architecture,
+		Timestamp:         b.Timestamp,
+		Version:           b.Version,
+		Migrations:        b.Migrations,
+		RegistryOverrides: b.RegistryOverrides,
+		Flavor:            b.Flavor,
+		Signed:            b.Signed,
+		ProvenanceFiles:   b.ProvenanceFiles,
+	}
+	if d := b.Differential; d != nil {
+		out.Differential = &v1beta1.Differential{
+			PackageVersion:       d.PackageVersion,
+			ExcludedImages:       imagesFromGeneric(d.ExcludedImages),
+			ExcludedRepositories: repositoriesFromGeneric(d.ExcludedRepositories),
+		}
 	}
 
 	out.AggregateChecksum = b.AggregateChecksum
@@ -426,18 +430,7 @@ func componentFromGeneric(c api.Component) v1beta1.Component {
 		})
 	}
 
-	for _, img := range c.Images {
-		source := img.Source
-		if source == api.ImageSourceRegistryDaemonFallback {
-			// The v1beta1 schema has no fallback source; its default is registry.
-			source = api.ImageSourceRegistry
-		}
-		bc.Images = append(bc.Images, v1beta1.Image{
-			ID:     img.ID,
-			Name:   img.Name,
-			Source: v1beta1.ImageSource(source),
-		})
-	}
+	bc.Images = imagesFromGeneric(c.Images)
 
 	for _, ia := range c.ImageArchives {
 		archive := v1beta1.ImageArchive{Path: ia.Path}
@@ -685,6 +678,35 @@ func healthCheckKind(kind, apiVersion string) string {
 		return kind
 	}
 	return kind + "." + version + "." + group
+}
+
+func imagesToGeneric(in []v1beta1.Image) []api.Image {
+	var out []api.Image
+	for _, img := range in {
+		out = append(out, api.Image{
+			ID:     img.ID,
+			Name:   img.Name,
+			Source: api.ImageSource(img.Source),
+		})
+	}
+	return out
+}
+
+func imagesFromGeneric(in []api.Image) []v1beta1.Image {
+	var out []v1beta1.Image
+	for _, img := range in {
+		source := img.Source
+		if source == api.ImageSourceRegistryDaemonFallback {
+			// The v1beta1 schema has no fallback source; its default is registry.
+			source = api.ImageSourceRegistry
+		}
+		out = append(out, v1beta1.Image{
+			ID:     img.ID,
+			Name:   img.Name,
+			Source: v1beta1.ImageSource(source),
+		})
+	}
+	return out
 }
 
 func repositoriesToGeneric(in []v1beta1.Repository) []api.Repository {

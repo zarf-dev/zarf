@@ -958,9 +958,9 @@ func (p *PackageLayout) FileName() (string, error) {
 	default:
 		name = fmt.Sprintf("zarf-%s-%s", strings.ToLower(string(pkg.Kind)), arch)
 	}
-	if pkg.Build.Differential {
+	if pkg.Build.Differential != nil {
 		name = fmt.Sprintf("%s-%s-differential-%s",
-			name, pkg.Build.DifferentialPackageVersion, pkg.Metadata.Version)
+			name, pkg.Build.Differential.PackageVersion, pkg.Metadata.Version)
 	} else if pkg.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, pkg.Metadata.Version)
 	}
@@ -1057,8 +1057,8 @@ func ValidatePackagePaths(pkg api.Package) error {
 	if !isCleanPath(pkg.Build.Flavor) {
 		return fmt.Errorf("package build flavor %q would result in an invalid path", pkg.Build.Flavor)
 	}
-	if !isCleanPath(pkg.Build.DifferentialPackageVersion) {
-		return fmt.Errorf("package build differential package version %q would result in an invalid path", pkg.Build.DifferentialPackageVersion)
+	if pkg.Build.Differential != nil && !isCleanPath(pkg.Build.Differential.PackageVersion) {
+		return fmt.Errorf("package build differential package version %q would result in an invalid path", pkg.Build.Differential.PackageVersion)
 	}
 	for _, comp := range pkg.Components {
 		if !isCleanPath(comp.Name) {

@@ -193,6 +193,10 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 	for i := range defaultFuzzIterations {
 		var pkg v1alpha1.ZarfPackage
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
+		// A reference version only applies when differential creation is enabled.
+		if !pkg.Build.Differential {
+			pkg.Build.DifferentialPackageVersion = ""
+		}
 
 		// apiVersion and kind are canonicalized on conversion, so they never round-trip an arbitrary
 		// value; pin them to valid forms and let every other field vary.
@@ -248,6 +252,10 @@ func TestConvertV1alpha1V1beta1RoundTripFuzz(t *testing.T) {
 	for i := range defaultFuzzIterations {
 		var pkg v1alpha1.ZarfPackage
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
+		// A reference version only applies when differential creation is enabled.
+		if !pkg.Build.Differential {
+			pkg.Build.DifferentialPackageVersion = ""
+		}
 		populateValidV1alpha1ChartSources(&pkg, rng, i)
 		pkg, _ = migrateDeprecated(pkg)
 

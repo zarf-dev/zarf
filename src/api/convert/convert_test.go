@@ -174,8 +174,8 @@ func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
 	require.Equal(t, "test-user", result.Build.User)
 	require.Equal(t, "arm64", result.Build.Architecture)
 	require.Equal(t, "v0.30.0", result.Build.Version)
-	require.True(t, result.Build.Differential)
-	require.Equal(t, "0.29.0", result.Build.DifferentialPackageVersion)
+	require.NotNil(t, result.Build.Differential)
+	require.Equal(t, "0.29.0", result.Build.Differential.PackageVersion)
 	require.Equal(t, "vanilla", result.Build.Flavor)
 	require.NotNil(t, result.Build.Signed)
 	require.True(t, *result.Build.Signed)
@@ -1192,17 +1192,16 @@ func TestV1Beta1PkgToV1Alpha1_Build(t *testing.T) {
 	pkg := v1beta1.Package{
 		Kind: v1beta1.ZarfPackageConfig,
 		Build: v1beta1.BuildData{
-			Hostname:                   "my-machine",
-			User:                       "test-user",
-			Architecture:               "arm64",
-			Timestamp:                  "Mon, 02 Jan 2006 15:04:05 -0700",
-			Version:                    "v0.30.0",
-			Migrations:                 []string{"migration1"},
-			RegistryOverrides:          map[string]string{"docker.io": "internal.registry"},
-			Differential:               true,
-			DifferentialPackageVersion: "0.29.0",
-			Flavor:                     "vanilla",
-			Signed:                     &signed,
+			Hostname:          "my-machine",
+			User:              "test-user",
+			Architecture:      "arm64",
+			Timestamp:         "Mon, 02 Jan 2006 15:04:05 -0700",
+			Version:           "v0.30.0",
+			Migrations:        []string{"migration1"},
+			RegistryOverrides: map[string]string{"docker.io": "internal.registry"},
+			Differential:      &v1beta1.Differential{PackageVersion: "0.29.0"},
+			Flavor:            "vanilla",
+			Signed:            &signed,
 			VersionRequirements: []v1beta1.VersionRequirement{
 				{Version: "v0.28.0", Reason: "needs feature X"},
 			},

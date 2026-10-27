@@ -45,12 +45,121 @@
               "type": "string"
             },
             "differential": {
-              "description": "Whether this package was created with differential components.",
-              "type": "boolean"
-            },
-            "differentialPackageVersion": {
-              "description": "Version of a previously built package used as the basis for creating this differential package.",
-              "type": "string"
+              "additionalProperties": false,
+              "description": "Reference package and resources omitted during differential creation.",
+              "patternProperties": {
+                "^x-": {}
+              },
+              "properties": {
+                "excludedImages": {
+                  "description": "Images excluded because they are already present in the reference package.",
+                  "items": {
+                    "additionalProperties": false,
+                    "description": "Image defines an OCI image to include in the package.",
+                    "patternProperties": {
+                      "^x-": {}
+                    },
+                    "properties": {
+                      "id": {
+                        "description": "Optional ID, unique within the component; matching IDs let importing components replace regular images.",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "The image reference.",
+                        "type": "string"
+                      },
+                      "source": {
+                        "default": "registry",
+                        "description": "The source to pull the image from. Defaults to \"registry\".",
+                        "enum": [
+                          "registry",
+                          "daemon"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "excludedRepositories": {
+                  "description": "Git repositories excluded because they are already present in the reference package.",
+                  "items": {
+                    "additionalProperties": false,
+                    "description": "Repository defines a git repository to include in the package.",
+                    "patternProperties": {
+                      "^x-": {}
+                    },
+                    "properties": {
+                      "ref": {
+                        "additionalProperties": false,
+                        "description": "The Git reference to mirror. Optional; when unset, all branches and tags are mirrored.",
+                        "oneOf": [
+                          {
+                            "required": [
+                              "tag"
+                            ],
+                            "title": "tag"
+                          },
+                          {
+                            "required": [
+                              "branch"
+                            ],
+                            "title": "branch"
+                          },
+                          {
+                            "required": [
+                              "commit"
+                            ],
+                            "title": "commit"
+                          }
+                        ],
+                        "patternProperties": {
+                          "^x-": {}
+                        },
+                        "properties": {
+                          "branch": {
+                            "description": "The Git branch.",
+                            "type": "string"
+                          },
+                          "commit": {
+                            "description": "The Git commit SHA-1.",
+                            "pattern": "^[0-9A-Fa-f]{40}$",
+                            "type": "string"
+                          },
+                          "tag": {
+                            "description": "The Git tag.",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "url": {
+                        "description": "The URL of the git repository.",
+                        "format": "uri",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "url"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "packageVersion": {
+                  "description": "Version of the previously built reference package.",
+                  "pattern": "^[^/\\\\]*$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "packageVersion"
+              ],
+              "type": "object"
             },
             "flavor": {
               "description": "The flavor of Zarf used to build this package.",

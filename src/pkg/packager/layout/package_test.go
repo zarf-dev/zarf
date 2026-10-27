@@ -2231,7 +2231,7 @@ func TestValidatePackagePaths(t *testing.T) {
 		},
 		{
 			name:    "build differential package version traversal",
-			pkg:     api.Package{Metadata: api.PackageMetadata{Name: "pkg"}, Build: api.BuildData{DifferentialPackageVersion: "../evil"}},
+			pkg:     api.Package{Metadata: api.PackageMetadata{Name: "pkg"}, Build: api.BuildData{Differential: &api.Differential{PackageVersion: "../evil"}}},
 			wantErr: `package build differential package version "../evil" would result in an invalid path`,
 		},
 		{
