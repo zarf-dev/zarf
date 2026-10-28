@@ -159,7 +159,7 @@ func generateArchivedSBOMs(ctx context.Context, pkg api.Package, buildPath strin
 	l := logger.From(ctx)
 	for index, target := range targets {
 		l.Info("creating image SBOM", "reference", target.resourceIdentifier, "count", fmt.Sprintf("%d/%d", index+1, len(targets)))
-		jsonData, err := createImageSBOM(ctx, cachePath, outputPath, target.img, target.imageReference)
+		jsonData, err := createImageSBOM(ctx, cachePath, outputPath, target.img, target.resourceIdentifier)
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
 		}
