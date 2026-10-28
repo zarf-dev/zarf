@@ -43,11 +43,10 @@ Members participate through Github teams and pre-submit tests run automatically 
 
 - Enabled [two-factor authentication](https://docs.github.com/en/authentication/securing-your-account-with-two-factor-authentication-2fa/about-two-factor-authentication) on their GitHub account
 - Have made contributions to the project in the form of:
-  - Authoring or reviewing PRs on GitHub. At least three (3) PR's must be **merged**.
-  - Filing or helping triage/resolve an issue on GitHub
+  - Authoring or reviewing meaningful PRs on GitHub. At least five (5) PRs must be **merged**.
+  - Filing and/or helping triage/resolve an issue on GitHub
   - Substantive contribution to a project, or community discussions (e.g. meetings, Slack,
     email discussion forums, Stack Overflow)
-  - Attended one (1) Community Meeting as documented during the time contributions were made
 
 #### Responsibilities
 - Can be assigned issues and pull request reviews
@@ -83,14 +82,14 @@ Reviewers have a strong and active track record of contribution to the Zarf proj
 - Has reviewed, or helped review, at least 10 Pull Requests
 - Has analyzed and resolved test failures
 - Demonstrates both deep understanding of the codebase and consistent high-quality contributions
-- Active participation in community meetings and/or design discussions
+- Active participation in design discussions; community meeting attendance is encouraged but optional
 
 #### Responsibilities
 
 - Commits to being an active contributor and reviewer as part of the Zarf project.  'Active' is defined as six PRs or PR reviews (or mix thereof) in **six months**,
 as measured by [Zarf Contributor Insights](https://github.com/zarf-dev/zarf/graphs/contributors) and [LFX Insights](https://insights.linuxfoundation.org/project/zarf/contributors?timeRange=alltime).
 - Is supportive of new and occasional contributors and helps get useful PRs in shape to commit.
-- Participate actively in design discussions and community meetings
+- Participate actively in design discussions and, where possible, community meetings
 - Maintain awareness of project goals and architecture to ensure alignment
 - Represent the project in the community with professionalism and respect
 
@@ -99,7 +98,6 @@ as measured by [Zarf Contributor Insights](https://github.com/zarf-dev/zarf/grap
 - Triage access to the repository (e.g., labeling, assigning issues/PRs)
 - Has GitHub or CI/CD rights to approve pull requests in specific directories
 - Greater influence in shaping technical direction and priorities
-- Eligibility for nomination to Maintainer roles  
 
 #### Promotion process
 
@@ -125,7 +123,7 @@ approval is focused on holistic acceptance of a contribution including:
 
 #### Prerequisites
 
-- Have at least eight (8) to ten (10) significant PRs successfully merged for any combination of repositories under the zarf-dev organization.
+- Have at least ten (10) significant PRs successfully merged for any combination of repositories under the zarf-dev organization.
 - Demonstrate the principles and responsibilities required for qualitative Maintainer Responsibilities
 - Sustain contribution history
 - Reviewer for at least 1 month
