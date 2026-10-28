@@ -37,12 +37,8 @@
           "type": "string"
         },
         "differential": {
-          "description": "Whether this package was created with differential components.",
-          "type": "boolean"
-        },
-        "differentialPackageVersion": {
-          "description": "Version of a previously built package used as the basis for creating this differential package.",
-          "type": "string"
+          "$ref": "#/$defs/Differential",
+          "description": "Base package used to create this differential package. Omitted for full packages."
         },
         "flavor": {
           "description": "The flavor of Zarf used to build this package.",
@@ -674,6 +670,23 @@
           "type": "string"
         }
       },
+      "type": "object"
+    },
+    "Differential": {
+      "additionalProperties": false,
+      "description": "Differential identifies the base package used to create a differential package.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "fromVersion": {
+          "description": "Version of a previously built package used as the basis for creating this differential package.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fromVersion"
+      ],
       "type": "object"
     },
     "File": {
