@@ -231,3 +231,39 @@ components:
 	require.NotNil(t, beta.Build.Differential)
 	require.Equal(t, previous.Metadata.Version, beta.Build.Differential.FromVersion)
 }
+
+func TestApplyDifferentialResources_recordsOmittedImages(t *testing.T) {
+	t.Parallel()
+
+	current := api.Package{
+		Components: []api.Component{{
+			Name: "app",
+			Images: []api.Image{
+				{ID: "kept", Name: "example.com/unchanged:v1"},
+				{ID: "updated", Name: "example.com/updated:v2"},
+			},
+		}},
+	}
+	previous := api.Package{
+		Components: []api.Component{{
+			Name: "app",
+			Images: []api.Image{
+				{Name: "example.com/unchanged:v1"},
+				{Name: "example.com/updated:v1"},
+			},
+		}},
+	}
+
+	result, err := applyDifferentialResources(current, previous)
+	require.NoError(t, err)
+
+	require.Equal(t, []api.Image{{ID: "updated", Name: "example.com/updated:v2"}}, result.Components[0].Images)
+	require.Equal(t, map[string][]api.Image{
+		"app": {{ID: "kept", Name: "example.com/unchanged:v1"}},
+	}, result.Build.Differential.Images)
+
+	restored := result.WithDifferentialImages()
+	require.ElementsMatch(t, []string{"example.com/unchanged:v1", "example.com/updated:v2"}, restored.Components[0].GetImages())
+	// Restoring must not mutate the package used to push images.
+	require.Len(t, result.Components[0].Images, 1)
+}

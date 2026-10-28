@@ -63,6 +63,7 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 	if pkg.Build.Differential {
 		g.Build.Differential = &api.Differential{
 			FromVersion: pkg.Build.DifferentialPackageVersion,
+			Images:      differentialImagesToGeneric(pkg.Build.DifferentialImages),
 		}
 	}
 
@@ -469,6 +470,7 @@ func buildFromGeneric(b api.BuildData) v1alpha1.ZarfBuildData {
 	if b.Differential != nil {
 		out.Differential = true
 		out.DifferentialPackageVersion = b.Differential.FromVersion
+		out.DifferentialImages = differentialImagesFromGeneric(b.Differential.Images)
 	}
 
 	for _, vr := range b.VersionRequirements {
@@ -976,6 +978,32 @@ func stateAccessFromGeneric(in []api.StateAccessKey) []v1alpha1.StateAccessKey {
 	var out []v1alpha1.StateAccessKey
 	for _, s := range in {
 		out = append(out, v1alpha1.StateAccessKey(s))
+	}
+	return out
+}
+
+func differentialImagesToGeneric(in map[string][]string) map[string][]api.Image {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make(map[string][]api.Image, len(in))
+	for component, images := range in {
+		for _, name := range images {
+			out[component] = append(out[component], api.Image{Name: name, Source: api.ImageSourceRegistryDaemonFallback})
+		}
+	}
+	return out
+}
+
+func differentialImagesFromGeneric(in map[string][]api.Image) map[string][]string {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make(map[string][]string, len(in))
+	for component, images := range in {
+		for _, img := range images {
+			out[component] = append(out[component], img.Name)
+		}
 	}
 	return out
 }

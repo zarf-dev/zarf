@@ -925,3 +925,24 @@ func TestRegistryCertSecretData(t *testing.T) {
 		require.ErrorContains(t, err, "incomplete")
 	})
 }
+
+func TestNewDeployedPackage_differentialKeepsOmittedImages(t *testing.T) {
+	t.Parallel()
+
+	definition := api.Package{
+		Metadata:   api.PackageMetadata{Name: "app"},
+		Components: []api.Component{{Name: "web", Images: []api.Image{{Name: "example.com/updated:v2"}}}},
+		Build: api.BuildData{
+			Differential: &api.Differential{
+				FromVersion: "1.0.0",
+				Images:      map[string][]api.Image{"web": {{Name: "example.com/unchanged:v1"}}},
+			},
+		},
+	}
+
+	deployed, err := NewDeployedPackage(definition, "digest", "v0.0.0", nil, 1)
+	require.NoError(t, err)
+	got, err := deployed.Definition()
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{"example.com/updated:v2", "example.com/unchanged:v1"}, got.Components[0].GetImages())
+}
