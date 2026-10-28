@@ -721,13 +721,14 @@ func newDevSha256SumCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
+func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) error {
 	out, err := o.compute(cmd.Context(), args[0])
-	if err != nil {
-		return err
+	// compute returns "" on every failure path, so a non-empty hash is still
+	// worth printing even when tmp dir cleanup joined an error onto err.
+	if out != "" {
+		fmt.Println(out)
 	}
-	fmt.Println(out)
-	return nil
+	return err
 }
 
 // compute assumes source is non-empty; the command's cobra.ExactArgs(1)
