@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { PostHog } from 'posthog-js';
-import { initializeAnalytics, captureDocsEvent } from './analytics.ts';
+import { initializeAnalytics, captureDocsEvent, shouldCaptureAnalytics } from './analytics.ts';
 
 test('analytics is optional, initializes once, and cannot break interactions', async (t) => {
   const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
@@ -67,4 +67,23 @@ test('analytics is optional, initializes once, and cannot break interactions', a
   await assert.doesNotReject(initializeAnalytics('public-test-token', async () => ({
     default: { init: () => { throw new Error('initialization failed'); } },
   }) as unknown as typeof import('posthog-js')));
+});
+
+
+test('production, local, and docs preview hosts have separate capture policies', () => {
+  assert.equal(shouldCaptureAnalytics('docs.zarf.dev'), true);
+  for (const host of ['localhost', '127.0.0.1', '[::1]']) {
+    assert.equal(shouldCaptureAnalytics(host), false);
+    assert.equal(shouldCaptureAnalytics(host, true), true);
+    assert.equal(shouldCaptureAnalytics(host, false, true), false);
+  }
+  for (const host of ['deploy-preview-5529--zarf-docs.netlify.app', 'analytics-fix--zarf-docs.netlify.app']) {
+    assert.equal(shouldCaptureAnalytics(host), false);
+    assert.equal(shouldCaptureAnalytics(host, true), false);
+    assert.equal(shouldCaptureAnalytics(host, false, true), true);
+  }
+  for (const host of ['zarf.dev', 'example.com', 'deploy-preview-1--other-site.netlify.app',
+    'deploy-preview-1--zarf-docs.netlify.app.example.com', 'zarf-docs.netlify.app']) {
+    assert.equal(shouldCaptureAnalytics(host, true, true), false);
+  }
 });

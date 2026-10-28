@@ -55,15 +55,23 @@ function trackInteractions() {
   document.addEventListener('astro:before-swap', clearSearch);
 }
 
+/** Preview capture is opt-in and limited to this Netlify site's deploy hosts. */
+export function shouldCaptureAnalytics(hostname: string, enableLocal = false, enablePreview = false): boolean {
+  return hostname === 'docs.zarf.dev'
+    || (enableLocal && ['localhost', '127.0.0.1', '[::1]'].includes(hostname))
+    || (enablePreview && /^[a-z0-9][a-z0-9-]*--zarf-docs\.netlify\.app$/.test(hostname));
+}
+
 /** A single SDK instance owns both initial and history-change pageviews. */
 export function initializeAnalytics(
   token: string | undefined,
   loadSDK = () => import('posthog-js'),
   enableLocal = false,
+  enablePreview = false,
 ): Promise<void> {
-  const hostname = window.location.hostname;
-  const localTest = enableLocal && ['localhost', '127.0.0.1', '[::1]'].includes(hostname);
-  if (!token || (hostname !== 'docs.zarf.dev' && !localTest)) return Promise.resolve();
+  if (!token || !shouldCaptureAnalytics(window.location.hostname, enableLocal, enablePreview)) {
+    return Promise.resolve();
+  }
   if (window.__zarfDocsAnalytics) return window.__zarfDocsAnalytics;
   window.__zarfDocsAnalytics = (async () => {
     try {
