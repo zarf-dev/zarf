@@ -1864,16 +1864,20 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	publishSignOpts := signing.DefaultSignBlobOptions()
-	publishSignOpts.Key = o.signingKeyPath
-	publishSignOpts.Password = o.signingKeyPassword
-	publishSignOpts.Overwrite = true
+	if o.signingKeyPath != "" {
+		publishSignOpts := signing.DefaultSignBlobOptions()
+		publishSignOpts.Key = o.signingKeyPath
+		publishSignOpts.Password = o.signingKeyPassword
+		publishSignOpts.Overwrite = true
+		if err := pkgLayout.SignPackage(ctx, &publishSignOpts); err != nil {
+			return fmt.Errorf("unable to sign package: %w", err)
+		}
+	}
 	publishPackageOpts := packager.PublishPackageOptions{
-		OCIConcurrency:  o.ociConcurrency,
-		SignBlobOptions: publishSignOpts,
-		Retries:         o.retries,
-		RemoteOptions:   defaultRemoteOptions(),
-		Tag:             o.tag,
+		OCIConcurrency: o.ociConcurrency,
+		Retries:        o.retries,
+		RemoteOptions:  defaultRemoteOptions(),
+		Tag:            o.tag,
 	}
 
 	_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)

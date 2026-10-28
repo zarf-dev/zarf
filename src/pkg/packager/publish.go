@@ -255,14 +255,20 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	}
 	// Create skeleton buildpath
 	createOpts := assemble.AssembleSkeletonOptions{
-		SigningKeyPath:       opts.SigningKeyPath,
-		SigningKeyPassword:   opts.SigningKeyPassword,
 		Flavor:               opts.Flavor,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
 	pkgLayout, err := assemble.AssembleSkeleton(ctx, loaded, createOpts)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
+	}
+	if opts.SigningKeyPath != "" {
+		signOpts := signing.DefaultSignBlobOptions()
+		signOpts.Key = opts.SigningKeyPath
+		signOpts.Password = opts.SigningKeyPassword
+		if err := pkgLayout.SignPackage(ctx, &signOpts); err != nil {
+			return registry.Reference{}, fmt.Errorf("unable to sign skeleton: %w", err)
+		}
 	}
 	referenceOptions := zoci.ReferenceFromMetadataOptions{
 		Tag: opts.Tag,

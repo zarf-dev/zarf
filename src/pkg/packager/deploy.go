@@ -311,7 +311,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		idx := len(deployedComponents) - 1
 		if d.isConnectedToCluster() {
 			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Definition(), pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
-				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
+				l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}
 		var charts []state.InstalledChart
@@ -357,7 +357,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, true)
 				if d.isConnectedToCluster() {
 					if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Definition(), pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
-						l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
+						l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
 					}
 				}
 			}
@@ -377,7 +377,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		deployedComponents[idx].Status = state.ComponentStatusSucceeded
 		if d.isConnectedToCluster() {
 			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Definition(), pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
-				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
+				l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}
 
