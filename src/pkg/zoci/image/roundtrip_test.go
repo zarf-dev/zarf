@@ -38,7 +38,7 @@ func TestWriteTarUnpacksAsAnImageArchive(t *testing.T) {
 
 	pulled, err := images.Unpack(ctx, api.ImageArchive{
 		Path:   tarPath,
-		Images: []string{ref},
+		Images: []api.ArchiveImage{{Name: ref}},
 	}, t.TempDir(), string(PlatformArchAMD64))
 	require.NoError(t, err)
 	require.Len(t, pulled, 1)
