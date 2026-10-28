@@ -56,7 +56,7 @@ components:
 				SkipSBOM:  true,
 			})
 			if tt.wantError {
-				require.ErrorContains(t, err, "1000000 byte limit")
+				require.ErrorContains(t, err, "1000000-byte limit")
 				require.Empty(t, packagePath)
 				entries, err := os.ReadDir(outputDir)
 				require.NoError(t, err)
