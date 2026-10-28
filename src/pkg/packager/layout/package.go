@@ -552,16 +552,20 @@ func (p *PackageLayout) IsSigned() bool {
 	return false
 }
 
-// GetSBOM outputs all SBOM data from the package to the given destination path.
-func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) (err error) {
+// GetSBOM outputs selected SBOM data from the package to the given destination path.
+// An empty key set outputs every SBOM.
+func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string, keys []string) (err error) {
 	if !p.ContainsSBOM() {
 		return &NoSBOMAvailableError{pkgName: p.Definition().Metadata.Name}
 	}
 	if !UsesGranularResourceLayout(p.pkg) {
+		if len(keys) > 0 {
+			return fmt.Errorf("SBOM selection by key requires granular SBOM resources")
+		}
 		return archive.Decompress(ctx, filepath.Join(p.dirPath, SBOMTar), destPath, archive.DecompressOpts{})
 	}
 
-	resources, err := p.sbomResources()
+	resources, err := p.sbomResources(keys)
 	if err != nil {
 		return err
 	}
@@ -594,7 +598,17 @@ type sbomResource struct {
 	sourcePath   string
 }
 
-func (p *PackageLayout) sbomResources() ([]sbomResource, error) {
+func (p *PackageLayout) sbomResources(keys []string) ([]sbomResource, error) {
+	var requested map[string]struct{}
+	var imageReferences map[string]struct{}
+	if len(keys) > 0 {
+		requested = make(map[string]struct{}, len(keys))
+		for _, key := range keys {
+			requested[key] = struct{}{}
+		}
+		imageReferences = SBOMImageReferenceSet(p.pkg)
+	}
+	foundRequested := make(map[string]struct{}, len(requested))
 	resourceRoot := filepath.Join(p.dirPath, SBOMResourcesDir)
 	resources := []sbomResource{}
 	err := filepath.WalkDir(resourceRoot, func(sourcePath string, entry fs.DirEntry, err error) error {
@@ -613,6 +627,19 @@ func (p *PackageLayout) sbomResources() ([]sbomResource, error) {
 		if !ok {
 			return fmt.Errorf("invalid SBOM resource path %q", resourcePath)
 		}
+		if len(requested) > 0 {
+			selected := false
+			for key := range requested {
+				if !SBOMKeyMatchesResource(kind, identifier, key, imageReferences) {
+					continue
+				}
+				foundRequested[key] = struct{}{}
+				selected = true
+			}
+			if !selected {
+				return nil
+			}
+		}
 		resources = append(resources, sbomResource{
 			kind:         kind,
 			identifier:   identifier,
@@ -621,7 +648,15 @@ func (p *PackageLayout) sbomResources() ([]sbomResource, error) {
 		})
 		return nil
 	})
-	return resources, err
+	if err != nil {
+		return nil, err
+	}
+	for _, key := range keys {
+		if _, found := foundRequested[key]; !found {
+			return nil, fmt.Errorf("SBOM key %q not found in package", key)
+		}
+	}
+	return resources, nil
 }
 
 func sbomResourceOutputPaths(resources []sbomResource) ([]string, error) {

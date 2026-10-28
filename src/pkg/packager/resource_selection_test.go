@@ -124,7 +124,7 @@ components:
 	require.NoFileExists(t, filepath.Join(sbomLayout.DirPath(), secondAttachmentPath))
 
 	sbomOutput := t.TempDir()
-	require.NoError(t, sbomLayout.GetSBOM(ctx, sbomOutput))
+	require.NoError(t, sbomLayout.GetSBOM(ctx, sbomOutput, nil))
 	sbomContents, err := os.ReadFile(filepath.Join(sbomOutput, "files", "metrics.json"))
 	require.NoError(t, err)
 	require.Equal(t, resources[sbomResourcePath], sbomContents)

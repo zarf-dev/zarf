@@ -99,7 +99,7 @@ func TestPackageLayout(t *testing.T) {
 	require.ErrorContains(t, err, "component test could not access a files directory")
 
 	tmpDir = t.TempDir()
-	err = pkgLayout.GetSBOM(ctx, tmpDir)
+	err = pkgLayout.GetSBOM(ctx, tmpDir, nil)
 	require.NoError(t, err)
 
 	files, err := pkgLayout.Files()
@@ -140,8 +140,48 @@ func TestGetSBOMV1Beta1(t *testing.T) {
 		},
 	}
 	outputDir := t.TempDir()
-	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir))
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir, nil))
 	require.FileExists(t, filepath.Join(outputDir, "files", "metrics.json"))
+}
+
+func TestGetSBOMV1Beta1WithKeys(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	imageReference := "ghcr.io/acme/api:v1.4.2"
+	resources := map[string]string{
+		ComponentSBOMResourcePath("metrics"):                   "metrics SBOM",
+		ComponentSBOMResourcePath("logs"):                      "logs SBOM",
+		ImageSBOMResourcePath(imageReference + "-linux-amd64"): "api amd64 SBOM",
+		ImageSBOMResourcePath(imageReference + "-linux-arm64"): "api arm64 SBOM",
+	}
+	for resourcePath, contents := range resources {
+		sourcePath := filepath.Join(dir, filepath.FromSlash(resourcePath))
+		require.NoError(t, os.MkdirAll(filepath.Dir(sourcePath), 0o700))
+		require.NoError(t, os.WriteFile(sourcePath, []byte(contents), 0o600))
+	}
+
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{
+				{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}},
+				{Name: "logs", Files: []api.File{{Source: "logs.yaml"}}},
+				{Name: "api", Images: []api.Image{{Name: imageReference}}},
+			},
+		},
+	}
+	outputDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir, []string{"metrics", imageReference}))
+	require.FileExists(t, filepath.Join(outputDir, "files", "metrics.json"))
+	require.NoFileExists(t, filepath.Join(outputDir, "files", "logs.json"))
+	require.FileExists(t, filepath.Join(outputDir, "images", "ghcr.io_acme_api_v1.4.2-linux-amd64.json"))
+	require.FileExists(t, filepath.Join(outputDir, "images", "ghcr.io_acme_api_v1.4.2-linux-arm64.json"))
+
+	err := pkgLayout.GetSBOM(t.Context(), t.TempDir(), []string{"missing"})
+	require.EqualError(t, err, `SBOM key "missing" not found in package`)
 }
 
 func TestGetSBOMV1Beta1RejectsSymlinkResource(t *testing.T) {
@@ -165,7 +205,7 @@ func TestGetSBOMV1Beta1RejectsSymlinkResource(t *testing.T) {
 		},
 	}
 	outputDir := t.TempDir()
-	err := pkgLayout.GetSBOM(t.Context(), outputDir)
+	err := pkgLayout.GetSBOM(t.Context(), outputDir, nil)
 	require.ErrorContains(t, err, "is not a regular file")
 	require.NoFileExists(t, filepath.Join(outputDir, "files", "metrics.json"))
 }
@@ -192,7 +232,7 @@ func TestGetSBOMV1Beta1DoesNotWriteThroughOutputDirectorySymlink(t *testing.T) {
 	externalDir := t.TempDir()
 	require.NoError(t, os.Symlink(externalDir, filepath.Join(outputDir, "images")))
 
-	err := pkgLayout.GetSBOM(t.Context(), outputDir)
+	err := pkgLayout.GetSBOM(t.Context(), outputDir, nil)
 	require.Error(t, err)
 	require.NoFileExists(t, filepath.Join(externalDir, "example.json"))
 }
@@ -220,7 +260,7 @@ func TestGetSBOMV1Beta1PreservesResourceKinds(t *testing.T) {
 	}
 
 	outputDir := t.TempDir()
-	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir))
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir, nil))
 
 	componentContents, err := os.ReadFile(filepath.Join(outputDir, "files", componentName+".json"))
 	require.NoError(t, err)
@@ -248,7 +288,7 @@ func TestGetSBOMV1Beta1UsesDeclaredImageReference(t *testing.T) {
 		},
 	}
 	outputDir := t.TempDir()
-	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir))
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir, nil))
 	contents, err := os.ReadFile(filepath.Join(outputDir, "images", "nginx.json"))
 	require.NoError(t, err)
 	require.Equal(t, "image SBOM", string(contents))
@@ -275,7 +315,7 @@ func TestGetSBOMV1Beta1RejectsLegacyImageFilenameCollisions(t *testing.T) {
 		},
 	}
 	outputDir := t.TempDir()
-	err := pkgLayout.GetSBOM(t.Context(), outputDir)
+	err := pkgLayout.GetSBOM(t.Context(), outputDir, nil)
 	require.ErrorContains(t, err, `both normalize to "images/a_b_c.json"`)
 	require.NoFileExists(t, filepath.Join(outputDir, "images", "a_b_c.json"))
 }

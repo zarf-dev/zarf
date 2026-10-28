@@ -1050,7 +1050,7 @@ func TestGetSBOM(t *testing.T) {
 	// Ensure the SBOM does not exist
 	require.NoFileExists(t, filepath.Join(pkgLayout.DirPath(), layout.SBOMTar))
 	// Ensure Zarf errors correctly
-	err = pkgLayout.GetSBOM(ctx, tmpdir)
+	err = pkgLayout.GetSBOM(ctx, tmpdir, nil)
 	var noSBOMErr *layout.NoSBOMAvailableError
 	require.ErrorAs(t, err, &noSBOMErr)
 }
@@ -1231,7 +1231,7 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	require.FileExists(t, filepath.Join(importedFileComponent, "0", "file.txt"))
 
 	// File-only packages include component SBOMs but not the deprecated viewer by default.
-	err = pkgLayout.GetSBOM(ctx, tmpdir)
+	err = pkgLayout.GetSBOM(ctx, tmpdir, nil)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(tmpdir, "zarf-component-file-import.json"))
 	require.NoFileExists(t, filepath.Join(tmpdir, "sbom-viewer-zarf-component-file-import.html"))

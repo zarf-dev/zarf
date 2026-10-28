@@ -618,7 +618,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 			return err
 		}
 		SBOMPath := filepath.Join(cwd, "zarf-sbom")
-		err = pkgLayout.GetSBOM(ctx, SBOMPath)
+		err = pkgLayout.GetSBOM(ctx, SBOMPath, nil)
 		if err != nil {
 			return err
 		}
@@ -1234,7 +1234,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	}
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
 	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.Definition().Metadata.Name))
-	err = pkgLayout.GetSBOM(ctx, outputPath)
+	err = pkgLayout.GetSBOM(ctx, outputPath, o.keys)
 	if err != nil {
 		return fmt.Errorf("could not get SBOM: %w", err)
 	}
