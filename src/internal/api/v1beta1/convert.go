@@ -19,26 +19,29 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 		Kind:       api.PackageKind(pkg.Kind),
 		Metadata:   metadataToGeneric(pkg.Metadata),
 		Build: api.BuildData{
-			Hostname:                   pkg.Build.Hostname,
-			User:                       pkg.Build.User,
-			Architecture:               pkg.Build.Architecture,
-			Timestamp:                  pkg.Build.Timestamp,
-			Version:                    pkg.Build.Version,
-			Migrations:                 pkg.Build.Migrations,
-			RegistryOverrides:          pkg.Build.RegistryOverrides,
-			Differential:               pkg.Build.Differential,
-			DifferentialPackageVersion: pkg.Build.DifferentialPackageVersion,
-			Flavor:                     pkg.Build.Flavor,
-			Signed:                     pkg.Build.Signed,
-			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
-			AggregateChecksum:          pkg.Build.AggregateChecksum,
-			VersionRequirements:        VersionRequirementsToGeneric(pkg.Build.VersionRequirements),
+			Hostname:            pkg.Build.Hostname,
+			User:                pkg.Build.User,
+			Architecture:        pkg.Build.Architecture,
+			Timestamp:           pkg.Build.Timestamp,
+			Version:             pkg.Build.Version,
+			Migrations:          pkg.Build.Migrations,
+			RegistryOverrides:   pkg.Build.RegistryOverrides,
+			Flavor:              pkg.Build.Flavor,
+			Signed:              pkg.Build.Signed,
+			ProvenanceFiles:     pkg.Build.ProvenanceFiles,
+			AggregateChecksum:   pkg.Build.AggregateChecksum,
+			VersionRequirements: VersionRequirementsToGeneric(pkg.Build.VersionRequirements),
 		},
 		Values: api.Values{
 			Files:  pkg.Values.Files,
 			Schema: pkg.Values.Schema,
 		},
 		Attachments: pkg.Attachments,
+	}
+	if pkg.Build.Differential != nil {
+		g.Build.Differential = &api.Differential{
+			FromVersion: pkg.Build.Differential.FromVersion,
+		}
 	}
 
 	for _, c := range pkg.Components {
@@ -359,18 +362,21 @@ func metadataFromGeneric(m api.PackageMetadata) v1beta1.PackageMetadata {
 
 func buildFromGeneric(b api.BuildData) v1beta1.BuildData {
 	out := v1beta1.BuildData{
-		Hostname:                   b.Hostname,
-		User:                       b.User,
-		Architecture:               b.Architecture,
-		Timestamp:                  b.Timestamp,
-		Version:                    b.Version,
-		Migrations:                 b.Migrations,
-		RegistryOverrides:          b.RegistryOverrides,
-		Differential:               b.Differential,
-		DifferentialPackageVersion: b.DifferentialPackageVersion,
-		Flavor:                     b.Flavor,
-		Signed:                     b.Signed,
-		ProvenanceFiles:            b.ProvenanceFiles,
+		Hostname:          b.Hostname,
+		User:              b.User,
+		Architecture:      b.Architecture,
+		Timestamp:         b.Timestamp,
+		Version:           b.Version,
+		Migrations:        b.Migrations,
+		RegistryOverrides: b.RegistryOverrides,
+		Flavor:            b.Flavor,
+		Signed:            b.Signed,
+		ProvenanceFiles:   b.ProvenanceFiles,
+	}
+	if b.Differential != nil {
+		out.Differential = &v1beta1.Differential{
+			FromVersion: b.Differential.FromVersion,
+		}
 	}
 
 	out.AggregateChecksum = b.AggregateChecksum
