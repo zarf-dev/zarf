@@ -116,8 +116,8 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		Flavor:               opts.Flavor,
 		RegistryOverrides:    opts.RegistryOverrides,
 		SignBlobOptions:      opts.SignBlobOptions,
-		SigningKeyPath:       opts.SigningKeyPath,
-		SigningKeyPassword:   opts.SigningKeyPassword,
+		SigningKeyPath:       opts.SigningKeyPath,     //nolint:staticcheck // Forward deprecated public options to preserve API compatibility.
+		SigningKeyPassword:   opts.SigningKeyPassword, //nolint:staticcheck // Forward deprecated public options to preserve API compatibility.
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,
