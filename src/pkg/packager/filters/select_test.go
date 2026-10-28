@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
@@ -85,10 +85,9 @@ func Test_selectStateFilter_Apply(t *testing.T) {
 			pkg := v1alpha1.ZarfPackage{
 				Components: tc.components,
 			}
-			indices, err := filter.Apply(packageView(api.NewPackageDefinitionFromV1alpha1(pkg)))
-			result := selectV1alpha1Components(pkg, indices)
+			components, err := filter.Apply(convert.PackageFromV1alpha1(pkg))
 
-			require.Equal(t, tc.expectedResult, result)
+			require.Equal(t, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: tc.expectedResult}).Components, components)
 			require.Equal(t, tc.expectedError, err)
 		})
 	}

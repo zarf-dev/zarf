@@ -93,12 +93,13 @@ func TestProbeNetworkHTTP(t *testing.T) {
 	closedTCPAddress := closedLocalTCPAddress(t)
 
 	tests := []struct {
-		name        string
-		host        string
-		condition   string
-		wantOK      bool
-		expectErr   bool
-		errContains string
+		name         string
+		host         string
+		condition    string
+		waitInterval time.Duration
+		wantOK       bool
+		expectErr    bool
+		errContains  string
 	}{
 		{
 			name:      "success condition accepts 2xx",
@@ -132,11 +133,12 @@ func TestProbeNetworkHTTP(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name:      "hanging server returns error",
-			host:      hangingServerURL,
-			condition: "success",
-			wantOK:    false,
-			expectErr: true,
+			name:         "hanging server returns error",
+			host:         hangingServerURL,
+			condition:    "success",
+			waitInterval: 100 * time.Millisecond,
+			wantOK:       false,
+			expectErr:    true,
 		},
 		{
 			name:        "invalid status code returns before network probe",
@@ -150,7 +152,11 @@ func TestProbeNetworkHTTP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ok, err := probeNetwork(t.Context(), "http", tt.host, tt.condition, 100*time.Millisecond)
+			waitInterval := tt.waitInterval
+			if waitInterval == 0 {
+				waitInterval = 500 * time.Millisecond
+			}
+			ok, err := probeNetwork(t.Context(), "http", tt.host, tt.condition, waitInterval)
 			if tt.expectErr || tt.errContains != "" {
 				require.Error(t, err)
 				if tt.errContains != "" {

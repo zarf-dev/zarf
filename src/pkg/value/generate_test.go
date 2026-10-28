@@ -13,10 +13,13 @@ import (
 func TestGenerateJSONSchema(t *testing.T) {
 	t.Run("infers nested types", func(t *testing.T) {
 		vals := Values{
-			"name":     "zarf",
-			"replicas": uint64(3),
-			"enabled":  true,
-			"ports":    []any{uint64(80)},
+			"name":        "zarf",
+			"replicas":    uint64(3),
+			"threshold":   0.75,
+			"percentage":  5.0,
+			"enabled":     true,
+			"ports":       []any{uint64(80)},
+			"annotations": nil,
 			"image": map[string]any{
 				"tag": "v1.2.3",
 			},
@@ -36,7 +39,15 @@ func TestGenerateJSONSchema(t *testing.T) {
 
 		replicas, ok := props["replicas"].(map[string]any)
 		require.True(t, ok)
-		assert.Equal(t, "number", replicas["type"])
+		assert.Equal(t, "integer", replicas["type"])
+
+		threshold, ok := props["threshold"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "number", threshold["type"])
+
+		percentage, ok := props["percentage"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "number", percentage["type"])
 
 		enabled, ok := props["enabled"].(map[string]any)
 		require.True(t, ok)
@@ -47,7 +58,11 @@ func TestGenerateJSONSchema(t *testing.T) {
 		assert.Equal(t, "array", ports["type"])
 		items, ok := ports["items"].(map[string]any)
 		require.True(t, ok)
-		assert.Equal(t, "number", items["type"])
+		assert.Equal(t, "integer", items["type"])
+
+		annotations, ok := props["annotations"].(map[string]any)
+		require.True(t, ok)
+		assert.Empty(t, annotations)
 
 		image, ok := props["image"].(map[string]any)
 		require.True(t, ok)
@@ -60,6 +75,85 @@ func TestGenerateJSONSchema(t *testing.T) {
 	})
 }
 
+func TestReconcileJSONSchemaUnknownType(t *testing.T) {
+	existing := map[string]any{
+		"type":        "object",
+		"description": "preserve this",
+		"properties":  map[string]any{"name": map[string]any{"type": "string"}},
+		"items":       map[string]any{"type": "string"},
+	}
+
+	preserved := ReconcileJSONSchema(existing, map[string]any{}, false)
+	assert.Equal(t, existing, preserved)
+
+	pruned := ReconcileJSONSchema(existing, map[string]any{}, true)
+	assert.Equal(t, map[string]any{"description": "preserve this"}, pruned)
+}
+
+func TestReconcileJSONSchemaPrunesStaleStructure(t *testing.T) {
+	tests := []struct {
+		name     string
+		existing map[string]any
+		inferred map[string]any
+	}{
+		{
+			name: "object to array",
+			existing: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{"name": map[string]any{"type": "string"}},
+			},
+			inferred: map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "integer"},
+			},
+		},
+		{
+			name: "array to object",
+			existing: map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "string"},
+			},
+			inferred: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{"enabled": map[string]any{"type": "boolean"}},
+			},
+		},
+		{
+			name: "empty object",
+			existing: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{"name": map[string]any{"type": "string"}},
+			},
+			inferred: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{},
+			},
+		},
+		{
+			name: "object without properties",
+			existing: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{"name": map[string]any{"type": "string"}},
+			},
+			inferred: map[string]any{"type": "object"},
+		},
+		{
+			name: "empty array",
+			existing: map[string]any{
+				"type":  "array",
+				"items": map[string]any{"type": "string"},
+			},
+			inferred: map[string]any{"type": "array"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.inferred, ReconcileJSONSchema(tc.existing, tc.inferred, true))
+		})
+	}
+}
+
 func TestMergeJSONSchemaAtPathPreservesNullableObjects(t *testing.T) {
 	schema := GenerateJSONSchema(Values{
 		"serviceAccount": map[string]any{
@@ -69,11 +163,12 @@ func TestMergeJSONSchemaAtPathPreservesNullableObjects(t *testing.T) {
 		},
 	})
 
-	err := MergeJSONSchemaAtPath(schema, Path(".serviceAccount.server.annotations"), map[string]any{
+	overlay := map[string]any{
 		"type":       []any{"object", "null"},
 		"properties": map[string]any{},
 		"required":   []any{"not-imported"},
-	})
+	}
+	err := MergeJSONSchemaAtPath(schema, Path(".serviceAccount.server.annotations"), overlay)
 	require.NoError(t, err)
 
 	annotations, found, err := ExtractJSONSchema(schema, Path(".serviceAccount.server.annotations"))
@@ -194,11 +289,12 @@ func TestMergeJSONSchemaAtPathCopiesValidationFields(t *testing.T) {
 	assert.InDelta(t, float64(1), ports["minItems"], 0)
 	assert.InDelta(t, float64(3), ports["maxItems"], 0)
 
-	err = MergeJSONSchemaAtPath(schema, Path(".config"), map[string]any{
+	overlay := map[string]any{
 		"minProperties": float64(1),
 		"required":      []any{"database"},
 		"allOf":         []any{map[string]any{"const": "postgres"}},
-	})
+	}
+	err = MergeJSONSchemaAtPath(schema, Path(".config"), overlay)
 	require.NoError(t, err)
 	config, found, err := ExtractJSONSchema(schema, Path(".config"))
 	require.NoError(t, err)
@@ -215,7 +311,7 @@ func TestMergeJSONSchemaAtPathKeepsInferredFieldWhenChartRefIsDropped(t *testing
 		},
 	})
 
-	err := MergeJSONSchemaAtPath(schema, Path("."), map[string]any{
+	overlay := map[string]any{
 		"type":                 "object",
 		"additionalProperties": false,
 		"properties": map[string]any{
@@ -228,7 +324,8 @@ func TestMergeJSONSchemaAtPathKeepsInferredFieldWhenChartRefIsDropped(t *testing
 				"$ref": "schemas/external.json",
 			},
 		},
-	})
+	}
+	err := MergeJSONSchemaAtPath(schema, Path("."), overlay)
 	require.NoError(t, err)
 
 	properties, ok := schema["properties"].(map[string]any)
@@ -239,6 +336,17 @@ func TestMergeJSONSchemaAtPathKeepsInferredFieldWhenChartRefIsDropped(t *testing
 	require.True(t, ok)
 	assert.Equal(t, "object", bad["type"])
 	assert.Equal(t, false, schema["additionalProperties"])
+}
+
+func TestMergeGeneratedJSONSchemaAtPathPreservesUnknownProperties(t *testing.T) {
+	schema := GenerateJSONSchema(Values{})
+	overlay := GenerateJSONSchema(Values{"credentials": nil})
+
+	require.NoError(t, MergeGeneratedJSONSchemaAtPath(schema, Path("."), overlay))
+
+	properties, ok := schema["properties"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, map[string]any{}, properties["credentials"])
 }
 
 func TestFilterChartSchemaDropsUnsupportedChildSchemas(t *testing.T) {

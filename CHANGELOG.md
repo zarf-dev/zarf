@@ -1,5 +1,138 @@
 # Changelog
 
+## [0.88.0](https://github.com/zarf-dev/zarf/compare/v0.87.0...v0.88.0) (2026-10-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* **layout:** materialize symlinks on package creation ([#5462](https://github.com/zarf-dev/zarf/issues/5462))
+* **create:** isolate and enforce filepaths to layout directory ([#5446](https://github.com/zarf-dev/zarf/issues/5446))
+* make component services an object ([#5471](https://github.com/zarf-dev/zarf/issues/5471))
+* cleanup v1beta1 edge cases and add e2e test ([#5443](https://github.com/zarf-dev/zarf/issues/5443))
+* implement find images for v1beta1 package and component config ([#5428](https://github.com/zarf-dev/zarf/issues/5428))
+
+### Features
+
+* add ability to skip arch check on package deploy ([#5451](https://github.com/zarf-dev/zarf/issues/5451)) ([16461d4](https://github.com/zarf-dev/zarf/commit/16461d45dbbf59465959f3c3af64ea4581f7d3c1))
+* add init chart values schemas ([#5347](https://github.com/zarf-dev/zarf/issues/5347)) ([4c238cc](https://github.com/zarf-dev/zarf/commit/4c238ccb4f610a680608a41f6cd40ff1ff1ad85f))
+* cleanup v1beta1 edge cases and add e2e test ([#5443](https://github.com/zarf-dev/zarf/issues/5443)) ([02264d6](https://github.com/zarf-dev/zarf/commit/02264d65315bbe4f21ae21ca47c7bc8d313ce917))
+* **get-creds:** only print credentials for configured services ([#5418](https://github.com/zarf-dev/zarf/issues/5418)) ([1f4b42a](https://github.com/zarf-dev/zarf/commit/1f4b42a35df05bd296840b810b9ac2a37d53b336))
+* implement find images for v1beta1 package and component config ([#5428](https://github.com/zarf-dev/zarf/issues/5428)) ([a12d5ab](https://github.com/zarf-dev/zarf/commit/a12d5ab4f63692a7670727f208088a156f3e38bf))
+* implement zarf dev generate-schema for  v1beta1 packages and component configs ([#5442](https://github.com/zarf-dev/zarf/issues/5442)) ([562f5c0](https://github.com/zarf-dev/zarf/commit/562f5c082ec67469e8bdf3eaea4815594d66a09a))
+* implement zarf dev lint for v1beta1 packages and component configs ([#5431](https://github.com/zarf-dev/zarf/issues/5431)) ([c3c98c1](https://github.com/zarf-dev/zarf/commit/c3c98c1493c15f2cd7cf635ecf0a2a861e6a7776))
+* introduce v1beta1 init config ([#5427](https://github.com/zarf-dev/zarf/issues/5427)) ([9ce3715](https://github.com/zarf-dev/zarf/commit/9ce37152ee117d2ed88be88b2ad0f5cfebb4e524))
+* **layout:** materialize symlinks on package creation ([#5462](https://github.com/zarf-dev/zarf/issues/5462)) ([1cc76b0](https://github.com/zarf-dev/zarf/commit/1cc76b04d4b9f9aa4aa5f441165b2e13c50db598))
+* make component services an object ([#5471](https://github.com/zarf-dev/zarf/issues/5471)) ([16f1a7c](https://github.com/zarf-dev/zarf/commit/16f1a7c52e25ad1870b7499e03c2561ae274a395))
+* unhide v1beta1 commands and add feature flag ([#5460](https://github.com/zarf-dev/zarf/issues/5460)) ([7387b24](https://github.com/zarf-dev/zarf/commit/7387b248e9e4efca2031e6e88fed1f3d83572f9c))
+* v1beta1 and component config `zarf dev inspect` implementations ([#5438](https://github.com/zarf-dev/zarf/issues/5438)) ([2430007](https://github.com/zarf-dev/zarf/commit/2430007d1ba8c8d8c6f313fc205fb367338f61b2))
+* **v1beta1:** honor image sources ([#5394](https://github.com/zarf-dev/zarf/issues/5394)) ([5062461](https://github.com/zarf-dev/zarf/commit/50624610373dd1974093e6c678bd5434e8cd5796))
+* **v1beta1:** sha256/sha512 verification checksum verification ([#5399](https://github.com/zarf-dev/zarf/issues/5399)) ([0e61e0e](https://github.com/zarf-dev/zarf/commit/0e61e0edf209339962536f161409daa869f287c8))
+
+
+### Bug Fixes
+
+* **create:** isolate and enforce filepaths to layout directory ([#5446](https://github.com/zarf-dev/zarf/issues/5446)) ([b3f2f8e](https://github.com/zarf-dev/zarf/commit/b3f2f8e830dc6948cd6da4129e50059e507b5d80))
+* preserve healthcheck result during watcher cancellation ([#5437](https://github.com/zarf-dev/zarf/issues/5437)) ([5222087](https://github.com/zarf-dev/zarf/commit/522208754569d259347c011e7447ac7b5160a187))
+* prevent cache race from causing errors in concurrent zarf process OCI package loads ([#5439](https://github.com/zarf-dev/zarf/issues/5439)) ([ef88af0](https://github.com/zarf-dev/zarf/commit/ef88af0754a8ce859b244290ca3ca22ae9d1cc23))
+
+## [0.87.0](https://github.com/zarf-dev/zarf/compare/v0.86.0...v0.87.0) (2026-09-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove images and repositories from package secret during connected deploys ([#5402](https://github.com/zarf-dev/zarf/issues/5402))
+* **helm:** only label pod templates of built-in workload kinds ([#5360](https://github.com/zarf-dev/zarf/issues/5360))
+* disable artifact server by default ([#5417](https://github.com/zarf-dev/zarf/issues/5417))
+* migrate SignBlobOptions to a pointer ([#5411](https://github.com/zarf-dev/zarf/issues/5411))
+* **package:** move signing out of publish ([#5387](https://github.com/zarf-dev/zarf/issues/5387))
+* switch to api.Package from v1alpha1.ZarfPackage throughout repository ([#5379](https://github.com/zarf-dev/zarf/issues/5379))
+* public operational type ([#5345](https://github.com/zarf-dev/zarf/issues/5345))
+
+### Features
+
+* add explicit git server mode to state ([#5395](https://github.com/zarf-dev/zarf/issues/5395)) ([a8e695d](https://github.com/zarf-dev/zarf/commit/a8e695dc638e2e8931e105e7dc723c80b87a959d))
+* add validation for api package ([#5393](https://github.com/zarf-dev/zarf/issues/5393)) ([cebc6ee](https://github.com/zarf-dev/zarf/commit/cebc6ee612ba031252636761bd5da10043ec014b))
+* component sign and verify ([#5358](https://github.com/zarf-dev/zarf/issues/5358)) ([9c58f59](https://github.com/zarf-dev/zarf/commit/9c58f5971b482b3304816bb6891fd1df4e13aca6))
+* **component:** sign published manifests ([#5386](https://github.com/zarf-dev/zarf/issues/5386)) ([0c61d2f](https://github.com/zarf-dev/zarf/commit/0c61d2f631f20bab24485907bc8051ed44dafa57))
+* **dev:** add --components flag to dev inspect values-files ([#5413](https://github.com/zarf-dev/zarf/issues/5413)) ([13b7af6](https://github.com/zarf-dev/zarf/commit/13b7af66943f4a7f4bd40dd2010110df0ac5f9a8))
+* disable artifact server by default ([#5417](https://github.com/zarf-dev/zarf/issues/5417)) ([720f29e](https://github.com/zarf-dev/zarf/commit/720f29e89a56052a94ab9f9cf3f0a0bf9c6c9794))
+* migrate SignBlobOptions to a pointer ([#5411](https://github.com/zarf-dev/zarf/issues/5411)) ([b94f06b](https://github.com/zarf-dev/zarf/commit/b94f06b9b21e78bdde6ffaf9870bfcae2a351264))
+* **package:** move signing out of publish ([#5387](https://github.com/zarf-dev/zarf/issues/5387)) ([438b6c5](https://github.com/zarf-dev/zarf/commit/438b6c57f5500d8c2b87215c443297fe347bfd69))
+* public operational type ([#5345](https://github.com/zarf-dev/zarf/issues/5345)) ([6c9d7ce](https://github.com/zarf-dev/zarf/commit/6c9d7ce2af3e54fc24f5cf6a7d809b98a7e74d68))
+* remove migrated fields on api.Package ([#5390](https://github.com/zarf-dev/zarf/issues/5390)) ([ed97710](https://github.com/zarf-dev/zarf/commit/ed97710f1588dc3ef8f4da145e0c2defd6c87b4e))
+* **signing:** unify signing option handling ([#5385](https://github.com/zarf-dev/zarf/issues/5385)) ([4ee0d5c](https://github.com/zarf-dev/zarf/commit/4ee0d5c8d984b5e4c875bee86d2940186c206ebf))
+* **v1beta1:** componet import validation ([#5384](https://github.com/zarf-dev/zarf/issues/5384)) ([ce0abd9](https://github.com/zarf-dev/zarf/commit/ce0abd96d249c29c19c10f40fd0bc58f6dd1f3cd))
+* **v1beta1:** store multiple API versions in Deployed packages ([#5250](https://github.com/zarf-dev/zarf/issues/5250)) ([bcfbc65](https://github.com/zarf-dev/zarf/commit/bcfbc653ea501de2f90252698b7ac7e2d0a94f08))
+
+
+### Bug Fixes
+
+* **assemble:** cleanup temporary directory on error ([#5407](https://github.com/zarf-dev/zarf/issues/5407)) ([d07690e](https://github.com/zarf-dev/zarf/commit/d07690ec7a8768d738ad6add4e93cce611fe03d3))
+* **create:** run OnSuccess and OnFailure actions during create ([#5406](https://github.com/zarf-dev/zarf/issues/5406)) ([dd7301b](https://github.com/zarf-dev/zarf/commit/dd7301bd14175a967753730d078472b6d5983e6c))
+* **helm:** handle charts that render resources inside list kinds ([#5344](https://github.com/zarf-dev/zarf/issues/5344)) ([1f7bbc9](https://github.com/zarf-dev/zarf/commit/1f7bbc9fba04918af1b1a47cb958fb24b1fda5cd))
+* **helm:** only label pod templates of built-in workload kinds ([#5360](https://github.com/zarf-dev/zarf/issues/5360)) ([7be076a](https://github.com/zarf-dev/zarf/commit/7be076aba8563dcbb71c99657712fabeaf7576e0))
+* **init:** propagate secret updates on init mode changes ([#5398](https://github.com/zarf-dev/zarf/issues/5398)) ([c18603a](https://github.com/zarf-dev/zarf/commit/c18603a918f293b0e92f22d939c3bddd9170ca3c))
+* remove images and repositories from package secret during connected deploys ([#5402](https://github.com/zarf-dev/zarf/issues/5402)) ([1653ca2](https://github.com/zarf-dev/zarf/commit/1653ca220620d0461a24247a39a75f098932151b))
+* replace github.com/defenseunicorns/pkg with local versions ([#5324](https://github.com/zarf-dev/zarf/issues/5324)) ([379379a](https://github.com/zarf-dev/zarf/commit/379379a2b707179517e9e3aa75037acf9873ad2b))
+* **values:** preserve inferred types across null overlays ([#5412](https://github.com/zarf-dev/zarf/issues/5412)) ([9213afd](https://github.com/zarf-dev/zarf/commit/9213afdc9859c3fd35a1c20280539de27f005bec))
+
+
+### Refactoring
+
+* switch to api.Package from v1alpha1.ZarfPackage throughout repository ([#5379](https://github.com/zarf-dev/zarf/issues/5379)) ([9ce36bb](https://github.com/zarf-dev/zarf/commit/9ce36bbb06e68afe9c0cf923da5caf0910acd3ac))
+
+## [0.86.0](https://github.com/zarf-dev/zarf/compare/v0.85.0...v0.86.0) (2026-09-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* move sbom viewer behind disabled feature flag ([#5368](https://github.com/zarf-dev/zarf/issues/5368))
+
+### Features
+
+* **cluster:** support random registry pod selection ([#5317](https://github.com/zarf-dev/zarf/issues/5317)) ([fb3a53b](https://github.com/zarf-dev/zarf/commit/fb3a53b276ed927fa5e279a826ee366243f9d9b7))
+* debug log container runtime for diagnostics - warn on cri-o ([#5333](https://github.com/zarf-dev/zarf/issues/5333)) ([4e34f0e](https://github.com/zarf-dev/zarf/commit/4e34f0eaedba5937e333c1cb5c6e160decac68b6))
+* migrate `zarf tools registry ls` from crane to oras-go ([#5199](https://github.com/zarf-dev/zarf/issues/5199)) ([da37c2a](https://github.com/zarf-dev/zarf/commit/da37c2a805fc8a78b57d691133ec7ecf080aa5cf))
+* reject extra arguments to destroy ([#5311](https://github.com/zarf-dev/zarf/issues/5311)) ([2a03baf](https://github.com/zarf-dev/zarf/commit/2a03bafdbf893cd2a5b2828d47a7e29eaf542ee9))
+* support listing a deployed package by name ([#5310](https://github.com/zarf-dev/zarf/issues/5310)) ([5fda9ff](https://github.com/zarf-dev/zarf/commit/5fda9ffa434d1cde07ec28d6c712b52c1735dba1))
+
+
+### Bug Fixes
+
+* differing Windows `files` basenames on Linux and Windows ([#5359](https://github.com/zarf-dev/zarf/issues/5359)) ([22bbb45](https://github.com/zarf-dev/zarf/commit/22bbb4583e44d62074366b13ba60337d6bed7bff))
+* interactive template prompts on create ([#5362](https://github.com/zarf-dev/zarf/issues/5362)) ([9545b01](https://github.com/zarf-dev/zarf/commit/9545b01b5d5f1de99daf143ff5c238688c1409a5))
+* introduce more randomization in the fuzzers ([#5275](https://github.com/zarf-dev/zarf/issues/5275)) ([46018cf](https://github.com/zarf-dev/zarf/commit/46018cff0e1288cb115ad4c0fc0921362a8dac83))
+* move sbom viewer behind disabled feature flag ([#5368](https://github.com/zarf-dev/zarf/issues/5368)) ([9a1699a](https://github.com/zarf-dev/zarf/commit/9a1699ab3f74de6eab258dc074e858bd9d6d3bd4))
+* **values:** infer integer and unknown schema types ([#5334](https://github.com/zarf-dev/zarf/issues/5334)) ([221c4f6](https://github.com/zarf-dev/zarf/commit/221c4f6c26cb7db6e7b115719ca47652fd831cc7))
+
+## [0.85.0](https://github.com/zarf-dev/zarf/compare/v0.84.0...v0.85.0) (2026-09-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* publish v1beta1 component configs ([#5219](https://github.com/zarf-dev/zarf/issues/5219))
+
+### Features
+
+* add index and count to deploy ([#4170](https://github.com/zarf-dev/zarf/issues/4170)) ([ba50b87](https://github.com/zarf-dev/zarf/commit/ba50b8704a6478354457215f06ddf3d39d3de490))
+* add oci source auto-prefixing ([#5273](https://github.com/zarf-dev/zarf/issues/5273)) ([9a41b0d](https://github.com/zarf-dev/zarf/commit/9a41b0db586ce20cd2ba132eb0a4843e2084b766))
+* **helm:** support allowable errors for helm chart retries ([#5287](https://github.com/zarf-dev/zarf/issues/5287)) ([cdb212b](https://github.com/zarf-dev/zarf/commit/cdb212bec6e5acf7a73a0740599cb8f9dd8c3db1))
+* publish v1beta1 component configs ([#5219](https://github.com/zarf-dev/zarf/issues/5219)) ([abd07dd](https://github.com/zarf-dev/zarf/commit/abd07ddf531e47098af30d03c6af243216d3f65f))
+* warn on image push failure ([#5268](https://github.com/zarf-dev/zarf/issues/5268)) ([258fa9e](https://github.com/zarf-dev/zarf/commit/258fa9e800758e08cfe7bf3554b68f7455086765))
+* **zoci:** add transport parameter to NewRemoteWithOptions ([#5260](https://github.com/zarf-dev/zarf/issues/5260)) ([97a1b4d](https://github.com/zarf-dev/zarf/commit/97a1b4d0e9ca6095450f87a9c8690d5c76f71702))
+
+
+### Bug Fixes
+
+* **helm:** ensure retrieval of latest release ([#5295](https://github.com/zarf-dev/zarf/issues/5295)) ([5977f2d](https://github.com/zarf-dev/zarf/commit/5977f2d5a44e4cbb7b557a89d94c41359bb4c320))
+* pass remote options when loading OCI init packages ([#5265](https://github.com/zarf-dev/zarf/issues/5265)) ([4e14f8b](https://github.com/zarf-dev/zarf/commit/4e14f8b773d3b989c307d37370b9027a1b327d96))
+* support platform flag entries for crane copy ([#5280](https://github.com/zarf-dev/zarf/issues/5280)) ([81fedb2](https://github.com/zarf-dev/zarf/commit/81fedb2d73543f06679f5feef298456b50e0c78e))
+
+
+### Refactoring
+
+* **state:** move agent information into a sub-struct ([#5269](https://github.com/zarf-dev/zarf/issues/5269)) ([e702d1c](https://github.com/zarf-dev/zarf/commit/e702d1c7c813b812b6efb137084e85f2309ef281))
+
 ## [0.84.0](https://github.com/zarf-dev/zarf/compare/v0.83.0...v0.84.0) (2026-08-20)
 
 

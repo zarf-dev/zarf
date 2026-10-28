@@ -41,6 +41,20 @@ func TestVerifyFlagsAreGrouped(t *testing.T) {
 	})
 }
 
+func TestComponentSignFlagsAreGrouped(t *testing.T) {
+	t.Parallel()
+
+	cmd := newComponentSignCommand(newTestViper())
+	cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+		if flag.Name == "confirm" {
+			require.Empty(t, flag.Annotations[flagGroupAnnotation])
+			return
+		}
+		require.Equal(t, []string{signingFlagGroupTitle}, flag.Annotations[flagGroupAnnotation],
+			"flag %q should belong to the signing group", flag.Name)
+	})
+}
+
 func TestGroupedFlagUsageRendering(t *testing.T) {
 	// Not parallel: setupGroupedFlagUsage registers template helpers via the global
 	// cobra.AddTemplateFunc, which is not safe to race with other tests.

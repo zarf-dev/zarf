@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
@@ -310,9 +310,10 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 	modeChanged := opts.RegistryInfo.RegistryMode != "" && opts.RegistryInfo.RegistryMode != previousMode
 
-	// If the registry mode is changing the injector will be re-made so the port should be reset
+	// Mode changes recreate the injector; its port and image may not be suitable for the new mode.
 	if modeChanged {
 		s.InjectorInfo.Port = 0
+		s.InjectorInfo.Image = ""
 	}
 
 	switch s.RegistryInfo.RegistryMode {
@@ -590,7 +591,7 @@ func (c *Cluster) GetIPFamily(ctx context.Context) (_ state.IPFamily, err error)
 	}()
 
 	// Use health checks to wait for the service to be ready
-	healthCheck := []v1alpha1.NamespacedObjectKindReference{
+	healthCheck := []api.NamespacedObjectKindReference{
 		{
 			APIVersion: "v1",
 			Kind:       "Service",

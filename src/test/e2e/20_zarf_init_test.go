@@ -75,6 +75,9 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 	err = json.Unmarshal(stateJSON, &s)
 	require.NoError(t, err)
+	if !oldState.ArtifactServer.IsConfigured() {
+		require.False(t, s.ArtifactServer.IsConfigured(), "artifact server should be disabled by default")
+	}
 
 	if e2e.ApplianceMode {
 		// make sure that we upgraded `k3s` correctly and are running the correct version - this should match that found in `packages/distros/k3s`
@@ -100,6 +103,17 @@ func TestZarfInit(t *testing.T) {
 	verifyZarfSecretLabels(t)
 	verifyZarfPodLabels(t)
 	verifyZarfServiceLabels(t)
+
+	// Opting into the deprecated artifact server creates its state and Gitea token.
+	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--features=artifact-server=true", "--confirm")
+	require.NoError(t, err)
+	base64State, _, err = e2e.Kubectl(t, "get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
+	require.NoError(t, err)
+	stateJSON, err = base64.StdEncoding.DecodeString(base64State)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(stateJSON, &s))
+	require.True(t, s.ArtifactServer.IsInternal())
+	require.NotEmpty(t, s.ArtifactServer.PushToken)
 
 	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
 	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1") //nolint:errcheck

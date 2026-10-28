@@ -5,6 +5,7 @@ package layout
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,38 +15,137 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"oras.land/oras-go/v2/errdef"
 )
 
 func TestAnnotationsFromMetadata(t *testing.T) {
 	t.Parallel()
 
-	metadata := v1alpha1.ZarfMetadata{
+	pkg := api.Package{Metadata: api.PackageMetadata{
 		Name:          "foo",
 		Description:   "bar",
-		URL:           "https://example.com",
-		Authors:       "Zarf",
-		Documentation: "documentation",
-		Source:        "source",
-		Vendor:        "vendor",
+		URL:           "https://field.example.com",
+		Authors:       "Field Author",
+		Documentation: "field-documentation",
+		Source:        "field-source",
+		Vendor:        "field-vendor",
 		Annotations: map[string]string{
+			"url":                            "https://annotation.example.com",
+			"authors":                        "Annotation Author",
+			"documentation":                  "annotation-documentation",
+			"source":                         "annotation-source",
+			"vendor":                         "annotation-vendor",
+			"metadata.url":                   "https://custom.example.com",
 			"org.opencontainers.image.title": "overridden",
 			"org.opencontainers.image.new":   "new-field",
 		},
-	}
-	annotations := AnnotationsFromMetadata(metadata)
+	}}
+	annotations := AnnotationsFromMetadata(pkg)
 	expectedAnnotations := map[string]string{
 		"org.opencontainers.image.title":         "overridden",
 		"org.opencontainers.image.description":   "bar",
-		"org.opencontainers.image.url":           "https://example.com",
-		"org.opencontainers.image.authors":       "Zarf",
-		"org.opencontainers.image.documentation": "documentation",
-		"org.opencontainers.image.source":        "source",
-		"org.opencontainers.image.vendor":        "vendor",
+		"org.opencontainers.image.url":           "https://field.example.com",
+		"org.opencontainers.image.authors":       "Field Author",
+		"org.opencontainers.image.documentation": "field-documentation",
+		"org.opencontainers.image.source":        "field-source",
+		"org.opencontainers.image.vendor":        "field-vendor",
 		"org.opencontainers.image.new":           "new-field",
+		"metadata.url":                           "https://custom.example.com",
+		"url":                                    "https://annotation.example.com",
+		"authors":                                "Annotation Author",
+		"documentation":                          "annotation-documentation",
+		"source":                                 "annotation-source",
+		"vendor":                                 "annotation-vendor",
 	}
 	require.Equal(t, expectedAnnotations, annotations)
+}
+
+func TestAnnotationsFromMetadata_PreservesV1alpha1Precedence(t *testing.T) {
+	t.Parallel()
+
+	pkg := convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
+		Metadata: v1alpha1.ZarfMetadata{
+			Name:        "foo",
+			Description: "bar",
+			URL:         "https://legacy.example.com",
+			Annotations: map[string]string{
+				"metadata.url":        "https://custom.example.com",
+				ocispec.AnnotationURL: "https://override.example.com",
+			},
+		},
+	})
+
+	require.Equal(t, map[string]string{
+		ocispec.AnnotationTitle:       "foo",
+		ocispec.AnnotationDescription: "bar",
+		ocispec.AnnotationURL:         "https://override.example.com",
+		"metadata.url":                "https://custom.example.com",
+	}, AnnotationsFromMetadata(pkg))
+}
+
+func TestResourceAnnotations(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{APIVersion: v1beta1.APIVersion}
+	documentationPath := DocumentationDir + "/README.md"
+	require.Equal(t, map[string]string{
+		ocispec.AnnotationTitle: documentationPath,
+		ResourceKindAnnotation:  ResourceKindDocumentation,
+	}, resourceAnnotations(documentationPath, pkg))
+
+	sbomPath := ComponentSBOMResourcePath("metrics")
+	require.Equal(t, map[string]string{
+		ocispec.AnnotationTitle: sbomPath,
+		ResourceKindAnnotation:  ResourceKindSBOM,
+	}, resourceAnnotations(sbomPath, pkg))
+
+	imageSBOMPath := ImageSBOMResourcePath("longhornio/longhorn-ui:v1.11.2")
+	require.Equal(t, map[string]string{
+		ocispec.AnnotationTitle: imageSBOMPath,
+		ResourceKindAnnotation:  ResourceKindSBOM,
+	}, resourceAnnotations(imageSBOMPath, pkg))
+}
+
+func TestComputeManifestAnnotatesV1Beta1Resources(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, DocumentationDir), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, DocumentationDir, "README.md"), []byte("documentation"), 0o600))
+	sbomPath := filepath.Join(dir, filepath.FromSlash(ComponentSBOMResourcePath("metrics")))
+	require.NoError(t, os.MkdirAll(filepath.Dir(sbomPath), 0o700))
+	require.NoError(t, os.WriteFile(sbomPath, []byte("sbom"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, Checksums), []byte{}, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: test-pkg
+attachments:
+  readme: README.md
+`), 0o600))
+
+	p := &PackageLayout{dirPath: dir}
+	require.NoError(t, p.computeManifest(context.Background()))
+	manifest, err := p.Manifest()
+	require.NoError(t, err)
+
+	descriptors := map[string]ocispec.Descriptor{}
+	for _, descriptor := range manifest.Layers {
+		descriptors[descriptor.Annotations[ocispec.AnnotationTitle]] = descriptor
+	}
+	documentation := descriptors[DocumentationDir+"/README.md"]
+	require.Equal(t, DocumentationDir+"/README.md", documentation.Annotations[ocispec.AnnotationTitle])
+	require.Equal(t, ResourceKindDocumentation, documentation.Annotations[ResourceKindAnnotation])
+	require.Equal(t, DocumentationLayerMediaTypeBlob, documentation.MediaType)
+	sbom := descriptors[ComponentSBOMResourcePath("metrics")]
+	require.Equal(t, ComponentSBOMResourcePath("metrics"), sbom.Annotations[ocispec.AnnotationTitle])
+	require.Equal(t, ResourceKindSBOM, sbom.Annotations[ResourceKindAnnotation])
+	//nolint:testifylint // application/vnd.syft+json is a media type, not encoded JSON.
+	require.Equal(t, SBOMMediaTypeSyftJSON, sbom.MediaType)
 }
 
 // newTestLayout creates a minimal PackageLayout with a computed manifest.
@@ -67,7 +167,7 @@ func newTestLayout(t *testing.T) (*PackageLayout, []byte) {
 
 	p := &PackageLayout{
 		dirPath: dir,
-		PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+		pkg: packageDefinition(v1alpha1.ZarfPackage{
 			Metadata: v1alpha1.ZarfMetadata{Name: "test-pkg", Version: "1.0.0"},
 			Build:    v1alpha1.ZarfBuildData{Architecture: "amd64"},
 		}),
@@ -81,7 +181,28 @@ func TestDigest(t *testing.T) {
 	p, _ := newTestLayout(t)
 
 	d := p.Digest()
-	assert.Equal(t, "sha256:28999b2812b62c2df92f9eb90e48b0a467ba3f0aeeaae10702e438387aa12bd3", d, "digest should match expected precomputed digest")
+	assert.Equal(t, "sha256:25242bc565875477a9f691d8ce135b433bb014340a46b87113d977f0c08bd728", d, "digest should match expected precomputed digest")
+}
+
+func TestComputeManifest_UsesDefinitionAPIVersionForConfig(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, Checksums), []byte{}, 0600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ZarfYAML), []byte("apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: test-pkg\n"), 0600))
+
+	p := &PackageLayout{dirPath: dir}
+	require.NoError(t, p.computeManifest(context.Background()))
+
+	manifest, err := p.Manifest()
+	require.NoError(t, err)
+	config, err := p.Fetch(context.Background(), manifest.Config)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, config.Close()) })
+
+	var definition struct {
+		APIVersion string `json:"apiVersion"`
+	}
+	require.NoError(t, json.NewDecoder(config).Decode(&definition))
+	require.Equal(t, v1beta1.APIVersion, definition.APIVersion)
 }
 
 func TestTotalSize(t *testing.T) {
@@ -103,6 +224,33 @@ func TestComputeManifestDeterministic(t *testing.T) {
 	assert.Equal(t, first, p.Digest(), "repeated computeManifest calls should produce the same digest")
 }
 
+func TestComputeManifestDeterministicWithDuplicateResourceContent(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, DocumentationDir), 0o700))
+	for _, name := range []string{"first.md", "second.md"} {
+		require.NoError(t, os.WriteFile(filepath.Join(dir, DocumentationDir, name), []byte("identical documentation"), 0o600))
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(dir, Checksums), []byte{}, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: test-pkg
+attachments:
+  first: first.md
+  second: second.md
+`), 0o600))
+
+	p := &PackageLayout{dirPath: dir}
+	require.NoError(t, p.computeManifest(t.Context()))
+	first := p.Digest()
+	for range 100 {
+		require.NoError(t, p.computeManifest(t.Context()))
+		require.Equal(t, first, p.Digest())
+	}
+}
+
 func TestResolve(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -115,7 +263,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("by package name", func(t *testing.T) {
-		desc, err := p.Resolve(ctx, p.AsV1alpha1().Metadata.Name)
+		desc, err := p.Resolve(ctx, convert.PackageToV1alpha1(p.Definition()).Metadata.Name)
 		require.NoError(t, err)
 		assert.Equal(t, p.Digest(), desc.Digest.String())
 	})

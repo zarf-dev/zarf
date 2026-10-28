@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -26,7 +26,10 @@ import (
 	clientfeatures "k8s.io/client-go/features"
 	clientfeaturestesting "k8s.io/client-go/features/testing"
 	"k8s.io/kubectl/pkg/scheme"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
+	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/cli-utils/pkg/testutil"
 )
 
@@ -106,7 +109,7 @@ func TestRunHealthChecks(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 			defer cancel()
 			statusWatcher := watcher.NewDefaultStatusWatcher(fakeClient, fakeMapper)
-			objs := []v1alpha1.NamespacedObjectKindReference{}
+			objs := []api.NamespacedObjectKindReference{}
 			for _, podYaml := range tt.podYamls {
 				m := make(map[string]any)
 				err := yaml.Unmarshal([]byte(podYaml), &m)
@@ -115,7 +118,7 @@ func TestRunHealthChecks(t *testing.T) {
 				podGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 				err = fakeClient.Tracker().Create(podGVR, pod, pod.GetNamespace())
 				require.NoError(t, err)
-				objs = append(objs, v1alpha1.NamespacedObjectKindReference{
+				objs = append(objs, api.NamespacedObjectKindReference{
 					APIVersion: pod.GetAPIVersion(),
 					Kind:       pod.GetKind(),
 					Namespace:  pod.GetNamespace(),
@@ -151,7 +154,7 @@ func TestFailedHealthChecks(t *testing.T) {
 	err = fakeClient.Tracker().Create(jobGVR, job, job.GetNamespace())
 	require.NoError(t, err)
 
-	objs := []v1alpha1.NamespacedObjectKindReference{
+	objs := []api.NamespacedObjectKindReference{
 		{
 			APIVersion: job.GetAPIVersion(),
 			Kind:       job.GetKind(),
@@ -173,7 +176,7 @@ func TestHealthChecksUseNamespaceScopedWatchesAcrossNamespaces(t *testing.T) {
 	fakeMapper := testutil.NewFakeRESTMapper(v1.SchemeGroupVersion.WithKind("Pod"))
 	statusWatcher := watcher.NewDefaultStatusWatcher(fakeClient, fakeMapper)
 
-	healthChecks := make([]v1alpha1.NamespacedObjectKindReference, 0, 2)
+	healthChecks := make([]api.NamespacedObjectKindReference, 0, 2)
 	for _, namespace := range []string{"alpha", "bravo"} {
 		pod := readyPod(fmt.Sprintf("pod-%s", namespace), namespace)
 		err := fakeClient.Tracker().Create(
@@ -182,7 +185,7 @@ func TestHealthChecksUseNamespaceScopedWatchesAcrossNamespaces(t *testing.T) {
 			namespace,
 		)
 		require.NoError(t, err)
-		healthChecks = append(healthChecks, v1alpha1.NamespacedObjectKindReference{
+		healthChecks = append(healthChecks, api.NamespacedObjectKindReference{
 			APIVersion: pod.GetAPIVersion(),
 			Kind:       pod.GetKind(),
 			Namespace:  pod.GetNamespace(),
@@ -259,4 +262,56 @@ func assertResourceWatchNamespaces(t *testing.T, fakeClient *dynamicfake.FakeDyn
 	}
 
 	require.ElementsMatch(t, expected, slices.Collect(maps.Keys(actual)))
+}
+
+// cancellationWatcher drains an in-flight update after the wait cancels its watch.
+type cancellationWatcher struct {
+	initial  status.Status
+	trailing status.Status
+}
+
+func (w cancellationWatcher) Watch(ctx context.Context, ids object.ObjMetadataSet, _ watcher.Options) <-chan event.Event {
+	events := make(chan event.Event)
+	go func() {
+		defer close(events)
+		send := func(s status.Status) {
+			events <- event.Event{Type: event.ResourceUpdateEvent, Resource: &event.ResourceStatus{
+				Identifier: ids[0], Status: s, Message: "status update",
+			}}
+		}
+		send(w.initial)
+		<-ctx.Done()
+		send(w.trailing)
+	}()
+	return events
+}
+
+func TestWaitForReadyPreservesCancellationResult(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		initial   status.Status
+		trailing  status.Status
+		wantError bool
+	}{
+		{name: "ready then in progress", initial: status.CurrentStatus, trailing: status.InProgressStatus},
+		{name: "ready then failed", initial: status.CurrentStatus, trailing: status.FailedStatus},
+		{name: "failed then ready", initial: status.FailedStatus, trailing: status.CurrentStatus, wantError: true},
+		{name: "failed then in progress", initial: status.FailedStatus, trailing: status.InProgressStatus, wantError: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			id := object.ObjMetadata{GroupKind: schema.GroupKind{Group: "uds.dev", Kind: "Package"}, Name: "example", Namespace: "apps"}
+			err := WaitForReady(ctx, cancellationWatcher{initial: tt.initial, trailing: tt.trailing}, []object.ObjMetadata{id})
+			require.NoError(t, ctx.Err(), "the wait should stop on the terminal status, before its timeout")
+			if tt.wantError {
+				require.EqualError(t, err, "example: Package not ready, status is Failed, message: status update")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }

@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -38,7 +37,7 @@ func TestDevDeploy_filtersComponents(t *testing.T) {
 			},
 			{
 				Name:     "unselected",
-				Required: helpers.BoolPtr(false),
+				Required: new(false),
 				Files:    []v1alpha1.ZarfFile{{Source: source, Target: unselectedTarget}},
 			},
 		},
@@ -71,11 +70,11 @@ func TestDevDeploy_appliesValues(t *testing.T) {
 		Metadata:   v1alpha1.ZarfMetadata{Name: "dev-deploy-values"},
 		Components: []v1alpha1.ZarfComponent{{
 			Name:     "values",
-			Required: helpers.BoolPtr(true),
+			Required: new(true),
 			Files: []v1alpha1.ZarfFile{{
 				Source:   source,
 				Target:   target,
-				Template: helpers.BoolPtr(true),
+				Template: new(true),
 			}},
 		}},
 	}
@@ -92,4 +91,35 @@ func TestDevDeploy_appliesValues(t *testing.T) {
 	contents, err := os.ReadFile(target)
 	require.NoError(t, err)
 	require.Equal(t, "from-deploy-values\n", string(contents))
+}
+
+func TestDevDeployRejectsArchitectureOverrideForInit(t *testing.T) {
+	for _, airgapMode := range []bool{false, true} {
+		name := "connected"
+		if airgapMode {
+			name = "airgap"
+		}
+		t.Run(name, func(t *testing.T) {
+			packageDir := t.TempDir()
+			pkg := v1alpha1.ZarfPackage{
+				APIVersion: v1alpha1.APIVersion,
+				Kind:       v1alpha1.ZarfInitConfig,
+				Metadata:   v1alpha1.ZarfMetadata{Name: "init-architecture-override"},
+				Components: []v1alpha1.ZarfComponent{{
+					Name:   "application",
+					Images: []string{"example.invalid/application:latest"},
+				}},
+			}
+			b, err := goyaml.Marshal(pkg)
+			require.NoError(t, err)
+			require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), b, 0o600))
+
+			err = DevDeploy(testutil.TestContext(t), packageDir, DevDeployOptions{
+				AirgapMode:            airgapMode,
+				CachePath:             filepath.Join(packageDir, "cache"),
+				SkipArchitectureCheck: true,
+			})
+			require.ErrorContains(t, err, "skipping architecture checks is not supported for init packages")
+		})
+	}
 }

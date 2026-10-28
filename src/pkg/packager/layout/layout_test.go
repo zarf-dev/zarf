@@ -8,6 +8,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
 
 func TestChartArchiveName(t *testing.T) {
@@ -39,6 +42,43 @@ func TestChartPaths(t *testing.T) {
 	require.Equal(t, filepath.Join("build", "values", "podinfo-6.4.0-1"), paths.ValuesFile("podinfo", "6.4.0", 1))
 }
 
+func TestChartPathsRejectUnsafeComponents(t *testing.T) {
+	t.Parallel()
+
+	paths := ChartPaths{ChartsDir: filepath.Join("build", "charts"), ValuesDir: filepath.Join("build", "values")}
+	tests := []struct {
+		name    string
+		pathFor func() (string, error)
+		wantErr string
+	}{
+		{name: "archive name", pathFor: func() (string, error) { return paths.ArchivePath("../chart", "1.0.0") }, wantErr: "chart name validation failed"},
+		{name: "archive version", pathFor: func() (string, error) { return paths.ArchivePath("chart", `nested\version`) }, wantErr: "chart version validation failed"},
+		{name: "values name", pathFor: func() (string, error) { return paths.ValuesFilePath("nested/chart", "1.0.0", 0) }, wantErr: "chart name validation failed"},
+		{name: "values version", pathFor: func() (string, error) { return paths.ValuesFilePath("chart", "../version", 0) }, wantErr: "chart version validation failed"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tt.pathFor()
+			require.ErrorContains(t, err, tt.wantErr)
+			require.ErrorContains(t, err, "must not")
+		})
+	}
+}
+
+func TestChartPathsStayWithinArtifactDirectories(t *testing.T) {
+	t.Parallel()
+
+	paths := ChartPaths{ChartsDir: filepath.Join("build", "charts"), ValuesDir: filepath.Join("build", "values")}
+	archive, err := paths.ArchivePath("chart", "1.0.0")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join("build", "charts", "chart-1.0.0.tgz"), archive)
+
+	values, err := paths.ValuesFilePath("chart", "1.0.0", 2)
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join("build", "values", "chart-1.0.0-2"), values)
+}
+
 func TestManifestFileNames(t *testing.T) {
 	t.Parallel()
 
@@ -49,7 +89,40 @@ func TestManifestFileNames(t *testing.T) {
 func TestComponentFileRelPath(t *testing.T) {
 	t.Parallel()
 
-	require.Equal(t, filepath.Join("0", "nginx.conf"), ComponentFileRelPath(0, "/etc/nginx/nginx.conf"),
-		"only the target's base name is kept")
-	require.Equal(t, filepath.Join("2", "data.txt"), ComponentFileRelPath(2, "data.txt"))
+	tests := []struct {
+		name   string
+		idx    int
+		target string
+		want   string
+	}{
+		{name: "POSIX path", idx: 0, target: "/etc/app/file.txt", want: filepath.Join("0", "file.txt")},
+		{name: "Windows path", idx: 1, target: `C:\app\file.txt`, want: filepath.Join("1", "file.txt")},
+		{name: "Windows path with forward slashes", idx: 2, target: "C:/app/file.txt", want: filepath.Join("2", "file.txt")},
+		{name: "file name", idx: 3, target: "file.txt", want: filepath.Join("3", "file.txt")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, ComponentFileRelPath(tt.idx, tt.target))
+		})
+	}
+}
+
+func TestUsesGranularResourceLayout(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		apiVersion string
+		want       bool
+	}{
+		"omitted version defaults to archive resources": {want: false},
+		"v1alpha1 uses archive resources":               {apiVersion: v1alpha1.APIVersion, want: false},
+		"v1beta1 uses granular resources":               {apiVersion: v1beta1.APIVersion, want: true},
+		"future versions use granular resources":        {apiVersion: "zarf.dev/v1gamma1", want: true},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tt.want, UsesGranularResourceLayout(api.Package{APIVersion: tt.apiVersion}))
+		})
+	}
 }

@@ -18,13 +18,18 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // Open opens an existing local repository at the given path.
-func Open(rootPath, address string) (*Repository, error) {
+func Open(rootPath string, source api.Repository) (*Repository, error) {
+	address, err := repositoryLayoutAddress(source)
+	if err != nil {
+		return nil, err
+	}
 	repoFolder, err := transform.GitURLtoFolderName(address)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse git url %s: %w", address, err)
@@ -50,14 +55,21 @@ func Open(rootPath, address string) (*Repository, error) {
 }
 
 // Clone clones a git repository to the given local path.
-func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Repository, error) {
+func Clone(ctx context.Context, rootPath string, source api.Repository, shallow bool) (*Repository, error) {
 	l := logger.From(ctx)
+	address, err := RepositoryAddress(source)
+	if err != nil {
+		return nil, err
+	}
+	layoutAddress, err := repositoryLayoutAddress(source)
+	if err != nil {
+		return nil, err
+	}
 	// Split the remote url and the zarf reference
 	gitURLNoRef, refPlain, err := transform.GitURLSplitRef(address)
 	if err != nil {
 		return nil, err
 	}
-
 	// Parse the ref from the git URL.
 	var ref plumbing.ReferenceName
 	if refPlain != emptyRef {
@@ -65,7 +77,7 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 	}
 
 	// Construct a path unique to this git repo
-	repoFolder, err := transform.GitURLtoFolderName(address)
+	repoFolder, err := transform.GitURLtoFolderName(layoutAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -115,6 +127,16 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 
 	l.Info("cloning Git repository", "address", address)
 
+	if shallow && plumbing.IsHash(refPlain) {
+		if err := r.cloneCommit(ctx, gitURLNoRef, refPlain, cloneOpts.Auth); err != nil {
+			return nil, err
+		}
+		if err := checkout(refPlain, ref, r); err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+
 	repo, err := git.PlainCloneContext(ctx, r.path, false, cloneOpts)
 	if err != nil {
 		l.Info("falling back to host 'git', failed to clone the repo with Zarf", "url", gitURLNoRef, "error", err)
@@ -150,6 +172,30 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 	}
 
 	return r, nil
+}
+
+// cloneCommit fetches only the pinned commit and its contents, without its history.
+func (r *Repository) cloneCommit(ctx context.Context, address, commit string, auth transport.AuthMethod) error {
+	repo, err := git.PlainInit(r.path, false)
+	if err != nil {
+		return err
+	}
+	_, err = repo.CreateRemote(&config.RemoteConfig{Name: onlineRemoteName, URLs: []string{address}})
+	if err != nil {
+		return err
+	}
+	err = repo.FetchContext(ctx, &git.FetchOptions{
+		RemoteName: onlineRemoteName,
+		RefSpecs:   []config.RefSpec{config.RefSpec(commit + ":refs/remotes/" + onlineRemoteName + "/zarf-ref-" + commit)},
+		Depth:      1,
+		Tags:       git.NoTags,
+		Auth:       auth,
+	})
+	if err == nil || errors.Is(err, git.NoErrAlreadyUpToDate) {
+		return nil
+	}
+	logger.From(ctx).Info("falling back to host 'git', failed to fetch the commit with Zarf", "url", address, "commit", commit, "error", err)
+	return r.gitFetchCommitFallback(ctx, commit)
 }
 
 // Repository manages a local git repository.

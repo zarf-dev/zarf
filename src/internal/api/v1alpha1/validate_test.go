@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
@@ -56,7 +55,7 @@ func TestZarfPackageValidate(t *testing.T) {
 				Components: []v1alpha1.ZarfComponent{
 					{
 						Name:     "invalid",
-						Required: helpers.BoolPtr(true),
+						Required: new(true),
 						Default:  true,
 						Charts: []v1alpha1.ZarfChart{
 							{Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
@@ -69,7 +68,7 @@ func TestZarfPackageValidate(t *testing.T) {
 					},
 					{
 						Name:            "required-in-group",
-						Required:        helpers.BoolPtr(true),
+						Required:        new(true),
 						DeprecatedGroup: "a-group",
 					},
 					{
@@ -154,6 +153,29 @@ func TestZarfPackageValidate(t *testing.T) {
 	}
 }
 
+func TestValidatePackageDocumentationKeys(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		key     string
+		wantErr string
+	}{
+		{key: "nested/document", wantErr: PkgValidateErrDocumentationKeyPath},
+		{key: `nested\document`, wantErr: PkgValidateErrDocumentationKeyPath},
+		{key: "..", wantErr: PkgValidateErrDocumentationKeyTraversal},
+	}
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			t.Parallel()
+			err := ValidatePackage(v1alpha1.ZarfPackage{
+				Components:    []v1alpha1.ZarfComponent{{Name: "component"}},
+				Documentation: map[string]string{tt.key: "readme.md"},
+			})
+			require.ErrorContains(t, err, fmt.Sprintf(tt.wantErr, tt.key))
+		})
+	}
+}
+
 func TestValidateManifest(t *testing.T) {
 	t.Parallel()
 	longName := strings.Repeat("a", ZarfMaxChartNameLength+1)
@@ -171,6 +193,16 @@ func TestValidateManifest(t *testing.T) {
 			name:         "long name",
 			manifest:     v1alpha1.ZarfManifest{Name: longName, Files: []string{"a-file"}},
 			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
+		},
+		{
+			name:         "name contains forward path separator",
+			manifest:     v1alpha1.ZarfManifest{Name: "nested/manifest", Files: []string{"a-file"}},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNamePath, "nested/manifest")},
+		},
+		{
+			name:         "name contains backslash path separator",
+			manifest:     v1alpha1.ZarfManifest{Name: `nested\manifest`, Files: []string{"a-file"}},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNamePath, `nested\manifest`)},
 		},
 		{
 			name:         "no files or kustomize",
@@ -311,7 +343,7 @@ func TestValidateChart(t *testing.T) {
 			partialMatch: true,
 		},
 		{
-			name:         "missing releaseName fallsback to name",
+			name:         "missing releaseName falls back to name",
 			chart:        v1alpha1.ZarfChart{Name: "chart3", Namespace: "namespace", URL: "http://whatever", Version: "v1.0.0"},
 			expectedErrs: nil,
 		},
@@ -413,7 +445,7 @@ func TestValidateComponentActions(t *testing.T) {
 					Before: []v1alpha1.ZarfComponentAction{
 						{
 							Cmd:      "echo 'templating not allowed'",
-							Template: helpers.BoolPtr(true),
+							Template: new(true),
 						},
 					},
 				},

@@ -71,9 +71,6 @@ serviceAccount:
 postgresql-ha:
   enabled: false
 
-redis-cluster:
-  enabled: false
-
 valkey-cluster:
   enabled: false
 

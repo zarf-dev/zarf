@@ -8,106 +8,106 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 )
 
 func TestPopulateVariables(t *testing.T) {
 	type test struct {
 		vc       VariableConfig
-		vars     []v1alpha1.InteractiveVariable
+		vars     []api.InteractiveVariable
 		presets  map[string]string
 		wantErr  bool
 		wantVars SetVariableMap
 	}
 
-	prompt := func(_ v1alpha1.InteractiveVariable) (string, error) { return "Prompt", nil }
+	prompt := func(_ api.InteractiveVariable) (string, error) { return "Prompt", nil }
 
 	tests := []test{
 		{
 			vc:       VariableConfig{setVariableMap: SetVariableMap{}},
-			vars:     []v1alpha1.InteractiveVariable{{Variable: v1alpha1.Variable{Name: "NAME"}}},
+			vars:     []api.InteractiveVariable{{Variable: api.Variable{Name: "NAME"}}},
 			presets:  map[string]string{},
-			wantVars: SetVariableMap{"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}}},
+			wantVars: SetVariableMap{"NAME": {Variable: api.Variable{Name: "NAME"}}},
 		},
 		{
 			vc: VariableConfig{setVariableMap: SetVariableMap{}},
-			vars: []v1alpha1.InteractiveVariable{
-				{Variable: v1alpha1.Variable{Name: "NAME"}, Default: "Default"},
+			vars: []api.InteractiveVariable{
+				{Variable: api.Variable{Name: "NAME"}, Default: "Default"},
 			},
 			presets: map[string]string{},
 			wantVars: SetVariableMap{
-				"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}, Value: "Default"},
+				"NAME": {Variable: api.Variable{Name: "NAME"}, Value: "Default"},
 			},
 		},
 		{
 			vc: VariableConfig{setVariableMap: SetVariableMap{}},
-			vars: []v1alpha1.InteractiveVariable{
-				{Variable: v1alpha1.Variable{Name: "NAME"}, Default: "Default"},
+			vars: []api.InteractiveVariable{
+				{Variable: api.Variable{Name: "NAME"}, Default: "Default"},
 			},
 			presets: map[string]string{"NAME": "Set"},
 			wantVars: SetVariableMap{
-				"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}, Value: "Set"},
+				"NAME": {Variable: api.Variable{Name: "NAME"}, Value: "Set"},
 			},
 		},
 		{
 			vc: VariableConfig{setVariableMap: SetVariableMap{}},
-			vars: []v1alpha1.InteractiveVariable{
-				{Variable: v1alpha1.Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: v1alpha1.FileVariableType}},
+			vars: []api.InteractiveVariable{
+				{Variable: api.Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: api.FileVariableType}},
 			},
 			presets: map[string]string{},
 			wantVars: SetVariableMap{
-				"NAME": {Variable: v1alpha1.Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: v1alpha1.FileVariableType}},
+				"NAME": {Variable: api.Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: api.FileVariableType}},
 			},
 		},
 		{
 			vc: VariableConfig{setVariableMap: SetVariableMap{}},
-			vars: []v1alpha1.InteractiveVariable{
-				{Variable: v1alpha1.Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: v1alpha1.FileVariableType}},
+			vars: []api.InteractiveVariable{
+				{Variable: api.Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: api.FileVariableType}},
 			},
 			presets: map[string]string{"NAME": "Set"},
 			wantVars: SetVariableMap{
-				"NAME": {Variable: v1alpha1.Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: v1alpha1.FileVariableType}, Value: "Set"},
+				"NAME": {Variable: api.Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: api.FileVariableType}, Value: "Set"},
 			},
 		},
 		{
 			vc: VariableConfig{setVariableMap: SetVariableMap{}, prompt: prompt},
-			vars: []v1alpha1.InteractiveVariable{
-				{Variable: v1alpha1.Variable{Name: "NAME"}, Prompt: true},
+			vars: []api.InteractiveVariable{
+				{Variable: api.Variable{Name: "NAME"}, Prompt: true},
 			},
 			presets: map[string]string{},
 			wantVars: SetVariableMap{
-				"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}, Value: "Prompt"},
+				"NAME": {Variable: api.Variable{Name: "NAME"}, Value: "Prompt"},
 			},
 		},
 		{
 			vc: VariableConfig{setVariableMap: SetVariableMap{}, prompt: prompt},
-			vars: []v1alpha1.InteractiveVariable{
-				{Variable: v1alpha1.Variable{Name: "NAME"}, Default: "Default", Prompt: true},
+			vars: []api.InteractiveVariable{
+				{Variable: api.Variable{Name: "NAME"}, Default: "Default", Prompt: true},
 			},
 			presets: map[string]string{},
 			wantVars: SetVariableMap{
-				"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}, Value: "Prompt"},
+				"NAME": {Variable: api.Variable{Name: "NAME"}, Value: "Prompt"},
 			},
 		},
 		{
 			vc: VariableConfig{setVariableMap: SetVariableMap{}, prompt: prompt},
-			vars: []v1alpha1.InteractiveVariable{
-				{Variable: v1alpha1.Variable{Name: "NAME"}, Prompt: true},
+			vars: []api.InteractiveVariable{
+				{Variable: api.Variable{Name: "NAME"}, Prompt: true},
 			},
 			presets: map[string]string{"NAME": "Set"},
 			wantVars: SetVariableMap{
-				"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}, Value: "Set"},
+				"NAME": {Variable: api.Variable{Name: "NAME"}, Value: "Set"},
 			},
 		},
 		{
 			vc: VariableConfig{setVariableMap: SetVariableMap{}, prompt: prompt},
-			vars: []v1alpha1.InteractiveVariable{
-				{Variable: v1alpha1.Variable{Name: "lowercase-prompt"}, Prompt: true},
+			vars: []api.InteractiveVariable{
+				{Variable: api.Variable{Name: "lowercase-prompt"}, Prompt: true},
 			},
 			presets: map[string]string{"lowercase-preset": "made-upper"},
 			wantVars: SetVariableMap{
-				"LOWERCASE-PRESET": {Variable: v1alpha1.Variable{Name: "LOWERCASE-PRESET"}, Value: "made-upper"},
-				"LOWERCASE-PROMPT": {Variable: v1alpha1.Variable{Name: "LOWERCASE-PROMPT"}, Value: "Prompt"},
+				"LOWERCASE-PRESET": {Variable: api.Variable{Name: "LOWERCASE-PRESET"}, Value: "made-upper"},
+				"LOWERCASE-PROMPT": {Variable: api.Variable{Name: "LOWERCASE-PROMPT"}, Value: "Prompt"},
 			},
 		},
 	}
@@ -145,18 +145,18 @@ func TestCheckVariablePattern(t *testing.T) {
 		},
 		{
 			vc: VariableConfig{
-				setVariableMap: SetVariableMap{"NAME": &v1alpha1.SetVariable{Value: "name"}},
+				setVariableMap: SetVariableMap{"NAME": {Value: "name"}},
 			}, name: "NAME", pattern: "n[^a]me",
 			wantErrMsg: "provided value for variable \"NAME\" does not match pattern \"n[^a]me\"",
 		},
 		{
 			vc: VariableConfig{
-				setVariableMap: SetVariableMap{"NAME": &v1alpha1.SetVariable{Value: "name"}},
+				setVariableMap: SetVariableMap{"NAME": {Value: "name"}},
 			}, name: "NAME", pattern: "n[a-z]me", wantErrMsg: "",
 		},
 		{
 			vc: VariableConfig{
-				setVariableMap: SetVariableMap{"NAME": &v1alpha1.SetVariable{Value: "name"}},
+				setVariableMap: SetVariableMap{"NAME": {Value: "name"}},
 			}, name: "NAME", pattern: "n[a-z-bad-pattern", wantErrMsg: "error parsing regexp: missing closing ]: `[a-z-bad-pattern`",
 		},
 	}

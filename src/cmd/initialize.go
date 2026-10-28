@@ -19,11 +19,11 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -94,7 +94,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(VInitInjectorPort),
 		"The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
 	cmd.Flags().StringVar(&o.injectorImage, "injector-image", v.GetString(VInitInjectorImage),
-		"Image for the injector. This image must be available on every node")
+		"Image for the injector. Required in proxy mode unless a previous proxy injector image is saved in cluster state. This image must be available on every node")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -174,9 +174,24 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		agentTLS = &loadedTLS
 	}
 
-	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer, agentTLS)
+	existingState, err := loadExistingState(ctx)
 	if err != nil {
 		return err
+	}
+	if err := validateExistingState(existingState, o.registryInfo, o.gitServer, o.artifactServer, agentTLS); err != nil {
+		return err
+	}
+	registryMode := o.registryInfo.RegistryMode
+	if existingState != nil {
+		if registryMode == "" {
+			registryMode = existingState.RegistryInfo.RegistryMode
+		}
+		if registryMode == state.RegistryModeProxy && o.injectorImage == "" && existingState.RegistryInfo.RegistryMode == state.RegistryModeProxy {
+			o.injectorImage = existingState.InjectorInfo.Image
+		}
+	}
+	if registryMode == state.RegistryModeProxy && o.injectorImage == "" {
+		return fmt.Errorf("--injector-image is required for proxy registry mode when no previous proxy injector image is saved in cluster state")
 	}
 
 	if o.registryInfo.RegistryMode == "" && o.registryInfo.Address != "" {
@@ -231,8 +246,8 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
 	}
-	if pkgLayout.AsV1alpha1().Kind != v1alpha1.ZarfInitConfig {
-		return fmt.Errorf("zarf init can only deploy packages of kind \"%s\"", v1alpha1.ZarfInitConfig)
+	if !pkgLayout.Definition().IsInitConfig() {
+		return fmt.Errorf("zarf init can only deploy packages of kind \"%s\"", api.ZarfInitConfig)
 	}
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
@@ -357,20 +372,25 @@ func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory st
 	return errors.New(lang.CmdInitPullErrManual)
 }
 
-// Checks if an init has already happened and if so check that none of the Zarf service information has changed
-func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo, agentTLS *pki.GeneratedPKI) error {
+// loadExistingState returns nil when the cluster is unavailable or has not been initialized.
+func loadExistingState(ctx context.Context) (*state.State, error) {
 	c, err := cluster.New(ctx)
 	// If there's no cluster available an init has not happened yet, or this is a custom init
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	s, err := c.LoadState(ctx)
 	// If there is no state found this is the first init on this cluster
 	if kerrors.IsNotFound(err) {
-		return nil
+		return nil, nil
 	}
-	if err != nil {
-		return err
+	return s, err
+}
+
+// validateExistingState prevents changing service information after initialization.
+func validateExistingState(s *state.State, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo, agentTLS *pki.GeneratedPKI) error {
+	if s == nil {
+		return nil
 	}
 
 	if helpers.IsNotZeroAndNotEqual(gitServer, s.GitServer) {

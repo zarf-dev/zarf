@@ -8,9 +8,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // TestDefaultSignBlobOptions_EmptyAuthFlow guards against re-introducing a
@@ -23,30 +27,29 @@ func TestDefaultSignBlobOptions_EmptyAuthFlow(t *testing.T) {
 	require.Empty(t, opts.Fulcio.AuthFlow)
 }
 
-func TestShouldSign_KeyRefAlias(t *testing.T) {
-	t.Parallel()
+func TestCosignSignManifestPublishesOCIReferrer(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	registry := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	reference, err := name.ParseReference(registry + "/components/example:1.0")
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(reference, empty.Image, remote.WithContext(ctx)))
 
-	t.Run("KeyRef alone triggers signing", func(t *testing.T) {
-		opts := SignBlobOptions{}
-		opts.KeyRef = "/path/to/key"
-		require.True(t, opts.ShouldSign())
-	})
+	signOpts := DefaultSignManifestOptions()
+	signOpts.Key = "./testdata/cosign.key"
+	signOpts.Password = "test"
+	require.NoError(t, SignManifest(ctx, reference.String(), signOpts, types.RemoteOptions{PlainHTTP: true}))
 
-	t.Run("Key alone triggers signing", func(t *testing.T) {
-		opts := SignBlobOptions{}
-		opts.Key = "/path/to/key"
-		require.True(t, opts.ShouldSign())
-	})
+	verifyOpts := DefaultVerifyManifestOptions()
+	verifyOpts.Key = "./testdata/cosign.pub"
+	require.NoError(t, VerifyManifest(ctx, reference.String(), verifyOpts, types.RemoteOptions{PlainHTTP: true}))
 
-	t.Run("Keyless alone triggers signing", func(t *testing.T) {
-		opts := SignBlobOptions{}
-		opts.Keyless = true
-		require.True(t, opts.ShouldSign())
-	})
-
-	t.Run("empty options skip signing", func(t *testing.T) {
-		require.False(t, SignBlobOptions{}.ShouldSign())
-	})
+	subject, err := remote.Head(reference, remote.WithContext(ctx))
+	require.NoError(t, err)
+	referrers, err := remote.Referrers(reference.Context().Digest(subject.Digest.String()), remote.WithContext(ctx))
+	require.NoError(t, err)
+	manifest, err := referrers.IndexManifest()
+	require.NoError(t, err)
+	require.Len(t, manifest.Manifests, 1)
 }
 
 // TestCosignSignVerifyRoundTrip exercises CosignSignBlobWithOptions and

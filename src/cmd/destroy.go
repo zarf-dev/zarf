@@ -11,11 +11,11 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 
@@ -32,6 +32,7 @@ func newDestroyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "destroy --confirm",
 		Aliases: []string{"d"},
+		Args:    cobra.NoArgs,
 		Short:   lang.CmdDestroyShort,
 		Long:    lang.CmdDestroyLong,
 		RunE:    o.run,

@@ -8,14 +8,19 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
 	ZarfMaxChartNameLength   = 40
+	maxMapKeyLength          = 256
+	maxAnnotationsSize       = 32 * 1024
 	errChartReleaseNameEmpty = "release name empty, unable to fallback to chart name"
 )
 
@@ -32,10 +37,22 @@ const (
 	PkgValidateErrActionSetValueOnDeploy  = "setValues is not supported in onCreate actions"
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
 	PkgValidateErrChartName               = "chart %q exceed the maximum length of %d characters"
+	PkgValidateErrChartSource             = "chart %q must include exactly one source (helmRepository, git, local, or oci)"
 	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
+	PkgValidateErrManifestNamePath        = "manifest %q must not contain path separators"
+	PkgValidateErrAttachmentsKeyPath      = "attachment key %q must not contain path separators"
+	PkgValidateErrAttachmentsKeyTraversal = "attachment key %q must not be a traversal path"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
+	PkgValidateErrGitURLWithRef           = "git URL %q must not contain an embedded ref; use the ref field instead"
+	PkgValidateErrServiceRequiresInit     = "component %q declares service %q, but only ZarfInitConfig packages may declare services"
+	PkgValidateErrServiceNotUnique        = "service %q is declared by multiple components (%q, %q)"
+	PkgValidateErrFileChecksumAlgorithm   = "component %q file %q has unsupported checksum algorithm %q (expected sha256 or sha512)"
+	PkgValidateErrFileChecksumDigest      = "component %q file %q has an empty checksum digest"
+	PkgValidateErrImageConflictingSources = "image %q has conflicting sources %q and %q"
+	PkgValidateErrMapKeyLength            = "%s key %q exceeds the maximum length of %d characters"
+	PkgValidateErrAnnotationsSize         = "metadata.annotations exceeds the maximum total size of %d bytes"
 )
 
 // ValidationErrors contains all errors found during package validation.
@@ -67,41 +84,158 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 	if len(pkg.Components) == 0 {
 		errs = append(errs, errors.New(PkgValidateErrNoComponents))
 	}
+	errs = append(errs, ValidateAnnotations(pkg.Metadata.Annotations)...)
+	errs = append(errs, validateMapKeys("documentation", pkg.Attachments)...)
+	errs = append(errs, validateMapKeys("build.registryOverrides", pkg.Build.RegistryOverrides)...)
+	for key := range pkg.Attachments {
+		if key == ".." {
+			errs = append(errs, fmt.Errorf(PkgValidateErrAttachmentsKeyTraversal, key))
+		} else if strings.ContainsAny(key, `/\`) {
+			errs = append(errs, fmt.Errorf(PkgValidateErrAttachmentsKeyPath, key))
+		}
+	}
 	uniqueComponentNames := make(map[string]bool)
+	serviceComponents := make(map[v1beta1.ServiceName]string)
+	seenSources := make(map[string]v1beta1.ImageSource)
 	for _, component := range pkg.Components {
+		if component.Service.Name != "" {
+			if pkg.Kind != v1beta1.ZarfInitConfig {
+				errs = append(errs, fmt.Errorf(PkgValidateErrServiceRequiresInit, component.Name, component.Service.Name))
+			}
+			if previous, exists := serviceComponents[component.Service.Name]; exists {
+				errs = append(errs, fmt.Errorf(PkgValidateErrServiceNotUnique, component.Service.Name, previous, component.Name))
+			} else {
+				serviceComponents[component.Service.Name] = component.Name
+			}
+		}
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
 			errs = append(errs, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
 		}
 		uniqueComponentNames[component.Name] = true
+		for _, image := range component.Images {
+			ref, err := transform.ParseImageRef(image.Name)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("invalid image %q: %w", image.Name, err))
+				continue
+			}
+			source := image.Source
+			if source == "" {
+				source = v1beta1.ImageSourceRegistry
+			}
+			if previous, exists := seenSources[ref.Reference]; exists {
+				if previous != source {
+					errs = append(errs, fmt.Errorf(PkgValidateErrImageConflictingSources, ref.Reference, previous, source))
+				}
+				continue
+			}
+			seenSources[ref.Reference] = source
+		}
 
-		uniqueChartNames := make(map[string]bool)
-		for _, chart := range component.Charts {
-			// ensure chart name is unique
-			if _, ok := uniqueChartNames[chart.Name]; ok {
-				errs = append(errs, fmt.Errorf(PkgValidateErrChartNameNotUnique, chart.Name))
-			}
-			uniqueChartNames[chart.Name] = true
-			for _, chartErr := range validateChart(chart) {
-				errs = append(errs, fmt.Errorf(PkgValidateErrChart, chartErr))
-			}
-		}
-		uniqueManifestNames := make(map[string]bool)
-		for _, manifest := range component.Manifests {
-			// ensure manifest name is unique
-			if _, ok := uniqueManifestNames[manifest.Name]; ok {
-				errs = append(errs, fmt.Errorf(PkgValidateErrManifestNameNotUnique, manifest.Name))
-			}
-			uniqueManifestNames[manifest.Name] = true
-			for _, manifestErr := range validateManifest(manifest) {
-				errs = append(errs, fmt.Errorf(PkgValidateErrManifest, manifestErr))
-			}
-		}
-		for _, actionsErr := range validateActions(component.Actions) {
-			errs = append(errs, fmt.Errorf("%q: %w", component.Name, actionsErr))
-		}
+		errs = append(errs, ValidateComponent(component)...)
 	}
 
+	return errs
+}
+
+// ValidateAnnotations checks metadata annotation key lengths and total size.
+func ValidateAnnotations(annotations map[string]string) ValidationErrors {
+	errs := validateMapKeys("metadata.annotations", annotations)
+	var size int
+	for key, value := range annotations {
+		size += len(key) + len(value)
+	}
+	if size > maxAnnotationsSize {
+		errs = append(errs, fmt.Errorf(PkgValidateErrAnnotationsSize, maxAnnotationsSize))
+	}
+	return errs
+}
+
+func validateMapKeys(field string, entries map[string]string) ValidationErrors {
+	var errs ValidationErrors
+	for key := range entries {
+		if utf8.RuneCountInString(key) > maxMapKeyLength {
+			errs = append(errs, fmt.Errorf(PkgValidateErrMapKeyLength, field, key, maxMapKeyLength))
+		}
+	}
+	return errs
+}
+
+// ValidateComponent runs the component-local validation shared by packages and
+// standalone component configs. The component name is used in diagnostics.
+func ValidateComponent(component v1beta1.Component) ValidationErrors {
+	var errs ValidationErrors
+	for _, err := range ValidateImageIDs(component.ComponentSpec) {
+		errs = append(errs, fmt.Errorf("component %q: %w", component.Name, err))
+	}
+	for _, file := range component.Files {
+		algorithm, digest, hasPrefix := strings.Cut(file.Checksum, ":")
+		if !hasPrefix {
+			continue
+		}
+		if algorithm != string(api.ChecksumSHA256) && algorithm != string(api.ChecksumSHA512) {
+			errs = append(errs, fmt.Errorf(PkgValidateErrFileChecksumAlgorithm, component.Name, file.Source, algorithm))
+		} else if digest == "" {
+			errs = append(errs, fmt.Errorf(PkgValidateErrFileChecksumDigest, component.Name, file.Source))
+		}
+	}
+	for _, repository := range component.Repositories {
+		if err := validateGitURL(repository.URL); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	uniqueChartNames := make(map[string]bool)
+	for _, chart := range component.Charts {
+		// ensure chart name is unique
+		if _, ok := uniqueChartNames[chart.Name]; ok {
+			errs = append(errs, fmt.Errorf(PkgValidateErrChartNameNotUnique, chart.Name))
+		}
+		uniqueChartNames[chart.Name] = true
+		for _, chartErr := range validateChart(chart) {
+			errs = append(errs, fmt.Errorf(PkgValidateErrChart, chartErr))
+		}
+	}
+	uniqueManifestNames := make(map[string]bool)
+	for _, manifest := range component.Manifests {
+		// ensure manifest name is unique
+		if _, ok := uniqueManifestNames[manifest.Name]; ok {
+			errs = append(errs, fmt.Errorf(PkgValidateErrManifestNameNotUnique, manifest.Name))
+		}
+		uniqueManifestNames[manifest.Name] = true
+		for _, manifestErr := range validateManifest(manifest) {
+			errs = append(errs, fmt.Errorf(PkgValidateErrManifest, manifestErr))
+		}
+	}
+	for _, actionsErr := range validateActions(component.Actions) {
+		errs = append(errs, fmt.Errorf("%q: %w", component.Name, actionsErr))
+	}
+	return errs
+}
+
+// ValidateImageIDs checks that non-empty IDs are unique across all images in a component.
+// Import resolution checks authored definitions before merging; component validation
+// checks the resolved result so regular-image overrides remain allowed.
+func ValidateImageIDs(spec v1beta1.ComponentSpec) ValidationErrors {
+	var errs ValidationErrors
+	seen := make(map[string]string)
+	check := func(id, path string) {
+		if id == "" {
+			return
+		}
+		if previous, exists := seen[id]; exists {
+			errs = append(errs, fmt.Errorf("image ID %q is not unique (%s and %s)", id, previous, path))
+			return
+		}
+		seen[id] = path
+	}
+	for i, image := range spec.Images {
+		check(image.ID, fmt.Sprintf("images[%d]", i))
+	}
+	for i, archive := range spec.ImageArchives {
+		for j, image := range archive.Images {
+			check(image.ID, fmt.Sprintf("imageArchives[%d].images[%d]", i, j))
+		}
+	}
 	return errs
 }
 
@@ -216,6 +350,40 @@ func validateReleaseName(chartName, releaseName string) error {
 func validateChart(chart v1beta1.Chart) ValidationErrors {
 	var errs ValidationErrors
 
+	sources := 0
+	for _, set := range []bool{chart.HelmRepository != nil, chart.Git != nil, chart.Local != nil, chart.OCI != nil} {
+		if set {
+			sources++
+		}
+	}
+	if sources != 1 {
+		errs = append(errs, fmt.Errorf(PkgValidateErrChartSource, chart.Name))
+	}
+	if chart.HelmRepository != nil {
+		if chart.HelmRepository.URL == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include helmRepository.url", chart.Name))
+		}
+		if chart.HelmRepository.Version == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include helmRepository.version", chart.Name))
+		}
+	}
+	if chart.Git != nil {
+		if chart.Git.URL == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include git.url", chart.Name))
+		}
+		if chart.Git.Ref == (v1beta1.GitRef{}) {
+			errs = append(errs, fmt.Errorf("chart %q must include git.ref", chart.Name))
+		}
+	}
+	if chart.OCI != nil {
+		if chart.OCI.URL == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include oci.url", chart.Name))
+		}
+		if chart.OCI.Ref == (v1beta1.OCIRef{}) {
+			errs = append(errs, fmt.Errorf("chart %q must include oci.ref", chart.Name))
+		}
+	}
+
 	if len(chart.Name) > ZarfMaxChartNameLength {
 		errs = append(errs, fmt.Errorf(PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))
 	}
@@ -227,8 +395,21 @@ func validateChart(chart v1beta1.Chart) ValidationErrors {
 	if nameErr := validateReleaseName(chart.Name, chart.ReleaseName); nameErr != nil {
 		errs = append(errs, nameErr)
 	}
+	if chart.Git != nil {
+		if err := validateGitURL(chart.Git.URL); err != nil {
+			errs = append(errs, err)
+		}
+	}
 
 	return errs
+}
+
+func validateGitURL(url string) error {
+	_, ref, err := transform.GitURLSplitRef(url)
+	if err == nil && ref != "" {
+		return fmt.Errorf(PkgValidateErrGitURLWithRef, url)
+	}
+	return nil
 }
 
 // validateManifest runs all validation checks on a manifest.
@@ -239,7 +420,11 @@ func validateManifest(manifest v1beta1.Manifest) ValidationErrors {
 		errs = append(errs, fmt.Errorf(PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
 	}
 
-	if len(manifest.Files) < 1 && manifest.Kustomize == nil {
+	if strings.ContainsAny(manifest.Name, `/\`) {
+		errs = append(errs, fmt.Errorf(PkgValidateErrManifestNamePath, manifest.Name))
+	}
+
+	if len(manifest.Files) < 1 && len(manifest.Kustomize.Files) < 1 {
 		errs = append(errs, fmt.Errorf(PkgValidateErrManifestFileOrKustomize, manifest.Name))
 	}
 

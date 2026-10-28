@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"

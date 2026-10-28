@@ -5,6 +5,22 @@ service:
 image:
   ref: nginx:latest
 
+excludedOnly: true
+
 configMap:
   annotations:
   labels:
+
+fallback:
+
+native:
+  object: {}
+  array: []
+  boolean: true
+  integer: 1
+  number: 1.5
+  nullable:
+
+packageOverride: false
+packageNull: true
+valuesFileOverride: false

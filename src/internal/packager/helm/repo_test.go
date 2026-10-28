@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,7 +18,7 @@ import (
 	chartutil "helm.sh/helm/v4/pkg/chart/v2/util"
 	"helm.sh/helm/v4/pkg/registry"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -66,10 +68,10 @@ entries:
 	repoSrv := httptest.NewServer(mux)
 	defer repoSrv.Close()
 
-	chart := v1alpha1.ZarfChart{
-		Name:    "simple-chart",
-		Version: "1.0.0",
-		URL:     repoSrv.URL,
+	chart := api.Chart{
+		Name:           "simple-chart",
+		LegacyVersion:  "archive-version",
+		HelmRepository: &api.HelmRepositorySource{URL: repoSrv.URL, Version: "1.0.0"},
 	}
 	chartPath := t.TempDir()
 	paths := layout.ChartPaths{ChartsDir: chartPath, ValuesDir: t.TempDir()}
@@ -78,7 +80,7 @@ entries:
 		InsecureSkipTLSVerify: true,
 	})
 	require.NoError(t, err)
-	require.FileExists(t, paths.Archive(chart.Name, chart.Version))
+	require.FileExists(t, paths.Archive(chart.Name, chart.LegacyVersion))
 }
 
 func TestDownloadPublishedChartFromOCI(t *testing.T) {
@@ -103,10 +105,13 @@ func TestDownloadPublishedChartFromOCI(t *testing.T) {
 	_, err = regClient.Push(chartData, fmt.Sprintf("%s/charts/simple-chart:1.0.0", regAddr))
 	require.NoError(t, err)
 
-	chart := v1alpha1.ZarfChart{
-		Name:    "simple-chart",
-		Version: "1.0.0",
-		URL:     fmt.Sprintf("oci://%s/charts/simple-chart", regAddr),
+	chart := api.Chart{
+		Name:          "simple-chart",
+		LegacyVersion: "archive-version",
+		OCI: &api.OCISource{
+			URL: fmt.Sprintf("oci://%s/charts/simple-chart", regAddr),
+			Ref: &api.OCIRef{Tag: "1.0.0"},
+		},
 	}
 	chartPath := t.TempDir()
 	paths := layout.ChartPaths{ChartsDir: chartPath, ValuesDir: t.TempDir()}
@@ -115,5 +120,63 @@ func TestDownloadPublishedChartFromOCI(t *testing.T) {
 		InsecureSkipTLSVerify: true,
 	})
 	require.NoError(t, err)
-	require.FileExists(t, paths.Archive(chart.Name, chart.Version))
+	require.FileExists(t, paths.Archive(chart.Name, chart.LegacyVersion))
+}
+
+func TestLocalChartSourcesMaterializeSymlinks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation requires elevated privileges")
+	}
+
+	t.Run("relative chart archive", func(t *testing.T) {
+		sourceDir := t.TempDir()
+		target, err := chartutil.Save(&chartv2.Chart{Metadata: &chartv2.Metadata{
+			APIVersion: chartv2.APIVersionV1,
+			Name:       "chart",
+			Version:    "1.0.0",
+		}}, sourceDir)
+		require.NoError(t, err)
+
+		source := filepath.Join(sourceDir, "selected.tgz")
+		require.NoError(t, os.Symlink(filepath.Base(target), source))
+
+		paths := layout.ChartPaths{ChartsDir: t.TempDir(), ValuesDir: t.TempDir()}
+		chart := api.Chart{
+			Name:          "chart",
+			LegacyVersion: "1.0.0",
+			Local:         &api.LocalSource{Path: source},
+		}
+		require.NoError(t, PackageChartFromLocalFiles(testutil.TestContext(t), chart, paths, t.TempDir(), types.RemoteOptions{}))
+
+		destination := paths.Archive(chart.Name, chart.LegacyVersion)
+		info, err := os.Lstat(destination)
+		require.NoError(t, err)
+		require.Zero(t, info.Mode()&os.ModeSymlink)
+		_, loaded, err := loadAndValidateChart(destination)
+		require.NoError(t, err)
+		require.Equal(t, "chart", loaded.Metadata.Name)
+	})
+
+	t.Run("values file", func(t *testing.T) {
+		target := filepath.Join(t.TempDir(), "target-values.yaml")
+		require.NoError(t, os.WriteFile(target, []byte("value: materialized\n"), 0o600))
+		source := filepath.Join(t.TempDir(), "source-values.yaml")
+		require.NoError(t, os.Symlink(target, source))
+
+		paths := layout.ChartPaths{ChartsDir: t.TempDir(), ValuesDir: t.TempDir()}
+		chart := api.Chart{
+			Name:          "chart",
+			LegacyVersion: "1.0.0",
+			ValuesFiles:   []api.ValuesFile{{Path: source}},
+		}
+		require.NoError(t, packageValues(testutil.TestContext(t), chart, paths))
+
+		destination := paths.ValuesFile(chart.Name, chart.LegacyVersion, 0)
+		info, err := os.Lstat(destination)
+		require.NoError(t, err)
+		require.Zero(t, info.Mode()&os.ModeSymlink)
+		content, err := os.ReadFile(destination)
+		require.NoError(t, err)
+		require.Equal(t, "value: materialized\n", string(content))
+	})
 }

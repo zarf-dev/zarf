@@ -87,9 +87,9 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(newRegistryLogoutCommand())
 	cmd.AddCommand(craneCmd.NewCmdCopy(&craneOptions))
 	cmd.AddCommand(newRegistryCatalogCommand(&craneOptions))
+	cmd.AddCommand(newRegistryListCommand())
 
 	// TODO(soltysh): consider splitting craneOptions to be per command
-	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdList, &craneOptions, lang.CmdToolsRegistryListExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPush, &craneOptions, lang.CmdToolsRegistryPushExample, 1))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
@@ -386,13 +386,19 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 
 	// Determine which image digests are currently used by Zarf packages
 	pkgImages := map[string]bool{}
-	for _, pkg := range zarfPackages {
+	for _, depPkg := range zarfPackages {
+		if depPkg.GetPackageConnectivity() == state.PackageConnectivityConnected {
+			continue
+		}
 		deployedComponents := map[string]bool{}
-		for _, depComponent := range pkg.DeployedComponents {
+		for _, depComponent := range depPkg.DeployedComponents {
 			deployedComponents[depComponent.Name] = true
 		}
-
-		for _, component := range pkg.Data.Components {
+		pkg, err := depPkg.Definition()
+		if err != nil {
+			return err
+		}
+		for _, component := range pkg.Components {
 			if _, ok := deployedComponents[component.Name]; ok {
 				for _, image := range component.GetImages() {
 					// We use the no checksum image since it will always exist and will share the same digest with other tags

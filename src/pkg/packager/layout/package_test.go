@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
@@ -25,14 +27,48 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func packageDefinition(pkg v1alpha1.ZarfPackage) api.PackageDefinition {
-	return api.NewPackageDefinitionFromV1alpha1(pkg)
+func packageDefinition(pkg v1alpha1.ZarfPackage) api.Package {
+	return convert.PackageFromV1alpha1(pkg)
 }
 
 func verifyOptsFromKey(keyPath string) *signing.VerifyBlobOptions {
 	opts := signing.DefaultVerifyBlobOptions()
 	opts.Key = keyPath
 	return &opts
+}
+
+func TestMarshalPackageDefinitionRejectsFieldsFromAnotherVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		pkg     api.Package
+		wantErr string
+	}{
+		{
+			name: "v1alpha1 image source",
+			pkg: api.Package{Components: []api.Component{{
+				Images: []api.Image{{Name: "example.com/app:1", Source: "daemon"}},
+			}}},
+			wantErr: "components[0].images[0].source",
+		},
+		{
+			name: "v1beta1 data injection",
+			pkg: api.Package{APIVersion: v1beta1.APIVersion, Components: []api.Component{{
+				DataInjections: []api.ZarfDataInjection{{Source: "file"}},
+			}}},
+			wantErr: "components[0].dataInjections",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			data, err := MarshalPackageDefinition(tt.pkg)
+			require.ErrorContains(t, err, tt.wantErr)
+			require.Empty(t, data)
+		})
+	}
 }
 
 func TestPackageLayout(t *testing.T) {
@@ -44,8 +80,8 @@ func TestPackageLayout(t *testing.T) {
 	pkgLayout, err := LoadFromTar(ctx, filepath.Join(pathToPackage, "zarf-package-test-amd64-0.0.1.tar.zst"), PackageLayoutOptions{})
 	require.NoError(t, err)
 
-	require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
-	require.Equal(t, "0.0.1", pkgLayout.AsV1alpha1().Metadata.Version)
+	require.Equal(t, "test", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
+	require.Equal(t, "0.0.1", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Version)
 
 	tmpDir := t.TempDir()
 	manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, "test", ManifestsComponentDir)
@@ -87,6 +123,208 @@ func TestPackageLayout(t *testing.T) {
 	}
 }
 
+func TestGetSBOMV1Beta1(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	resourcePath := filepath.Join(dir, filepath.FromSlash(ComponentSBOMResourcePath("metrics")))
+	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+	require.NoError(t, os.WriteFile(resourcePath, []byte("metrics SBOM"), 0o600))
+
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}}},
+		},
+	}
+	outputDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir))
+	require.FileExists(t, filepath.Join(outputDir, "files", "metrics.json"))
+}
+
+func TestGetSBOMV1Beta1RejectsSymlinkResource(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation requires elevated privileges")
+	}
+
+	dir := t.TempDir()
+	target := filepath.Join(t.TempDir(), "outside-sbom.json")
+	require.NoError(t, os.WriteFile(target, []byte("SBOM outside the package"), 0o600))
+	resourcePath := filepath.Join(dir, filepath.FromSlash(ComponentSBOMResourcePath("metrics")))
+	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+	require.NoError(t, os.Symlink(target, resourcePath))
+
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}}},
+		},
+	}
+	outputDir := t.TempDir()
+	err := pkgLayout.GetSBOM(t.Context(), outputDir)
+	require.ErrorContains(t, err, "is not a regular file")
+	require.NoFileExists(t, filepath.Join(outputDir, "files", "metrics.json"))
+}
+
+func TestGetSBOMV1Beta1DoesNotWriteThroughOutputDirectorySymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation requires elevated privileges")
+	}
+
+	dir := t.TempDir()
+	resourcePath := filepath.Join(dir, filepath.FromSlash(ImageSBOMResourcePath("example")))
+	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+	require.NoError(t, os.WriteFile(resourcePath, []byte("image SBOM"), 0o600))
+
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}}},
+		},
+	}
+	outputDir := t.TempDir()
+	externalDir := t.TempDir()
+	require.NoError(t, os.Symlink(externalDir, filepath.Join(outputDir, "images")))
+
+	err := pkgLayout.GetSBOM(t.Context(), outputDir)
+	require.Error(t, err)
+	require.NoFileExists(t, filepath.Join(externalDir, "example.json"))
+}
+
+func TestGetSBOMV1Beta1PreservesResourceKinds(t *testing.T) {
+	t.Parallel()
+
+	const componentName = "aW1hZ2U6Zm9v"
+	dir := t.TempDir()
+	for resourceRelativePath, contents := range map[string]string{
+		ComponentSBOMResourcePath(componentName): "component SBOM",
+		ImageSBOMResourcePath("foo"):             "image SBOM",
+	} {
+		resourcePath := filepath.Join(dir, filepath.FromSlash(resourceRelativePath))
+		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o600))
+	}
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: componentName, Files: []api.File{{Source: "component.yaml"}}}},
+		},
+	}
+
+	outputDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir))
+
+	componentContents, err := os.ReadFile(filepath.Join(outputDir, "files", componentName+".json"))
+	require.NoError(t, err)
+	require.Equal(t, "component SBOM", string(componentContents))
+	imageContents, err := os.ReadFile(filepath.Join(outputDir, "images", "foo.json"))
+	require.NoError(t, err)
+	require.Equal(t, "image SBOM", string(imageContents))
+}
+
+func TestGetSBOMV1Beta1UsesDeclaredImageReference(t *testing.T) {
+	t.Parallel()
+
+	const imageIdentifier = "nginx"
+	dir := t.TempDir()
+	resourcePath := filepath.Join(dir, filepath.FromSlash(ImageSBOMResourcePath(imageIdentifier)))
+	require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+	require.NoError(t, os.WriteFile(resourcePath, []byte("image SBOM"), 0o600))
+
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}}},
+		},
+	}
+	outputDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir))
+	contents, err := os.ReadFile(filepath.Join(outputDir, "images", "nginx.json"))
+	require.NoError(t, err)
+	require.Equal(t, "image SBOM", string(contents))
+}
+
+func TestGetSBOMV1Beta1RejectsLegacyImageFilenameCollisions(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	for resourceRelativePath, contents := range map[string]string{
+		ImageSBOMResourcePath("a/b:c"): "first image SBOM",
+		ImageSBOMResourcePath("a_b:c"): "second image SBOM",
+	} {
+		resourcePath := filepath.Join(dir, filepath.FromSlash(resourceRelativePath))
+		require.NoError(t, os.MkdirAll(filepath.Dir(resourcePath), 0o700))
+		require.NoError(t, os.WriteFile(resourcePath, []byte(contents), 0o600))
+	}
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}}},
+		},
+	}
+	outputDir := t.TempDir()
+	err := pkgLayout.GetSBOM(t.Context(), outputDir)
+	require.ErrorContains(t, err, `both normalize to "images/a_b_c.json"`)
+	require.NoFileExists(t, filepath.Join(outputDir, "images", "a_b_c.json"))
+}
+
+func TestPackageLayoutMutators(t *testing.T) {
+	pkgLayout := &PackageLayout{pkg: api.Package{
+		Metadata: api.PackageMetadata{
+			Name:        "original",
+			Annotations: map[string]string{"existing": "annotation"},
+		},
+		Components: []api.Component{
+			{
+				Name:          "first",
+				Charts:        []api.Chart{{Name: "target", Namespace: "old"}, {Name: "other", Namespace: "old"}},
+				Images:        []api.Image{{}},
+				ImageArchives: []api.ImageArchive{{}},
+				Repositories:  []api.Repository{{}},
+			},
+			{
+				Name:          "second",
+				Charts:        []api.Chart{{Name: "target", Namespace: "old"}},
+				Images:        []api.Image{{}},
+				ImageArchives: []api.ImageArchive{{}},
+				Repositories:  []api.Repository{{}},
+			},
+		},
+	}}
+
+	annotations := map[string]string{"environment": "test"}
+	pkgLayout.SetName("renamed")
+	pkgLayout.SetAnnotations(annotations)
+	pkgLayout.SetChartNamespace("first", "target", "new")
+	pkgLayout.RemoveImages()
+	pkgLayout.RemoveRepositories()
+	annotations["environment"] = "changed"
+
+	definition := pkgLayout.Definition()
+	require.Equal(t, "renamed", definition.Metadata.Name)
+	require.Equal(t, map[string]string{"environment": "test"}, definition.Metadata.Annotations)
+	require.Equal(t, "new", definition.Components[0].Charts[0].Namespace)
+	require.Equal(t, "old", definition.Components[0].Charts[1].Namespace)
+	require.Equal(t, "old", definition.Components[1].Charts[0].Namespace)
+	for _, component := range definition.Components {
+		require.Nil(t, component.Images)
+		require.Nil(t, component.ImageArchives)
+		require.Nil(t, component.Repositories)
+	}
+}
+
 func TestPackageLayoutLoadFromDirPreservesMultiDocDefinition(t *testing.T) {
 	t.Parallel()
 
@@ -98,12 +336,12 @@ func TestPackageLayoutLoadFromDirPreservesMultiDocDefinition(t *testing.T) {
 	pkgLayout, err := LoadFromDir(ctx, tmpDir, PackageLayoutOptions{VerificationStrategy: VerifyNever})
 	require.NoError(t, err)
 
-	require.Equal(t, v1alpha1.APIVersion, pkgLayout.AsV1alpha1().APIVersion)
-	require.Equal(t, "beta-package", pkgLayout.AsV1alpha1().Metadata.Name)
-	require.Len(t, pkgLayout.AsV1alpha1().Components, 1)
-	require.Equal(t, "./components/first.yaml", pkgLayout.AsV1alpha1().Components[0].Import.Path)
+	require.Equal(t, v1alpha1.APIVersion, convert.PackageToV1alpha1(pkgLayout.Definition()).APIVersion)
+	require.Equal(t, "beta-package", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
+	require.Len(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Components, 1)
+	require.Equal(t, "./components/first.yaml", convert.PackageToV1alpha1(pkgLayout.Definition()).Components[0].Import.Path)
 
-	betaPkg := pkgLayout.AsV1beta1()
+	betaPkg := convert.PackageToV1beta1(pkgLayout.Definition())
 	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
 	require.Equal(t, "beta-package", betaPkg.Metadata.Name)
 	require.Len(t, betaPkg.Components, 1)
@@ -126,7 +364,7 @@ func TestPackageLayoutSignPackagePreservesMultiDocZarfYAML(t *testing.T) {
 	opts.Key = "./testdata/cosign.key"
 	opts.Password = "test"
 
-	require.NoError(t, pkgLayout.SignPackage(ctx, opts))
+	require.NoError(t, pkgLayout.SignPackage(ctx, &opts))
 
 	updated, err := os.ReadFile(filepath.Join(tmpDir, ZarfYAML))
 	require.NoError(t, err)
@@ -328,7 +566,7 @@ func TestPackageFileName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			layout := PackageLayout{PackageDefinition: packageDefinition(tt.pkg)}
+			layout := PackageLayout{pkg: packageDefinition(tt.pkg)}
 			actual, err := layout.FileName()
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
@@ -353,20 +591,20 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.NoError(t, err)
 		require.FileExists(t, bundlePath, "bundle signature should exist")
 		require.NoFileExists(t, filepath.Join(tmpDir, Signature), "legacy .sig should not be written")
-		require.NotNil(t, pkgLayout.AsV1alpha1().Build.Signed)
-		require.True(t, *pkgLayout.AsV1alpha1().Build.Signed)
+		require.NotNil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
+		require.True(t, *convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
 	})
 
 	t.Run("wrong password", func(t *testing.T) {
@@ -379,15 +617,15 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "wrongpassword"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.ErrorContains(t, err, "failed to sign package")
 		require.ErrorContains(t, err, "reading key: decrypt: encrypted: decryption failed")
 		require.NoFileExists(t, bundlePath)
@@ -397,45 +635,45 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 	t.Run("missing zarf.yaml", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err := pkgLayout.SignPackage(ctx, opts)
+		err := pkgLayout.SignPackage(ctx, &opts)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "cannot access zarf.yaml for signing")
 	})
 
 	t.Run("invalid directory path", func(t *testing.T) {
 		pkgLayout := &PackageLayout{
-			dirPath:           "/nonexistent/path",
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: "/nonexistent/path",
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err := pkgLayout.SignPackage(ctx, opts)
+		err := pkgLayout.SignPackage(ctx, &opts)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid package layout directory")
 	})
 
 	t.Run("empty dirPath", func(t *testing.T) {
 		pkgLayout := &PackageLayout{
-			dirPath:           "",
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: "",
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err := pkgLayout.SignPackage(ctx, opts)
+		err := pkgLayout.SignPackage(ctx, &opts)
 		require.EqualError(t, err, "invalid package layout: dirPath is empty")
 	})
 
@@ -453,8 +691,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -462,7 +700,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Password = "test"
 		opts.Overwrite = true
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.NoError(t, err)
 		require.FileExists(t, bundlePath)
 
@@ -496,8 +734,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoFileExists(t, bundlePath)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -505,36 +743,31 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Password = "test"
 		opts.Overwrite = true
 
-		require.NoError(t, pkgLayout.SignPackage(ctx, opts))
+		require.NoError(t, pkgLayout.SignPackage(ctx, &opts))
 		require.FileExists(t, bundlePath)
 		require.NoFileExists(t, legacySignaturePath, "legacy signature should be removed after re-sign")
-		require.Contains(t, pkgLayout.AsV1alpha1().Build.ProvenanceFiles, Bundle)
-		require.NotContains(t, pkgLayout.AsV1alpha1().Build.ProvenanceFiles, Signature)
+		require.Contains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Bundle)
+		require.NotContains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Signature)
 	})
 
-	t.Run("skip signing when ShouldSign returns false", func(t *testing.T) {
+	t.Run("nil options leave the package unsigned", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		yamlPath := filepath.Join(tmpDir, ZarfYAML)
 		bundlePath := filepath.Join(tmpDir, Bundle)
 		legacySignaturePath := filepath.Join(tmpDir, Signature)
 
-		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
-		require.NoError(t, err)
-
+		existingSigned := false
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: tmpDir,
+			pkg: packageDefinition(v1alpha1.ZarfPackage{
+				Build: v1alpha1.ZarfBuildData{Signed: &existingSigned},
+			}),
 		}
 
-		// Empty options - no signing key material configured
-		opts := signing.SignBlobOptions{}
-
-		// Should skip signing without error
-		err = pkgLayout.SignPackage(ctx, opts)
-		require.NoError(t, err)
+		require.NoError(t, pkgLayout.SignPackage(ctx, nil))
 		require.NoFileExists(t, bundlePath)
 		require.NoFileExists(t, legacySignaturePath)
-		require.Nil(t, pkgLayout.AsV1alpha1().Build.Signed)
+		require.NotNil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
+		require.False(t, *convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
 	})
 
 	t.Run("dirPath is file not directory", func(t *testing.T) {
@@ -544,15 +777,15 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           filePath,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: filePath,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "is not a directory")
 	})
@@ -566,8 +799,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -578,7 +811,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		// Store original value
 		originalOutputSignature := opts.OutputSignature
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.NoError(t, err)
 
 		// Verify input options were not modified
@@ -594,8 +827,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		// Wrong password should cause signing to fail
@@ -603,39 +836,20 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "wrongpassword"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.Error(t, err)
 
 		// Verify Signed field was not set
-		require.Nil(t, pkgLayout.AsV1alpha1().Build.Signed)
+		require.Nil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
 	})
 
-	t.Run("preserves existing Signed value on skip", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		yamlPath := filepath.Join(tmpDir, ZarfYAML)
-
-		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
-		require.NoError(t, err)
-
-		existingSigned := false
+	t.Run("non-nil empty options validate the layout", func(t *testing.T) {
 		pkgLayout := &PackageLayout{
-			dirPath: tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
-				Build: v1alpha1.ZarfBuildData{
-					Signed: &existingSigned,
-				},
-			}),
+			pkg: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
-		// Empty options - should skip signing
-		opts := signing.SignBlobOptions{}
-
-		err = pkgLayout.SignPackage(ctx, opts)
-		require.NoError(t, err)
-
-		// Verify Signed field preserved
-		require.NotNil(t, pkgLayout.AsV1alpha1().Build.Signed)
-		require.False(t, *pkgLayout.AsV1alpha1().Build.Signed)
+		err := pkgLayout.SignPackage(ctx, &signing.SignBlobOptions{})
+		require.EqualError(t, err, "invalid package layout: dirPath is empty")
 	})
 
 	t.Run("zarf.yaml updated with signed:true after signing", func(t *testing.T) {
@@ -656,8 +870,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		}
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(initialPkg),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(initialPkg),
 		}
 
 		// Marshal and write initial package (without signed field)
@@ -672,7 +886,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.NoError(t, err)
 
 		// cosign v3.1.1+ produces only the bundle when NewBundleFormat=true (the default).
@@ -694,8 +908,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.True(t, *updatedPkg.Build.Signed, "zarf.yaml should have signed:true")
 
 		// Also verify in-memory state matches
-		require.NotNil(t, pkgLayout.AsV1alpha1().Build.Signed)
-		require.True(t, *pkgLayout.AsV1alpha1().Build.Signed)
+		require.NotNil(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
+		require.True(t, *convert.PackageToV1alpha1(pkgLayout.Definition()).Build.Signed)
 	})
 }
 
@@ -722,7 +936,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				existingSigned := false
 				layout := &PackageLayout{
 					dirPath: tmpDir,
-					PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+					pkg: packageDefinition(v1alpha1.ZarfPackage{
 						APIVersion: v1alpha1.APIVersion,
 						Build: v1alpha1.ZarfBuildData{
 							Signed: &existingSigned,
@@ -751,7 +965,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				existingSigned := true
 				layout := &PackageLayout{
 					dirPath: tmpDir,
-					PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+					pkg: packageDefinition(v1alpha1.ZarfPackage{
 						APIVersion: v1alpha1.APIVersion,
 						Build: v1alpha1.ZarfBuildData{
 							Signed: &existingSigned,
@@ -778,8 +992,8 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 				layout := &PackageLayout{
-					dirPath:           tmpDir,
-					PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+					dirPath: tmpDir,
+					pkg:     packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 				}
 
 				opts := signing.DefaultSignBlobOptions()
@@ -800,8 +1014,8 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
 
 				layout := &PackageLayout{
-					dirPath:           tmpDir,
-					PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+					dirPath: tmpDir,
+					pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
 				}
 
 				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
@@ -827,7 +1041,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 
 				layout := &PackageLayout{
 					dirPath: tmpDir,
-					PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+					pkg: packageDefinition(v1alpha1.ZarfPackage{
 						APIVersion: v1alpha1.APIVersion,
 						Metadata:   v1alpha1.ZarfMetadata{},
 						Build:      v1alpha1.ZarfBuildData{},
@@ -852,14 +1066,14 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 
 			layout, opts := tt.setupFunc(t)
 
-			err := layout.SignPackage(ctx, opts)
+			err := layout.SignPackage(ctx, &opts)
 
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
 				if !tt.expectSigned {
 					// On error, Signed should not be set to true
-					if layout.AsV1alpha1().Build.Signed != nil {
-						require.False(t, *layout.AsV1alpha1().Build.Signed)
+					if convert.PackageToV1alpha1(layout.Definition()).Build.Signed != nil {
+						require.False(t, *convert.PackageToV1alpha1(layout.Definition()).Build.Signed)
 					}
 				}
 				return
@@ -868,8 +1082,8 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 			require.NoError(t, err)
 
 			if tt.expectSigned {
-				require.NotNil(t, layout.AsV1alpha1().Build.Signed)
-				require.True(t, *layout.AsV1alpha1().Build.Signed)
+				require.NotNil(t, convert.PackageToV1alpha1(layout.Definition()).Build.Signed)
+				require.True(t, *convert.PackageToV1alpha1(layout.Definition()).Build.Signed)
 			}
 
 			if tt.expectSignFile {
@@ -896,15 +1110,15 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		signOpts := signing.DefaultSignBlobOptions()
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, signOpts)
+		err = pkgLayout.SignPackage(ctx, &signOpts)
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(tmpDir, Bundle), "bundle signature should exist")
 
@@ -925,8 +1139,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		// Sign with the test key
@@ -934,7 +1148,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, signOpts)
+		err = pkgLayout.SignPackage(ctx, &signOpts)
 		require.NoError(t, err)
 
 		// Try to verify with a different (non-existent) key - should fail
@@ -954,8 +1168,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		verifyOpts := signing.DefaultVerifyBlobOptions()
@@ -968,8 +1182,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 	t.Run("verification fails with empty dirPath", func(t *testing.T) {
 		pkgLayout := &PackageLayout{
-			dirPath:           "",
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: "",
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		verifyOpts := signing.DefaultVerifyBlobOptions()
@@ -981,8 +1195,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 	t.Run("verification fails with invalid directory", func(t *testing.T) {
 		pkgLayout := &PackageLayout{
-			dirPath:           "/nonexistent/path",
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: "/nonexistent/path",
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		verifyOpts := signing.DefaultVerifyBlobOptions()
@@ -1000,8 +1214,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
-			dirPath:           filePath,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}),
+			dirPath: filePath,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
 		verifyOpts := signing.DefaultVerifyBlobOptions()
@@ -1022,8 +1236,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		// Sign the package
@@ -1031,7 +1245,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, signOpts)
+		err = pkgLayout.SignPackage(ctx, &signOpts)
 		require.NoError(t, err)
 
 		// Try to verify without providing a key
@@ -1053,8 +1267,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		// Sign the package
@@ -1062,7 +1276,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, signOpts)
+		err = pkgLayout.SignPackage(ctx, &signOpts)
 		require.NoError(t, err)
 
 		// Corrupt all signature files that were produced
@@ -1092,8 +1306,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		// Sign the package
@@ -1101,7 +1315,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, signOpts)
+		err = pkgLayout.SignPackage(ctx, &signOpts)
 		require.NoError(t, err)
 
 		// Modify the zarf.yaml after signing (tampering)
@@ -1142,7 +1356,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signed := true
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+			pkg: packageDefinition(v1alpha1.ZarfPackage{
 				APIVersion: v1alpha1.APIVersion,
 				Build:      v1alpha1.ZarfBuildData{Signed: &signed},
 			}),
@@ -1166,15 +1380,15 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
-			dirPath:           tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
+			dirPath: tmpDir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
 		}
 
 		signOpts := signing.DefaultSignBlobOptions()
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, signOpts)
+		err = pkgLayout.SignPackage(ctx, &signOpts)
 		require.NoError(t, err)
 
 		// Use only the deprecated KeyRef alias with Key intentionally left empty.
@@ -1188,7 +1402,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 	})
 }
 
-func TestGetDocumentation(t *testing.T) {
+func TestGetAttachments(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
@@ -1218,8 +1432,8 @@ func TestGetDocumentation(t *testing.T) {
 		}
 
 		pkgLayout := &PackageLayout{
-			dirPath:           pkgDir,
-			PackageDefinition: packageDefinition(pkg),
+			dirPath: pkgDir,
+			pkg:     packageDefinition(pkg),
 		}
 
 		outputDir := filepath.Join(tmpDir, "output")
@@ -1247,11 +1461,20 @@ func TestGetDocumentation(t *testing.T) {
 			},
 		)
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
-		require.NoError(t, err)
-
-		require.FileExists(t, filepath.Join(outputDir, "README.md"))
-		require.FileExists(t, filepath.Join(outputDir, "LICENSE"))
+		for _, method := range []struct {
+			name    string
+			extract func(context.Context, string, []string) error
+		}{
+			{name: "GetAttachments", extract: pkgLayout.GetAttachments},
+			{name: "GetDocumentation", extract: pkgLayout.GetDocumentation},
+		} {
+			t.Run(method.name, func(t *testing.T) {
+				destPath := filepath.Join(outputDir, method.name)
+				require.NoError(t, method.extract(ctx, destPath, nil))
+				assertFileContent(t, filepath.Join(destPath, "README.md"), "readme content")
+				assertFileContent(t, filepath.Join(destPath, "LICENSE"), "license content")
+			})
+		}
 	})
 
 	t.Run("extract specific documentation keys", func(t *testing.T) {
@@ -1266,7 +1489,7 @@ func TestGetDocumentation(t *testing.T) {
 			},
 		)
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"})
+		err := pkgLayout.GetAttachments(ctx, outputDir, []string{"readme"})
 		require.NoError(t, err)
 
 		require.FileExists(t, filepath.Join(outputDir, "README.md"))
@@ -1279,7 +1502,7 @@ func TestGetDocumentation(t *testing.T) {
 			nil,
 		)
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		err := pkgLayout.GetAttachments(ctx, outputDir, nil)
 		require.ErrorContains(t, err, "no documentation files found in package")
 	})
 
@@ -1293,8 +1516,27 @@ func TestGetDocumentation(t *testing.T) {
 			},
 		)
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"nonexistent"})
+		err := pkgLayout.GetAttachments(ctx, outputDir, []string{"nonexistent"})
 		require.ErrorContains(t, err, "not found in package documentation")
+	})
+	t.Run("extract v1beta1 documentation resources", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		pkgDir := filepath.Join(tmpDir, "package")
+		require.NoError(t, os.MkdirAll(filepath.Join(pkgDir, DocumentationDir), 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, DocumentationDir, "README.md"), []byte("readme content"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, DocumentationDir, "LICENSE"), []byte("license content"), 0o600))
+
+		pkgLayout := &PackageLayout{
+			dirPath: pkgDir,
+			pkg: convert.PackageFromV1beta1(v1beta1.Package{
+				APIVersion:  v1beta1.APIVersion,
+				Attachments: map[string]string{"readme": "README.md", "license": "LICENSE"},
+			}),
+		}
+		outputDir := filepath.Join(tmpDir, "output")
+		require.NoError(t, pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"}))
+		assertFileContent(t, filepath.Join(outputDir, "README.md"), "readme content")
+		require.NoFileExists(t, filepath.Join(outputDir, "LICENSE"))
 	})
 
 	t.Run("extract single key when multiple files have same basename", func(t *testing.T) {
@@ -1309,11 +1551,140 @@ func TestGetDocumentation(t *testing.T) {
 			},
 		)
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme1"})
+		err := pkgLayout.GetAttachments(ctx, outputDir, []string{"readme1"})
 		require.NoError(t, err)
 
 		assertFileContent(t, filepath.Join(outputDir, "readme1-README.md"), "readme1 content")
 	})
+
+	t.Run("rejects documentation keys that escape output directory", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{
+				"../escape": "first/README.md",
+				"readme":    "second/README.md",
+			},
+			nil,
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		require.EqualError(t, err, `documentation key "../escape" would result in an invalid path`)
+		require.NoFileExists(t, filepath.Join(filepath.Dir(outputDir), "escape-README.md"))
+	})
+	t.Run("does not write through an output symlink", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("Windows symlink creation requires elevated privileges")
+		}
+
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{"readme": "README.md"},
+			map[string]string{"README.md": "documentation content"},
+		)
+		require.NoError(t, os.MkdirAll(outputDir, 0o700))
+
+		externalPath := filepath.Join(t.TempDir(), "external.md")
+		require.NoError(t, os.WriteFile(externalPath, []byte("unchanged"), 0o600))
+		require.NoError(t, os.Symlink(externalPath, filepath.Join(outputDir, "README.md")))
+
+		err := pkgLayout.GetAttachments(ctx, outputDir, nil)
+		require.Error(t, err)
+
+		content, err := os.ReadFile(externalPath)
+		require.NoError(t, err)
+		require.Equal(t, "unchanged", string(content))
+	})
+}
+
+func TestGetDocumentationFileNamesRejectsUnsafePaths(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]map[string]string{
+		"empty key":               {"": "README.md"},
+		"current directory key":   {".": "README.md"},
+		"parent directory key":    {"..": "README.md"},
+		"slash in key":            {"docs/readme": "README.md"},
+		"backslash in key":        {`docs\readme`: "README.md"},
+		"parent directory source": {"readme": ".."},
+	}
+	for name, documentation := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := GetDocumentationFileNames(documentation)
+			require.ErrorContains(t, err, "would result in an invalid path")
+		})
+	}
+}
+
+func TestValidatePackagePathsRejectsSpacesInDocumentation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		apiVersion    string
+		documentation map[string]string
+		wantErr       string
+	}{
+		{
+			name:          "legacy documentation key",
+			apiVersion:    v1alpha1.APIVersion,
+			documentation: map[string]string{"release notes": "README.md"},
+			wantErr:       `documentation key "release notes" must not contain spaces`,
+		},
+		{
+			name:          "legacy documentation filename",
+			apiVersion:    v1alpha1.APIVersion,
+			documentation: map[string]string{"readme": "docs/release notes.md"},
+			wantErr:       `documentation file "docs/release notes.md" produces final filename "release notes.md", which must not contain spaces`,
+		},
+		{
+			name:          "granular documentation key",
+			apiVersion:    v1beta1.APIVersion,
+			documentation: map[string]string{"release notes": "README.md"},
+			wantErr:       `documentation key "release notes" must not contain spaces`,
+		},
+		{
+			name:          "granular documentation filename",
+			apiVersion:    v1beta1.APIVersion,
+			documentation: map[string]string{"readme": "docs/release notes.md"},
+			wantErr:       `documentation file "docs/release notes.md" produces final filename "release notes.md", which must not contain spaces`,
+		},
+		{
+			name:          "documentation source directory",
+			apiVersion:    v1beta1.APIVersion,
+			documentation: map[string]string{"readme": "release notes/README.md"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := ValidatePackagePaths(api.Package{
+				APIVersion:  test.apiVersion,
+				Attachments: test.documentation,
+			})
+			if test.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.EqualError(t, err, test.wantErr)
+		})
+	}
+}
+
+func TestCopyDocumentationFileConfinesSourcePath(t *testing.T) {
+	sourceRootPath := filepath.Join(t.TempDir(), "source")
+	require.NoError(t, os.Mkdir(sourceRootPath, 0o700))
+
+	sourceRoot, err := os.OpenRoot(sourceRootPath)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, sourceRoot.Close())
+	})
+
+	destinationRoot, err := os.OpenRoot(t.TempDir())
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, destinationRoot.Close())
+	})
+
+	err = copyDocumentationFile(sourceRoot, destinationRoot, "../outside.md")
+	require.Error(t, err)
 }
 
 func TestLoadFromDir_VerificationStrategies(t *testing.T) {
@@ -1366,15 +1737,15 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		if signed {
 			// Sign the package
 			pkgLayout := &PackageLayout{
-				dirPath:           pkgDir,
-				PackageDefinition: packageDefinition(pkg),
+				dirPath: pkgDir,
+				pkg:     packageDefinition(pkg),
 			}
 
 			signOpts := signing.DefaultSignBlobOptions()
 			signOpts.Key = "./testdata/cosign.key"
 			signOpts.Password = "test"
 
-			err = pkgLayout.SignPackage(ctx, signOpts)
+			err = pkgLayout.SignPackage(ctx, &signOpts)
 			require.NoError(t, err)
 
 			return pkgDir, "./testdata/cosign.pub"
@@ -1394,7 +1765,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test-verification", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test-verification", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 
 	t.Run("VerifyNever with unsigned package succeeds", func(t *testing.T) {
@@ -1420,7 +1791,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test-verification", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test-verification", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 
 	t.Run("VerifyIfPossible with signed package and no key warns but continues", func(t *testing.T) {
@@ -1435,7 +1806,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test-verification", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test-verification", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 
 	t.Run("VerifyIfPossible with signed package and wrong key fails", func(t *testing.T) {
@@ -1515,7 +1886,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test-verification", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test-verification", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 
 	t.Run("VerifyAlways with signed package and invalid key fails", func(t *testing.T) {
@@ -1619,7 +1990,7 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 			require.NoError(t, pkgLayout.Cleanup())
 		})
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 
 	t.Run("VerifyIfPossible with unsigned tarball and material provided fails", func(t *testing.T) {
@@ -1651,7 +2022,7 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 			require.NoError(t, pkgLayout.Cleanup())
 		})
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 
 	t.Run("VerifyAlways fails on unsigned tarball", func(t *testing.T) {
@@ -1680,7 +2051,7 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 			require.NoError(t, pkgLayout.Cleanup())
 		})
 		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test", pkgLayout.AsV1alpha1().Metadata.Name)
+		require.Equal(t, "test", convert.PackageToV1alpha1(pkgLayout.Definition()).Metadata.Name)
 	})
 }
 
@@ -1774,7 +2145,7 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+			pkg: packageDefinition(v1alpha1.ZarfPackage{
 				APIVersion: v1alpha1.APIVersion,
 				Build: v1alpha1.ZarfBuildData{
 					ProvenanceFiles: []string{Checksums},
@@ -1786,12 +2157,12 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.NoError(t, err)
 
-		require.Contains(t, pkgLayout.AsV1alpha1().Build.ProvenanceFiles, Checksums)
-		require.Contains(t, pkgLayout.AsV1alpha1().Build.ProvenanceFiles, Bundle)
-		require.NotContains(t, pkgLayout.AsV1alpha1().Build.ProvenanceFiles, Signature)
+		require.Contains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Checksums)
+		require.Contains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Bundle)
+		require.NotContains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Signature)
 	})
 
 	t.Run("signing rollback restores original provenance files on failure", func(t *testing.T) {
@@ -1804,7 +2175,7 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 		original := []string{Checksums}
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{
+			pkg: packageDefinition(v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
 					ProvenanceFiles: original,
 				},
@@ -1815,9 +2186,9 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "wrongpassword"
 
-		err = pkgLayout.SignPackage(ctx, opts)
+		err = pkgLayout.SignPackage(ctx, &opts)
 		require.Error(t, err)
-		require.Equal(t, []string{Checksums}, pkgLayout.AsV1alpha1().Build.ProvenanceFiles)
+		require.Equal(t, []string{Checksums}, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles)
 	})
 }
 
@@ -1826,121 +2197,137 @@ func TestValidatePackagePaths(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		pkg     v1alpha1.ZarfPackage
+		pkg     api.Package
 		wantErr string
 	}{
 		{
 			name: "valid names",
-			pkg: v1alpha1.ZarfPackage{
-				Metadata: v1alpha1.ZarfMetadata{Name: "my-package", Version: "1.0.0"},
-				Components: []v1alpha1.ZarfComponent{
+			pkg: api.Package{
+				Metadata: api.PackageMetadata{Name: "my-package", Version: "1.0.0"},
+				Components: []api.Component{
 					{
 						Name:      "my-component",
-						Charts:    []v1alpha1.ZarfChart{{Name: "my-chart", Version: "1.2.3"}},
-						Manifests: []v1alpha1.ZarfManifest{{Name: "my-manifest"}},
+						Charts:    []api.Chart{{Name: "my-chart", LegacyVersion: "1.2.3"}},
+						Manifests: []api.Manifest{{Name: "my-manifest"}},
 					},
 				},
 			},
 		},
 		{
 			name:    "metadata name traversal",
-			pkg:     v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "../../evil"}},
+			pkg:     api.Package{Metadata: api.PackageMetadata{Name: "../../evil"}},
 			wantErr: `package metadata name "../../evil" would result in an invalid path`,
 		},
 		{
 			name:    "metadata name is traversal",
-			pkg:     v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: ".."}},
+			pkg:     api.Package{Metadata: api.PackageMetadata{Name: ".."}},
 			wantErr: `package metadata name ".." would result in an invalid path`,
 		},
 		{
 			name:    "metadata version traversal",
-			pkg:     v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "pkg", Version: "../bad"}},
+			pkg:     api.Package{Metadata: api.PackageMetadata{Name: "pkg", Version: "../bad"}},
 			wantErr: `package metadata version "../bad" would result in an invalid path`,
 		},
 		{
 			name:    "metadata name absolute path",
-			pkg:     v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "/etc/passwd"}},
+			pkg:     api.Package{Metadata: api.PackageMetadata{Name: "/etc/passwd"}},
 			wantErr: `package metadata name "/etc/passwd" would result in an invalid path`,
 		},
 		{
 			name:    "build flavor traversal",
-			pkg:     v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "pkg"}, Build: v1alpha1.ZarfBuildData{Flavor: "../evil"}},
+			pkg:     api.Package{Metadata: api.PackageMetadata{Name: "pkg"}, Build: api.BuildData{Flavor: "../evil"}},
 			wantErr: `package build flavor "../evil" would result in an invalid path`,
 		},
 		{
 			name:    "build differential package version traversal",
-			pkg:     v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "pkg"}, Build: v1alpha1.ZarfBuildData{DifferentialPackageVersion: "../evil"}},
+			pkg:     api.Package{Metadata: api.PackageMetadata{Name: "pkg"}, Build: api.BuildData{Differential: &api.Differential{FromVersion: "../evil"}}},
 			wantErr: `package build differential package version "../evil" would result in an invalid path`,
 		},
 		{
 			name: "component name traversal",
-			pkg: v1alpha1.ZarfPackage{
-				Metadata:   v1alpha1.ZarfMetadata{Name: "pkg"},
-				Components: []v1alpha1.ZarfComponent{{Name: "../../etc/passwd"}},
+			pkg: api.Package{
+				Metadata:   api.PackageMetadata{Name: "pkg"},
+				Components: []api.Component{{Name: "../../etc/passwd"}},
 			},
 			wantErr: `component name "../../etc/passwd" would result in an invalid path`,
 		},
 		{
 			name: "component name is traversal",
-			pkg: v1alpha1.ZarfPackage{
-				Metadata:   v1alpha1.ZarfMetadata{Name: "pkg"},
-				Components: []v1alpha1.ZarfComponent{{Name: ".."}},
+			pkg: api.Package{
+				Metadata:   api.PackageMetadata{Name: "pkg"},
+				Components: []api.Component{{Name: ".."}},
 			},
 			wantErr: `component name ".." would result in an invalid path`,
 		},
 		{
 			name: "component name with backslash",
-			pkg: v1alpha1.ZarfPackage{
-				Metadata:   v1alpha1.ZarfMetadata{Name: "pkg"},
-				Components: []v1alpha1.ZarfComponent{{Name: `evil\path`}},
+			pkg: api.Package{
+				Metadata:   api.PackageMetadata{Name: "pkg"},
+				Components: []api.Component{{Name: `evil\path`}},
 			},
 			wantErr: `component name "evil\\path" would result in an invalid path`,
 		},
 		{
 			name: "chart name traversal",
-			pkg: v1alpha1.ZarfPackage{
-				Metadata: v1alpha1.ZarfMetadata{Name: "pkg"},
-				Components: []v1alpha1.ZarfComponent{
-					{Name: "comp", Charts: []v1alpha1.ZarfChart{{Name: "../evil", Version: "1.0"}}},
+			pkg: api.Package{
+				Metadata: api.PackageMetadata{Name: "pkg"},
+				Components: []api.Component{
+					{Name: "comp", Charts: []api.Chart{{Name: "../evil", LegacyVersion: "1.0"}}},
 				},
 			},
 			wantErr: `chart name "../evil" in component "comp" would result in an invalid path`,
 		},
 		{
 			name: "chart version traversal",
-			pkg: v1alpha1.ZarfPackage{
-				Metadata: v1alpha1.ZarfMetadata{Name: "pkg"},
-				Components: []v1alpha1.ZarfComponent{
-					{Name: "comp", Charts: []v1alpha1.ZarfChart{{Name: "chart", Version: "../bad"}}},
+			pkg: api.Package{
+				Metadata: api.PackageMetadata{Name: "pkg"},
+				Components: []api.Component{
+					{Name: "comp", Charts: []api.Chart{{Name: "chart", LegacyVersion: "../bad"}}},
 				},
 			},
 			wantErr: `chart version "../bad" in component "comp" would result in an invalid path`,
 		},
 		{
 			name: "manifest name with slash",
-			pkg: v1alpha1.ZarfPackage{
-				Metadata: v1alpha1.ZarfMetadata{Name: "pkg"},
-				Components: []v1alpha1.ZarfComponent{
-					{Name: "comp", Manifests: []v1alpha1.ZarfManifest{{Name: "a/b"}}},
+			pkg: api.Package{
+				Metadata: api.PackageMetadata{Name: "pkg"},
+				Components: []api.Component{
+					{Name: "comp", Manifests: []api.Manifest{{Name: "a/b"}}},
 				},
 			},
 			wantErr: `manifest name "a/b" in component "comp" would result in an invalid path`,
 		},
 		{
 			name: "manifest name is traversal",
-			pkg: v1alpha1.ZarfPackage{
-				Metadata: v1alpha1.ZarfMetadata{Name: "pkg"},
-				Components: []v1alpha1.ZarfComponent{
-					{Name: "comp", Manifests: []v1alpha1.ZarfManifest{{Name: ".."}}},
+			pkg: api.Package{
+				Metadata: api.PackageMetadata{Name: "pkg"},
+				Components: []api.Component{
+					{Name: "comp", Manifests: []api.Manifest{{Name: ".."}}},
 				},
 			},
 			wantErr: `manifest name ".." in component "comp" would result in an invalid path`,
+		},
+		{
+			name: "documentation key traversal",
+			pkg: api.Package{
+				Metadata:    api.PackageMetadata{Name: "pkg"},
+				Attachments: map[string]string{"../docs": "readme.md"},
+			},
+			wantErr: `documentation key "../docs" would result in an invalid path`,
+		},
+		{
+			name: "documentation key is traversal",
+			pkg: api.Package{
+				Metadata:    api.PackageMetadata{Name: "pkg"},
+				Attachments: map[string]string{"..": "readme.md"},
+			},
+			wantErr: `documentation key ".." would result in an invalid path`,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := validatePackagePaths(tt.pkg)
+			err := ValidatePackagePaths(tt.pkg)
 			if tt.wantErr == "" {
 				require.NoError(t, err)
 			} else {
@@ -1972,8 +2359,8 @@ func TestHasValuesSchema(t *testing.T) {
 		dir := t.TempDir()
 		require.NoError(t, os.WriteFile(filepath.Join(dir, ValuesSchema), []byte(`{}`), 0o600))
 		p := &PackageLayout{
-			dirPath:           dir,
-			PackageDefinition: packageDefinition(v1alpha1.ZarfPackage{}), // Values.Schema is ""
+			dirPath: dir,
+			pkg:     packageDefinition(v1alpha1.ZarfPackage{}), // Values.Schema is ""
 		}
 		require.True(t, p.HasValuesSchema(), "file on disk should take precedence over empty metadata field")
 	})

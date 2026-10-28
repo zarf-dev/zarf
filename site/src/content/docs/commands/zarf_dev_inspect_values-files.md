@@ -8,19 +8,20 @@ tableOfContents: false
 
 ## zarf dev inspect values-files
 
-Creates, templates, and outputs the values-files to be sent to each chart
+Creates, templates, and outputs chart values files from a package definition
 
 ### Synopsis
 
-Creates, templates, and outputs the values-files to be sent to each chart. Does not consider values files builtin to charts
+Creates, templates, and outputs the values files to be sent to each chart. Does not consider values files builtin to charts
 
 ```
-zarf dev inspect values-files [ DIRECTORY ] [flags]
+zarf dev inspect values-files [ PATH ] [flags]
 ```
 
 ### Options
 
 ```
+      --components string                     comma separated list of components to show values files for
       --create-set stringToString             Specify package templates to set on the command line (KEY=value) (default [])
       --deploy-set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
   -f, --flavor string                         The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
@@ -46,5 +47,5 @@ zarf dev inspect values-files [ DIRECTORY ] [flags]
 
 ### SEE ALSO
 
-* [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to gather information about a Zarf package using its package definition
+* [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to gather information about a Zarf package from its definition
 

@@ -4,13 +4,25 @@
 package packager
 
 import (
+	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8syaml "sigs.k8s.io/yaml"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -19,8 +31,6 @@ func TestFindImages(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-
-	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck
 
 	tests := []struct {
 		name           string
@@ -35,11 +45,9 @@ func TestFindImages(t *testing.T) {
 			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					Matches: []string{
-						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
-					},
-					CosignArtifacts: []string{
-						"ghcr.io/zarf-dev/zarf/agent:sha256-f8b1c2f99349516ae1bd0711a19697abcc41555076b0ae90f1a70ca6b50dcbd8.sig",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "ghcr.io/zarf-dev/zarf/agent:v0.38.1"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "ghcr.io/zarf-dev/zarf/agent:sha256-f8b1c2f99349516ae1bd0711a19697abcc41555076b0ae90f1a70ca6b50dcbd8.sig"}, MatchType: MatchCosign},
 					},
 				},
 			},
@@ -53,9 +61,9 @@ func TestFindImages(t *testing.T) {
 			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					Matches: []string{
-						"docker.io/library/nginx:1.16.0",
-						"docker.io/library/alpine:latest",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "docker.io/library/nginx:1.16.0"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "docker.io/library/alpine:latest"}, MatchType: MatchDefinite},
 					},
 				},
 			},
@@ -69,8 +77,8 @@ func TestFindImages(t *testing.T) {
 			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					Matches: []string{
-						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "ghcr.io/zarf-dev/zarf/agent:v0.38.1"}, MatchType: MatchDefinite},
 					},
 				},
 			},
@@ -84,14 +92,14 @@ func TestFindImages(t *testing.T) {
 			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					Matches: []string{
-						"10.0.0.1:443/zarf-dev/zarf/agent:v0.38.1",
-						"docker.io/library/alpine:latest",
-						"docker.io/library/foo_bar:latest",
-						"foo.com:8080/bar:1.2.3",
-						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
-						"registry.io/foo/project--id.module--name.ver---sion--name:latest",
-						"xn--7o8h.com/myimage:9.8.7",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "10.0.0.1:443/zarf-dev/zarf/agent:v0.38.1"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "docker.io/library/alpine:latest"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "docker.io/library/foo_bar:latest"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "foo.com:8080/bar:1.2.3"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "ghcr.io/zarf-dev/zarf/agent:v0.38.1"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "registry.io/foo/project--id.module--name.ver---sion--name:latest"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "xn--7o8h.com/myimage:9.8.7"}, MatchType: MatchDefinite},
 					},
 				},
 			},
@@ -123,11 +131,11 @@ func TestFindImages(t *testing.T) {
 			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					Matches: []string{
-						"docker.io/curlimages/curl:7.69.0",
-						"docker.io/giantswarm/tiny-tools:latest",
-						"docker.io/stefanprodan/grpc_health_probe:v0.3.0",
-						"ghcr.io/stefanprodan/podinfo:6.4.0",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "docker.io/curlimages/curl:7.69.0"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "docker.io/giantswarm/tiny-tools:latest"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "docker.io/stefanprodan/grpc_health_probe:v0.3.0"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "ghcr.io/stefanprodan/podinfo:6.4.0"}, MatchType: MatchDefinite},
 					},
 				},
 			},
@@ -150,9 +158,9 @@ func TestFindImages(t *testing.T) {
 			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					Matches: []string{
-						"ghcr.io/stefanprodan/manifests/podinfo:6.4.1",
-						"ghcr.io/stefanprodan/manifests/podinfo@sha256:fc60d367cc05bedae04d6030e270daa89c3d82fa18b1a155314102b2fca39652",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "ghcr.io/stefanprodan/manifests/podinfo:6.4.1"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "ghcr.io/stefanprodan/manifests/podinfo@sha256:fc60d367cc05bedae04d6030e270daa89c3d82fa18b1a155314102b2fca39652"}, MatchType: MatchDefinite},
 					},
 				},
 			},
@@ -166,23 +174,21 @@ func TestFindImages(t *testing.T) {
 			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					Matches:       []string{},
-					PotentialMatches: []string{
-						"quay.io/cephcsi/cephcsi:v3.14.1",
-						"quay.io/csiaddons/k8s-sidecar:v0.12.0",
-						"registry.k8s.io/sig-storage/csi-attacher:v4.8.1",
-						"registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.13.0",
-						"registry.k8s.io/sig-storage/csi-provisioner:v5.2.0",
-						"registry.k8s.io/sig-storage/csi-resizer:v1.13.2",
-						"registry.k8s.io/sig-storage/csi-snapshotter:v8.2.1",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "quay.io/cephcsi/cephcsi:v3.14.1"}, MatchType: MatchPossible},
+						{Image: api.Image{Name: "quay.io/csiaddons/k8s-sidecar:v0.12.0"}, MatchType: MatchPossible},
+						{Image: api.Image{Name: "registry.k8s.io/sig-storage/csi-attacher:v4.8.1"}, MatchType: MatchPossible},
+						{Image: api.Image{Name: "registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.13.0"}, MatchType: MatchPossible},
+						{Image: api.Image{Name: "registry.k8s.io/sig-storage/csi-provisioner:v5.2.0"}, MatchType: MatchPossible},
+						{Image: api.Image{Name: "registry.k8s.io/sig-storage/csi-resizer:v1.13.2"}, MatchType: MatchPossible},
+						{Image: api.Image{Name: "registry.k8s.io/sig-storage/csi-snapshotter:v8.2.1"}, MatchType: MatchPossible},
 					},
 				},
 				{
 					ComponentName: "underscores",
-					Matches:       []string{},
-					PotentialMatches: []string{
-						"docker.io/percona/mongodb_exporter:0.47.1",
-						"docker.io/library/alpine:3.23",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "docker.io/percona/mongodb_exporter:0.47.1"}, MatchType: MatchPossible},
+						{Image: api.Image{Name: "docker.io/library/alpine:3.23"}, MatchType: MatchPossible},
 					},
 				},
 			},
@@ -196,8 +202,8 @@ func TestFindImages(t *testing.T) {
 			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					Matches: []string{
-						"docker.io/library/nginx:1.25.0",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "docker.io/library/nginx:1.25.0"}, MatchType: MatchDefinite},
 					},
 				},
 			},
@@ -216,8 +222,8 @@ func TestFindImages(t *testing.T) {
 			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					Matches: []string{
-						"docker.io/library/nginx:1.24.0",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "docker.io/library/nginx:1.24.0"}, MatchType: MatchDefinite},
 					},
 				},
 			},
@@ -236,8 +242,8 @@ func TestFindImages(t *testing.T) {
 			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					Matches: []string{
-						"docker.io/library/nginx:2.0.0",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "docker.io/library/nginx:2.0.0"}, MatchType: MatchDefinite},
 					},
 				},
 			},
@@ -251,9 +257,9 @@ func TestFindImages(t *testing.T) {
 			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					Matches: []string{
-						"ghcr.io/zarf-dev/zarf/agent:v0.68.1",
-						"quay.io/almalinuxorg/10-minimal:10",
+					Matches: []ImageMatch{
+						{Image: api.Image{Name: "ghcr.io/zarf-dev/zarf/agent:v0.68.1"}, MatchType: MatchDefinite},
+						{Image: api.Image{Name: "quay.io/almalinuxorg/10-minimal:10"}, MatchType: MatchDefinite},
 					},
 				},
 			},
@@ -271,12 +277,87 @@ func TestFindImages(t *testing.T) {
 			for i, expected := range tt.expectedImages {
 				require.Equal(t, expected.ComponentName, imagesScans[i].ComponentName)
 				require.ElementsMatch(t, expected.Matches, imagesScans[i].Matches)
-				require.ElementsMatch(t, expected.PotentialMatches, imagesScans[i].PotentialMatches)
-				require.ElementsMatch(t, expected.CosignArtifacts, imagesScans[i].CosignArtifacts)
 				require.ElementsMatch(t, expected.WhyResources, imagesScans[i].WhyResources)
 			}
 		})
 	}
+}
+
+func TestFindImagesFromRepositoryHelmChartWithBranchRef(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	repoURL := createRepositoryHelmChart(t)
+	packageDir := t.TempDir()
+	packageDefinition := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: repository-chart
+components:
+  - name: baseline
+    repositories:
+      - url: %s
+        ref:
+          branch: main
+`, repoURL)
+	require.NoError(t, os.WriteFile(filepath.Join(packageDir, "zarf.yaml"), []byte(packageDefinition), 0o600))
+
+	images, err := FindImages(ctx, packageDir, FindImagesOptions{
+		RepoHelmChartPath: "/",
+		SkipCosign:        true,
+	})
+	require.NoError(t, err)
+	require.Equal(t, []ComponentImageScan{{
+		ComponentName: "baseline",
+		Matches: []ImageMatch{
+			{Image: api.Image{Name: "docker.io/library/nginx:1.25.0"}, MatchType: MatchDefinite},
+		},
+	}}, images)
+}
+
+func createRepositoryHelmChart(t *testing.T) string {
+	t.Helper()
+
+	repositoryDir := t.TempDir()
+	repository, err := git.PlainInitWithOptions(repositoryDir, &git.PlainInitOptions{
+		InitOptions: git.InitOptions{DefaultBranch: plumbing.Main},
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, os.MkdirAll(filepath.Join(repositoryDir, "templates"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(repositoryDir, "Chart.yaml"), []byte("apiVersion: v2\nname: repository-chart\nversion: 0.1.0\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(repositoryDir, "templates", "deployment.yaml"), []byte(`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: repository-chart
+spec:
+  selector:
+    matchLabels:
+      app: repository-chart
+  template:
+    metadata:
+      labels:
+        app: repository-chart
+    spec:
+      containers:
+        - name: app
+          image: nginx:1.25.0
+`), 0o600))
+
+	worktree, err := repository.Worktree()
+	require.NoError(t, err)
+	require.NoError(t, worktree.AddGlob("."))
+	_, err = worktree.Commit("add chart", &git.CommitOptions{Author: &object.Signature{
+		Name:  "Zarf Test",
+		Email: "zarf@example.com",
+		When:  time.Unix(0, 0),
+	}})
+	require.NoError(t, err)
+
+	return (&url.URL{
+		Scheme: "file",
+		Path:   "/" + strings.TrimPrefix(filepath.ToSlash(repositoryDir), "/"),
+	}).String()
 }
 
 func TestFindDefinitionImages(t *testing.T) {
@@ -296,9 +377,9 @@ func TestFindDefinitionImages(t *testing.T) {
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "baseline",
-						Matches: []string{
-							"docker.io/library/alpine:latest",
-							"docker.io/library/nginx:1.16.0",
+						Matches: []ImageMatch{
+							{Image: api.Image{Name: "docker.io/library/alpine:latest"}, MatchType: MatchDefinite},
+							{Image: api.Image{Name: "docker.io/library/nginx:1.16.0"}, MatchType: MatchDefinite},
 						},
 					},
 				},
@@ -316,8 +397,8 @@ func TestFindDefinitionImages(t *testing.T) {
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "manifest-referencing-image-not-in-archive",
-						Matches: []string{
-							"docker.io/library/alpine:latest",
+						Matches: []ImageMatch{
+							{Image: api.Image{Name: "docker.io/library/alpine:latest"}, MatchType: MatchDefinite},
 						},
 					},
 				},
@@ -325,11 +406,9 @@ func TestFindDefinitionImages(t *testing.T) {
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "image-archive-component",
 					},
-					ImageArchives: []v1alpha1.ImageArchive{
+					ImageArchives: []api.ImageArchive{
 						{
-							Images: []string{
-								"docker.io/library/scratch:latest",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/scratch:latest"}},
 						},
 					},
 				},
@@ -352,8 +431,8 @@ func TestFindDefinitionImages(t *testing.T) {
 				{
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "manifest-referencing-image-not-in-archive",
-						Matches: []string{
-							"docker.io/library/alpine:latest",
+						Matches: []ImageMatch{
+							{Image: api.Image{Name: "docker.io/library/alpine:latest"}, MatchType: MatchDefinite},
 						},
 					},
 				},
@@ -361,16 +440,12 @@ func TestFindDefinitionImages(t *testing.T) {
 					ComponentImageScan: ComponentImageScan{
 						ComponentName: "image-archive-component",
 					},
-					ImageArchives: []v1alpha1.ImageArchive{
+					ImageArchives: []api.ImageArchive{
 						{
-							Images: []string{
-								"docker.io/library/scratch:latest",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/scratch:latest"}},
 						},
 						{
-							Images: []string{
-								"docker.io/library/scratch:other",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/scratch:other"}},
 						},
 					},
 				},
@@ -398,6 +473,45 @@ func TestFindDefinitionImages(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFindDefinitionImagesComponentConfig(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	image := "docker.io/library/nginx:1.27"
+	pod := corev1.Pod{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Pod"},
+		ObjectMeta: metav1.ObjectMeta{Name: "app"},
+		Spec: corev1.PodSpec{Containers: []corev1.Container{
+			{Name: "app", Image: image},
+		}},
+	}
+	manifest, err := k8syaml.Marshal(pod)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "pod.yaml"), manifest, 0o600))
+	config := v1beta1.ComponentConfig{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfComponentConfig,
+		Metadata:   v1beta1.ComponentMetadata{Name: "app"},
+		Component: v1beta1.ComponentSpec{
+			Images: []v1beta1.Image{{Name: "nginx:1.27", ID: "web"}},
+			Manifests: []v1beta1.Manifest{
+				{Name: "app", Files: []string{"pod.yaml"}},
+			},
+		},
+	}
+	configBytes, err := yaml.Marshal(config)
+	require.NoError(t, err)
+	configPath := filepath.Join(dir, "app.yaml")
+	require.NoError(t, os.WriteFile(configPath, configBytes, 0o600))
+	results, err := FindDefinitionImages(ctx, configPath, FindImagesOptions{SkipCosign: true})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	require.Equal(t, config.Metadata.Name, results[0].ComponentName)
+	require.Equal(t, []ImageMatch{
+		{Image: api.Image{Name: "nginx:1.27", ID: "web"}, MatchType: MatchDefinite},
+	}, results[0].Matches)
 }
 
 func TestFindImagesWhyExcludesHelmTestResources(t *testing.T) {

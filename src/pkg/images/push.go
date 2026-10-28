@@ -18,9 +18,9 @@ import (
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
@@ -172,8 +172,11 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 				delete(toPush, refInfo)
 			}
 		}()
+		total := len(toPush)
+		index := 0
 		for img := range toPush {
-			l.Info("pushing image", "name", img)
+			index++
+			l.Info("pushing image", "name", img, "count", fmt.Sprintf("%d/%d", index, total))
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
 				offlineNameCRC, err := transform.ImageTransformHost(registryRef.String(), img)

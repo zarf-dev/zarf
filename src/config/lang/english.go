@@ -37,7 +37,7 @@ const (
 // Zarf CLI commands.
 const (
 	// root zarf command
-	RootCmdShort = "The Airgap Native Packager Manager for Kubernetes"
+	RootCmdShort = "The Airgap Native Package Manager for Kubernetes"
 	RootCmdLong  = "Zarf eliminates the complexity of airgap software delivery for Kubernetes clusters and cloud native workloads\n" +
 		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
@@ -132,7 +132,7 @@ $ zarf init --components=git-server
 $ zarf init oci://ghcr.io/zarf-dev/packages/init:v0.69.0
 
 # Initializing w/ an internal registry in proxy mode for built-in cross-node mTLS:
-$ zarf init --registry-mode=proxy
+$ zarf init --registry-mode=proxy --injector-image={IMAGE}
 
 # Initializing w/ an internal registry but with a different nodeport:
 $ zarf init --registry-port=30333
@@ -228,8 +228,8 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
 	CmdPackageFlagSkipSignatureValidation = "[Deprecated] Skip validating the signature of the Zarf package. Use --verify=never instead."
 	CmdPackageFlagRetries                 = "Maximum attempts for retryable Zarf operations, including image, Git, and transient Helm failures"
 
-	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
-	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +
+	CmdPackageCreateShort = "Creates a Zarf package from a definition file or directory"
+	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the package definition at the given file or directory.\n" +
 		"Private registries and repositories are accessed via credentials in your local '~/.docker/config.json', " +
 		"'~/.git-credentials' and '~/.netrc'.\n"
 
@@ -284,7 +284,8 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 
 	CmdPackageInspectShort = "Commands for gathering information from a built package"
 
-	CmdPackageListShort         = "Lists out all of the packages that have been deployed to the cluster (runs offline)"
+	CmdPackageListShort         = "Lists packages that have been deployed to the cluster (runs offline)"
+	CmdPackageListFlagNamespace = "[Alpha] Filter by namespace override when listing packages or select it for a named deployed package"
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
 
 	CmdPackageCreateFlagConfirm               = "Confirm package creation without prompting"
@@ -320,6 +321,7 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 	CmdPackageDeployInvalidCLIVersionWarn      = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
 	CmdPackageDeployFlagNamespace              = "[Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined."
 	CmdPackageDeployFlagValuesFiles            = CmdPackageCreateFlagValuesFiles
+	CmdPackageDeployFlagSkipArchitectureCheck  = "Allow application images to deploy to nodes with a different architecture. Requires node emulation support; intended for development and testing, not recommended for production."
 	CmdPackageDeployFlagSkipValuesSchema       = "Skip validation of package values against the values schema."
 
 	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
@@ -425,17 +427,36 @@ $ zarf package publish oci://source-registry.com/my-namespace/my-package:1.0.0 o
 # Publish a package with a specific tag different from the package metadata.version
 $ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry.com/my-namespace --tag v0.0.1
 `
-	CmdPackagePublishFlagSigningKey         = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider"
-	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key used for publishing packages"
-	CmdPackagePublishFlagConfirm            = "Confirms package publish without prompting. Skips prompt for the signing key password"
-	CmdPackagePublishFlagFlavor             = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
-	CmdPackagePublishFlagTag                = "The tag to be used in the OCI reference for the package in the registry"
+	CmdPackagePublishFlagSigningKey           = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider"
+	CmdPackagePublishFlagSigningKeyPassword   = "Password to the private key used for publishing packages"
+	CmdPackagePublishFlagConfirm              = "Confirms package publish without prompting. Skips prompt for the signing key password"
+	CmdPackagePublishFlagFlavor               = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
+	CmdPackagePublishFlagTag                  = "The tag to be used in the OCI reference for the package in the registry"
+	CmdPackagePublishSigningDeprecation       = "This flag is deprecated. Use signing during package creation or 'zarf package sign' before publishing when applicable."
+	CmdPackagePublishSigningConfigDeprecation = "package.publish signing configuration is deprecated. Use signing during package creation or 'zarf package sign' before publishing."
 
 	CmdComponentShort          = "Commands for reusable Zarf components"
 	CmdComponentPublishShort   = "Publishes a v1beta1 Zarf component to a remote registry"
 	CmdComponentPublishExample = `
 # Publish a v1beta1 component config to a remote registry
 $ zarf component publish monitoring.yaml oci://ghcr.io/my-org/components
+`
+	CmdComponentSignShort   = "Signs an already published Zarf component"
+	CmdComponentSignExample = `
+# Sign a published component with a private key
+$ zarf component sign ghcr.io/my-org/my-component:1.0 --signing-key ./private-key.pem
+
+# Sign a published component using Sigstore keyless signing
+$ zarf component sign ghcr.io/my-org/my-component:1.0 --keyless --confirm
+`
+	CmdComponentVerifyShort   = "Verifies a published Zarf component signature"
+	CmdComponentVerifyLong    = "Verifies the Sigstore signature stored as an OCI referrer of a published Zarf component manifest."
+	CmdComponentVerifyExample = `
+# Verify a published component with a public key
+$ zarf component verify ghcr.io/my-org/my-component:1.0 --key ./public-key.pem
+
+# Verify a keyless signature by its certificate identity
+$ zarf component verify ghcr.io/my-org/my-component:1.0 --certificate-identity signer@example.com --certificate-oidc-issuer https://token.actions.githubusercontent.com
 `
 	CmdPackageSignShort   = "Signs an existing Zarf package"
 	CmdPackageSignLong    = "Signs an existing Zarf package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the zarf.yaml file and does not modify the package checksums."
@@ -550,7 +571,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdDevFlagRegistry                     = "Override the ###ZARF_REGISTRY### value"
 	CmdDevFlagFindImagesWhy                = "Prints the source manifest for the specified image"
 	CmdDevFlagFindImagesSkipCosign         = "Skip searching for cosign artifacts related to discovered images"
-	CmdDevFlagFindImagesUpdate             = "Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change."
+	CmdDevFlagFindImagesUpdate             = "Update the images in the zarf file if needed. Formatting such as comments and newlines may change."
 	CmdDevFlagGenerateSchemaUpdate         = "Update the existing schema. Formatting such as ordering and newlines may change."
 	CmdDevFlagGenerateSchemaDeleteNotFound = "Remove existing schema keys when they are not found in the mapped values"
 

@@ -134,7 +134,7 @@ func ReadYaml(path string, destConfig any) error {
 		return err
 	}
 
-	return goyaml.Unmarshal(file, destConfig)
+	return k8syaml.Unmarshal(file, destConfig)
 }
 
 // WriteYaml writes a given config to a yaml file on disk.

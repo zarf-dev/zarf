@@ -66,7 +66,7 @@ func TestDataInjection(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "sbom", path, "--output", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 
-	require.FileExists(t, filepath.Join(sbomPath, "data-injection", "sbom-viewer-zarf-component-file-server.html"), "The data-injection component should have an SBOM viewer")
+	require.NoFileExists(t, filepath.Join(sbomPath, "data-injection", "sbom-viewer-zarf-component-file-server.html"), "The data-injection component should not have an SBOM viewer by default")
 	require.FileExists(t, filepath.Join(sbomPath, "data-injection", "zarf-component-file-server.json"), "The data-injection component should have an SBOM json")
 }
 

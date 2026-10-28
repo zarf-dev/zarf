@@ -36,11 +36,9 @@ type devTemplateOptions struct {
 func newDevTemplateCommand(v *viper.Viper) *cobra.Command {
 	o := &devTemplateOptions{}
 	cmd := &cobra.Command{
-		Use:   "template [ TEMPLATE_FILE | DIRECTORY ]",
+		Use:   "template [ PATH ]",
 		Short: "Renders a template into a generated definition",
-		// Once v1beta1 is released this command should be unhidden
-		Hidden: true,
-		Args:   cobra.MaximumNArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd.Context(), args)
 		},
@@ -141,7 +139,7 @@ func validateTemplateSchema(path string, rendered []byte, kind v1beta1.PackageKi
 		err      error
 	)
 	switch kind {
-	case "", v1beta1.ZarfPackageConfig:
+	case "", v1beta1.ZarfPackageConfig, v1beta1.ZarfInitConfig:
 		findings, err = lint.ValidatePackageSchemaBytesV1Beta1(rendered)
 	case v1beta1.ZarfComponentConfig:
 		findings, err = lint.ValidateComponentConfigSchemaBytesV1Beta1(rendered)

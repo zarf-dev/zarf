@@ -228,25 +228,33 @@ func setupRootFlags(rootCmd *cobra.Command) {
 	// Features
 	rootCmd.PersistentFlags().StringToStringVar(&features, "features", vpr.GetStringMapString(VFeatures), "Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features \"foo=true,bar=false,baz=true\"")
 
+	// A vendored tool defines its own flags, and pflag panics when a shorthand is redefined.
+	// That happens whenever root flags are registered alongside one, i.e. when they are given
+	// before the subcommand: `zarf --log-level info tools helm list`.
+	logShorthand, archShorthand := "l", "a"
+	if vendorCmdInArgs(os.Args) {
+		logShorthand, archShorthand = "", ""
+	}
+
 	// Logs
-	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", logShorthand, vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", vpr.GetString(VLogFormat), "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'.")
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", vpr.GetBool(VNoColor), "Disable terminal color codes in logging and stdout prints.")
 	rootCmd.PersistentFlags().BoolVar(&showNoProgressDeprecation, "no-progress", v.GetBool("no_progress"), "Disable fancy UI progress bars, spinners, logos, etc")
 	_ = rootCmd.PersistentFlags().MarkDeprecated("no-progress", "Progress bars and spinners were removed with --log-format=legacy, this flag will be removed in a future version of Zarf.")
 
 	// Core functionality
-	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
-	cachePath := vpr.GetString(VCache)
+	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", archShorthand, vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
+	cachePath = vpr.GetString(VCache)
 	if cachePath == "" {
 		cachePath = vpr.GetString(VZarfCache)
 	}
 	if cachePath == "" {
 		cachePath = config.ZarfDefaultCachePath
 	}
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", cachePath, lang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&cachePath, "zarf-cache", cachePath, lang.RootCmdFlagCachePath)
 	_ = rootCmd.PersistentFlags().MarkDeprecated("zarf-cache", "use --cache instead")
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "cache", cachePath, lang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&cachePath, "cache", cachePath, lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
 	// Security

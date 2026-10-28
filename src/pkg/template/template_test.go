@@ -12,7 +12,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -114,22 +117,29 @@ func TestObjects_WithValues(t *testing.T) {
 
 func TestObjects_WithPackage(t *testing.T) {
 	tests := []struct {
-		name string
-		pkg  v1alpha1.ZarfPackage
+		name         string
+		pkg          api.Package
+		expectedType any
 	}{
 		{
-			name: "populated package",
-			pkg: v1alpha1.ZarfPackage{
-				Metadata: v1alpha1.ZarfMetadata{Name: "test-package", Version: "1.0.0"},
-				Build:    v1alpha1.ZarfBuildData{User: "test-user", Architecture: "amd64"},
+			name:         "v1alpha1 package",
+			expectedType: v1alpha1.ZarfPackage{},
+			pkg: convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
+				APIVersion: v1alpha1.APIVersion,
+				Metadata:   v1alpha1.ZarfMetadata{Name: "test-package", Version: "1.0.0"},
+				Build:      v1alpha1.ZarfBuildData{User: "test-user", Architecture: "amd64"},
 				Constants: []v1alpha1.Constant{
 					{Name: "APP_NAME", Value: "my-app"},
 				},
-			},
+			}),
 		},
 		{
-			name: "empty package",
-			pkg:  v1alpha1.ZarfPackage{},
+			name:         "v1beta1 package",
+			expectedType: v1beta1.Package{},
+			pkg: convert.PackageFromV1beta1(v1beta1.Package{
+				APIVersion: v1beta1.APIVersion,
+				Metadata:   v1beta1.PackageMetadata{Name: "test-package", Version: "1.0.0"},
+			}),
 		},
 	}
 
@@ -137,7 +147,11 @@ func TestObjects_WithPackage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			objects := make(Objects)
 			result := objects.WithPackage(tt.pkg)
-			require.Equal(t, tt.pkg, result[objectKeyPackage])
+			require.IsType(t, tt.expectedType, result[objectKeyPackage])
+
+			output, err := Apply(context.Background(), "{{ .Pkg.APIVersion }}|{{ .Pkg.Metadata.Name }}", result)
+			require.NoError(t, err)
+			require.Equal(t, tt.pkg.GetAPIVersion()+"|test-package", output)
 		})
 	}
 }
@@ -145,12 +159,12 @@ func TestObjects_WithPackage(t *testing.T) {
 func TestObjects_WithConstants(t *testing.T) {
 	tests := []struct {
 		name      string
-		constants []v1alpha1.Constant
+		constants []api.Constant
 		expected  map[string]string
 	}{
 		{
 			name: "multiple constants",
-			constants: []v1alpha1.Constant{
+			constants: []api.Constant{
 				{Name: "APP_NAME", Value: "my-app"},
 				{Name: "VERSION", Value: "1.2.3"},
 				{Name: "NAMESPACE", Value: "default"},
@@ -168,7 +182,7 @@ func TestObjects_WithConstants(t *testing.T) {
 		},
 		{
 			name: "single constant",
-			constants: []v1alpha1.Constant{
+			constants: []api.Constant{
 				{Name: "ENVIRONMENT", Value: "production"},
 			},
 			expected: map[string]string{
@@ -177,7 +191,7 @@ func TestObjects_WithConstants(t *testing.T) {
 		},
 		{
 			name: "constants with special characters",
-			constants: []v1alpha1.Constant{
+			constants: []api.Constant{
 				{Name: "DB_URL", Value: "postgresql://user:pass@localhost:5432/db"},
 				{Name: "API_KEY", Value: "abc123-def456-ghi789"},
 			},
@@ -1214,7 +1228,7 @@ func TestWithState_RegistryCredentialsGroup(t *testing.T) {
 	s := testState()
 	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
 		State:      s,
-		AccessKeys: []v1alpha1.StateAccessKey{v1alpha1.StateAccessRegistryCredentials},
+		AccessKeys: []api.StateAccessKey{api.StateAccessRegistryCredentials},
 	})
 	require.NoError(t, err)
 
@@ -1238,7 +1252,7 @@ func TestWithState_GitCredentialsGroup(t *testing.T) {
 	s := testState()
 	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
 		State:      s,
-		AccessKeys: []v1alpha1.StateAccessKey{v1alpha1.StateAccessGitCredentials},
+		AccessKeys: []api.StateAccessKey{api.StateAccessGitCredentials},
 	})
 	require.NoError(t, err)
 
@@ -1261,7 +1275,7 @@ func TestWithState_AgentCertsGroup(t *testing.T) {
 	s := testState()
 	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
 		State:      s,
-		AccessKeys: []v1alpha1.StateAccessKey{v1alpha1.StateAccessAgentCerts},
+		AccessKeys: []api.StateAccessKey{api.StateAccessAgentCerts},
 	})
 	require.NoError(t, err)
 
@@ -1304,9 +1318,9 @@ func TestWithState_MultipleGroups(t *testing.T) {
 	s := testState()
 	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
 		State: s,
-		AccessKeys: []v1alpha1.StateAccessKey{
-			v1alpha1.StateAccessRegistryCredentials,
-			v1alpha1.StateAccessGitCredentials,
+		AccessKeys: []api.StateAccessKey{
+			api.StateAccessRegistryCredentials,
+			api.StateAccessGitCredentials,
 		},
 	})
 	require.NoError(t, err)

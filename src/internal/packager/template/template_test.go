@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
@@ -115,7 +117,7 @@ func TestGetZarfTemplatesForIPv6SeedRegistry(t *testing.T) {
 				},
 				IPFamily: test.IPFamily,
 			}
-			templateMap, err := GetZarfTemplates(context.Background(), "zarf-seed-registry", &state)
+			templateMap, err := GetZarfTemplates(context.Background(), v1alpha1.APIVersion, api.ServiceSeedRegistry, &state)
 			require.NoError(t, err)
 			require.Equal(t, test.expectedRegistryAddress, templateMap["###ZARF_SEED_REGISTRY###"].Value)
 			require.Equal(t, test.expectedIPv6Enabled, templateMap["###ZARF_IPV6_ONLY###"].Value)

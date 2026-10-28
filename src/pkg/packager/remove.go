@@ -12,22 +12,20 @@ import (
 	"slices"
 	"time"
 
+	"helm.sh/helm/v4/pkg/storage/driver"
+
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/value"
-
-	"helm.sh/helm/v4/pkg/storage/driver"
-
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 )
 
 // RemoveOptions are the options for Remove.
@@ -42,13 +40,14 @@ type RemoveOptions struct {
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
-func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOptions) error {
+func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) error {
+	if err := definition.Validate(); err != nil {
+		return err
+	}
 	l := logger.From(ctx)
-	pkg := definition.AsV1alpha1()
-
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
-		if err := requirements.ValidateVersionRequirements(pkg); err != nil {
+		if err := requirements.ValidateVersionRequirements(definition.Build.VersionRequirements); err != nil {
 			return fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", err)
 		}
 	}
@@ -61,9 +60,7 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 	if err != nil {
 		return err
 	}
-	pkg = definition.AsV1alpha1()
-
-	if len(pkg.Components) == 0 {
+	if len(definition.Components) == 0 {
 		return fmt.Errorf("package to remove contains no components")
 	}
 
@@ -80,8 +77,8 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 
 	// Check that cluster is configured if required.
 	requiresCluster := false
-	componentIdx := map[string]v1alpha1.ZarfComponent{}
-	for _, component := range pkg.Components {
+	componentIdx := map[string]api.Component{}
+	for _, component := range definition.Components {
 		componentIdx[component.Name] = component
 		if component.RequiresCluster() {
 			if opts.Cluster == nil {
@@ -95,15 +92,17 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 	depPkg := &state.DeployedPackage{}
 	if requiresCluster {
 		var err error
-		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
+		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, definition.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %w", err)
 		}
 	} else {
 		// If we do not need the cluster, create a deployed components object based on the info we have
-		depPkg.Name = pkg.Metadata.Name
-		depPkg.Data = pkg
-		for _, component := range pkg.Components {
+		depPkg.Name = definition.Metadata.Name
+		if err := depPkg.SetPackageDefinition(definition); err != nil {
+			return err
+		}
+		for _, component := range definition.Components {
 			depPkg.DeployedComponents = append(depPkg.DeployedComponents, state.DeployedComponent{Name: component.Name})
 		}
 	}
@@ -121,9 +120,8 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 		}
 	}
 
-	reverseDepComps := slices.Clone(depPkg.DeployedComponents)
-	slices.Reverse(reverseDepComps)
-	for _, depComp := range reverseDepComps {
+	for i := len(depPkg.DeployedComponents) - 1; i >= 0; i-- {
+		depComp := &depPkg.DeployedComponents[i]
 		// Only remove the component if it was requested or if we are removing the whole package.
 		comp, ok := componentIdx[depComp.Name]
 		if !ok {
@@ -132,15 +130,18 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 
 		err := func() error {
 			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
-			err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil, vals, stateAccess)
+			err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Before, actions.RunOptions{
+				DefaultConfig: comp.Actions.OnRemove.Defaults,
+				Values:        vals,
+				StateAccess:   stateAccess,
+			})
 			if err != nil {
 				return fmt.Errorf("unable to run the before action: %w", err)
 			}
 
-			reverseInstalledCharts := slices.Clone(depComp.InstalledCharts)
-			slices.Reverse(reverseInstalledCharts)
 			if opts.Cluster != nil {
-				for _, chart := range reverseInstalledCharts {
+				for j := len(depComp.InstalledCharts) - 1; j >= 0; j-- {
+					chart := depComp.InstalledCharts[j]
 					err := helm.RemoveChart(ctx, chart.Namespace, chart.ChartName, opts.Timeout)
 					if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
 						return fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w", chart.ChartName, chart.Namespace, err)
@@ -150,9 +151,7 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 					}
 
 					// remove the helm chart from the installed charts slice.
-					depComp.InstalledCharts = slices.DeleteFunc(depComp.InstalledCharts, func(t state.InstalledChart) bool {
-						return t.ChartName == chart.ChartName
-					})
+					depComp.InstalledCharts = slices.Delete(depComp.InstalledCharts, j, j+1)
 
 					err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 					if err != nil {
@@ -162,20 +161,26 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 				}
 			}
 
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil, vals, stateAccess)
+			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.After, actions.RunOptions{
+				DefaultConfig: comp.Actions.OnRemove.Defaults,
+				Values:        vals,
+				StateAccess:   stateAccess,
+			})
 			if err != nil {
 				return fmt.Errorf("unable to run the after action: %w", err)
 			}
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil, vals, stateAccess)
+			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.OnSuccess, actions.RunOptions{
+				DefaultConfig: comp.Actions.OnRemove.Defaults,
+				Values:        vals,
+				StateAccess:   stateAccess,
+			})
 			if err != nil {
 				return fmt.Errorf("unable to run the success action: %w", err)
 			}
 
 			// remove the component from deploy components slice.
 			if opts.Cluster != nil {
-				depPkg.DeployedComponents = slices.DeleteFunc(depPkg.DeployedComponents, func(t state.DeployedComponent) bool {
-					return t.Name == depComp.Name
-				})
+				depPkg.DeployedComponents = slices.Delete(depPkg.DeployedComponents, i, i+1)
 				err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 				if err != nil {
 					// We warn and ignore errors because we may have removed the cluster that this package was inside of
@@ -186,7 +191,11 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 		}()
 		if err != nil {
 			stateAccess := template.StateAccess{State: s, AccessKeys: comp.StateAccess}
-			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil, vals, stateAccess)
+			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.OnFailure, actions.RunOptions{
+				DefaultConfig: comp.Actions.OnRemove.Defaults,
+				Values:        vals,
+				StateAccess:   stateAccess,
+			})
 			if removeErr != nil {
 				return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)
 			}
@@ -202,6 +211,6 @@ func Remove(ctx context.Context, definition api.PackageDefinition, opts RemoveOp
 		}
 	}
 
-	l.Info("package successfully removed", "name", pkg.Metadata.Name)
+	l.Info("package successfully removed", "name", definition.Metadata.Name)
 	return nil
 }

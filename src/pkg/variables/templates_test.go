@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 )
 
 var start = `
@@ -69,10 +69,18 @@ func TestReplaceTextTemplate(t *testing.T) {
 
 	tests := []test{
 		{
-			vc:           VariableConfig{setVariableMap: SetVariableMap{}, applicationTemplates: map[string]*TextTemplate{}},
+			vc: VariableConfig{
+				applicationTemplates: map[string]*TextTemplate{
+					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED"},
+				},
+			},
 			path:         "non-existent.test",
 			wantErr:      true,
 			wantContents: start,
+		},
+		{
+			wantContents: start,
+			vc:           VariableConfig{},
 		},
 		{
 			vc: VariableConfig{
@@ -80,7 +88,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 				setVariableMap: SetVariableMap{
 					"REPLACE_ME": {Value: "VAR_REPLACED"},
 				},
-				constants: []v1alpha1.Constant{{Name: "REPLACE_ME", Value: "CONST_REPLACED"}},
+				constants: []api.Constant{{Name: "REPLACE_ME", Value: "CONST_REPLACED"}},
 				applicationTemplates: map[string]*TextTemplate{
 					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED"},
 				},
@@ -93,7 +101,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 				setVariableMap: SetVariableMap{
 					"REPLACE_ME": {Value: "VAR_REPLACED\nVAR_SECOND"},
 				},
-				constants: []v1alpha1.Constant{{Name: "REPLACE_ME", Value: "CONST_REPLACED\nCONST_SECOND"}},
+				constants: []api.Constant{{Name: "REPLACE_ME", Value: "CONST_REPLACED\nCONST_SECOND"}},
 				applicationTemplates: map[string]*TextTemplate{
 					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED\nAPP_SECOND"},
 				},
@@ -104,9 +112,9 @@ func TestReplaceTextTemplate(t *testing.T) {
 			vc: VariableConfig{
 				templatePrefix: "PREFIX",
 				setVariableMap: SetVariableMap{
-					"REPLACE_ME": {Value: "VAR_REPLACED\nVAR_SECOND", Variable: v1alpha1.Variable{AutoIndent: true}},
+					"REPLACE_ME": {Value: "VAR_REPLACED\nVAR_SECOND", Variable: api.Variable{AutoIndent: true}},
 				},
-				constants: []v1alpha1.Constant{{Name: "REPLACE_ME", Value: "CONST_REPLACED\nCONST_SECOND", AutoIndent: true}},
+				constants: []api.Constant{{Name: "REPLACE_ME", Value: "CONST_REPLACED\nCONST_SECOND", AutoIndent: true}},
 				applicationTemplates: map[string]*TextTemplate{
 					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED\nAPP_SECOND", AutoIndent: true},
 				},
@@ -117,11 +125,11 @@ func TestReplaceTextTemplate(t *testing.T) {
 			vc: VariableConfig{
 				templatePrefix: "PREFIX",
 				setVariableMap: SetVariableMap{
-					"REPLACE_ME": {Value: "testdata/file.txt", Variable: v1alpha1.Variable{Type: v1alpha1.FileVariableType}},
+					"REPLACE_ME": {Value: "testdata/file.txt", Variable: api.Variable{Type: api.FileVariableType}},
 				},
-				constants: []v1alpha1.Constant{{Name: "REPLACE_ME", Value: "CONSTs Don't Support File"}},
+				constants: []api.Constant{{Name: "REPLACE_ME", Value: "CONSTs Don't Support File"}},
 				applicationTemplates: map[string]*TextTemplate{
-					"###PREFIX_APP_REPLACE_ME###": {Value: "testdata/file.txt", Type: v1alpha1.FileVariableType},
+					"###PREFIX_APP_REPLACE_ME###": {Value: "testdata/file.txt", Type: api.FileVariableType},
 				},
 			},
 			wantContents: file,

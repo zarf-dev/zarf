@@ -6,24 +6,181 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 )
 
-func TestAgentInfoIsConfigured(t *testing.T) {
+func TestDeployedPackagePackageDefinition(t *testing.T) {
+	t.Parallel()
+
+	beta := v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Metadata:   v1beta1.PackageMetadata{Name: "beta-package", Version: "1.2.3"},
+	}
+	definition := convert.PackageFromV1beta1(beta)
+
+	components := []DeployedComponent{{
+		InstalledCharts: []InstalledChart{{
+			ConnectStrings: ConnectStrings{"web": {Description: "Web UI", URL: "/"}},
+		}},
+	}}
+	deployed, err := NewDeployedPackage(
+		definition,
+		"sha256:abc",
+		"v1.2.3",
+		components,
+		7,
+		WithPackageConnectivity(true),
+		WithPackageNamespaceOverride("override"),
+	)
+	require.NoError(t, err)
+	require.Equal(t, "beta-package", deployed.Name)
+	require.Equal(t, "sha256:abc", deployed.Digest)
+	require.Equal(t, "v1.2.3", deployed.CLIVersion)
+	require.Equal(t, 7, deployed.Generation)
+	require.Equal(t, components, deployed.DeployedComponents)
+	require.Equal(t, ConnectStrings{"web": {Description: "Web UI", URL: "/"}}, deployed.ConnectStrings)
+	require.Equal(t, PackageConnectivityConnected, deployed.PackageConnectivity)
+	require.Equal(t, "override", deployed.NamespaceOverride)
+	require.Equal(t, convert.PackageToV1alpha1(definition), deployed.Data)
+	require.NotContains(t, deployed.PackageData, v1alpha1.APIVersion)
+	require.Contains(t, deployed.PackageData, v1beta1.APIVersion)
+
+	actual, err := deployed.Definition()
+	require.NoError(t, err)
+	require.Equal(t, v1beta1.APIVersion, actual.GetAPIVersion())
+	require.Equal(t, beta.APIVersion, convert.PackageToV1beta1(actual).APIVersion)
+	require.Equal(t, beta.Metadata, convert.PackageToV1beta1(actual).Metadata)
+}
+
+func TestDeployedPackagePackageDefinition_legacyData(t *testing.T) {
+	t.Parallel()
+
+	legacy := v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "legacy-package"}}
+	definition, err := (DeployedPackage{Data: legacy}).Definition()
+	require.NoError(t, err)
+	alpha := convert.PackageToV1alpha1(definition)
+	require.Equal(t, legacy.Metadata.Name, alpha.Metadata.Name)
+	require.True(t, alpha.AllowsNamespaceOverride())
+}
+
+func TestDeployedPackagePackageDefinition_v1alpha1Serialization(t *testing.T) {
+	t.Parallel()
+
+	for _, version := range []string{"", v1alpha1.APIVersion} {
+		t.Run(version, func(t *testing.T) {
+			t.Parallel()
+
+			definition := convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
+				APIVersion: version,
+				Kind:       v1alpha1.ZarfPackageConfig,
+				Metadata:   v1alpha1.ZarfMetadata{Name: "alpha-package"},
+			})
+			deployed, err := NewDeployedPackage(definition, "", "", nil, 1)
+			require.NoError(t, err)
+			serialized, err := json.Marshal(deployed)
+			require.NoError(t, err)
+			var fields map[string]json.RawMessage
+			require.NoError(t, json.Unmarshal(serialized, &fields))
+			require.NotContains(t, fields, "packageData")
+			var legacy v1alpha1.ZarfPackage
+			require.NoError(t, json.Unmarshal(fields["data"], &legacy))
+			require.Equal(t, convert.PackageToV1alpha1(definition), legacy)
+
+			var loaded DeployedPackage
+			require.NoError(t, json.Unmarshal(serialized, &loaded))
+			actual, err := loaded.Definition()
+			require.NoError(t, err)
+			require.Equal(t, definition, actual)
+		})
+	}
+}
+
+func TestDeployedPackageSetPackageDefinition_replacesStoredVersions(t *testing.T) {
+	t.Parallel()
+
+	deployed, err := NewDeployedPackage(api.Package{
+		APIVersion: v1beta1.APIVersion,
+		Metadata:   api.PackageMetadata{Name: "package"},
+	}, "", "", nil, 1)
+	require.NoError(t, err)
+	alpha := convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       v1alpha1.ZarfPackageConfig,
+		Metadata:   v1alpha1.ZarfMetadata{Name: "package", Version: "2.0.0"},
+	})
+	require.NoError(t, deployed.SetPackageDefinition(alpha))
+	actual, err := deployed.Definition()
+	require.NoError(t, err)
+	require.Equal(t, alpha, actual)
+	serialized, err := json.Marshal(deployed)
+	require.NoError(t, err)
+	var fields map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(serialized, &fields))
+	require.NotContains(t, fields, "packageData")
+}
+
+func TestDeployedPackagePackageDefinition_unknownVersionFallsBackToData(t *testing.T) {
+	t.Parallel()
+
+	legacy := v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "future-package"}}
+	deployed := DeployedPackage{
+		Data:        legacy,
+		PackageData: map[string]json.RawMessage{"zarf.dev/v9": []byte(`{}`)},
+	}
+	definition, err := deployed.Definition()
+	require.NoError(t, err)
+	require.Equal(t, convert.PackageFromV1alpha1(legacy), definition)
+}
+
+func TestDeployedPackagePackageDefinition_noSupportedData(t *testing.T) {
+	t.Parallel()
+
+	deployed := DeployedPackage{PackageData: map[string]json.RawMessage{"zarf.dev/v9": []byte(`{}`)}}
+	_, err := deployed.Definition()
+	require.EqualError(t, err, "deployed package has no supported package data")
+}
+
+func TestAgentIsConfigured(t *testing.T) {
 	t.Parallel()
 
 	require.False(t, (AgentInfo{}).IsConfigured())
 	require.False(t, (AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Key: []byte("key")}}).IsConfigured())
 	require.False(t, (AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Cert: []byte("cert")}}).IsConfigured())
 	require.True(t, (AgentInfo{TLS: pki.GeneratedPKI{CA: []byte("ca"), Cert: []byte("cert"), Key: []byte("key")}}).IsConfigured())
+}
+
+func TestGitServerInfoIsInternal(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		gitServer  GitServerInfo
+		isInternal bool
+	}{
+		{name: "internal mode takes precedence over external address", gitServer: GitServerInfo{Address: "https://git.example.com", GitServerMode: GitServerModeInternal}, isInternal: true},
+		{name: "external mode takes precedence over internal address", gitServer: GitServerInfo{Address: ZarfInClusterGitServiceURL, GitServerMode: GitServerModeExternal}},
+		{name: "older internal state uses address", gitServer: GitServerInfo{Address: ZarfInClusterGitServiceURL}, isInternal: true},
+		{name: "older external state uses address", gitServer: GitServerInfo{Address: "https://git.example.com"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.isInternal, tt.gitServer.IsInternal())
+		})
+	}
 }
 
 func TestStateReconcile(t *testing.T) {
@@ -385,6 +542,30 @@ func TestMergeStateGit(t *testing.T) {
 			},
 		},
 		{
+			name: "changing the address updates the mode",
+			oldGitServer: GitServerInfo{
+				Address:       ZarfInClusterGitServiceURL,
+				GitServerMode: GitServerModeInternal,
+			},
+			initGitServer: GitServerInfo{Address: "https://git.example.com"},
+			expectedGitServer: GitServerInfo{
+				Address:       "https://git.example.com",
+				GitServerMode: GitServerModeExternal,
+			},
+		},
+		{
+			name: "explicit mode is preserved when address changes",
+			oldGitServer: GitServerInfo{
+				Address:       ZarfInClusterGitServiceURL,
+				GitServerMode: GitServerModeInternal,
+			},
+			initGitServer: GitServerInfo{Address: "https://git.example.com", GitServerMode: GitServerModeInternal},
+			expectedGitServer: GitServerInfo{
+				Address:       "https://git.example.com",
+				GitServerMode: GitServerModeInternal,
+			},
+		},
+		{
 			name: "empty init options not merged",
 			expectedGitServer: GitServerInfo{
 				PushUsername: "",
@@ -408,6 +589,9 @@ func TestMergeStateGit(t *testing.T) {
 			require.Equal(t, tt.expectedGitServer.PushUsername, newState.GitServer.PushUsername)
 			require.Equal(t, tt.expectedGitServer.PullUsername, newState.GitServer.PullUsername)
 			require.Equal(t, tt.expectedGitServer.Address, newState.GitServer.Address)
+			if tt.expectedGitServer.GitServerMode != "" {
+				require.Equal(t, tt.expectedGitServer.GitServerMode, newState.GitServer.GitServerMode)
+			}
 			// Only check passwords if explicitly set in expected (non-empty means explicit expectation)
 			if tt.expectedGitServer.PushPassword != "" {
 				require.Equal(t, tt.expectedGitServer.PushPassword, newState.GitServer.PushPassword)
@@ -636,6 +820,69 @@ func TestMergeInstalledChartsForComponent(t *testing.T) {
 			t.Parallel()
 			actual := MergeInstalledChartsForComponent(tt.existingCharts, tt.installedCharts, false)
 			require.ElementsMatch(t, tt.expectedCharts, actual)
+		})
+	}
+}
+
+func TestMergeInstalledChartsForComponentOrder(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		existingCharts  []InstalledChart
+		installedCharts []InstalledChart
+		expectedCharts  []InstalledChart
+	}{
+		{
+			name: "fresh install preserves deployment order",
+			installedCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "policy"},
+				{Namespace: "default", ChartName: "runtime"},
+			},
+			expectedCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "policy"},
+				{Namespace: "default", ChartName: "runtime"},
+			},
+		},
+		{
+			name: "redeployment restores deployment order",
+			existingCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "runtime"},
+				{Namespace: "default", ChartName: "policy"},
+			},
+			installedCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "policy"},
+				{Namespace: "default", ChartName: "runtime"},
+			},
+			expectedCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "policy"},
+				{Namespace: "default", ChartName: "runtime"},
+			},
+		},
+		{
+			name: "old-only charts follow the current deployment",
+			existingCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "runtime"},
+				{Namespace: "default", ChartName: "legacy"},
+				{Namespace: "default", ChartName: "policy"},
+			},
+			installedCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "policy"},
+				{Namespace: "default", ChartName: "runtime"},
+			},
+			expectedCharts: []InstalledChart{
+				{Namespace: "default", ChartName: "policy"},
+				{Namespace: "default", ChartName: "runtime"},
+				{Namespace: "default", ChartName: "legacy"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			actual := MergeInstalledChartsForComponent(tt.existingCharts, tt.installedCharts, false)
+			require.Equal(t, tt.expectedCharts, actual)
 		})
 	}
 }

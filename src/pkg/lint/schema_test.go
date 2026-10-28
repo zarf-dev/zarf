@@ -6,6 +6,7 @@ package lint
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -238,20 +239,6 @@ func TestV1Beta1SourceOneOfSchema(t *testing.T) {
 			valid: true,
 		},
 		{
-			name: "chart rejects multiple sources",
-			doc: baseDoc(chartComponent(map[string]any{
-				"name": "chart",
-				"local": map[string]any{
-					"path": "chart",
-				},
-				"oci": map[string]any{
-					"url": "oci://example.com/chart",
-					"ref": map[string]any{"tag": "1.0.0"},
-				},
-			})),
-			valid: false,
-		},
-		{
 			name: "oci ref rejects tag and digest",
 			doc: baseDoc(chartComponent(map[string]any{
 				"name": "chart",
@@ -316,6 +303,48 @@ func TestV1Beta1SourceOneOfSchema(t *testing.T) {
 			}),
 			valid: false,
 		},
+		{
+			name: "manifest rejects forward path separators",
+			doc: baseDoc(map[string]any{
+				"name": "component",
+				"manifests": []any{map[string]any{
+					"name":  "nested/manifest",
+					"files": []any{"manifest.yaml"},
+				}},
+			}),
+			valid: false,
+		},
+		{
+			name: "manifest rejects path separators",
+			doc: baseDoc(map[string]any{
+				"name": "component",
+				"manifests": []any{map[string]any{
+					"name":  `nested\manifest`,
+					"files": []any{"manifest.yaml"},
+				}},
+			}),
+			valid: false,
+		},
+		{
+			name: "chart rejects forward path separators",
+			doc: baseDoc(chartComponent(map[string]any{
+				"name": "nested/chart",
+				"local": map[string]any{
+					"path": "chart",
+				},
+			})),
+			valid: false,
+		},
+		{
+			name: "chart rejects backslash path separators",
+			doc: baseDoc(chartComponent(map[string]any{
+				"name": `nested\chart`,
+				"local": map[string]any{
+					"path": "chart",
+				},
+			})),
+			valid: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -333,9 +362,13 @@ func TestValidatePackageSchema(t *testing.T) {
 		"PACKAGE_NAME": "test-package",
 		"MY_COMP_NAME": "test-comp",
 	}
-	findings, err := ValidatePackageSchemaAtPath(filepath.Join("testdata", "package-with-templates"), setVariables)
-	require.Empty(t, findings)
+	b, err := os.ReadFile(filepath.Join("testdata", "package-with-templates", "zarf.yaml"))
 	require.NoError(t, err)
+	var pkg any
+	require.NoError(t, goyaml.Unmarshal(b, &pkg))
+	findings, err := ValidatePackageSchemaV1Alpha1(pkg, setVariables)
+	require.NoError(t, err)
+	require.Empty(t, findings)
 }
 
 func TestYqCompat(t *testing.T) {

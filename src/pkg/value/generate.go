@@ -3,9 +3,7 @@
 
 package value
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // GenerateJSONSchema infers a JSON schema from the structure and scalar types in values.
 func GenerateJSONSchema(vals Values) map[string]any {
@@ -31,14 +29,20 @@ func ReconcileJSONSchema(existing, inferred map[string]any, deleteNotFound bool)
 	typeVal, hasType := inferred["type"]
 	if hasType {
 		existing["type"] = typeVal
+	} else if deleteNotFound {
+		delete(existing, "type")
 	}
 
 	if schemaTypeIncludes(typeVal, "object") {
 		reconcileSchemaProperties(existing, inferred, deleteNotFound)
+	} else if deleteNotFound {
+		delete(existing, "properties")
 	}
 
 	if schemaTypeIncludes(typeVal, "array") {
 		reconcileSchemaItems(existing, inferred, deleteNotFound)
+	} else if deleteNotFound {
+		delete(existing, "items")
 	}
 
 	if schemaURI, ok := inferred["$schema"]; ok {
@@ -102,15 +106,22 @@ func ExtractJSONSchema(schema map[string]any, path Path) (map[string]any, bool, 
 	return current, true, nil
 }
 
-// MergeJSONSchemaAtPath overlays a chart schema at a JSON value path. Chart
-// fields are copied into the inferred schema; authored package schemas are
-// reconciled later and take precedence over conflicting fields.
+// MergeJSONSchemaAtPath overlays supported fields at a JSON value path.
 func MergeJSONSchemaAtPath(schema map[string]any, path Path, overlay map[string]any) error {
+	return mergeJSONSchemaAtPath(schema, path, FilterChartSchema(overlay))
+}
+
+// MergeGeneratedJSONSchemaAtPath overlays an inferred schema without filtering unknown properties.
+func MergeGeneratedJSONSchemaAtPath(schema map[string]any, path Path, overlay map[string]any) error {
+	return mergeJSONSchemaAtPath(schema, path, overlay)
+}
+
+func mergeJSONSchemaAtPath(schema map[string]any, path Path, overlay map[string]any) error {
 	if err := path.Validate(); err != nil {
 		return err
 	}
 	if path == "." {
-		mergeChartSchema(schema, overlay)
+		mergeJSONSchema(schema, overlay)
 		return nil
 	}
 
@@ -122,7 +133,7 @@ func MergeJSONSchemaAtPath(schema map[string]any, path Path, overlay map[string]
 			return fmt.Errorf("schema path %s: key %q is not an object schema", path, part)
 		}
 		if i == len(parts)-1 {
-			mergeChartSchema(child, overlay)
+			mergeJSONSchema(child, overlay)
 			return nil
 		}
 		current = child
@@ -176,8 +187,8 @@ func schemaChild(schema map[string]any, part string) (map[string]any, bool) {
 	return nil, false
 }
 
-func mergeChartSchema(destination, source map[string]any) {
-	for key, sourceValue := range FilterChartSchema(source) {
+func mergeJSONSchema(destination, source map[string]any) {
+	for key, sourceValue := range source {
 		switch key {
 		case "properties":
 			sourceProperties, ok := sourceValue.(map[string]any)
@@ -194,7 +205,7 @@ func mergeChartSchema(destination, source map[string]any) {
 				sourcePropertyMap, sourceIsMap := sourceProperty.(map[string]any)
 				destinationPropertyMap, destinationIsMap := destinationProperties[propertyName].(map[string]any)
 				if sourceIsMap && destinationIsMap {
-					mergeChartSchema(destinationPropertyMap, sourcePropertyMap)
+					mergeJSONSchema(destinationPropertyMap, sourcePropertyMap)
 				} else {
 					destinationProperties[propertyName] = copyValue(sourceProperty)
 				}
@@ -203,13 +214,12 @@ func mergeChartSchema(destination, source map[string]any) {
 			sourceMap, sourceIsMap := sourceValue.(map[string]any)
 			destinationMap, destinationIsMap := destination[key].(map[string]any)
 			if sourceIsMap && destinationIsMap {
-				mergeChartSchema(destinationMap, sourceMap)
+				mergeJSONSchema(destinationMap, sourceMap)
 			} else {
 				destination[key] = copyValue(sourceValue)
 			}
 		default:
-			// Validation keywords are chart-owned at this stage and should be
-			// retained when they describe values supplied by the package.
+			// Preserve validation keywords from the overlay.
 			destination[key] = copyValue(sourceValue)
 		}
 	}
@@ -343,6 +353,9 @@ func isChartSchemaKeyword(key string) bool {
 func reconcileSchemaProperties(existing, inferred map[string]any, deleteNotFound bool) {
 	inferredProps, ok := inferred["properties"].(map[string]any)
 	if !ok {
+		if deleteNotFound {
+			delete(existing, "properties")
+		}
 		return
 	}
 
@@ -380,6 +393,9 @@ func reconcileSchemaProperties(existing, inferred map[string]any, deleteNotFound
 func reconcileSchemaItems(existing, inferred map[string]any, deleteNotFound bool) {
 	inferredItems, hasInferredItems := inferred["items"].(map[string]any)
 	if !hasInferredItems {
+		if deleteNotFound {
+			delete(existing, "items")
+		}
 		return
 	}
 
@@ -396,7 +412,9 @@ func inferSchemaType(v any) any {
 	switch val := v.(type) {
 	case string:
 		return map[string]any{"type": "string"}
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return map[string]any{"type": "integer"}
+	case float32, float64:
 		return map[string]any{"type": "number"}
 	case bool:
 		return map[string]any{"type": "boolean"}
@@ -415,6 +433,6 @@ func inferSchemaType(v any) any {
 		}
 		return map[string]any{"type": "array"}
 	default:
-		return map[string]any{"type": "string"}
+		return map[string]any{}
 	}
 }

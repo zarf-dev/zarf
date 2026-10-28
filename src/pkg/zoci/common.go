@@ -12,14 +12,15 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/types"
 	ociDirectory "oras.land/oras-go/v2/content/oci"
+	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 // LayerType specifies a category of layers in a Zarf OCI package.
@@ -30,7 +31,7 @@ const (
 	DefaultConcurrency = 6
 	//DefaultRetries is the default number of retries for operations
 	DefaultRetries = 1
-	// ImageCacheDirectory is the directory within the Zarf cache containing an OCI store
+	// ImageCacheDirectory is the directory within the Zarf cache containing OCI blobs.
 	ImageCacheDirectory = "images"
 	// MetadataLayers includes zarf.yaml, signature, and checksums.
 	MetadataLayers LayerType = "metadata"
@@ -68,6 +69,9 @@ type PublishOptions struct {
 type RemoteClientOptions struct {
 	// CachePath stores OCI layers locally when non-empty.
 	CachePath string
+	// CredentialFunc supplies registry credentials.
+	// If nil, the Docker credential store is used instead.
+	CredentialFunc auth.CredentialFunc
 	// Transport configures HTTP transport behavior such as proxies and mTLS.
 	// It is cloned before use and is never modified.
 	Transport *http.Transport
@@ -87,16 +91,19 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 }
 
 // NewRemoteWithOptions returns an ORAS remote repository configured with Zarf's
-// cache and transport options.
+// cache, credential, and transport options.
 func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Platform, options RemoteClientOptions) (*Remote, error) {
 	modifiers := []oci.Modifier{
 		oci.WithInsecureSkipVerify(options.InsecureSkipTLSVerify),
+	}
+	if options.CredentialFunc != nil {
+		modifiers = append(modifiers, oci.WithCredentialFunc(options.CredentialFunc))
 	}
 	if options.Transport != nil {
 		modifiers = append(modifiers, oci.WithTransport(options.Transport))
 	}
 	if options.CachePath != "" {
-		cacheModifier, err := GetOCICacheModifier(ctx, options.CachePath)
+		cacheModifier, err := GetOCICacheModifier(options.CachePath)
 		if err != nil {
 			return nil, err
 		}
@@ -156,8 +163,8 @@ func newRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 }
 
 // GetOCICacheModifier takes in a Zarf cachePath and uses it to return an oci.WithCache modifier
-func GetOCICacheModifier(ctx context.Context, cachePath string) (oci.Modifier, error) {
-	ociCache, err := ociDirectory.NewWithContext(ctx, filepath.Join(cachePath, ImageCacheDirectory))
+func GetOCICacheModifier(cachePath string) (oci.Modifier, error) {
+	ociCache, err := ociDirectory.NewStorage(filepath.Join(cachePath, ImageCacheDirectory))
 	if err != nil {
 		return nil, err
 	}

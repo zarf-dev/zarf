@@ -6,10 +6,11 @@ package transform
 
 import (
 	"fmt"
+	"hash/crc32"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/distribution/reference"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
 // Image represents a config for an OCI image.
@@ -26,7 +27,7 @@ type Image struct {
 // CRCTag returns the airgap tag Zarf assigns to an image: the original tag with a
 // crc32 of the image name appended, matching the reference stored in the registry.
 func CRCTag(imageName, tag string) string {
-	return fmt.Sprintf("%s-zarf-%d", tag, helpers.GetCRCHash(imageName))
+	return fmt.Sprintf("%s-zarf-%d", tag, crc32.ChecksumIEEE([]byte(imageName)))
 }
 
 // ImageTransformHost replaces the base url for an image and adds a crc32 of the original url to the end of the src (note image refs are not full URLs).

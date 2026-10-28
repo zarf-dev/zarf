@@ -7,7 +7,7 @@ package variables
 import (
 	"log/slog"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 )
 
 // VariableConfig represents a value to be templated into a text file.
@@ -16,14 +16,14 @@ type VariableConfig struct {
 
 	applicationTemplates map[string]*TextTemplate
 	setVariableMap       SetVariableMap
-	constants            []v1alpha1.Constant
+	constants            []api.Constant
 
-	prompt func(variable v1alpha1.InteractiveVariable) (value string, err error)
+	prompt func(variable api.InteractiveVariable) (value string, err error)
 	logger *slog.Logger
 }
 
 // New creates a new VariableConfig
-func New(templatePrefix string, prompt func(variable v1alpha1.InteractiveVariable) (value string, err error), logger *slog.Logger) *VariableConfig {
+func New(templatePrefix string, prompt func(variable api.InteractiveVariable) (value string, err error), logger *slog.Logger) *VariableConfig {
 	return &VariableConfig{
 		templatePrefix:       templatePrefix,
 		applicationTemplates: make(map[string]*TextTemplate),
@@ -39,11 +39,11 @@ func (vc *VariableConfig) SetApplicationTemplates(applicationTemplates map[strin
 }
 
 // SetConstants sets the constants for a variable config (templated as PREFIX_CONST_NAME)
-func (vc *VariableConfig) SetConstants(constants []v1alpha1.Constant) {
+func (vc *VariableConfig) SetConstants(constants []api.Constant) {
 	vc.constants = constants
 }
 
 // GetConstants fetches the package constants.
-func (vc *VariableConfig) GetConstants() []v1alpha1.Constant {
+func (vc *VariableConfig) GetConstants() []api.Constant {
 	return vc.constants
 }

@@ -10,12 +10,48 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"oras.land/oras-go/v2/errdef"
 )
+
+func TestRegistryPruneSkipsConnectedDeploys(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	address := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	options := []crane.Option{crane.Insecure}
+
+	keptDigest := testutil.PushImage(ctx, t, address+"/library/kept", "latest")
+	unusedDigest := testutil.PushImage(ctx, t, address+"/library/unused", "latest")
+
+	packages := []state.DeployedPackage{
+		{
+			PackageConnectivity: state.PackageConnectivityConnected,
+			Data: v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{
+				{Name: "connected", Images: []string{"docker.io/library/connected:latest"}},
+			}},
+			DeployedComponents: []state.DeployedComponent{{Name: "connected"}},
+		},
+		{
+			Data: v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{
+				{Name: "airgap", Images: []string{"docker.io/library/kept:latest"}},
+			}},
+			DeployedComponents: []state.DeployedComponent{{Name: "airgap"}},
+		},
+	}
+
+	require.NoError(t, doPruneImagesForPackages(ctx, options, &state.State{}, packages, address, true, false))
+	kept, err := testutil.NewRepo(t, address+"/library/kept").Resolve(ctx, "latest")
+	require.NoError(t, err)
+	require.Equal(t, keptDigest, kept.Digest.String())
+	_, err = testutil.NewRepo(t, address+"/library/unused").Resolve(ctx, unusedDigest)
+	require.ErrorIs(t, err, errdef.ErrNotFound)
+}
 
 func TestRegistryCopyPlatform(t *testing.T) {
 	ctx := context.Background()

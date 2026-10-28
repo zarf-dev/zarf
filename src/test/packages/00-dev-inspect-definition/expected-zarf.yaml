@@ -2,12 +2,16 @@ kind: ZarfPackageConfig
 metadata:
   name: test-inspect-definition
   architecture: amd64
+  allowNamespaceOverride: true
 components:
 - name: import-test
   description: worked-fine
+  required: false
 - name: flavor-test
   description: this component should be included
+  required: false
   only:
     flavor: ice-cream
 - name: set-variables
   description: "ensure that package templates were set: worked-as-expected"
+  required: false

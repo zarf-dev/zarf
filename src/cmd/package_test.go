@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/images"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -118,7 +119,7 @@ func TestPackageList(t *testing.T) {
 				outputWriter: buf,
 				cluster:      c,
 			}
-			err := listOpts.run(ctx)
+			err := listOpts.run(ctx, nil)
 			require.NoError(t, err)
 			b, err := os.ReadFile(filepath.Join("testdata", "package-list", tt.file))
 			require.NoError(t, err)
@@ -130,6 +131,140 @@ func TestPackageList(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPackageListFiltersByNamespaceOverride(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	c := &cluster.Cluster{Clientset: fake.NewClientset()}
+	packages := []state.DeployedPackage{
+		{
+			Name: "package1",
+		},
+		{
+			Name:              "package2",
+			NamespaceOverride: "test2",
+		},
+	}
+
+	for _, p := range packages {
+		b, err := json.Marshal(p)
+		require.NoError(t, err)
+		secret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      p.GetSecretName(),
+				Namespace: state.ZarfNamespaceName,
+				Labels:    map[string]string{state.ZarfPackageInfoLabel: p.Name},
+			},
+			Data: map[string][]byte{"data": b},
+		}
+		_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &secret, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	buf := new(bytes.Buffer)
+	listOpts := packageListOptions{
+		outputFormat:      outputJSON,
+		outputWriter:      buf,
+		cluster:           c,
+		namespaceOverride: "test2",
+	}
+	require.NoError(t, listOpts.run(ctx, nil))
+	require.JSONEq(t, `[
+  {
+    "package": "package2",
+    "namespaceOverride": "test2",
+    "version": "",
+    "connectivity": "airgap",
+    "components": null
+  }
+]`, buf.String())
+}
+
+func TestPackageListCommandAcceptsOptionalPackageName(t *testing.T) {
+	t.Parallel()
+
+	cmd := newPackageListCommand()
+
+	require.Equal(t, "list [PACKAGE_NAME]", cmd.Use)
+	require.NotNil(t, cmd.Args)
+	require.Equal(t, "n", cmd.Flag("namespace").Shorthand)
+	require.NoError(t, cmd.Args(cmd, []string{"package1"}))
+	require.Error(t, cmd.Args(cmd, []string{"package1", "package2"}))
+}
+
+func TestPackageListNamedPackage(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	c := &cluster.Cluster{Clientset: fake.NewClientset()}
+	packages := []state.DeployedPackage{
+		{
+			Name: "package1",
+			Data: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Version: "0.42.0"},
+			},
+			DeployedComponents: []state.DeployedComponent{{Name: "component1"}},
+		},
+		{
+			Name:              "package2",
+			NamespaceOverride: "test2",
+			Data: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Version: "1.0.0"},
+			},
+			DeployedComponents: []state.DeployedComponent{{Name: "component2"}},
+		},
+	}
+
+	for _, p := range packages {
+		b, err := json.Marshal(p)
+		require.NoError(t, err)
+		secret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      p.GetSecretName(),
+				Namespace: state.ZarfNamespaceName,
+				Labels:    map[string]string{state.ZarfPackageInfoLabel: p.Name},
+			},
+			Data: map[string][]byte{"data": b},
+		}
+		_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &secret, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	buf := new(bytes.Buffer)
+	listOpts := packageListOptions{
+		outputFormat: outputJSON,
+		outputWriter: buf,
+		cluster:      c,
+	}
+	require.NoError(t, listOpts.run(ctx, []string{"package1"}))
+	require.JSONEq(t, `[
+  {
+    "package": "package1",
+    "namespaceOverride": "",
+    "version": "0.42.0",
+    "connectivity": "airgap",
+    "components": ["component1"]
+  }
+]`, buf.String())
+
+	buf.Reset()
+	listOpts.namespaceOverride = "test2"
+	require.NoError(t, listOpts.run(ctx, []string{"package2"}))
+	require.JSONEq(t, `[
+  {
+    "package": "package2",
+    "namespaceOverride": "test2",
+    "version": "1.0.0",
+    "connectivity": "airgap",
+    "components": ["component2"]
+  }
+]`, buf.String())
+
+	listOpts.namespaceOverride = ""
+	require.Error(t, listOpts.run(ctx, []string{"package2"}))
+	require.Error(t, listOpts.run(ctx, []string{"missing"}))
 }
 
 func TestPackageInspectManifests(t *testing.T) {
@@ -215,7 +350,9 @@ func TestPackageInspectManifests(t *testing.T) {
 				confirm: true,
 				output:  tmpdir,
 			}
-			err := createOpts.run(context.Background(), []string{tc.definitionDir})
+			cmd := &cobra.Command{}
+			cmd.SetContext(context.Background())
+			err := createOpts.run(cmd, []string{tc.definitionDir})
 			require.NoError(t, err)
 
 			// Inspect manifests
@@ -379,7 +516,9 @@ func checkPackageValuesInspectFiles(t *testing.T, tc ValuesFilesTestData) {
 		confirm: true,
 		output:  tmpdir,
 	}
-	err := createOpts.run(context.Background(), []string{tc.definitionDir})
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+	err := createOpts.run(cmd, []string{tc.definitionDir})
 	require.NoError(t, err)
 
 	// Inspect values files
@@ -580,7 +719,9 @@ func TestPackageInspectDocumentation(t *testing.T) {
 				confirm: true,
 				output:  tmpdir,
 			}
-			err := createOpts.run(ctx, []string{tc.definitionDir})
+			cmd := &cobra.Command{}
+			cmd.SetContext(ctx)
+			err := createOpts.run(cmd, []string{tc.definitionDir})
 			require.NoError(t, err)
 
 			// Inspect documentation
@@ -592,9 +733,9 @@ func TestPackageInspectDocumentation(t *testing.T) {
 			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
 
 			// Create a cobra command with context for the run method
-			cmd := &cobra.Command{}
-			cmd.SetContext(ctx)
-			err = opts.run(cmd, []string{packagePath})
+			inspectCmd := &cobra.Command{}
+			inspectCmd.SetContext(ctx)
+			err = opts.run(inspectCmd, []string{packagePath})
 
 			if tc.expectedErr != "" {
 				require.ErrorContains(t, err, tc.expectedErr)
@@ -631,6 +772,19 @@ func TestSignConfirmNotViperBound(t *testing.T) {
 	require.Equal(t, "false", f.DefValue, "--confirm must default to false and must not be bound to viper")
 }
 
+func TestComponentPublishConfirm(t *testing.T) {
+	t.Parallel()
+
+	cmd := newComponentPublishCommand(newTestViper())
+	flag := cmd.Flags().Lookup("confirm")
+	require.NotNil(t, flag)
+	require.Equal(t, "false", flag.DefValue)
+
+	o := componentPublishOptions{confirm: true}
+	signOpts := o.buildSignManifestOptions(nil, newTestViper(), VPkgSignTlogUpload, o.confirm)
+	require.True(t, signOpts.SkipConfirmation)
+}
+
 func TestSignTlogUploadNotDefaulted(t *testing.T) {
 	t.Parallel()
 	v := newTestViper()
@@ -651,6 +805,104 @@ func TestSignTlogUploadEnvRespected(t *testing.T) {
 	cmd := newPackageSignCommand(v)
 	f := cmd.Flags().Lookup("tlog-upload")
 	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
+}
+
+func TestPackageSigningTlogUploadNotDefaulted(t *testing.T) {
+	t.Parallel()
+
+	v := newTestViper()
+	for _, key := range []string{VPkgCreateTlogUpload, VPkgSignTlogUpload} {
+		require.Falsef(t, v.IsSet(key), "%s must not have a default; IsSet distinguishes an explicit opt-out", key)
+	}
+}
+
+func TestPackageSigningTlogUpload(t *testing.T) {
+	t.Parallel()
+
+	t.Run("keyless defaults tlog upload", func(t *testing.T) {
+		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		require.NotNil(t, opts)
+		require.True(t, opts.TlogUpload)
+	})
+	t.Run("CLI tlog opt-out is honored", func(t *testing.T) {
+		cmd := &cobra.Command{}
+		cmd.Flags().Bool("tlog-upload", false, "")
+		require.NoError(t, cmd.Flags().Set("tlog-upload", "false"))
+		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(cmd, newTestViper(), VPkgCreateTlogUpload, false, false)
+		require.NotNil(t, opts)
+		require.False(t, opts.TlogUpload)
+	})
+	t.Run("config tlog opt-out is honored", func(t *testing.T) {
+		v := newTestViper()
+		v.Set(VPkgCreateTlogUpload, false)
+		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, v, VPkgCreateTlogUpload, false, false)
+		require.NotNil(t, opts)
+		require.False(t, opts.TlogUpload)
+	})
+}
+
+func TestPackageSigningModeGuard(t *testing.T) {
+	t.Parallel()
+
+	for _, flags := range []packageSigningFlags{
+		{identityToken: "token"},
+		{signingKeyPath: "key"},
+		{keyless: true},
+	} {
+		opts := flags.buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		require.NotNil(t, opts)
+		if flags.signingKeyPath != "" || flags.keyless {
+			require.NoError(t, flags.validateSigningMode())
+			continue
+		}
+		require.EqualError(t, flags.validateSigningMode(), "--signing-key is required (or pass --keyless for Sigstore keyless flow)")
+	}
+}
+
+func TestBuildSignBlobOptions(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no signing inputs leaves the package unsigned", func(t *testing.T) {
+		opts := (&packageSigningFlags{}).buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		require.Nil(t, opts)
+	})
+
+	t.Run("keyless requests signing with defaults", func(t *testing.T) {
+		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		expected := signing.DefaultSignBlobOptions()
+		expected.TlogUpload = true
+		expected.OIDC.ClientID = ""
+		require.Equal(t, &expected, opts)
+	})
+}
+
+func TestPackageSigningModeGuardRejectsViperConflicts(t *testing.T) {
+	t.Parallel()
+
+	for name, keys := range map[string]packageSigningViperKeys{
+		"package create": {
+			signingKey: VPkgCreateSigningKey,
+			keyless:    VPkgCreateKeyless,
+		},
+		"package sign and component commands": {
+			signingKey: VPkgSignSigningKey,
+			keyless:    VPkgSignKeyless,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			v := newTestViper()
+			v.Set(keys.signingKey, "configured-key")
+			v.Set(keys.keyless, true)
+			var flags packageSigningFlags
+			newSigningFlagSet(v, &flags, keys, "", "")
+
+			require.True(t, flags.keyless)
+			require.Equal(t, "configured-key", flags.signingKeyPath)
+			require.EqualError(t, flags.validateSigningMode(), "--keyless cannot be used with --signing-key")
+		})
+	}
 }
 
 func TestVerifyInsecureIgnoreTlogDefaultTrue(t *testing.T) {

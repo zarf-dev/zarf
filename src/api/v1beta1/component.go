@@ -3,6 +3,14 @@
 
 package v1beta1
 
+import (
+	_ "crypto/sha256" // Register SHA-256 for image digest validation.
+	_ "crypto/sha512" // Register SHA-384 and SHA-512 for image digest validation.
+	"fmt"
+
+	"github.com/distribution/reference"
+)
+
 // Component is the primary functional grouping of assets to deploy by Zarf.
 type Component struct {
 	// The name of the component.
@@ -16,6 +24,48 @@ type Component struct {
 	ComponentSpec `json:",inline"`
 }
 
+// ImageReference exposes the full image reference and its optional tag and digest.
+type ImageReference struct {
+	Reference string `json:"reference"`
+	Tag       string `json:"tag"`
+	Digest    string `json:"digest"`
+}
+
+// GetImageByID returns the reference for the given non-empty image ID.
+// Tag and Digest are empty when absent from the image reference.
+func (c Component) GetImageByID(id string) (ImageReference, error) {
+	if id == "" {
+		return ImageReference{}, fmt.Errorf("image ID must not be empty")
+	}
+	parse := func(name string) (ImageReference, error) {
+		ref, err := reference.Parse(name)
+		if err != nil {
+			return ImageReference{}, fmt.Errorf("invalid image reference %q for ID %q in component %q: %w", name, id, c.Name, err)
+		}
+		result := ImageReference{Reference: name}
+		if tagged, ok := ref.(reference.Tagged); ok {
+			result.Tag = tagged.Tag()
+		}
+		if digested, ok := ref.(reference.Digested); ok {
+			result.Digest = digested.Digest().String()
+		}
+		return result, nil
+	}
+	for _, image := range c.Images {
+		if image.ID == id {
+			return parse(image.Name)
+		}
+	}
+	for _, archive := range c.ImageArchives {
+		for _, image := range archive.Images {
+			if image.ID == id {
+				return parse(image.Name)
+			}
+		}
+	}
+	return ImageReference{}, fmt.Errorf("no image with ID %q in component %q", id, c.Name)
+}
+
 // GetImages returns all image names specified in the component, including those from ImageArchives.
 func (c Component) GetImages() []string {
 	images := []string{}
@@ -23,14 +73,11 @@ func (c Component) GetImages() []string {
 		images = append(images, img.Name)
 	}
 	for _, ia := range c.ImageArchives {
-		images = append(images, ia.Images...)
+		for _, image := range ia.Images {
+			images = append(images, image.Name)
+		}
 	}
 	return images
-}
-
-// RequiresCluster returns true if the component requires a cluster connection to deploy.
-func (c Component) RequiresCluster() bool {
-	return len(c.Images) > 0 || len(c.Charts) > 0 || len(c.Manifests) > 0 || len(c.Repositories) > 0
 }
 
 // ComponentTarget filters a component to only apply for a given local OS at deploy time.
@@ -68,19 +115,25 @@ type ComponentImportRemote struct {
 }
 
 // Service identifies which Zarf CLI service a component provides.
-type Service string
+type Service struct {
+	// The name of the Zarf CLI service this component provides.
+	Name ServiceName `json:"name" jsonschema:"enum=registry,enum=seed-registry,enum=injector,enum=agent,enum=git-server"`
+}
+
+// ServiceName identifies a Zarf CLI service.
+type ServiceName string
 
 const (
 	// ServiceRegistry indicates a component that provides the in-cluster registry.
-	ServiceRegistry Service = "registry"
+	ServiceRegistry ServiceName = "registry"
 	// ServiceSeedRegistry indicates a component that provides the seed registry used during init.
-	ServiceSeedRegistry Service = "seed-registry"
+	ServiceSeedRegistry ServiceName = "seed-registry"
 	// ServiceInjector indicates a component that provides the Zarf injector.
-	ServiceInjector Service = "injector"
+	ServiceInjector ServiceName = "injector"
 	// ServiceAgent indicates a component that provides the Zarf agent.
-	ServiceAgent Service = "agent"
+	ServiceAgent ServiceName = "agent"
 	// ServiceGitServer indicates a component that provides the in-cluster git server.
-	ServiceGitServer Service = "git-server"
+	ServiceGitServer ServiceName = "git-server"
 )
 
 // ServerSideApplyMode controls when server-side apply is used during deploy.
@@ -108,13 +161,13 @@ type KustomizeManifest struct {
 // Manifest defines raw manifests Zarf will deploy as a helm chart.
 type Manifest struct {
 	// A name to give this collection of manifests; this will become the name of the dynamically-created helm chart.
-	Name string `json:"name" jsonschema:"maxLength=40"`
+	Name string `json:"name" jsonschema:"maxLength=40,pattern=^[^/\\\\]*$"`
 	// The namespace to deploy the manifests to.
 	Namespace string `json:"namespace,omitempty"`
 	// List of local K8s YAML files or remote URLs to deploy (in order).
 	Files []string `json:"files,omitempty"`
 	// Kustomize settings for this manifest.
-	Kustomize *KustomizeManifest `json:"kustomize,omitempty"`
+	Kustomize KustomizeManifest `json:"kustomize,omitzero"`
 	// Whether to skip waiting for manifest resources to be ready before continuing.
 	SkipWait bool `json:"skipWait,omitempty"`
 	// Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy. Defaults to "auto" when omitted.
@@ -123,18 +176,19 @@ type Manifest struct {
 	EnableTemplating bool `json:"enableTemplating,omitempty"`
 }
 
-// Chart defines a helm chart to be deployed.
+// Chart defines a helm chart to be deployed. Imports may override the source's
+// version or ref, but must retain its type, URL, name, and path.
 type Chart struct {
 	// The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repository.
-	Name string `json:"name"`
+	Name string `json:"name" jsonschema:"pattern=^[^/\\\\]*$"`
 	// The Helm repository where the chart is stored.
-	HelmRepository *HelmRepositorySource `json:"helmRepository,omitempty" jsonschema:"oneof_required=helmRepository"`
+	HelmRepository *HelmRepositorySource `json:"helmRepository,omitempty"`
 	// The Git repository where the chart is stored.
-	Git *GitSource `json:"git,omitempty" jsonschema:"oneof_required=git"`
+	Git *GitSource `json:"git,omitempty"`
 	// The local path where the chart is stored.
-	Local *LocalSource `json:"local,omitempty" jsonschema:"oneof_required=local"`
+	Local *LocalSource `json:"local,omitempty"`
 	// The OCI registry where the chart is stored.
-	OCI *OCISource `json:"oci,omitempty" jsonschema:"oneof_required=oci"`
+	OCI *OCISource `json:"oci,omitempty"`
 	// The namespace to deploy the chart to.
 	Namespace string `json:"namespace,omitempty"`
 	// The name of the Helm release to create (defaults to the Zarf name of the chart).
@@ -174,9 +228,9 @@ type HelmRepositorySource struct {
 	// The name of a chart within a Helm repository.
 	Name string `json:"name,omitempty"`
 	// The URL of the chart repository where the Helm chart is stored.
-	URL string `json:"url"`
+	URL string `json:"url,omitempty"`
 	// The version of the chart in the Helm repository.
-	Version string `json:"version"`
+	Version string `json:"version,omitempty"`
 }
 
 // GitRef selects a single Git reference. Exactly one of Tag, Branch, or Commit must be set.
@@ -192,11 +246,11 @@ type GitRef struct {
 // GitSource represents a Helm chart stored in a Git repository.
 type GitSource struct {
 	// The URL of the Git repository where the Helm chart is stored. Must not contain an @ref suffix.
-	URL string `json:"url"`
+	URL string `json:"url,omitempty"`
 	// The subdirectory containing the chart within a Git repo.
 	Path string `json:"path,omitempty"`
 	// The Git reference to check out. Required for charts.
-	Ref GitRef `json:"ref"`
+	Ref GitRef `json:"ref,omitzero"`
 }
 
 // LocalSource represents a Helm chart stored locally.
@@ -216,9 +270,9 @@ type OCIRef struct {
 // OCISource represents a Helm chart stored in an OCI registry.
 type OCISource struct {
 	// The URL of the OCI registry where the Helm chart is stored.
-	URL string `json:"url"`
+	URL string `json:"url,omitempty"`
 	// The OCI reference to pull. Exactly one of Ref.Tag or Ref.Digest must be set.
-	Ref OCIRef `json:"ref"`
+	Ref OCIRef `json:"ref,omitzero"`
 }
 
 // File defines a file to deploy.
@@ -239,12 +293,24 @@ type File struct {
 	EnableTemplating bool `json:"enableTemplating,omitempty"`
 }
 
+// ImageSource identifies where an image is read during package creation.
+type ImageSource string
+
+const (
+	// ImageSourceRegistry reads an image from a registry.
+	ImageSourceRegistry ImageSource = "registry"
+	// ImageSourceDaemon reads an image from the local container daemon.
+	ImageSourceDaemon ImageSource = "daemon"
+)
+
 // Image defines an OCI image to include in the package.
 type Image struct {
 	// The image reference.
 	Name string `json:"name"`
+	// Optional ID, unique within the component; matching IDs let importing components replace regular images.
+	ID string `json:"id,omitempty"`
 	// The source to pull the image from. Defaults to "registry".
-	Source string `json:"source,omitempty" jsonschema:"enum=registry,enum=daemon,default=registry"`
+	Source ImageSource `json:"source,omitempty" jsonschema:"enum=registry,enum=daemon,default=registry"`
 }
 
 // ImageArchive defines a tar archive of images to include in the package.
@@ -252,7 +318,15 @@ type ImageArchive struct {
 	// The path to the tar archive.
 	Path string `json:"path"`
 	// The list of images contained in the archive.
-	Images []string `json:"images"`
+	Images []ArchiveImage `json:"images"`
+}
+
+// ArchiveImage identifies an image selected from an archive.
+type ArchiveImage struct {
+	// The image reference contained in the archive.
+	Name string `json:"name"`
+	// Optional ID, unique across regular and archive images in the component. Does not enable import overrides.
+	ID string `json:"id,omitempty"`
 }
 
 // Repository defines a git repository to include in the package.

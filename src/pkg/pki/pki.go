@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 

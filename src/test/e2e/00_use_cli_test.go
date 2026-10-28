@@ -15,10 +15,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/otiai10/copy"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test"
@@ -56,6 +56,36 @@ func TestTrustedRootCreate(t *testing.T) {
 func TestUseCLI(t *testing.T) {
 	t.Parallel()
 
+	t.Run("zarf dev upgrade", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(`apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: upgrade
+  version: 1.0.0
+components:
+  - name: app
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+`), 0o600))
+
+		stdOut, stdErr, err := e2e.Zarf(t, "dev", "upgrade", dir)
+		require.NoError(t, err, stdOut, stdErr)
+		require.YAMLEq(t, `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: upgrade
+  version: 1.0.0
+components:
+  - name: app
+    optional: true
+    images:
+      - name: ghcr.io/stefanprodan/podinfo:6.4.0
+        source: registry
+`, stdOut)
+	})
+
 	// TODO once cmd is refactored to accept an io.Writer, move this test to DevInspectDefinitionOptions.Run()
 	t.Run("zarf dev inspect definition", func(t *testing.T) {
 		t.Parallel()
@@ -79,6 +109,48 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, string(b))
 	})
 
+	t.Run("zarf dev inspect v1beta1 component and package resources", func(t *testing.T) {
+		t.Parallel()
+		base := filepath.Join("src", "test", "packages", "15-component-publish-v1beta1")
+		sources := []string{
+			filepath.Join(base, "component.yaml"),
+			filepath.Join(base, "zarf-inspect.yaml"),
+		}
+		for _, source := range sources {
+			t.Run(filepath.Base(source), func(t *testing.T) {
+				t.Parallel()
+				stdOut, stdErr, err := e2e.Zarf(t, "dev", "inspect", "manifests", source)
+				require.NoError(t, err, stdOut, stdErr)
+				require.Contains(t, stdOut, "name: published-component")
+				require.Contains(t, stdOut, "name: local-chart")
+
+				stdOut, stdErr, err = e2e.Zarf(t, "dev", "inspect", "values-files", source, "--components=published-component")
+				require.NoError(t, err, stdOut, stdErr)
+				require.Contains(t, stdOut, "# associated chart: local-chart")
+				require.Contains(t, stdOut, "replicaCount: 1")
+			})
+		}
+
+		stdOut, stdErr, err := e2e.Zarf(t, "dev", "inspect", "definition", sources[0])
+		require.NoError(t, err, stdOut, stdErr)
+		require.Contains(t, stdOut, "kind: ZarfComponentConfig")
+		require.Contains(t, stdOut, "name: published-component")
+		require.Contains(t, stdOut, "name: local-chart")
+	})
+
+	t.Run("zarf dev inspect values-files with components", func(t *testing.T) {
+		t.Parallel()
+		pathToPackage := filepath.Join("src", "cmd", "testdata", "inspect-values-files", "chart")
+
+		stdOut, stdErr, err := e2e.Zarf(t,
+			"dev", "inspect", "values-files", pathToPackage,
+			"--components=httpd-local",
+			"--deploy-set-variables=PORT=8080,REPLICAS=2,DESCRIPTION=selected",
+		)
+		require.NoError(t, err, stdOut, stdErr)
+		require.Equal(t, 1, strings.Count(stdOut, "# associated chart: htppd-local"))
+		require.Contains(t, stdOut, `replicaCount: "2"`)
+	})
 	t.Run("zarf dev template", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
@@ -358,6 +430,51 @@ components:
 	})
 }
 
+func TestDevLintV1Beta1(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name     string
+		filename string
+		content  string
+	}{
+		{
+			name:     "package",
+			filename: "zarf.yaml",
+			content: `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: lint-package
+components:
+  - name: app
+    images:
+      - name: busybox:1.0
+`,
+		},
+		{
+			name:     "component config",
+			filename: "component.yaml",
+			content: `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: lint-component
+component:
+  images:
+    - name: busybox:1.0
+`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			path := filepath.Join(t.TempDir(), tc.filename)
+			require.NoError(t, os.WriteFile(path, []byte(tc.content), 0o600))
+			stdOut, stdErr, err := e2e.Zarf(t, "dev", "lint", path)
+			require.NoError(t, err, stdOut, stdErr)
+			require.Contains(t, stdOut+stdErr, "Image not pinned with digest")
+		})
+	}
+}
+
 func TestBuildMachineInfo(t *testing.T) {
 	t.Parallel()
 
@@ -400,13 +517,13 @@ func TestBuildMachineInfo(t *testing.T) {
 			require.NoError(t, err, stdOut, stdErr)
 
 			if tt.withBuildMachineInfo {
-				require.NotEmpty(t, pkgLayout.AsV1alpha1().Build.Terminal)
-				require.NotEmpty(t, pkgLayout.AsV1alpha1().Build.User)
+				require.NotEmpty(t, pkgLayout.Definition().Build.Hostname)
+				require.NotEmpty(t, pkgLayout.Definition().Build.User)
 				require.Contains(t, stdOut, "terminal:")
 				require.Contains(t, stdOut, "user:")
 			} else {
-				require.Empty(t, pkgLayout.AsV1alpha1().Build.Terminal)
-				require.Empty(t, pkgLayout.AsV1alpha1().Build.User)
+				require.Empty(t, pkgLayout.Definition().Build.Hostname)
+				require.Empty(t, pkgLayout.Definition().Build.User)
 				require.NotContains(t, stdOut, "terminal:")
 				require.NotContains(t, stdOut, "user:")
 			}

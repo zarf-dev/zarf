@@ -10,7 +10,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
@@ -18,6 +20,248 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestPackageDefinitionV1Beta1ImageIDs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		imported []v1beta1.Image
+		middle   []v1beta1.Image
+		head     []v1beta1.Image
+		want     []v1beta1.Image
+	}{
+		{
+			name:     "matching ID replaces reference and overrides source",
+			imported: []v1beta1.Image{{ID: "registry", Name: "registry:3", Source: "daemon"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "registry"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "registry"}},
+		},
+		{
+			name:     "matching ID inherits omitted source",
+			imported: []v1beta1.Image{{ID: "registry", Name: "registry:3", Source: "daemon"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "daemon"}},
+		},
+		{
+			name:     "matching name inherits ID for later replacement",
+			imported: []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+			middle:   []v1beta1.Image{{Name: "registry:3", Source: "daemon"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "daemon"}},
+		},
+		{
+			name:     "matching name adds ID for later replacement",
+			imported: []v1beta1.Image{{Name: "registry:3", Source: "daemon"}},
+			middle:   []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3", Source: "daemon"}},
+		},
+		{
+			name:     "matching name overrides different ID",
+			imported: []v1beta1.Image{{ID: "old", Name: "registry:3"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+		},
+		{
+			name:     "empty IDs do not match and new images append",
+			imported: []v1beta1.Image{{Name: "nginx:1.27"}, {ID: "registry", Name: "registry:3"}},
+			head:     []v1beta1.Image{{Name: "redis:7"}, {ID: "app", Name: "example.com/app:1"}},
+			want:     []v1beta1.Image{{Name: "nginx:1.27"}, {ID: "registry", Name: "registry:3"}, {Name: "redis:7"}, {ID: "app", Name: "example.com/app:1"}},
+		},
+		{
+			name:     "ID match takes precedence over earlier name match",
+			imported: []v1beta1.Image{{ID: "other", Name: "enterprise.example.com/registry:3"}, {ID: "registry", Name: "registry:3"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "other", Name: "enterprise.example.com/registry:3"}, {ID: "registry", Name: "enterprise.example.com/registry:3"}},
+		},
+		{
+			name:     "nearest importing component wins in nested imports",
+			imported: []v1beta1.Image{{ID: "registry", Name: "registry:3"}},
+			middle:   []v1beta1.Image{{ID: "registry", Name: "mirror.example.com/registry:3"}},
+			head:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+			want:     []v1beta1.Image{{ID: "registry", Name: "enterprise.example.com/registry:3"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			writeYAML := func(name string, value any) {
+				t.Helper()
+				data, err := goyaml.MarshalWithOptions(value, goyaml.UseJSONMarshaler())
+				require.NoError(t, err)
+				require.NoError(t, os.WriteFile(filepath.Join(dir, name), data, 0o600))
+			}
+			writeYAML("base.yaml", v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfComponentConfig,
+				Metadata:   v1beta1.ComponentMetadata{Name: "base"},
+				Component:  v1beta1.ComponentSpec{Images: tt.imported},
+			})
+			writeYAML("middle.yaml", v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfComponentConfig,
+				Metadata:   v1beta1.ComponentMetadata{Name: "middle"},
+				Component: v1beta1.ComponentSpec{
+					Import: v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "base.yaml"}}},
+					Images: tt.middle,
+				},
+			})
+			writeYAML(layout.ZarfYAML, v1beta1.Package{
+				APIVersion: v1beta1.APIVersion,
+				Kind:       v1beta1.ZarfPackageConfig,
+				Metadata:   v1beta1.PackageMetadata{Name: "image-ids"},
+				Components: []v1beta1.Component{{
+					Name: "app",
+					ComponentSpec: v1beta1.ComponentSpec{
+						Import: v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "middle.yaml"}}},
+						Images: tt.head,
+					},
+				}},
+			})
+
+			pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+			require.NoError(t, err)
+			require.Len(t, pkg.Components, 1)
+			require.Equal(t, tt.want, convert.PackageToV1beta1(pkg).Components[0].Images)
+		})
+	}
+}
+
+func TestV1Beta1ComponentImageIDs(t *testing.T) {
+	t.Parallel()
+
+	regular := func(id, name string) v1beta1.Image { return v1beta1.Image{ID: id, Name: name} }
+	archived := func(path, id, name string) v1beta1.ImageArchive {
+		return v1beta1.ImageArchive{Path: path, Images: []v1beta1.ArchiveImage{{ID: id, Name: name}}}
+	}
+	for _, tc := range []struct {
+		name     string
+		imported v1beta1.ComponentSpec
+		head     v1beta1.ComponentSpec
+		wantErr  bool
+	}{
+		{
+			name:     "regular image overrides imported regular image",
+			imported: v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:1")}},
+			head:     v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:2")}},
+		},
+		{
+			name:     "archive image is available by ID after import",
+			imported: v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("images.tar", "app", "app.internal/app:1")}},
+		},
+		{
+			name:     "regular image cannot override imported archive image",
+			imported: v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("images.tar", "app", "app.internal/app:1")}},
+			head:     v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:2")}},
+			wantErr:  true,
+		},
+		{
+			name:     "archive image cannot override imported regular image",
+			imported: v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:1")}},
+			head:     v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("images.tar", "app", "app.internal/app:2")}},
+			wantErr:  true,
+		},
+		{
+			name:     "archive images cannot override imported archive images",
+			imported: v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("images.tar", "app", "app.internal/app:1")}},
+			head:     v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("replacement.tar", "app", "app.internal/app:2")}},
+			wantErr:  true,
+		},
+		{
+			name:     "duplicate authored regular IDs cannot merge away",
+			imported: v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:1")}},
+			head:     v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:2"), regular("app", "example.com/app:3")}},
+			wantErr:  true,
+		},
+		{
+			name:     "duplicate imported regular IDs cannot be overridden away",
+			imported: v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:1"), regular("app", "example.com/app:2")}},
+			head:     v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/app:3")}},
+			wantErr:  true,
+		},
+		{
+			name: "duplicate IDs within an archive",
+			head: v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{{Path: "images.tar", Images: []v1beta1.ArchiveImage{
+				{ID: "app", Name: "app.internal/app:1"}, {ID: "app", Name: "app.internal/app:2"},
+			}}}},
+			wantErr: true,
+		},
+		{
+			name:    "duplicate IDs across authored archives",
+			head:    v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("one.tar", "app", "app.internal/app:1"), archived("two.tar", "app", "app.internal/app:2")}},
+			wantErr: true,
+		},
+		{
+			name: "duplicate IDs across authored regular and archive images",
+			head: v1beta1.ComponentSpec{
+				Images:        []v1beta1.Image{regular("app", "example.com/app:1")},
+				ImageArchives: []v1beta1.ImageArchive{archived("images.tar", "app", "app.internal/app:2")},
+			},
+			wantErr: true,
+		},
+		{
+			name:     "empty IDs are allowed across all image sources",
+			imported: v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("", "example.com/app:1")}},
+			head:     v1beta1.ComponentSpec{ImageArchives: []v1beta1.ImageArchive{archived("one.tar", "", "app.internal/app:1"), archived("two.tar", "", "app.internal/app:2")}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			write := func(name string, definition any) string {
+				t.Helper()
+				b, err := goyaml.Marshal(definition)
+				require.NoError(t, err)
+				path := filepath.Join(dir, name)
+				require.NoError(t, os.WriteFile(path, b, 0o600))
+				return path
+			}
+			write("base.yaml", v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfComponentConfig,
+				Metadata: v1beta1.ComponentMetadata{Name: "base"}, Component: tc.imported,
+			})
+			head := tc.head
+			head.Import.Local = []v1beta1.ComponentImportLocal{{Path: "base.yaml"}}
+			componentPath := write("component.yaml", v1beta1.ComponentConfig{
+				APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfComponentConfig,
+				Metadata: v1beta1.ComponentMetadata{Name: "app"}, Component: head,
+			})
+			packagePath := write("zarf.yaml", v1beta1.Package{
+				APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfPackageConfig,
+				Metadata: v1beta1.PackageMetadata{Name: "image-ids"},
+				Components: []v1beta1.Component{
+					{Name: "app", ComponentSpec: head},
+					// IDs are scoped to a component, not to the package.
+					{Name: "other", ComponentSpec: v1beta1.ComponentSpec{Images: []v1beta1.Image{regular("app", "example.com/other:1")}}},
+				},
+			})
+			ctx := testutil.TestContext(t)
+			pkg, packageErr := PackageDefinition(ctx, packagePath, DefinitionOptions{})
+			component, componentErr := ComponentDefinition(ctx, componentPath, ComponentOptions{})
+			if tc.wantErr {
+				for _, err := range []error{packageErr, componentErr} {
+					require.ErrorContains(t, err, `image ID "app" is not unique`)
+				}
+				return
+			}
+			require.NoError(t, packageErr)
+			require.NoError(t, componentErr)
+			resolved := convert.PackageToV1beta1(pkg).Components[0]
+			require.Equal(t, component.Component, resolved.ComponentSpec)
+			if tc.name == "regular image overrides imported regular image" {
+				require.Equal(t, tc.head.Images, resolved.Images)
+			}
+			if tc.name == "archive image is available by ID after import" {
+				image, err := resolved.GetImageByID("app")
+				require.NoError(t, err)
+				require.Equal(t, "app.internal/app:1", image.Reference)
+			}
+		})
+	}
+}
 
 func TestLoadPackageWithFlavors(t *testing.T) {
 	t.Parallel()
@@ -62,6 +306,150 @@ func TestValidateV1Beta1_FormatsValidationErrors(t *testing.T) {
 	require.EqualError(t, err, "package validation failed:\npackage does not contain any compatible components")
 }
 
+func TestPackageDefinitionV1Beta1InitServices(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		kind     string
+		service  string
+		imported bool
+		wantErr  string
+	}{
+		{name: "init with service", kind: "ZarfInitConfig", service: "registry"},
+		{name: "init without service", kind: "ZarfInitConfig"},
+		{name: "ordinary package with service", kind: "ZarfPackageConfig", service: "registry", wantErr: "only ZarfInitConfig packages may declare services"},
+		{name: "init with imported service", kind: "ZarfInitConfig", imported: true},
+		{name: "init overrides imported service", kind: "ZarfInitConfig", imported: true, service: "agent"},
+		{name: "ordinary package with imported service", kind: "ZarfPackageConfig", imported: true, wantErr: "only ZarfInitConfig packages may declare services"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			component := "  - name: registry\n"
+			if tt.imported {
+				imported := `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: registry
+component:
+  service:
+    name: registry
+`
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "registry.yaml"), []byte(imported), 0o600))
+				component += "    import:\n      local:\n        - path: registry.yaml\n"
+			}
+			if tt.service != "" {
+				component += "    service:\n      name: " + tt.service + "\n"
+			}
+			definition := "apiVersion: zarf.dev/v1beta1\nkind: " + tt.kind + "\nmetadata:\n  name: init-test\ncomponents:\n" + component
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+
+			pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.kind, string(pkg.Kind))
+			require.Len(t, pkg.Components, 1)
+			if tt.service != "" {
+				require.Equal(t, tt.service, string(pkg.Components[0].Service.Name))
+			} else if tt.imported {
+				require.Equal(t, "registry", string(pkg.Components[0].Service.Name))
+			} else {
+				require.Empty(t, pkg.Components[0].Service)
+			}
+		})
+	}
+}
+
+func TestPackageDefinitionV1Beta1ImageSources(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		components  string
+		expectedErr string
+	}{
+		{
+			name: "conflicting sources across components with equivalent references",
+			components: `  - name: first
+    images:
+      - name: nginx:1.27
+        source: daemon
+  - name: second
+    images:
+      - name: docker.io/library/nginx:1.27
+        source: registry
+`,
+			expectedErr: `image "docker.io/library/nginx:1.27" has conflicting sources "daemon" and "registry"`,
+		},
+		{
+			name: "omitted source defaults to registry",
+			components: `  - name: component
+    images:
+      - name: nginx:1.27
+      - name: nginx:1.27
+        source: daemon
+`,
+			expectedErr: `image "docker.io/library/nginx:1.27" has conflicting sources "registry" and "daemon"`,
+		},
+		{
+			name: "duplicate images with the same source are valid",
+			components: `  - name: first
+    images:
+      - name: nginx:1.27
+  - name: second
+    images:
+      - name: docker.io/library/nginx:1.27
+        source: registry
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			definition := "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: image-sources\ncomponents:\n" + tt.components
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+
+			_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestPackageDefinitionRejectsV1Beta1ChartPathComponents(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	packageYAML := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: path-components
+components:
+  - name: component
+    charts:
+      - name: ../escaped
+        namespace: default
+        releaseName: valid
+        local:
+          path: chart
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(packageYAML), 0o600))
+
+	_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+	require.ErrorContains(t, err, "linting error found")
+}
+
 func TestPackageDefinitionRejectsUnsupportedRawFields(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -96,6 +484,58 @@ documenttaion:
 			var lintErr *lint.LintError
 			require.ErrorAs(t, err, &lintErr)
 			require.NotEmpty(t, lintErr.Findings)
+		})
+	}
+}
+
+func TestPackageDefinitionValidatesSelectedDocument(t *testing.T) {
+	t.Parallel()
+	alpha := "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\ncomponents:\n  - name: component\n"
+	beta := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta
+  description: |+
+    selected beta
+
+components:
+  - name: component
+`
+	future := "apiVersion: zarf.dev/v99\n"
+	unknownField := "unsupported: true\n"
+	for _, tt := range []struct {
+		name       string
+		definition string
+		wantName   string
+		wantError  bool
+	}{
+		{name: "alpha then beta", definition: alpha + "---\n" + beta, wantName: "beta"},
+		{name: "beta then alpha", definition: beta + "---\n" + alpha, wantName: "beta"},
+		{name: "future then alpha", definition: future + "---\n" + alpha, wantName: "alpha"},
+		{name: "alpha then future", definition: alpha + "---\n" + future, wantName: "alpha"},
+		{name: "unknown beta field after alpha", definition: alpha + "---\n" + beta + unknownField, wantName: "beta", wantError: true},
+		{name: "unknown beta field before alpha", definition: beta + unknownField + "---\n" + alpha, wantName: "beta", wantError: true},
+		{name: "unknown alpha field after future", definition: future + "---\n" + alpha + unknownField, wantName: "alpha", wantError: true},
+		{name: "unknown alpha field before future", definition: alpha + unknownField + "---\n" + future, wantName: "alpha", wantError: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(tt.definition), 0o600))
+			pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+			if tt.wantError {
+				var lintErr *lint.LintError
+				require.ErrorAs(t, err, &lintErr)
+				require.Equal(t, tt.wantName, lintErr.PackageName)
+				require.Len(t, lintErr.Findings, 1)
+				require.Contains(t, lintErr.Findings[0].Description, "unsupported")
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantName, pkg.Metadata.Name)
+			if tt.wantName == "beta" {
+				require.Equal(t, "selected beta\n\n", pkg.Metadata.Description)
+			}
 		})
 	}
 }
@@ -166,6 +606,33 @@ components:
 	}
 }
 
+func TestPackageDefinitionRejectsV1Beta1GitURLsWithEmbeddedReferences(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	packageYAML := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: git-url-validation
+components:
+  - name: component
+    repositories:
+      - url: https://example.com/repository.git@legacy-tag
+    charts:
+      - name: chart
+        namespace: default
+        git:
+          url: https://example.com/charts.git@legacy-tag
+          ref:
+            tag: v1.0.0
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(packageYAML), 0o600))
+
+	_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
+	require.ErrorContains(t, err, "git URL \"https://example.com/repository.git@legacy-tag\" must not contain an embedded ref")
+	require.ErrorContains(t, err, "git URL \"https://example.com/charts.git@legacy-tag\" must not contain an embedded ref")
+}
+
 func TestPackageUsesFlavor(t *testing.T) {
 	t.Parallel()
 
@@ -232,14 +699,7 @@ func TestPackageUsesFlavor(t *testing.T) {
 func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 	t.Parallel()
 
-	// Enable the values feature for these tests
-	err := feature.Set([]feature.Feature{
-		{
-			Name:    feature.Values,
-			Enabled: true,
-		},
-	})
-	require.NoError(t, err)
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
 
 	tests := []struct {
 		name        string
@@ -286,9 +746,9 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		t.Parallel()
 		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-package"), DefinitionOptions{})
 		require.NoError(t, err)
-		require.Equal(t, v1beta1.APIVersion, defined.OriginalAPIVersion())
+		require.Equal(t, v1beta1.APIVersion, defined.APIVersion)
 
-		pkg := defined.AsV1alpha1()
+		pkg := convert.PackageToV1alpha1(defined)
 		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
 		require.Equal(t, "beta-package", pkg.Metadata.Name)
 		require.NotEmpty(t, pkg.Metadata.Architecture)
@@ -299,11 +759,11 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 
 		// The v1beta1 view preserves fields with no v1alpha1 representation — here an image's source.
 		// Collapsing to v1alpha1 on load (the previous approach) dropped these.
-		betaPkg := defined.AsV1beta1()
+		betaPkg := convert.PackageToV1beta1(defined)
 		require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
 		require.Len(t, betaPkg.Components, 1)
 		require.Equal(t, "nginx:1.27.0", betaPkg.Components[0].Images[0].Name)
-		require.Equal(t, "daemon", betaPkg.Components[0].Images[0].Source)
+		require.Equal(t, v1beta1.ImageSourceDaemon, betaPkg.Components[0].Images[0].Source)
 	})
 
 	t.Run("resolves a local component config import", func(t *testing.T) {
@@ -311,7 +771,7 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-with-import"), DefinitionOptions{})
 		require.NoError(t, err)
 
-		pkg := defined.AsV1alpha1()
+		pkg := convert.PackageToV1alpha1(defined)
 		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
 		require.Len(t, pkg.Components, 1)
 		require.Equal(t, "imported", pkg.Components[0].Name)
@@ -321,6 +781,7 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 
 func TestV1Beta1PackageDefinitionValuesSchemaValidation(t *testing.T) {
 	t.Parallel()
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
 	ctx := testutil.TestContext(t)
 	dir := filepath.Join("testdata", "v1beta1-invalid-values")
 
@@ -351,7 +812,7 @@ components:
 
 	definition, err := PackageDefinition(ctx, dir, DefinitionOptions{})
 	require.NoError(t, err)
-	require.Equal(t, "definition-only", definition.AsV1alpha1().Metadata.Name)
+	require.Equal(t, "definition-only", convert.PackageToV1alpha1(definition).Metadata.Name)
 
 	_, err = Package(ctx, dir, PackageOptions{})
 	require.ErrorContains(t, err, "unable to access local resource \"missing-values.yaml\"")
@@ -368,7 +829,7 @@ func TestLoadedPackageCloseInvalidatesResources(t *testing.T) {
 	require.ErrorContains(t, err, "package resources are closed")
 }
 
-func TestV1Beta1PackageDefinitionParentChartSourceTakesPriority(t *testing.T) {
+func TestV1Beta1PackageDefinitionRejectsConflictingChartSources(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 	dir := t.TempDir()
@@ -401,11 +862,8 @@ components:
             tag: 1.0.0
 `), 0o600))
 
-	defined, err := PackageDefinition(ctx, dir, DefinitionOptions{})
-	require.NoError(t, err)
-	chart := defined.AsV1beta1().Components[0].Charts[0]
-	require.Nil(t, chart.Local)
-	require.NotNil(t, chart.OCI)
+	_, err := PackageDefinition(ctx, dir, DefinitionOptions{})
+	require.ErrorContains(t, err, `chart "app" must include exactly one source`)
 }
 
 func TestPackageDefinitionErrors(t *testing.T) {
@@ -447,9 +905,9 @@ components:
 		dir := t.TempDir()
 		zarfYAML := `kind: ZarfPackageConfig
 metadata:
-  name: test
+  name: "###ZARF_PKG_TMPL_MYVAR###"
 components:
-  - name: test
+  - name: "###ZARF_PKG_TMPL_MYVAR###"
     required: true
     actions:
       onCreate:
@@ -460,6 +918,26 @@ components:
 		_, err := PackageDefinition(ctx, dir, DefinitionOptions{
 			SetVariables: map[string]string{}, // non-nil triggers fillActiveTemplate; MYVAR is absent
 		})
-		require.ErrorContains(t, err, "MYVAR")
+		require.ErrorContains(t, err, `template "MYVAR" must be '--set' when using the '--confirm' flag`)
+	})
+
+	t.Run("resolves package and component names from package templates", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		zarfYAML := `kind: ZarfPackageConfig
+metadata:
+  name: "###ZARF_PKG_TMPL_MYVAR###"
+components:
+  - name: "###ZARF_PKG_TMPL_MYVAR###"
+    required: true
+`
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(zarfYAML), 0o600))
+
+		pkg, err := PackageDefinition(ctx, dir, DefinitionOptions{
+			SetVariables: map[string]string{"MYVAR": "test-package"},
+		})
+		require.NoError(t, err)
+		require.Equal(t, "test-package", pkg.Metadata.Name)
+		require.Equal(t, "test-package", pkg.Components[0].Name)
 	})
 }

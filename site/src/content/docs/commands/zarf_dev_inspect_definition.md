@@ -12,10 +12,10 @@ Displays the fully rendered package definition
 
 ### Synopsis
 
-Displays the 'zarf.yaml' definition of a Zarf after package templating, flavors, and component imports are applied
+Displays a package definition after package templating, flavor selection, and component imports are applied
 
 ```
-zarf dev inspect definition [ DIRECTORY ] [flags]
+zarf dev inspect definition [ PATH ] [flags]
 ```
 
 ### Options
@@ -42,5 +42,5 @@ zarf dev inspect definition [ DIRECTORY ] [flags]
 
 ### SEE ALSO
 
-* [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to gather information about a Zarf package using its package definition
+* [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to gather information about a Zarf package from its definition
 

@@ -13,10 +13,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -141,7 +140,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 
 	// Verify checksum if provided
 	if opts.Shasum != "" {
-		if err := helpers.SHAsMatch(tmpPath, opts.Shasum); err != nil {
+		if err := checksum.VerifyFile(tmpPath, api.ChecksumSHA256, opts.Shasum); err != nil {
 			return nil, fmt.Errorf("SHA256 mismatch for %s: %w", tmpPath, err)
 		}
 	}
@@ -208,27 +207,30 @@ func identifySource(src string) (string, error) {
 }
 
 // GetPackageFromSourceOrCluster retrieves a package definition from a source or cluster.
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, namespaceOverride string, opts LoadOptions) (_ api.PackageDefinition, err error) {
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, namespaceOverride string, opts LoadOptions) (_ api.Package, err error) {
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
 	src = zoci.NormalizeOCISource(src)
 	srcType, err := identifySource(src)
 	if err != nil {
-		return api.PackageDefinition{}, err
+		return api.Package{}, err
 	}
 	if srcType == "cluster" {
 		if cluster == nil {
-			return api.PackageDefinition{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
+			return api.Package{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
 		}
 		depPkg, err := cluster.GetDeployedPackage(ctx, src, state.WithPackageNamespaceOverride(namespaceOverride))
 		if err != nil {
-			return api.PackageDefinition{}, err
+			return api.Package{}, err
 		}
-		definition := api.NewPackageDefinitionFromV1alpha1(depPkg.Data)
+		definition, err := depPkg.Definition()
+		if err != nil {
+			return api.Package{}, err
+		}
 		definition, err = filters.Apply(definition, opts.Filter)
 		if err != nil {
-			return api.PackageDefinition{}, err
+			return api.Package{}, err
 		}
 		return definition, nil
 	}
@@ -236,10 +238,10 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 	opts.LayerTypes = []zoci.LayerType{zoci.MetadataLayers}
 	pkgLayout, err := LoadPackage(ctx, src, opts)
 	if err != nil {
-		return api.PackageDefinition{}, err
+		return api.Package{}, err
 	}
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	return pkgLayout.PackageDefinition, nil
+	return pkgLayout.Definition(), nil
 }

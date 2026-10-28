@@ -12,10 +12,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 

@@ -8,11 +8,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 )
 
 func TestEmptyFilter_Apply(t *testing.T) {
-	pkg := PackageView{
-		Components: []ComponentView{
+	pkg := api.Package{
+		Components: []api.Component{
 			{Name: "component1"},
 			{Name: "component2"},
 		},
@@ -22,5 +23,5 @@ func TestEmptyFilter_Apply(t *testing.T) {
 	result, err := filter.Apply(pkg)
 
 	require.NoError(t, err)
-	require.Equal(t, []int{0, 1}, result)
+	require.Equal(t, pkg.Components, result)
 }

@@ -8,7 +8,7 @@ tableOfContents: false
 
 ## zarf dev inspect
 
-Commands to gather information about a Zarf package using its package definition
+Commands to gather information about a Zarf package from its definition
 
 ### Options
 
@@ -34,6 +34,6 @@ Commands to gather information about a Zarf package using its package definition
 
 * [zarf dev](/commands/zarf_dev/)	 - Commands useful for developing packages
 * [zarf dev inspect definition](/commands/zarf_dev_inspect_definition/)	 - Displays the fully rendered package definition
-* [zarf dev inspect manifests](/commands/zarf_dev_inspect_manifests/)	 - Template and output all manifests and charts referenced by the package definition
-* [zarf dev inspect values-files](/commands/zarf_dev_inspect_values-files/)	 - Creates, templates, and outputs the values-files to be sent to each chart
+* [zarf dev inspect manifests](/commands/zarf_dev_inspect_manifests/)	 - Template and output manifests and charts referenced by a package
+* [zarf dev inspect values-files](/commands/zarf_dev_inspect_values-files/)	 - Creates, templates, and outputs chart values files from a package definition
 

@@ -9,12 +9,12 @@ import (
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // PromptVariable prompts the user for a value for a variable
-func PromptVariable(ctx context.Context, variable v1alpha1.InteractiveVariable) (string, error) {
+func PromptVariable(ctx context.Context, variable api.InteractiveVariable) (string, error) {
 	if variable.Description != "" {
 		logger.From(ctx).Info(variable.Description)
 	}

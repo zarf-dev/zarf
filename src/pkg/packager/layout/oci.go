@@ -17,13 +17,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/images"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/memory"
@@ -33,12 +33,20 @@ import (
 const (
 	// ZarfLayerMediaTypeBlob is the media type for all Zarf package layer blobs.
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
+	// DocumentationLayerMediaTypeBlob is the media type for a v1beta1 documentation resource layer.
+	DocumentationLayerMediaTypeBlob = "application/vnd.zarf.documentation.layer.v1.blob"
 	// ZarfConfigMediaType is the media type for the Zarf package manifest config.
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
 	// ZarfComponentConfigMediaType is the media type for a v1beta1 Zarf component config OCI artifact.
 	ZarfComponentConfigMediaType = "application/vnd.zarf.component.config.v1+json"
 	// ComponentResourceMountPathAnnotation identifies where a component resource is mounted in its OCI artifact.
 	ComponentResourceMountPathAnnotation = "dev.zarf.mountPath"
+	// ResourceKindAnnotation identifies the kind of a granular package resource.
+	ResourceKindAnnotation = "dev.zarf.resource.kind"
+	// ResourceKindDocumentation identifies a documentation resource.
+	ResourceKindDocumentation = "documentation"
+	// ResourceKindSBOM identifies an SBOM resource.
+	ResourceKindSBOM = "sbom"
 	// OCITimestampFormat is the format used for the OCI timestamp annotation
 	OCITimestampFormat = time.RFC3339
 )
@@ -54,8 +62,9 @@ type manifestCache struct {
 	totalSize    int64                      // layers + config + manifest
 }
 
-// AnnotationsFromMetadata extracts OCI manifest annotations from Zarf package metadata.
-func AnnotationsFromMetadata(metadata v1alpha1.ZarfMetadata) map[string]string {
+// AnnotationsFromMetadata extracts OCI manifest annotations from a package definition.
+func AnnotationsFromMetadata(pkg api.Package) map[string]string {
+	metadata := pkg.Metadata
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,
@@ -75,9 +84,38 @@ func AnnotationsFromMetadata(metadata v1alpha1.ZarfMetadata) map[string]string {
 	if vendor := metadata.Vendor; vendor != "" {
 		annotations[ocispec.AnnotationVendor] = vendor
 	}
-	// annotations explicitly defined in metadata.Annotations take precedence over legacy fields.
+	// Explicit annotations take precedence over generated OCI annotations.
 	maps.Copy(annotations, metadata.Annotations)
 	return annotations
+}
+
+func resourceAnnotations(resourcePath string, pkg api.Package) map[string]string {
+	annotations := map[string]string{
+		ocispec.AnnotationTitle: resourcePath,
+	}
+	if !UsesGranularResourceLayout(pkg) {
+		return annotations
+	}
+
+	switch {
+	case strings.HasPrefix(resourcePath, DocumentationDir+"/"):
+		annotations[ResourceKindAnnotation] = ResourceKindDocumentation
+	case strings.HasPrefix(resourcePath, SBOMResourcesDir+"/"):
+		annotations[ResourceKindAnnotation] = ResourceKindSBOM
+	}
+	return annotations
+}
+
+func resourceMediaType(resourcePath string, pkg api.Package) string {
+	if UsesGranularResourceLayout(pkg) {
+		switch {
+		case strings.HasPrefix(resourcePath, DocumentationDir+"/"):
+			return DocumentationLayerMediaTypeBlob
+		case strings.HasPrefix(resourcePath, SBOMResourcesDir+"/"):
+			return SBOMMediaTypeSyftJSON
+		}
+	}
+	return ZarfLayerMediaTypeBlob
 }
 
 // computeManifest builds the OCI manifest for this layout, caches the result,
@@ -105,6 +143,18 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		checksumMap[parts[1]] = parts[0] // relpath → sha256hex
 	}
 
+	// Read the zarf.yaml from disk rather than using the in-memory package
+	// definition, which may have been component-filtered or otherwise mutated
+	// after load.
+	zarfYAMLBytes, err := os.ReadFile(filepath.Join(p.dirPath, ZarfYAML))
+	if err != nil {
+		return fmt.Errorf("reading %s for manifest: %w", ZarfYAML, err)
+	}
+	configDefinition, configPackage, err := pkgcfg.ParseMultiDocNative(ctx, zarfYAMLBytes)
+	if err != nil {
+		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
+	}
+
 	files, err := p.Files()
 	if err != nil {
 		return err
@@ -115,7 +165,7 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		totalLayerSize int64
 		blobs          = map[godigest.Digest]string{}
 	)
-	for filePath, name := range files {
+	for filePath := range files {
 		rel, err := filepath.Rel(p.dirPath, filePath)
 		if err != nil {
 			return err
@@ -145,7 +195,7 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		default:
 			// zarf.yaml and post-signing provenance files (signature, bundle) are
 			// small — read from disk.
-			hex, err := helpers.GetSHA256OfFile(filePath)
+			hex, err := checksum.GetSHA256OfFile(filePath)
 			if err != nil {
 				return err
 			}
@@ -161,44 +211,33 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		}
 
 		descs = append(descs, ocispec.Descriptor{
-			MediaType: ZarfLayerMediaTypeBlob,
-			Digest:    fileDigest,
-			Size:      fileSize,
-			Annotations: map[string]string{
-				ocispec.AnnotationTitle: name,
-			},
+			MediaType:   resourceMediaType(rel, configPackage),
+			Digest:      fileDigest,
+			Size:        fileSize,
+			Annotations: resourceAnnotations(rel, configPackage),
 		})
 		blobs[fileDigest] = filePath
 		totalLayerSize += fileSize
 	}
 
-	// Sort by digest for deterministic ordering.
+	// Sort by digest and title for deterministic ordering.
 	sort.Slice(descs, func(i, j int) bool {
-		return descs[i].Digest.String() < descs[j].Digest.String()
+		if descs[i].Digest != descs[j].Digest {
+			return descs[i].Digest < descs[j].Digest
+		}
+		return descs[i].Annotations[ocispec.AnnotationTitle] < descs[j].Annotations[ocispec.AnnotationTitle]
 	})
 
-	// Read the zarf.yaml from disk rather than using the in-memory package
-	// definition, which may have been component-filtered or otherwise mutated
-	// after load.
-	zarfYAMLBytes, err := os.ReadFile(filepath.Join(p.dirPath, ZarfYAML))
-	if err != nil {
-		return fmt.Errorf("reading %s for manifest: %w", ZarfYAML, err)
-	}
-	defined, err := pkgcfg.ParseMultiDoc(ctx, zarfYAMLBytes)
-	if err != nil {
-		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
-	}
-	zarfPkg := defined.AsV1alpha1()
-	configBytes, err := json.Marshal(zarfPkg)
+	configBytes, err := json.Marshal(configDefinition)
 	if err != nil {
 		return err
 	}
 	configDesc := content.NewDescriptorFromBytes(ZarfConfigMediaType, configBytes)
 
-	annotations := AnnotationsFromMetadata(zarfPkg.Metadata)
+	annotations := AnnotationsFromMetadata(configPackage)
 
 	// Back-compatible timestamp parsing → OCI format. Fall back to zero time (epoch) if the timestamp is absent.
-	t, parseErr := time.Parse(v1alpha1.BuildTimestampFormat, zarfPkg.Build.Timestamp)
+	t, parseErr := time.Parse(api.BuildTimestampFormat, configPackage.Build.Timestamp)
 	if parseErr != nil {
 		t = time.Time{}
 	}
@@ -308,7 +347,7 @@ func (p *PackageLayout) Resolve(_ context.Context, reference string) (ocispec.De
 	if p.cache == nil {
 		return ocispec.Descriptor{}, errdef.ErrNotFound
 	}
-	if reference == p.digest || reference == p.AsV1alpha1().Metadata.Name {
+	if reference == p.digest || reference == p.Definition().Metadata.Name {
 		return p.cache.desc, nil
 	}
 	return ocispec.Descriptor{}, errdef.ErrNotFound

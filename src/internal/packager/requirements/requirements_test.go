@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 )
 
@@ -20,15 +20,15 @@ func TestValidateVersionRequirements(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		pkg         v1alpha1.ZarfPackage
+		pkg         api.Package
 		cliVersion  string
 		expectError bool
 	}{
 		{
 			name: "no requirements",
-			pkg: v1alpha1.ZarfPackage{
-				Build: v1alpha1.ZarfBuildData{
-					VersionRequirements: []v1alpha1.VersionRequirement{},
+			pkg: api.Package{
+				Build: api.BuildData{
+					VersionRequirements: []api.VersionRequirement{},
 				},
 			},
 			cliVersion:  "v0.64.0",
@@ -36,9 +36,9 @@ func TestValidateVersionRequirements(t *testing.T) {
 		},
 		{
 			name: "requirement met",
-			pkg: v1alpha1.ZarfPackage{
-				Build: v1alpha1.ZarfBuildData{
-					VersionRequirements: []v1alpha1.VersionRequirement{
+			pkg: api.Package{
+				Build: api.BuildData{
+					VersionRequirements: []api.VersionRequirement{
 						{
 							Version: "v0.65.0",
 							Reason:  "values field requires v0.65.0+",
@@ -51,9 +51,9 @@ func TestValidateVersionRequirements(t *testing.T) {
 		},
 		{
 			name: "requirement not met",
-			pkg: v1alpha1.ZarfPackage{
-				Build: v1alpha1.ZarfBuildData{
-					VersionRequirements: []v1alpha1.VersionRequirement{
+			pkg: api.Package{
+				Build: api.BuildData{
+					VersionRequirements: []api.VersionRequirement{
 						{
 							Version: "v0.65.0",
 							Reason:  "values field requires v0.65.0+",
@@ -66,9 +66,9 @@ func TestValidateVersionRequirements(t *testing.T) {
 		},
 		{
 			name: "multiple requirements with one not met",
-			pkg: v1alpha1.ZarfPackage{
-				Build: v1alpha1.ZarfBuildData{
-					VersionRequirements: []v1alpha1.VersionRequirement{
+			pkg: api.Package{
+				Build: api.BuildData{
+					VersionRequirements: []api.VersionRequirement{
 						{
 							Version: "v0.60.0",
 							Reason:  "older requirement",
@@ -85,9 +85,9 @@ func TestValidateVersionRequirements(t *testing.T) {
 		},
 		{
 			name: "development version skips validation",
-			pkg: v1alpha1.ZarfPackage{
-				Build: v1alpha1.ZarfBuildData{
-					VersionRequirements: []v1alpha1.VersionRequirement{
+			pkg: api.Package{
+				Build: api.BuildData{
+					VersionRequirements: []api.VersionRequirement{
 						{
 							Version: "v0.65.0",
 							Reason:  "should be skipped in dev mode",
@@ -100,9 +100,9 @@ func TestValidateVersionRequirements(t *testing.T) {
 		},
 		{
 			name: "requirement met at exact version",
-			pkg: v1alpha1.ZarfPackage{
-				Build: v1alpha1.ZarfBuildData{
-					VersionRequirements: []v1alpha1.VersionRequirement{
+			pkg: api.Package{
+				Build: api.BuildData{
+					VersionRequirements: []api.VersionRequirement{
 						{
 							Version: "v0.65.0",
 							Reason:  "exact version match",
@@ -118,7 +118,7 @@ func TestValidateVersionRequirements(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config.CLIVersion = tt.cliVersion
-			err := ValidateVersionRequirements(tt.pkg)
+			err := ValidateVersionRequirements(tt.pkg.Build.VersionRequirements)
 			if tt.expectError {
 				var orErr *VersionRequirementsError
 				require.ErrorAs(t, err, &orErr)
@@ -129,16 +129,57 @@ func TestValidateVersionRequirements(t *testing.T) {
 	}
 }
 
+func TestValidateVersionRequirements_ReleaseCandidate(t *testing.T) {
+	originalVersion := config.CLIVersion
+	t.Cleanup(func() { config.CLIVersion = originalVersion })
+
+	tests := []struct {
+		name        string
+		cliVersion  string
+		required    string
+		expectError bool
+	}{
+		{name: "matching release", cliVersion: "v0.88.0-rc1", required: "v0.88.0"},
+		{name: "dotted release candidate", cliVersion: "v0.88.0-rc.1", required: "v0.88.0"},
+		{name: "build metadata", cliVersion: "v0.88.0-rc1+build.123", required: "v0.88.0"},
+		{name: "matching patch release", cliVersion: "v0.88.1-rc1", required: "v0.88.1"},
+		{name: "older requirement", cliVersion: "v0.88.0-rc1", required: "v0.87.0"},
+		{name: "newer patch required", cliVersion: "v0.88.0-rc1", required: "v0.88.1", expectError: true},
+		{name: "newer minor required", cliVersion: "v0.88.0-rc1", required: "v0.89.0", expectError: true},
+		{name: "newer major required", cliVersion: "v0.88.0-rc1", required: "v1.88.0", expectError: true},
+		{name: "exact release candidate", cliVersion: "v0.88.0-rc.1", required: "v0.88.0-rc.1"},
+		{name: "later release candidate", cliVersion: "v0.88.0-rc.2", required: "v0.88.0-rc.1"},
+		{name: "earlier release candidate", cliVersion: "v0.88.0-rc.1", required: "v0.88.0-rc.2", expectError: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config.CLIVersion = tt.cliVersion
+			reqs := []api.VersionRequirement{{Version: tt.required, Reason: "required feature"}}
+			err := ValidateVersionRequirements(reqs)
+			if tt.expectError {
+				var requirementErr *VersionRequirementsError
+				require.ErrorAs(t, err, &requirementErr)
+				require.Equal(t, tt.required, requirementErr.RequiredVersion)
+				require.Equal(t, tt.cliVersion, requirementErr.CurrentVersion)
+				require.Equal(t, reqs, requirementErr.Requirements)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestVersionRequirementsError_HighestVersion(t *testing.T) {
 	tests := []struct {
 		name         string
-		requirements []v1alpha1.VersionRequirement
+		requirements []api.VersionRequirement
 		expected     string
 		expectError  bool
 	}{
 		{
 			name: "multiple versions",
-			requirements: []v1alpha1.VersionRequirement{
+			requirements: []api.VersionRequirement{
 				{
 					Version: "v0.70.0",
 					Reason:  "newer requirement",
@@ -153,7 +194,7 @@ func TestVersionRequirementsError_HighestVersion(t *testing.T) {
 		},
 		{
 			name: "single version",
-			requirements: []v1alpha1.VersionRequirement{
+			requirements: []api.VersionRequirement{
 				{
 					Version: "v0.65.0",
 					Reason:  "single requirement",
@@ -164,13 +205,13 @@ func TestVersionRequirementsError_HighestVersion(t *testing.T) {
 		},
 		{
 			name:         "empty requirements",
-			requirements: []v1alpha1.VersionRequirement{},
+			requirements: []api.VersionRequirement{},
 			expected:     "",
 			expectError:  false,
 		},
 		{
 			name: "invalid version",
-			requirements: []v1alpha1.VersionRequirement{
+			requirements: []api.VersionRequirement{
 				{
 					Version: "invalid",
 					Reason:  "bad version",

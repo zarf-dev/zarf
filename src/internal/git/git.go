@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 const onlineRemoteName = "online-upstream"
@@ -23,4 +25,33 @@ func ParseRef(r string) plumbing.ReferenceName {
 	}
 	// Set the reference name to the provided ref.
 	return plumbing.ReferenceName(r)
+}
+
+// RepositoryAddress returns a Git URL that selects the repository reference.
+func RepositoryAddress(repository api.Repository) (string, error) {
+	if repository.Ref == nil {
+		return repository.URL, nil
+	}
+	url, _, err := transform.GitURLSplitRef(repository.URL)
+	if err != nil {
+		return "", err
+	}
+	switch {
+	case repository.Ref.Tag != "":
+		return url + "@" + repository.Ref.Tag, nil
+	case repository.Ref.Branch != "":
+		return url + "@refs/heads/" + repository.Ref.Branch, nil
+	case repository.Ref.Commit != "":
+		return url + "@" + repository.Ref.Commit, nil
+	default:
+		return url, nil
+	}
+}
+
+// repositoryLayoutAddress returns the URL used to derive the repository directory name.
+func repositoryLayoutAddress(repository api.Repository) (string, error) {
+	if repository.LegacyURL != "" {
+		return repository.LegacyURL, nil
+	}
+	return RepositoryAddress(repository)
 }

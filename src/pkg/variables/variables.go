@@ -9,14 +9,20 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 )
 
 // SetVariableMap represents a map of variable names to their set values
-type SetVariableMap map[string]*v1alpha1.SetVariable
+type SetVariableMap map[string]*SetVariable
+
+// SetVariable is the runtime value of a package variable.
+type SetVariable struct {
+	api.Variable
+	Value string
+}
 
 // GetSetVariable gets a variable set within a VariableConfig by its name
-func (vc *VariableConfig) GetSetVariable(name string) (*v1alpha1.SetVariable, bool) {
+func (vc *VariableConfig) GetSetVariable(name string) (*SetVariable, bool) {
 	variable, ok := vc.setVariableMap[strings.ToUpper(name)]
 	return variable, ok
 }
@@ -27,7 +33,7 @@ func (vc *VariableConfig) GetSetVariableMap() SetVariableMap {
 }
 
 // PopulateVariables handles setting the active variables within a VariableConfig's SetVariableMap
-func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVariable, presetVariables map[string]string) error {
+func (vc *VariableConfig) PopulateVariables(variables []api.InteractiveVariable, presetVariables map[string]string) error {
 	for name, value := range presetVariables {
 		vc.SetVariable(name, value, false, false, "")
 	}
@@ -71,10 +77,10 @@ func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVari
 }
 
 // SetVariable sets a variable in a VariableConfig's SetVariableMap
-func (vc *VariableConfig) SetVariable(name, value string, sensitive bool, autoIndent bool, varType v1alpha1.VariableType) {
+func (vc *VariableConfig) SetVariable(name, value string, sensitive bool, autoIndent bool, varType api.VariableType) {
 	name = strings.ToUpper(name)
-	vc.setVariableMap[name] = &v1alpha1.SetVariable{
-		Variable: v1alpha1.Variable{
+	vc.setVariableMap[name] = &SetVariable{
+		Variable: api.Variable{
 			Name:       name,
 			Sensitive:  sensitive,
 			AutoIndent: autoIndent,

@@ -14,6 +14,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -30,7 +31,7 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// DefinitionOptions are the optional parameters to load.PackageDefinition.
+// DefinitionOptions are the optional parameters to load.Package.
 type DefinitionOptions struct {
 	Flavor       string
 	SetVariables map[string]string
@@ -39,7 +40,6 @@ type DefinitionOptions struct {
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
-	// TODO: implement version requirements for v1beta1 remote resources
 	SkipVersionCheck bool
 	types.RemoteOptions
 }
@@ -52,7 +52,7 @@ type valuePlan struct {
 }
 
 type resolution struct {
-	definition      api.PackageDefinition
+	definition      api.Package
 	packageRoot     string
 	values          valuePlan
 	remoteResources []remoteResource
@@ -60,10 +60,10 @@ type resolution struct {
 
 // PackageDefinition returns a structurally validated package definition after flavors, imports, and set variables are applied.
 // It does not read package resource contents; callers that need values, schemas, charts, or manifests must use load.Package.
-func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (api.PackageDefinition, error) {
+func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (api.Package, error) {
 	resolved, err := resolve(ctx, packagePath, opts)
 	if err != nil {
-		return api.PackageDefinition{}, err
+		return api.Package{}, err
 	}
 	return resolved.definition, nil
 }
@@ -87,19 +87,23 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 		return resolution{}, err
 	}
 
-	version, err := pkgcfg.SelectVersion(ctx, b)
+	document, err := pkgcfg.SelectDocument(ctx, b)
 	if err != nil {
 		return resolution{}, err
 	}
+	var rawPackage any
+	if err := document.Unmarshal(&rawPackage); err != nil {
+		return resolution{}, fmt.Errorf("unable to check schema: %w", err)
+	}
 
 	var defined resolution
-	switch version {
+	switch document.APIVersion() {
 	case v1beta1.APIVersion:
-		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
+		pkg, err := pkgcfg.DecodeAs(ctx, document, pkgcfg.V1Beta1)
 		if err != nil {
 			return resolution{}, err
 		}
-		if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, b); err != nil {
+		if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, rawPackage); err != nil {
 			return resolution{}, err
 		}
 		defined, err = v1beta1Resolution(ctx, pkg, pkgPath, opts)
@@ -107,26 +111,26 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 			return resolution{}, err
 		}
 	case v1alpha1.APIVersion:
-		pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
+		pkg, err := pkgcfg.DecodeAs(ctx, document, pkgcfg.V1Alpha1)
 		if err != nil {
 			return resolution{}, err
 		}
-		if err := validatePackageSchemaV1Alpha1(pkg.Metadata.Name, b, opts.SetVariables); err != nil {
-			return resolution{}, err
-		}
-		defined, err = v1alpha1Resolution(ctx, pkg, pkgPath, opts)
+		defined, err = v1alpha1Resolution(ctx, pkg, pkgPath, rawPackage, opts)
 		if err != nil {
 			return resolution{}, err
 		}
 	default:
 		return resolution{}, fmt.Errorf("unrecognized API version")
 	}
+	if err := layout.ValidatePackagePaths(defined.definition); err != nil {
+		return resolution{}, err
+	}
 
 	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
 	return defined, nil
 }
 
-func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, opts DefinitionOptions) (resolution, error) {
+func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, rawPackage any, opts DefinitionOptions) (resolution, error) {
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 	var err error
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
@@ -150,11 +154,16 @@ func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath l
 			return resolution{}, err
 		}
 	}
+	// Validate the original document so fields discarded while decoding are still
+	// Done after package templates have been resolved and prompted.
+	if err := validatePackageSchemaV1Alpha1(pkg.Metadata.Name, rawPackage, opts.SetVariables); err != nil {
+		return resolution{}, err
+	}
 	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
 		return resolution{}, err
 	}
 	return resolution{
-		definition:  api.NewPackageDefinitionFromV1alpha1(pkg),
+		definition:  convert.PackageFromV1alpha1(pkg),
 		packageRoot: pkgPath.BaseDir,
 		values: valuePlan{
 			files:   pkg.Values.Files,
@@ -170,7 +179,7 @@ func v1beta1Resolution(ctx context.Context, pkg v1beta1.Package, pkgPath layout.
 		return resolution{}, err
 	}
 
-	imported, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor, opts.RemoteOptions, cachePath)
+	imported, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, pkg.Metadata.Architecture, opts.Flavor, opts.SkipVersionCheck, opts.RemoteOptions, cachePath)
 	if err != nil {
 		return resolution{}, err
 	}
@@ -181,7 +190,7 @@ func v1beta1Resolution(ctx context.Context, pkg v1beta1.Package, pkgPath layout.
 	}
 
 	return resolution{
-		definition:      api.NewPackageDefinitionFromV1beta1(pkg),
+		definition:      convert.PackageFromV1beta1(pkg),
 		packageRoot:     pkgPath.BaseDir,
 		remoteResources: imported.remoteResources,
 		values: valuePlan{
@@ -234,19 +243,12 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 		"flavor", flavor,
 	)
 
-	if !hasFlavoredComponentV1Beta1(pkg, flavor) {
-		l.Warn("flavor not used in package", "flavor", flavor)
-	}
 	if validationErrs := internalv1beta1.ValidatePackage(pkg); len(validationErrs) > 0 {
 		return fmt.Errorf("package validation failed:\n%w", validationErrs)
 	}
 
 	// Validate after import just in case
-	resolvedPackage, err := goyaml.Marshal(pkg)
-	if err != nil {
-		return fmt.Errorf("unable to marshal resolved package: %w", err)
-	}
-	if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, resolvedPackage); err != nil {
+	if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, pkg); err != nil {
 		return err
 	}
 
@@ -258,8 +260,8 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 	return nil
 }
 
-func validatePackageSchemaV1Alpha1(pkgName string, b []byte, setVariables map[string]string) error {
-	findings, err := lint.ValidatePackageSchemaBytesV1Alpha1(b, setVariables)
+func validatePackageSchemaV1Alpha1(pkgName string, pkg any, setVariables map[string]string) error {
+	findings, err := lint.ValidatePackageSchemaV1Alpha1(pkg, setVariables)
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
@@ -272,8 +274,8 @@ func validatePackageSchemaV1Alpha1(pkgName string, b []byte, setVariables map[st
 	}
 }
 
-func validatePackageSchemaV1Beta1(pkgName string, b []byte) error {
-	findings, err := lint.ValidatePackageSchemaBytesV1Beta1(b)
+func validatePackageSchemaV1Beta1(pkgName string, pkg any) error {
+	findings, err := lint.ValidatePackageSchemaV1Beta1(pkg)
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
@@ -289,12 +291,6 @@ func validatePackageSchemaV1Beta1(pkgName string, b []byte) error {
 func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	return slices.ContainsFunc(pkg.Components, func(comp v1alpha1.ZarfComponent) bool {
 		return comp.Only.Flavor == flavor
-	})
-}
-
-func hasFlavoredComponentV1Beta1(pkg v1beta1.Package, flavor string) bool {
-	return slices.ContainsFunc(pkg.Components, func(comp v1beta1.Component) bool {
-		return comp.Selector.Flavor == flavor
 	})
 }
 
@@ -315,8 +311,8 @@ func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariab
 
 			_, present := setVariables[key]
 			if !present && isInteractive {
-				setVal, err := interactive.PromptVariable(ctx, v1alpha1.InteractiveVariable{
-					Variable: v1alpha1.Variable{Name: key},
+				setVal, err := interactive.PromptVariable(ctx, api.InteractiveVariable{
+					Variable: api.Variable{Name: key},
 				})
 				if err != nil {
 					return err
@@ -378,4 +374,19 @@ func reloadComponentTemplatesInPackage(zarfPackage *v1alpha1.ZarfPackage) error 
 		}
 	}
 	return nil
+}
+
+// DefinitionHeader identifies the API version and kind declared by a config file.
+type DefinitionHeader struct {
+	APIVersion string `json:"apiVersion"`
+	Kind       string `json:"kind"`
+}
+
+// ParseDefinitionHeader reads the identifying fields without loading the full definition.
+func ParseDefinitionHeader(contents []byte) (DefinitionHeader, error) {
+	var header DefinitionHeader
+	if err := goyaml.Unmarshal(contents, &header); err != nil {
+		return DefinitionHeader{}, err
+	}
+	return header, nil
 }

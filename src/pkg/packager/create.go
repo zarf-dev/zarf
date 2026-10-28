@@ -5,28 +5,41 @@ package packager
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// CreateOptions are the optional parameters to create
+// Leave headroom below Kubernetes' 1 MiB Secret limit for deployment metadata.
+const packageSecretSizeLimit = 1_000_000
+
+// CreateOptions are the optional parameters to create.
 type CreateOptions struct {
-	Flavor                  string
-	RegistryOverrides       []images.RegistryOverride
-	SigningKeyPath          string
+	Flavor            string
+	RegistryOverrides []images.RegistryOverride
+	// A nil value leaves the package unsigned; a non-nil value requests signing.
+	SignBlobOptions *signing.SignBlobOptions
+	// Deprecated: populate SignBlobOptions.Key directly.
+	SigningKeyPath string
+	// Deprecated: populate SignBlobOptions.Password directly.
 	SigningKeyPassword      string
 	SetVariables            map[string]string
 	MaxPackageSizeMB        int
@@ -72,9 +85,13 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
-	pkg := loaded.Definition.AsV1alpha1()
+	pkg := loaded.Definition
+	if pkg.GetAPIVersion() == v1beta1.APIVersion && !feature.IsEnabled(feature.V1Beta1) {
+		return "", fmt.Errorf("creating a %s package requires the %q feature. Run again with --features=%s=true",
+			v1beta1.APIVersion, feature.V1Beta1, feature.V1Beta1)
+	}
 
-	var differentialPkg v1alpha1.ZarfPackage
+	var differentialPkg api.Package
 	if opts.DifferentialPackagePath != "" {
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
 			Architecture:   pkg.Metadata.Architecture,
@@ -89,7 +106,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err := pkgLayout.Cleanup(); err != nil {
 			return "", err
 		}
-		differentialPkg = pkgLayout.AsV1alpha1()
+		differentialPkg = pkgLayout.Definition()
 	}
 
 	assembleOpt := assemble.AssembleOptions{
@@ -98,8 +115,9 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		DifferentialPackage:  differentialPkg,
 		Flavor:               opts.Flavor,
 		RegistryOverrides:    opts.RegistryOverrides,
-		SigningKeyPath:       opts.SigningKeyPath,
-		SigningKeyPassword:   opts.SigningKeyPassword,
+		SignBlobOptions:      opts.SignBlobOptions,
+		SigningKeyPath:       opts.SigningKeyPath,     //nolint:staticcheck // Forward deprecated public options to preserve API compatibility.
+		SigningKeyPassword:   opts.SigningKeyPassword, //nolint:staticcheck // Forward deprecated public options to preserve API compatibility.
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,
@@ -111,10 +129,13 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
+	if err := validatePackageSecretSize(pkgLayout.Definition(), pkgLayout.Digest()); err != nil {
+		return "", err
+	}
 
 	var packageLocation string
 	if helpers.IsOCIURL(output) {
-		pkg := pkgLayout.AsV1alpha1()
+		pkg := pkgLayout.Definition()
 		ref, err := zoci.ReferenceFromMetadata(output, pkg)
 		if err != nil {
 			return "", err
@@ -144,7 +165,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 
 	if opts.SBOMOut != "" {
 		// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
-		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, filepath.Base(pkgLayout.AsV1alpha1().Metadata.Name)))
+		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, filepath.Base(pkgLayout.Definition().Metadata.Name)))
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {
@@ -156,4 +177,29 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		}
 	}
 	return packageLocation, nil
+}
+
+// Check the persisted definition, including compatibility copies and component status,
+// before writing a created package.
+func validatePackageSecretSize(pkg api.Package, digest string) error {
+	components := make([]state.DeployedComponent, 0, len(pkg.Components))
+	for _, component := range pkg.Components {
+		components = append(components, state.DeployedComponent{
+			Name:               component.Name,
+			Status:             state.ComponentStatusSucceeded,
+			ObservedGeneration: 1,
+		})
+	}
+	deployed, err := state.NewDeployedPackage(pkg, digest, config.CLIVersion, components, 1)
+	if err != nil {
+		return err
+	}
+	data, err := json.Marshal(deployed)
+	if err != nil {
+		return err
+	}
+	if len(data) > packageSecretSizeLimit {
+		return fmt.Errorf("package %q cannot be created: its deployment metadata is %d bytes, exceeding Zarf's %d-byte limit for Kubernetes Secret storage; reduce the package definition size", pkg.Metadata.Name, len(data), packageSecretSizeLimit)
+	}
+	return nil
 }

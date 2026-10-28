@@ -34,7 +34,6 @@ func ReadBundleInfo(bundlePath string) (BundleInfo, error) {
 	if err != nil {
 		return BundleInfo{}, fmt.Errorf("loading bundle: %w", err)
 	}
-
 	timestamps, err := b.Timestamps()
 	if err != nil {
 		return BundleInfo{}, fmt.Errorf("reading bundle timestamps: %w", err)

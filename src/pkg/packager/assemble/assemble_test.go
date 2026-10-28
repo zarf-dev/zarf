@@ -5,24 +5,31 @@ package assemble
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 	_ "modernc.org/sqlite"
 )
 
@@ -55,6 +62,103 @@ fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9 foo
 	require.Equal(t, "7c554cf67e1c2b50a1b728299c368cd56d53588300c37479623f29a52812ca3f", checksumHash)
 }
 
+func TestPackageManifestRejectsNamesWithPathSeparators(t *testing.T) {
+	t.Parallel()
+
+	componentDir := filepath.Join(t.TempDir(), "component")
+	resources := load.NewResourceSet(t.TempDir())
+	tests := []struct {
+		name     string
+		manifest api.Manifest
+	}{
+		{
+			name:     "raw manifest",
+			manifest: api.Manifest{Name: "../escaped", Files: []string{"manifest.yaml"}},
+		},
+		{
+			name: "kustomization",
+			manifest: api.Manifest{
+				Name:      `nested\manifest`,
+				Kustomize: api.KustomizeManifest{Files: []string{"kustomize"}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := PackageManifest(testutil.TestContext(t), tt.manifest, componentDir, resources)
+			require.ErrorContains(t, err, "manifest name validation failed")
+			require.ErrorContains(t, err, "must not contain path separators")
+			require.NoDirExists(t, filepath.Join(componentDir, string(layout.ManifestsComponentDir)))
+			require.NoFileExists(t, filepath.Join(componentDir, "escaped-0.yaml"))
+		})
+	}
+}
+
+func TestManifestOutputPathStaysWithinManifestDirectory(t *testing.T) {
+	t.Parallel()
+
+	componentDir := t.TempDir()
+	manifestDir := filepath.Join(componentDir, string(layout.ManifestsComponentDir))
+	destination, err := layout.PathWithinDirectory(manifestDir, "manifest-0.yaml")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(manifestDir, "manifest-0.yaml"), destination)
+
+	_, err = layout.PathWithinDirectory(manifestDir, "../escaped-0.yaml")
+	require.ErrorContains(t, err, "escapes")
+}
+
+func TestPackageChartRejectsUnsafeArtifactComponents(t *testing.T) {
+	t.Parallel()
+
+	paths := layout.ChartPaths{
+		ChartsDir: filepath.Join(t.TempDir(), "charts"),
+		ValuesDir: filepath.Join(t.TempDir(), "values"),
+	}
+	err := PackageChart(testutil.TestContext(t), api.Chart{Name: "../escape"}, load.NewResourceSet(t.TempDir()), paths, "", types.RemoteOptions{})
+	require.ErrorContains(t, err, "chart name")
+	require.NoFileExists(t, filepath.Join(filepath.Dir(paths.ChartsDir), "escape.tgz"))
+}
+
+func TestAssembleSkeletonComponentRejectsUnsafeChartArtifactComponents(t *testing.T) {
+	t.Parallel()
+
+	buildPath := t.TempDir()
+	err := assembleSkeletonComponent(testutil.TestContext(t), api.Component{
+		Name:   "component",
+		Charts: []api.Chart{{Name: `nested\chart`}},
+	}, load.NewResourceSet(t.TempDir()), buildPath)
+	require.ErrorContains(t, err, "chart name")
+	require.NoDirExists(t, filepath.Join(buildPath, "component", string(layout.ChartsComponentDir)))
+}
+
+func TestStageDocumentationRejectsPathKeys(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{
+		Attachments: map[string]string{
+			"../escape": "first/readme.md",
+			"witness":   "second/readme.md",
+		},
+	}
+	buildPath := t.TempDir()
+	err := stageDocumentation(testutil.TestContext(t), pkg, load.NewResourceSet(t.TempDir()), buildPath)
+	require.ErrorContains(t, err, "documentation key")
+	require.NoFileExists(t, filepath.Join(buildPath, layout.DocumentationTar))
+}
+
+func TestDocumentationOutputPathStaysWithinDocumentationDirectory(t *testing.T) {
+	t.Parallel()
+
+	documentationDir := t.TempDir()
+	destination, err := layout.PathWithinDirectory(documentationDir, "readme.md")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(documentationDir, "readme.md"), destination)
+
+	_, err = layout.PathWithinDirectory(documentationDir, "../escape-readme.md")
+	require.ErrorContains(t, err, "escapes")
+}
+
 func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	t.Parallel()
 
@@ -66,9 +170,71 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	err = createReproducibleTarballFromDir(tmpDir, "", tarPath, true)
 	require.NoError(t, err)
 
-	shaSum, err := helpers.GetSHA256OfFile(tarPath)
+	shaSum, err := checksum.GetSHA256OfFile(tarPath)
 	require.NoError(t, err)
 	require.Equal(t, "c09d17f612f241cdf549e5fb97c9e063a8ad18ae7a9f3af066332ed6b38556ad", shaSum)
+}
+
+func TestStageDocumentationMaterializesSymlinks(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows symlink creation requires elevated privileges")
+	}
+
+	tests := []struct {
+		name    string
+		target  func(resourceRoot string) (string, error)
+		content string
+	}{
+		{
+			name: "external",
+			target: func(_ string) (string, error) {
+				externalFile := filepath.Join(t.TempDir(), "external.txt")
+				if err := os.WriteFile(externalFile, []byte("external"), helpers.ReadAllWriteUser); err != nil {
+					return "", err
+				}
+				return externalFile, nil
+			},
+			content: "external",
+		},
+		{
+			name: "contained",
+			target: func(resourceRoot string) (string, error) {
+				targetDir := filepath.Join(resourceRoot, "shared")
+				if err := os.Mkdir(targetDir, helpers.ReadWriteExecuteUser); err != nil {
+					return "", err
+				}
+				if err := os.WriteFile(filepath.Join(targetDir, "readme.md"), []byte("materialized"), helpers.ReadAllWriteUser); err != nil {
+					return "", err
+				}
+				return filepath.Join("shared", "readme.md"), nil
+			},
+			content: "materialized",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resourceRoot := t.TempDir()
+			target, err := tt.target(resourceRoot)
+			require.NoError(t, err)
+			require.NoError(t, os.Symlink(target, filepath.Join(resourceRoot, "readme.md")))
+
+			buildPath := t.TempDir()
+			require.NoError(t, stageDocumentation(testutil.TestContext(t), api.Package{
+				Attachments: map[string]string{"readme": "readme.md"},
+			}, load.NewResourceSet(resourceRoot), buildPath))
+
+			outputDir := t.TempDir()
+			require.NoError(t, archive.Decompress(t.Context(), filepath.Join(buildPath, layout.DocumentationTar), outputDir, archive.DecompressOpts{}))
+			info, err := os.Lstat(filepath.Join(outputDir, "readme.md"))
+			require.NoError(t, err)
+			require.Zero(t, info.Mode()&os.ModeSymlink)
+			require.Equal(t, os.FileMode(helpers.ReadWriteUser), info.Mode().Perm())
+			content, err := os.ReadFile(filepath.Join(outputDir, "readme.md"))
+			require.NoError(t, err)
+			require.Equal(t, tt.content, string(content))
+		})
+	}
 }
 
 func TestValidateImageArchivesNoDuplicates(t *testing.T) {
@@ -219,7 +385,7 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := validateImageArchivesNoDuplicates(tt.components)
+			err := validateImageArchivesNoDuplicates(convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: tt.components}).Components)
 
 			if tt.errorContains != "" {
 				require.Error(t, err)
@@ -340,7 +506,40 @@ func TestCollectVersionRequirements(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tt.expected, collectVersionRequirements(tt.pkg, tt.hasIndex))
+			require.Equal(t, tt.expected, collectVersionRequirements(convert.PackageFromV1alpha1(tt.pkg), tt.hasIndex))
+		})
+	}
+}
+
+func TestCollectVersionRequirementsV1Beta1Charts(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name    string
+		chart   v1beta1.Chart
+		require bool
+	}{
+		{name: "Helm repository version", chart: v1beta1.Chart{HelmRepository: &v1beta1.HelmRepositorySource{Version: "1.0.0"}}, require: true},
+		{name: "OCI tag", chart: v1beta1.Chart{OCI: &v1beta1.OCISource{Ref: v1beta1.OCIRef{Tag: "1.0.0"}}}, require: true},
+		{name: "OCI digest", chart: v1beta1.Chart{OCI: &v1beta1.OCISource{Ref: v1beta1.OCIRef{Digest: "sha256:abc"}}}},
+		{name: "local chart", chart: v1beta1.Chart{Local: &v1beta1.LocalSource{Path: "chart"}}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pkg := convert.PackageFromV1beta1(v1beta1.Package{
+				APIVersion: v1beta1.APIVersion,
+				Components: []v1beta1.Component{{ComponentSpec: v1beta1.ComponentSpec{Charts: []v1beta1.Chart{tt.chart}}}},
+			})
+			reqs := collectVersionRequirements(pkg, false)
+			requirement := api.VersionRequirement{
+				Version: "v0.88.0",
+				Reason:  "This package contains v1beta1 versioned charts whose resource filenames require v0.88.0+",
+			}
+			if tt.require {
+				require.Contains(t, reqs, requirement)
+			} else {
+				require.NotContains(t, reqs, requirement)
+			}
 		})
 	}
 }
@@ -438,8 +637,30 @@ fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm
 `
 
 	require.Equal(t, expectedChecksum, string(b))
-	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.AsV1alpha1())
-	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.AsV1alpha1()), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
+	testutil.RequireNoBackslashInPackagePaths(t, convert.PackageToV1alpha1(pkgLayout.Definition()))
+	require.Equal(t, "7eb1a1e4e33ec7b6a7da78937b99c64bf7cf4751b70c0ed0662356cd7c18f967", testutil.ChecksumZarfYAMLContent(t, convert.PackageToV1alpha1(pkgLayout.Definition())), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
+}
+
+func TestAssembleSkeletonRejectsNonV1Alpha1Package(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-skeleton
+components:
+  - name: component
+`), 0o600))
+
+	loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+
+	_, err = AssembleSkeleton(ctx, loaded, AssembleSkeletonOptions{})
+	require.ErrorContains(t, err, "skeleton packages are only supported for apiVersion "+v1alpha1.APIVersion)
+	require.ErrorContains(t, err, v1beta1.APIVersion)
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
@@ -449,6 +670,129 @@ func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	path := filepath.Join(dir, layout.ZarfYAML)
 	err = os.WriteFile(path, b, 0700)
 	require.NoError(t, err)
+}
+
+func TestAssemblePackageOnCreateOutcomeActions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		before      string
+		onSuccess   string
+		wantError   string
+		wantBefore  bool
+		wantSuccess bool
+		wantFailure bool
+	}{
+		{
+			name:        "successful creation",
+			before:      "echo before > before.txt",
+			onSuccess:   "echo success > success.txt",
+			wantBefore:  true,
+			wantSuccess: true,
+		},
+		{
+			name:        "failed before action",
+			before:      "exit 1",
+			onSuccess:   "echo success > success.txt",
+			wantError:   "unable to run component before action",
+			wantFailure: true,
+		},
+		{
+			name:        "failed success action",
+			before:      "echo before > before.txt",
+			onSuccess:   "exit 1",
+			wantError:   "unable to run component success action",
+			wantBefore:  true,
+			wantFailure: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			dir := t.TempDir()
+			definition := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: create-actions
+components:
+  - name: component
+    actions:
+      onCreate:
+        before:
+          - cmd: %q
+        onSuccess:
+          - cmd: %q
+        onFailure:
+          - cmd: echo failure > failure.txt
+`, tt.before, tt.onSuccess)
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+
+			loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+			require.NoError(t, err)
+			pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+			if tt.wantError != "" {
+				require.ErrorContains(t, err, tt.wantError)
+			} else {
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			}
+
+			for name, want := range map[string]bool{
+				"before.txt":  tt.wantBefore,
+				"success.txt": tt.wantSuccess,
+				"failure.txt": tt.wantFailure,
+			} {
+				path := filepath.Join(dir, name)
+				if want {
+					require.FileExists(t, path)
+				} else {
+					require.NoFileExists(t, path)
+				}
+			}
+		})
+	}
+}
+
+func TestAssemblePackageCleansStagingDirectoryOnSuccessActionFailure(t *testing.T) {
+	// This test configures a process-global temporary directory.
+	tempDirectory := t.TempDir()
+	originalTempDirectory := config.CommonOptions.TempDirectory
+	config.CommonOptions.TempDirectory = tempDirectory
+	t.Cleanup(func() {
+		config.CommonOptions.TempDirectory = originalTempDirectory
+	})
+
+	ctx := testutil.TestContext(t)
+	sourcePath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
+	require.NoError(t, err)
+	dir := t.TempDir()
+	definition := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: create-actions
+components:
+  - name: component
+    files:
+      - source: %q
+        destination: data.txt
+    actions:
+      onCreate:
+        onSuccess:
+          - cmd: exit 1
+`, sourcePath)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+
+	loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+	require.NoError(t, err)
+	_, err = AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+	require.ErrorContains(t, err, "unable to run component success action")
+
+	entries, err := os.ReadDir(tempDirectory)
+	require.NoError(t, err)
+	require.Empty(t, entries)
 }
 
 func TestAssemblePackageWritesResolvedValues(t *testing.T) {
@@ -517,16 +861,23 @@ func TestAssemblePackageV1Beta1WritesMultiDocDefinition(t *testing.T) {
 	dataPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
 	require.NoError(t, err)
 
+	data, err := os.ReadFile(dataPath)
+	require.NoError(t, err)
+	checksum := fmt.Sprintf("sha256:%x", sha256.Sum256(data))
+
 	zarfYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: beta-local
+attachments:
+  readme: %q
 components:
   - name: beta-component
     files:
       - source: %q
+        checksum: %q
         destination: data.txt
-`, dataPath)
+`, dataPath, dataPath, checksum)
 	require.NoError(t, os.WriteFile(filepath.Join(tmpdir, layout.ZarfYAML), []byte(zarfYAML), 0o600))
 
 	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
@@ -543,6 +894,98 @@ components:
 	require.NoError(t, err)
 	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
 	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
+	require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationDir, "data.txt"))
+	require.NoFileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationTar))
+}
+
+func TestStageDocumentationRejectsUnsafeKeys(t *testing.T) {
+	t.Parallel()
+
+	for _, apiVersion := range []string{v1alpha1.APIVersion, v1beta1.APIVersion} {
+		t.Run(apiVersion, func(t *testing.T) {
+			buildPath := t.TempDir()
+			err := stageDocumentation(t.Context(), api.Package{
+				APIVersion:  apiVersion,
+				Attachments: map[string]string{"../escape": "first/README.md", "readme": "second/README.md"},
+			}, load.NewResourceSet(t.TempDir()), buildPath)
+
+			require.EqualError(t, err, `documentation key validation failed: "../escape" must not contain path separators`)
+			require.NoFileExists(t, filepath.Join(filepath.Dir(buildPath), "escape-README.md"))
+		})
+	}
+}
+
+func TestAssemblePackageReadinessVersionRequirement(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name, apiVersion, lifecycle, hook, condition string
+		wantRequirement                              bool
+	}{
+		{name: "deploy before", lifecycle: "onDeploy", hook: "before", wantRequirement: true},
+		{name: "deploy success", lifecycle: "onDeploy", hook: "onSuccess", wantRequirement: true},
+		{name: "deploy failure", lifecycle: "onDeploy", hook: "onFailure", wantRequirement: true},
+		{name: "remove before", lifecycle: "onRemove", hook: "before", wantRequirement: true},
+		{name: "remove success", lifecycle: "onRemove", hook: "onSuccess", wantRequirement: true},
+		{name: "remove failure", lifecycle: "onRemove", hook: "onFailure", wantRequirement: true},
+		{name: "explicit condition", lifecycle: "onDeploy", hook: "before", condition: "available"},
+		{name: "alpha existence wait", apiVersion: v1alpha1.APIVersion, lifecycle: "onDeploy", hook: "before"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			dir := t.TempDir()
+			apiVersion := tt.apiVersion
+			if apiVersion == "" {
+				apiVersion = v1beta1.APIVersion
+			}
+			definition := fmt.Sprintf(`apiVersion: %s
+kind: ZarfPackageConfig
+metadata:
+  name: readiness
+components:
+  - name: component
+    actions:
+      %s:
+        %s:
+          - wait:
+              cluster:
+                kind: Deployment
+                name: app
+                condition: %q
+`, apiVersion, tt.lifecycle, tt.hook, tt.condition)
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+			loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+			pkgLayout, err := AssemblePackage(ctx, loaded, AssembleOptions{SkipSBOM: true})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
+			require.NoError(t, err)
+			alphaPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Alpha1)
+			require.NoError(t, err)
+			var expected []api.VersionRequirement
+			if tt.wantRequirement {
+				expected = []api.VersionRequirement{{
+					Version: "v0.88.0",
+					Reason:  "This package uses v1beta1 default cluster readiness waits which require v0.88.0+",
+				}}
+			}
+			if apiVersion == v1beta1.APIVersion && tt.lifecycle == "onDeploy" && tt.hook == "onSuccess" {
+				expected = append(expected, api.VersionRequirement{
+					Version: "v0.88.0",
+					Reason:  "This package uses v1beta1 deployment success hooks which require v0.88.0+ to run before saving successful state",
+				})
+			}
+			require.Equal(t, expected, convert.PackageFromV1alpha1(alphaPkg).Build.VersionRequirements)
+			if apiVersion == v1beta1.APIVersion {
+				betaPkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
+				require.NoError(t, err)
+				require.Equal(t, expected, convert.PackageFromV1beta1(betaPkg).Build.VersionRequirements)
+			}
+		})
+	}
 }
 
 func TestAssemblePackageV1Alpha1DoesNotWriteV1Beta1Definition(t *testing.T) {
@@ -701,7 +1144,7 @@ func TestCreateAbsoluteSources(t *testing.T) {
 				require.NoError(t, err)
 			}
 			docsDir := filepath.Join(tmpdir, "docs-dir")
-			err = pkgLayout.GetDocumentation(ctx, docsDir, []string{})
+			err = pkgLayout.GetAttachments(ctx, docsDir, []string{})
 			require.NoError(t, err)
 			require.FileExists(t, filepath.Join(docsDir, "doc.md"))
 
@@ -787,8 +1230,9 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(importedFileComponent, "0", "file.txt"))
 
-	// Ensure the sbom exists as expected
+	// File-only packages include component SBOMs but not the deprecated viewer by default.
 	err = pkgLayout.GetSBOM(ctx, tmpdir)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(tmpdir, "zarf-component-file-import.json"))
+	require.NoFileExists(t, filepath.Join(tmpdir, "sbom-viewer-zarf-component-file-import.html"))
 }

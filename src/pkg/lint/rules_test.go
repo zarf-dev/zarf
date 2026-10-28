@@ -14,11 +14,14 @@ import (
 
 func TestUnpinnedRepo(t *testing.T) {
 	t.Parallel()
+
 	unpinnedRepo := "https://github.com/zarf-dev/zarf-public-test.git"
-	component := v1alpha1.ZarfComponent{Repos: []string{
-		unpinnedRepo,
-		"https://dev.azure.com/zarf-dev/zarf-public-test/_git/zarf-public-test@v0.0.1",
-	}}
+	component := v1alpha1.ZarfComponent{
+		Repos: []string{
+			unpinnedRepo,
+			"https://dev.azure.com/zarf-dev/zarf-public-test/_git/zarf-public-test@v0.0.1",
+		},
+	}
 	findings := checkForUnpinnedRepos(component, 0)
 	expected := []PackageFinding{
 		{
@@ -33,17 +36,20 @@ func TestUnpinnedRepo(t *testing.T) {
 
 func TestUnpinnedImageWarning(t *testing.T) {
 	t.Parallel()
+
 	unpinnedImage := "registry.com:9001/whatever/image:1.0.0"
 	badImage := "badimage:badimage@@sha256:3fbc632167424a6d997e74f5"
 	cosignSignature := "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig"
 	cosignAttestation := "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.att"
-	component := v1alpha1.ZarfComponent{Images: []string{
-		unpinnedImage,
-		"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
-		badImage,
-		cosignSignature,
-		cosignAttestation,
-	}}
+	component := v1alpha1.ZarfComponent{
+		Images: []string{
+			unpinnedImage,
+			"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
+			badImage,
+			cosignSignature,
+			cosignAttestation,
+		},
+	}
 	findings := checkForUnpinnedImages(component, 0)
 	expected := []PackageFinding{
 		{
@@ -64,6 +70,7 @@ func TestUnpinnedImageWarning(t *testing.T) {
 
 func TestUnpinnnedFileWarning(t *testing.T) {
 	t.Parallel()
+
 	fileURL := "http://example.com/file.zip"
 	localFile := "local.txt"
 	zarfFiles := []v1alpha1.ZarfFile{
@@ -94,14 +101,17 @@ func TestUnpinnnedFileWarning(t *testing.T) {
 
 func TestImagesWithoutDomain(t *testing.T) {
 	t.Parallel()
-	component := v1alpha1.ZarfComponent{Images: []string{
-		"myapp:1.0.0",
-		"library/myapp:1.0.0",
-		"docker.io/library/myapp:1.0.0",
-		"ghcr.io/zarf-dev/zarf:v0.1.0",
-		"localhost:5000/myapp:1.0.0",
-		"###ZARF_PKG_TMPL_IMAGE###",
-	}}
+
+	component := v1alpha1.ZarfComponent{
+		Images: []string{
+			"myapp:1.0.0",
+			"library/myapp:1.0.0",
+			"docker.io/library/myapp:1.0.0",
+			"ghcr.io/zarf-dev/zarf:v0.1.0",
+			"localhost:5000/myapp:1.0.0",
+			"###ZARF_PKG_TMPL_IMAGE###",
+		},
+	}
 	findings := checkForImagesWithoutDomain(component, 0)
 	expected := []PackageFinding{
 		{
@@ -122,18 +132,21 @@ func TestImagesWithoutDomain(t *testing.T) {
 
 func TestImageArchivesWithoutInternalDomain(t *testing.T) {
 	t.Parallel()
-	component := v1alpha1.ZarfComponent{ImageArchives: []v1alpha1.ImageArchive{
-		{
-			Path: "images.tar",
-			Images: []string{
-				"zarf.internal/myapp:1.0.0",
-				"my.registry.internal:5000/myapp:1.0.0",
-				"myapp:1.0.0",
-				"docker.io/library/myapp:1.0.0",
-				"###ZARF_PKG_TMPL_IMAGE###",
+
+	component := v1alpha1.ZarfComponent{
+		ImageArchives: []v1alpha1.ImageArchive{
+			{
+				Path: "images.tar",
+				Images: []string{
+					"zarf.internal/myapp:1.0.0",
+					"my.registry.internal:5000/myapp:1.0.0",
+					"myapp:1.0.0",
+					"docker.io/library/myapp:1.0.0",
+					"###ZARF_PKG_TMPL_IMAGE###",
+				},
 			},
 		},
-	}}
+	}
 	findings := checkForImageArchivesWithoutInternalDomain(component, 0)
 	expected := []PackageFinding{
 		{

@@ -108,7 +108,7 @@ func TestInit(t *testing.T) {
 			PushUsername: "push-user",
 			PullUsername: "pull-user",
 			Address:      "address",
-			NodePort:     1,
+			Port:         1,
 			Secret:       "secret",
 		},
 	}
@@ -371,7 +371,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 					RegistryMode: state.RegistryModeNodePort,
 					MTLSStrategy: state.MTLSStrategyNone,
 				},
-				InjectorInfo: state.InjectorInfo{Port: 31999},
+				InjectorInfo: state.InjectorInfo{Port: 31999, Image: "example.com/nodeport-injector:1"},
 			},
 			opts: InitStateOptions{
 				RegistryInfo: state.RegistryInfo{RegistryMode: state.RegistryModeProxy},
@@ -380,7 +380,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 				RegistryInfo: state.RegistryInfo{
 					RegistryMode: state.RegistryModeProxy,
 					MTLSStrategy: state.MTLSStrategyZarfManaged,
-					NodePort:     state.ZarfRegistryHostPort,
+					Port:         state.ZarfRegistryHostPort,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 0},
 			},
@@ -401,7 +401,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 				RegistryInfo: state.RegistryInfo{
 					RegistryMode: state.RegistryModeNodePort,
 					MTLSStrategy: state.MTLSStrategyNone,
-					NodePort:     state.ZarfInClusterContainerRegistryNodePort,
+					Port:         state.ZarfInClusterContainerRegistryNodePort,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 0},
 			},
@@ -426,7 +426,6 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 					RegistryMode: state.RegistryModeNodePort,
 					MTLSStrategy: state.MTLSStrategyNone,
 					Port:         30500,
-					NodePort:     30500,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 0},
 			},
@@ -451,7 +450,6 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 					RegistryMode: state.RegistryModeProxy,
 					MTLSStrategy: state.MTLSStrategyZarfManaged,
 					Port:         8080,
-					NodePort:     8080,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 0},
 			},
@@ -463,7 +461,6 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 					RegistryMode: state.RegistryModeNodePort,
 					MTLSStrategy: state.MTLSStrategyNone,
 					Port:         30500,
-					NodePort:     30500,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 31999},
 			},
@@ -475,7 +472,6 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 					RegistryMode: state.RegistryModeNodePort,
 					MTLSStrategy: state.MTLSStrategyNone,
 					Port:         30500,
-					NodePort:     30500,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 31999},
 			},
@@ -487,7 +483,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 					RegistryMode: state.RegistryModeProxy,
 					MTLSStrategy: state.MTLSStrategyZarfManaged,
 				},
-				InjectorInfo: state.InjectorInfo{Port: 5000},
+				InjectorInfo: state.InjectorInfo{Port: 5000, Image: "example.com/proxy-injector:1"},
 			},
 			opts: InitStateOptions{
 				RegistryInfo: state.RegistryInfo{RegistryMode: state.RegistryModeProxy},
@@ -497,7 +493,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 					RegistryMode: state.RegistryModeProxy,
 					MTLSStrategy: state.MTLSStrategyZarfManaged,
 				},
-				InjectorInfo: state.InjectorInfo{Port: 5000},
+				InjectorInfo: state.InjectorInfo{Port: 5000, Image: "example.com/proxy-injector:1"},
 			},
 		},
 	}
@@ -632,6 +628,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.True(t, s.GitServer.IsConfigured())
+		require.Equal(t, state.GitServerModeInternal, s.GitServer.GitServerMode)
 		require.True(t, s.ArtifactServer.IsInternal())
 		require.NotEmpty(t, s.RegistryInfo.Address)
 		require.NotEmpty(t, s.AgentInfo.TLS.Cert)
@@ -656,6 +653,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.True(t, s.GitServer.IsConfigured())
+		require.Equal(t, state.GitServerModeInternal, s.GitServer.GitServerMode)
 		require.Equal(t, "127.0.0.1:31999", s.RegistryInfo.Address)
 		require.NotEmpty(t, s.ArtifactServer.Address)
 	})
@@ -723,6 +721,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, "https://git.example.com", s.GitServer.Address)
+		require.Equal(t, state.GitServerModeExternal, s.GitServer.GitServerMode)
 		require.False(t, s.GitServer.IsInternal())
 	})
 

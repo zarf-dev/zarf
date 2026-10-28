@@ -15,18 +15,31 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 	registryremote "oras.land/oras-go/v2/registry/remote"
 )
+
+func TestMain(m *testing.M) {
+	if err := feature.Set([]feature.Feature{{Name: feature.V1Beta1, Enabled: true}}); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
+}
 
 func defaultTestRemoteOptions() types.RemoteOptions {
 	return types.RemoteOptions{PlainHTTP: true}
@@ -71,11 +84,19 @@ func TestPublishComponentAndAssembleRemoteImportResources(t *testing.T) {
 		Values:     v1beta1.Values{Files: []string{"values.yaml"}, Schema: "schema.json"},
 		Component: v1beta1.ComponentSpec{
 			Charts:    []v1beta1.Chart{{Name: "test", Namespace: "default", Local: &v1beta1.LocalSource{Path: "chart"}, ValuesFiles: []v1beta1.ValuesFile{{Path: "chart-values.yaml"}}}},
-			Manifests: []v1beta1.Manifest{{Name: "manifest", Files: []string{"manifest.yaml"}}, {Name: "kustomize", Kustomize: &v1beta1.KustomizeManifest{Files: []string{"kustomize"}}}},
+			Manifests: []v1beta1.Manifest{{Name: "manifest", Files: []string{"manifest.yaml"}}, {Name: "kustomize", Kustomize: v1beta1.KustomizeManifest{Files: []string{"kustomize"}}}},
 			Files:     []v1beta1.File{{Source: "file.txt", Destination: "/tmp/file.txt"}},
 		},
 	}
 	componentYAML, err := goyaml.Marshal(component)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(componentDir, "base.yaml"), componentYAML, 0o600))
+	component.Component = v1beta1.ComponentSpec{
+		Import: v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "base.yaml"}}},
+		Charts: []v1beta1.Chart{{Name: "test", Namespace: "overridden", ReleaseName: "custom-release"}},
+	}
+	component.Values = v1beta1.Values{}
+	componentYAML, err = goyaml.Marshal(component)
 	require.NoError(t, err)
 	componentPath := filepath.Join(componentDir, "component.yaml")
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
@@ -99,12 +120,14 @@ components:
 	loaded, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{CachePath: cachePath, RemoteOptions: defaultTestRemoteOptions()}})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
-	resourcePath, err := loaded.Resources.Path(loaded.Definition.AsV1alpha1().Components[0].Files[0].Source)
+	resourcePath, err := loaded.Resources.Path(convert.PackageToV1alpha1(loaded.Definition).Components[0].Files[0].Source)
 	require.NoError(t, err)
 
 	pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{CachePath: cachePath, SkipSBOM: true, RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+	require.Equal(t, "overridden", pkgLayout.Definition().Components[0].Charts[0].Namespace)
+	require.Equal(t, "custom-release", pkgLayout.Definition().Components[0].Charts[0].ReleaseName)
 	require.NoFileExists(t, resourcePath)
 
 	assembledComponentDir := t.TempDir()
@@ -126,12 +149,73 @@ components:
 	require.FileExists(t, filepath.Join(manifestsDir, "kustomization-kustomize-0.yaml"))
 }
 
+func TestPublishComponentChartRevisionOverrides(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	dir := t.TempDir()
+	base := v1beta1.ComponentConfig{
+		APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfComponentConfig,
+		Metadata: v1beta1.ComponentMetadata{Name: "base"},
+		Component: v1beta1.ComponentSpec{Charts: []v1beta1.Chart{
+			{Name: "helm", Namespace: "default", HelmRepository: &v1beta1.HelmRepositorySource{
+				Name: "upstream", URL: "https://example.com/charts", Version: "1.0.0",
+			}},
+			{Name: "git", Namespace: "default", Git: &v1beta1.GitSource{
+				URL: "https://example.com/charts.git", Path: "charts/app", Ref: v1beta1.GitRef{Tag: "v1"},
+			}},
+			{Name: "oci", Namespace: "default", OCI: &v1beta1.OCISource{
+				URL: "oci://example.com/chart", Ref: v1beta1.OCIRef{Tag: "v1"},
+			}},
+		}},
+	}
+	writeConfig := func(path string, config v1beta1.ComponentConfig) {
+		t.Helper()
+		b, err := goyaml.Marshal(config)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(path, b, 0o600))
+	}
+	writeConfig(filepath.Join(dir, "base.yaml"), base)
+	parent := v1beta1.ComponentConfig{
+		APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfComponentConfig,
+		Metadata: v1beta1.ComponentMetadata{Name: "revisions", Version: "1.0.0"},
+		Component: v1beta1.ComponentSpec{
+			Import: v1beta1.ComponentImport{Local: []v1beta1.ComponentImportLocal{{Path: "base.yaml"}}},
+			Charts: []v1beta1.Chart{
+				{Name: "helm", HelmRepository: &v1beta1.HelmRepositorySource{Version: "2.0.0"}},
+				{Name: "git", Git: &v1beta1.GitSource{Ref: v1beta1.GitRef{Branch: "release"}}},
+				{Name: "oci", OCI: &v1beta1.OCISource{Ref: v1beta1.OCIRef{Tag: "v2"}}},
+			},
+		},
+	}
+	path := filepath.Join(dir, "component.yaml")
+	writeConfig(path, parent)
+	published, err := Publish(ctx, path, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	config, _ := getPublishedComponent(ctx, t, published)
+	base.Component.Charts[0].HelmRepository.Version = "2.0.0"
+	base.Component.Charts[1].Git.Ref = v1beta1.GitRef{Branch: "release"}
+	base.Component.Charts[2].OCI.Ref = v1beta1.OCIRef{Tag: "v2"}
+	require.Equal(t, base.Component.Charts, config.Component.Charts)
+
+	parent.Component.Charts[0].HelmRepository.URL = "https://example.com/other-charts"
+	writeConfig(path, parent)
+	_, err = Publish(ctx, path, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.ErrorContains(t, err, "cannot override helmRepository.url")
+
+	parent.Component.Charts[0].HelmRepository.URL = ""
+	parent.Component.Charts[0].OCI = &v1beta1.OCISource{URL: "oci://example.com/chart", Ref: v1beta1.OCIRef{Tag: "v2"}}
+	writeConfig(path, parent)
+	_, err = Publish(ctx, path, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.ErrorContains(t, err, `chart "helm" must include exactly one source`)
+}
+
 func TestPublishComponent(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
-		RemoteOptions: defaultTestRemoteOptions(),
+		SignManifestOptions: nil,
+		RemoteOptions:       defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
 
@@ -171,6 +255,71 @@ func TestPublishComponent(t *testing.T) {
 	} {
 		require.NotContains(t, layerTitles, remotePath)
 	}
+}
+
+func TestPublishComponentRequiresChartNamespace(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.CopyFS(dir, os.DirFS(filepath.Join("testdata", "publish-component-v1beta1"))))
+	componentPath := filepath.Join(dir, "component.yaml")
+	component, err := load.ComponentConfig(componentPath)
+	require.NoError(t, err)
+	component.Component.Charts[0].Namespace = ""
+	b, err := goyaml.Marshal(component)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(componentPath, b, 0o600))
+
+	ctx := t.Context()
+	_, err = load.ComponentDefinition(ctx, componentPath, load.ComponentOptions{})
+	require.ErrorContains(t, err, `chart "local-chart" must include a namespace`)
+	_, err = Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.ErrorContains(t, err, `chart "local-chart" must include a namespace`)
+}
+
+func TestPublishComponentSignsManifest(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.key")
+	signOpts.Password = "test"
+	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
+		SignManifestOptions: &signOpts,
+		RemoteOptions:       defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+
+	verifyOpts := signing.DefaultVerifyManifestOptions()
+	verifyOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.pub")
+	require.NoError(t, signing.VerifyManifest(ctx, published.String(), verifyOpts, defaultTestRemoteOptions()))
+}
+
+func TestPublishComponentDoesNotTagOnSigningFailure(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	componentPath := filepath.Join("testdata", "publish-component-v1beta1", "component.yaml")
+	destination := createRegistry(ctx, t)
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = filepath.Join(t.TempDir(), "missing.key")
+
+	_, err := Publish(ctx, componentPath, destination, PublishOptions{
+		SignManifestOptions: &signOpts,
+		RemoteOptions:       defaultTestRemoteOptions(),
+	})
+	require.Error(t, err)
+
+	config, err := load.ComponentConfig(componentPath)
+	require.NoError(t, err)
+	componentRef, err := componentReference(destination, config)
+	require.NoError(t, err)
+	remote, err := zoci.NewRemoteWithOptions(ctx, componentRef.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+	_, err = remote.Repo().Resolve(ctx, componentRef.Reference)
+	require.ErrorIs(t, err, errdef.ErrNotFound)
 }
 
 func TestPublishComponentFlavor(t *testing.T) {
@@ -267,7 +416,8 @@ component:
   imageArchives:
     - path: %q
       images:
-        - ghcr.io/zarf-dev/images/hello-world:latest
+        - name: ghcr.io/zarf-dev/images/hello-world:latest
+          id: hello
 `, archivePath))
 	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
 
@@ -276,6 +426,24 @@ component:
 
 	component, manifest := getPublishedComponent(ctx, t, published)
 	require.Equal(t, "images", component.Component.ImageArchives[0].Path)
+	require.Equal(t, "hello", component.Component.ImageArchives[0].Images[0].ID)
+	packagePath := filepath.Join(t.TempDir(), "zarf.yaml")
+	packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: archive-import
+components:
+  - name: app
+    import:
+      remote:
+        - url: oci://%s
+`, published.String())
+	require.NoError(t, os.WriteFile(packagePath, []byte(packageYAML), 0o600))
+	resolved, err := load.PackageDefinition(ctx, packagePath, load.DefinitionOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.NoError(t, err)
+	image, err := convert.PackageToV1beta1(resolved).Components[0].GetImageByID("hello")
+	require.NoError(t, err)
+	require.Equal(t, "ghcr.io/zarf-dev/images/hello-world:latest", image.Reference)
 
 	layerTitles := make([]string, 0, len(manifest.Layers))
 	for _, layer := range manifest.Layers {
@@ -488,6 +656,10 @@ func TestPublishComponentArchitectureIndexImportsMatchingFlavorVariant(t *testin
 	destination := createRegistry(ctx, t)
 	const flavor = "hardened"
 
+	signOpts := signing.DefaultSignManifestOptions()
+	signOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.key")
+	signOpts.Password = "test"
+
 	for _, architecture := range []string{"amd64", "arm64"} {
 		componentPath := filepath.Join(root, architecture+".yaml")
 		require.NoError(t, os.WriteFile(filepath.Join(root, architecture+".txt"), []byte(architecture), 0o600))
@@ -505,7 +677,10 @@ component:
       destination: /tmp/variant.txt
 `, flavor, architecture, architecture)
 		require.NoError(t, os.WriteFile(componentPath, []byte(componentYAML), 0o600))
-		published, err := Publish(ctx, componentPath, destination, PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+		published, err := Publish(ctx, componentPath, destination, PublishOptions{
+			SignManifestOptions: &signOpts,
+			RemoteOptions:       defaultTestRemoteOptions(),
+		})
 		require.NoError(t, err)
 		require.Equal(t, "0.0.1-hardened", published.Reference)
 	}
@@ -518,6 +693,10 @@ component:
 	rootDescriptor, err := repo.Resolve(ctx, published.Reference)
 	require.NoError(t, err)
 	require.Equal(t, ocispec.MediaTypeImageIndex, rootDescriptor.MediaType)
+
+	verifyOpts := signing.DefaultVerifyManifestOptions()
+	verifyOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.pub")
+	require.NoError(t, signing.VerifyManifest(ctx, published.String(), verifyOpts, defaultTestRemoteOptions()))
 
 	packagePath := filepath.Join(root, "zarf.yaml")
 	packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
@@ -532,11 +711,15 @@ components:
         - url: oci://%s
 `, published.String())
 	require.NoError(t, os.WriteFile(packagePath, []byte(packageYAML), 0o600))
-	loaded, err := load.Package(ctx, root, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{Flavor: flavor, RemoteOptions: defaultTestRemoteOptions()}})
+	loaded, err := load.Package(ctx, root, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{
+		CachePath:     t.TempDir(),
+		Flavor:        flavor,
+		RemoteOptions: defaultTestRemoteOptions(),
+	}})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 
-	contents, err := loaded.Resources.ReadFile(loaded.Definition.AsV1beta1().Components[0].Files[0].Source)
+	contents, err := loaded.Resources.ReadFile(convert.PackageToV1beta1(loaded.Definition).Components[0].Files[0].Source)
 	require.NoError(t, err)
 	require.Equal(t, "arm64", string(contents))
 }
@@ -601,12 +784,15 @@ func TestPublishComponentNormalizesExternalResources(t *testing.T) {
 		Values:     v1beta1.Values{Files: []string{"../external/values.yaml"}, Schema: filepath.Join(externalDir, "schema.json")},
 		Component: v1beta1.ComponentSpec{
 			Charts: []v1beta1.Chart{{
+				Name:        "test",
+				Namespace:   "default",
 				Local:       &v1beta1.LocalSource{Path: filepath.Join(externalDir, "chart")},
 				ValuesFiles: []v1beta1.ValuesFile{{Path: "../external/chart-values.yaml"}},
 			}},
 			Manifests: []v1beta1.Manifest{{
+				Name:      "test",
 				Files:     []string{filepath.Join(externalDir, "manifest.yaml")},
-				Kustomize: &v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
+				Kustomize: v1beta1.KustomizeManifest{Files: []string{"../external/kustomize"}},
 			}},
 			Files: []v1beta1.File{{Source: filepath.Join(externalDir, "file.txt"), Destination: "/tmp/file.txt"}},
 		},
@@ -664,6 +850,30 @@ component:
 
 	_, err := Publish(context.Background(), componentPath, createRegistry(context.Background(), t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.EqualError(t, err, "onCreate actions are not supported for published remote components")
+}
+
+func TestPublishComponentRejectsAllowAnyDirectory(t *testing.T) {
+	t.Parallel()
+
+	componentPath := filepath.Join(t.TempDir(), "component.yaml")
+	componentYAML := []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: unrestricted
+  version: 0.0.1
+component:
+  manifests:
+    - name: app
+      kustomize:
+        files:
+          - kustomize
+        allowAnyDirectory: true
+`)
+	require.NoError(t, os.WriteFile(componentPath, componentYAML, 0o600))
+
+	ctx := context.Background()
+	_, err := Publish(ctx, componentPath, createRegistry(ctx, t), PublishOptions{RemoteOptions: defaultTestRemoteOptions()})
+	require.ErrorContains(t, err, `manifest "app" uses kustomize.allowAnyDirectory`)
 }
 
 func getPublishedComponent(ctx context.Context, t *testing.T, published registry.Reference) (v1beta1.ComponentConfig, ocispec.Manifest) {
@@ -753,7 +963,7 @@ func TestComponentResourcesAllowsSupportedRemoteSources(t *testing.T) {
 			Charts: []v1beta1.Chart{{ValuesFiles: []v1beta1.ValuesFile{{Path: "https://example.com/chart-values.yaml"}}}},
 			Manifests: []v1beta1.Manifest{{
 				Files:     []string{"https://example.com/manifest.yaml"},
-				Kustomize: &v1beta1.KustomizeManifest{Files: []string{"https://example.com/kustomization.yaml"}},
+				Kustomize: v1beta1.KustomizeManifest{Files: []string{"https://example.com/kustomization.yaml"}},
 			}},
 			Files: []v1beta1.File{{Source: "https://example.com/file.txt"}},
 		},

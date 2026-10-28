@@ -12,6 +12,8 @@ type PackageKind string
 const (
 	// ZarfPackageConfig is the default kind of Zarf package.
 	ZarfPackageConfig PackageKind = "ZarfPackageConfig"
+	// ZarfInitConfig is the kind of package used during zarf init.
+	ZarfInitConfig PackageKind = "ZarfInitConfig"
 	// ZarfComponentConfig is the kind of a Zarf component config file.
 	ZarfComponentConfig PackageKind = "ZarfComponentConfig"
 	// APIVersion is the api version of this package.
@@ -23,7 +25,7 @@ type Package struct {
 	// The API version of the Zarf package.
 	APIVersion string `json:"apiVersion" jsonschema:"enum=zarf.dev/v1beta1"`
 	// The kind of Zarf package.
-	Kind PackageKind `json:"kind" jsonschema:"enum=ZarfPackageConfig,default=ZarfPackageConfig"`
+	Kind PackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	// Package metadata.
 	Metadata PackageMetadata `json:"metadata,omitempty"`
 	// Zarf-generated package build data.
@@ -32,8 +34,8 @@ type Package struct {
 	Components []Component `json:"components" jsonschema:"minItems=1"`
 	// Values imports Zarf values files for templating and overriding Helm values.
 	Values Values `json:"values,omitempty"`
-	// Documentation files included in the package.
-	Documentation map[string]string `json:"documentation,omitempty"`
+	// Attachments are files included in the package.
+	Attachments map[string]string `json:"attachments,omitempty"`
 }
 
 // GetComponent returns the component with the given name, or an error if no such component exists.
@@ -46,20 +48,10 @@ func (pkg Package) GetComponent(name string) (Component, error) {
 	return Component{}, fmt.Errorf("no component named %q in package %q", name, pkg.Metadata.Name)
 }
 
-// HasImages returns true if one of the components contains an image.
+// HasImages returns true if one of the components contains an image or image archive.
 func (pkg Package) HasImages() bool {
 	for _, component := range pkg.Components {
-		if len(component.Images) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
-// IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or image archives).
-func (pkg Package) IsSBOMAble() bool {
-	for _, c := range pkg.Components {
-		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.ImageArchives) > 0 {
+		if len(component.Images) > 0 || len(component.ImageArchives) > 0 {
 			return true
 		}
 	}
@@ -100,10 +92,8 @@ type BuildData struct {
 	Migrations []string `json:"migrations,omitempty"`
 	// Any registry domains that were overridden on package create when pulling images.
 	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
-	// Whether this package was created with differential components.
-	Differential bool `json:"differential,omitempty"`
-	// Version of a previously built package used as the basis for creating this differential package.
-	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
+	// Base package used to create this differential package. Omitted for full packages.
+	Differential *Differential `json:"differential,omitempty"`
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
 	// Whether this package was signed.
@@ -114,22 +104,12 @@ type BuildData struct {
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
 	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
 	AggregateChecksum string `json:"aggregateChecksum"`
-	// originalAPIVersion records the apiVersion the package was read from before any conversion.
-	originalAPIVersion string
 }
 
-// GetOriginalAPIVersion returns the apiVersion the package was read from before any conversion,
-// defaulting to this package's apiVersion when one was never recorded.
-func (b BuildData) GetOriginalAPIVersion() string {
-	if b.originalAPIVersion == "" {
-		return APIVersion
-	}
-	return b.originalAPIVersion
-}
-
-// SetOriginalAPIVersion records the apiVersion the package was read from before any conversion.
-func (b *BuildData) SetOriginalAPIVersion(apiVersion string) {
-	b.originalAPIVersion = apiVersion
+// Differential identifies the base package used to create a differential package.
+type Differential struct {
+	// Version of a previously built package used as the basis for creating this differential package.
+	FromVersion string `json:"fromVersion"`
 }
 
 // VersionRequirement specifies a minimum Zarf version needed and the reason for the requirement.

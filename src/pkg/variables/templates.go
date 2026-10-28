@@ -12,15 +12,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
 // TextTemplate represents a value to be templated into a text file.
 type TextTemplate struct {
 	Sensitive  bool
 	AutoIndent bool
-	Type       v1alpha1.VariableType
+	Type       api.VariableType
 	Value      string
 }
 
@@ -51,8 +51,11 @@ func (vc *VariableConfig) GetAllTemplates() map[string]*TextTemplate {
 
 // ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
 func (vc *VariableConfig) ReplaceTextTemplate(path string) (err error) {
-	templateRegex := fmt.Sprintf("###%s_[A-Z0-9_]+###", strings.ToUpper(vc.templatePrefix))
 	templateMap := vc.GetAllTemplates()
+	if len(templateMap) == 0 {
+		return nil
+	}
+	templateRegex := fmt.Sprintf("###%s_[A-Z0-9_]+###", strings.ToUpper(vc.templatePrefix))
 
 	textFile, err := os.Open(path)
 	if err != nil {
@@ -62,7 +65,6 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) (err error) {
 		err2 := textFile.Close()
 		err = errors.Join(err, err2)
 	}()
-
 	// This regex takes a line and parses the text before and after a discovered template: https://regex101.com/r/ilUxAz/1
 	regexTemplateLine := regexp.MustCompile(fmt.Sprintf("(?P<preTemplate>.*?)(?P<template>%s)(?P<postTemplate>.*)", templateRegex))
 
@@ -102,7 +104,7 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) (err error) {
 				value = template.Value
 
 				// Check if the value is a file type and load the value contents from the file
-				if template.Type == v1alpha1.FileVariableType && value != "" {
+				if template.Type == api.FileVariableType && value != "" {
 					if isText, err := helpers.IsTextFile(value); err != nil || !isText {
 						nonTextWarning := fmt.Sprintf("Refusing to load a non-text file for templating %s", templateKey)
 						vc.logger.Warn(nonTextWarning)

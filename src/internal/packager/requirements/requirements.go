@@ -1,26 +1,27 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package requirements validates that Zarf meets the version requirements defined by the package
+// Package requirements validates minimum Zarf versions declared by packages and components.
 package requirements
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 )
 
 // VersionRequirementsError is returned when operational requirements are not met
 type VersionRequirementsError struct {
 	RequiredVersion string
-	Requirements    []v1alpha1.VersionRequirement
+	Requirements    []api.VersionRequirement
 	CurrentVersion  string
 }
 
 func (e *VersionRequirementsError) Error() string {
-	msg := fmt.Sprintf("package requires Zarf version '%s' (current version: '%s'):\n",
+	msg := fmt.Sprintf("Zarf version '%s' is required (current version: '%s'):\n",
 		e.RequiredVersion, e.CurrentVersion)
 	for _, req := range e.Requirements {
 		if req.Reason != "" {
@@ -31,7 +32,7 @@ func (e *VersionRequirementsError) Error() string {
 }
 
 // calculateRequiredVersion finds the highest version from a list of version requirements
-func calculateRequiredVersion(requirements []v1alpha1.VersionRequirement) (string, error) {
+func calculateRequiredVersion(requirements []api.VersionRequirement) (string, error) {
 	if len(requirements) == 0 {
 		return "", nil
 	}
@@ -56,9 +57,9 @@ func calculateRequiredVersion(requirements []v1alpha1.VersionRequirement) (strin
 	return highestVersion, nil
 }
 
-// ValidateVersionRequirements checks if the config.CLIVersion meets the operational requirements.
-func ValidateVersionRequirements(pkg v1alpha1.ZarfPackage) error {
-	if len(pkg.Build.VersionRequirements) == 0 {
+// ValidateVersionRequirements checks if config.CLIVersion meets the given minimum versions.
+func ValidateVersionRequirements(requirements []api.VersionRequirement) error {
+	if len(requirements) == 0 {
 		return nil
 	}
 
@@ -72,15 +73,21 @@ func ValidateVersionRequirements(pkg v1alpha1.ZarfPackage) error {
 		return fmt.Errorf("failed to parse current Zarf version '%s': %w", currentVersion, err)
 	}
 
-	var unmetRequirements []v1alpha1.VersionRequirement
+	var unmetRequirements []api.VersionRequirement
 
-	for _, req := range pkg.Build.VersionRequirements {
+	for _, req := range requirements {
 		requiredVer, err := semver.NewVersion(req.Version)
 		if err != nil {
 			return fmt.Errorf("failed to parse required version '%s': %w", req.Version, err)
 		}
 
-		if currentVer.LessThan(requiredVer) {
+		versionToCheck := currentVer
+		if requiredVer.Prerelease() == "" && strings.HasPrefix(currentVer.Prerelease(), "rc") {
+			// Release candidates include the features required by their corresponding stable release.
+			versionToCheck = semver.New(currentVer.Major(), currentVer.Minor(), currentVer.Patch(), "", "")
+		}
+
+		if versionToCheck.LessThan(requiredVer) {
 			unmetRequirements = append(unmetRequirements, req)
 		}
 	}

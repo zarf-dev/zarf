@@ -3,24 +3,148 @@
 package packager
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-var testDataRoot = "testdata/inspect"
+func TestInspectResourcesComponentServices(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name          string
+		apiVersion    string
+		componentName string
+		service       v1beta1.ServiceName
+		registry      bool
+		agent         bool
+	}{
+		{name: "renamed registry", apiVersion: v1beta1.APIVersion, componentName: "custom-registry", service: v1beta1.ServiceRegistry},
+		{name: "renamed seed registry", apiVersion: v1beta1.APIVersion, componentName: "custom-seed", service: v1beta1.ServiceSeedRegistry},
+		{name: "renamed agent", apiVersion: v1beta1.APIVersion, componentName: "custom-agent", service: v1beta1.ServiceAgent},
+		{name: "service overrides name", apiVersion: v1beta1.APIVersion, componentName: "zarf-registry", service: v1beta1.ServiceAgent},
+		{name: "registry name without service", apiVersion: v1beta1.APIVersion, componentName: "zarf-registry"},
+		{name: "agent name without service", apiVersion: v1beta1.APIVersion, componentName: "zarf-agent"},
+		{name: "legacy init registry", apiVersion: v1alpha1.APIVersion, componentName: "zarf-registry", registry: true},
+		{name: "legacy init agent", apiVersion: v1alpha1.APIVersion, componentName: "zarf-agent", agent: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			dir := t.TempDir()
+			serviceField := ""
+			if tt.service != "" {
+				serviceField = fmt.Sprintf("    service:\n      name: %s\n", tt.service)
+			}
+			definition := fmt.Sprintf(`apiVersion: %s
+kind: ZarfInitConfig
+metadata:
+  name: service-init
+components:
+  - name: %s
+%s    manifests:
+      - name: service-templates
+        files:
+          - manifest.yaml
+`, tt.apiVersion, tt.componentName, serviceField)
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(definition), 0o600))
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"), []byte(`apiVersion: v1
+kind: Secret
+metadata:
+  name: service-templates
+stringData:
+  seed: "###ZARF_SEED_REGISTRY###"
+  htpasswd: "###ZARF_HTPASSWD###"
+  agentKey: "###ZARF_AGENT_KEY###"
+  gitPush: "###ZARF_GIT_PUSH###"
+  gitPassword: "###ZARF_GIT_AUTH_PUSH###"
+`), 0o600))
 
-func setupInspectTests(t *testing.T) {
-	t.Helper()
-	// Enable values feature for tests (ignore error if already set)
-	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck
+			check := func(t *testing.T, resources []Resource) {
+				t.Helper()
+				require.Len(t, resources, 1)
+				for marker, rendered := range map[string]bool{
+					"###ZARF_SEED_REGISTRY###": tt.registry,
+					"###ZARF_HTPASSWD###":      tt.registry,
+					"###ZARF_AGENT_KEY###":     tt.agent,
+					"###ZARF_GIT_PUSH###":      tt.apiVersion == v1alpha1.APIVersion,
+					"###ZARF_GIT_AUTH_PUSH###": tt.apiVersion == v1alpha1.APIVersion,
+				} {
+					if rendered {
+						require.NotContains(t, resources[0].Content, marker)
+					} else {
+						require.Contains(t, resources[0].Content, marker)
+					}
+				}
+			}
+			resources, err := InspectDefinitionResources(ctx, dir, InspectDefinitionResourcesOptions{})
+			require.NoError(t, err)
+			check(t, resources)
+
+			loaded, err := load.Package(ctx, dir, load.PackageOptions{})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+			pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{SkipSBOM: true})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			resources, err = InspectPackageResources(ctx, pkgLayout, InspectPackageResourcesOptions{})
+			require.NoError(t, err)
+			check(t, resources)
+		})
+	}
 }
+
+func TestInspectDefinitionResourcesComponentValuesSchema(t *testing.T) {
+	dir := t.TempDir()
+	for name, contents := range map[string]string{
+		"zarf.yaml": `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: sample
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
+component:
+  manifests:
+    - name: example
+      files:
+        - manifest.yaml
+`,
+		"values.yaml": `replicas: 1
+`,
+		"values.schema.json": `{"type":"object","properties":{"replicas":{"type":"integer"}}}`,
+		"manifest.yaml": `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example
+`,
+	} {
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(contents), 0o600))
+	}
+
+	resources, err := InspectDefinitionResources(t.Context(), dir, InspectDefinitionResourcesOptions{
+		Values: value.Values{"replicas": 2},
+	})
+	require.NoError(t, err)
+	require.Len(t, resources, 1)
+	require.Contains(t, resources[0].Content, "name: example")
+
+	_, err = InspectDefinitionResources(t.Context(), dir, InspectDefinitionResourcesOptions{
+		Values: value.Values{"replicas": "invalid"},
+	})
+	require.ErrorContains(t, err, "inspect values validation failed")
+}
+
+var testDataRoot = "testdata/inspect"
 
 func inspectTestDataPath(parts ...string) string {
 	return filepath.Join(append([]string{testDataRoot}, parts...)...)
@@ -40,7 +164,6 @@ func assertContainsAll(t *testing.T, resources []Resource, expectedContent []str
 }
 
 func TestInspectPackageResourcesSkipsValuesSchemaValidationWhenConfigured(t *testing.T) {
-	setupInspectTests(t)
 	ctx := testutil.TestContext(t)
 	srcDir := filepath.Join("load", "testdata", "package-with-invalid-values")
 	loaded, err := load.Package(ctx, srcDir, load.PackageOptions{SkipValuesSchemaValidation: true})
@@ -61,7 +184,6 @@ func TestInspectPackageResourcesSkipsValuesSchemaValidationWhenConfigured(t *tes
 
 func TestInspectDefinitionResources(t *testing.T) {
 	t.Parallel()
-	setupInspectTests(t)
 
 	tests := []struct {
 		name              string
@@ -244,8 +366,6 @@ func TestInspectDefinitionResources(t *testing.T) {
 
 func TestInspectDefinitionResources_Errors(t *testing.T) {
 	t.Parallel()
-	setupInspectTests(t)
-
 	tests := []struct {
 		name       string
 		packageDir string

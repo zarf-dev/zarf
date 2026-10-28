@@ -19,8 +19,9 @@ import (
 	flux "github.com/fluxcd/source-controller/api/v1"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -73,16 +74,36 @@ type FindImagesOptions struct {
 	types.RemoteOptions
 }
 
-// ComponentImageScan contains the results of FindImages for a component
+// MatchType identifies how an image was found.
+type MatchType string
+
+const (
+	// MatchDefinite is an image identified directly in a resource or chart annotation.
+	MatchDefinite MatchType = "definite"
+	// MatchPossible is an image inferred from resource text and confirmed in a registry.
+	MatchPossible MatchType = "possible"
+	// MatchCosign is a signature or attestation image found for another match.
+	MatchCosign MatchType = "cosign"
+)
+
+// ImageMatch is an image found in a component's resources.
+type ImageMatch struct {
+	Image     api.Image
+	MatchType MatchType
+}
+
+func imageMatchNames(matches []ImageMatch) []string {
+	names := make([]string, 0, len(matches))
+	for _, match := range matches {
+		names = append(names, match.Image.Name)
+	}
+	return names
+}
+
+// ComponentImageScan contains the results of FindImages for a component.
 type ComponentImageScan struct {
-	// ComponentName is the name of the component where the images were found
 	ComponentName string
-	// Matches contains definitively identified container images, such as those in an image: field
-	Matches []string
-	// PotentialMatches contains potential container images found by a regex
-	PotentialMatches []string
-	// CosignArtifacts contains found cosign artifacts for images
-	CosignArtifacts []string
+	Matches       []ImageMatch
 	// WhyResources contains the resources where specific images were found (when Why option is used)
 	WhyResources []Resource
 }
@@ -90,7 +111,8 @@ type ComponentImageScan struct {
 // DefinitionImageResult contains the results of FindDefinitionImages for a component
 type DefinitionImageResult struct {
 	ComponentImageScan
-	ImageArchives []v1alpha1.ImageArchive
+	ImageArchives []api.ImageArchive
+	Selector      api.ComponentSelector
 }
 
 // FindDefinitionImages finds all images contained in a component and filters them according to images discovered in
@@ -111,20 +133,19 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 			RemoteOptions:    opts.RemoteOptions,
 		},
 	}
-	loaded, err := load.Package(ctx, packagePath, loadOpts)
+	loaded, err := loadDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
-	pkg := loaded.Definition.AsV1alpha1()
-	imageScans, err := findImages(ctx, pkg, loaded.Resources, loaded.Values, opts)
+	imageScans, err := findImages(ctx, loaded.Definition, loaded.Resources, loaded.Values, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	return filterImagesFoundInArchives(ctx, pkg, loaded.Resources, imageScans)
+	return filterImagesFoundInArchives(ctx, loaded.Definition, loaded.Resources, imageScans)
 }
 
 // FindImages iterates over the manifests and charts within each component to find any container images
@@ -145,39 +166,36 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 			RemoteOptions:    opts.RemoteOptions,
 		},
 	}
-	loaded, err := load.Package(ctx, packagePath, loadOpts)
+	loaded, err := loadDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		err = errors.Join(err, loaded.Close())
 	}()
-	pkg := loaded.Definition.AsV1alpha1()
-
-	return findImages(ctx, pkg, loaded.Resources, loaded.Values, opts)
+	return findImages(ctx, loaded.Definition, loaded.Resources, loaded.Values, opts)
 }
 
 // filterImagesFoundInArchives merges scan results with each component's imageArchives.
 // An image present in both surfaces only on the archive side
-func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, resources *load.ResourceSet, imageScans []ComponentImageScan) (_ []DefinitionImageResult, err error) {
+func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources *load.ResourceSet, imageScans []ComponentImageScan) (_ []DefinitionImageResult, err error) {
 	componentNameScanMap := make(map[string]ComponentImageScan)
 	var allScanArtifacts []string
 	for _, scan := range imageScans {
 		componentNameScanMap[scan.ComponentName] = scan
-		allScanArtifacts = append(allScanArtifacts, scan.Matches...)
-		allScanArtifacts = append(allScanArtifacts, scan.PotentialMatches...)
-		allScanArtifacts = append(allScanArtifacts, scan.CosignArtifacts...)
+		for _, match := range scan.Matches {
+			allScanArtifacts = append(allScanArtifacts, match.Image.Name)
+		}
 	}
 
 	var definitionImageResults []DefinitionImageResult
 	var allArchiveImages []string
 	for _, component := range pkg.Components {
-		result := DefinitionImageResult{}
+		result := DefinitionImageResult{Selector: component.Selector}
 		result.ComponentName = component.Name
 		if scan, ok := componentNameScanMap[component.Name]; ok {
 			result.ComponentImageScan = scan
 		}
-
 		for _, archive := range component.ImageArchives {
 			archivePath, err := resources.Path(archive.Path)
 			if err != nil {
@@ -191,9 +209,28 @@ func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, 
 			if err != nil {
 				return nil, fmt.Errorf("failed to find images in archive %s: %w", archive.Path, err)
 			}
-			imageArchive := v1alpha1.ImageArchive{
-				Images: archiveImages,
-				Path:   archive.Path,
+			authored := make(map[string][]api.ArchiveImage, len(archive.Images))
+			for _, image := range archive.Images {
+				ref, err := transform.ParseImageRef(image.Name)
+				if err != nil {
+					return nil, fmt.Errorf("invalid image %q in archive %q: %w", image.Name, archive.Path, err)
+				}
+				authored[ref.Reference] = append(authored[ref.Reference], image)
+			}
+			imageArchive := api.ImageArchive{Path: archive.Path}
+			seen := make(map[string]bool, len(archiveImages))
+			for _, name := range archiveImages {
+				if seen[name] {
+					continue
+				}
+				seen[name] = true
+				if selected := authored[name]; len(selected) > 0 {
+					for _, image := range selected {
+						imageArchive.Images = append(imageArchive.Images, api.ArchiveImage{Name: name, ID: image.ID})
+					}
+				} else {
+					imageArchive.Images = append(imageArchive.Images, api.ArchiveImage{Name: name})
+				}
 			}
 			result.ImageArchives = append(result.ImageArchives, imageArchive)
 			allArchiveImages = append(allArchiveImages, archiveImages...)
@@ -204,26 +241,51 @@ func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, 
 
 	// Remove scan artifacts if those artifacts are present in any imageArchives
 	for i := range definitionImageResults {
-		definitionImageResults[i].Matches = slices.DeleteFunc(definitionImageResults[i].Matches, func(s string) bool {
-			return slices.Contains(allArchiveImages, s)
-		})
-		definitionImageResults[i].PotentialMatches = slices.DeleteFunc(definitionImageResults[i].PotentialMatches, func(s string) bool {
-			return slices.Contains(allArchiveImages, s)
-		})
-		definitionImageResults[i].CosignArtifacts = slices.DeleteFunc(definitionImageResults[i].CosignArtifacts, func(s string) bool {
-			return slices.Contains(allArchiveImages, s)
+		definitionImageResults[i].Matches = slices.DeleteFunc(definitionImageResults[i].Matches, func(match ImageMatch) bool {
+			return slices.Contains(allArchiveImages, match.Image.Name)
 		})
 		for j := range definitionImageResults[i].ImageArchives {
-			definitionImageResults[i].ImageArchives[j].Images = slices.DeleteFunc(definitionImageResults[i].ImageArchives[j].Images, func(s string) bool {
-				return !slices.Contains(allScanArtifacts, s)
+			definitionImageResults[i].ImageArchives[j].Images = slices.DeleteFunc(definitionImageResults[i].ImageArchives[j].Images, func(image api.ArchiveImage) bool {
+				return !slices.Contains(allScanArtifacts, image.Name)
 			})
 		}
+		authoredByRef := make(map[string][]api.Image)
+		for _, image := range pkg.Components[i].Images {
+			if image.Source == "" && image.ID == "" {
+				continue
+			}
+			ref, err := transform.ParseImageRef(image.Name)
+			if err != nil {
+				return nil, fmt.Errorf("invalid authored image %q in component %q: %w", image.Name, pkg.Components[i].Name, err)
+			}
+			authoredByRef[ref.Reference] = append(authoredByRef[ref.Reference], image)
+		}
+		var matches []ImageMatch
+		seen := make(map[string]bool)
+		for _, match := range definitionImageResults[i].Matches {
+			ref, err := transform.ParseImageRef(match.Image.Name)
+			if err != nil {
+				return nil, fmt.Errorf("invalid scanned image %q in component %q: %w", match.Image.Name, pkg.Components[i].Name, err)
+			}
+			if seen[ref.Reference] {
+				continue
+			}
+			seen[ref.Reference] = true
+			if authored, found := authoredByRef[ref.Reference]; found {
+				for _, image := range authored {
+					matches = append(matches, ImageMatch{Image: image, MatchType: match.MatchType})
+				}
+			} else {
+				matches = append(matches, match)
+			}
+		}
+		definitionImageResults[i].Matches = matches
 	}
 
 	return definitionImageResults, nil
 }
 
-func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load.ResourceSet, packageValues value.Values, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
+func findImages(ctx context.Context, pkg api.Package, resourceSet *load.ResourceSet, packageValues value.Values, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
 	s, err := state.Default()
 	if err != nil {
@@ -250,13 +312,13 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 
 	componentImageScans := []ComponentImageScan{}
 	for _, component := range pkg.Components {
-		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
+		if len(component.Charts)+len(component.Manifests)+len(component.Repositories) < 1 {
 			// Skip if there are no manifests, charts, or repos
 			continue
 		}
 		scan := ComponentImageScan{ComponentName: component.Name}
 
-		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, s)
+		applicationTemplates, err := template.GetZarfTemplates(ctx, pkg.GetAPIVersion(), component.Service.Name, s)
 		if err != nil {
 			return nil, err
 		}
@@ -270,18 +332,27 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 
 		if opts.RepoHelmChartPath != "" {
 			// Also process git repos that have helm charts
-			for idx, repo := range component.Repos {
-				matches := strings.Split(repo, "@")
-				if len(matches) < 2 {
-					return nil, fmt.Errorf("cannot convert the Git repository %s to a Helm chart without a version tag", repo)
+			for idx, repo := range component.Repositories {
+				gitURL, gitRef := repo.URL, repo.Ref
+				if url, ref, err := transform.GitURLSplitRef(repo.URL); err == nil && ref != "" {
+					gitURL = url
+					if gitRef == nil && git.ParseRef(ref).IsTag() {
+						gitRef = &api.GitRef{Tag: strings.TrimPrefix(ref, "refs/tags/")}
+					}
+				}
+				if gitRef == nil {
+					return nil, fmt.Errorf("cannot convert the Git repository %s to a Helm chart without a version tag", repo.URL)
 				}
 				// If a repo helm chart path is specified,
-				component.Charts = append(component.Charts, v1alpha1.ZarfChart{
-					Name:    fmt.Sprintf("temp-git-chart-%d", idx),
-					URL:     matches[0],
-					Version: matches[1],
+				component.Charts = append(component.Charts, api.Chart{
+					Name:          fmt.Sprintf("temp-git-chart-%d", idx),
+					LegacyVersion: gitRef.Tag,
+					Git: &api.GitSource{
+						URL:  gitURL,
+						Ref:  gitRef,
+						Path: strings.TrimPrefix(opts.RepoHelmChartPath, "/"),
+					},
 					// Trim the first char to match how the packager expects it, this is messy,need to clean up better
-					GitPath: strings.TrimPrefix(opts.RepoHelmChartPath, "/"),
 				})
 			}
 		}
@@ -303,10 +374,10 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 			yamls = slices.DeleteFunc(yamls, isHelmTestResource)
 			resources = append(resources, yamls...)
 			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
-			chartTarball := filepath.Join(chartPath, layout.ChartArchiveName(zarfChart.Name, zarfChart.Version))
+			chartTarball := filepath.Join(chartPath, layout.ChartArchiveName(zarfChart.Name, zarfChart.LegacyVersion))
 			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 			if err != nil {
-				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", zarfChart.URL, err)
+				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", zarfChart.SourceURL(), err)
 			}
 			for _, image := range annotatedImages {
 				matchedImages[image] = true
@@ -377,11 +448,10 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 			if err != nil {
 				return nil, fmt.Errorf("could not parse image reference for matched image %s: %w", image, err)
 			}
-			scan.Matches = append(scan.Matches, imageReference.Reference)
+			scan.Matches = append(scan.Matches, ImageMatch{Image: api.Image{Name: imageReference.Reference}, MatchType: MatchDefinite})
 		}
 
 		// Handle the "maybes"
-		var validMaybeImages []string
 		if len(sortedExpectedImages) > 0 {
 			for _, image := range sortedExpectedImages {
 				if descriptor, err := crane.Head(image, images.WithGlobalInsecureFlag(opts.InsecureSkipTLSVerify)...); err != nil {
@@ -394,11 +464,10 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 					if err != nil {
 						return nil, err
 					}
-					validMaybeImages = append(validMaybeImages, imageReference.Reference)
+					scan.Matches = append(scan.Matches, ImageMatch{Image: api.Image{Name: imageReference.Reference}, MatchType: MatchPossible})
 				}
 			}
 		}
-		scan.PotentialMatches = validMaybeImages
 
 		l.Debug("done looking for images in component",
 			"name", component.Name,
@@ -407,22 +476,12 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 
 		if !opts.SkipCosign {
 			cosignHosts := map[string]struct{}{}
-			addCosignHosts := func(images []string) error {
-				for _, image := range images {
-					parsed, parseErr := transform.ParseImageRef(image)
-					if parseErr != nil {
-						return fmt.Errorf("could not parse image reference for cosign pre-auth %s: %w", image, parseErr)
-					}
-					cosignHosts[parsed.Host] = struct{}{}
+			for _, match := range scan.Matches {
+				parsed, parseErr := transform.ParseImageRef(match.Image.Name)
+				if parseErr != nil {
+					return nil, fmt.Errorf("could not parse image reference for cosign pre-auth %s: %w", match.Image.Name, parseErr)
 				}
-
-				return nil
-			}
-			if err := addCosignHosts(scan.Matches); err != nil {
-				return nil, err
-			}
-			if err := addCosignHosts(scan.PotentialMatches); err != nil {
-				return nil, err
+				cosignHosts[parsed.Host] = struct{}{}
 			}
 
 			cosignClient, err := images.NewAuthClientFromDocker(ctx, opts.InsecureSkipTLSVerify, 0, cosignHosts)
@@ -431,27 +490,22 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, resourceSet *load
 			}
 
 			// Handle cosign artifact lookups
-			if len(scan.Matches) > 0 || len(scan.PotentialMatches) > 0 {
+			if len(scan.Matches) > 0 {
 				imgStart := time.Now()
-				l.Info("looking up cosign artifacts for discovered images", "count", len(scan.Matches)+len(scan.PotentialMatches))
+				l.Info("looking up cosign artifacts for discovered images", "count", len(scan.Matches))
 
-				for _, image := range scan.Matches {
-					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient, opts.RemoteOptions)
+				var cosignMatches []ImageMatch
+				for _, match := range scan.Matches {
+					l.Debug("looking up cosign artifacts for image", "name", match.Image.Name)
+					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, match.Image.Name, cosignClient, opts.RemoteOptions)
 					if err != nil {
-						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
+						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", match.Image.Name, err)
 					}
-					scan.CosignArtifacts = append(scan.CosignArtifacts, cosignArtifacts...)
-				}
-
-				for _, image := range scan.PotentialMatches {
-					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient, opts.RemoteOptions)
-					if err != nil {
-						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
+					for _, artifact := range cosignArtifacts {
+						cosignMatches = append(cosignMatches, ImageMatch{Image: api.Image{Name: artifact}, MatchType: MatchCosign})
 					}
-					scan.CosignArtifacts = append(scan.CosignArtifacts, cosignArtifacts...)
 				}
+				scan.Matches = append(scan.Matches, cosignMatches...)
 				l.Debug("done looking up cosign artifacts for discovered images", "duration", time.Since(imgStart))
 			}
 		}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 
 	"github.com/zarf-dev/zarf/src/config"
@@ -26,7 +27,7 @@ const (
 
 // GetZarfVariableConfig gets a variable configuration specific to Zarf
 func GetZarfVariableConfig(ctx context.Context, isInteractive bool) *variables.VariableConfig {
-	prompt := func(variable v1alpha1.InteractiveVariable) (value string, err error) {
+	prompt := func(variable api.InteractiveVariable) (value string, err error) {
 		if isInteractive {
 			return interactive.PromptVariable(ctx, variable)
 		}
@@ -36,9 +37,12 @@ func GetZarfVariableConfig(ctx context.Context, isInteractive bool) *variables.V
 	return variables.New("zarf", prompt, logger.From(ctx))
 }
 
-// GetZarfTemplates returns the template keys and values to be used for templating.
-func GetZarfTemplates(ctx context.Context, componentName string, s *state.State) (templateMap map[string]*variables.TextTemplate, err error) {
+// GetZarfTemplates returns legacy template keys and values for v1alpha1 packages.
+func GetZarfTemplates(ctx context.Context, apiVersion string, service api.ServiceName, s *state.State) (templateMap map[string]*variables.TextTemplate, err error) {
 	templateMap = make(map[string]*variables.TextTemplate)
+	if apiVersion != v1alpha1.APIVersion {
+		return templateMap, nil
+	}
 
 	if s != nil {
 		s.Reconcile()
@@ -72,15 +76,15 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 		builtinMap[depMarker] = config.GetDataInjectionMarker()
 
 		// Don't template component-specific variables for every component
-		switch componentName {
-		case "zarf-agent":
+		switch service {
+		case api.ServiceAgent:
 			agentTLS := s.AgentInfo.TLS
 			builtinMap["AGENT_CRT"] = base64.StdEncoding.EncodeToString(agentTLS.Cert)
 			builtinMap["AGENT_KEY"] = base64.StdEncoding.EncodeToString(agentTLS.Key)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
 			builtinMap["AGENT_MUTATION_POLICY"] = string(s.AgentInfo.MutationPolicy)
 
-		case "zarf-seed-registry", "zarf-registry":
+		case api.ServiceSeedRegistry, api.ServiceRegistry:
 			builtinMap["SEED_REGISTRY"] = state.LocalhostRegistryAddress(s.IPFamily, s.InjectorInfo.Port)
 			htpasswd, err := regInfo.Htpasswd()
 			if err != nil {
