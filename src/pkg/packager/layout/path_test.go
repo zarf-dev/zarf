@@ -6,6 +6,7 @@ package layout_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -122,6 +123,9 @@ func TestResolvePackagePath(t *testing.T) {
 			}
 
 			// Create symlinks
+			if len(tt.createSymlinks) > 0 && runtime.GOOS == "windows" {
+				t.Skip("Windows symlink creation requires elevated privileges")
+			}
 			for link, target := range tt.createSymlinks {
 				err := os.Symlink(filepath.Join(tmpdir, target), filepath.Join(tmpdir, link))
 				require.NoError(t, err)
