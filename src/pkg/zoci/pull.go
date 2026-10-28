@@ -189,6 +189,9 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 	}
 
 	if selection.SBOMs != nil {
+		if len(selection.SBOMs.Keys) > 0 && !layout.UsesGranularResourceLayout(pkg) {
+			return nil, fmt.Errorf("SBOM selection by key requires granular SBOM resources")
+		}
 		if layout.UsesGranularResourceLayout(pkg) {
 			sbomLayers, err := checksumVerifiedSBOMLayers(ctx, root, fetcher, pkg, selection.SBOMs.Keys)
 			if err != nil {

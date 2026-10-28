@@ -257,4 +257,9 @@ documentation:
 	sbomLayers, err := AssembleLayers(ctx, root, store, nil, LayerSelection{SBOMs: &SBOMSelection{}})
 	require.NoError(t, err)
 	require.Equal(t, []ocispec.Descriptor{zarfYAMLDesc, sbomDesc}, sbomLayers)
+
+	_, err = AssembleLayers(ctx, root, store, nil, LayerSelection{
+		SBOMs: &SBOMSelection{Keys: []string{"metrics"}},
+	})
+	require.EqualError(t, err, "SBOM selection by key requires granular SBOM resources")
 }
