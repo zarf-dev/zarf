@@ -157,8 +157,10 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 				Namespace:   "zarf",
 				ReleaseName: rel.Name(),
 			}
-			// TODO, once the v1beta1 init package is released, we will have to match the values
+			agentValues := map[string]interface{}{}
 			if initPkg.GetAPIVersion() == v1alpha1.APIVersion {
+				// Older CLIs rotate credentials through post-rendered placeholders.
+				// Preserve those placeholders in Helm's reusable values.
 				opts.VariableConfig.SetConstants([]api.Constant{
 					{
 						Name:  "AGENT_IMAGE",
@@ -169,6 +171,16 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 						Value: agentImage.Tag,
 					},
 				})
+			} else {
+				agentTLS := opts.State.AgentInfo.TLS
+				agentValues = map[string]interface{}{
+					"caBundle":       base64.StdEncoding.EncodeToString(agentTLS.CA),
+					"mutationPolicy": string(opts.State.AgentInfo.MutationPolicy),
+					"secret": map[string]interface{}{
+						"tlsCrt": base64.StdEncoding.EncodeToString(agentTLS.Cert),
+						"tlsKey": base64.StdEncoding.EncodeToString(agentTLS.Key),
+					},
+				}
 			}
 			applicationTemplates, err := template.GetZarfTemplates(ctx, initPkg.GetAPIVersion(), api.ServiceAgent, opts.State)
 			if err != nil {
@@ -176,15 +188,6 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 			}
 			opts.VariableConfig.SetApplicationTemplates(applicationTemplates)
 
-			agentTLS := opts.State.AgentInfo.TLS
-			agentValues := map[string]interface{}{
-				"caBundle":       base64.StdEncoding.EncodeToString(agentTLS.CA),
-				"mutationPolicy": string(opts.State.AgentInfo.MutationPolicy),
-				"secret": map[string]interface{}{
-					"tlsCrt": base64.StdEncoding.EncodeToString(agentTLS.Cert),
-					"tlsKey": base64.StdEncoding.EncodeToString(agentTLS.Key),
-				},
-			}
 			err = UpdateReleaseValues(ctx, chart, agentValues, opts)
 			if err != nil {
 				return fmt.Errorf("error updating the release values: %w", err)

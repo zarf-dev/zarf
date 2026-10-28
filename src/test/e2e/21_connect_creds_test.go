@@ -7,6 +7,8 @@ package test
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,7 +18,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type RegistryResponse struct {
@@ -56,8 +60,65 @@ func TestConnectAndCreds(t *testing.T) {
 	require.NotEqual(t, prevAgentSecretData, newAgentSecretData)
 	require.NotEqual(t, oldState.ArtifactServer.PushToken, newState.ArtifactServer.PushToken)
 	require.NotEqual(t, oldState.GitServer.PushPassword, newState.GitServer.PushPassword)
+	verifyAgentTLS(t, c)
 
 	connectToZarfServices(ctx, t)
+}
+
+func testAgentCredentialRotationCompatibility(t *testing.T) {
+	c, err := cluster.New(t.Context())
+	require.NoError(t, err)
+	previousState, err := c.LoadState(t.Context())
+	require.NoError(t, err)
+
+	legacyCLI := e2e
+	legacyCLI.ZarfBinPath = e2e.GetZarfAtVersion(t, "v0.88.0")
+	for _, cli := range []test.ZarfE2ETest{e2e, legacyCLI} {
+		stdOut, stdErr, err := cli.Zarf(t, "tools", "update-creds", "agent", "--confirm", "--force-conflicts")
+		require.NoError(t, err, stdOut, stdErr)
+		currentState, err := c.LoadState(t.Context())
+		require.NoError(t, err)
+		require.NotEqual(t, previousState.AgentInfo.TLS.Cert, currentState.AgentInfo.TLS.Cert)
+		verifyAgentTLS(t, c)
+		previousState = currentState
+	}
+}
+
+func verifyAgentTLS(t *testing.T, c *cluster.Cluster) {
+	t.Helper()
+	ctx := t.Context()
+	s, err := c.LoadState(ctx)
+	require.NoError(t, err)
+	agentTLS := s.AgentInfo.TLS
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, "agent-hook-tls", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, agentTLS.Cert, secret.Data["tls.crt"])
+	require.Equal(t, agentTLS.Key, secret.Data["tls.key"])
+	webhook, err := c.Clientset.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, "zarf", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.NotEmpty(t, webhook.Webhooks)
+	for _, hook := range webhook.Webhooks {
+		require.Equal(t, agentTLS.CA, hook.ClientConfig.CABundle)
+	}
+
+	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, "svc", "agent-hook", "", 0, 8443)
+	require.NoError(t, err)
+	_, err = tunnel.Connect(ctx)
+	require.NoError(t, err)
+	defer tunnel.Close()
+	endpoints := tunnel.Endpoints()
+	require.Len(t, endpoints, 1)
+	caPool := x509.NewCertPool()
+	require.True(t, caPool.AppendCertsFromPEM(agentTLS.CA))
+	dialer := tls.Dialer{Config: &tls.Config{RootCAs: caPool, ServerName: state.ZarfAgentHost}}
+	conn, err := dialer.DialContext(ctx, "tcp", endpoints[0])
+	require.NoError(t, err, "agent must serve a certificate trusted by the CA in cluster state")
+	defer func() { require.NoError(t, conn.Close()) }()
+	tlsConn, ok := conn.(*tls.Conn)
+	require.True(t, ok)
+	cert, _ := pem.Decode(agentTLS.Cert)
+	require.NotNil(t, cert)
+	require.Equal(t, cert.Bytes, tlsConn.ConnectionState().PeerCertificates[0].Raw)
 }
 
 func TestMetrics(t *testing.T) {
