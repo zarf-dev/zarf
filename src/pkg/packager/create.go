@@ -199,7 +199,7 @@ func validatePackageSecretSize(pkg api.Package, digest string) error {
 		return err
 	}
 	if len(data) > packageSecretSizeLimit {
-		return fmt.Errorf("package %q is too large to store in a package secret: %d bytes exceeds the %d byte limit; reduce the package definition size or split it into smaller packages", pkg.Metadata.Name, len(data), packageSecretSizeLimit)
+		return fmt.Errorf("package %q is too large to store in a package secret: %d bytes exceeds the %d byte limit; reduce the package definition size", pkg.Metadata.Name, len(data), packageSecretSizeLimit)
 	}
 	return nil
 }
