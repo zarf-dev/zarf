@@ -13,7 +13,7 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
-	orasOCI "oras.land/oras-go/v2/content/oci"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -29,7 +29,7 @@ const (
 // OrasRemote is a wrapper around the Oras remote repository.
 type OrasRemote struct {
 	repo               *remote.Repository
-	cache              *orasOCI.Store
+	cache              content.Storage
 	credentialFunc     auth.CredentialFunc
 	root               *Manifest
 	progTransport      *retry.Transport
@@ -104,7 +104,7 @@ func WithLogger(logger *slog.Logger) Modifier {
 }
 
 // WithCache sets the cache for the remote
-func WithCache(cache *orasOCI.Store) Modifier {
+func WithCache(cache content.Storage) Modifier {
 	return func(o *OrasRemote) { o.cache = cache }
 }
 

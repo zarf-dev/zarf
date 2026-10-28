@@ -132,7 +132,7 @@ $ zarf init --components=git-server
 $ zarf init oci://ghcr.io/zarf-dev/packages/init:v0.69.0
 
 # Initializing w/ an internal registry in proxy mode for built-in cross-node mTLS:
-$ zarf init --registry-mode=proxy
+$ zarf init --registry-mode=proxy --injector-image={IMAGE}
 
 # Initializing w/ an internal registry but with a different nodeport:
 $ zarf init --registry-port=30333

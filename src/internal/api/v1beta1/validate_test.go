@@ -188,25 +188,99 @@ func TestValidatePackageFileChecksum(t *testing.T) {
 	}
 }
 
-func TestValidatePackageDocumentationKeys(t *testing.T) {
+func TestValidatePackageAttachmentsKeys(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		key     string
 		wantErr string
 	}{
-		{key: "nested/document", wantErr: PkgValidateErrDocumentationKeyPath},
-		{key: `nested\document`, wantErr: PkgValidateErrDocumentationKeyPath},
-		{key: "..", wantErr: PkgValidateErrDocumentationKeyTraversal},
+		{key: "nested/document", wantErr: PkgValidateErrAttachmentsKeyPath},
+		{key: `nested\document`, wantErr: PkgValidateErrAttachmentsKeyPath},
+		{key: "..", wantErr: PkgValidateErrAttachmentsKeyTraversal},
 	}
 	for _, tt := range tests {
 		t.Run(tt.key, func(t *testing.T) {
 			t.Parallel()
 			errs := ValidatePackage(v1beta1.Package{
-				Components:    []v1beta1.Component{{Name: "component"}},
-				Documentation: map[string]string{tt.key: "readme.md"},
+				Components:  []v1beta1.Component{{Name: "component"}},
+				Attachments: map[string]string{tt.key: "readme.md"},
 			})
 			require.ErrorContains(t, errs, fmt.Sprintf(tt.wantErr, tt.key))
+		})
+	}
+}
+
+func TestValidatePackageAnnotationsSize(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name        string
+		annotations map[string]string
+		wantError   bool
+	}{
+		{name: "omitted"},
+		{name: "empty", annotations: map[string]string{}},
+		{name: "exact limit", annotations: map[string]string{"a": strings.Repeat("v", 32767)}},
+		{name: "key contributes to size", annotations: map[string]string{"ab": strings.Repeat("v", 32767)}, wantError: true},
+		{name: "combined entries at limit", annotations: map[string]string{
+			"a": strings.Repeat("v", 16383), "b": strings.Repeat("v", 16383),
+		}},
+		{name: "combined entries exceed limit", annotations: map[string]string{
+			"a": strings.Repeat("v", 16383), "b": strings.Repeat("v", 16384),
+		}, wantError: true},
+		{name: "unicode at byte limit", annotations: map[string]string{"é": strings.Repeat("界", 10922)}},
+		{name: "unicode exceeds byte limit", annotations: map[string]string{"界": strings.Repeat("界", 10922)}, wantError: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			errs := ValidatePackage(v1beta1.Package{
+				Metadata:   v1beta1.PackageMetadata{Annotations: tt.annotations},
+				Components: []v1beta1.Component{{Name: "component"}},
+			})
+			if tt.wantError {
+				require.ErrorContains(t, errs, "metadata.annotations exceeds the maximum total size of 32768 bytes")
+			} else {
+				require.Empty(t, errs)
+			}
+		})
+	}
+}
+
+func TestValidatePackageMapKeyLengths(t *testing.T) {
+	t.Parallel()
+	for _, field := range []struct {
+		name string
+		set  func(*v1beta1.Package, map[string]string)
+	}{
+		{name: "metadata.annotations", set: func(pkg *v1beta1.Package, entries map[string]string) { pkg.Metadata.Annotations = entries }},
+		{name: "documentation", set: func(pkg *v1beta1.Package, entries map[string]string) { pkg.Attachments = entries }},
+		{name: "build.registryOverrides", set: func(pkg *v1beta1.Package, entries map[string]string) { pkg.Build.RegistryOverrides = entries }},
+	} {
+		t.Run(field.name, func(t *testing.T) {
+			t.Parallel()
+			for _, tt := range []struct {
+				name      string
+				key       string
+				wantError bool
+			}{
+				{name: "ascii at limit", key: strings.Repeat("k", 256)},
+				{name: "ascii over limit", key: strings.Repeat("k", 257), wantError: true},
+				{name: "unicode at limit", key: strings.Repeat("界", 256)},
+				{name: "unicode over limit", key: strings.Repeat("界", 257), wantError: true},
+			} {
+				t.Run(tt.name, func(t *testing.T) {
+					t.Parallel()
+					pkg := v1beta1.Package{Components: []v1beta1.Component{{Name: "component"}}}
+					field.set(&pkg, map[string]string{tt.key: "value"})
+					errs := ValidatePackage(pkg)
+					if tt.wantError {
+						require.ErrorContains(t, errs, field.name+" key")
+						require.ErrorContains(t, errs, "exceeds the maximum length of 256 characters")
+					} else {
+						require.Empty(t, errs)
+					}
+				})
+			}
 		})
 	}
 }
@@ -338,6 +412,7 @@ func TestValidateChart(t *testing.T) {
 			name:  "no namespace or source",
 			chart: v1beta1.Chart{Name: "invalid"},
 			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrChartSource, "invalid"),
 				fmt.Sprintf(PkgValidateErrChartNamespaceMissing, "invalid"),
 			},
 		},
@@ -373,6 +448,31 @@ func TestValidateChart(t *testing.T) {
 			} else {
 				require.ElementsMatch(t, tt.expectedErrs, validationErrorMessages(errs))
 			}
+		})
+	}
+}
+
+func TestValidateComponentRequiresResolvedChartSource(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name  string
+		chart v1beta1.Chart
+	}{
+		{name: "missing source", chart: v1beta1.Chart{Name: "app", Namespace: "app"}},
+		{name: "conflicting sources", chart: v1beta1.Chart{
+			Name: "app", Namespace: "app",
+			Local: &v1beta1.LocalSource{Path: "chart"},
+			HelmRepository: &v1beta1.HelmRepositorySource{
+				URL: "https://example.com/charts", Version: "1.0.0",
+			},
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			errs := ValidateComponent(v1beta1.Component{
+				Name: "app", ComponentSpec: v1beta1.ComponentSpec{Charts: []v1beta1.Chart{tc.chart}},
+			})
+			require.ErrorContains(t, errs, fmt.Sprintf(PkgValidateErrChartSource, "app"))
 		})
 	}
 }

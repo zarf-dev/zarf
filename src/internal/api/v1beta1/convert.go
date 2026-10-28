@@ -38,7 +38,7 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 			Files:  pkg.Values.Files,
 			Schema: pkg.Values.Schema,
 		},
-		Documentation: pkg.Documentation,
+		Attachments: pkg.Attachments,
 	}
 
 	for _, c := range pkg.Components {
@@ -116,16 +116,18 @@ func componentToGeneric(c v1beta1.Component) api.Component {
 
 	for _, img := range c.Images {
 		gc.Images = append(gc.Images, api.Image{
+			ID:     img.ID,
 			Name:   img.Name,
 			Source: api.ImageSource(img.Source),
 		})
 	}
 
 	for _, ia := range c.ImageArchives {
-		gc.ImageArchives = append(gc.ImageArchives, api.ImageArchive{
-			Path:   ia.Path,
-			Images: ia.Images,
-		})
+		archive := api.ImageArchive{Path: ia.Path}
+		for _, image := range ia.Images {
+			archive.Images = append(archive.Images, api.ArchiveImage{Name: image.Name, ID: image.ID})
+		}
+		gc.ImageArchives = append(gc.ImageArchives, archive)
 	}
 
 	return gc
@@ -305,12 +307,12 @@ func waitToGeneric(w *v1beta1.ComponentActionWait) *api.ActionWait {
 // PackageToV1beta1 converts the internal generic representation to a v1beta1 Package.
 func PackageToV1beta1(g api.Package) v1beta1.Package {
 	pkg := v1beta1.Package{
-		APIVersion:    v1beta1.APIVersion,
-		Kind:          v1beta1.PackageKind(g.Kind),
-		Metadata:      metadataFromGeneric(g.Metadata),
-		Build:         buildFromGeneric(g.Build),
-		Values:        v1beta1.Values{Files: g.Values.Files, Schema: g.Values.Schema},
-		Documentation: g.Documentation,
+		APIVersion:  v1beta1.APIVersion,
+		Kind:        v1beta1.PackageKind(g.Kind),
+		Metadata:    metadataFromGeneric(g.Metadata),
+		Build:       buildFromGeneric(g.Build),
+		Values:      v1beta1.Values{Files: g.Values.Files, Schema: g.Values.Schema},
+		Attachments: g.Attachments,
 	}
 
 	if pkg.Kind == "" {
@@ -431,16 +433,18 @@ func componentFromGeneric(c api.Component) v1beta1.Component {
 			source = api.ImageSourceRegistry
 		}
 		bc.Images = append(bc.Images, v1beta1.Image{
+			ID:     img.ID,
 			Name:   img.Name,
 			Source: v1beta1.ImageSource(source),
 		})
 	}
 
 	for _, ia := range c.ImageArchives {
-		bc.ImageArchives = append(bc.ImageArchives, v1beta1.ImageArchive{
-			Path:   ia.Path,
-			Images: ia.Images,
-		})
+		archive := v1beta1.ImageArchive{Path: ia.Path}
+		for _, image := range ia.Images {
+			archive.Images = append(archive.Images, v1beta1.ArchiveImage{Name: image.Name, ID: image.ID})
+		}
+		bc.ImageArchives = append(bc.ImageArchives, archive)
 	}
 
 	// Convert v1alpha1 HealthChecks into onDeploy onSuccess wait actions.

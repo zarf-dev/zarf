@@ -76,9 +76,9 @@ func TestFetchSharedCachePopulationRace(t *testing.T) {
 	source := memory.New()
 	require.NoError(t, source.Push(ctx, descriptor, bytes.NewReader(data)))
 	cacheDir := filepath.Join(t.TempDir(), "images")
-	firstCache, err := oci.New(cacheDir)
+	firstCache, err := oci.NewStorage(cacheDir)
 	require.NoError(t, err)
-	secondCache, err := oci.New(cacheDir)
+	secondCache, err := oci.NewStorage(cacheDir)
 	require.NoError(t, err)
 
 	// Hold the second push until the first reader has published the blob.

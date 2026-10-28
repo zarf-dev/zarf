@@ -1,5 +1,26 @@
 {
   "$defs": {
+    "ArchiveImage": {
+      "additionalProperties": false,
+      "description": "ArchiveImage identifies an image selected from an archive.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "id": {
+          "description": "Optional ID, unique across regular and archive images in the component. Does not enable import overrides.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The image reference contained in the archive.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
     "BuildData": {
       "additionalProperties": false,
       "description": "BuildData is written during package create to track details of the created package.",
@@ -86,32 +107,6 @@
     "Chart": {
       "additionalProperties": false,
       "description": "Chart defines a helm chart to be deployed.",
-      "oneOf": [
-        {
-          "required": [
-            "helmRepository"
-          ],
-          "title": "helmRepository"
-        },
-        {
-          "required": [
-            "git"
-          ],
-          "title": "git"
-        },
-        {
-          "required": [
-            "local"
-          ],
-          "title": "local"
-        },
-        {
-          "required": [
-            "oci"
-          ],
-          "title": "oci"
-        }
-      ],
       "patternProperties": {
         "^x-": {}
       },
@@ -789,10 +784,6 @@
           "type": "string"
         }
       },
-      "required": [
-        "url",
-        "ref"
-      ],
       "type": "object"
     },
     "HelmRepositorySource": {
@@ -815,10 +806,6 @@
           "type": "string"
         }
       },
-      "required": [
-        "url",
-        "version"
-      ],
       "type": "object"
     },
     "Image": {
@@ -828,6 +815,10 @@
         "^x-": {}
       },
       "properties": {
+        "id": {
+          "description": "Optional ID, unique within the component; matching IDs let importing components replace regular images.",
+          "type": "string"
+        },
         "name": {
           "description": "The image reference.",
           "type": "string"
@@ -857,7 +848,7 @@
         "images": {
           "description": "The list of images contained in the archive.",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/ArchiveImage"
           },
           "type": "array"
         },
@@ -1014,10 +1005,6 @@
           "type": "string"
         }
       },
-      "required": [
-        "url",
-        "ref"
-      ],
       "type": "object"
     },
     "PackageMetadata": {
@@ -1256,6 +1243,13 @@
       ],
       "type": "string"
     },
+    "attachments": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Attachments are files included in the package.",
+      "type": "object"
+    },
     "build": {
       "$ref": "#/$defs/BuildData",
       "description": "Zarf-generated package build data."
@@ -1267,13 +1261,6 @@
       },
       "minItems": 1,
       "type": "array"
-    },
-    "documentation": {
-      "additionalProperties": {
-        "type": "string"
-      },
-      "description": "Documentation files included in the package.",
-      "type": "object"
     },
     "kind": {
       "default": "ZarfPackageConfig",

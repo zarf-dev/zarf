@@ -6,6 +6,7 @@ metadata:
 
 documentation:
   zarf.cli.openvex.json: .vex/zarf.cli.openvex.json
+  injector.config: injector-config.md
 
 components:
   - name: k3s
