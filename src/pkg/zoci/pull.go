@@ -310,6 +310,15 @@ func checksumVerifiedSBOMLayers(ctx context.Context, root *oci.Manifest, fetcher
 	for _, key := range keys {
 		requested[key] = struct{}{}
 	}
+	var declaredImageReferences map[string]struct{}
+	if len(requested) > 0 {
+		declaredImageReferences = make(map[string]struct{})
+		for _, component := range pkg.Components {
+			for _, imageReference := range component.GetImages() {
+				declaredImageReferences[imageReference] = struct{}{}
+			}
+		}
+	}
 	foundRequested := make(map[string]struct{}, len(requested))
 	layers := []ocispec.Descriptor{}
 	for _, entry := range entries {
@@ -336,12 +345,20 @@ func checksumVerifiedSBOMLayers(ctx context.Context, root *oci.Manifest, fetcher
 			layers = append(layers, descriptor)
 			continue
 		}
-		_, key, supported := layout.ParseSBOMResourcePath(entry.Path)
-		if supported {
-			if _, selected := requested[key]; selected {
-				layers = append(layers, descriptor)
-				foundRequested[key] = struct{}{}
+		kind, identifier, supported := layout.ParseSBOMResourcePath(entry.Path)
+		if !supported {
+			continue
+		}
+		selected := false
+		for key := range requested {
+			if !matchesSBOMKey(kind, identifier, key, declaredImageReferences) {
+				continue
 			}
+			foundRequested[key] = struct{}{}
+			selected = true
+		}
+		if selected {
+			layers = append(layers, descriptor)
 		}
 	}
 	for _, key := range keys {
@@ -350,6 +367,19 @@ func checksumVerifiedSBOMLayers(ctx context.Context, root *oci.Manifest, fetcher
 		}
 	}
 	return layers, nil
+}
+
+func matchesSBOMKey(kind layout.SBOMResourceKind, identifier, key string, declaredImageReferences map[string]struct{}) bool {
+	if identifier == key {
+		return true
+	}
+	if kind != layout.SBOMResourceImage {
+		return false
+	}
+	if _, declared := declaredImageReferences[key]; !declared {
+		return false
+	}
+	return strings.HasPrefix(identifier, key+"-")
 }
 
 // LayersFromComponents returns the layers for the requested components and
