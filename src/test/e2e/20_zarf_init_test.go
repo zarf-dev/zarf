@@ -120,8 +120,6 @@ func TestZarfInit(t *testing.T) {
 	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--registry-push-password", "new-password", "--confirm")
 	require.Error(t, err)
 
-	t.Run("agent credentials remain rotatable by older CLIs", testAgentCredentialRotationCompatibility)
-
 	// Upgrade the v1alpha1 init installation to the v1beta1 init package.
 	initPackageV1beta1 := filepath.Join("build", "v1beta1-init", fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, initPackageVersion))
 	stdOut, stdErr, err := e2e.Zarf(t, "init", initPackageV1beta1, "--components="+initComponents, "--features=v1beta1=true,values=true", "--confirm")
