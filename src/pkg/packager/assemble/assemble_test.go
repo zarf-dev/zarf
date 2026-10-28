@@ -136,7 +136,7 @@ func TestStageDocumentationRejectsPathKeys(t *testing.T) {
 	t.Parallel()
 
 	pkg := api.Package{
-		Documentation: map[string]string{
+		Attachments: map[string]string{
 			"../escape": "first/readme.md",
 			"witness":   "second/readme.md",
 		},
@@ -221,7 +221,7 @@ func TestStageDocumentationMaterializesSymlinks(t *testing.T) {
 
 			buildPath := t.TempDir()
 			require.NoError(t, stageDocumentation(testutil.TestContext(t), api.Package{
-				Documentation: map[string]string{"readme": "readme.md"},
+				Attachments: map[string]string{"readme": "readme.md"},
 			}, load.NewResourceSet(resourceRoot), buildPath))
 
 			outputDir := t.TempDir()
@@ -869,7 +869,7 @@ func TestAssemblePackageV1Beta1WritesMultiDocDefinition(t *testing.T) {
 kind: ZarfPackageConfig
 metadata:
   name: beta-local
-documentation:
+attachments:
   readme: %q
 components:
   - name: beta-component
@@ -905,8 +905,8 @@ func TestStageDocumentationRejectsUnsafeKeys(t *testing.T) {
 		t.Run(apiVersion, func(t *testing.T) {
 			buildPath := t.TempDir()
 			err := stageDocumentation(t.Context(), api.Package{
-				APIVersion:    apiVersion,
-				Documentation: map[string]string{"../escape": "first/README.md", "readme": "second/README.md"},
+				APIVersion:  apiVersion,
+				Attachments: map[string]string{"../escape": "first/README.md", "readme": "second/README.md"},
 			}, load.NewResourceSet(t.TempDir()), buildPath)
 
 			require.EqualError(t, err, `documentation key validation failed: "../escape" must not contain path separators`)
@@ -1144,7 +1144,7 @@ func TestCreateAbsoluteSources(t *testing.T) {
 				require.NoError(t, err)
 			}
 			docsDir := filepath.Join(tmpdir, "docs-dir")
-			err = pkgLayout.GetDocumentation(ctx, docsDir, []string{})
+			err = pkgLayout.GetAttachments(ctx, docsDir, []string{})
 			require.NoError(t, err)
 			require.FileExists(t, filepath.Join(docsDir, "doc.md"))
 

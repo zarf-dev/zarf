@@ -26,32 +26,33 @@ const (
 
 // Package errors found during validation.
 const (
-	PkgValidateErrComponentNameNotUnique    = "component name %q is not unique"
-	PkgValidateErrChartNameNotUnique        = "chart name %q is not unique"
-	PkgValidateErrChart                     = "invalid chart definition: %w"
-	PkgValidateErrManifestNameNotUnique     = "manifest name %q is not unique"
-	PkgValidateErrManifest                  = "invalid manifest definition: %w"
-	PkgValidateErrAction                    = "invalid action: %w"
-	PkgValidateErrActionCmdWait             = "action %q cannot be both a command and wait action"
-	PkgValidateErrActionClusterNetwork      = "a single wait action must contain only one of cluster or network"
-	PkgValidateErrActionSetValueOnDeploy    = "setValues is not supported in onCreate actions"
-	PkgValidateErrActionTemplateOnCreate    = "templating is not supported in onCreate actions"
-	PkgValidateErrChartName                 = "chart %q exceed the maximum length of %d characters"
-	PkgValidateErrChartNamespaceMissing     = "chart %q must include a namespace"
-	PkgValidateErrManifestFileOrKustomize   = "manifest %q must have at least one file or kustomization"
-	PkgValidateErrManifestNameLength        = "manifest %q exceed the maximum length of %d characters"
-	PkgValidateErrManifestNamePath          = "manifest %q must not contain path separators"
-	PkgValidateErrDocumentationKeyPath      = "documentation key %q must not contain path separators"
-	PkgValidateErrDocumentationKeyTraversal = "documentation key %q must not be a traversal path"
-	PkgValidateErrNoComponents              = "package does not contain any compatible components"
-	PkgValidateErrGitURLWithRef             = "git URL %q must not contain an embedded ref; use the ref field instead"
-	PkgValidateErrServiceRequiresInit       = "component %q declares service %q, but only ZarfInitConfig packages may declare services"
-	PkgValidateErrServiceNotUnique          = "service %q is declared by multiple components (%q, %q)"
-	PkgValidateErrFileChecksumAlgorithm     = "component %q file %q has unsupported checksum algorithm %q (expected sha256 or sha512)"
-	PkgValidateErrFileChecksumDigest        = "component %q file %q has an empty checksum digest"
-	PkgValidateErrImageConflictingSources   = "image %q has conflicting sources %q and %q"
-	PkgValidateErrMapKeyLength              = "%s key %q exceeds the maximum length of %d characters"
-	PkgValidateErrAnnotationsSize           = "metadata.annotations exceeds the maximum total size of %d bytes"
+	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
+	PkgValidateErrChartNameNotUnique      = "chart name %q is not unique"
+	PkgValidateErrChart                   = "invalid chart definition: %w"
+	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
+	PkgValidateErrManifest                = "invalid manifest definition: %w"
+	PkgValidateErrAction                  = "invalid action: %w"
+	PkgValidateErrActionCmdWait           = "action %q cannot be both a command and wait action"
+	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
+	PkgValidateErrActionSetValueOnDeploy  = "setValues is not supported in onCreate actions"
+	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
+	PkgValidateErrChartName               = "chart %q exceed the maximum length of %d characters"
+	PkgValidateErrChartSource             = "chart %q must include exactly one source (helmRepository, git, local, or oci)"
+	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
+	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
+	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
+	PkgValidateErrManifestNamePath        = "manifest %q must not contain path separators"
+	PkgValidateErrAttachmentsKeyPath      = "attachment key %q must not contain path separators"
+	PkgValidateErrAttachmentsKeyTraversal = "attachment key %q must not be a traversal path"
+	PkgValidateErrNoComponents            = "package does not contain any compatible components"
+	PkgValidateErrGitURLWithRef           = "git URL %q must not contain an embedded ref; use the ref field instead"
+	PkgValidateErrServiceRequiresInit     = "component %q declares service %q, but only ZarfInitConfig packages may declare services"
+	PkgValidateErrServiceNotUnique        = "service %q is declared by multiple components (%q, %q)"
+	PkgValidateErrFileChecksumAlgorithm   = "component %q file %q has unsupported checksum algorithm %q (expected sha256 or sha512)"
+	PkgValidateErrFileChecksumDigest      = "component %q file %q has an empty checksum digest"
+	PkgValidateErrImageConflictingSources = "image %q has conflicting sources %q and %q"
+	PkgValidateErrMapKeyLength            = "%s key %q exceeds the maximum length of %d characters"
+	PkgValidateErrAnnotationsSize         = "metadata.annotations exceeds the maximum total size of %d bytes"
 )
 
 // ValidationErrors contains all errors found during package validation.
@@ -84,13 +85,13 @@ func ValidatePackage(pkg v1beta1.Package) ValidationErrors {
 		errs = append(errs, errors.New(PkgValidateErrNoComponents))
 	}
 	errs = append(errs, ValidateAnnotations(pkg.Metadata.Annotations)...)
-	errs = append(errs, validateMapKeys("documentation", pkg.Documentation)...)
+	errs = append(errs, validateMapKeys("documentation", pkg.Attachments)...)
 	errs = append(errs, validateMapKeys("build.registryOverrides", pkg.Build.RegistryOverrides)...)
-	for key := range pkg.Documentation {
+	for key := range pkg.Attachments {
 		if key == ".." {
-			errs = append(errs, fmt.Errorf(PkgValidateErrDocumentationKeyTraversal, key))
+			errs = append(errs, fmt.Errorf(PkgValidateErrAttachmentsKeyTraversal, key))
 		} else if strings.ContainsAny(key, `/\`) {
-			errs = append(errs, fmt.Errorf(PkgValidateErrDocumentationKeyPath, key))
+			errs = append(errs, fmt.Errorf(PkgValidateErrAttachmentsKeyPath, key))
 		}
 	}
 	uniqueComponentNames := make(map[string]bool)
@@ -348,6 +349,40 @@ func validateReleaseName(chartName, releaseName string) error {
 // validateChart runs all validation checks on a chart.
 func validateChart(chart v1beta1.Chart) ValidationErrors {
 	var errs ValidationErrors
+
+	sources := 0
+	for _, set := range []bool{chart.HelmRepository != nil, chart.Git != nil, chart.Local != nil, chart.OCI != nil} {
+		if set {
+			sources++
+		}
+	}
+	if sources != 1 {
+		errs = append(errs, fmt.Errorf(PkgValidateErrChartSource, chart.Name))
+	}
+	if chart.HelmRepository != nil {
+		if chart.HelmRepository.URL == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include helmRepository.url", chart.Name))
+		}
+		if chart.HelmRepository.Version == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include helmRepository.version", chart.Name))
+		}
+	}
+	if chart.Git != nil {
+		if chart.Git.URL == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include git.url", chart.Name))
+		}
+		if chart.Git.Ref == (v1beta1.GitRef{}) {
+			errs = append(errs, fmt.Errorf("chart %q must include git.ref", chart.Name))
+		}
+	}
+	if chart.OCI != nil {
+		if chart.OCI.URL == "" {
+			errs = append(errs, fmt.Errorf("chart %q must include oci.url", chart.Name))
+		}
+		if chart.OCI.Ref == (v1beta1.OCIRef{}) {
+			errs = append(errs, fmt.Errorf("chart %q must include oci.ref", chart.Name))
+		}
+	}
 
 	if len(chart.Name) > ZarfMaxChartNameLength {
 		errs = append(errs, fmt.Errorf(PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))

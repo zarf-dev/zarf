@@ -203,7 +203,7 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		}
 	}
 
-	if slices.Contains(include, DocLayers) && len(pkg.Documentation) > 0 {
+	if slices.Contains(include, DocLayers) && len(pkg.Attachments) > 0 {
 		if layout.UsesGranularResourceLayout(pkg) {
 			layers = append(layers, granularResourceLayers(root, layout.ResourceKindDocumentation)...)
 		} else if desc := root.Locate(layout.DocumentationTar); !oci.IsEmptyDescriptor(desc) {

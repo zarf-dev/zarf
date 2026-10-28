@@ -188,23 +188,23 @@ func TestValidatePackageFileChecksum(t *testing.T) {
 	}
 }
 
-func TestValidatePackageDocumentationKeys(t *testing.T) {
+func TestValidatePackageAttachmentsKeys(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		key     string
 		wantErr string
 	}{
-		{key: "nested/document", wantErr: PkgValidateErrDocumentationKeyPath},
-		{key: `nested\document`, wantErr: PkgValidateErrDocumentationKeyPath},
-		{key: "..", wantErr: PkgValidateErrDocumentationKeyTraversal},
+		{key: "nested/document", wantErr: PkgValidateErrAttachmentsKeyPath},
+		{key: `nested\document`, wantErr: PkgValidateErrAttachmentsKeyPath},
+		{key: "..", wantErr: PkgValidateErrAttachmentsKeyTraversal},
 	}
 	for _, tt := range tests {
 		t.Run(tt.key, func(t *testing.T) {
 			t.Parallel()
 			errs := ValidatePackage(v1beta1.Package{
-				Components:    []v1beta1.Component{{Name: "component"}},
-				Documentation: map[string]string{tt.key: "readme.md"},
+				Components:  []v1beta1.Component{{Name: "component"}},
+				Attachments: map[string]string{tt.key: "readme.md"},
 			})
 			require.ErrorContains(t, errs, fmt.Sprintf(tt.wantErr, tt.key))
 		})
@@ -253,7 +253,7 @@ func TestValidatePackageMapKeyLengths(t *testing.T) {
 		set  func(*v1beta1.Package, map[string]string)
 	}{
 		{name: "metadata.annotations", set: func(pkg *v1beta1.Package, entries map[string]string) { pkg.Metadata.Annotations = entries }},
-		{name: "documentation", set: func(pkg *v1beta1.Package, entries map[string]string) { pkg.Documentation = entries }},
+		{name: "documentation", set: func(pkg *v1beta1.Package, entries map[string]string) { pkg.Attachments = entries }},
 		{name: "build.registryOverrides", set: func(pkg *v1beta1.Package, entries map[string]string) { pkg.Build.RegistryOverrides = entries }},
 	} {
 		t.Run(field.name, func(t *testing.T) {
@@ -412,6 +412,7 @@ func TestValidateChart(t *testing.T) {
 			name:  "no namespace or source",
 			chart: v1beta1.Chart{Name: "invalid"},
 			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrChartSource, "invalid"),
 				fmt.Sprintf(PkgValidateErrChartNamespaceMissing, "invalid"),
 			},
 		},
@@ -447,6 +448,31 @@ func TestValidateChart(t *testing.T) {
 			} else {
 				require.ElementsMatch(t, tt.expectedErrs, validationErrorMessages(errs))
 			}
+		})
+	}
+}
+
+func TestValidateComponentRequiresResolvedChartSource(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name  string
+		chart v1beta1.Chart
+	}{
+		{name: "missing source", chart: v1beta1.Chart{Name: "app", Namespace: "app"}},
+		{name: "conflicting sources", chart: v1beta1.Chart{
+			Name: "app", Namespace: "app",
+			Local: &v1beta1.LocalSource{Path: "chart"},
+			HelmRepository: &v1beta1.HelmRepositorySource{
+				URL: "https://example.com/charts", Version: "1.0.0",
+			},
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			errs := ValidateComponent(v1beta1.Component{
+				Name: "app", ComponentSpec: v1beta1.ComponentSpec{Charts: []v1beta1.Chart{tc.chart}},
+			})
+			require.ErrorContains(t, errs, fmt.Sprintf(PkgValidateErrChartSource, "app"))
 		})
 	}
 }

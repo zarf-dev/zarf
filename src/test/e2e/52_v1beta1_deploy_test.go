@@ -79,7 +79,7 @@ func TestV1Beta1Deploy(t *testing.T) {
 	packagePath := filepath.Join(workDir, fmt.Sprintf("zarf-package-v1beta1-deploy-%s.tar.zst", e2e.Arch))
 	require.FileExists(t, packagePath)
 	docsDir := filepath.Join(workDir, "docs")
-	stdOut, stdErr, err = e2e.ZarfInDir(t, workDir, "package", "inspect", "documentation", packagePath, "--output", docsDir)
+	stdOut, stdErr, err = e2e.ZarfInDir(t, workDir, "package", "inspect", "attachments", packagePath, "--output", docsDir)
 	require.NoError(t, err, "%s\n%s", stdOut, stdErr)
 	docs, err := os.ReadFile(filepath.Join(docsDir, "v1beta1-deploy-documentation", "README.md"))
 	require.NoError(t, err)
