@@ -58,9 +58,9 @@ func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 			Files:  pkg.Values.Files,
 			Schema: pkg.Values.Schema,
 		},
-		Documentation: pkg.Documentation,
-		Variables:     interactiveVarsToGeneric(pkg.Variables),
-		Constants:     constantsToGeneric(pkg.Constants),
+		Attachments: pkg.Documentation,
+		Variables:   interactiveVarsToGeneric(pkg.Variables),
+		Constants:   constantsToGeneric(pkg.Constants),
 	}
 
 	for _, vr := range pkg.Build.VersionRequirements {
@@ -156,10 +156,11 @@ func componentToGeneric(c v1alpha1.ZarfComponent) api.Component {
 	}
 
 	for _, ia := range c.ImageArchives {
-		gc.ImageArchives = append(gc.ImageArchives, api.ImageArchive{
-			Path:   ia.Path,
-			Images: ia.Images,
-		})
+		archive := api.ImageArchive{Path: ia.Path}
+		for _, image := range ia.Images {
+			archive.Images = append(archive.Images, api.ArchiveImage{Name: image})
+		}
+		gc.ImageArchives = append(gc.ImageArchives, archive)
 	}
 
 	return gc
@@ -409,7 +410,7 @@ func PackageToV1alpha1(g api.Package) v1alpha1.ZarfPackage {
 		Metadata:      metadataFromGeneric(g.Metadata, g.Build),
 		Build:         buildFromGeneric(g.Build),
 		Values:        v1alpha1.ZarfValues{Files: g.Values.Files, Schema: g.Values.Schema},
-		Documentation: g.Documentation,
+		Documentation: g.Attachments,
 		Variables:     interactiveVarsFromGeneric(g.Variables),
 		Constants:     constantsFromGeneric(g.Constants),
 	}
@@ -534,10 +535,11 @@ func componentFromGeneric(c api.Component) v1alpha1.ZarfComponent {
 	}
 
 	for _, ia := range c.ImageArchives {
-		ac.ImageArchives = append(ac.ImageArchives, v1alpha1.ImageArchive{
-			Path:   ia.Path,
-			Images: ia.Images,
-		})
+		archive := v1alpha1.ImageArchive{Path: ia.Path}
+		for _, image := range ia.Images {
+			archive.Images = append(archive.Images, image.Name)
+		}
+		ac.ImageArchives = append(ac.ImageArchives, archive)
 	}
 
 	return ac

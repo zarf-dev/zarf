@@ -9,13 +9,13 @@ import "strings"
 // Package is the version-neutral representation used by package operations and converters.
 type Package struct {
 	// APIVersion identifies the source package schema. An empty value is the legacy v1alpha1 form.
-	APIVersion    string
-	Kind          PackageKind
-	Metadata      PackageMetadata
-	Build         BuildData
-	Components    []Component
-	Values        Values
-	Documentation map[string]string
+	APIVersion  string
+	Kind        PackageKind
+	Metadata    PackageMetadata
+	Build       BuildData
+	Components  []Component
+	Values      Values
+	Attachments map[string]string
 
 	// v1alpha1-only fields
 	Variables []InteractiveVariable
@@ -364,6 +364,7 @@ func (s ImageSource) GetSource() ImageSource {
 
 // Image represents an OCI image in the package.
 type Image struct {
+	ID     string
 	Name   string
 	Source ImageSource
 }
@@ -371,7 +372,13 @@ type Image struct {
 // ImageArchive defines a tar archive of images to include in the package.
 type ImageArchive struct {
 	Path   string
-	Images []string
+	Images []ArchiveImage
+}
+
+// ArchiveImage identifies an image selected from an archive.
+type ArchiveImage struct {
+	Name string
+	ID   string
 }
 
 // ComponentActions are the actions associated with each package lifecycle operation.

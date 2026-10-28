@@ -103,7 +103,8 @@ func resolveImportsV1Beta1(ctx context.Context, pkg v1beta1.Package, pkgPath lay
 }
 
 // ResolveComponentConfigImports resolves imports in a v1beta1 component config using
-// the supplied registry options and cache path for remote component imports.
+// the supplied registry options and cache path for remote component imports, then
+// validates the resolved component.
 func ResolveComponentConfigImports(ctx context.Context, component v1beta1.ComponentConfig, componentPath string, remoteOptions types.RemoteOptions, cachePath string) (ComponentConfigImportResolution, error) {
 	componentPath = filepath.Clean(componentPath)
 	resolvedSpec, importedVals, remoteResources, err := resolveComponentConfigSpecImports(ctx, component.Component, filepath.Dir(componentPath), component.Variant.Architecture, component.Variant.Flavor, []string{componentPath}, false, remoteOptions, cachePath, remoteReferenceCache{})
@@ -111,6 +112,12 @@ func ResolveComponentConfigImports(ctx context.Context, component v1beta1.Compon
 		return ComponentConfigImportResolution{}, err
 	}
 	component.Component = resolvedSpec
+	if validationErrs := internalv1beta1.ValidateComponent(v1beta1.Component{
+		Name:          component.Metadata.Name,
+		ComponentSpec: component.Component,
+	}); len(validationErrs) > 0 {
+		return ComponentConfigImportResolution{}, fmt.Errorf("component validation failed:\n%w", validationErrs)
+	}
 	component.Values.Files = dedupePaths(append(importedVals.files, component.Values.Files...))
 	return ComponentConfigImportResolution{
 		Component:       component,
@@ -128,6 +135,9 @@ func (r ComponentConfigImportResolution) MaterializeResources(ctx context.Contex
 // resolveComponentConfigSpecImports merges component-config imports. Its target always
 // comes from the root component config metadata, never a package-create override.
 func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.ComponentSpec, specDir, arch, flavor string, importStack []string, skipVersionCheck bool, remoteOptions types.RemoteOptions, cachePath string, refCache remoteReferenceCache) (v1beta1.ComponentSpec, importedValues, []remoteResource, error) {
+	if errs := internalv1beta1.ValidateImageIDs(spec); len(errs) > 0 {
+		return v1beta1.ComponentSpec{}, importedValues{}, nil, fmt.Errorf("component definition %q: %w", importStack[len(importStack)-1], errs)
+	}
 	if err := validateComponentImportV1Beta1(spec.Import); err != nil {
 		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
 	}
@@ -157,7 +167,10 @@ func resolveComponentConfigSpecImports(ctx context.Context, spec v1beta1.Compone
 		inheritedResources[i].importRoot = makePathRelativeTo(inheritedResources[i].importRoot, relDir)
 	}
 	resources := append(directImport.resources, inheritedResources...)
-	merged := mergeComponentConfigSpec(resolvedImportSpec, spec)
+	merged, err := mergeComponentConfigSpec(resolvedImportSpec, spec)
+	if err != nil {
+		return v1beta1.ComponentSpec{}, importedValues{}, nil, err
+	}
 	merged.Import = v1beta1.ComponentImport{}
 	return merged, vals, resources, nil
 }
@@ -408,6 +421,9 @@ func componentConfigFromBytes(path string, b []byte) (v1beta1.ComponentConfig, e
 	}
 	if err := validateComponentConfigSchemaV1Beta1(path, b); err != nil {
 		return v1beta1.ComponentConfig{}, err
+	}
+	if errs := internalv1beta1.ValidateAnnotations(config.Metadata.Annotations); len(errs) > 0 {
+		return v1beta1.ComponentConfig{}, fmt.Errorf("component config %q validation failed:\n%w", path, errs)
 	}
 	return config, nil
 }

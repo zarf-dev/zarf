@@ -123,10 +123,10 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 					Repositories: []v1beta1.Repository{{URL: "https://github.com/example/repo"}},
 					StateAccess:  []v1beta1.StateAccessKey{v1beta1.StateAccessRegistryCredentials},
 					Images: []v1beta1.Image{
-						{Name: "nginx:latest", Source: "registry"},
+						{ID: "web", Name: "nginx:latest", Source: "registry"},
 					},
 					ImageArchives: []v1beta1.ImageArchive{
-						{Path: "images.tar", Images: []string{"busybox:1.36"}},
+						{Path: "images.tar", Images: []v1beta1.ArchiveImage{{Name: "busybox:1.36", ID: "busybox"}}},
 					},
 					Charts: []v1beta1.Chart{
 						{
@@ -224,8 +224,8 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 				},
 			},
 		},
-		Values:        v1beta1.Values{Files: []string{"vals.yaml"}, Schema: "schema.json"},
-		Documentation: map[string]string{"doc": "doc.md"},
+		Values:      v1beta1.Values{Files: []string{"vals.yaml"}, Schema: "schema.json"},
+		Attachments: map[string]string{"doc": "doc.md"},
 	}
 	roundTripped := PackageToV1beta1(PackageFromV1beta1(original))
 	require.Empty(t, cmp.Diff(original, roundTripped, v1beta1GenericRoundTripExclusions()...))
@@ -404,6 +404,7 @@ func validV1beta1Repository(rng *rand.Rand) v1beta1.Repository {
 //   - component.import has separate local and remote lists in v1beta1, while v1alpha1 has one
 //     import object; component.service has no v1alpha1 equivalent.
 //   - image.source distinguishes registry and daemon sources in v1beta1, v1alpha1 images always fallback
+//   - image.id has no v1alpha1 equivalent
 //   - chart.valuesFiles is one ordered v1beta1 list. v1alpha1 separates plain and templated files,
 //     so their relative order is lost when the two kinds are interleaved.
 //   - actionSet.defaults is a pointer in v1beta1 but a value in v1alpha1, so nil and an explicitly
@@ -415,7 +416,8 @@ func v1beta1V1alpha1RoundTripExclusions() cmp.Options {
 		cmpopts.IgnoreFields(v1beta1.Package{}, "APIVersion", "Kind"),
 		cmpopts.IgnoreFields(v1beta1.BuildData{}, "Migrations"),
 		cmpopts.IgnoreFields(v1beta1.ComponentSpec{}, "Import", "Service"),
-		cmpopts.IgnoreFields(v1beta1.Image{}, "Source"),
+		cmpopts.IgnoreFields(v1beta1.Image{}, "ID", "Source"),
+		cmpopts.IgnoreFields(v1beta1.ArchiveImage{}, "ID"),
 		cmpopts.IgnoreFields(v1beta1.Chart{}, "ValuesFiles"),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionSet{}, "Defaults"),
 		cmpopts.IgnoreFields(v1beta1.ComponentActionWaitCluster{}, "Condition"),
