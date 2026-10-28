@@ -224,8 +224,8 @@ func TestConvertGenericRoundTrip(t *testing.T) {
 				},
 			},
 		},
-		Values:        v1beta1.Values{Files: []string{"vals.yaml"}, Schema: "schema.json"},
-		Documentation: map[string]string{"doc": "doc.md"},
+		Values:      v1beta1.Values{Files: []string{"vals.yaml"}, Schema: "schema.json"},
+		Attachments: map[string]string{"doc": "doc.md"},
 	}
 	roundTripped := PackageToV1beta1(PackageFromV1beta1(original))
 	require.Empty(t, cmp.Diff(original, roundTripped, v1beta1GenericRoundTripExclusions()...))

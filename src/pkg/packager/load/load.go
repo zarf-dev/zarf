@@ -243,9 +243,6 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 		"flavor", flavor,
 	)
 
-	if !hasFlavoredComponentV1Beta1(pkg, flavor) {
-		l.Warn("flavor not used in package", "flavor", flavor)
-	}
 	if validationErrs := internalv1beta1.ValidatePackage(pkg); len(validationErrs) > 0 {
 		return fmt.Errorf("package validation failed:\n%w", validationErrs)
 	}
@@ -294,12 +291,6 @@ func validatePackageSchemaV1Beta1(pkgName string, pkg any) error {
 func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	return slices.ContainsFunc(pkg.Components, func(comp v1alpha1.ZarfComponent) bool {
 		return comp.Only.Flavor == flavor
-	})
-}
-
-func hasFlavoredComponentV1Beta1(pkg v1beta1.Package, flavor string) bool {
-	return slices.ContainsFunc(pkg.Components, func(comp v1beta1.Component) bool {
-		return comp.Selector.Flavor == flavor
 	})
 }
 
