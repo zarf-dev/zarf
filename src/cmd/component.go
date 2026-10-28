@@ -23,6 +23,8 @@ func newComponentCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "component",
 		Short: lang.CmdComponentShort,
+		Args:  cobra.NoArgs,
+		Run:   run,
 	}
 
 	v := getViper()

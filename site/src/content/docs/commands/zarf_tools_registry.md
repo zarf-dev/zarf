@@ -10,6 +10,10 @@ tableOfContents: false
 
 Tools for working with container registries using go-containertools
 
+```
+zarf tools registry [flags]
+```
+
 ### Options
 
 ```

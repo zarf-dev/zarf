@@ -19,6 +19,8 @@ func newTrustedRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "trusted-root",
 		Short: lang.CmdToolsTrustedRootShort,
+		Args:  cobra.NoArgs,
+		Run:   run,
 	}
 
 	cmd.AddCommand(newTrustedRootCreateCommand())

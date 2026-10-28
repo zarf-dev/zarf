@@ -10,6 +10,10 @@ tableOfContents: false
 
 Zarf package commands for creating, deploying, and inspecting packages
 
+```
+zarf package [flags]
+```
+
 ### Options
 
 ```

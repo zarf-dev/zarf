@@ -56,6 +56,50 @@ func TestTrustedRootCreate(t *testing.T) {
 func TestUseCLI(t *testing.T) {
 	t.Parallel()
 
+	t.Run("invalid commands exit with non-zero status", func(t *testing.T) {
+		t.Parallel()
+		tests := []struct {
+			name        string
+			args        []string
+			expectedErr string
+		}{
+			{
+				name:        "invalid root command",
+				args:        []string{"foo"},
+				expectedErr: `unknown command "foo" for "zarf"`,
+			},
+			{
+				name:        "invalid package subcommand",
+				args:        []string{"package", "foo"},
+				expectedErr: `unknown command "foo" for "zarf package"`,
+			},
+			{
+				name:        "invalid tools subcommand",
+				args:        []string{"tools", "foo"},
+				expectedErr: `unknown command "foo" for "zarf tools"`,
+			},
+			{
+				name:        "invalid dev subcommand",
+				args:        []string{"dev", "foo"},
+				expectedErr: `unknown command "foo" for "zarf dev"`,
+			},
+			{
+				name:        "invalid component subcommand",
+				args:        []string{"component", "foo"},
+				expectedErr: `unknown command "foo" for "zarf component"`,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+				_, stdErr, err := e2e.Zarf(t, tt.args...)
+				require.Error(t, err)
+				require.Contains(t, stdErr, tt.expectedErr)
+			})
+		}
+	})
+
 	t.Run("zarf dev upgrade", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()

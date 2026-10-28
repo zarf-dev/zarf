@@ -10,6 +10,10 @@ tableOfContents: false
 
 Commands to gather information about a Zarf package from its definition
 
+```
+zarf dev inspect [flags]
+```
+
 ### Options
 
 ```

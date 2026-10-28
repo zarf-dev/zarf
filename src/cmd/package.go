@@ -52,6 +52,8 @@ func newPackageCommand() *cobra.Command {
 		Use:     "package",
 		Aliases: []string{"p"},
 		Short:   lang.CmdPackageShort,
+		Args:    cobra.NoArgs,
+		Run:     run,
 	}
 
 	v := getViper()

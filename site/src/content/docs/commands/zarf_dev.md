@@ -10,6 +10,10 @@ tableOfContents: false
 
 Commands useful for developing packages
 
+```
+zarf dev [flags]
+```
+
 ### Options
 
 ```

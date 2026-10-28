@@ -10,6 +10,10 @@ tableOfContents: false
 
 Compresses/Decompresses generic archives, including Zarf packages
 
+```
+zarf tools archiver [flags]
+```
+
 ### Options
 
 ```
