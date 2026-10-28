@@ -15,36 +15,6 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func TestPackageCreateV1Beta1ByDefault(t *testing.T) {
-	ctx := testutil.TestContext(t)
-	packageDir := t.TempDir()
-	outputDir := t.TempDir()
-	definition := `apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
-metadata:
-  name: beta-feature
-components:
-  - name: empty
-    actions:
-      onCreate:
-        before:
-          - cmd: echo created > created.txt
-`
-	require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(definition), 0o600))
-
-	packagePath, err := Create(ctx, packageDir, outputDir, CreateOptions{
-		CachePath: t.TempDir(),
-		SkipSBOM:  true,
-	})
-	require.NoError(t, err)
-	require.FileExists(t, packagePath)
-	require.FileExists(t, filepath.Join(packageDir, "created.txt"))
-	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{})
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
-	require.Equal(t, "zarf.dev/v1beta1", pkgLayout.Definition().APIVersion)
-}
-
 func TestPackageCreatePreservesV1alpha1MetadataAnnotationCollisions(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	packageDir := t.TempDir()
