@@ -157,7 +157,7 @@ func packageLayerPath(destinationDir, title string) (string, error) {
 
 // AssembleLayers returns the OCI layer descriptors for the requested package resources.
 // Metadata layers are always included.
-func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, requestedComponents []api.Component, selection LayerSelection) ([]ocispec.Descriptor, error) {
+func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, selection LayerSelection) ([]ocispec.Descriptor, error) {
 	layers := make([]ocispec.Descriptor, 0)
 	for _, path := range PackageAlwaysPull {
 		desc := root.Locate(path)
@@ -171,15 +171,19 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		return nil, err
 	}
 
-	if selection.Components || selection.Images {
+	if selection.IncludeComponents || selection.IncludeImages {
+		requestedComponents := selection.RequestedComponents
+		if len(requestedComponents) == 0 {
+			requestedComponents = pkg.Components
+		}
 		componentLayers, images, err := LayersFromComponents(root, pkg, requestedComponents)
 		if err != nil {
 			return nil, err
 		}
-		if selection.Components {
+		if selection.IncludeComponents {
 			layers = append(layers, componentLayers...)
 		}
-		if selection.Images && len(images) > 0 {
+		if selection.IncludeImages && len(images) > 0 {
 			imageLayers, err := LayersFromImages(ctx, root, fetcher, images)
 			if err != nil {
 				return nil, err
@@ -485,12 +489,12 @@ func layersFromIndexChildren(ctx context.Context, root *oci.Manifest, fetcher co
 }
 
 // AssembleLayers returns the OCI layer descriptors for the requested package resources.
-func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []api.Component, selection LayerSelection) ([]ocispec.Descriptor, error) {
+func (r *Remote) AssembleLayers(ctx context.Context, selection LayerSelection) ([]ocispec.Descriptor, error) {
 	root, err := r.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return AssembleLayers(ctx, root, r, requestedComponents, selection)
+	return AssembleLayers(ctx, root, r, selection)
 }
 
 // LayersFromComponents returns the layers for the requested components and

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -26,10 +27,13 @@ import (
 // LayerSelection specifies package layer categories to retrieve.
 // Metadata is always retrieved and is not represented here.
 type LayerSelection struct {
-	Components  bool
-	Images      bool
-	SBOMs       *SBOMSelection
-	Attachments *AttachmentSelection
+	// RequestedComponents limits component and image layers to the listed components.
+	// An empty set selects every package component.
+	RequestedComponents []api.Component
+	IncludeComponents   bool
+	IncludeImages       bool
+	SBOMs               *SBOMSelection
+	Attachments         *AttachmentSelection
 }
 
 // SBOMSelection specifies which checksum-declared SBOM resources to retrieve.
@@ -48,10 +52,10 @@ type AttachmentSelection struct {
 // AllLayerSelection returns a selection for every package resource.
 func AllLayerSelection() LayerSelection {
 	return LayerSelection{
-		Components:  true,
-		Images:      true,
-		SBOMs:       &SBOMSelection{},
-		Attachments: &AttachmentSelection{},
+		IncludeComponents: true,
+		IncludeImages:     true,
+		SBOMs:             &SBOMSelection{},
+		Attachments:       &AttachmentSelection{},
 	}
 }
 

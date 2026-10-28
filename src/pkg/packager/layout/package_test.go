@@ -102,6 +102,9 @@ func TestPackageLayout(t *testing.T) {
 	err = pkgLayout.GetSBOM(ctx, tmpDir, nil)
 	require.NoError(t, err)
 
+	err = pkgLayout.GetSBOM(ctx, t.TempDir(), []string{"test"})
+	require.EqualError(t, err, "SBOM selection by key requires granular SBOM resources")
+
 	files, err := pkgLayout.Files()
 	require.NoError(t, err)
 	expectedNames := []string{
@@ -1501,20 +1504,10 @@ func TestGetAttachments(t *testing.T) {
 			},
 		)
 
-		for _, method := range []struct {
-			name    string
-			extract func(context.Context, string, []string) error
-		}{
-			{name: "GetAttachments", extract: pkgLayout.GetAttachments},
-			{name: "GetDocumentation", extract: pkgLayout.GetDocumentation},
-		} {
-			t.Run(method.name, func(t *testing.T) {
-				destPath := filepath.Join(outputDir, method.name)
-				require.NoError(t, method.extract(ctx, destPath, nil))
-				assertFileContent(t, filepath.Join(destPath, "README.md"), "readme content")
-				assertFileContent(t, filepath.Join(destPath, "LICENSE"), "license content")
-			})
-		}
+		destPath := filepath.Join(outputDir, "attachments")
+		require.NoError(t, pkgLayout.GetAttachments(ctx, destPath, nil))
+		assertFileContent(t, filepath.Join(destPath, "README.md"), "readme content")
+		assertFileContent(t, filepath.Join(destPath, "LICENSE"), "license content")
 	})
 
 	t.Run("extract specific documentation keys", func(t *testing.T) {
@@ -1574,7 +1567,7 @@ func TestGetAttachments(t *testing.T) {
 			}),
 		}
 		outputDir := filepath.Join(tmpDir, "output")
-		require.NoError(t, pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"}))
+		require.NoError(t, pkgLayout.GetAttachments(ctx, outputDir, []string{"readme"}))
 		assertFileContent(t, filepath.Join(outputDir, "README.md"), "readme content")
 		require.NoFileExists(t, filepath.Join(outputDir, "LICENSE"))
 	})
@@ -1606,7 +1599,7 @@ func TestGetAttachments(t *testing.T) {
 			nil,
 		)
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		err := pkgLayout.GetAttachments(ctx, outputDir, nil)
 		require.EqualError(t, err, `attachment key "../escape" would result in an invalid path`)
 		require.NoFileExists(t, filepath.Join(filepath.Dir(outputDir), "escape-README.md"))
 	})

@@ -161,9 +161,12 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		selection = *opts.LayerSelection
 	}
 	if opts.Connected || isSkeleton(desc.Platform) {
-		selection.Images = false
+		selection.IncludeImages = false
 	}
-	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, selection)
+	if len(selection.RequestedComponents) == 0 {
+		selection.RequestedComponents = pkg.Components
+	}
+	layersToPull, err := remote.AssembleLayers(ctx, selection)
 	if err != nil {
 		return nil, err
 	}

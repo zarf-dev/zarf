@@ -209,11 +209,11 @@ components:
 		},
 	}}
 	selection := LayerSelection{SBOMs: &SBOMSelection{Keys: []string{"metrics"}}}
-	layers, err := AssembleLayers(ctx, root, store, nil, selection)
+	layers, err := AssembleLayers(ctx, root, store, selection)
 	require.NoError(t, err)
 	require.Equal(t, []ocispec.Descriptor{zarfYAMLDesc, checksumDesc, componentResource, imageResource}, layers)
 
-	imageLayers, err := AssembleLayers(ctx, root, store, nil, LayerSelection{
+	imageLayers, err := AssembleLayers(ctx, root, store, LayerSelection{
 		SBOMs: &SBOMSelection{Keys: []string{imageReference}},
 	})
 	require.NoError(t, err)
@@ -228,7 +228,7 @@ components:
 		ocispec.AnnotationTitle: unselectedResourcePath,
 	}
 	root.Layers[6] = unselectedResource
-	_, err = AssembleLayers(ctx, root, store, nil, selection)
+	_, err = AssembleLayers(ctx, root, store, selection)
 	require.ErrorContains(t, err, `SBOM resource "`+unselectedResourcePath+`" has an invalid OCI kind`)
 
 	root.Layers[6] = content.NewDescriptorFromBytes(layout.SBOMMediaTypeSyftJSON, []byte("logs sbom"))
@@ -236,7 +236,7 @@ components:
 		ocispec.AnnotationTitle:       unselectedResourcePath,
 		layout.ResourceKindAnnotation: layout.ResourceKindSBOM,
 	}
-	_, err = AssembleLayers(ctx, root, store, nil, LayerSelection{
+	_, err = AssembleLayers(ctx, root, store, LayerSelection{
 		SBOMs: &SBOMSelection{Keys: []string{"missing"}},
 	})
 	require.ErrorContains(t, err, `SBOM key "missing" not found in package`)
@@ -265,17 +265,17 @@ documentation:
 		Layers: []ocispec.Descriptor{zarfYAMLDesc, documentationDesc, sbomDesc},
 	}}
 
-	attachmentLayers, err := AssembleLayers(ctx, root, store, nil, LayerSelection{
+	attachmentLayers, err := AssembleLayers(ctx, root, store, LayerSelection{
 		Attachments: &AttachmentSelection{},
 	})
 	require.NoError(t, err)
 	require.Equal(t, []ocispec.Descriptor{zarfYAMLDesc, documentationDesc}, attachmentLayers)
 
-	sbomLayers, err := AssembleLayers(ctx, root, store, nil, LayerSelection{SBOMs: &SBOMSelection{}})
+	sbomLayers, err := AssembleLayers(ctx, root, store, LayerSelection{SBOMs: &SBOMSelection{}})
 	require.NoError(t, err)
 	require.Equal(t, []ocispec.Descriptor{zarfYAMLDesc, sbomDesc}, sbomLayers)
 
-	_, err = AssembleLayers(ctx, root, store, nil, LayerSelection{
+	_, err = AssembleLayers(ctx, root, store, LayerSelection{
 		SBOMs: &SBOMSelection{Keys: []string{"metrics"}},
 	})
 	require.EqualError(t, err, "SBOM selection by key requires granular SBOM resources")
