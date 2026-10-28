@@ -140,18 +140,19 @@ func TestFindImages(t *testing.T) {
 		t.Parallel()
 		registry := "zarf.dev"
 		agentTag := "test"
+		initPath := filepath.Join("packages", "init", "v1alpha1")
 
-		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", ".", "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag), "--skip-cosign")
+		stdOut, stdErr, err := e2e.Zarf(t, "dev", "find-images", initPath, "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag), "--skip-cosign")
 
-		require.NoError(t, err)
+		require.NoError(t, err, stdOut, stdErr)
 		internalRegistryImage := fmt.Sprintf("%s/%s:%s", registry, "zarf-dev/zarf/agent", agentTag)
 		require.Contains(t, stdOut, internalRegistryImage)
 		// busybox image is in git init package
 		require.Contains(t, stdOut, "busybox:latest")
 
 		path := filepath.Join("src", "test", "packages", "13-find-images-with-vars")
-		stdOut, _, err = e2e.Zarf(t, "dev", "find-images", path, "--deploy-set", "PODINFO_IMAGE=zarf.dev/podinfo:latest", "--skip-cosign")
-		require.NoError(t, err)
+		stdOut, stdErr, err = e2e.Zarf(t, "dev", "find-images", path, "--deploy-set", "PODINFO_IMAGE=zarf.dev/podinfo:latest", "--skip-cosign")
+		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "ghcr.io/zarf-dev/zarf/agent:v0.36.1")
 		require.Contains(t, stdOut, "zarf.dev/podinfo:latest")
 	})
