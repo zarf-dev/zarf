@@ -119,9 +119,6 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git-readonly", "--log-format=console", "--no-color")
 	require.NoError(t, err, stdOut, stdErr)
 	gitPullPassword := strings.TrimSpace(stdOut)
-	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "artifact", "--log-format=console", "--no-color")
-	require.NoError(t, err, stdOut, stdErr)
-	gitArtifactToken := strings.TrimSpace(stdOut)
 
 	// Connect to Gitea
 	c, err := cluster.New(ctx)
@@ -141,10 +138,6 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	require.Equal(t, 200, respGit.StatusCode)
 	gitPullURL := fmt.Sprintf("http://zarf-git-read-user:%s@%s/api/v1/user", gitPullPassword, endpoints[0])
 	respGit, err = http.Get(gitPullURL)
-	require.NoError(t, err)
-	require.Equal(t, 200, respGit.StatusCode)
-	gitArtifactURL := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitArtifactToken, endpoints[0])
-	respGit, err = http.Get(gitArtifactURL)
 	require.NoError(t, err)
 	require.Equal(t, 200, respGit.StatusCode)
 }

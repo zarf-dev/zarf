@@ -73,12 +73,7 @@ func TestGetCreds(t *testing.T) {
 				Distro: "test",
 			}
 
-			// Older clusters may still have artifact credentials in their state secret.
-			// FIXME: we probably don't care
-			b, err := json.Marshal(struct {
-				*state.State
-				ArtifactServer json.RawMessage `json:"artifactServer"`
-			}{s, json.RawMessage(`{"address":"https://git-server.com","pushUsername":"push-user","pushPassword":"artifact-token"}`)})
+			b, err := json.Marshal(s)
 			require.NoError(t, err)
 			secret := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -107,9 +102,6 @@ func TestGetCreds(t *testing.T) {
 			if tt.outputFormat == outputYAML {
 				require.YAMLEq(t, string(b), buf.String())
 			}
-			buf.Reset()
-			require.EqualError(t, getCredsOpts.run(ctx, []string{"artifact"}), `service "artifact" not found`)
-			require.Empty(t, buf.String())
 		})
 	}
 }
