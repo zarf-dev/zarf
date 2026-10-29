@@ -28,6 +28,8 @@ import (
 
 // DevDeployOptions are the optionalParameters to DevDeploy
 type DevDeployOptions struct {
+	// Architecture overrides package metadata when loading the definition.
+	Architecture string
 	// When true packs images and repos into the package and uses the cluster Zarf state
 	// When false deploys package without repos or images and uses the default Zarf state
 	AirgapMode bool
@@ -81,6 +83,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 
 	loadOpts := load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     opts.Architecture,
 			Flavor:           opts.Flavor,
 			SetVariables:     opts.CreateSetVariables,
 			CachePath:        opts.CachePath,

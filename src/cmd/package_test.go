@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -365,7 +366,7 @@ func TestPackageInspectManifests(t *testing.T) {
 				setValues:    tc.setValues,
 				components:   tc.components,
 			}
-			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
+			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, runtime.GOARCH))
 			testCmd := &cobra.Command{}
 			testCmd.SetContext(context.Background())
 			err = opts.run(testCmd, []string{packagePath})
@@ -531,7 +532,7 @@ func checkPackageValuesInspectFiles(t *testing.T, tc ValuesFilesTestData) {
 		setValues:    tc.setValues,
 		components:   tc.components,
 	}
-	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
+	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, runtime.GOARCH))
 	testCmd := &cobra.Command{}
 	testCmd.SetContext(context.Background())
 	err = opts.run(testCmd, []string{packagePath})
@@ -730,7 +731,7 @@ func TestPackageInspectDocumentation(t *testing.T) {
 				keys:      tc.keys,
 				outputDir: outputDir,
 			}
-			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
+			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, runtime.GOARCH))
 
 			// Create a cobra command with context for the run method
 			inspectCmd := &cobra.Command{}
@@ -766,7 +767,7 @@ func newTestViper() *viper.Viper {
 func TestSignConfirmNotViperBound(t *testing.T) {
 	t.Parallel()
 	v := newTestViper()
-	cmd := newPackageSignCommand(v)
+	cmd := newPackageSignCommand(v, nil)
 	f := cmd.Flags().Lookup("confirm")
 	require.NotNil(t, f)
 	require.Equal(t, "false", f.DefValue, "--confirm must default to false and must not be bound to viper")
@@ -802,7 +803,7 @@ func TestSignTlogUploadEnvRespected(t *testing.T) {
 	require.True(t, v.IsSet(VPkgSignTlogUpload))
 	require.False(t, v.GetBool(VPkgSignTlogUpload))
 
-	cmd := newPackageSignCommand(v)
+	cmd := newPackageSignCommand(v, nil)
 	f := cmd.Flags().Lookup("tlog-upload")
 	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
 }
@@ -913,7 +914,7 @@ func TestVerifyInsecureIgnoreTlogDefaultTrue(t *testing.T) {
 	require.False(t, v.IsSet(VPkgInsecureIgnoreTlog),
 		"VPkgInsecureIgnoreTlog must not have a viper default; the keyless guard relies on IsSet() being false when the user has not configured the key")
 
-	cmd := newPackageVerifyCommand(v)
+	cmd := newPackageVerifyCommand(v, nil)
 	f := cmd.Flags().Lookup("insecure-ignore-tlog")
 	require.Equal(t, "true", f.DefValue, "flag must still default to true for air-gap compat when no config is provided")
 }
@@ -925,7 +926,7 @@ func TestVerifyInsecureIgnoreTlogEnvRespected(t *testing.T) {
 	require.True(t, v.IsSet(VPkgInsecureIgnoreTlog))
 	require.False(t, v.GetBool(VPkgInsecureIgnoreTlog))
 
-	cmd := newPackageVerifyCommand(v)
+	cmd := newPackageVerifyCommand(v, nil)
 	f := cmd.Flags().Lookup("insecure-ignore-tlog")
 	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
 }

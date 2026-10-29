@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -29,7 +30,9 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
-	Shasum       string
+	Shasum string
+	// Architecture selects the target architecture for OCI sources.
+	// Empty uses the host architecture. Ignored for local archives.
 	Architecture string
 	// Deprecated: Use VerifyBlobOptions instead.
 	PublicKeyPath     string
@@ -91,12 +94,13 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 	switch srcType {
 	case "oci":
+		arch := helpers.ResolveArch(opts.Architecture)
 		ociOpts := pullOCIOptions{
 			Source:               source,
 			VerifyBlobOptions:    opts.VerifyBlobOptions,
 			VerificationStrategy: opts.VerificationStrategy,
 			Shasum:               opts.Shasum,
-			Architecture:         config.GetArch(opts.Architecture),
+			Architecture:         arch,
 			Filter:               opts.Filter,
 			LayerTypes:           opts.LayerTypes,
 			OCIConcurrency:       opts.OCIConcurrency,

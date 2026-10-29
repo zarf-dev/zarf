@@ -37,6 +37,7 @@ import (
 )
 
 type initOptions struct {
+	*architectureOptions
 	setVariables               map[string]string
 	valuesFiles                []string
 	setValues                  map[string]string
@@ -61,8 +62,8 @@ type initOptions struct {
 	packageVerifyFlags
 }
 
-func newInitCommand() *cobra.Command {
-	o := &initOptions{}
+func newInitCommand(architecture *architectureOptions) *cobra.Command {
+	o := &initOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:     "init [ PACKAGE_SOURCE ]",
@@ -203,10 +204,8 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		packageSource = args[0]
 	} else {
-		initPackageName := config.GetInitPackageName()
-
 		// Try to use an init-package in the executable directory if none exist in current working directory
-		packageSource, err = o.findInitPackage(cmd.Context(), initPackageName)
+		packageSource, err = o.findInitPackage(cmd.Context())
 		if err != nil {
 			return err
 		}
@@ -238,7 +237,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
 		Filter:               filter,
-		Architecture:         config.GetArch(),
+		Architecture:         o.selectedArchitecture(),
 		CachePath:            cachePath,
 		RemoteOptions:        defaultRemoteOptions(),
 	}
@@ -282,7 +281,8 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (o *initOptions) findInitPackage(ctx context.Context, initPackageName string) (string, error) {
+func (o *initOptions) findInitPackage(ctx context.Context) (string, error) {
+	initPackageName := config.GetInitPackageName(o.selectedArchitecture())
 	// First, look for the init package in the current working directory
 	if !helpers.InvalidPath(initPackageName) {
 		return initPackageName, nil
@@ -356,7 +356,7 @@ func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory st
 		}
 
 		pullOptions := packager.PullOptions{
-			Architecture:   config.GetArch(),
+			Architecture:   o.selectedArchitecture(),
 			OCIConcurrency: o.ociConcurrency,
 			CachePath:      cachePath,
 		}
