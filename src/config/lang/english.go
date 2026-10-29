@@ -573,6 +573,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdDevFlagSetVariables                 = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
 	CmdDevFlagRepoChartPath                = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdDevFlagGitAccount                   = "User or organization name for the git account that the repos are created under."
+	CmdDevFlagEnableKustomizePlugins       = "Allow external Kustomize plugins referenced by the package definition to execute arbitrary code"
 	CmdDevFlagKubeVersion                  = "Override the default helm template KubeVersion when performing a package chart template"
 	CmdDevFlagRegistry                     = "Override the ###ZARF_REGISTRY### value"
 	CmdDevFlagFindImagesWhy                = "Prints the source manifest for the specified image"
