@@ -209,7 +209,7 @@ func TestDevKustomizePlugins(t *testing.T) {
 			args = append(args, fixture)
 			stdout, stderr, err := e2e.Zarf(t, args...)
 			require.Error(t, err, stdout, stderr)
-			require.Contains(t, stderr, "--enable-kustomize-plugins")
+			require.Contains(t, stderr, "requires explicit opt-in")
 			require.NoFileExists(t, marker)
 
 			args = append(args, "--enable-kustomize-plugins")
