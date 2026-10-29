@@ -103,6 +103,13 @@ func warnOnUnrecognizedPackageAPIVersions(ctx context.Context, deployedPackage s
 
 // UpdateDeployedPackage updates the deployed package metadata.
 func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
+	if err := c.applyDeployedPackage(ctx, depPkg); err != nil {
+		return fmt.Errorf("unable to apply the deployed package secret: %w", err)
+	}
+	return nil
+}
+
+func (c *Cluster) applyDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
 	packageSecretData, err := json.Marshal(depPkg)
 	if err != nil {
 		return err
@@ -115,10 +122,7 @@ func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg state.Deploy
 		"data": packageSecretData,
 	}).WithType(corev1.SecretTypeOpaque)
 	_, err = c.Clientset.CoreV1().Secrets(*packageSecret.Namespace).Apply(ctx, packageSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-	if err != nil {
-		return fmt.Errorf("unable to apply the deployed package secret: %w", err)
-	}
-	return nil
+	return err
 }
 
 // DeleteDeployedPackage removes the metadata for the deployed package.
@@ -181,25 +185,8 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg api.Package, 
 		return nil, err
 	}
 
-	packageData, err := json.Marshal(deployedPackage)
-	if err != nil {
-		return nil, err
-	}
-
-	deployedPackageSecret := v1ac.Secret(deployedPackage.GetSecretName(), state.ZarfNamespaceName).
-		WithLabels(map[string]string{
-			state.ZarfManagedByLabel:   "zarf",
-			state.ZarfPackageInfoLabel: deployedPackage.Name,
-		}).WithType(corev1.SecretTypeOpaque).
-		WithData(map[string][]byte{
-			"data": packageData,
-		})
-	updatedSecret, err := c.Clientset.CoreV1().Secrets(*deployedPackageSecret.Namespace).Apply(ctx, deployedPackageSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-	if err != nil {
-		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", *deployedPackageSecret.Name, err)
-	}
-	if err := json.Unmarshal(updatedSecret.Data["data"], &deployedPackage); err != nil {
-		return nil, err
+	if err := c.UpdateDeployedPackage(ctx, *deployedPackage); err != nil {
+		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", deployedPackage.GetSecretName(), err)
 	}
 	return deployedPackage, nil
 }

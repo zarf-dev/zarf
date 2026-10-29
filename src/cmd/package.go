@@ -489,14 +489,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		return err
 	}
 
-	// If deploy is confirmed, then only pull the necessary layers as we won't need to prompt for optional components
 	filter := filters.Empty()
-	if o.confirm {
-		filter = filters.Combine(
-			filters.ByLocalOS(runtime.GOOS),
-			filters.ForDeploy(o.optionalComponents, false),
-		)
-	}
 
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
@@ -518,15 +511,19 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}()
 
 	deployOpts := packager.DeployOptions{
-		Values:                     values,
+		DeployConfig: packager.DeployConfig{
+			Values:             values,
+			SetVariables:       o.setVariables,
+			NamespaceOverride:  o.namespaceOverride,
+			OptionalComponents: o.optionalComponents,
+			Connected:          o.connected,
+		},
+		Source:                     packageSource,
 		TakeOwnership:              o.takeOwnership,
-		Connected:                  o.connected,
 		ForceConflicts:             o.forceConflicts,
 		Timeout:                    o.timeout,
 		Retries:                    o.retries,
 		OCIConcurrency:             o.ociConcurrency,
-		SetVariables:               o.setVariables,
-		NamespaceOverride:          o.namespaceOverride,
 		RemoteOptions:              defaultRemoteOptions(),
 		IsInteractive:              !o.confirm,
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
@@ -534,7 +531,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		SkipVersionCheck:           o.skipVersionCheck,
 	}
 
-	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)
+	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts)
 	if err != nil {
 		return err
 	}
@@ -554,27 +551,15 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
-	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
+func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions) ([]state.DeployedComponent, error) {
+	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below.
 	if opts.NamespaceOverride != "" {
 		if err := pkgLayout.OverrideNamespace(opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
-	err := confirmDeploy(ctx, pkgLayout, setVariables, opts.IsInteractive, opts.Connected)
-	if err != nil {
+	if err := confirmDeploy(ctx, pkgLayout, opts.SetVariables, opts.IsInteractive, opts.Connected); err != nil {
 		return nil, err
-	}
-
-	// In the interactive case we wait until after the component prompt to filter
-	if opts.IsInteractive {
-		filter := filters.Combine(
-			filters.ByLocalOS(runtime.GOOS),
-			filters.ForDeploy(optionalComponents, true),
-		)
-		if err := pkgLayout.Filter(filter); err != nil {
-			return nil, err
-		}
 	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)
@@ -1632,10 +1617,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.BySelectState(o.optionalComponents),
-	)
+	filter := filters.Empty()
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -1656,11 +1638,14 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	removeOpt := packager.RemoveOptions{
-		Cluster:           c,
-		Timeout:           config.ZarfDefaultTimeout,
-		NamespaceOverride: o.namespaceOverride,
-		SkipVersionCheck:  o.skipVersionCheck,
-		Values:            vals,
+		RemoveConfig: packager.RemoveConfig{
+			NamespaceOverride:  o.namespaceOverride,
+			OptionalComponents: o.optionalComponents,
+			Values:             vals,
+		},
+		Cluster:          c,
+		Timeout:          config.ZarfDefaultTimeout,
+		SkipVersionCheck: o.skipVersionCheck,
 	}
 	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
 	displayPackage, err := packageForDisplay(pkg)

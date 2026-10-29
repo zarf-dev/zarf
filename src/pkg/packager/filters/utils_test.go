@@ -104,3 +104,14 @@ func Test_includedOrExcluded(t *testing.T) {
 		})
 	}
 }
+
+func TestNormalizeComponentSelectors(t *testing.T) {
+	t.Parallel()
+
+	normalized, err := NormalizeComponentSelectors(" B, -A,b,  ")
+	require.NoError(t, err)
+	require.Equal(t, "-a,b", normalized)
+
+	_, err = NormalizeComponentSelectors("[")
+	require.ErrorIs(t, err, path.ErrBadPattern)
+}

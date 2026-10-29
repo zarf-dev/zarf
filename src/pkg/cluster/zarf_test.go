@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -263,4 +264,43 @@ func TestInternalGitServerExists(t *testing.T) {
 			require.Equal(t, tt.expectedErr, err)
 		})
 	}
+}
+
+func TestUpdateDeployedPackagePreservesLifecycleState(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	c := &Cluster{Clientset: fake.NewClientset()}
+	definition := convert.PackageFromV1beta1(v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Metadata:   v1beta1.PackageMetadata{Name: "lifecycle-package", Version: "1.2.3"},
+	})
+	deployed, err := state.NewDeployedPackage(definition, "sha256:manifest", "v1", []state.DeployedComponent{{
+		Name:      "component",
+		Status:    state.ComponentStatusDeploying,
+		LastEvent: state.ComponentEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeInProgress, Timestamp: time.Unix(1, 0).UTC()},
+	}}, 1)
+	require.NoError(t, err)
+	deployed.AppendEvent(state.PackageEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded, Timestamp: time.Unix(2, 0).UTC()})
+	deployed.SetDeployConfig(state.DeployConfig{SetVariables: map[string]string{"VARIABLE": "value"}})
+	require.NoError(t, c.UpdateDeployedPackage(ctx, *deployed))
+
+	deployed.DeployedComponents[0].Status = state.ComponentStatusSucceeded //nolint:staticcheck // Verify legacy status remains serialized.
+	deployed.DeployedComponents[0].LastEvent = state.ComponentEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded, Timestamp: time.Unix(3, 0).UTC()}
+	require.NoError(t, c.UpdateDeployedPackage(ctx, *deployed))
+
+	loaded, err := c.GetDeployedPackage(ctx, definition.Metadata.Name)
+	require.NoError(t, err)
+	require.Equal(t, deployed.Events, loaded.Events)
+	require.Equal(t, deployed.DeployConfig, loaded.DeployConfig)
+	require.Equal(t, deployed.DeployedComponents[0].LastEvent, loaded.DeployedComponents[0].LastEvent)
+
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, deployed.GetSecretName(), metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, state.ZarfNamespaceName, secret.Namespace)
+	require.Equal(t, map[string]string{
+		state.ZarfManagedByLabel:   "zarf",
+		state.ZarfPackageInfoLabel: definition.Metadata.Name,
+	}, secret.Labels)
+	require.Contains(t, secret.Data, "data")
 }

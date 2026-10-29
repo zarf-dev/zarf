@@ -21,13 +21,21 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
+// DeploymentFilter selects components for deployment and records interactive choices.
+type DeploymentFilter interface {
+	ComponentFilterStrategy
+	ResolvedSelectors() []string
+}
+
 // ForDeploy creates a new deployment filter.
-func ForDeploy(optionalComponents string, isInteractive bool) ComponentFilterStrategy {
+func ForDeploy(optionalComponents string, isInteractive bool) DeploymentFilter {
 	requested := helpers.StringToSlice(optionalComponents)
 
 	return &deploymentFilter{
-		requested,
-		isInteractive,
+		requestedComponents: requested,
+		isInteractive:       isInteractive,
+		selectOptional:      selectOptionalComponent,
+		selectGroup:         selectChoiceGroup,
 	}
 }
 
@@ -35,6 +43,14 @@ func ForDeploy(optionalComponents string, isInteractive bool) ComponentFilterStr
 type deploymentFilter struct {
 	requestedComponents []string
 	isInteractive       bool
+	resolvedSelectors   []string
+	selectOptional      func(api.Package, api.Component) (bool, error)
+	selectGroup         func([]api.Component) (api.Component, error)
+}
+
+// ResolvedSelectors returns the explicit selectors produced by interactive choices.
+func (f *deploymentFilter) ResolvedSelectors() []string {
+	return slices.Clone(f.resolvedSelectors)
 }
 
 // Errors for the deployment filter.
@@ -144,11 +160,12 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 			group := groupedComponents[groupKey]
 			if len(group) > 1 {
 				if f.isInteractive {
-					component, err := selectChoiceGroup(group)
+					component, err := f.selectGroup(group)
 					if err != nil {
 						return nil, fmt.Errorf("%w: %w", ErrSelectionCanceled, err)
 					}
 					selectedComponents = append(selectedComponents, component)
+					f.resolvedSelectors = append(f.resolvedSelectors, component.Name)
 				} else {
 					foundDefault := false
 					componentNames := []string{}
@@ -176,14 +193,17 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 				}
 
 				if f.isInteractive {
-					selected, err := selectOptionalComponent(pkg, component)
+					selected, err := f.selectOptional(pkg, component)
 					if err != nil {
 						return nil, fmt.Errorf("%w: %w", ErrSelectionCanceled, err)
 					}
 					if selected {
 						selectedComponents = append(selectedComponents, component)
+						f.resolvedSelectors = append(f.resolvedSelectors, component.Name)
 						continue
 					}
+					f.resolvedSelectors = append(f.resolvedSelectors, "-"+component.Name)
+					continue
 				}
 
 				if component.Default {

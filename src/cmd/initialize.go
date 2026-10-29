@@ -14,7 +14,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -227,12 +226,6 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	filter := filters.Empty()
-	if o.confirm {
-		filter = filters.Combine(
-			filters.ByLocalOS(runtime.GOOS),
-			filters.ForDeploy(o.optionalComponents, false),
-		)
-	}
 
 	loadOpt := packager.LoadOptions{
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
@@ -254,6 +247,12 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}()
 
 	opts := packager.DeployOptions{
+		DeployConfig: packager.DeployConfig{
+			SetVariables:       o.setVariables,
+			Values:             values,
+			OptionalComponents: o.optionalComponents,
+		},
+		Source:                     packageSource,
 		GitServer:                  o.gitServer,
 		RegistryInfo:               o.registryInfo,
 		ArtifactServer:             o.artifactServer,
@@ -262,8 +261,6 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		Timeout:                    o.timeout,
 		Retries:                    o.retries,
 		OCIConcurrency:             o.ociConcurrency,
-		SetVariables:               o.setVariables,
-		Values:                     values,
 		StorageClass:               o.storageClass,
 		InjectorPort:               o.injectorPort,
 		InjectorImage:              o.injectorImage,
@@ -273,7 +270,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		AgentMutationPolicy:        state.MutationPolicy(o.agentMutationPolicy),
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
 	}
-	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
+	_, err = deploy(ctx, pkgLayout, opts)
 	if err != nil {
 		return err
 	}
