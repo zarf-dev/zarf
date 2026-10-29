@@ -13,8 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
-// For further explanation: https://regex101.com/r/YxpfhC/5
-var gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)?(?P<git>\.git)?(\/)?(?P<atRef>@(?P<force>\+)?(?P<ref>[\/\+\w\-\.]+))?(?P<gitPath>\/(?P<gitPathId>info\/.*|git-upload-pack|git-receive-pack))?$`)
+var gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)?(?P<git>\.git)?(\/)?(?P<atRef>@(?P<force>\+)?(?P<ref>[\/\+\w\-\.]+))?$`)
 
 // MutateGitURLsInText changes the gitURL hostname to use the repository Zarf is configured to use.
 func MutateGitURLsInText(logger Log, targetBaseURL string, text string, pushUser string) string {
@@ -103,6 +102,6 @@ func GitURL(targetBaseURL string, sourceURL string, pushUser string) (*url.URL, 
 		return nil, fmt.Errorf("unable to extract the airgap target url from the url %s", sourceURL)
 	}
 
-	output := fmt.Sprintf("%s/%s/%s%s%s", targetBaseURL, pushUser, repoName, matches[idx("git")], matches[idx("gitPath")])
+	output := fmt.Sprintf("%s/%s/%s%s", targetBaseURL, pushUser, repoName, matches[idx("git")])
 	return url.Parse(output)
 }

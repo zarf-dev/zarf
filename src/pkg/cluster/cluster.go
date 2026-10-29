@@ -259,7 +259,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
-		// Populate git/registry/artifact state for each service that is either
+		// Populate git/registry state for each service that is either
 		// deployed by Zarf (InternalServices) or pointed at an external endpoint.
 		if opts.InternalServices.Has(state.GitKey) || opts.GitServer.Address != "" {
 			if err := opts.GitServer.FillInEmptyValues(); err != nil {
