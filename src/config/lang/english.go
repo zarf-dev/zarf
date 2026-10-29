@@ -360,11 +360,17 @@ $ zarf package inspect images my-package
 `
 
 	CmdPackageInspectSBOMExample = `
-# Extract the SBOM from a local package tarball
+# Extract every SBOM from a local package tarball
 $ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --output ./sbom
 
-# Extract the SBOM from a package in an OCI registry (oci:// prefix optional)
+# Extract every SBOM from a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbom
+
+# Extract SBOMs matching a component name
+$ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --keys metrics --output ./sbom
+
+# Extract SBOMs matching an exact package image reference
+$ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --keys ghcr.io/my-org/api:v1.4.2 --output ./sbom
 `
 
 	CmdPackageInspectManifestsExample = `

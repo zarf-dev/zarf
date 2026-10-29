@@ -132,7 +132,7 @@ func TestAssembleSkeletonComponentRejectsUnsafeChartArtifactComponents(t *testin
 	require.NoDirExists(t, filepath.Join(buildPath, "component", string(layout.ChartsComponentDir)))
 }
 
-func TestStageDocumentationRejectsPathKeys(t *testing.T) {
+func TestStageAttachmentsRejectsPathKeys(t *testing.T) {
 	t.Parallel()
 
 	pkg := api.Package{
@@ -142,8 +142,8 @@ func TestStageDocumentationRejectsPathKeys(t *testing.T) {
 		},
 	}
 	buildPath := t.TempDir()
-	err := stageDocumentation(testutil.TestContext(t), pkg, load.NewResourceSet(t.TempDir()), buildPath)
-	require.ErrorContains(t, err, "documentation key")
+	err := stageAttachments(testutil.TestContext(t), pkg, load.NewResourceSet(t.TempDir()), buildPath)
+	require.ErrorContains(t, err, "attachment key")
 	require.NoFileExists(t, filepath.Join(buildPath, layout.DocumentationTar))
 }
 
@@ -220,7 +220,7 @@ func TestStageDocumentationMaterializesSymlinks(t *testing.T) {
 			require.NoError(t, os.Symlink(target, filepath.Join(resourceRoot, "readme.md")))
 
 			buildPath := t.TempDir()
-			require.NoError(t, stageDocumentation(testutil.TestContext(t), api.Package{
+			require.NoError(t, stageAttachments(testutil.TestContext(t), api.Package{
 				Attachments: map[string]string{"readme": "readme.md"},
 			}, load.NewResourceSet(resourceRoot), buildPath))
 
@@ -894,22 +894,22 @@ components:
 	require.NoError(t, err)
 	require.Equal(t, v1alpha1.APIVersion, alphaPkg.APIVersion)
 	require.Equal(t, v1beta1.APIVersion, betaPkg.APIVersion)
-	require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationDir, "data.txt"))
+	require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.AttachmentsDir, "data.txt"))
 	require.NoFileExists(t, filepath.Join(pkgLayout.DirPath(), layout.DocumentationTar))
 }
 
-func TestStageDocumentationRejectsUnsafeKeys(t *testing.T) {
+func TestStageAttachmentsRejectsUnsafeKeys(t *testing.T) {
 	t.Parallel()
 
 	for _, apiVersion := range []string{v1alpha1.APIVersion, v1beta1.APIVersion} {
 		t.Run(apiVersion, func(t *testing.T) {
 			buildPath := t.TempDir()
-			err := stageDocumentation(t.Context(), api.Package{
+			err := stageAttachments(t.Context(), api.Package{
 				APIVersion:  apiVersion,
 				Attachments: map[string]string{"../escape": "first/README.md", "readme": "second/README.md"},
 			}, load.NewResourceSet(t.TempDir()), buildPath)
 
-			require.EqualError(t, err, `documentation key validation failed: "../escape" must not contain path separators`)
+			require.EqualError(t, err, `attachment key validation failed: "../escape" must not contain path separators`)
 			require.NoFileExists(t, filepath.Join(filepath.Dir(buildPath), "escape-README.md"))
 		})
 	}
@@ -1050,7 +1050,7 @@ func TestGetSBOM(t *testing.T) {
 	// Ensure the SBOM does not exist
 	require.NoFileExists(t, filepath.Join(pkgLayout.DirPath(), layout.SBOMTar))
 	// Ensure Zarf errors correctly
-	err = pkgLayout.GetSBOM(ctx, tmpdir)
+	err = pkgLayout.GetSBOM(ctx, tmpdir, nil)
 	var noSBOMErr *layout.NoSBOMAvailableError
 	require.ErrorAs(t, err, &noSBOMErr)
 }
@@ -1231,7 +1231,7 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	require.FileExists(t, filepath.Join(importedFileComponent, "0", "file.txt"))
 
 	// File-only packages include component SBOMs.
-	err = pkgLayout.GetSBOM(ctx, tmpdir)
+	err = pkgLayout.GetSBOM(ctx, tmpdir, nil)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(tmpdir, "zarf-component-file-import.json"))
 }

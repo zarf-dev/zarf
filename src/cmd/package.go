@@ -616,7 +616,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 			return err
 		}
 		SBOMPath := filepath.Join(cwd, "zarf-sbom")
-		err = pkgLayout.GetSBOM(ctx, SBOMPath)
+		err = pkgLayout.GetSBOM(ctx, SBOMPath, nil)
 		if err != nil {
 			return err
 		}
@@ -1007,7 +1007,7 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
+		LayerSelection:       &zoci.LayerSelection{IncludeComponents: true},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1116,7 +1116,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
+		LayerSelection:       &zoci.LayerSelection{IncludeComponents: true},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1162,6 +1162,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 
 // packageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
 type packageInspectSBOMOptions struct {
+	keys           []string
 	outputDir      string
 	ociConcurrency int
 	packageVerifyFlags
@@ -1186,6 +1187,8 @@ func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated component names or image references for SBOMs to extract. "+
+		"Key selection is supported only for v1beta1 packages.")
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
@@ -1209,7 +1212,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerTypes:           []zoci.LayerType{zoci.SbomLayers},
+		LayerSelection:       &zoci.LayerSelection{SBOMs: &zoci.SBOMSelection{Keys: o.keys}},
 		Filter:               filters.Empty(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1223,9 +1226,13 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
+
+	if len(o.keys) > 0 && pkgLayout.Definition().GetAPIVersion() == v1alpha1.APIVersion {
+		return fmt.Errorf("SBOM selection by key requires package API version v1beta1+")
+	}
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
 	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.Definition().Metadata.Name))
-	err = pkgLayout.GetSBOM(ctx, outputPath)
+	err = pkgLayout.GetSBOM(ctx, outputPath, o.keys)
 	if err != nil {
 		return fmt.Errorf("could not get SBOM: %w", err)
 	}
@@ -1359,7 +1366,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayerTypes:           []zoci.LayerType{zoci.DocLayers},
+		LayerSelection:       &zoci.LayerSelection{Attachments: &zoci.AttachmentSelection{Keys: o.keys}},
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -2154,7 +2161,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayerTypes:           []zoci.LayerType{zoci.MetadataLayers},
+		LayerSelection:       &zoci.LayerSelection{},
 	}
 
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)
