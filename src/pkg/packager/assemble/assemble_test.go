@@ -1230,9 +1230,8 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(importedFileComponent, "0", "file.txt"))
 
-	// File-only packages include component SBOMs but not the deprecated viewer by default.
+	// File-only packages include component SBOMs.
 	err = pkgLayout.GetSBOM(ctx, tmpdir)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(tmpdir, "zarf-component-file-import.json"))
-	require.NoFileExists(t, filepath.Join(tmpdir, "sbom-viewer-zarf-component-file-import.html"))
 }

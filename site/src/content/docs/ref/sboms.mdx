@@ -8,6 +8,12 @@ Zarf builds [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/
 
 By default, Zarf will generate SBOMs for all components in a package and include them in the package itself.  This means that wherever you end up moving your package, you will always be able to take a peek inside to see what it contains. If you would like to skip this behavior you can use the [`--skip-sbom`](/commands/zarf_package_create) flag when creating a package.
 
+:::note
+
+The built-in HTML SBOM viewer, the `sbom-viewer` feature flag, and `zarf package create --sbom` (`-s`) have been removed. Remove `sbom-viewer` from your feature configuration and `package.create.sbom` from your config file. Use `zarf package create --sbom-out <directory>` or `zarf package inspect sbom` to export Syft JSON for analysis with other tools. SBOM generation, deployment-time JSON review, and existing package compatibility are unchanged.
+
+:::
+
 ## Extracting a Package's SBOM
 
 ```bash

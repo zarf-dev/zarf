@@ -23,7 +23,6 @@ func TestCreateSBOM(t *testing.T) {
 
 	const (
 		imageSBOM   = "ghcr.io_zarf-dev_doom-game_0.0.1.json"
-		sbomViewer  = "sbom-viewer-ghcr.io_zarf-dev_doom-game_0.0.1.html"
 		packageName = "dos-games"
 	)
 
@@ -41,36 +40,17 @@ func TestCreateSBOM(t *testing.T) {
 	require.NoError(t, err)
 	for _, sbomPath := range []string{defaultExtractPath, filepath.Join(defaultSBOMPath, packageName)} {
 		require.FileExists(t, filepath.Join(sbomPath, imageSBOM))
-		require.NoFileExists(t, filepath.Join(sbomPath, sbomViewer))
-	}
-
-	legacySBOMPath := t.TempDir()
-	legacyBuildPath := t.TempDir()
-	legacyTarPath := filepath.Join(legacyBuildPath, fmt.Sprintf("zarf-package-%s-%s-1.3.0.tar.zst", packageName, e2e.Arch))
-	_, _, err = e2e.Zarf(t, "package", "create", "examples/dos-games", "-o", legacyBuildPath, "--features=sbom-viewer=true", "--sbom-out", legacySBOMPath, "--confirm")
-	require.NoError(t, err)
-
-	legacyPkgLayout, err := layout.LoadFromTar(ctx, legacyTarPath, layout.PackageLayoutOptions{})
-	require.NoError(t, err)
-	legacyExtractPath := t.TempDir()
-	err = legacyPkgLayout.GetSBOM(ctx, legacyExtractPath)
-	require.NoError(t, err)
-	for _, sbomPath := range []string{legacyExtractPath, filepath.Join(legacySBOMPath, packageName)} {
-		require.FileExists(t, filepath.Join(sbomPath, imageSBOM))
-		require.FileExists(t, filepath.Join(sbomPath, sbomViewer))
 	}
 
 	fileSBOMPath := t.TempDir()
 	fileBuildPath := t.TempDir()
-	_, _, err = e2e.Zarf(t, "package", "create", "src/test/packages/04-file-folders-templating-sbom", "-o", fileBuildPath, "--features=sbom-viewer=true", "--sbom-out", fileSBOMPath, "--confirm")
+	_, _, err = e2e.Zarf(t, "package", "create", "src/test/packages/04-file-folders-templating-sbom", "-o", fileBuildPath, "--sbom-out", fileSBOMPath, "--confirm")
 	require.NoError(t, err)
 
 	fileSBOMDir := filepath.Join(fileSBOMPath, "file-folders-templating-sbom")
-	require.FileExists(t, filepath.Join(fileSBOMDir, "sbom-viewer-zarf-component-folders.html"))
 	foldersJSON, err := os.ReadFile(filepath.Join(fileSBOMDir, "zarf-component-folders.json"))
 	require.NoError(t, err)
 	require.Contains(t, string(foldersJSON), "numpy")
-	require.FileExists(t, filepath.Join(fileSBOMDir, "sbom-viewer-zarf-component-files.html"))
 	filesJSON, err := os.ReadFile(filepath.Join(fileSBOMDir, "zarf-component-files.json"))
 	require.NoError(t, err)
 	require.Contains(t, string(filesJSON), "pandas")
@@ -83,7 +63,6 @@ func TestCreateSBOM(t *testing.T) {
 
 	// Test that we preserve the package-name directory.
 	require.FileExists(t, filepath.Join(defaultSBOMPath, packageName, imageSBOM))
-	require.NoFileExists(t, filepath.Join(defaultSBOMPath, packageName, sbomViewer))
 
 	stdOut, _, err := e2e.Zarf(t, "package", "inspect", "images", defaultTarPath)
 	require.NoError(t, err)
@@ -98,8 +77,6 @@ func TestCreateSBOM(t *testing.T) {
 	require.NoError(t, err)
 
 	require.FileExists(t, filepath.Join(defaultSBOMPath, packageName, imageSBOM))
-	require.NoFileExists(t, filepath.Join(defaultSBOMPath, packageName, sbomViewer))
 	require.FileExists(t, filepath.Join(defaultSBOMPath, "init", "ghcr.io_go-gitea_gitea_1.27.3-rootless.json"))
-	require.NoFileExists(t, filepath.Join(defaultSBOMPath, "init", "sbom-viewer-ghcr.io_go-gitea_gitea_1.27.3-rootless.html"))
 	require.FileExists(t, filepath.Join(defaultSBOMPath, "init", "zarf-component-k3s.json"))
 }

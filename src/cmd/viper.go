@@ -100,7 +100,6 @@ const (
 
 	VPkgCreateSet                  = "package.create.set"
 	VPkgCreateOutput               = "package.create.output"
-	VPkgCreateSbom                 = "package.create.sbom"
 	VPkgCreateSbomOutput           = "package.create.sbom_output"
 	VPkgCreateSkipSbom             = "package.create.skip_sbom"
 	VPkgCreateMaxPackageSize       = "package.create.max_package_size"

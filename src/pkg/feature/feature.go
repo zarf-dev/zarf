@@ -207,7 +207,6 @@ const (
 	RegistryProxy          Name = "registry-proxy"
 	Values                 Name = "values"
 	DockerDaemonDirectPull Name = "docker-daemon-direct-pull"
-	SBOMViewer             Name = "sbom-viewer"
 	ArtifactServer         Name = "artifact-server"
 	V1Beta1                Name = "v1beta1"
 )
@@ -254,13 +253,6 @@ func init() {
 			Enabled: true,
 			Since:   "v0.80.0",
 			Stage:   GA,
-		},
-		{
-			Name:        SBOMViewer,
-			Description: "Enables deprecated SBOM viewer HTML generation during package creation.",
-			Enabled:     false,
-			Since:       "v0.86.0",
-			Stage:       Deprecated,
 		},
 		{
 			Name:        ArtifactServer,

@@ -292,7 +292,6 @@ $ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos 
 	CmdPackageCreateFlagSetPkgTmpl            = "Specify package templates to set on the command line (KEY=value)"
 	CmdPackageCreateFlagSetVariables          = "Specify package variables to set on the command line (KEY=value)"
 	CmdPackageCreateFlagOutput                = "Specify the output (either a directory or an oci:// URL) for the created Zarf package"
-	CmdPackageCreateFlagSbom                  = "View SBOM contents after creating the package"
 	CmdPackageCreateFlagSbomOut               = "Specify an output directory for the SBOMs from the created Zarf package"
 	CmdPackageCreateFlagSkipSbom              = "Skip generating SBOM for this package"
 	CmdPackageCreateFlagMaxPackageSize        = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts to be loaded onto smaller media (i.e. DVDs). Use 0 to disable splitting."
