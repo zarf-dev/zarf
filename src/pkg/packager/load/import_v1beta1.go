@@ -58,16 +58,9 @@ type ComponentConfigImportResolution struct {
 }
 
 // remoteReferenceCache pins each remote reference to the first component manifest
-// resolved during a package or component-config resolution. Its entries retain
-// the original config bytes; load returns independently owned data for each import.
-type remoteReferenceCache map[string]cachedRemoteComponentConfig
-
-type cachedRemoteComponentConfig struct {
-	configBytes []byte
-	importRoot  string
-	path        string
-	resources   []remoteResource
-}
+// resolved during a package or component-config resolution. Component definitions
+// are decoded separately for each import so rebasing cannot affect other imports.
+type remoteReferenceCache map[string]ocispec.Descriptor
 
 // resolveImportsV1Beta1 resolves component config imports into a v1beta1 package definition.
 // Each package component may import one or more ZarfComponentConfig files; filtering compatible components also happens here.
@@ -254,68 +247,48 @@ func selectImportVariant(ctx context.Context, imp v1beta1.ComponentImport, specD
 }
 
 func (c remoteReferenceCache) load(ctx context.Context, importURL, arch string, remoteOptions types.RemoteOptions, cachePath string) (loadedComponentConfig, error) {
-	cached, exists := c[importURL]
-	if !exists {
-		var err error
-		cached, err = remoteComponentConfig(ctx, importURL, arch, remoteOptions, cachePath)
-		if err != nil {
-			return loadedComponentConfig{}, err
-		}
-		c[importURL] = cached
-	}
-	var config v1beta1.ComponentConfig
-	if err := goyaml.Unmarshal(cached.configBytes, &config); err != nil {
-		return loadedComponentConfig{}, fmt.Errorf("unable to parse imported component config %q: %w", cached.path, err)
-	}
-	return loadedComponentConfig{
-		config:           config,
-		remote:           true,
-		dir:              cached.importRoot,
-		relativeToParent: cached.importRoot,
-		path:             cached.path,
-		resources:        slices.Clone(cached.resources),
-	}, nil
-}
-
-func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOptions types.RemoteOptions, cachePath string) (cachedRemoteComponentConfig, error) {
 	remote, err := zoci.NewRemoteWithOptions(ctx, importURL, ocispec.Platform{Architecture: arch}, zoci.RemoteClientOptions{
 		CachePath:     cachePath,
 		RemoteOptions: remoteOptions,
 	})
 	if err != nil {
-		return cachedRemoteComponentConfig{}, err
+		return loadedComponentConfig{}, err
 	}
-	root, err := remote.ResolveRoot(ctx)
-	if err != nil {
-		return cachedRemoteComponentConfig{}, err
+	root, exists := c[importURL]
+	if !exists {
+		root, err = remote.ResolveRoot(ctx)
+		if err != nil {
+			return loadedComponentConfig{}, err
+		}
+		c[importURL] = root
 	}
 	manifest, err := remote.FetchManifest(ctx, root)
 	if err != nil {
-		return cachedRemoteComponentConfig{}, err
+		return loadedComponentConfig{}, err
 	}
 	if manifest.Config.MediaType != layout.ZarfComponentConfigMediaType {
-		return cachedRemoteComponentConfig{}, fmt.Errorf("remote import %q is not a v1beta1 component artifact", importURL)
+		return loadedComponentConfig{}, fmt.Errorf("remote import %q is not a v1beta1 component artifact", importURL)
 	}
 	configBytes, err := remote.FetchLayer(ctx, manifest.Config)
 	if err != nil {
-		return cachedRemoteComponentConfig{}, err
+		return loadedComponentConfig{}, err
 	}
 	config, err := componentConfigFromBytes(importURL, configBytes)
 	if err != nil {
-		return cachedRemoteComponentConfig{}, err
+		return loadedComponentConfig{}, err
 	}
 	if err := ValidateRemoteKustomizeRestrictions(config.Component); err != nil {
-		return cachedRemoteComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
 	}
 	// Remote components are barred from oncreate actions, this ensures a component wasn't maliciously published with them
 	if HasActionSet(config.Component.Actions.OnCreate) {
-		return cachedRemoteComponentConfig{}, fmt.Errorf("remote component %q contains unsupported onCreate actions", importURL)
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q contains unsupported onCreate actions", importURL)
 	}
 	if len(config.Component.Import.Local) != 0 || len(config.Component.Import.Remote) != 0 {
-		return cachedRemoteComponentConfig{}, fmt.Errorf("remote component %q contains unresolved imports", importURL)
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q contains unresolved imports", importURL)
 	}
 	if !variantMatchesOCIPlatform(config.Variant, root.Platform) {
-		return cachedRemoteComponentConfig{}, fmt.Errorf("remote component %q variant architecture does not match its OCI platform", importURL)
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q variant architecture does not match its OCI platform", importURL)
 	}
 	importRoot := path.Join(".zarf", "remote-components", strings.ReplaceAll(root.Digest.String(), ":", "-"))
 	resources := make([]remoteResource, 0, len(manifest.Layers))
@@ -327,22 +300,24 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 		}
 		mountPath := descriptor.Annotations[layout.ComponentResourceMountPathAnnotation]
 		if !validResourcePath(mountPath) {
-			return cachedRemoteComponentConfig{}, fmt.Errorf("remote component %q has an invalid resource layer", importURL)
+			return loadedComponentConfig{}, fmt.Errorf("remote component %q has an invalid resource layer", importURL)
 		}
 		if _, exists := seenMountPaths[mountPath]; exists {
-			return cachedRemoteComponentConfig{}, fmt.Errorf("remote component %q has duplicate resource layers", importURL)
+			return loadedComponentConfig{}, fmt.Errorf("remote component %q has duplicate resource layers", importURL)
 		}
 		seenMountPaths[mountPath] = struct{}{}
 		resources = append(resources, remoteResource{remote: remote, descriptor: descriptor, importRoot: importRoot, mountPath: mountPath})
 	}
 	if err := validateRemoteComponentResources(config, seenMountPaths); err != nil {
-		return cachedRemoteComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
+		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
 	}
-	return cachedRemoteComponentConfig{
-		configBytes: configBytes,
-		importRoot:  importRoot,
-		path:        importURL + "@" + root.Digest.String(),
-		resources:   resources,
+	return loadedComponentConfig{
+		config:           config,
+		remote:           true,
+		dir:              importRoot,
+		relativeToParent: importRoot,
+		path:             importURL + "@" + root.Digest.String(),
+		resources:        resources,
 	}, nil
 }
 
