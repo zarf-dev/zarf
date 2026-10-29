@@ -19,7 +19,7 @@ zarf dev inspect manifests [ PATH ] [flags]
 ```
       --create-set stringToString             Specify package templates to set on the command line (KEY=value) (default [])
       --deploy-set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
-      --enable-kustomize-plugins              Allow Kustomize plugins enabled in the package definition to run arbitrary commands
+      --enable-kustomize-plugins              Allow external Kustomize plugins referenced by the package definition to execute arbitrary code
   -f, --flavor string                         The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                                  help for manifests
       --kube-version string                   Override the default helm template KubeVersion when performing a package chart template

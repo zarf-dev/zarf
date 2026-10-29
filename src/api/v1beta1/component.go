@@ -154,7 +154,7 @@ type KustomizeManifest struct {
 	Files []string `json:"files,omitempty"`
 	// Allow traversing directory above the current directory if needed for kustomization.
 	AllowAnyDirectory bool `json:"allowAnyDirectory,omitempty"`
-	// Enable kustomize plugins when building manifests.
+	// Allow external Kustomize plugins when building manifests.
 	EnablePlugins bool `json:"enablePlugins,omitempty"`
 }
 
