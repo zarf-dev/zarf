@@ -512,11 +512,12 @@ component:
 }
 
 func TestPublishComponentMergesNestedImportedValuesSchemasFromRelativePath(t *testing.T) {
-	// FIXME: is it not possible to test this without absolutes
-	t.Chdir(t.TempDir())
+	t.Parallel()
 
 	ctx := context.Background()
-	root := filepath.Join("components", "root")
+	root, err := os.MkdirTemp(".", "schema-import-*")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, os.RemoveAll(root)) })
 	childDir := filepath.Join(root, "child")
 	grandchildDir := filepath.Join(childDir, "grandchild")
 	require.NoError(t, os.MkdirAll(grandchildDir, 0o700))
