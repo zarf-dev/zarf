@@ -203,13 +203,12 @@ func featuresToMap(fs []Feature) map[Name]Feature {
 // List of feature names
 const (
 	// AxolotlMode declares the "axolotl-mode" feature
-	AxolotlMode            Name = "axolotl-mode"
-	RegistryProxy          Name = "registry-proxy"
-	Values                 Name = "values"
-	DockerDaemonDirectPull Name = "docker-daemon-direct-pull"
-	SBOMViewer             Name = "sbom-viewer"
-	ArtifactServer         Name = "artifact-server"
-	V1Beta1                Name = "v1beta1"
+	AxolotlMode    Name = "axolotl-mode"
+	RegistryProxy  Name = "registry-proxy"
+	Values         Name = "values"
+	SBOMViewer     Name = "sbom-viewer"
+	ArtifactServer Name = "artifact-server"
+	V1Beta1        Name = "v1beta1"
 )
 
 func init() {
@@ -246,14 +245,6 @@ func init() {
 			Enabled: true,
 			Since:   "v0.64.0",
 			Stage:   Beta,
-		},
-		{
-			Name: DockerDaemonDirectPull,
-			Description: "Saves images from the local Docker daemon directly via the engine's OCI image export " +
-				"disabling this feature falls back to pulling with Crane.",
-			Enabled: true,
-			Since:   "v0.80.0",
-			Stage:   GA,
 		},
 		{
 			Name:        SBOMViewer,
