@@ -45,10 +45,14 @@ func TestCreateImageSBOM(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, fileContent, b)
 	betaOutputPath := t.TempDir()
-	betaSBOM, err := createImageSBOMResource(ctx, t.TempDir(), betaOutputPath, img, "nginx")
+	betaSBOM, err := createImageSBOMResource(ctx, t.TempDir(), betaOutputPath, img, "nginx", "docker.io/library/nginx:latest")
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.ImageSBOMResourcePath("nginx"))))
 	require.NotEmpty(t, betaSBOM)
+	var betaDoc model.Document
+	require.NoError(t, json.Unmarshal(betaSBOM, &betaDoc))
+	require.Equal(t, "docker.io/library/nginx", betaDoc.Source.Name)
+	require.Contains(t, string(betaSBOM), "docker.io/library/nginx:latest")
 }
 
 func TestCreateImageSBOMNonExistentCachePath(t *testing.T) {
@@ -120,8 +124,10 @@ func TestImageSBOMTargetsExpandDeclaredAliases(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, targets, 2)
-	require.Equal(t, "nginx", targets[0].identifier)
-	require.Equal(t, "docker.io/library/nginx:latest", targets[1].identifier)
+	require.Equal(t, "nginx", targets[0].resourceIdentifier)
+	require.Equal(t, "docker.io/library/nginx:latest", targets[1].resourceIdentifier)
+	require.Equal(t, canonical.Reference, targets[0].imageReference)
+	require.Equal(t, canonical.Reference, targets[1].imageReference)
 }
 
 // findArtifact looks a package up by name in a syft document. Decoding into
