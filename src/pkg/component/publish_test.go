@@ -511,11 +511,12 @@ component:
 	require.NotContains(t, layerTitles, "child/component.yaml")
 }
 
-func TestPublishComponentMergesNestedImportedValuesSchemas(t *testing.T) {
-	t.Parallel()
+func TestPublishComponentMergesNestedImportedValuesSchemasFromRelativePath(t *testing.T) {
+	// FIXME: is it not possible to test this without absolutes
+	t.Chdir(t.TempDir())
 
 	ctx := context.Background()
-	root := t.TempDir()
+	root := filepath.Join("components", "root")
 	childDir := filepath.Join(root, "child")
 	grandchildDir := filepath.Join(childDir, "grandchild")
 	require.NoError(t, os.MkdirAll(grandchildDir, 0o700))
@@ -949,7 +950,7 @@ func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
 			t.Parallel()
 
 			componentPath := filepath.Join(t.TempDir(), "component.yaml")
-			_, _, err := normalizeComponentResources(componentPath, tt.component, nil, localComponentResourceSet(componentPath))
+			_, _, err := normalizeComponentResources(tt.component, nil, localComponentResourceSet(componentPath))
 			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
@@ -969,7 +970,7 @@ func TestComponentResourcesAllowsSupportedRemoteSources(t *testing.T) {
 		},
 	}
 	componentPath := filepath.Join(t.TempDir(), "component.yaml")
-	_, resources, err := normalizeComponentResources(componentPath, component, nil, localComponentResourceSet(componentPath))
+	_, resources, err := normalizeComponentResources(component, nil, localComponentResourceSet(componentPath))
 	require.NoError(t, err)
 	require.Empty(t, resources.resources)
 }
