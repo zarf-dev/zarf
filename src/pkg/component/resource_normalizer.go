@@ -32,7 +32,6 @@ type normalizedComponentResources struct {
 }
 
 type componentResourceNormalizer struct {
-	baseDir      string
 	resourceSet  *load.ResourceSet
 	resources    map[string]componentResource
 	sourceMounts map[string]string
@@ -42,9 +41,8 @@ type componentResourceNormalizer struct {
 // normalizeComponentResources makes every local source path artifact-relative. This keeps the
 // published config independent of the directory in which it was built and gives remote imports a
 // stable mount contract.
-func normalizeComponentResources(componentPath string, component v1beta1.ComponentConfig, importedSchemas []string, resourceSet *load.ResourceSet) (v1beta1.ComponentConfig, normalizedComponentResources, error) {
+func normalizeComponentResources(component v1beta1.ComponentConfig, importedSchemas []string, resourceSet *load.ResourceSet) (v1beta1.ComponentConfig, normalizedComponentResources, error) {
 	normalizer := componentResourceNormalizer{
-		baseDir:      filepath.Dir(componentPath),
 		resourceSet:  resourceSet,
 		resources:    map[string]componentResource{},
 		sourceMounts: map[string]string{},
@@ -59,13 +57,23 @@ func normalizeComponentResources(componentPath string, component v1beta1.Compone
 	}
 	var err error
 	if len(importedSchemas) > 0 {
-		for i := range importedSchemas {
-			importedSchemas[i], err = normalizer.resourceSet.Path(importedSchemas[i])
+		schemaPaths := importedSchemas
+		if component.Values.Schema != "" {
+			schemaPaths = append([]string{component.Values.Schema}, schemaPaths...)
+		}
+		schemas := make([]value.SchemaDocument, 0, len(schemaPaths))
+		for _, schemaPath := range schemaPaths {
+			contents, err := resourceSet.ReadFile(schemaPath)
+			if err != nil {
+				return component, normalizedComponentResources{}, fmt.Errorf("reading values schema %q: %w", schemaPath, err)
+			}
+			schema, err := value.ParseSchemaDocument(schemaPath, contents)
 			if err != nil {
 				return component, normalizedComponentResources{}, err
 			}
+			schemas = append(schemas, schema)
 		}
-		merged, err := value.MergeSchemaFiles(component.Values.Schema, importedSchemas, normalizer.baseDir)
+		merged, err := value.MergeSchemaDocuments(schemas)
 		if err != nil {
 			return component, normalizedComponentResources{}, fmt.Errorf("merging imported values schemas: %w", err)
 		}
