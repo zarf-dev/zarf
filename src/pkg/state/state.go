@@ -647,9 +647,11 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	return nil
 }
 
-// Default returns a default State with default values filled in for the registry, git server, and artifact server
+// Default returns a State with default service values for offline rendering.
 func Default() (*State, error) {
-	state := &State{}
+	state := &State{
+		AgentInfo: AgentInfo{MutationPolicy: MutationPolicyAll},
+	}
 	err := state.GitServer.FillInEmptyValues()
 	if err != nil {
 		return nil, err
