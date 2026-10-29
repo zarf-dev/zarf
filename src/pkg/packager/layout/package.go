@@ -560,7 +560,7 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string, keys []str
 	}
 	if !UsesGranularResourceLayout(p.pkg) {
 		if len(keys) > 0 {
-			return fmt.Errorf("SBOM selection by key requires granular SBOM resources")
+			return fmt.Errorf("SBOM selection by key requires package API version v1beta1+")
 		}
 		return archive.Decompress(ctx, filepath.Join(p.dirPath, SBOMTar), destPath, archive.DecompressOpts{})
 	}
