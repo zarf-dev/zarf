@@ -33,10 +33,8 @@ func newInternalCommand(rootCmd *cobra.Command) *cobra.Command {
 	}
 
 	cmd.AddCommand(newInternalAgentCommand())
-	cmd.AddCommand(newInternalHTTPProxyCommand())
 	cmd.AddCommand(newInternalGenCliDocsCommand(rootCmd))
 	cmd.AddCommand(newInternalCreateReadOnlyGiteaUserCommand())
-	cmd.AddCommand(newInternalCreateArtifactRegistryTokenCommand())
 	cmd.AddCommand(newInternalUpdateGiteaPVCCommand())
 	cmd.AddCommand(newInternalIsValidHostnameCommand())
 	cmd.AddCommand(newInternalCrc32Command())
@@ -66,30 +64,6 @@ func (o *internalAgentOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	return agent.StartWebhook(ctx, c)
-}
-
-type internalHTTPProxyOptions struct{}
-
-func newInternalHTTPProxyCommand() *cobra.Command {
-	o := &internalHTTPProxyOptions{}
-
-	cmd := &cobra.Command{
-		Use:   "http-proxy",
-		Short: lang.CmdInternalProxyShort,
-		Long:  lang.CmdInternalProxyLong,
-		RunE:  o.run,
-	}
-
-	return cmd
-}
-
-func (o *internalHTTPProxyOptions) run(cmd *cobra.Command, _ []string) error {
-	ctx := cmd.Context()
-	c, err := cluster.New(ctx)
-	if err != nil {
-		return err
-	}
-	return agent.StartHTTPProxy(ctx, c)
 }
 
 type internalGenCliDocsOptions struct {
@@ -276,72 +250,6 @@ func (o *internalCreateReadOnlyGiteaUserOptions) run(cmd *cobra.Command, _ []str
 	})
 	if err != nil {
 		return err
-	}
-	return nil
-}
-
-type internalCreateArtifactRegistryTokenOptions struct{}
-
-func newInternalCreateArtifactRegistryTokenCommand() *cobra.Command {
-	o := &internalCreateArtifactRegistryTokenOptions{}
-
-	cmd := &cobra.Command{
-		Use:   "create-artifact-registry-token",
-		Short: lang.CmdInternalArtifactRegistryGiteaTokenShort,
-		Long:  lang.CmdInternalArtifactRegistryGiteaTokenLong,
-		RunE:  o.run,
-	}
-
-	return cmd
-}
-
-func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ []string) error {
-	ctx := cmd.Context()
-	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
-	defer cancel()
-	c, err := cluster.NewWithWait(timeoutCtx)
-	if err != nil {
-		return err
-	}
-	s, err := c.LoadState(ctx)
-	if err != nil {
-		return err
-	}
-
-	// If we are setup to use an internal artifact server, create the artifact registry token
-	if s.ArtifactServer.IsInternal() {
-		tunnel, err := c.NewTunnel(state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
-		if err != nil {
-			return err
-		}
-		_, err = tunnel.Connect(ctx)
-		if err != nil {
-			return err
-		}
-		defer tunnel.Close()
-		// tunnel is created with the default listenAddress - there will only be one endpoint until otherwise supported
-		tunnelURLs := tunnel.HTTPEndpoints()
-		if len(tunnelURLs) == 0 {
-			return fmt.Errorf("no tunnel endpoints found")
-		}
-		giteaClient, err := gitea.NewClient(tunnelURLs[0], s.GitServer.PushUsername, s.GitServer.PushPassword)
-		if err != nil {
-			return err
-		}
-		err = tunnel.Wrap(func() error {
-			tokenSha1, err := giteaClient.CreatePackageRegistryToken(ctx)
-			if err != nil {
-				return fmt.Errorf("unable to create an artifact registry token for Gitea: %w", err)
-			}
-			s.ArtifactServer.PushToken = tokenSha1
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-		if err := c.SaveState(ctx, s); err != nil {
-			return err
-		}
 	}
 	return nil
 }
