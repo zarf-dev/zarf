@@ -12,14 +12,20 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry"
 )
+
+type nilComponentFilter struct{}
+
+func (nilComponentFilter) Apply(api.Package) ([]api.Component, error) {
+	return nil, nil
+}
 
 func TestLoadPackageSelectsGranularResources(t *testing.T) {
 	t.Parallel()
@@ -134,7 +140,7 @@ components:
 	emptyComponentLayout, err := LoadPackage(ctx, packageRef.String(), LoadOptions{
 		Architecture:         "amd64",
 		CachePath:            t.TempDir(),
-		Filter:               filters.BySelectState("-metrics"),
+		Filter:               nilComponentFilter{},
 		LayerSelection:       &zoci.LayerSelection{IncludeComponents: true},
 		VerificationStrategy: layout.VerifyNever,
 		RemoteOptions:        types.RemoteOptions{PlainHTTP: true},

@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -165,6 +166,9 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	}
 	if selection.RequestedComponents == nil {
 		selection.RequestedComponents = pkg.Components
+		if selection.RequestedComponents == nil {
+			selection.RequestedComponents = []api.Component{}
+		}
 	}
 	layersToPull, err := remote.AssembleLayers(ctx, selection)
 	if err != nil {
