@@ -222,7 +222,7 @@ components:
 `
 	definitionPath := filepath.Join(source, "zarf.yaml")
 	require.NoError(t, os.WriteFile(definitionPath, []byte(definition), 0o600))
-	stdout, stderr, err := e2e.Zarf(t, "dev", "find-images", source, "--skip-cosign", "--update", "--features=v1beta1=true")
+	stdout, stderr, err := e2e.Zarf(t, "dev", "find-images", source, "--skip-cosign", "--update")
 	require.NoError(t, err, "%s\n%s", stdout, stderr)
 	var found v1beta1.Package
 	require.NoError(t, yaml.Unmarshal([]byte(stdout), &found))
@@ -238,7 +238,7 @@ components:
 	require.Equal(t, want, authored.Components[0].ImageArchives[0].Images)
 
 	output := t.TempDir()
-	stdout, stderr, err = e2e.Zarf(t, "package", "create", source, "-o", output, "--skip-sbom", "--confirm", "--features=v1beta1=true")
+	stdout, stderr, err = e2e.Zarf(t, "package", "create", source, "-o", output, "--skip-sbom", "--confirm")
 	require.NoError(t, err, "%s\n%s", stdout, stderr)
 	packagePath := filepath.Join(output, fmt.Sprintf("zarf-package-archive-ids-%s.tar.zst", e2e.Arch))
 	pkg, err := layout.LoadFromTar(t.Context(), packagePath, layout.PackageLayoutOptions{})
