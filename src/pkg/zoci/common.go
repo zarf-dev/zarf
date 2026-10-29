@@ -24,16 +24,20 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
-// LayerSelection specifies package layer categories to retrieve.
-// Metadata is always retrieved and is not represented here.
+// LayerSelection controls optional OCI package layers to retrieve.
+// Metadata layers are always retrieved; a zero-value selection retrieves metadata only.
 type LayerSelection struct {
-	// RequestedComponents limits component and image layers to the listed components.
+	// RequestedComponents scopes component and image layers.
 	// A nil slice selects every package component; a non-nil empty slice selects none.
 	RequestedComponents []api.Component
-	IncludeComponents   bool
-	IncludeImages       bool
-	SBOMs               *SBOMSelection
-	Attachments         *AttachmentSelection
+	// IncludeComponents retrieves component archive layers in the requested scope.
+	IncludeComponents bool
+	// IncludeImages retrieves image layers referenced by components in the requested scope.
+	IncludeImages bool
+	// SBOMs selects SBOM resources; nil skips SBOM layers.
+	SBOMs *SBOMSelection
+	// Attachments selects attachment resources; nil skips attachment layers.
+	Attachments *AttachmentSelection
 }
 
 // SBOMSelection specifies which checksum-declared SBOM resources to retrieve.
