@@ -699,14 +699,7 @@ func TestPackageUsesFlavor(t *testing.T) {
 func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 	t.Parallel()
 
-	// Enable the values feature for these tests
-	err := feature.Set([]feature.Feature{
-		{
-			Name:    feature.Values,
-			Enabled: true,
-		},
-	})
-	require.NoError(t, err)
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
 
 	tests := []struct {
 		name        string
@@ -788,6 +781,7 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 
 func TestV1Beta1PackageDefinitionValuesSchemaValidation(t *testing.T) {
 	t.Parallel()
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck // Features may already be set by another test.
 	ctx := testutil.TestContext(t)
 	dir := filepath.Join("testdata", "v1beta1-invalid-values")
 
