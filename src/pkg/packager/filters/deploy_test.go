@@ -250,3 +250,31 @@ func TestDeployFilter_Apply(t *testing.T) {
 		})
 	}
 }
+
+func TestDeploymentFilterCapturesInteractiveSelectors(t *testing.T) {
+	t.Parallel()
+
+	filter := &deploymentFilter{
+		isInteractive: true,
+		selectOptional: func(_ api.Package, component api.Component) (bool, error) {
+			return component.Name == "selected", nil
+		},
+		selectGroup: func(group []api.Component) (api.Component, error) {
+			return group[1], nil
+		},
+	}
+	components, err := filter.Apply(api.Package{Components: []api.Component{
+		{Name: "declined", Optional: true, Default: true},
+		{Name: "selected", Optional: true},
+		{Name: "required"},
+		{Name: "group-a", Group: "group"},
+		{Name: "group-b", Group: "group"},
+	}})
+	require.NoError(t, err)
+	require.Equal(t, []api.Component{
+		{Name: "selected", Optional: true},
+		{Name: "required"},
+		{Name: "group-b", Group: "group"},
+	}, components)
+	require.Equal(t, []string{"-declined", "selected", "group-b"}, filter.ResolvedSelectors())
+}

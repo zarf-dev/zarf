@@ -186,7 +186,7 @@ func validatePackageSecretSize(pkg api.Package, digest string) error {
 	for _, component := range pkg.Components {
 		components = append(components, state.DeployedComponent{
 			Name:               component.Name,
-			Status:             state.ComponentStatusSucceeded,
+			Status:             state.ComponentStatusSucceeded, //nolint:staticcheck // Legacy status remains persisted for compatibility.
 			ObservedGeneration: 1,
 		})
 	}

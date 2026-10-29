@@ -7,23 +7,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
-	"slices"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/types"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // DevDeployOptions are the optionalParameters to DevDeploy
@@ -99,15 +93,6 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if opts.SkipArchitectureCheck && loaded.Definition.IsInitConfig() {
 		return fmt.Errorf("skipping architecture checks is not supported for init packages")
 	}
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(opts.OptionalComponents, false),
-	)
-	definition, err := filters.Apply(loaded.Definition, filter)
-	if err != nil {
-		return err
-	}
-	loaded.Definition = definition
 
 	// If not building for airgap, strip out all images and repos.
 	if !opts.AirgapMode {
@@ -129,79 +114,34 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	pkg := pkgLayout.Definition()
+	l.Info("starting package dev deploy", "name", pkgLayout.Definition().Metadata.Name)
 
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, false)
-	if err != nil {
-		return err
-	}
-	values, err := loadDeploymentValues(ctx, pkgLayout, opts.Values, false)
-	if err != nil {
-		return err
-	}
-
-	l.Info("starting package dev deploy", "name", pkg.Metadata.Name)
-
-	var d deployer
-	d.vc = variableConfig
-	d.vals = values
-	if !opts.AirgapMode {
-		// Set default builtin values so they exist in case any helm charts rely on them
-		d.s, err = state.Default()
-		if err != nil {
-			return err
-		}
-
-		requiresCluster := slices.ContainsFunc(pkg.Components, func(c api.Component) bool {
-			return c.RequiresCluster()
-		})
-		if requiresCluster {
-			timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
-			defer cancel()
-			d.c, err = cluster.NewWithWait(timeoutCtx)
-			if err != nil {
-				return err
-			}
-			clusterState, err := d.c.LoadState(ctx)
-			if err != nil && !kerrors.IsNotFound(err) {
-				return err
-			}
-			if clusterState != nil {
-				d.s = clusterState
-			}
-		}
-
-		if opts.RegistryURL != "" {
-			d.s.RegistryInfo.Address = opts.RegistryURL
-		}
-	}
-
-	if err := validateTemplateRefs(ctx, pkgLayout, values); err != nil {
-		return fmt.Errorf("package references values that cannot be resolved (value templates must be explicitly defined, even if empty): %w", err)
-	}
-
-	// Get a list of all the components we are deploying and actually deploy them
-	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOptions{
-		SetVariables:          opts.DeploySetVariables,
-		Values:                opts.Values,
+	result, err := Deploy(ctx, pkgLayout, DeployOptions{
+		DeployConfig: DeployConfig{
+			SetVariables:       opts.DeploySetVariables,
+			Values:             opts.Values,
+			OptionalComponents: opts.OptionalComponents,
+			Connected:          !opts.AirgapMode,
+		},
+		Source:                packagePath,
+		RegistryInfo:          state.RegistryInfo{Address: opts.RegistryURL},
 		Timeout:               opts.Timeout,
 		Retries:               opts.Retries,
-		Connected:             !opts.AirgapMode,
 		OCIConcurrency:        opts.OCIConcurrency,
 		RemoteOptions:         opts.RemoteOptions,
 		TakeOwnership:         opts.TakeOwnership,
 		SkipArchitectureCheck: opts.SkipArchitectureCheck,
+		SkipVersionCheck:      opts.SkipVersionCheck,
 	})
 	if err != nil {
 		return err
 	}
 
-	if len(deployedComponents) == 0 {
-		l.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
+	if len(result.DeployedComponents) == 0 {
+		l.Warn("No components were selected for deployment. Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 	}
 
-	// Notify all the things about the successful deployment
-	l.Debug("dev deployment complete", "package", pkg.Metadata.Name, "duration", time.Since(start))
-
+	// Notify all the things about the successful deployment.
+	l.Debug("dev deployment complete", "package", pkgLayout.Definition().Metadata.Name, "duration", time.Since(start))
 	return nil
 }

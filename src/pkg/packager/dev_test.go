@@ -90,7 +90,7 @@ func TestDevDeploy_appliesValues(t *testing.T) {
 	require.NoError(t, err)
 	contents, err := os.ReadFile(target)
 	require.NoError(t, err)
-	require.Equal(t, "from-deploy-values\n", string(contents))
+	require.Equal(t, "from-deploy-values", string(contents))
 }
 
 func TestDevDeployRejectsArchitectureOverrideForInit(t *testing.T) {

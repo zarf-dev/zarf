@@ -55,7 +55,7 @@ func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 				deployed, err := c.GetDeployedPackage(ctx, "success-hooks")
 				if assert.NoError(t, err) {
-					assert.Equal(t, tt.duringHook, deployed.DeployedComponents[0].Status)
+					assert.Equal(t, tt.duringHook, deployed.DeployedComponents[0].Status) //nolint:staticcheck // Verify legacy status remains persisted.
 				}
 			}))
 			t.Cleanup(srv.Close)
@@ -79,9 +79,65 @@ func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
 			require.ErrorContains(t, err, `command "exit 1" failed`)
 			deployed, err := c.GetDeployedPackage(ctx, pkg.Metadata.Name)
 			require.NoError(t, err)
-			require.Equal(t, tt.final, deployed.DeployedComponents[0].Status)
+			require.Equal(t, tt.final, deployed.DeployedComponents[0].Status) //nolint:staticcheck // Verify legacy status remains persisted.
+			require.Equal(t, []state.EventOutcome{state.EventOutcomeInProgress, state.EventOutcomeFailed}, []state.EventOutcome{
+				deployed.Events[0].Outcome,
+				deployed.Events[1].Outcome,
+			})
+			require.Equal(t, state.EventTypeDeploy, deployed.DeployedComponents[0].LastEvent.Type)
+			if tt.final == state.ComponentStatusFailed {
+				require.Equal(t, state.EventOutcomeFailed, deployed.DeployedComponents[0].LastEvent.Outcome)
+			} else {
+				require.Equal(t, state.EventOutcomeSucceeded, deployed.DeployedComponents[0].LastEvent.Outcome)
+			}
 		})
 	}
+}
+
+func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	c := &cluster.Cluster{Clientset: fake.NewClientset()}
+	success := api.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       api.ZarfPackageConfig,
+		Metadata:   api.PackageMetadata{Name: "config-retry", Version: "1.0.0"},
+		Components: []api.Component{{Name: "component"}},
+	}
+	successLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: success, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, successLayout.Cleanup()) })
+
+	config := DeployConfig{SetVariables: map[string]string{"VARIABLE": "value"}, OptionalComponents: "component"}
+	d := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
+	_, err = d.deployComponents(ctx, successLayout, DeployOptions{DeployConfig: config})
+	require.NoError(t, err)
+
+	deployed, err := c.GetDeployedPackage(ctx, success.Metadata.Name)
+	require.NoError(t, err)
+	require.Equal(t, state.EventOutcomeSucceeded, deployed.Events[len(deployed.Events)-1].Outcome)
+	expectedDigest, err := config.Digest()
+	require.NoError(t, err)
+	actualDigest, err := deployed.DeployConfig.Digest()
+	require.NoError(t, err)
+	require.Equal(t, expectedDigest, actualDigest)
+	require.Equal(t, actualDigest, deployed.Events[len(deployed.Events)-1].ConfigDigest)
+
+	failed := success
+	failed.Components = []api.Component{{Name: "component", Actions: api.ComponentActions{OnDeploy: api.ActionSet{OnSuccess: []api.Action{{Cmd: "exit 1"}}}}}}
+	failedLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: failed, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, failedLayout.Cleanup()) })
+
+	retry := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
+	_, err = retry.deployComponents(ctx, failedLayout, DeployOptions{DeployConfig: DeployConfig{SetVariables: map[string]string{"VARIABLE": "changed"}}})
+	require.ErrorContains(t, err, `command "exit 1" failed`)
+
+	deployed, err = c.GetDeployedPackage(ctx, success.Metadata.Name)
+	require.NoError(t, err)
+	require.Equal(t, state.EventOutcomeFailed, deployed.Events[len(deployed.Events)-1].Outcome)
+	require.Equal(t, config.SetVariables, deployed.DeployConfig.SetVariables)
 }
 
 func TestDeployInitComponentServices(t *testing.T) {
@@ -156,7 +212,6 @@ func TestDeployInitComponentServices(t *testing.T) {
 			ctx := testutil.TestContext(t)
 			cs := fake.NewClientset(
 				&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node"}},
-				&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: state.ZarfNamespaceName}},
 				&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "default", Namespace: state.ZarfNamespaceName}},
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{Name: "zarf-ip-family-test", Namespace: state.ZarfNamespaceName},
@@ -439,7 +494,7 @@ func TestDeployFileTemplatesByAPIVersion(t *testing.T) {
 			definitionPath := filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML)
 			originalDefinition, err := os.ReadFile(definitionPath)
 			require.NoError(t, err)
-			_, err = Deploy(ctx, pkgLayout, DeployOptions{SetVariables: map[string]string{"INPUT": "supplied"}})
+			_, err = Deploy(ctx, pkgLayout, DeployOptions{DeployConfig: DeployConfig{SetVariables: map[string]string{"INPUT": "supplied"}}})
 			if tt.fail {
 				require.ErrorContains(t, err, `command "exit 1" failed`)
 			} else {

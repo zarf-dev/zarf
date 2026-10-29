@@ -8,8 +8,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"regexp"
+	"time"
 
+	"github.com/opencontainers/go-digest"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -19,8 +22,10 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
 // MutationPolicy controls the agent's default mutation behavior.
@@ -819,6 +824,116 @@ const (
 	PackageConnectivityConnected PackageConnectivity = "connected"
 )
 
+// ValuesOverrides contains direct Helm chart values keyed by component and chart name.
+type ValuesOverrides map[string]map[string]value.Values
+
+// DeployConfig is the persisted configuration of a successful package deployment.
+type DeployConfig struct {
+	SetVariables       map[string]string `json:"setVariables,omitempty"`
+	Values             value.Values      `json:"values,omitempty"`
+	NamespaceOverride  string            `json:"namespaceOverride,omitempty"`
+	ValuesOverridesMap ValuesOverrides   `json:"valuesOverridesMap,omitempty"`
+	OptionalComponents string            `json:"optionalComponents,omitempty"`
+	Connected          bool              `json:"connected,omitempty"`
+}
+
+// Digest returns the canonical digest for the deployment configuration.
+func (c DeployConfig) Digest() (digest.Digest, error) {
+	normalized, err := filters.NormalizeComponentSelectors(c.OptionalComponents)
+	if err != nil {
+		return "", err
+	}
+	c.OptionalComponents = normalized
+	data, err := json.Marshal(c)
+	if err != nil {
+		return "", err
+	}
+	return digest.FromBytes(data), nil
+}
+
+// RemoveConfig is the persisted configuration used to remove a package.
+type RemoveConfig struct {
+	Values             value.Values `json:"values,omitempty"`
+	NamespaceOverride  string       `json:"namespaceOverride,omitempty"`
+	OptionalComponents string       `json:"optionalComponents,omitempty"`
+}
+
+// Digest returns the canonical digest for the removal configuration.
+func (c RemoveConfig) Digest() (digest.Digest, error) {
+	normalized, err := filters.NormalizeComponentSelectors(c.OptionalComponents)
+	if err != nil {
+		return "", err
+	}
+	c.OptionalComponents = normalized
+	data, err := json.Marshal(c)
+	if err != nil {
+		return "", err
+	}
+	return digest.FromBytes(data), nil
+}
+
+func (c DeployConfig) deepCopy() DeployConfig {
+	snapshot := DeployConfig{
+		SetVariables:       maps.Clone(c.SetVariables),
+		NamespaceOverride:  c.NamespaceOverride,
+		OptionalComponents: c.OptionalComponents,
+		Connected:          c.Connected,
+	}
+	if c.Values != nil {
+		snapshot.Values = c.Values.DeepCopy()
+	}
+	if c.ValuesOverridesMap != nil {
+		snapshot.ValuesOverridesMap = make(ValuesOverrides, len(c.ValuesOverridesMap))
+		for component, charts := range c.ValuesOverridesMap {
+			snapshot.ValuesOverridesMap[component] = make(map[string]value.Values, len(charts))
+			for chart, values := range charts {
+				snapshot.ValuesOverridesMap[component][chart] = values.DeepCopy()
+			}
+		}
+	}
+	return snapshot
+}
+
+// EventType identifies the package or component lifecycle operation.
+type EventType string
+
+// EventTypeDeploy identifies deploy events; EventTypeRemove identifies remove events.
+const (
+	EventTypeDeploy EventType = "Deploy"
+	EventTypeRemove EventType = "Remove"
+)
+
+// EventOutcome identifies the result of a lifecycle operation.
+type EventOutcome string
+
+// EventOutcomeUnknown identifies an unknown event result. Other values identify lifecycle transitions.
+const (
+	EventOutcomeUnknown    EventOutcome = "Unknown"
+	EventOutcomeInProgress EventOutcome = "InProgress"
+	EventOutcomeSucceeded  EventOutcome = "Succeeded"
+	EventOutcomeFailed     EventOutcome = "Failed"
+	EventOutcomeCancelled  EventOutcome = "Cancelled"
+)
+
+// PackageEvent records a package lifecycle transition.
+type PackageEvent struct {
+	Type         EventType     `json:"type"`
+	Outcome      EventOutcome  `json:"outcome"`
+	Timestamp    time.Time     `json:"timestamp"`
+	Version      string        `json:"version,omitempty"`
+	Flavor       string        `json:"flavor,omitempty"`
+	Digest       digest.Digest `json:"digest,omitempty"`
+	Source       string        `json:"source,omitempty"`
+	ConfigDigest digest.Digest `json:"configDigest,omitempty"`
+}
+
+// ComponentEvent records a component lifecycle transition.
+type ComponentEvent struct {
+	Type      EventType    `json:"type"`
+	Outcome   EventOutcome `json:"outcome"`
+	Timestamp time.Time    `json:"timestamp"`
+}
+
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
@@ -833,6 +948,8 @@ type DeployedPackage struct {
 	DeployedComponents  []DeployedComponent        `json:"deployedComponents"`
 	ConnectStrings      ConnectStrings             `json:"connectStrings,omitempty"`
 	PackageConnectivity PackageConnectivity        `json:"packageConnectivity"`
+	Events              []PackageEvent             `json:"events,omitempty"`
+	DeployConfig        *DeployConfig              `json:"deployConfig,omitempty"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
 }
@@ -863,6 +980,39 @@ func NewDeployedPackage(definition api.Package, digest, cliVersion string, compo
 		opt(deployedPackage)
 	}
 	return deployedPackage, nil
+}
+
+// SetDeployConfig saves a detached snapshot of a successful deployment configuration.
+func (d *DeployedPackage) SetDeployConfig(config DeployConfig) {
+	snapshot := config.deepCopy()
+	d.DeployConfig = &snapshot
+}
+
+// AppendEvent adds an event, retaining the ten most recent events.
+func (d *DeployedPackage) AppendEvent(event PackageEvent) {
+	d.Events = append(d.Events, event)
+	if len(d.Events) > 10 {
+		d.Events = d.Events[len(d.Events)-10:]
+	}
+}
+
+// LatestEvent returns the most recent retained lifecycle event.
+func (d *DeployedPackage) LatestEvent() (PackageEvent, bool) {
+	if len(d.Events) == 0 {
+		return PackageEvent{}, false
+	}
+	return d.Events[len(d.Events)-1], true
+}
+
+// LastSuccessfulDeploy returns the latest successful deploy event.
+func (d *DeployedPackage) LastSuccessfulDeploy() (PackageEvent, bool) {
+	for i := len(d.Events) - 1; i >= 0; i-- {
+		event := d.Events[i]
+		if event.Type == EventTypeDeploy && event.Outcome == EventOutcomeSucceeded {
+			return event, true
+		}
+	}
+	return PackageEvent{}, false
 }
 
 // SetPackageDefinition records every API version needed to read a deployed package.
@@ -946,10 +1096,12 @@ type ConnectStrings map[string]ConnectString
 
 // DeployedComponent contains information about a Zarf Package Component that has been deployed to a cluster.
 type DeployedComponent struct {
-	Name               string           `json:"name"`
-	InstalledCharts    []InstalledChart `json:"installedCharts"`
-	Status             ComponentStatus  `json:"status"`
-	ObservedGeneration int              `json:"observedGeneration"`
+	Name            string           `json:"name"`
+	InstalledCharts []InstalledChart `json:"installedCharts"`
+	// Deprecated: LastEvent is the lifecycle status. Status remains populated for compatibility.
+	Status             ComponentStatus `json:"status"`
+	LastEvent          ComponentEvent  `json:"lastEvent,omitempty"`
+	ObservedGeneration int             `json:"observedGeneration"`
 }
 
 // ChartStatus is the status of a Helm Chart release
