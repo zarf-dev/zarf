@@ -278,5 +278,5 @@ documentation:
 	_, err = AssembleLayers(ctx, root, store, LayerSelection{
 		SBOMs: &SBOMSelection{Keys: []string{"metrics"}},
 	})
-	require.EqualError(t, err, "SBOM selection by key requires granular SBOM resources")
+	require.EqualError(t, err, "SBOM selection by key requires package API version v1beta1+")
 }

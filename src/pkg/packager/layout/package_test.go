@@ -103,7 +103,7 @@ func TestPackageLayout(t *testing.T) {
 	require.NoError(t, err)
 
 	err = pkgLayout.GetSBOM(ctx, t.TempDir(), []string{"test"})
-	require.EqualError(t, err, "SBOM selection by key requires granular SBOM resources")
+	require.EqualError(t, err, "SBOM selection by key requires package API version v1beta1+")
 
 	files, err := pkgLayout.Files()
 	require.NoError(t, err)

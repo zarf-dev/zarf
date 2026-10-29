@@ -1230,7 +1230,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	}()
 
 	if len(o.keys) > 0 && pkgLayout.Definition().GetAPIVersion() == v1alpha1.APIVersion {
-		return fmt.Errorf("SBOM selection by key requires granular SBOM resources")
+		return fmt.Errorf("SBOM selection by key requires package API version v1beta1+")
 	}
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
 	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.Definition().Metadata.Name))
