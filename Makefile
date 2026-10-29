@@ -203,7 +203,6 @@ publish-init-components-v1beta1: template-init-package-v1beta1 ## Render and pub
 	$(ZARF_BIN) component publish packages/init/v1beta1/git-server/zarf.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
 	$(ZARF_BIN) component publish packages/init/v1beta1/injector/amd64.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
 	$(ZARF_BIN) component publish packages/init/v1beta1/injector/arm64.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
-	$(ZARF_BIN) component publish packages/init/v1beta1/k3s/common.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
 	$(ZARF_BIN) component publish packages/init/v1beta1/k3s/amd64.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
 	$(ZARF_BIN) component publish packages/init/v1beta1/k3s/arm64.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm
 	$(ZARF_BIN) component publish packages/init/v1beta1/registry/registry-base.gen.yaml "oci://$(REPOSITORY_URL)" --features=v1beta1=true --keyless --confirm

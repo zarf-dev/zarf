@@ -196,6 +196,7 @@ func mergeImportedValues(directValues v1beta1.Values, inherited importedValues, 
 // loadedComponentConfig pairs a parsed component config with where it was read from.
 type loadedComponentConfig struct {
 	config           v1beta1.ComponentConfig
+	rawConfig        []byte
 	remote           bool
 	dir              string
 	relativeToParent string
@@ -244,7 +245,18 @@ func selectImportVariant(ctx context.Context, imp v1beta1.ComponentImport, specD
 	case 0:
 		return loadedComponentConfig{}, fmt.Errorf("no imported component variant is compatible with the package target")
 	case 1:
-		return compatible[0], nil
+		selected := compatible[0]
+		if selected.remote {
+			// Decode the cached bytes into a fresh value so rebasing and overrides
+			// cannot mutate nested slices and pointers shared by other imports.
+			var config v1beta1.ComponentConfig
+			if err := goyaml.Unmarshal(selected.rawConfig, &config); err != nil {
+				return loadedComponentConfig{}, fmt.Errorf("unable to parse imported component config %q: %w", selected.path, err)
+			}
+			selected.config = config
+			selected.resources = slices.Clone(selected.resources)
+		}
+		return selected, nil
 	default:
 		return loadedComponentConfig{}, fmt.Errorf("multiple imported component variants are compatible with the package target")
 	}
@@ -311,7 +323,7 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if err := validateRemoteComponentResources(config, seenMountPaths); err != nil {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
 	}
-	return loadedComponentConfig{config: config, remote: true, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
+	return loadedComponentConfig{config: config, rawConfig: configBytes, remote: true, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
 }
 
 // ValidateRemoteKustomizeRestrictions rejects unrestricted Kustomize builds for remote components.
