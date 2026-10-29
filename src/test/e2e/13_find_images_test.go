@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -178,6 +179,51 @@ func TestFindImages(t *testing.T) {
 		require.Contains(t, stdOut, "manifest: simple-httpd-deployment")
 		require.Contains(t, stdOut, "image: httpd:alpine3.18")
 	})
+}
+
+func TestDevKustomizePlugins(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("test plugin requires a POSIX shell")
+	}
+
+	fixture, err := filepath.Abs(filepath.Join("src", "pkg", "packager", "testdata", "kustomize-plugins"))
+	require.NoError(t, err)
+	t.Setenv("KUSTOMIZE_PLUGIN_HOME", filepath.Join(fixture, "plugins"))
+
+	for _, tc := range []struct {
+		name       string
+		args       []string
+		wantOutput string
+		wantError  string
+	}{
+		{name: "find-images", args: []string{"find-images", "--skip-cosign"}, wantOutput: "docker.io/library/scratch:latest"},
+		{name: "find-images why", args: []string{"find-images", "--skip-cosign", "--why", "scratch:latest"}, wantOutput: "name: plugin-pod"},
+		{name: "inspect manifests", args: []string{"inspect", "manifests"}, wantOutput: "name: plugin-pod"},
+		// This fixture has no charts, but values-files must still require permission before running its manifest plugins.
+		{name: "inspect values-files", args: []string{"inspect", "values-files"}, wantError: "0 values files found"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			marker := filepath.Join(t.TempDir(), "executed")
+			t.Setenv("ZARF_TEST_KUSTOMIZE_PLUGIN_MARKER", marker)
+			args := append([]string{"dev"}, tc.args...)
+			args = append(args, fixture)
+			stdout, stderr, err := e2e.Zarf(t, args...)
+			require.Error(t, err, stdout, stderr)
+			require.Contains(t, stderr, "--enable-kustomize-plugins")
+			require.NoFileExists(t, marker)
+
+			args = append(args, "--enable-kustomize-plugins")
+			stdout, stderr, err = e2e.Zarf(t, args...)
+			if tc.wantError != "" {
+				require.Error(t, err, stdout, stderr)
+				require.Contains(t, stderr, tc.wantError)
+			} else {
+				require.NoError(t, err, stdout, stderr)
+				require.Contains(t, stdout, tc.wantOutput)
+			}
+			require.FileExists(t, marker)
+		})
+	}
 }
 
 func updateFindImagesFixture(t *testing.T, filename string) []byte {

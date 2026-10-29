@@ -24,6 +24,7 @@ zarf dev inspect values-files [ PATH ] [flags]
       --components string                     comma separated list of components to show values files for
       --create-set stringToString             Specify package templates to set on the command line (KEY=value) (default [])
       --deploy-set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+      --enable-kustomize-plugins              Allow Kustomize plugins enabled in the package definition to run arbitrary commands
   -f, --flavor string                         The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                                  help for values-files
       --kube-version string                   Override the default helm template KubeVersion when performing a package chart template
