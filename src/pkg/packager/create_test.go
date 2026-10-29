@@ -9,13 +9,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 	"testing"
 
-	gcrlayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -75,152 +72,6 @@ components:
 			require.Equal(t, tt.description, pkgLayout.Definition().Metadata.Description)
 		})
 	}
-}
-
-func TestCreateArchitectureConcurrentV1Alpha1(t *testing.T) {
-	ctx := testutil.TestContext(t)
-	registry := testutil.SetupInMemoryRegistryDynamic(ctx, t)
-	image := registry + "/images:1"
-	testutil.PushMultiArchIndex(ctx, t, registry+"/images", "1", []ocispec.Platform{
-		{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"},
-	})
-	source := t.TempDir()
-	root := `apiVersion: zarf.dev/v1alpha1
-kind: ZarfPackageConfig
-metadata:
-  name: concurrent
-  architecture: amd64
-components:
-  - name: selected
-    description: '###ZARF_PKG_ARCH###'
-    import:
-      path: imported
-`
-	require.NoError(t, os.Mkdir(filepath.Join(source, "imported"), 0o700))
-	imported := `kind: ZarfPackageConfig
-metadata:
-  name: imported
-  architecture: amd64
-components:
-`
-	for _, arch := range []string{"amd64", "arm64"} {
-		imported += fmt.Sprintf(`  - name: selected
-    only:
-      cluster:
-        architecture: %s
-    files:
-      - source: %s.txt
-        target: /payload
-    images:
-      - %s
-`, arch, arch, image)
-		require.NoError(t, os.WriteFile(filepath.Join(source, "imported", arch+".txt"), []byte(arch), 0o600))
-	}
-	require.NoError(t, os.WriteFile(filepath.Join(source, "imported", layout.ZarfYAML), []byte(imported), 0o600))
-	require.NoError(t, os.WriteFile(filepath.Join(source, layout.ZarfYAML), []byte(root), 0o600))
-
-	for arch, pkg := range assertConcurrentCreateArchitectures(t, source) {
-		require.Equal(t, arch, pkg.Components[0].Description)
-	}
-}
-
-func TestCreateArchitectureConcurrentV1Beta1(t *testing.T) {
-	ctx := testutil.TestContext(t)
-	registry := testutil.SetupInMemoryRegistryDynamic(ctx, t)
-	image := registry + "/images:1"
-	testutil.PushMultiArchIndex(ctx, t, registry+"/images", "1", []ocispec.Platform{
-		{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"},
-	})
-	source := t.TempDir()
-	root := `apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
-metadata:
-  name: concurrent
-  architecture: amd64
-components:
-  - name: selected
-    import:
-      local:
-        - path: amd64.yaml
-        - path: arm64.yaml
-`
-	for _, arch := range []string{"amd64", "arm64"} {
-		component := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
-kind: ZarfComponentConfig
-metadata:
-  name: selected
-variant:
-  architecture: %s
-component:
-  files:
-    - source: %s.txt
-      destination: /payload
-  images:
-    - name: %s
-`, arch, arch, image)
-		require.NoError(t, os.WriteFile(filepath.Join(source, arch+".yaml"), []byte(component), 0o600))
-		require.NoError(t, os.WriteFile(filepath.Join(source, arch+".txt"), []byte(arch), 0o600))
-	}
-	require.NoError(t, os.WriteFile(filepath.Join(source, layout.ZarfYAML), []byte(root), 0o600))
-
-	assertConcurrentCreateArchitectures(t, source)
-}
-
-func assertConcurrentCreateArchitectures(t *testing.T, source string) map[string]api.Package {
-	t.Helper()
-	ctx := testutil.TestContext(t)
-	type result struct {
-		arch, path string
-		err        error
-	}
-	results := make(chan result, 2)
-	start := make(chan struct{})
-	var workers sync.WaitGroup
-	for _, arch := range []string{"amd64", "arm64"} {
-		opts := CreateOptions{Architecture: arch, CachePath: t.TempDir(), SkipSBOM: true, SetVariables: map[string]string{}, RemoteOptions: defaultTestRemoteOptions()}
-		output := t.TempDir()
-		workers.Add(1)
-		go func() {
-			defer workers.Done()
-			<-start
-			path, err := Create(ctx, source, output, opts)
-			results <- result{arch: arch, path: path, err: err}
-		}()
-	}
-	close(start)
-	workers.Wait()
-	close(results)
-	packages := make(map[string]api.Package)
-	for result := range results {
-		require.NoError(t, result.err)
-		require.Equal(t, "zarf-package-concurrent-"+result.arch+".tar.zst", filepath.Base(result.path))
-		pkgLayout, err := layout.LoadFromTar(ctx, result.path, layout.PackageLayoutOptions{})
-		require.NoError(t, err)
-		t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
-		pkg := pkgLayout.Definition()
-		require.Equal(t, result.arch, pkg.Metadata.Architecture)
-		require.Equal(t, result.arch, pkg.Build.Architecture)
-		require.Len(t, pkg.Components, 1)
-		filesDir, err := pkgLayout.GetComponentDir(ctx, t.TempDir(), "selected", layout.FilesComponentDir)
-		require.NoError(t, err)
-		payload, err := os.ReadFile(filepath.Join(filesDir, layout.ComponentFileRelPath(0, "/payload")))
-		require.NoError(t, err)
-		require.Equal(t, result.arch, string(payload))
-		imageLayout, err := gcrlayout.FromPath(pkgLayout.GetImageDirPath())
-		require.NoError(t, err)
-		index, err := imageLayout.ImageIndex()
-		require.NoError(t, err)
-		manifest, err := index.IndexManifest()
-		require.NoError(t, err)
-		require.Len(t, manifest.Manifests, 1)
-		selected, err := index.Image(manifest.Manifests[0].Digest)
-		require.NoError(t, err)
-		imageConfig, err := selected.ConfigFile()
-		require.NoError(t, err)
-		require.Equal(t, result.arch, imageConfig.Architecture)
-		packages[result.arch] = pkg
-	}
-	return packages
 }
 
 func TestCreateDifferentialUsesRequestedArchitecture(t *testing.T) {

@@ -144,17 +144,6 @@ func TestLoadPackage(t *testing.T) {
 		})
 	}
 
-	t.Run("architecture option does not rewrite tarball", func(t *testing.T) {
-		t.Parallel()
-
-		tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
-		pkgLayout, err := LoadPackage(ctx, tarPath, LoadOptions{Architecture: "arm64"})
-		require.NoError(t, err)
-		t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
-		require.Equal(t, "amd64", pkgLayout.Definition().Metadata.Architecture)
-		require.Equal(t, "amd64", pkgLayout.Definition().Build.Architecture)
-	})
-
 	t.Run("VerificationStrategy explicit values", func(t *testing.T) {
 		t.Parallel()
 

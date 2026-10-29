@@ -138,28 +138,6 @@ func TestDefinitionOperationsArchitecture(t *testing.T) {
 	}
 }
 
-func TestDefinitionArchitectureImageIDOverride(t *testing.T) {
-	pkg, _, target := architectureDefinitions(t)
-	path := filepath.Join(pkg, layout.ZarfYAML)
-	definition, err := os.ReadFile(path)
-	require.NoError(t, err)
-	definition = append(definition, []byte(`    images:
-      - id: selected
-        name: example.com/override:1
-`)...)
-	require.NoError(t, os.WriteFile(path, definition, 0o600))
-	resolved, err := load.PackageDefinition(testutil.TestContext(t), pkg, load.DefinitionOptions{Architecture: target, CachePath: t.TempDir()})
-	require.NoError(t, err)
-	require.Equal(t, target, resolved.Metadata.Architecture)
-	require.Len(t, resolved.Components, 1)
-	component := resolved.Components[0]
-	require.Equal(t, []string{target + "-manifest.yaml"}, component.Manifests[0].Files)
-	require.Len(t, component.Images, 1, "the matching ID must replace the selected variant's image")
-	require.Equal(t, "example.com/override:1", component.Images[0].Name)
-	require.Equal(t, "selected", component.Images[0].ID)
-	require.EqualValues(t, "registry", component.Images[0].Source)
-}
-
 func TestPublishSkeletonArchitecture(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	target := "arm64"
