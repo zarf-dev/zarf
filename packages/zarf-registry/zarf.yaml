@@ -123,6 +123,11 @@ variables:
     description: The group ID to run the registry as
     default: "2000"
 
+  - name: REGISTRY_SECURITY_CONTEXT_SELINUX_OPTIONS
+    description: Optional map of seLinuxOption to use for the registry
+    default: ""
+    autoIndent: true
+
 constants:
   - name: REGISTRY_IMAGE
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE###"
@@ -174,7 +179,7 @@ components:
       - name: docker-registry
         releaseName: zarf-docker-registry
         localPath: chart
-        version: 1.0.2
+        version: 1.0.3
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
@@ -201,7 +206,7 @@ components:
       - name: docker-registry
         releaseName: zarf-docker-registry
         localPath: chart
-        version: 1.0.2
+        version: 1.0.3
         namespace: zarf
         valuesFiles:
           - registry-values.yaml

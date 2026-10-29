@@ -202,6 +202,23 @@
         },
         "runAsGroup": {
           "type": "integer"
+        },
+        "seLinuxOptions": {
+          "type": ["object", "null"],
+          "properties": {
+            "level": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "user": {
+              "type": "string"
+            }
+          }
         }
       }
     },

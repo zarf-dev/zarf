@@ -46,6 +46,10 @@ spec:
         runAsGroup: {{ .Values.securityContext.runAsGroup }}
         seccompProfile:
           type: "RuntimeDefault"
+{{- with .Values.securityContext.seLinuxOptions }}
+        seLinuxOptions:
+{{ toYaml . | indent 10 }}
+{{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ include "registry.image.repository" . }}:{{ .Values.image.tag }}"
