@@ -6,7 +6,6 @@ package zoci
 
 import (
 	"context"
-	"fmt"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api"
@@ -18,11 +17,7 @@ import (
 
 // FetchZarfYAML fetches and parses the zarf.yaml layer of an already-fetched root manifest.
 func FetchZarfYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher) (api.Package, error) {
-	descriptor := root.Locate(layout.ZarfYAML)
-	if oci.IsEmptyDescriptor(descriptor) {
-		return api.Package{}, fmt.Errorf("unable to find %s in the manifest", layout.ZarfYAML)
-	}
-	b, err := content.FetchAll(ctx, fetcher, descriptor)
+	b, err := oci.FetchFile(ctx, fetcher, root, layout.ZarfYAML)
 	if err != nil {
 		return api.Package{}, err
 	}
