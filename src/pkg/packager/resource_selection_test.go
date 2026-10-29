@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -129,4 +130,16 @@ components:
 	require.NoError(t, err)
 	require.Equal(t, resources[sbomResourcePath], sbomContents)
 	require.NoFileExists(t, filepath.Join(sbomOutput, "files", "logs.json"))
+
+	emptyComponentLayout, err := LoadPackage(ctx, packageRef.String(), LoadOptions{
+		Architecture:         "amd64",
+		CachePath:            t.TempDir(),
+		Filter:               filters.BySelectState("-metrics"),
+		LayerSelection:       &zoci.LayerSelection{IncludeComponents: true},
+		VerificationStrategy: layout.VerifyNever,
+		RemoteOptions:        types.RemoteOptions{PlainHTTP: true},
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, emptyComponentLayout.Cleanup()) })
+	require.Empty(t, emptyComponentLayout.Definition().Components)
 }

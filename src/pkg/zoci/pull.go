@@ -173,7 +173,7 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 
 	if selection.IncludeComponents || selection.IncludeImages {
 		requestedComponents := selection.RequestedComponents
-		if len(requestedComponents) == 0 {
+		if requestedComponents == nil {
 			requestedComponents = pkg.Components
 		}
 		componentLayers, images, err := LayersFromComponents(root, pkg, requestedComponents)

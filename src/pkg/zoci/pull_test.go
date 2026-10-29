@@ -83,6 +83,12 @@ func TestAllLayersRespectsRequestedComponents(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, allLayersFull, 4)
 
+	emptySelection := zoci.AllLayerSelection()
+	emptySelection.RequestedComponents = []api.Component{}
+	noComponentLayers, err := remote.AssembleLayers(ctx, emptySelection)
+	require.NoError(t, err)
+	require.Len(t, noComponentLayers, 2)
+
 	subsetSelection := zoci.AllLayerSelection()
 	subsetSelection.RequestedComponents = alpineOnly
 	allLayersSubset, err := remote.AssembleLayers(ctx, subsetSelection)

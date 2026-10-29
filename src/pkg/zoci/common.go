@@ -28,7 +28,7 @@ import (
 // Metadata is always retrieved and is not represented here.
 type LayerSelection struct {
 	// RequestedComponents limits component and image layers to the listed components.
-	// An empty set selects every package component.
+	// A nil slice selects every package component; a non-nil empty slice selects none.
 	RequestedComponents []api.Component
 	IncludeComponents   bool
 	IncludeImages       bool
