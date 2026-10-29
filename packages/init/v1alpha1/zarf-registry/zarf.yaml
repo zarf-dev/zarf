@@ -1,0 +1,211 @@
+kind: ZarfPackageConfig
+metadata:
+  name: init-package-zarf-registry
+
+variables:
+  - name: REGISTRY_EXISTING_PVC
+    description: "Optional: Use an existing PVC for the registry instead of creating a new one. If this is set, the REGISTRY_PVC_SIZE variable will be ignored."
+    default: ""
+
+  - name: REGISTRY_PVC_ENABLED
+    description: Toggle the creation and use of a PVC off/on
+    default: "true"
+
+  - name: REGISTRY_PVC_SIZE
+    description: The size of the persistent volume claim for the registry
+    default: 20Gi
+
+  - name: REGISTRY_PVC_ACCESS_MODE
+    description: The access mode of the persistent volume claim for the registry
+    default: ReadWriteOnce
+
+  - name: REGISTRY_CPU_REQ
+    description: The CPU request for the registry
+    default: 100m
+
+  - name: REGISTRY_MEM_REQ
+    description: The memory request for the registry
+    default: 256Mi
+
+  - name: REGISTRY_CPU_LIMIT
+    description: The CPU limit for the registry
+    default: "3"
+
+  - name: REGISTRY_MEM_LIMIT
+    description: The memory limit for the registry
+    default: "2Gi"
+
+  - name: REGISTRY_HPA_MIN
+    description: The minimum number of registry replicas
+    default: "1"
+
+  - name: REGISTRY_HPA_MAX
+    description: The maximum number of registry replicas
+    default: "5"
+
+  - name: REGISTRY_HPA_ENABLE
+    description: Enable the Horizontal Pod Autoscaler for the registry
+    default: "true"
+
+  - name: REGISTRY_CA_BUNDLE
+    description: Filepath to a bundle of trusted certificates to mount into the registry container
+    default: ""
+    autoIndent: true
+    type: file
+
+  - name: REGISTRY_EXTRA_ENVS
+    description: Array of additional environment variables passed to the registry container
+    default: ""
+    autoIndent: true
+
+  - name: REGISTRY_OTEL_EXPORTER
+    description: set the opentelemetry exporter
+    default: "none"
+
+  - name: REGISTRY_CREATE_SERVICE_ACCOUNT
+    description: Toggle the creation of a new service account for the registry
+    default: "false"
+
+  - name: REGISTRY_SERVICE_ACCOUNT_NAME
+    description: The name of the service account to use. If not set and create is true, a name is generated using fullname template
+    default: ""
+
+  - name: REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS
+    description: Map of annotations to add to the created service account
+    default: ""
+    autoIndent: true
+
+  - name: REGISTRY_AFFINITY_ENABLE
+    description: Enable pod affinity for the registry
+    default: "true"
+
+  - name: REGISTRY_AFFINITY_CUSTOM
+    description: Custom pod affinity yaml block for the registry
+    default: ""
+    autoIndent: true
+
+  - name: REGISTRY_TOLERATIONS
+    description: Custom tolerations array for the registry
+    default: ""
+    autoIndent: true
+
+  - name: REGISTRY_NODE_SELECTOR
+    description: Custom node selector map for the registry
+    default: ""
+    autoIndent: true
+
+  - name: PROXY_TOLERATIONS
+    description: Custom tolerations array for the registry proxy and injector
+    default: ""
+    autoIndent: true
+
+  - name: REGISTRY_HPA_AUTO_SIZE
+    description: Enable to set min and max replicas based on amount of nodes
+    default: "false"
+
+  - name: REGISTRY_HPA_TARGET_CPU
+    description: The target CPU utilization percentage for the registry
+    default: "80"
+
+  - name: HOST_NETWORK_PROXY
+    description: Decides if host port or host network should be used with the registry proxy
+    default: "false"
+
+  - name: REGISTRY_SECURITY_CONTEXT_RUN_AS_USER
+    description: The user ID to run the registry as
+    default: "1000"
+
+  - name: REGISTRY_SECURITY_CONTEXT_FS_GROUP
+    description: The filesystem group ID to run the registry as
+    default: "2000"
+
+  - name: REGISTRY_SECURITY_CONTEXT_RUN_AS_GROUP
+    description: The group ID to run the registry as
+    default: "2000"
+
+constants:
+  - name: REGISTRY_IMAGE
+    value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE###"
+
+  - name: REGISTRY_IMAGE_TAG
+    value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+
+  - name: PROXY_IMAGE
+    value: "###ZARF_PKG_TMPL_PROXY_IMAGE###"
+
+  - name: PROXY_IMAGE_TAG
+    value: "###ZARF_PKG_TMPL_PROXY_IMAGE_TAG###"
+
+components:
+  - name: zarf-injector
+    description: |
+      Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
+      Removed and destroyed after the Zarf Registry is self-hosting the registry image.
+    required: true
+    only:
+      cluster:
+        architecture: amd64
+    files:
+      # Rust Injector Binary
+      - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.3.0/zarf-injector-amd64
+        target: "###ZARF_TEMP###/zarf-injector"
+        shasum: "54c37ca19a101c795786510cb89cf4fe2aa7504d4c399985606a3d8f58f42119"
+        executable: true
+
+  - name: zarf-injector
+    description: |
+      Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
+      Removed and destroyed after the Zarf Registry is self-hosting the registry image.
+    required: true
+    only:
+      cluster:
+        architecture: arm64
+    files:
+      # Rust Injector Binary
+      - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.3.0/zarf-injector-arm64
+        target: "###ZARF_TEMP###/zarf-injector"
+        shasum: "7a677809accc0d3d9b1cddc8d6be07ebf0a883a1db887e50828bb3df0e824577"
+        executable: true
+
+  - name: zarf-seed-registry
+    description: |
+      Deploys the Zarf Registry using the registry image provided by the Zarf Injector.
+    charts:
+      - name: docker-registry
+        releaseName: zarf-docker-registry
+        localPath: chart
+        version: 1.0.3
+        namespace: zarf
+        valuesFiles:
+          - registry-values.yaml
+          - registry-values-seed.yaml
+    images:
+      # The seed image (or images) that will be injected (see zarf-config.toml)
+      - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+      - "###ZARF_PKG_TMPL_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_PROXY_IMAGE###:###ZARF_PKG_TMPL_PROXY_IMAGE_TAG###"
+
+  - name: zarf-registry
+    description: |
+      Updates the Zarf Registry to use the self-hosted registry image.
+      Serves as the primary docker registry for the cluster.
+    manifests:
+      - name: registry-connect
+        namespace: zarf
+        files:
+          - connect.yaml
+      - name: kep-1755-registry-annotation
+        namespace: zarf
+        files:
+          - configmap.yaml
+    charts:
+      - name: docker-registry
+        releaseName: zarf-docker-registry
+        localPath: chart
+        version: 1.0.3
+        namespace: zarf
+        valuesFiles:
+          - registry-values.yaml
+    images:
+      # This image (or images) must match that used for injection (see zarf-config.toml)
+      - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+      - "###ZARF_PKG_TMPL_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_PROXY_IMAGE###:###ZARF_PKG_TMPL_PROXY_IMAGE_TAG###"

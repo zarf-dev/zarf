@@ -60,7 +60,7 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 	err := exec.CmdWithPrint("helm", helmInstallArgs...)
 	suite.NoError(err, "unable to install gitea chart")
 
-	helmInstallArgs = []string{"install", "external-registry", "../../../packages/zarf-registry/chart", "-f=docker-registry-values.yaml", "-n=external-registry", "--create-namespace"}
+	helmInstallArgs = []string{"install", "external-registry", "../../../packages/init/v1alpha1/zarf-registry/chart", "-f=docker-registry-values.yaml", "-n=external-registry", "--create-namespace"}
 	err = exec.CmdWithPrint("helm", helmInstallArgs...)
 	suite.NoError(err, "unable to install the docker-registry chart")
 

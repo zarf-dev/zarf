@@ -1,0 +1,8 @@
+persistence:
+  storageClass: {{ .State.StorageClass | quote }}
+gitea:
+  admin:
+    username: {{ .State.Git.PushUsername | quote }}
+    password: {{ .State.Git.PushPassword | quote }}
+image:
+  fullOverride: {{ ((.Pkg.GetComponent "git-server").GetImageByID "git-server").Reference | quote }}

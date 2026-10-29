@@ -137,6 +137,9 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		"PayloadConfigMaps": s.InjectorInfo.PayLoadConfigMapAmount,
 		"PayloadShaSum":     s.InjectorInfo.PayLoadShaSum,
 	}
+	agent := map[string]any{
+		"MutationPolicy": string(s.AgentInfo.MutationPolicy),
+	}
 
 	if slices.Contains(access.AccessKeys, api.StateAccessRegistryCredentials) {
 		registry["PushPassword"] = s.RegistryInfo.PushPassword
@@ -160,14 +163,13 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		"Registry":     registry,
 		"Git":          git,
 		"Injector":     injector,
+		"Agent":        agent,
 	}
 
 	if slices.Contains(access.AccessKeys, api.StateAccessAgentCerts) {
-		stateMap["Agent"] = map[string]any{
-			"CA":   base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.CA),
-			"Cert": base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.Cert),
-			"Key":  base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.Key),
-		}
+		agent["CA"] = base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.CA)
+		agent["Cert"] = base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.Cert)
+		agent["Key"] = base64.StdEncoding.EncodeToString(s.AgentInfo.TLS.Key)
 	}
 
 	o[objectKeyState] = stateMap

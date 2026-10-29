@@ -1216,6 +1216,8 @@ func TestWithState_SensitiveFieldsBlockedWithoutOptIn(t *testing.T) {
 		`{{ .State.Git.PushPassword }}`,
 		`{{ .State.Git.PullPassword }}`,
 		`{{ .State.Agent.CA }}`,
+		`{{ .State.Agent.Cert }}`,
+		`{{ .State.Agent.Key }}`,
 	} {
 		_, err := Apply(ctx, tmpl, objs)
 		require.Error(t, err, "template %q should fail without the matching stateAccess group", tmpl)
@@ -1279,11 +1281,6 @@ func TestWithState_AgentCertsGroup(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Agent sub-map is only present when agentCerts is declared
-	stateMap, ok := objs[objectKeyState].(map[string]any)
-	require.True(t, ok, "state object should be map[string]any")
-	require.Contains(t, stateMap, "Agent")
-
 	for tmpl, expectedB64 := range map[string][]byte{
 		`{{ .State.Agent.CA }}`:   s.AgentInfo.TLS.CA,
 		`{{ .State.Agent.Cert }}`: s.AgentInfo.TLS.Cert,
@@ -1301,15 +1298,22 @@ func TestWithState_AgentCertsGroup(t *testing.T) {
 	require.Error(t, err, "gitCredentials should still be blocked")
 }
 
-func TestWithState_AgentMapAbsentWithoutGroup(t *testing.T) {
+func TestWithState_AgentMutationPolicy(t *testing.T) {
 	t.Parallel()
-	s := testState()
-	objs, err := NewObjects(value.Values{}).WithState(StateAccess{State: s})
-	require.NoError(t, err)
-	stateMap, ok := objs[objectKeyState].(map[string]any)
-	require.True(t, ok, "state object should be map[string]any")
-	require.NotContains(t, stateMap, "Agent",
-		"Agent sub-map must not exist without agentCerts access key")
+	for _, policy := range []state.MutationPolicy{state.MutationPolicyAll, state.MutationPolicyLabeled} {
+		t.Run(string(policy), func(t *testing.T) {
+			t.Parallel()
+			for _, keys := range [][]api.StateAccessKey{nil, {api.StateAccessAgentCerts}} {
+				s := testState()
+				s.AgentInfo.MutationPolicy = policy
+				objs, err := NewObjects(value.Values{}).WithState(StateAccess{State: s, AccessKeys: keys})
+				require.NoError(t, err)
+				out, err := Apply(t.Context(), `{{ .State.Agent.MutationPolicy }}`, objs)
+				require.NoError(t, err)
+				require.Equal(t, string(policy), out)
+			}
+		})
+	}
 }
 
 func TestWithState_MultipleGroups(t *testing.T) {
@@ -1340,8 +1344,4 @@ func TestWithState_MultipleGroups(t *testing.T) {
 	// Undeclared groups remain blocked
 	_, err = Apply(ctx, `{{ .State.Agent.CA }}`, objs)
 	require.Error(t, err, "agentCerts should still be blocked")
-	stateMap, ok := objs[objectKeyState].(map[string]any)
-	require.True(t, ok, "state object should be map[string]any")
-	require.NotContains(t, stateMap, "Agent",
-		"Agent sub-map must not exist without agentCerts")
 }

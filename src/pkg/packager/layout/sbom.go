@@ -8,6 +8,8 @@ import (
 	"path"
 	"regexp"
 	"strings"
+
+	"github.com/zarf-dev/zarf/src/api"
 )
 
 const (
@@ -59,6 +61,31 @@ func ParseSBOMResourcePath(resourcePath string) (SBOMResourceKind, string, bool)
 	default:
 		return "", "", false
 	}
+}
+
+// SBOMImageReferenceSet returns the image references declared by the package.
+func SBOMImageReferenceSet(pkg api.Package) map[string]struct{} {
+	references := make(map[string]struct{})
+	for _, component := range pkg.Components {
+		for _, imageReference := range component.GetImages() {
+			references[imageReference] = struct{}{}
+		}
+	}
+	return references
+}
+
+// SBOMKeyMatchesResource reports whether a requested key selects an SBOM resource.
+func SBOMKeyMatchesResource(kind SBOMResourceKind, identifier, key string, imageReferences map[string]struct{}) bool {
+	if identifier == key {
+		return true
+	}
+	if kind != SBOMResourceImage {
+		return false
+	}
+	if _, declared := imageReferences[key]; !declared {
+		return false
+	}
+	return strings.HasPrefix(identifier, key+"-")
 }
 
 var legacySBOMFilenamePattern = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)

@@ -140,18 +140,19 @@ func TestFindImages(t *testing.T) {
 		t.Parallel()
 		registry := "zarf.dev"
 		agentTag := "test"
+		initPath := filepath.Join("packages", "init", "v1alpha1")
 
-		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", ".", "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag), "--skip-cosign")
+		stdOut, stdErr, err := e2e.Zarf(t, "dev", "find-images", initPath, "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag), "--skip-cosign")
 
-		require.NoError(t, err)
+		require.NoError(t, err, stdOut, stdErr)
 		internalRegistryImage := fmt.Sprintf("%s/%s:%s", registry, "zarf-dev/zarf/agent", agentTag)
 		require.Contains(t, stdOut, internalRegistryImage)
 		// busybox image is in git init package
 		require.Contains(t, stdOut, "busybox:latest")
 
 		path := filepath.Join("src", "test", "packages", "13-find-images-with-vars")
-		stdOut, _, err = e2e.Zarf(t, "dev", "find-images", path, "--deploy-set", "PODINFO_IMAGE=zarf.dev/podinfo:latest", "--skip-cosign")
-		require.NoError(t, err)
+		stdOut, stdErr, err = e2e.Zarf(t, "dev", "find-images", path, "--deploy-set", "PODINFO_IMAGE=zarf.dev/podinfo:latest", "--skip-cosign")
+		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "ghcr.io/zarf-dev/zarf/agent:v0.36.1")
 		require.Contains(t, stdOut, "zarf.dev/podinfo:latest")
 	})
@@ -221,7 +222,7 @@ components:
 `
 	definitionPath := filepath.Join(source, "zarf.yaml")
 	require.NoError(t, os.WriteFile(definitionPath, []byte(definition), 0o600))
-	stdout, stderr, err := e2e.Zarf(t, "dev", "find-images", source, "--skip-cosign", "--update", "--features=v1beta1=true")
+	stdout, stderr, err := e2e.Zarf(t, "dev", "find-images", source, "--skip-cosign", "--update")
 	require.NoError(t, err, "%s\n%s", stdout, stderr)
 	var found v1beta1.Package
 	require.NoError(t, yaml.Unmarshal([]byte(stdout), &found))
@@ -237,7 +238,7 @@ components:
 	require.Equal(t, want, authored.Components[0].ImageArchives[0].Images)
 
 	output := t.TempDir()
-	stdout, stderr, err = e2e.Zarf(t, "package", "create", source, "-o", output, "--skip-sbom", "--confirm", "--features=v1beta1=true")
+	stdout, stderr, err = e2e.Zarf(t, "package", "create", source, "-o", output, "--skip-sbom", "--confirm")
 	require.NoError(t, err, "%s\n%s", stdout, stderr)
 	packagePath := filepath.Join(output, fmt.Sprintf("zarf-package-archive-ids-%s.tar.zst", e2e.Arch))
 	pkg, err := layout.LoadFromTar(t.Context(), packagePath, layout.PackageLayoutOptions{})

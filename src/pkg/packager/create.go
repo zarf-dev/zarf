@@ -99,7 +99,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
 			Architecture:   pkg.Metadata.Architecture,
 			RemoteOptions:  opts.RemoteOptions,
-			LayerTypes:     []zoci.LayerType{zoci.MetadataLayers},
+			LayerSelection: &zoci.LayerSelection{},
 			OCIConcurrency: opts.OCIConcurrency,
 			CachePath:      opts.CachePath,
 		})
@@ -168,7 +168,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 
 	if opts.SBOMOut != "" {
 		// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
-		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, filepath.Base(pkgLayout.Definition().Metadata.Name)))
+		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, filepath.Base(pkgLayout.Definition().Metadata.Name)), nil)
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {

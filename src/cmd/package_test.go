@@ -705,7 +705,7 @@ func TestPackageInspectDocumentation(t *testing.T) {
 			packageName:   "documentation",
 			definitionDir: filepath.Join("testdata", "inspect-documentation", "simple"),
 			keys:          []string{"nonexistent"},
-			expectedErr:   "not found in package documentation",
+			expectedErr:   "attachment key nonexistent not found in package",
 		},
 	}
 
