@@ -28,7 +28,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v4/pkg/chart/common"
-	krustytypes "sigs.k8s.io/kustomize/api/types"
 )
 
 // ResourceType represents the different types of Zarf resources that can be inspected
@@ -411,11 +410,10 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 }
 
 func getTemplatedManifests(ctx context.Context, manifest api.Manifest, resourceSet *load.ResourceSet, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg api.Package, stateAccess tmpl.StateAccess, enableKustomizePlugins bool) (_ []Resource, err error) {
-	manifest.Kustomize.EnablePlugins = manifest.Kustomize.EnablePlugins && enableKustomizePlugins
+	if manifest.Kustomize.EnablePlugins && !enableKustomizePlugins {
+		return nil, fmt.Errorf("manifest %q enables Kustomize plugin which can execute arbitrary commands, this requires explicit opt-in", manifest.Name)
+	}
 	if err := assemble.PackageManifest(ctx, manifest, baseComponentDir, resourceSet); err != nil {
-		if !enableKustomizePlugins && krustytypes.IsErrOnlyBuiltinPluginsAllowed(err) {
-			return nil, fmt.Errorf("%w; use --enable-kustomize-plugins to allow plugins to run arbitrary commands", err)
-		}
 		return nil, err
 	}
 
