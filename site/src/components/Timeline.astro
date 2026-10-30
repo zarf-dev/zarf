@@ -1,0 +1,101 @@
+---
+interface Props {
+  label: string;
+  milestones: {
+    title: string;
+    description: string;
+    date: string;
+    datetime: string;
+  }[];
+}
+
+const { label, milestones } = Astro.props;
+---
+
+<div class="timeline not-content" role="region" aria-label={label} tabindex="0">
+  <ol role="list">
+    {milestones.map(({ title, description, date, datetime }) => (
+      <li>
+        <div class="milestone">
+          <strong>{title}</strong>
+          <span>{description}</span>
+        </div>
+        <time datetime={datetime}>{date}</time>
+      </li>
+    ))}
+  </ol>
+</div>
+
+<style>
+  .timeline {
+    --box-height: 5rem;
+    --gap: 1.5rem;
+    overflow-x: auto;
+    margin-block: 1.5rem;
+    padding: 0.125rem 0.125rem 0.5rem;
+  }
+
+  .timeline:focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+  }
+
+  ol {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(8rem, 1fr);
+    gap: var(--gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    position: relative;
+    display: grid;
+    gap: 0.5rem;
+    text-align: center;
+  }
+
+  li:not(:last-child)::after {
+    content: "→";
+    position: absolute;
+    inset-inline-start: 100%;
+    top: calc(var(--box-height) / 2);
+    width: var(--gap);
+    transform: translateY(-50%);
+    color: var(--sl-color-gray-3);
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .milestone {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: var(--box-height);
+    padding: 0.5rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    background: var(--sl-color-bg-sidebar);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  strong {
+    color: var(--sl-color-white);
+    font-weight: 600;
+  }
+
+  span {
+    color: var(--sl-color-gray-2);
+  }
+
+  time {
+    color: var(--sl-color-gray-3);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+</style>
