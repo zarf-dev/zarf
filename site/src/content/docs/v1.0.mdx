@@ -1,6 +1,9 @@
 ---
 title: Zarf v1.0.0
+slug: v1.0
 ---
+
+import Mermaid from "@components/Mermaid.astro";
 
 ## Introduction
 
@@ -8,18 +11,32 @@ Zarf is happy to announce v1.0.0. We release new Zarf features every other week,
 
 ## The v1beta1 package schema
 
-{/* FIXME links */}
-The largest addition in v1.0 is the v1beta1 Zarf package schema. This redesign converts years of feedback into a more intuitive experience. It also introduces features for package maintenance, such as [component publishing](https://docs.zarf.dev/commands/zarf_component_publish/#_top) for imports, and simplifies [package definition templating](https://docs.zarf.dev/commands/zarf_dev_template/#_top). Retiring deprecated and unwieldy features from v1alpha1 gives Zarf a foundation for long-term schema support.
+The largest addition in v1.0 is the v1beta1 Zarf package schema. This redesign converts years of feedback into a more intuitive experience. It also introduces features for package maintenance, such as [component publishing](/commands/zarf_component_publish/) for imports, and simplifies [package definition templating](/commands/zarf_dev_template/). Retiring deprecated and unwieldy features from v1alpha1 gives Zarf a foundation for long-term schema support.
 
 ### v1alpha1 deprecation
 
-The legacy package schema, v1alpha1, is deprecated in v1.0. However, we recognize that there are countless existing v1alpha1 packages supporting many critical systems across the world. To accommodate, we are giving an extended deprecation period for users to migrate. Zarf will support v1alpha1 packages nine months post v1.0 release (November 9th). On release of v1.0, Zarf will log a warning warning when v1alpha1 packages are used. As the support window nears closing v1alpha1 will be disabled by default and require `--features=v1alpha1=true` for continued use. The requirement will be introduced first for create time operations such as package create, publish, and sign, with subsequent releases requiring the feature flag for deploy time operations. Removing packages will operate without a feature flag until v1alpha1 is fully unsupported.
+The legacy package schema, v1alpha1, is deprecated in v1.0. However, we recognize that there are countless existing v1alpha1 packages supporting many critical systems across the world. To accommodate, we are giving an extended deprecation period for users to migrate. Zarf will support v1alpha1 packages nine months post v1.0 release (November 9th).
+
+On release of v1.0, Zarf will log a warning when v1alpha1 packages are used. As the support window nears closing v1alpha1 will be disabled by default and require `--features=v1alpha1=true` for continued use. The requirement will be introduced first for create time operations such as package create, publish, and sign, with subsequent releases requiring the feature flag for deploy time operations.
+
+<Mermaid diagram={`
+flowchart LR
+    accTitle: v1alpha1 deprecation timeline
+    accDescr: Warnings begin at v1.0, followed by create-time and deploy-time opt-in requirements. Support ends nine months after release.
+    release["v1.0<br/>Warnings"]
+    create["Create-time<br/>Opt-in required"]
+    deploy["Deploy-time<br/>Opt-in required"]
+    unsupported["+9 months<br/>Support ends"]
+    release --> create --> deploy --> unsupported
+`}/>
+
+Removing packages will operate without a feature flag until v1alpha1 is fully unsupported. Follow the [v1alpha1 to v1beta1 migration guide](/best-practices/v1alpha1-to-v1beta1/) to update existing package definitions.
 
 ### V1 Removals
 
 Notable features removed in v1.0.0.
 
-- The Zarf artifact server: this used Gitea to send and store artifacts. Note that any command such as `zarf tools update-creds registry` that updates state
-- `zarf tools registry export`: this command focused on saving container images locally, and the focus of the registry sub-command is generic OCI interactions with the registry
+- The Zarf artifact server, which used Gitea to store artifacts such as npm packages, was removed due to limited adoption
+- `zarf tools registry export`: this command focused on saving container images locally. The focus and intent of the registry sub-command is generic OCI interactions with the registry.
 - The SBOM viewer: Zarf no longer produces HTML files to view SBOMs.
 - Docker Daemon pulls pre engine version v0.25.0: user's must have a Docker engine version >= 25.0.0 to pull from their local docker Daemon
