@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.90.0](https://github.com/zarf-dev/zarf/compare/v0.89.0...v0.90.0) (2026-10-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* delete artifact server ([#5561](https://github.com/zarf-dev/zarf/issues/5561))
+
+### Features
+
+* delete artifact server ([#5561](https://github.com/zarf-dev/zarf/issues/5561)) ([2b51f6c](https://github.com/zarf-dev/zarf/commit/2b51f6ce06c67138dd3e0c844ad93dc227b17a6e))
+* dev sha256sum not working with `extract-path` flag ([#5160](https://github.com/zarf-dev/zarf/issues/5160)) ([badae8f](https://github.com/zarf-dev/zarf/commit/badae8f9274c7d98daafcf27765d7941d4d0fc51))
+* **dev:** add --confirm flag to patch-git ([#5531](https://github.com/zarf-dev/zarf/issues/5531)) ([f0861e2](https://github.com/zarf-dev/zarf/commit/f0861e2aef35793d2e2773f3561248ef8db8121a))
+
+
+### Bug Fixes
+
+* print a valid skeleton import example from the CLI ([#5530](https://github.com/zarf-dev/zarf/issues/5530)) ([a9d5dd5](https://github.com/zarf-dev/zarf/commit/a9d5dd5e28e987e6cc1f13aeb8fd3e28aed1dcbb))
+
 ## [0.89.0](https://github.com/zarf-dev/zarf/compare/v0.88.0...v0.89.0) (2026-10-29)
 
 
