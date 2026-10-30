@@ -94,13 +94,25 @@ func (o *OrasRemote) FetchLayerReader(ctx context.Context, desc ocispec.Descript
 	return content.NewVerifyReader(r, desc), nil
 }
 
-// FetchJSONFile fetches and unmarshals the JSON file at path, located via the manifest.
-func FetchJSONFile[T any](ctx context.Context, fetcher content.Fetcher, manifest *Manifest, path string) (result T, err error) {
+// FetchFile fetches (and digest-verifies) the bytes of the layer at path, located via the manifest.
+func FetchFile(ctx context.Context, fetcher content.Fetcher, manifest *Manifest, path string) ([]byte, error) {
 	descriptor := manifest.Locate(path)
 	if IsEmptyDescriptor(descriptor) {
-		return result, fmt.Errorf("unable to find %s in the manifest", path)
+		return nil, fmt.Errorf("unable to find %s in the manifest", path)
 	}
-	return FetchUnmarshal[T](ctx, fetcher, json.Unmarshal, descriptor)
+	return content.FetchAll(ctx, fetcher, descriptor)
+}
+
+// FetchJSONFile fetches and unmarshals the JSON file at path, located via the manifest.
+func FetchJSONFile[T any](ctx context.Context, fetcher content.Fetcher, manifest *Manifest, path string) (result T, err error) {
+	b, err := FetchFile(ctx, fetcher, manifest, path)
+	if err != nil {
+		return result, err
+	}
+	if err := json.Unmarshal(b, &result); err != nil {
+		return result, err
+	}
+	return result, nil
 }
 
 // FetchUnmarshal fetches (and digest-verifies, via content.FetchAll) the descriptor and unmarshals it.
