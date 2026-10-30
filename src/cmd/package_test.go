@@ -17,9 +17,11 @@ import (
 	"strings"
 	"testing"
 
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -31,6 +33,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"oras.land/oras-go/v2/registry"
 )
 
 func TestPackageList(t *testing.T) {
@@ -995,4 +998,26 @@ func TestBuildVerifyBlobOptions(t *testing.T) {
 			require.Equal(t, tc.wantIgnoreTlog, opts.CommonVerifyOptions.IgnoreTlog)
 		})
 	}
+}
+
+func TestSkeletonImportExample(t *testing.T) {
+	t.Parallel()
+	ref := registry.Reference{Registry: "localhost:5000", Repository: "skeletons/test", Reference: "0.0.1"}
+	pkg := api.Package{Components: []api.Component{{Name: "first"}, {Name: "second", Description: "not copied"}}}
+
+	data, err := goyaml.Marshal(skeletonImportExample(pkg, ref))
+	require.NoError(t, err)
+
+	expected := `- name: import-first
+  required: true
+  import:
+    name: first
+    url: oci://localhost:5000/skeletons/test:0.0.1
+- name: import-second
+  required: true
+  import:
+    name: second
+    url: oci://localhost:5000/skeletons/test:0.0.1
+`
+	require.Equal(t, expected, string(data))
 }

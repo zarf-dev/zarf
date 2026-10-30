@@ -10,14 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -284,22 +283,6 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
-	ex := []api.Component{}
-	for _, c := range pkgLayout.Definition().Components {
-		ex = append(ex, api.Component{
-			Name: fmt.Sprintf("import-%s", c.Name),
-			Import: api.ComponentImport{
-				Name:   c.Name,
-				Remote: []api.ComponentImportRemote{{URL: helpers.OCIURLPrefix + pkgRef.String()}},
-			},
-		})
-	}
-	err = utils.ColorPrintYAML(ex, nil, false)
-	if err != nil {
-		return registry.Reference{}, err
-	}
-	l.Info("find more info on skeleton packages at https://docs.zarf.dev/faq/#what-is-a-skeleton-zarf-package")
 	return pkgRef, nil
 }
 

@@ -1,0 +1,4 @@
+apiVersion: testing.zarf.dev/v1
+kind: Generate
+metadata:
+  name: plugin-pod

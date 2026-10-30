@@ -309,17 +309,23 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
+		var charts []state.InstalledChart
+		var deployErr error
+		// Initialize at the first cluster component so deployment status has a namespace to be saved in.
+		if pkg.IsInitConfig() && component.RequiresCluster() && d.s == nil {
+			deployErr = d.initState(ctx, pkg, opts)
+		}
 		if d.isConnectedToCluster() {
 			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Definition(), pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 				l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}
-		var charts []state.InstalledChart
-		var deployErr error
-		if pkg.IsInitConfig() {
-			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
-		} else {
-			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
+		if deployErr == nil {
+			if pkg.IsInitConfig() {
+				charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
+			} else {
+				charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
+			}
 		}
 
 		onDeploy := component.Actions.OnDeploy
@@ -415,6 +421,31 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 	return services
 }
 
+func (d *deployer) initState(ctx context.Context, pkg api.Package, opts DeployOptions) error {
+	applianceMode := false
+	for _, component := range pkg.Components {
+		if component.Name == "k3s" {
+			applianceMode = true
+		}
+	}
+	var err error
+	d.s, err = d.c.InitState(ctx, cluster.InitStateOptions{
+		GitServer:           opts.GitServer,
+		RegistryInfo:        opts.RegistryInfo,
+		ArtifactServer:      opts.ArtifactServer,
+		ApplianceMode:       applianceMode,
+		StorageClass:        opts.StorageClass,
+		InjectorPort:        opts.InjectorPort,
+		AgentTLS:            opts.AgentTLS,
+		AgentMutationPolicy: opts.AgentMutationPolicy,
+		InternalServices:    internalServicesFor(pkg.Components, opts),
+	})
+	if err != nil {
+		return fmt.Errorf("unable to initialize Zarf state: %w", err)
+	}
+	return nil
+}
+
 func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
@@ -422,31 +453,6 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	isRegistry := component.Service.Name == api.ServiceRegistry
 	isInjector := component.Service.Name == api.ServiceInjector
 	isAgent := component.Service.Name == api.ServiceAgent
-
-	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if component.RequiresCluster() && d.s == nil {
-		applianceMode := false
-		for _, component := range pkg.Components {
-			if component.Name == "k3s" {
-				applianceMode = true
-			}
-		}
-		var err error
-		d.s, err = d.c.InitState(ctx, cluster.InitStateOptions{
-			GitServer:           opts.GitServer,
-			RegistryInfo:        opts.RegistryInfo,
-			ArtifactServer:      opts.ArtifactServer,
-			ApplianceMode:       applianceMode,
-			StorageClass:        opts.StorageClass,
-			InjectorPort:        opts.InjectorPort,
-			AgentTLS:            opts.AgentTLS,
-			AgentMutationPolicy: opts.AgentMutationPolicy,
-			InternalServices:    internalServicesFor(pkg.Components, opts),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
-		}
-	}
 
 	if d.s != nil {
 		if !d.s.RegistryInfo.IsInternal() && (isSeedRegistry || isInjector || isRegistry) {

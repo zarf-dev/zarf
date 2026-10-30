@@ -48,14 +48,14 @@ func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
 	}
 }
 
-func TestPublishComponentAndAssembleRemoteImportResources(t *testing.T) {
+func TestPublishComponentAndAssembleRepeatedRemoteImportResources(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	componentDir := t.TempDir()
 	for relativePath, contents := range map[string]string{
 		"values.yaml":                    "enabled: true\n",
-		"schema.json":                    `{"type":"object"}`,
+		"schema.json":                    `{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object"}`,
 		"chart/Chart.yaml":               "apiVersion: v2\nname: test\nversion: 0.1.0\n",
 		"chart/templates/configmap.yaml": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: chart\n",
 		"chart-values.yaml":              "replicas: 1\n",
@@ -96,16 +96,34 @@ func TestPublishComponentAndAssembleRemoteImportResources(t *testing.T) {
 	require.NoError(t, err)
 
 	packageDir := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(packageDir, "nested"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(packageDir, "nested", "indirect.yaml"), []byte(fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: indirect
+component:
+  import:
+    remote:
+      - url: oci://%s
+`, published.String())), 0o600))
 	packageYAML := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: remote-component-import
 components:
+  - name: imported-indirectly
+    import:
+      local:
+        - path: nested/indirect.yaml
   - name: imported
     import:
       remote:
         - url: oci://%s
-`, published.String())
+  - name: imported-again
+    import:
+      remote:
+        - url: oci://%s
+`, published.String(), published.String())
 	require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(packageYAML), 0o600))
 	cachePath := t.TempDir()
 	loaded, err := load.Package(ctx, packageDir, load.PackageOptions{DefinitionOptions: load.DefinitionOptions{CachePath: cachePath, RemoteOptions: defaultTestRemoteOptions()}})
@@ -121,23 +139,25 @@ components:
 	require.Equal(t, "custom-release", pkgLayout.Definition().Components[0].Charts[0].ReleaseName)
 	require.NoFileExists(t, resourcePath)
 
-	assembledComponentDir := t.TempDir()
-	chartsDir, err := pkgLayout.GetComponentDir(ctx, assembledComponentDir, "imported", layout.ChartsComponentDir)
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(chartsDir, "test.tgz"))
+	for _, componentName := range []string{"imported", "imported-again", "imported-indirectly"} {
+		assembledComponentDir := t.TempDir()
+		chartsDir, err := pkgLayout.GetComponentDir(ctx, assembledComponentDir, componentName, layout.ChartsComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(chartsDir, "test.tgz"))
 
-	valuesDir, err := pkgLayout.GetComponentDir(ctx, assembledComponentDir, "imported", layout.ValuesComponentDir)
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(valuesDir, "test-0"))
+		valuesDir, err := pkgLayout.GetComponentDir(ctx, assembledComponentDir, componentName, layout.ValuesComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(valuesDir, "test-0"))
 
-	filesDir, err := pkgLayout.GetComponentDir(ctx, assembledComponentDir, "imported", layout.FilesComponentDir)
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(filesDir, "0", "file.txt"))
+		filesDir, err := pkgLayout.GetComponentDir(ctx, assembledComponentDir, componentName, layout.FilesComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(filesDir, "0", "file.txt"))
 
-	manifestsDir, err := pkgLayout.GetComponentDir(ctx, assembledComponentDir, "imported", layout.ManifestsComponentDir)
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(manifestsDir, "manifest-0.yaml"))
-	require.FileExists(t, filepath.Join(manifestsDir, "kustomization-kustomize-0.yaml"))
+		manifestsDir, err := pkgLayout.GetComponentDir(ctx, assembledComponentDir, componentName, layout.ManifestsComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(manifestsDir, "manifest-0.yaml"))
+		require.FileExists(t, filepath.Join(manifestsDir, "kustomization-kustomize-0.yaml"))
+	}
 }
 
 func TestPublishComponentChartRevisionOverrides(t *testing.T) {
@@ -502,11 +522,13 @@ component:
 	require.NotContains(t, layerTitles, "child/component.yaml")
 }
 
-func TestPublishComponentMergesNestedImportedValuesSchemas(t *testing.T) {
+func TestPublishComponentMergesNestedImportedValuesSchemasFromRelativePath(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	root := t.TempDir()
+	root, err := os.MkdirTemp(".", "schema-import-*")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, os.RemoveAll(root)) })
 	childDir := filepath.Join(root, "child")
 	grandchildDir := filepath.Join(childDir, "grandchild")
 	require.NoError(t, os.MkdirAll(grandchildDir, 0o700))
@@ -940,7 +962,7 @@ func TestComponentResourcesRejectUnsupportedRemoteSources(t *testing.T) {
 			t.Parallel()
 
 			componentPath := filepath.Join(t.TempDir(), "component.yaml")
-			_, _, err := normalizeComponentResources(componentPath, tt.component, nil, localComponentResourceSet(componentPath))
+			_, _, err := normalizeComponentResources(tt.component, nil, localComponentResourceSet(componentPath))
 			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
@@ -960,7 +982,7 @@ func TestComponentResourcesAllowsSupportedRemoteSources(t *testing.T) {
 		},
 	}
 	componentPath := filepath.Join(t.TempDir(), "component.yaml")
-	_, resources, err := normalizeComponentResources(componentPath, component, nil, localComponentResourceSet(componentPath))
+	_, resources, err := normalizeComponentResources(component, nil, localComponentResourceSet(componentPath))
 	require.NoError(t, err)
 	require.Empty(t, resources.resources)
 }

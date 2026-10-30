@@ -280,9 +280,11 @@ func templateValuesFiles(ctx context.Context, chart api.Chart, valuesDir string,
 // InspectDefinitionResourcesOptions are the optional parameters to InspectDefinitionResources
 type InspectDefinitionResourcesOptions struct {
 	// Architecture overrides package metadata; standalone components use their declared variant.
-	Architecture       string
-	CreateSetVariables map[string]string
-	DeploySetVariables map[string]string
+	Architecture string
+	// EnableKustomizePlugins allows plugins enabled in the package definition to execute arbitrary commands.
+	EnableKustomizePlugins bool
+	CreateSetVariables     map[string]string
+	DeploySetVariables     map[string]string
 	// Values are values passed in at inspect time. They can come from the CLI, user configuration, or set directly by
 	// API callers.
 	Values      value.Values
@@ -399,7 +401,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, loaded.Resources, compBuildPath, variableConfig, vals, pkg, tmpl.StateAccess{State: s, AccessKeys: component.StateAccess})
+			manifestResources, err := getTemplatedManifests(ctx, manifest, loaded.Resources, compBuildPath, variableConfig, vals, pkg, tmpl.StateAccess{State: s, AccessKeys: component.StateAccess}, opts.EnableKustomizePlugins)
 			if err != nil {
 				return nil, err
 			}
@@ -410,7 +412,10 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	return resources, nil
 }
 
-func getTemplatedManifests(ctx context.Context, manifest api.Manifest, resourceSet *load.ResourceSet, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg api.Package, stateAccess tmpl.StateAccess) (_ []Resource, err error) {
+func getTemplatedManifests(ctx context.Context, manifest api.Manifest, resourceSet *load.ResourceSet, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg api.Package, stateAccess tmpl.StateAccess, enableKustomizePlugins bool) (_ []Resource, err error) {
+	if manifest.Kustomize.EnablePlugins && !enableKustomizePlugins {
+		return nil, fmt.Errorf("manifest %q enables Kustomize plugin which can execute arbitrary commands, this requires explicit opt-in", manifest.Name)
+	}
 	if err := assemble.PackageManifest(ctx, manifest, baseComponentDir, resourceSet); err != nil {
 		return nil, err
 	}

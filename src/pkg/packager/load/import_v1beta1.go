@@ -58,8 +58,9 @@ type ComponentConfigImportResolution struct {
 }
 
 // remoteReferenceCache pins each remote reference to the first component manifest
-// resolved during a package or component-config resolution.
-type remoteReferenceCache map[string]loadedComponentConfig
+// resolved during a package or component-config resolution. Component definitions
+// are decoded separately for each import so rebasing cannot affect other imports.
+type remoteReferenceCache map[string]ocispec.Descriptor
 
 // resolveImportsV1Beta1 resolves component config imports into a v1beta1 package definition.
 // Each package component may import one or more ZarfComponentConfig files; filtering compatible components also happens here.
@@ -219,14 +220,9 @@ func selectImportVariant(ctx context.Context, imp v1beta1.ComponentImport, specD
 		loaded = append(loaded, loadedComponentConfig{config: config, dir: filepath.Dir(path), relativeToParent: filepath.Dir(entry.Path), path: path})
 	}
 	for _, entry := range imp.Remote {
-		loadedComponent, exists := refCache[entry.URL]
-		if !exists {
-			var err error
-			loadedComponent, err = remoteComponentConfig(ctx, entry.URL, arch, remoteOptions, cachePath)
-			if err != nil {
-				return loadedComponentConfig{}, err
-			}
-			refCache[entry.URL] = loadedComponent
+		loadedComponent, err := refCache.load(ctx, entry.URL, arch, remoteOptions, cachePath)
+		if err != nil {
+			return loadedComponentConfig{}, err
 		}
 		if slices.Contains(importStack, loadedComponent.path) {
 			return loadedComponentConfig{}, fmt.Errorf("component config %s imported in cycle", loadedComponent.path)
@@ -250,7 +246,7 @@ func selectImportVariant(ctx context.Context, imp v1beta1.ComponentImport, specD
 	}
 }
 
-func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOptions types.RemoteOptions, cachePath string) (loadedComponentConfig, error) {
+func (c remoteReferenceCache) load(ctx context.Context, importURL, arch string, remoteOptions types.RemoteOptions, cachePath string) (loadedComponentConfig, error) {
 	remote, err := zoci.NewRemoteWithOptions(ctx, importURL, ocispec.Platform{Architecture: arch}, zoci.RemoteClientOptions{
 		CachePath:     cachePath,
 		RemoteOptions: remoteOptions,
@@ -258,9 +254,13 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if err != nil {
 		return loadedComponentConfig{}, err
 	}
-	root, err := remote.ResolveRoot(ctx)
-	if err != nil {
-		return loadedComponentConfig{}, err
+	root, exists := c[importURL]
+	if !exists {
+		root, err = remote.ResolveRoot(ctx)
+		if err != nil {
+			return loadedComponentConfig{}, err
+		}
+		c[importURL] = root
 	}
 	manifest, err := remote.FetchManifest(ctx, root)
 	if err != nil {
@@ -311,7 +311,14 @@ func remoteComponentConfig(ctx context.Context, importURL, arch string, remoteOp
 	if err := validateRemoteComponentResources(config, seenMountPaths); err != nil {
 		return loadedComponentConfig{}, fmt.Errorf("remote component %q: %w", importURL, err)
 	}
-	return loadedComponentConfig{config: config, remote: true, dir: importRoot, relativeToParent: importRoot, path: importURL + "@" + root.Digest.String(), resources: resources}, nil
+	return loadedComponentConfig{
+		config:           config,
+		remote:           true,
+		dir:              importRoot,
+		relativeToParent: importRoot,
+		path:             importURL + "@" + root.Digest.String(),
+		resources:        resources,
+	}, nil
 }
 
 // ValidateRemoteKustomizeRestrictions rejects unrestricted Kustomize builds for remote components.
