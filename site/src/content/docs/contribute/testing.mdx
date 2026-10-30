@@ -67,7 +67,7 @@ test caching explicitly.
 :::
 
 :::note
-The Zarf binary and built packages are required to be stored in the ./build directory. However, if you intend to run tests locally using 'go test ./...', the zarf-init package must also be present in this directory.
+The Zarf binary and built packages are required to be stored in the `./build` directory. Before running the cluster tests directly with `go test`, run `make init-package init-package-v1beta1` to create the init packages in `build/`.
 :::
 
 ### The Upgrade Test

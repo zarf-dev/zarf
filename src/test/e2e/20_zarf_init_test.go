@@ -7,6 +7,7 @@ package test
 import (
 	"encoding/base64"
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -53,17 +54,6 @@ func TestZarfInit(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Check for any old secrets to ensure that they don't get saved in the init log
-	// FIXME: why delete this?
-	// oldState := state.State{}
-	// base64State, _, err := e2e.Kubectl(t, "get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
-	// if err == nil {
-	// 	oldStateJSON, err := base64.StdEncoding.DecodeString(base64State)
-	// 	require.NoError(t, err)
-	// 	err = json.Unmarshal(oldStateJSON, &oldState)
-	// 	require.NoError(t, err)
-	// }
-
 	// run `zarf init`
 	_, _, err := e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "--injector-port", "31888", "--confirm")
 	require.NoError(t, err)
@@ -102,13 +92,23 @@ func TestZarfInit(t *testing.T) {
 	verifyZarfPodLabels(t)
 	verifyZarfServiceLabels(t)
 
-	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
-	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1") //nolint:errcheck
-	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")     //nolint:errcheck
-
 	// Zarf should fail since registry credentials are changing on a subsequent init
 	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--registry-push-password", "new-password", "--confirm")
 	require.Error(t, err)
+
+	// Upgrade the v1alpha1 init installation to the v1beta1 init package.
+	initPackageV1beta1 := filepath.Join("build", "v1beta1-init", fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, initPackageVersion))
+	stdOut, stdErr, err := e2e.Zarf(t, "init", initPackageV1beta1, "--components="+initComponents, "--features=v1beta1=true,values=true", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	verifyZarfNamespaceLabels(t)
+	verifyZarfSecretLabels(t)
+	verifyZarfPodLabels(t)
+	verifyZarfServiceLabels(t)
+
+	// Reduce CI resource usage after the upgrade so scale field ownership does not conflict with Helm.
+	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1") //nolint:errcheck
+	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")     //nolint:errcheck
 }
 
 func verifyZarfNamespaceLabels(t *testing.T) {

@@ -84,7 +84,7 @@ func TestRemoteComponentConfigRejectsPlatformVariantMismatch(t *testing.T) {
 	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
 	require.NoError(t, err)
 
-	_, err = remoteComponentConfig(ctx, "oci://"+ref.String(), "arm64", types.RemoteOptions{PlainHTTP: true}, "")
+	_, err = (remoteReferenceCache{}).load(ctx, "oci://"+ref.String(), "arm64", types.RemoteOptions{PlainHTTP: true}, "")
 	require.ErrorContains(t, err, "variant architecture does not match its OCI platform")
 }
 
@@ -118,7 +118,7 @@ func TestRemoteComponentConfigRejectsOnCreateActions(t *testing.T) {
 	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
 	require.NoError(t, err)
 
-	_, err = remoteComponentConfig(ctx, "oci://"+ref.String(), "amd64", types.RemoteOptions{PlainHTTP: true}, "")
+	_, err = (remoteReferenceCache{}).load(ctx, "oci://"+ref.String(), "amd64", types.RemoteOptions{PlainHTTP: true}, "")
 	require.ErrorContains(t, err, "unsupported onCreate actions")
 }
 
@@ -396,7 +396,7 @@ func TestRemoteComponentConfigRejectsUnsafeResourceMountPaths(t *testing.T) {
 
 			ctx := testutil.TestContext(t)
 			ref := publishRemoteComponent(ctx, t, tt.name, tt.mountPath)
-			_, err := remoteComponentConfig(ctx, "oci://"+ref.String(), "amd64", types.RemoteOptions{PlainHTTP: true}, "")
+			_, err := (remoteReferenceCache{}).load(ctx, "oci://"+ref.String(), "amd64", types.RemoteOptions{PlainHTTP: true}, "")
 			require.ErrorContains(t, err, "invalid resource layer")
 		})
 	}
@@ -421,8 +421,13 @@ func TestRemoteImportResolutionPinsReferencesForOneInvocation(t *testing.T) {
 	publishRemoteComponentToReference(ctx, t, ref, "resources/0/second.txt")
 	second, err := selectImportVariant(ctx, imports, t.TempDir(), "amd64", "", nil, types.RemoteOptions{PlainHTTP: true}, "", cache)
 	require.NoError(t, err)
-	require.Equal(t, first.path, second.path)
-	require.Equal(t, first.resources, second.resources)
+	for _, imported := range []loadedComponentConfig{first, second} {
+		require.Len(t, imported.resources, 1)
+		resource := imported.resources[0]
+		contents, err := resource.remote.FetchLayer(ctx, resource.descriptor)
+		require.NoError(t, err)
+		require.Equal(t, "resources/0/first.txt", string(contents))
+	}
 }
 
 func resolveRemoteImport(ctx context.Context, t *testing.T, ref registry.Reference) v1beta1ImportResolution {

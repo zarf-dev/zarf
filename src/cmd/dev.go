@@ -249,13 +249,14 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 }
 
 type devInspectManifestsOptions struct {
-	flavor             string
-	createSetPkgTmpl   map[string]string
-	deploySetVariables map[string]string
-	valuesFiles        []string
-	setValues          map[string]string
-	kubeVersion        string
-	outputWriter       io.Writer
+	enableKustomizePlugins bool
+	flavor                 string
+	createSetPkgTmpl       map[string]string
+	deploySetVariables     map[string]string
+	valuesFiles            []string
+	setValues              map[string]string
+	kubeVersion            string
+	outputWriter           io.Writer
 }
 
 func newDevInspectManifestsOptions() devInspectManifestsOptions {
@@ -285,6 +286,8 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
+	cmd.Flags().BoolVar(&o.enableKustomizePlugins, "enable-kustomize-plugins", false, lang.CmdDevFlagEnableKustomizePlugins)
+
 	return cmd
 }
 
@@ -306,14 +309,15 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
-		CreateSetVariables: o.createSetPkgTmpl,
-		DeploySetVariables: o.deploySetVariables,
-		Values:             values,
-		Flavor:             o.flavor,
-		KubeVersion:        o.kubeVersion,
-		CachePath:          cachePath,
-		IsInteractive:      true,
-		RemoteOptions:      defaultRemoteOptions(),
+		EnableKustomizePlugins: o.enableKustomizePlugins,
+		CreateSetVariables:     o.createSetPkgTmpl,
+		DeploySetVariables:     o.deploySetVariables,
+		Values:                 values,
+		Flavor:                 o.flavor,
+		KubeVersion:            o.kubeVersion,
+		CachePath:              cachePath,
+		IsInteractive:          true,
+		RemoteOptions:          defaultRemoteOptions(),
 	}
 	basePath, err := setBaseDirectory(args)
 	if err != nil {
@@ -345,14 +349,15 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 }
 
 type devInspectValuesFilesOptions struct {
-	flavor             string
-	components         string
-	createSetPkgTmpl   map[string]string
-	deploySetVariables map[string]string
-	valuesFiles        []string
-	setValues          map[string]string
-	kubeVersion        string
-	outputWriter       io.Writer
+	enableKustomizePlugins bool
+	flavor                 string
+	components             string
+	createSetPkgTmpl       map[string]string
+	deploySetVariables     map[string]string
+	valuesFiles            []string
+	setValues              map[string]string
+	kubeVersion            string
+	outputWriter           io.Writer
 }
 
 func newDevInspectValuesFilesOptions() devInspectValuesFilesOptions {
@@ -384,6 +389,8 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
+	cmd.Flags().BoolVar(&o.enableKustomizePlugins, "enable-kustomize-plugins", false, lang.CmdDevFlagEnableKustomizePlugins)
+
 	return cmd
 }
 
@@ -405,15 +412,16 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
-		CreateSetVariables: o.createSetPkgTmpl,
-		DeploySetVariables: o.deploySetVariables,
-		Values:             values,
-		Flavor:             o.flavor,
-		Components:         o.components,
-		KubeVersion:        o.kubeVersion,
-		CachePath:          cachePath,
-		IsInteractive:      true,
-		RemoteOptions:      defaultRemoteOptions(),
+		EnableKustomizePlugins: o.enableKustomizePlugins,
+		CreateSetVariables:     o.createSetPkgTmpl,
+		DeploySetVariables:     o.deploySetVariables,
+		Values:                 values,
+		Flavor:                 o.flavor,
+		Components:             o.components,
+		KubeVersion:            o.kubeVersion,
+		CachePath:              cachePath,
+		IsInteractive:          true,
+		RemoteOptions:          defaultRemoteOptions(),
 	}
 	basePath, err := setBaseDirectory(args)
 	if err != nil {
@@ -804,17 +812,18 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 }
 
 type devFindImagesOptions struct {
-	repoHelmChartPath   string
-	createSetPkgTmpl    map[string]string
-	flavor              string
-	deploySetVariables  map[string]string
-	valuesFiles         []string
-	setValues           map[string]string
-	kubeVersionOverride string
-	why                 string
-	skipCosign          bool
-	registryURL         string
-	update              bool
+	enableKustomizePlugins bool
+	repoHelmChartPath      string
+	createSetPkgTmpl       map[string]string
+	flavor                 string
+	deploySetVariables     map[string]string
+	valuesFiles            []string
+	setValues              map[string]string
+	kubeVersionOverride    string
+	why                    string
+	skipCosign             bool
+	registryURL            string
+	update                 bool
 }
 
 func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
@@ -859,6 +868,8 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVar(&o.registryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
 
+	cmd.Flags().BoolVar(&o.enableKustomizePlugins, "enable-kustomize-plugins", false, lang.CmdDevFlagEnableKustomizePlugins)
+
 	return cmd
 }
 
@@ -888,18 +899,19 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	findImagesOptions := packager.FindImagesOptions{
-		RepoHelmChartPath:   o.repoHelmChartPath,
-		RegistryURL:         o.registryURL,
-		KubeVersionOverride: o.kubeVersionOverride,
-		CreateSetVariables:  o.createSetPkgTmpl,
-		DeploySetVariables:  o.deploySetVariables,
-		Values:              values,
-		Flavor:              o.flavor,
-		Why:                 o.why,
-		SkipCosign:          o.skipCosign,
-		CachePath:           cachePath,
-		IsInteractive:       true,
-		RemoteOptions:       defaultRemoteOptions(),
+		EnableKustomizePlugins: o.enableKustomizePlugins,
+		RepoHelmChartPath:      o.repoHelmChartPath,
+		RegistryURL:            o.registryURL,
+		KubeVersionOverride:    o.kubeVersionOverride,
+		CreateSetVariables:     o.createSetPkgTmpl,
+		DeploySetVariables:     o.deploySetVariables,
+		Values:                 values,
+		Flavor:                 o.flavor,
+		Why:                    o.why,
+		SkipCosign:             o.skipCosign,
+		CachePath:              cachePath,
+		IsInteractive:          true,
+		RemoteOptions:          defaultRemoteOptions(),
 	}
 
 	if o.why != "" {

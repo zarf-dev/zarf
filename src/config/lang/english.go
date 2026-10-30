@@ -344,11 +344,17 @@ $ zarf package inspect images my-package
 `
 
 	CmdPackageInspectSBOMExample = `
-# Extract the SBOM from a local package tarball
+# Extract every SBOM from a local package tarball
 $ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --output ./sbom
 
-# Extract the SBOM from a package in an OCI registry (oci:// prefix optional)
+# Extract every SBOM from a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbom
+
+# Extract SBOMs matching a component name
+$ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --keys metrics --output ./sbom
+
+# Extract SBOMs matching an exact package image reference
+$ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --keys ghcr.io/my-org/api:v1.4.2 --output ./sbom
 `
 
 	CmdPackageInspectManifestsExample = `
@@ -550,6 +556,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdDevFlagSetVariables                 = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
 	CmdDevFlagRepoChartPath                = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdDevFlagGitAccount                   = "User or organization name for the git account that the repos are created under."
+	CmdDevFlagEnableKustomizePlugins       = "Allow external Kustomize plugins referenced by the package definition to execute arbitrary code"
 	CmdDevFlagKubeVersion                  = "Override the default helm template KubeVersion when performing a package chart template"
 	CmdDevFlagRegistry                     = "Override the ###ZARF_REGISTRY### value"
 	CmdDevFlagFindImagesWhy                = "Prints the source manifest for the specified image"
