@@ -40,7 +40,6 @@ const (
 	registryReadKey = "registry-readonly"
 	gitKey          = "git"
 	gitReadKey      = "git-readonly"
-	artifactKey     = "artifact"
 )
 
 type getCredsOptions struct {
@@ -105,9 +104,6 @@ func (o *getCredsOptions) run(ctx context.Context, args []string) error {
 		return printComponentCredential(ctx, s, args[0], o.outputWriter)
 	}
 
-	if s.ArtifactServer.IsConfigured() {
-		logger.From(ctx).Warn(lang.ArtifactServerDeprecated)
-	}
 	return printCredentialTable(s, o.outputFormat, o.outputWriter)
 }
 
@@ -157,15 +153,6 @@ func printCredentialTable(s *state.State, outputFormat outputFormat, out io.Writ
 		})
 	}
 
-	if s.ArtifactServer.IsConfigured() {
-		credentials = append(credentials, credentialInfo{
-			Application: "Artifact Token",
-			Username:    s.ArtifactServer.PushUsername,
-			Password:    s.ArtifactServer.PushToken,
-			Connect:     "zarf connect git",
-			GetCredsKey: artifactKey,
-		})
-	}
 	if len(credentials) == 0 {
 		return errors.New("no services configured")
 	}
@@ -213,13 +200,6 @@ func printComponentCredential(ctx context.Context, s *state.State, componentName
 		}
 		l.Info("Git server (read-only) password", "username", s.GitServer.PullUsername)
 		fmt.Fprintln(out, s.GitServer.PullPassword)
-	case artifactKey:
-		if !s.ArtifactServer.IsConfigured() {
-			return fmt.Errorf("service %q not found", componentName)
-		}
-		logger.From(ctx).Warn(lang.ArtifactServerDeprecated)
-		l.Info("artifact server token", "username", s.ArtifactServer.PushUsername)
-		fmt.Fprintln(out, s.ArtifactServer.PushToken)
 	case registryKey:
 		if !s.RegistryInfo.IsConfigured() {
 			return fmt.Errorf("service %q not found", componentName)
@@ -243,7 +223,6 @@ type updateCredsOptions struct {
 	forceConflicts   bool
 	gitServer        state.GitServerInfo
 	registryInfo     state.RegistryInfo
-	artifactServer   state.ArtifactServerInfo
 	agentTLSCAPath   string
 	agentTLSCertPath string
 	agentTLSKeyPath  string
@@ -281,14 +260,6 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.registryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 	cmd.Flags().StringVar(&o.registryInfo.PullUsername, "registry-pull-username", v.GetString(VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
 	cmd.Flags().StringVar(&o.registryInfo.PullPassword, "registry-pull-password", v.GetString(VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
-
-	// Flags for using an external artifact server
-	cmd.Flags().StringVar(&o.artifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
-	cmd.Flags().StringVar(&o.artifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
-	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
-	_ = cmd.Flags().MarkDeprecated("artifact-url", lang.ArtifactServerDeprecated)
-	_ = cmd.Flags().MarkDeprecated("artifact-push-username", lang.ArtifactServerDeprecated)
-	_ = cmd.Flags().MarkDeprecated("artifact-push-token", lang.ArtifactServerDeprecated)
 
 	// Flags for providing user-managed agent TLS certificates
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", "", "Path to a PEM-encoded CA certificate for the Zarf agent")
@@ -336,20 +307,15 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string, v *viper.Vip
 		return errors.New("zarf state secret did not load properly")
 	}
 
-	if services.Has(state.ArtifactKey) && oldState.ArtifactServer.IsConfigured() {
-		l.Warn(lang.ArtifactServerDeprecated)
-	}
-
 	registryURLSet := services.Has(state.RegistryKey) && optionIsExplicitlySet(cmd, v, "registry-url", VInitRegistryURL)
 	registryInfo, err := resolveRegistryUpdate(ctx, c, oldState.RegistryInfo, o.registryInfo, registryURLSet)
 	if err != nil {
 		return err
 	}
 	opts := state.MergeOptions{
-		GitServer:      o.gitServer,
-		RegistryInfo:   registryInfo,
-		ArtifactServer: o.artifactServer,
-		Services:       services,
+		GitServer:    o.gitServer,
+		RegistryInfo: registryInfo,
+		Services:     services,
 	}
 
 	if services.Has(state.AgentKey) {
@@ -413,14 +379,6 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string, v *viper.Vip
 	internalGitServerExists, err := c.InternalGitServerExists(cmd.Context())
 	if err != nil {
 		return err
-	}
-
-	// Update artifact token (if internal)
-	if services.Has(state.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() && internalGitServerExists {
-		newState.ArtifactServer.PushToken, err = c.UpdateInternalArtifactServerToken(ctx, oldState.GitServer)
-		if err != nil {
-			return fmt.Errorf("unable to create the new Gitea artifact token: %w", err)
-		}
 	}
 
 	// Save the final Zarf State
@@ -491,13 +449,6 @@ func printCredentialUpdates(ctx context.Context, oldState *state.State, newState
 		l.Info("Git server push password", "changed", oG.PushPassword != nG.PushPassword)
 		l.Info("Git server pull username", "existing", oG.PullUsername, "replacement", nG.PullUsername)
 		l.Info("Git server pull password", "changed", oG.PullPassword != nG.PullPassword)
-	}
-	if services.Has(state.ArtifactKey) {
-		oA := oldState.ArtifactServer
-		nA := newState.ArtifactServer
-		l.Info("artifact server URL address", "existing", oA.Address, "replacement", nA.Address)
-		l.Info("artifact server push username", "existing", oA.PushUsername, "replacement", nA.PushUsername)
-		l.Info("artifact server push token", "changed", oA.PushToken != nA.PushToken)
 	}
 	if services.Has(state.AgentKey) {
 		oT := oldState.AgentInfo.TLS

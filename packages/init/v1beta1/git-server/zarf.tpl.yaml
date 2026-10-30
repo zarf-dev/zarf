@@ -50,10 +50,6 @@ component:
           retries: 3
           maxTotalSeconds: 60
           description: Create the read-only Gitea user
-        - cmd: ./zarf internal create-artifact-registry-token
-          retries: 3
-          maxTotalSeconds: 60
-          description: Create an artifact registry token
       onFailure:
         - cmd: >-
             ./zarf internal update-gitea-pvc --rollback --pvc-name {{ .Values.gitServer.persistence.claimName }}

@@ -44,20 +44,19 @@ const (
 	ZarfPackageInfoLabel = "package-deploy-info"
 )
 
-// ServiceKey identifies a Zarf-managed service in state (registry, git, artifact, agent).
+// ServiceKey identifies a Zarf-managed service in state (registry, git, agent).
 type ServiceKey string
 
 // Credential keys
 const (
 	RegistryKey ServiceKey = "registry"
 	GitKey      ServiceKey = "git"
-	ArtifactKey ServiceKey = "artifact"
 	AgentKey    ServiceKey = "agent"
 )
 
 // AllServiceKeys is the canonical ordered list of every supported service key.
 func AllServiceKeys() []ServiceKey {
-	return []ServiceKey{RegistryKey, GitKey, ArtifactKey, AgentKey}
+	return []ServiceKey{RegistryKey, GitKey, AgentKey}
 }
 
 // ServiceSet is an unordered set of ServiceKeys.
@@ -134,8 +133,7 @@ const (
 	ZarfGitReadUser = "zarf-git-read-user"
 	ZarfAgentHost   = "agent-hook.zarf.svc"
 
-	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
-	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 
 	// ZarfRegistryMTLSServerCommonName is the common name for the registry server certificate
 	ZarfRegistryMTLSServerCommonName = "zarf-docker-registry"
@@ -180,8 +178,6 @@ type State struct {
 	GitServer GitServerInfo `json:"gitServer"`
 	// Information about the container registry Zarf is configured to use
 	RegistryInfo RegistryInfo `json:"registryInfo"`
-	// Information about the artifact registry Zarf is configured to use
-	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
 }
 
 // AgentInfo contains information Zarf uses to configure the agent.
@@ -349,39 +345,6 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 	}
 
 	return nil
-}
-
-// ArtifactServerInfo contains information Zarf uses to communicate with a artifact registry to push/pull repositories to.
-type ArtifactServerInfo struct {
-	// Username of a user with push access to the artifact registry
-	PushUsername string `json:"pushUsername"`
-	// Password of a user with push access to the artifact registry
-	PushToken string `json:"pushPassword"`
-	// URL address of the artifact registry
-	Address string `json:"address"`
-}
-
-// IsInternal returns true if the artifact server URL is equivalent to the artifact server deployed through the default init package
-func (as ArtifactServerInfo) IsInternal() bool {
-	return as.Address == ZarfInClusterArtifactServiceURL
-}
-
-// IsConfigured returns true if the artifact server address has been set.
-func (as ArtifactServerInfo) IsConfigured() bool {
-	return as.Address != ""
-}
-
-// FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
-func (as *ArtifactServerInfo) FillInEmptyValues() {
-	// Set default svc url if an external registry was not provided
-	if as.Address == "" {
-		as.Address = ZarfInClusterArtifactServiceURL
-	}
-
-	// Set the push username to the git push user if not specified
-	if as.PushUsername == "" {
-		as.PushUsername = ZarfGitPushUser
-	}
 }
 
 // MTLSStrategy defines the strategy to manage the mTLS certificates for the registry
@@ -660,7 +623,6 @@ func Default() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	state.ArtifactServer.FillInEmptyValues()
 	state.Reconcile()
 	return state, nil
 }
@@ -668,10 +630,9 @@ func Default() (*State, error) {
 // MergeOptions tracks the user-defined options during cluster initialization.
 // TODO(mkcp): Provide semantic doccomments for how exported fields are used.
 type MergeOptions struct {
-	GitServer      GitServerInfo
-	RegistryInfo   RegistryInfo
-	ArtifactServer ArtifactServerInfo
-	Services       ServiceSet
+	GitServer    GitServerInfo
+	RegistryInfo RegistryInfo
+	Services     ServiceSet
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
@@ -720,15 +681,6 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			if newState.GitServer.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
-		}
-	}
-	if opts.Services.Has(ArtifactKey) {
-		// TODO: Replace use of reflections with explicit setting
-		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, opts.ArtifactServer)
-
-		// Only clear token for autogeneration if the user didn't provide one and the artifact server is internal
-		if opts.ArtifactServer.PushToken == "" && oldState.ArtifactServer.IsInternal() {
-			newState.ArtifactServer.PushToken = ""
 		}
 	}
 	if opts.Services.Has(AgentKey) {
@@ -781,9 +733,6 @@ func sanitizeState(s *State) *State {
 	s.RegistryInfo.PushPassword = "**sanitized**"
 	s.RegistryInfo.PullPassword = "**sanitized**"
 	s.RegistryInfo.Secret = "**sanitized**"
-
-	// Overwrite the ArtifactServer secret
-	s.ArtifactServer.PushToken = "**sanitized**"
 
 	return s
 }

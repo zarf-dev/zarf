@@ -16,8 +16,6 @@ import (
 	"time"
 )
 
-const artifactTokenName = "zarf-artifact-registry-token"
-
 // Client is a client that communicates with the Gitea API.
 type Client struct {
 	httpClient *http.Client
@@ -136,58 +134,6 @@ func (g *Client) UpdateGitUser(ctx context.Context, username string, password st
 		return fmt.Errorf("failed to update git user %q: unexpected status code %d", username, statusCode)
 	}
 	return nil
-}
-
-// CreatePackageRegistryToken creates or replaces an existing package registry token.
-func (g *Client) CreatePackageRegistryToken(ctx context.Context) (string, error) {
-	// Determine if the package token already exists.
-	b, _, err := g.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/users/%s/tokens", g.username), nil)
-	if err != nil {
-		return "", err
-	}
-	var tokens []map[string]interface{}
-	err = json.Unmarshal(b, &tokens)
-	if err != nil {
-		return "", err
-	}
-	hasPackageToken := false
-	for _, token := range tokens {
-		if token["name"] != artifactTokenName {
-			continue
-		}
-		hasPackageToken = true
-		break
-	}
-
-	// Delete the token if it already exists.
-	if hasPackageToken {
-		_, _, err := g.DoRequest(ctx, http.MethodDelete, fmt.Sprintf("/api/v1/users/%s/tokens/%s", g.username, artifactTokenName), nil)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	// Create the new token.
-	createTokensData := map[string]interface{}{
-		"name":   artifactTokenName,
-		"scopes": []string{"read:user", "read:package", "write:package"},
-	}
-	body, err := json.Marshal(createTokensData)
-	if err != nil {
-		return "", err
-	}
-	b, _, err = g.DoRequest(ctx, http.MethodPost, fmt.Sprintf("/api/v1/users/%s/tokens", g.username), body)
-	if err != nil {
-		return "", err
-	}
-	createTokenResponse := struct {
-		Sha1 string `json:"sha1"`
-	}{}
-	err = json.Unmarshal(b, &createTokenResponse)
-	if err != nil {
-		return "", err
-	}
-	return createTokenResponse.Sha1, nil
 }
 
 // AddReadOnlyUserToRepository adds a read only user to a repository.

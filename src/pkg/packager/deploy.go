@@ -73,11 +73,10 @@ type DeployOptions struct {
 	// Remote Options for image pushes
 	types.RemoteOptions
 	// How to configure Zarf state if it's not already been configured
-	GitServer      state.GitServerInfo
-	RegistryInfo   state.RegistryInfo
-	ArtifactServer state.ArtifactServerInfo
-	StorageClass   string
-	InjectorPort   int
+	GitServer    state.GitServerInfo
+	RegistryInfo state.RegistryInfo
+	StorageClass string
+	InjectorPort int
 	// InjectorImage is the injector container image. Proxy mode defaults to the image saved in cluster state and requires an image on first init.
 	InjectorImage string
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
@@ -407,9 +406,6 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 		switch c.Service.Name {
 		case api.ServiceGitServer:
 			services.Add(state.GitKey)
-			if feature.IsEnabled(feature.ArtifactServer) {
-				services.Add(state.ArtifactKey)
-			}
 		case api.ServiceRegistry, api.ServiceSeedRegistry, api.ServiceInjector:
 			if !registryExternal {
 				services.Add(state.RegistryKey)
@@ -432,7 +428,6 @@ func (d *deployer) initState(ctx context.Context, pkg api.Package, opts DeployOp
 	d.s, err = d.c.InitState(ctx, cluster.InitStateOptions{
 		GitServer:           opts.GitServer,
 		RegistryInfo:        opts.RegistryInfo,
-		ArtifactServer:      opts.ArtifactServer,
 		ApplianceMode:       applianceMode,
 		StorageClass:        opts.StorageClass,
 		InjectorPort:        opts.InjectorPort,
