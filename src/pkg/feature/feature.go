@@ -207,6 +207,7 @@ const (
 	RegistryProxy          Name = "registry-proxy"
 	Values                 Name = "values"
 	DockerDaemonDirectPull Name = "docker-daemon-direct-pull"
+	SBOMViewer             Name = "sbom-viewer"
 	ArtifactServer         Name = "artifact-server"
 	V1Beta1                Name = "v1beta1"
 )
@@ -253,6 +254,14 @@ func init() {
 			Enabled: true,
 			Since:   "v0.80.0",
 			Stage:   GA,
+		},
+		{
+			Name:        SBOMViewer,
+			Description: "SBOM viewer HTML generation has been removed. Use 'zarf package inspect sbom' to extract JSON SBOMs.",
+			Enabled:     false,
+			Since:       "v0.86.0",
+			Until:       "v1.0.0",
+			Stage:       Deprecated,
 		},
 		{
 			Name:        ArtifactServer,
