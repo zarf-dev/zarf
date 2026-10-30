@@ -257,7 +257,7 @@ func init() {
 		},
 		{
 			Name:        SBOMViewer,
-			Description: "SBOM viewer HTML generation has been removed. Use 'zarf package inspect sbom' to extract JSON SBOMs.",
+			Description: "Retired: Enabled deprecated SBOM viewer HTML generation during package creation",
 			Enabled:     false,
 			Since:       "v0.86.0",
 			Until:       "v1.0.0",
