@@ -7,13 +7,13 @@ import Timeline from "@components/Timeline.astro";
 
 ## Introduction
 
-Zarf is happy to announce v1.0.0. Zarf's release cadence of every two weeks means many features planned for v1.0.0 are already available. This milestone lets us retire deprecated features and establish a clear foundation for long-term support.
+Zarf is happy to announce v1.0.0. This milestone lets us retire deprecated features and establish a clear foundation for long-term support.
 
-## The v1beta1 package schema
+## v1beta1 Package Schema
 
-A premier focus of v1.0 is the v1beta1 Zarf package schema. This redesign converts years of feedback into a more intuitive experience. It also introduces features for package maintenance, such as [component publishing](/commands/zarf_component_publish/) for imports, and [package definition templating](/commands/zarf_dev_template/) for simpler templating. This schema retries deprecated and unwieldy features from v1alpha1 giving Zarf a foundation for long-term support.
+The v1beta1 package schema incorporates years of feedback to make packages easier to author and maintain. It introduces reusable [published components](/commands/zarf_component_publish/) and a dedicated [templating workflow](/commands/zarf_dev_template/), while removing deprecated v1alpha1 features.
 
-### v1alpha1 deprecation
+### v1alpha1 Deprecation
 
 The legacy package schema, v1alpha1, is deprecated in v1.0. However, we recognize that there are countless existing v1alpha1 packages supporting many critical systems across the world. To accommodate, we are giving an extended deprecation period for users to migrate. Zarf will support v1alpha1 packages through August 2027, nine months after the v1.0 release in November 2026.
 
@@ -31,11 +31,11 @@ On release of v1.0, Zarf will log a warning when v1alpha1 packages are used. Sta
 
 Removing packages will operate without a feature flag until v1alpha1 is fully unsupported. Follow the [v1alpha1 to v1beta1 migration guide](/best-practices/v1alpha1-to-v1beta1/) to update existing package definitions.
 
-### V1 Removals
+### Removed Features
 
 Notable features removed in v1.0.0:
 
 - The Zarf artifact server, which used Gitea to store artifacts such as npm packages, was removed due to limited adoption
-- `zarf tools registry export`: this command focused on saving container images locally. The focus and intent of the registry sub-command is generic OCI interactions with the registry.
+- `zarf tools registry export`: Removed as registry commands focus on generic OCI operations, and container image exports were outside this scope.
 - The SBOM viewer: Zarf no longer produces HTML files for human-friendly SBOM reading.
-- Docker Daemon pulls pre engine version v0.25.0: user's must have a Docker engine version >= 25.0.0 to pull from their local docker Daemon
+- Older Docker engine compatibility: Pulling images from a local Docker daemon now requires Docker Engine 25.0.0 or later
