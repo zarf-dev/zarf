@@ -267,7 +267,7 @@ func init() {
 			Description: "Retired: Created the artifact server during Zarf init",
 			Enabled:     false,
 			Since:       "v0.87.0",
-			Until:       "v1.0",
+			Until:       "v1.0.0",
 			Stage:       Deprecated,
 		},
 		{
