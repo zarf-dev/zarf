@@ -7,11 +7,11 @@ import Timeline from "@components/Timeline.astro";
 
 ## Introduction
 
-Zarf is happy to announce v1.0.0. We release new Zarf features every other week, and as such, many of the features we've been working towards for v1.0.0 are already available! However, this release lets us deprecate and remove as needed to establish a contract of long-term support.
+Zarf is happy to announce v1.0.0. Zarf has been working towards this milestone for years, and since we continuously release, many of the features leading to v1.0.0 are already available. However, v1.0 grants us the opportunity to deprecate and remove as needed to establish a contract of long-term support.
 
 ## The v1beta1 package schema
 
-The largest addition in v1.0 is the v1beta1 Zarf package schema. This redesign converts years of feedback into a more intuitive experience. It also introduces features for package maintenance, such as [component publishing](/commands/zarf_component_publish/) for imports, and simplifies [package definition templating](/commands/zarf_dev_template/). Retiring deprecated and unwieldy features from v1alpha1 gives Zarf a foundation for long-term schema support.
+A premier focus of v1.0 is the v1beta1 Zarf package schema. This redesign converts years of feedback into a more intuitive experience. It also introduces features for package maintenance, such as [component publishing](/commands/zarf_component_publish/) for imports, and [package definition templating](/commands/zarf_dev_template/) for simpler templating. This schema retries deprecated and unwieldy features from v1alpha1 giving Zarf a foundation for long-term support.
 
 ### v1alpha1 deprecation
 
@@ -33,9 +33,9 @@ Removing packages will operate without a feature flag until v1alpha1 is fully un
 
 ### V1 Removals
 
-Notable features removed in v1.0.0.
+Notable features removed in v1.0.0:
 
 - The Zarf artifact server, which used Gitea to store artifacts such as npm packages, was removed due to limited adoption
 - `zarf tools registry export`: this command focused on saving container images locally. The focus and intent of the registry sub-command is generic OCI interactions with the registry.
-- The SBOM viewer: Zarf no longer produces HTML files to view SBOMs.
+- The SBOM viewer: Zarf no longer produces HTML files for human-friendly SBOM reading.
 - Docker Daemon pulls pre engine version v0.25.0: user's must have a Docker engine version >= 25.0.0 to pull from their local docker Daemon
