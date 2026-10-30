@@ -249,11 +249,10 @@ func init() {
 		},
 		{
 			Name:        DockerDaemonDirectPull,
-			Description: "Retired: disabling allowed falling back to Daemon pulls with Crane.",
-			Enabled:     false,
+			Description: "Saves daemon source through direct Docker API interactions. Disabling once enabled Crane daemon pulls, but no longer has any effect",
+			Enabled:     true,
 			Since:       "v0.80.0",
-			Until:       "v1.0.0",
-			Stage:       Deprecated,
+			Stage:       GA,
 		},
 		{
 			Name:        SBOMViewer,
