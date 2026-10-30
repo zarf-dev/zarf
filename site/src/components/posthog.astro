@@ -1,0 +1,10 @@
+<script>
+  import { initializeAnalytics } from '../lib/analytics';
+
+  void initializeAnalytics(
+    import.meta.env.PUBLIC_POSTHOG_PROJECT_TOKEN,
+    undefined,
+    import.meta.env.PUBLIC_POSTHOG_ENABLE_LOCAL === 'true',
+    import.meta.env.PUBLIC_POSTHOG_ENABLE_PREVIEW === 'true',
+  );
+</script>
