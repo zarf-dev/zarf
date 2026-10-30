@@ -11,11 +11,11 @@ Zarf is happy to announce v1.0.0. This milestone lets us retire deprecated featu
 
 ## v1beta1 Package Schema
 
-The v1beta1 package schema incorporates years of feedback to make packages easier to author and maintain. It introduces reusable [published components](/commands/zarf_component_publish/) and a dedicated [templating workflow](/commands/zarf_dev_template/), while removing deprecated v1alpha1 features.
+A package schema defines the fields and structure of your `zarf.yaml` package definition. Zarf v1.0 introduces a new version of that format, v1beta1, to make packages easier to author and maintain. It introduces reusable [published components](/commands/zarf_component_publish/) and a dedicated [templating workflow](/commands/zarf_dev_template/), while removing deprecated features and reorganizing keys from the previous format, v1alpha1.
 
 ### v1alpha1 Deprecation
 
-The legacy package schema, v1alpha1, is deprecated in v1.0. However, we recognize that there are countless existing v1alpha1 packages supporting many critical systems across the world. To accommodate, we are giving an extended deprecation period for users to migrate. Zarf will support v1alpha1 packages through August 2027, nine months after the v1.0 release in November 2026.
+The legacy package schema, v1alpha1, is deprecated in v1.0. However, we know there are countless existing v1alpha1 packages supporting many critical systems across the world. To accommodate, we are giving an extended deprecation period for users to migrate. Zarf will support v1alpha1 packages through August 2027, nine months after the v1.0 release in November 2026.
 
 On release of v1.0, Zarf will log a warning when v1alpha1 packages are used. Starting in May 2027, create time operations such as package create, publish, and sign will require `--features=v1alpha1=true` for continued use. Deploy time operations will require the feature flag starting in June 2027.
 
