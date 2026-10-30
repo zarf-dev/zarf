@@ -39,7 +39,7 @@ import (
 // It uses the same logic as `kubectl wait`, with retry logic for resources that don't exist yet.
 // If identifier is empty, it will wait for any resource of the given kind to exist.
 // This function retries on cluster connection errors, allowing it to wait for a cluster to become available.
-func ForResource(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
+func ForResource(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration, connectOpts ...cluster.ConnectOptions) error {
 	l := logger.From(ctx)
 	if kind == "" {
 		return errors.New("kind is required")
@@ -58,7 +58,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		var err error
 		loader := clientcmd.NewDefaultClientConfigLoadingRules()
 		clientCfg = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, nil)
-		_, restConfig, err = cluster.ClientAndConfig()
+		_, restConfig, err = cluster.ClientAndConfig(connectOpts...)
 		if err != nil {
 			l.Debug("failed to get REST config, retrying", "error", err)
 			return false, nil
@@ -90,7 +90,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 // If identifier is empty, it will wait for the given kind
 // If condition is empty, it will wait for the given identifier to be fully reconciled using healthchecks.
 // This functions requires that a cluster is available before it is called
-func ForResourceDefaultReady(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
+func ForResourceDefaultReady(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration, connectOpts ...cluster.ConnectOptions) error {
 	if kind == "" {
 		return errors.New("kind is required")
 	}
@@ -101,7 +101,7 @@ func ForResourceDefaultReady(ctx context.Context, kind, identifier, condition, n
 
 	loader := clientcmd.NewDefaultClientConfigLoadingRules()
 	clientCfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, nil)
-	_, restConfig, err := cluster.ClientAndConfig()
+	_, restConfig, err := cluster.ClientAndConfig(connectOpts...)
 	if err != nil {
 		return err
 	}
