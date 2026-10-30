@@ -9,10 +9,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/test"
 )
 
@@ -37,7 +37,7 @@ func TestECRPublishing(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Set up the e2e configs
-	e2e.Arch = config.GetArch()
+	e2e.Arch = runtime.GOARCH
 	e2e.ZarfBinPath = path.Join("build", test.GetCLIName())
 
 	// Set up variables for common names/locations

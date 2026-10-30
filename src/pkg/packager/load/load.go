@@ -17,12 +17,12 @@ import (
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -33,6 +33,8 @@ import (
 
 // DefinitionOptions are the optional parameters to load.Package.
 type DefinitionOptions struct {
+	// Architecture overrides package metadata. Empty falls back to metadata, then the host.
+	Architecture string
 	Flavor       string
 	SetVariables map[string]string
 	// CachePath is used to cache layers from skeleton package pulls
@@ -131,7 +133,7 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 }
 
 func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath layout.PackagePath, rawPackage any, opts DefinitionOptions) (resolution, error) {
-	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	pkg.Metadata.Architecture = helpers.ResolveArch(opts.Architecture, pkg.Metadata.Architecture)
 	var err error
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
@@ -173,7 +175,7 @@ func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath l
 }
 
 func v1beta1Resolution(ctx context.Context, pkg v1beta1.Package, pkgPath layout.PackagePath, opts DefinitionOptions) (resolution, error) {
-	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	pkg.Metadata.Architecture = helpers.ResolveArch(opts.Architecture, pkg.Metadata.Architecture)
 	cachePath, err := utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return resolution{}, err

@@ -895,12 +895,13 @@ func (o *clearCacheOptions) run(cmd *cobra.Command, _ []string) error {
 }
 
 type downloadInitOptions struct {
+	*architectureOptions
 	version         string
 	outputDirectory string
 }
 
-func newDownloadInitCommand() *cobra.Command {
-	o := &downloadInitOptions{}
+func newDownloadInitCommand(architecture *architectureOptions) *cobra.Command {
+	o := &downloadInitOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:   "download-init",
@@ -945,7 +946,7 @@ func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	pullOptions := packager.PullOptions{
-		Architecture: config.GetArch(),
+		Architecture: o.selectedArchitecture(),
 		CachePath:    cachePath,
 	}
 

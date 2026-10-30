@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -72,7 +72,7 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 		return fmt.Errorf("source and destination repositories must have the same name")
 	}
 
-	arch := config.GetArch(opts.Architecture)
+	arch := helpers.ResolveArch(opts.Architecture)
 	p := oci.PlatformForArch(arch)
 
 	// Set up remote repo clients.
@@ -179,6 +179,8 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 
 // PublishSkeletonOptions declares the parameters to publish a skeleton package.
 type PublishSkeletonOptions struct {
+	// Architecture selects package components, falling back to metadata and then the host.
+	Architecture string
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
 	// SigningKeyPath points to a signing key on the local disk.
@@ -233,6 +235,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	l.Info("loading skeleton package", "path", path)
 	loaded, err := load.Package(ctx, path, load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     opts.Architecture,
 			CachePath:        opts.CachePath,
 			Flavor:           opts.Flavor,
 			SkipVersionCheck: opts.SkipVersionCheck,

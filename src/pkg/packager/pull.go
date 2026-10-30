@@ -27,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -58,7 +59,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	source = zoci.NormalizeOCISource(source)
 
 	// ensure architecture is set
-	arch := config.GetArch(opts.Architecture)
+	arch := helpers.ResolveArch(opts.Architecture)
 
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {

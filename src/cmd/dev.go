@@ -63,7 +63,7 @@ func parseValues(ctx context.Context, valuesFiles []string, setValues map[string
 	return values, nil
 }
 
-func newDevCommand() *cobra.Command {
+func newDevCommand(architecture *architectureOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "dev",
 		Aliases: []string{"prepare", "prep"},
@@ -72,15 +72,15 @@ func newDevCommand() *cobra.Command {
 
 	v := getViper()
 
-	cmd.AddCommand(newDevDeployCommand(v))
+	cmd.AddCommand(newDevDeployCommand(v, architecture))
 	cmd.AddCommand(newDevGenerateCommand())
 	cmd.AddCommand(newDevPatchGitCommand())
 	cmd.AddCommand(newDevSha256SumCommand())
-	cmd.AddCommand(newDevInspectCommand(v))
-	cmd.AddCommand(newDevFindImagesCommand(v))
+	cmd.AddCommand(newDevInspectCommand(v, architecture))
+	cmd.AddCommand(newDevFindImagesCommand(v, architecture))
 	cmd.AddCommand(newDevGenerateConfigCommand())
-	cmd.AddCommand(newDevGenerateSchemaCommand(v))
-	cmd.AddCommand(newDevLintCommand(v))
+	cmd.AddCommand(newDevGenerateSchemaCommand(v, architecture))
+	cmd.AddCommand(newDevLintCommand(v, architecture))
 	cmd.AddCommand(newDevUpgradeSchemaCommand())
 	cmd.AddCommand(newDevTemplateCommand(v))
 
@@ -88,14 +88,15 @@ func newDevCommand() *cobra.Command {
 }
 
 type devGenerateSchemaOptions struct {
+	*architectureOptions
 	flavor         string
 	setPkgTmpl     map[string]string
 	update         bool
 	deleteNotFound bool
 }
 
-func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
-	o := &devGenerateSchemaOptions{}
+func newDevGenerateSchemaCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devGenerateSchemaOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:   "generate-schema [ PATH ]",
@@ -125,6 +126,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	}
 	schema, err := packager.GenerateValuesSchema(ctx, basePath, packager.GenerateValuesSchemaOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     o.selectedArchitecture(),
 			Flavor:           o.flavor,
 			SetVariables:     o.setPkgTmpl,
 			IsInteractive:    true,
@@ -146,25 +148,26 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	return nil
 }
 
-func newDevInspectCommand(v *viper.Viper) *cobra.Command {
+func newDevInspectCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect",
 		Short: "Commands to gather information about a Zarf package from its definition",
 	}
 
-	cmd.AddCommand(newDevInspectDefinitionCommand(v))
-	cmd.AddCommand(newDevInspectManifestsCommand(v))
-	cmd.AddCommand(newDevInspectValuesFilesCommand(v))
+	cmd.AddCommand(newDevInspectDefinitionCommand(v, architecture))
+	cmd.AddCommand(newDevInspectManifestsCommand(v, architecture))
+	cmd.AddCommand(newDevInspectValuesFilesCommand(v, architecture))
 	return cmd
 }
 
 type devInspectDefinitionOptions struct {
+	*architectureOptions
 	flavor     string
 	setPkgTmpl map[string]string
 }
 
-func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
-	o := &devInspectDefinitionOptions{}
+func newDevInspectDefinitionCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devInspectDefinitionOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:   "definition [ PATH ]",
@@ -190,6 +193,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 	loadOpts := load.DefinitionOptions{
+		Architecture:     o.selectedArchitecture(),
 		Flavor:           o.flavor,
 		SetVariables:     o.setPkgTmpl,
 		CachePath:        cachePath,
@@ -249,6 +253,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 }
 
 type devInspectManifestsOptions struct {
+	*architectureOptions
 	enableKustomizePlugins bool
 	flavor                 string
 	createSetPkgTmpl       map[string]string
@@ -265,8 +270,9 @@ func newDevInspectManifestsOptions() devInspectManifestsOptions {
 	}
 }
 
-func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
+func newDevInspectManifestsCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
 	o := newDevInspectManifestsOptions()
+	o.architectureOptions = architecture
 
 	cmd := &cobra.Command{
 		Use:   "manifests [ PATH ]",
@@ -309,6 +315,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
+		Architecture:           o.selectedArchitecture(),
 		EnableKustomizePlugins: o.enableKustomizePlugins,
 		CreateSetVariables:     o.createSetPkgTmpl,
 		DeploySetVariables:     o.deploySetVariables,
@@ -349,6 +356,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 }
 
 type devInspectValuesFilesOptions struct {
+	*architectureOptions
 	enableKustomizePlugins bool
 	flavor                 string
 	components             string
@@ -366,8 +374,9 @@ func newDevInspectValuesFilesOptions() devInspectValuesFilesOptions {
 	}
 }
 
-func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
+func newDevInspectValuesFilesCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
 	o := newDevInspectValuesFilesOptions()
+	o.architectureOptions = architecture
 
 	cmd := &cobra.Command{
 		Use:   "values-files [ PATH ]",
@@ -412,6 +421,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
+		Architecture:           o.selectedArchitecture(),
 		EnableKustomizePlugins: o.enableKustomizePlugins,
 		CreateSetVariables:     o.createSetPkgTmpl,
 		DeploySetVariables:     o.deploySetVariables,
@@ -449,6 +459,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 }
 
 type devDeployOptions struct {
+	*architectureOptions
 	createSetPkgTmpl      map[string]string
 	deploySetVariables    map[string]string
 	valuesFiles           []string
@@ -467,8 +478,8 @@ type devDeployOptions struct {
 	skipArchitectureCheck bool
 }
 
-func newDevDeployCommand(v *viper.Viper) *cobra.Command {
-	o := &devDeployOptions{}
+func newDevDeployCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devDeployOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -544,6 +555,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	err = packager.DevDeploy(ctx, basePath, packager.DevDeployOptions{
+		Architecture:          o.selectedArchitecture(),
 		AirgapMode:            o.noYOLO || !o.connected,
 		Flavor:                o.flavor,
 		RegistryURL:           o.registryURL,
@@ -812,6 +824,7 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 }
 
 type devFindImagesOptions struct {
+	*architectureOptions
 	enableKustomizePlugins bool
 	repoHelmChartPath      string
 	createSetPkgTmpl       map[string]string
@@ -826,8 +839,8 @@ type devFindImagesOptions struct {
 	update                 bool
 }
 
-func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
-	o := &devFindImagesOptions{}
+func newDevFindImagesCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devFindImagesOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:     "find-images [ PATH ]",
@@ -899,6 +912,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	findImagesOptions := packager.FindImagesOptions{
+		Architecture:           o.selectedArchitecture(),
 		EnableKustomizePlugins: o.enableKustomizePlugins,
 		RepoHelmChartPath:      o.repoHelmChartPath,
 		RegistryURL:            o.registryURL,
@@ -1073,12 +1087,13 @@ func (o *devGenerateConfigOptions) run(_ *cobra.Command, args []string) error {
 }
 
 type devLintOptions struct {
+	*architectureOptions
 	setPkgTmpl map[string]string
 	flavor     string
 }
 
-func newDevLintCommand(v *viper.Viper) *cobra.Command {
-	o := &devLintOptions{}
+func newDevLintCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devLintOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:     "lint [ PATH ]",
@@ -1109,6 +1124,7 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	err = packager.Lint(ctx, basePath, packager.LintOptions{
+		Architecture:  o.selectedArchitecture(),
 		Flavor:        o.flavor,
 		SetVariables:  o.setPkgTmpl,
 		CachePath:     cachePath,

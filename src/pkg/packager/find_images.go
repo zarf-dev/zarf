@@ -48,6 +48,8 @@ var (
 
 // FindImagesOptions declares the parameters to find images.
 type FindImagesOptions struct {
+	// Architecture overrides package metadata; standalone components use their declared variant.
+	Architecture string
 	// EnableKustomizePlugins allows plugins enabled in the package definition to execute arbitrary commands.
 	EnableKustomizePlugins bool
 	// RepoHelmChartPath specifies the path to helm charts in git repos defined in the zarf.yaml
@@ -127,6 +129,7 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 	}
 	loadOpts := load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     opts.Architecture,
 			Flavor:           opts.Flavor,
 			SetVariables:     opts.CreateSetVariables,
 			CachePath:        cachePath,
@@ -160,6 +163,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 
 	loadOpts := load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     opts.Architecture,
 			Flavor:           opts.Flavor,
 			SetVariables:     opts.CreateSetVariables,
 			CachePath:        opts.CachePath,

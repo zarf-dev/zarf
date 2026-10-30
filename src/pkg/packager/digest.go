@@ -12,6 +12,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -60,7 +61,7 @@ func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions
 		return depPkg.Digest, nil
 
 	case "oci":
-		platform := oci.PlatformForArch(config.GetArch(opts.Architecture))
+		platform := oci.PlatformForArch(helpers.ResolveArch(opts.Architecture))
 		remote, err := zoci.NewRemoteWithOptions(ctx, source, platform, zoci.RemoteClientOptions{
 			RemoteOptions: opts.RemoteOptions,
 		})

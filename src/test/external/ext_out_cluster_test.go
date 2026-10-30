@@ -13,11 +13,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
@@ -138,7 +138,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	tmpdir := t.TempDir()
 	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom")
 	suite.NoError(err)
-	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())), "--confirm"}
+	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", runtime.GOARCH)), "--confirm"}
 	mirrorArgs = append(mirrorArgs, outClusterCredentialArgs...)
 	err = exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
 	suite.NoError(err, "unable to mirror the package with zarf")
@@ -178,7 +178,7 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	// Deploy the flux example package
 	temp := suite.T().TempDir()
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
-	deployArgs := []string{"package", "deploy", filepath.Join(temp, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", config.GetArch())), "--confirm"}
+	deployArgs := []string{"package", "deploy", filepath.Join(temp, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", runtime.GOARCH)), "--confirm"}
 	err := exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
@@ -191,7 +191,7 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 
 	deployArgs = []string{
 		"package", "deploy",
-		filepath.Join(temp, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())),
+		filepath.Join(temp, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", runtime.GOARCH)),
 		"--confirm",
 		"--values", testValuesPath,
 	}
