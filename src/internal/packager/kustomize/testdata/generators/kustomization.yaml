@@ -1,0 +1,9 @@
+configMapGenerator:
+  - name: test
+    literals:
+      - key=value
+secretGenerator:
+  - name: auth
+    literals:
+      - username=username
+      - password=password
