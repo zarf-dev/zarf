@@ -62,18 +62,13 @@ func TestGetCreds(t *testing.T) {
 					PullPassword: "pull-password",
 					PullUsername: "pull-user",
 				},
-				ArtifactServer: state.ArtifactServerInfo{
-					Address:      "https://git-server.com",
-					PushUsername: "push-user",
-					PushToken:    "push-password",
-				},
 				RegistryInfo: state.RegistryInfo{
 					PullUsername: "pull-user",
 					PushUsername: "push-user",
 					PullPassword: "pull-password",
 					PushPassword: "push-password",
 					Address:      "127.0.0.1:30001",
-					NodePort:     30001,
+					Port:         30001,
 				},
 				Distro: "test",
 			}
@@ -118,14 +113,12 @@ func TestGetCredsOnlyConfiguredServices(t *testing.T) {
 		registryAddress string
 		registryMode    state.RegistryMode
 		gitAddress      string
-		artifactAddress string
 		wantKeys        []string
 	}{
-		{"none configured", "", state.RegistryModeNodePort, "", "", []string{}},
-		{"internal registry configured", "127.0.0.1:30001", state.RegistryModeNodePort, "", "", []string{registryKey, registryReadKey}},
-		{"external registry configured", "registry.example.com", state.RegistryModeExternal, "", "", []string{registryKey, registryReadKey}},
-		{"git configured", "", state.RegistryModeNodePort, "https://git.example.com", "", []string{gitKey, gitReadKey}},
-		{"artifact configured", "", state.RegistryModeNodePort, "", "https://artifact.example.com", []string{artifactKey}},
+		{"none configured", "", state.RegistryModeNodePort, "", []string{}},
+		{"internal registry configured", "127.0.0.1:30001", state.RegistryModeNodePort, "", []string{registryKey, registryReadKey}},
+		{"external registry configured", "registry.example.com", state.RegistryModeExternal, "", []string{registryKey, registryReadKey}},
+		{"git configured", "", state.RegistryModeNodePort, "https://git.example.com", []string{gitKey, gitReadKey}},
 	}
 
 	for _, tt := range tests {
@@ -144,10 +137,6 @@ func TestGetCredsOnlyConfiguredServices(t *testing.T) {
 					Address:      tt.gitAddress,
 					PushPassword: "git-push-password",
 					PullPassword: "git-pull-password",
-				},
-				ArtifactServer: state.ArtifactServerInfo{
-					Address:   tt.artifactAddress,
-					PushToken: "artifact-token",
 				},
 			}
 			b, err := json.Marshal(s)
@@ -180,7 +169,6 @@ func TestGetCredsOnlyConfiguredServices(t *testing.T) {
 				{registryReadKey, "registry-pull-password"},
 				{gitKey, "git-push-password"},
 				{gitReadKey, "git-pull-password"},
-				{artifactKey, "artifact-token"},
 				{"unknown", ""},
 			} {
 				buf.Reset()
@@ -335,7 +323,6 @@ func internalRegistryState(pullPassword string) *state.State {
 			RegistryMode: state.RegistryModeNodePort,
 			Address:      "127.0.0.1:31999",
 			Port:         31999,
-			NodePort:     31999,
 			PullUsername: "pull-user",
 			PullPassword: pullPassword,
 			PushUsername: "push-user",

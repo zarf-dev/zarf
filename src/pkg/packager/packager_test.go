@@ -3,16 +3,30 @@
 package packager
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestMain(m *testing.M) {
+	if err := feature.Set([]feature.Feature{
+		{Name: feature.Values, Enabled: true},
+		{Name: feature.V1Beta1, Enabled: true},
+	}); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
+}
 
 func genericChart(chart v1alpha1.ZarfChart) api.Chart {
 	return convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{{Charts: []v1alpha1.ZarfChart{chart}}}}).Components[0].Charts[0]

@@ -23,7 +23,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -32,8 +31,6 @@ func TestFindImages(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-
-	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck
 
 	tests := []struct {
 		name           string
@@ -411,9 +408,7 @@ func TestFindDefinitionImages(t *testing.T) {
 					},
 					ImageArchives: []api.ImageArchive{
 						{
-							Images: []string{
-								"docker.io/library/scratch:latest",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/scratch:latest"}},
 						},
 					},
 				},
@@ -447,14 +442,10 @@ func TestFindDefinitionImages(t *testing.T) {
 					},
 					ImageArchives: []api.ImageArchive{
 						{
-							Images: []string{
-								"docker.io/library/scratch:latest",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/scratch:latest"}},
 						},
 						{
-							Images: []string{
-								"docker.io/library/scratch:other",
-							},
+							Images: []api.ArchiveImage{{Name: "docker.io/library/scratch:other"}},
 						},
 					},
 				},
@@ -503,9 +494,12 @@ func TestFindDefinitionImagesComponentConfig(t *testing.T) {
 		APIVersion: v1beta1.APIVersion,
 		Kind:       v1beta1.ZarfComponentConfig,
 		Metadata:   v1beta1.ComponentMetadata{Name: "app"},
-		Component: v1beta1.ComponentSpec{Manifests: []v1beta1.Manifest{
-			{Name: "app", Files: []string{"pod.yaml"}},
-		}},
+		Component: v1beta1.ComponentSpec{
+			Images: []v1beta1.Image{{Name: "nginx:1.27", ID: "web"}},
+			Manifests: []v1beta1.Manifest{
+				{Name: "app", Files: []string{"pod.yaml"}},
+			},
+		},
 	}
 	configBytes, err := yaml.Marshal(config)
 	require.NoError(t, err)
@@ -516,7 +510,7 @@ func TestFindDefinitionImagesComponentConfig(t *testing.T) {
 	require.Len(t, results, 1)
 	require.Equal(t, config.Metadata.Name, results[0].ComponentName)
 	require.Equal(t, []ImageMatch{
-		{Image: api.Image{Name: image}, MatchType: MatchDefinite},
+		{Image: api.Image{Name: "nginx:1.27", ID: "web"}, MatchType: MatchDefinite},
 	}, results[0].Matches)
 }
 

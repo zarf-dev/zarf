@@ -23,8 +23,6 @@ var vendorCmds = []string{
 	"k9s",
 	"monitor",
 	"m",
-	"wait",
-	"w",
 	"crane",
 	"registry",
 	"r",
@@ -44,6 +42,21 @@ func checkVendorOnlyFromPath(cmd *cobra.Command) bool {
 	args := strings.Split(cmd.CommandPath(), " ")
 	// Check for "zarf tools|t <cmd>" where <cmd> is in the vendorCmd list
 	return IsVendorCmd(args, vendorCmds)
+}
+
+// vendorCmdInArgs reports whether the invocation targets a vendored tool, allowing for root
+// flags before the subcommand as in `zarf --log-level info tools helm list`. Unlike
+// IsVendorCmd that form still needs the root flags registered, so this is only used to avoid
+// colliding with the flags the vendored command defines for itself.
+// shortcut: a literal "tools" argument elsewhere (say a directory named tools) also matches,
+// costing only the -l/-a shorthands; upgrade to real flag parsing if that ever bites.
+func vendorCmdInArgs(args []string) bool {
+	for i, arg := range args {
+		if arg == "tools" || arg == "t" {
+			return i+1 < len(args) && slices.Contains(vendorCmds, args[i+1])
+		}
+	}
+	return false
 }
 
 // IsVendorCmd checks if the command is a vendor command.

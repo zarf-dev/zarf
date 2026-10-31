@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -28,10 +27,10 @@ func TestInspectResourcesComponentServices(t *testing.T) {
 		registry      bool
 		agent         bool
 	}{
-		{name: "renamed registry", apiVersion: v1beta1.APIVersion, componentName: "custom-registry", service: v1beta1.ServiceRegistry, registry: true},
-		{name: "renamed seed registry", apiVersion: v1beta1.APIVersion, componentName: "custom-seed", service: v1beta1.ServiceSeedRegistry, registry: true},
-		{name: "renamed agent", apiVersion: v1beta1.APIVersion, componentName: "custom-agent", service: v1beta1.ServiceAgent, agent: true},
-		{name: "service overrides name", apiVersion: v1beta1.APIVersion, componentName: "zarf-registry", service: v1beta1.ServiceAgent, agent: true},
+		{name: "renamed registry", apiVersion: v1beta1.APIVersion, componentName: "custom-registry", service: v1beta1.ServiceRegistry},
+		{name: "renamed seed registry", apiVersion: v1beta1.APIVersion, componentName: "custom-seed", service: v1beta1.ServiceSeedRegistry},
+		{name: "renamed agent", apiVersion: v1beta1.APIVersion, componentName: "custom-agent", service: v1beta1.ServiceAgent},
+		{name: "service overrides name", apiVersion: v1beta1.APIVersion, componentName: "zarf-registry", service: v1beta1.ServiceAgent},
 		{name: "registry name without service", apiVersion: v1beta1.APIVersion, componentName: "zarf-registry"},
 		{name: "agent name without service", apiVersion: v1beta1.APIVersion, componentName: "zarf-agent"},
 		{name: "legacy init registry", apiVersion: v1alpha1.APIVersion, componentName: "zarf-registry", registry: true},
@@ -65,6 +64,8 @@ stringData:
   seed: "###ZARF_SEED_REGISTRY###"
   htpasswd: "###ZARF_HTPASSWD###"
   agentKey: "###ZARF_AGENT_KEY###"
+  gitPush: "###ZARF_GIT_PUSH###"
+  gitPassword: "###ZARF_GIT_AUTH_PUSH###"
 `), 0o600))
 
 			check := func(t *testing.T, resources []Resource) {
@@ -74,6 +75,8 @@ stringData:
 					"###ZARF_SEED_REGISTRY###": tt.registry,
 					"###ZARF_HTPASSWD###":      tt.registry,
 					"###ZARF_AGENT_KEY###":     tt.agent,
+					"###ZARF_GIT_PUSH###":      tt.apiVersion == v1alpha1.APIVersion,
+					"###ZARF_GIT_AUTH_PUSH###": tt.apiVersion == v1alpha1.APIVersion,
 				} {
 					if rendered {
 						require.NotContains(t, resources[0].Content, marker)
@@ -100,7 +103,6 @@ stringData:
 }
 
 func TestInspectDefinitionResourcesComponentValuesSchema(t *testing.T) {
-	setupInspectTests(t)
 	dir := t.TempDir()
 	for name, contents := range map[string]string{
 		"zarf.yaml": `apiVersion: zarf.dev/v1beta1
@@ -144,12 +146,6 @@ metadata:
 
 var testDataRoot = "testdata/inspect"
 
-func setupInspectTests(t *testing.T) {
-	t.Helper()
-	// Enable values feature for tests (ignore error if already set)
-	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck
-}
-
 func inspectTestDataPath(parts ...string) string {
 	return filepath.Join(append([]string{testDataRoot}, parts...)...)
 }
@@ -168,7 +164,6 @@ func assertContainsAll(t *testing.T, resources []Resource, expectedContent []str
 }
 
 func TestInspectPackageResourcesSkipsValuesSchemaValidationWhenConfigured(t *testing.T) {
-	setupInspectTests(t)
 	ctx := testutil.TestContext(t)
 	srcDir := filepath.Join("load", "testdata", "package-with-invalid-values")
 	loaded, err := load.Package(ctx, srcDir, load.PackageOptions{SkipValuesSchemaValidation: true})
@@ -189,7 +184,6 @@ func TestInspectPackageResourcesSkipsValuesSchemaValidationWhenConfigured(t *tes
 
 func TestInspectDefinitionResources(t *testing.T) {
 	t.Parallel()
-	setupInspectTests(t)
 
 	tests := []struct {
 		name              string
@@ -372,8 +366,6 @@ func TestInspectDefinitionResources(t *testing.T) {
 
 func TestInspectDefinitionResources_Errors(t *testing.T) {
 	t.Parallel()
-	setupInspectTests(t)
-
 	tests := []struct {
 		name       string
 		packageDir string

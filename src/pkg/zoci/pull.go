@@ -5,15 +5,21 @@
 package zoci
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/internal/checksum"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
@@ -66,18 +72,92 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	if err != nil {
 		return nil, err
 	}
+	if err := restoreDuplicateLayers(destinationDir, layersToPull); err != nil {
+		return nil, err
+	}
+
 	r.Log().Info("finished pulling package layers", "duration", time.Since(start).Round(time.Millisecond*100))
 	return layersToPull, nil
 }
 
-// AssembleLayers returns the OCI layer descriptors for the requested components.
-// The include parameter specifies which layer types to return.
-// All layers are included if include is empty and Metadata layers are always included
-func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, requestedComponents []api.Component, include ...LayerType) ([]ocispec.Descriptor, error) {
-	if len(include) == 0 {
-		include = GetAllLayerTypes()
+// restoreDuplicateLayers restores each package file represented by duplicate OCI descriptors.
+// ORAS transfers each content digest once, so only one of several differently named files
+// with identical content is guaranteed to be materialized by the file store.
+func restoreDuplicateLayers(destinationDir string, layers []ocispec.Descriptor) error {
+	pathsByDigest := make(map[string][]string, len(layers))
+	for _, layer := range layers {
+		title := layer.Annotations[ocispec.AnnotationTitle]
+		if title == "" {
+			continue
+		}
+		path, err := packageLayerPath(destinationDir, title)
+		if err != nil {
+			return err
+		}
+		pathsByDigest[layer.Digest.String()] = append(pathsByDigest[layer.Digest.String()], path)
 	}
-	// Metadata layers are always included
+
+	for digest, paths := range pathsByDigest {
+		sourcePath := ""
+		sourceIndex := -1
+		for index, path := range paths {
+			info, err := os.Lstat(path)
+			if err == nil {
+				if !info.Mode().IsRegular() {
+					return fmt.Errorf("pulled layer %s at %q is not a regular file", digest, path)
+				}
+				sourcePath = path
+				sourceIndex = index
+				break
+			}
+			if !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("checking pulled layer %s at %q: %w", digest, path, err)
+			}
+		}
+		if sourcePath == "" {
+			return fmt.Errorf("pulled layer %s was not materialized", digest)
+		}
+
+		for index, destinationPath := range paths {
+			if destinationPath == sourcePath {
+				continue
+			}
+			// Paths before the source were already observed missing while locating it.
+			if index > sourceIndex {
+				if _, err := os.Lstat(destinationPath); err == nil {
+					continue
+				} else if !errors.Is(err, os.ErrNotExist) {
+					return fmt.Errorf("checking duplicate layer destination %q: %w", destinationPath, err)
+				}
+			}
+			if err := helpers.CreateParentDirectory(destinationPath); err != nil {
+				return fmt.Errorf("creating duplicate layer destination for %s: %w", digest, err)
+			}
+			if err := os.Link(sourcePath, destinationPath); err != nil {
+				if err := helpers.CreatePathAndCopy(sourcePath, destinationPath); err != nil {
+					return fmt.Errorf("restoring duplicate layer %s at %q: %w", digest, destinationPath, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func packageLayerPath(destinationDir, title string) (string, error) {
+	path := filepath.Join(destinationDir, filepath.FromSlash(title))
+	relative, err := filepath.Rel(destinationDir, path)
+	if err != nil {
+		return "", fmt.Errorf("calculating package layer path for %q: %w", title, err)
+	}
+	if title == "" || title == "." || !filepath.IsLocal(relative) {
+		return "", fmt.Errorf("invalid package layer title %q", title)
+	}
+	return path, nil
+}
+
+// AssembleLayers returns the OCI layer descriptors for the requested package resources.
+// Metadata layers are always included.
+func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, selection LayerSelection) ([]ocispec.Descriptor, error) {
 	layers := make([]ocispec.Descriptor, 0)
 	for _, path := range PackageAlwaysPull {
 		desc := root.Locate(path)
@@ -91,15 +171,19 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		return nil, err
 	}
 
-	if slices.Contains(include, ComponentLayers) || slices.Contains(include, ImageLayers) {
+	if selection.IncludeComponents || selection.IncludeImages {
+		requestedComponents := selection.RequestedComponents
+		if requestedComponents == nil {
+			requestedComponents = pkg.Components
+		}
 		componentLayers, images, err := LayersFromComponents(root, pkg, requestedComponents)
 		if err != nil {
 			return nil, err
 		}
-		if slices.Contains(include, ComponentLayers) {
+		if selection.IncludeComponents {
 			layers = append(layers, componentLayers...)
 		}
-		if slices.Contains(include, ImageLayers) && len(images) > 0 {
+		if selection.IncludeImages && len(images) > 0 {
 			imageLayers, err := LayersFromImages(ctx, root, fetcher, images)
 			if err != nil {
 				return nil, err
@@ -108,22 +192,179 @@ func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fet
 		}
 	}
 
-	if slices.Contains(include, SbomLayers) {
-		desc := root.Locate(layout.SBOMTar)
-		if !oci.IsEmptyDescriptor(desc) {
+	if selection.SBOMs != nil {
+		if len(selection.SBOMs.Keys) > 0 && !layout.UsesGranularResourceLayout(pkg) {
+			return nil, fmt.Errorf("SBOM selection by key requires package API version v1beta1+")
+		}
+		if layout.UsesGranularResourceLayout(pkg) {
+			sbomLayers, err := checksumVerifiedSBOMLayers(ctx, root, fetcher, pkg, selection.SBOMs.Keys)
+			if err != nil {
+				return nil, err
+			}
+			layers = append(layers, sbomLayers...)
+		} else if desc := root.Locate(layout.SBOMTar); !oci.IsEmptyDescriptor(desc) {
 			layers = append(layers, desc)
 		}
 	}
 
-	if slices.Contains(include, DocLayers) {
-		if len(pkg.Documentation) > 0 {
-			desc := root.Locate(layout.DocumentationTar)
-			if !oci.IsEmptyDescriptor(desc) {
+	if selection.Attachments != nil {
+		if layout.UsesGranularResourceLayout(pkg) {
+			attachmentLayers, err := attachmentResourceLayers(root, pkg.Attachments, selection.Attachments.Keys)
+			if err != nil {
+				return nil, err
+			}
+			layers = append(layers, attachmentLayers...)
+		} else if len(pkg.Attachments) > 0 {
+			if desc := root.Locate(layout.DocumentationTar); !oci.IsEmptyDescriptor(desc) {
 				layers = append(layers, desc)
 			}
 		}
 	}
+	return layers, nil
+}
 
+// attachmentResourceLayers validates every declared attachment resource before selecting the requested descriptors.
+func attachmentResourceLayers(root *oci.Manifest, attachments map[string]string, keys []string) ([]ocispec.Descriptor, error) {
+	allFileNames, err := layout.GetAttachmentFileNames(attachments, nil)
+	if err != nil {
+		return nil, err
+	}
+	selectedFileNames, err := layout.GetAttachmentFileNames(attachments, keys)
+	if err != nil {
+		return nil, err
+	}
+
+	declaredTitles := make(map[string]struct{}, len(allFileNames))
+	for _, fileName := range allFileNames {
+		declaredTitles[path.Join(layout.AttachmentsDir, fileName)] = struct{}{}
+	}
+	selectedTitles := make(map[string]struct{}, len(selectedFileNames))
+	for _, fileName := range selectedFileNames {
+		selectedTitles[path.Join(layout.AttachmentsDir, fileName)] = struct{}{}
+	}
+
+	descriptorsByTitle := make(map[string]ocispec.Descriptor, len(declaredTitles))
+	for _, descriptor := range root.Layers {
+		title := descriptor.Annotations[ocispec.AnnotationTitle]
+		if _, declared := declaredTitles[title]; declared {
+			if _, found := descriptorsByTitle[title]; found {
+				return nil, fmt.Errorf("multiple OCI descriptors represent attachment resource %q", title)
+			}
+			descriptorsByTitle[title] = descriptor
+			if descriptor.Annotations[layout.ResourceKindAnnotation] != layout.ResourceKindAttachment {
+				return nil, fmt.Errorf("attachment resource %q has an invalid OCI kind", title)
+			}
+			if descriptor.MediaType != layout.AttachmentLayerMediaTypeBlob {
+				return nil, fmt.Errorf("attachment resource %q has an invalid OCI media type %q", title, descriptor.MediaType)
+			}
+		} else if descriptor.Annotations[layout.ResourceKindAnnotation] == layout.ResourceKindAttachment {
+			return nil, fmt.Errorf("attachment resource %q is not declared by the package", title)
+		}
+	}
+	for title := range declaredTitles {
+		if _, found := descriptorsByTitle[title]; !found {
+			return nil, fmt.Errorf("attachment resource %q is missing from OCI manifest", title)
+		}
+	}
+
+	layers := make([]ocispec.Descriptor, 0, len(selectedTitles))
+	for _, descriptor := range root.Layers {
+		if _, selected := selectedTitles[descriptor.Annotations[ocispec.AnnotationTitle]]; selected {
+			layers = append(layers, descriptor)
+		}
+	}
+	return layers, nil
+}
+
+// checksumVerifiedSBOMLayers validates every checksum-listed SBOM resource before selecting requested resources.
+func checksumVerifiedSBOMLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, pkg api.Package, keys []string) ([]ocispec.Descriptor, error) {
+	checksumDesc := root.Locate(layout.Checksums)
+	if oci.IsEmptyDescriptor(checksumDesc) {
+		return nil, fmt.Errorf("checksums descriptor not found in OCI manifest")
+	}
+	checksums, err := content.FetchAll(ctx, fetcher, checksumDesc)
+	if err != nil {
+		return nil, fmt.Errorf("fetching checksum inventory: %w", err)
+	}
+	aggregateChecksum, err := checksum.GetSHA256Hash(bytes.NewReader(checksums))
+	if err != nil {
+		return nil, fmt.Errorf("hashing checksum inventory: %w", err)
+	}
+	if aggregateChecksum != pkg.Build.AggregateChecksum {
+		return nil, fmt.Errorf("checksum inventory digest mismatch: expected %s, found %s", pkg.Build.AggregateChecksum, aggregateChecksum)
+	}
+	entries, err := checksum.Parse(checksums)
+	if err != nil {
+		return nil, err
+	}
+
+	descriptorsByPath := make(map[string]ocispec.Descriptor)
+	for _, descriptor := range root.Layers {
+		resourcePath := descriptor.Annotations[ocispec.AnnotationTitle]
+		if !strings.HasPrefix(resourcePath, layout.SBOMResourcesDir+"/") {
+			continue
+		}
+		if _, found := descriptorsByPath[resourcePath]; found {
+			return nil, fmt.Errorf("multiple OCI descriptors represent SBOM resource %q", resourcePath)
+		}
+		descriptorsByPath[resourcePath] = descriptor
+	}
+
+	requested := make(map[string]struct{}, len(keys))
+	for _, key := range keys {
+		requested[key] = struct{}{}
+	}
+	var declaredImageReferences map[string]struct{}
+	if len(requested) > 0 {
+		declaredImageReferences = layout.SBOMImageReferenceSet(pkg)
+	}
+	foundRequested := make(map[string]struct{}, len(requested))
+	layers := []ocispec.Descriptor{}
+	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Path, layout.SBOMResourcesDir+"/") {
+			continue
+		}
+		descriptor, found := descriptorsByPath[entry.Path]
+		if !found {
+			return nil, fmt.Errorf("SBOM resource %q is missing from OCI manifest", entry.Path)
+		}
+		if descriptor.Annotations[ocispec.AnnotationTitle] != entry.Path {
+			return nil, fmt.Errorf("SBOM resource %q has an invalid OCI title", entry.Path)
+		}
+		if descriptor.Annotations[layout.ResourceKindAnnotation] != layout.ResourceKindSBOM {
+			return nil, fmt.Errorf("SBOM resource %q has an invalid OCI kind", entry.Path)
+		}
+		if descriptor.MediaType != layout.SBOMMediaTypeSyftJSON {
+			return nil, fmt.Errorf("SBOM resource %q has an invalid OCI media type %q", entry.Path, descriptor.MediaType)
+		}
+		if descriptor.Digest.String() != string(api.ChecksumSHA256)+":"+entry.Digest {
+			return nil, fmt.Errorf("SBOM resource %q has an OCI digest that does not match checksums.txt", entry.Path)
+		}
+		if len(requested) == 0 {
+			layers = append(layers, descriptor)
+			continue
+		}
+		kind, identifier, supported := layout.ParseSBOMResourcePath(entry.Path)
+		if !supported {
+			continue
+		}
+		selected := false
+		for key := range requested {
+			if !layout.SBOMKeyMatchesResource(kind, identifier, key, declaredImageReferences) {
+				continue
+			}
+			foundRequested[key] = struct{}{}
+			selected = true
+		}
+		if selected {
+			layers = append(layers, descriptor)
+		}
+	}
+	for _, key := range keys {
+		if _, found := foundRequested[key]; !found {
+			return nil, fmt.Errorf("SBOM key %q not found in package", key)
+		}
+	}
 	return layers, nil
 }
 
@@ -247,15 +488,13 @@ func layersFromIndexChildren(ctx context.Context, root *oci.Manifest, fetcher co
 	return layers, nil
 }
 
-// AssembleLayers returns the OCI layer descriptors for the requested components.
-// The include parameter specifies which layer types to return.
-// All layers are included if include is empty and Metadata layers are always included
-func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []api.Component, include ...LayerType) ([]ocispec.Descriptor, error) {
+// AssembleLayers returns the OCI layer descriptors for the requested package resources.
+func (r *Remote) AssembleLayers(ctx context.Context, selection LayerSelection) ([]ocispec.Descriptor, error) {
 	root, err := r.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return AssembleLayers(ctx, root, r, requestedComponents, include...)
+	return AssembleLayers(ctx, root, r, selection)
 }
 
 // LayersFromComponents returns the layers for the requested components and

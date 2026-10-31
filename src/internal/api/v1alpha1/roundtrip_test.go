@@ -199,6 +199,10 @@ func TestConvertGenericRoundTripFuzz(t *testing.T) {
 		pkg.APIVersion = v1alpha1.APIVersion
 		pkg.Kind = v1alpha1.ZarfPackageConfig
 		populateValidV1alpha1ChartSources(&pkg, rng, i)
+		// Full packages have no differential base version in the operational model.
+		if !pkg.Build.Differential {
+			pkg.Build.DifferentialPackageVersion = ""
+		}
 		pkg, _ = migrateDeprecated(pkg)
 
 		roundTripped := PackageToV1alpha1(PackageFromV1alpha1(pkg))
@@ -249,6 +253,10 @@ func TestConvertV1alpha1V1beta1RoundTripFuzz(t *testing.T) {
 		var pkg v1alpha1.ZarfPackage
 		testutil.FillValue(reflect.ValueOf(&pkg).Elem(), rng)
 		populateValidV1alpha1ChartSources(&pkg, rng, i)
+		// Full packages have no differential base version in the operational model.
+		if !pkg.Build.Differential {
+			pkg.Build.DifferentialPackageVersion = ""
+		}
 		pkg, _ = migrateDeprecated(pkg)
 
 		v1beta1Pkg := internalv1beta1.PackageToV1beta1(PackageFromV1alpha1(pkg))

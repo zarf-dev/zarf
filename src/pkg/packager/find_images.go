@@ -48,6 +48,8 @@ var (
 
 // FindImagesOptions declares the parameters to find images.
 type FindImagesOptions struct {
+	// EnableKustomizePlugins allows plugins enabled in the package definition to execute arbitrary commands.
+	EnableKustomizePlugins bool
 	// RepoHelmChartPath specifies the path to helm charts in git repos defined in the zarf.yaml
 	RepoHelmChartPath string
 	// RegistryURL specifies the value of the ###ZARF_REGISTRY### variable during templating
@@ -209,9 +211,28 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 			if err != nil {
 				return nil, fmt.Errorf("failed to find images in archive %s: %w", archive.Path, err)
 			}
-			imageArchive := api.ImageArchive{
-				Images: archiveImages,
-				Path:   archive.Path,
+			authored := make(map[string][]api.ArchiveImage, len(archive.Images))
+			for _, image := range archive.Images {
+				ref, err := transform.ParseImageRef(image.Name)
+				if err != nil {
+					return nil, fmt.Errorf("invalid image %q in archive %q: %w", image.Name, archive.Path, err)
+				}
+				authored[ref.Reference] = append(authored[ref.Reference], image)
+			}
+			imageArchive := api.ImageArchive{Path: archive.Path}
+			seen := make(map[string]bool, len(archiveImages))
+			for _, name := range archiveImages {
+				if seen[name] {
+					continue
+				}
+				seen[name] = true
+				if selected := authored[name]; len(selected) > 0 {
+					for _, image := range selected {
+						imageArchive.Images = append(imageArchive.Images, api.ArchiveImage{Name: name, ID: image.ID})
+					}
+				} else {
+					imageArchive.Images = append(imageArchive.Images, api.ArchiveImage{Name: name})
+				}
 			}
 			result.ImageArchives = append(result.ImageArchives, imageArchive)
 			allArchiveImages = append(allArchiveImages, archiveImages...)
@@ -226,31 +247,41 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 			return slices.Contains(allArchiveImages, match.Image.Name)
 		})
 		for j := range definitionImageResults[i].ImageArchives {
-			definitionImageResults[i].ImageArchives[j].Images = slices.DeleteFunc(definitionImageResults[i].ImageArchives[j].Images, func(s string) bool {
-				return !slices.Contains(allScanArtifacts, s)
+			definitionImageResults[i].ImageArchives[j].Images = slices.DeleteFunc(definitionImageResults[i].ImageArchives[j].Images, func(image api.ArchiveImage) bool {
+				return !slices.Contains(allScanArtifacts, image.Name)
 			})
 		}
-		sourcedByRef := make(map[string]api.Image)
+		authoredByRef := make(map[string][]api.Image)
 		for _, image := range pkg.Components[i].Images {
-			if image.Source == "" {
+			if image.Source == "" && image.ID == "" {
 				continue
 			}
 			ref, err := transform.ParseImageRef(image.Name)
 			if err != nil {
-				return nil, fmt.Errorf("invalid sourced image %q in component %q: %w", image.Name, pkg.Components[i].Name, err)
+				return nil, fmt.Errorf("invalid authored image %q in component %q: %w", image.Name, pkg.Components[i].Name, err)
 			}
-			sourcedByRef[ref.Reference] = image
+			authoredByRef[ref.Reference] = append(authoredByRef[ref.Reference], image)
 		}
-		for j := range definitionImageResults[i].Matches {
-			match := &definitionImageResults[i].Matches[j]
+		var matches []ImageMatch
+		seen := make(map[string]bool)
+		for _, match := range definitionImageResults[i].Matches {
 			ref, err := transform.ParseImageRef(match.Image.Name)
 			if err != nil {
 				return nil, fmt.Errorf("invalid scanned image %q in component %q: %w", match.Image.Name, pkg.Components[i].Name, err)
 			}
-			if image, found := sourcedByRef[ref.Reference]; found {
-				match.Image = image
+			if seen[ref.Reference] {
+				continue
+			}
+			seen[ref.Reference] = true
+			if authored, found := authoredByRef[ref.Reference]; found {
+				for _, image := range authored {
+					matches = append(matches, ImageMatch{Image: image, MatchType: match.MatchType})
+				}
+			} else {
+				matches = append(matches, match)
 			}
 		}
+		definitionImageResults[i].Matches = matches
 	}
 
 	return definitionImageResults, nil
@@ -289,7 +320,7 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 		}
 		scan := ComponentImageScan{ComponentName: component.Name}
 
-		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Service.Name, s)
+		applicationTemplates, err := template.GetZarfTemplates(ctx, pkg.GetAPIVersion(), component.Service.Name, s)
 		if err != nil {
 			return nil, err
 		}
@@ -376,7 +407,7 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, resourceSet, compBuildPath, variableConfig, vals, pkg, itpl.StateAccess{State: s, AccessKeys: component.StateAccess})
+			manifestResources, err := getTemplatedManifests(ctx, manifest, resourceSet, compBuildPath, variableConfig, vals, pkg, itpl.StateAccess{State: s, AccessKeys: component.StateAccess}, opts.EnableKustomizePlugins)
 			if err != nil {
 				return nil, err
 			}

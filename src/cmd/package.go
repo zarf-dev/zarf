@@ -44,6 +44,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func newPackageCommand() *cobra.Command {
@@ -605,7 +606,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
 
-	if len(pkg.Documentation) > 0 {
+	if len(pkg.Attachments) > 0 {
 		l.Info("documentation available for this package - use 'zarf package inspect documentation' to view")
 	}
 
@@ -618,7 +619,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 			return err
 		}
 		SBOMPath := filepath.Join(cwd, "zarf-sbom")
-		err = pkgLayout.GetSBOM(ctx, SBOMPath)
+		err = pkgLayout.GetSBOM(ctx, SBOMPath, nil)
 		if err != nil {
 			return err
 		}
@@ -1009,7 +1010,7 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
+		LayerSelection:       &zoci.LayerSelection{IncludeComponents: true},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1118,7 +1119,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
+		LayerSelection:       &zoci.LayerSelection{IncludeComponents: true},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1164,6 +1165,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 
 // packageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
 type packageInspectSBOMOptions struct {
+	keys           []string
 	outputDir      string
 	ociConcurrency int
 	packageVerifyFlags
@@ -1188,6 +1190,8 @@ func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated component names or image references for SBOMs to extract. "+
+		"Key selection is supported only for v1beta1 packages.")
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
@@ -1211,7 +1215,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Architecture:         config.GetArch(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
-		LayerTypes:           []zoci.LayerType{zoci.SbomLayers},
+		LayerSelection:       &zoci.LayerSelection{SBOMs: &zoci.SBOMSelection{Keys: o.keys}},
 		Filter:               filters.Empty(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1225,9 +1229,13 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
+
+	if len(o.keys) > 0 && pkgLayout.Definition().GetAPIVersion() == v1alpha1.APIVersion {
+		return fmt.Errorf("SBOM selection by key requires package API version v1beta1+")
+	}
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
 	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.Definition().Metadata.Name))
-	err = pkgLayout.GetSBOM(ctx, outputPath)
+	err = pkgLayout.GetSBOM(ctx, outputPath, o.keys)
 	if err != nil {
 		return fmt.Errorf("could not get SBOM: %w", err)
 	}
@@ -1326,6 +1334,7 @@ func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectDocumentationOptions()
 	cmd := &cobra.Command{
 		Use:     "documentation [ PACKAGE_SOURCE ]",
+		Aliases: []string{"attachments"},
 		Short:   "Extract documentation files from the package",
 		Example: lang.CmdPackageInspectDocumentationExample,
 		Args:    cobra.MaximumNArgs(1),
@@ -1360,7 +1369,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayerTypes:           []zoci.LayerType{zoci.DocLayers},
+		LayerSelection:       &zoci.LayerSelection{Attachments: &zoci.AttachmentSelection{Keys: o.keys}},
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -1371,7 +1380,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 	}()
 	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
 	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", filepath.Base(pkgLayout.Definition().Metadata.Name)))
-	return pkgLayout.GetDocumentation(ctx, outputPath, o.keys)
+	return pkgLayout.GetAttachments(ctx, outputPath, o.keys)
 }
 
 type packageInspectDefinitionOptions struct {
@@ -1780,8 +1789,15 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			WithBuildMachineInfo: o.withBuildMachineInfo,
 			Tag:                  o.tag,
 		}
-		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
-		return err
+		pkgRef, err := packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
+		if err != nil {
+			return err
+		}
+		// The skeleton is already published, so failing to show the example should not fail the command.
+		if err := printSkeletonImportExample(ctx, pkgRef, skeletonOpts.RemoteOptions); err != nil {
+			l.Warn("unable to print the skeleton import example", "error", err)
+		}
+		return nil
 	}
 
 	if helpers.IsOCIURL(packageSource) && o.signingKeyPath == "" {
@@ -1856,20 +1872,63 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	publishSignOpts := signing.DefaultSignBlobOptions()
-	publishSignOpts.Key = o.signingKeyPath
-	publishSignOpts.Password = o.signingKeyPassword
-	publishSignOpts.Overwrite = true
+	if o.signingKeyPath != "" {
+		publishSignOpts := signing.DefaultSignBlobOptions()
+		publishSignOpts.Key = o.signingKeyPath
+		publishSignOpts.Password = o.signingKeyPassword
+		publishSignOpts.Overwrite = true
+		if err := pkgLayout.SignPackage(ctx, &publishSignOpts); err != nil {
+			return fmt.Errorf("unable to sign package: %w", err)
+		}
+	}
 	publishPackageOpts := packager.PublishPackageOptions{
-		OCIConcurrency:  o.ociConcurrency,
-		SignBlobOptions: publishSignOpts,
-		Retries:         o.retries,
-		RemoteOptions:   defaultRemoteOptions(),
-		Tag:             o.tag,
+		OCIConcurrency: o.ociConcurrency,
+		Retries:        o.retries,
+		RemoteOptions:  defaultRemoteOptions(),
+		Tag:            o.tag,
 	}
 
 	_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)
 	return err
+}
+
+// printSkeletonImportExample prints components that import each component from the published skeleton.
+// It reads the definition back from the registry so it matches what was published without resolving imports again.
+func printSkeletonImportExample(ctx context.Context, pkgRef registry.Reference, remoteOpts types.RemoteOptions) error {
+	l := logger.From(ctx)
+	remote, err := zoci.NewRemoteWithOptions(ctx, pkgRef.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
+		RemoteOptions: remoteOpts,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to create remote for %s: %w", pkgRef, err)
+	}
+	pkg, err := remote.FetchZarfYAML(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to fetch the published package definition: %w", err)
+	}
+	l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
+	if err := utils.ColorPrintYAML(skeletonImportExample(pkg, pkgRef), nil, false); err != nil {
+		return fmt.Errorf("unable to print the import example: %w", err)
+	}
+	l.Info("find more info on skeleton packages at https://docs.zarf.dev/faq/#what-is-a-skeleton-zarf-package")
+	return nil
+}
+
+// skeletonImportExample returns components that import each component of pkg from the skeleton published at ref,
+// converted to v1alpha1 for user-facing serialization. Skeletons are v1alpha1-only, so this does not branch on
+// apiVersion like packageForDisplay.
+func skeletonImportExample(pkg api.Package, ref registry.Reference) []v1alpha1.ZarfComponent {
+	ex := api.Package{Components: make([]api.Component, 0, len(pkg.Components))}
+	for _, c := range pkg.Components {
+		ex.Components = append(ex.Components, api.Component{
+			Name: fmt.Sprintf("import-%s", c.Name),
+			Import: api.ComponentImport{
+				Name:   c.Name,
+				Remote: []api.ComponentImportRemote{{URL: helpers.OCIURLPrefix + ref.String()}},
+			},
+		})
+	}
+	return convert.PackageToV1alpha1(ex).Components
 }
 
 type packagePullOptions struct {
@@ -2151,7 +2210,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayerTypes:           []zoci.LayerType{zoci.MetadataLayers},
+		LayerSelection:       &zoci.LayerSelection{},
 	}
 
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)

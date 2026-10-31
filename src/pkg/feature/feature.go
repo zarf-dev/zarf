@@ -264,17 +264,18 @@ func init() {
 		},
 		{
 			Name:        ArtifactServer,
-			Description: "Creates the deprecated artifact server during Zarf init when the git-server component is deployed.",
+			Description: "Retired: Created the artifact server during Zarf init",
 			Enabled:     false,
 			Since:       "v0.87.0",
+			Until:       "v1.0.0",
 			Stage:       Deprecated,
 		},
 		{
 			Name:        V1Beta1,
 			Description: "Enables package creation and component publishing using the zarf.dev/v1beta1 API version.",
-			Enabled:     false,
+			Enabled:     true,
 			Since:       "v0.88.0",
-			Stage:       Alpha,
+			Stage:       Beta,
 		},
 	}
 

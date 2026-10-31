@@ -4,13 +4,14 @@
 package load
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
 
 // mergeComponentConfigSpec overlays override onto imported.
-func mergeComponentConfigSpec(imported, override v1beta1.ComponentSpec) v1beta1.ComponentSpec {
+func mergeComponentConfigSpec(imported, override v1beta1.ComponentSpec) (v1beta1.ComponentSpec, error) {
 	merged := imported
 
 	if override.Target.OS != "" {
@@ -26,21 +27,37 @@ func mergeComponentConfigSpec(imported, override v1beta1.ComponentSpec) v1beta1.
 	merged.StateAccess = append(merged.StateAccess, override.StateAccess...)
 
 	merged.Images = mergeImages(merged.Images, override.Images)
-	merged.Charts = mergeCharts(merged.Charts, override.Charts)
+	var err error
+	merged.Charts, err = mergeCharts(merged.Charts, override.Charts)
+	if err != nil {
+		return v1beta1.ComponentSpec{}, err
+	}
 	merged.Manifests = mergeManifests(merged.Manifests, override.Manifests)
 	merged.Actions = mergeActions(merged.Actions, override.Actions)
 
-	return merged
+	return merged, nil
 }
 
-// mergeImages merges images by name. The head value of source (and future fields) wins when set.
+// mergeImages matches non-empty IDs first, then names. Non-empty head fields take precedence.
 func mergeImages(base, head []v1beta1.Image) []v1beta1.Image {
 	out := slices.Clone(base)
 	for _, h := range head {
-		idx := slices.IndexFunc(out, func(img v1beta1.Image) bool { return img.Name == h.Name })
+		idx := -1
+		if h.ID != "" {
+			idx = slices.IndexFunc(out, func(img v1beta1.Image) bool { return img.ID == h.ID })
+		}
+		if idx == -1 {
+			idx = slices.IndexFunc(out, func(img v1beta1.Image) bool { return img.Name == h.Name })
+		}
 		if idx == -1 {
 			out = append(out, h)
 			continue
+		}
+		if h.ID != "" {
+			out[idx].ID = h.ID
+		}
+		if h.Name != "" {
+			out[idx].Name = h.Name
 		}
 		if h.Source != "" {
 			out[idx].Source = h.Source
@@ -49,7 +66,7 @@ func mergeImages(base, head []v1beta1.Image) []v1beta1.Image {
 	return out
 }
 
-func mergeCharts(base, headCharts []v1beta1.Chart) []v1beta1.Chart {
+func mergeCharts(base, headCharts []v1beta1.Chart) ([]v1beta1.Chart, error) {
 	out := slices.Clone(base)
 	for _, headChart := range headCharts {
 		idx := slices.IndexFunc(out, func(chart v1beta1.Chart) bool { return chart.Name == headChart.Name })
@@ -58,29 +75,48 @@ func mergeCharts(base, headCharts []v1beta1.Chart) []v1beta1.Chart {
 			continue
 		}
 		importedChart := out[idx]
+		if err := validateChartSourceOverride(importedChart, headChart); err != nil {
+			return nil, err
+		}
 		if headChart.Namespace != "" {
 			importedChart.Namespace = headChart.Namespace
 		}
 		if headChart.ReleaseName != "" {
 			importedChart.ReleaseName = headChart.ReleaseName
 		}
-		if hasChartSource(headChart) {
-			importedChart.HelmRepository = nil
-			importedChart.Git = nil
-			importedChart.Local = nil
-			importedChart.OCI = nil
-		}
+		// Preserve different source types so resolved validation rejects conflicts.
 		if headChart.HelmRepository != nil {
-			importedChart.HelmRepository = headChart.HelmRepository
+			source := *headChart.HelmRepository
+			if importedChart.HelmRepository != nil {
+				source = *importedChart.HelmRepository
+				if headChart.HelmRepository.Version != "" {
+					source.Version = headChart.HelmRepository.Version
+				}
+			}
+			importedChart.HelmRepository = &source
 		}
 		if headChart.Git != nil {
-			importedChart.Git = headChart.Git
+			source := *headChart.Git
+			if importedChart.Git != nil {
+				source = *importedChart.Git
+				if headChart.Git.Ref != (v1beta1.GitRef{}) {
+					source.Ref = headChart.Git.Ref
+				}
+			}
+			importedChart.Git = &source
 		}
-		if headChart.Local != nil {
+		if headChart.Local != nil && importedChart.Local == nil {
 			importedChart.Local = headChart.Local
 		}
 		if headChart.OCI != nil {
-			importedChart.OCI = headChart.OCI
+			source := *headChart.OCI
+			if importedChart.OCI != nil {
+				source = *importedChart.OCI
+				if headChart.OCI.Ref != (v1beta1.OCIRef{}) {
+					source.Ref = headChart.OCI.Ref
+				}
+			}
+			importedChart.OCI = &source
 		}
 		if headChart.ServerSideApply != "" {
 			importedChart.ServerSideApply = headChart.ServerSideApply
@@ -95,10 +131,42 @@ func mergeCharts(base, headCharts []v1beta1.Chart) []v1beta1.Chart {
 		importedChart.Values = append(importedChart.Values, headChart.Values...)
 		out[idx] = importedChart
 	}
-	return out
+	return out, nil
 }
-func hasChartSource(chart v1beta1.Chart) bool {
-	return chart.HelmRepository != nil || chart.Git != nil || chart.Local != nil || chart.OCI != nil
+
+func validateChartSourceOverride(base, head v1beta1.Chart) error {
+	type fieldOverride struct {
+		name, base, head string
+	}
+	var fields []fieldOverride
+	if base.HelmRepository != nil && head.HelmRepository != nil {
+		name := base.HelmRepository.Name
+		if name == "" {
+			name = base.Name
+		}
+		fields = append(fields,
+			fieldOverride{"helmRepository.url", base.HelmRepository.URL, head.HelmRepository.URL},
+			fieldOverride{"helmRepository.name", name, head.HelmRepository.Name},
+		)
+	}
+	if base.Git != nil && head.Git != nil {
+		fields = append(fields,
+			fieldOverride{"git.url", base.Git.URL, head.Git.URL},
+			fieldOverride{"git.path", base.Git.Path, head.Git.Path},
+		)
+	}
+	if base.OCI != nil && head.OCI != nil {
+		fields = append(fields, fieldOverride{"oci.url", base.OCI.URL, head.OCI.URL})
+	}
+	if base.Local != nil && head.Local != nil {
+		fields = append(fields, fieldOverride{"local.path", base.Local.Path, head.Local.Path})
+	}
+	for _, field := range fields {
+		if field.head != "" && field.head != field.base {
+			return fmt.Errorf("chart %q cannot override %s from %q to %q; only source version or ref can be overridden", head.Name, field.name, field.base, field.head)
+		}
+	}
+	return nil
 }
 
 func mergeManifests(base, head []v1beta1.Manifest) []v1beta1.Manifest {
@@ -165,7 +233,7 @@ func fixPathsV1Beta1(spec v1beta1.ComponentSpec, relativeToHead string) v1beta1.
 		spec.ImageArchives[i].Path = makePathRelativeTo(spec.ImageArchives[i].Path, relativeToHead)
 	}
 	for i := range spec.Charts {
-		if spec.Charts[i].Local != nil {
+		if spec.Charts[i].Local != nil && spec.Charts[i].Local.Path != "" {
 			spec.Charts[i].Local.Path = makePathRelativeTo(spec.Charts[i].Local.Path, relativeToHead)
 		}
 		for j := range spec.Charts[i].ValuesFiles {

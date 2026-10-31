@@ -1000,9 +1000,6 @@ github.com/bodgit/sevenzip/internal/zstd
 # github.com/bodgit/windows v1.0.1
 ## explicit; go 1.13
 github.com/bodgit/windows
-# github.com/bshuster-repo/logrus-logstash-hook v1.1.0
-## explicit; go 1.16
-github.com/bshuster-repo/logrus-logstash-hook
 # github.com/buger/jsonparser v1.1.2
 ## explicit; go 1.13
 github.com/buger/jsonparser
@@ -1347,8 +1344,8 @@ github.com/diskfs/go-diskfs/backend
 github.com/diskfs/go-diskfs/backend/file
 github.com/diskfs/go-diskfs/filesystem
 github.com/diskfs/go-diskfs/filesystem/squashfs
-# github.com/distribution/distribution/v3 v3.1.1
-## explicit; go 1.25.0
+# github.com/distribution/distribution/v3 v3.1.2
+## explicit; go 1.26.0
 github.com/distribution/distribution/v3
 github.com/distribution/distribution/v3/configuration
 github.com/distribution/distribution/v3/health
@@ -1427,8 +1424,8 @@ github.com/docker/go-connections/tlsconfig
 # github.com/docker/go-events v0.0.0-20250808211157-605354379745
 ## explicit
 github.com/docker/go-events
-# github.com/docker/go-metrics v0.0.1
-## explicit; go 1.11
+# github.com/docker/go-metrics v0.1.0
+## explicit; go 1.21
 github.com/docker/go-metrics
 # github.com/docker/go-units v0.5.0
 ## explicit
@@ -1569,7 +1566,7 @@ github.com/fluxcd/pkg/apis/acl
 # github.com/fluxcd/pkg/apis/meta v1.31.0
 ## explicit; go 1.26.0
 github.com/fluxcd/pkg/apis/meta
-# github.com/fluxcd/source-controller/api v1.9.5
+# github.com/fluxcd/source-controller/api v1.9.6
 ## explicit; go 1.26.0
 github.com/fluxcd/source-controller/api/v1
 # github.com/fsnotify/fsnotify v1.10.1
@@ -1682,7 +1679,7 @@ github.com/go-gorp/gorp/v3
 # github.com/go-ini/ini v1.67.0
 ## explicit
 github.com/go-ini/ini
-# github.com/go-jose/go-jose/v4 v4.1.4
+# github.com/go-jose/go-jose/v4 v4.1.6
 ## explicit; go 1.24.0
 github.com/go-jose/go-jose/v4
 github.com/go-jose/go-jose/v4/cipher
@@ -3571,7 +3568,6 @@ golang.org/x/net/html/atom
 golang.org/x/net/html/charset
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
-golang.org/x/net/http2/h2c
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/httpcommon
@@ -3992,9 +3988,6 @@ gopkg.in/ini.v1
 # gopkg.in/warnings.v0 v0.1.2
 ## explicit
 gopkg.in/warnings.v0
-# gopkg.in/yaml.v2 v2.4.0
-## explicit; go 1.15
-gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3

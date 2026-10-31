@@ -221,40 +221,6 @@ func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageNam
 	return installedCharts, nil
 }
 
-// UpdateInternalArtifactServerToken updates the the artifact server token on the internal gitea server and returns it
-func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitServer state.GitServerInfo) (string, error) {
-	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
-	if err != nil {
-		return "", err
-	}
-	_, err = tunnel.Connect(ctx)
-	if err != nil {
-		return "", err
-	}
-	defer tunnel.Close()
-	// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
-	tunnelURLs := tunnel.HTTPEndpoints()
-	if len(tunnelURLs) == 0 {
-		return "", errors.New("no tunnel endpoints found")
-	}
-	giteaClient, err := gitea.NewClient(tunnelURLs[0], oldGitServer.PushUsername, oldGitServer.PushPassword)
-	if err != nil {
-		return "", err
-	}
-	var newToken string
-	err = tunnel.Wrap(func() error {
-		newToken, err = giteaClient.CreatePackageRegistryToken(ctx)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return "", err
-	}
-	return newToken, nil
-}
-
 // UpdateInternalGitServerSecret updates the internal gitea server secrets with the new git server info
 func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServer state.GitServerInfo, newGitServer state.GitServerInfo) error {
 	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)

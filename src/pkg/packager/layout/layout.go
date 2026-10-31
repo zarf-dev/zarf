@@ -10,6 +10,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 // Constants used in the default package layout.
@@ -30,11 +33,18 @@ const (
 	SBOMDir = "zarf-sbom"
 	SBOMTar = "sboms.tar"
 
+	// AttachmentsDir contains individually-addressable attachment resources in v1beta1 and later packages.
+	AttachmentsDir   = "attachments"
 	DocumentationTar = "documentation.tar"
-
-	IndexJSON = "index.json"
-	OCILayout = "oci-layout"
+	IndexJSON        = "index.json"
+	OCILayout        = "oci-layout"
 )
+
+// UsesGranularResourceLayout reports whether a package stores documentation and SBOMs as individual files.
+// v1alpha1, including definitions that omit apiVersion, retains archive-backed resources.
+func UsesGranularResourceLayout(pkg api.Package) bool {
+	return pkg.GetAPIVersion() != v1alpha1.APIVersion
+}
 
 var (
 	// IndexPath is the path to the index.json file

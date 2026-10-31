@@ -44,20 +44,19 @@ const (
 	ZarfPackageInfoLabel = "package-deploy-info"
 )
 
-// ServiceKey identifies a Zarf-managed service in state (registry, git, artifact, agent).
+// ServiceKey identifies a Zarf-managed service in state (registry, git, agent).
 type ServiceKey string
 
 // Credential keys
 const (
 	RegistryKey ServiceKey = "registry"
 	GitKey      ServiceKey = "git"
-	ArtifactKey ServiceKey = "artifact"
 	AgentKey    ServiceKey = "agent"
 )
 
 // AllServiceKeys is the canonical ordered list of every supported service key.
 func AllServiceKeys() []ServiceKey {
-	return []ServiceKey{RegistryKey, GitKey, ArtifactKey, AgentKey}
+	return []ServiceKey{RegistryKey, GitKey, AgentKey}
 }
 
 // ServiceSet is an unordered set of ServiceKeys.
@@ -134,8 +133,7 @@ const (
 	ZarfGitReadUser = "zarf-git-read-user"
 	ZarfAgentHost   = "agent-hook.zarf.svc"
 
-	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
-	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+	ZarfInClusterGitServiceURL = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 
 	// ZarfRegistryMTLSServerCommonName is the common name for the registry server certificate
 	ZarfRegistryMTLSServerCommonName = "zarf-docker-registry"
@@ -180,8 +178,6 @@ type State struct {
 	GitServer GitServerInfo `json:"gitServer"`
 	// Information about the container registry Zarf is configured to use
 	RegistryInfo RegistryInfo `json:"registryInfo"`
-	// Information about the artifact registry Zarf is configured to use
-	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
 }
 
 // AgentInfo contains information Zarf uses to configure the agent.
@@ -349,39 +345,6 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 	}
 
 	return nil
-}
-
-// ArtifactServerInfo contains information Zarf uses to communicate with a artifact registry to push/pull repositories to.
-type ArtifactServerInfo struct {
-	// Username of a user with push access to the artifact registry
-	PushUsername string `json:"pushUsername"`
-	// Password of a user with push access to the artifact registry
-	PushToken string `json:"pushPassword"`
-	// URL address of the artifact registry
-	Address string `json:"address"`
-}
-
-// IsInternal returns true if the artifact server URL is equivalent to the artifact server deployed through the default init package
-func (as ArtifactServerInfo) IsInternal() bool {
-	return as.Address == ZarfInClusterArtifactServiceURL
-}
-
-// IsConfigured returns true if the artifact server address has been set.
-func (as ArtifactServerInfo) IsConfigured() bool {
-	return as.Address != ""
-}
-
-// FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
-func (as *ArtifactServerInfo) FillInEmptyValues() {
-	// Set default svc url if an external registry was not provided
-	if as.Address == "" {
-		as.Address = ZarfInClusterArtifactServiceURL
-	}
-
-	// Set the push username to the git push user if not specified
-	if as.PushUsername == "" {
-		as.PushUsername = ZarfGitPushUser
-	}
 }
 
 // MTLSStrategy defines the strategy to manage the mTLS certificates for the registry
@@ -647,9 +610,11 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	return nil
 }
 
-// Default returns a default State with default values filled in for the registry, git server, and artifact server
+// Default returns a State with default service values for offline rendering.
 func Default() (*State, error) {
-	state := &State{}
+	state := &State{
+		AgentInfo: AgentInfo{MutationPolicy: MutationPolicyAll},
+	}
 	err := state.GitServer.FillInEmptyValues()
 	if err != nil {
 		return nil, err
@@ -658,7 +623,6 @@ func Default() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	state.ArtifactServer.FillInEmptyValues()
 	state.Reconcile()
 	return state, nil
 }
@@ -666,10 +630,9 @@ func Default() (*State, error) {
 // MergeOptions tracks the user-defined options during cluster initialization.
 // TODO(mkcp): Provide semantic doccomments for how exported fields are used.
 type MergeOptions struct {
-	GitServer      GitServerInfo
-	RegistryInfo   RegistryInfo
-	ArtifactServer ArtifactServerInfo
-	Services       ServiceSet
+	GitServer    GitServerInfo
+	RegistryInfo RegistryInfo
+	Services     ServiceSet
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
@@ -718,15 +681,6 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			if newState.GitServer.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
-		}
-	}
-	if opts.Services.Has(ArtifactKey) {
-		// TODO: Replace use of reflections with explicit setting
-		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, opts.ArtifactServer)
-
-		// Only clear token for autogeneration if the user didn't provide one and the artifact server is internal
-		if opts.ArtifactServer.PushToken == "" && oldState.ArtifactServer.IsInternal() {
-			newState.ArtifactServer.PushToken = ""
 		}
 	}
 	if opts.Services.Has(AgentKey) {
@@ -780,9 +734,6 @@ func sanitizeState(s *State) *State {
 	s.RegistryInfo.PullPassword = "**sanitized**"
 	s.RegistryInfo.Secret = "**sanitized**"
 
-	// Overwrite the ArtifactServer secret
-	s.ArtifactServer.PushToken = "**sanitized**"
-
 	return s
 }
 
@@ -822,9 +773,10 @@ const (
 type DeployedPackage struct {
 	Name   string `json:"name"`
 	Digest string `json:"digest"`
-	// Deprecated: use PackageData or Definition() instead. This field is kept so older clients can read package deployment state.
-	Data                v1alpha1.ZarfPackage       `json:"data"`
-	PackageData         map[string]json.RawMessage `json:"packageData"`
+	// Data contains the v1alpha1 definition
+	Data v1alpha1.ZarfPackage `json:"data"`
+	// PackageData contains the v1beta1 definition and future definitions
+	PackageData         map[string]json.RawMessage `json:"packageData,omitempty"`
 	CLIVersion          string                     `json:"cliVersion"`
 	Generation          int                        `json:"generation"`
 	DeployedComponents  []DeployedComponent        `json:"deployedComponents"`
@@ -866,16 +818,8 @@ func NewDeployedPackage(definition api.Package, digest, cliVersion string, compo
 // Data always contains the v1alpha1 form to allow older Zarf clients to read the
 // deployed package secret.
 func (d *DeployedPackage) SetPackageDefinition(definition api.Package) error {
-	alpha := convert.PackageToV1alpha1(definition)
-	alphaData, err := json.Marshal(alpha)
-	if err != nil {
-		return fmt.Errorf("marshal %s package data: %w", v1alpha1.APIVersion, err)
-	}
-
-	d.Data = alpha
-	d.PackageData = map[string]json.RawMessage{
-		v1alpha1.APIVersion: alphaData,
-	}
+	d.Data = convert.PackageToV1alpha1(definition)
+	d.PackageData = nil
 
 	switch definition.GetAPIVersion() {
 	case "", v1alpha1.APIVersion:
@@ -885,7 +829,7 @@ func (d *DeployedPackage) SetPackageDefinition(definition api.Package) error {
 		if err != nil {
 			return fmt.Errorf("marshal %s package data: %w", v1beta1.APIVersion, err)
 		}
-		d.PackageData[v1beta1.APIVersion] = betaData
+		d.PackageData = map[string]json.RawMessage{v1beta1.APIVersion: betaData}
 		return nil
 	default:
 		return fmt.Errorf("unsupported package API version %q", definition.APIVersion)
@@ -893,13 +837,8 @@ func (d *DeployedPackage) SetPackageDefinition(definition api.Package) error {
 }
 
 // Definition returns the latest package definition this Zarf version
-// understands. Deployed package secrets written before PackageData was added
-// fall back to their legacy v1alpha1 Data field.
+// understands, falling back to the v1alpha1 Data field.
 func (d DeployedPackage) Definition() (api.Package, error) {
-	if len(d.PackageData) == 0 {
-		return convert.PackageFromV1alpha1(d.Data), nil
-	}
-
 	if data, found := d.PackageData[v1beta1.APIVersion]; found {
 		var pkg v1beta1.Package
 		if err := json.Unmarshal(data, &pkg); err != nil {
@@ -913,6 +852,9 @@ func (d DeployedPackage) Definition() (api.Package, error) {
 			return api.Package{}, fmt.Errorf("unmarshal %s package data: %w", v1alpha1.APIVersion, err)
 		}
 		return convert.PackageFromV1alpha1(pkg), nil
+	}
+	if len(d.PackageData) == 0 || d.Data.Metadata.Name != "" {
+		return convert.PackageFromV1alpha1(d.Data), nil
 	}
 
 	return api.Package{}, fmt.Errorf("deployed package has no supported package data")

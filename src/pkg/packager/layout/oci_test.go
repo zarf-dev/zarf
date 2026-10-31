@@ -87,6 +87,67 @@ func TestAnnotationsFromMetadata_PreservesV1alpha1Precedence(t *testing.T) {
 	}, AnnotationsFromMetadata(pkg))
 }
 
+func TestResourceAnnotations(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{APIVersion: v1beta1.APIVersion}
+	attachmentPath := AttachmentsDir + "/README.md"
+	require.Equal(t, map[string]string{
+		ocispec.AnnotationTitle: attachmentPath,
+		ResourceKindAnnotation:  ResourceKindAttachment,
+	}, resourceAnnotations(attachmentPath, pkg))
+
+	sbomPath := ComponentSBOMResourcePath("metrics")
+	require.Equal(t, map[string]string{
+		ocispec.AnnotationTitle: sbomPath,
+		ResourceKindAnnotation:  ResourceKindSBOM,
+	}, resourceAnnotations(sbomPath, pkg))
+
+	imageSBOMPath := ImageSBOMResourcePath("longhornio/longhorn-ui:v1.11.2")
+	require.Equal(t, map[string]string{
+		ocispec.AnnotationTitle: imageSBOMPath,
+		ResourceKindAnnotation:  ResourceKindSBOM,
+	}, resourceAnnotations(imageSBOMPath, pkg))
+}
+
+func TestComputeManifestAnnotatesV1Beta1Resources(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, AttachmentsDir), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, AttachmentsDir, "README.md"), []byte("documentation"), 0o600))
+	sbomPath := filepath.Join(dir, filepath.FromSlash(ComponentSBOMResourcePath("metrics")))
+	require.NoError(t, os.MkdirAll(filepath.Dir(sbomPath), 0o700))
+	require.NoError(t, os.WriteFile(sbomPath, []byte("sbom"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, Checksums), []byte{}, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: test-pkg
+attachments:
+  readme: README.md
+`), 0o600))
+
+	p := &PackageLayout{dirPath: dir}
+	require.NoError(t, p.computeManifest(context.Background()))
+	manifest, err := p.Manifest()
+	require.NoError(t, err)
+
+	descriptors := map[string]ocispec.Descriptor{}
+	for _, descriptor := range manifest.Layers {
+		descriptors[descriptor.Annotations[ocispec.AnnotationTitle]] = descriptor
+	}
+	attachment := descriptors[AttachmentsDir+"/README.md"]
+	require.Equal(t, AttachmentsDir+"/README.md", attachment.Annotations[ocispec.AnnotationTitle])
+	require.Equal(t, ResourceKindAttachment, attachment.Annotations[ResourceKindAnnotation])
+	require.Equal(t, AttachmentLayerMediaTypeBlob, attachment.MediaType)
+	sbom := descriptors[ComponentSBOMResourcePath("metrics")]
+	require.Equal(t, ComponentSBOMResourcePath("metrics"), sbom.Annotations[ocispec.AnnotationTitle])
+	require.Equal(t, ResourceKindSBOM, sbom.Annotations[ResourceKindAnnotation])
+	//nolint:testifylint // application/vnd.syft+json is a media type, not encoded JSON.
+	require.Equal(t, SBOMMediaTypeSyftJSON, sbom.MediaType)
+}
+
 // newTestLayout creates a minimal PackageLayout with a computed manifest.
 // It writes a single known blob file and returns its contents so callers
 // can verify Fetch returns the right bytes.
@@ -161,6 +222,33 @@ func TestComputeManifestDeterministic(t *testing.T) {
 
 	require.NoError(t, p.computeManifest(context.Background()))
 	assert.Equal(t, first, p.Digest(), "repeated computeManifest calls should produce the same digest")
+}
+
+func TestComputeManifestDeterministicWithDuplicateResourceContent(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, AttachmentsDir), 0o700))
+	for _, name := range []string{"first.md", "second.md"} {
+		require.NoError(t, os.WriteFile(filepath.Join(dir, AttachmentsDir, name), []byte("identical documentation"), 0o600))
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(dir, Checksums), []byte{}, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ZarfYAML), []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: test-pkg
+attachments:
+  first: first.md
+  second: second.md
+`), 0o600))
+
+	p := &PackageLayout{dirPath: dir}
+	require.NoError(t, p.computeManifest(t.Context()))
+	first := p.Digest()
+	for range 100 {
+		require.NoError(t, p.computeManifest(t.Context()))
+		require.Equal(t, first, p.Digest())
+	}
 }
 
 func TestResolve(t *testing.T) {

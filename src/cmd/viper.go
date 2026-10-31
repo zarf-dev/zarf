@@ -71,10 +71,6 @@ const (
 
 	// Init Package config keys
 
-	VInitArtifactURL       = "init.artifact.url"
-	VInitArtifactPushUser  = "init.artifact.push_username"
-	VInitArtifactPushToken = "init.artifact.push_token"
-
 	VInitAgentTLSCA          = "init.agent.tls_ca"
 	VInitAgentTLSCert        = "init.agent.tls_cert"
 	VInitAgentTLSKey         = "init.agent.tls_key"

@@ -9,13 +9,13 @@ import "strings"
 // Package is the version-neutral representation used by package operations and converters.
 type Package struct {
 	// APIVersion identifies the source package schema. An empty value is the legacy v1alpha1 form.
-	APIVersion    string
-	Kind          PackageKind
-	Metadata      PackageMetadata
-	Build         BuildData
-	Components    []Component
-	Values        Values
-	Documentation map[string]string
+	APIVersion  string
+	Kind        PackageKind
+	Metadata    PackageMetadata
+	Build       BuildData
+	Components  []Component
+	Values      Values
+	Attachments map[string]string
 
 	// v1alpha1-only fields
 	Variables []InteractiveVariable
@@ -45,23 +45,28 @@ type PackageMetadata struct {
 // BuildData contains build metadata shared across package API versions.
 type BuildData struct {
 	// Hostname is the v1beta1 name (v1alpha1: Terminal).
-	Hostname                   string
-	User                       string
-	Architecture               string
-	Timestamp                  string
-	Version                    string
-	Migrations                 []string
-	RegistryOverrides          map[string]string
-	Differential               bool
-	DifferentialPackageVersion string
-	Flavor                     string
-	Signed                     *bool
-	VersionRequirements        []VersionRequirement
-	ProvenanceFiles            []string
-	AggregateChecksum          string
+	Hostname            string
+	User                string
+	Architecture        string
+	Timestamp           string
+	Version             string
+	Migrations          []string
+	RegistryOverrides   map[string]string
+	Differential        *Differential
+	Flavor              string
+	Signed              *bool
+	VersionRequirements []VersionRequirement
+	ProvenanceFiles     []string
+	AggregateChecksum   string
 
 	// v1alpha1-only build fields.
 	DifferentialMissing []string
+}
+
+// Differential identifies the base package used to create a differential package.
+// A nil Differential indicates a full package.
+type Differential struct {
+	FromVersion string
 }
 
 // VersionRequirement specifies a minimum Zarf version needed.
@@ -364,6 +369,7 @@ func (s ImageSource) GetSource() ImageSource {
 
 // Image represents an OCI image in the package.
 type Image struct {
+	ID     string
 	Name   string
 	Source ImageSource
 }
@@ -371,7 +377,13 @@ type Image struct {
 // ImageArchive defines a tar archive of images to include in the package.
 type ImageArchive struct {
 	Path   string
-	Images []string
+	Images []ArchiveImage
+}
+
+// ArchiveImage identifies an image selected from an archive.
+type ArchiveImage struct {
+	Name string
+	ID   string
 }
 
 // ComponentActions are the actions associated with each package lifecycle operation.
