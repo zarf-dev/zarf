@@ -47,66 +47,21 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class=WHI>$ zarf package create .</b>
-
-<b class=YEL>Saving log file to /tmp/zarf-2023-05-06-21-02-22-601928677.log</b>
-<b class=YEL></b>
-<b class=YEL>Using build directory .</b>
-<b class=YEL></b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<b style="color:#55ffff;">kind</b>:<b style="color:#ff55ff;"> ZarfPackageConfig</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">metadata</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> wordpress</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> A Zarf Package that deploys the WordPress blogging and content management platform</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 26.0.0</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">components</b>:
--<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> wordpress</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Deploys the Bitnami-packaged WordPress chart into the cluster</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;">  </b><b style="color:#55ffff;">charts</b>:
-  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> wordpress</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">url</b>:<b style="color:#ff55ff;"> oci://registry-1.docker.io/bitnamicharts/wordpress</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 26.0.0</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> wordpress</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">valuesFiles</b>:
-    -<b style="color:#ff55ff;"> wordpress-values.yaml</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">manifests</b>:
-  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> connect-services</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> wordpress</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">files</b>:
-    -<b style="color:#ff55ff;"> connect-services.yaml</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
-  -<b style="color:#ff55ff;"> docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">variables</b>:
--<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_USERNAME</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The username that is used to login to the WordPress admin account</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> zarf</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_PASSWORD</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The password that is used to login to the WordPress admin account</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;">  </b><b style="color:#55ffff;">sensitive</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_EMAIL</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The email that is used for the WordPress admin account</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> hello@zarf-dev.com</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_FIRST_NAME</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The first name that is used for the WordPress admin account</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> Zarf</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_LAST_NAME</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The last name that is used for the WordPress admin account</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> The Axolotl</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> WORDPRESS_BLOG_NAME</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> The blog name that is used for the WordPress admin account</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">default</b>:<b style="color:#ff55ff;"> The Zarf Blog</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">prompt</b>:<b style="color:#ffffff;"> true</b>
-
-<b class="BOLD" style="color:#55ff55;">? </b><b class="BOLD">Create this Zarf package? </b><b class=WHI>(y/N) </b><span style="color:#55ffff;">Yes</span> <br/>
+<b class="WHI">$ zarf package create .</b>
+<b class="HIK">2026-10-31 08:56:33</b> <b class="HIG">INF</b> assembling package <b class="HIC">path=</b><b class="WHI">.</b>
+<b class="HIK">2026-10-31 08:56:33</b> <b class="HIG">INF</b> pulling Helm chart from OCI <b class="HIC">name=</b><b class="WHI">wordpress</b> <b class="HIC">address=</b><b class="WHI">oci://registry-1.docker.io/bitnamicharts/wordpress:26.0.0</b>
+<b class="HIK">2026-10-31 08:56:34</b> <b class="HIG">INF</b> fetching info for images <b class="HIC">count=</b><b class="WHI">3</b> <b class="HIC">destination=</b><b class="WHI">/tmp/zarf-3760164624/images</b>
+<b class="HIK">2026-10-31 08:56:34</b> <b class="HIG">INF</b> pulling images <b class="HIC">count=</b><b class="WHI">3</b>
+<b class="HIK">2026-10-31 08:56:34</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0</b> <b class="HIC">size=</b><b class="WHI">132.08 MBs</b> <b class="HIC">count=</b><b class="WHI">1/3</b>
+<b class="HIK">2026-10-31 08:56:35</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55</b> <b class="HIC">size=</b><b class="WHI">45.68 MBs</b> <b class="HIC">count=</b><b class="WHI">2/3</b>
+<b class="HIK">2026-10-31 08:56:35</b> <b class="HIG">INF</b> saving image <b class="HIC">name=</b><b class="WHI">docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4</b> <b class="HIC">size=</b><b class="WHI">159.29 MBs</b> <b class="HIC">count=</b><b class="WHI">3/3</b>
+<b class="HIK">2026-10-31 08:56:35</b> <b class="HIG">INF</b> done pulling images <b class="HIC">count=</b><b class="WHI">3</b> <b class="HIC">duration=</b><b class="WHI">1.4s</b>
+<b class="HIK">2026-10-31 08:56:35</b> <b class="HIG">INF</b> composed components successfully
+<b class="HIK">2026-10-31 08:56:35</b> <b class="HIG">INF</b> generating SBOM
+<b class="HIK">2026-10-31 08:56:35</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0</b> <b class="HIC">count=</b><b class="WHI">1/3</b>
+<b class="HIK">2026-10-31 08:56:38</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55</b> <b class="HIC">count=</b><b class="WHI">2/3</b>
+<b class="HIK">2026-10-31 08:56:39</b> <b class="HIG">INF</b> creating image SBOM <b class="HIC">reference=</b><b class="WHI">docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4</b> <b class="HIC">count=</b><b class="WHI">3/3</b>
+<b class="HIK">2026-10-31 08:56:43</b> <b class="HIG">INF</b> writing package to disk <b class="HIC">path=</b><b class="WHI">zarf-package-wordpress-arm64-26.0.0.tar.zst</b><br/>
 </pre>
 </body>
 </html>
