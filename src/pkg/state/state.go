@@ -797,6 +797,8 @@ func NewDeployedPackage(definition api.Package, digest, cliVersion string, compo
 		}
 	}
 
+	// A differential package omits images the base package provides, but the deployed package still needs them.
+	definition = definition.WithDifferentialImages()
 	deployedPackage := &DeployedPackage{
 		Name:               definition.Metadata.Name,
 		Digest:             digest,

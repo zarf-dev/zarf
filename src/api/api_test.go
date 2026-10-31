@@ -209,3 +209,26 @@ func TestManifestGetServerSideApply(t *testing.T) {
 		})
 	}
 }
+
+func TestPackageWithDifferentialImages(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{
+		Components: []api.Component{
+			{Name: "app", Images: []api.Image{{Name: "new:v2"}}},
+			{Name: "other", Images: []api.Image{{Name: "other:v1"}}},
+		},
+		Build: api.BuildData{Differential: &api.Differential{Images: map[string][]api.Image{
+			"app":     {{ID: "base", Name: "base:v1"}},
+			"removed": {{Name: "ignored:v1"}},
+		}}},
+	}
+
+	got := pkg.WithDifferentialImages()
+	require.Equal(t, []api.Image{{Name: "new:v2"}, {ID: "base", Name: "base:v1"}}, got.Components[0].Images)
+	require.Equal(t, []api.Image{{Name: "other:v1"}}, got.Components[1].Images)
+	require.Equal(t, []api.Image{{Name: "new:v2"}}, pkg.Components[0].Images)
+
+	noop := api.Package{Components: []api.Component{{Name: "app", Images: []api.Image{{Name: "a:v1"}}}}}
+	require.Equal(t, noop, noop.WithDifferentialImages())
+}
