@@ -637,6 +637,7 @@ fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm
 `
 
 	require.Equal(t, expectedChecksum, string(b))
+	testutil.RequireNoBackslashInPackagePathsV1Beta1(t, convert.PackageToV1beta1(pkgLayout.Definition()))
 	testutil.RequireNoBackslashInPackagePaths(t, convert.PackageToV1alpha1(pkgLayout.Definition()))
 	require.Equal(t, "7eb1a1e4e33ec7b6a7da78937b99c64bf7cf4751b70c0ed0662356cd7c18f967", testutil.ChecksumZarfYAMLContent(t, convert.PackageToV1alpha1(pkgLayout.Definition())), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
 }
