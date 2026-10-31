@@ -37,17 +37,17 @@ func TestCreateImageSBOM(t *testing.T) {
 
 	outputPath := t.TempDir()
 	img := empty.Image
-	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
+	err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
-	require.NotEmpty(t, b)
 
 	fileContent, err := os.ReadFile(filepath.Join(outputPath, "docker.io_foo_bar_latest.json"))
 	require.NoError(t, err)
-	require.Equal(t, fileContent, b)
+	require.NotEmpty(t, fileContent)
 	betaOutputPath := t.TempDir()
-	betaSBOM, err := createImageSBOMResource(ctx, t.TempDir(), betaOutputPath, img, "nginx", "docker.io/library/nginx:latest")
+	err = createImageSBOMResource(ctx, t.TempDir(), betaOutputPath, img, "nginx", "docker.io/library/nginx:latest")
 	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.ImageSBOMResourcePath("nginx"))))
+	betaSBOM, err := os.ReadFile(filepath.Join(betaOutputPath, filepath.FromSlash(layout.ImageSBOMResourcePath("nginx"))))
+	require.NoError(t, err)
 	require.NotEmpty(t, betaSBOM)
 	var betaDoc model.Document
 	require.NoError(t, json.Unmarshal(betaSBOM, &betaDoc))
@@ -64,9 +64,9 @@ func TestCreateImageSBOMNonExistentCachePath(t *testing.T) {
 	// Cache path that doesn't exist yet
 	cachePath := filepath.Join(t.TempDir(), "non-existent-cache")
 	img := empty.Image
-	b, err := createImageSBOM(ctx, cachePath, outputPath, img, "docker.io/foo/bar:latest")
+	err := createImageSBOM(ctx, cachePath, outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
-	require.NotEmpty(t, b)
+	require.FileExists(t, filepath.Join(outputPath, "docker.io_foo_bar_latest.json"))
 }
 
 func TestSBOMImageIdentifiers(t *testing.T) {
@@ -184,9 +184,11 @@ L:Zlib
 	require.NoError(t, err)
 
 	outputPath := t.TempDir()
-	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
+	err = createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
 
+	b, err := os.ReadFile(filepath.Join(outputPath, "docker.io_foo_bar_latest.json"))
+	require.NoError(t, err)
 	var doc model.Document
 	require.NoError(t, json.Unmarshal(b, &doc))
 
@@ -236,9 +238,11 @@ func TestCreateFileSBOMContents(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(componentsDir, component.Name+".tar"), buf.Bytes(), 0o644))
 
 	outputPath := t.TempDir()
-	b, err := createFileSBOM(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], outputPath, buildPath)
+	err = createFileSBOM(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], outputPath, buildPath)
 	require.NoError(t, err)
 
+	b, err := os.ReadFile(filepath.Join(outputPath, "zarf-component-test-component.json"))
+	require.NoError(t, err)
 	var doc model.Document
 	require.NoError(t, json.Unmarshal(b, &doc))
 
@@ -253,13 +257,8 @@ func TestCreateFileSBOMContents(t *testing.T) {
 	require.Equal(t, "zarf", doc.Descriptor.Name)
 	require.NotEmpty(t, doc.ArtifactRelationships)
 
-	// The returned bytes are also written to zarf-component-<name>.json.
-	fileContent, err := os.ReadFile(filepath.Join(outputPath, "zarf-component-test-component.json"))
-	require.NoError(t, err)
-	require.Equal(t, fileContent, b)
-
 	betaOutputPath := t.TempDir()
-	_, err = createFileSBOMResource(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], betaOutputPath, buildPath)
+	err = createFileSBOMResource(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], betaOutputPath, buildPath)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.ComponentSBOMResourcePath("test-component"))))
 }
