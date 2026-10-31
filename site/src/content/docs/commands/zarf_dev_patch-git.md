@@ -18,6 +18,7 @@ zarf dev patch-git HOST FILE [flags]
 ### Options
 
 ```
+      --confirm              Confirm the overwrite of FILE without prompting
       --git-account string   User or organization name for the git account that the repos are created under. (default "zarf-git-user")
   -h, --help                 help for patch-git
 ```

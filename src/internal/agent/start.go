@@ -15,7 +15,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/zarf-dev/zarf/src/internal/agent/hooks"
-	agentHttp "github.com/zarf-dev/zarf/src/internal/agent/http"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -57,14 +56,6 @@ func StartWebhook(ctx context.Context, cluster *cluster.Cluster) error {
 	mux.Handle("/mutate/argocd-appproject", admissionHandler.Serve(ctx, argocdAppProjectMutation))
 	mux.Handle("/mutate/argocd-repository", admissionHandler.Serve(ctx, argocdRepositoryMutation))
 
-	return startServer(ctx, httpPort, mux)
-}
-
-// StartHTTPProxy launches the zarf agent proxy in the cluster.
-func StartHTTPProxy(ctx context.Context, cluster *cluster.Cluster) error {
-	logger.From(ctx).Warn("the Zarf internal proxy will is deprecated and will be removed in a future release")
-	mux := http.NewServeMux()
-	mux.Handle("/", agentHttp.ProxyHandler(ctx, cluster))
 	return startServer(ctx, httpPort, mux)
 }
 

@@ -1,0 +1,63 @@
+kind: ZarfPackageConfig
+metadata:
+  name: init-package-zarf-agent
+  description: Install the zarf agent mutating webhook on a new cluster
+
+variables:
+  - name: AGENT_AFFINITY
+    description: Custom affinity map for the zarf-agent deployment
+    default: ""
+    autoIndent: true
+
+  - name: AGENT_TOLERATIONS
+    description: Custom tolerations array for the zarf-agent deployment
+    default: ""
+    autoIndent: true
+
+  - name: AGENT_NODE_SELECTOR
+    description: Custom node selector map for the zarf-agent deployment
+    default: ""
+    autoIndent: true
+
+  - name: AGENT_WEBHOOK_ANNOTATIONS
+    description: Custom annotations map for the zarf-agent mutating webhook
+    default: "{}"
+    autoIndent: true
+
+  - name: AGENT_MUTATION_EXCLUSIONS
+    description: YAML list of GitOps resource groups the zarf-agent should not mutate (valid values are argocd and flux)
+    default: "[]"
+    autoIndent: true
+
+constants:
+  - name: AGENT_IMAGE
+    value: "###ZARF_PKG_TMPL_AGENT_IMAGE###"
+  - name: AGENT_IMAGE_TAG
+    value: "###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###"
+
+components:
+  - name: zarf-agent
+    description: |
+      A Kubernetes mutating webhook to enable automated URL rewriting for container
+      images and git repository references in Kubernetes manifests. This prevents
+      the need to manually update URLs from their original sources to the Zarf-managed
+      docker registry and git server.
+    required: true
+    images:
+      - "###ZARF_PKG_TMPL_AGENT_IMAGE_DOMAIN######ZARF_PKG_TMPL_AGENT_IMAGE###:###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###"
+    charts:
+      - name: zarf-agent
+        releaseName: zarf-d2db14ef40305397791454e883b26fc94ad9615d
+        localPath: chart
+        version: 0.1.2
+        namespace: zarf
+        valuesFiles:
+          - agent-values.yaml
+    actions:
+      onCreate:
+        before:
+          - cmd: "test \"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\" != \"local\" || make build-local-agent-image AGENT_IMAGE_TAG=\"###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###\" ARCH=\"###ZARF_PKG_ARCH###\""
+            shell:
+              windows: pwsh
+            dir: ../../../..
+            description: Build the local agent image (if 'AGENT_IMAGE_TAG' was specified as 'local')

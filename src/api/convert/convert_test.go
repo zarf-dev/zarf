@@ -174,8 +174,8 @@ func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
 	require.Equal(t, "test-user", result.Build.User)
 	require.Equal(t, "arm64", result.Build.Architecture)
 	require.Equal(t, "v0.30.0", result.Build.Version)
-	require.True(t, result.Build.Differential)
-	require.Equal(t, "0.29.0", result.Build.DifferentialPackageVersion)
+	require.NotNil(t, result.Build.Differential)
+	require.Equal(t, "0.29.0", result.Build.Differential.FromVersion)
 	require.Equal(t, "vanilla", result.Build.Flavor)
 	require.NotNil(t, result.Build.Signed)
 	require.True(t, *result.Build.Signed)
@@ -183,6 +183,48 @@ func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
 	require.Equal(t, "v0.28.0", result.Build.VersionRequirements[0].Version)
 	require.Equal(t, "needs feature X", result.Build.VersionRequirements[0].Reason)
 	require.Equal(t, []string{"sig.json"}, result.Build.ProvenanceFiles)
+}
+
+func TestPackageDifferentialConversion(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name         string
+		differential bool
+		version      string
+	}{
+		{name: "full package"},
+		{name: "full package with unused base version", version: "1.0.0"},
+		{name: "differential package", differential: true, version: "1.0.0"},
+		{name: "legacy differential without base version", differential: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			legacy := v1alpha1.ZarfPackage{Build: v1alpha1.ZarfBuildData{
+				Differential: tt.differential, DifferentialPackageVersion: tt.version,
+			}}
+			generic := PackageFromV1alpha1(legacy)
+			beta := PackageToV1beta1(generic)
+			if tt.differential {
+				require.NotNil(t, generic.Build.Differential)
+				require.Equal(t, tt.version, generic.Build.Differential.FromVersion)
+				require.NotNil(t, beta.Build.Differential)
+				require.Equal(t, tt.version, beta.Build.Differential.FromVersion)
+			} else {
+				require.Nil(t, generic.Build.Differential)
+				require.Nil(t, beta.Build.Differential)
+			}
+			roundTripped := PackageFromV1beta1(beta)
+			require.Equal(t, generic.Build, roundTripped.Build)
+			build := PackageToV1alpha1(roundTripped).Build
+			require.Equal(t, tt.differential, build.Differential)
+			if tt.differential {
+				require.Equal(t, tt.version, build.DifferentialPackageVersion)
+			} else {
+				require.Empty(t, build.DifferentialPackageVersion)
+			}
+		})
+	}
 }
 
 func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
@@ -1193,17 +1235,16 @@ func TestV1Beta1PkgToV1Alpha1_Build(t *testing.T) {
 	pkg := v1beta1.Package{
 		Kind: v1beta1.ZarfPackageConfig,
 		Build: v1beta1.BuildData{
-			Hostname:                   "my-machine",
-			User:                       "test-user",
-			Architecture:               "arm64",
-			Timestamp:                  "Mon, 02 Jan 2006 15:04:05 -0700",
-			Version:                    "v0.30.0",
-			Migrations:                 []string{"migration1"},
-			RegistryOverrides:          map[string]string{"docker.io": "internal.registry"},
-			Differential:               true,
-			DifferentialPackageVersion: "0.29.0",
-			Flavor:                     "vanilla",
-			Signed:                     &signed,
+			Hostname:          "my-machine",
+			User:              "test-user",
+			Architecture:      "arm64",
+			Timestamp:         "Mon, 02 Jan 2006 15:04:05 -0700",
+			Version:           "v0.30.0",
+			Migrations:        []string{"migration1"},
+			RegistryOverrides: map[string]string{"docker.io": "internal.registry"},
+			Differential:      &v1beta1.Differential{FromVersion: "0.29.0"},
+			Flavor:            "vanilla",
+			Signed:            &signed,
 			VersionRequirements: []v1beta1.VersionRequirement{
 				{Version: "v0.28.0", Reason: "needs feature X"},
 			},

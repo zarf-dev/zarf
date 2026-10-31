@@ -37,7 +37,7 @@ func TestCreateSBOM(t *testing.T) {
 	defaultPkgLayout, err := layout.LoadFromTar(ctx, defaultTarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 	defaultExtractPath := t.TempDir()
-	err = defaultPkgLayout.GetSBOM(ctx, defaultExtractPath)
+	err = defaultPkgLayout.GetSBOM(ctx, defaultExtractPath, nil)
 	require.NoError(t, err)
 	for _, sbomPath := range []string{defaultExtractPath, filepath.Join(defaultSBOMPath, packageName)} {
 		require.FileExists(t, filepath.Join(sbomPath, imageSBOM))
@@ -53,7 +53,7 @@ func TestCreateSBOM(t *testing.T) {
 	legacyPkgLayout, err := layout.LoadFromTar(ctx, legacyTarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 	legacyExtractPath := t.TempDir()
-	err = legacyPkgLayout.GetSBOM(ctx, legacyExtractPath)
+	err = legacyPkgLayout.GetSBOM(ctx, legacyExtractPath, nil)
 	require.NoError(t, err)
 	for _, sbomPath := range []string{legacyExtractPath, filepath.Join(legacySBOMPath, packageName)} {
 		require.FileExists(t, filepath.Join(sbomPath, imageSBOM))

@@ -113,8 +113,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		}
 		definition = updatedDefinition
 		pkg = definition
-		definition.Build.Differential = true
-		definition.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
+		definition.Build.Differential = &api.Differential{
+			FromVersion: opts.DifferentialPackage.Metadata.Version,
+		}
 	}
 	if err := layout.ValidatePackagePaths(definition); err != nil {
 		return nil, err
@@ -217,7 +218,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 
-	if err = stageDocumentation(ctx, pkg, resolvedPackage.Resources, buildPath); err != nil {
+	if err = stageAttachments(ctx, pkg, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -308,7 +309,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, err
 	}
 
-	if err = stageDocumentation(ctx, definition, resolvedPackage.Resources, buildPath); err != nil {
+	if err = stageAttachments(ctx, definition, resolvedPackage.Resources, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -1212,24 +1213,24 @@ func writeValuesSchema(buildPath string, schema value.SchemaDocument) error {
 	return nil
 }
 
-func stageDocumentation(ctx context.Context, pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
+func stageAttachments(ctx context.Context, pkg api.Package, resources *load.ResourceSet, buildPath string) (err error) {
 	if len(pkg.Attachments) == 0 {
 		return nil
 	}
 	for key := range pkg.Attachments {
 		if err := layout.ValidatePathComponent(key); err != nil {
-			return fmt.Errorf("documentation key validation failed: %w", err)
+			return fmt.Errorf("attachment key validation failed: %w", err)
 		}
 	}
 
-	// Get the mapping of keys to their final filenames (with deduplication logic).
-	fileNames, err := layout.GetDocumentationFileNames(pkg.Attachments)
+	// Get the mapping of keys to their final filenames (with deconfliction logic).
+	fileNames, err := layout.GetAttachmentFileNames(pkg.Attachments, nil)
 	if err != nil {
-		return fmt.Errorf("validating documentation filenames: %w", err)
+		return fmt.Errorf("validating attachment filenames: %w", err)
 	}
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return fmt.Errorf("failed to create temp directory for documentation: %w", err)
+		return fmt.Errorf("failed to create temp directory for attachments: %w", err)
 	}
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(tmpDir))
@@ -1240,25 +1241,25 @@ func stageDocumentation(ctx context.Context, pkg api.Package, resources *load.Re
 			return err
 		}
 
-		docFilename := fileNames[key]
+		attachmentFileName := fileNames[key]
 		dstDir := tmpDir
 		if layout.UsesGranularResourceLayout(pkg) {
-			dstDir = filepath.Join(buildPath, layout.DocumentationDir)
+			dstDir = filepath.Join(buildPath, layout.AttachmentsDir)
 		}
 		if err := os.MkdirAll(dstDir, helpers.ReadWriteExecuteUser); err != nil {
-			return fmt.Errorf("failed to create documentation directory: %w", err)
+			return fmt.Errorf("failed to create attachment directory: %w", err)
 		}
 
-		dst, err := layout.PathWithinDirectory(dstDir, docFilename)
+		dst, err := layout.PathWithinDirectory(dstDir, attachmentFileName)
 		if err != nil {
-			return fmt.Errorf("documentation output validation failed: %w", err)
+			return fmt.Errorf("attachment output validation failed: %w", err)
 		}
 
 		if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
-			return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
+			return fmt.Errorf("failed to copy attachment file %s: %w", src, err)
 		}
 		if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
-			return fmt.Errorf("failed to set permissions on documentation file %s: %w", dst, err)
+			return fmt.Errorf("failed to set permissions on attachment file %s: %w", dst, err)
 		}
 	}
 

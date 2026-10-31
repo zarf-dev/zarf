@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+name: Publish v1beta1 Init Package
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Package version and published agent image tag
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Package version and existing agent image tag (e.g. v0.88.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-v1beta1-init-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'zarf-dev/zarf'
+    runs-on: large-ubuntu-zarf-release
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    env:
+      CLI_VERSION: ${{ inputs.version }}
+      AGENT_IMAGE_TAG: ${{ inputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Build CLI
+        run: make build-cli-linux-amd
+
+      - name: Login to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: dummy
+          password: ${{ github.token }}
+
+      - name: Build v1beta1 Init Packages
+        run: |
+          for arch in amd64 arm64; do
+            make release-init-package-v1beta1 ARCH="$arch"
+          done
+
+      - name: Sign v1beta1 Init Packages
+        run: |
+          for arch in amd64 arm64; do
+            build/zarf package sign "build/v1beta1-init/zarf-init-$arch-$CLI_VERSION.tar.zst" \
+              --keyless --confirm
+          done
+
+      - name: Publish v1beta1 Init Packages
+        run: |
+          for arch in amd64 arm64; do
+            make publish-init-package-v1beta1 ARCH="$arch" REPOSITORY_URL=ghcr.io/zarf-dev/packages/v1beta1
+          done
+
+      - name: Publish v1beta1 Init Component Configs
+        run: make publish-init-components-v1beta1 REPOSITORY_URL=ghcr.io/zarf-dev/components/init

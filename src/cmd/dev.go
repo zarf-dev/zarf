@@ -249,13 +249,14 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 }
 
 type devInspectManifestsOptions struct {
-	flavor             string
-	createSetPkgTmpl   map[string]string
-	deploySetVariables map[string]string
-	valuesFiles        []string
-	setValues          map[string]string
-	kubeVersion        string
-	outputWriter       io.Writer
+	enableKustomizePlugins bool
+	flavor                 string
+	createSetPkgTmpl       map[string]string
+	deploySetVariables     map[string]string
+	valuesFiles            []string
+	setValues              map[string]string
+	kubeVersion            string
+	outputWriter           io.Writer
 }
 
 func newDevInspectManifestsOptions() devInspectManifestsOptions {
@@ -285,6 +286,8 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
+	cmd.Flags().BoolVar(&o.enableKustomizePlugins, "enable-kustomize-plugins", false, lang.CmdDevFlagEnableKustomizePlugins)
+
 	return cmd
 }
 
@@ -306,14 +309,15 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
-		CreateSetVariables: o.createSetPkgTmpl,
-		DeploySetVariables: o.deploySetVariables,
-		Values:             values,
-		Flavor:             o.flavor,
-		KubeVersion:        o.kubeVersion,
-		CachePath:          cachePath,
-		IsInteractive:      true,
-		RemoteOptions:      defaultRemoteOptions(),
+		EnableKustomizePlugins: o.enableKustomizePlugins,
+		CreateSetVariables:     o.createSetPkgTmpl,
+		DeploySetVariables:     o.deploySetVariables,
+		Values:                 values,
+		Flavor:                 o.flavor,
+		KubeVersion:            o.kubeVersion,
+		CachePath:              cachePath,
+		IsInteractive:          true,
+		RemoteOptions:          defaultRemoteOptions(),
 	}
 	basePath, err := setBaseDirectory(args)
 	if err != nil {
@@ -345,14 +349,15 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 }
 
 type devInspectValuesFilesOptions struct {
-	flavor             string
-	components         string
-	createSetPkgTmpl   map[string]string
-	deploySetVariables map[string]string
-	valuesFiles        []string
-	setValues          map[string]string
-	kubeVersion        string
-	outputWriter       io.Writer
+	enableKustomizePlugins bool
+	flavor                 string
+	components             string
+	createSetPkgTmpl       map[string]string
+	deploySetVariables     map[string]string
+	valuesFiles            []string
+	setValues              map[string]string
+	kubeVersion            string
+	outputWriter           io.Writer
 }
 
 func newDevInspectValuesFilesOptions() devInspectValuesFilesOptions {
@@ -384,6 +389,8 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
+	cmd.Flags().BoolVar(&o.enableKustomizePlugins, "enable-kustomize-plugins", false, lang.CmdDevFlagEnableKustomizePlugins)
+
 	return cmd
 }
 
@@ -405,15 +412,16 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
-		CreateSetVariables: o.createSetPkgTmpl,
-		DeploySetVariables: o.deploySetVariables,
-		Values:             values,
-		Flavor:             o.flavor,
-		Components:         o.components,
-		KubeVersion:        o.kubeVersion,
-		CachePath:          cachePath,
-		IsInteractive:      true,
-		RemoteOptions:      defaultRemoteOptions(),
+		EnableKustomizePlugins: o.enableKustomizePlugins,
+		CreateSetVariables:     o.createSetPkgTmpl,
+		DeploySetVariables:     o.deploySetVariables,
+		Values:                 values,
+		Flavor:                 o.flavor,
+		Components:             o.components,
+		KubeVersion:            o.kubeVersion,
+		CachePath:              cachePath,
+		IsInteractive:          true,
+		RemoteOptions:          defaultRemoteOptions(),
 	}
 	basePath, err := setBaseDirectory(args)
 	if err != nil {
@@ -643,6 +651,7 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 
 type devPatchGitOptions struct {
 	gitPushUsername string
+	confirm         bool
 }
 
 func newDevPatchGitCommand() *cobra.Command {
@@ -657,6 +666,8 @@ func newDevPatchGitCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.gitPushUsername, "git-account", state.ZarfGitPushUser, lang.CmdDevFlagGitAccount)
+	// Always require the confirm flag to be passed explicitly (no viper)
+	cmd.Flags().BoolVar(&o.confirm, "confirm", false, "Confirm the overwrite of FILE without prompting")
 
 	return cmd
 }
@@ -681,13 +692,15 @@ func (o *devPatchGitOptions) run(cmd *cobra.Command, args []string) error {
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	pterm.Println(dmp.DiffPrettyText(diffs))
 
-	// Ask the user before this destructive action
-	confirm := false
-	prompt := &survey.Confirm{
-		Message: fmt.Sprintf(lang.CmdDevPatchGitOverwritePrompt, fileName),
-	}
-	if err := survey.AskOne(prompt, &confirm); err != nil {
-		return fmt.Errorf("confirm overwrite canceled: %w", err)
+	// Ask the user before this destructive action, unless --confirm was passed
+	confirm := o.confirm
+	if !confirm {
+		prompt := &survey.Confirm{
+			Message: fmt.Sprintf(lang.CmdDevPatchGitOverwritePrompt, fileName),
+		}
+		if err := survey.AskOne(prompt, &confirm); err != nil {
+			return fmt.Errorf("confirm overwrite canceled: %w", err)
+		}
 	}
 
 	if confirm {
@@ -721,21 +734,32 @@ func newDevSha256SumCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
-	hashErr := errors.New("unable to compute the SHA256SUM hash")
-	ctx := cmd.Context()
+func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) error {
+	out, err := o.compute(cmd.Context(), args[0])
+	// compute returns "" on every failure path, so a non-empty hash is still
+	// worth printing even when tmp dir cleanup joined an error onto err.
+	if out != "" {
+		fmt.Println(out)
+	}
+	return err
+}
 
-	fileName := args[0]
+// compute assumes source is non-empty; the command's cobra.ExactArgs(1)
+// guarantees that at the CLI boundary.
+func (o *devSha256SumOptions) compute(ctx context.Context, source string) (output string, err error) {
+	hashErr := errors.New("unable to compute the SHA256SUM hash")
+
+	fileName := source
 
 	var tmp string
 	var data io.ReadCloser
 
 	if helpers.IsURL(fileName) {
-		logger.From(cmd.Context()).Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
+		logger.From(ctx).Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
 
 		fileBase, err := helpers.ExtractBasePathFromURL(fileName)
 		if err != nil {
-			return errors.Join(hashErr, err)
+			return "", errors.Join(hashErr, err)
 		}
 
 		if fileBase == "" {
@@ -744,43 +768,41 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 		tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
-			return errors.Join(hashErr, err)
+			return "", errors.Join(hashErr, err)
 		}
-
-		downloadPath := filepath.Join(tmp, fileBase)
-		err = utils.DownloadToFile(ctx, fileName, downloadPath)
-		if err != nil {
-			return errors.Join(hashErr, err)
-		}
-
-		fileName = downloadPath
-
 		defer func(path string) {
 			errRemove := os.RemoveAll(path)
 			err = errors.Join(err, errRemove)
 		}(tmp)
+
+		downloadPath := filepath.Join(tmp, fileBase)
+		err = utils.DownloadToFile(ctx, fileName, downloadPath)
+		if err != nil {
+			return "", errors.Join(hashErr, err)
+		}
+
+		fileName = downloadPath
 	}
 
 	if o.extractPath != "" {
-		if tmp == "" {
-			tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
-			if err != nil {
-				return errors.Join(hashErr, err)
-			}
-			defer func(path string) {
-				errRemove := os.RemoveAll(path)
-				err = errors.Join(err, errRemove)
-			}(tmp)
+		tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return "", errors.Join(hashErr, err)
 		}
+		defer func(path string) {
+			errRemove := os.RemoveAll(path)
+			err = errors.Join(err, errRemove)
+		}(tmp)
 
 		extractedFile := filepath.Join(tmp, o.extractPath)
 
 		decompressOpts := archive.DecompressOpts{
-			Files: []string{extractedFile},
+			// We want to extract the file relative to the tar ball
+			Files: []string{o.extractPath},
 		}
 		err = archive.Decompress(ctx, fileName, tmp, decompressOpts)
 		if err != nil {
-			return errors.Join(hashErr, err)
+			return "", errors.Join(hashErr, err)
 		}
 
 		fileName = extractedFile
@@ -788,7 +810,7 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 	data, err = os.Open(fileName)
 	if err != nil {
-		return errors.Join(hashErr, err)
+		return "", errors.Join(hashErr, err)
 	}
 	defer func(data io.ReadCloser) {
 		errClose := data.Close()
@@ -797,24 +819,24 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 	hash, err := checksum.GetSHA256Hash(data)
 	if err != nil {
-		return errors.Join(hashErr, err)
+		return "", errors.Join(hashErr, err)
 	}
-	fmt.Println(hash)
-	return nil
+	return hash, nil
 }
 
 type devFindImagesOptions struct {
-	repoHelmChartPath   string
-	createSetPkgTmpl    map[string]string
-	flavor              string
-	deploySetVariables  map[string]string
-	valuesFiles         []string
-	setValues           map[string]string
-	kubeVersionOverride string
-	why                 string
-	skipCosign          bool
-	registryURL         string
-	update              bool
+	enableKustomizePlugins bool
+	repoHelmChartPath      string
+	createSetPkgTmpl       map[string]string
+	flavor                 string
+	deploySetVariables     map[string]string
+	valuesFiles            []string
+	setValues              map[string]string
+	kubeVersionOverride    string
+	why                    string
+	skipCosign             bool
+	registryURL            string
+	update                 bool
 }
 
 func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
@@ -859,6 +881,8 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVar(&o.registryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
 
+	cmd.Flags().BoolVar(&o.enableKustomizePlugins, "enable-kustomize-plugins", false, lang.CmdDevFlagEnableKustomizePlugins)
+
 	return cmd
 }
 
@@ -888,18 +912,19 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	findImagesOptions := packager.FindImagesOptions{
-		RepoHelmChartPath:   o.repoHelmChartPath,
-		RegistryURL:         o.registryURL,
-		KubeVersionOverride: o.kubeVersionOverride,
-		CreateSetVariables:  o.createSetPkgTmpl,
-		DeploySetVariables:  o.deploySetVariables,
-		Values:              values,
-		Flavor:              o.flavor,
-		Why:                 o.why,
-		SkipCosign:          o.skipCosign,
-		CachePath:           cachePath,
-		IsInteractive:       true,
-		RemoteOptions:       defaultRemoteOptions(),
+		EnableKustomizePlugins: o.enableKustomizePlugins,
+		RepoHelmChartPath:      o.repoHelmChartPath,
+		RegistryURL:            o.registryURL,
+		KubeVersionOverride:    o.kubeVersionOverride,
+		CreateSetVariables:     o.createSetPkgTmpl,
+		DeploySetVariables:     o.deploySetVariables,
+		Values:                 values,
+		Flavor:                 o.flavor,
+		Why:                    o.why,
+		SkipCosign:             o.skipCosign,
+		CachePath:              cachePath,
+		IsInteractive:          true,
+		RemoteOptions:          defaultRemoteOptions(),
 	}
 
 	if o.why != "" {

@@ -50,6 +50,8 @@ var (
 
 // FindImagesOptions declares the parameters to find images.
 type FindImagesOptions struct {
+	// EnableKustomizePlugins allows plugins enabled in the package definition to execute arbitrary commands.
+	EnableKustomizePlugins bool
 	// RepoHelmChartPath specifies the path to helm charts in git repos defined in the zarf.yaml
 	RepoHelmChartPath string
 	// RegistryURL specifies the value of the ###ZARF_REGISTRY### variable during templating
@@ -524,7 +526,7 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, resourceSet, compBuildPath, variableConfig, vals, pkg, itpl.StateAccess{State: s, AccessKeys: component.StateAccess})
+			manifestResources, err := getTemplatedManifests(ctx, manifest, resourceSet, compBuildPath, variableConfig, vals, pkg, itpl.StateAccess{State: s, AccessKeys: component.StateAccess}, opts.EnableKustomizePlugins)
 			if err != nil {
 				return nil, err
 			}

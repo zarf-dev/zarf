@@ -4,12 +4,6 @@ title: "Migrating Packages from v1alpha1 to v1beta1"
 
 This guide migrates a `ZarfPackageConfig` definition from `zarf.dev/v1alpha1` to `zarf.dev/v1beta1`. Existing v1alpha1 definitions remain supported. A definition without `apiVersion` is treated as v1alpha1, whereas v1beta1 requires `apiVersion: zarf.dev/v1beta1`.
 
-:::caution
-
-The v1beta1 schema is experimental, and creating v1beta1 packages is behind a feature flag.
-
-:::
-
 ## Replace removed features
 
 Before converting, migrate these features while keeping the definition on v1alpha1. `zarf dev upgrade` errors if any of the following removed features are still in use:
@@ -148,6 +142,8 @@ These conversions are automatic. `[]` denotes a list entry.
 | `metadata.image`, `metadata.source`, `metadata.documentation`, `metadata.url`, `metadata.authors`, `metadata.vendor` | Same keys under `metadata.annotations`. Existing annotation values take precedence. |
 | `metadata.aggregateChecksum` | `build.aggregateChecksum` |
 | `build.terminal` | `build.hostname` |
+| `build.differential` | Becomes an object when true |
+| `build.differentialPackageVersion` | `build.differential.fromVersion` |
 
 Namespace overrides remain enabled by default.
 
