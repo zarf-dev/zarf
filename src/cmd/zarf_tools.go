@@ -823,6 +823,7 @@ func newClearCacheCommand() *cobra.Command {
 		Use:     "clear-cache",
 		Aliases: []string{"c"},
 		Short:   lang.CmdToolsClearCacheShort,
+		Args:    cobra.NoArgs,
 		RunE:    o.run,
 	}
 
@@ -856,6 +857,7 @@ func newDownloadInitCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "download-init",
 		Short: lang.CmdToolsDownloadInitShort,
+		Args:  cobra.NoArgs,
 		RunE:  o.run,
 	}
 
@@ -967,6 +969,7 @@ func newGenKeyCommand() *cobra.Command {
 		Use:     "gen-key",
 		Aliases: []string{"key"},
 		Short:   lang.CmdToolsGenKeyShort,
+		Args:    cobra.NoArgs,
 		RunE:    o.run,
 	}
 

@@ -50,6 +50,8 @@ func newRegistryCommand() *cobra.Command {
 		Use:     "registry",
 		Aliases: []string{"r"},
 		Short:   lang.CmdToolsRegistryShort,
+		Args:    cobra.NoArgs,
+		Run:     run,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// TODO (@austinabro321) once the code in cmd is simplified, we should change this to respect
 			// the log-format flag

@@ -68,6 +68,8 @@ func newDevCommand() *cobra.Command {
 		Use:     "dev",
 		Aliases: []string{"prepare", "prep"},
 		Short:   lang.CmdDevShort,
+		Args:    cobra.NoArgs,
+		Run:     run,
 	}
 
 	v := getViper()
@@ -150,6 +152,8 @@ func newDevInspectCommand(v *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect",
 		Short: "Commands to gather information about a Zarf package from its definition",
+		Args:  cobra.NoArgs,
+		Run:   run,
 	}
 
 	cmd.AddCommand(newDevInspectDefinitionCommand(v))

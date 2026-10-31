@@ -183,7 +183,7 @@ func NewZarfCommand() *cobra.Command {
 		Use:          "zarf COMMAND",
 		Short:        lang.RootCmdShort,
 		Long:         lang.RootCmdLong,
-		Args:         cobra.MaximumNArgs(1),
+		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		// We use silence errors so we can print out errors in the Zarf log format
 		SilenceErrors:     true,
@@ -272,7 +272,7 @@ func Execute(ctx context.Context) error {
 	// Check if we need to use the default err printer
 	defaultPrintCmds := []string{"helm", "yq", "kubectl"}
 	comps := strings.Split(cmd.CommandPath(), " ")
-	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
+	if len(comps) > 2 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
 		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
 		os.Exit(1)
 	}

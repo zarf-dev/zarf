@@ -33,6 +33,7 @@ func newConnectCommand() *cobra.Command {
 		Aliases: []string{"c"},
 		Short:   lang.CmdConnectShort,
 		Long:    lang.CmdConnectLong,
+		Args:    cobra.MaximumNArgs(1),
 		RunE:    o.run,
 	}
 
@@ -131,6 +132,7 @@ func newConnectResourceCommand() *cobra.Command {
 		Use:   "resource",
 		Short: lang.CmdConnectResourceShort,
 		Long:  lang.CmdConnectResourceLong,
+		Args:  cobra.NoArgs,
 		RunE:  o.run,
 	}
 
@@ -176,6 +178,7 @@ func newConnectListCommand() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"l", "ls"},
 		Short:   lang.CmdConnectListShort,
+		Args:    cobra.NoArgs,
 		RunE:    o.run,
 	}
 	return cmd
