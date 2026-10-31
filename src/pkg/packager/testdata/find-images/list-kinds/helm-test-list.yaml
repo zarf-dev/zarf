@@ -1,0 +1,35 @@
+# a list is not a helm test, so the annotation on an item inside it is inert: helm installs the list
+# and everything in it, so busybox:1.36 ships and has to be found
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: helm-test-in-list
+      annotations:
+        helm.sh/hook: test
+    spec:
+      template:
+        spec:
+          containers:
+            - name: t
+              image: docker.io/library/busybox:1.36
+---
+# the list itself is the test, so helm never installs it and busybox:1.37 must not be found
+apiVersion: v1
+kind: List
+metadata:
+  annotations:
+    helm.sh/hook: test
+items:
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: helm-test-wrapping-list
+    spec:
+      template:
+        spec:
+          containers:
+            - name: t
+              image: docker.io/library/busybox:1.37
