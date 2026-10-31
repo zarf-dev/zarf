@@ -107,7 +107,7 @@ zarf package create zarf.gen.yaml
 
 Rendering writes `zarf.gen.yaml` alongside the template and validates the generated schema. Re-render whenever template inputs change.
 
-For local component templates, render each `<name>.tpl.yaml` separately and set `import.local[].path` to `<name>.gen.yaml`. Remote components must be fully rendered before publishing and cannot be templated during import.
+For local component templates, set `import.local[].path` to `<name>.gen.yaml` and run `zarf dev template --recursive` to render the package and its imported templates with the same `--set` and `--set-file` values. Paths are resolved relative to the importing definition. Nested local imports are traversed, including imports through ordinary component YAML files, which are left unchanged. Each `.gen.yaml` import requires a matching `.tpl.yaml` source; existing generated files are regenerated. Cyclic imports cause an error. Without `--recursive`, render each template separately. Remote components must be fully rendered before publishing and cannot be templated during import.
 
 ## Readiness checks
 
