@@ -499,7 +499,7 @@ func findImages(ctx context.Context, pkg api.Package, resourceSet *load.Resource
 				var cosignMatches []ImageMatch
 				for _, match := range scan.Matches {
 					l.Debug("looking up cosign artifacts for image", "name", match.Image.Name)
-					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, match.Image.Name, cosignClient, opts.RemoteOptions)
+					cosignArtifacts, err := getCosignArtifacts(ctx, match.Image.Name, cosignClient, opts.RemoteOptions)
 					if err != nil {
 						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", match.Image.Name, err)
 					}

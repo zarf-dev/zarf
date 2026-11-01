@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -294,8 +295,9 @@ components:
 	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = "testdata/cosign.key"
 	packagePath, err := packager.Create(ctx, dir, tmpdir, packager.CreateOptions{
-		CachePath:       tmpdir,
-		SignBlobOptions: &signOpts,
+		CachePath:     tmpdir,
+		Signer:        signing.NewPackageSigner(signOpts),
+		SBOMGenerator: sbom.NewSyftGenerator(),
 	})
 	require.NoError(t, err)
 

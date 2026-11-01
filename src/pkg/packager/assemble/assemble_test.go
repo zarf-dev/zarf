@@ -27,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -1222,7 +1223,7 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
 	// create the package
-	pkgLayout, err := AssemblePackage(context.Background(), loaded, AssembleOptions{})
+	pkgLayout, err := AssemblePackage(context.Background(), loaded, AssembleOptions{SBOMGenerator: sbom.NewSyftGenerator()})
 	require.NoError(t, err)
 
 	// Ensure the component has the correct file
@@ -1236,3 +1237,42 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	require.FileExists(t, filepath.Join(tmpdir, "zarf-component-file-import.json"))
 	require.NoFileExists(t, filepath.Join(tmpdir, "sbom-viewer-zarf-component-file-import.html"))
 }
+
+func TestAssemblePackageMissingSBOMGenerator(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tmpdir := t.TempDir()
+
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name: "test-package",
+		},
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name: "test-component",
+				Files: []v1alpha1.ZarfFile{
+					{
+						Source: "file.txt",
+						Target: "file.txt",
+					},
+				},
+			},
+		},
+	}
+	err := os.WriteFile(filepath.Join(tmpdir, "file.txt"), []byte("test content"), 0600)
+	require.NoError(t, err)
+	writePackageToDisk(t, pkg, tmpdir)
+
+	loaded, err := load.Package(ctx, tmpdir, load.PackageOptions{})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+
+	_, err = AssemblePackage(ctx, loaded, AssembleOptions{
+		SkipSBOM:      false,
+		SBOMGenerator: nil,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no SBOM generator configured: set SBOMGenerator or SkipSBOM")
+}
+

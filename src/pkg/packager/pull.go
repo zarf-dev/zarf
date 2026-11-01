@@ -18,7 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
+	"github.com/zarf-dev/zarf/src/pkg/packager/signature"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 
@@ -38,10 +38,8 @@ type PullOptions struct {
 	SHASum string
 	// Architecture is the package architecture.
 	Architecture string
-	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
-	PublicKeyPath string
-	// VerifyBlobOptions configures package signature verification.
-	VerifyBlobOptions *signing.VerifyBlobOptions
+	// Verifier verifies the package signature, e.g. signing.NewPackageVerifier.
+	Verifier signature.Verifier
 	// OCIConcurrency is the number of layers pulled in parallel
 	OCIConcurrency int
 	// CachePath is used to cache layers from OCI package pulls
@@ -79,19 +77,10 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 		return "", errors.New("host cannot be empty")
 	}
 
-	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
-	// Only applies when VerifyBlobOptions is not already set,
-	// ensuring the new API takes precedence over the deprecated field.
-	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
-		defaults := signing.DefaultVerifyBlobOptions()
-		defaults.Key = opts.PublicKeyPath
-		opts.VerifyBlobOptions = &defaults
-	}
-
 	pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
 		Shasum:               opts.SHASum,
 		Architecture:         arch,
-		VerifyBlobOptions:    opts.VerifyBlobOptions,
+		Verifier:             opts.Verifier,
 		VerificationStrategy: opts.VerificationStrategy,
 		Output:               destination,
 		OCIConcurrency:       opts.OCIConcurrency,
@@ -114,15 +103,15 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 }
 
 type pullOCIOptions struct {
-	Source            string
-	Shasum            string
-	Architecture      string
-	LayerSelection    *zoci.LayerSelection
-	Filter            filters.ComponentFilterStrategy
-	OCIConcurrency    int
-	CachePath         string
-	VerifyBlobOptions *signing.VerifyBlobOptions
-	Connected         bool
+	Source         string
+	Shasum         string
+	Architecture   string
+	LayerSelection *zoci.LayerSelection
+	Filter         filters.ComponentFilterStrategy
+	OCIConcurrency int
+	CachePath      string
+	Verifier       signature.Verifier
+	Connected      bool
 	types.RemoteOptions
 	layout.VerificationStrategy
 }
@@ -192,7 +181,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	}
 
 	layoutOpts := layout.PackageLayoutOptions{
-		VerifyBlobOptions:    opts.VerifyBlobOptions,
+		Verifier:             opts.Verifier,
 		VerificationStrategy: opts.VerificationStrategy,
 		IsPartial:            isPartial,
 		Filter:               opts.Filter,

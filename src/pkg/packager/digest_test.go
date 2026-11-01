@@ -85,7 +85,7 @@ func TestPackageDigestSignedDiffersFromUnsigned(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, pkgLayout.Cleanup()) }()
 
-	require.NoError(t, pkgLayout.SignPackage(ctx, testSignOpts()))
+	require.NoError(t, pkgLayout.SignPackage(ctx, signing.NewPackageSigner(*testSignOpts())))
 
 	require.NotEqual(t, unsignedDigest, pkgLayout.Digest(),
 		"signing should change the OCI manifest digest because the sig file is a new layer")
@@ -102,7 +102,7 @@ func TestPackageDigestSignedConsistency(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, pkgLayout.Cleanup()) }()
 
-	require.NoError(t, pkgLayout.SignPackage(ctx, testSignOpts()))
+	require.NoError(t, pkgLayout.SignPackage(ctx, signing.NewPackageSigner(*testSignOpts())))
 	localDigest := pkgLayout.Digest()
 
 	packageRef, err := PublishPackage(ctx, pkgLayout, registryRef, PublishPackageOptions{

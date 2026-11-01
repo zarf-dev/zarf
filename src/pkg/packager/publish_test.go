@@ -45,12 +45,12 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 
 	// Generate tmpdir and pull published package from local registry
 	pullOCIOpts := pullOCIOptions{
-		Source:            packageRef,
-		Architecture:      architecture,
-		Filter:            filters.Empty(),
-		RemoteOptions:     remoteOptions,
-		VerifyBlobOptions: &verifyOpts,
-		CachePath:         cachePath,
+		Source:        packageRef,
+		Architecture:  architecture,
+		Filter:        filters.Empty(),
+		RemoteOptions: remoteOptions,
+		Verifier:      signing.NewPackageVerifier(verifyOpts),
+		CachePath:     cachePath,
 	}
 	pkgLayout, err := pullOCI(ctx, pullOCIOpts)
 	require.NoError(t, err)
@@ -180,9 +180,8 @@ func TestPublishSkeleton(t *testing.T) {
 			name: "Sign and publish skeleton package",
 			path: "testdata/skeleton",
 			opts: PublishSkeletonOptions{
-				RemoteOptions:      defaultTestRemoteOptions(),
-				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
-				SigningKeyPassword: "password",
+				RemoteOptions: defaultTestRemoteOptions(),
+				Signer:        signing.NewPackageSigner(*testSignOpts()),
 			},
 			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
 			expectedTag:   "0.0.1",
@@ -270,19 +269,8 @@ func TestPublishPackage(t *testing.T) {
 			name: "Sign and publish package",
 			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOptions{
-				RemoteOptions:   defaultTestRemoteOptions(),
-				SignBlobOptions: signOpts,
-			},
-			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
-			expectedTag:   "0.0.1",
-		},
-		{
-			name: "Sign and publish package with deprecated keypair fields",
-			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOptions{
-				RemoteOptions:      defaultTestRemoteOptions(),
-				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
-				SigningKeyPassword: "password",
+				RemoteOptions: defaultTestRemoteOptions(),
+				Signer:        signing.NewPackageSigner(signOpts),
 			},
 			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
 			expectedTag:   "0.0.1",
@@ -591,7 +579,7 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
 	signOpts.Password = "password"
-	require.NoError(t, sourceLayout.SignPackage(ctx, &signOpts))
+	require.NoError(t, sourceLayout.SignPackage(ctx, signing.NewPackageSigner(signOpts)))
 
 	destinationRef, err := PublishPackage(ctx, sourceLayout, registry.Reference{
 		Registry:   destinationAddress,

@@ -31,10 +31,10 @@ func packageDefinition(pkg v1alpha1.ZarfPackage) api.Package {
 	return convert.PackageFromV1alpha1(pkg)
 }
 
-func verifyOptsFromKey(keyPath string) *signing.VerifyBlobOptions {
+func verifierFromKey(keyPath string) *signing.PackageVerifier {
 	opts := signing.DefaultVerifyBlobOptions()
 	opts.Key = keyPath
-	return &opts
+	return signing.NewPackageVerifier(opts)
 }
 
 func TestMarshalPackageDefinitionRejectsFieldsFromAnotherVersion(t *testing.T) {
@@ -407,7 +407,7 @@ func TestPackageLayoutSignPackagePreservesMultiDocZarfYAML(t *testing.T) {
 	opts.Key = "./testdata/cosign.key"
 	opts.Password = "test"
 
-	require.NoError(t, pkgLayout.SignPackage(ctx, &opts))
+	require.NoError(t, pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts)))
 
 	updated, err := os.ReadFile(filepath.Join(tmpDir, ZarfYAML))
 	require.NoError(t, err)
@@ -642,7 +642,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, &opts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts))
 		require.NoError(t, err)
 		require.FileExists(t, bundlePath, "bundle signature should exist")
 		require.NoFileExists(t, filepath.Join(tmpDir, Signature), "legacy .sig should not be written")
@@ -668,7 +668,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "wrongpassword"
 
-		err = pkgLayout.SignPackage(ctx, &opts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts))
 		require.ErrorContains(t, err, "failed to sign package")
 		require.ErrorContains(t, err, "reading key: decrypt: encrypted: decryption failed")
 		require.NoFileExists(t, bundlePath)
@@ -686,7 +686,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err := pkgLayout.SignPackage(ctx, &opts)
+		err := pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "cannot access zarf.yaml for signing")
 	})
@@ -701,7 +701,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err := pkgLayout.SignPackage(ctx, &opts)
+		err := pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid package layout directory")
 	})
@@ -716,7 +716,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err := pkgLayout.SignPackage(ctx, &opts)
+		err := pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts))
 		require.EqualError(t, err, "invalid package layout: dirPath is empty")
 	})
 
@@ -743,7 +743,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Password = "test"
 		opts.Overwrite = true
 
-		err = pkgLayout.SignPackage(ctx, &opts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts))
 		require.NoError(t, err)
 		require.FileExists(t, bundlePath)
 
@@ -786,7 +786,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Password = "test"
 		opts.Overwrite = true
 
-		require.NoError(t, pkgLayout.SignPackage(ctx, &opts))
+		require.NoError(t, pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts)))
 		require.FileExists(t, bundlePath)
 		require.NoFileExists(t, legacySignaturePath, "legacy signature should be removed after re-sign")
 		require.Contains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Bundle)
@@ -828,7 +828,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, &opts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "is not a directory")
 	})
@@ -854,7 +854,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		// Store original value
 		originalOutputSignature := opts.OutputSignature
 
-		err = pkgLayout.SignPackage(ctx, &opts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts))
 		require.NoError(t, err)
 
 		// Verify input options were not modified
@@ -879,7 +879,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "wrongpassword"
 
-		err = pkgLayout.SignPackage(ctx, &opts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts))
 		require.Error(t, err)
 
 		// Verify Signed field was not set
@@ -891,7 +891,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 			pkg: packageDefinition(v1alpha1.ZarfPackage{}),
 		}
 
-		err := pkgLayout.SignPackage(ctx, &signing.SignBlobOptions{})
+		err := pkgLayout.SignPackage(ctx, signing.NewPackageSigner(signing.SignBlobOptions{}))
 		require.EqualError(t, err, "invalid package layout: dirPath is empty")
 	})
 
@@ -929,7 +929,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, &opts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts))
 		require.NoError(t, err)
 
 		// cosign v3.1.1+ produces only the bundle when NewBundleFormat=true (the default).
@@ -1109,7 +1109,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 
 			layout, opts := tt.setupFunc(t)
 
-			err := layout.SignPackage(ctx, &opts)
+			err := layout.SignPackage(ctx, signing.NewPackageSigner(opts))
 
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
@@ -1161,14 +1161,14 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, &signOpts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(signOpts))
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(tmpDir, Bundle), "bundle signature should exist")
 
 		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
-		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		err = pkgLayout.VerifyPackageSignature(ctx, signing.NewPackageVerifier(verifyOpts))
 		require.NoError(t, err)
 	})
 
@@ -1191,14 +1191,14 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, &signOpts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(signOpts))
 		require.NoError(t, err)
 
 		// Try to verify with a different (non-existent) key - should fail
 		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/nonexistent.pub"
 
-		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		err = pkgLayout.VerifyPackageSignature(ctx, signing.NewPackageVerifier(verifyOpts))
 		require.Error(t, err)
 	})
 
@@ -1218,7 +1218,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
-		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		err = pkgLayout.VerifyPackageSignature(ctx, signing.NewPackageVerifier(verifyOpts))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "verification material was provided but the package is not signed")
 	})
@@ -1232,7 +1232,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
-		err := pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		err := pkgLayout.VerifyPackageSignature(ctx, signing.NewPackageVerifier(verifyOpts))
 		require.EqualError(t, err, "invalid package layout: dirPath is empty")
 	})
 
@@ -1245,7 +1245,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
-		err := pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		err := pkgLayout.VerifyPackageSignature(ctx, signing.NewPackageVerifier(verifyOpts))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid package layout directory")
 	})
@@ -1264,7 +1264,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
-		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		err = pkgLayout.VerifyPackageSignature(ctx, signing.NewPackageVerifier(verifyOpts))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "is not a directory")
 	})
@@ -1288,14 +1288,14 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, &signOpts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(signOpts))
 		require.NoError(t, err)
 
 		// Try to verify without providing a key
 		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "" // Empty key
 
-		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		err = pkgLayout.VerifyPackageSignature(ctx, signing.NewPackageVerifier(verifyOpts))
 		require.ErrorIs(t, err, ErrNoVerificationMaterial)
 		require.Contains(t, err.Error(), "package was signed with a key; provide --key to verify")
 	})
@@ -1319,7 +1319,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, &signOpts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(signOpts))
 		require.NoError(t, err)
 
 		// Corrupt all signature files that were produced
@@ -1335,7 +1335,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
-		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		err = pkgLayout.VerifyPackageSignature(ctx, signing.NewPackageVerifier(verifyOpts))
 		require.Error(t, err)
 	})
 
@@ -1358,7 +1358,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, &signOpts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(signOpts))
 		require.NoError(t, err)
 
 		// Modify the zarf.yaml after signing (tampering)
@@ -1369,7 +1369,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
-		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		err = pkgLayout.VerifyPackageSignature(ctx, signing.NewPackageVerifier(verifyOpts))
 		require.Error(t, err)
 	})
 
@@ -1408,7 +1408,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
-		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		err = pkgLayout.VerifyPackageSignature(ctx, signing.NewPackageVerifier(verifyOpts))
 		require.NoError(t, err, "verification should succeed with legacy signature format")
 	})
 
@@ -1431,7 +1431,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, &signOpts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(signOpts))
 		require.NoError(t, err)
 
 		// Use only the deprecated KeyRef alias with Key intentionally left empty.
@@ -1440,7 +1440,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "./testdata/cosign.pub" //nolint:staticcheck
 
-		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		err = pkgLayout.VerifyPackageSignature(ctx, signing.NewPackageVerifier(verifyOpts))
 		require.NoError(t, err)
 	})
 }
@@ -1778,7 +1778,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 			signOpts.Key = "./testdata/cosign.key"
 			signOpts.Password = "test"
 
-			err = pkgLayout.SignPackage(ctx, &signOpts)
+			err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(signOpts))
 			require.NoError(t, err)
 
 			return pkgDir, "./testdata/cosign.pub"
@@ -1792,7 +1792,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyNever,
-			VerifyBlobOptions:    verifyOptsFromKey("./testdata/cosign.pub"),
+			Verifier:             verifierFromKey("./testdata/cosign.pub"),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1818,7 +1818,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyIfPossible,
-			VerifyBlobOptions:    verifyOptsFromKey(pubKeyPath),
+			Verifier:             verifierFromKey(pubKeyPath),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1832,7 +1832,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyIfPossible,
-			VerifyBlobOptions:    verifyOptsFromKey(""), // No key provided
+			Verifier:             verifierFromKey(""), // No key provided
 		}
 
 		// Should warn but not fail
@@ -1847,7 +1847,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyIfPossible,
-			VerifyBlobOptions:    verifyOptsFromKey("./testdata/nonexistent.pub"),
+			Verifier:             verifierFromKey("./testdata/nonexistent.pub"),
 		}
 
 		// Signed package + verification failure = always fatal, even under VerifyIfPossible.
@@ -1862,7 +1862,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyIfPossible,
-			VerifyBlobOptions:    verifyOptsFromKey("./testdata/cosign.pub"),
+			Verifier:             verifierFromKey("./testdata/cosign.pub"),
 		}
 
 		// Providing a key against an unsigned package implies an expectation of a signature — always fatal.
@@ -1899,7 +1899,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyIfPossible,
-			VerifyBlobOptions:    verifyOptsFromKey(pubKeyPath),
+			Verifier:             verifierFromKey(pubKeyPath),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1913,7 +1913,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyAlways,
-			VerifyBlobOptions:    verifyOptsFromKey(pubKeyPath),
+			Verifier:             verifierFromKey(pubKeyPath),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1927,7 +1927,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyAlways,
-			VerifyBlobOptions:    verifyOptsFromKey("./testdata/nonexistent.pub"),
+			Verifier:             verifierFromKey("./testdata/nonexistent.pub"),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1941,7 +1941,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyAlways,
-			VerifyBlobOptions:    verifyOptsFromKey(""),
+			Verifier:             verifierFromKey(""),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1955,7 +1955,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyAlways,
-			VerifyBlobOptions:    verifyOptsFromKey("./testdata/cosign.pub"),
+			Verifier:             verifierFromKey("./testdata/cosign.pub"),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1964,40 +1964,29 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		require.Contains(t, err.Error(), "signature verification failed")
 	})
 
+	t.Run("VerifyIfPossible with signed package and no verifier warns but continues", func(t *testing.T) {
+		pkgDir, _ := setupTestPackage(t, true)
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, PackageLayoutOptions{VerificationStrategy: VerifyIfPossible})
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+
+	t.Run("VerifyAlways with signed package and no verifier fails", func(t *testing.T) {
+		pkgDir, _ := setupTestPackage(t, true)
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, PackageLayoutOptions{VerificationStrategy: VerifyAlways})
+		require.ErrorIs(t, err, ErrNoVerificationMaterial)
+		require.Contains(t, err.Error(), "no verifier was configured")
+		require.Nil(t, pkgLayout)
+	})
+
 	t.Run("default strategy value is VerifyNever", func(t *testing.T) {
 		pkgDir, _ := setupTestPackage(t, false)
 
 		// Empty options - should default to VerifyNever (zero value)
 		opts := PackageLayoutOptions{}
 
-		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
-		require.NoError(t, err)
-		require.NotNil(t, pkgLayout)
-	})
-
-	t.Run("deprecated PublicKeyPath bridges to VerifyBlobOptions", func(t *testing.T) {
-		pkgDir, pubKeyPath := setupTestPackage(t, true)
-
-		opts := PackageLayoutOptions{
-			VerificationStrategy: VerifyAlways,
-			PublicKeyPath:        pubKeyPath,
-		}
-
-		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
-		require.NoError(t, err)
-		require.NotNil(t, pkgLayout)
-	})
-
-	t.Run("VerifyBlobOptions takes precedence over deprecated PublicKeyPath", func(t *testing.T) {
-		pkgDir, pubKeyPath := setupTestPackage(t, true)
-
-		opts := PackageLayoutOptions{
-			VerificationStrategy: VerifyAlways,
-			PublicKeyPath:        "./testdata/nonexistent.pub",
-			VerifyBlobOptions:    verifyOptsFromKey(pubKeyPath),
-		}
-
-		// Should use VerifyBlobOptions (correct key), not PublicKeyPath (wrong key)
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)
@@ -2029,7 +2018,7 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 	t.Run("VerifyIfPossible with unsigned tarball and material provided fails", func(t *testing.T) {
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyIfPossible,
-			VerifyBlobOptions:    verifyOptsFromKey("./testdata/cosign.pub"),
+			Verifier:             verifierFromKey("./testdata/cosign.pub"),
 		}
 
 		// Providing a key against an unsigned package is always fatal.
@@ -2061,7 +2050,7 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 	t.Run("VerifyAlways fails on unsigned tarball", func(t *testing.T) {
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyAlways,
-			VerifyBlobOptions:    verifyOptsFromKey("./testdata/cosign.pub"),
+			Verifier:             verifierFromKey("./testdata/cosign.pub"),
 		}
 
 		pkgLayout, err := LoadFromTar(ctx, tarPath, opts)
@@ -2190,7 +2179,7 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
-		err = pkgLayout.SignPackage(ctx, &opts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts))
 		require.NoError(t, err)
 
 		require.Contains(t, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles, Checksums)
@@ -2219,7 +2208,7 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "wrongpassword"
 
-		err = pkgLayout.SignPackage(ctx, &opts)
+		err = pkgLayout.SignPackage(ctx, signing.NewPackageSigner(opts))
 		require.Error(t, err)
 		require.Equal(t, []string{Checksums}, convert.PackageToV1alpha1(pkgLayout.Definition()).Build.ProvenanceFiles)
 	})

@@ -21,7 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
+	"github.com/zarf-dev/zarf/src/pkg/packager/signature"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -35,16 +35,14 @@ const packageSecretSizeLimit = 1_000_000
 type CreateOptions struct {
 	Flavor            string
 	RegistryOverrides []images.RegistryOverride
-	// A nil value leaves the package unsigned; a non-nil value requests signing.
-	SignBlobOptions *signing.SignBlobOptions
-	// Deprecated: populate SignBlobOptions.Key directly.
-	SigningKeyPath string
-	// Deprecated: populate SignBlobOptions.Password directly.
-	SigningKeyPassword      string
-	SetVariables            map[string]string
-	MaxPackageSizeMB        int
-	SBOMOut                 string
-	SkipSBOM                bool
+	// Signer signs the package, e.g. signing.NewPackageSigner. A nil Signer leaves the package unsigned.
+	Signer           signature.Signer
+	SetVariables     map[string]string
+	MaxPackageSizeMB int
+	SBOMOut          string
+	SkipSBOM         bool
+	// SBOMGenerator creates SBOMs unless SkipSBOM is set, e.g. sbom.NewSyftGenerator.
+	SBOMGenerator           assemble.SBOMGenerator
 	DifferentialPackagePath string
 	OCIConcurrency          int
 	CachePath               string
@@ -111,13 +109,12 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 
 	assembleOpt := assemble.AssembleOptions{
 		SkipSBOM:             opts.SkipSBOM,
+		SBOMGenerator:        opts.SBOMGenerator,
 		OCIConcurrency:       opts.OCIConcurrency,
 		DifferentialPackage:  differentialPkg,
 		Flavor:               opts.Flavor,
 		RegistryOverrides:    opts.RegistryOverrides,
-		SignBlobOptions:      opts.SignBlobOptions,
-		SigningKeyPath:       opts.SigningKeyPath,     //nolint:staticcheck // Forward deprecated public options to preserve API compatibility.
-		SigningKeyPassword:   opts.SigningKeyPassword, //nolint:staticcheck // Forward deprecated public options to preserve API compatibility.
+		Signer:               opts.Signer,
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,

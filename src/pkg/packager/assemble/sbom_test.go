@@ -26,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -37,7 +38,7 @@ func TestCreateImageSBOM(t *testing.T) {
 
 	outputPath := t.TempDir()
 	img := empty.Image
-	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
+	b, err := createImageSBOM(ctx, sbom.NewSyftGenerator(), t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
 
@@ -45,7 +46,7 @@ func TestCreateImageSBOM(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, fileContent, b)
 	betaOutputPath := t.TempDir()
-	betaSBOM, err := createImageSBOMResource(ctx, t.TempDir(), betaOutputPath, img, "nginx", "docker.io/library/nginx:latest")
+	betaSBOM, err := createImageSBOMResource(ctx, sbom.NewSyftGenerator(), t.TempDir(), betaOutputPath, img, "nginx", "docker.io/library/nginx:latest")
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.ImageSBOMResourcePath("nginx"))))
 	require.NotEmpty(t, betaSBOM)
@@ -64,7 +65,7 @@ func TestCreateImageSBOMNonExistentCachePath(t *testing.T) {
 	// Cache path that doesn't exist yet
 	cachePath := filepath.Join(t.TempDir(), "non-existent-cache")
 	img := empty.Image
-	b, err := createImageSBOM(ctx, cachePath, outputPath, img, "docker.io/foo/bar:latest")
+	b, err := createImageSBOM(ctx, sbom.NewSyftGenerator(), cachePath, outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
 }
@@ -184,7 +185,7 @@ L:Zlib
 	require.NoError(t, err)
 
 	outputPath := t.TempDir()
-	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
+	b, err := createImageSBOM(ctx, sbom.NewSyftGenerator(), t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
 
 	var doc model.Document
@@ -236,7 +237,7 @@ func TestCreateFileSBOMContents(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(componentsDir, component.Name+".tar"), buf.Bytes(), 0o644))
 
 	outputPath := t.TempDir()
-	b, err := createFileSBOM(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], outputPath, buildPath)
+	b, err := createFileSBOM(ctx, sbom.NewSyftGenerator(), convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], outputPath, buildPath)
 	require.NoError(t, err)
 
 	var doc model.Document
@@ -259,7 +260,7 @@ func TestCreateFileSBOMContents(t *testing.T) {
 	require.Equal(t, fileContent, b)
 
 	betaOutputPath := t.TempDir()
-	_, err = createFileSBOMResource(ctx, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], betaOutputPath, buildPath)
+	_, err = createFileSBOMResource(ctx, sbom.NewSyftGenerator(), convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{component}}).Components[0], betaOutputPath, buildPath)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(betaOutputPath, filepath.FromSlash(layout.ComponentSBOMResourcePath("test-component"))))
 }

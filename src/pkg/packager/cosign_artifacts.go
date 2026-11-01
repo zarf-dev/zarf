@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic utility functions.
-package utils
+package packager
 
 import (
 	"context"
@@ -10,7 +9,7 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/types"
@@ -21,8 +20,8 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
-// GetCosignArtifacts returns signatures and attestations for the given image.
-func GetCosignArtifacts(ctx context.Context, image string, client *auth.Client, remoteOptions types.RemoteOptions) ([]string, error) {
+// getCosignArtifacts returns the cosign signature and attestation tags that exist for image.
+func getCosignArtifacts(ctx context.Context, image string, client *auth.Client, remoteOptions types.RemoteOptions) ([]string, error) {
 	l := logger.From(ctx)
 
 	var nameOpts []name.Option
@@ -57,11 +56,11 @@ func GetCosignArtifacts(ctx context.Context, image string, client *auth.Client, 
 		return nil, nil
 	}
 
-	sigTag, err := ociremote.SignatureTag(digestRef)
+	sigTag, err := cosignTag(digestRef, "sig")
 	if err != nil {
 		return nil, err
 	}
-	attTag, err := ociremote.AttestationTag(digestRef)
+	attTag, err := cosignTag(digestRef, "att")
 	if err != nil {
 		return nil, err
 	}
@@ -133,4 +132,14 @@ func existsInRemote(ctx context.Context, reference string, client *auth.Client, 
 	}
 
 	return true, nil
+}
+
+// cosignTag returns the tag cosign stores an artifact for digestRef under, e.g. sha256-<hex>.sig.
+// It matches ociremote.SignatureTag and ociremote.AttestationTag without linking cosign.
+func cosignTag(digestRef name.Digest, suffix string) (name.Tag, error) {
+	h, err := v1.NewHash(digestRef.DigestStr())
+	if err != nil {
+		return name.Tag{}, err
+	}
+	return digestRef.Context().Tag(fmt.Sprintf("%s-%s.%s", h.Algorithm, h.Hex, suffix)), nil
 }

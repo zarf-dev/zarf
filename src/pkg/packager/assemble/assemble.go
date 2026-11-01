@@ -41,7 +41,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
+	"github.com/zarf-dev/zarf/src/pkg/packager/signature"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -54,13 +54,11 @@ type AssembleOptions struct {
 	Flavor string
 	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry.
 	RegistryOverrides []images.RegistryOverride
-	// A nil value leaves the package unsigned; a non-nil value requests signing.
-	SignBlobOptions *signing.SignBlobOptions
-	// Deprecated: populate SignBlobOptions.Key directly.
-	SigningKeyPath string
-	// Deprecated: populate SignBlobOptions.Password directly.
-	SigningKeyPassword string
-	SkipSBOM           bool
+	// Signer signs the package, e.g. signing.NewPackageSigner. A nil Signer leaves the package unsigned.
+	Signer   signature.Signer
+	SkipSBOM bool
+	// SBOMGenerator creates SBOMs unless SkipSBOM is set, e.g. sbom.NewSyftGenerator.
+	SBOMGenerator SBOMGenerator
 	// When DifferentialPackage is set the zarf package created only includes images and repos not in the differential package.
 	DifferentialPackage api.Package
 	OCIConcurrency      int
@@ -202,8 +200,11 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	l.Info("composed components successfully")
 
 	if !opts.SkipSBOM && pkg.IsSBOMAble() {
+		if opts.SBOMGenerator == nil {
+			return nil, errors.New("no SBOM generator configured: set SBOMGenerator or SkipSBOM")
+		}
 		l.Info("generating SBOM")
-		err := generateSBOM(ctx, pkg, buildPath, manifests, opts.CachePath, declaredImageReferences)
+		err := generateSBOM(ctx, opts.SBOMGenerator, pkg, buildPath, manifests, opts.CachePath, declaredImageReferences)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}
@@ -246,25 +247,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		return nil, err
 	}
 
-	signOpts := opts.SignBlobOptions
-	if signOpts != nil && ((signOpts.Key == "" && opts.SigningKeyPath != "") || (signOpts.Password == "" && opts.SigningKeyPassword != "")) {
-		copied := *signOpts
-		signOpts = &copied
-	}
-	if signOpts == nil && opts.SigningKeyPath != "" {
-		defaults := signing.DefaultSignBlobOptions()
-		signOpts = &defaults
-	}
-	if signOpts != nil {
-		if signOpts.Key == "" {
-			signOpts.Key = opts.SigningKeyPath
-		}
-		if signOpts.Password == "" {
-			signOpts.Password = opts.SigningKeyPassword
-		}
-	}
-
-	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
+	if err := pkgLayout.SignPackage(ctx, opts.Signer); err != nil {
 		return nil, err
 	}
 
@@ -273,10 +256,8 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 
 // AssembleSkeletonOptions are the options for creating a skeleton package.
 type AssembleSkeletonOptions struct {
-	// Deprecated: use PackageLayout.SignPackage or the sign command.
-	SigningKeyPath string
-	// Deprecated: use PackageLayout.SignPackage or the sign command.
-	SigningKeyPassword   string
+	// Signer signs the package, e.g. signing.NewPackageSigner. A nil Signer leaves the package unsigned.
+	Signer               signature.Signer
 	Flavor               string
 	WithBuildMachineInfo bool
 }
@@ -351,14 +332,7 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 		return nil, fmt.Errorf("unable to load skeleton: %w", err)
 	}
 
-	var signOpts *signing.SignBlobOptions
-	if opts.SigningKeyPath != "" {
-		defaults := signing.DefaultSignBlobOptions()
-		defaults.Key = opts.SigningKeyPath
-		defaults.Password = opts.SigningKeyPassword
-		signOpts = &defaults
-	}
-	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
+	if err := pkgLayout.SignPackage(ctx, opts.Signer); err != nil {
 		return nil, err
 	}
 

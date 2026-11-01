@@ -226,7 +226,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		Verifier:             o.buildVerifier(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
 		Filter:               filter,
 		Architecture:         config.GetArch(),

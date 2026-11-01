@@ -20,7 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
+	"github.com/zarf-dev/zarf/src/pkg/packager/signature"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -31,11 +31,10 @@ import (
 type LoadOptions struct {
 	Shasum       string
 	Architecture string
-	// Deprecated: Use VerifyBlobOptions instead.
-	PublicKeyPath     string
-	VerifyBlobOptions *signing.VerifyBlobOptions
-	Filter            filters.ComponentFilterStrategy
-	Output            string
+	// Verifier verifies the package signature, e.g. signing.NewPackageVerifier.
+	Verifier signature.Verifier
+	Filter   filters.ComponentFilterStrategy
+	Output   string
 	// number of layers to pull in parallel
 	OCIConcurrency int
 	// LayerSelection specifies which optional package resources to pull from OCI.
@@ -59,15 +58,6 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	source = zoci.NormalizeOCISource(source)
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
-	}
-
-	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
-	// Only applies when VerifyBlobOptions is not already set,
-	// ensuring the new API takes precedence over the deprecated field.
-	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
-		defaults := signing.DefaultVerifyBlobOptions()
-		defaults.Key = opts.PublicKeyPath
-		opts.VerifyBlobOptions = &defaults
 	}
 
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
@@ -94,7 +84,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	case "oci":
 		ociOpts := pullOCIOptions{
 			Source:               source,
-			VerifyBlobOptions:    opts.VerifyBlobOptions,
+			Verifier:             opts.Verifier,
 			VerificationStrategy: opts.VerificationStrategy,
 			Shasum:               opts.Shasum,
 			Architecture:         config.GetArch(opts.Architecture),
@@ -147,7 +137,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	layoutOpts := layout.PackageLayoutOptions{
-		VerifyBlobOptions:    opts.VerifyBlobOptions,
+		Verifier:             opts.Verifier,
 		VerificationStrategy: opts.VerificationStrategy,
 		Filter:               opts.Filter,
 	}
