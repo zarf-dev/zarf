@@ -47,43 +47,45 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class=WHI>$ zarf package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m)</b>
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-23-10-20-59-1265818177.log</b>
-<b class=YEL></b>  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package sget://defenseunicorns/zarf-hello-world:$(uname -m)</b>
-<b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package sget://defenseunicorns/zarf-hello-world:$(uname -m)</b>
+<b class="WHI">$ zarf package deploy oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 --key=https://zarf.dev/cosign.pub</b>
+<b class="HIK">2026-11-01 10:19:05</b> <b class="HIG">INF</b> pulling package <b class="HIC">name=</b><b class="WHI">ghcr.io/zarf-dev/packages/dos-games:1.3.0</b> <b class="HIC">size=</b><b class="WHI">3.76 MBs</b>
+<b class="HIK">2026-11-01 10:19:05</b> <b class="HIG">INF</b> finished pulling package layers <b class="HIC">duration=</b><b class="WHI">100ms</b>
+<b class="HIK">2026-11-01 10:19:05</b> <b class="HIY">WRN</b> bundle format signature not found: legacy signature is being deprecated.
+<b class="HIG">Verified OK</b>
 
-<b style="color:#55ffff;">kind</b>:<b style="color:#ff55ff;"> ZarfPackageConfig</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">metadata</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> dos-games</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Simple example to load classic DOS games into K8s in the airgap</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> arm64</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">build</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  terminal</b>:<b style="color:#ff55ff;"> JvBUnicornMBP5</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">user</b>:<b style="color:#ff55ff;"> jason</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> arm64</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">timestamp</b>:<b style="color:#ff55ff;"> Tue, 07 Mar 2023 10:53:12 -0500</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> v0.24.3</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">migrations</b>:
-  -<b style="color:#ff55ff;"> scripts-to-actions</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">components</b>:
--<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> baseline</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;">  </b><b style="color:#55ffff;">manifests</b>:
-  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> multi-games</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> zarf</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">files</b>:
-    -<b style="color:#ff55ff;"> manifests/deployment.yaml</b>
-<b style="color:#ff55ff;">    </b>-<b style="color:#ff55ff;"> manifests/service.yaml</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
-  -<b style="color:#ff55ff;"> defenseunicorns/zarf-game:multi-tile-dark</b>
-<b class=YEL>This package has 1 artifacts with software bill-of-materials (SBOM) included. You can view them now</b>
-<b class=YEL>in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:</b>
-<b class=YEL>/Users/jason/src/github.com/jasonvanbrackel/zarf/docs-website/zarf-sbom/sbom-viewer-defenseunicorns_zarf-game_multi-tile-dark.html</b>
-<b class=YEL></b>
-<b class=YEL>* This directory will be removed after package deployment.</b>
-<b class=YEL></b>
-<b style="color:#55ff55;">? </b><b class="HIW">Deploy this Zarf package?</b> (y/N) <span style="color:#00aaaa">Yes</span>
+<b class="HIC">kind</b>:<b class="HIM"> ZarfPackageConfig</b>
+<b class="HIC">metadata</b>:
+  <b class="HIC">name</b>:<b class="HIM"> dos-games</b>
+  <b class="HIC">description</b>:<b class="HIM"> Simple example to load classic DOS games into K8s in the airgap</b>
+  <b class="HIC">version</b>:<b class="HIM"> 1.3.0</b>
+  <b class="HIC">architecture</b>:<b class="HIM"> arm64</b>
+  <b class="HIC">aggregateChecksum</b>:<b class="HIM"> fd88f8588ecd15256af8382417fcb15d1aa4875d7d1d9f4ba49b15ea1a4e62d7</b>
+  <b class="HIC">allowNamespaceOverride</b>:<b class="HIW"> true</b>
+<b class="HIC">build</b>:
+  <b class="HIC">architecture</b>:<b class="HIM"> arm64</b>
+  <b class="HIC">timestamp</b>:<b class="HIM"> Mon, 26 Jan 2026 18:44:13 +0000</b>
+  <b class="HIC">version</b>:<b class="HIM"> v0.70.1</b>
+  <b class="HIC">migrations</b>:
+  - <b class="HIM">scripts-to-actions</b>
+  - <b class="HIM">pluralize-set-variable</b>
+  <b class="HIC">signed</b>:<b class="HIW"> true</b>
+<b class="HIC">components</b>:
+- <b class="HIC">name</b>:<b class="HIM"> baseline</b>
+  <b class="HIC">required</b>:<b class="HIW"> true</b>
+  <b class="HIC">manifests</b>:
+  - <b class="HIC">name</b>:<b class="HIM"> multi-games</b>
+    <b class="HIC">namespace</b>:<b class="HIM"> dos-games</b>
+    <b class="HIC">files</b>:
+    - <b class="HIM">manifests/deployment.yaml</b>
+    - <b class="HIM">manifests/service.yaml</b>
+    <b class="HIC">template</b>:<b class="HIW"> false</b>
+  <b class="HIC">images</b>:
+  - <b class="HIM">ghcr.io/zarf-dev/doom-game:0.0.1</b>
+<b class="HIC">documentation</b>:
+  <b class="HIC">walkthrough</b>:<b class="HIM"> secrets.md</b>
+<b class="HIK">2026-11-01 10:19:05</b> <b class="HIG">INF</b> documentation available for this package - use 'zarf package inspect documentation' to view
+<b class="HIK">2026-11-01 10:19:05</b> <b class="HIG">INF</b> this package has SBOMs available for review in a temporary directory <b class="HIC">directory=</b><b class="WHI">/tmp/zarf-sbom</b>
+<b class="HIG">? </b><b class="BOLD">Deploy this Zarf package? </b><b class="WHI">(y/N)</b>
 </pre>
 </body>
 </html>
