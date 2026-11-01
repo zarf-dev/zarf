@@ -172,6 +172,8 @@ func InferType(s string) any {
 
 // DeepMerge merges one or more Values maps recursively into the receiver via mutation.
 // Later maps in the variadic arguments take precedence over earlier ones.
+// Values taken from the sources are deep copied, so the sources are never mutated and the
+// result never shares nested maps or slices with them.
 func (v Values) DeepMerge(sources ...Values) {
 	if v == nil {
 		return
@@ -190,11 +192,11 @@ func (v Values) DeepMerge(sources ...Values) {
 					Values(dstMap).DeepMerge(srcMap)
 				} else {
 					// Not both maps, src overwrites dst
-					v[key] = srcVal
+					v[key] = deepCopyValue(srcVal)
 				}
 			} else {
 				// Key only in src
-				v[key] = srcVal
+				v[key] = deepCopyValue(srcVal)
 			}
 		}
 	}
@@ -241,6 +243,7 @@ func (v Values) Extract(path Path) (any, error) {
 
 // Set takes a Values, a Path to a new or existing key, and any value and stores the newVal at the path.
 // Special case: path "." merges the newVal's map contents directly into v (at the root).
+// newVal is deep copied, so the stored value never shares nested maps or slices with it.
 func (v Values) Set(path Path, newVal any) error {
 	if err := path.Validate(); err != nil {
 		return err
@@ -267,7 +270,7 @@ func (v Values) Set(path Path, newVal any) error {
 			if newIsMap && currIsMap {
 				Values(currMap).DeepMerge(newMap)
 			} else {
-				current[part] = newVal
+				current[part] = deepCopyValue(newVal)
 			}
 		} else {
 			if _, exists := current[part]; !exists {
