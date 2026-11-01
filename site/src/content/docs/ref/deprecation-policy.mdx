@@ -1,0 +1,167 @@
+---
+title: Deprecation Policy
+sidebar:
+  order: 120
+---
+
+As Zarf progresses toward `v1.0.0` and evolves beyond, stability and predictability are paramount. Zarf is routinely deployed in mission-critical, airgapped, and highly regulated environments where ad-hoc patches and internet access are unavailable. In such operational contexts, unanticipated breaking changes or silent behavioral shifts can cause catastrophic downtime.
+
+This document establishes the official deprecation policy for Zarf. It defines how schemas, CLI commands, flags, configuration options, Go library APIs, and runtime behaviors evolve, are marked for deprecation, and are eventually retired without requiring unexpected major revisions.
+
+:::note
+This policy is inspired by the Kubernetes Deprecation Policy, tailored specifically to Zarf's single-binary architecture, declarative package format, and airgap deployment model.
+:::
+
+## Scope: Supported vs. Unsupported Interfaces
+
+To provide clear guarantees, Zarf explicitly distinguishes between supported public interfaces that adhere to this deprecation policy and private or internal implementations that do not.
+
+### Supported Interfaces
+
+The following interfaces are considered public contracts. Any breaking change or removal must strictly follow the deprecation rules detailed in this document:
+
+| Interface | Scope & Description | Current Tracks |
+| --- | --- | --- |
+| **Package Schemas** | Declarative package and component specifications (`zarf.yaml`) | `zarf.dev/v1alpha1` (Legacy), `zarf.dev/v1beta1` (Current Beta), `zarf.dev/v1` (Target GA) |
+| **Schema Kinds** | Top-level object models: `ZarfPackageConfig`, `ZarfComponentConfig`, and `ZarfInitConfig` | Documented in the [Schema Reference](/schema/v1beta1-package) |
+| **CLI Commands & Flags** | User-facing CLI invocations (`zarf [command] [subcommand] [flags]`) | Documented under [CLI Commands](/commands/zarf) |
+| **Configuration Files & Env Vars** | Config files (`zarf-config.yaml`, `zarf-config.toml`) and `ZARF_*` environment variables | Documented under [Config Files](/ref/config-files) |
+| **Public Go APIs** | Exported types and conversion helpers under `github.com/zarf-dev/zarf/src/api/...` | Version-neutral `api.Package`, `api.Component`, `src/api/convert`, and versioned types |
+| **Package Archive Specification** | Package tarball structure (`.tar.zst`), checksum manifest (`checksums.txt`), and OCI layout | Documented under [Zarf Packages](/ref/packages) |
+| **In-Cluster State** | State secrets managed in the `zarf` namespace (`zarf-state` and package secrets) | Managed via `zarf init` and `zarf package deploy` |
+
+### Unsupported & Private Interfaces
+
+The following components are internal to Zarf or experimental in nature. They do **not** carry deprecation notice guarantees and may change or be removed at any time:
+
+- **Internal Go Packages**: Any package under `src/internal/...` or `src/cmd/...`. Go compiler visibility rules prevent external imports of `internal/`, and the Zarf project provides no compatibility promises for these packages.
+- **Cache & Ephemeral Directory Layouts**: The internal layout and file formats inside `~/.zarf-cache` or temporary staging directories (`.zarf-temp-*`).
+- **Undocumented Flags & Debug Hooks**: Flags marked as hidden or explicitly documented with `[Experimental]`.
+- **Experimental Schema Features**: Schema attributes or component actions explicitly noted as experimental in release notes or schema annotations.
+- **Undocumented Cluster Secrets**: Unexported fields or internal transient annotations placed on cluster resources outside the documented `zarf-state` contract.
+
+---
+
+## Stability Levels
+
+Zarf interfaces progress through three distinct stability levels:
+
+```text
+[ Alpha / Experimental ] ──> [ Beta ] ──> [ GA / Stable ] ──> [ Deprecated ] ──> [ Removed ]
+```
+
+### 1. Alpha / Experimental
+
+- **Purpose**: Early exploration and community feedback for new capabilities.
+- **Guarantees**: May change or be removed between minor releases. No long-term backwards compatibility is guaranteed, though breaking changes will be highlighted in release notes.
+- **Example**: New component features or CLI commands initially released under experimental flags.
+
+### 2. Beta
+
+- **Purpose**: Feature-complete functionality undergoing real-world hardening.
+- **Guarantees**: Breaking changes are avoided. If a beta interface must be modified or replaced, migration paths and warnings will be provided across at least one minor release before removal.
+- **Example**: `zarf.dev/v1beta1` package schema definitions.
+
+### 3. Generally Available (GA / Stable)
+
+- **Purpose**: Production-ready, fully tested capabilities.
+- **Guarantees**: Strict compatibility contract. Stable elements will **never** be removed within a major version of Zarf. When a replacement is introduced, the deprecated element remains functional for the required notice period across minor releases.
+- **Example**: Core CLI commands (`zarf init`, `zarf package create`, `zarf package deploy`) and the `zarf.dev/v1` package schema.
+
+---
+
+## Deprecation Rules
+
+### Rule #1: Schema Elements Removal Requires Version Increment
+
+Elements of the package specification schema (fields, annotations, kinds, and enumerated values) can **only be removed by incrementing the API version** of the schema (e.g., advancing from `zarf.dev/v1alpha1` to `zarf.dev/v1beta1`, or to `zarf.dev/v1`).
+
+Once a field has been introduced in a stable schema version, it cannot be removed from that version or have its core parsing semantics altered.
+
+### Rule #2: Schema Lifetime and Deprecation Windows
+
+The lifecycle and deprecation of package schemas depend on their stability tier:
+
+- **GA Schemas (`zarf.dev/v1`)**: May be marked as deprecated if superseded by a newer major schema (e.g., `v2`), but **must not be removed within the current major version of Zarf**.
+- **Beta Schemas (`zarf.dev/v1beta1`)**: When a GA schema is released, the beta schema will be deprecated and supported for no less than **6 months or 3 minor releases** (whichever is longer) before being retired.
+- **Alpha Schemas (`zarf.dev/v1alpha1`)**: May be deprecated and removed across minor releases once a replacement schema is established. Automated migration tooling (`zarf dev upgrade`) must be provided for at least **2 minor releases** to transition package configurations.
+
+### Rule #3: Bidirectional Package Compatibility
+
+Zarf enforces bidirectional package compatibility to prevent breaking operational pipelines:
+
+- **Backward Compatibility (Older Packages on Newer CLIs)**:
+  Packages built with older supported Zarf versions must deploy successfully on newer Zarf CLIs. When older schema elements are encountered during `zarf package deploy`, Zarf translates them dynamically via internal conversion layers.
+- **Forward Compatibility (Newer Packages on Older CLIs)**:
+  When possible, packages created with a newer CLI deploy cleanly on older CLIs within the same schema family. If a package utilizes capabilities introduced in a newer release, package authors should specify a `VersionRequirement` (`minimumVersion`), causing older CLIs to fail fast with an actionable upgrade message rather than failing unpredictably during deployment.
+
+### Rule #4: CLI Commands and Flags
+
+CLI commands, subcommands, and flags follow strict longevity windows once marked for deprecation:
+
+| Stability Track | Minimum Notice / Lifetime After Deprecation | Removal Milestone |
+| --- | --- | --- |
+| **GA / Stable** | **6 months or 2 minor releases** (whichever is longer) | Next minor or major release after window |
+| **Beta** | **3 months or 1 minor release** (whichever is longer) | Subsequent minor release |
+| **Alpha / Experimental** | **0 releases** (Documented in release notes) | Any minor release |
+
+- A stable CLI element cannot be deprecated in favor of a less stable (Alpha/Experimental) alternative.
+- Deprecated CLI elements must emit an explicit warning to standard error when executed, detailing:
+  1. The deprecated command or flag.
+  2. The recommended replacement.
+  3. The target version in which it will be removed.
+
+### Rule #5: Round-Trip Schema Conversion
+
+Package definitions must be able to convert between supported schema versions without loss of critical deployment configuration (with the exception of whole features that have been deliberately deprecated and removed from newer schemas).
+
+Zarf provides automated migration tooling:
+
+```bash
+zarf dev upgrade zarf.yaml > zarf-new.yaml
+```
+
+This ensures package maintainers can automatically adapt existing definitions to newer schema revisions without manual re-authoring.
+
+### Rule #6: Public Go API Deprecation (`src/api`)
+
+For consumers importing Zarf as a Go library:
+
+- Public symbols under `github.com/zarf-dev/zarf/src/api/...` follow standard Go deprecation conventions using Godoc comments:
+
+  ```go
+  // Deprecated: Use ReplacementFunction instead. Will be removed in v1.X.0.
+  func LegacyFunction() { ... }
+  ```
+
+- Deprecated Go functions, types, and constants will be maintained for at least **2 minor releases** before removal.
+- Private packages (`src/internal/...`) have no deprecation window and must not be imported by external projects.
+
+### Rule #7: In-Cluster State & Component Upgrades
+
+Changes to Zarf's cluster state schema (the `zarf-state` secret and package secrets in the `zarf` namespace) or in-cluster agents:
+
+- Must support in-place schema upgrades via `zarf init` or `zarf tools update-creds`.
+- An upgraded Zarf binary must never render existing cluster deployments unmanageable or require tearing down initialized clusters to adopt minor release updates.
+
+---
+
+## Deprecation Process & Notifications
+
+When an interface or feature enters deprecation, Zarf communicates the change through multiple channels to ensure zero operational surprises:
+
+1. **Terminal Warnings**: When a deprecated flag, command, or schema element is used, the CLI prints an interactive warning with remediation instructions.
+2. **Release Notes**: Every minor release includes a dedicated **Deprecations and Removals** section highlighting deprecated features, proposed timelines, and migration guides.
+3. **Migration Documentation**: Dedicated migration guides (such as [Migrating Packages from v1alpha1 to v1beta1](/best-practices/v1alpha1-to-v1beta1/)) are published alongside schema transitions to guide users through necessary updates.
+4. **Automated Linters**: `zarf dev lint` and package validation identify deprecated fields during package authoring before deployment occurs.
+
+---
+
+## Exceptions
+
+No policy can foresee every situation. While Zarf strictly adheres to these rules, exceptional circumstances may require expedited changes:
+
+- **Critical Security Vulnerabilities (CVEs)**: If an existing API, embedded utility, or flag introduces a severe security flaw that cannot be mitigated while maintaining backwards compatibility, the maintainers may disable or remove the affected logic in a patch or minor release.
+- **Upstream Kubernetes / Container Runtime Incompatibilities**: If upstream dependencies (such as Kubernetes API removals or OCI specification shifts) break underlying assumptions, Zarf will provide documented workarounds and accelerate the migration path.
+
+Any exception will be thoroughly documented in the release notes and announced in the community Slack channel.
