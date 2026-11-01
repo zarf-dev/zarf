@@ -253,6 +253,16 @@ func TestDeployInitComponentServices(t *testing.T) {
 			if tt.opts.RegistryInfo.Address != "" {
 				require.Equal(t, tt.opts.RegistryInfo.Address, s.RegistryInfo.Address)
 			}
+
+			_, err = cs.CoreV1().Namespaces().Get(ctx, state.ZarfNamespaceName, metav1.GetOptions{})
+			require.NoError(t, err)
+			deployed, err := c.GetDeployedPackage(ctx, pkg.Metadata.Name)
+			require.NoError(t, err)
+			require.Equal(t, 1, deployed.Generation)
+			require.Equal(t, state.EventOutcomeInProgress, deployed.Events[0].Outcome)
+			for _, component := range deployed.DeployedComponents {
+				require.Equal(t, 1, component.ObservedGeneration)
+			}
 		})
 	}
 }

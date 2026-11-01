@@ -67,12 +67,11 @@ type DeployOptions struct {
 	OCIConcurrency int
 	// Remote Options for image pushes.
 	types.RemoteOptions
-	// How to configure Zarf state if it's not already been configured.
-	GitServer      state.GitServerInfo
-	RegistryInfo   state.RegistryInfo
-	ArtifactServer state.ArtifactServerInfo
-	StorageClass   string
-	InjectorPort   int
+	// How to configure Zarf state if it's not already been configured
+	GitServer    state.GitServerInfo
+	RegistryInfo state.RegistryInfo
+	StorageClass string
+	InjectorPort int
 	// InjectorImage is the injector container image. Proxy mode defaults to the image saved in cluster state and requires an image on first init.
 	InjectorImage string
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
@@ -393,16 +392,29 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
-		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
-			l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
-		}
 
 		var charts []state.InstalledChart
 		var deployErr error
-		if pkg.IsInitConfig() {
-			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
-		} else {
-			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
+		// InitState creates the Zarf namespace required to persist deployed package state.
+		if pkg.IsInitConfig() && component.RequiresCluster() && d.s == nil {
+			if err := d.initState(ctx, pkg, opts); err != nil {
+				return nil, err
+			}
+		}
+		if d.isConnectedToCluster() && d.deployedPkg == nil && d.s != nil {
+			if err := d.startDeploymentState(ctx, pkgLayout, opts); err != nil {
+				return nil, fmt.Errorf("start package deployment state: %w", err)
+			}
+		}
+		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
+			l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
+		}
+		if deployErr == nil {
+			if pkg.IsInitConfig() {
+				charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
+			} else {
+				charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
+			}
 		}
 
 		onDeploy := component.Actions.OnDeploy
@@ -498,9 +510,6 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 		switch c.Service.Name {
 		case api.ServiceGitServer:
 			services.Add(state.GitKey)
-			if feature.IsEnabled(feature.ArtifactServer) {
-				services.Add(state.ArtifactKey)
-			}
 		case api.ServiceRegistry, api.ServiceSeedRegistry, api.ServiceInjector:
 			if !registryExternal {
 				services.Add(state.RegistryKey)
@@ -512,6 +521,30 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 	return services
 }
 
+func (d *deployer) initState(ctx context.Context, pkg api.Package, opts DeployOptions) error {
+	applianceMode := false
+	for _, component := range pkg.Components {
+		if component.Name == "k3s" {
+			applianceMode = true
+		}
+	}
+	var err error
+	d.s, err = d.c.InitState(ctx, cluster.InitStateOptions{
+		GitServer:           opts.GitServer,
+		RegistryInfo:        opts.RegistryInfo,
+		ApplianceMode:       applianceMode,
+		StorageClass:        opts.StorageClass,
+		InjectorPort:        opts.InjectorPort,
+		AgentTLS:            opts.AgentTLS,
+		AgentMutationPolicy: opts.AgentMutationPolicy,
+		InternalServices:    internalServicesFor(pkg.Components, opts),
+	})
+	if err != nil {
+		return fmt.Errorf("unable to initialize Zarf state: %w", err)
+	}
+	return nil
+}
+
 func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component api.Component, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
@@ -520,34 +553,9 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	isInjector := component.Service.Name == api.ServiceInjector
 	isAgent := component.Service.Name == api.ServiceAgent
 
-	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if component.RequiresCluster() && d.s == nil {
-		applianceMode := false
-		for _, component := range pkg.Components {
-			if component.Name == "k3s" {
-				applianceMode = true
-			}
-		}
-		var err error
-		d.s, err = d.c.InitState(ctx, cluster.InitStateOptions{
-			GitServer:           opts.GitServer,
-			RegistryInfo:        opts.RegistryInfo,
-			ArtifactServer:      opts.ArtifactServer,
-			ApplianceMode:       applianceMode,
-			StorageClass:        opts.StorageClass,
-			InjectorPort:        opts.InjectorPort,
-			AgentTLS:            opts.AgentTLS,
-			AgentMutationPolicy: opts.AgentMutationPolicy,
-			InternalServices:    internalServicesFor(pkg.Components, opts),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
-		}
-	}
-
-	if d.deployedPkg == nil && d.s != nil {
-		if err := d.startDeploymentState(ctx, pkgLayout, opts); err != nil {
-			return nil, fmt.Errorf("start package deployment state: %w", err)
+		if err := d.initState(ctx, pkg, opts); err != nil {
+			return nil, err
 		}
 	}
 

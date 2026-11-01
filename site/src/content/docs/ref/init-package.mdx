@@ -129,7 +129,7 @@ It leverages the same `docker-registry` chart used in `zarf-seed-registry` but w
 
 You can further customize how the registry behaves by setting variables such as `REGISTRY_PVC_SIZE` with a [config file](/ref/config-files/) or `--set` on `zarf init`.
 
-To see a full list of `variables` you can view the [`zarf.yaml` that defines the registry](https://github.com/zarf-dev/zarf/blob/main/packages/zarf-registry/zarf.yaml).
+To see a full list of `variables` you can view the [`zarf.yaml` that defines the registry](https://github.com/zarf-dev/zarf/blob/main/packages/init/v1alpha1/zarf-registry/zarf.yaml).
 
 :::
 
@@ -258,7 +258,7 @@ root@machine ~ # zarf init --components k3s --set K3S_ARGS="" --confirm
 
 You can further customize how the git-server behaves by setting variables such as `GIT_SERVER_PVC_SIZE` with a [config file](/ref/config-files/) or `--set` on `zarf init`.
 
-To see a full list of `variables` you can view the [zarf.yaml that defines the git-server](https://github.com/zarf-dev/zarf/blob/main/packages/gitea/zarf.yaml).
+To see a full list of `variables` you can view the [zarf.yaml that defines the git-server](https://github.com/zarf-dev/zarf/blob/main/packages/init/v1alpha1/gitea/zarf.yaml).
 
 :::
 
@@ -317,7 +317,6 @@ In order to reproduce / build the following example, you will need to have the Z
 ```bash
 git clone https://github.com/zarf-dev/zarf.git
 cd zarf
-mv zarf.yaml zarf.yaml.bak
 ```
 
 You can learn more about creating a custom init package in the [Creating a Custom 'init' Package Tutorial](/tutorials/7-custom-init-packages).
@@ -336,22 +335,22 @@ components:
   - name: zarf-injector
     required: true
     import:
-      path: packages/zarf-registry
+      path: packages/init/v1alpha1/zarf-registry
 
   - name: zarf-seed-registry
     required: true
     import:
-      path: packages/zarf-registry
+      path: packages/init/v1alpha1/zarf-registry
 
   - name: zarf-registry
     required: true
     import:
-      path: packages/zarf-registry
+      path: packages/init/v1alpha1/zarf-registry
 
   - name: zarf-agent
     required: true
     import:
-      path: packages/zarf-agent
+      path: packages/init/v1alpha1/zarf-agent
 ```
 
 {/* technically the most minimal you can go is just `zarf-agent` and using an external registry / git server but idk if it's worth documenting that */}

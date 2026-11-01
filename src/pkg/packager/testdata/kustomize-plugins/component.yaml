@@ -1,0 +1,11 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component:
+  manifests:
+    - name: app
+      kustomize:
+        enablePlugins: true
+        files:
+          - .

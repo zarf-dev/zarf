@@ -148,7 +148,6 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
 
 	CmdInitErrValidateGit      = "the 'git-push-username' and 'git-push-password' flags must be provided if the 'git-url' flag is provided"
 	CmdInitErrValidateRegistry = "the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided"
-	CmdInitErrValidateArtifact = "the 'artifact-push-username' and 'artifact-push-token' flags must be provided if the 'artifact-url' flag is provided"
 
 	CmdInitPullAsk       = "It seems the init package could not be found locally, but can be pulled from oci://%s"
 	CmdInitPullNote      = "Note: This will require an internet connection."
@@ -176,13 +175,6 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
 	CmdInitFlagRegPullPass = "Password for the pull-only user to access the registry"
 	CmdInitFlagRegSecret   = "Internal registry secret value. Only used when --registry-url is not set."
 
-	CmdInitFlagArtifactURL       = "[alpha] External artifact registry url to use for this Zarf cluster"
-	CmdInitFlagArtifactPushUser  = "[alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts."
-	CmdInitFlagArtifactPushToken = "[alpha] API Token for the push-user to access the artifact registry"
-
-	// The artifact server is deprecated across init and tools creds commands.
-	ArtifactServerDeprecated = "The artifact server is deprecated and will be removed in a future release"
-
 	// zarf internal
 	CmdInternalShort = "Internal tools used by zarf"
 
@@ -190,11 +182,6 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
 	CmdInternalAgentLong  = "NOTE: This command is a hidden command and generally shouldn't be run by a human.\n" +
 		"This command starts up a http webhook that Zarf deployments use to mutate pods to conform " +
 		"with the Zarf container registry and Gitea server URLs."
-
-	CmdInternalProxyShort = "[alpha] Runs the zarf agent http proxy"
-	CmdInternalProxyLong  = "[alpha] NOTE: This command is a hidden command and generally shouldn't be run by a human.\n" +
-		"This command starts up a http proxy that can be used by running pods to transform queries " +
-		"that conform to Gitea / Gitlab repository and package URLs in the airgap."
 
 	CmdInternalGenerateCliDocsShort   = "Creates auto-generated markdown of all the commands for the CLI"
 	CmdInternalGenerateCliDocsSuccess = "Successfully created the CLI documentation"
@@ -205,10 +192,6 @@ $ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-
 	CmdInternalCreateReadOnlyGiteaUserLong  = "Creates a read-only user in Gitea by using the Gitea API. " +
 		"This is called internally by the supported Gitea package component."
 	CmdInternalCreateReadOnlyGiteaUserErr = "Unable to create a read-only user in the Gitea service."
-
-	CmdInternalArtifactRegistryGiteaTokenShort = "Creates an artifact registry token for Gitea"
-	CmdInternalArtifactRegistryGiteaTokenLong  = "Creates an artifact registry token in Gitea using the Gitea API. " +
-		"This is called internally by the supported Gitea package component."
 
 	CmdInternalUpdateGiteaPVCShort = "Updates an existing Gitea persistent volume claim"
 	CmdInternalUpdateGiteaPVCLong  = "Updates an existing Gitea persistent volume claim by assessing if claim is a custom user provided claim or default." +
@@ -361,11 +344,17 @@ $ zarf package inspect images my-package
 `
 
 	CmdPackageInspectSBOMExample = `
-# Extract the SBOM from a local package tarball
+# Extract every SBOM from a local package tarball
 $ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --output ./sbom
 
-# Extract the SBOM from a package in an OCI registry (oci:// prefix optional)
+# Extract every SBOM from a package in an OCI registry (oci:// prefix optional)
 $ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbom
+
+# Extract SBOMs matching a component name
+$ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --keys metrics --output ./sbom
+
+# Extract SBOMs matching an exact package image reference
+$ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --keys ghcr.io/my-org/api:v1.4.2 --output ./sbom
 `
 
 	CmdPackageInspectManifestsExample = `
@@ -567,6 +556,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdDevFlagSetVariables                 = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
 	CmdDevFlagRepoChartPath                = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdDevFlagGitAccount                   = "User or organization name for the git account that the repos are created under."
+	CmdDevFlagEnableKustomizePlugins       = "Allow external Kustomize plugins referenced by the package definition to execute arbitrary code"
 	CmdDevFlagKubeVersion                  = "Override the default helm template KubeVersion when performing a package chart template"
 	CmdDevFlagRegistry                     = "Override the ###ZARF_REGISTRY### value"
 	CmdDevFlagFindImagesWhy                = "Prints the source manifest for the specified image"
@@ -850,7 +840,6 @@ $ zarf tools get-creds registry
 $ zarf tools get-creds registry-readonly
 $ zarf tools get-creds git
 $ zarf tools get-creds git-readonly
-$ zarf tools get-creds artifact
 `
 
 	CmdToolsUpdateCredsShort      = "Updates the credentials for deployed Zarf services (deprecated; prefer the per-service subcommands)"
@@ -863,14 +852,12 @@ $ zarf tools update-creds
 # Autogenerate specific Zarf service credentials:
 $ zarf tools update-creds registry
 $ zarf tools update-creds git
-$ zarf tools update-creds artifact
 $ zarf tools update-creds agent
 
 # Update all Zarf credentials w/external services at once:
 $ zarf tools update-creds \
 	--registry-push-username={USERNAME} --registry-push-password={PASSWORD} \
-	--git-push-username={USERNAME} --git-push-password={PASSWORD} \
-	--artifact-push-username={USERNAME} --artifact-push-token={PASSWORD}
+	--git-push-username={USERNAME} --git-push-password={PASSWORD}
 
 # NOTE: Any credentials omitted from flags without a service key specified will be autogenerated - URLs will only change if specified.
 # Config options can also be set with the 'init' section of a Zarf config file.
@@ -878,7 +865,6 @@ $ zarf tools update-creds \
 # Update specific Zarf credentials w/external services:
 $ zarf tools update-creds registry --registry-push-username={USERNAME} --registry-push-password={PASSWORD}
 $ zarf tools update-creds git --git-push-username={USERNAME} --git-push-password={PASSWORD}
-$ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifact-push-token={PASSWORD}
 
 # NOTE: Not specifying a pull username/password will keep the previous pull username/password.
 `

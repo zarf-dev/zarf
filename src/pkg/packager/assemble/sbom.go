@@ -50,8 +50,9 @@ const componentPrefix = "zarf-component-"
 var viewerAssets embed.FS
 
 type imageSBOMTarget struct {
-	img        v1.Image
-	identifier string
+	img                v1.Image
+	resourceIdentifier string
+	imageReference     string
 }
 
 func generateSBOM(ctx context.Context, pkg api.Package, buildPath string, images []images.PulledImage, cachePath string, declaredImageReferences map[string][]string) error {
@@ -78,14 +79,18 @@ func imageSBOMTargets(buildPath string, images []images.PulledImage, useDeclared
 		}
 		for _, identifier := range identifiers {
 			for _, platformImage := range platformImages {
-				platformIdentifier := identifier
+				resourceIdentifier := identifier
 				if platformImage.platform != nil && platformImage.platform.Architecture != "" {
-					platformIdentifier = fmt.Sprintf("%s-%s-%s", identifier, platformImage.platform.OS, platformImage.platform.Architecture)
+					resourceIdentifier = fmt.Sprintf("%s-%s-%s", identifier, platformImage.platform.OS, platformImage.platform.Architecture)
 					if platformImage.platform.Variant != "" {
-						platformIdentifier = fmt.Sprintf("%s-%s", platformIdentifier, platformImage.platform.Variant)
+						resourceIdentifier = fmt.Sprintf("%s-%s", resourceIdentifier, platformImage.platform.Variant)
 					}
 				}
-				targets = append(targets, imageSBOMTarget{img: platformImage.image, identifier: platformIdentifier})
+				targets = append(targets, imageSBOMTarget{
+					img:                platformImage.image,
+					resourceIdentifier: resourceIdentifier,
+					imageReference:     pulled.Image.Reference,
+				})
 			}
 		}
 	}
@@ -107,8 +112,8 @@ func sbomImageIdentifiers(image transform.Image, useDeclaredReferences bool, dec
 func generateGranularSBOMs(ctx context.Context, pkg api.Package, buildPath string, targets []imageSBOMTarget, cachePath string) error {
 	l := logger.From(ctx)
 	for index, target := range targets {
-		l.Info("creating image SBOM", "reference", target.identifier, "count", fmt.Sprintf("%d/%d", index+1, len(targets)))
-		if _, err := createImageSBOMResource(ctx, cachePath, buildPath, target.img, target.identifier); err != nil {
+		l.Info("creating image SBOM", "reference", target.resourceIdentifier, "count", fmt.Sprintf("%d/%d", index+1, len(targets)))
+		if _, err := createImageSBOMResource(ctx, cachePath, buildPath, target.img, target.resourceIdentifier, target.imageReference); err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
 		}
 	}
@@ -143,7 +148,7 @@ func generateArchivedSBOMs(ctx context.Context, pkg api.Package, buildPath strin
 		}
 		identifiers := make([]string, 0, len(targets))
 		for _, target := range targets {
-			identifiers = append(identifiers, target.identifier)
+			identifiers = append(identifiers, target.resourceIdentifier)
 		}
 		jsonList, err = generateJSONList(componentSBOMs, identifiers)
 		if err != nil {
@@ -153,13 +158,13 @@ func generateArchivedSBOMs(ctx context.Context, pkg api.Package, buildPath strin
 
 	l := logger.From(ctx)
 	for index, target := range targets {
-		l.Info("creating image SBOM", "reference", target.identifier, "count", fmt.Sprintf("%d/%d", index+1, len(targets)))
-		jsonData, err := createImageSBOM(ctx, cachePath, outputPath, target.img, target.identifier)
+		l.Info("creating image SBOM", "reference", target.resourceIdentifier, "count", fmt.Sprintf("%d/%d", index+1, len(targets)))
+		jsonData, err := createImageSBOM(ctx, cachePath, outputPath, target.img, target.resourceIdentifier)
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
 		}
 		if sbomViewerEnabled {
-			if err := createSBOMViewerAsset(outputPath, target.identifier, jsonData, jsonList); err != nil {
+			if err := createSBOMViewerAsset(outputPath, target.resourceIdentifier, jsonData, jsonList); err != nil {
 				return err
 			}
 		}
@@ -186,9 +191,10 @@ func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.I
 	return createImageSBOMAtPath(ctx, cachePath, filepath.Join(outputPath, filename), img, identifier)
 }
 
-func createImageSBOMResource(ctx context.Context, cachePath, outputPath string, img v1.Image, identifier string) ([]byte, error) {
-	resourcePath := filepath.FromSlash(layout.ImageSBOMResourcePath(identifier))
-	return createImageSBOMAtPath(ctx, cachePath, filepath.Join(outputPath, resourcePath), img, identifier)
+// createImageSBOMResource stores an image SBOM under resourceIdentifier while recording imageReference in the SBOM.
+func createImageSBOMResource(ctx context.Context, cachePath, outputPath string, img v1.Image, resourceIdentifier, imageReference string) ([]byte, error) {
+	resourcePath := filepath.FromSlash(layout.ImageSBOMResourcePath(resourceIdentifier))
+	return createImageSBOMAtPath(ctx, cachePath, filepath.Join(outputPath, resourcePath), img, imageReference)
 }
 
 func createImageSBOMAtPath(ctx context.Context, cachePath, sbomPath string, img v1.Image, identifier string) ([]byte, error) {

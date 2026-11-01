@@ -1,0 +1,15 @@
+#!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+set -eu
+printf 'executed\n' > "$ZARF_TEST_KUSTOMIZE_PLUGIN_MARKER"
+cat <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: plugin-pod
+spec:
+  containers:
+    - name: app
+      image: scratch:latest
+EOF

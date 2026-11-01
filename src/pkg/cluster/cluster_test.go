@@ -592,7 +592,7 @@ func newFakeInitStateCluster(ctx context.Context, t *testing.T, existing *state.
 }
 
 func TestInitStateServicesGating(t *testing.T) {
-	t.Run("new cluster without git service leaves git and artifact empty", func(t *testing.T) {
+	t.Run("new cluster without git service leaves git empty", func(t *testing.T) {
 		ctx := context.Background()
 		c := newFakeInitStateCluster(ctx, t, nil)
 		s, err := c.InitState(ctx, InitStateOptions{
@@ -601,7 +601,6 @@ func TestInitStateServicesGating(t *testing.T) {
 		require.NoError(t, err)
 		require.Empty(t, s.GitServer.Address)
 		require.Empty(t, s.GitServer.PushPassword)
-		require.Empty(t, s.ArtifactServer.Address)
 		require.False(t, s.GitServer.IsConfigured())
 		require.NotEmpty(t, s.RegistryInfo.Address)
 		require.NotEmpty(t, s.AgentInfo.TLS.Cert)
@@ -624,12 +623,11 @@ func TestInitStateServicesGating(t *testing.T) {
 		ctx := context.Background()
 		c := newFakeInitStateCluster(ctx, t, nil)
 		s, err := c.InitState(ctx, InitStateOptions{
-			InternalServices: state.NewServiceSet(state.RegistryKey, state.GitKey, state.ArtifactKey, state.AgentKey),
+			InternalServices: state.NewServiceSet(state.RegistryKey, state.GitKey, state.AgentKey),
 		})
 		require.NoError(t, err)
 		require.True(t, s.GitServer.IsConfigured())
 		require.Equal(t, state.GitServerModeInternal, s.GitServer.GitServerMode)
-		require.True(t, s.ArtifactServer.IsInternal())
 		require.NotEmpty(t, s.RegistryInfo.Address)
 		require.NotEmpty(t, s.AgentInfo.TLS.Cert)
 	})
@@ -649,13 +647,12 @@ func TestInitStateServicesGating(t *testing.T) {
 		}
 		c := newFakeInitStateCluster(ctx, t, existing)
 		s, err := c.InitState(ctx, InitStateOptions{
-			InternalServices: state.NewServiceSet(state.GitKey, state.ArtifactKey),
+			InternalServices: state.NewServiceSet(state.GitKey),
 		})
 		require.NoError(t, err)
 		require.True(t, s.GitServer.IsConfigured())
 		require.Equal(t, state.GitServerModeInternal, s.GitServer.GitServerMode)
 		require.Equal(t, "127.0.0.1:31999", s.RegistryInfo.Address)
-		require.NotEmpty(t, s.ArtifactServer.Address)
 	})
 
 	t.Run("re-init adds missing agent and ignores existing namespaces", func(t *testing.T) {

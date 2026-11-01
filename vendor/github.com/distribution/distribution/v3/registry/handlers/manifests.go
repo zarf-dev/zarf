@@ -51,6 +51,11 @@ func manifestDispatcher(ctx *Context, r *http.Request) http.Handler {
 	ref := getReference(ctx)
 	dgst, err := digest.Parse(ref)
 	if err != nil {
+		if strings.ContainsRune(ref, ':') {
+			// Looks like a digest but failed to parse; reject rather than treating the malformed digest as a tag name.
+			ctx.Errors = append(ctx.Errors, errcode.ErrorCodeDigestInvalid.WithDetail(err))
+			return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+		}
 		// We just have a tag
 		manifestHandler.Tag = ref
 	} else {
@@ -124,7 +129,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 			if _, ok := err.(distribution.ErrTagUnknown); ok {
 				imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestUnknown.WithDetail(err))
 			} else {
-				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+				imh.Errors = append(imh.Errors, toErrcodeErrors(err)...)
 			}
 			return
 		}
@@ -145,7 +150,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestUnknown.WithDetail(err))
 		} else {
-			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			imh.Errors = append(imh.Errors, toErrcodeErrors(err)...)
 		}
 		return
 	}
@@ -471,8 +476,7 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 	err = manifests.Delete(imh, imh.Digest)
 	if err != nil {
 		switch err {
-		case digest.ErrDigestUnsupported:
-		case digest.ErrDigestInvalidFormat:
+		case digest.ErrDigestUnsupported, digest.ErrDigestInvalidFormat:
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeDigestInvalid)
 			return
 		case distribution.ErrBlobUnknown:
