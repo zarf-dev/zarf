@@ -356,10 +356,15 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	if err != nil {
 		return "", err
 	}
-	rel, err := filepath.Rel(abs, dir)
+	absDir, err := filepath.Abs(dir)
 	if err != nil {
 		return "", err
 	}
+	rel, err := filepath.Rel(abs, absDir)
+	if err != nil {
+		return "", err
+	}
+	rel = filepath.ToSlash(rel)
 
 	// If it is a remote component, there is nothing to extract
 	if oci.IsEmptyDescriptor(componentDesc) {

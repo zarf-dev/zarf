@@ -7,6 +7,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -20,14 +21,20 @@ import (
 func TestComposabilityExample(t *testing.T) {
 	t.Parallel()
 
-	// Skip for Windows until path separators in packages are standardized.
+	tmpDir := t.TempDir()
 	if runtime.GOOS == "windows" {
-		t.SkipNow()
+		// Ensure tmpDir is on the same drive as the repository to support cross-path relative resolution on multi-drive Windows runners.
+		cwd, err := os.Getwd()
+		require.NoError(t, err)
+		tmpDir, err = os.MkdirTemp(cwd, "zarf-test-*")
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_ = os.RemoveAll(tmpDir)
+		})
 	}
 
-	tmpDir := t.TempDir()
 	composeExample := filepath.Join("examples", "composable-packages")
-	_, _, err := e2e.Zarf(t, "package", "create", composeExample, "-o", tmpDir, "--no-color", "--confirm", "--zarf-cache", tmpDir)
+	_, _, err := e2e.Zarf(t, "package", "create", composeExample, "-o", tmpDir, "--no-color", "--confirm", "--cache", tmpDir)
 	require.NoError(t, err)
 
 	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
@@ -43,6 +50,7 @@ func TestComposabilityExample(t *testing.T) {
 
 	rel, err := filepath.Rel(absComposeExample, tmpDir)
 	require.NoError(t, err)
+	rel = filepath.ToSlash(rel)
 
 	expectedYaml := fmt.Sprintf(`- name: local-games-path
   description: Example of a local composed package with a unique description for this component
@@ -80,12 +88,18 @@ func TestComposabilityExample(t *testing.T) {
 func TestFullComposability(t *testing.T) {
 	t.Parallel()
 
-	// Skip for Windows until path separators in packages are standardized.
+	tmpDir := t.TempDir()
 	if runtime.GOOS == "windows" {
-		t.SkipNow()
+		// Ensure tmpDir is on the same drive as the repository to support cross-path relative resolution on multi-drive Windows runners.
+		cwd, err := os.Getwd()
+		require.NoError(t, err)
+		tmpDir, err = os.MkdirTemp(cwd, "zarf-test-*")
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_ = os.RemoveAll(tmpDir)
+		})
 	}
 
-	tmpDir := t.TempDir()
 	composeTest := filepath.Join("src", "test", "packages", "09-composable-packages")
 	_, _, err := e2e.Zarf(t, "package", "create", composeTest, "-o", tmpDir, "--no-color", "--confirm")
 	require.NoError(t, err)
