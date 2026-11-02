@@ -4,7 +4,8 @@ Date: 2022-12-14
 
 ## Status
 
-Accepted
+Deprecated. Use `zarf package deploy --connected` instead of `metadata.yolo`.
+The `metadata.yolo` field remains supported in v1alpha1 for backward compatibility and is removed in v1beta1.
 
 ## Context
 
