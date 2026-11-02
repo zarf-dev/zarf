@@ -246,6 +246,8 @@ type ZarfBuildData struct {
 	Differential bool `json:"differential,omitempty"`
 	// Version of a previously built package used as the basis for creating this differential package.
 	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty" jsonschema:"pattern=^[^/\\\\]*$"`
+	// Images, keyed by component name, that were not included in this package because the differential package already provides them.
+	DifferentialImages map[string][]string `json:"differentialImages,omitempty"`
 	// List of components that were not included in this package due to differential packaging.
 	DifferentialMissing []string `json:"differentialMissing,omitempty"`
 	// The flavor of Zarf used to build this package.

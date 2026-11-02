@@ -113,9 +113,10 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		}
 		definition = updatedDefinition
 		pkg = definition
-		definition.Build.Differential = &api.Differential{
-			FromVersion: opts.DifferentialPackage.Metadata.Version,
+		if definition.Build.Differential == nil {
+			definition.Build.Differential = &api.Differential{}
 		}
+		definition.Build.Differential.FromVersion = opts.DifferentialPackage.Metadata.Version
 	}
 	if err := layout.ValidatePackagePaths(definition); err != nil {
 		return nil, err

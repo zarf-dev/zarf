@@ -41,6 +41,7 @@ func PackageFromV1beta1(pkg v1beta1.Package) api.Package {
 	if pkg.Build.Differential != nil {
 		g.Build.Differential = &api.Differential{
 			FromVersion: pkg.Build.Differential.FromVersion,
+			Images:      imagesMapToGeneric(pkg.Build.Differential.Images),
 		}
 	}
 
@@ -376,6 +377,7 @@ func buildFromGeneric(b api.BuildData) v1beta1.BuildData {
 	if b.Differential != nil {
 		out.Differential = &v1beta1.Differential{
 			FromVersion: b.Differential.FromVersion,
+			Images:      imagesMapFromGeneric(b.Differential.Images),
 		}
 	}
 
@@ -781,4 +783,35 @@ func ociRefFromGeneric(ref *api.OCIRef) v1beta1.OCIRef {
 		Tag:    ref.Tag,
 		Digest: ref.Digest,
 	}
+}
+
+func imagesMapToGeneric(in map[string][]v1beta1.Image) map[string][]api.Image {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make(map[string][]api.Image, len(in))
+	for component, images := range in {
+		for _, img := range images {
+			out[component] = append(out[component], api.Image{ID: img.ID, Name: img.Name, Source: api.ImageSource(img.Source)})
+		}
+	}
+	return out
+}
+
+func imagesMapFromGeneric(in map[string][]api.Image) map[string][]v1beta1.Image {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make(map[string][]v1beta1.Image, len(in))
+	for component, images := range in {
+		for _, img := range images {
+			source := img.Source
+			if source == api.ImageSourceRegistryDaemonFallback {
+				// The v1beta1 schema has no fallback source; its default is registry.
+				source = api.ImageSourceRegistry
+			}
+			out[component] = append(out[component], v1beta1.Image{ID: img.ID, Name: img.Name, Source: v1beta1.ImageSource(source)})
+		}
+	}
+	return out
 }

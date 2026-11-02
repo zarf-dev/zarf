@@ -110,6 +110,8 @@ type BuildData struct {
 type Differential struct {
 	// Version of a previously built package used as the basis for creating this differential package.
 	FromVersion string `json:"fromVersion"`
+	// Images, keyed by component name, that were not included in this package because the base package already provides them.
+	Images map[string][]Image `json:"images,omitempty"`
 }
 
 // VersionRequirement specifies a minimum Zarf version needed and the reason for the requirement.

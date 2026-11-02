@@ -85,6 +85,7 @@ func (o Objects) WithVariables(vars variables.SetVariableMap) Objects {
 
 // WithPackage makes the package available on the Objects map using its authored API version.
 func (o Objects) WithPackage(pkg api.Package) Objects {
+	pkg = pkg.WithDifferentialImages()
 	switch pkg.GetAPIVersion() {
 	case v1alpha1.APIVersion:
 		o[objectKeyPackage] = convert.PackageToV1alpha1(pkg)

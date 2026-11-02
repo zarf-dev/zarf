@@ -110,3 +110,5 @@ Additionally, you cannot template the component import path using package config
 
 The `--differential` flag accepts another Zarf package (local or OCI) as a reference. Images and Git repositories that exist in both packages are excluded from the new
 package, reducing its size. This is especially useful in environments where large data transfers are costly or time-consuming. View the [Differential Package Tutorial](/tutorials/9-package-create-differential) for an example.
+
+Images omitted from a differential package are listed in its `zarf.yaml` under `build.differential.images` (v1beta1) or `build.differentialImages` (v1alpha1). When the package is deployed, Zarf records them as part of the deployed package, so `zarf tools registry prune` keeps them and they remain available to package templates.

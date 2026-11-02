@@ -324,6 +324,16 @@
           "description": "Whether this package was created with differential components.",
           "type": "boolean"
         },
+        "differentialImages": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "Images, keyed by component name, that were not included in this package because the differential package already provides them.",
+          "type": "object"
+        },
         "differentialMissing": {
           "description": "List of components that were not included in this package due to differential packaging.",
           "items": {

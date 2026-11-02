@@ -61,6 +61,43 @@
                 "fromVersion": {
                   "description": "Version of a previously built package used as the basis for creating this differential package.",
                   "type": "string"
+                },
+                "images": {
+                  "additionalProperties": {
+                    "items": {
+                      "additionalProperties": false,
+                      "description": "Image defines an OCI image to include in the package.",
+                      "patternProperties": {
+                        "^x-": {}
+                      },
+                      "properties": {
+                        "id": {
+                          "description": "Optional ID, unique within the component; matching IDs let importing components replace regular images.",
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "The image reference.",
+                          "type": "string"
+                        },
+                        "source": {
+                          "default": "registry",
+                          "description": "The source to pull the image from. Defaults to \"registry\".",
+                          "enum": [
+                            "registry",
+                            "daemon"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "description": "Images, keyed by component name, that were not included in this package because the base package already provides them.",
+                  "type": "object"
                 }
               },
               "required": [
@@ -3065,6 +3102,16 @@
           "differential": {
             "description": "Whether this package was created with differential components.",
             "type": "boolean"
+          },
+          "differentialImages": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "description": "Images, keyed by component name, that were not included in this package because the differential package already provides them.",
+            "type": "object"
           },
           "differentialMissing": {
             "description": "List of components that were not included in this package due to differential packaging.",

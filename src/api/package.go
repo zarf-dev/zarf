@@ -67,6 +67,9 @@ type BuildData struct {
 // A nil Differential indicates a full package.
 type Differential struct {
 	FromVersion string
+	// Images maps component names to the images left out of the package because the
+	// differential base package already provides them.
+	Images map[string][]Image
 }
 
 // VersionRequirement specifies a minimum Zarf version needed.

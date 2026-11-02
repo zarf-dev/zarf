@@ -60,6 +60,23 @@ func (p Package) HasImages() bool {
 	return false
 }
 
+// WithDifferentialImages returns a copy of the package with the images a differential package left out restored
+// to their components, so the result describes everything the deployed package needs.
+func (p Package) WithDifferentialImages() Package {
+	if p.Build.Differential == nil || len(p.Build.Differential.Images) == 0 {
+		return p
+	}
+	p.Components = slices.Clone(p.Components)
+	for i := range p.Components {
+		omitted := p.Build.Differential.Images[p.Components[i].Name]
+		if len(omitted) == 0 {
+			continue
+		}
+		p.Components[i].Images = append(slices.Clone(p.Components[i].Images), omitted...)
+	}
+	return p
+}
+
 // IsInitConfig reports whether this is a Zarf init package.
 func (p Package) IsInitConfig() bool {
 	return p.Kind == ZarfInitConfig

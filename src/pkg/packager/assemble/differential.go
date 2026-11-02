@@ -16,6 +16,7 @@ import (
 func applyDifferentialResources(definition, previous api.Package) (api.Package, error) {
 	definition.Components = slices.Clone(definition.Components)
 	previousImages, previousRepos := differentialResources(previous.Components)
+	omittedImages := map[string][]api.Image{}
 	for componentIdx := range definition.Components {
 		component := &definition.Components[componentIdx]
 		images := make([]api.Image, 0, len(component.Images))
@@ -26,6 +27,8 @@ func applyDifferentialResources(definition, previous api.Package) (api.Package, 
 			}
 			if includeImage {
 				images = append(images, image)
+			} else {
+				omittedImages[component.Name] = append(omittedImages[component.Name], image)
 			}
 		}
 		component.Images = images
@@ -41,6 +44,9 @@ func applyDifferentialResources(definition, previous api.Package) (api.Package, 
 			}
 		}
 		component.Repositories = repositories
+	}
+	if len(omittedImages) > 0 {
+		definition.Build.Differential = &api.Differential{Images: omittedImages}
 	}
 	return definition, nil
 }

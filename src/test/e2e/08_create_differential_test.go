@@ -82,4 +82,9 @@ func TestCreateDifferential(t *testing.T) {
 	for _, expectedImage := range expectedImages {
 		require.Contains(t, actualImages, expectedImage, "unable to find expected image %s", expectedImage)
 	}
+
+	// Images omitted because the base package provides them must stay recorded so deployed state and templates still see them
+	require.Equal(t, map[string][]string{
+		"versioned-assets": {"ghcr.io/stefanprodan/podinfo:6.0.0"},
+	}, differentialZarfConfig.Build.DifferentialImages)
 }

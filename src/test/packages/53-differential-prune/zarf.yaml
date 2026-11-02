@@ -1,0 +1,12 @@
+kind: ZarfPackageConfig
+metadata:
+  name: differential-prune
+  version: "###ZARF_PKG_TMPL_PACKAGE_VERSION###"
+
+components:
+  - name: app
+    required: true
+    images:
+      # Unchanged between versions, so a differential package omits it
+      - ghcr.io/stefanprodan/podinfo:6.0.0
+      - ghcr.io/stefanprodan/podinfo:###ZARF_PKG_TMPL_UPDATED_TAG###
