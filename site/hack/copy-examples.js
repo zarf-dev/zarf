@@ -16,12 +16,20 @@ export async function generateExamples({
   dstDir = path.join(__dirname, "../src/content/docs/ref/Examples"),
   ref = "main",
 } = {}) {
+  const { hiddenExamples } = JSON.parse(
+    await fs.readFile(new URL("../examples.config.json", import.meta.url), "utf-8"),
+  );
+  const hidden = new Set(hiddenExamples);
+
   await fs.rm(dstDir, { recursive: true, force: true });
   await fs.mkdir(dstDir, { recursive: true });
 
   const dirs = await fs.readdir(examplesDir);
   const examples = [];
   for (const dir of dirs) {
+    if (hidden.has(dir)) {
+      continue;
+    }
     let content;
     try {
       content = await fs.readFile(path.join(examplesDir, dir, "zarf.yaml"), "utf-8");
