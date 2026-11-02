@@ -1,0 +1,315 @@
+---
+title: How to use Image Volume-mount Archives
+sidebar:
+  order: 10
+---
+
+import ExampleYAML from "@components/ExampleYAML.astro";
+
+## Introduction
+
+`zarf dev image-volume-archive` (alias `zarf dev iva`) turns a plain directory of files into an OCI image and writes it straight to a tar in OCI layout format — no Dockerfile, no container build, and no registry round trip. Ship that tar in a package as an `imageArchive` and Zarf pushes it into the cluster registry at deploy time, where two different consumers can read it:
+
+- **Kubernetes [image volumes](https://kubernetes.io/docs/concepts/storage/volumes/#image)** — the image's filesystem is mounted into a pod at a path via `volumes[].image.reference`, the way [`examples/kiwix`](/ref/examples/kiwix/) serves its offline wiki archive. This needs OCI volume support in the cluster (generally available in Kubernetes 1.35).
+- **Flux [`OCIRepository`](https://fluxcd.io/flux/components/source/ocirepositories/) sources** — Flux extracts a layer from the artifact and treats its contents as a directory of manifests. No feature gate, and it works on any cluster Flux already runs on.
+
+The [`image-volume-archive` example](https://github.com/zarf-dev/zarf/tree/main/examples/image-volume-archive) does both halves of the second case: it builds an archive out of a directory of Flux-ready manifests, and ships the Flux `OCIRepository` and `Kustomization` that consume it. The result is a GitOps workflow whose source of truth is a directory in your package — the manifests never pass through a git host or an upstream registry.
+
+## Prerequisites
+
+- The [Zarf repository](https://github.com/zarf-dev/zarf) cloned, and a `zarf` binary built from it (`make build-cli`) or on your `$PATH`.
+- [An initialized cluster](/tutorials/01-initializing-a-k8s-cluster/).
+- The Flux controllers installed in the cluster, **installed after `zarf init`**. See the note below.
+- `kubectl`, and optionally the [`flux` CLI](https://fluxcd.io/flux/installation/), [`oras`](https://oras.land/docs/installation), `yq`, and `jq` for the inspection commands.
+
+:::caution
+
+`zarf init` labels every namespace that already exists with `zarf.dev/agent: ignore`, so the Zarf agent never mutates resources it does not own. If you install Flux **before** running `zarf init`, `flux-system` carries that label and the agent will leave the `OCIRepository` URL pointing at `zarf.internal`, which never resolves. Either install Flux after `zarf init`, or remove the label:
+
+```bash
+kubectl label ns flux-system zarf.dev/agent-
+```
+
+:::
+
+## What's in the example
+
+```
+examples/image-volume-archive
+├── fluxcd
+│   ├── deploy            # applied by Zarf into the cluster
+│   │   ├── kustomization.yaml
+│   │   ├── ks-podinfo.yaml
+│   │   ├── ns-podinfo.yaml
+│   │   └── or-iva.yaml
+│   └── podinfo           # packed into the archive, applied by Flux
+│       ├── kustomization.yaml
+│       ├── deployment.yaml
+│       ├── hpa.yaml
+│       └── service.yaml
+└── zarf.yaml
+```
+
+The split matters: `fluxcd/deploy` is what Zarf applies, and `fluxcd/podinfo` is what Zarf never looks at — those four files are only ever bytes inside the archive until Flux extracts them in the cluster.
+
+The package has a second component, `docs-archive`, that packs this site's source directory into `zarf.internal/zarf-docs:local` and ships it with no consumer attached. It is there to show the plain build-and-push case — the archive lands in the cluster registry and is ready for a pod to mount as an image volume, or for anything else that can pull an image. The rest of this tutorial follows the `fluxcd-oci-repo` component.
+
+### The component
+
+<ExampleYAML src={import("../../../../../examples/image-volume-archive/zarf.yaml?raw")} component="fluxcd-oci-repo" />
+
+Four pieces of wiring are doing the work here.
+
+**`--max-layers 1`.** Flux extracts exactly one layer from an artifact — with a `layerSelector` it takes the first layer matching the media type, and without one it takes the first layer, period. `zarf dev iva` normally spreads files across up to 127 layers, so any file that landed in a second layer would simply be missing from what Flux applies. Capping the archive at one layer guarantees Flux sees all four manifests. (See [Debugging](#debugging) for how to confirm the layer count before you deploy.)
+
+**`layerSelector.mediaType` matches the build.** `or-iva.yaml` selects `application/vnd.oci.image.layer.v1.tar+gzip`, which is the media type `zarf dev iva` writes with its default `--layer-compression gzip`. Build with `--layer-compression zstd` or `uncompressed` and this selector has to change with it, or Flux will not find a layer at all.
+
+**The `podinfo` namespace is a Zarf manifest, not a Flux one.** `ns-podinfo.yaml` is deployed by Zarf so the namespace exists before Flux's `Kustomization` applies into it via `targetNamespace`. More importantly, namespaces Zarf creates get the `private-registry` image pull secret and the `zarf.dev/agent: mutate` label — both of which the podinfo pods need in the next paragraph.
+
+**The podinfo image is listed in `images`.** Zarf rewrites image references in manifests it deploys itself, but the podinfo `Deployment` lives inside the archive, so Zarf never sees it at create time. Listing `ghcr.io/stefanprodan/podinfo:6.15.0` under `images` puts the image in the cluster registry; the Zarf agent's pod webhook then rewrites the reference at admission time, when Flux applies the `Deployment`. Drop this line and the pods land in `ImagePullBackOff` in the airgap.
+
+The `OCIRepository` itself points at the same `zarf.internal` reference the archive was built with:
+
+```yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: zarf-iva-podinfo
+  namespace: flux-system
+spec:
+  interval: 5m0s
+  url: oci://zarf.internal/zarf-flux-podinfo
+  ref:
+    tag: local
+  layerSelector:
+    mediaType: application/vnd.oci.image.layer.v1.tar+gzip
+    operation: extract
+```
+
+`zarf.internal` is a reserved TLD that never resolves on the public internet, so a failed rewrite fails loudly instead of quietly pulling from somewhere real. The Zarf agent mutates this URL on admission to the in-cluster registry service.
+
+## Create and deploy
+
+```bash
+zarf package create examples/image-volume-archive --confirm
+```
+
+The `onCreate` action runs `zarf dev iva` for each component before the package is assembled, writing `zarf.internal_zarf-flux-podinfo-local.tar` next to `zarf.yaml`. That name is what the command derives from the image reference when `--output` is not passed, which is why it matches `imageArchives[0].path`.
+
+```bash
+zarf package deploy zarf-package-image-volume-archive-amd64-0.0.1.tar.zst --confirm
+```
+
+On deploy Zarf pushes both archives into the cluster registry, creates the `podinfo` namespace, and applies the rendered `fluxcd/deploy` kustomization into `flux-system`.
+
+## Verify Flux is reading the archive
+
+The two Flux objects are the fastest signal that the archive made it into the registry in a form Flux can read:
+
+```bash
+kubectl -n flux-system get ocirepo,ks
+```
+
+```
+NAME                                                      URL                                         READY   STATUS                                                                                AGE
+ocirepository.source.toolkit.fluxcd.io/zarf-iva-podinfo   oci://10.43.36.151:5000/zarf-flux-podinfo   True    stored artifact for digest 'local-zarf-2095603145@sha256:6b1b3e0f...'                 79s
+
+NAME                                                AGE   READY   STATUS
+kustomization.kustomize.toolkit.fluxcd.io/podinfo   79s   True    Applied revision: local-zarf-2095603145@sha256:6b1b3e0f...
+```
+
+Two things to read out of that `URL` column: the host is the Zarf registry service rather than `zarf.internal`, and the tag has picked up a `-zarf-<crc32>` suffix — both the work of the agent. Look at the whole mutated spec with:
+
+```bash
+kubectl -n flux-system get ocirepo zarf-iva-podinfo -o yaml | yq '.spec'
+```
+
+```yaml
+interval: 5m0s
+url: oci://10.43.36.151:5000/zarf-flux-podinfo
+ref:
+  tag: local-zarf-2095603145
+layerSelector:
+  mediaType: application/vnd.oci.image.layer.v1.tar+gzip
+  operation: extract
+insecure: true
+secretRef:
+  name: private-registry
+```
+
+The agent added `secretRef` so source-controller authenticates to the registry, and `insecure: true` because the internal registry is served over plain HTTP. If you are running the registry in mTLS mode you will see a `certSecretRef` instead.
+
+Then check that the manifests inside the archive actually became workloads:
+
+```bash
+kubectl -n podinfo get deploy,po,svc,hpa
+```
+
+```
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/podinfo   2/2     2            2           71s
+
+NAME                           READY   STATUS    RESTARTS   AGE
+pod/podinfo-7d8b9c6f4d-4xkzq   1/1     Running   0          71s
+pod/podinfo-7d8b9c6f4d-p9wc2   1/1     Running   0          71s
+
+NAME              TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)             AGE
+service/podinfo   ClusterIP   10.43.201.18   <none>        9898/TCP,9999/TCP   71s
+
+NAME                                          REFERENCE            TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/podinfo   Deployment/podinfo   cpu: 1%/99%     2         4         2          71s
+```
+
+Nothing in the `podinfo` namespace came from the Zarf package except the namespace itself — the `Deployment`, `Service`, and `HorizontalPodAutoscaler` were all extracted from the image volume archive by Flux.
+
+Confirm the agent rewrote the image reference inside the Flux-applied `Deployment`:
+
+```bash
+kubectl -n podinfo get deploy podinfo -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+```
+
+```
+10.43.36.151:5000/stefanprodan/podinfo:6.15.0-zarf-2985051089
+```
+
+And reach the app to prove it is serving:
+
+```bash
+kubectl -n podinfo port-forward svc/podinfo 9898:9898
+curl -s localhost:9898/version
+```
+
+The `flux` CLI gives the same picture with reconcile timings, and is the quicker way to force a re-check instead of waiting out the 5m interval:
+
+```bash
+flux -n flux-system get sources oci
+flux -n flux-system get kustomizations
+flux -n flux-system reconcile kustomization podinfo --with-source
+```
+
+## Change a manifest and ship it again
+
+The tag stays `local`, so the update loop is just create-and-deploy — Flux notices the digest changed:
+
+```bash
+# edit examples/image-volume-archive/fluxcd/podinfo/deployment.yaml, e.g. PODINFO_UI_COLOR
+zarf package create examples/image-volume-archive --confirm
+zarf package deploy zarf-package-image-volume-archive-amd64-0.0.1.tar.zst --confirm
+flux -n flux-system reconcile source oci zarf-iva-podinfo
+kubectl -n flux-system get ocirepo,ks
+```
+
+The digest in the `STATUS` column changes and the `Kustomization` reports the new revision. Because `zarf dev iva` pins timestamps and file ownership to fixed values, an unchanged directory rebuilds to the same digest and Flux does nothing at all — reproducibility here is what keeps redeploys from churning the cluster.
+
+## Debugging
+
+An image volume archive is just an OCI image written out to a tar in OCI layout format, so the standard [`oras`](https://oras.land/docs/installation) tooling can read it directly off disk — no registry and no cluster required. This is the fastest way to confirm that `zarf dev iva` packed the files you expected before you ever run `zarf package create`.
+
+### Inspect the manifest
+
+Point `oras` at the tar with `--oci-layout`, and append the tag from the image reference you built the archive with (`:local` in the examples below). Piping through `yq` renders the JSON as YAML, which is much easier to skim:
+
+```bash
+oras manifest fetch --oci-layout examples/image-volume-archive/zarf.internal_zarf-flux-podinfo-local.tar:local | yq -oy -pj
+```
+
+```yaml
+schemaVersion: 2
+mediaType: application/vnd.oci.image.manifest.v1+json
+artifactType: application/vnd.oci.image.manifest.v1+json
+config:
+  mediaType: application/vnd.oci.image.config.v1+json
+  digest: sha256:383bd3ca86a99a85dc5fd1b3d6999781438beed015461aeb76ce16892bc525f9
+  size: 360
+layers:
+  - mediaType: application/vnd.oci.image.layer.v1.tar+gzip
+    digest: sha256:d38d1edd40f77abee48fe65784b879d150600bab3a6ebeef0843d292b520eaf7
+    size: 1099
+    annotations:
+      org.opencontainers.image.created: "2021-04-13T18:30:43Z"
+      org.opencontainers.image.title: |-
+        deployment.yaml
+        hpa.yaml
+        kustomization.yaml
+        service.yaml
+annotations:
+  org.opencontainers.image.created: "2021-04-13T18:30:43Z"
+```
+
+A few things worth checking here:
+
+- **`layers`** — one entry per layer. Each layer's `org.opencontainers.image.title` annotation lists the files batched into it, so you can see exactly where every file landed without extracting anything. The example above was built with `--max-layers 1`, which is why all four manifests share a single layer.
+- **`mediaType` on each layer** — reflects the `--layer-compression` value used at build time (`application/vnd.oci.image.layer.v1.tar+gzip` for the default `gzip`). For the Flux path this must match `layerSelector.mediaType` exactly.
+- **Timestamps** — `org.opencontainers.image.created` is derived from the source files rather than the current clock, which is what keeps repeated builds of an unchanged directory reproducible.
+
+:::note
+
+`zarf dev iva` respects `--max-layers` (default `127`) by batching files together once the file count would exceed the cap. If you see far fewer layers than you have files, that batching is why. Count them quickly with `oras manifest fetch --oci-layout <tar>:<tag> | jq '.layers | length'`.
+
+:::
+
+### Inspect the image config
+
+The config blob shows the platform the volume claims and the synthetic history entries Zarf writes:
+
+```bash
+oras manifest fetch-config --oci-layout examples/image-volume-archive/zarf.internal_zarf-flux-podinfo-local.tar:local | yq -oy -pj
+```
+
+```yaml
+created: "2021-04-13T18:30:43Z"
+architecture: amd64
+os: linux
+config: {}
+rootfs:
+  type: layers
+  diff_ids:
+    - sha256:7db41421c97e25fd6247daec8542199a70da9e184cbbf8a26b8c4a92969dc7b1
+history:
+  - created: "2021-04-13T18:30:43Z"
+    created_by: |-
+      ADD deployment.yaml
+      hpa.yaml
+      kustomization.yaml
+      service.yaml
+    comment: dev.zarf.zoci.volume.v0
+```
+
+Use this to verify `--platform-os` and the global `--architecture` flag took effect — a mismatch between these values and the node the volume is mounted on is a common reason a mount fails to resolve at runtime.
+
+### List the files inside a layer
+
+To go one level deeper, fetch a layer blob by digest and list its contents. The blob is a compressed tar, so pipe it straight into `tar`:
+
+```bash
+oras blob fetch --oci-layout examples/image-volume-archive/zarf.internal_zarf-flux-podinfo-local.tar@sha256:d38d1edd40f77abee48fe65784b879d150600bab3a6ebeef0843d292b520eaf7 --output - | tar -tzvf -
+```
+
+```
+-rw-r--r-- 0/0            1847 2021-04-13 14:30 deployment.yaml
+-rw-r--r-- 0/0             414 2021-04-13 14:30 hpa.yaml
+-rw-r--r-- 0/0             125 2021-04-13 14:30 kustomization.yaml
+-rw-r--r-- 0/0             271 2021-04-13 14:30 service.yaml
+```
+
+Note the `@sha256:...` digest reference in place of the `:local` tag — blobs are addressed by digest, not by tag. Paths in the listing are relative to the root of the mounted volume, so this output is the clearest answer to "what will my container actually see at the mount path?" For the Flux path it is also the answer to "what directory is `Kustomization.spec.path` relative to?" — the example uses `./.` because `kustomization.yaml` sits at the root of the extracted layer.
+
+### When Flux won't reconcile
+
+Start with the events and conditions on the source:
+
+```bash
+kubectl -n flux-system describe ocirepo zarf-iva-podinfo
+kubectl -n flux-system logs deploy/source-controller --tail=50
+```
+
+Common failures and what they point at:
+
+| Symptom | Cause |
+| --- | --- |
+| `dial tcp: lookup zarf.internal` and the URL still reads `oci://zarf.internal/...` | The agent did not mutate the `OCIRepository`. Check the namespace label: `kubectl get ns flux-system -o jsonpath='{.metadata.labels}'`. A `zarf.dev/agent: ignore` means it was pre-existing at `zarf init` time. Under `--agent-mutation-policy labeled` the object or its namespace needs `zarf.dev/agent: mutate`. |
+| `failed to find layer with media type` | `layerSelector.mediaType` and the archive's `--layer-compression` disagree. Compare against the manifest output above. |
+| `Kustomization` is ready but only some resources exist | The archive has more than one layer and Flux only extracted one. Rebuild with `--max-layers 1`. |
+| `kustomization.yaml not found` / `no objects` | `Kustomization.spec.path` does not match the layout inside the layer. List the layer contents as shown above. |
+| `401 Unauthorized` from the registry | `secretRef` was not added, or the `private-registry` secret in `flux-system` is stale. `zarf tools update-creds registry` re-applies it. |
+| podinfo pods in `ImagePullBackOff` | The workload image is not in the cluster registry, or the pod was never mutated. Confirm the image is listed under the component's `images`, and that the namespace carries `zarf.dev/agent: mutate`: `kubectl get ns podinfo -o jsonpath='{.metadata.labels}'`. |

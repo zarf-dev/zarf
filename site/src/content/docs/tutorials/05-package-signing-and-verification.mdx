@@ -96,7 +96,7 @@ Verification checks the signature and package checksums. This confirms the packa
 
 ## Step 6: Deploy with Signature Verification
 
-Deploy with signature verification enabled. If you have an initialized Kubernetes cluster, see [Initializing a K8s Cluster](/tutorials/1-initializing-a-k8s-cluster/), then run:
+Deploy with signature verification enabled. If you have an initialized Kubernetes cluster, see [Initializing a K8s Cluster](/tutorials/01-initializing-a-k8s-cluster/), then run:
 
 ```bash
 zarf package deploy zarf-package-wordpress-amd64-26.0.0.tar.zst --key cosign.pub --verify --confirm
