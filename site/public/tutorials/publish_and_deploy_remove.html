@@ -47,11 +47,39 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b>$ zarf package remove helm-oci-chart --confirm</b>
+<b class="WHI">$ zarf package remove helm-oci-chart --confirm</b>
+<b class="HIK">2026-11-02 15:52:25</b> <b class="HIG">INF</b> loaded package for removal <b class="HIC">name=</b><b class="WHI">helm-oci-chart</b>
 
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-30-12-10-10-2699609497.log</b>
-<b class=YEL></b>  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Removing zarf package helm-oci-chart</b>
+<b class="HIC">kind</b>:<b class="HIM"> ZarfPackageConfig</b>
+<b class="HIC">metadata</b>:
+  <b class="HIC">name</b>:<b class="HIM"> helm-oci-chart</b>
+  <b class="HIC">description</b>:<b class="HIM"> Deploy podinfo using a Helm OCI chart</b>
+  <b class="HIC">version</b>:<b class="HIM"> 0.0.1</b>
+  <b class="HIC">architecture</b>:<b class="HIM"> arm64</b>
+  <b class="HIC">aggregateChecksum</b>:<b class="HIM"> 422a99720bcfa14a6126ebcfaab786e327d9acfbb70a858b8402fba3e3c28d5a</b>
+  <b class="HIC">allowNamespaceOverride</b>:<b class="HIW"> true</b>
+<b class="HIC">build</b>:
+  <b class="HIC">architecture</b>:<b class="HIM"> arm64</b>
+  <b class="HIC">timestamp</b>:<b class="HIM"> Mon, 02 Nov 2026 15:30:46 -0600</b>
+  <b class="HIC">version</b>:<b class="HIM"> v0.89.0</b>
+  <b class="HIC">migrations</b>:
+  -<b class="HIM"> scripts-to-actions</b>
+  -<b class="HIM"> pluralize-set-variable</b>
+  <b class="HIC">signed</b>:<b class="HIW"> false</b>
+  <b class="HIC">provenanceFiles</b>:
+  -<b class="HIM"> checksums.txt</b>
+<b class="HIC">components</b>:
+- <b class="HIC">name</b>:<b class="HIM"> helm-oci-chart</b>
+  <b class="HIC">required</b>:<b class="HIW"> true</b>
+  <b class="HIC">charts</b>:
+  - <b class="HIC">name</b>:<b class="HIM"> podinfo</b>
+    <b class="HIC">version</b>:<b class="HIM"> 6.3.3</b>
+    <b class="HIC">url</b>:<b class="HIM"> oci://ghcr.io/stefanprodan/charts/podinfo</b>
+    <b class="HIC">namespace</b>:<b class="HIM"> helm-oci-demo</b>
+    <b class="HIC">schemaValidation</b>:<b class="HIW"> true</b>
+  <b class="HIC">images</b>:
+  -<b class="HIM"> ghcr.io/stefanprodan/podinfo:6.3.3</b>
+<b class="HIK">2026-11-02 15:52:25</b> <b class="HIG">INF</b> package successfully removed <b class="HIC">name=</b><b class="WHI">helm-oci-chart</b>
 </pre>
 </body>
 </html>
