@@ -41,6 +41,112 @@ func TestUpdateImagesV1Beta1RejectsInvalidKind(t *testing.T) {
 	}
 }
 
+func TestFindImagesUpdateOmitsImportedImages(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, parent, child, childPath string
+		flavor                         string
+	}{
+		{
+			name: "v1alpha1 package",
+			parent: `kind: ZarfPackageConfig
+metadata:
+  name: parent
+components:
+  - name: app
+    import:
+      path: child
+    manifests:
+      - name: extra
+        files:
+          - parent-pod.yaml
+`,
+			child: `kind: ZarfPackageConfig
+metadata:
+  name: child
+components:
+  - name: app
+    only:
+      flavor: test
+    images:
+      - example.com/child:1
+    manifests:
+      - name: child
+        files:
+          - child-pod.yaml
+`,
+			childPath: "child/zarf.yaml",
+			flavor:    "test",
+		},
+		{
+			name: "v1beta1 package",
+			parent: `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: parent
+components:
+  - name: app
+    import:
+      local:
+        - path: child.yaml
+    manifests:
+      - name: extra
+        files:
+          - parent-pod.yaml
+`,
+			child: `apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component:
+  images:
+    - name: example.com/child:1
+  manifests:
+    - name: child
+      files:
+        - child-pod.yaml
+`,
+			childPath: "child.yaml",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			childPath := filepath.Join(dir, tc.childPath)
+			require.NoError(t, os.MkdirAll(filepath.Dir(childPath), 0o700))
+			require.NoError(t, os.WriteFile(childPath, []byte(tc.child), 0o600))
+			childPod := "apiVersion: v1\nkind: Pod\nmetadata:\n  name: child\nspec:\n  containers:\n    - name: child\n      image: example.com/child:1\n"
+			require.NoError(t, os.WriteFile(filepath.Join(filepath.Dir(childPath), "child-pod.yaml"), []byte(childPod), 0o600))
+			parentPod := "apiVersion: v1\nkind: Pod\nmetadata:\n  name: extra\nspec:\n  containers:\n    - name: extra\n      image: example.com/extra:1\n"
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "parent-pod.yaml"), []byte(parentPod), 0o600))
+			path := filepath.Join(dir, "zarf.yaml")
+			require.NoError(t, os.WriteFile(path, []byte(tc.parent), 0o600))
+
+			ctx := testutil.TestContext(t)
+			opts := FindImagesOptions{SkipCosign: true, Flavor: tc.flavor}
+			results, err := FindDefinitionImages(ctx, path, opts)
+			require.NoError(t, err)
+			require.Len(t, results, 1)
+			require.Equal(t, []ImageMatch{{Image: api.Image{Name: "example.com/extra:1"}, MatchType: MatchDefinite}}, results[0].Matches)
+			require.NoError(t, UpdateImages(ctx, path, results))
+			updated, err := os.ReadFile(path)
+			require.NoError(t, err)
+			require.Contains(t, string(updated), "example.com/extra:1")
+			require.NotContains(t, string(updated), "example.com/child:1")
+			childAfter, err := os.ReadFile(childPath)
+			require.NoError(t, err)
+			require.Equal(t, tc.child, string(childAfter))
+
+			results, err = FindDefinitionImages(ctx, path, opts)
+			require.NoError(t, err)
+			require.NoError(t, UpdateImages(ctx, path, results))
+			secondUpdate, err := os.ReadFile(path)
+			require.NoError(t, err)
+			require.Equal(t, updated, secondUpdate)
+		})
+	}
+}
+
 func TestUpdateImagesV1Beta1PreservesAuthoredFields(t *testing.T) {
 	t.Parallel()
 	oldImage := v1beta1.Image{Name: "example.com/old:1", Source: "daemon"}
