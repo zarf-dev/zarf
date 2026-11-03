@@ -7,6 +7,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -159,7 +160,7 @@ func TestDevTemplateRejectsInvalidSchema(t *testing.T) {
 			err := (&devTemplateOptions{}).run(context.Background(), []string{source})
 			var validationErr *schema.ValidationError
 			require.ErrorAs(t, err, &validationErr)
-			require.ErrorContains(t, err, source)
+			require.ErrorContains(t, err, strconv.Quote(source))
 			require.ErrorContains(t, err, tc.wantError)
 			_, statErr := os.Stat(filepath.Join(dir, "zarf.gen.yaml"))
 			require.ErrorIs(t, statErr, os.ErrNotExist)
