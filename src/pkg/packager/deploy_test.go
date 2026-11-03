@@ -34,7 +34,9 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
 
@@ -58,6 +60,38 @@ func TestDeployLeavesComponentSelectionToCaller(t *testing.T) {
 	result, err := Deploy(ctx, pkgLayout, DeployOptions{IsInteractive: true})
 	require.NoError(t, err)
 	require.Equal(t, []string{"component-a", "component-b"}, []string{result.DeployedComponents[0].Name, result.DeployedComponents[1].Name})
+}
+
+func TestPrepareDeploymentStateCreatesNamespaceBeforePackageSecret(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	clientset := fake.NewClientset()
+	var appliedResources []string
+	clientset.PrependReactor("patch", "namespaces", func(k8stesting.Action) (bool, runtime.Object, error) {
+		appliedResources = append(appliedResources, "namespace")
+		return false, nil, nil
+	})
+	clientset.PrependReactor("patch", "secrets", func(k8stesting.Action) (bool, runtime.Object, error) {
+		appliedResources = append(appliedResources, "secret")
+		return false, nil, nil
+	})
+
+	pkg := api.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       api.ZarfPackageConfig,
+		Metadata:   api.PackageMetadata{Name: "connected"},
+	}
+	pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	d := deployer{c: &cluster.Cluster{Clientset: clientset}}
+	err = d.prepareDeploymentState(ctx, pkgLayout, DeployOptions{
+		DeployConfig: DeployConfig{Connectivity: state.PackageConnectivityConnected},
+	})
+	require.NoError(t, err)
+	require.Equal(t, []string{"namespace", "secret"}, appliedResources)
 }
 
 func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {

@@ -287,6 +287,20 @@ func (d *deployer) startDeploymentState(ctx context.Context, pkgLayout *layout.P
 	return d.c.UpdateDeployedPackage(ctx, *d.deployedPkg)
 }
 
+func (d *deployer) prepareDeploymentState(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) error {
+	if d.s == nil {
+		var err error
+		d.s, err = setupState(ctx, d.c, opts.Connectivity.IsConnected())
+		if err != nil {
+			return fmt.Errorf("setup Zarf state: %w", err)
+		}
+	}
+	if err := d.startDeploymentState(ctx, pkgLayout, opts); err != nil {
+		return fmt.Errorf("start package deployment state: %w", err)
+	}
+	return nil
+}
+
 func (d *deployer) deployPackageEvent(pkgLayout *layout.PackageLayout, opts DeployOptions, outcome state.EventOutcome) state.PackageEvent {
 	pkg := pkgLayout.Definition()
 	return state.PackageEvent{
@@ -344,10 +358,10 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			if err := d.verifyPackageIsDeployable(ctx, pkgLayout, opts.SkipArchitectureCheck); err != nil {
 				return nil, fmt.Errorf("package is not deployable to this system: %w", err)
 			}
-			if !pkg.IsInitConfig() {
-				if err := d.startDeploymentState(ctx, pkgLayout, opts); err != nil {
-					return nil, fmt.Errorf("start package deployment state: %w", err)
-				}
+		}
+		if component.RequiresCluster() && !pkg.IsInitConfig() && (d.s == nil || d.deployedPkg == nil) {
+			if err := d.prepareDeploymentState(ctx, pkgLayout, opts); err != nil {
+				return nil, err
 			}
 		}
 
@@ -382,7 +396,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				return nil, err
 			}
 		}
-		if d.isConnectedToCluster() && d.deployedPkg == nil && d.s != nil {
+		if pkg.IsInitConfig() && d.isConnectedToCluster() && d.deployedPkg == nil && d.s != nil {
 			if err := d.startDeploymentState(ctx, pkgLayout, opts); err != nil {
 				return nil, fmt.Errorf("start package deployment state: %w", err)
 			}
