@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package oci provides Zarf's ORAS registry client and OCI descriptor helpers.
 package oci
 
 import (
@@ -109,8 +108,17 @@ func WithCache(cache content.Storage) Modifier {
 	return func(o *OrasRemote) { o.cache = cache }
 }
 
-// WithRetryPolicy configures HTTP retries and range-capable blob recovery.
+// WithRetryPolicy configures HTTP retries and resumable blob reads.
 // Nil keeps default HTTP retries and disables read recovery.
+//
+// On policy-approved read failures, the returned reader automatically continues
+// after the bytes already returned to the caller. If recovery fails or retries
+// are exhausted, Read returns an error.
+//
+// Read recovery requires range-capable blobs and lasts only for one reader.
+// Manifest bodies, destination uploads, and later processes are not resumed.
+//
+// The policy may be called concurrently. For read failures, the response is nil.
 func WithRetryPolicy(policy retry.Policy) Modifier {
 	return func(o *OrasRemote) {
 		o.retryPolicy = policy
