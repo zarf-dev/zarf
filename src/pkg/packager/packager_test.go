@@ -3,14 +3,28 @@
 package packager
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestMain(m *testing.M) {
+	if err := feature.Set([]feature.Feature{
+		{Name: feature.Values, Enabled: true},
+		{Name: feature.V1Beta1, Enabled: true},
+	}); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
+}
 
 func Test_generateValuesOverrides(t *testing.T) {
 	t.Parallel()

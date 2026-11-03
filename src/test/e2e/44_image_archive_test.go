@@ -27,7 +27,7 @@ func TestImageArchivePush(t *testing.T) {
 	require.NoError(t, err)
 
 	sbomPath := t.TempDir()
-	err = pkgLayout.GetSBOM(t.Context(), sbomPath)
+	err = pkgLayout.GetSBOM(t.Context(), sbomPath, nil)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(sbomPath, "ghcr.io_zarf-dev_images_alpine_3.21.3.json"))
 

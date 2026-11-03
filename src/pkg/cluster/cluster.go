@@ -172,8 +172,6 @@ type InitStateOptions struct {
 	GitServer state.GitServerInfo
 	// Information about the container registry Zarf is going to be using
 	RegistryInfo state.RegistryInfo
-	// Information about the artifact registry Zarf is going to be using
-	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
 	// InjectorPort is the port that the injector will be exposed through
@@ -187,7 +185,7 @@ type InitStateOptions struct {
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
-// If state was already initialized then internal services (registry, git server, artifact server) won't be updated
+// If state was already initialized then internal services (registry, git server) won't be updated
 func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.State, error) {
 	l := logger.From(ctx)
 
@@ -261,7 +259,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
-		// Populate git/registry/artifact state for each service that is either
+		// Populate git/registry state for each service that is either
 		// deployed by Zarf (InternalServices) or pointed at an external endpoint.
 		if opts.InternalServices.Has(state.GitKey) || opts.GitServer.Address != "" {
 			if err := opts.GitServer.FillInEmptyValues(); err != nil {
@@ -275,10 +273,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			}
 			s.RegistryInfo = opts.RegistryInfo
 		}
-		if opts.InternalServices.Has(state.ArtifactKey) || opts.ArtifactServer.Address != "" {
-			opts.ArtifactServer.FillInEmptyValues()
-			s.ArtifactServer = opts.ArtifactServer
-		}
 	} else {
 		// Re-init: fill defaults only for internal services that weren't configured
 		// on a prior init. External services are managed via `zarf tools update-creds`.
@@ -286,9 +280,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			if err := s.GitServer.FillInEmptyValues(); err != nil {
 				return nil, err
 			}
-		}
-		if opts.InternalServices.Has(state.ArtifactKey) && !s.ArtifactServer.IsConfigured() {
-			s.ArtifactServer.FillInEmptyValues()
 		}
 		if opts.InternalServices.Has(state.RegistryKey) && !s.RegistryInfo.IsConfigured() {
 			if err := s.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {

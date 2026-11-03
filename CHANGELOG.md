@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.89.0](https://github.com/zarf-dev/zarf/compare/v0.88.0...v0.89.0) (2026-10-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* explit opt in to kustomize plugins on read only dev commands ([#5558](https://github.com/zarf-dev/zarf/issues/5558))
+* **zoci:** support granular layers from Load api ([#5538](https://github.com/zarf-dev/zarf/issues/5538))
+* **create:** validate package secret size ([#5528](https://github.com/zarf-dev/zarf/issues/5528))
+* **v1beta1:** change differential to an object ([#5541](https://github.com/zarf-dev/zarf/issues/5541))
+* **v1beta1:** rename documentation to attachments ([#5518](https://github.com/zarf-dev/zarf/issues/5518))
+* **v1beta1:** limit annotation size ([#5526](https://github.com/zarf-dev/zarf/issues/5526))
+* add id to image object ([#5480](https://github.com/zarf-dev/zarf/issues/5480))
+* remove ###ZARF builtins from v1beta1 ([#5506](https://github.com/zarf-dev/zarf/issues/5506))
+* **v1beta1:** make sbom and documentation into granular files and layers ([#5421](https://github.com/zarf-dev/zarf/issues/5421))
+* stop duplicating package data in package secret ([#5527](https://github.com/zarf-dev/zarf/issues/5527))
+* simplify image layer caching to avoid concurrency issues ([#5495](https://github.com/zarf-dev/zarf/issues/5495))
+* required injector image in proxy mode ([#5494](https://github.com/zarf-dev/zarf/issues/5494))
+* remove defense unicorn shortcuts from oci package refs ([#5504](https://github.com/zarf-dev/zarf/issues/5504))
+* remove global cachepath SDK option ([#5473](https://github.com/zarf-dev/zarf/issues/5473))
+
+### Features
+
+* add id to image object ([#5480](https://github.com/zarf-dev/zarf/issues/5480)) ([4fa3135](https://github.com/zarf-dev/zarf/commit/4fa3135a2d18210939a8678f48c0d199ea4d2540))
+* allow R.C. versions to pass version requirements ([#5479](https://github.com/zarf-dev/zarf/issues/5479)) ([5644019](https://github.com/zarf-dev/zarf/commit/5644019f39160e8fcd865becdd9f510987d34d75))
+* **create:** validate package secret size ([#5528](https://github.com/zarf-dev/zarf/issues/5528)) ([fdf6f98](https://github.com/zarf-dev/zarf/commit/fdf6f98b6a3e1335a9e7ffaa0d416af84504000f))
+* explit opt in to kustomize plugins on read only dev commands ([#5558](https://github.com/zarf-dev/zarf/issues/5558)) ([d851b21](https://github.com/zarf-dev/zarf/commit/d851b21d3ce508f95af8bc9c73fe35509647ab5c))
+* improve v1beta1 component config override import logic ([#5474](https://github.com/zarf-dev/zarf/issues/5474)) ([ef307ca](https://github.com/zarf-dev/zarf/commit/ef307caf44d845a7fdd8e5a58150e45dc529c642))
+* introduce v1beta1 init package ([#5453](https://github.com/zarf-dev/zarf/issues/5453)) ([56a4b59](https://github.com/zarf-dev/zarf/commit/56a4b592f3fa69b4865bb425a95098c3661d2377))
+* **oci:** support custom credential providers ([#5502](https://github.com/zarf-dev/zarf/issues/5502)) ([be55273](https://github.com/zarf-dev/zarf/commit/be55273c24899e61215599fd1dbe40ba61ce2e72))
+* release v1beta1 ([#5551](https://github.com/zarf-dev/zarf/issues/5551)) ([50d2d5a](https://github.com/zarf-dev/zarf/commit/50d2d5adcb1e804baabb0f8a9c20e7df6c367ab4))
+* remove BuildData from output of zarf dev upgrade ([#5522](https://github.com/zarf-dev/zarf/issues/5522)) ([0af0352](https://github.com/zarf-dev/zarf/commit/0af035275fab01e4748cd0e26af6d72a06fe3bec))
+* remove defense unicorn shortcuts from oci package refs ([#5504](https://github.com/zarf-dev/zarf/issues/5504)) ([2bb9b35](https://github.com/zarf-dev/zarf/commit/2bb9b35ee57cb810e243515985ef5185f5387c43))
+* remove global cachepath SDK option ([#5473](https://github.com/zarf-dev/zarf/issues/5473)) ([65e8152](https://github.com/zarf-dev/zarf/commit/65e8152c9920337d8bbda2ccce02dbc4dabe8bf9))
+* required injector image in proxy mode ([#5494](https://github.com/zarf-dev/zarf/issues/5494)) ([1f36c1c](https://github.com/zarf-dev/zarf/commit/1f36c1c734372a0580afd3ab02a2f396b23ced4f))
+* stop duplicating package data in package secret ([#5527](https://github.com/zarf-dev/zarf/issues/5527)) ([2904d9e](https://github.com/zarf-dev/zarf/commit/2904d9e15a31793537701d0f658e663fc02facd4))
+* **v1beta1:** change differential to an object ([#5541](https://github.com/zarf-dev/zarf/issues/5541)) ([f92de7b](https://github.com/zarf-dev/zarf/commit/f92de7bd921dcde64066b2ba962c36a1907a0452))
+* **v1beta1:** limit annotation size ([#5526](https://github.com/zarf-dev/zarf/issues/5526)) ([cb3315b](https://github.com/zarf-dev/zarf/commit/cb3315b5600c3c4493b702ea2a4b621d2a1f1817))
+* **v1beta1:** make sbom and documentation into granular files and layers ([#5421](https://github.com/zarf-dev/zarf/issues/5421)) ([2df5429](https://github.com/zarf-dev/zarf/commit/2df5429026ff0aed2e8282c9bd2e96186851afa5))
+* **v1beta1:** rename documentation to attachments ([#5518](https://github.com/zarf-dev/zarf/issues/5518)) ([24ecf08](https://github.com/zarf-dev/zarf/commit/24ecf085a35b7f94bdf96d43dbbfd4f0cbf5c00f))
+* **zoci:** support granular layers from Load api ([#5538](https://github.com/zarf-dev/zarf/issues/5538)) ([918a769](https://github.com/zarf-dev/zarf/commit/918a76967bf2d5db3937d2259c7c661c51e8b092))
+
+
+### Bug Fixes
+
+* catch and handle empty digests ([#5501](https://github.com/zarf-dev/zarf/issues/5501)) ([bf616d6](https://github.com/zarf-dev/zarf/commit/bf616d60ea5d02c1a46b7092ed68be11ff921477))
+* **cmd:** don't redefine vendored tool flag shorthands ([#5496](https://github.com/zarf-dev/zarf/issues/5496)) ([d2830dc](https://github.com/zarf-dev/zarf/commit/d2830dca8bbdaa1095c969f50a7fc1ec633d4121))
+* component publish values schema ([#5565](https://github.com/zarf-dev/zarf/issues/5565)) ([44b3c04](https://github.com/zarf-dev/zarf/commit/44b3c0433158a9189427979e79364bbee42fba8a))
+* correctly save chart removal progress after subsequent chart removal fails ([#5492](https://github.com/zarf-dev/zarf/issues/5492)) ([59dc11f](https://github.com/zarf-dev/zarf/commit/59dc11fbb586df70199cbaf4e6d60773ad0d4dd6))
+* ensure chart order is preserved in state ([#5477](https://github.com/zarf-dev/zarf/issues/5477)) ([efdd6a8](https://github.com/zarf-dev/zarf/commit/efdd6a8691f30809bf7a3fd2fe3782fcc7010ef4))
+* initialize cluster state before recording init status ([#5566](https://github.com/zarf-dev/zarf/issues/5566)) ([0c2b3c8](https://github.com/zarf-dev/zarf/commit/0c2b3c83454efd006b280865ebb0b874cff56ef6))
+* remove ###ZARF builtins from v1beta1 ([#5506](https://github.com/zarf-dev/zarf/issues/5506)) ([9283799](https://github.com/zarf-dev/zarf/commit/92837997c82e96413170d875639ed544f35d183a))
+* simplify image layer caching to avoid concurrency issues ([#5495](https://github.com/zarf-dev/zarf/issues/5495)) ([2ec7419](https://github.com/zarf-dev/zarf/commit/2ec7419409482127e0337f9e18ba344a74ccc206))
+* use canonical reference for sbom source ([#5545](https://github.com/zarf-dev/zarf/issues/5545)) ([ac27648](https://github.com/zarf-dev/zarf/commit/ac27648bdc965650de14cdef3a216aa1e61c7cfa))
+
 ## [0.88.0](https://github.com/zarf-dev/zarf/compare/v0.87.0...v0.88.0) (2026-10-15)
 
 

@@ -14,6 +14,8 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -212,6 +214,20 @@ components:
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 
 	definition := pkgLayout.Definition()
-	require.True(t, definition.Build.Differential)
-	require.Equal(t, previous.Metadata.Version, definition.Build.DifferentialPackageVersion)
+	require.NotNil(t, definition.Build.Differential)
+	require.Equal(t, previous.Metadata.Version, definition.Build.Differential.FromVersion)
+	filename, err := pkgLayout.FileName()
+	require.NoError(t, err)
+	require.Contains(t, filename, "-0.0.1-differential-0.0.2.tar.zst")
+
+	data, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
+	require.NoError(t, err)
+	legacy, err := pkgcfg.ParseAs(ctx, data, pkgcfg.V1Alpha1)
+	require.NoError(t, err)
+	require.True(t, legacy.Build.Differential)
+	require.Equal(t, previous.Metadata.Version, legacy.Build.DifferentialPackageVersion)
+	beta, err := pkgcfg.ParseAs(ctx, data, pkgcfg.V1Beta1)
+	require.NoError(t, err)
+	require.NotNil(t, beta.Build.Differential)
+	require.Equal(t, previous.Metadata.Version, beta.Build.Differential.FromVersion)
 }

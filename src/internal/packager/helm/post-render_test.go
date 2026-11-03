@@ -472,7 +472,7 @@ func TestAddAgentIgnoreLabels(t *testing.T) {
 func TestAgentMutatedKindsMatchesWebhook(t *testing.T) {
 	t.Parallel()
 
-	webhookPath := filepath.Join("..", "..", "..", "..", "packages", "zarf-agent", "chart", "templates", "webhook.yaml")
+	webhookPath := filepath.Join("..", "..", "..", "..", "packages", "init", "v1alpha1", "zarf-agent", "chart", "templates", "webhook.yaml")
 	data, err := os.ReadFile(webhookPath)
 	require.NoError(t, err)
 

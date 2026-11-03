@@ -177,6 +177,17 @@ func TestPublishSkeleton(t *testing.T) {
 			expectedTag: "0.0.1",
 		},
 		{
+			name: "Sign and publish skeleton package",
+			path: "testdata/skeleton",
+			opts: PublishSkeletonOptions{
+				RemoteOptions:      defaultTestRemoteOptions(),
+				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
+				SigningKeyPassword: "password",
+			},
+			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
+			expectedTag:   "0.0.1",
+		},
+		{
 			name: "Publish skeleton package with tag",
 			path: "testdata/skeleton",
 			opts: PublishSkeletonOptions{

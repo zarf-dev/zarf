@@ -99,7 +99,7 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 		return registry.Reference{}, err
 	}
 	component.PublishData.ZarfVersion = config.CLIVersion
-	component, resources, err := normalizeComponentResources(componentPath, component, resolved.ImportedSchemas, resourceSet)
+	component, resources, err := normalizeComponentResources(component, resolved.ImportedSchemas, resourceSet)
 	if err != nil {
 		return registry.Reference{}, err
 	}

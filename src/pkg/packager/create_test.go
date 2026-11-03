@@ -7,43 +7,69 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func TestPackageCreateRejectsV1Beta1WithoutFeature(t *testing.T) {
-	ctx := testutil.TestContext(t)
-	require.False(t, feature.IsEnabled(feature.V1Beta1))
-	packageDir := t.TempDir()
-	outputDir := t.TempDir()
-	definition := `apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
+func TestPackageCreateSecretSize(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name        string
+		apiVersion  string
+		description string
+		wantError   bool
+	}{
+		{name: "implicit-alpha-over-limit", description: strings.Repeat("a", 1_000_000), wantError: true},
+		{name: "alpha-below-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 900_000)},
+		{name: "alpha-over-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 1_000_000), wantError: true},
+		// Ampersands exercise JSON escaping and remain quoted when the definition is written as YAML.
+		{name: "alpha-json-escaping-exceeds-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("&", 180_000), wantError: true},
+		{name: "beta-below-limit", apiVersion: v1beta1.APIVersion, description: strings.Repeat("a", 450_000)},
+		// The beta definition fits alone, but its alpha compatibility copy pushes the secret over the limit.
+		{name: "beta-compatibility-copy-exceeds-limit", apiVersion: v1beta1.APIVersion, description: strings.Repeat("a", 600_000), wantError: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			packageDir := t.TempDir()
+			outputDir := t.TempDir()
+			definition := fmt.Sprintf(`kind: ZarfPackageConfig
 metadata:
-  name: beta-feature
+  name: secret-size
+  description: %q
 components:
   - name: empty
-    actions:
-      onCreate:
-        before:
-          - cmd: echo created > created.txt
-`
-	require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(definition), 0o600))
-
-	packagePath, err := Create(ctx, packageDir, outputDir, CreateOptions{
-		CachePath: t.TempDir(),
-		SkipSBOM:  true,
-	})
-	require.ErrorContains(t, err, "--features=v1beta1=true")
-	require.Empty(t, packagePath)
-	require.NoFileExists(t, filepath.Join(packageDir, "created.txt"))
-	entries, err := os.ReadDir(outputDir)
-	require.NoError(t, err)
-	require.Empty(t, entries)
+`, tt.description)
+			if tt.apiVersion != "" {
+				definition = "apiVersion: " + tt.apiVersion + "\n" + definition
+			}
+			require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(definition), 0o600))
+			packagePath, err := Create(ctx, packageDir, outputDir, CreateOptions{
+				CachePath: t.TempDir(),
+				SkipSBOM:  true,
+			})
+			if tt.wantError {
+				require.ErrorContains(t, err, "1000000-byte limit")
+				require.Empty(t, packagePath)
+				entries, err := os.ReadDir(outputDir)
+				require.NoError(t, err)
+				require.Empty(t, entries)
+				return
+			}
+			require.NoError(t, err)
+			pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{VerificationStrategy: layout.VerifyNever})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			require.Equal(t, tt.description, pkgLayout.Definition().Metadata.Description)
+		})
+	}
 }
 
 func TestPackageCreatePreservesV1alpha1MetadataAnnotationCollisions(t *testing.T) {

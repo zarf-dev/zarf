@@ -836,7 +836,7 @@
           "type": "boolean"
         },
         "enablePlugins": {
-          "description": "Enable kustomize plugins when building manifests.",
+          "description": "Allow external Kustomize plugins when building manifests.",
           "type": "boolean"
         },
         "files": {

@@ -13,9 +13,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"slices"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -117,7 +117,7 @@ type pullOCIOptions struct {
 	Source            string
 	Shasum            string
 	Architecture      string
-	LayerTypes        []zoci.LayerType
+	LayerSelection    *zoci.LayerSelection
 	Filter            filters.ComponentFilterStrategy
 	OCIConcurrency    int
 	CachePath         string
@@ -156,17 +156,21 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		}
 	}
 
-	// Get all the layers for relevant components, exclude images if it's a skeleton or connected package
-	layerTypes := opts.LayerTypes
-	if opts.Connected || isSkeleton(desc.Platform) {
-		if len(layerTypes) == 0 {
-			layerTypes = zoci.GetAllLayerTypes()
-		}
-		layerTypes = slices.DeleteFunc(layerTypes, func(lt zoci.LayerType) bool {
-			return lt == zoci.ImageLayers
-		})
+	// Get all relevant package layers, excluding images for a skeleton or connected package.
+	selection := zoci.AllLayerSelection()
+	if opts.LayerSelection != nil {
+		selection = *opts.LayerSelection
 	}
-	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, layerTypes...)
+	if opts.Connected || isSkeleton(desc.Platform) {
+		selection.IncludeImages = false
+	}
+	if selection.RequestedComponents == nil {
+		selection.RequestedComponents = pkg.Components
+		if selection.RequestedComponents == nil {
+			selection.RequestedComponents = []api.Component{}
+		}
+	}
+	layersToPull, err := remote.AssembleLayers(ctx, selection)
 	if err != nil {
 		return nil, err
 	}
