@@ -28,7 +28,32 @@ View all init options w/ [`zarf init --help`](/commands/zarf_init/).
 
 :::
 
-`zarf tools download-init` defaults to the `v1beta1` init package. The v1beta1 package accepts values instead of variables. Run `zarf package inspect documentation oci://ghcr.io/zarf-dev/packages/v1beta1/init:<version> --keys=migration` for migration guidance. To download the deprecated, legacy package, use `zarf tools download-init --api-version=v1alpha1`.
+`zarf tools download-init` defaults to the `v1beta1` init package. When no init package is found locally, `zarf init` offers to download the `v1beta1` package for the current CLI version. To download the deprecated, legacy package, use `zarf tools download-init --api-version=v1alpha1`.
+
+## Configuring the Init Package
+
+The v1beta1 init package accepts values through `--values` files or `--set-values`. Values are grouped under `registry`, `agent`, `gitServer`, and `k3s`. For example:
+
+```yaml
+# init-values.yaml
+registry:
+  persistence:
+    size: 40Gi
+agent:
+  nodeSelector:
+    role: infra
+gitServer:
+  persistence:
+    size: 20Gi
+```
+
+```bash
+zarf init --values init-values.yaml --components git-server --confirm
+```
+
+For a single setting, use `zarf init --set-values registry.persistence.size=40Gi --confirm`. Settings supplied with `--set-values` take precedence over values files. Write booleans, numbers, arrays, and maps as native YAML values. Setting values for an optional component does not enable it; select it with `--components`.
+
+The legacy v1alpha1 package continues to use variables. For the full variable-to-value mapping, inspect the migration guide attached to the package with `zarf package inspect documentation oci://ghcr.io/zarf-dev/packages/v1beta1/init:<version> --keys=migration`
 
 ## Core Components
 
