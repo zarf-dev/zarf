@@ -295,6 +295,9 @@ func (d *deployer) prepareDeploymentState(ctx context.Context, pkgLayout *layout
 			return fmt.Errorf("setup Zarf state: %w", err)
 		}
 	}
+	if opts.Connectivity.IsConnected() && opts.RegistryInfo.Address != "" {
+		d.s.RegistryInfo.Address = opts.RegistryInfo.Address
+	}
 	if err := d.startDeploymentState(ctx, pkgLayout, opts); err != nil {
 		return fmt.Errorf("start package deployment state: %w", err)
 	}

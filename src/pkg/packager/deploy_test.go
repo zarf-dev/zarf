@@ -94,6 +94,32 @@ func TestPrepareDeploymentStateCreatesNamespaceBeforePackageSecret(t *testing.T)
 	require.Equal(t, []string{"namespace", "secret"}, appliedResources)
 }
 
+func TestPrepareDeploymentStateAppliesConnectedRegistryOverride(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	clientset := fake.NewClientset(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: state.ZarfNamespaceName}})
+	pkg := api.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       api.ZarfPackageConfig,
+		Metadata:   api.PackageMetadata{Name: "connected-registry"},
+	}
+	pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	d := deployer{
+		c: &cluster.Cluster{Clientset: clientset},
+		s: &state.State{RegistryInfo: state.RegistryInfo{Address: "cluster-registry.example.com"}},
+	}
+	err = d.prepareDeploymentState(ctx, pkgLayout, DeployOptions{
+		DeployConfig: DeployConfig{Connectivity: state.PackageConnectivityConnected},
+		RegistryInfo: state.RegistryInfo{Address: "override-registry.example.com"},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "override-registry.example.com", d.s.RegistryInfo.Address)
+}
+
 func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
 	t.Parallel()
 
