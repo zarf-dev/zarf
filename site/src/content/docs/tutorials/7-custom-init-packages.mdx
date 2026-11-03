@@ -20,62 +20,124 @@ When creating a Zarf 'init' package, you must have a network connection so that 
 
 Before beginning this tutorial you will need the following:
 
-- The [Zarf](https://github.com/zarf-dev/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 - Zarf binary installed on your $PATH: ([Installing Zarf](/getting-started/install/))
-- (if building a local [`zarf-agent`](/faq#what-is-the-zarf-agent)) The [Docker CLI](https://docs.docker.com/desktop/) installed and the tools to [Build your own CLI](/getting-started/install/#building-from-source)
 
 ## Building the init-package
 
-Creating the zarf 'init' package is as simple as creating any other package. All you need to do is run the `zarf package create` command within the Zarf git repository.
+Creating the Zarf 'init' package is as simple as creating any other package. Start with a directory for your package definition and check your Zarf version:
 
 ```bash
-$ cd zarf # Enter the zarf repository that you have cloned down
+$ mkdir custom-init
+$ cd custom-init
 $ zarf version
 vX.X.X
-$ git checkout vX.X.X # checkout the version that corresponds to your zarf version
-# Run the command to create the zarf package where the AGENT_IMAGE_TAG matches your zarf version
-$ zarf package create . --set AGENT_IMAGE_TAG=vX.X.X
-# Type `y` when prompted and then hit the enter key
 ```
 
-:::tip
+Save the following as `zarf.yaml`, replacing each `<version>` with your Zarf release, including the leading `v`. The components are published under `ghcr.io/zarf-dev/components/init` and include the resources and default values needed to initialize a cluster.
 
-For development if you omit the `AGENT_IMAGE_TAG` Zarf will build a Zarf Agent image based on the source code within the Zarf git repository you cloned.
+```yaml
+apiVersion: zarf.dev/v1beta1
+kind: ZarfInitConfig
+metadata:
+  name: init
+  preventNamespaceOverride: true
 
-Prior to v0.26.0 `AGENT_IMAGE_TAG` was `AGENT_IMAGE` and would be set like: `zarf package create . --set AGENT_IMAGE=agent:vX.X.X`
+components:
+  - name: k3s
+    optional: true
+    import:
+      remote:
+        - url: oci://ghcr.io/zarf-dev/components/init/k3s:<version>
 
-:::
+  - name: zarf-injector
+    import:
+      remote:
+        - url: oci://ghcr.io/zarf-dev/components/init/zarf-injector:<version>
 
-When you execute the `zarf package create` command, Zarf will prompt you to confirm that you want to create the package by displaying the package definition and asking you to respond with either `y` or `n`.
+  - name: zarf-seed-registry
+    import:
+      remote:
+        - url: oci://ghcr.io/zarf-dev/components/init/zarf-seed-registry:<version>
 
-<iframe src="/tutorials/package_create_init.html" height="500px" width="100%"></iframe>
+  - name: zarf-registry
+    import:
+      remote:
+        - url: oci://ghcr.io/zarf-dev/components/init/zarf-registry:<version>
 
-:::tip
+  - name: zarf-agent
+    import:
+      remote:
+        - url: oci://ghcr.io/zarf-dev/components/init/zarf-agent:<version>
 
-You can skip this confirmation by adding the `--confirm` flag when running the command. This will look like: `zarf package create . --confirm`
+  - name: git-server
+    optional: true
+    import:
+      remote:
+        - url: oci://ghcr.io/zarf-dev/components/init/git-server:<version>
+```
 
-:::
+Run the command to create the package:
 
-After you confirm package creation, Zarf will create the Zarf 'init' package in the current directory. In this case, the package name should look something like `zarf-init-amd64-vX.X.X.tar.zst`, although it might differ slightly depending on your system architecture.
+```bash
+zarf package create .
+```
+
+After you confirm package creation, Zarf will create the Zarf 'init' package in the current directory. In this case, the package name should look something like `zarf-init-ARCH-vX.X.X.tar.zst`.
 
 ## Customizing the 'init' Package
 
 The above will simply build the init package as it is defined for your version of Zarf. To build something custom you will need to make some modifications.
 
-The Zarf 'init' Package is a [composed Zarf Package](/ref/components/#component-imports) made up of many sub-Zarf Packages. The root `zarf.yaml` file is defined at the root of the Zarf git repository.
+The Zarf 'init' Package is a [composed Zarf Package](/ref/components/#component-imports) that imports published components. Customize the `zarf.yaml` file you created above to override their images or change which components are included.
 
 ### Swapping Images
 
-As of v0.26.0 you can swap the `registry` and `agent` images by specifying different values in the `zarf-config.toml` file at the root of the project or by overriding them as we did above with `--set` on the command line. This allows you to swap these images for hardened or enterprise-vetted versions like those from [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
+You can replace images from imported components by adding `images` entries with matching `id` fields. The `name` field supplies the replacement image reference. This allows you to swap these images for hardened or enterprise-vetted versions like those from [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
 
-For other components, or older versions of Zarf, you can modify the manifests of the components you want to change in their individual packages under the `packages` folder of the Zarf repo.
+Keep the existing `import` sections and add the following `images` entries under the corresponding components in `zarf.yaml`, replacing the example image references with your own:
+
+```yaml
+components:
+  - name: zarf-seed-registry
+    # Keep the existing import section.
+    images:
+      - id: registry
+        name: custom.enterprise.corp/opensource/registry:3.1.1
+      - id: proxy
+        name: custom.enterprise.corp/alpine/socat:1.8.0.3
+
+  - name: zarf-registry
+    # Keep the existing import section.
+    images:
+      - id: registry
+        name: custom.enterprise.corp/opensource/registry:3.1.1
+      - id: proxy
+        name: custom.enterprise.corp/alpine/socat:1.8.0.3
+
+  - name: zarf-agent
+    # Keep the existing import section.
+    images:
+      - id: agent
+        name: custom.enterprise.corp/opensource/zarf:vX.X.X
+        source: registry
+
+  - name: git-server
+    # Keep the existing import section and optional: true.
+    images:
+      - id: git-server
+        name: custom.enterprise.corp/opensource/gitea:1.27.3-rootless
+```
+
+Use the same registry and proxy image overrides in both `zarf-seed-registry` and `zarf-registry`. The component templates use the image IDs to configure their charts with the replacement references.
+
+The Gitea image still needs to implement the [Gitea configuration of a rootless image](https://github.com/go-gitea/gitea/blob/main/Dockerfile.rootless), although its tag does not need to end in `-rootless`.
 
 :::tip
 
 If your enterprise uses pull-through mirrors to host vetted images you can run the following command to create a Zarf 'init' package from those mirrors (where `<registry>.enterprise.corp` are your enterprise mirror(s)):
 
 ```bash
-$ zarf package create . --set AGENT_IMAGE_TAG=vX.X.X \
+$ zarf package create . \
   --registry-override docker.io=dockerio.enterprise.corp \
   --registry-override ghcr.io=ghcr.enterprise.corp \
   --registry-override quay.io=quay.enterprise.corp
@@ -108,28 +170,12 @@ registry_override = [
 ]
 ```
 
-And if you need even more control over the exact Agent, Registry, and Gitea images you can specify that with additional `--set` flags:
-
-```bash
-$ zarf package create . \
---set AGENT_IMAGE_TAG=$(zarf version) \
---set AGENT_IMAGE="opensource/zarf" \
---set AGENT_IMAGE_DOMAIN="custom.enterprise.corp" \
---set REGISTRY_IMAGE_TAG=3.0.0 \
---set REGISTRY_IMAGE="opensource/registry" \
---set REGISTRY_IMAGE_DOMAIN="custom.enterprise.corp" \
---set PROXY_IMAGE_TAG="1.8.0.3" \
---set PROXY_IMAGE_DOMAIN="custom.enterprise.corp" \
---set PROXY_IMAGE="alpine/socat" \
---set GITEA_IMAGE="custom.enterprise.corp/opensource/gitea:v1.21.0-rootless"
-```
-
-⚠️ - The Gitea image is different from the Agent and Registry in that Zarf will always prefer the `rootless` version of a given server image. The image no longer must be tagged with `-rootless`, but it still needs to implement the [Gitea configuration of a rootless image](https://github.com/go-gitea/gitea/blob/main/Dockerfile.rootless). If you need to change this, edit the `packages/gitea` package.
-
-You can find all of the `--set` configurations by looking at the `zarf-config.toml` in the root of the repository.
+Registry overrides change where Zarf pulls images during package creation while preserving their declared names and IDs. Use image ID overrides in `zarf.yaml` when you want to replace the image reference itself. Registry overrides apply to image pulls; the published component imports above are still fetched from GHCR.
 
 :::
 
 ### Removing Components
 
-You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the [Zarf Package is composed](/ref/components/#component-imports) all you need to do is remove the component that imports the component you wish to exclude.
+You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the [Zarf Package is composed](/ref/components/#component-imports), remove the corresponding entry from `components` in `zarf.yaml` and rebuild the package.
+
+For example, remove `k3s` if you already have a Kubernetes cluster, or `git-server` if you do not need an in-cluster Git server. If you use an external registry, you can remove `zarf-injector`, `zarf-seed-registry`, and `zarf-registry`; supply the external registry details with the `--registry-*` flags when running `zarf init`.
