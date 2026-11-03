@@ -27,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
@@ -37,6 +38,27 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
+
+func TestDeployDoesNotPromptForComponentSelection(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	pkg := api.Package{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       api.ZarfPackageConfig,
+		Metadata:   api.PackageMetadata{Name: "non-interactive"},
+		Components: []api.Component{
+			{Name: "component-a", Group: "group"},
+			{Name: "component-b", Group: "group"},
+		},
+	}
+	pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	_, err = Deploy(ctx, pkgLayout, DeployOptions{IsInteractive: true})
+	require.ErrorIs(t, err, filters.ErrNoDefaultOrSelection)
+}
 
 func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
 	t.Parallel()

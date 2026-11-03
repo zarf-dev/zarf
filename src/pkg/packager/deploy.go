@@ -167,17 +167,9 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 	opts.OptionalComponents = normalizedSelectors
 
-	selection := filters.ForDeploy(opts.OptionalComponents, opts.IsInteractive)
+	selection := filters.ForDeploy(opts.OptionalComponents, false)
 	if err := pkgLayout.Filter(filters.Combine(filters.ByLocalOS(runtime.GOOS), selection)); err != nil {
 		return DeployResult{}, err
-	}
-	if resolvedSelectors := selection.ResolvedSelectors(); len(resolvedSelectors) > 0 {
-		opts.OptionalComponents = strings.Join(append([]string{opts.OptionalComponents}, resolvedSelectors...), ",")
-		normalizedSelectors, err = filters.NormalizeComponentSelectors(opts.OptionalComponents)
-		if err != nil {
-			return DeployResult{}, err
-		}
-		opts.OptionalComponents = normalizedSelectors
 	}
 	if opts.Connectivity.IsConnected() {
 		pkgLayout.RemoveImages()

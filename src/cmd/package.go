@@ -567,6 +567,13 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	if err := confirmDeploy(ctx, pkgLayout, opts.SetVariables, opts.IsInteractive, opts.Connectivity.IsConnected()); err != nil {
 		return nil, err
 	}
+	if opts.IsInteractive {
+		optionalComponents, err := resolveInteractiveDeploymentSelectors(pkgLayout.Definition(), opts.OptionalComponents)
+		if err != nil {
+			return nil, err
+		}
+		opts.OptionalComponents = optionalComponents
+	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)
 	if err != nil {
@@ -574,6 +581,23 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	}
 
 	return result.DeployedComponents, nil
+}
+
+func resolveInteractiveDeploymentSelectors(pkg api.Package, optionalComponents string) (string, error) {
+	normalized, err := filters.NormalizeComponentSelectors(optionalComponents)
+	if err != nil {
+		return "", err
+	}
+
+	selection := filters.ForDeploy(normalized, true)
+	if _, err := filters.Apply(pkg, filters.Combine(filters.ByLocalOS(runtime.GOOS), selection)); err != nil {
+		return "", err
+	}
+	resolvedSelectors := selection.ResolvedSelectors()
+	if len(resolvedSelectors) == 0 {
+		return normalized, nil
+	}
+	return filters.NormalizeComponentSelectors(strings.Join(append([]string{normalized}, resolvedSelectors...), ","))
 }
 
 func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, isInteractive bool, connected bool) (err error) {
