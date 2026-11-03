@@ -48,10 +48,8 @@ gitServer:
 ```
 
 ```bash
-zarf init --values init-values.yaml --components git-server --confirm
+zarf init --values init-values.yaml --components git-server
 ```
-
-For a single setting, use `zarf init --set-values registry.persistence.size=40Gi --confirm`. Settings supplied with `--set-values` take precedence over values files. Write booleans, numbers, arrays, and maps as native YAML values. Setting values for an optional component does not enable it; select it with `--components`.
 
 The legacy v1alpha1 package continues to use variables. For the full variable-to-value mapping, inspect the migration guide attached to the package with `zarf package inspect documentation oci://ghcr.io/zarf-dev/packages/v1beta1/init:<version> --keys=migration`
 
