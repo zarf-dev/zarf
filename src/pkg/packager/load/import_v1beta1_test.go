@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -644,7 +645,7 @@ func TestResolveImportsV1Beta1Errors(t *testing.T) {
 		t.Helper()
 		var validationErr *schema.ValidationError
 		require.ErrorAs(t, err, &validationErr)
-		require.ErrorContains(t, err, path)
+		require.ErrorContains(t, err, strconv.Quote(path))
 		require.NotEmpty(t, validationErr.Errors)
 	}
 
