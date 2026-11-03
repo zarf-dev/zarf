@@ -10,6 +10,10 @@ tableOfContents: false
 
 Collection of additional tools to make airgap easier
 
+```
+zarf tools [flags]
+```
+
 ### Options
 
 ```

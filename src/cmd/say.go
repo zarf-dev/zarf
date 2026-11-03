@@ -19,6 +19,7 @@ func sayCommand() *cobra.Command {
 		Use:   "say",
 		Short: "Print Zarf logo",
 		Long:  "Print out the adorable Zarf logo",
+		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			out := logo()
 			if !message.ColorEnabled() {

@@ -10,6 +10,10 @@ tableOfContents: false
 
 Commands for reusable Zarf components
 
+```
+zarf component [flags]
+```
+
 ### Options
 
 ```

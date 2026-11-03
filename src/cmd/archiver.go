@@ -19,6 +19,8 @@ func newArchiverCommand() *cobra.Command {
 		Aliases: []string{"a"},
 		Short:   lang.CmdToolsArchiverShort,
 		Version: archivesVersion,
+		Args:    cobra.NoArgs,
+		Run:     run,
 	}
 
 	cmd.AddCommand(newArchiverCompressCommand())

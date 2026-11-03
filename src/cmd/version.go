@@ -47,6 +47,7 @@ func newVersionCommand() *cobra.Command {
 		Aliases: []string{"v"},
 		Short:   lang.CmdVersionShort,
 		Long:    lang.CmdVersionLong,
+		Args:    cobra.NoArgs,
 		RunE:    o.run,
 	}
 

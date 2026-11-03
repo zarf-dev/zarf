@@ -30,6 +30,8 @@ func newInternalCommand(rootCmd *cobra.Command) *cobra.Command {
 		Use:    "internal",
 		Hidden: true,
 		Short:  lang.CmdInternalShort,
+		Args:   cobra.NoArgs,
+		Run:    run,
 	}
 
 	cmd.AddCommand(newInternalAgentCommand())
@@ -51,6 +53,7 @@ func newInternalAgentCommand() *cobra.Command {
 		Use:   "agent",
 		Short: lang.CmdInternalAgentShort,
 		Long:  lang.CmdInternalAgentLong,
+		Args:  cobra.NoArgs,
 		RunE:  o.run,
 	}
 
@@ -79,6 +82,7 @@ func newInternalGenCliDocsCommand(root *cobra.Command) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "gen-cli-docs",
 		Short: lang.CmdInternalGenerateCliDocsShort,
+		Args:  cobra.NoArgs,
 		RunE:  o.run,
 	}
 
@@ -205,6 +209,7 @@ func newInternalCreateReadOnlyGiteaUserCommand() *cobra.Command {
 		Use:   "create-read-only-gitea-user",
 		Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
 		Long:  lang.CmdInternalCreateReadOnlyGiteaUserLong,
+		Args:  cobra.NoArgs,
 		RunE:  o.run,
 	}
 
@@ -266,6 +271,7 @@ func newInternalUpdateGiteaPVCCommand() *cobra.Command {
 		Use:   "update-gitea-pvc",
 		Short: lang.CmdInternalUpdateGiteaPVCShort,
 		Long:  lang.CmdInternalUpdateGiteaPVCLong,
+		Args:  cobra.NoArgs,
 		RunE:  o.run,
 	}
 
@@ -298,6 +304,7 @@ func newInternalIsValidHostnameCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "is-valid-hostname",
 		Short: lang.CmdInternalIsValidHostnameShort,
+		Args:  cobra.NoArgs,
 		RunE:  o.run,
 	}
 

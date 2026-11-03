@@ -10,6 +10,10 @@ tableOfContents: false
 
 Tools for working with Sigstore trusted roots
 
+```
+zarf tools trusted-root [flags]
+```
+
 ### Options
 
 ```

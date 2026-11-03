@@ -16,6 +16,8 @@ func newToolsCommand(architecture *architectureOptions) *cobra.Command {
 		Use:     "tools",
 		Aliases: []string{"t"},
 		Short:   lang.CmdToolsShort,
+		Args:    cobra.NoArgs,
+		Run:     run,
 	}
 
 	v := getViper()
