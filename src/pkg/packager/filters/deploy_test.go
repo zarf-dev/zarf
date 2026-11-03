@@ -250,6 +250,32 @@ func TestDeployFilter_Apply(t *testing.T) {
 		})
 	}
 }
+func TestDeploymentFilterRespectsSelectorOrder(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{Components: []api.Component{
+		{Name: "one", Optional: true, Default: true},
+		{Name: "two", Optional: true, Default: true},
+	}}
+	for _, tt := range []struct {
+		selectors string
+		want      []string
+	}{
+		{selectors: "-*,two", want: []string{"two"}},
+		{selectors: "two,-*", want: []string{}},
+	} {
+		t.Run(tt.selectors, func(t *testing.T) {
+			components, err := ForDeploy(tt.selectors, false).Apply(pkg)
+			require.NoError(t, err)
+
+			names := make([]string, len(components))
+			for idx, component := range components {
+				names[idx] = component.Name
+			}
+			require.Equal(t, tt.want, names)
+		})
+	}
+}
 
 func TestDeploymentFilterCapturesInteractiveSelectors(t *testing.T) {
 	t.Parallel()

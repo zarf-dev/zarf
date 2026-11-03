@@ -311,6 +311,25 @@ components:
 		require.NoError(t, err)
 		require.NotContains(t, stdErr, "DESELECT-ME COMPONENT")
 	})
+	t.Run("zarf deploy should respect component selector order", func(t *testing.T) {
+		t.Parallel()
+		tmpdir := t.TempDir()
+		one := "src/test/packages/00-component-selector/one.txt"
+		two := "src/test/packages/00-component-selector/two.txt"
+		t.Cleanup(func() {
+			e2e.CleanFiles(t, one, two)
+		})
+
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-component-selector", "-o", tmpdir)
+		require.NoError(t, err, stdOut, stdErr)
+		packageName := fmt.Sprintf("zarf-package-component-selector-%s.tar.zst", e2e.Arch)
+		path := filepath.Join(tmpdir, packageName)
+
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=-*,two", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+		require.NoFileExists(t, one)
+		require.FileExists(t, two)
+	})
 
 	t.Run("changing log level", func(t *testing.T) {
 		t.Parallel()

@@ -964,7 +964,7 @@ func TestConfigDigestNormalizesSelectors(t *testing.T) {
 		Values:             value.Values{"nested": map[string]any{"enabled": true}},
 		NamespaceOverride:  "namespace",
 		ValuesOverridesMap: ValuesOverrides{"component": {"chart": value.Values{"replicas": 2}}},
-		OptionalComponents: "b,-a",
+		OptionalComponents: "b,-a,b",
 		Connectivity:       PackageConnectivityConnected,
 	}
 	deployDigestA, err := deployA.Digest()
@@ -974,19 +974,30 @@ func TestConfigDigestNormalizesSelectors(t *testing.T) {
 	require.Equal(t, deployDigestA, deployDigestB)
 	require.True(t, deployDigestA.Algorithm().Available())
 
-	deployB.Connectivity = PackageConnectivityAirGap
+	deployB.OptionalComponents = "-a,b"
 	changedDeployDigest, err := deployB.Digest()
 	require.NoError(t, err)
 	require.NotEqual(t, deployDigestA, changedDeployDigest)
 
+	deployB.OptionalComponents = deployA.OptionalComponents
+	deployB.Connectivity = PackageConnectivityAirGap
+	changedDeployDigest, err = deployB.Digest()
+	require.NoError(t, err)
+	require.NotEqual(t, deployDigestA, changedDeployDigest)
+
 	removeA := RemoveConfig{Values: value.Values{"force": true}, NamespaceOverride: "namespace", OptionalComponents: " B, -A,b "}
-	removeB := RemoveConfig{Values: value.Values{"force": true}, NamespaceOverride: "namespace", OptionalComponents: "b,-a"}
+	removeB := RemoveConfig{Values: value.Values{"force": true}, NamespaceOverride: "namespace", OptionalComponents: "b,-a,b"}
 	removeDigestA, err := removeA.Digest()
 	require.NoError(t, err)
 	removeDigestB, err := removeB.Digest()
 	require.NoError(t, err)
 	require.Equal(t, removeDigestA, removeDigestB)
 	require.True(t, removeDigestA.Algorithm().Available())
+
+	removeB.OptionalComponents = "-a,b"
+	changedRemoveDigest, err := removeB.Digest()
+	require.NoError(t, err)
+	require.NotEqual(t, removeDigestA, changedRemoveDigest)
 
 	_, err = (DeployConfig{Values: value.Values{"invalid": func() {}}}).Digest()
 	require.Error(t, err)

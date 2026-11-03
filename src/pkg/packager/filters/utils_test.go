@@ -17,7 +17,6 @@ func Test_includedOrExcluded(t *testing.T) {
 		componentName           string
 		requestedComponentNames []string
 		wantState               selectState
-		wantRequestedComponent  string
 		expectedErr             error
 	}{
 		{
@@ -25,64 +24,54 @@ func Test_includedOrExcluded(t *testing.T) {
 			componentName:           "example",
 			requestedComponentNames: []string{"-example"},
 			wantState:               excluded,
-			wantRequestedComponent:  "-example",
 		},
 		{
 			name:                    "Test when component is included",
 			componentName:           "example",
 			requestedComponentNames: []string{"example"},
 			wantState:               included,
-			wantRequestedComponent:  "example",
 		},
 		{
 			name:                    "Test when component is not included or excluded",
 			componentName:           "example",
 			requestedComponentNames: []string{"other"},
 			wantState:               unknown,
-			wantRequestedComponent:  "",
 		},
 		{
-			name:                    "Test when component is excluded and included",
+			name:                    "Test when a later include overrides an exclusion",
 			componentName:           "example",
 			requestedComponentNames: []string{"-example", "example"},
-			wantState:               excluded,
-			wantRequestedComponent:  "-example",
+			wantState:               included,
 		},
-		// interesting case, excluded wins
 		{
-			name:                    "Test when component is included and excluded",
+			name:                    "Test when a later exclusion overrides an include",
 			componentName:           "example",
 			requestedComponentNames: []string{"example", "-example"},
 			wantState:               excluded,
-			wantRequestedComponent:  "-example",
 		},
 		{
 			name:                    "Test when component is included via glob",
 			componentName:           "example",
 			requestedComponentNames: []string{"ex*"},
 			wantState:               included,
-			wantRequestedComponent:  "ex*",
 		},
 		{
 			name:                    "Test when component is excluded via glob",
 			componentName:           "example",
 			requestedComponentNames: []string{"-ex*"},
 			wantState:               excluded,
-			wantRequestedComponent:  "-ex*",
 		},
 		{
 			name:                    "Test when component is not found via glob",
 			componentName:           "example",
 			requestedComponentNames: []string{"other*"},
 			wantState:               unknown,
-			wantRequestedComponent:  "",
 		},
 		{
 			name:                    "Test error",
 			componentName:           "example",
 			requestedComponentNames: []string{"["},
 			wantState:               unknown,
-			wantRequestedComponent:  "",
 			expectedErr:             path.ErrBadPattern,
 		},
 		{
@@ -90,17 +79,15 @@ func Test_includedOrExcluded(t *testing.T) {
 			componentName:           "example",
 			requestedComponentNames: []string{"-["},
 			wantState:               unknown,
-			wantRequestedComponent:  "",
 			expectedErr:             path.ErrBadPattern,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gotState, gotRequestedComponent, err := includedOrExcluded(tc.componentName, tc.requestedComponentNames)
+			gotState, err := includedOrExcluded(tc.componentName, tc.requestedComponentNames, nil)
 			require.ErrorIs(t, err, tc.expectedErr)
 			require.Equal(t, tc.wantState, gotState)
-			require.Equal(t, tc.wantRequestedComponent, gotRequestedComponent)
 		})
 	}
 }
@@ -110,7 +97,7 @@ func TestNormalizeComponentSelectors(t *testing.T) {
 
 	normalized, err := NormalizeComponentSelectors(" B, -A,b,  ")
 	require.NoError(t, err)
-	require.Equal(t, "-a,b", normalized)
+	require.Equal(t, "b,-a,b", normalized)
 
 	_, err = NormalizeComponentSelectors("[")
 	require.ErrorIs(t, err, path.ErrBadPattern)

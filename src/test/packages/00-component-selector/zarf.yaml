@@ -1,0 +1,16 @@
+kind: ZarfPackageConfig
+metadata:
+  name: component-selector
+components:
+  - name: one
+    default: true
+    actions:
+      onDeploy:
+        after:
+          - cmd: touch src/test/packages/00-component-selector/one.txt
+  - name: two
+    default: true
+    actions:
+      onDeploy:
+        after:
+          - cmd: touch src/test/packages/00-component-selector/two.txt

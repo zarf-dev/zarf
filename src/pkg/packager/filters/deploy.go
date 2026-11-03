@@ -95,15 +95,13 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 				// Ensure we have a local version of the component to point to (otherwise the pointer might change on us)
 				component := component
 
-				selectState, matchedRequest, err := includedOrExcluded(component.Name, f.requestedComponents)
+				selectState, err := includedOrExcluded(component.Name, f.requestedComponents, matchedRequests)
 				if err != nil {
 					return nil, err
 				}
 
 				if component.Optional {
 					if selectState == excluded {
-						// If the component was explicitly excluded, record the match and continue
-						matchedRequests[matchedRequest] = true
 						continue
 					} else if selectState == unknown && component.Default && groupDefault == nil {
 						// If the component is default but not included or excluded, remember the default
@@ -115,9 +113,6 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 				}
 
 				if selectState == included {
-					// If the component was explicitly included, record the match
-					matchedRequests[matchedRequest] = true
-
 					// Then check for already selected groups
 					if groupSelected != nil {
 						return nil, fmt.Errorf("%w: group: %s selected: %s, %s", ErrMultipleSameGroup, component.Group, groupSelected.Name, component.Name)
