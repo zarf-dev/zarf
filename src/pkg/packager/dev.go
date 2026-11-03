@@ -115,13 +115,17 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 	l.Info("starting package dev deploy", "name", pkgLayout.Definition().Metadata.Name)
+	connectivity := state.PackageConnectivityConnected
+	if opts.AirgapMode {
+		connectivity = state.PackageConnectivityAirGap
+	}
 
 	result, err := Deploy(ctx, pkgLayout, DeployOptions{
 		DeployConfig: DeployConfig{
 			SetVariables:       opts.DeploySetVariables,
 			Values:             opts.Values,
 			OptionalComponents: opts.OptionalComponents,
-			Connected:          !opts.AirgapMode,
+			Connectivity:       connectivity,
 		},
 		Source:                packagePath,
 		RegistryInfo:          state.RegistryInfo{Address: opts.RegistryURL},

@@ -67,6 +67,40 @@ func TestDeployedPackagePackageDefinition(t *testing.T) {
 	require.Equal(t, beta.Metadata, convert.PackageToV1beta1(actual).Metadata)
 }
 
+func TestDeployedPackageGetPackageConnectivity(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name   string
+		pkg    DeployedPackage
+		expect PackageConnectivity
+	}{
+		{
+			name:   "defaults legacy state to airgap",
+			expect: PackageConnectivityAirGap,
+		},
+		{
+			name:   "uses legacy state without deploy config",
+			pkg:    DeployedPackage{PackageConnectivity: PackageConnectivityConnected},
+			expect: PackageConnectivityConnected,
+		},
+		{
+			name:   "uses persisted deploy config",
+			pkg:    DeployedPackage{DeployConfig: &DeployConfig{Connectivity: PackageConnectivityConnected}},
+			expect: PackageConnectivityConnected,
+		},
+		{
+			name:   "prefers deploy config over legacy state",
+			pkg:    DeployedPackage{PackageConnectivity: PackageConnectivityConnected, DeployConfig: &DeployConfig{}},
+			expect: PackageConnectivityAirGap,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expect, tt.pkg.GetPackageConnectivity())
+		})
+	}
+}
+
 func TestDeployedPackagePackageDefinition_legacyData(t *testing.T) {
 	t.Parallel()
 
@@ -888,7 +922,7 @@ func TestConfigDigestNormalizesSelectors(t *testing.T) {
 		NamespaceOverride:  "namespace",
 		ValuesOverridesMap: ValuesOverrides{"component": {"chart": value.Values{"replicas": 2}}},
 		OptionalComponents: " B, -A,b ",
-		Connected:          true,
+		Connectivity:       PackageConnectivityConnected,
 	}
 	deployB := DeployConfig{
 		SetVariables:       map[string]string{"A": "one", "B": "two"},
@@ -896,7 +930,7 @@ func TestConfigDigestNormalizesSelectors(t *testing.T) {
 		NamespaceOverride:  "namespace",
 		ValuesOverridesMap: ValuesOverrides{"component": {"chart": value.Values{"replicas": 2}}},
 		OptionalComponents: "b,-a",
-		Connected:          true,
+		Connectivity:       PackageConnectivityConnected,
 	}
 	deployDigestA, err := deployA.Digest()
 	require.NoError(t, err)
@@ -905,7 +939,7 @@ func TestConfigDigestNormalizesSelectors(t *testing.T) {
 	require.Equal(t, deployDigestA, deployDigestB)
 	require.True(t, deployDigestA.Algorithm().Available())
 
-	deployB.Connected = false
+	deployB.Connectivity = PackageConnectivityAirGap
 	changedDeployDigest, err := deployB.Digest()
 	require.NoError(t, err)
 	require.NotEqual(t, deployDigestA, changedDeployDigest)

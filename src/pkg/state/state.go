@@ -752,7 +752,9 @@ func WithPackageNamespaceOverride(namespaceOverride string) DeployedPackageOptio
 	}
 }
 
-// WithPackageConnectivity sets the connectivity mode for the deployed package
+// WithPackageConnectivity sets the legacy connectivity mode for a deployed package.
+//
+// Deprecated: persist connectivity through DeployConfig instead.
 func WithPackageConnectivity(connected bool) DeployedPackageOptions {
 	return func(o *DeployedPackage) {
 		if connected {
@@ -763,27 +765,38 @@ func WithPackageConnectivity(connected bool) DeployedPackageOptions {
 	}
 }
 
-// PackageConnectivity defines the connectivity mode of package deployments
+// PackageConnectivity defines the connectivity mode of package deployments.
 type PackageConnectivity string
 
 const (
-	// PackageConnectivityAirGap is the default deploy mode
+	// PackageConnectivityAirGap is the default deploy mode.
 	PackageConnectivityAirGap PackageConnectivity = "airgap"
 	// PackageConnectivityConnected is used when a package is deployed with YOLO or in connected mode.
 	PackageConnectivityConnected PackageConnectivity = "connected"
 )
+
+// IsConnected reports whether the connectivity mode uses a connected deployment.
+func (c PackageConnectivity) IsConnected() bool {
+	return c == PackageConnectivityConnected
+}
+
+// IsValid reports whether the connectivity mode is supported.
+// The empty value is accepted as the default airgap mode.
+func (c PackageConnectivity) IsValid() bool {
+	return c == "" || c == PackageConnectivityAirGap || c == PackageConnectivityConnected
+}
 
 // ValuesOverrides contains direct Helm chart values keyed by component and chart name.
 type ValuesOverrides map[string]map[string]value.Values
 
 // DeployConfig is the persisted configuration of a successful package deployment.
 type DeployConfig struct {
-	SetVariables       map[string]string `json:"setVariables,omitempty"`
-	Values             value.Values      `json:"values,omitempty"`
-	NamespaceOverride  string            `json:"namespaceOverride,omitempty"`
-	ValuesOverridesMap ValuesOverrides   `json:"valuesOverridesMap,omitempty"`
-	OptionalComponents string            `json:"optionalComponents,omitempty"`
-	Connected          bool              `json:"connected,omitempty"`
+	SetVariables       map[string]string   `json:"setVariables,omitempty"`
+	Values             value.Values        `json:"values,omitempty"`
+	NamespaceOverride  string              `json:"namespaceOverride,omitempty"`
+	ValuesOverridesMap ValuesOverrides     `json:"valuesOverridesMap,omitempty"`
+	OptionalComponents string              `json:"optionalComponents,omitempty"`
+	Connectivity       PackageConnectivity `json:"connectivity,omitempty"`
 }
 
 // Digest returns the canonical digest for the deployment configuration.
@@ -826,7 +839,7 @@ func (c DeployConfig) deepCopy() DeployConfig {
 		SetVariables:       maps.Clone(c.SetVariables),
 		NamespaceOverride:  c.NamespaceOverride,
 		OptionalComponents: c.OptionalComponents,
-		Connected:          c.Connected,
+		Connectivity:       c.Connectivity,
 	}
 	if c.Values != nil {
 		snapshot.Values = c.Values.DeepCopy()
@@ -891,14 +904,15 @@ type DeployedPackage struct {
 	// Data contains the v1alpha1 definition
 	Data v1alpha1.ZarfPackage `json:"data"`
 	// PackageData contains the v1beta1 definition and future definitions
-	PackageData         map[string]json.RawMessage `json:"packageData,omitempty"`
-	CLIVersion          string                     `json:"cliVersion"`
-	Generation          int                        `json:"generation"`
-	DeployedComponents  []DeployedComponent        `json:"deployedComponents"`
-	ConnectStrings      ConnectStrings             `json:"connectStrings,omitempty"`
-	PackageConnectivity PackageConnectivity        `json:"packageConnectivity"`
-	Events              []PackageEvent             `json:"events,omitempty"`
-	DeployConfig        *DeployConfig              `json:"deployConfig,omitempty"`
+	PackageData        map[string]json.RawMessage `json:"packageData,omitempty"`
+	CLIVersion         string                     `json:"cliVersion"`
+	Generation         int                        `json:"generation"`
+	DeployedComponents []DeployedComponent        `json:"deployedComponents"`
+	ConnectStrings     ConnectStrings             `json:"connectStrings,omitempty"`
+	// Deprecated: derive connectivity from DeployConfig. This field remains for pre-DeployConfig package secrets.
+	PackageConnectivity PackageConnectivity `json:"packageConnectivity"`
+	Events              []PackageEvent      `json:"events,omitempty"`
+	DeployConfig        *DeployConfig       `json:"deployConfig,omitempty"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
 }
@@ -1023,9 +1037,15 @@ func (d *DeployedPackage) GetSecretName() string {
 	return fmt.Sprintf("%s-%s", "zarf-package", d.Name)
 }
 
-// GetPackageConnectivity returns the connectivity mode the package is using
-// Defaults to airgap for packages that were deployed before connectivity was introduced
+// GetPackageConnectivity returns the connectivity mode for the most recent successful deployment.
+// It falls back to the legacy package field for secrets written before DeployConfig was persisted.
 func (d *DeployedPackage) GetPackageConnectivity() PackageConnectivity {
+	if d.DeployConfig != nil {
+		if d.DeployConfig.Connectivity == "" {
+			return PackageConnectivityAirGap
+		}
+		return d.DeployConfig.Connectivity
+	}
 	if d.PackageConnectivity == "" {
 		return PackageConnectivityAirGap
 	}

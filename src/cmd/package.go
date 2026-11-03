@@ -490,6 +490,11 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		return err
 	}
 
+	connectivity := state.PackageConnectivityAirGap
+	if o.connected {
+		connectivity = state.PackageConnectivityConnected
+	}
+
 	filter := filters.Empty()
 
 	loadOpt := packager.LoadOptions{
@@ -517,7 +522,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 			SetVariables:       o.setVariables,
 			NamespaceOverride:  o.namespaceOverride,
 			OptionalComponents: o.optionalComponents,
-			Connected:          o.connected,
+			Connectivity:       connectivity,
 		},
 		Source:                     packageSource,
 		TakeOwnership:              o.takeOwnership,
@@ -559,7 +564,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 			return nil, err
 		}
 	}
-	if err := confirmDeploy(ctx, pkgLayout, opts.SetVariables, opts.IsInteractive, opts.Connected); err != nil {
+	if err := confirmDeploy(ctx, pkgLayout, opts.SetVariables, opts.IsInteractive, opts.Connectivity.IsConnected()); err != nil {
 		return nil, err
 	}
 

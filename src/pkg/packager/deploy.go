@@ -114,7 +114,10 @@ type DeployResult struct {
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	start := time.Now()
 	pkg := pkgLayout.Definition()
-	if opts.Connected && pkg.IsInitConfig() {
+	if !opts.Connectivity.IsValid() {
+		return DeployResult{}, fmt.Errorf("unsupported package connectivity mode %q", opts.Connectivity)
+	}
+	if opts.Connectivity.IsConnected() && pkg.IsInitConfig() {
 		return DeployResult{}, fmt.Errorf("--connected is not supported for init packages")
 	}
 
@@ -141,7 +144,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	if pkg.Metadata.YOLO {
-		opts.Connected = true
+		opts.Connectivity = state.PackageConnectivityConnected
 	}
 
 	if opts.NamespaceOverride != "" {
@@ -176,7 +179,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		}
 		opts.OptionalComponents = normalizedSelectors
 	}
-	if opts.Connected {
+	if opts.Connectivity.IsConnected() {
 		pkgLayout.RemoveImages()
 		pkgLayout.RemoveRepositories()
 	}
@@ -269,7 +272,6 @@ func (d *deployer) startDeploymentState(ctx context.Context, pkgLayout *layout.P
 			config.CLIVersion,
 			nil,
 			1,
-			state.WithPackageConnectivity(opts.Connected),
 			state.WithPackageNamespaceOverride(opts.NamespaceOverride),
 		)
 		if err != nil {
@@ -285,11 +287,6 @@ func (d *deployer) startDeploymentState(ctx context.Context, pkgLayout *layout.P
 	deployedPkg.Digest = pkgLayout.Digest()
 	deployedPkg.CLIVersion = config.CLIVersion
 	deployedPkg.NamespaceOverride = opts.NamespaceOverride
-	if opts.Connected {
-		deployedPkg.PackageConnectivity = state.PackageConnectivityConnected
-	} else {
-		deployedPkg.PackageConnectivity = state.PackageConnectivityAirGap
-	}
 
 	d.configDigest, err = opts.DeployConfig.Digest()
 	if err != nil {
@@ -651,7 +648,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		// Setup the state in the config
 		if d.s == nil {
 			var err error
-			d.s, err = setupState(ctx, d.c, opts.Connected)
+			d.s, err = setupState(ctx, d.c, opts.Connectivity.IsConnected())
 			if err != nil {
 				return nil, err
 			}
@@ -823,7 +820,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			VariableConfig:    d.vc,
 			State:             d.s,
 			Cluster:           d.c,
-			ConnectedDeploy:   opts.Connected,
+			ConnectedDeploy:   opts.Connectivity.IsConnected(),
 			Timeout:           opts.Timeout,
 			Retries:           opts.Retries,
 			PkgName:           pkg.Metadata.Name,
@@ -919,7 +916,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			VariableConfig:    d.vc,
 			State:             d.s,
 			Cluster:           d.c,
-			ConnectedDeploy:   opts.Connected,
+			ConnectedDeploy:   opts.Connectivity.IsConnected(),
 			Timeout:           opts.Timeout,
 			Retries:           opts.Retries,
 			PkgName:           pkg.Metadata.Name,
