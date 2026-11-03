@@ -919,6 +919,24 @@ type DeployedPackage struct {
 
 // NewDeployedPackage creates persisted deployment state from a package definition.
 func NewDeployedPackage(definition api.Package, digest, cliVersion string, components []DeployedComponent, generation int, opts ...DeployedPackageOptions) (*DeployedPackage, error) {
+	deployedPackage := &DeployedPackage{
+		Name:       definition.Metadata.Name,
+		Digest:     digest,
+		CLIVersion: cliVersion,
+		Generation: generation,
+	}
+	deployedPackage.SetDeployedComponents(components)
+	if err := deployedPackage.SetPackageDefinition(definition); err != nil {
+		return nil, err
+	}
+	for _, opt := range opts {
+		opt(deployedPackage)
+	}
+	return deployedPackage, nil
+}
+
+// SetDeployedComponents updates deployed components and their aggregate connection strings.
+func (d *DeployedPackage) SetDeployedComponents(components []DeployedComponent) {
 	connectStrings := ConnectStrings{}
 	for _, component := range components {
 		for _, chart := range component.InstalledCharts {
@@ -928,21 +946,8 @@ func NewDeployedPackage(definition api.Package, digest, cliVersion string, compo
 		}
 	}
 
-	deployedPackage := &DeployedPackage{
-		Name:               definition.Metadata.Name,
-		Digest:             digest,
-		CLIVersion:         cliVersion,
-		Generation:         generation,
-		DeployedComponents: components,
-		ConnectStrings:     connectStrings,
-	}
-	if err := deployedPackage.SetPackageDefinition(definition); err != nil {
-		return nil, err
-	}
-	for _, opt := range opts {
-		opt(deployedPackage)
-	}
-	return deployedPackage, nil
+	d.DeployedComponents = components
+	d.ConnectStrings = connectStrings
 }
 
 // SetDeployConfig saves a detached snapshot of a successful deployment configuration.

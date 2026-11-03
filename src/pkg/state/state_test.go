@@ -67,6 +67,41 @@ func TestDeployedPackagePackageDefinition(t *testing.T) {
 	require.Equal(t, beta.Metadata, convert.PackageToV1beta1(actual).Metadata)
 }
 
+func TestDeployedPackageSetDeployedComponentsRefreshesConnectStrings(t *testing.T) {
+	t.Parallel()
+
+	deployed := &DeployedPackage{
+		ConnectStrings: ConnectStrings{
+			"stale": {Description: "Stale", URL: "https://stale.example.com"},
+			"web":   {Description: "Old web", URL: "https://old.example.com"},
+		},
+	}
+	components := []DeployedComponent{
+		{
+			Name: "web",
+			InstalledCharts: []InstalledChart{{
+				ChartName:      "web",
+				ConnectStrings: ConnectStrings{"web": {Description: "Web", URL: "https://web.example.com"}},
+			}},
+		},
+		{
+			Name: "api",
+			InstalledCharts: []InstalledChart{{
+				ChartName:      "api",
+				ConnectStrings: ConnectStrings{"api": {Description: "API", URL: "https://api.example.com"}},
+			}},
+		},
+	}
+
+	deployed.SetDeployedComponents(components)
+
+	require.Equal(t, components, deployed.DeployedComponents)
+	require.Equal(t, ConnectStrings{
+		"web": {Description: "Web", URL: "https://web.example.com"},
+		"api": {Description: "API", URL: "https://api.example.com"},
+	}, deployed.ConnectStrings)
+}
+
 func TestDeployedPackageGetPackageConnectivity(t *testing.T) {
 	t.Parallel()
 

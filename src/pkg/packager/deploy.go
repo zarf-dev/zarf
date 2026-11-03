@@ -319,7 +319,7 @@ func (d *deployer) persistDeploymentState(ctx context.Context, components []stat
 	if d.deployedPkg == nil {
 		return nil
 	}
-	d.deployedPkg.DeployedComponents = components
+	d.deployedPkg.SetDeployedComponents(components)
 	return d.c.UpdateDeployedPackage(ctx, *d.deployedPkg)
 }
 
