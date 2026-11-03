@@ -36,6 +36,7 @@ type OrasRemote struct {
 	targetPlatform     *ocispec.Platform
 	insecureSkipVerify *bool
 	log                *slog.Logger
+	retryPolicy        retry.Policy
 }
 
 // Modifier is a function that modifies an OrasRemote
@@ -106,6 +107,18 @@ func WithLogger(logger *slog.Logger) Modifier {
 // WithCache sets the cache for the remote
 func WithCache(cache content.Storage) Modifier {
 	return func(o *OrasRemote) { o.cache = cache }
+}
+
+// WithRetryPolicy configures HTTP retries and range-capable blob recovery.
+// Nil keeps default HTTP retries and disables read recovery.
+func WithRetryPolicy(policy retry.Policy) Modifier {
+	return func(o *OrasRemote) {
+		o.retryPolicy = policy
+		o.progTransport.Policy = nil
+		if policy != nil {
+			o.progTransport.Policy = func() retry.Policy { return policy }
+		}
+	}
 }
 
 // PlatformForArch sets the target architecture for the remote
