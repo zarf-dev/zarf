@@ -133,15 +133,3 @@ You can find all of the `--set` configurations by looking at the `zarf-config.to
 ### Removing Components
 
 You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the [Zarf Package is composed](/ref/components/#component-imports) all you need to do is remove the component that imports the component you wish to exclude.
-
-## Troubleshooting
-
-### Unable to read zarf.yaml file
-
-<iframe src="/tutorials/package_create_error.html" height="120px" width="100%"></iframe>
-
-:::note[Remediation]
-
-If you receive this error, you may not be in the correct directory. Double-check where you are in your system and try again once you're in the correct directory with the zarf.yaml file that you're trying to build.
-
-:::
