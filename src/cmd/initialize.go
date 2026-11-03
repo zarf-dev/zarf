@@ -78,8 +78,6 @@ func newInitCommand(architecture *architectureOptions) *cobra.Command {
 	v := getViper()
 
 	// Init package set variable flags
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
-	_ = cmd.Flags().MarkDeprecated("set", "Use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
@@ -105,9 +103,11 @@ func newInitCommand(architecture *architectureOptions) *cobra.Command {
 
 	// Flags for using an external registry
 	cmd.Flags().StringVar(&o.registryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
-	cmd.Flags().IntVar(&o.registryInfo.Port, "registry-port", v.GetInt(VInitRegistryPort), lang.CmdInitFlagRegPort)
-	cmd.Flags().IntVar(&o.registryInfo.Port, "nodeport", v.GetInt(VInitRegistryNodeport), lang.CmdInitFlagRegNodePort)
-	_ = cmd.Flags().MarkDeprecated("nodeport", "Use --registry-port instead")
+	registryPort := v.GetInt(VInitRegistryPort)
+	if v.IsSet(VInitRegistryNodeport) {
+		registryPort = v.GetInt(VInitRegistryNodeport)
+	}
+	cmd.Flags().IntVar(&o.registryInfo.Port, "registry-port", registryPort, lang.CmdInitFlagRegPort)
 	cmd.Flags().StringVar(&o.registryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
 	cmd.Flags().StringVar(&o.registryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 	cmd.Flags().StringVar(&o.registryInfo.PullUsername, "registry-pull-username", v.GetString(VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
@@ -123,8 +123,6 @@ func newInitCommand(architecture *architectureOptions) *cobra.Command {
 	// Flags that control how a deployment proceeds
 	// Always require take-ownership flag (no viper)
 	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
-	cmd.Flags().BoolVar(&o.takeOwnership, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 	cmd.Flags().BoolVar(&o.skipValuesSchemaValidation, "skip-values-schema-validation", false, lang.CmdPackageDeployFlagSkipValuesSchema)
@@ -140,9 +138,7 @@ func newInitCommand(architecture *architectureOptions) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-port")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-image")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-port")
-	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-secret")
-	cmd.MarkFlagsMutuallyExclusive("registry-port", "nodeport")
 
 	cmd.Flags().SortFlags = true
 
