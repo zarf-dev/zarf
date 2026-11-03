@@ -89,6 +89,10 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = errors.Join(err, loaded.Close())
+	}()
+
 	normalizedSelectors, err := filters.NormalizeComponentSelectors(opts.OptionalComponents)
 	if err != nil {
 		return err
