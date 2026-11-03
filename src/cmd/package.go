@@ -496,6 +496,12 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 
 	filter := filters.Empty()
+	if o.confirm {
+		filter = filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(o.optionalComponents, false),
+		)
+	}
 
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
@@ -568,7 +574,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 		return nil, err
 	}
 	if opts.IsInteractive {
-		optionalComponents, err := resolveInteractiveDeploymentSelectors(pkgLayout.Definition(), opts.OptionalComponents)
+		optionalComponents, err := resolveInteractiveDeploymentSelectors(pkgLayout, opts.OptionalComponents)
 		if err != nil {
 			return nil, err
 		}
@@ -583,14 +589,14 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	return result.DeployedComponents, nil
 }
 
-func resolveInteractiveDeploymentSelectors(pkg api.Package, optionalComponents string) (string, error) {
+func resolveInteractiveDeploymentSelectors(pkgLayout *layout.PackageLayout, optionalComponents string) (string, error) {
 	normalized, err := filters.NormalizeComponentSelectors(optionalComponents)
 	if err != nil {
 		return "", err
 	}
 
 	selection := filters.ForDeploy(normalized, true)
-	if _, err := filters.Apply(pkg, filters.Combine(filters.ByLocalOS(runtime.GOOS), selection)); err != nil {
+	if err := pkgLayout.Filter(filters.Combine(filters.ByLocalOS(runtime.GOOS), selection)); err != nil {
 		return "", err
 	}
 	resolvedSelectors := selection.ResolvedSelectors()

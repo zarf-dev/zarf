@@ -166,9 +166,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		return DeployResult{}, err
 	}
 	opts.OptionalComponents = normalizedSelectors
-
-	selection := filters.ForDeploy(opts.OptionalComponents, false)
-	if err := pkgLayout.Filter(filters.Combine(filters.ByLocalOS(runtime.GOOS), selection)); err != nil {
+	if err := pkgLayout.Filter(filters.ByLocalOS(runtime.GOOS)); err != nil {
 		return DeployResult{}, err
 	}
 	if opts.Connectivity.IsConnected() {

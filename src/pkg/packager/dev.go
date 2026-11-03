@@ -7,12 +7,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -87,9 +89,19 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err = errors.Join(err, loaded.Close())
-	}()
+	normalizedSelectors, err := filters.NormalizeComponentSelectors(opts.OptionalComponents)
+	if err != nil {
+		return err
+	}
+	loaded.Definition, err = filters.Apply(loaded.Definition, filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.ForDeploy(normalizedSelectors, false),
+	))
+	if err != nil {
+		return err
+	}
+	opts.OptionalComponents = normalizedSelectors
+
 	if opts.SkipArchitectureCheck && loaded.Definition.IsInitConfig() {
 		return fmt.Errorf("skipping architecture checks is not supported for init packages")
 	}

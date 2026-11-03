@@ -27,7 +27,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
@@ -39,7 +38,7 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
 
-func TestDeployDoesNotPromptForComponentSelection(t *testing.T) {
+func TestDeployLeavesComponentSelectionToCaller(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
@@ -56,8 +55,9 @@ func TestDeployDoesNotPromptForComponentSelection(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 
-	_, err = Deploy(ctx, pkgLayout, DeployOptions{IsInteractive: true})
-	require.ErrorIs(t, err, filters.ErrNoDefaultOrSelection)
+	result, err := Deploy(ctx, pkgLayout, DeployOptions{IsInteractive: true})
+	require.NoError(t, err)
+	require.Equal(t, []string{"component-a", "component-b"}, []string{result.DeployedComponents[0].Name, result.DeployedComponents[1].Name})
 }
 
 func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
