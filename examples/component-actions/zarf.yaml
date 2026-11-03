@@ -7,7 +7,7 @@ values:
   files:
     - values.yaml
 
-# See the example README.md in this folder or /adrs/0010-scripts-actions.md for more info.
+# See the example README.md in this folder for more info.
 components:
   - name: on-create
     actions:

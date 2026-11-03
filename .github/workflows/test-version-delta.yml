@@ -7,7 +7,6 @@ on:
       - "**.png"
       - "**.gif"
       - "**.svg"
-      - "adr/**"
       - "docs/**"
       - "CODEOWNERS"
   merge_group:
