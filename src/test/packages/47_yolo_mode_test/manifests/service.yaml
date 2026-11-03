@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: doom
+  annotations:
+    zarf.dev/connect-description: "Play doom!!!"
+    zarf.dev/connect-url: "?doom"
+  labels:
+    # Enables "zarf connect doom"
+    zarf.dev/connect-name: doom
+spec:
+  selector:
+    app: game
+  ports:
+    - name: http
+      port: 8000
+      protocol: TCP
+      targetPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: game
+  annotations:
+    zarf.dev/connect-description: "Play some old dos games 🦄"
+  labels:
+    # Enables "zarf connect games"
+    zarf.dev/connect-name: games
+spec:
+  selector:
+    app: game
+  ports:
+    - name: http
+      port: 8000
+      protocol: TCP
+      targetPort: 8000

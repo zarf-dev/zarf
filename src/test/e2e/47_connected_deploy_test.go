@@ -84,7 +84,7 @@ func TestYOLOMode(t *testing.T) {
 	t.Log("E2E: Legacy YOLO compatibility")
 
 	tmpdir := t.TempDir()
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/yolo", "-o", tmpdir)
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", filepath.Join("src", "test", "packages", "47_yolo_mode_test"), "-o", tmpdir)
 	require.NoError(t, err, stdOut, stdErr)
 
 	packageName := fmt.Sprintf("zarf-package-yolo-%s.tar.zst", e2e.Arch)
