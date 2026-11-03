@@ -329,12 +329,6 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		}()
 	}
 
-	if d.isConnectedToCluster() && !pkg.IsInitConfig() {
-		if err := d.startDeploymentState(ctx, pkgLayout, opts); err != nil {
-			return nil, fmt.Errorf("start package deployment state: %w", err)
-		}
-	}
-
 	for _, component := range pkg.Components {
 		if component.RequiresCluster() && !d.isConnectedToCluster() {
 			timeout := cluster.DefaultTimeout

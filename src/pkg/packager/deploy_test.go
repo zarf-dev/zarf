@@ -97,6 +97,7 @@ func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
 			require.NoError(t, err)
 			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 			d := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
+			require.NoError(t, d.startDeploymentState(ctx, pkgLayout, DeployOptions{}))
 			_, err = d.deployComponents(ctx, pkgLayout, DeployOptions{})
 			require.ErrorContains(t, err, `command "exit 1" failed`)
 			deployed, err := c.GetDeployedPackage(ctx, pkg.Metadata.Name)
@@ -133,6 +134,7 @@ func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
 
 	config := DeployConfig{SetVariables: map[string]string{"VARIABLE": "value"}, OptionalComponents: "component"}
 	d := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
+	require.NoError(t, d.startDeploymentState(ctx, successLayout, DeployOptions{DeployConfig: config}))
 	_, err = d.deployComponents(ctx, successLayout, DeployOptions{DeployConfig: config})
 	require.NoError(t, err)
 
@@ -153,7 +155,9 @@ func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, failedLayout.Cleanup()) })
 
 	retry := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
-	_, err = retry.deployComponents(ctx, failedLayout, DeployOptions{DeployConfig: DeployConfig{SetVariables: map[string]string{"VARIABLE": "changed"}}})
+	retryOpts := DeployOptions{DeployConfig: DeployConfig{SetVariables: map[string]string{"VARIABLE": "changed"}}}
+	require.NoError(t, retry.startDeploymentState(ctx, failedLayout, retryOpts))
+	_, err = retry.deployComponents(ctx, failedLayout, retryOpts)
 	require.ErrorContains(t, err, `command "exit 1" failed`)
 
 	deployed, err = c.GetDeployedPackage(ctx, success.Metadata.Name)
