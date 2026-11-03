@@ -6,8 +6,11 @@ package testutil
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -23,4 +26,20 @@ func TestContext(t *testing.T) context.Context {
 	require.NoError(t, err)
 	ctx = logger.WithContext(ctx, l)
 	return ctx
+}
+
+// WritePackage writes a definition as zarf.yaml and authored source files into a
+// test-owned directory. It does not load, render, or assemble package resources.
+func WritePackage(t *testing.T, definition any, files map[string]string) string {
+	t.Helper()
+	dir := t.TempDir()
+	contents, err := yaml.Marshal(definition)
+	require.NoError(t, err)
+	for name, content := range files {
+		path := filepath.Join(dir, name)
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), contents, 0o600))
+	return dir
 }

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -18,8 +19,8 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/schema"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -640,12 +641,12 @@ func TestResolveImportsV1Beta1Errors(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600))
 	}
 
-	requireLintErr := func(t *testing.T, err error, path string) {
+	requireSchemaErr := func(t *testing.T, err error, path string) {
 		t.Helper()
-		var lintErr *lint.LintError
-		require.ErrorAs(t, err, &lintErr)
-		require.Equal(t, path, lintErr.PackageName)
-		require.NotEmpty(t, lintErr.Findings)
+		var validationErr *schema.ValidationError
+		require.ErrorAs(t, err, &validationErr)
+		require.ErrorContains(t, err, strconv.Quote(path))
+		require.NotEmpty(t, validationErr.Errors)
 	}
 
 	t.Run("missing import file errors", func(t *testing.T) {
@@ -730,7 +731,8 @@ components:
 `)
 		pkg := loadV1Beta1Package(t, dir)
 		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
-		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
+		requireSchemaErr(t, err, filepath.Join(dir, "child.yaml"))
+		require.ErrorContains(t, err, "Additional property unknown is not allowed")
 	})
 
 	t.Run("component config selector is rejected", func(t *testing.T) {
@@ -756,7 +758,7 @@ components:
 `)
 		pkg := loadV1Beta1Package(t, dir)
 		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
-		requireLintErr(t, err, filepath.Join(dir, "child.yaml"))
+		requireSchemaErr(t, err, filepath.Join(dir, "child.yaml"))
 	})
 
 	t.Run("multiple compatible variants error", func(t *testing.T) {

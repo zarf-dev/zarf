@@ -1,24 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package lint contains functions for verifying zarf yaml files are valid
-package lint
+package schema
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
+	"strings"
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/schema"
 )
 
 func TestZarfSchema(t *testing.T) {
 	t.Parallel()
-	zarfSchema := schema.GetV1Alpha1Schema()
+	zarfSchema := GetV1Alpha1Schema()
 
 	tests := []struct {
 		name                  string
@@ -136,10 +132,15 @@ func TestZarfSchema(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			findings, err := runSchema(zarfSchema, tt.pkg)
-			require.NoError(t, err)
+			err := Validate(zarfSchema, tt.pkg)
+			if len(tt.expectedSchemaStrings) == 0 {
+				require.NoError(t, err)
+				return
+			}
+			var validationErr *ValidationError
+			require.ErrorAs(t, err, &validationErr)
 			var schemaStrings []string
-			for _, schemaErr := range findings {
+			for _, schemaErr := range validationErr.Errors {
 				schemaStrings = append(schemaStrings, schemaErr.String())
 			}
 			require.ElementsMatch(t, tt.expectedSchemaStrings, schemaStrings)
@@ -169,10 +170,11 @@ components:
 		var unmarshalledYaml interface{}
 		err := goyaml.Unmarshal([]byte(badZarfPackage), &unmarshalledYaml)
 		require.NoError(t, err)
-		schemaErrs, err := runSchema(zarfSchema, unmarshalledYaml)
-		require.NoError(t, err)
+		err = Validate(zarfSchema, unmarshalledYaml)
+		var validationErr *ValidationError
+		require.ErrorAs(t, err, &validationErr)
 		var schemaStrings []string
-		for _, schemaErr := range schemaErrs {
+		for _, schemaErr := range validationErr.Errors {
 			schemaStrings = append(schemaStrings, schemaErr.String())
 		}
 		expectedSchemaStrings := []string{
@@ -185,23 +187,20 @@ components:
 		require.ElementsMatch(t, expectedSchemaStrings, schemaStrings)
 	})
 
-	t.Run("test schema findings is created as expected", func(t *testing.T) {
+	t.Run("validation error retains field path and description", func(t *testing.T) {
 		t.Parallel()
-		findings, err := getSchemaFindings(zarfSchema, v1alpha1.ZarfPackage{
+		err := Validate(zarfSchema, v1alpha1.ZarfPackage{
 			Kind: v1alpha1.ZarfInitConfig,
 			Metadata: v1alpha1.ZarfMetadata{
 				Name: "invalid",
 			},
 		})
-		require.NoError(t, err)
-		expected := []PackageFinding{
-			{
-				Description: "Invalid type. Expected: array, given: null",
-				Severity:    SevErr,
-				YqPath:      ".components",
-			},
-		}
-		require.ElementsMatch(t, expected, findings)
+		var validationErr *ValidationError
+		require.ErrorAs(t, err, &validationErr)
+		require.Len(t, validationErr.Errors, 1)
+		require.Equal(t, "components", validationErr.Errors[0].Field())
+		require.Equal(t, "Invalid type. Expected: array, given: null", validationErr.Errors[0].Description())
+		require.ErrorContains(t, err, "components: Invalid type. Expected: array, given: null")
 	})
 }
 
@@ -350,107 +349,77 @@ func TestV1Beta1SourceOneOfSchema(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			findings, err := getSchemaFindings(schema.GetV1Beta1Schema(), tt.doc)
-			require.NoError(t, err)
-			require.Equal(t, tt.valid, len(findings) == 0, findings)
+			err := Validate(GetV1Beta1Schema(), tt.doc)
+			if tt.valid {
+				require.NoError(t, err)
+				return
+			}
+			var validationErr *ValidationError
+			require.ErrorAs(t, err, &validationErr)
+			require.NotEmpty(t, validationErr.Errors)
 		})
 	}
 }
 
-func TestValidatePackageSchema(t *testing.T) {
-	setVariables := map[string]string{
-		"PACKAGE_NAME": "test-package",
-		"MY_COMP_NAME": "test-comp",
-	}
-	b, err := os.ReadFile(filepath.Join("testdata", "package-with-templates", "zarf.yaml"))
-	require.NoError(t, err)
-	var pkg any
-	require.NoError(t, goyaml.Unmarshal(b, &pkg))
-	findings, err := ValidatePackageSchemaV1Alpha1(pkg, setVariables)
-	require.NoError(t, err)
-	require.Empty(t, findings)
-}
-
-func TestYqCompat(t *testing.T) {
+func TestValidateUntypedDocument(t *testing.T) {
 	t.Parallel()
-	t.Run("Wrap standalone numbers in bracket", func(t *testing.T) {
-		t.Parallel()
-		input := "components12.12.import.path"
-		expected := ".components12.[12].import.path"
-		actual := makeFieldPathYqCompat(input)
-		require.Equal(t, expected, actual)
-	})
-
-	t.Run("root doesn't change", func(t *testing.T) {
-		t.Parallel()
-		input := "(root)"
-		actual := makeFieldPathYqCompat(input)
-		require.Equal(t, input, actual)
-	})
-}
-
-func TestFillObjTemplate(t *testing.T) {
-	testCases := []struct {
-		name              string
-		variables         map[string]string
-		component         v1alpha1.ZarfComponent
-		expectedComponent v1alpha1.ZarfComponent
+	for _, tc := range []struct {
+		name    string
+		schema  []byte
+		valid   string
+		invalid string
 	}{
 		{
-			name: "basic template",
-			variables: map[string]string{
-				"KEY": "value",
-			},
-			component: v1alpha1.ZarfComponent{
-				Images: []string{
-					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY"),
-				},
-			},
-			expectedComponent: v1alpha1.ZarfComponent{
-				Images: []string{
-					"value",
-				},
-			},
+			name:    "package",
+			schema:  GetV1Beta1Schema(),
+			valid:   "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: app\ncomponents:\n  - name: app\n",
+			invalid: "components.0.images.0.name",
 		},
 		{
-			name: "deprecated template",
-			variables: map[string]string{
-				"KEY": "value",
-			},
-			component: v1alpha1.ZarfComponent{
-				Images: []string{
-					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageVariablePrefix, "KEY"),
-				},
-			},
-			expectedComponent: v1alpha1.ZarfComponent{
-				Images: []string{
-					"value",
-				},
-			},
+			name:    "component",
+			schema:  GetV1Beta1ComponentSchema(),
+			valid:   "apiVersion: zarf.dev/v1beta1\nkind: ZarfComponentConfig\nmetadata:\n  name: app\ncomponent:\n  images: []\n",
+			invalid: "component.images.0.name",
 		},
-		{
-			name: "template not defined",
-			component: v1alpha1.ZarfComponent{
-				Images: []string{
-					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY"),
-				},
-			},
-			expectedComponent: v1alpha1.ZarfComponent{
-				Images: []string{
-					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY"),
-				},
-			},
-		},
-	}
-
-	for _, tc := range testCases {
+	} {
 		t.Run(tc.name, func(t *testing.T) {
-			component := tc.component
-			if err := templateZarfObj(&component, tc.variables); err != nil {
-				require.NoError(t, err)
-			}
+			t.Parallel()
+			var document any
+			require.NoError(t, goyaml.Unmarshal([]byte(tc.valid), &document))
+			require.NoError(t, Validate(tc.schema, document))
 
-			require.Equal(t, tc.expectedComponent, component)
+			require.NoError(t, goyaml.Unmarshal([]byte(tc.valid+"unknown: true\n"), &document))
+			err := Validate(tc.schema, document)
+			var validationErr *ValidationError
+			require.ErrorAs(t, err, &validationErr)
+			require.ErrorContains(t, err, "Additional property unknown is not allowed")
+
+			invalid := strings.ReplaceAll(tc.valid, "  images: []\n", "")
+			invalid += "    images:\n      - name: 123\n"
+			require.NoError(t, goyaml.Unmarshal([]byte(invalid), &document))
+			err = Validate(tc.schema, document)
+			require.ErrorAs(t, err, &validationErr)
+			require.ErrorContains(t, err, tc.invalid+": Invalid type. Expected: string, given: integer")
+		})
+	}
+}
+
+func TestValidateEngineErrors(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name     string
+		schema   []byte
+		document any
+	}{
+		{name: "malformed schema", schema: []byte("{"), document: map[string]any{}},
+		{name: "unserializable document", schema: GetV1Beta1Schema(), document: make(chan int)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := Validate(tc.schema, tc.document)
+			require.Error(t, err)
+			var validationErr *ValidationError
+			require.NotErrorAs(t, err, &validationErr, "engine failures are not schema violations")
 		})
 	}
 }

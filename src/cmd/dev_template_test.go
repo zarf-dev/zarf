@@ -7,10 +7,12 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/schema"
 )
 
 func TestDevTemplateRendersValuesAndCLIVersion(t *testing.T) {
@@ -139,18 +141,31 @@ components:
 }
 
 func TestDevTemplateRejectsInvalidSchema(t *testing.T) {
-	dir := t.TempDir()
-	source := filepath.Join(dir, packageTemplateFilename)
-	require.NoError(t, os.WriteFile(source, []byte(`apiVersion: zarf.dev/v1beta1
-kind: ZarfPackageConfig
-metadata:
-  name: app
-`), 0o644))
+	for _, tc := range []struct {
+		name       string
+		definition string
+		wantError  string
+	}{
+		{name: "required components", definition: "kind: ZarfPackageConfig\n", wantError: "components is required"},
+		{name: "package unknown field", definition: "kind: ZarfPackageConfig\ncomponents:\n  - name: app\nunknown: true\n", wantError: "Additional property unknown is not allowed"},
+		{name: "component unknown field", definition: "kind: ZarfComponentConfig\ncomponent:\n  unknown: true\n", wantError: "component: Additional property unknown is not allowed"},
+		{name: "component image type", definition: "kind: ZarfComponentConfig\ncomponent:\n  images:\n    - name: 123\n", wantError: "component.images.0.name: Invalid type. Expected: string, given: integer"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			source := filepath.Join(dir, packageTemplateFilename)
+			definition := "apiVersion: zarf.dev/v1beta1\nmetadata:\n  name: app\n" + tc.definition
+			require.NoError(t, os.WriteFile(source, []byte(definition), 0o644))
 
-	err := (&devTemplateOptions{}).run(context.Background(), []string{source})
-	require.ErrorContains(t, err, "linting error found")
-	_, statErr := os.Stat(filepath.Join(dir, "zarf.gen.yaml"))
-	require.ErrorIs(t, statErr, os.ErrNotExist)
+			err := (&devTemplateOptions{}).run(context.Background(), []string{source})
+			var validationErr *schema.ValidationError
+			require.ErrorAs(t, err, &validationErr)
+			require.ErrorContains(t, err, strconv.Quote(source))
+			require.ErrorContains(t, err, tc.wantError)
+			_, statErr := os.Stat(filepath.Join(dir, "zarf.gen.yaml"))
+			require.ErrorIs(t, statErr, os.ErrNotExist)
+		})
+	}
 }
 
 func TestDevTemplateSkipsSchemaValidation(t *testing.T) {

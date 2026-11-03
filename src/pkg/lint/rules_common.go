@@ -7,9 +7,16 @@ package lint
 import (
 	"strings"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
+
+// isTemplatedImage reports unresolved alpha template or variable placeholders.
+func isTemplatedImage(image string) bool {
+	return strings.Contains(image, v1alpha1.ZarfPackageTemplatePrefix) ||
+		strings.Contains(image, v1alpha1.ZarfPackageVariablePrefix)
+}
 
 func isPinnedImageReference(image string) (bool, error) {
 	transformedImage, err := transform.ParseImageRef(image)

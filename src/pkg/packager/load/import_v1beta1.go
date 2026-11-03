@@ -20,9 +20,9 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/schema"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -426,27 +426,17 @@ func componentConfigFromBytes(path string, b []byte) (v1beta1.ComponentConfig, e
 	if config.Kind != v1beta1.ZarfComponentConfig {
 		return v1beta1.ComponentConfig{}, fmt.Errorf("v1beta1 import %q must be a %s; components cannot be imported from packages", path, v1beta1.ZarfComponentConfig)
 	}
-	if err := validateComponentConfigSchemaV1Beta1(path, b); err != nil {
-		return v1beta1.ComponentConfig{}, err
+	var document any
+	if err := goyaml.Unmarshal(b, &document); err != nil {
+		return v1beta1.ComponentConfig{}, fmt.Errorf("unable to parse imported component config %q: %w", path, err)
+	}
+	if err := schema.Validate(schema.GetV1Beta1ComponentSchema(), document); err != nil {
+		return v1beta1.ComponentConfig{}, fmt.Errorf("unable to check imported component config schema %q: %w", path, err)
 	}
 	if errs := internalv1beta1.ValidateAnnotations(config.Metadata.Annotations); len(errs) > 0 {
 		return v1beta1.ComponentConfig{}, fmt.Errorf("component config %q validation failed:\n%w", path, errs)
 	}
 	return config, nil
-}
-
-func validateComponentConfigSchemaV1Beta1(path string, b []byte) error {
-	findings, err := lint.ValidateComponentConfigSchemaBytesV1Beta1(b)
-	if err != nil {
-		return fmt.Errorf("unable to check imported component config schema %q: %w", path, err)
-	}
-	if len(findings) == 0 {
-		return nil
-	}
-	return &lint.LintError{
-		PackageName: path,
-		Findings:    findings,
-	}
 }
 
 func validateComponentImportV1Beta1(imp v1beta1.ComponentImport) error {

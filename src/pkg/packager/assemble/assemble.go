@@ -462,87 +462,8 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 	for filesIdx, file := range component.Files {
 		rel := filepath.Join(string(layout.FilesComponentDir), layout.ComponentFileRelPath(filesIdx, file.Destination))
 		dst := filepath.Join(compBuildPath, rel)
-		destinationDir := filepath.Dir(dst)
-
-		if helpers.IsURL(file.Source) {
-			if file.ExtractPath != "" {
-				// get the compressedFileName from the source
-				compressedFileName, err := helpers.ExtractBasePathFromURL(file.Source)
-				if err != nil {
-					return fmt.Errorf(lang.ErrFileNameExtract, file.Source, err)
-				}
-				tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-				if err != nil {
-					return err
-				}
-				defer func() {
-					err = errors.Join(err, os.RemoveAll(tmpDir))
-				}()
-				compressedFile := filepath.Join(tmpDir, compressedFileName)
-
-				// If the file is an archive, download it to the componentPath.Temp
-				if err := utils.DownloadToFile(ctx, file.Source, compressedFile); err != nil {
-					return fmt.Errorf(lang.ErrDownloading, file.Source, err)
-				}
-				decompressOpts := archive.DecompressOpts{
-					Files: []string{file.ExtractPath},
-				}
-				err = archive.Decompress(ctx, compressedFile, destinationDir, decompressOpts)
-				if err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
-				}
-			} else {
-				if err := utils.DownloadToFile(ctx, file.Source, dst); err != nil {
-					return fmt.Errorf(lang.ErrDownloading, file.Source, err)
-				}
-			}
-		} else {
-			src, err := resources.Path(file.Source)
-			if err != nil {
-				return err
-			}
-			if file.ExtractPath != "" {
-				decompressOpts := archive.DecompressOpts{
-					Files: []string{file.ExtractPath},
-				}
-				err = archive.Decompress(ctx, src, destinationDir, decompressOpts)
-				if err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err)
-				}
-			} else {
-				if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
-					return fmt.Errorf("unable to copy file %s: %w", src, err)
-				}
-			}
-		}
-
-		if file.ExtractPath != "" {
-			// Make sure dst reflects the actual file or directory.
-			updatedExtractedFileOrDir := filepath.Join(destinationDir, file.ExtractPath)
-			if updatedExtractedFileOrDir != dst {
-				if err := os.Rename(updatedExtractedFileOrDir, dst); err != nil {
-					return fmt.Errorf(lang.ErrWritingFile, dst, err)
-				}
-			}
-		}
-
-		// Abort packaging on invalid shasum (if one is specified).
-		if file.Checksum.IsSet() {
-			if err := checksum.VerifyFile(dst, file.Checksum.GetAlgorithm(), file.Checksum.Digest); err != nil {
-				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
-			}
-		}
-
-		if file.Executable || helpers.IsDir(dst) {
-			err := os.Chmod(dst, helpers.ReadWriteExecuteUser)
-			if err != nil {
-				return err
-			}
-		} else {
-			err := os.Chmod(dst, helpers.ReadWriteUser)
-			if err != nil {
-				return err
-			}
+		if err := PackageFile(ctx, file, dst, resources); err != nil {
+			return err
 		}
 	}
 
@@ -607,6 +528,96 @@ func assemblePackageComponent(ctx context.Context, component api.Component, reso
 	err = createReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, false)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+// PackageFile acquires, extracts, verifies, and sets permissions for a file at dst without running actions.
+// It removes temporary downloads before returning; dst must be a validated staging path.
+func PackageFile(ctx context.Context, file api.File, dst string, resources *load.ResourceSet) (err error) {
+	destinationDir := filepath.Dir(dst)
+
+	if helpers.IsURL(file.Source) {
+		if file.ExtractPath != "" {
+			// get the compressedFileName from the source
+			var compressedFileName string
+			compressedFileName, err = helpers.ExtractBasePathFromURL(file.Source)
+			if err != nil {
+				return fmt.Errorf(lang.ErrFileNameExtract, file.Source, err)
+			}
+			var tmpDir string
+			tmpDir, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, os.RemoveAll(tmpDir))
+			}()
+			compressedFile := filepath.Join(tmpDir, compressedFileName)
+
+			// If the file is an archive, download it to the componentPath.Temp
+			if err := utils.DownloadToFile(ctx, file.Source, compressedFile); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, file.Source, err)
+			}
+			decompressOpts := archive.DecompressOpts{
+				Files: []string{file.ExtractPath},
+			}
+			err = archive.Decompress(ctx, compressedFile, destinationDir, decompressOpts)
+			if err != nil {
+				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
+			}
+		} else {
+			if err := utils.DownloadToFile(ctx, file.Source, dst); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, file.Source, err)
+			}
+		}
+	} else {
+		src, err := resources.Path(file.Source)
+		if err != nil {
+			return err
+		}
+		if file.ExtractPath != "" {
+			decompressOpts := archive.DecompressOpts{
+				Files: []string{file.ExtractPath},
+			}
+			err = archive.Decompress(ctx, src, destinationDir, decompressOpts)
+			if err != nil {
+				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err)
+			}
+		} else {
+			if err := layout.MaterializeSourceToLayout(ctx, src, dst); err != nil {
+				return fmt.Errorf("unable to copy file %s: %w", src, err)
+			}
+		}
+	}
+
+	if file.ExtractPath != "" {
+		// Make sure dst reflects the actual file or directory.
+		updatedExtractedFileOrDir := filepath.Join(destinationDir, file.ExtractPath)
+		if updatedExtractedFileOrDir != dst {
+			if err := os.Rename(updatedExtractedFileOrDir, dst); err != nil {
+				return fmt.Errorf(lang.ErrWritingFile, dst, err)
+			}
+		}
+	}
+
+	// Abort packaging on invalid shasum (if one is specified).
+	if file.Checksum.IsSet() {
+		if err := checksum.VerifyFile(dst, file.Checksum.GetAlgorithm(), file.Checksum.Digest); err != nil {
+			return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
+		}
+	}
+
+	if file.Executable || helpers.IsDir(dst) {
+		err := os.Chmod(dst, helpers.ReadWriteExecuteUser)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := os.Chmod(dst, helpers.ReadWriteUser)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
