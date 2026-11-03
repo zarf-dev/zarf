@@ -388,7 +388,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
-			l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
+			l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
 		}
 		if deployErr == nil {
 			if pkg.IsInitConfig() {
@@ -436,7 +436,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 					d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeFailed))
 				}
 				if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
-					l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
+					l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
 				}
 			}
 			select {
@@ -455,7 +455,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		deployedComponents[idx].Status = state.ComponentStatusSucceeded //nolint:staticcheck // Legacy status remains persisted for compatibility.
 		deployedComponents[idx].LastEvent = state.ComponentEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded, Timestamp: time.Now()}
 		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
-			l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
+			l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
 		}
 
 		// Alpha success hooks observe the saved successful deployment.
@@ -466,7 +466,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 					d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeFailed))
 				}
 				if persistErr := d.persistDeploymentState(ctx, deployedComponents); persistErr != nil {
-					l.Debug("unable to record package deployment", "component", component.Name, "error", persistErr.Error())
+					l.Error("unable to record package deployment", "component", component.Name, "error", persistErr.Error())
 				}
 				return nil, err
 			}
@@ -477,7 +477,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeSucceeded))
 		d.deployedPkg.SetDeployConfig(opts.DeployConfig)
 		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
-			l.Debug("unable to record package deployment", "error", err.Error())
+			l.Error("unable to record package deployment", "error", err.Error())
 		}
 	}
 	return deployedComponents, nil
