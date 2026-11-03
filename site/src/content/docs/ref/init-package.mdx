@@ -28,7 +28,7 @@ View all init options w/ [`zarf init --help`](/commands/zarf_init/).
 
 :::
 
-`zarf tools download-init` defaults to the `v1beta1` init package. To download the legacy package, use `zarf tools download-init --api-version=v1alpha1`.
+`zarf tools download-init` defaults to the `v1beta1` init package. The v1beta1 package accepts values instead of variables. Run `zarf package inspect documentation oci://ghcr.io/zarf-dev/packages/v1beta1/init:<version> --keys=migration` for migration guidance. To download the deprecated, legacy package, use `zarf tools download-init --api-version=v1alpha1`.
 
 ## Core Components
 
