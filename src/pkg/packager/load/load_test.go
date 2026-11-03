@@ -16,8 +16,8 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/schema"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -447,7 +447,9 @@ components:
 	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(packageYAML), 0o600))
 
 	_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
-	require.ErrorContains(t, err, "linting error found")
+	var validationErr *schema.ValidationError
+	require.ErrorAs(t, err, &validationErr)
+	require.ErrorContains(t, err, "components.0.charts.0.name: Does not match pattern")
 }
 
 func TestPackageDefinitionRejectsUnsupportedRawFields(t *testing.T) {
@@ -481,9 +483,10 @@ documenttaion:
 
 			_, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
 
-			var lintErr *lint.LintError
-			require.ErrorAs(t, err, &lintErr)
-			require.NotEmpty(t, lintErr.Findings)
+			var validationErr *schema.ValidationError
+			require.ErrorAs(t, err, &validationErr)
+			require.NotEmpty(t, validationErr.Errors)
+			require.ErrorContains(t, err, "Additional property documenttaion is not allowed")
 		})
 	}
 }
@@ -524,11 +527,11 @@ components:
 			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(tt.definition), 0o600))
 			pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{})
 			if tt.wantError {
-				var lintErr *lint.LintError
-				require.ErrorAs(t, err, &lintErr)
-				require.Equal(t, tt.wantName, lintErr.PackageName)
-				require.Len(t, lintErr.Findings, 1)
-				require.Contains(t, lintErr.Findings[0].Description, "unsupported")
+				var validationErr *schema.ValidationError
+				require.ErrorAs(t, err, &validationErr)
+				require.ErrorContains(t, err, fmt.Sprintf("package %q schema", tt.wantName))
+				require.Len(t, validationErr.Errors, 1)
+				require.Contains(t, validationErr.Errors[0].Description(), "unsupported")
 				return
 			}
 			require.NoError(t, err)
@@ -536,6 +539,55 @@ components:
 			if tt.wantName == "beta" {
 				require.Equal(t, "selected beta\n\n", pkg.Metadata.Description)
 			}
+		})
+	}
+}
+
+func TestPackageDefinitionTemplatesOriginalV1Alpha1Document(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name  string
+		extra string
+	}{
+		{name: "native package and component templates"},
+		{name: "unknown field uses filtered component name", extra: "    \"###ZARF_COMPONENT_NAME###\": true\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			definition := `kind: ZarfPackageConfig
+metadata:
+  name: "###ZARF_PKG_VAR_PACKAGE###"
+components:
+  - name: "###ZARF_PKG_TMPL_COMPONENT###"
+    manifests:
+      - name: "###ZARF_COMPONENT_NAME###"
+        files: [manifest.yaml]
+  - name: filtered
+    only:
+      cluster:
+        architecture: "###ZARF_PKG_ARCH###"
+    manifests:
+      - name: "###ZARF_COMPONENT_NAME###"
+        files: [manifest.yaml]
+` + tc.extra
+			require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+			pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{
+				SetVariables: map[string]string{"PACKAGE": "templated", "COMPONENT": "active"},
+			})
+			if tc.extra != "" {
+				var validationErr *schema.ValidationError
+				require.ErrorAs(t, err, &validationErr)
+				require.Len(t, validationErr.Errors, 1)
+				require.Equal(t, "components.1", validationErr.Errors[0].Field())
+				require.ErrorContains(t, err, "Additional property filtered is not allowed")
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, "templated", pkg.Metadata.Name)
+			require.Len(t, pkg.Components, 1)
+			require.Equal(t, "active", pkg.Components[0].Name)
+			require.Equal(t, "active", pkg.Components[0].Manifests[0].Name)
 		})
 	}
 }
@@ -599,9 +651,9 @@ components:
 				require.NoError(t, err)
 				return
 			}
-			var lintErr *lint.LintError
-			require.ErrorAs(t, err, &lintErr)
-			require.Len(t, lintErr.Findings, 1)
+			var validationErr *schema.ValidationError
+			require.ErrorAs(t, err, &validationErr)
+			require.Len(t, validationErr.Errors, 1)
 		})
 	}
 }

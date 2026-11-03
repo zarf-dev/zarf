@@ -4,6 +4,7 @@ package packager
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,94 +15,40 @@ import (
 
 func TestLintPackageWithImports(t *testing.T) {
 	testCases := []struct {
-		name     string
-		path     string
-		opts     LintOptions
-		findings []lint.PackageFinding
+		name, fixture string
+		opts          LintOptions
+		images        []string
 	}{
 		{
-			name: "compose test ",
-			path: filepath.Join("testdata", "lint-with-imports", "compose"),
-			findings: []lint.PackageFinding{
-				{
-					YqPath:      ".components.[0].images.[0]",
-					Description: "Image not pinned with digest",
-					Item:        "busybox:0.0.1",
-					Severity:    lint.SevWarn,
-				},
-				{
-					YqPath:      ".components.[0].images.[0]",
-					Description: "Image reference does not specify a registry domain",
-					Item:        "busybox:0.0.1",
-					Severity:    lint.SevWarn,
-				},
-				{
-					YqPath:      ".components.[0].images.[1]",
-					Description: "Image reference does not specify a registry domain",
-					Item:        "busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
-					Severity:    lint.SevWarn,
-				},
-			},
+			name: "composition", fixture: "compose",
+			images: []string{"busybox:0.0.1", "busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79"},
 		},
 		{
-			name: "variables test",
-			path: filepath.Join("testdata", "lint-with-imports", "variables"),
-			opts: LintOptions{
-				SetVariables: map[string]string{
-					"BUSYBOX_TAG": "1.0.0",
-				},
-			},
-			findings: []lint.PackageFinding{
-				{
-					YqPath:      ".components.[0].images.[0]",
-					Description: "Image not pinned with digest",
-					Item:        "busybox:1.0.0",
-					Severity:    lint.SevWarn,
-				},
-				{
-					YqPath:      ".components.[0].images.[0]",
-					Description: "Image reference does not specify a registry domain",
-					Item:        "busybox:1.0.0",
-					Severity:    lint.SevWarn,
-				},
-				{
-					YqPath:      ".components.[0].images.[1]",
-					Description: "Image reference does not specify a registry domain",
-					Item:        "busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
-					Severity:    lint.SevWarn,
-				},
-			},
+			name: "create variables", fixture: "variables",
+			opts:   LintOptions{CreateSetVariables: map[string]string{"BUSYBOX_TAG": "1.0.0"}},
+			images: []string{"busybox:1.0.0", "busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79"},
 		},
 		{
-			name: "flavor test",
-			path: filepath.Join("testdata", "lint-with-imports", "flavor"),
-			opts: LintOptions{
-				Flavor: "good-flavor",
-			},
-			findings: []lint.PackageFinding{
-				{
-					YqPath:      ".components.[0].images.[0]",
-					Description: "Image not pinned with digest",
-					Item:        "image-in-good-flavor-component:unpinned",
-					Severity:    lint.SevWarn,
-				},
-				{
-					YqPath:      ".components.[0].images.[0]",
-					Description: "Image reference does not specify a registry domain",
-					Item:        "image-in-good-flavor-component:unpinned",
-					Severity:    lint.SevWarn,
-				},
-			},
+			name: "flavor", fixture: "flavor", opts: LintOptions{Flavor: "good-flavor"},
+			images: []string{"image-in-good-flavor-component:unpinned"},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
-			err := Lint(ctx, tc.path, tc.opts)
-			var lintErr *lint.LintError
-			require.ErrorAs(t, err, &lintErr)
-			require.ElementsMatch(t, tc.findings, lintErr.Findings)
+			lintErr := Lint(t.Context(), filepath.Join("testdata", "lint-with-imports", tc.fixture), tc.opts)
+			var got, want []string
+			for _, finding := range lintErr.Findings {
+				require.Equal(t, "composed definition", finding.Source)
+				got = append(got, finding.RuleID+":"+finding.YqPath+":"+finding.Item)
+			}
+			want = append(want, "image-unpinned:.components.[0].images.[0]:"+tc.images[0])
+			for i, image := range tc.images {
+				want = append(want, fmt.Sprintf("image-registry-missing:.components.[0].images.[%d]:%s", i, image))
+			}
+			require.ElementsMatch(t, want, got)
+			require.NoError(t, lintErr.Err)
+			require.Empty(t, lintErr.NotEvaluated)
 		})
 	}
 }
@@ -161,17 +108,16 @@ component:
 			if tc.filename == "zarf.yaml" {
 				path = dir
 			}
-			err := Lint(context.Background(), path, LintOptions{})
-			var lintErr *lint.LintError
-			require.ErrorAs(t, err, &lintErr)
+			lintErr := Lint(context.Background(), path, LintOptions{})
 			require.ElementsMatch(t, []lint.PackageFinding{
-				{YqPath: tc.prefix + ".repositories.[0]", Description: "Repository is not pinned to a commit", Item: "https://example.com/repo.git", Severity: lint.SevWarn},
-				{YqPath: tc.prefix + ".images.[0]", Description: "Image not pinned with digest", Item: "busybox:1.0", Severity: lint.SevWarn},
-				{YqPath: tc.prefix + ".images.[0]", Description: "Image reference does not specify a registry domain", Item: "busybox:1.0", Severity: lint.SevWarn},
-				{YqPath: tc.prefix + ".files.[0]", Description: "No checksum for remote file", Item: "https://example.com/file.zip", Severity: lint.SevWarn},
-				{YqPath: tc.prefix + ".imageArchives.[0].images.[0].name", Description: "Image archive image should use a .internal domain to avoid resolving to a public registry", Item: "example.com/app:1.0", Severity: lint.SevWarn},
+				{RuleID: "repository-unpinned", Source: "composed definition", YqPath: tc.prefix + ".repositories.[0]", Description: "Repository is not pinned to a commit", Item: "https://example.com/repo.git", Severity: lint.SevWarn},
+				{RuleID: "image-unpinned", Source: "composed definition", YqPath: tc.prefix + ".images.[0]", Description: "Image not pinned with digest", Item: "busybox:1.0", Severity: lint.SevInfo},
+				{RuleID: "image-registry-missing", Source: "composed definition", YqPath: tc.prefix + ".images.[0]", Description: "Image reference does not specify a registry domain", Item: "busybox:1.0", Severity: lint.SevWarn},
+				{RuleID: "file-checksum-missing", Source: "composed definition", YqPath: tc.prefix + ".files.[0]", Description: "No checksum for remote file", Item: "https://example.com/file.zip", Severity: lint.SevWarn},
+				{RuleID: "image-archive-domain", Source: "composed definition", YqPath: tc.prefix + ".imageArchives.[0].images.[0].name", Description: "Image archive image should use a .internal domain to avoid resolving to a public registry", Item: "example.com/app:1.0", Severity: lint.SevWarn},
 			}, lintErr.Findings)
-			require.True(t, lintErr.OnlyWarnings())
+			require.NoError(t, lintErr.Err)
+			require.False(t, lintErr.FailsAt(lint.SevErr))
 		})
 	}
 }
@@ -201,12 +147,11 @@ component:
 	parentPath := filepath.Join(dir, "parent.yaml")
 	require.NoError(t, os.WriteFile(parentPath, []byte(parent), 0o600))
 
-	err := Lint(context.Background(), parentPath, LintOptions{})
-	var lintErr *lint.LintError
-	require.ErrorAs(t, err, &lintErr)
+	lintErr := Lint(context.Background(), parentPath, LintOptions{})
 	require.Equal(t, "parent", lintErr.PackageName)
 	require.ElementsMatch(t, []lint.PackageFinding{
-		{YqPath: ".component.images.[0]", Description: "Image not pinned with digest", Item: "busybox:1.0", Severity: lint.SevWarn},
-		{YqPath: ".component.images.[0]", Description: "Image reference does not specify a registry domain", Item: "busybox:1.0", Severity: lint.SevWarn},
+		{RuleID: "image-unpinned", Source: "composed definition", YqPath: ".component.images.[0]", Description: "Image not pinned with digest", Item: "busybox:1.0", Severity: lint.SevInfo},
+		{RuleID: "image-registry-missing", Source: "composed definition", YqPath: ".component.images.[0]", Description: "Image reference does not specify a registry domain", Item: "busybox:1.0", Severity: lint.SevWarn},
 	}, lintErr.Findings)
+	require.NoError(t, lintErr.Err)
 }

@@ -24,9 +24,9 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/schema"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -103,8 +103,8 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 		if err != nil {
 			return resolution{}, err
 		}
-		if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, rawPackage); err != nil {
-			return resolution{}, err
+		if err := schema.Validate(schema.GetV1Beta1Schema(), rawPackage); err != nil {
+			return resolution{}, fmt.Errorf("unable to check package %q schema: %w", pkg.Metadata.Name, err)
 		}
 		defined, err = v1beta1Resolution(ctx, pkg, pkgPath, opts)
 		if err != nil {
@@ -149,15 +149,15 @@ func v1alpha1Resolution(ctx context.Context, pkg v1alpha1.ZarfPackage, pkgPath l
 	}
 
 	if opts.SetVariables != nil {
-		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
+		pkg, _, err = fillActiveTemplate(ctx, pkg, &rawPackage, opts.SetVariables, opts.IsInteractive)
 		if err != nil {
 			return resolution{}, err
 		}
 	}
-	// Validate the original document so fields discarded while decoding are still
-	// Done after package templates have been resolved and prompted.
-	if err := validatePackageSchemaV1Alpha1(pkg.Metadata.Name, rawPackage, opts.SetVariables); err != nil {
-		return resolution{}, err
+	// Validate the original document after templating so unknown fields survive
+	// decoding and prompted values receive the same validation as --set values.
+	if err := schema.Validate(schema.GetV1Alpha1Schema(), rawPackage); err != nil {
+		return resolution{}, fmt.Errorf("unable to check package %q schema: %w", pkg.Metadata.Name, err)
 	}
 	if err := validateV1alpha1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
 		return resolution{}, err
@@ -248,8 +248,8 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 	}
 
 	// Validate after import just in case
-	if err := validatePackageSchemaV1Beta1(pkg.Metadata.Name, pkg); err != nil {
-		return err
+	if err := schema.Validate(schema.GetV1Beta1Schema(), pkg); err != nil {
+		return fmt.Errorf("unable to check package %q schema: %w", pkg.Metadata.Name, err)
 	}
 
 	l.Debug("done v1beta1 validate",
@@ -260,41 +260,13 @@ func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath strin
 	return nil
 }
 
-func validatePackageSchemaV1Alpha1(pkgName string, pkg any, setVariables map[string]string) error {
-	findings, err := lint.ValidatePackageSchemaV1Alpha1(pkg, setVariables)
-	if err != nil {
-		return fmt.Errorf("unable to check schema: %w", err)
-	}
-	if len(findings) == 0 {
-		return nil
-	}
-	return &lint.LintError{
-		PackageName: pkgName,
-		Findings:    findings,
-	}
-}
-
-func validatePackageSchemaV1Beta1(pkgName string, pkg any) error {
-	findings, err := lint.ValidatePackageSchemaV1Beta1(pkg)
-	if err != nil {
-		return fmt.Errorf("unable to check schema: %w", err)
-	}
-	if len(findings) == 0 {
-		return nil
-	}
-	return &lint.LintError{
-		PackageName: pkgName,
-		Findings:    findings,
-	}
-}
-
 func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	return slices.ContainsFunc(pkg.Components, func(comp v1alpha1.ZarfComponent) bool {
 		return comp.Only.Flavor == flavor
 	})
 }
 
-func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string, isInteractive bool) (v1alpha1.ZarfPackage, []string, error) {
+func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, rawPackage *any, setVariables map[string]string, isInteractive bool) (v1alpha1.ZarfPackage, []string, error) {
 	templateMap := map[string]string{}
 	warnings := []string{}
 
@@ -330,9 +302,34 @@ func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariab
 		return nil
 	}
 
-	// update the component templates on the package
-	if err := reloadComponentTemplatesInPackage(&pkg); err != nil {
-		return v1alpha1.ZarfPackage{}, nil, err
+	// Component names are scoped to each component and resolve before package templates.
+	for i := range pkg.Components {
+		if err := utils.ReloadYamlTemplate(&pkg.Components[i], map[string]string{
+			v1alpha1.ZarfComponentName: pkg.Components[i].Name,
+		}); err != nil {
+			return v1alpha1.ZarfPackage{}, nil, err
+		}
+	}
+	// The original components can differ from the resolved, filtered package.
+	// Keep their unknown fields and use their own names, not resolved slice indices.
+	if original, ok := (*rawPackage).(map[string]any); ok {
+		if components, ok := original["components"].([]any); ok {
+			for i, component := range components {
+				fields, ok := component.(map[string]any)
+				if !ok {
+					continue // The schema validator reports malformed components.
+				}
+				name, ok := fields["name"].(string)
+				if !ok {
+					continue // Preserve invalid names for schema validation.
+				}
+				if err := utils.ReloadYamlTemplate(&components[i], map[string]string{
+					v1alpha1.ZarfComponentName: name,
+				}); err != nil {
+					return v1alpha1.ZarfPackage{}, nil, err
+				}
+			}
+		}
 	}
 
 	if err := promptAndSetTemplate(v1alpha1.ZarfPackageTemplatePrefix, false); err != nil {
@@ -349,31 +346,11 @@ func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariab
 	if err := utils.ReloadYamlTemplate(&pkg, templateMap); err != nil {
 		return v1alpha1.ZarfPackage{}, nil, err
 	}
+	if err := utils.ReloadYamlTemplate(rawPackage, templateMap); err != nil {
+		return v1alpha1.ZarfPackage{}, nil, err
+	}
 
 	return pkg, warnings, nil
-}
-
-// reloadComponentTemplate appends ###ZARF_COMPONENT_NAME### for the component, assigns value, and reloads
-// Any instance of ###ZARF_COMPONENT_NAME### within a component will be replaced with that components name
-func reloadComponentTemplate(component *v1alpha1.ZarfComponent) error {
-	mappings := map[string]string{}
-	mappings[v1alpha1.ZarfComponentName] = component.Name
-	err := utils.ReloadYamlTemplate(component, mappings)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// reloadComponentTemplatesInPackage appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
-func reloadComponentTemplatesInPackage(zarfPackage *v1alpha1.ZarfPackage) error {
-	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
-	for i := range zarfPackage.Components {
-		if err := reloadComponentTemplate(&zarfPackage.Components[i]); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // DefinitionHeader identifies the API version and kind declared by a config file.

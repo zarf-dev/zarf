@@ -576,7 +576,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdDevFlagGenerateSchemaDeleteNotFound = "Remove existing schema keys when they are not found in the mapped values"
 
 	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
-	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
+	CmdDevLintLong  = "Checks package or component definitions for recommended practices that improve maintainability, deployment reliability, and security."
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"

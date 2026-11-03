@@ -24,17 +24,41 @@ func PrintFindings(ctx context.Context, lintErr *lint.LintError) {
 			sevColor = color.FgRed
 		case lint.SevWarn:
 			sevColor = color.FgYellow
+		case lint.SevInfo:
+			sevColor = color.FgBlue
 		}
 
+		location := finding.YqPath
+		if finding.Source != "" {
+			location = finding.Source
+			if finding.Line > 0 {
+				location += fmt.Sprintf(":%d:%d", finding.Line, finding.Column)
+			}
+			if finding.YqPath != "" {
+				location += " (" + finding.YqPath + ")"
+			}
+		}
 		lintData = append(lintData, []string{
 			colorWrap(string(finding.Severity), sevColor),
-			colorWrap(finding.YqPath, color.FgCyan),
+			finding.RuleID,
+			colorWrap(location, color.FgCyan),
 			finding.ItemizedDescription(),
 		})
 	}
 	// Print table to our OutputWriter
 	logger.From(ctx).Info("linting composed package definition", "name", lintErr.PackageName)
-	message.TableWithWriter(OutputWriter, []string{"Type", "Path", "Message"}, lintData)
+	if len(lintData) > 0 {
+		message.TableWithWriter(OutputWriter, []string{"Type", "Rule", "Location", "Message"}, lintData)
+	}
+	if len(lintErr.SkippedRules) > 0 {
+		fmt.Fprintf(OutputWriter, "Skipped rules: %v\n", lintErr.SkippedRules)
+	}
+	if len(lintErr.NotEvaluated) > 0 {
+		fmt.Fprintln(OutputWriter, "Not evaluated:")
+		for _, check := range lintErr.NotEvaluated {
+			fmt.Fprintf(OutputWriter, "- %s\n", check)
+		}
+	}
 }
 
 func colorWrap(str string, attr color.Attribute) string {

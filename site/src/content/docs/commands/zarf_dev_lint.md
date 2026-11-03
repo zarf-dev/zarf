@@ -12,7 +12,7 @@ Lints the given package for valid schema and recommended practices
 
 ### Synopsis
 
-Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files
+Checks package or component definitions for recommended practices that improve maintainability, deployment reliability, and security.
 
 ```
 zarf dev lint [ PATH ] [flags]
@@ -21,9 +21,14 @@ zarf dev lint [ PATH ] [flags]
 ### Options
 
 ```
-  -f, --flavor string        The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
-  -h, --help                 help for lint
-      --set stringToString   Specify package templates to set on the command line (KEY=value) (default [])
+      --create-set stringToString             Specify package templates to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]. (default [])
+      --deploy-set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+      --fail-on string                        Minimum finding severity that fails linting: error, warning, or info (default "error")
+  -f, --flavor string                         The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
+  -h, --help                                  help for lint
+      --set-values stringToString             Set package values (key.path=value). Booleans and integers are type-inferred; everything else is a string (default [])
+      --skip-rule stringArray                 Skip a lint rule by ID (repeatable)
+      --values strings                        [beta] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
 ```
 
 ### Options inherited from parent commands

@@ -91,7 +91,7 @@ func checkAction(component api.Component, action api.Action, defined *definedVal
 	}
 	location := fmt.Sprintf("component %q action %q", component.Name, actionLabel(action))
 	var errs []error
-	for _, s := range actionTemplateStrings(action) {
+	for _, s := range action.TemplateStrings() {
 		errs = append(errs, checkTemplateString(s, defined, location)...)
 	}
 	return errs
@@ -267,20 +267,6 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		}
 	}
 	return sources, nil
-}
-
-func actionTemplateStrings(a api.Action) []string {
-	if a.Wait != nil {
-		var out []string
-		if c := a.Wait.Cluster; c != nil {
-			out = append(out, c.Kind, c.Name, c.Namespace, c.Condition.Expression)
-		}
-		if n := a.Wait.Network; n != nil {
-			out = append(out, n.Protocol, n.Address)
-		}
-		return out
-	}
-	return []string{a.Cmd}
 }
 
 func actionLabel(a api.Action) string {

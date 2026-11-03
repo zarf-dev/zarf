@@ -10,9 +10,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
-// CheckComponentValuesV1Beta1 checks recommended practices on a resolved v1beta1 component.
-// path is the component's location in the source definition.
-func CheckComponentValuesV1Beta1(c v1beta1.ComponentSpec, path string) []PackageFinding {
+func checkComponentPrimitivesV1Beta1(c v1beta1.ComponentSpec, path string) []PackageFinding {
 	var findings []PackageFinding
 	findings = append(findings, checkForUnpinnedReposV1Beta1(c, path)...)
 	findings = append(findings, checkForUnpinnedImagesV1Beta1(c, path)...)
@@ -27,6 +25,7 @@ func checkForUnpinnedReposV1Beta1(c v1beta1.ComponentSpec, path string) []Packag
 	for i, repo := range c.Repositories {
 		if repo.Ref == nil || repo.Ref.Commit == "" {
 			findings = append(findings, PackageFinding{
+				RuleID:      RuleRepositoryUnpinned,
 				YqPath:      fmt.Sprintf("%s.repositories.[%d]", path, i),
 				Description: "Repository is not pinned to a commit",
 				Item:        repo.URL,
@@ -45,6 +44,7 @@ func checkForUnpinnedImagesV1Beta1(c v1beta1.ComponentSpec, path string) []Packa
 		switch {
 		case err != nil:
 			findings = append(findings, PackageFinding{
+				RuleID:      RuleImageReferenceInvalid,
 				YqPath:      imagePath,
 				Description: "Failed to parse image reference",
 				Item:        image.Name,
@@ -52,10 +52,11 @@ func checkForUnpinnedImagesV1Beta1(c v1beta1.ComponentSpec, path string) []Packa
 			})
 		case !pinned:
 			findings = append(findings, PackageFinding{
+				RuleID:      RuleImageUnpinned,
 				YqPath:      imagePath,
 				Description: "Image not pinned with digest",
 				Item:        image.Name,
-				Severity:    SevWarn,
+				Severity:    SevInfo,
 			})
 		}
 	}
@@ -67,6 +68,7 @@ func checkForImagesWithoutDomainV1Beta1(c v1beta1.ComponentSpec, path string) []
 	for i, image := range c.Images {
 		if imageDomain(image.Name) == "" {
 			findings = append(findings, PackageFinding{
+				RuleID:      RuleImageRegistryMissing,
 				YqPath:      fmt.Sprintf("%s.images.[%d]", path, i),
 				Description: "Image reference does not specify a registry domain",
 				Item:        image.Name,
@@ -82,6 +84,7 @@ func checkForUnpinnedFilesV1Beta1(c v1beta1.ComponentSpec, path string) []Packag
 	for i, file := range c.Files {
 		if file.Checksum == "" && helpers.IsURL(file.Source) {
 			findings = append(findings, PackageFinding{
+				RuleID:      RuleFileChecksumMissing,
 				YqPath:      fmt.Sprintf("%s.files.[%d]", path, i),
 				Description: "No checksum for remote file",
 				Item:        file.Source,
@@ -98,6 +101,7 @@ func checkForImageArchivesWithoutInternalDomainV1Beta1(c v1beta1.ComponentSpec, 
 		for j, image := range archive.Images {
 			if !hasInternalDomain(image.Name) {
 				findings = append(findings, PackageFinding{
+					RuleID:      RuleImageArchiveDomain,
 					YqPath:      fmt.Sprintf("%s.imageArchives.[%d].images.[%d].name", path, i, j),
 					Description: "Image archive image should use a .internal domain to avoid resolving to a public registry",
 					Item:        image.Name,

@@ -1061,8 +1061,13 @@ func (o *devGenerateConfigOptions) run(_ *cobra.Command, args []string) error {
 }
 
 type devLintOptions struct {
-	setPkgTmpl map[string]string
-	flavor     string
+	createSetPkgTmpl   map[string]string
+	flavor             string
+	deploySetVariables map[string]string
+	valuesFiles        []string
+	setValues          map[string]string
+	failOn             string
+	skipRules          []string
 }
 
 func newDevLintCommand(v *viper.Viper) *cobra.Command {
@@ -1077,41 +1082,61 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringToStringVar(&o.setPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
+	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSetPkgTmpl)
+	cmd.Flags().Var(cmd.Flags().Lookup("create-set").Value, "set", "Alias for --create-set")
+	_ = cmd.Flags().MarkDeprecated("set", "Use --create-set instead")
+	_ = cmd.Flags().MarkHidden("set")
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
+	cmd.Flags().StringVar(&o.failOn, "fail-on", "error", "Minimum finding severity that fails linting: error, warning, or info")
+	cmd.Flags().StringArrayVar(&o.skipRules, "skip-rule", nil, "Skip a lint rule by ID (repeatable)")
 
 	return cmd
 }
 
 func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	level, err := lint.ParseFailureLevel(o.failOn)
+	if err != nil {
+		return err
+	}
+	if err := lint.ValidateSkipRules(o.skipRules); err != nil {
+		return err
+	}
 	basePath, err := setBaseDirectory(args)
 	if err != nil {
 		return err
 	}
 	v := getViper()
-	o.setPkgTmpl = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.setPkgTmpl, strings.ToUpper)
+	o.createSetPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
+	o.deploySetVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+	fmt.Fprintf(OutputWriter, "Lint input: %s\nFlavor: %q\nValues files: %v\nFailure level: %s\nSkipped rules: %v\n",
+		basePath, o.flavor, o.valuesFiles, strings.ToLower(string(level)), o.skipRules)
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
-	err = packager.Lint(ctx, basePath, packager.LintOptions{
-		Flavor:        o.flavor,
-		SetVariables:  o.setPkgTmpl,
-		CachePath:     cachePath,
-		RemoteOptions: defaultRemoteOptions(),
+	result := packager.Lint(ctx, basePath, packager.LintOptions{
+		Flavor:             o.flavor,
+		CreateSetVariables: o.createSetPkgTmpl,
+		DeploySetVariables: o.deploySetVariables,
+		Values:             values,
+		SkipRules:          o.skipRules,
+		CachePath:          cachePath,
+		RemoteOptions:      defaultRemoteOptions(),
 	})
-	var lintErr *lint.LintError
-	if errors.As(err, &lintErr) {
-		PrintFindings(ctx, lintErr)
-		// Do not return an error if the findings are all warnings.
-		if lintErr.OnlyWarnings() {
-			return nil
-		}
-	}
-	if err != nil {
-		return err
+	PrintFindings(ctx, result)
+	if result.FailsAt(level) {
+		return result
 	}
 	return nil
 }

@@ -471,8 +471,69 @@ component:
 			stdOut, stdErr, err := e2e.Zarf(t, "dev", "lint", path)
 			require.NoError(t, err, stdOut, stdErr)
 			require.Contains(t, stdOut+stdErr, "Image not pinned with digest")
+			require.Contains(t, stdOut, "image-unpinned")
+			require.Contains(t, stdOut, "Info")
+			require.Contains(t, stdOut, "image-registry-missing")
+			require.Contains(t, stdOut, `Flavor: ""`)
+
+			for _, threshold := range []struct {
+				name     string
+				flags    []string
+				wantFail bool
+				wantInfo bool
+				wantWarn bool
+			}{
+				{"warnings enforced", []string{"--fail-on=warning"}, true, true, true},
+				{"all findings enforced", []string{"--fail-on=info"}, true, true, true},
+				{"info below warning", []string{"--fail-on=warning", "--skip-rule=image-registry-missing"}, false, true, false},
+				{"info enforced", []string{"--fail-on=info", "--skip-rule=image-registry-missing"}, true, true, false},
+				{"warning below error", []string{"--fail-on=error", "--skip-rule=image-unpinned"}, false, false, true},
+				{"all recommendations skipped", []string{"--fail-on=info", "--skip-rule=image-unpinned", "--skip-rule=image-registry-missing"}, false, false, false},
+			} {
+				t.Run(threshold.name, func(t *testing.T) {
+					args := append([]string{"dev", "lint", path}, threshold.flags...)
+					stdOut, stdErr, err := e2e.Zarf(t, args...)
+					if threshold.wantFail {
+						require.Error(t, err, stdOut, stdErr)
+					} else {
+						require.NoError(t, err, stdOut, stdErr)
+					}
+					require.Equal(t, threshold.wantInfo, strings.Contains(stdOut, "Image not pinned with digest"), stdOut)
+					require.Equal(t, threshold.wantWarn, strings.Contains(stdOut, "Image reference does not specify a registry domain"), stdOut)
+					require.Contains(t, stdOut, "Lint input: "+path)
+					if !threshold.wantInfo && !threshold.wantWarn {
+						require.Contains(t, stdOut, "Skipped rules: [image-unpinned image-registry-missing]")
+					}
+				})
+			}
 		})
 	}
+
+	t.Run("template errors fail every threshold", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(t.TempDir(), "component.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: invalid-template
+component:
+  images:
+    - name: busybox:1.0
+  actions:
+    onDeploy:
+      before:
+        - cmd: '{{ if }}'
+          enableTemplating: true
+`), 0o600))
+		for _, level := range []string{"error", "warning", "info"} {
+			stdOut, stdErr, err := e2e.Zarf(t, "dev", "lint", path, "--fail-on="+level)
+			require.Error(t, err, stdOut, stdErr)
+			require.Contains(t, stdOut, "template-syntax")
+			require.Contains(t, stdOut, "Error")
+			require.Contains(t, stdOut, "image-unpinned")
+			require.Contains(t, stdOut, "image-registry-missing")
+		}
+	})
 }
 
 func TestBuildMachineInfo(t *testing.T) {

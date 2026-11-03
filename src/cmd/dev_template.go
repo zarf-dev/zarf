@@ -6,7 +6,6 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,7 +17,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/schema"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
@@ -88,9 +87,6 @@ func (o *devTemplateOptions) run(ctx context.Context, args []string) error {
 	}
 	if !o.skipValidation {
 		if err := validateTemplateSchema(source, rendered, kind); err != nil {
-			if lintErr, ok := errors.AsType[*lint.LintError](err); ok {
-				PrintFindings(ctx, lintErr)
-			}
 			return err
 		}
 	}
@@ -134,23 +130,21 @@ func validateTemplateAPIVersion(path string, rendered []byte) (v1beta1.PackageKi
 }
 
 func validateTemplateSchema(path string, rendered []byte, kind v1beta1.PackageKind) error {
-	var (
-		findings []lint.PackageFinding
-		err      error
-	)
+	var schemaBytes []byte
 	switch kind {
 	case "", v1beta1.ZarfPackageConfig, v1beta1.ZarfInitConfig:
-		findings, err = lint.ValidatePackageSchemaBytesV1Beta1(rendered)
+		schemaBytes = schema.GetV1Beta1Schema()
 	case v1beta1.ZarfComponentConfig:
-		findings, err = lint.ValidateComponentConfigSchemaBytesV1Beta1(rendered)
+		schemaBytes = schema.GetV1Beta1ComponentSchema()
 	default:
 		return fmt.Errorf("package template %q has unsupported kind %q", path, kind)
 	}
-	if err != nil {
-		return fmt.Errorf("validating rendered package template %q: %w", path, err)
+	var document any
+	if err := yaml.Unmarshal(rendered, &document); err != nil {
+		return fmt.Errorf("parsing rendered package template %q: %w", path, err)
 	}
-	if len(findings) > 0 {
-		return &lint.LintError{PackageName: path, Findings: findings}
+	if err := schema.Validate(schemaBytes, document); err != nil {
+		return fmt.Errorf("validating rendered package template %q: %w", path, err)
 	}
 	return nil
 }

@@ -423,6 +423,22 @@ type Action struct {
 	EnableTemplating bool
 }
 
+// TemplateStrings returns the command or wait fields evaluated when action
+// templating is enabled.
+func (a Action) TemplateStrings() []string {
+	if a.Wait == nil {
+		return []string{a.Cmd}
+	}
+	var fields []string
+	if c := a.Wait.Cluster; c != nil {
+		fields = append(fields, c.Kind, c.Name, c.Namespace, c.Condition.Expression)
+	}
+	if n := a.Wait.Network; n != nil {
+		fields = append(fields, n.Protocol, n.Address)
+	}
+	return fields
+}
+
 // SetValue declares how command output is stored in the package values map.
 type SetValue struct {
 	Key   string
