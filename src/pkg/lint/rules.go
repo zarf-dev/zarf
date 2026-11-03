@@ -5,11 +5,12 @@ package lint
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
 // Stable semantic rule IDs.
@@ -60,19 +61,136 @@ func ValidateSkipRules(rules []string) error {
 // CheckPrimitives checks recommended practices on a resolved package's repositories,
 // images, files, and image archives. componentConfig selects singular component paths.
 func CheckPrimitives(pkg api.Package, componentConfig bool) []PackageFinding {
+	version := pkg.GetAPIVersion()
+	if version != v1alpha1.APIVersion && version != v1beta1.APIVersion {
+		return nil
+	}
+	legacy := version == v1alpha1.APIVersion
 	var findings []PackageFinding
-	switch pkg.GetAPIVersion() {
-	case v1alpha1.APIVersion:
-		for i, component := range convert.PackageToV1alpha1(pkg).Components {
-			findings = append(findings, checkComponentPrimitivesV1Alpha1(component, i)...)
+	for i, component := range pkg.Components {
+		path := fmt.Sprintf(".components.[%d]", i)
+		if componentConfig && !legacy {
+			path = ".component"
 		}
-	case v1beta1.APIVersion:
-		for i, component := range convert.PackageToV1beta1(pkg).Components {
-			path := fmt.Sprintf(".components.[%d]", i)
-			if componentConfig {
-				path = ".component"
+		findings = append(findings, checkRepositories(component.Repositories, path, legacy)...)
+		findings = append(findings, checkImagePins(component.Images, path, legacy)...)
+		findings = append(findings, checkFileChecksums(component.Files, path, legacy)...)
+		findings = append(findings, checkImageDomains(component.Images, path, legacy)...)
+		findings = append(findings, checkImageArchiveDomains(component.ImageArchives, path, legacy)...)
+	}
+	return findings
+}
+
+func checkRepositories(repositories []api.Repository, path string, legacy bool) []PackageFinding {
+	description := "Repository is not pinned to a commit"
+	field := "repositories"
+	if legacy {
+		description = "Unpinned repository"
+		field = "repos"
+	}
+	var findings []PackageFinding
+	for i, repo := range repositories {
+		item := repo.URL
+		pinned := repo.Ref != nil && repo.Ref.Commit != ""
+		if legacy {
+			if repo.LegacyURL != "" {
+				item = repo.LegacyURL
 			}
-			findings = append(findings, checkComponentPrimitivesV1Beta1(component.ComponentSpec, path)...)
+			pinned = strings.Contains(item, "@")
+			// Without an authored URL, alpha conversion appends @ref for any
+			// nonempty tag, commit, or branch. All such locators count as pinned.
+			if repo.LegacyURL == "" && repo.Ref != nil {
+				pinned = pinned || repo.Ref.Tag != "" || repo.Ref.Commit != "" || repo.Ref.Branch != ""
+			}
+		}
+		if !pinned {
+			findings = append(findings, PackageFinding{
+				RuleID: RuleRepositoryUnpinned, YqPath: fmt.Sprintf("%s.%s.[%d]", path, field, i),
+				Description: description, Item: item, Severity: SevWarn,
+			})
+		}
+	}
+	return findings
+}
+
+func checkImagePins(images []api.Image, path string, legacy bool) []PackageFinding {
+	var findings []PackageFinding
+	for i, image := range images {
+		pinned, err := isPinnedImageReference(image.Name)
+		if err != nil && legacy && isTemplatedImage(image.Name) {
+			continue
+		}
+		imagePath := fmt.Sprintf("%s.images.[%d]", path, i)
+		switch {
+		case err != nil:
+			findings = append(findings, PackageFinding{
+				RuleID: RuleImageReferenceInvalid, YqPath: imagePath,
+				Description: "Failed to parse image reference", Item: image.Name, Severity: SevWarn,
+			})
+		case !pinned:
+			findings = append(findings, PackageFinding{
+				RuleID: RuleImageUnpinned, YqPath: imagePath,
+				Description: "Image not pinned with digest", Item: image.Name, Severity: SevInfo,
+			})
+		}
+	}
+	return findings
+}
+
+func checkFileChecksums(files []api.File, path string, legacy bool) []PackageFinding {
+	description := "No checksum for remote file"
+	if legacy {
+		description = "No shasum for remote file"
+	}
+	var findings []PackageFinding
+	for i, file := range files {
+		checksumSet := file.Checksum.IsSet()
+		if legacy {
+			checksumSet = file.Checksum.GetAlgorithm() == api.ChecksumSHA256 && file.Checksum.Digest != ""
+		}
+		if !checksumSet && helpers.IsURL(file.Source) {
+			findings = append(findings, PackageFinding{
+				RuleID: RuleFileChecksumMissing, YqPath: fmt.Sprintf("%s.files.[%d]", path, i),
+				Description: description, Item: file.Source, Severity: SevWarn,
+			})
+		}
+	}
+	return findings
+}
+
+func checkImageDomains(images []api.Image, path string, legacy bool) []PackageFinding {
+	var findings []PackageFinding
+	for i, image := range images {
+		if legacy && isTemplatedImage(image.Name) {
+			continue
+		}
+		if imageDomain(image.Name) == "" {
+			findings = append(findings, PackageFinding{
+				RuleID: RuleImageRegistryMissing, YqPath: fmt.Sprintf("%s.images.[%d]", path, i),
+				Description: "Image reference does not specify a registry domain", Item: image.Name, Severity: SevWarn,
+			})
+		}
+	}
+	return findings
+}
+
+func checkImageArchiveDomains(archives []api.ImageArchive, path string, legacy bool) []PackageFinding {
+	suffix := ".name"
+	if legacy {
+		suffix = ""
+	}
+	var findings []PackageFinding
+	for i, archive := range archives {
+		for j, image := range archive.Images {
+			if legacy && isTemplatedImage(image.Name) {
+				continue
+			}
+			if !hasInternalDomain(image.Name) {
+				findings = append(findings, PackageFinding{
+					RuleID: RuleImageArchiveDomain, YqPath: fmt.Sprintf("%s.imageArchives.[%d].images.[%d]%s", path, i, j, suffix),
+					Description: "Image archive image should use a .internal domain to avoid resolving to a public registry", Item: image.Name, Severity: SevWarn,
+				})
+			}
 		}
 	}
 	return findings

@@ -19,7 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	packagertemplate "github.com/zarf-dev/zarf/src/internal/packager/template"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -393,16 +392,7 @@ func (a *analysis) chart(chart api.Chart, path, dir string) {
 			continue
 		}
 		if !validate {
-			if helpers.IsURL(file.Path) {
-				err = utils.DownloadToFile(a.ctx, file.Path, physical)
-			} else {
-				var src string
-				src, err = a.loaded.Resources.Path(file.Path)
-				if err == nil {
-					err = layout.MaterializeSourceToLayout(a.ctx, src, physical)
-				}
-			}
-			if err != nil {
+			if err := assemble.PackageFile(a.ctx, api.File{Source: file.Path}, physical, a.loaded.Resources); err != nil {
 				a.resourceError(path, err)
 				templatesOK = false
 				continue

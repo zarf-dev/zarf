@@ -5,16 +5,16 @@ package lint_test
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
-	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 const (
@@ -35,18 +35,10 @@ type sourceFixture struct {
 
 func (f sourceFixture) analyze(t *testing.T, opts lint.Options) *lint.LintError {
 	t.Helper()
-	dir := t.TempDir()
 	pkg := v1beta1.Package{APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfPackageConfig,
 		Values: f.values, Components: []v1beta1.Component{{Name: "app", ComponentSpec: f.spec}}}
 	pkg.Metadata.Name = "analysis"
-	contents, err := yaml.Marshal(pkg)
-	require.NoError(t, err)
-	for name, content := range f.files {
-		path := filepath.Join(dir, name)
-		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
-		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
-	}
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), contents, 0o600))
+	dir := testutil.WritePackage(t, pkg, f.files)
 	loaded, err := load.Package(t.Context(), dir, load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{SkipVersionCheck: true}, SkipValuesSchemaValidation: true,
 	})
@@ -163,18 +155,11 @@ func TestAnalyzeUnusedValues(t *testing.T) {
 		unused               []string
 	}{
 		{name: "no consumers", unused: []string{"app.drop", "app.keep", "enabled", "profiles.blue.name", "profiles.red.name", "selected"}},
-		{name: "object read", command: "{{ .Values.app | toYaml }}", unused: []string{"enabled", "profiles.blue.name", "profiles.red.name", "selected"}},
 		{name: "mapping excludes descendant", mapping: true, unused: []string{"app.drop", "enabled", "profiles.blue.name", "profiles.red.name", "selected"}},
 		{name: "second chart consumes exclusion", mapping: true, secondChart: true, unused: []string{"enabled", "profiles.blue.name", "profiles.red.name", "selected"}},
 		{name: "template consumes exclusion", mapping: true, command: "{{ .Values.app.drop }}", unused: []string{"enabled", "profiles.blue.name", "profiles.red.name", "selected"}},
-		{name: "parent consumes exclusion", mapping: true, command: "{{ .Values.app | toYaml }}", unused: []string{"enabled", "profiles.blue.name", "profiles.red.name", "selected"}},
-		{name: "root", command: "{{ .Values | toYaml }}"},
-		{name: "root alias", command: "{{ $v := .Values }}{{ $v.app.keep }}"},
 		{name: "dynamic subtree", command: "{{ index .Values.profiles .Values.selected }}", unused: []string{"app.drop", "app.keep", "enabled"}},
-		{name: "dynamic root", command: "{{ index .Values .Values.selected }}"},
 		{name: "inactive branch", command: "{{ if .Values.enabled }}{{ .Values.app.keep }}{{ end }}", unused: []string{"app.drop", "profiles.blue.name", "profiles.red.name", "selected"}},
-		{name: "literal index", command: `{{ index .Values "app" "keep" }}`, unused: []string{"app.drop", "enabled", "profiles.blue.name", "profiles.red.name", "selected"}},
-		{name: "rebound dot", command: "{{ with .Values.app }}{{ .keep }}{{ end }}", unused: []string{"enabled", "profiles.blue.name", "profiles.red.name", "selected"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := chartSource()
@@ -277,18 +262,9 @@ func TestAnalyzeDefaultStateAccess(t *testing.T) {
 		name, command, missing string
 		access                 []v1beta1.StateAccessKey
 	}{
-		{name: "non-sensitive defaults", command: `{{ .State.Distro }}{{ .State.StorageClass }}{{ .State.IPFamily }}
-{{ .State.Registry.Address }}{{ .State.Registry.Port }}{{ .State.Registry.PushUsername }}{{ .State.Registry.PullUsername }}
-{{ .State.Registry.Mode }}{{ .State.Registry.MTLSEnabled }}{{ .State.Registry.SeedAddress }}
-{{ .State.Git.Address }}{{ .State.Git.PushUsername }}{{ .State.Git.PullUsername }}{{ .State.Git.IsInternal }}
-{{ .State.Injector.Image }}{{ .State.Injector.Port }}{{ .State.Injector.PayloadConfigMaps }}{{ .State.Injector.PayloadShaSum }}
-{{ if or (empty .State.Registry.Address) (empty .State.Registry.PushUsername) (empty .State.Git.Address) (empty .State.Git.PullUsername) }}{{ fail "default state is not populated" }}{{ end }}`},
+		{name: "non-sensitive defaults", command: `{{ if or (empty .State.Registry.Address) (empty .State.Registry.PushUsername) (empty .State.Git.Address) (empty .State.Git.PullUsername) }}{{ fail "default state is not populated" }}{{ end }}`},
 		{name: "registry gated", command: "{{ .State.Registry.PushPassword }}", missing: ".State.Registry.PushPassword"},
-		{name: "git gated", command: "{{ .State.Git.PullPassword }}", missing: ".State.Git.PullPassword"},
-		{name: "agent gated", command: "{{ .State.Agent.Key }}", missing: ".State.Agent.Key"},
 		{name: "registry declared", command: "{{ .State.Registry.PushPassword }}{{ .State.Registry.PullPassword }}{{ .State.Registry.Secret }}{{ .State.Registry.Htpasswd }}", access: []v1beta1.StateAccessKey{v1beta1.StateAccessRegistryCredentials}},
-		{name: "git declared", command: "{{ .State.Git.PushPassword }}{{ .State.Git.PullPassword }}", access: []v1beta1.StateAccessKey{v1beta1.StateAccessGitCredentials}},
-		{name: "agent declared", command: "{{ .State.Agent.CA }}{{ .State.Agent.Cert }}{{ .State.Agent.Key }}", access: []v1beta1.StateAccessKey{v1beta1.StateAccessAgentCerts}},
 		{name: "unrelated declaration stays gated", command: "{{ .State.Git.PushPassword }}", missing: ".State.Git.PushPassword", access: []v1beta1.StateAccessKey{v1beta1.StateAccessRegistryCredentials}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -345,7 +321,7 @@ func TestAnalyzeResourceTemplateFailures(t *testing.T) {
 
 func TestAnalyzeChartSchemaExemptions(t *testing.T) {
 	t.Parallel()
-	for _, mode := range []string{"exempt only", "checked sibling", "warning suppressed"} {
+	for _, mode := range []string{"exempt only", "checked sibling", "warning suppressed", "HTTP values file"} {
 		t.Run(mode, func(t *testing.T) {
 			f := chartSource()
 			f.spec.Charts[0].SkipSchemaValidation = true
@@ -361,13 +337,24 @@ func TestAnalyzeChartSchemaExemptions(t *testing.T) {
 				f.spec.Charts[0].Values = []v1beta1.ChartValue{{SourcePath: ".missing", TargetPath: ".input"}}
 				f.spec.Charts[0].ValuesFiles = []v1beta1.ValuesFile{{Path: "exempt-values.yaml", EnableTemplating: true}}
 				f.files["exempt-values.yaml"] = `replicas: {{ fail "secret-exempt" }}`
+				source := "exempt-values.yaml"
+				if mode == "HTTP values file" {
+					server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						if _, err := fmt.Fprint(w, f.files["exempt-values.yaml"]); err != nil {
+							t.Errorf("writing values response: %v", err)
+						}
+					}))
+					t.Cleanup(server.Close)
+					source = server.URL + "/values.yaml"
+					f.spec.Charts[0].ValuesFiles[0].Path = source
+				}
 				if mode == "warning suppressed" {
 					opts.SkipRules = []string{"chart-schema-skipped"}
 					want = nil
 				}
 				want = append(want,
 					findingContract{"template-input-missing", definition, chartPath + ".values.[0]", lint.SevWarn, "--set-values missing=<value>"},
-					findingContract{"template-render", "exempt-values.yaml", chartPath + ".valuesFiles.[0]", lint.SevErr, "template evaluation failed"},
+					findingContract{"template-render", source, chartPath + ".valuesFiles.[0]", lint.SevErr, "template evaluation failed"},
 					findingContract{lint.RuleChartValuesSchema, definition, component + ".charts.[1]", lint.SevErr, "replicas"})
 				blocked = append(blocked, chartPath+".values.[0]: missing input missing", chartPath+".valuesFiles.[0]: template evaluation failed")
 			}

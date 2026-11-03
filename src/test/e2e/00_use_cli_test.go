@@ -475,6 +475,13 @@ component:
 			require.Contains(t, stdOut, "Info")
 			require.Contains(t, stdOut, "image-registry-missing")
 			require.Contains(t, stdOut, `Flavor: ""`)
+			require.Equal(t, 1, strings.Count(stdOut, "Skipped rules:"))
+			require.Contains(t, stdOut, "Lint input: "+path)
+
+			// Both source shapes use the same threshold policy.
+			if tc.name != "package" {
+				return
+			}
 
 			for _, threshold := range []struct {
 				name     string
@@ -501,6 +508,7 @@ component:
 					require.Equal(t, threshold.wantInfo, strings.Contains(stdOut, "Image not pinned with digest"), stdOut)
 					require.Equal(t, threshold.wantWarn, strings.Contains(stdOut, "Image reference does not specify a registry domain"), stdOut)
 					require.Contains(t, stdOut, "Lint input: "+path)
+					require.Equal(t, 1, strings.Count(stdOut, "Skipped rules:"))
 					if !threshold.wantInfo && !threshold.wantWarn {
 						require.Contains(t, stdOut, "Skipped rules: [image-unpinned image-registry-missing]")
 					}

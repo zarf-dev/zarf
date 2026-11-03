@@ -50,9 +50,6 @@ func PrintFindings(ctx context.Context, lintErr *lint.LintError) {
 	if len(lintData) > 0 {
 		message.TableWithWriter(OutputWriter, []string{"Type", "Rule", "Location", "Message"}, lintData)
 	}
-	if len(lintErr.SkippedRules) > 0 {
-		fmt.Fprintf(OutputWriter, "Skipped rules: %v\n", lintErr.SkippedRules)
-	}
 	if len(lintErr.NotEvaluated) > 0 {
 		fmt.Fprintln(OutputWriter, "Not evaluated:")
 		for _, check := range lintErr.NotEvaluated {

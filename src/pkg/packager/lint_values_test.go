@@ -11,30 +11,21 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 // These fixtures enter through Lint: setup supplies source inputs, never rendered
 // files, coalesced chart values, or action-generated output owned by production.
 func lintSource(t *testing.T, spec v1beta1.ComponentSpec, values v1beta1.Values, files map[string]string) string {
 	t.Helper()
-	dir := t.TempDir()
 	pkg := v1beta1.Package{APIVersion: v1beta1.APIVersion, Kind: v1beta1.ZarfPackageConfig,
 		Values: values, Components: []v1beta1.Component{{Name: "app", ComponentSpec: spec}}}
 	pkg.Metadata.Name = "lint-source"
-	contents, err := yaml.Marshal(pkg)
-	require.NoError(t, err)
-	for name, content := range files {
-		path := filepath.Join(dir, name)
-		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
-		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
-	}
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), contents, 0o600))
-	return dir
+	return testutil.WritePackage(t, pkg, files)
 }
 
 func lintSourceSnapshot(t *testing.T, dir string) map[string]string {
