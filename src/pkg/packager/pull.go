@@ -114,15 +114,16 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 }
 
 type pullOCIOptions struct {
-	Source            string
-	Shasum            string
-	Architecture      string
-	LayerSelection    *zoci.LayerSelection
-	Filter            filters.ComponentFilterStrategy
-	OCIConcurrency    int
-	CachePath         string
-	VerifyBlobOptions *signing.VerifyBlobOptions
-	Connected         bool
+	Source              string
+	Shasum              string
+	Architecture        string
+	LayerSelection      *zoci.LayerSelection
+	Filter              filters.ComponentFilterStrategy
+	DeploymentSelection *DeploymentSelection
+	OCIConcurrency      int
+	CachePath           string
+	VerifyBlobOptions   *signing.VerifyBlobOptions
+	Connected           bool
 	types.RemoteOptions
 	layout.VerificationStrategy
 }
@@ -149,11 +150,26 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
+
+	deploymentFilter := opts.Filter
+	if opts.DeploymentSelection != nil {
+		deploymentFilter = filters.Combine(deploymentFilter, filters.ForDeploy(opts.DeploymentSelection.OptionalComponents, false))
+	}
+	layoutFilter := opts.Filter
 	if supportsFiltering(desc.Platform) {
-		pkg, err = filters.Apply(pkg, opts.Filter)
+		pkg, err = filters.Apply(pkg, deploymentFilter)
 		if err != nil {
 			return nil, err
 		}
+		if opts.DeploymentSelection != nil {
+			names := make([]string, len(pkg.Components))
+			for idx, component := range pkg.Components {
+				names[idx] = component.Name
+			}
+			layoutFilter = filters.ByComponentNames(names)
+		}
+	} else if opts.DeploymentSelection != nil {
+		layoutFilter = deploymentFilter
 	}
 
 	// Get all relevant package layers, excluding images for a skeleton or connected package.
@@ -195,7 +211,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		VerifyBlobOptions:    opts.VerifyBlobOptions,
 		VerificationStrategy: opts.VerificationStrategy,
 		IsPartial:            isPartial,
-		Filter:               opts.Filter,
+		Filter:               layoutFilter,
 	}
 	pkgLayout, err := layout.LoadFromDir(ctx, dirPath, layoutOpts)
 	if err != nil {

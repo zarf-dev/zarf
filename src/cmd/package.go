@@ -494,11 +494,10 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 
 	filter := filters.Empty()
+	var selection *packager.DeploymentSelection
 	if o.confirm {
-		filter = filters.Combine(
-			filters.ByLocalOS(runtime.GOOS),
-			filters.ForDeploy(o.optionalComponents, false),
-		)
+		filter = filters.ByLocalOS(runtime.GOOS)
+		selection = &packager.DeploymentSelection{OptionalComponents: o.optionalComponents}
 	}
 
 	loadOpt := packager.LoadOptions{
@@ -506,6 +505,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
 		Filter:               filter,
+		DeploymentSelection:  selection,
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -521,13 +521,10 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}()
 
 	deployOpts := packager.DeployOptions{
-		DeployConfig: packager.DeployConfig{
-			Values:             values,
-			SetVariables:       o.setVariables,
-			NamespaceOverride:  o.namespaceOverride,
-			OptionalComponents: o.optionalComponents,
-			Connectivity:       connectivity,
-		},
+		Values:                     values,
+		SetVariables:               o.setVariables,
+		NamespaceOverride:          o.namespaceOverride,
+		Connectivity:               connectivity,
 		Source:                     packageSource,
 		TakeOwnership:              o.takeOwnership,
 		ForceConflicts:             o.forceConflicts,
@@ -541,7 +538,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		SkipVersionCheck:           o.skipVersionCheck,
 	}
 
-	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts)
+	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.optionalComponents)
 	if err != nil {
 		return err
 	}
@@ -561,7 +558,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions) ([]state.DeployedComponent, error) {
+func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, optionalComponents string) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below.
 	if opts.NamespaceOverride != "" {
 		if err := pkgLayout.OverrideNamespace(opts.NamespaceOverride); err != nil {
@@ -572,11 +569,11 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 		return nil, err
 	}
 	if opts.IsInteractive {
-		optionalComponents, err := resolveInteractiveDeploymentSelectors(pkgLayout, opts.OptionalComponents)
+		optionalComponents, err := resolveInteractiveDeploymentSelectors(pkgLayout, optionalComponents)
 		if err != nil {
 			return nil, err
 		}
-		opts.OptionalComponents = optionalComponents
+		pkgLayout.SetDeploymentSelection(layout.DeploymentSelection{OptionalComponents: optionalComponents})
 	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)

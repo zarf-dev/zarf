@@ -36,15 +36,34 @@ import (
 
 // PackageLayout manages the layout for a package.
 type PackageLayout struct {
-	dirPath string
-	pkg     api.Package
-	digest  string
-	cache   *manifestCache
+	dirPath             string
+	pkg                 api.Package
+	digest              string
+	cache               *manifestCache
+	deploymentSelection *DeploymentSelection
+}
+
+// DeploymentSelection records component selectors applied while loading a deployment package.
+type DeploymentSelection struct {
+	OptionalComponents string
 }
 
 // Definition returns the version-neutral package definition for this layout.
 func (p *PackageLayout) Definition() api.Package {
 	return p.pkg
+}
+
+// SetDeploymentSelection records the selection used to produce this layout.
+func (p *PackageLayout) SetDeploymentSelection(selection DeploymentSelection) {
+	p.deploymentSelection = &selection
+}
+
+// DeploymentSelection returns the selection used to produce this layout.
+func (p *PackageLayout) DeploymentSelection() (DeploymentSelection, bool) {
+	if p.deploymentSelection == nil {
+		return DeploymentSelection{}, false
+	}
+	return *p.deploymentSelection, true
 }
 
 // SetName updates the package metadata name.

@@ -46,9 +46,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DeployOptions are optional parameters to packager.Deploy.
+// DeployOptions configure package deployment. Component selection is configured by
+// LoadOptions.DeploymentSelection when the package is loaded.
 type DeployOptions struct {
-	DeployConfig
+	// SetVariables configures package variables.
+	SetVariables map[string]string
+	// Values configures package-level values.
+	Values value.Values
+	// NamespaceOverride replaces component namespaces.
+	NamespaceOverride string
+	// ValuesOverridesMap configures Helm chart values by component and chart.
+	ValuesOverridesMap state.ValuesOverrides
+	// Connectivity configures the package deployment mode.
+	Connectivity state.PackageConnectivity
 	// Source identifies the resolved package source for event provenance.
 	Source string
 	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf.
@@ -87,6 +97,20 @@ type DeployOptions struct {
 	SkipArchitectureCheck bool
 	// SkipVersionCheck skips version requirement validation.
 	SkipVersionCheck bool
+}
+
+func (opts DeployOptions) persistedConfig(pkgLayout *layout.PackageLayout) state.DeployConfig {
+	config := state.DeployConfig{
+		SetVariables:       opts.SetVariables,
+		Values:             opts.Values,
+		NamespaceOverride:  opts.NamespaceOverride,
+		ValuesOverridesMap: opts.ValuesOverridesMap,
+		Connectivity:       opts.Connectivity,
+	}
+	if selection, ok := pkgLayout.DeploymentSelection(); ok {
+		config.OptionalComponents = selection.OptionalComponents
+	}
+	return config
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -161,11 +185,6 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		opts.Timeout = config.ZarfDefaultTimeout
 	}
 
-	normalizedSelectors, err := filters.NormalizeComponentSelectors(opts.OptionalComponents)
-	if err != nil {
-		return DeployResult{}, err
-	}
-	opts.OptionalComponents = normalizedSelectors
 	if err := pkgLayout.Filter(filters.ByLocalOS(runtime.GOOS)); err != nil {
 		return DeployResult{}, err
 	}
@@ -278,7 +297,8 @@ func (d *deployer) startDeploymentState(ctx context.Context, pkgLayout *layout.P
 	deployedPkg.CLIVersion = config.CLIVersion
 	deployedPkg.NamespaceOverride = opts.NamespaceOverride
 
-	d.configDigest, err = opts.DeployConfig.Digest()
+	deployConfig := opts.persistedConfig(pkgLayout)
+	d.configDigest, err = deployConfig.Digest()
 	if err != nil {
 		return fmt.Errorf("digest deploy config: %w", err)
 	}
@@ -492,7 +512,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 	if d.deployedPkg != nil {
 		d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeSucceeded))
-		d.deployedPkg.SetDeployConfig(opts.DeployConfig)
+		d.deployedPkg.SetDeployConfig(opts.persistedConfig(pkgLayout))
 		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
 			l.Error("unable to record package deployment", "error", err.Error())
 		}

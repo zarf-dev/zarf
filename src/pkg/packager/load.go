@@ -27,6 +27,9 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+// DeploymentSelection configures component selection while loading a deployment package.
+type DeploymentSelection = layout.DeploymentSelection
+
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
 	Shasum       string
@@ -35,7 +38,9 @@ type LoadOptions struct {
 	PublicKeyPath     string
 	VerifyBlobOptions *signing.VerifyBlobOptions
 	Filter            filters.ComponentFilterStrategy
-	Output            string
+	// DeploymentSelection selects deployment components during loading.
+	DeploymentSelection *DeploymentSelection
+	Output              string
 	// number of layers to pull in parallel
 	OCIConcurrency int
 	// LayerSelection specifies which optional package resources to pull from OCI.
@@ -60,6 +65,10 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
+	selection, err := normalizeDeploymentSelection(opts.DeploymentSelection)
+	if err != nil {
+		return nil, err
+	}
 
 	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
 	// Only applies when VerifyBlobOptions is not already set,
@@ -78,6 +87,9 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	srcType, err := identifySource(source)
 	if err != nil {
 		return nil, err
+	}
+	if selection != nil && srcType != "oci" {
+		opts.Filter = filters.Combine(opts.Filter, filters.ForDeploy(selection.OptionalComponents, false))
 	}
 
 	// Prepare a temp workspace
@@ -99,23 +111,25 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			Shasum:               opts.Shasum,
 			Architecture:         config.GetArch(opts.Architecture),
 			Filter:               opts.Filter,
+			DeploymentSelection:  selection,
 			LayerSelection:       opts.LayerSelection,
 			OCIConcurrency:       opts.OCIConcurrency,
 			RemoteOptions:        opts.RemoteOptions,
 			Connected:            opts.Connected,
 			CachePath:            opts.CachePath,
 		}
-
 		pkgLayout, err := pullOCI(ctx, ociOpts)
 		if err != nil {
 			return nil, err
 		}
-		// OCI is a special case since it doesn't create a tar unless the tar file is output
 		if opts.Output != "" {
 			_, err := pkgLayout.Archive(ctx, opts.Output, 0)
 			if err != nil {
 				return nil, err
 			}
+		}
+		if selection != nil {
+			pkgLayout.SetDeploymentSelection(*selection)
 		}
 		return pkgLayout, nil
 	case "http", "https":
@@ -155,6 +169,9 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	if err != nil {
 		return nil, err
 	}
+	if selection != nil {
+		pkgLayout.SetDeploymentSelection(*selection)
+	}
 
 	if opts.Output != "" {
 		filename, err := pkgLayout.FileName()
@@ -187,6 +204,16 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	return pkgLayout, nil
+}
+func normalizeDeploymentSelection(selection *DeploymentSelection) (*DeploymentSelection, error) {
+	if selection == nil {
+		return nil, nil
+	}
+	normalized, err := filters.NormalizeComponentSelectors(selection.OptionalComponents)
+	if err != nil {
+		return nil, err
+	}
+	return &DeploymentSelection{OptionalComponents: normalized}, nil
 }
 
 // identifySource returns the source type for the given source string.

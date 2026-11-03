@@ -15,6 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -130,6 +131,8 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
+	pkgLayout.SetDeploymentSelection(layout.DeploymentSelection{OptionalComponents: opts.OptionalComponents})
+
 	l.Info("starting package dev deploy", "name", pkgLayout.Definition().Metadata.Name)
 	connectivity := state.PackageConnectivityConnected
 	if opts.AirgapMode {
@@ -137,12 +140,9 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 
 	result, err := Deploy(ctx, pkgLayout, DeployOptions{
-		DeployConfig: DeployConfig{
-			SetVariables:       opts.DeploySetVariables,
-			Values:             opts.Values,
-			OptionalComponents: opts.OptionalComponents,
-			Connectivity:       connectivity,
-		},
+		SetVariables:          opts.DeploySetVariables,
+		Values:                opts.Values,
+		Connectivity:          connectivity,
 		Source:                packagePath,
 		RegistryInfo:          state.RegistryInfo{Address: opts.RegistryURL},
 		Timeout:               opts.Timeout,
