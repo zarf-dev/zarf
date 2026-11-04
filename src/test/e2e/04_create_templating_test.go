@@ -43,7 +43,7 @@ func TestCreateTemplating(t *testing.T) {
 
 	// Deploy the package and look for the variables in the output
 	workingPath := t.TempDir()
-	_, _, err = e2e.ZarfInDir(t, workingPath, "package", "deploy", fileFoldersPath, "--set", "DOGGO=doggy", "--set", "KITTEH=meowza", "--set", "PANDA=pandemonium", "--confirm")
+	_, _, err = e2e.ZarfInDir(t, workingPath, "package", "deploy", fileFoldersPath, "--set-variables", "DOGGO=doggy", "--set-variables", "KITTEH=meowza", "--set-variables", "PANDA=pandemonium", "--confirm")
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(workingPath, "temp", "requirements.txt"))

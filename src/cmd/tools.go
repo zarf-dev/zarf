@@ -11,18 +11,19 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
-func newToolsCommand() *cobra.Command {
+func newToolsCommand(architecture *architectureOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "tools",
 		Aliases: []string{"t"},
 		Short:   lang.CmdToolsShort,
+		Args:    cobra.NoArgs,
+		RunE:    func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
 	}
 
 	v := getViper()
 
 	cmd.AddCommand(newArchiverCommand())
 	cmd.AddCommand(newRegistryCommand())
-	cmd.AddCommand(newDeprecatedCraneCommand())
 	cmd.AddCommand(newHelmCommand())
 	cmd.AddCommand(newK9sCommand())
 	cmd.AddCommand(newKubectlCommand())
@@ -32,7 +33,7 @@ func newToolsCommand() *cobra.Command {
 	cmd.AddCommand(newGetCredsCommand())
 	cmd.AddCommand(newUpdateCredsCommand(v))
 	cmd.AddCommand(newClearCacheCommand())
-	cmd.AddCommand(newDownloadInitCommand())
+	cmd.AddCommand(newDownloadInitCommand(architecture))
 	cmd.AddCommand(newGenPKICommand())
 	cmd.AddCommand(newGenKeyCommand())
 	cmd.AddCommand(newTrustedRootCommand())
