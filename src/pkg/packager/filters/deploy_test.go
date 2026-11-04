@@ -6,6 +6,7 @@ package filters
 
 import (
 	"fmt"
+	"path"
 	"strings"
 	"testing"
 
@@ -246,29 +247,24 @@ func TestDeployFilterOverlappingSelectors(t *testing.T) {
 		{"unmatched inclusion", "abc,a*,missing", nil, ErrNotFound},
 		{"unmatched exclusion", "abc,a*,-missing", nil, ErrNotFound},
 		{"multiple group selections", "group-*", nil, ErrMultipleSameGroup},
+		{"empty selector entries", " , ABC, ,", []string{"abc", "default", "required", "group-default"}, nil},
+		{"only separators and whitespace", " , , ", []string{"default", "required", "group-default"}, nil},
+		{"ordered selectors with empty entries", " ABC, , -A*, ABC, ", []string{"abc", "default", "required", "group-default"}, nil},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, normalize := range []bool{false, true} {
-				selectors := tt.selectors
-				if normalize {
-					var err error
-					selectors, err = NormalizeComponentSelectors(selectors)
-					require.NoError(t, err)
-				}
-				components, err := ForDeploy(selectors).Apply(pkg)
-				if tt.wantErr != nil {
-					require.ErrorIs(t, err, tt.wantErr)
-					continue
-				}
-				require.NoError(t, err)
-				names := make([]string, 0, len(components))
-				for _, component := range components {
-					names = append(names, component.Name)
-				}
-				require.Equal(t, tt.want, names)
+			components, err := ForDeploy(tt.selectors).Apply(pkg)
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+				return
 			}
+			require.NoError(t, err)
+			names := make([]string, 0, len(components))
+			for _, component := range components {
+				names = append(names, component.Name)
+			}
+			require.Equal(t, tt.want, names)
 		})
 	}
 }
@@ -290,4 +286,21 @@ func TestDeployFilterExplicitRequiredGroupChoice(t *testing.T) {
 	}
 	_, err := ForDeploy("group-a,group-b").Apply(pkg)
 	require.ErrorIs(t, err, ErrMultipleSameGroup)
+}
+
+func TestDeployFilterRejectsInvalidSelectors(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name string
+		pkg  api.Package
+	}{
+		{"empty package", api.Package{}},
+		{"required component", api.Package{Components: []api.Component{{Name: "required"}}}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ForDeploy(" , [, ").Apply(tt.pkg)
+			require.ErrorIs(t, err, path.ErrBadPattern)
+		})
+	}
 }

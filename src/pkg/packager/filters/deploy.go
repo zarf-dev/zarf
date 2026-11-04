@@ -11,19 +11,20 @@ import (
 
 	"github.com/agnivade/levenshtein"
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
 // ForDeploy creates a noninteractive deployment filter using explicit selectors,
 // required components, and legacy v1alpha1 defaults and choice groups.
 // An explicit group selection replaces other group members.
+// Selectors are normalized when applied: case and surrounding whitespace are
+// ignored, empty entries are discarded, and invalid glob patterns return an error.
 func ForDeploy(optionalComponents string) ComponentFilterStrategy {
-	return &deploymentFilter{requestedComponents: helpers.StringToSlice(optionalComponents)}
+	return &deploymentFilter{optionalComponents: optionalComponents}
 }
 
 // deploymentFilter is the default filter for deployments.
 type deploymentFilter struct {
-	requestedComponents []string
+	optionalComponents string
 }
 
 // Errors for the deployment filter.
@@ -35,6 +36,11 @@ var (
 
 // Apply applies the filter.
 func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
+	requestedComponents, err := parseComponentSelectors(f.optionalComponents)
+	if err != nil {
+		return nil, err
+	}
+
 	var selectedComponents []api.Component
 	groupedComponents := map[string][]api.Component{}
 	orderedComponentGroups := []string{}
@@ -54,7 +60,7 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 		groupedComponents[groupKey] = append(groupedComponents[groupKey], component)
 	}
 
-	isPartial := len(f.requestedComponents) > 0 && f.requestedComponents[0] != ""
+	isPartial := len(requestedComponents) > 0
 
 	if isPartial {
 		matchedRequests := map[string]bool{}
@@ -69,7 +75,7 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 			hasGroupChoice := false
 			if len(groupedComponents[groupKey]) > 1 {
 				for _, component := range groupedComponents[groupKey] {
-					state, err := includedOrExcluded(component.Name, f.requestedComponents, nil)
+					state, err := includedOrExcluded(component.Name, requestedComponents, nil)
 					if err != nil {
 						return nil, err
 					}
@@ -84,7 +90,7 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 				// Ensure we have a local version of the component to point to (otherwise the pointer might change on us)
 				component := component
 
-				selectState, err := includedOrExcluded(component.Name, f.requestedComponents, matchedRequests)
+				selectState, err := includedOrExcluded(component.Name, requestedComponents, matchedRequests)
 				if err != nil {
 					return nil, err
 				}
@@ -127,7 +133,7 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 		}
 
 		// Check that we have matched against all requests
-		for _, requestedComponent := range f.requestedComponents {
+		for _, requestedComponent := range requestedComponents {
 			if _, ok := matchedRequests[requestedComponent]; !ok {
 				closeEnough := []string{}
 				for _, c := range pkg.Components {

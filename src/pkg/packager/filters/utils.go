@@ -19,19 +19,28 @@ const (
 
 // NormalizeComponentSelectors normalizes selectors while preserving their order and repetitions.
 func NormalizeComponentSelectors(selectors string) (string, error) {
-	result := make([]string, 0)
-	for _, selector := range strings.Split(selectors, ",") {
+	parsed, err := parseComponentSelectors(selectors)
+	if err != nil {
+		return "", err
+	}
+	return strings.Join(parsed, ","), nil
+}
+
+func parseComponentSelectors(selectors string) ([]string, error) {
+	parts := strings.Split(selectors, ",")
+	result := parts[:0]
+	for _, selector := range parts {
 		selector = strings.ToLower(strings.TrimSpace(selector))
 		if selector == "" {
 			continue
 		}
 		pattern := strings.TrimPrefix(selector, "-")
 		if _, err := path.Match(pattern, ""); err != nil {
-			return "", err
+			return nil, err
 		}
 		result = append(result, selector)
 	}
-	return strings.Join(result, ","), nil
+	return result, nil
 }
 
 // includedOrExcluded records every matching selector; the last match determines the state.
