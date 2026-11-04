@@ -133,7 +133,7 @@ jobs:
 
   create-release:
     runs-on: large-ubuntu-zarf-release
-    needs: validate-release
+    needs: [validate-release, publish-v1beta1-init]
     environment: release
     permissions:
       contents: write

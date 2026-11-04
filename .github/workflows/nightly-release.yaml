@@ -185,7 +185,7 @@ jobs:
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true CLI_VERSION=$CLI_VERSION make test-e2e ARCH=amd64
 
   create-release:
-    needs: [repo-gate, build-release]
+    needs: [repo-gate, build-release, publish-v1beta1-init]
     if: ${{ needs.repo-gate.outputs.should_run == 'true' }}
     runs-on: large-ubuntu-zarf-release
     env:
