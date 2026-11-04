@@ -1,7 +1,5 @@
 # Zarf Deprecation and Compatibility Policy
 
-**Status:** Draft for Zarf v1.0.0
-
 ## Scope
 
 Zarf's explicit SemVer compatibility contract is limited to the package lifecycle:
@@ -16,12 +14,10 @@ A package artifact includes the metadata, layout, signatures, and OCI representa
 The following are outside the explicit SemVer compatibility contract:
 
 - Every command, flag, output format, and behavior below `zarf tools`.
-- Commands other than `zarf package create` and `zarf package deploy`.
 - Configuration-file keys, environment variables, hidden flags, cache layouts, temporary files, and undocumented behavior.
 - Go packages and exported symbols, including `src/api`, `src/api/convert`, `src/pkg/signing`, `src/pkg/oci`, and `src/pkg/zoci`.
-- The implementation, command syntax, flags, defaults, and output of standalone signing, verification, publishing, and pulling commands.
 
-Code outside this scope may still follow normal project deprecation practices. It does not receive an independent SemVer support promise from this policy.
+Interfaces outside this contract do not receive an independent SemVer compatibility promise. When functionality is deprecated, the general deprecation process below applies unless a specific exception in this policy says otherwise.
 
 ## Schema Contract
 
@@ -68,6 +64,16 @@ For example, a later compatible Zarf 1.x `zarf package deploy` MUST continue to 
 
 Likewise, a later compatible `zarf package deploy` MUST continue to consume a compatible package artifact stored in OCI by an earlier supported package workflow. It MAY change standalone publish or pull commands and OCI utility APIs.
 
+## General Deprecation Process
+
+When Zarf functionality is deprecated, including functionality not tied to a schema version, it follows this minimum retirement schedule:
+
+1. For at least six months after deprecation is announced, the functionality MUST remain enabled by default behind a feature flag.
+2. After that period, the feature flag MAY default to disabled, but the functionality MUST remain available when explicitly enabled for at least three more months. This period starts with the first release that changes the default.
+3. After both periods have elapsed, the functionality MAY be removed without a major Zarf release, provided removal does not violate a compatibility guarantee in this policy.
+
+When Zarf detects use of deprecated functionality, it MUST emit a warning to standard error identifying the functionality, its replacement if available, and the scheduled default change and removal dates or releases if known. Release notes and documentation MUST identify the feature flag and explain how to migrate.
+
 ## Deprecating Stable Package Behavior
 
 A deprecation of `zarf.dev/v1beta1` behavior MUST:
@@ -76,6 +82,8 @@ A deprecation of `zarf.dev/v1beta1` behavior MUST:
 2. Describe the migration in release notes and package documentation.
 3. Preserve the deprecated behavior throughout Zarf 1.x.
 4. Add or update compatibility coverage for create, deploy, and runtime behavior.
+
+The general deprecation process does not override the stable package contract: behavior protected by that contract MUST remain enabled by default throughout Zarf 1.x. Its default-disabled period starts no earlier than the first release that can change the default without violating that contract.
 
 The project MAY add an automated migration tool. Such tooling MUST either perform a safe transformation or fail with an actionable description of the manual migration required. It MUST NOT claim lossless conversion where removed features cannot be represented in the target schema.
 
