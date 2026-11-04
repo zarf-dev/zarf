@@ -16,7 +16,8 @@ const { diagram } = Astro.props;
       theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default",
     });
     for (const node of document.getElementsByClassName("mermaid")) {
-      const text = node.textContent!.trim();
+      // Current and archived docs use empty subgraph titles, which Mermaid 12 rejects.
+      const text = node.textContent!.trim().replace(/^([ \t]*subgraph[ \t]+)""[ \t]*$/gm, '$1" "');
       const { svg, bindFunctions } = await mermaid.render(
         "mermaid-svg-" + Math.random().toString(36).substring(7),
         text
