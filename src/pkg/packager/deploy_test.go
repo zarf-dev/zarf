@@ -31,12 +31,62 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
+
+func TestDeployVariablesByAPIVersion(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name       string
+		apiVersion string
+		kind       api.PackageKind
+		variables  map[string]string
+		values     value.Values
+		wantError  bool
+	}{
+		{name: "legacy", variables: map[string]string{"INPUT": "supplied"}},
+		{name: "alpha", apiVersion: v1alpha1.APIVersion, variables: map[string]string{"INPUT": "supplied"}},
+		{name: "beta without variables", apiVersion: v1beta1.APIVersion},
+		{name: "beta empty variables", apiVersion: v1beta1.APIVersion, variables: map[string]string{}},
+		{name: "beta variables", apiVersion: v1beta1.APIVersion, variables: map[string]string{"INPUT": "supplied"}, wantError: true},
+		{name: "beta empty variable value", apiVersion: v1beta1.APIVersion, variables: map[string]string{"INPUT": ""}, wantError: true},
+		{name: "beta init variables", apiVersion: v1beta1.APIVersion, kind: api.ZarfInitConfig, variables: map[string]string{"INPUT": "supplied"}, wantError: true},
+		{name: "beta values", apiVersion: v1beta1.APIVersion, values: value.Values{"input": "supplied"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			kind := tt.kind
+			if kind == "" {
+				kind = api.ZarfPackageConfig
+			}
+			pkg := api.Package{
+				APIVersion: tt.apiVersion,
+				Kind:       kind,
+				Metadata:   api.PackageMetadata{Name: "deploy-variables"},
+			}
+			pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+			result, err := Deploy(ctx, pkgLayout, DeployOptions{SetVariables: tt.variables, Values: tt.values})
+			if tt.wantError {
+				require.ErrorContains(t, err, "variables have no effect on zarf.dev/v1beta1 packages")
+				require.ErrorContains(t, err, "use --set-values or --values instead of --set-variables")
+				return
+			}
+			require.NoError(t, err)
+			if tt.values != nil {
+				require.Equal(t, tt.values, result.Values)
+			}
+		})
+	}
+}
 
 func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
 	t.Parallel()
@@ -439,7 +489,11 @@ func TestDeployFileTemplatesByAPIVersion(t *testing.T) {
 			definitionPath := filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML)
 			originalDefinition, err := os.ReadFile(definitionPath)
 			require.NoError(t, err)
-			_, err = Deploy(ctx, pkgLayout, DeployOptions{SetVariables: map[string]string{"INPUT": "supplied"}})
+			opts := DeployOptions{}
+			if tt.apiVersion == v1alpha1.APIVersion {
+				opts.SetVariables = map[string]string{"INPUT": "supplied"}
+			}
+			_, err = Deploy(ctx, pkgLayout, opts)
 			if tt.fail {
 				require.ErrorContains(t, err, `command "exit 1" failed`)
 			} else {
