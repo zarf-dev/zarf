@@ -101,7 +101,7 @@ type DeployOptions struct {
 // Validate checks whether the deployment options are supported by the package.
 func (opts DeployOptions) Validate(pkg api.Package) error {
 	if pkg.GetAPIVersion() == v1beta1.APIVersion && len(opts.SetVariables) > 0 {
-		return fmt.Errorf("variables have no effect on %s packages; use --set-values or --values instead of --set-variables", v1beta1.APIVersion)
+		return fmt.Errorf("variables have no effect on %s packages; use package values instead", v1beta1.APIVersion)
 	}
 	if opts.Connected && pkg.IsInitConfig() {
 		return fmt.Errorf("connected mode is not supported for init packages")
