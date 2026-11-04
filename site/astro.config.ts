@@ -101,7 +101,7 @@ export default defineConfig({
       gfm: true,
       remarkPlugins: [
         remarkGemoji,
-        [remarkLinkRewrite, { srcDir: docsDir, sections, publicDir: fileURLToPath(new URL("./public/", import.meta.url)) }],
+        [remarkLinkRewrite, { srcDir: docsDir, sections, publicDir: fileURLToPath(new URL("./public/", import.meta.url)), versions }],
       ],
       rehypePlugins: [
         rehypeHeadingIds,

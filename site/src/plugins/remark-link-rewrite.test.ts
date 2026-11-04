@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { rewriteUrl, fixEscapingRelative, rewriteVersionedAssetImport, remarkLinkRewrite } from "./remark-link-rewrite.ts";
+import { rewriteUrl, fixEscapingRelative, rewriteVersionedAssetImport, rewriteArchivedSourceUrl, remarkLinkRewrite } from "./remark-link-rewrite.ts";
 
 const sections = new Set(["commands", "ref", "tutorials", "getting-started", "faq", "schema"]);
 const prefix = "/v0-76";
@@ -55,6 +55,17 @@ test("resolves retired references to the matching archived reference pages", () 
   assert.equal(rewriteUrl("/faq#another-question", prefix, sections), "/v0-76/faq#another-question");
 });
 
+test("pins archived package source links to their release tag", () => {
+  assert.equal(rewriteArchivedSourceUrl("https://github.com/zarf-dev/zarf/blob/main/packages/gitea/zarf.yaml", "v0.80.0"),
+    "https://github.com/zarf-dev/zarf/blob/v0.80.0/packages/gitea/zarf.yaml");
+  assert.equal(rewriteArchivedSourceUrl("https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-registry/zarf.yaml#L1", "v0.81.1"),
+    "https://github.com/zarf-dev/zarf/blob/v0.81.1/packages/zarf-registry/zarf.yaml#L1");
+  const otherSource = "https://github.com/zarf-dev/zarf/blob/main/src/main.go";
+  assert.equal(rewriteArchivedSourceUrl(otherSource, "v0.80.0"), otherSource);
+  const packageSource = "https://github.com/zarf-dev/zarf/blob/main/packages/gitea/zarf.yaml";
+  assert.equal(rewriteArchivedSourceUrl(packageSource), packageSource);
+});
+
 test("rewrites archived Markdown, HTML and JSX links without changing Latest pages", (t) => {
   const root = mkdtempSync(path.join(tmpdir(), "zarf-remark-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -62,13 +73,20 @@ test("rewrites archived Markdown, HTML and JSX links without changing Latest pag
   mkdirSync(path.join(publicDir, "tutorials"), { recursive: true });
   writeFileSync(path.join(publicDir, "tutorials/recording.html"), "recording");
   const srcDir = path.join(root, "docs");
-  const transform = remarkLinkRewrite({ srcDir, sections: [...sections], publicDir });
+  const transform = remarkLinkRewrite({ srcDir, sections: [...sections], publicDir,
+    versions: [{ slug: "v0-76", ref: "v0.76.4" }] });
   const tree = () => ({ type: "root", children: [
     { type: "link", url: "https://docs.zarf.dev/docs/create-a-zarf-package/zarf-schema#metadata", children: [] },
     { type: "link", url: "/faq#what-is-the-zarf-agent", children: [] },
     { type: "html", value: '<iframe src="/tutorials/recording.html"></iframe>' },
     { type: "mdxJsxFlowElement", name: "iframe", attributes: [
       { type: "mdxJsxAttribute", name: "src", value: "/tutorials/recording.html" },
+    ], children: [] },
+    { type: "link", url: "https://github.com/zarf-dev/zarf/blob/main/packages/gitea/zarf.yaml", children: [] },
+    { type: "link", url: "https://gitea.io/en-us/", children: [] },
+    { type: "html", value: '<a href="https://www.gnu.org/software/make/">make</a>' },
+    { type: "mdxJsxFlowElement", name: "a", attributes: [
+      { type: "mdxJsxAttribute", name: "href", value: "https://facebook.github.io/zstd/" },
     ], children: [] },
   ] });
   const archived = tree();
@@ -77,6 +95,10 @@ test("rewrites archived Markdown, HTML and JSX links without changing Latest pag
   assert.equal(archived.children[1].url, "/v0-76/ref/init-package/#zarf-agent");
   assert.equal(archived.children[2].value, '<iframe src="/tutorials/recording.html"></iframe>');
   assert.equal(archived.children[3].attributes?.[0].value, "/tutorials/recording.html");
+  assert.equal(archived.children[4].url, "https://github.com/zarf-dev/zarf/blob/v0.76.4/packages/gitea/zarf.yaml");
+  assert.equal(archived.children[5].url, "https://about.gitea.com/");
+  assert.equal(archived.children[6].value, '<a href="https://savannah.gnu.org/projects/make/">make</a>');
+  assert.equal(archived.children[7].attributes?.[0].value, "https://github.com/meta/zstd");
   const latest = tree();
   transform(latest as any, { path: path.join(srcDir, "page.mdx") } as any);
   assert.deepEqual(latest, tree());
