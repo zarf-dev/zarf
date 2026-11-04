@@ -5,11 +5,16 @@ inputs:
   slack-webhook-url:
     description: 'The webhook URL to use to post to slack'
     required: true
+  payload-file-path:
+    description: 'Optional JSON payload file; otherwise use the standard workflow-status message'
+    required: false
+    default: ''
 
 runs:
   using: composite
   steps:
     - uses: slackapi/slack-github-action@6c661ce58804a1a20f6dc5fbee7f0381b469e001 # v1.25.0
+      if: ${{ inputs.payload-file-path == '' }}
       with:
         payload: |
           {
@@ -42,6 +47,14 @@ runs:
               }
             ]
           }
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+    - uses: slackapi/slack-github-action@6c661ce58804a1a20f6dc5fbee7f0381b469e001 # v1.25.0
+      if: ${{ inputs.payload-file-path != '' }}
+      with:
+        payload-file-path: ${{ inputs.payload-file-path }}
       env:
         SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

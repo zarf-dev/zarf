@@ -1,0 +1,79 @@
+name: Test Markdown Links
+on:
+  pull_request:
+    paths:
+      - '**/*.[mM][dD]'
+      - '!vendor/**'
+      - '!adr/**'
+      - '!site/src/content/docs/**' # Exclude all files in the site directory, there is a different workflow for testing site links
+
+permissions:
+  contents: read
+
+concurrency:
+  group: markdown-links-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  markdown-links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Restore site build cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            site/.cache/astro
+          key: site-build-${{ runner.os }}-node26-${{ hashFiles('site/package-lock.json', 'site/astro.config.ts', 'Makefile') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            site-build-${{ runner.os }}-node26-${{ hashFiles('site/package-lock.json', 'site/astro.config.ts', 'Makefile') }}-
+
+      # The official action installs the pinned binary; Make owns all scan arguments.
+      - name: Install lychee
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2
+        with:
+          lycheeVersion: v0.24.2
+          args: --version
+          failIfEmpty: false
+          jobSummary: false
+          output: ${{ runner.temp }}/lychee-version.md
+
+      - name: Check Markdown links
+        run: make check-md-links CHECK_EXTERNAL=false
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      # Retain useful work even when a broken link fails the check.
+      - name: Save site build cache
+        if: ${{ !cancelled() && steps.cache.outcome == 'success' && hashFiles('site/.cache/astro/**') != '' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            site/.cache/astro
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+      - name: Summarize link reports
+        if: ${{ !cancelled() && hashFiles('.lychee/results/markdown-*.md') != '' }}
+        run: cat .lychee/results/markdown-*.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload link reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: markdown-link-reports
+          path: .lychee/results/markdown-*.md
+          include-hidden-files: true
+          retention-days: 7

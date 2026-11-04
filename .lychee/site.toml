@@ -1,0 +1,3 @@
+# Built output is gitignored. Include every HTML page, including archived pages.
+no_ignore = true
+index_files = ["index.html"]

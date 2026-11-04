@@ -92,6 +92,7 @@ const topicsOption: Record<string, string[]> = {
 
 // https://astro.build/config
 export default defineConfig({
+  cacheDir: "./.cache/astro",
   redirects: {
     "/docs/zarf-overview": "/",
   },
