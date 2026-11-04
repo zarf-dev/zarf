@@ -1,0 +1,20 @@
+# Shared policy for the site and repository Markdown jobs.
+accept = ["200..=299"]
+# Lychee renders progress on interactive stderr and hides it in CI/piped logs.
+no_progress = false
+max_concurrency = 8
+host_concurrency = 2
+host_request_interval = "250ms"
+max_retries = 1
+timeout = 20
+include_mail = false
+
+exclude = [
+  # GitHub edit pages require a session; generated pages also have no source file.
+  '^https://github\.com/zarf-dev/zarf/edit/',
+
+  # These URLs are checked separately with auth.toml. Keep both lists in sync.
+  '^https://kubernetes\.slack\.com/(?:archives/C03B6BJAUJ3)?$',
+  '^https://openssf\.slack\.com/archives/C07AKUMBDMJ$',
+  '^https://slack\.openssf\.org/$',
+]

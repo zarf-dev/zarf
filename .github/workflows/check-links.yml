@@ -1,0 +1,140 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+name: Check All Documentation Links
+
+on:
+  schedule:
+    - cron: '17 6 * * 1' # Mondays at 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: all-links-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-links:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'zarf-dev/zarf' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Restore site build cache
+        id: build-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: site/.cache/astro
+          key: site-build-${{ runner.os }}-node26-${{ hashFiles('site/package-lock.json', 'site/astro.config.ts', 'Makefile') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            site-build-${{ runner.os }}-node26-${{ hashFiles('site/package-lock.json', 'site/astro.config.ts', 'Makefile') }}-
+
+      - name: Restore external URL cache
+        id: url-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .lycheecache
+          key: lychee-${{ runner.os }}-0.24.2-${{ hashFiles('.lychee/*.toml', 'Makefile') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            lychee-${{ runner.os }}-0.24.2-${{ hashFiles('.lychee/*.toml', 'Makefile') }}-
+
+      - name: Install lychee
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2
+        with:
+          lycheeVersion: v0.24.2
+          args: --version
+          failIfEmpty: false
+          jobSummary: false
+          output: ${{ runner.temp }}/lychee-version.md
+
+      - name: Check all local and external links
+        run: make check-links CHECK_EXTERNAL=true LYCHEE_FORMAT=json
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Save site build cache
+        if: ${{ !cancelled() && steps.build-cache.outcome == 'success' && hashFiles('site/.cache/astro/**') != '' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: site/.cache/astro
+          key: ${{ steps.build-cache.outputs.cache-primary-key }}
+
+      - name: Save external URL cache
+        if: ${{ !cancelled() && steps.url-cache.outcome == 'success' && hashFiles('.lycheecache') != '' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .lycheecache
+          key: ${{ steps.url-cache.outputs.cache-primary-key }}
+
+      - name: Summarize link reports
+        if: ${{ !cancelled() && hashFiles('.lychee/results/*.json') != '' }}
+        run: |
+          jq -r '"### \(input_filename)\n\nErrors: \(.errors); timeouts: \(.timeouts)\n"' .lychee/results/*.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload link reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: all-link-reports
+          path: .lychee/results/*.json
+          include-hidden-files: true
+          retention-days: 14
+
+  notify-slack:
+    needs: check-links
+    if: ${{ always() && !cancelled() && needs.check-links.result == 'failure' && github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download link reports
+        continue-on-error: true # Build/setup failures and timeouts may have no reports.
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: all-link-reports
+          path: link-reports
+
+      - name: Prepare failure notification
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPOSITORY: ${{ github.repository }}
+          FILE_ROOT: file://${{ github.workspace }}/
+          SOURCE_ROOT: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/
+        run: |
+          mkdir -p link-reports
+          printf '{}\n' > link-reports/fallback.json
+          jq -s --arg run "$RUN_URL" --arg repo "$REPOSITORY" \
+            --arg root "$FILE_ROOT" --arg source "$SOURCE_ROOT" '
+            [ .[] | ((.error_map // {}), (.timeout_map // {})) | .[][] | .url
+              | if startswith($root + "site/dist/") then "https://docs.zarf.dev/" + ltrimstr($root + "site/dist/")
+                elif startswith($root) then $source + ltrimstr($root)
+                else . end ] | unique as $urls
+            | (reduce $urls[] as $url ([];
+                if length < 20 and (((map(length) | add) // 0) + ($url | length)) < 3000
+                then . + [$url] else . end)) as $preview
+            | {text: ("*Documentation link checks failed* in " + $repo + ".\n<" + $run + "|Full reports and run log>\n\n" +
+                if ($urls | length) > 0 then
+                  "Showing \($preview | length) of \($urls | length) distinct broken targets:\n" + ($preview | map("<" + . + ">") | join("\n"))
+                else "No broken-URL details are available; check the workflow logs." end)}
+            ' link-reports/*.json > "$RUNNER_TEMP/link-failure.json"
+
+      - name: Notify Slack of failure
+        uses: ./.github/actions/slack
+        with:
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload-file-path: ${{ runner.temp }}/link-failure.json

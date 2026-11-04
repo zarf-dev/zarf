@@ -304,3 +304,79 @@ vex-lint: ## Check for orphaned VEX statements in .vex/zarf.cli.openvex.json (re
 
 lint-go: ## Run golang-ci-lint to lint the go code (must `brew install golangci-lint` first)
 	golangci-lint run
+
+.PHONY: build-site
+build-site: ## Install locked dependencies and build versioned documentation (requires Node.js)
+	npm --prefix site ci
+	npm --prefix site run build:versions
+
+# Link checks rebuild the versioned site and use lychee 0.24.2.
+LYCHEE ?= lychee
+LYCHEE_FLAGS ?=
+LYCHEE_FORMAT ?= markdown
+CHECK_EXTERNAL ?= false
+LINK_REPORT_EXT = $(if $(filter markdown,$(LYCHEE_FORMAT)),md,$(LYCHEE_FORMAT))
+LINK_CHECK_ARGS = $(LYCHEE_FLAGS) --config .lychee/common.toml --format $(LYCHEE_FORMAT) \
+	--root-dir "$(CURDIR)/site/dist" \
+	--remap '^https://docs\.zarf\.dev/ file://$(CURDIR)/site/dist/' \
+	--remap '^https://github\.com/defenseunicorns/zarf/ https://github.com/zarf-dev/zarf/'
+
+.PHONY: check-links check-site-links check-md-links _link-check-inputs
+check-links: ## Rebuild and check site and Markdown links; add CHECK_EXTERNAL=true for HTTP checks
+	$(MAKE) --keep-going check-site-links check-md-links
+
+check-site-links: _link-check-inputs ## Rebuild and check site links; add CHECK_EXTERNAL=true for HTTP checks
+	$(MAKE) --keep-going _check-site-local $(if $(filter true,$(CHECK_EXTERNAL)),_check-site-external _check-site-auth)
+
+check-md-links: _link-check-inputs ## Rebuild and check Markdown links; add CHECK_EXTERNAL=true for HTTP checks
+	git ls-files -- ':(icase,glob)**/*.md' ':(exclude)vendor/**' ':(exclude)adr/**' ':(exclude)site/src/content/docs/**' > .lychee/results/markdown-inputs.txt
+	test -s .lychee/results/markdown-inputs.txt
+	$(MAKE) --keep-going _check-md-local _check-md-docs $(if $(filter true,$(CHECK_EXTERNAL)),_check-md-external _check-md-auth)
+
+_link-check-inputs: build-site
+	@command -v $(LYCHEE) >/dev/null
+	@test -s site/dist/index.html
+	@mkdir -p .lychee/results
+
+# Keep going through every phase so reports survive failures; make still fails.
+.PHONY: _check-site-local _check-site-external _check-site-auth
+_check-site-local _check-site-external _check-site-auth: SHELL := /bin/bash
+_check-site-local:
+	@echo "Checking site files and anchors..."
+	@set -o pipefail; $(LYCHEE) $(LINK_CHECK_ARGS) --config .lychee/site.toml \
+		--offline --include-fragments=anchor-only \
+		-- 'site/dist/**/*.html' | tee .lychee/results/site-local.$(LINK_REPORT_EXT)
+
+_check-site-external:
+	@echo "Checking external site URLs (uncached requests may take several minutes)..."
+	@set -o pipefail; $(LYCHEE) $(LINK_CHECK_ARGS) --config .lychee/external.toml \
+		-- 'site/dist/**/*.html' | tee .lychee/results/site-external.$(LINK_REPORT_EXT)
+
+_check-site-auth:
+	@echo "Checking authentication-protected site URLs..."
+	@set -o pipefail; $(LYCHEE) $(LINK_CHECK_ARGS) --config .lychee/external.toml --config .lychee/auth.toml \
+		-- 'site/dist/**/*.html' | tee .lychee/results/site-auth.$(LINK_REPORT_EXT)
+
+.PHONY: _check-md-local _check-md-docs _check-md-external _check-md-auth
+_check-md-local _check-md-docs _check-md-external _check-md-auth: SHELL := /bin/bash
+_check-md-local:
+	@echo "Checking repository Markdown files and anchors..."
+	@set -o pipefail; $(LYCHEE) $(LINK_CHECK_ARGS) --config .lychee/markdown.toml \
+		--offline --include-fragments=anchor-only --exclude '^file://.*/site/dist(?:/|$$)' \
+		--files-from .lychee/results/markdown-inputs.txt | tee .lychee/results/markdown-local.$(LINK_REPORT_EXT)
+
+_check-md-docs:
+	@echo "Checking Markdown links into the built documentation..."
+	@set -o pipefail; $(LYCHEE) $(LINK_CHECK_ARGS) --config .lychee/site.toml \
+		--offline --include-fragments=anchor-only --include '^file://.*/site/dist(?:/|$$)' --exclude '.*' \
+		--files-from .lychee/results/markdown-inputs.txt | tee .lychee/results/markdown-site-local.$(LINK_REPORT_EXT)
+
+_check-md-external:
+	@echo "Checking external Markdown URLs (uncached requests may take several minutes)..."
+	@set -o pipefail; $(LYCHEE) $(LINK_CHECK_ARGS) --config .lychee/external.toml \
+		--files-from .lychee/results/markdown-inputs.txt | tee .lychee/results/markdown-external.$(LINK_REPORT_EXT)
+
+_check-md-auth:
+	@echo "Checking authentication-protected Markdown URLs..."
+	@set -o pipefail; $(LYCHEE) $(LINK_CHECK_ARGS) --config .lychee/external.toml --config .lychee/auth.toml \
+		--files-from .lychee/results/markdown-inputs.txt | tee .lychee/results/markdown-auth.$(LINK_REPORT_EXT)

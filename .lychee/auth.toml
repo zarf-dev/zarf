@@ -1,0 +1,13 @@
+# Broader status acceptance applies ONLY to this explicit URL allowlist.
+cache = false
+accept = ["200..=299", "401", "403"]
+exclude = ['.*']
+# Lychee's include patterns take precedence over exclude patterns.
+include = [
+  # Kubernetes workspace and Zarf channel require workspace authentication.
+  '^https://kubernetes\.slack\.com/(?:archives/C03B6BJAUJ3)?$',
+  # OpenSSF channel requires workspace authentication.
+  '^https://openssf\.slack\.com/archives/C07AKUMBDMJ$',
+  # The OpenSSF signup endpoint rejects automated clients with 403.
+  '^https://slack\.openssf\.org/$',
+]
