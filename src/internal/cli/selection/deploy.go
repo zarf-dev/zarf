@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package cmd
+// Package selection provides interactive CLI component selection.
+package selection
 
 import (
 	"fmt"
-	"runtime"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -24,37 +24,12 @@ type deploymentPrompts struct {
 	group    func([]api.Component) (int, error)
 }
 
-type filterableLayout interface {
-	Definition() api.Package
-	Filter(filters.ComponentFilterStrategy) error
-}
-
-func resolveInteractiveDeploymentSelectors(pkgLayout filterableLayout, optionalComponents string) (string, error) {
-	return resolveDeploymentSelectors(pkgLayout, optionalComponents, deploymentPrompts{
+// DeploymentSelectors prompts for component choices and returns selectors for the deployment filter.
+func DeploymentSelectors(pkg api.Package) (string, error) {
+	return promptDeploymentSelectors(pkg, deploymentPrompts{
 		optional: selectOptionalComponent,
 		group:    selectChoiceGroup,
 	})
-}
-
-func resolveDeploymentSelectors(pkgLayout filterableLayout, optionalComponents string, prompts deploymentPrompts) (string, error) {
-	normalized, err := filters.NormalizeComponentSelectors(optionalComponents)
-	if err != nil {
-		return "", err
-	}
-	if normalized == "" {
-		pkg, err := filters.Apply(pkgLayout.Definition(), filters.ByLocalOS(runtime.GOOS))
-		if err != nil {
-			return "", err
-		}
-		normalized, err = promptDeploymentSelectors(pkg, prompts)
-		if err != nil {
-			return "", err
-		}
-	}
-	if err := pkgLayout.Filter(filters.Combine(filters.ByLocalOS(runtime.GOOS), filters.ForDeploy(normalized))); err != nil {
-		return "", err
-	}
-	return normalized, nil
 }
 
 func promptDeploymentSelectors(pkg api.Package, prompts deploymentPrompts) (string, error) {

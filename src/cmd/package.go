@@ -32,6 +32,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/cli/selection"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -576,8 +577,21 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 		return nil, err
 	}
 	if opts.IsInteractive {
-		optionalComponents, err := resolveInteractiveDeploymentSelectors(pkgLayout, opts.OptionalComponents)
+		optionalComponents, err := filters.NormalizeComponentSelectors(opts.OptionalComponents)
 		if err != nil {
+			return nil, err
+		}
+		if optionalComponents == "" {
+			pkg, err := filters.Apply(pkgLayout.Definition(), filters.ByLocalOS(runtime.GOOS))
+			if err != nil {
+				return nil, err
+			}
+			optionalComponents, err = selection.DeploymentSelectors(pkg)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if err := pkgLayout.Filter(filters.Combine(filters.ByLocalOS(runtime.GOOS), filters.ForDeploy(optionalComponents))); err != nil {
 			return nil, err
 		}
 		opts.OptionalComponents = optionalComponents
