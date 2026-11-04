@@ -72,6 +72,52 @@ func TestCombinedSchemaSelectsVersionByAPIVersion(t *testing.T) {
 	}
 }
 
+func TestV1Beta1DifferentialSchema(t *testing.T) {
+	t.Parallel()
+
+	for _, sourceSchema := range []struct {
+		name   string
+		schema []byte
+	}{
+		{name: "package", schema: GetV1Beta1Schema()},
+		{name: "combined", schema: getSchema()},
+	} {
+		t.Run(sourceSchema.name, func(t *testing.T) {
+			t.Parallel()
+			for _, tt := range []struct {
+				name   string
+				fields map[string]any
+				valid  bool
+			}{
+				{name: "full package", valid: true},
+				{name: "differential object", fields: map[string]any{
+					"differential": map[string]any{"fromVersion": "1.0.0"},
+				}, valid: true},
+				{name: "boolean", fields: map[string]any{"differential": true}},
+				{name: "missing base version", fields: map[string]any{"differential": map[string]any{}}},
+				{name: "base version at build level", fields: map[string]any{"differentialPackageVersion": "1.0.0"}},
+			} {
+				t.Run(tt.name, func(t *testing.T) {
+					t.Parallel()
+					build := map[string]any{"architecture": "amd64", "version": "v1.0.0", "aggregateChecksum": "checksum"}
+					for key, value := range tt.fields {
+						build[key] = value
+					}
+					doc := map[string]any{
+						"apiVersion": "zarf.dev/v1beta1", "kind": "ZarfPackageConfig",
+						"metadata":   map[string]any{"name": "app"},
+						"components": []any{map[string]any{"name": "app"}},
+						"build":      build,
+					}
+					result, err := gojsonschema.Validate(gojsonschema.NewBytesLoader(sourceSchema.schema), gojsonschema.NewGoLoader(doc))
+					require.NoError(t, err)
+					require.Equal(t, tt.valid, result.Valid(), result.Errors())
+				})
+			}
+		})
+	}
+}
+
 func TestV1Beta1SchemaAllowsChartOverrides(t *testing.T) {
 	t.Parallel()
 	for _, sourceSchema := range []struct {

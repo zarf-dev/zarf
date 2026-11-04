@@ -1,0 +1,12 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: kustomize-plugins
+components:
+  - name: app
+    manifests:
+      - name: app
+        kustomize:
+          enablePlugins: true
+          files:
+            - .

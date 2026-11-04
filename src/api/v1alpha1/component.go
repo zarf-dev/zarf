@@ -70,7 +70,7 @@ const (
 	StateAccessRegistryCredentials StateAccessKey = "registryCredentials"
 	// StateAccessGitCredentials unlocks .State.Git.{PushPassword,PullPassword}.
 	StateAccessGitCredentials StateAccessKey = "gitCredentials"
-	// StateAccessAgentCerts unlocks .State.Agent.{CA,Cert,Key} (base64-encoded) and adds the .State.Agent sub-object.
+	// StateAccessAgentCerts unlocks .State.Agent.{CA,Cert,Key} (base64-encoded).
 	StateAccessAgentCerts StateAccessKey = "agentCerts"
 )
 

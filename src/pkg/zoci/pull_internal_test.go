@@ -17,8 +17,8 @@ func TestRestoreDuplicateLayers(t *testing.T) {
 	t.Parallel()
 
 	destination := t.TempDir()
-	originalTitle := "documentation/secrets.md"
-	duplicateTitle := "documentation/secrets-copy.md"
+	originalTitle := "attachments/secrets.md"
+	duplicateTitle := "attachments/secrets-copy.md"
 	contents := []byte("same documentation")
 	originalPath := filepath.Join(destination, filepath.FromSlash(originalTitle))
 	require.NoError(t, os.MkdirAll(filepath.Dir(originalPath), 0o700))

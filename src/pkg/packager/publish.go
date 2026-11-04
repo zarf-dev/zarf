@@ -10,15 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -74,7 +72,7 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 		return fmt.Errorf("source and destination repositories must have the same name")
 	}
 
-	arch := config.GetArch(opts.Architecture)
+	arch := helpers.ResolveArch(opts.Architecture)
 	p := oci.PlatformForArch(arch)
 
 	// Set up remote repo clients.
@@ -181,6 +179,8 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 
 // PublishSkeletonOptions declares the parameters to publish a skeleton package.
 type PublishSkeletonOptions struct {
+	// Architecture selects package components, falling back to metadata and then the host.
+	Architecture string
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
 	// SigningKeyPath points to a signing key on the local disk.
@@ -235,6 +235,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	l.Info("loading skeleton package", "path", path)
 	loaded, err := load.Package(ctx, path, load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     opts.Architecture,
 			CachePath:        opts.CachePath,
 			Flavor:           opts.Flavor,
 			SkipVersionCheck: opts.SkipVersionCheck,
@@ -255,14 +256,20 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	}
 	// Create skeleton buildpath
 	createOpts := assemble.AssembleSkeletonOptions{
-		SigningKeyPath:       opts.SigningKeyPath,
-		SigningKeyPassword:   opts.SigningKeyPassword,
 		Flavor:               opts.Flavor,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
 	pkgLayout, err := assemble.AssembleSkeleton(ctx, loaded, createOpts)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
+	}
+	if opts.SigningKeyPath != "" {
+		signOpts := signing.DefaultSignBlobOptions()
+		signOpts.Key = opts.SigningKeyPath
+		signOpts.Password = opts.SigningKeyPassword
+		if err := pkgLayout.SignPackage(ctx, &signOpts); err != nil {
+			return registry.Reference{}, fmt.Errorf("unable to sign skeleton: %w", err)
+		}
 	}
 	referenceOptions := zoci.ReferenceFromMetadataOptions{
 		Tag: opts.Tag,
@@ -276,22 +283,6 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
-	ex := []api.Component{}
-	for _, c := range pkgLayout.Definition().Components {
-		ex = append(ex, api.Component{
-			Name: fmt.Sprintf("import-%s", c.Name),
-			Import: api.ComponentImport{
-				Name:   c.Name,
-				Remote: []api.ComponentImportRemote{{URL: helpers.OCIURLPrefix + pkgRef.String()}},
-			},
-		})
-	}
-	err = utils.ColorPrintYAML(ex, nil, false)
-	if err != nil {
-		return registry.Reference{}, err
-	}
-	l.Info("find more info on skeleton packages at https://docs.zarf.dev/faq/#what-is-a-skeleton-zarf-package")
 	return pkgRef, nil
 }
 

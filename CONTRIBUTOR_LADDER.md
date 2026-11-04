@@ -34,17 +34,17 @@ Community participants engage with Zarf, contributing their time and energy in d
 
 ### Community Members
 
-Community members are active **contributors** in the community. They help advance the Zarf project through commits, issues, and pull requests.
+Community members are active **contributors** in the community. They help advance the Zarf project through issues, and pull requests.
 Members participate through Github teams and pre-submit tests run automatically for their PRs.  Community members are expected to be active contributors in the community.
 
-**Defined by:** Member of the Zarf GitHub "Community Member" team.
+**Defined by:** Member of the `zarf-dev` GitHub organization.
 
 #### Prerequisites
 
 - Enabled [two-factor authentication](https://docs.github.com/en/authentication/securing-your-account-with-two-factor-authentication-2fa/about-two-factor-authentication) on their GitHub account
 - Have made contributions to the project in the form of:
-  - Authoring or reviewing PRs on GitHub. At least one PR must be **merged**.
-  - Filing or helping resolve an issue on GitHub
+  - Authoring or reviewing meaningful PRs on GitHub. At least five (5) PRs must be **merged**.
+  - Filing and/or helping triage/resolve an issue on GitHub
   - Substantive contribution to a project, or community discussions (e.g. meetings, Slack,
     email discussion forums, Stack Overflow)
 
@@ -74,31 +74,36 @@ Members participate through Github teams and pre-submit tests run automatically 
 Reviewers are trusted members of the Zarf community that are able to review changes to Zarf and indicate if those changes are ready for merge.
 Reviewers have a strong and active track record of contribution to the Zarf project.
 
-**Defined by:** Member of the Zarf GitHub ["Reviewer" team](https://github.com/orgs/zarf-dev/teams/reviewers).
+**Defined by:** Member of the Zarf GitHub Reviewer team `zarf-dev/reviewers`.
 
 #### Prerequisites
 
-- Experience as a Community Member for at least 6 months
-- Is an Organization Member
+- Completed all steps in the above mentioned Community Member guidelines
 - Has reviewed, or helped review, at least 10 Pull Requests
 - Has analyzed and resolved test failures
-- Has demonstrated an in-depth knowledge of Zarf
+- Demonstrates both deep understanding of the codebase and consistent high-quality contributions
+- Active participation in design discussions; community meeting attendance is encouraged but optional
 
 #### Responsibilities
 
 - Commits to being an active contributor and reviewer as part of the Zarf project.  'Active' is defined as six PRs or PR reviews (or mix thereof) in **six months**,
 as measured by [Zarf Contributor Insights](https://github.com/zarf-dev/zarf/graphs/contributors) and [LFX Insights](https://insights.linuxfoundation.org/project/zarf/contributors?timeRange=alltime).
 - Is supportive of new and occasional contributors and helps get useful PRs in shape to commit.
+- Participate actively in design discussions and, where possible, community meetings
+- Maintain awareness of project goals and architecture to ensure alignment
+- Represent the project in the community with professionalism and respect
 
 #### Privileges
 
+- Triage access to the repository (e.g., labeling, assigning issues/PRs)
 - Has GitHub or CI/CD rights to approve pull requests in specific directories
+- Greater influence in shaping technical direction and priorities
 
 #### Promotion process
 
-- May self-nominate or be nominated by a Maintainer.
+- Nomination by a Maintainer.
 - Meet the [Promotion approval baseline](#promotion-approval-baseline).
-- Completed by addition to Zarf Reviewer group.
+- Completed by addition to Zarf Reviewer team.
 
 
 ### Maintainers
@@ -114,15 +119,16 @@ approval is focused on holistic acceptance of a contribution including:
 - Interactions with other parts of the system
 - Consistency between code and documentation
 
-**Defined by:** Member of the Zarf GitHub ["Maintainer" team](https://github.com/orgs/zarf-dev/teams/maintainers).
+**Defined by:** Member of the Zarf Maintainers team `zarf-dev/maintainers`.
 
 #### Prerequisites
 
+- Have at least ten (10) significant PRs successfully merged for any combination of repositories under the zarf-dev organization.
 - Demonstrate the principles and responsibilities required for qualitative Maintainer Responsibilities
-- Sustain contribution history over 12 month time period and 10+ significant pull requests.
+- Sustain contribution history
 - Reviewer for at least 1 month
 - Reviewed at least 10 substantial pull requests to the codebase
-- Reviewed or got at least 30 pull requests merged to the codebase
+- Reviewed or contributed at least 30 pull requests merged to the codebase
 
 #### Responsibilities
 
@@ -144,13 +150,11 @@ approval is focused on holistic acceptance of a contribution including:
 - Maintainer status may be a precondition to accepting especially large code contributions
 
 #### Promotion process
-- Sponsored by a maintainer or [Technical Steering Committee (TSC)](https://github.com/zarf-dev/zarf/blob/main/CONTRIBUTING.md#technical-steering-committee) members.
+- Nominated by a maintainer or [Technical Steering Committee (TSC)](https://github.com/zarf-dev/zarf/blob/main/CONTRIBUTING.md#technical-steering-committee) members.
   - With no objections from other TSC members.
-  - Done through pull request to update the CODEOWNERS file
-- May self-nominate or be nominated by a maintainer.
 - Meet the [Promotion approval baseline](#promotion-approval-baseline).
 
-Nominate by opening a PR against the Zarf repository, which adds their GitHub username to the OWNERS file for one or more directories.
+Nomination by opening an issue against the Zarf repository for tracking purposes.
 
 ## Inactive members
 A core principle in maintaining a healthy community is encouraging active participation.

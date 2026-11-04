@@ -1,9 +1,9 @@
 name: packages
-description: "Build CLI, agent image, init package and example packages"
+description: "Build CLI, agent image, init packages and example packages"
 
 inputs:
   init-package:
-    description: 'Build the init package'
+    description: 'Build the v1alpha1 and v1beta1 init packages'
     required: false
     default: 'true'
   os:
@@ -23,5 +23,6 @@ runs:
       shell: ${{ inputs.shell }}
     - run: |
         make init-package ARCH=amd64
+        make init-package-v1beta1 ARCH=amd64
       shell: ${{ inputs.shell }}
       if: ${{ inputs.init-package == 'true' }}

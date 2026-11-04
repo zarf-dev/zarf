@@ -24,11 +24,12 @@ type Component struct {
 	ComponentSpec `json:",inline"`
 }
 
-// ImageReference exposes the full image reference and its optional tag and digest.
+// ImageReference exposes the full image reference, repository path, and optional tag and digest.
 type ImageReference struct {
-	Reference string `json:"reference"`
-	Tag       string `json:"tag"`
-	Digest    string `json:"digest"`
+	Reference  string `json:"reference"`
+	Repository string `json:"repository"`
+	Tag        string `json:"tag"`
+	Digest     string `json:"digest"`
 }
 
 // GetImageByID returns the reference for the given non-empty image ID.
@@ -38,11 +39,11 @@ func (c Component) GetImageByID(id string) (ImageReference, error) {
 		return ImageReference{}, fmt.Errorf("image ID must not be empty")
 	}
 	parse := func(name string) (ImageReference, error) {
-		ref, err := reference.Parse(name)
+		ref, err := reference.ParseNormalizedNamed(name)
 		if err != nil {
 			return ImageReference{}, fmt.Errorf("invalid image reference %q for ID %q in component %q: %w", name, id, c.Name, err)
 		}
-		result := ImageReference{Reference: name}
+		result := ImageReference{Reference: name, Repository: reference.Path(ref)}
 		if tagged, ok := ref.(reference.Tagged); ok {
 			result.Tag = tagged.Tag()
 		}
@@ -154,7 +155,7 @@ type KustomizeManifest struct {
 	Files []string `json:"files,omitempty"`
 	// Allow traversing directory above the current directory if needed for kustomization.
 	AllowAnyDirectory bool `json:"allowAnyDirectory,omitempty"`
-	// Enable kustomize plugins when building manifests.
+	// Allow external Kustomize plugins when building manifests.
 	EnablePlugins bool `json:"enablePlugins,omitempty"`
 }
 
@@ -345,7 +346,7 @@ const (
 	StateAccessRegistryCredentials StateAccessKey = "registryCredentials"
 	// StateAccessGitCredentials unlocks .State.Git.{PushPassword,PullPassword}.
 	StateAccessGitCredentials StateAccessKey = "gitCredentials"
-	// StateAccessAgentCerts unlocks .State.Agent.{CA,Cert,Key} (base64-encoded) and adds the .State.Agent sub-object.
+	// StateAccessAgentCerts unlocks .State.Agent.{CA,Cert,Key} (base64-encoded).
 	StateAccessAgentCerts StateAccessKey = "agentCerts"
 )
 
