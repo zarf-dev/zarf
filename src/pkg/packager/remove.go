@@ -27,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // RemoveOptions are the options for Remove.
@@ -38,7 +39,10 @@ type RemoveOptions struct {
 	SkipVersionCheck bool
 }
 
-// Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
+// Remove runs removal actions and uninstalls recorded Helm charts for the selected
+// components. When a deployment record exists, it preserves unselected components
+// and records progress even for local-only selections. Standalone local packages
+// without a deployment record never create one during removal.
 func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) error {
 	if err := definition.Validate(); err != nil {
 		return err
@@ -99,17 +103,22 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 		}
 	}
 
-	// Get or build the secret for the deployed package
-	depPkg := &state.DeployedPackage{}
-	if requiresCluster {
-		var err error
+	// A local-only selection may still belong to a package recorded in the cluster.
+	var depPkg *state.DeployedPackage
+	persistState := false
+	if opts.Cluster != nil {
 		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, definition.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
-		if err != nil {
+		switch {
+		case err == nil:
+			persistState = true
+		case kerrors.IsNotFound(err) && !requiresCluster:
+			// Standalone local packages have no deployment record.
+		default:
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %w", err)
 		}
-	} else {
-		// If we do not need the cluster, create a deployed components object based on the info we have
-		depPkg.Name = definition.Metadata.Name
+	}
+	if !persistState {
+		depPkg = &state.DeployedPackage{Name: definition.Metadata.Name}
 		if err := depPkg.SetPackageDefinition(definition); err != nil {
 			return err
 		}
@@ -129,7 +138,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 			ConfigDigest: removeConfigDigest,
 		}
 	}
-	if requiresCluster {
+	if persistState {
 		depPkg.AppendEvent(removePackageEvent(state.EventOutcomeInProgress))
 		if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
 			l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
@@ -159,7 +168,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 
 		depComp.Status = state.ComponentStatusRemoving //nolint:staticcheck // Legacy status remains persisted for compatibility.
 		depComp.LastEvent = state.ComponentEvent{Type: state.EventTypeRemove, Outcome: state.EventOutcomeInProgress, Timestamp: time.Now()}
-		if requiresCluster {
+		if persistState {
 			if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
 				l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 			}
@@ -176,7 +185,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 				return fmt.Errorf("unable to run the before action: %w", err)
 			}
 
-			if opts.Cluster != nil {
+			if persistState {
 				for j := len(depComp.InstalledCharts) - 1; j >= 0; j-- {
 					chart := depComp.InstalledCharts[j]
 					err := helm.RemoveChart(ctx, chart.Namespace, chart.ChartName, opts.Timeout)
@@ -215,9 +224,9 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 				return fmt.Errorf("unable to run the success action: %w", err)
 			}
 
-			// remove the component from deploy components slice.
-			if opts.Cluster != nil {
-				depPkg.DeployedComponents = slices.Delete(depPkg.DeployedComponents, i, i+1)
+			// Remove completed components locally even when no deployment record exists.
+			depPkg.DeployedComponents = slices.Delete(depPkg.DeployedComponents, i, i+1)
+			if persistState {
 				err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 				if err != nil {
 					// We warn and ignore errors because we may have removed the cluster that this package was inside of
@@ -227,7 +236,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 			return nil
 		}()
 		if err != nil {
-			if requiresCluster {
+			if persistState {
 				depComp.Status = state.ComponentStatusFailed //nolint:staticcheck // Legacy status remains persisted for compatibility.
 				depComp.LastEvent = state.ComponentEvent{Type: state.EventTypeRemove, Outcome: state.EventOutcomeFailed, Timestamp: time.Now()}
 				depPkg.AppendEvent(removePackageEvent(state.EventOutcomeFailed))
@@ -248,7 +257,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 		}
 	}
 
-	if requiresCluster {
+	if persistState {
 		depPkg.AppendEvent(removePackageEvent(state.EventOutcomeSucceeded))
 		if len(depPkg.DeployedComponents) == 0 {
 			err := opts.Cluster.DeleteDeployedPackage(ctx, *depPkg)
