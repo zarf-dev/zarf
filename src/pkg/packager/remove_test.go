@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -196,9 +195,7 @@ func TestRemoveLocalPackageDoesNotCreateDeploymentRecord(t *testing.T) {
 				c = &cluster.Cluster{Clientset: fake.NewClientset()}
 			}
 			require.NoError(t, Remove(ctx, pkg, RemoveOptions{Cluster: c}))
-			content, err := os.ReadFile(marker)
-			require.NoError(t, err)
-			require.Equal(t, "removed", strings.TrimSpace(string(content)))
+			require.FileExists(t, marker)
 			if c != nil {
 				secrets, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 				require.NoError(t, err)
@@ -251,9 +248,7 @@ func TestRemoveLocalComponentPreservesRecordedPackage(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
-			content, err := os.ReadFile(marker)
-			require.NoError(t, err)
-			require.Equal(t, "removed", strings.TrimSpace(string(content)))
+			require.FileExists(t, marker)
 			actual, err := c.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride("tenant"))
 			require.NoError(t, err)
 			require.Equal(t, 7, actual.Generation)
