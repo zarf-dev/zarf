@@ -46,9 +46,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DeployOptions are optional parameters to packager.Deploy. OptionalComponents in
-// DeployConfig is persisted as metadata; callers must apply a matching deployment
-// filter when loading the package.
+// DeployOptions are optional parameters to Deploy. OptionalComponents records
+// selection metadata; it does not select components. Callers must apply
+// filters.ForDeploy with the same selectors when loading the package or filter
+// the package layout before deployment.
 type DeployOptions struct {
 	DeployConfig
 	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
@@ -112,7 +113,11 @@ type DeployResult struct {
 	Values             value.Values
 }
 
-// Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
+// Deploy deploys the components present in pkgLayout and returns their deployment
+// records, variable configuration, and values on success.
+// opts.OptionalComponents records selection metadata; it does not filter the
+// layout. Callers must apply filters.ForDeploy separately with the same selectors
+// when loading the package or filter the package layout before deployment.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	start := time.Now()
 	pkg := pkgLayout.Definition()

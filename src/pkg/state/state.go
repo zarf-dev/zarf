@@ -791,10 +791,14 @@ type ValuesOverrides map[string]map[string]value.Values
 
 // DeployConfig is the persisted configuration of a successful package deployment.
 type DeployConfig struct {
-	SetVariables       map[string]string   `json:"setVariables,omitempty"`
-	Values             value.Values        `json:"values,omitempty"`
-	NamespaceOverride  string              `json:"namespaceOverride,omitempty"`
-	ValuesOverridesMap ValuesOverrides     `json:"valuesOverridesMap,omitempty"`
+	SetVariables       map[string]string `json:"setVariables,omitempty"`
+	Values             value.Values      `json:"values,omitempty"`
+	NamespaceOverride  string            `json:"namespaceOverride,omitempty"`
+	ValuesOverridesMap ValuesOverrides   `json:"valuesOverridesMap,omitempty"`
+	// OptionalComponents records the selectors used for this deployment.
+	// It does not control component selection in packager.Deploy. Callers must
+	// apply filters.ForDeploy with the same selectors when loading the package
+	// or filter the package layout before deployment.
 	OptionalComponents string              `json:"optionalComponents,omitempty"`
 	Connectivity       PackageConnectivity `json:"connectivity,omitempty"`
 }
