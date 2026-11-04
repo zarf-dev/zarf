@@ -287,14 +287,6 @@ func newPackageCreateCommand(v *viper.Viper, architecture *architectureOptions) 
 	if errOD != nil {
 		logger.Default().Debug("unable to mark flag output-directory", "error", errOD)
 	}
-	errKey := cmd.Flags().MarkHidden("key")
-	if errKey != nil {
-		logger.Default().Debug("unable to mark flag key", "error", errKey)
-	}
-	errKP := cmd.Flags().MarkHidden("key-pass")
-	if errKP != nil {
-		logger.Default().Debug("unable to mark flag key-pass", "error", errKP)
-	}
 
 	return cmd
 }
