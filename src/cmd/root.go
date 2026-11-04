@@ -71,6 +71,18 @@ func (o *outputFormat) Type() string {
 
 var rootCmd = NewZarfCommand()
 
+// architectureOptions belongs to one command tree and is shared with its operations.
+type architectureOptions struct {
+	architecture string
+}
+
+func (o *architectureOptions) selectedArchitecture() string {
+	if o == nil {
+		return ""
+	}
+	return o.architecture
+}
+
 func preRun(cmd *cobra.Command, _ []string) error {
 	// This ensures the field manager is set to Zarf during any Helm SDK actions
 	kube.ManagedFieldsManager = cluster.FieldManagerName
@@ -179,6 +191,7 @@ func run(cmd *cobra.Command, _ []string) {
 
 // NewZarfCommand creates the `zarf` command and its nested children.
 func NewZarfCommand() *cobra.Command {
+	architecture := &architectureOptions{}
 	rootCmd := &cobra.Command{
 		Use:          "zarf COMMAND",
 		Short:        lang.RootCmdShort,
@@ -196,23 +209,23 @@ func NewZarfCommand() *cobra.Command {
 	// to ensure the config defaulting doesn't kick in, and inject values
 	// into zart tools update-creds command
 	// see https://github.com/zarf-dev/zarf/pull/3340#discussion_r1889221826
-	rootCmd.AddCommand(newToolsCommand())
+	rootCmd.AddCommand(newToolsCommand(architecture))
 
 	// TODO(soltysh): consider adding command groups
 	rootCmd.AddCommand(newConnectCommand())
 	rootCmd.AddCommand(sayCommand())
 	rootCmd.AddCommand(newDestroyCommand())
-	rootCmd.AddCommand(newDevCommand())
-	rootCmd.AddCommand(newInitCommand())
+	rootCmd.AddCommand(newDevCommand(architecture))
+	rootCmd.AddCommand(newInitCommand(architecture))
 	rootCmd.AddCommand(newInternalCommand(rootCmd))
 	rootCmd.AddCommand(newComponentCommand())
-	rootCmd.AddCommand(newPackageCommand())
+	rootCmd.AddCommand(newPackageCommand(architecture))
 
 	rootCmd.AddCommand(newVersionCommand())
 
 	// Setup flags - skip for vendor-only commands
 	if !checkVendorOnlyFromArgs() {
-		setupRootFlags(rootCmd)
+		setupRootFlags(rootCmd, architecture)
 	}
 
 	setupGroupedFlagUsage(rootCmd)
@@ -221,8 +234,7 @@ func NewZarfCommand() *cobra.Command {
 }
 
 // setupRootFlags sets up the persistent flags for the root command
-func setupRootFlags(rootCmd *cobra.Command) {
-	var showNoProgressDeprecation bool
+func setupRootFlags(rootCmd *cobra.Command, architecture *architectureOptions) {
 	vpr := getViper()
 
 	// Features
@@ -240,11 +252,9 @@ func setupRootFlags(rootCmd *cobra.Command) {
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", logShorthand, vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", vpr.GetString(VLogFormat), "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'.")
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", vpr.GetBool(VNoColor), "Disable terminal color codes in logging and stdout prints.")
-	rootCmd.PersistentFlags().BoolVar(&showNoProgressDeprecation, "no-progress", v.GetBool("no_progress"), "Disable fancy UI progress bars, spinners, logos, etc")
-	_ = rootCmd.PersistentFlags().MarkDeprecated("no-progress", "Progress bars and spinners were removed with --log-format=legacy, this flag will be removed in a future version of Zarf.")
 
 	// Core functionality
-	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", archShorthand, vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().StringVarP(&architecture.architecture, "architecture", archShorthand, vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
 	cachePath = vpr.GetString(VCache)
 	if cachePath == "" {
 		cachePath = vpr.GetString(VZarfCache)
@@ -252,8 +262,6 @@ func setupRootFlags(rootCmd *cobra.Command) {
 	if cachePath == "" {
 		cachePath = config.ZarfDefaultCachePath
 	}
-	rootCmd.PersistentFlags().StringVar(&cachePath, "zarf-cache", cachePath, lang.RootCmdFlagCachePath)
-	_ = rootCmd.PersistentFlags().MarkDeprecated("zarf-cache", "use --cache instead")
 	rootCmd.PersistentFlags().StringVar(&cachePath, "cache", cachePath, lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
@@ -272,7 +280,7 @@ func Execute(ctx context.Context) error {
 	// Check if we need to use the default err printer
 	defaultPrintCmds := []string{"helm", "yq", "kubectl"}
 	comps := strings.Split(cmd.CommandPath(), " ")
-	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
+	if len(comps) > 2 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
 		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
 		os.Exit(1)
 	}

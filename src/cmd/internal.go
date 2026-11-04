@@ -106,8 +106,6 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 					addHiddenDummyFlag(toolCmd, "log-format")
 					addHiddenDummyFlag(toolCmd, "architecture")
 					addHiddenDummyFlag(toolCmd, "no-log-file")
-					addHiddenDummyFlag(toolCmd, "no-progress")
-					addHiddenDummyFlag(toolCmd, "zarf-cache")
 					addHiddenDummyFlag(toolCmd, "cache")
 					addHiddenDummyFlag(toolCmd, "tmpdir")
 					addHiddenDummyFlag(toolCmd, "no-color")
