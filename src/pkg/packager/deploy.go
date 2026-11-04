@@ -104,7 +104,7 @@ func (opts DeployOptions) Validate(pkg api.Package) error {
 		return fmt.Errorf("variables have no effect on %s packages; use --set-values or --values instead of --set-variables", v1beta1.APIVersion)
 	}
 	if opts.Connected && pkg.IsInitConfig() {
-		return fmt.Errorf("--connected is not supported for init packages")
+		return fmt.Errorf("connected mode is not supported for init packages")
 	}
 	if opts.SkipArchitectureCheck && pkg.IsInitConfig() {
 		return fmt.Errorf("skipping architecture checks is not supported for init packages")
