@@ -172,9 +172,10 @@ func InferType(s string) any {
 
 // DeepMerge merges one or more Values maps recursively into the receiver via mutation.
 // Later maps in the variadic arguments take precedence over earlier ones.
-// Values taken from the sources are deep copied, so the sources are never mutated. Only
-// map[string]any, []any and scalars are copied; any other map or slice type (map[string]string,
-// []string, ...) is stored by reference and stays shared with the source.
+// Values taken from the sources are deep copied, so the sources are never mutated.
+//
+// TODO: Extend deep copying to other map and slice types, such as map[string]string
+// and []string, so modifying merged values cannot mutate the sources.
 func (v Values) DeepMerge(sources ...Values) {
 	if v == nil {
 		return
