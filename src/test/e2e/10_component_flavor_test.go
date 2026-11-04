@@ -116,12 +116,14 @@ func TestPublishFlavor(t *testing.T) {
 		require.Equal(t, expectedIDs[i], component.Name)
 	}
 
-	// Deprecated signing flags remain compatible with this publish flow.
+	// Publish with a custom tag, then sign the skeleton in place.
 	privateKeyFlag := "--signing-key=src/test/packages/zarf-test.prv-key"
 	publicKeyFlag := "--key=src/test/packages/zarf-test.pub"
-	_, stdErr, err := e2e.Zarf(t, "package", "publish", flavorTest, "--flavor", "vanilla", "--tag", "signed", "--no-color", "oci://"+ref, "--plain-http", privateKeyFlag)
+	_, stdErr, err := e2e.Zarf(t, "package", "publish", flavorTest, "--flavor", "vanilla", "--tag", "signed", "--no-color", "oci://"+ref, "--plain-http")
 	require.NoError(t, err, stdErr)
-	require.Contains(t, stdErr, "deprecated")
+
+	_, stdErr, err = e2e.Zarf(t, "package", "sign", "oci://"+ref+"/test-package-flavors:signed", "--plain-http", "-a", "skeleton", privateKeyFlag)
+	require.NoError(t, err, stdErr)
 
 	_, stdErr, err = e2e.Zarf(t, "package", "verify", "oci://"+ref+"/test-package-flavors:signed", "--plain-http", "-a", "skeleton", publicKeyFlag)
 	require.NoError(t, err, stdErr)

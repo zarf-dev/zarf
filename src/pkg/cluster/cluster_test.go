@@ -547,7 +547,6 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 			require.Equal(t, tt.expected.RegistryInfo.MTLSStrategy, result.RegistryInfo.MTLSStrategy)
 			if tt.expected.RegistryInfo.Port != 0 {
 				require.Equal(t, tt.expected.RegistryInfo.Port, result.RegistryInfo.Port)
-				require.Equal(t, tt.expected.RegistryInfo.Port, result.RegistryInfo.NodePort) //nolint:staticcheck // verify backwards compat sync
 			}
 		})
 	}
@@ -774,6 +773,50 @@ func TestInitStateServicesGating(t *testing.T) {
 		require.False(t, s.RegistryInfo.IsInternal())
 		require.Equal(t, 0, s.InjectorInfo.Port, "injector port must reset when mode changes")
 	})
+}
+
+func TestStateRegistryPortPersistence(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name     string
+		registry string
+		wantPort int
+	}{
+		{name: "port round trip", registry: `{"port":31999}`, wantPort: 31999},
+		{name: "legacy nodePort is ignored", registry: `{"nodePort":31999}`},
+		{name: "stale nodePort is discarded", registry: `{"port":5000,"nodePort":31999}`, wantPort: 5000},
+		{name: "zero port is preserved", registry: `{"port":0,"nodePort":31999}`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := t.Context()
+			c := &Cluster{Clientset: fake.NewClientset()}
+			data := []byte(`{"registryInfo":` + tt.registry + `}`)
+			_, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Namespace: state.ZarfNamespaceName, Name: state.ZarfStateSecretName},
+				Data:       map[string][]byte{state.ZarfStateDataKey: data},
+			}, metav1.CreateOptions{})
+			require.NoError(t, err)
+
+			loaded, err := c.LoadState(ctx)
+			require.NoError(t, err)
+			require.Equal(t, tt.wantPort, loaded.RegistryInfo.Port)
+
+			require.NoError(t, c.SaveState(ctx, loaded))
+			persisted, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
+			require.NoError(t, err)
+			var raw struct {
+				RegistryInfo map[string]json.RawMessage `json:"registryInfo"`
+			}
+			require.NoError(t, json.Unmarshal(persisted.Data[state.ZarfStateDataKey], &raw))
+			var port int
+			require.NoError(t, json.Unmarshal(raw.RegistryInfo["port"], &port))
+			require.Equal(t, tt.wantPort, port)
+			require.NotContains(t, raw.RegistryInfo, "nodePort")
+		})
+	}
 }
 
 func TestStateAgentInfoPersistence(t *testing.T) {

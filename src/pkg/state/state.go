@@ -189,12 +189,6 @@ func (ai AgentInfo) IsConfigured() bool {
 	return len(ai.TLS.CA) > 0 && len(ai.TLS.Cert) > 0 && len(ai.TLS.Key) > 0
 }
 
-// Reconcile synchronizes compatibility fields with their canonical replacements.
-// Call it when State crosses an application boundary or before reading compatibility-sensitive fields.
-func (s *State) Reconcile() {
-	s.RegistryInfo.ReconcilePort()
-}
-
 // InjectorInfo contains information on how to run the long lived Daemonset Injector
 type InjectorInfo struct {
 	// The image to be used for the long lived injector
@@ -369,8 +363,6 @@ type RegistryInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the registry
 	Address string `json:"address"`
-	// Deprecated: Use Port instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
-	NodePort int `json:"nodePort"`
 	// Port of the internal registry. In nodeport mode this is a Kubernetes NodePort, in proxy mode it is a host port.
 	Port int `json:"port"`
 	// Secret value that the registry was seeded with
@@ -379,22 +371,6 @@ type RegistryInfo struct {
 	RegistryMode RegistryMode `json:"registryMode"`
 	// MTLSStrategy defines who manages the mTLS certificates for the registry (defaults to none)
 	MTLSStrategy MTLSStrategy `json:"mtlsStrategy,omitempty"`
-}
-
-// SetPort updates the registry port and its deprecated compatibility field.
-func (ri *RegistryInfo) SetPort(port int) {
-	ri.Port = port
-	ri.NodePort = port
-}
-
-// ReconcilePort syncs the deprecated NodePort field with Port at serialization boundaries.
-// On read (LoadState): copies NodePort into Port when Port is unset, for state written by older Zarf.
-// On write (SaveState): copies Port into NodePort so older Zarf versions can read the state.
-func (ri *RegistryInfo) ReconcilePort() {
-	if ri.Port == 0 && ri.NodePort != 0 {
-		ri.Port = ri.NodePort
-	}
-	ri.NodePort = ri.Port
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
@@ -574,7 +550,6 @@ func Default() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	state.Reconcile()
 	return state, nil
 }
 
@@ -593,14 +568,13 @@ type MergeOptions struct {
 // Merge merges init options for provided services into the provided state to create a new state struct
 func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	newState := *oldState
-	newState.Reconcile()
 	var err error
 	if opts.Services.Has(RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, opts.RegistryInfo)
 		// A resolved mode makes the access fields authoritative, including a zero external port.
 		if opts.RegistryInfo.RegistryMode != "" {
-			newState.RegistryInfo.SetPort(opts.RegistryInfo.Port)
+			newState.RegistryInfo.Port = opts.RegistryInfo.Port
 		}
 
 		// Only autogenerate passwords if the user didn't provide one and the target registry is internal
@@ -653,7 +627,6 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 		newState.AgentInfo = agentInfo
 	}
 
-	newState.Reconcile()
 	return &newState, nil
 }
 
