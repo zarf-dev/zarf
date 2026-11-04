@@ -16,6 +16,10 @@ type selectionTestLayout struct {
 	pkg api.Package
 }
 
+func (l *selectionTestLayout) Definition() api.Package {
+	return l.pkg
+}
+
 func (l *selectionTestLayout) Filter(filter filters.ComponentFilterStrategy) error {
 	pkg, err := filters.Apply(l.pkg, filter)
 	if err != nil {
@@ -57,8 +61,8 @@ func TestDeploymentSelectorReplay(t *testing.T) {
 	pkg := api.Package{Components: []api.Component{
 		{Name: "required"},
 		{Name: "default", Optional: true, Default: true},
-		{Name: "first", Group: "choice", Optional: true, Default: true},
-		{Name: "second", Group: "choice", Optional: true},
+		{Name: "first", Group: "choice", Default: true},
+		{Name: "second", Group: "choice"},
 		{Name: "extra", Optional: true},
 	}}
 	interactive := &selectionTestLayout{pkg: pkg}

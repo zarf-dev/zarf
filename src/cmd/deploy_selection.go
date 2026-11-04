@@ -25,6 +25,7 @@ type deploymentPrompts struct {
 }
 
 type filterableLayout interface {
+	Definition() api.Package
 	Filter(filters.ComponentFilterStrategy) error
 }
 
@@ -40,26 +41,23 @@ func resolveDeploymentSelectors(pkgLayout filterableLayout, optionalComponents s
 	if err != nil {
 		return "", err
 	}
-	if normalized != "" {
-		if err := pkgLayout.Filter(filters.Combine(filters.ByLocalOS(runtime.GOOS), filters.ForDeploy(normalized))); err != nil {
+	if normalized == "" {
+		pkg, err := filters.Apply(pkgLayout.Definition(), filters.ByLocalOS(runtime.GOOS))
+		if err != nil {
 			return "", err
 		}
-		return normalized, nil
+		normalized, err = promptDeploymentSelectors(pkg, prompts)
+		if err != nil {
+			return "", err
+		}
 	}
-
-	selection := &interactiveDeploymentFilter{prompts: prompts}
-	if err := pkgLayout.Filter(filters.Combine(filters.ByLocalOS(runtime.GOOS), selection)); err != nil {
+	if err := pkgLayout.Filter(filters.Combine(filters.ByLocalOS(runtime.GOOS), filters.ForDeploy(normalized))); err != nil {
 		return "", err
 	}
-	return filters.NormalizeComponentSelectors(strings.Join(selection.selectors, ","))
+	return normalized, nil
 }
 
-type interactiveDeploymentFilter struct {
-	prompts   deploymentPrompts
-	selectors []string
-}
-
-func (f *interactiveDeploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
+func promptDeploymentSelectors(pkg api.Package, prompts deploymentPrompts) (string, error) {
 	groups := make(map[string][]api.Component)
 	var order []string
 	for _, component := range pkg.Components {
@@ -73,40 +71,35 @@ func (f *interactiveDeploymentFilter) Apply(pkg api.Package) ([]api.Component, e
 		groups[key] = append(groups[key], component)
 	}
 
-	var selected []api.Component
 	var selectors []string
 	for _, key := range order {
 		group := groups[key]
 		if len(group) > 1 {
-			index, err := f.prompts.group(group)
+			index, err := prompts.group(group)
 			if err != nil {
-				return nil, fmt.Errorf("selection canceled: %w", err)
+				return "", fmt.Errorf("selection canceled: %w", err)
 			}
 			if index < 0 || index >= len(group) {
-				return nil, fmt.Errorf("selection canceled: invalid component choice %d", index)
+				return "", fmt.Errorf("selection canceled: invalid component choice %d", index)
 			}
-			selected = append(selected, group[index])
 			selectors = append(selectors, group[index].Name)
 			continue
 		}
 		component := group[0]
 		if !component.Optional {
-			selected = append(selected, component)
 			continue
 		}
-		include, err := f.prompts.optional(pkg, component)
+		include, err := prompts.optional(pkg, component)
 		if err != nil {
-			return nil, fmt.Errorf("selection canceled: %w", err)
+			return "", fmt.Errorf("selection canceled: %w", err)
 		}
 		if include {
-			selected = append(selected, component)
 			selectors = append(selectors, component.Name)
 		} else {
 			selectors = append(selectors, "-"+component.Name)
 		}
 	}
-	f.selectors = selectors
-	return selected, nil
+	return filters.NormalizeComponentSelectors(strings.Join(selectors, ","))
 }
 
 func selectOptionalComponent(pkg api.Package, component api.Component) (bool, error) {
