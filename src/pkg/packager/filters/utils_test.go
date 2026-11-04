@@ -97,10 +97,13 @@ func Test_includedOrExcluded(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gotState, gotRequestedComponent, err := includedOrExcluded(tc.componentName, tc.requestedComponentNames)
+			matchedRequests := map[string]bool{}
+			gotState, err := includedOrExcluded(tc.componentName, tc.requestedComponentNames, matchedRequests)
 			require.ErrorIs(t, err, tc.expectedErr)
 			require.Equal(t, tc.wantState, gotState)
-			require.Equal(t, tc.wantRequestedComponent, gotRequestedComponent)
+			if tc.wantRequestedComponent != "" {
+				require.True(t, matchedRequests[tc.wantRequestedComponent])
+			}
 		})
 	}
 }

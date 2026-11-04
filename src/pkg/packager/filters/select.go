@@ -31,7 +31,7 @@ func (f *selectStateFilter) Apply(pkg api.Package) ([]api.Component, error) {
 		selectState := included
 		if isPartial {
 			var err error
-			selectState, _, err = includedOrExcluded(component.Name, f.requestedComponents)
+			selectState, err = includedOrExcluded(component.Name, f.requestedComponents, nil)
 			if err != nil {
 				return nil, err
 			}

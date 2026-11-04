@@ -499,7 +499,10 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 	filter := filters.Empty()
 	if o.confirm {
-		filter = filters.Combine(filters.ByLocalOS(runtime.GOOS), filters.ForDeploy(optionalComponents, false))
+		filter = filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(optionalComponents),
+		)
 	}
 
 	loadOpt := packager.LoadOptions{
@@ -586,23 +589,6 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	}
 
 	return result.DeployedComponents, nil
-}
-
-func resolveInteractiveDeploymentSelectors(pkgLayout *layout.PackageLayout, optionalComponents string) (string, error) {
-	normalized, err := filters.NormalizeComponentSelectors(optionalComponents)
-	if err != nil {
-		return "", err
-	}
-
-	selection := filters.ForDeploy(normalized, true)
-	if err := pkgLayout.Filter(filters.Combine(filters.ByLocalOS(runtime.GOOS), selection)); err != nil {
-		return "", err
-	}
-	resolvedSelectors := selection.ResolvedSelectors()
-	if len(resolvedSelectors) == 0 {
-		return normalized, nil
-	}
-	return filters.NormalizeComponentSelectors(strings.Join(append([]string{normalized}, resolvedSelectors...), ","))
 }
 
 func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, isInteractive bool, connected bool) (err error) {

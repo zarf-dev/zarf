@@ -136,6 +136,42 @@ func TestDeployedPackageGetPackageConnectivity(t *testing.T) {
 	}
 }
 
+func TestSetDeployConfigLegacyConnectivity(t *testing.T) {
+	t.Parallel()
+
+	deployed := DeployedPackage{}
+	for _, step := range []struct {
+		name         string
+		connectivity PackageConnectivity
+		want         PackageConnectivity
+	}{
+		{"new connected deployment", PackageConnectivityConnected, PackageConnectivityConnected},
+		{"switch to explicit airgap", PackageConnectivityAirGap, PackageConnectivityAirGap},
+		{"switch back to connected", PackageConnectivityConnected, PackageConnectivityConnected},
+		{"switch to default airgap", "", PackageConnectivityAirGap},
+		{"switch from default airgap to connected", PackageConnectivityConnected, PackageConnectivityConnected},
+	} {
+		t.Run(step.name, func(t *testing.T) {
+			deployed.SetDeployConfig(DeployConfig{Connectivity: step.connectivity})
+			data, err := json.Marshal(deployed)
+			require.NoError(t, err)
+
+			// Model an older client that knows only the legacy JSON field.
+			var legacy struct {
+				PackageConnectivity PackageConnectivity `json:"packageConnectivity"`
+			}
+			require.NoError(t, json.Unmarshal(data, &legacy))
+			require.Equal(t, step.want, legacy.PackageConnectivity)
+			require.Equal(t, step.want, deployed.GetPackageConnectivity())
+
+			var restored DeployedPackage
+			require.NoError(t, json.Unmarshal(data, &restored))
+			require.Equal(t, step.connectivity, restored.DeployConfig.Connectivity)
+			require.Equal(t, step.want, restored.GetPackageConnectivity())
+		})
+	}
+}
+
 func TestDeployedPackagePackageDefinition_legacyData(t *testing.T) {
 	t.Parallel()
 
@@ -918,6 +954,7 @@ func TestDeployedPackageEventsLegacyAndRetention(t *testing.T) {
 
 	var legacy DeployedPackage
 	require.NoError(t, json.Unmarshal(legacyData, &legacy))
+	require.Empty(t, legacy.Events)
 	_, ok := legacy.LatestEvent()
 	require.False(t, ok)
 	_, ok = legacy.LastSuccessfulDeploy()
@@ -940,6 +977,7 @@ func TestDeployedPackageEventsLegacyAndRetention(t *testing.T) {
 
 	require.Len(t, deployed.Events, 10)
 	require.Equal(t, time.Unix(3, 0), deployed.Events[0].Timestamp)
+	require.Equal(t, time.Unix(13, 0), deployed.Events[9].Timestamp)
 	latest, ok := deployed.LatestEvent()
 	require.True(t, ok)
 	require.Equal(t, EventOutcomeCancelled, latest.Outcome)

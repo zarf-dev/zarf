@@ -50,7 +50,7 @@ func TestCombine(t *testing.T) {
 	require.Equal(t, convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: expected}).Components, components)
 
 	// Test error propagation
-	combo = Combine(f1, f2, ForDeploy("group with no default", false))
+	combo = Combine(f1, f2, ForDeploy("group with no default"))
 	pkg.Components = append(pkg.Components, v1alpha1.ZarfComponent{
 		Name:            "group with no default",
 		DeprecatedGroup: "g1",

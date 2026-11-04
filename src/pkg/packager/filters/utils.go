@@ -41,34 +41,28 @@ func NormalizeComponentSelectors(selectors string) (string, error) {
 	return strings.Join(result, ","), nil
 }
 
-func includedOrExcluded(componentName string, requestedComponentNames []string) (selectState, string, error) {
-	// Check if the component has a leading dash indicating it should be excluded - this is done first so that exclusions precede inclusions
+// includedOrExcluded records every matching selector, even when an exclusion wins.
+func includedOrExcluded(componentName string, requestedComponentNames []string, matchedRequests map[string]bool) (selectState, error) {
+	state := unknown
 	for _, requestedComponent := range requestedComponentNames {
-		if strings.HasPrefix(requestedComponent, "-") {
-			// If the component glob matches one of the requested components, then return true
-			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
-			matched, err := path.Match(strings.TrimPrefix(requestedComponent, "-"), componentName)
-			if err != nil {
-				return unknown, "", err
-			}
-			if matched {
-				return excluded, requestedComponent, nil
-			}
-		}
-	}
-	// Check if the component matches a glob pattern and should be included
-	for _, requestedComponent := range requestedComponentNames {
-		// If the component glob matches one of the requested components, then return true
-		// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
-		matched, err := path.Match(requestedComponent, componentName)
+		isExclusion := strings.HasPrefix(requestedComponent, "-")
+		pattern := strings.TrimPrefix(requestedComponent, "-")
+		// Use path.Match for consistent glob behavior across operating systems.
+		matched, err := path.Match(pattern, componentName)
 		if err != nil {
-			return unknown, "", err
+			return unknown, err
 		}
-		if matched {
-			return included, requestedComponent, nil
+		if !matched {
+			continue
+		}
+		if matchedRequests != nil {
+			matchedRequests[requestedComponent] = true
+		}
+		if isExclusion {
+			state = excluded
+		} else if state == unknown {
+			state = included
 		}
 	}
-
-	// All other cases we don't know if we should include or exclude yet
-	return unknown, "", nil
+	return state, nil
 }

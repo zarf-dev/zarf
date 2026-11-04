@@ -99,7 +99,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 	loaded.Definition, err = filters.Apply(loaded.Definition, filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(normalizedSelectors, false),
+		filters.ForDeploy(normalizedSelectors),
 	))
 	if err != nil {
 		return err
@@ -137,7 +137,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		connectivity = state.PackageConnectivityAirGap
 	}
 
-	result, err := Deploy(ctx, pkgLayout, DeployOptions{
+	_, err = Deploy(ctx, pkgLayout, DeployOptions{
 		DeployConfig: DeployConfig{
 			SetVariables:       opts.DeploySetVariables,
 			Values:             opts.Values,
@@ -156,10 +156,6 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	})
 	if err != nil {
 		return err
-	}
-
-	if len(result.DeployedComponents) == 0 {
-		l.Warn("No components were selected for deployment. Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 	}
 
 	// Notify all the things about the successful deployment.

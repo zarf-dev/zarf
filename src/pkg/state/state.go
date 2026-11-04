@@ -868,7 +868,7 @@ const (
 // EventOutcome identifies the result of a lifecycle operation.
 type EventOutcome string
 
-// EventOutcomeUnknown identifies an unknown event result. Other values identify lifecycle transitions.
+// Event outcomes identify lifecycle transitions.
 const (
 	EventOutcomeUnknown    EventOutcome = "Unknown"
 	EventOutcomeInProgress EventOutcome = "InProgress"
@@ -909,7 +909,7 @@ type DeployedPackage struct {
 	Generation         int                        `json:"generation"`
 	DeployedComponents []DeployedComponent        `json:"deployedComponents"`
 	ConnectStrings     ConnectStrings             `json:"connectStrings,omitempty"`
-	// Deprecated: derive connectivity from DeployConfig. This field remains for pre-DeployConfig package secrets.
+	// Deprecated: derive connectivity from DeployConfig. This field preserves compatibility with older clients.
 	PackageConnectivity PackageConnectivity `json:"packageConnectivity"`
 	Events              []PackageEvent      `json:"events,omitempty"`
 	DeployConfig        *DeployConfig       `json:"deployConfig,omitempty"`
@@ -950,10 +950,14 @@ func (d *DeployedPackage) SetDeployedComponents(components []DeployedComponent) 
 	d.ConnectStrings = connectStrings
 }
 
-// SetDeployConfig saves a detached snapshot of a successful deployment configuration.
+// SetDeployConfig saves a detached snapshot and synchronizes legacy connectivity for older clients.
 func (d *DeployedPackage) SetDeployConfig(config DeployConfig) {
 	snapshot := config.deepCopy()
 	d.DeployConfig = &snapshot
+	d.PackageConnectivity = config.Connectivity
+	if d.PackageConnectivity == "" {
+		d.PackageConnectivity = PackageConnectivityAirGap
+	}
 }
 
 // AppendEvent adds an event, retaining the ten most recent events.
@@ -964,7 +968,7 @@ func (d *DeployedPackage) AppendEvent(event PackageEvent) {
 	}
 }
 
-// LatestEvent returns the most recent retained lifecycle event.
+// LatestEvent returns the most recently recorded package event, if one exists.
 func (d *DeployedPackage) LatestEvent() (PackageEvent, bool) {
 	if len(d.Events) == 0 {
 		return PackageEvent{}, false
@@ -972,7 +976,7 @@ func (d *DeployedPackage) LatestEvent() (PackageEvent, bool) {
 	return d.Events[len(d.Events)-1], true
 }
 
-// LastSuccessfulDeploy returns the latest successful deploy event.
+// LastSuccessfulDeploy returns the most recent retained successful deployment event, if one exists.
 func (d *DeployedPackage) LastSuccessfulDeploy() (PackageEvent, bool) {
 	for i := len(d.Events) - 1; i >= 0; i-- {
 		event := d.Events[i]

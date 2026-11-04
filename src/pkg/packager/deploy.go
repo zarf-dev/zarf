@@ -410,12 +410,10 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
 			l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
 		}
-		if deployErr == nil {
-			if pkg.IsInitConfig() {
-				charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
-			} else {
-				charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
-			}
+		if pkg.IsInitConfig() {
+			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
+		} else {
+			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
 		}
 
 		onDeploy := component.Actions.OnDeploy
@@ -553,12 +551,6 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	isRegistry := component.Service.Name == api.ServiceRegistry
 	isInjector := component.Service.Name == api.ServiceInjector
 	isAgent := component.Service.Name == api.ServiceAgent
-
-	if component.RequiresCluster() && d.s == nil {
-		if err := d.initState(ctx, pkg, opts); err != nil {
-			return nil, err
-		}
-	}
 
 	if d.s != nil {
 		if !d.s.RegistryInfo.IsInternal() && (isSeedRegistry || isInjector || isRegistry) {
