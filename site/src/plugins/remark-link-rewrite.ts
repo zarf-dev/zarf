@@ -1,5 +1,5 @@
 // Remark plugin for archived docs staged under a version subtree
-// (`src/content/docs/<slug>/`). It does two things for those pages only — Latest
+// (`src/content/docs/<slug>/`). It adjusts those pages only — Latest
 // pages (no version slug) are left untouched:
 //
 //   1. Prefixes root-absolute internal links into known sections with the
@@ -7,34 +7,51 @@
 //   2. Normalizes relative paths that escape the version subtree (shared assets
 //      in `src/assets`, repo-root files, `examples/`). Nesting content one level
 //      deeper shifts these up by one, so an escaping `../…` gains one `../`.
+//   3. Migrates retired FAQ/schema references to the matching archived pages.
+//      Shared public files keep their original root paths.
 //
 // Context is derived from `file.path` at render time, so it works for both the
 // staged tree (versioned build) and the live tree (dev).
 
 import { visit } from "unist-util-visit";
 import path from "node:path";
+import { statSync } from "node:fs";
 import type { Root } from "mdast";
 import type { VFile } from "vfile";
 
 const VERSION_SLUG = /^v\d+-\d+$/;
+
+// References retained in release tags after the corresponding pages moved.
+const ARCHIVED_LINKS = new Map([
+  ["/faq#what-is-the-zarf-agent", "/ref/init-package/#zarf-agent"],
+  [
+    "https://docs.zarf.dev/docs/create-a-zarf-package/zarf-schema#metadata",
+    "/schema/v1alpha1-package/#ZarfMetadata",
+  ],
+]);
 
 interface Options {
   /** Absolute path to `src/content/docs/`. */
   srcDir: string;
   /** Top-level content sections eligible for prefixing (dir/page names). */
   sections: string[];
+  /** Root of shared public assets, which must not receive a version prefix. */
+  publicDir?: string;
 }
 
 /**
  * Prefix `url` with `prefix` when it is a root-absolute link into a known
- * section. Leaves external, protocol-relative, already-versioned, and
- * non-section links unchanged.
+ * section, migrating retired references first. Shared public files and other
+ * external, protocol-relative, already-versioned, and non-section links stay unchanged.
  */
-export function rewriteUrl(url: string, prefix: string, sections: Set<string>): string {
+export function rewriteUrl(url: string, prefix: string, sections: Set<string>, publicDir?: string): string {
+  url = ARCHIVED_LINKS.get(url) ?? url;
   if (!url.startsWith("/") || url.startsWith("//")) return url;
   const segment = url.slice(1).split(/[/#?]/, 1)[0];
   if (VERSION_SLUG.test(segment)) return url;
   if (!sections.has(segment)) return url;
+  const pathname = url.split(/[?#]/, 1)[0];
+  if (publicDir && statSync(path.join(publicDir, pathname), { throwIfNoEntry: false })?.isFile()) return url;
   return prefix + url;
 }
 
@@ -104,7 +121,10 @@ export function remarkLinkRewrite(options: Options) {
 
     const fixRelative = (spec: string) =>
       rewriteVersionedAssetImport(spec, versionSlug) ?? fixEscapingRelative(spec, fileDir, versionRoot);
-    const fixUrl = (url: string) => (url.startsWith("/") ? rewriteUrl(url, prefix, sections) : fixRelative(url));
+    const fixUrl = (url: string) => {
+      const rewritten = rewriteUrl(url, prefix, sections, options.publicDir);
+      return rewritten.startsWith("/") ? rewritten : fixRelative(rewritten);
+    };
 
     // Markdown links, link reference definitions, and images.
     visit(tree, ["link", "definition"], (node: any) => {
