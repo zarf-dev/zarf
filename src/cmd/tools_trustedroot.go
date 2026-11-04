@@ -10,13 +10,11 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/trustedroot"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
-// FIXME: make sure this is something we want changed
 func newTrustedRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "trusted-root",
@@ -73,34 +71,53 @@ func newTrustedRootCreateCommand() *cobra.Command {
 				len(o.Fulcio) == 0 &&
 				len(o.Rekor) == 0 &&
 				len(o.CTFE) == 0 &&
-				len(o.TSA) == 0 {
+				len(o.TSA) == 0 &&
+				len(o.CertChain) == 0 &&
+				len(o.CtfeKeyPath) == 0 &&
+				len(o.RekorKeyPath) == 0 &&
+				len(o.TSACertChainPath) == 0 {
 				return errors.New("provide --with-default-services to retrieve the public Sigstore trusted root, or specify --fulcio/--rekor/--ctfe/--tsa to compose a custom trusted root")
 			}
 
 			ctx, cancel := context.WithTimeout(cmd.Context(), signing.CosignDefaultTimeout)
 			defer cancel()
-			return (&trustedroot.CreateCmd{
-				FulcioSpecs:         o.Fulcio,
-				RekorSpecs:          o.Rekor,
-				CTFESpecs:           o.CTFE,
-				TSASpecs:            o.TSA,
-				WithDefaultServices: o.WithDefaultServices,
-				NoDefaultFulcio:     o.NoDefaultFulcio,
-				NoDefaultCTFE:       o.NoDefaultCTFE,
-				NoDefaultTSA:        o.NoDefaultTSA,
-				NoDefaultRekor:      o.NoDefaultRekor,
-				Out:                 o.Out,
-			}).Exec(ctx)
+			return optionsToCreateCmd(o).Exec(ctx)
 		},
 	}
 
-	// Reuse cosign's flag definitions, exposing only its current service specifications.
-	flags := &cobra.Command{}
-	o.AddFlags(flags)
-	flags.Flags().VisitAll(func(f *pflag.Flag) {
-		if f.Deprecated == "" {
-			cmd.Flags().AddFlag(f)
-		}
-	})
+	o.AddFlags(cmd)
 	return cmd
+}
+
+// optionsToCreateCmd translates cosign's flag-binding struct to its execution struct.
+// New fields on either struct added in future cosign versions must be added here to
+// reach Exec. TestTrustedRootTranslationCoverage verifies that every exported field on
+// options.TrustedRootCreateOptions is forwarded to the corresponding field on
+// trustedroot.CreateCmd.
+func optionsToCreateCmd(o *options.TrustedRootCreateOptions) *trustedroot.CreateCmd {
+	return &trustedroot.CreateCmd{
+		FulcioSpecs:         o.Fulcio,
+		RekorSpecs:          o.Rekor,
+		CTFESpecs:           o.CTFE,
+		TSASpecs:            o.TSA,
+		WithDefaultServices: o.WithDefaultServices,
+		NoDefaultFulcio:     o.NoDefaultFulcio,
+		NoDefaultCTFE:       o.NoDefaultCTFE,
+		NoDefaultTSA:        o.NoDefaultTSA,
+		NoDefaultRekor:      o.NoDefaultRekor,
+		Out:                 o.Out,
+		// Deprecated flags — cosign accepts them with warnings; pass through for parity.
+		CertChain:        o.CertChain,
+		FulcioURI:        o.FulcioURI,
+		CtfeKeyPath:      o.CtfeKeyPath,
+		CtfeStartTime:    o.CtfeStartTime,
+		CtfeEndTime:      o.CtfeEndTime,
+		CtfeURL:          o.CtfeURL,
+		RekorKeyPath:     o.RekorKeyPath,
+		RekorStartTime:   o.RekorStartTime,
+		RekorEndTime:     o.RekorEndTime,
+		RekorURL:         o.RekorURL,
+		TSACertChainPath: o.TSACertChainPath,
+		TSAURI:           o.TSAURI,
+	}
 }
