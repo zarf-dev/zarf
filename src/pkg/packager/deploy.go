@@ -46,12 +46,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DeployOptions are optional parameters to Deploy. OptionalComponents records
-// selection metadata; it does not select components. Callers must apply
-// filters.ForDeploy with the same selectors when loading the package or filter
-// the package layout before deployment.
+// DeployOptions are optional parameters to Deploy. Component selection is applied
+// by filtering the package before deployment.
 type DeployOptions struct {
-	DeployConfig
+	// SetVariables supplies deploy-time variable overrides.
+	SetVariables map[string]string
+	// Values supplies deploy-time package value overrides.
+	Values value.Values
+	// NamespaceOverride overrides the namespace used by deployed resources.
+	NamespaceOverride string
+	// ValuesOverridesMap supplies per-component chart value overrides.
+	ValuesOverridesMap ValuesOverrides
+	// Connectivity controls whether deployment uses connected or air-gap mode.
+	Connectivity state.PackageConnectivity
 	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
 	TakeOwnership bool
 	// AdoptExistingResources adopts any pre-existing K8s resources into the Helm charts managed by Zarf.
@@ -100,6 +107,7 @@ type deployer struct {
 	vc           *variables.VariableConfig
 	vals         value.Values
 	deployedPkg  *state.DeployedPackage
+	deployConfig state.DeployConfig
 	configDigest digest.Digest
 
 	// runtimeDir holds runtime files across components. v1alpha1 uses the package layout.
@@ -115,17 +123,10 @@ type DeployResult struct {
 
 // Deploy deploys the components present in pkgLayout and returns their deployment
 // records, variable configuration, and values on success.
-// opts.OptionalComponents records selection metadata; it does not filter the
-// layout. Callers must apply filters.ForDeploy separately with the same selectors
-// when loading the package or filter the package layout before deployment.
+// Component selection and its provenance come from the already-filtered layout.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	start := time.Now()
 	pkg := pkgLayout.Definition()
-	normalizedSelectors, err := filters.NormalizeComponentSelectors(opts.OptionalComponents)
-	if err != nil {
-		return DeployResult{}, err
-	}
-	opts.OptionalComponents = normalizedSelectors
 	if !opts.Connectivity.IsValid() {
 		return DeployResult{}, fmt.Errorf("unsupported package connectivity mode %q", opts.Connectivity)
 	}
@@ -285,8 +286,16 @@ func (d *deployer) startDeploymentState(ctx context.Context, pkgLayout *layout.P
 	deployedPkg.CLIVersion = config.CLIVersion
 	deployedPkg.NamespaceOverride = opts.NamespaceOverride
 
-	deployConfig := opts.DeployConfig
-	d.configDigest, err = deployConfig.Digest()
+	selectors, _ := pkg.ComponentSelectors()
+	d.deployConfig = state.DeployConfig{
+		SetVariables:       opts.SetVariables,
+		Values:             opts.Values,
+		NamespaceOverride:  opts.NamespaceOverride,
+		ValuesOverridesMap: opts.ValuesOverridesMap,
+		OptionalComponents: selectors,
+		Connectivity:       opts.Connectivity,
+	}
+	d.configDigest, err = d.deployConfig.Digest()
 	if err != nil {
 		return fmt.Errorf("digest deploy config: %w", err)
 	}
@@ -498,7 +507,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 	if d.deployedPkg != nil {
 		d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeSucceeded))
-		d.deployedPkg.SetDeployConfig(opts.DeployConfig)
+		d.deployedPkg.SetDeployConfig(d.deployConfig)
 		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
 			l.Error("unable to record package deployment", "error", err.Error())
 		}

@@ -93,18 +93,13 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		err = errors.Join(err, loaded.Close())
 	}()
 
-	normalizedSelectors, err := filters.NormalizeComponentSelectors(opts.OptionalComponents)
-	if err != nil {
-		return err
-	}
 	loaded.Definition, err = filters.Apply(loaded.Definition, filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(normalizedSelectors),
+		filters.ForDeploy(opts.OptionalComponents),
 	))
 	if err != nil {
 		return err
 	}
-	opts.OptionalComponents = normalizedSelectors
 
 	if opts.SkipArchitectureCheck && loaded.Definition.IsInitConfig() {
 		return fmt.Errorf("skipping architecture checks is not supported for init packages")
@@ -138,12 +133,9 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 
 	_, err = Deploy(ctx, pkgLayout, DeployOptions{
-		DeployConfig: DeployConfig{
-			SetVariables:       opts.DeploySetVariables,
-			Values:             opts.Values,
-			Connectivity:       connectivity,
-			OptionalComponents: opts.OptionalComponents,
-		},
+		SetVariables:          opts.DeploySetVariables,
+		Values:                opts.Values,
+		Connectivity:          connectivity,
 		Source:                packagePath,
 		RegistryInfo:          state.RegistryInfo{Address: opts.RegistryURL},
 		Timeout:               opts.Timeout,

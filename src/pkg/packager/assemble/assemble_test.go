@@ -25,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -1233,4 +1234,46 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	err = pkgLayout.GetSBOM(ctx, tmpdir, nil)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(tmpdir, "zarf-component-file-import.json"))
+}
+
+func TestAssemblePackagePreservesDeploymentSelection(t *testing.T) {
+	t.Parallel()
+
+	for _, version := range []string{v1alpha1.APIVersion, v1beta1.APIVersion} {
+		t.Run(version, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			definition := api.Package{
+				APIVersion: version,
+				Kind:       api.ZarfPackageConfig,
+				Metadata:   api.PackageMetadata{Name: "selection-provenance"},
+				Components: []api.Component{
+					{Name: "one", Optional: true},
+					{Name: "two", Optional: true},
+				},
+			}
+			definition, err := filters.Apply(definition, filters.ForDeploy(" ONE, -TWO "))
+			require.NoError(t, err)
+			pkgLayout, err := AssemblePackage(ctx, &load.ResolvedPackage{
+				Definition: definition,
+				Resources:  load.NewResourceSet(t.TempDir()),
+			}, AssembleOptions{SkipSBOM: true})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+			actual := pkgLayout.Definition()
+			require.Equal(t, []api.Component{{Name: "one", Optional: true}}, actual.Components)
+			selectors, applied := actual.ComponentSelectors()
+			require.True(t, applied)
+			require.Equal(t, "one,-two", selectors)
+
+			data, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
+			require.NoError(t, err)
+			reloaded, err := pkgcfg.ParseMultiDoc(ctx, data)
+			require.NoError(t, err)
+			require.Equal(t, actual.Components, reloaded.Components)
+			_, applied = reloaded.ComponentSelectors()
+			require.False(t, applied, "runtime provenance must not be serialized into package definitions")
+		})
+	}
 }

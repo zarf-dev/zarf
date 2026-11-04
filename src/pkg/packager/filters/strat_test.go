@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
@@ -98,4 +99,72 @@ func TestApply(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, definition.Components, 2)
 	require.Equal(t, []string{"keep"}, []string{filtered.Components[0].Name})
+}
+
+func TestApplyRecordsDeploymentSelection(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{Components: []api.Component{
+		{Name: "required"},
+		{Name: "one", Optional: true, Default: true},
+		{Name: "two", Optional: true, Default: true},
+	}}
+	for _, tt := range []struct {
+		name       string
+		selectors  string
+		want       string
+		components []api.Component
+	}{
+		{"defaults", " , ", "", pkg.Components},
+		{"explicit choices", " , ONE, , -TWO, ONE ", "one,-two,one", pkg.Components[:2]},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			filtered, err := Apply(pkg, Combine(
+				ByLocalOS("linux"),
+				Combine(ForDeploy(tt.selectors), Empty()),
+			))
+			require.NoError(t, err)
+			require.Equal(t, tt.components, filtered.Components)
+			selectors, applied := filtered.ComponentSelectors()
+			require.True(t, applied)
+			require.Equal(t, tt.want, selectors)
+
+			filtered, err = Apply(filtered, ByLocalOS("linux"))
+			require.NoError(t, err)
+			selectors, applied = filtered.ComponentSelectors()
+			require.True(t, applied)
+			require.Equal(t, tt.want, selectors)
+			_, applied = pkg.ComponentSelectors()
+			require.False(t, applied)
+		})
+	}
+}
+
+func TestApplyDoesNotRecordFailedSelection(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{Components: []api.Component{{Name: "one", Optional: true}}}
+	for _, filter := range []ComponentFilterStrategy{
+		ForDeploy("missing"),
+		Combine(ForDeploy("one"), ByLocalOS("")),
+	} {
+		_, err := Apply(pkg, filter)
+		require.Error(t, err)
+		_, applied := pkg.ComponentSelectors()
+		require.False(t, applied)
+	}
+}
+
+func TestApplyRejectsRepeatedDeploymentSelection(t *testing.T) {
+	t.Parallel()
+
+	pkg := api.Package{Components: []api.Component{{Name: "one", Optional: true}}}
+	filtered, err := Apply(pkg, ForDeploy("one"))
+	require.NoError(t, err)
+	for _, selectors := range []string{"one", "", "missing"} {
+		_, err := Apply(filtered, ForDeploy(selectors))
+		require.ErrorContains(t, err, "deployment component selection has already been applied")
+	}
+	_, err = Apply(pkg, Combine(ForDeploy("one"), Combine(Empty(), ForDeploy(""))))
+	require.ErrorContains(t, err, "deployment component selection has already been applied")
 }

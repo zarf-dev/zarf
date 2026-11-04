@@ -259,3 +259,66 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, "beta-test", pkg.Metadata.Name)
 }
+
+func TestLoadPackageCarriesDeploymentSelection(t *testing.T) {
+	t.Parallel()
+
+	for _, transport := range []string{"tar", "oci"} {
+		t.Run(transport, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			sourceDir := t.TempDir()
+			targetDir := t.TempDir()
+			one := filepath.Join(targetDir, "one")
+			two := filepath.Join(targetDir, "two")
+			require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "one.txt"), []byte("selected"), 0o600))
+			require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "two.txt"), []byte("excluded"), 0o600))
+			definition := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: selection-provenance
+  version: 1.0.0
+components:
+  - name: one
+    optional: true
+    files:
+      - source: one.txt
+        destination: %q
+  - name: two
+    optional: true
+    files:
+      - source: two.txt
+        destination: %q
+`, one, two)
+			require.NoError(t, os.WriteFile(filepath.Join(sourceDir, layout.ZarfYAML), []byte(definition), 0o600))
+			output := t.TempDir()
+			if transport == "oci" {
+				output = "oci://" + createRegistry(ctx, t).String()
+			}
+			source, err := Create(ctx, sourceDir, output, CreateOptions{
+				SkipSBOM:      true,
+				CachePath:     t.TempDir(),
+				RemoteOptions: defaultTestRemoteOptions(),
+			})
+			require.NoError(t, err)
+			pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
+				Filter:        filters.Combine(filters.Empty(), filters.ForDeploy(" , ONE, -TWO, ")),
+				CachePath:     t.TempDir(),
+				RemoteOptions: defaultTestRemoteOptions(),
+			})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+			selectors, applied := pkgLayout.Definition().ComponentSelectors()
+			require.True(t, applied)
+			require.Equal(t, "one,-two", selectors)
+
+			result, err := Deploy(ctx, pkgLayout, DeployOptions{})
+			require.NoError(t, err)
+			require.Equal(t, "one", result.DeployedComponents[0].Name)
+			content, err := os.ReadFile(one)
+			require.NoError(t, err)
+			require.Equal(t, "selected", string(content))
+			require.NoFileExists(t, two)
+		})
+	}
+}

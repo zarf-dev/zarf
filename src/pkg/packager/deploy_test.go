@@ -27,10 +27,12 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,16 +59,18 @@ func TestDeployLeavesComponentSelectionToCaller(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 
-	result, err := Deploy(ctx, pkgLayout, DeployOptions{IsInteractive: true, DeployConfig: DeployConfig{OptionalComponents: "unrelated"}})
+	result, err := Deploy(ctx, pkgLayout, DeployOptions{IsInteractive: true})
 	require.NoError(t, err)
 	require.Equal(t, []string{"component-a", "component-b"}, []string{result.DeployedComponents[0].Name, result.DeployedComponents[1].Name})
-}
 
-func TestDeployRejectsInvalidSelectorMetadata(t *testing.T) {
-	t.Parallel()
-
-	_, err := Deploy(testutil.TestContext(t), &layout.PackageLayout{}, DeployOptions{DeployConfig: DeployConfig{OptionalComponents: "["}})
-	require.Error(t, err)
+	require.NoError(t, pkgLayout.Filter(filters.ForDeploy(" COMPONENT-B,component-b ")))
+	result, err = Deploy(ctx, pkgLayout, DeployOptions{IsInteractive: true})
+	require.NoError(t, err)
+	require.Len(t, result.DeployedComponents, 1)
+	require.Equal(t, "component-b", result.DeployedComponents[0].Name)
+	selectors, applied := pkgLayout.Definition().ComponentSelectors()
+	require.True(t, applied)
+	require.Equal(t, "component-b,component-b", selectors)
 }
 
 func TestPrepareDeploymentStateCreatesNamespaceBeforePackageSecret(t *testing.T) {
@@ -95,7 +99,7 @@ func TestPrepareDeploymentStateCreatesNamespaceBeforePackageSecret(t *testing.T)
 
 	d := deployer{c: &cluster.Cluster{Clientset: clientset}}
 	err = d.prepareDeploymentState(ctx, pkgLayout, DeployOptions{
-		DeployConfig: DeployConfig{Connectivity: state.PackageConnectivityConnected},
+		Connectivity: state.PackageConnectivityConnected,
 	})
 	require.NoError(t, err)
 	require.Equal(t, []string{"namespace", "secret"}, appliedResources)
@@ -120,7 +124,7 @@ func TestPrepareDeploymentStateAppliesConnectedRegistryOverride(t *testing.T) {
 		s: &state.State{RegistryInfo: state.RegistryInfo{Address: "cluster-registry.example.com"}},
 	}
 	err = d.prepareDeploymentState(ctx, pkgLayout, DeployOptions{
-		DeployConfig: DeployConfig{Connectivity: state.PackageConnectivityConnected},
+		Connectivity: state.PackageConnectivityConnected,
 		RegistryInfo: state.RegistryInfo{Address: "override-registry.example.com"},
 	})
 	require.NoError(t, err)
@@ -193,15 +197,27 @@ func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
 		APIVersion: v1beta1.APIVersion,
 		Kind:       api.ZarfPackageConfig,
 		Metadata:   api.PackageMetadata{Name: "config-retry", Version: "1.0.0"},
-		Components: []api.Component{{Name: "component"}},
+		Components: []api.Component{{Name: "component"}, {Name: "unselected", Optional: true}},
 	}
 	successLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: success, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, successLayout.Cleanup()) })
+	require.NoError(t, successLayout.Filter(filters.ForDeploy(" COMPONENT,component ")))
+	require.Equal(t, []api.Component{{Name: "component"}}, successLayout.Definition().Components)
 
-	opts := DeployOptions{DeployConfig: DeployConfig{SetVariables: map[string]string{"VARIABLE": "value"}, OptionalComponents: "component"}}
-	config := opts.DeployConfig
-	d := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
+	opts := DeployOptions{
+		SetVariables: map[string]string{"VARIABLE": "value"},
+		Values:       value.Values{"user": "override"},
+		Connectivity: state.PackageConnectivityConnected,
+		Source:       "package-source",
+	}
+	config := state.DeployConfig{
+		SetVariables:       opts.SetVariables,
+		Values:             opts.Values,
+		OptionalComponents: "component,component",
+		Connectivity:       state.PackageConnectivityConnected,
+	}
+	d := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false), vals: value.Values{"user": "override", "package": "default"}}
 	require.NoError(t, d.startDeploymentState(ctx, successLayout, opts))
 	_, err = d.deployComponents(ctx, successLayout, opts)
 	require.NoError(t, err)
@@ -211,20 +227,27 @@ func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
 	require.Equal(t, state.EventOutcomeSucceeded, deployed.Events[len(deployed.Events)-1].Outcome)
 	expectedDigest, err := config.Digest()
 	require.NoError(t, err)
-	actualDigest, err := deployed.DeployConfig.Digest()
+	persistedConfig, ok := deployed.GetDeployConfig()
+	require.True(t, ok)
+	require.Equal(t, config, persistedConfig)
+	actualDigest, err := persistedConfig.Digest()
 	require.NoError(t, err)
 	require.Equal(t, expectedDigest, actualDigest)
-	require.Equal(t, "component", deployed.DeployConfig.OptionalComponents)
+	require.Equal(t, "component,component", persistedConfig.OptionalComponents)
+	require.Equal(t, actualDigest, deployed.Events[0].ConfigDigest)
 	require.Equal(t, actualDigest, deployed.Events[len(deployed.Events)-1].ConfigDigest)
+	require.Equal(t, opts.Source, deployed.Events[0].Source)
+	require.Equal(t, opts.Source, deployed.Events[len(deployed.Events)-1].Source)
 
 	failed := success
 	failed.Components = []api.Component{{Name: "component", Actions: api.ComponentActions{OnDeploy: api.ActionSet{OnSuccess: []api.Action{{Cmd: "exit 1"}}}}}}
 	failedLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: failed, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, failedLayout.Cleanup()) })
+	require.NoError(t, failedLayout.Filter(filters.ForDeploy("component")))
 
 	retry := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
-	retryOpts := DeployOptions{DeployConfig: DeployConfig{SetVariables: map[string]string{"VARIABLE": "changed"}}}
+	retryOpts := DeployOptions{SetVariables: map[string]string{"VARIABLE": "changed"}, Connectivity: state.PackageConnectivityConnected}
 	require.NoError(t, retry.startDeploymentState(ctx, failedLayout, retryOpts))
 	_, err = retry.deployComponents(ctx, failedLayout, retryOpts)
 	require.ErrorContains(t, err, `command "exit 1" failed`)
@@ -232,7 +255,18 @@ func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
 	deployed, err = c.GetDeployedPackage(ctx, success.Metadata.Name)
 	require.NoError(t, err)
 	require.Equal(t, state.EventOutcomeFailed, deployed.Events[len(deployed.Events)-1].Outcome)
-	require.Equal(t, config.SetVariables, deployed.DeployConfig.SetVariables)
+	retainedConfig, ok := deployed.GetDeployConfig()
+	require.True(t, ok)
+	require.Equal(t, config, retainedConfig)
+	retryConfig := config
+	retryConfig.SetVariables = retryOpts.SetVariables
+	retryConfig.Values = nil
+	retryConfig.OptionalComponents = "component"
+	retryDigest, err := retryConfig.Digest()
+	require.NoError(t, err)
+	require.NotEqual(t, expectedDigest, retryDigest)
+	require.Equal(t, retryDigest, deployed.Events[len(deployed.Events)-2].ConfigDigest)
+	require.Equal(t, retryDigest, deployed.Events[len(deployed.Events)-1].ConfigDigest)
 }
 
 func TestDeployInitComponentServices(t *testing.T) {
@@ -599,7 +633,7 @@ func TestDeployFileTemplatesByAPIVersion(t *testing.T) {
 			definitionPath := filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML)
 			originalDefinition, err := os.ReadFile(definitionPath)
 			require.NoError(t, err)
-			_, err = Deploy(ctx, pkgLayout, DeployOptions{DeployConfig: DeployConfig{SetVariables: map[string]string{"INPUT": "supplied"}}})
+			_, err = Deploy(ctx, pkgLayout, DeployOptions{SetVariables: map[string]string{"INPUT": "supplied"}})
 			if tt.fail {
 				require.ErrorContains(t, err, `command "exit 1" failed`)
 			} else {

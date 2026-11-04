@@ -526,13 +526,10 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}()
 
 	deployOpts := packager.DeployOptions{
-		DeployConfig: packager.DeployConfig{
-			Values:             values,
-			SetVariables:       o.setVariables,
-			NamespaceOverride:  o.namespaceOverride,
-			Connectivity:       connectivity,
-			OptionalComponents: optionalComponents,
-		},
+		Values:                     values,
+		SetVariables:               o.setVariables,
+		NamespaceOverride:          o.namespaceOverride,
+		Connectivity:               connectivity,
 		Source:                     packageSource,
 		TakeOwnership:              o.takeOwnership,
 		ForceConflicts:             o.forceConflicts,
@@ -546,7 +543,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		SkipVersionCheck:           o.skipVersionCheck,
 	}
 
-	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts)
+	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, optionalComponents)
 	if err != nil {
 		return err
 	}
@@ -566,7 +563,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions) ([]state.DeployedComponent, error) {
+func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, optionalComponents string) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below.
 	if opts.NamespaceOverride != "" {
 		if err := pkgLayout.OverrideNamespace(opts.NamespaceOverride); err != nil {
@@ -577,10 +574,6 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 		return nil, err
 	}
 	if opts.IsInteractive {
-		optionalComponents, err := filters.NormalizeComponentSelectors(opts.OptionalComponents)
-		if err != nil {
-			return nil, err
-		}
 		if optionalComponents == "" {
 			pkg, err := filters.Apply(pkgLayout.Definition(), filters.ByLocalOS(runtime.GOOS))
 			if err != nil {
@@ -594,7 +587,6 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 		if err := pkgLayout.Filter(filters.Combine(filters.ByLocalOS(runtime.GOOS), filters.ForDeploy(optionalComponents))); err != nil {
 			return nil, err
 		}
-		opts.OptionalComponents = optionalComponents
 	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)

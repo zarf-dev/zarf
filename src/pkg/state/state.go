@@ -795,10 +795,8 @@ type DeployConfig struct {
 	Values             value.Values      `json:"values,omitempty"`
 	NamespaceOverride  string            `json:"namespaceOverride,omitempty"`
 	ValuesOverridesMap ValuesOverrides   `json:"valuesOverridesMap,omitempty"`
-	// OptionalComponents records the selectors used for this deployment.
-	// It does not control component selection in packager.Deploy. Callers must
-	// apply filters.ForDeploy with the same selectors when loading the package
-	// or filter the package layout before deployment.
+	// OptionalComponents records normalized selectors derived from package filtering.
+	// It is deployment provenance, not an input controlling component selection.
 	OptionalComponents string              `json:"optionalComponents,omitempty"`
 	Connectivity       PackageConnectivity `json:"connectivity,omitempty"`
 }
@@ -916,7 +914,8 @@ type DeployedPackage struct {
 	// Deprecated: derive connectivity from DeployConfig. This field preserves compatibility with older clients.
 	PackageConnectivity PackageConnectivity `json:"packageConnectivity"`
 	Events              []PackageEvent      `json:"events,omitempty"`
-	DeployConfig        *DeployConfig       `json:"deployConfig,omitempty"`
+	// DeployConfig is the last successful deployment snapshot, absent in legacy state.
+	DeployConfig *DeployConfig `json:"deployConfig,omitempty"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
 }
@@ -962,6 +961,16 @@ func (d *DeployedPackage) SetDeployConfig(config DeployConfig) {
 	if d.PackageConnectivity == "" {
 		d.PackageConnectivity = PackageConnectivityAirGap
 	}
+}
+
+// GetDeployConfig returns a detached copy of the last successful deployment snapshot.
+// Legacy state without a saved snapshot returns the zero configuration and false;
+// it does not synthesize configuration from legacy fields.
+func (d *DeployedPackage) GetDeployConfig() (DeployConfig, bool) {
+	if d.DeployConfig == nil {
+		return DeployConfig{}, false
+	}
+	return d.DeployConfig.deepCopy(), true
 }
 
 // AppendEvent adds an event, retaining the ten most recent events.

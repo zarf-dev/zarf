@@ -18,6 +18,9 @@ import (
 // An explicit group selection replaces other group members.
 // Selectors are normalized when applied: case and surrounding whitespace are
 // ignored, empty entries are discarded, and invalid glob patterns return an error.
+// Use the package-level Apply function or a package layout's Filter method to
+// record the selectors for deployment. A second deployment selection on the same
+// package is rejected rather than replacing its provenance.
 func ForDeploy(optionalComponents string) ComponentFilterStrategy {
 	return &deploymentFilter{optionalComponents: optionalComponents}
 }
@@ -40,7 +43,27 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 	if err != nil {
 		return nil, err
 	}
+	return f.applyComponents(pkg, requestedComponents)
+}
 
+func (f *deploymentFilter) applyPackage(pkg api.Package) (api.Package, error) {
+	if _, applied := pkg.ComponentSelectors(); applied {
+		return api.Package{}, fmt.Errorf("deployment component selection has already been applied")
+	}
+	requestedComponents, err := parseComponentSelectors(f.optionalComponents)
+	if err != nil {
+		return api.Package{}, err
+	}
+	components, err := f.applyComponents(pkg, requestedComponents)
+	if err != nil {
+		return api.Package{}, err
+	}
+	pkg.Components = components
+	pkg.SetComponentSelectors(strings.Join(requestedComponents, ","))
+	return pkg, nil
+}
+
+func (f *deploymentFilter) applyComponents(pkg api.Package, requestedComponents []string) ([]api.Component, error) {
 	var selectedComponents []api.Component
 	groupedComponents := map[string][]api.Component{}
 	orderedComponentGroups := []string{}

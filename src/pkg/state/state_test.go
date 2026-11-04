@@ -1073,3 +1073,54 @@ func TestDeployedPackageSetDeployConfigCopiesNestedValues(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, "original", deployedOverrides["value"])
 }
+
+func TestDeployedPackageGetDeployConfigPresence(t *testing.T) {
+	t.Parallel()
+
+	deployed := DeployedPackage{
+		PackageConnectivity: PackageConnectivityConnected,
+		NamespaceOverride:   "legacy",
+	}
+	config, ok := deployed.GetDeployConfig()
+	require.False(t, ok)
+	require.Equal(t, DeployConfig{}, config)
+	require.Nil(t, deployed.DeployConfig)
+
+	deployed.SetDeployConfig(DeployConfig{})
+	config, ok = deployed.GetDeployConfig()
+	require.True(t, ok)
+	require.Equal(t, DeployConfig{}, config)
+}
+
+func TestDeployedPackageGetDeployConfigCopiesNestedValues(t *testing.T) {
+	t.Parallel()
+
+	config := DeployConfig{
+		SetVariables: map[string]string{"VARIABLE": "original"},
+		Values:       value.Values{"nested": map[string]any{"value": "original"}},
+		ValuesOverridesMap: ValuesOverrides{
+			"component": {
+				"chart": value.Values{"nested": map[string]any{"value": "original"}},
+			},
+		},
+	}
+	deployed := DeployedPackage{}
+	deployed.SetDeployConfig(config)
+
+	snapshot, ok := deployed.GetDeployConfig()
+	require.True(t, ok)
+	snapshot.SetVariables["VARIABLE"] = "mutated"
+	snapshotValues, ok := snapshot.Values["nested"].(map[string]any)
+	require.True(t, ok)
+	snapshotValues["value"] = "mutated"
+	snapshotOverrides, ok := snapshot.ValuesOverridesMap["component"]["chart"]["nested"].(map[string]any)
+	require.True(t, ok)
+	snapshotOverrides["value"] = "mutated"
+	snapshot.ValuesOverridesMap["component"]["added"] = value.Values{"value": "mutated"}
+	snapshot.ValuesOverridesMap["added"] = map[string]value.Values{"chart": {"value": "mutated"}}
+
+	require.Equal(t, config, *deployed.DeployConfig)
+	laterSnapshot, ok := deployed.GetDeployConfig()
+	require.True(t, ok)
+	require.Equal(t, config, laterSnapshot)
+}

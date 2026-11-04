@@ -245,6 +245,9 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 	if err != nil {
 		return nil, err
 	}
+	if selectors, applied := definition.ComponentSelectors(); applied {
+		pkgLayout.SetComponentSelectors(selectors)
+	}
 
 	signOpts := opts.SignBlobOptions
 	if signOpts != nil && ((signOpts.Key == "" && opts.SigningKeyPath != "") || (signOpts.Password == "" && opts.SigningKeyPassword != "")) {
@@ -349,6 +352,9 @@ func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage
 	pkgLayout, err := layout.LoadFromDir(ctx, buildPath, layoutOpts)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load skeleton: %w", err)
+	}
+	if selectors, applied := definition.ComponentSelectors(); applied {
+		pkgLayout.SetComponentSelectors(selectors)
 	}
 
 	var signOpts *signing.SignBlobOptions

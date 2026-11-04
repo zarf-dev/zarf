@@ -20,6 +20,24 @@ type Package struct {
 	// v1alpha1-only fields
 	Variables []InteractiveVariable
 	Constants []Constant
+
+	// Runtime selection provenance is not part of either package wire schema.
+	componentSelectors        string
+	componentSelectorsApplied bool
+}
+
+// ComponentSelectors returns the normalized deployment selectors applied to this
+// package. The boolean distinguishes default selection from no recorded selection.
+func (p Package) ComponentSelectors() (string, bool) {
+	return p.componentSelectors, p.componentSelectorsApplied
+}
+
+// SetComponentSelectors records a successful deployment selection. Filtering
+// supplies normalized selectors; assembly may restore them after an in-memory
+// definition crosses a serialization boundary.
+func (p *Package) SetComponentSelectors(selectors string) {
+	p.componentSelectors = selectors
+	p.componentSelectorsApplied = true
 }
 
 // PackageMetadata contains metadata from all supported package API versions.

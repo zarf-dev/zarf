@@ -248,11 +248,8 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}()
 
 	opts := packager.DeployOptions{
-		DeployConfig: packager.DeployConfig{
-			SetVariables:       o.setVariables,
-			Values:             values,
-			OptionalComponents: optionalComponents,
-		},
+		SetVariables:               o.setVariables,
+		Values:                     values,
 		Source:                     packageSource,
 		GitServer:                  o.gitServer,
 		RegistryInfo:               o.registryInfo,
@@ -270,7 +267,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		AgentMutationPolicy:        state.MutationPolicy(o.agentMutationPolicy),
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
 	}
-	_, err = deploy(ctx, pkgLayout, opts)
+	_, err = deploy(ctx, pkgLayout, opts, optionalComponents)
 	if err != nil {
 		return err
 	}
