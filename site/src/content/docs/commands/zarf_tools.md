@@ -10,6 +10,10 @@ tableOfContents: false
 
 Collection of additional tools to make airgap easier
 
+```
+zarf tools [flags]
+```
+
 ### Options
 
 ```
@@ -45,7 +49,7 @@ Collection of additional tools to make airgap easier
 * [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
 * [zarf tools sbom](/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
 * [zarf tools trusted-root](/commands/zarf_tools_trusted-root/)	 - Tools for working with Sigstore trusted roots
-* [zarf tools update-creds](/commands/zarf_tools_update-creds/)	 - Updates the credentials for deployed Zarf services (deprecated; prefer the per-service subcommands)
+* [zarf tools update-creds](/commands/zarf_tools_update-creds/)	 - Updates the credentials for a deployed Zarf service
 * [zarf tools wait-for](/commands/zarf_tools_wait-for/)	 - Waits for a given Kubernetes resource to be ready
 * [zarf tools yq](/commands/zarf_tools_yq/)	 - yq is a lightweight and portable command-line data file processor.
 
