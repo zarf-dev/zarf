@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -20,6 +21,127 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestPackageDefinitionArchitecturePrecedence(t *testing.T) {
+	metadataArch := "arm64"
+	if runtime.GOARCH == metadataArch {
+		metadataArch = "amd64"
+	}
+	for _, version := range []string{"v1alpha1", "v1beta1"} {
+		t.Run(version, func(t *testing.T) {
+			for _, tt := range []struct {
+				name, explicit, metadata, want string
+			}{
+				{"explicit", "arm64", "amd64", "arm64"},
+				{"metadata", "", metadataArch, metadataArch},
+				{"host", "", "", runtime.GOARCH},
+			} {
+				t.Run(tt.name, func(t *testing.T) {
+					dir := t.TempDir()
+					metadataArchitecture := ""
+					if tt.metadata != "" {
+						metadataArchitecture = fmt.Sprintf("  architecture: %s", tt.metadata)
+					}
+					definition := fmt.Sprintf(`apiVersion: zarf.dev/%s
+kind: ZarfPackageConfig
+metadata:
+  name: architecture
+%s
+components:
+  - name: empty
+`, version, metadataArchitecture)
+					require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(definition), 0o600))
+					pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{Architecture: tt.explicit, CachePath: t.TempDir()})
+					require.NoError(t, err)
+					require.Equal(t, tt.want, pkg.Metadata.Architecture)
+				})
+			}
+		})
+	}
+}
+
+func TestPackageDefinitionArchitectureImportsV1Alpha1(t *testing.T) {
+	dir := t.TempDir()
+	root := `kind: ZarfPackageConfig
+metadata:
+  name: architecture
+  architecture: amd64
+components:
+  - name: selected
+    import:
+      path: nested
+`
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "nested"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "nested", layout.ZarfYAML), []byte(`kind: ZarfPackageConfig
+metadata:
+  name: nested
+  architecture: amd64
+components:
+  - name: selected
+    import:
+      path: ../leaf
+`), 0o600))
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "leaf"), 0o700))
+	leaf := `kind: ZarfPackageConfig
+metadata:
+  name: leaf
+  architecture: amd64
+components:
+`
+	for _, arch := range []string{"amd64", "arm64"} {
+		leaf += fmt.Sprintf(`  - name: selected
+    only:
+      cluster:
+        architecture: %s
+    images:
+      - example.com/%s:1
+`, arch, arch)
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "leaf", layout.ZarfYAML), []byte(leaf), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(root), 0o600))
+	pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{Architecture: "arm64", CachePath: t.TempDir()})
+	require.NoError(t, err)
+	require.Equal(t, "arm64", pkg.Metadata.Architecture)
+	require.Len(t, pkg.Components, 1)
+	require.Len(t, pkg.Components[0].Images, 1)
+	require.Equal(t, "example.com/arm64:1", pkg.Components[0].Images[0].Name)
+}
+
+func TestPackageDefinitionArchitectureImportsV1Beta1(t *testing.T) {
+	dir := t.TempDir()
+	root := `apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: architecture
+  architecture: amd64
+components:
+  - name: selected
+    import:
+      local:
+        - path: amd64.yaml
+        - path: arm64.yaml
+`
+	for _, arch := range []string{"amd64", "arm64"} {
+		component := fmt.Sprintf(`apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: selected
+variant:
+  architecture: %s
+component:
+  images:
+    - name: example.com/%s:1
+`, arch, arch)
+		require.NoError(t, os.WriteFile(filepath.Join(dir, arch+".yaml"), []byte(component), 0o600))
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(dir, layout.ZarfYAML), []byte(root), 0o600))
+	pkg, err := PackageDefinition(testutil.TestContext(t), dir, DefinitionOptions{Architecture: "arm64", CachePath: t.TempDir()})
+	require.NoError(t, err)
+	require.Equal(t, "arm64", pkg.Metadata.Architecture)
+	require.Len(t, pkg.Components, 1)
+	require.Len(t, pkg.Components[0].Images, 1)
+	require.Equal(t, "example.com/arm64:1", pkg.Components[0].Images[0].Name)
+}
 
 func TestPackageDefinitionV1Beta1ImageIDs(t *testing.T) {
 	t.Parallel()
