@@ -82,6 +82,16 @@ linters:
     presets:
       - common-false-positives
       - legacy
+    rules:
+      # Tests assert that deprecated fields stay in sync with their
+      # replacements, so they have to read the deprecated field on purpose and
+      # silence staticcheck for that line. Whether staticcheck reports the
+      # deprecation at all varies between environments, and when it does not,
+      # nolintlint reports the directive as unused and fails the build for code
+      # that is correct either way.
+      - path: _test\.go
+        linters: [nolintlint]
+        text: 'directive `//nolint:staticcheck'
     paths:
       - src/cmd/helm
       - third_party$
