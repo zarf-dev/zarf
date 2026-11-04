@@ -279,6 +279,8 @@ func templateValuesFiles(ctx context.Context, chart api.Chart, valuesDir string,
 
 // InspectDefinitionResourcesOptions are the optional parameters to InspectDefinitionResources
 type InspectDefinitionResourcesOptions struct {
+	// Architecture overrides package metadata; standalone components use their declared variant.
+	Architecture string
 	// EnableKustomizePlugins allows plugins enabled in the package definition to execute arbitrary commands.
 	EnableKustomizePlugins bool
 	CreateSetVariables     map[string]string
@@ -309,6 +311,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	}
 	loadOpts := load.PackageOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     opts.Architecture,
 			Flavor:           opts.Flavor,
 			SetVariables:     opts.CreateSetVariables,
 			CachePath:        opts.CachePath,

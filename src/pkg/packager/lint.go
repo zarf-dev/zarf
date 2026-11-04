@@ -21,6 +21,8 @@ import (
 
 // LintOptions are the optional parameters to Lint
 type LintOptions struct {
+	// Architecture overrides package metadata; standalone components use their declared variant.
+	Architecture string
 	SetVariables map[string]string
 	Flavor       string
 	CachePath    string
@@ -65,6 +67,7 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	}
 
 	loadOpts := load.DefinitionOptions{
+		Architecture:     opts.Architecture,
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.SetVariables,
 		CachePath:        cachePath,
