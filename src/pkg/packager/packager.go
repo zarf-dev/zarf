@@ -25,6 +25,8 @@ import (
 type ValuesOverrides = state.ValuesOverrides
 
 // DeployConfig is a compatibility alias for the persisted deployment configuration.
+// OptionalComponents records selection metadata; callers must apply the matching
+// deployment filter separately when loading the package.
 type DeployConfig = state.DeployConfig
 
 // RemoveConfig is a compatibility alias for the persisted removal configuration.

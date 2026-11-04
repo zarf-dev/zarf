@@ -47,7 +47,7 @@ func TestDevDeploy_filtersComponents(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), b, 0o600))
 
 	err = DevDeploy(ctx, packageDir, DevDeployOptions{
-		OptionalComponents: "selected",
+		OptionalComponents: " SELECTED,selected ",
 		CachePath:          filepath.Join(packageDir, "cache"),
 	})
 

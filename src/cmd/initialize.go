@@ -216,18 +216,19 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	optionalComponents, err := filters.NormalizeComponentSelectors(o.optionalComponents)
+	if err != nil {
+		return err
+	}
 	filter := filters.Empty()
-	var selection *packager.DeploymentSelection
 	if o.confirm {
-		filter = filters.ByLocalOS(runtime.GOOS)
-		selection = &packager.DeploymentSelection{OptionalComponents: o.optionalComponents}
+		filter = filters.Combine(filters.ByLocalOS(runtime.GOOS), filters.ForDeploy(optionalComponents, false))
 	}
 
 	loadOpt := packager.LoadOptions{
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
 		Filter:               filter,
-		DeploymentSelection:  selection,
 		Architecture:         config.GetArch(),
 		CachePath:            cachePath,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -244,8 +245,11 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}()
 
 	opts := packager.DeployOptions{
-		SetVariables:               o.setVariables,
-		Values:                     values,
+		DeployConfig: packager.DeployConfig{
+			SetVariables:       o.setVariables,
+			Values:             values,
+			OptionalComponents: optionalComponents,
+		},
 		Source:                     packageSource,
 		GitServer:                  o.gitServer,
 		RegistryInfo:               o.registryInfo,
@@ -263,7 +267,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		AgentMutationPolicy:        state.MutationPolicy(o.agentMutationPolicy),
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
 	}
-	_, err = deploy(ctx, pkgLayout, opts, o.optionalComponents)
+	_, err = deploy(ctx, pkgLayout, opts)
 	if err != nil {
 		return err
 	}

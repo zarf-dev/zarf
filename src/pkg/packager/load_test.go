@@ -115,27 +115,15 @@ func TestLoadPackage(t *testing.T) {
 		require.Contains(t, err.Error(), "signature verification failed")
 	})
 }
-func TestLoadPackageRecordsDeploymentSelection(t *testing.T) {
+func TestLoadPackageAppliesFilter(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
 	tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
-	unfiltered, err := LoadPackage(ctx, tarPath, LoadOptions{Filter: filters.Empty()})
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, unfiltered.Cleanup()) })
-	require.NotEmpty(t, unfiltered.Definition().Components)
-	selector := " " + unfiltered.Definition().Components[0].Name + " "
-
-	pkgLayout, err := LoadPackage(ctx, tarPath, LoadOptions{
-		Filter:              filters.Empty(),
-		DeploymentSelection: &DeploymentSelection{OptionalComponents: selector},
-	})
+	pkgLayout, err := LoadPackage(ctx, tarPath, LoadOptions{Filter: filters.BySelectState("not-present")})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
-
-	selection, ok := pkgLayout.DeploymentSelection()
-	require.True(t, ok)
-	require.Equal(t, strings.TrimSpace(selector), selection.OptionalComponents)
+	require.Empty(t, pkgLayout.Definition().Components)
 }
 
 func TestLoadSplitPackage(t *testing.T) {

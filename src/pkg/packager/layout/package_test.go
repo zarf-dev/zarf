@@ -367,19 +367,6 @@ func TestPackageLayoutMutators(t *testing.T) {
 		require.Nil(t, component.Repositories)
 	}
 }
-func TestPackageLayoutDeploymentSelection(t *testing.T) {
-	t.Parallel()
-
-	pkgLayout := &PackageLayout{}
-	_, ok := pkgLayout.DeploymentSelection()
-	require.False(t, ok)
-
-	selection := DeploymentSelection{OptionalComponents: "one,two"}
-	pkgLayout.SetDeploymentSelection(selection)
-	actual, ok := pkgLayout.DeploymentSelection()
-	require.True(t, ok)
-	require.Equal(t, selection, actual)
-}
 
 func TestPackageLayoutLoadFromDirPreservesMultiDocDefinition(t *testing.T) {
 	t.Parallel()

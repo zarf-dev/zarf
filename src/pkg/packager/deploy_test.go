@@ -57,9 +57,16 @@ func TestDeployLeavesComponentSelectionToCaller(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 
-	result, err := Deploy(ctx, pkgLayout, DeployOptions{IsInteractive: true})
+	result, err := Deploy(ctx, pkgLayout, DeployOptions{IsInteractive: true, DeployConfig: DeployConfig{OptionalComponents: "unrelated"}})
 	require.NoError(t, err)
 	require.Equal(t, []string{"component-a", "component-b"}, []string{result.DeployedComponents[0].Name, result.DeployedComponents[1].Name})
+}
+
+func TestDeployRejectsInvalidSelectorMetadata(t *testing.T) {
+	t.Parallel()
+
+	_, err := Deploy(testutil.TestContext(t), &layout.PackageLayout{}, DeployOptions{DeployConfig: DeployConfig{OptionalComponents: "["}})
+	require.Error(t, err)
 }
 
 func TestPrepareDeploymentStateCreatesNamespaceBeforePackageSecret(t *testing.T) {
@@ -88,7 +95,7 @@ func TestPrepareDeploymentStateCreatesNamespaceBeforePackageSecret(t *testing.T)
 
 	d := deployer{c: &cluster.Cluster{Clientset: clientset}}
 	err = d.prepareDeploymentState(ctx, pkgLayout, DeployOptions{
-		Connectivity: state.PackageConnectivityConnected,
+		DeployConfig: DeployConfig{Connectivity: state.PackageConnectivityConnected},
 	})
 	require.NoError(t, err)
 	require.Equal(t, []string{"namespace", "secret"}, appliedResources)
@@ -113,7 +120,7 @@ func TestPrepareDeploymentStateAppliesConnectedRegistryOverride(t *testing.T) {
 		s: &state.State{RegistryInfo: state.RegistryInfo{Address: "cluster-registry.example.com"}},
 	}
 	err = d.prepareDeploymentState(ctx, pkgLayout, DeployOptions{
-		Connectivity: state.PackageConnectivityConnected,
+		DeployConfig: DeployConfig{Connectivity: state.PackageConnectivityConnected},
 		RegistryInfo: state.RegistryInfo{Address: "override-registry.example.com"},
 	})
 	require.NoError(t, err)
@@ -192,9 +199,8 @@ func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, successLayout.Cleanup()) })
 
-	successLayout.SetDeploymentSelection(layout.DeploymentSelection{OptionalComponents: "component"})
-	opts := DeployOptions{SetVariables: map[string]string{"VARIABLE": "value"}}
-	config := opts.persistedConfig(successLayout)
+	opts := DeployOptions{DeployConfig: DeployConfig{SetVariables: map[string]string{"VARIABLE": "value"}, OptionalComponents: "component"}}
+	config := opts.DeployConfig
 	d := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
 	require.NoError(t, d.startDeploymentState(ctx, successLayout, opts))
 	_, err = d.deployComponents(ctx, successLayout, opts)
@@ -208,6 +214,7 @@ func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
 	actualDigest, err := deployed.DeployConfig.Digest()
 	require.NoError(t, err)
 	require.Equal(t, expectedDigest, actualDigest)
+	require.Equal(t, "component", deployed.DeployConfig.OptionalComponents)
 	require.Equal(t, actualDigest, deployed.Events[len(deployed.Events)-1].ConfigDigest)
 
 	failed := success
@@ -217,7 +224,7 @@ func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, failedLayout.Cleanup()) })
 
 	retry := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
-	retryOpts := DeployOptions{SetVariables: map[string]string{"VARIABLE": "changed"}}
+	retryOpts := DeployOptions{DeployConfig: DeployConfig{SetVariables: map[string]string{"VARIABLE": "changed"}}}
 	require.NoError(t, retry.startDeploymentState(ctx, failedLayout, retryOpts))
 	_, err = retry.deployComponents(ctx, failedLayout, retryOpts)
 	require.ErrorContains(t, err, `command "exit 1" failed`)
@@ -592,7 +599,7 @@ func TestDeployFileTemplatesByAPIVersion(t *testing.T) {
 			definitionPath := filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML)
 			originalDefinition, err := os.ReadFile(definitionPath)
 			require.NoError(t, err)
-			_, err = Deploy(ctx, pkgLayout, DeployOptions{SetVariables: map[string]string{"INPUT": "supplied"}})
+			_, err = Deploy(ctx, pkgLayout, DeployOptions{DeployConfig: DeployConfig{SetVariables: map[string]string{"INPUT": "supplied"}}})
 			if tt.fail {
 				require.ErrorContains(t, err, `command "exit 1" failed`)
 			} else {

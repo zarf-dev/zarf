@@ -46,21 +46,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DeployOptions are optional parameters to packager.Deploy
+// DeployOptions are optional parameters to packager.Deploy. OptionalComponents in
+// DeployConfig is persisted as metadata; callers must apply a matching deployment
+// filter when loading the package.
 type DeployOptions struct {
-	// Deploy time set variables
-	SetVariables map[string]string
-	// Values are values passed in at deploy time. They can come from the CLI, user configuration, or set directly by
-	// API callers.
-	Values value.Values
+	DeployConfig
 	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
 	TakeOwnership bool
 	// AdoptExistingResources adopts any pre-existing K8s resources into the Helm charts managed by Zarf.
 	//
 	// Deprecated: use TakeOwnership instead.
 	AdoptExistingResources bool
-	// Connectivity configures the package deployment mode.
-	Connectivity state.PackageConnectivity
 	// Force Helm to take ownership of conflicting fields during Server-Side Apply operations
 	ForceConflicts bool
 	// Timeout for Helm operations
@@ -69,8 +65,6 @@ type DeployOptions struct {
 	Retries int
 	// Number of layers to push concurrently per image
 	OCIConcurrency int
-	// Namespace is an optional namespace override for package deployment
-	NamespaceOverride string
 	// Remote Options for image pushes
 	types.RemoteOptions
 	// How to configure Zarf state if it's not already been configured
@@ -84,8 +78,6 @@ type DeployOptions struct {
 	AgentTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
 	AgentMutationPolicy state.MutationPolicy
-	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
-	ValuesOverridesMap ValuesOverrides
 	// Source identifies the resolved package source for event provenance.
 	Source string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
@@ -97,20 +89,6 @@ type DeployOptions struct {
 	SkipArchitectureCheck bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
-}
-
-func (opts DeployOptions) persistedConfig(pkgLayout *layout.PackageLayout) state.DeployConfig {
-	config := state.DeployConfig{
-		SetVariables:       opts.SetVariables,
-		Values:             opts.Values,
-		NamespaceOverride:  opts.NamespaceOverride,
-		ValuesOverridesMap: opts.ValuesOverridesMap,
-		Connectivity:       opts.Connectivity,
-	}
-	if selection, ok := pkgLayout.DeploymentSelection(); ok {
-		config.OptionalComponents = selection.OptionalComponents
-	}
-	return config
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -138,6 +116,11 @@ type DeployResult struct {
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	start := time.Now()
 	pkg := pkgLayout.Definition()
+	normalizedSelectors, err := filters.NormalizeComponentSelectors(opts.OptionalComponents)
+	if err != nil {
+		return DeployResult{}, err
+	}
+	opts.OptionalComponents = normalizedSelectors
 	if !opts.Connectivity.IsValid() {
 		return DeployResult{}, fmt.Errorf("unsupported package connectivity mode %q", opts.Connectivity)
 	}
@@ -297,7 +280,7 @@ func (d *deployer) startDeploymentState(ctx context.Context, pkgLayout *layout.P
 	deployedPkg.CLIVersion = config.CLIVersion
 	deployedPkg.NamespaceOverride = opts.NamespaceOverride
 
-	deployConfig := opts.persistedConfig(pkgLayout)
+	deployConfig := opts.DeployConfig
 	d.configDigest, err = deployConfig.Digest()
 	if err != nil {
 		return fmt.Errorf("digest deploy config: %w", err)
@@ -512,7 +495,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 	if d.deployedPkg != nil {
 		d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeSucceeded))
-		d.deployedPkg.SetDeployConfig(opts.persistedConfig(pkgLayout))
+		d.deployedPkg.SetDeployConfig(opts.DeployConfig)
 		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
 			l.Error("unable to record package deployment", "error", err.Error())
 		}
