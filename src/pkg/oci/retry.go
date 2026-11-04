@@ -136,12 +136,6 @@ func (r *retryReader) resume() error {
 	if _, err := seeker.Seek(0, io.SeekEnd); err != nil {
 		return err
 	}
-	position, err := seeker.Seek(r.offset, io.SeekStart)
-	if err != nil {
-		return err
-	}
-	if position != r.offset {
-		return fmt.Errorf("blob %s resumed at offset %d, expected %d", r.desc.Digest, position, r.offset)
-	}
-	return nil
+	_, err = seeker.Seek(r.offset, io.SeekStart)
+	return err
 }
