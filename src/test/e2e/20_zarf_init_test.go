@@ -55,7 +55,7 @@ func TestZarfInit(t *testing.T) {
 	}
 
 	// run `zarf init`
-	_, _, err := e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "--injector-port", "31888", "--confirm")
+	_, _, err := e2e.Zarf(t, "init", "--components="+initComponents, "--registry-port", "31337", "--injector-port", "31888", "--confirm")
 	require.NoError(t, err)
 
 	// Load the initialized cluster state.

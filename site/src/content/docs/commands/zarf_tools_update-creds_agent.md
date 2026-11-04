@@ -57,5 +57,5 @@ $ zarf tools update-creds agent --agent-tls-ca={CA_PATH} --agent-tls-cert={CERT_
 
 ### SEE ALSO
 
-* [zarf tools update-creds](/commands/zarf_tools_update-creds/)	 - Updates the credentials for deployed Zarf services (deprecated; prefer the per-service subcommands)
+* [zarf tools update-creds](/commands/zarf_tools_update-creds/)	 - Updates the credentials for a deployed Zarf service
 
