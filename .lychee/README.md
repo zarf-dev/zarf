@@ -1,6 +1,6 @@
 # Link Checks
 
-Install [lychee 0.24.2](https://github.com/lycheeverse/lychee/releases/tag/lychee-v0.24.2), then run from the repository root:
+Install [lychee](https://github.com/lycheeverse/lychee#installation), then run from the repository root:
 
 Test all links (Markdown and site):
 
