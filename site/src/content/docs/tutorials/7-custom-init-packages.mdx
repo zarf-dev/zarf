@@ -170,12 +170,12 @@ registry_override = [
 ]
 ```
 
-Registry overrides change where Zarf pulls images during package creation while preserving their declared names and IDs. Use image ID overrides in `zarf.yaml` when you want to replace the image reference itself. Registry overrides apply to image pulls; the published component imports above are still fetched from GHCR.
+Registry overrides change where Zarf pulls images during package creation while preserving their declared names and IDs. Use image ID overrides in `zarf.yaml` when you want to replace the image reference itself.
 
 :::
 
 ### Removing Components
 
-You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the [Zarf Package is composed](/ref/components/#component-imports), remove the corresponding entry from `components` in `zarf.yaml` and rebuild the package.
+You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the Zarf Package is composed, remove the corresponding entry from `components` in `zarf.yaml` and rebuild the package.
 
 For example, remove `k3s` if you already have a Kubernetes cluster, or `git-server` if you do not need an in-cluster Git server. If you use an external registry, you can remove `zarf-injector`, `zarf-seed-registry`, and `zarf-registry`; supply the external registry details with the `--registry-*` flags when running `zarf init`.
