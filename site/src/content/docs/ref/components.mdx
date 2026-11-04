@@ -349,6 +349,8 @@ If you have any `default` components in a package definition you can also exclud
 $ zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,-default-component-1
 ```
 
+When a component matches multiple selectors, the last matching selector takes precedence. For example, `--components=-*,optional-component-1` excludes optional components except `optional-component-1`. Reversing the selectors excludes it too. Required components remain selected. Previously exclusions always took precedence; place exclusions last to retain that behavior.
+
 :::
 
 ## Extensions (Removed)

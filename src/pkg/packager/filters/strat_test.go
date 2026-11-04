@@ -59,6 +59,32 @@ func TestCombine(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestBySelectStateRespectsSelectorOrder(t *testing.T) {
+	t.Parallel()
+
+	pkg := convert.PackageFromV1alpha1(v1alpha1.ZarfPackage{Components: []v1alpha1.ZarfComponent{
+		{Name: "one"}, {Name: "two"},
+	}})
+	for _, tt := range []struct {
+		selectors string
+		want      []string
+	}{
+		{"-*,two", []string{"two"}},
+		{"two,-*", []string{}},
+		{"two,-*,two", []string{"two"}},
+	} {
+		t.Run(tt.selectors, func(t *testing.T) {
+			components, err := BySelectState(tt.selectors).Apply(pkg)
+			require.NoError(t, err)
+			names := make([]string, 0, len(components))
+			for _, component := range components {
+				names = append(names, component.Name)
+			}
+			require.Equal(t, tt.want, names)
+		})
+	}
+}
+
 func TestApply(t *testing.T) {
 	t.Parallel()
 

@@ -89,7 +89,6 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 
 				if component.Optional || hasGroupChoice {
 					if selectState == excluded {
-						// Explicit exclusions take precedence over inclusions.
 						continue
 					} else if selectState == unknown && component.Default && groupDefault == nil {
 						// If the component is default but not included or excluded, remember the default

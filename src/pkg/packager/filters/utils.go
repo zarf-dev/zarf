@@ -6,7 +6,6 @@ package filters
 
 import (
 	"path"
-	"slices"
 	"strings"
 )
 
@@ -18,9 +17,9 @@ const (
 	excluded
 )
 
-// NormalizeComponentSelectors canonicalizes a comma-separated component selector list.
+// NormalizeComponentSelectors normalizes selectors while preserving their order and repetitions.
 func NormalizeComponentSelectors(selectors string) (string, error) {
-	normalized := make(map[string]struct{})
+	result := make([]string, 0)
 	for _, selector := range strings.Split(selectors, ",") {
 		selector = strings.ToLower(strings.TrimSpace(selector))
 		if selector == "" {
@@ -30,18 +29,12 @@ func NormalizeComponentSelectors(selectors string) (string, error) {
 		if _, err := path.Match(pattern, ""); err != nil {
 			return "", err
 		}
-		normalized[selector] = struct{}{}
-	}
-
-	result := make([]string, 0, len(normalized))
-	for selector := range normalized {
 		result = append(result, selector)
 	}
-	slices.Sort(result)
 	return strings.Join(result, ","), nil
 }
 
-// includedOrExcluded records every matching selector, even when an exclusion wins.
+// includedOrExcluded records every matching selector; the last match determines the state.
 func includedOrExcluded(componentName string, requestedComponentNames []string, matchedRequests map[string]bool) (selectState, error) {
 	state := unknown
 	for _, requestedComponent := range requestedComponentNames {
@@ -60,7 +53,7 @@ func includedOrExcluded(componentName string, requestedComponentNames []string, 
 		}
 		if isExclusion {
 			state = excluded
-		} else if state == unknown {
+		} else {
 			state = included
 		}
 	}

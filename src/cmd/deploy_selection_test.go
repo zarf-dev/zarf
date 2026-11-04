@@ -71,9 +71,8 @@ func TestDeploymentSelectorReplay(t *testing.T) {
 		group:    func([]api.Component) (int, error) { return 1, nil },
 	})
 	require.NoError(t, err)
-	require.Equal(t, "-default,extra,second", selectors)
 	replay := &selectionTestLayout{pkg: pkg}
-	resolved, err := resolveDeploymentSelectors(replay, " EXTRA, -DEFAULT,second ", deploymentPrompts{
+	resolved, err := resolveDeploymentSelectors(replay, selectors, deploymentPrompts{
 		optional: func(api.Package, api.Component) (bool, error) { t.Fatal("unexpected prompt"); return false, nil },
 		group:    func([]api.Component) (int, error) { t.Fatal("unexpected prompt"); return 0, nil },
 	})
