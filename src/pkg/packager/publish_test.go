@@ -218,7 +218,7 @@ func TestPublishSkeleton(t *testing.T) {
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, expectedPkg.Metadata.Name)
 
-			rmt, err := zoci.NewRemoteWithOptions(ctx, ref.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
+			rmt, err := zoci.NewRemote(ctx, ref.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
 				RemoteOptions: types.RemoteOptions{PlainHTTP: true},
 			})
 			require.NoError(t, err)
@@ -408,7 +408,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 
 			// Attempt to get the digest
 			platform := oci.PlatformForArch(layoutExpected.Definition().Build.Architecture)
-			remote, err := zoci.NewRemoteWithOptions(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
+			remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
 				RemoteOptions: tc.opts.RemoteOptions,
 			})
 			require.NoError(t, err)

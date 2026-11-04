@@ -355,9 +355,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 
 	if s.AgentInfo.IsConfigured() && opts.AgentMutationPolicy != "" {
-		agentInfo := s.AgentInfo
-		agentInfo.MutationPolicy = opts.AgentMutationPolicy
-		s.SetAgentInfo(agentInfo)
+		s.AgentInfo.MutationPolicy = opts.AgentMutationPolicy
 	}
 
 	// Save the state back to K8s
@@ -381,7 +379,7 @@ func (c *Cluster) initAgent(ctx context.Context, s *state.State, agentTLS *pki.G
 		agentInfo.TLS = generatedAgentTLS
 		agentInfo.TLSUserProvided = false
 	}
-	s.SetAgentInfo(agentInfo)
+	s.AgentInfo = agentInfo
 	return c.ignoreExistingNamespacesForAgent(ctx)
 }
 

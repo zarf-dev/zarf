@@ -79,11 +79,11 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	remoteOptions := zoci.RemoteClientOptions{
 		RemoteOptions: opts.RemoteOptions,
 	}
-	srcRemote, err := zoci.NewRemoteWithOptions(ctx, src.String(), p, remoteOptions)
+	srcRemote, err := zoci.NewRemote(ctx, src.String(), p, remoteOptions)
 	if err != nil {
 		return fmt.Errorf("could not instantiate source remote: %w", err)
 	}
-	dstRemote, err := zoci.NewRemoteWithOptions(ctx, dst.String(), p, remoteOptions)
+	dstRemote, err := zoci.NewRemote(ctx, dst.String(), p, remoteOptions)
 	if err != nil {
 		return fmt.Errorf("could not instantiate destination remote: %w", err)
 	}
@@ -272,7 +272,7 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 	// Set platform
 	platform := oci.PlatformForArch(arch)
 
-	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), platform, zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, ref.String(), platform, zoci.RemoteClientOptions{
 		RemoteOptions: remoteOpts,
 	})
 	if err != nil {

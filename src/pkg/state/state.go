@@ -165,14 +165,8 @@ type State struct {
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
 	IPFamily IPFamily `json:"ipFamily,omitempty"`
 	// AgentInfo contains information Zarf uses to configure the agent.
-	AgentInfo AgentInfo `json:"agentInfo"`
-	// Deprecated: Use AgentInfo.TLS instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
-	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
-	// Deprecated: Use AgentInfo.TLSUserProvided instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
-	AgentTLSUserProvided bool `json:"agentTLSUserProvided,omitempty"`
-	// Deprecated: Use AgentInfo.MutationPolicy instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
-	AgentMutationPolicy MutationPolicy `json:"agentMutationPolicy"`
-	InjectorInfo        InjectorInfo   `json:"injectorInfo"`
+	AgentInfo    AgentInfo    `json:"agentInfo"`
+	InjectorInfo InjectorInfo `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -199,41 +193,6 @@ func (ai AgentInfo) IsConfigured() bool {
 // Call it when State crosses an application boundary or before reading compatibility-sensitive fields.
 func (s *State) Reconcile() {
 	s.RegistryInfo.ReconcilePort()
-	s.ReconcileAgentInfo()
-}
-
-// ReconcileAgentInfo syncs AgentInfo with deprecated agent fields.
-// When AgentInfo is empty, the deprecated fields are assumed to be the source of truth so
-// callers that still construct State with the legacy fields remain supported.
-func (s *State) ReconcileAgentInfo() {
-	if s.AgentInfo.isZero() {
-		s.AgentInfo = s.legacyAgentInfo()
-	}
-	s.syncLegacyAgentFields()
-}
-
-// SetAgentInfo updates AgentInfo and its deprecated compatibility fields together.
-func (s *State) SetAgentInfo(agentInfo AgentInfo) {
-	s.AgentInfo = agentInfo
-	s.syncLegacyAgentFields()
-}
-
-func (s *State) legacyAgentInfo() AgentInfo {
-	return AgentInfo{
-		TLS:             s.AgentTLS,
-		TLSUserProvided: s.AgentTLSUserProvided,
-		MutationPolicy:  s.AgentMutationPolicy,
-	}
-}
-
-func (s *State) syncLegacyAgentFields() {
-	s.AgentTLS = s.AgentInfo.TLS
-	s.AgentTLSUserProvided = s.AgentInfo.TLSUserProvided
-	s.AgentMutationPolicy = s.AgentInfo.MutationPolicy
-}
-
-func (ai AgentInfo) isZero() bool {
-	return len(ai.TLS.CA) == 0 && len(ai.TLS.Cert) == 0 && len(ai.TLS.Key) == 0 && !ai.TLSUserProvided && ai.MutationPolicy == ""
 }
 
 // InjectorInfo contains information on how to run the long lived Daemonset Injector
@@ -691,7 +650,7 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 		if opts.AgentMutationPolicy != "" {
 			agentInfo.MutationPolicy = opts.AgentMutationPolicy
 		}
-		newState.SetAgentInfo(agentInfo)
+		newState.AgentInfo = agentInfo
 	}
 
 	newState.Reconcile()
@@ -710,12 +669,10 @@ func DebugPrint(ctx context.Context, state *State) {
 }
 
 func sanitizeState(s *State) *State {
-	// Overwrite the AgentTLS information
-	agentInfo := s.AgentInfo
-	agentInfo.TLS.CA = []byte("**sanitized**")
-	agentInfo.TLS.Cert = []byte("**sanitized**")
-	agentInfo.TLS.Key = []byte("**sanitized**")
-	s.SetAgentInfo(agentInfo)
+	// Overwrite the agent TLS information
+	s.AgentInfo.TLS.CA = []byte("**sanitized**")
+	s.AgentInfo.TLS.Cert = []byte("**sanitized**")
+	s.AgentInfo.TLS.Key = []byte("**sanitized**")
 
 	// Overwrite the GitServer passwords
 	s.GitServer.PushPassword = "**sanitized**"

@@ -1895,7 +1895,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 // It reads the definition back from the registry so it matches what was published without resolving imports again.
 func printSkeletonImportExample(ctx context.Context, pkgRef registry.Reference, remoteOpts types.RemoteOptions) error {
 	l := logger.From(ctx)
-	remote, err := zoci.NewRemoteWithOptions(ctx, pkgRef.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, pkgRef.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
 		RemoteOptions: remoteOpts,
 	})
 	if err != nil {

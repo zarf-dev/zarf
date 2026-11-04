@@ -123,7 +123,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	}
 
 	platform := oci.PlatformForArch(opts.Architecture)
-	remote, err := zoci.NewRemoteWithOptions(ctx, opts.Source, platform, zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, opts.Source, platform, zoci.RemoteClientOptions{
 		CachePath:     opts.CachePath,
 		RemoteOptions: opts.RemoteOptions,
 	})

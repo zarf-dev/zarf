@@ -776,47 +776,69 @@ func TestInitStateServicesGating(t *testing.T) {
 	})
 }
 
-func TestStateAgentInfoCompatibility(t *testing.T) {
+func TestStateAgentInfoPersistence(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
-	c := &Cluster{Clientset: fake.NewClientset()}
-	legacy := struct {
-		AgentTLS             pki.GeneratedPKI     `json:"agentTLS"`
-		AgentTLSUserProvided bool                 `json:"agentTLSUserProvided"`
-		AgentMutationPolicy  state.MutationPolicy `json:"agentMutationPolicy"`
-	}{
-		AgentTLS: pki.GeneratedPKI{
+	agentInfo := state.AgentInfo{
+		TLS: pki.GeneratedPKI{
 			CA:   []byte("ca"),
 			Cert: []byte("cert"),
 			Key:  []byte("key"),
 		},
-		AgentTLSUserProvided: true,
-		AgentMutationPolicy:  state.MutationPolicyLabeled,
+		TLSUserProvided: true,
+		MutationPolicy:  state.MutationPolicyLabeled,
 	}
-	legacyData, err := json.Marshal(legacy)
-	require.NoError(t, err)
-	_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: state.ZarfNamespaceName, Name: state.ZarfStateSecretName},
-		Data:       map[string][]byte{state.ZarfStateDataKey: legacyData},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err)
 
-	loaded, err := c.LoadState(ctx)
-	require.NoError(t, err)
-	require.Equal(t, legacy.AgentTLS, loaded.AgentInfo.TLS)
-	require.True(t, loaded.AgentInfo.TLSUserProvided)
-	require.Equal(t, state.MutationPolicyLabeled, loaded.AgentInfo.MutationPolicy)
+	for _, tt := range []struct {
+		name          string
+		withAgentInfo bool
+		withLegacy    bool
+	}{
+		{name: "agentInfo round trip", withAgentInfo: true},
+		{name: "legacy fields are ignored", withLegacy: true},
+		{name: "stale legacy fields are discarded", withAgentInfo: true, withLegacy: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	require.NoError(t, c.SaveState(ctx, loaded))
-	persisted, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
-	require.NoError(t, err)
-	var raw map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(persisted.Data[state.ZarfStateDataKey], &raw))
-	require.Contains(t, raw, "agentInfo")
-	require.Contains(t, raw, "agentTLS")
-	require.Contains(t, raw, "agentTLSUserProvided")
-	require.Contains(t, raw, "agentMutationPolicy")
+			ctx := t.Context()
+			c := &Cluster{Clientset: fake.NewClientset()}
+			stored := map[string]any{}
+			var expected state.AgentInfo
+			if tt.withAgentInfo {
+				stored["agentInfo"] = agentInfo
+				expected = agentInfo
+			}
+			if tt.withLegacy {
+				stored["agentTLS"] = pki.GeneratedPKI{CA: []byte("old-ca"), Cert: []byte("old-cert"), Key: []byte("old-key")}
+				stored["agentTLSUserProvided"] = false
+				stored["agentMutationPolicy"] = state.MutationPolicyAll
+			}
+			data, err := json.Marshal(stored)
+			require.NoError(t, err)
+			_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Namespace: state.ZarfNamespaceName, Name: state.ZarfStateSecretName},
+				Data:       map[string][]byte{state.ZarfStateDataKey: data},
+			}, metav1.CreateOptions{})
+			require.NoError(t, err)
+
+			loaded, err := c.LoadState(ctx)
+			require.NoError(t, err)
+			require.Equal(t, expected, loaded.AgentInfo)
+
+			require.NoError(t, c.SaveState(ctx, loaded))
+			persisted, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
+			require.NoError(t, err)
+			var raw map[string]json.RawMessage
+			require.NoError(t, json.Unmarshal(persisted.Data[state.ZarfStateDataKey], &raw))
+			var persistedAgentInfo state.AgentInfo
+			require.NoError(t, json.Unmarshal(raw["agentInfo"], &persistedAgentInfo))
+			require.Equal(t, expected, persistedAgentInfo)
+			require.NotContains(t, raw, "agentTLS")
+			require.NotContains(t, raw, "agentTLSUserProvided")
+			require.NotContains(t, raw, "agentMutationPolicy")
+		})
+	}
 }
 
 func TestIgnoreExistingNamespacesForAgent(t *testing.T) {

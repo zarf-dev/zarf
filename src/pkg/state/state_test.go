@@ -186,11 +186,7 @@ func TestGitServerInfoIsInternal(t *testing.T) {
 func TestStateReconcile(t *testing.T) {
 	t.Parallel()
 
-	legacyTLS := pki.GeneratedPKI{Cert: []byte("legacy-cert")}
 	s := State{
-		AgentTLS:             legacyTLS,
-		AgentTLSUserProvided: true,
-		AgentMutationPolicy:  MutationPolicyLabeled,
 		RegistryInfo: RegistryInfo{
 			NodePort: 1234,
 		},
@@ -198,9 +194,6 @@ func TestStateReconcile(t *testing.T) {
 
 	s.Reconcile()
 
-	require.Equal(t, legacyTLS, s.AgentInfo.TLS)
-	require.True(t, s.AgentInfo.TLSUserProvided)
-	require.Equal(t, MutationPolicyLabeled, s.AgentInfo.MutationPolicy)
 	require.Equal(t, 1234, s.RegistryInfo.Port)
 	require.Equal(t, 1234, s.RegistryInfo.NodePort)
 }

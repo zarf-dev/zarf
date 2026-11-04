@@ -105,9 +105,9 @@ type Remote struct {
 	*oci.OrasRemote
 }
 
-// NewRemoteWithOptions returns an ORAS remote repository configured with Zarf's
+// NewRemote returns an ORAS remote repository configured with Zarf's
 // cache, credential, and transport options.
-func NewRemoteWithOptions(ctx context.Context, url string, platform ocispec.Platform, options RemoteClientOptions) (*Remote, error) {
+func NewRemote(ctx context.Context, url string, platform ocispec.Platform, options RemoteClientOptions) (*Remote, error) {
 	modifiers := []oci.Modifier{
 		oci.WithLogger(logger.From(ctx)),
 		oci.WithUserAgent("zarf/" + config.CLIVersion),

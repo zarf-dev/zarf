@@ -62,7 +62,7 @@ func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions
 
 	case "oci":
 		platform := oci.PlatformForArch(helpers.ResolveArch(opts.Architecture))
-		remote, err := zoci.NewRemoteWithOptions(ctx, source, platform, zoci.RemoteClientOptions{
+		remote, err := zoci.NewRemote(ctx, source, platform, zoci.RemoteClientOptions{
 			RemoteOptions: opts.RemoteOptions,
 		})
 		if err != nil {

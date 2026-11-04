@@ -15,7 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-func TestNewRemoteWithOptionsTransportNegotiation(t *testing.T) {
+func TestNewRemoteTransportNegotiation(t *testing.T) {
 	tests := []struct {
 		name        string
 		newServer   func(http.Handler) *httptest.Server
@@ -56,7 +56,7 @@ func TestNewRemoteWithOptionsTransportNegotiation(t *testing.T) {
 			}))
 			t.Cleanup(server.Close)
 
-			remote, err := NewRemoteWithOptions(context.Background(), "oci://"+strings.TrimPrefix(strings.TrimPrefix(server.URL, "https://"), "http://")+"/test:latest", oci.PlatformForArch("amd64"), RemoteClientOptions{
+			remote, err := NewRemote(context.Background(), "oci://"+strings.TrimPrefix(strings.TrimPrefix(server.URL, "https://"), "http://")+"/test:latest", oci.PlatformForArch("amd64"), RemoteClientOptions{
 				RemoteOptions: tt.remoteOpts,
 			})
 			if tt.expectError {
@@ -70,7 +70,7 @@ func TestNewRemoteWithOptionsTransportNegotiation(t *testing.T) {
 	}
 }
 
-func TestNewRemoteWithOptionsUsesCustomTransportForNegotiation(t *testing.T) {
+func TestNewRemoteUsesCustomTransportForNegotiation(t *testing.T) {
 	newServer := func(t *testing.T) *httptest.Server {
 		t.Helper()
 		server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -85,7 +85,7 @@ func TestNewRemoteWithOptionsUsesCustomTransportForNegotiation(t *testing.T) {
 		transport, ok := server.Client().Transport.(*http.Transport)
 		require.True(t, ok)
 
-		remote, err := NewRemoteWithOptions(context.Background(), "oci://"+strings.TrimPrefix(server.URL, "https://")+"/test:latest", oci.PlatformForArch("amd64"), RemoteClientOptions{
+		remote, err := NewRemote(context.Background(), "oci://"+strings.TrimPrefix(server.URL, "https://")+"/test:latest", oci.PlatformForArch("amd64"), RemoteClientOptions{
 			Transport: transport,
 			RemoteOptions: types.RemoteOptions{
 				PlainHTTP: true,
@@ -101,7 +101,7 @@ func TestNewRemoteWithOptionsUsesCustomTransportForNegotiation(t *testing.T) {
 		require.True(t, ok)
 		transport := defaultTransport.Clone()
 
-		remote, err := NewRemoteWithOptions(context.Background(), "oci://"+strings.TrimPrefix(server.URL, "https://")+"/test:latest", oci.PlatformForArch("amd64"), RemoteClientOptions{
+		remote, err := NewRemote(context.Background(), "oci://"+strings.TrimPrefix(server.URL, "https://")+"/test:latest", oci.PlatformForArch("amd64"), RemoteClientOptions{
 			Transport: transport,
 			RemoteOptions: types.RemoteOptions{
 				PlainHTTP:             true,
