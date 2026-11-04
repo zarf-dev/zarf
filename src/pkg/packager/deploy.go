@@ -54,10 +54,6 @@ type DeployOptions struct {
 	value.Values
 	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
 	TakeOwnership bool
-	// AdoptExistingResources adopts any pre-existing K8s resources into the Helm charts managed by Zarf.
-	//
-	// Deprecated: use TakeOwnership instead.
-	AdoptExistingResources bool
 	// Connected deploys without mirroring images/repos and labels resources to bypass the Zarf agent
 	Connected bool
 	// Force Helm to take ownership of conflicting fields during Server-Side Apply operations
@@ -708,7 +704,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		}
 
 		helmOpts := helm.InstallUpgradeOptions{
-			TakeOwnership:     opts.TakeOwnership || opts.AdoptExistingResources,
+			TakeOwnership:     opts.TakeOwnership,
 			ForceConflicts:    opts.ForceConflicts,
 			VariableConfig:    d.vc,
 			State:             d.s,
@@ -804,7 +800,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			return installedCharts, err
 		}
 		helmOpts := helm.InstallUpgradeOptions{
-			TakeOwnership:     opts.TakeOwnership || opts.AdoptExistingResources,
+			TakeOwnership:     opts.TakeOwnership,
 			ForceConflicts:    opts.ForceConflicts,
 			VariableConfig:    d.vc,
 			State:             d.s,

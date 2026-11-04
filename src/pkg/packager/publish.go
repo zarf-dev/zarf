@@ -111,18 +111,11 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 type PublishPackageOptions struct {
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
-	// Deprecated: sign the layout explicitly with PackageLayout.SignPackage before publishing.
-	SignBlobOptions signing.SignBlobOptions
 	// Retries specifies the number of retries to use
 	Retries int
 	types.RemoteOptions
 	// Tag is an optional tag for the OCI reference separate from the package metadata.version
 	Tag string
-
-	// Deprecated: populate SignBlobOptions.Key directly.
-	SigningKeyPath string
-	// Deprecated: populate SignBlobOptions.Password directly.
-	SigningKeyPassword string
 }
 
 // PublishPackage takes a package layout and pushes the package to the given registry.
@@ -146,19 +139,6 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 	}
 	if pkgLayout == nil {
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
-	}
-
-	signOpts := opts.SignBlobOptions
-	if opts.SigningKeyPath != "" && signOpts.Key == "" {
-		signOpts.Key = opts.SigningKeyPath
-	}
-	if opts.SigningKeyPassword != "" && signOpts.Password == "" {
-		signOpts.Password = opts.SigningKeyPassword
-	}
-	if signOpts.Key != "" || signOpts.KeyRef != "" { //nolint:staticcheck // KeyRef remains supported through its documented removal window.
-		if err := pkgLayout.SignPackage(ctx, &signOpts); err != nil {
-			return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
-		}
 	}
 
 	referenceOptions := zoci.ReferenceFromMetadataOptions{

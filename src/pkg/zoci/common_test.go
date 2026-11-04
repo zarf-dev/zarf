@@ -15,12 +15,6 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-func TestNewRemoteDeprecatedModifiers(t *testing.T) {
-	remote, err := NewRemote(context.Background(), "example.com/example:latest", oci.PlatformForArch("amd64"), oci.WithPlainHTTP(true))
-	require.NoError(t, err)
-	require.True(t, remote.Repo().PlainHTTP)
-}
-
 func TestNewRemoteWithOptionsTransportNegotiation(t *testing.T) {
 	tests := []struct {
 		name        string

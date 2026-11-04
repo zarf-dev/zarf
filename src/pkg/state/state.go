@@ -195,14 +195,6 @@ func (ai AgentInfo) IsConfigured() bool {
 	return len(ai.TLS.CA) > 0 && len(ai.TLS.Cert) > 0 && len(ai.TLS.Key) > 0
 }
 
-// AgentIsConfigured returns true when Zarf has agent TLS configured.
-//
-// Deprecated: Use AgentInfo.IsConfigured instead.
-func (s *State) AgentIsConfigured() bool {
-	s.Reconcile()
-	return s.AgentInfo.IsConfigured()
-}
-
 // Reconcile synchronizes compatibility fields with their canonical replacements.
 // Call it when State crosses an application boundary or before reading compatibility-sensitive fields.
 func (s *State) Reconcile() {

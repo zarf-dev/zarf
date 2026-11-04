@@ -267,22 +267,10 @@ func TestPublishPackage(t *testing.T) {
 			expectedTag: "0.0.1",
 		},
 		{
-			name: "Sign and publish package",
+			name: "Publish signed package",
 			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOptions{
-				RemoteOptions:   defaultTestRemoteOptions(),
-				SignBlobOptions: signOpts,
-			},
-			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
-			expectedTag:   "0.0.1",
-		},
-		{
-			name: "Sign and publish package with deprecated keypair fields",
-			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOptions{
-				RemoteOptions:      defaultTestRemoteOptions(),
-				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
-				SigningKeyPassword: "password",
+				RemoteOptions: defaultTestRemoteOptions(),
 			},
 			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
 			expectedTag:   "0.0.1",
@@ -306,6 +294,9 @@ func TestPublishPackage(t *testing.T) {
 			// We want to pull the package and sure the content is the same as the local package
 			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
+			if tc.publicKeyPath != "" {
+				require.NoError(t, layoutExpected.SignPackage(ctx, &signOpts))
+			}
 
 			// Publish test package
 			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)

@@ -39,8 +39,6 @@ type PullOptions struct {
 	SHASum string
 	// Architecture is the package architecture.
 	Architecture string
-	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
-	PublicKeyPath string
 	// VerifyBlobOptions configures package signature verification.
 	VerifyBlobOptions *signing.VerifyBlobOptions
 	// OCIConcurrency is the number of layers pulled in parallel
@@ -78,15 +76,6 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	}
 	if u.Host == "" {
 		return "", errors.New("host cannot be empty")
-	}
-
-	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
-	// Only applies when VerifyBlobOptions is not already set,
-	// ensuring the new API takes precedence over the deprecated field.
-	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
-		defaults := signing.DefaultVerifyBlobOptions()
-		defaults.Key = opts.PublicKeyPath
-		opts.VerifyBlobOptions = &defaults
 	}
 
 	pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
