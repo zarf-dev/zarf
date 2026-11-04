@@ -76,8 +76,8 @@ func TestDeployVariablesByAPIVersion(t *testing.T) {
 
 			result, err := Deploy(ctx, pkgLayout, DeployOptions{SetVariables: tt.variables, Values: tt.values})
 			if tt.wantError {
-				require.ErrorContains(t, err, "variables have no effect on zarf.dev/v1beta1 packages")
-				require.ErrorContains(t, err, "use --set-values or --values instead of --set-variables")
+				require.ErrorContains(t, err, "variables are not supported in v1beta1 packages")
+				require.ErrorContains(t, err, "use package values instead")
 				return
 			}
 			require.NoError(t, err)
