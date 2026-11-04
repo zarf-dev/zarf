@@ -24,7 +24,9 @@ type deploymentPrompts struct {
 	group    func([]api.Component) (int, error)
 }
 
-// DeploymentSelectors prompts for component choices and returns selectors for the deployment filter.
+// DeploymentSelectors prompts for component choices and returns selectors for
+// filters.ForDeploy. The caller must supply OS-compatible components and apply
+// the returned selectors to the package layout.
 func DeploymentSelectors(pkg api.Package) (string, error) {
 	return promptDeploymentSelectors(pkg, deploymentPrompts{
 		optional: selectOptionalComponent,
@@ -33,6 +35,8 @@ func DeploymentSelectors(pkg api.Package) (string, error) {
 }
 
 func promptDeploymentSelectors(pkg api.Package, prompts deploymentPrompts) (string, error) {
+	// Preserve v1alpha1 choice groups; v1beta1 components have no Group.
+	// Process each group at its first member's position.
 	groups := make(map[string][]api.Component)
 	var order []string
 	for _, component := range pkg.Components {
@@ -71,6 +75,7 @@ func promptDeploymentSelectors(pkg api.Package, prompts deploymentPrompts) (stri
 		if include {
 			selectors = append(selectors, component.Name)
 		} else {
+			// Explicitly exclude declined components so v1alpha1 defaults cannot reselect them.
 			selectors = append(selectors, "-"+component.Name)
 		}
 	}

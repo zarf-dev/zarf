@@ -14,8 +14,9 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
-// ForDeploy creates a noninteractive deployment filter using explicit selectors
-// and package defaults. An explicit group selection replaces other group members.
+// ForDeploy creates a noninteractive deployment filter using explicit selectors,
+// required components, and legacy v1alpha1 defaults and choice groups.
+// An explicit group selection replaces other group members.
 func ForDeploy(optionalComponents string) ComponentFilterStrategy {
 	return &deploymentFilter{requestedComponents: helpers.StringToSlice(optionalComponents)}
 }
@@ -38,7 +39,8 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 	groupedComponents := map[string][]api.Component{}
 	orderedComponentGroups := []string{}
 
-	// Group the components by Name and Group while maintaining order
+	// Preserve v1alpha1 choice groups and defaults; v1beta1 has neither.
+	// Process each group at its first member's position.
 	for _, component := range pkg.Components {
 		groupKey := component.Name
 		if component.Group != "" {

@@ -222,7 +222,10 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}
 	filter := filters.Empty()
 	if o.confirm {
-		filter = filters.Combine(filters.ByLocalOS(runtime.GOOS), filters.ForDeploy(optionalComponents))
+		filter = filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(optionalComponents),
+		)
 	}
 
 	loadOpt := packager.LoadOptions{
