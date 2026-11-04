@@ -510,7 +510,7 @@ func Test_generateValuesOverrides_ExcludeDoesNotAffectOtherCharts(t *testing.T) 
 	}, bResult)
 }
 
-// Regression for #5584: comp-a maps two source paths onto the same chart root, comp-b maps
+// comp-a maps two source paths onto the same chart root, comp-b maps
 // only the first. Mapping comp-a must not rewrite the shared package values tree, or comp-b
 // receives comp-a's values and the result depends on which components are in the command.
 func Test_generateValuesOverrides_MappingDoesNotLeakIntoLaterComponents(t *testing.T) {

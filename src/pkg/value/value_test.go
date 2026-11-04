@@ -795,7 +795,7 @@ func TestDeepMerge(t *testing.T) {
 	}
 }
 
-// Regression for #5584: a merge must not hand the destination a live reference into the
+// A merge must not hand the destination a live reference into the
 // source, or a later write through the destination silently rewrites the source tree.
 func TestDeepMergeDoesNotShareNestedValuesWithSource(t *testing.T) {
 	t.Parallel()

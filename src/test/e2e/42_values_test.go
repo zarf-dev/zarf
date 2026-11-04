@@ -239,7 +239,7 @@ func TestStateTemplates(t *testing.T) {
 	})
 }
 
-// Regression for #5584: comp-a maps .shared and .extra onto the chart root, comp-b maps only
+// comp-a maps .shared and .extra onto the chart root, comp-b maps only
 // .shared. Rendering comp-a must not rewrite the shared package values tree, so comp-b must
 // resolve nested.both to from-shared whether or not comp-a is in the same command.
 func TestValuesMappingDoesNotLeakBetweenComponents(t *testing.T) {

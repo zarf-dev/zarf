@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: test-values-leak
   description: |
-    Regression package for #5584. Both components map .shared onto the same chart, and only
+    Both components map .shared onto the same chart, and only
     the first adds a second mapping. The first component's mapping must not rewrite the
     shared package values tree, or the second component renders the first one's values.
 

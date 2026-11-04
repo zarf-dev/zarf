@@ -172,8 +172,9 @@ func InferType(s string) any {
 
 // DeepMerge merges one or more Values maps recursively into the receiver via mutation.
 // Later maps in the variadic arguments take precedence over earlier ones.
-// Values taken from the sources are deep copied, so the sources are never mutated and the
-// result never shares nested maps or slices with them.
+// Values taken from the sources are deep copied, so the sources are never mutated. Only
+// map[string]any, []any and scalars are copied; any other map or slice type (map[string]string,
+// []string, ...) is stored by reference and stays shared with the source.
 func (v Values) DeepMerge(sources ...Values) {
 	if v == nil {
 		return
@@ -204,6 +205,7 @@ func (v Values) DeepMerge(sources ...Values) {
 
 // Extract retrieves a value from a nested Values map using dot notation path.
 // Path format: ".key.subkey.value" where each dot represents a map level.
+// The result is a live reference into v, not a copy, so callers must not mutate it.
 func (v Values) Extract(path Path) (any, error) {
 	if err := path.Validate(); err != nil {
 		return nil, err
@@ -243,7 +245,8 @@ func (v Values) Extract(path Path) (any, error) {
 
 // Set takes a Values, a Path to a new or existing key, and any value and stores the newVal at the path.
 // Special case: path "." merges the newVal's map contents directly into v (at the root).
-// newVal is deep copied, so the stored value never shares nested maps or slices with it.
+// newVal is deep copied, with the same type limits as DeepMerge: only map[string]any, []any and
+// scalars are copied, any other map or slice type is stored by reference.
 func (v Values) Set(path Path, newVal any) error {
 	if err := path.Validate(); err != nil {
 		return err
@@ -320,7 +323,8 @@ func (v Values) Delete(path Path) error {
 }
 
 // DeepCopy returns a recursive copy of v so the result can be mutated without
-// affecting the original maps or slices.
+// affecting the original maps or slices. Only map[string]any, []any and scalars are
+// copied; any other map or slice type is shared with v.
 func (v Values) DeepCopy() Values {
 	cp := make(Values, len(v))
 	for k, val := range v {
