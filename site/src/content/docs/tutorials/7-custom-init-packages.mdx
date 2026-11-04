@@ -160,16 +160,6 @@ package:
       - quay.io=quay.enterprise.corp
 ```
 
-```toml
-# zarf-config.toml
-[package.create]
-registry_override = [
-  "docker.io=dockerio.enterprise.corp",
-  "ghcr.io=ghcr.enterprise.corp",
-  "quay.io=quay.enterprise.corp"
-]
-```
-
 Registry overrides change where Zarf pulls images during package creation while preserving their declared names and IDs. Use image ID overrides in `zarf.yaml` when you want to replace the image reference itself.
 
 :::
