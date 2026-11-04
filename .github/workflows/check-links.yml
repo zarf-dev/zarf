@@ -61,7 +61,7 @@ jobs:
           output: ${{ runner.temp }}/lychee-version.md
 
       - name: Check all local and external links
-        run: make check-links CHECK_EXTERNAL=true LYCHEE_FORMAT=json
+        run: make test-links TEST_EXTERNAL_URLS=true LYCHEE_FORMAT=json
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
@@ -102,39 +102,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Download link reports
-        continue-on-error: true # Build/setup failures and timeouts may have no reports.
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: all-link-reports
-          path: link-reports
-
-      - name: Prepare failure notification
-        env:
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          REPOSITORY: ${{ github.repository }}
-          FILE_ROOT: file://${{ github.workspace }}/
-          SOURCE_ROOT: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/
-        run: |
-          mkdir -p link-reports
-          printf '{}\n' > link-reports/fallback.json
-          jq -s --arg run "$RUN_URL" --arg repo "$REPOSITORY" \
-            --arg root "$FILE_ROOT" --arg source "$SOURCE_ROOT" '
-            [ .[] | ((.error_map // {}), (.timeout_map // {})) | .[][] | .url
-              | if startswith($root + "site/dist/") then "https://docs.zarf.dev/" + ltrimstr($root + "site/dist/")
-                elif startswith($root) then $source + ltrimstr($root)
-                else . end ] | unique as $urls
-            | (reduce $urls[] as $url ([];
-                if length < 20 and (((map(length) | add) // 0) + ($url | length)) < 3000
-                then . + [$url] else . end)) as $preview
-            | {text: ("*Documentation link checks failed* in " + $repo + ".\n<" + $run + "|Full reports and run log>\n\n" +
-                if ($urls | length) > 0 then
-                  "Showing \($preview | length) of \($urls | length) distinct broken targets:\n" + ($preview | map("<" + . + ">") | join("\n"))
-                else "No broken-URL details are available; check the workflow logs." end)}
-            ' link-reports/*.json > "$RUNNER_TEMP/link-failure.json"
-
       - name: Notify Slack of failure
         uses: ./.github/actions/slack
         with:
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          payload-file-path: ${{ runner.temp }}/link-failure.json
+          status: ${{ needs.check-links.result }}

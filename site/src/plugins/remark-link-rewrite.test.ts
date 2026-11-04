@@ -1,9 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
-import { rewriteUrl, fixEscapingRelative, rewriteVersionedAssetImport } from "./remark-link-rewrite.ts";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { rewriteUrl, fixEscapingRelative, rewriteVersionedAssetImport, remarkLinkRewrite } from "./remark-link-rewrite.ts";
 
-const sections = new Set(["commands", "ref", "tutorials", "getting-started", "faq"]);
+const sections = new Set(["commands", "ref", "tutorials", "getting-started", "faq", "schema"]);
 const prefix = "/v0-76";
 
 test("prefixes root-absolute links into known sections", () => {
@@ -33,6 +35,51 @@ test("ignores external, protocol-relative, and relative links", () => {
 
 test("does not double-prefix already-versioned links", () => {
   assert.equal(rewriteUrl("/v0-75/commands/zarf", prefix, sections), "/v0-75/commands/zarf");
+});
+
+test("keeps shared public recordings at their root path while versioning documentation", (t) => {
+  const publicDir = mkdtempSync(path.join(tmpdir(), "zarf-public-"));
+  t.after(() => rmSync(publicDir, { recursive: true, force: true }));
+  mkdirSync(path.join(publicDir, "tutorials"));
+  writeFileSync(path.join(publicDir, "tutorials/recording.html"), "recording");
+  assert.equal(rewriteUrl("/tutorials/recording.html?theme=dark#frame", prefix, sections, publicDir),
+    "/tutorials/recording.html?theme=dark#frame");
+  assert.equal(rewriteUrl("/tutorials/", prefix, sections, publicDir), "/v0-76/tutorials/");
+  assert.equal(rewriteUrl("/tutorials/guide", prefix, sections, publicDir), "/v0-76/tutorials/guide");
+});
+
+test("resolves retired references to the matching archived reference pages", () => {
+  assert.equal(rewriteUrl("/faq#what-is-the-zarf-agent", prefix, sections), "/v0-76/ref/init-package/#zarf-agent");
+  assert.equal(rewriteUrl("https://docs.zarf.dev/docs/create-a-zarf-package/zarf-schema#metadata", prefix, sections),
+    "/v0-76/schema/v1alpha1-package/#ZarfMetadata");
+  assert.equal(rewriteUrl("/faq#another-question", prefix, sections), "/v0-76/faq#another-question");
+});
+
+test("rewrites archived Markdown, HTML and JSX links without changing Latest pages", (t) => {
+  const root = mkdtempSync(path.join(tmpdir(), "zarf-remark-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const publicDir = path.join(root, "public");
+  mkdirSync(path.join(publicDir, "tutorials"), { recursive: true });
+  writeFileSync(path.join(publicDir, "tutorials/recording.html"), "recording");
+  const srcDir = path.join(root, "docs");
+  const transform = remarkLinkRewrite({ srcDir, sections: [...sections], publicDir });
+  const tree = () => ({ type: "root", children: [
+    { type: "link", url: "https://docs.zarf.dev/docs/create-a-zarf-package/zarf-schema#metadata", children: [] },
+    { type: "link", url: "/faq#what-is-the-zarf-agent", children: [] },
+    { type: "html", value: '<iframe src="/tutorials/recording.html"></iframe>' },
+    { type: "mdxJsxFlowElement", name: "iframe", attributes: [
+      { type: "mdxJsxAttribute", name: "src", value: "/tutorials/recording.html" },
+    ], children: [] },
+  ] });
+  const archived = tree();
+  transform(archived as any, { path: path.join(srcDir, "v0-76/page.mdx") } as any);
+  assert.equal(archived.children[0].url, "/v0-76/schema/v1alpha1-package/#ZarfMetadata");
+  assert.equal(archived.children[1].url, "/v0-76/ref/init-package/#zarf-agent");
+  assert.equal(archived.children[2].value, '<iframe src="/tutorials/recording.html"></iframe>');
+  assert.equal(archived.children[3].attributes?.[0].value, "/tutorials/recording.html");
+  const latest = tree();
+  transform(latest as any, { path: path.join(srcDir, "page.mdx") } as any);
+  assert.deepEqual(latest, tree());
 });
 
 // fixEscapingRelative: docs root /docs, version subtree /docs/v0-76

@@ -5,8 +5,8 @@ inputs:
   slack-webhook-url:
     description: 'The webhook URL to use to post to slack'
     required: true
-  payload-file-path:
-    description: 'Optional JSON payload file; otherwise use the standard workflow-status message'
+  status:
+    description: 'Status to report; defaults to the current job status'
     required: false
     default: ''
 
@@ -14,17 +14,16 @@ runs:
   using: composite
   steps:
     - uses: slackapi/slack-github-action@6c661ce58804a1a20f6dc5fbee7f0381b469e001 # v1.25.0
-      if: ${{ inputs.payload-file-path == '' }}
       with:
         payload: |
           {
-            "text": "The GitHub Workflow *'${{ github.workflow }}'* had a result of: `${{ job.status }}`.\n\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Action Log>",
+            "text": "The GitHub Workflow *'${{ github.workflow }}'* had a result of: `${{ inputs.status || job.status }}`.\n\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Action Log>",
             "blocks": [
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "The GitHub Workflow *'${{ github.workflow }}'* had a result of: `${{ job.status }}`."
+                  "text": "The GitHub Workflow *'${{ github.workflow }}'* had a result of: `${{ inputs.status || job.status }}`."
                 }
               },
               {
@@ -47,14 +46,6 @@ runs:
               }
             ]
           }
-      env:
-        SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
-        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-
-    - uses: slackapi/slack-github-action@6c661ce58804a1a20f6dc5fbee7f0381b469e001 # v1.25.0
-      if: ${{ inputs.payload-file-path != '' }}
-      with:
-        payload-file-path: ${{ inputs.payload-file-path }}
       env:
         SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

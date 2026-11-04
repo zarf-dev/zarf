@@ -55,7 +55,7 @@ jobs:
           output: ${{ runner.temp }}/lychee-version.md
 
       - name: Check site links
-        run: make check-site-links CHECK_EXTERNAL=false
+        run: make test-site-links TEST_EXTERNAL_URLS=false
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
