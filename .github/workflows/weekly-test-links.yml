@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  check-links:
+  test-links:
     if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'zarf-dev/zarf' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -94,8 +94,8 @@ jobs:
           retention-days: 14
 
   notify-slack:
-    needs: check-links
-    if: ${{ always() && !cancelled() && needs.check-links.result == 'failure' && github.event_name == 'schedule' }}
+    needs: test-links
+    if: ${{ always() && !cancelled() && needs.test-links.result == 'failure' && github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -106,4 +106,4 @@ jobs:
         uses: ./.github/actions/slack
         with:
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          status: ${{ needs.check-links.result }}
+          status: ${{ needs.test-links.result }}

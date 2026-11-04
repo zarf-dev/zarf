@@ -10,4 +10,6 @@ include = [
   '^https://openssf\.slack\.com/archives/C07AKUMBDMJ$',
   # The OpenSSF signup endpoint rejects automated clients with 403.
   '^https://slack\.openssf\.org/$',
+  # Verified public discussion; Reddit returns 403 to hosted CI.
+  '^https://www\.reddit\.com/r/programming/comments/nap4pt/dos_gaming_in_docker/$',
 ]
