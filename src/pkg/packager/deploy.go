@@ -46,36 +46,32 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DeployOptions configure package deployment. Component selection is configured by
-// LoadOptions.DeploymentSelection when the package is loaded.
+// DeployOptions are optional parameters to packager.Deploy
 type DeployOptions struct {
-	// SetVariables configures package variables.
+	// Deploy time set variables
 	SetVariables map[string]string
-	// Values configures package-level values.
+	// Values are values passed in at deploy time. They can come from the CLI, user configuration, or set directly by
+	// API callers.
 	Values value.Values
-	// NamespaceOverride replaces component namespaces.
-	NamespaceOverride string
-	// ValuesOverridesMap configures Helm chart values by component and chart.
-	ValuesOverridesMap state.ValuesOverrides
-	// Connectivity configures the package deployment mode.
-	Connectivity state.PackageConnectivity
-	// Source identifies the resolved package source for event provenance.
-	Source string
-	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf.
+	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
 	TakeOwnership bool
 	// AdoptExistingResources adopts any pre-existing K8s resources into the Helm charts managed by Zarf.
 	//
 	// Deprecated: use TakeOwnership instead.
 	AdoptExistingResources bool
-	// Force Helm to take ownership of conflicting fields during Server-Side Apply operations.
+	// Connectivity configures the package deployment mode.
+	Connectivity state.PackageConnectivity
+	// Force Helm to take ownership of conflicting fields during Server-Side Apply operations
 	ForceConflicts bool
-	// Timeout for Helm operations.
+	// Timeout for Helm operations
 	Timeout time.Duration
 	// Retries is the maximum attempts for retryable deployment operations, including transient Helm admission-webhook failures.
 	Retries int
-	// Number of layers to push concurrently per image.
+	// Number of layers to push concurrently per image
 	OCIConcurrency int
-	// Remote Options for image pushes.
+	// Namespace is an optional namespace override for package deployment
+	NamespaceOverride string
+	// Remote Options for image pushes
 	types.RemoteOptions
 	// How to configure Zarf state if it's not already been configured
 	GitServer    state.GitServerInfo
@@ -88,14 +84,18 @@ type DeployOptions struct {
 	AgentTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
 	AgentMutationPolicy state.MutationPolicy
-	// IsInteractive decides if Zarf can interactively prompt users through the CLI.
+	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
+	ValuesOverridesMap ValuesOverrides
+	// Source identifies the resolved package source for event provenance.
+	Source string
+	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	// SkipValuesSchemaValidation skips validation of the merged package values against the package schema.
 	SkipValuesSchemaValidation bool
 	// SkipArchitectureCheck allows application images to deploy to nodes with a different architecture.
 	// The operator must configure emulation on the target nodes.
 	SkipArchitectureCheck bool
-	// SkipVersionCheck skips version requirement validation.
+	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
 }
 

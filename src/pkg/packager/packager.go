@@ -45,7 +45,7 @@ func getPopulatedVariableConfig(ctx context.Context, pkg api.Package, setVariabl
 type overrideOpts struct {
 	variableConfig     *variables.VariableConfig
 	values             value.Values
-	valuesOverridesMap state.ValuesOverrides
+	valuesOverridesMap ValuesOverrides
 }
 
 // generateValuesOverrides generates a map of values to override for a given chart and component, with precedence of:
