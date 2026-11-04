@@ -55,6 +55,7 @@ func newKubectlCommand() *cobra.Command {
 	kubectlCmd.SilenceErrors = true
 
 	patchPluginListSubcommand(kubectlCmd)
+	chainKubeconfigPreRun(kubectlCmd)
 
 	return ReplaceCommandName(kubeLong, "zarf tools kubectl", kubectlCmd)
 }

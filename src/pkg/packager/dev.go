@@ -56,6 +56,9 @@ type DevDeployOptions struct {
 	CachePath      string
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// ConnectOptions selects the kubeconfig and context used to reach the cluster. The zero
+	// value uses the ambient default.
+	ConnectOptions cluster.ConnectOptions
 	// SkipArchitectureCheck allows application images to deploy to nodes with a different architecture.
 	// The operator must configure emulation on the target nodes. Only applies in airgap mode.
 	SkipArchitectureCheck bool
@@ -161,7 +164,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		if requiresCluster {
 			timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 			defer cancel()
-			d.c, err = cluster.NewWithWait(timeoutCtx)
+			d.c, err = cluster.NewWithWait(timeoutCtx, opts.ConnectOptions)
 			if err != nil {
 				return err
 			}
@@ -183,6 +186,12 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		return fmt.Errorf("package references values that cannot be resolved (value templates must be explicitly defined, even if empty): %w", err)
 	}
 
+	cleanup, err := d.applyConnectOptions(opts.ConnectOptions)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOptions{
 		SetVariables:          opts.DeploySetVariables,
@@ -194,6 +203,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		RemoteOptions:         opts.RemoteOptions,
 		TakeOwnership:         opts.TakeOwnership,
 		SkipArchitectureCheck: opts.SkipArchitectureCheck,
+		ConnectOptions:        opts.ConnectOptions,
 	})
 	if err != nil {
 		return err

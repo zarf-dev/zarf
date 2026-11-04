@@ -19,6 +19,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/template"
@@ -35,6 +36,8 @@ type RunOptions struct {
 	VariableConfig *variables.VariableConfig
 	Values         value.Values
 	StateAccess    template.StateAccess
+	// ConnectOptions selects the kubeconfig and context that wait actions use.
+	ConnectOptions cluster.ConnectOptions
 }
 
 // Run runs all provided actions.
@@ -44,7 +47,7 @@ func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOpt
 	}
 
 	for _, a := range actions {
-		if err := runAction(ctx, basePath, opts.DefaultConfig, a, opts.VariableConfig, opts.Values, opts.StateAccess); err != nil {
+		if err := runAction(ctx, basePath, opts.DefaultConfig, a, opts.VariableConfig, opts.Values, opts.StateAccess, opts.ConnectOptions); err != nil {
 			return err
 		}
 	}
@@ -52,7 +55,7 @@ func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOpt
 }
 
 // Run commands that a component has provided.
-func runAction(ctx context.Context, basePath string, defaultCfg api.ActionDefaults, action api.Action, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error {
+func runAction(ctx context.Context, basePath string, defaultCfg api.ActionDefaults, action api.Action, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess, connectOpts cluster.ConnectOptions) error {
 	var cmdEscaped string
 	var err error
 	cmd := action.Cmd
@@ -68,7 +71,7 @@ func runAction(ctx context.Context, basePath string, defaultCfg api.ActionDefaul
 	}
 
 	if action.Wait != nil {
-		err := runWaitAction(ctx, action, variableConfig, tmplObjs)
+		err := runWaitAction(ctx, action, variableConfig, tmplObjs, connectOpts)
 		if err != nil {
 			return err
 		}
@@ -182,7 +185,7 @@ retryCmd:
 	}
 }
 
-func runWaitAction(ctx context.Context, action api.Action, variableConfig *variables.VariableConfig, tmplObjs template.Objects) error {
+func runWaitAction(ctx context.Context, action api.Action, variableConfig *variables.VariableConfig, tmplObjs template.Objects, connectOpts cluster.ConnectOptions) error {
 	waitCfg := action.Wait
 
 	timeout := 5 * time.Minute
@@ -203,27 +206,27 @@ func runWaitAction(ctx context.Context, action api.Action, variableConfig *varia
 
 	switch {
 	case waitCfg.Cluster != nil:
-		cluster := waitCfg.Cluster
-		cluster.Kind = templateString(cluster.Kind, templates)
-		cluster.Name = templateString(cluster.Name, templates)
-		cluster.Namespace = templateString(cluster.Namespace, templates)
-		cluster.Condition.Expression = templateString(cluster.Condition.Expression, templates)
+		waitCluster := waitCfg.Cluster
+		waitCluster.Kind = templateString(waitCluster.Kind, templates)
+		waitCluster.Name = templateString(waitCluster.Name, templates)
+		waitCluster.Namespace = templateString(waitCluster.Namespace, templates)
+		waitCluster.Condition.Expression = templateString(waitCluster.Condition.Expression, templates)
 		if applyTemplates != nil {
 			var err error
-			if cluster.Kind, err = applyTemplates(cluster.Kind); err != nil {
+			if waitCluster.Kind, err = applyTemplates(waitCluster.Kind); err != nil {
 				return fmt.Errorf("could not template wait.cluster.kind: %w", err)
 			}
-			if cluster.Name, err = applyTemplates(cluster.Name); err != nil {
+			if waitCluster.Name, err = applyTemplates(waitCluster.Name); err != nil {
 				return fmt.Errorf("could not template wait.cluster.name: %w", err)
 			}
-			if cluster.Namespace, err = applyTemplates(cluster.Namespace); err != nil {
+			if waitCluster.Namespace, err = applyTemplates(waitCluster.Namespace); err != nil {
 				return fmt.Errorf("could not template wait.cluster.namespace: %w", err)
 			}
-			if cluster.Condition.Expression, err = applyTemplates(cluster.Condition.Expression); err != nil {
+			if waitCluster.Condition.Expression, err = applyTemplates(waitCluster.Condition.Expression); err != nil {
 				return fmt.Errorf("could not template wait.cluster.condition: %w", err)
 			}
 		}
-		return runWaitClusterAction(ctx, cluster, timeout)
+		return runWaitClusterAction(ctx, waitCluster, timeout, connectOpts)
 	case waitCfg.Network != nil:
 		network := waitCfg.Network
 		network.Protocol = templateString(network.Protocol, templates)
@@ -266,13 +269,13 @@ func templateString(s string, templates map[string]*variables.TextTemplate) stri
 	return s
 }
 
-func runWaitClusterAction(ctx context.Context, cluster *api.ActionWaitCluster, timeout time.Duration) error {
+func runWaitClusterAction(ctx context.Context, waitCluster *api.ActionWaitCluster, timeout time.Duration, connectOpts cluster.ConnectOptions) error {
 	l := logger.From(ctx)
 
-	kind := cluster.Kind
-	identifier := cluster.Name
-	condition := cluster.Condition.Expression
-	namespace := cluster.Namespace
+	kind := waitCluster.Kind
+	identifier := waitCluster.Name
+	condition := waitCluster.Condition.Expression
+	namespace := waitCluster.Namespace
 
 	desc := fmt.Sprintf("wait for %s/%s", kind, identifier)
 	if condition != "" {
@@ -280,10 +283,10 @@ func runWaitClusterAction(ctx context.Context, cluster *api.ActionWaitCluster, t
 	}
 	l.Info("running wait action", "description", desc)
 
-	if condition == "" && cluster.Condition.Default == api.WaitForReadiness {
-		return wait.ForResourceDefaultReady(ctx, kind, identifier, condition, namespace, timeout)
+	if condition == "" && waitCluster.Condition.Default == api.WaitForReadiness {
+		return wait.ForResourceDefaultReady(ctx, kind, identifier, condition, namespace, timeout, connectOpts)
 	}
-	return wait.ForResource(ctx, kind, identifier, condition, namespace, timeout)
+	return wait.ForResource(ctx, kind, identifier, condition, namespace, timeout, connectOpts)
 }
 
 func runWaitNetworkAction(ctx context.Context, network *api.ActionWaitNetwork, timeout time.Duration) error {

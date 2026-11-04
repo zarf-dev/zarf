@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -42,6 +43,16 @@ func defaultRemoteOptions() types.RemoteOptions {
 var plainHTTP bool
 var insecureSkipTLSVerify bool
 var cachePath string
+var kubeconfigPath string
+var kubeContext string
+
+// clusterConnectOptions returns the cluster connection selected by the --kubeconfig and --context flags.
+func clusterConnectOptions() cluster.ConnectOptions {
+	return cluster.ConnectOptions{
+		Kubeconfig: kubeconfigPath,
+		Context:    kubeContext,
+	}
+}
 
 var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 

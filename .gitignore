@@ -35,3 +35,6 @@ dist
 CLAUDE.local.md
 
 src/cmd/testdata/inspect-values-files/chart-remote/zarf.yaml
+
+# src/test/e2e/24_variables_test.go test artifact
+modified-config.json

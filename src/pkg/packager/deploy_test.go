@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -506,4 +507,67 @@ func TestDeployLegacyBuiltinsByAPIVersion(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDeployerActionDefaults(t *testing.T) {
+	t.Parallel()
+
+	base := api.ActionDefaults{Env: []string{"FOO=bar"}}
+
+	t.Run("no action env leaves defaults alone", func(t *testing.T) {
+		t.Parallel()
+		d := deployer{}
+		require.Equal(t, []string{"FOO=bar"}, d.actionDefaults(base).Env)
+	})
+
+	t.Run("action env is appended last so it wins", func(t *testing.T) {
+		t.Parallel()
+		d := deployer{actionEnv: []string{"KUBECONFIG=/tmp/kc"}}
+		require.Equal(t, []string{"FOO=bar", "KUBECONFIG=/tmp/kc"}, d.actionDefaults(base).Env)
+		// The caller's slice must not be aliased, or a second component would accumulate.
+		require.Equal(t, []string{"FOO=bar"}, base.Env)
+	})
+}
+
+// TestDeployActionKubeconfig covers the library path: a caller that selects a cluster through
+// DeployOptions gets the same selection in the environment of anything an action shells out to.
+// The CLI reaches this through the process environment instead, which is covered in src/cmd.
+func TestDeployActionKubeconfig(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// The fixture action reads the variable with POSIX syntax, which PowerShell does not
+		// expand. What is under test, the environment reaching the child process, is not
+		// OS-specific.
+		t.Skip("action fixture uses POSIX shell syntax")
+	}
+
+	kubeconfig := filepath.Join(t.TempDir(), "config")
+	require.NoError(t, os.WriteFile(kubeconfig, []byte("apiVersion: v1\nkind: Config\n"), 0o600))
+
+	seenKubeconfig := func(t *testing.T, opts DeployOptions) string {
+		t.Helper()
+		ctx := testutil.TestContext(t)
+		loaded, err := load.Package(ctx, filepath.Join("testdata", "deploy-action-kubeconfig"), load.PackageOptions{})
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, loaded.Close()) })
+		pkgLayout, err := assemble.AssemblePackage(ctx, loaded, assemble.AssembleOptions{SkipSBOM: true})
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+		result, err := Deploy(ctx, pkgLayout, opts)
+		require.NoError(t, err)
+		v, ok := result.VariableConfig.GetSetVariableMap()["SEEN_KUBECONFIG"]
+		require.True(t, ok, "the action should have set SEEN_KUBECONFIG")
+		return v.Value
+	}
+
+	t.Run("no selection leaves the ambient environment alone", func(t *testing.T) {
+		t.Setenv("KUBECONFIG", "/ambient/config")
+		require.Equal(t, "/ambient/config", seenKubeconfig(t, DeployOptions{}))
+	})
+
+	t.Run("a selected kubeconfig reaches the action", func(t *testing.T) {
+		t.Setenv("KUBECONFIG", "/ambient/config")
+		opts := DeployOptions{ConnectOptions: cluster.ConnectOptions{Kubeconfig: kubeconfig}}
+		require.Equal(t, kubeconfig, seenKubeconfig(t, opts))
+	})
 }

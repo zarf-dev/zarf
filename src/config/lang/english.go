@@ -47,6 +47,8 @@ const (
 	RootCmdFlagTempDir               = "Specify the temporary directory to use for intermediate files"
 	RootCmdFlagPlainHTTP             = "Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture."
 	RootCmdFlagInsecureSkipTLSVerify = "Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagKubeconfig            = "Path to the kubeconfig file to use for Kubernetes connections"
+	RootCmdFlagKubeContext           = "Name of the kubeconfig context to use for Kubernetes connections"
 
 	// zarf connect
 	CmdConnectShort = "Accesses services or pods deployed in the cluster"

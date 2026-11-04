@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: deploy-action-kubeconfig
+  version: 0.0.1
+components:
+  - name: report-kubeconfig
+    required: true
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "${KUBECONFIG:-unset}"
+            setVariables:
+              - name: SEEN_KUBECONFIG

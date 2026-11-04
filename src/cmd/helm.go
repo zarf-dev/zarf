@@ -34,6 +34,8 @@ func newHelmCommand() *cobra.Command {
 		}
 	}
 
+	chainKubeconfigPreRun(cmd)
+
 	// Explicitly set cmd.Help() here so cobra still generates the docs page correctly
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		return cmd.Help()
