@@ -38,6 +38,7 @@ const ARCHIVED_LINKS = new Map([
     "https://github.com/helm/helm/blob/v3.19.2/pkg/releaseutil/manifest_sorter.go#L78",
   ],
   ["https://gitea.io/en-us/", "https://about.gitea.com/"],
+  ["https://www.musl-libc.org/", "https://wiki.musl-libc.org/"],
   [
     "https://www.icann.org/en/board-activities-and-meetings/materials/approved-resolutions-special-meeting-of-the-icann-board-24-07-2024-en#section2.b",
     "https://www.icann.org/en/board-activities-and-meetings/materials/approved-resolutions-special-meeting-of-the-icann-board-29-07-2024-en#section2.b",
