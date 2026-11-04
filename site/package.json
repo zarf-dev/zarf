@@ -43,6 +43,12 @@
   "overrides": {
     "markdownlint": {
       "re2js": "2.9.1"
+    },
+    "micromark-extension-math": {
+      "katex": "0.18.10"
+    },
+    "linkinator": {
+      "glob": "14.0.3"
     }
   }
 }
