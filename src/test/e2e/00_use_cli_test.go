@@ -379,7 +379,7 @@ components:
 		t.Parallel()
 		tmpdir := t.TempDir()
 		cacheDir := filepath.Join(t.TempDir(), ".cache-location")
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "--zarf-cache", cacheDir, "--tmpdir", tmpdir, "--log-level=debug", "-o", tmpdir, "--confirm")
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "--cache", cacheDir, "--tmpdir", tmpdir, "--log-level=debug", "-o", tmpdir, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
 		files, err := os.ReadDir(filepath.Join(cacheDir, "images"))
@@ -404,7 +404,7 @@ components:
 		tmpdir := t.TempDir()
 		// Test removal of cache
 		cachePath := filepath.Join(tmpdir, ".cache-location")
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "clear-cache", "--zarf-cache", cachePath)
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "clear-cache", "--cache", cachePath)
 		require.NoError(t, err, stdOut, stdErr)
 		// Check that ReadDir returns no such file or directory for the cachePath
 		_, err = os.ReadDir(cachePath)
