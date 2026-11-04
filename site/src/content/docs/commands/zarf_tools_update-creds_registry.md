@@ -61,5 +61,5 @@ $ zarf tools update-creds registry --registry-push-username={USERNAME} --registr
 
 ### SEE ALSO
 
-* [zarf tools update-creds](/commands/zarf_tools_update-creds/)	 - Updates the credentials for deployed Zarf services (deprecated; prefer the per-service subcommands)
+* [zarf tools update-creds](/commands/zarf_tools_update-creds/)	 - Updates the credentials for a deployed Zarf service
 
