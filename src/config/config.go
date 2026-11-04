@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -50,9 +50,6 @@ var (
 	// CommonOptions tracks user-defined values that apply across commands
 	CommonOptions types.ZarfCommonOptions
 
-	// CLIArch is the computer architecture of the device executing the CLI commands
-	CLIArch string
-
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
 	dataInjectionMarker = ".zarf-injection-%d"
@@ -65,21 +62,6 @@ var (
 	ZarfDefaultRetryDelay    = 500 * time.Millisecond
 	ZarfDefaultRetryMaxDelay = 8 * time.Second
 )
-
-// GetArch returns the arch based on a priority list with options for overriding.
-func GetArch(archs ...string) string {
-	// List of architecture overrides.
-	priority := append([]string{CLIArch}, archs...)
-
-	// Find the first architecture that is specified.
-	for _, arch := range priority {
-		if arch != "" {
-			return arch
-		}
-	}
-
-	return runtime.GOARCH
-}
 
 // GetStartTime returns the timestamp of when the CLI was started.
 func GetStartTime() int64 {
@@ -103,9 +85,8 @@ func GetAbsHomePath(path string) (string, error) {
 	return path, nil
 }
 
-// GetInitPackageName based on the architecture and CLI version
-func GetInitPackageName() string {
-	// No package has been loaded yet so lookup GetArch() with no package info
-	arch := GetArch()
+// GetInitPackageName returns the init filename for the architecture (or host) and CLI version.
+func GetInitPackageName(architecture string) string {
+	arch := helpers.ResolveArch(architecture)
 	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, CLIVersion)
 }
