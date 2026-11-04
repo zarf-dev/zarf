@@ -45,16 +45,12 @@ func TestConnectAndCreds(t *testing.T) {
 	// Because we use kubectl scale the agent in an earlier command we force conflict
 	stdOut, stdErr, err = e2e.Zarf(t, "tools", "update-creds", "agent", "--confirm", "--force-conflicts")
 	require.NoError(t, err, stdOut, stdErr)
-	// The artifact server is deprecated and only updatable through the legacy command.
-	stdOut, stdErr, err = e2e.Zarf(t, "tools", "update-creds", "artifact", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
 
 	newAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
 	newState, err := c.LoadState(ctx)
 	require.NoError(t, err)
 	require.NotEqual(t, prevAgentSecretData, newAgentSecretData)
-	require.NotEqual(t, oldState.ArtifactServer.PushToken, newState.ArtifactServer.PushToken)
 	require.NotEqual(t, oldState.GitServer.PushPassword, newState.GitServer.PushPassword)
 
 	connectToZarfServices(ctx, t)
@@ -123,9 +119,6 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git-readonly", "--log-format=console", "--no-color")
 	require.NoError(t, err, stdOut, stdErr)
 	gitPullPassword := strings.TrimSpace(stdOut)
-	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "artifact", "--log-format=console", "--no-color")
-	require.NoError(t, err, stdOut, stdErr)
-	gitArtifactToken := strings.TrimSpace(stdOut)
 
 	// Connect to Gitea
 	c, err := cluster.New(ctx)
@@ -145,10 +138,6 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	require.Equal(t, 200, respGit.StatusCode)
 	gitPullURL := fmt.Sprintf("http://zarf-git-read-user:%s@%s/api/v1/user", gitPullPassword, endpoints[0])
 	respGit, err = http.Get(gitPullURL)
-	require.NoError(t, err)
-	require.Equal(t, 200, respGit.StatusCode)
-	gitArtifactURL := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitArtifactToken, endpoints[0])
-	respGit, err = http.Get(gitArtifactURL)
 	require.NoError(t, err)
 	require.Equal(t, 200, respGit.StatusCode)
 }

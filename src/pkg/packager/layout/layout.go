@@ -33,8 +33,8 @@ const (
 	SBOMDir = "zarf-sbom"
 	SBOMTar = "sboms.tar"
 
-	// DocumentationDir contains individually-addressable documentation resources in v1beta1 packages.
-	DocumentationDir = "documentation"
+	// AttachmentsDir contains individually-addressable attachment resources in v1beta1 and later packages.
+	AttachmentsDir   = "attachments"
 	DocumentationTar = "documentation.tar"
 	IndexJSON        = "index.json"
 	OCILayout        = "oci-layout"

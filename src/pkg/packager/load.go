@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -29,7 +30,9 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
-	Shasum       string
+	Shasum string
+	// Architecture selects the target architecture for OCI sources.
+	// Empty uses the host architecture. Ignored for local archives.
 	Architecture string
 	// Deprecated: Use VerifyBlobOptions instead.
 	PublicKeyPath     string
@@ -38,8 +41,9 @@ type LoadOptions struct {
 	Output            string
 	// number of layers to pull in parallel
 	OCIConcurrency int
-	// LayerTypes specifies which layer types to pull from OCI
-	LayerTypes []zoci.LayerType
+	// LayerSelection specifies which optional package resources to pull from OCI.
+	// A nil value selects every resource while an empty value selects only the metadata resources.
+	LayerSelection *zoci.LayerSelection
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
 	// Connected skips pulling image layers from OCI sources
@@ -91,14 +95,15 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 	switch srcType {
 	case "oci":
+		arch := helpers.ResolveArch(opts.Architecture)
 		ociOpts := pullOCIOptions{
 			Source:               source,
 			VerifyBlobOptions:    opts.VerifyBlobOptions,
 			VerificationStrategy: opts.VerificationStrategy,
 			Shasum:               opts.Shasum,
-			Architecture:         config.GetArch(opts.Architecture),
+			Architecture:         arch,
 			Filter:               opts.Filter,
-			LayerTypes:           opts.LayerTypes,
+			LayerSelection:       opts.LayerSelection,
 			OCIConcurrency:       opts.OCIConcurrency,
 			RemoteOptions:        opts.RemoteOptions,
 			Connected:            opts.Connected,
@@ -234,8 +239,8 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		}
 		return definition, nil
 	}
-	// This function only returns the ZarfPackageConfig so we only need the metadata
-	opts.LayerTypes = []zoci.LayerType{zoci.MetadataLayers}
+	// This function only returns the ZarfPackageConfig so it only needs metadata.
+	opts.LayerSelection = &zoci.LayerSelection{}
 	pkgLayout, err := LoadPackage(ctx, src, opts)
 	if err != nil {
 		return api.Package{}, err

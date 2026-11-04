@@ -37,6 +37,7 @@ import (
 )
 
 type initOptions struct {
+	*architectureOptions
 	setVariables               map[string]string
 	valuesFiles                []string
 	setValues                  map[string]string
@@ -45,7 +46,6 @@ type initOptions struct {
 	storageClass               string
 	gitServer                  state.GitServerInfo
 	registryInfo               state.RegistryInfo
-	artifactServer             state.ArtifactServerInfo
 	injectorPort               int
 	injectorImage              string
 	takeOwnership              bool
@@ -61,8 +61,8 @@ type initOptions struct {
 	packageVerifyFlags
 }
 
-func newInitCommand() *cobra.Command {
-	o := &initOptions{}
+func newInitCommand(architecture *architectureOptions) *cobra.Command {
+	o := &initOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:     "init [ PACKAGE_SOURCE ]",
@@ -113,14 +113,6 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.registryInfo.PullUsername, "registry-pull-username", v.GetString(VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
 	cmd.Flags().StringVar(&o.registryInfo.PullPassword, "registry-pull-password", v.GetString(VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
 	cmd.Flags().StringVar(&o.registryInfo.Secret, "registry-secret", v.GetString(VInitRegistrySecret), lang.CmdInitFlagRegSecret)
-
-	// Flags for using an external artifact server
-	cmd.Flags().StringVar(&o.artifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
-	cmd.Flags().StringVar(&o.artifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
-	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
-	_ = cmd.Flags().MarkDeprecated("artifact-url", lang.ArtifactServerDeprecated)
-	_ = cmd.Flags().MarkDeprecated("artifact-push-username", lang.ArtifactServerDeprecated)
-	_ = cmd.Flags().MarkDeprecated("artifact-push-token", lang.ArtifactServerDeprecated)
 
 	// Flags for providing user-managed agent TLS certificates
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
@@ -178,7 +170,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := validateExistingState(existingState, o.registryInfo, o.gitServer, o.artifactServer, agentTLS); err != nil {
+	if err := validateExistingState(existingState, o.registryInfo, o.gitServer, agentTLS); err != nil {
 		return err
 	}
 	registryMode := o.registryInfo.RegistryMode
@@ -203,10 +195,8 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		packageSource = args[0]
 	} else {
-		initPackageName := config.GetInitPackageName()
-
 		// Try to use an init-package in the executable directory if none exist in current working directory
-		packageSource, err = o.findInitPackage(cmd.Context(), initPackageName)
+		packageSource, err = o.findInitPackage(cmd.Context())
 		if err != nil {
 			return err
 		}
@@ -238,7 +228,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
 		Filter:               filter,
-		Architecture:         config.GetArch(),
+		Architecture:         o.selectedArchitecture(),
 		CachePath:            cachePath,
 		RemoteOptions:        defaultRemoteOptions(),
 	}
@@ -256,7 +246,6 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	opts := packager.DeployOptions{
 		GitServer:                  o.gitServer,
 		RegistryInfo:               o.registryInfo,
-		ArtifactServer:             o.artifactServer,
 		TakeOwnership:              o.takeOwnership,
 		ForceConflicts:             o.forceConflicts,
 		Timeout:                    o.timeout,
@@ -282,7 +271,8 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (o *initOptions) findInitPackage(ctx context.Context, initPackageName string) (string, error) {
+func (o *initOptions) findInitPackage(ctx context.Context) (string, error) {
+	initPackageName := config.GetInitPackageName(o.selectedArchitecture())
 	// First, look for the init package in the current working directory
 	if !helpers.InvalidPath(initPackageName) {
 		return initPackageName, nil
@@ -356,7 +346,7 @@ func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory st
 		}
 
 		pullOptions := packager.PullOptions{
-			Architecture:   config.GetArch(),
+			Architecture:   o.selectedArchitecture(),
 			OCIConcurrency: o.ociConcurrency,
 			CachePath:      cachePath,
 		}
@@ -388,7 +378,7 @@ func loadExistingState(ctx context.Context) (*state.State, error) {
 }
 
 // validateExistingState prevents changing service information after initialization.
-func validateExistingState(s *state.State, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo, agentTLS *pki.GeneratedPKI) error {
+func validateExistingState(s *state.State, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, agentTLS *pki.GeneratedPKI) error {
 	if s == nil {
 		return nil
 	}
@@ -398,9 +388,6 @@ func validateExistingState(s *state.State, registryInfo state.RegistryInfo, gitS
 	}
 	if state.CheckIfRegistryAddressOrCredsChanged(s.RegistryInfo, registryInfo) {
 		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
-	}
-	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
-		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
 	if agentTLS != nil {
 		if !bytes.Equal(agentTLS.CA, s.AgentInfo.TLS.CA) ||
@@ -458,13 +445,6 @@ func (o *initOptions) validateInitFlags() error {
 	if o.registryInfo.Address != "" {
 		if o.registryInfo.PushUsername == "" || o.registryInfo.PushPassword == "" {
 			return fmt.Errorf(lang.CmdInitErrValidateRegistry)
-		}
-	}
-
-	// If 'artifact-url' is provided, make sure they provided values for the username and password of the push user
-	if o.artifactServer.Address != "" {
-		if o.artifactServer.PushUsername == "" || o.artifactServer.PushToken == "" {
-			return fmt.Errorf(lang.CmdInitErrValidateArtifact)
 		}
 	}
 

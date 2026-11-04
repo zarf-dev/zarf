@@ -1,0 +1,10 @@
+kind: ZarfPackageConfig
+metadata:
+  name: kustomize-plugins
+components:
+  - name: app
+    manifests:
+      - name: app
+        enableKustomizePlugins: true
+        kustomizations:
+          - .

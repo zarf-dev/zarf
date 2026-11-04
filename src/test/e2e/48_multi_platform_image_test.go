@@ -58,7 +58,7 @@ func TestIndexImage(t *testing.T) {
 	require.NoError(t, json.Unmarshal(idxBytes, &idx))
 
 	sbomDir := t.TempDir()
-	require.NoError(t, pkgLayout.GetSBOM(t.Context(), sbomDir))
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), sbomDir, nil))
 	sbomEntries, err := os.ReadDir(sbomDir)
 	require.NoError(t, err)
 	count := 0

@@ -99,8 +99,11 @@ func TestPackageLayout(t *testing.T) {
 	require.ErrorContains(t, err, "component test could not access a files directory")
 
 	tmpDir = t.TempDir()
-	err = pkgLayout.GetSBOM(ctx, tmpDir)
+	err = pkgLayout.GetSBOM(ctx, tmpDir, nil)
 	require.NoError(t, err)
+
+	err = pkgLayout.GetSBOM(ctx, t.TempDir(), []string{"test"})
+	require.EqualError(t, err, "SBOM selection by key requires package API version v1beta1+")
 
 	files, err := pkgLayout.Files()
 	require.NoError(t, err)
@@ -140,8 +143,48 @@ func TestGetSBOMV1Beta1(t *testing.T) {
 		},
 	}
 	outputDir := t.TempDir()
-	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir))
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir, nil))
 	require.FileExists(t, filepath.Join(outputDir, "files", "metrics.json"))
+}
+
+func TestGetSBOMV1Beta1WithKeys(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	imageReference := "ghcr.io/acme/api:v1.4.2"
+	resources := map[string]string{
+		ComponentSBOMResourcePath("metrics"):                   "metrics SBOM",
+		ComponentSBOMResourcePath("logs"):                      "logs SBOM",
+		ImageSBOMResourcePath(imageReference + "-linux-amd64"): "api amd64 SBOM",
+		ImageSBOMResourcePath(imageReference + "-linux-arm64"): "api arm64 SBOM",
+	}
+	for resourcePath, contents := range resources {
+		sourcePath := filepath.Join(dir, filepath.FromSlash(resourcePath))
+		require.NoError(t, os.MkdirAll(filepath.Dir(sourcePath), 0o700))
+		require.NoError(t, os.WriteFile(sourcePath, []byte(contents), 0o600))
+	}
+
+	pkgLayout := &PackageLayout{
+		dirPath: dir,
+		pkg: api.Package{
+			APIVersion: v1beta1.APIVersion,
+			Metadata:   api.PackageMetadata{Name: "test"},
+			Components: []api.Component{
+				{Name: "metrics", Files: []api.File{{Source: "metrics.yaml"}}},
+				{Name: "logs", Files: []api.File{{Source: "logs.yaml"}}},
+				{Name: "api", Images: []api.Image{{Name: imageReference}}},
+			},
+		},
+	}
+	outputDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir, []string{"metrics", imageReference}))
+	require.FileExists(t, filepath.Join(outputDir, "files", "metrics.json"))
+	require.NoFileExists(t, filepath.Join(outputDir, "files", "logs.json"))
+	require.FileExists(t, filepath.Join(outputDir, "images", "ghcr.io_acme_api_v1.4.2-linux-amd64.json"))
+	require.FileExists(t, filepath.Join(outputDir, "images", "ghcr.io_acme_api_v1.4.2-linux-arm64.json"))
+
+	err := pkgLayout.GetSBOM(t.Context(), t.TempDir(), []string{"missing"})
+	require.EqualError(t, err, `SBOM key "missing" not found in package`)
 }
 
 func TestGetSBOMV1Beta1RejectsSymlinkResource(t *testing.T) {
@@ -165,7 +208,7 @@ func TestGetSBOMV1Beta1RejectsSymlinkResource(t *testing.T) {
 		},
 	}
 	outputDir := t.TempDir()
-	err := pkgLayout.GetSBOM(t.Context(), outputDir)
+	err := pkgLayout.GetSBOM(t.Context(), outputDir, nil)
 	require.ErrorContains(t, err, "is not a regular file")
 	require.NoFileExists(t, filepath.Join(outputDir, "files", "metrics.json"))
 }
@@ -192,7 +235,7 @@ func TestGetSBOMV1Beta1DoesNotWriteThroughOutputDirectorySymlink(t *testing.T) {
 	externalDir := t.TempDir()
 	require.NoError(t, os.Symlink(externalDir, filepath.Join(outputDir, "images")))
 
-	err := pkgLayout.GetSBOM(t.Context(), outputDir)
+	err := pkgLayout.GetSBOM(t.Context(), outputDir, nil)
 	require.Error(t, err)
 	require.NoFileExists(t, filepath.Join(externalDir, "example.json"))
 }
@@ -220,7 +263,7 @@ func TestGetSBOMV1Beta1PreservesResourceKinds(t *testing.T) {
 	}
 
 	outputDir := t.TempDir()
-	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir))
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir, nil))
 
 	componentContents, err := os.ReadFile(filepath.Join(outputDir, "files", componentName+".json"))
 	require.NoError(t, err)
@@ -248,7 +291,7 @@ func TestGetSBOMV1Beta1UsesDeclaredImageReference(t *testing.T) {
 		},
 	}
 	outputDir := t.TempDir()
-	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir))
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), outputDir, nil))
 	contents, err := os.ReadFile(filepath.Join(outputDir, "images", "nginx.json"))
 	require.NoError(t, err)
 	require.Equal(t, "image SBOM", string(contents))
@@ -275,7 +318,7 @@ func TestGetSBOMV1Beta1RejectsLegacyImageFilenameCollisions(t *testing.T) {
 		},
 	}
 	outputDir := t.TempDir()
-	err := pkgLayout.GetSBOM(t.Context(), outputDir)
+	err := pkgLayout.GetSBOM(t.Context(), outputDir, nil)
 	require.ErrorContains(t, err, `both normalize to "images/a_b_c.json"`)
 	require.NoFileExists(t, filepath.Join(outputDir, "images", "a_b_c.json"))
 }
@@ -1461,20 +1504,10 @@ func TestGetAttachments(t *testing.T) {
 			},
 		)
 
-		for _, method := range []struct {
-			name    string
-			extract func(context.Context, string, []string) error
-		}{
-			{name: "GetAttachments", extract: pkgLayout.GetAttachments},
-			{name: "GetDocumentation", extract: pkgLayout.GetDocumentation},
-		} {
-			t.Run(method.name, func(t *testing.T) {
-				destPath := filepath.Join(outputDir, method.name)
-				require.NoError(t, method.extract(ctx, destPath, nil))
-				assertFileContent(t, filepath.Join(destPath, "README.md"), "readme content")
-				assertFileContent(t, filepath.Join(destPath, "LICENSE"), "license content")
-			})
-		}
+		destPath := filepath.Join(outputDir, "attachments")
+		require.NoError(t, pkgLayout.GetAttachments(ctx, destPath, nil))
+		assertFileContent(t, filepath.Join(destPath, "README.md"), "readme content")
+		assertFileContent(t, filepath.Join(destPath, "LICENSE"), "license content")
 	})
 
 	t.Run("extract specific documentation keys", func(t *testing.T) {
@@ -1496,14 +1529,14 @@ func TestGetAttachments(t *testing.T) {
 		require.NoFileExists(t, filepath.Join(outputDir, "LICENSE"))
 	})
 
-	t.Run("error when no documentation in package", func(t *testing.T) {
+	t.Run("error when no attachments in package", func(t *testing.T) {
 		pkgLayout, outputDir := setupDocTest(t,
 			map[string]string{},
 			nil,
 		)
 
 		err := pkgLayout.GetAttachments(ctx, outputDir, nil)
-		require.ErrorContains(t, err, "no documentation files found in package")
+		require.ErrorContains(t, err, "no attachments found in package")
 	})
 
 	t.Run("error when key not found", func(t *testing.T) {
@@ -1517,14 +1550,14 @@ func TestGetAttachments(t *testing.T) {
 		)
 
 		err := pkgLayout.GetAttachments(ctx, outputDir, []string{"nonexistent"})
-		require.ErrorContains(t, err, "not found in package documentation")
+		require.ErrorContains(t, err, "attachment key nonexistent not found in package")
 	})
-	t.Run("extract v1beta1 documentation resources", func(t *testing.T) {
+	t.Run("extract v1beta1 attachment resources", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		pkgDir := filepath.Join(tmpDir, "package")
-		require.NoError(t, os.MkdirAll(filepath.Join(pkgDir, DocumentationDir), 0o700))
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, DocumentationDir, "README.md"), []byte("readme content"), 0o600))
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, DocumentationDir, "LICENSE"), []byte("license content"), 0o600))
+		require.NoError(t, os.MkdirAll(filepath.Join(pkgDir, AttachmentsDir), 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, AttachmentsDir, "README.md"), []byte("readme content"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, AttachmentsDir, "LICENSE"), []byte("license content"), 0o600))
 
 		pkgLayout := &PackageLayout{
 			dirPath: pkgDir,
@@ -1534,7 +1567,7 @@ func TestGetAttachments(t *testing.T) {
 			}),
 		}
 		outputDir := filepath.Join(tmpDir, "output")
-		require.NoError(t, pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"}))
+		require.NoError(t, pkgLayout.GetAttachments(ctx, outputDir, []string{"readme"}))
 		assertFileContent(t, filepath.Join(outputDir, "README.md"), "readme content")
 		require.NoFileExists(t, filepath.Join(outputDir, "LICENSE"))
 	})
@@ -1557,7 +1590,7 @@ func TestGetAttachments(t *testing.T) {
 		assertFileContent(t, filepath.Join(outputDir, "readme1-README.md"), "readme1 content")
 	})
 
-	t.Run("rejects documentation keys that escape output directory", func(t *testing.T) {
+	t.Run("rejects attachment keys that escape output directory", func(t *testing.T) {
 		pkgLayout, outputDir := setupDocTest(t,
 			map[string]string{
 				"../escape": "first/README.md",
@@ -1566,8 +1599,8 @@ func TestGetAttachments(t *testing.T) {
 			nil,
 		)
 
-		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
-		require.EqualError(t, err, `documentation key "../escape" would result in an invalid path`)
+		err := pkgLayout.GetAttachments(ctx, outputDir, nil)
+		require.EqualError(t, err, `attachment key "../escape" would result in an invalid path`)
 		require.NoFileExists(t, filepath.Join(filepath.Dir(outputDir), "escape-README.md"))
 	})
 	t.Run("does not write through an output symlink", func(t *testing.T) {
@@ -1594,7 +1627,7 @@ func TestGetAttachments(t *testing.T) {
 	})
 }
 
-func TestGetDocumentationFileNamesRejectsUnsafePaths(t *testing.T) {
+func TestGetAttachmentFileNamesRejectsUnsafePaths(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]map[string]string{
@@ -1605,58 +1638,58 @@ func TestGetDocumentationFileNamesRejectsUnsafePaths(t *testing.T) {
 		"backslash in key":        {`docs\readme`: "README.md"},
 		"parent directory source": {"readme": ".."},
 	}
-	for name, documentation := range tests {
+	for name, attachments := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := GetDocumentationFileNames(documentation)
+			_, err := GetAttachmentFileNames(attachments, nil)
 			require.ErrorContains(t, err, "would result in an invalid path")
 		})
 	}
 }
 
-func TestValidatePackagePathsRejectsSpacesInDocumentation(t *testing.T) {
+func TestValidatePackagePathsRejectsSpacesInAttachments(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name          string
-		apiVersion    string
-		documentation map[string]string
-		wantErr       string
+		name        string
+		apiVersion  string
+		attachments map[string]string
+		wantErr     string
 	}{
 		{
-			name:          "legacy documentation key",
-			apiVersion:    v1alpha1.APIVersion,
-			documentation: map[string]string{"release notes": "README.md"},
-			wantErr:       `documentation key "release notes" must not contain spaces`,
+			name:        "legacy attachment key",
+			apiVersion:  v1alpha1.APIVersion,
+			attachments: map[string]string{"release notes": "README.md"},
+			wantErr:     `attachment key "release notes" must not contain spaces`,
 		},
 		{
-			name:          "legacy documentation filename",
-			apiVersion:    v1alpha1.APIVersion,
-			documentation: map[string]string{"readme": "docs/release notes.md"},
-			wantErr:       `documentation file "docs/release notes.md" produces final filename "release notes.md", which must not contain spaces`,
+			name:        "legacy attachment filename",
+			apiVersion:  v1alpha1.APIVersion,
+			attachments: map[string]string{"readme": "docs/release notes.md"},
+			wantErr:     `attachment file "docs/release notes.md" produces final filename "release notes.md", which must not contain spaces`,
 		},
 		{
-			name:          "granular documentation key",
-			apiVersion:    v1beta1.APIVersion,
-			documentation: map[string]string{"release notes": "README.md"},
-			wantErr:       `documentation key "release notes" must not contain spaces`,
+			name:        "granular attachment key",
+			apiVersion:  v1beta1.APIVersion,
+			attachments: map[string]string{"release notes": "README.md"},
+			wantErr:     `attachment key "release notes" must not contain spaces`,
 		},
 		{
-			name:          "granular documentation filename",
-			apiVersion:    v1beta1.APIVersion,
-			documentation: map[string]string{"readme": "docs/release notes.md"},
-			wantErr:       `documentation file "docs/release notes.md" produces final filename "release notes.md", which must not contain spaces`,
+			name:        "granular attachment filename",
+			apiVersion:  v1beta1.APIVersion,
+			attachments: map[string]string{"readme": "docs/release notes.md"},
+			wantErr:     `attachment file "docs/release notes.md" produces final filename "release notes.md", which must not contain spaces`,
 		},
 		{
-			name:          "documentation source directory",
-			apiVersion:    v1beta1.APIVersion,
-			documentation: map[string]string{"readme": "release notes/README.md"},
+			name:        "attachment source directory",
+			apiVersion:  v1beta1.APIVersion,
+			attachments: map[string]string{"readme": "release notes/README.md"},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			err := ValidatePackagePaths(api.Package{
 				APIVersion:  test.apiVersion,
-				Attachments: test.documentation,
+				Attachments: test.attachments,
 			})
 			if test.wantErr == "" {
 				require.NoError(t, err)
@@ -1683,7 +1716,7 @@ func TestCopyDocumentationFileConfinesSourcePath(t *testing.T) {
 		require.NoError(t, destinationRoot.Close())
 	})
 
-	err = copyDocumentationFile(sourceRoot, destinationRoot, "../outside.md")
+	err = copyAttachmentFile(sourceRoot, destinationRoot, "../outside.md")
 	require.Error(t, err)
 }
 
@@ -2240,7 +2273,7 @@ func TestValidatePackagePaths(t *testing.T) {
 		},
 		{
 			name:    "build differential package version traversal",
-			pkg:     api.Package{Metadata: api.PackageMetadata{Name: "pkg"}, Build: api.BuildData{DifferentialPackageVersion: "../evil"}},
+			pkg:     api.Package{Metadata: api.PackageMetadata{Name: "pkg"}, Build: api.BuildData{Differential: &api.Differential{FromVersion: "../evil"}}},
 			wantErr: `package build differential package version "../evil" would result in an invalid path`,
 		},
 		{
@@ -2308,20 +2341,20 @@ func TestValidatePackagePaths(t *testing.T) {
 			wantErr: `manifest name ".." in component "comp" would result in an invalid path`,
 		},
 		{
-			name: "documentation key traversal",
+			name: "attachment key traversal",
 			pkg: api.Package{
 				Metadata:    api.PackageMetadata{Name: "pkg"},
 				Attachments: map[string]string{"../docs": "readme.md"},
 			},
-			wantErr: `documentation key "../docs" would result in an invalid path`,
+			wantErr: `attachment key "../docs" would result in an invalid path`,
 		},
 		{
-			name: "documentation key is traversal",
+			name: "attachment key is traversal",
 			pkg: api.Package{
 				Metadata:    api.PackageMetadata{Name: "pkg"},
 				Attachments: map[string]string{"..": "readme.md"},
 			},
-			wantErr: `documentation key ".." would result in an invalid path`,
+			wantErr: `attachment key ".." would result in an invalid path`,
 		},
 	}
 	for _, tt := range tests {

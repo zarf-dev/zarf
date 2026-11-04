@@ -4,8 +4,6 @@
     ".": {
       "release-type": "go",
       "package-name": "zarf",
-      "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": true,
       "include-v-in-tag": true,
       "tag-separator": "",
       "changelog-sections": [

@@ -1,0 +1,39 @@
+registry:
+  persistence:
+    enabled: true
+    size: 20Gi
+    existingClaim: ""
+    accessMode: ReadWriteOnce
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "3"
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    mapReplicasToNodes: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+  affinity:
+    enabled: true
+    custom: {}
+  tolerations: []
+  nodeSelector: {}
+  caBundle: ""
+  extraEnvVars: []
+  opentelemetry:
+    exporter: none
+  serviceAccount:
+    create: false
+    name: ""
+    annotations: {}
+  securityContext:
+    runAsUser: 1000
+    fsGroup: 2000
+    runAsGroup: 2000
+  proxy:
+    hostNetwork: false
+    tolerations: []

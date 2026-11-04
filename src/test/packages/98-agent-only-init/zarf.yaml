@@ -6,4 +6,4 @@ components:
   - name: zarf-agent
     required: true
     import:
-      path: ../../../../packages/zarf-agent
+      path: ../../../../packages/init/v1alpha1/zarf-agent
