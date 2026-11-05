@@ -86,6 +86,25 @@ In addition to the traditional sources outlined above, there is also a special "
 
 Additionally, inspecting a package deployed to a cluster will not be able to show the package's SBOMs, as they are not currently persisted to the cluster.
 
+### Deployed Package State
+
+Zarf stores deployed package definitions and component status in `zarf-package-*` Secrets in the `zarf` namespace. This state is used to list, inspect, update, and remove deployed packages.
+
+The `data` entry contains gzip-compressed JSON. To inspect it directly:
+
+```sh
+kubectl get secret -n zarf zarf-package-<package-name> -o jsonpath='{.data.data}' | base64 -d | gzip -dc
+```
+
+Existing uncompressed state remains readable and is compressed the next time Zarf updates it.
+
+:::caution
+
+pre v1.0 Zarf CLIs only recognize uncompressed state and will fail when reading v1.0+ packages. This can affect package deploy, package list, package remove, and update-creds.
+
+:::
+
+
 :::
 
 ### Package Documentation

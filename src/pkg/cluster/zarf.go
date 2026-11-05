@@ -5,10 +5,13 @@
 package cluster
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"sort"
 	"strings"
@@ -25,6 +28,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
+
+const packageCompressionFormatAnnotation = "zarf.dev/compression-format"
 
 // GetDeployedZarfPackages gets metadata information about packages that have been deployed to the cluster.
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
@@ -45,9 +50,9 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]state.Deployed
 		}
 		var deployedPackage state.DeployedPackage
 		// Process the k8s secret into our internal structs
-		err := json.Unmarshal(secret.Data["data"], &deployedPackage)
+		err := decodeDeployedPackage(&secret, &deployedPackage)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
+			errs = append(errs, fmt.Errorf("unable to decode the secret %s/%s: %w", secret.Namespace, secret.Name, err))
 			continue
 		}
 		warnOnUnrecognizedPackageAPIVersions(ctx, deployedPackage)
@@ -78,9 +83,9 @@ func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, op
 		return nil, err
 	}
 
-	err = json.Unmarshal(secret.Data["data"], deployedPackage)
+	err = decodeDeployedPackage(secret, deployedPackage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to decode the secret %s/%s: %w", secret.Namespace, secret.Name, err)
 	}
 	warnOnUnrecognizedPackageAPIVersions(ctx, *deployedPackage)
 	return deployedPackage, nil
@@ -110,7 +115,7 @@ func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg state.Deploy
 }
 
 func (c *Cluster) applyDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
-	packageSecretData, err := json.Marshal(depPkg)
+	packageSecretData, err := encodeDeployedPackage(depPkg)
 	if err != nil {
 		return err
 	}
@@ -118,11 +123,55 @@ func (c *Cluster) applyDeployedPackage(ctx context.Context, depPkg state.Deploye
 		WithLabels(map[string]string{
 			state.ZarfManagedByLabel:   "zarf",
 			state.ZarfPackageInfoLabel: depPkg.Name,
-		}).WithData(map[string][]byte{
-		"data": packageSecretData,
-	}).WithType(corev1.SecretTypeOpaque)
+		}).
+		WithAnnotations(map[string]string{
+			packageCompressionFormatAnnotation: "gzip",
+		}).
+		WithData(map[string][]byte{
+			"data": packageSecretData,
+		}).
+		WithType(corev1.SecretTypeOpaque)
 	_, err = c.Clientset.CoreV1().Secrets(*packageSecret.Namespace).Apply(ctx, packageSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	return err
+}
+
+func encodeDeployedPackage(depPkg state.DeployedPackage) ([]byte, error) {
+	data, err := json.Marshal(depPkg)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	writer, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := writer.Write(data); err != nil {
+		return nil, errors.Join(err, writer.Close())
+	}
+	if err := writer.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func decodeDeployedPackage(secret *corev1.Secret, depPkg *state.DeployedPackage) error {
+	data := secret.Data["data"]
+	switch format := secret.Annotations[packageCompressionFormatAnnotation]; format {
+	case "":
+		// Packages stored before compression was introduced contain plain JSON.
+	case "gzip":
+		reader, err := gzip.NewReader(bytes.NewReader(data))
+		if err != nil {
+			return err
+		}
+		data, err = io.ReadAll(reader)
+		if err = errors.Join(err, reader.Close()); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unsupported deployed package compression format %q", format)
+	}
+	return json.Unmarshal(data, depPkg)
 }
 
 // DeleteDeployedPackage removes the metadata for the deployed package.
