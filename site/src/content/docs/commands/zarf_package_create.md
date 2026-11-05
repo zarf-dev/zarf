@@ -38,7 +38,6 @@ zarf package create [ PATH ] [flags]
   -o, --output string               Specify the output (either a directory or an oci:// URL) for the created Zarf package
       --registry-override strings   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
       --rekor-url string            Rekor transparency log URL. Override for private Sigstore deployments. (default "https://rekor.sigstore.dev")
-  -s, --sbom                        View SBOM contents after creating the package
       --sbom-out string             Specify an output directory for the SBOMs from the created Zarf package
       --set stringToString          Specify package templates to set on the command line (KEY=value) (default [])
       --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider

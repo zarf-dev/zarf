@@ -63,7 +63,7 @@ func parseValues(ctx context.Context, valuesFiles []string, setValues map[string
 	return values, nil
 }
 
-func newDevCommand() *cobra.Command {
+func newDevCommand(architecture *architectureOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "dev",
 		Aliases: []string{"prepare", "prep"},
@@ -72,15 +72,15 @@ func newDevCommand() *cobra.Command {
 
 	v := getViper()
 
-	cmd.AddCommand(newDevDeployCommand(v))
+	cmd.AddCommand(newDevDeployCommand(v, architecture))
 	cmd.AddCommand(newDevGenerateCommand())
 	cmd.AddCommand(newDevPatchGitCommand())
 	cmd.AddCommand(newDevSha256SumCommand())
-	cmd.AddCommand(newDevInspectCommand(v))
-	cmd.AddCommand(newDevFindImagesCommand(v))
+	cmd.AddCommand(newDevInspectCommand(v, architecture))
+	cmd.AddCommand(newDevFindImagesCommand(v, architecture))
 	cmd.AddCommand(newDevGenerateConfigCommand())
-	cmd.AddCommand(newDevGenerateSchemaCommand(v))
-	cmd.AddCommand(newDevLintCommand(v))
+	cmd.AddCommand(newDevGenerateSchemaCommand(v, architecture))
+	cmd.AddCommand(newDevLintCommand(v, architecture))
 	cmd.AddCommand(newDevUpgradeSchemaCommand())
 	cmd.AddCommand(newDevTemplateCommand(v))
 
@@ -88,14 +88,15 @@ func newDevCommand() *cobra.Command {
 }
 
 type devGenerateSchemaOptions struct {
+	*architectureOptions
 	flavor         string
 	setPkgTmpl     map[string]string
 	update         bool
 	deleteNotFound bool
 }
 
-func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
-	o := &devGenerateSchemaOptions{}
+func newDevGenerateSchemaCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devGenerateSchemaOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:   "generate-schema [ PATH ]",
@@ -125,6 +126,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	}
 	schema, err := packager.GenerateValuesSchema(ctx, basePath, packager.GenerateValuesSchemaOptions{
 		DefinitionOptions: load.DefinitionOptions{
+			Architecture:     o.selectedArchitecture(),
 			Flavor:           o.flavor,
 			SetVariables:     o.setPkgTmpl,
 			IsInteractive:    true,
@@ -146,25 +148,26 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	return nil
 }
 
-func newDevInspectCommand(v *viper.Viper) *cobra.Command {
+func newDevInspectCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect",
 		Short: "Commands to gather information about a Zarf package from its definition",
 	}
 
-	cmd.AddCommand(newDevInspectDefinitionCommand(v))
-	cmd.AddCommand(newDevInspectManifestsCommand(v))
-	cmd.AddCommand(newDevInspectValuesFilesCommand(v))
+	cmd.AddCommand(newDevInspectDefinitionCommand(v, architecture))
+	cmd.AddCommand(newDevInspectManifestsCommand(v, architecture))
+	cmd.AddCommand(newDevInspectValuesFilesCommand(v, architecture))
 	return cmd
 }
 
 type devInspectDefinitionOptions struct {
+	*architectureOptions
 	flavor     string
 	setPkgTmpl map[string]string
 }
 
-func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
-	o := &devInspectDefinitionOptions{}
+func newDevInspectDefinitionCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devInspectDefinitionOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:   "definition [ PATH ]",
@@ -190,6 +193,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 	loadOpts := load.DefinitionOptions{
+		Architecture:     o.selectedArchitecture(),
 		Flavor:           o.flavor,
 		SetVariables:     o.setPkgTmpl,
 		CachePath:        cachePath,
@@ -249,6 +253,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 }
 
 type devInspectManifestsOptions struct {
+	*architectureOptions
 	enableKustomizePlugins bool
 	flavor                 string
 	createSetPkgTmpl       map[string]string
@@ -265,8 +270,9 @@ func newDevInspectManifestsOptions() devInspectManifestsOptions {
 	}
 }
 
-func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
+func newDevInspectManifestsCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
 	o := newDevInspectManifestsOptions()
+	o.architectureOptions = architecture
 
 	cmd := &cobra.Command{
 		Use:   "manifests [ PATH ]",
@@ -279,8 +285,6 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
-	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
@@ -309,6 +313,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
+		Architecture:           o.selectedArchitecture(),
 		EnableKustomizePlugins: o.enableKustomizePlugins,
 		CreateSetVariables:     o.createSetPkgTmpl,
 		DeploySetVariables:     o.deploySetVariables,
@@ -349,6 +354,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 }
 
 type devInspectValuesFilesOptions struct {
+	*architectureOptions
 	enableKustomizePlugins bool
 	flavor                 string
 	components             string
@@ -366,8 +372,9 @@ func newDevInspectValuesFilesOptions() devInspectValuesFilesOptions {
 	}
 }
 
-func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
+func newDevInspectValuesFilesCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
 	o := newDevInspectValuesFilesOptions()
+	o.architectureOptions = architecture
 
 	cmd := &cobra.Command{
 		Use:   "values-files [ PATH ]",
@@ -382,8 +389,6 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
 	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
-	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
@@ -412,6 +417,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
+		Architecture:           o.selectedArchitecture(),
 		EnableKustomizePlugins: o.enableKustomizePlugins,
 		CreateSetVariables:     o.createSetPkgTmpl,
 		DeploySetVariables:     o.deploySetVariables,
@@ -449,6 +455,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 }
 
 type devDeployOptions struct {
+	*architectureOptions
 	createSetPkgTmpl      map[string]string
 	deploySetVariables    map[string]string
 	valuesFiles           []string
@@ -460,15 +467,14 @@ type devDeployOptions struct {
 	timeout               time.Duration
 	retries               int
 	optionalComponents    string
-	noYOLO                bool
 	connected             bool
 	ociConcurrency        int
 	skipVersionCheck      bool
 	skipArchitectureCheck bool
 }
 
-func newDevDeployCommand(v *viper.Viper) *cobra.Command {
-	o := &devDeployOptions{}
+func newDevDeployCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devDeployOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
@@ -488,16 +494,12 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 		logger.Default().Debug("unable to mark dev-deploy flag as hidden", "error", err)
 	}
 
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
-	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 
 	// Always require take-ownership flag (no viper)
 	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
-	cmd.Flags().BoolVar(&o.takeOwnership, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
@@ -505,8 +507,6 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().BoolVar(&o.connected, "connected", v.GetBool(VDevDeployConnected), lang.CmdDevDeployFlagConnected)
 	cmd.Flags().BoolVar(&o.skipArchitectureCheck, "skip-architecture-check", false, lang.CmdPackageDeployFlagSkipArchitectureCheck+" Only applies when --connected=false.")
-	cmd.Flags().BoolVar(&o.noYOLO, "no-yolo", v.GetBool(VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
-	_ = cmd.Flags().MarkDeprecated("no-yolo", "Use --connected=false instead")
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
@@ -544,7 +544,8 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	err = packager.DevDeploy(ctx, basePath, packager.DevDeployOptions{
-		AirgapMode:            o.noYOLO || !o.connected,
+		Architecture:          o.selectedArchitecture(),
+		AirgapMode:            v.GetBool(VDevDeployNoYolo) || !o.connected,
 		Flavor:                o.flavor,
 		RegistryURL:           o.registryURL,
 		RegistryOverrides:     overrides,
@@ -825,6 +826,7 @@ func (o *devSha256SumOptions) compute(ctx context.Context, source string) (outpu
 }
 
 type devFindImagesOptions struct {
+	*architectureOptions
 	enableKustomizePlugins bool
 	repoHelmChartPath      string
 	createSetPkgTmpl       map[string]string
@@ -839,8 +841,8 @@ type devFindImagesOptions struct {
 	update                 bool
 }
 
-func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
-	o := &devFindImagesOptions{}
+func newDevFindImagesCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devFindImagesOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:     "find-images [ PATH ]",
@@ -852,21 +854,8 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdDevFlagRepoChartPath)
-	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSetPkgTmpl)
-
-	err := cmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
-	if err != nil {
-		logger.Default().Debug("unable to mark dev-find-images flag as set", "error", err)
-	}
-	err = cmd.Flags().MarkHidden("set")
-	if err != nil {
-		logger.Default().Debug("unable to mark dev-find-images flag as hidden", "error", err)
-	}
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSetPkgTmpl)
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
-	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
@@ -912,6 +901,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	findImagesOptions := packager.FindImagesOptions{
+		Architecture:           o.selectedArchitecture(),
 		EnableKustomizePlugins: o.enableKustomizePlugins,
 		RepoHelmChartPath:      o.repoHelmChartPath,
 		RegistryURL:            o.registryURL,
@@ -1086,12 +1076,13 @@ func (o *devGenerateConfigOptions) run(_ *cobra.Command, args []string) error {
 }
 
 type devLintOptions struct {
+	*architectureOptions
 	setPkgTmpl map[string]string
 	flavor     string
 }
 
-func newDevLintCommand(v *viper.Viper) *cobra.Command {
-	o := &devLintOptions{}
+func newDevLintCommand(v *viper.Viper, architecture *architectureOptions) *cobra.Command {
+	o := &devLintOptions{architectureOptions: architecture}
 
 	cmd := &cobra.Command{
 		Use:     "lint [ PATH ]",
@@ -1122,6 +1113,7 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	err = packager.Lint(ctx, basePath, packager.LintOptions{
+		Architecture:  o.selectedArchitecture(),
 		Flavor:        o.flavor,
 		SetVariables:  o.setPkgTmpl,
 		CachePath:     cachePath,
