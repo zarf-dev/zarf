@@ -28,8 +28,7 @@ func TestPush(t *testing.T) {
 		namespace       string
 	}{
 		{
-			name: "push local images oras",
-			// This OCI format directory was created by building the package at src/test/packages/39-crane-to-oras with the ORAS implementation
+			name:            "push local images oras",
 			SourceDirectory: "testdata/oras-oci-layout/images",
 			imageNames: []string{
 				"local-test:1.0.0",

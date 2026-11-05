@@ -108,7 +108,8 @@ func TestFindImages(t *testing.T) {
 			name:        "image not found",
 			packagePath: "./testdata/find-images/agent",
 			opts: FindImagesOptions{
-				Why: "foobar",
+				Why:        "foobar",
+				SkipCosign: true,
 			},
 			expectedErr: "image foobar not found in any charts or manifests",
 		},
@@ -117,6 +118,7 @@ func TestFindImages(t *testing.T) {
 			packagePath: "./testdata/find-images/invalid-helm-repo",
 			opts: FindImagesOptions{
 				RepoHelmChartPath: "test",
+				SkipCosign:        true,
 			},
 			expectedErr: "cannot convert the Git repository https://github.com/zarf-dev/zarf-public-test.git to a Helm chart without a version tag",
 		},
@@ -454,7 +456,7 @@ func TestFindDefinitionImages(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			opts := FindImagesOptions{}
+			opts := FindImagesOptions{SkipCosign: true}
 			definitionImageResults, err := FindDefinitionImages(ctx, tt.packagePath, opts)
 
 			if tt.expectedErr != "" {
