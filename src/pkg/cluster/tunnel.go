@@ -230,9 +230,8 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 			return TunnelInfo{}, fmt.Errorf("service %s/%s has no ports", svc.Namespace, svc.Name)
 		}
 		zt.RemotePort = svc.Spec.Ports[0].TargetPort.IntValue()
-		// if targetPort == 0, look for Port (which is required)
+		// If targetPort is 0, it may be a named port, so find the corresponding container port in the pod.
 		if zt.RemotePort == 0 {
-			// TODO: Need a check for if container port is not found
 			remotePort, err := c.findPodContainerPort(ctx, svc)
 			if err != nil {
 				return TunnelInfo{}, err
@@ -266,6 +265,9 @@ func (c *Cluster) findPodContainerPort(ctx context.Context, svc corev1.Service) 
 	if err != nil {
 		return 0, err
 	}
+	if len(podList.Items) == 0 {
+		return 0, fmt.Errorf("no pods found for service %s/%s", svc.Namespace, svc.Name)
+	}
 	for _, pod := range podList.Items {
 		// Find the matching name on the port in the pod
 		for _, container := range pod.Spec.Containers {
@@ -276,7 +278,7 @@ func (c *Cluster) findPodContainerPort(ctx context.Context, svc corev1.Service) 
 			}
 		}
 	}
-	return 0, nil
+	return 0, fmt.Errorf("target port %s not found in pods for service %s/%s", svc.Spec.Ports[0].TargetPort.String(), svc.Namespace, svc.Name)
 }
 
 // ServiceInfoFromNodePortURL returns the Kubernetes Service that corresponds to the given NodePort URL.
