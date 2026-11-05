@@ -5,6 +5,10 @@ inputs:
   slack-webhook-url:
     description: 'The webhook URL to use to post to slack'
     required: true
+  status:
+    description: 'Status to report; defaults to the current job status'
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -13,13 +17,13 @@ runs:
       with:
         payload: |
           {
-            "text": "The GitHub Workflow *'${{ github.workflow }}'* had a result of: `${{ job.status }}`.\n\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Action Log>",
+            "text": "The GitHub Workflow *'${{ github.workflow }}'* had a result of: `${{ inputs.status || job.status }}`.\n\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Action Log>",
             "blocks": [
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "The GitHub Workflow *'${{ github.workflow }}'* had a result of: `${{ job.status }}`."
+                  "text": "The GitHub Workflow *'${{ github.workflow }}'* had a result of: `${{ inputs.status || job.status }}`."
                 }
               },
               {

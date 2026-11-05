@@ -6,7 +6,7 @@ title: Nerd Notes
 This page is still being developed. More content will be added soon!
 :::
 
-Zarf is written entirely in [go](https://go.dev/), except for a single \<1Mib binary for the injector system written in [rust](https://www.rust-lang.org/), so we can fit it in a [configmap](https://kubernetes.io/docs/concepts/configuration/configmap/). All assets are bundled together into a single [zstd](https://facebook.github.io/zstd/) tarball on each `zarf package create` operation. On the airgap / offline side, `zarf package deploy` extracts the various assets and places them on the filesystem or installs them in the cluster, depending on what the zarf package says to do. Some important ideas behind Zarf:
+Zarf is written entirely in [go](https://go.dev/), except for a single \<1Mib binary for the injector system written in [rust](https://www.rust-lang.org/), so we can fit it in a [configmap](https://kubernetes.io/docs/concepts/configuration/configmap/). All assets are bundled together into a single [zstd](https://github.com/facebook/zstd) tarball on each `zarf package create` operation. On the airgap / offline side, `zarf package deploy` extracts the various assets and places them on the filesystem or installs them in the cluster, depending on what the zarf package says to do. Some important ideas behind Zarf:
 
 - All workloads are installed in the cluster via the [Helm SDK](https://helm.sh/docs/topics/advanced/#go-sdk)
 - The OCI Registries used are both from [Docker](https://github.com/distribution/distribution)
@@ -16,7 +16,7 @@ Zarf is written entirely in [go](https://go.dev/), except for a single \<1Mib bi
 - Zarf uses a custom injector system to bootstrap a new cluster. See the PR [#329](https://github.com/zarf-dev/zarf/pull/329) and [ADR](https://github.com/zarf-dev/zarf/blob/main/adr/0003-image-injection-into-remote-clusters-without-native-support.md) for more details on how we came to this solution.  The general steps are listed below:
   - Get a list of images in the cluster
   - Attempt to create an ephemeral pod using an image from the list
-  - A small rust binary that is compiled using [musl](https://www.musl-libc.org/) to keep the max binary size as minimal as possible
+  - A small rust binary that is compiled using [musl](https://wiki.musl-libc.org/) to keep the max binary size as minimal as possible
   - The `registry:3` image is placed in a tar archive and split into 512 KB chunks; larger sizes tended to cause latency issues on low-resource control planes
   - An init container runs the rust binary to re-assemble and extract the zarf binary and registry image
   - The container then starts and runs the rust binary to host the registry image in an static docker registry

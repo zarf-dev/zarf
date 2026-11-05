@@ -1,0 +1,4 @@
+# Inputs come from git ls-files, including tracked files in hidden directories.
+no_ignore = true
+# Repository directories are valid links on GitHub even without a README.
+index_files = ["README.md", "readme.md", "."]

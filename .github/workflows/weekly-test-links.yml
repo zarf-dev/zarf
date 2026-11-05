@@ -1,0 +1,109 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+name: Weekly test all links
+
+on:
+  schedule:
+    - cron: '17 6 * * 1' # Mondays at 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: all-links-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test-links:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.repository == 'zarf-dev/zarf' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Restore site build cache
+        id: build-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: site/.cache/astro
+          key: site-build-${{ runner.os }}-node26-${{ hashFiles('site/package-lock.json', 'site/astro.config.ts', 'Makefile') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            site-build-${{ runner.os }}-node26-${{ hashFiles('site/package-lock.json', 'site/astro.config.ts', 'Makefile') }}-
+
+      - name: Restore external URL cache
+        id: url-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .lycheecache
+          key: lychee-${{ runner.os }}-0.24.2-${{ hashFiles('.lychee/*.toml', 'Makefile') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            lychee-${{ runner.os }}-0.24.2-${{ hashFiles('.lychee/*.toml', 'Makefile') }}-
+
+      - name: Install lychee
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2
+        with:
+          lycheeVersion: v0.24.2
+          args: --version
+          failIfEmpty: false
+          jobSummary: false
+          output: ${{ runner.temp }}/lychee-version.md
+
+      - name: Check all local and external links
+        run: make test-links TEST_EXTERNAL_URLS=true LYCHEE_FORMAT=json
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Save site build cache
+        if: ${{ !cancelled() && steps.build-cache.outcome == 'success' && hashFiles('site/.cache/astro/**') != '' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: site/.cache/astro
+          key: ${{ steps.build-cache.outputs.cache-primary-key }}
+
+      - name: Save external URL cache
+        if: ${{ !cancelled() && steps.url-cache.outcome == 'success' && hashFiles('.lycheecache') != '' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .lycheecache
+          key: ${{ steps.url-cache.outputs.cache-primary-key }}
+
+      - name: Summarize link reports
+        if: ${{ !cancelled() && hashFiles('.lychee/results/*.json') != '' }}
+        run: |
+          jq -r '"### \(input_filename)\n\nErrors: \(.errors); timeouts: \(.timeouts)\n"' .lychee/results/*.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload link reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: all-link-reports
+          path: .lychee/results/*.json
+          include-hidden-files: true
+          retention-days: 14
+
+  notify-slack:
+    needs: test-links
+    if: ${{ always() && !cancelled() && needs.test-links.result == 'failure' && github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Notify Slack of failure
+        uses: ./.github/actions/slack
+        with:
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ needs.test-links.result }}

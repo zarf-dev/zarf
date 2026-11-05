@@ -92,6 +92,7 @@ const topicsOption: Record<string, string[]> = {
 
 // https://astro.build/config
 export default defineConfig({
+  cacheDir: "./.cache/astro",
   redirects: {
     "/docs/zarf-overview": "/",
   },
@@ -100,7 +101,7 @@ export default defineConfig({
       gfm: true,
       remarkPlugins: [
         remarkGemoji,
-        [remarkLinkRewrite, { srcDir: docsDir, sections }],
+        [remarkLinkRewrite, { srcDir: docsDir, sections, publicDir: fileURLToPath(new URL("./public/", import.meta.url)), versions }],
       ],
       rehypePlugins: [
         rehypeHeadingIds,
