@@ -530,6 +530,9 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 }
 
 func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
+	if err := opts.Validate(pkgLayout.Definition()); err != nil {
+		return nil, err
+	}
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
 	if opts.NamespaceOverride != "" {
 		if err := pkgLayout.OverrideNamespace(opts.NamespaceOverride); err != nil {

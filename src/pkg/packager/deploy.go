@@ -16,6 +16,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
@@ -93,6 +94,20 @@ type DeployOptions struct {
 	SkipVersionCheck bool
 }
 
+// Validate checks whether the deployment options are supported by the package.
+func (opts DeployOptions) Validate(pkg api.Package) error {
+	if pkg.GetAPIVersion() == v1beta1.APIVersion && len(opts.SetVariables) > 0 {
+		return fmt.Errorf("variables are not supported in v1beta1 packages; use package values instead")
+	}
+	if opts.Connected && pkg.IsInitConfig() {
+		return fmt.Errorf("connected mode is not supported for init packages")
+	}
+	if opts.SkipArchitectureCheck && pkg.IsInitConfig() {
+		return fmt.Errorf("skipping architecture checks is not supported for init packages")
+	}
+	return nil
+}
+
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
 // any of these fields are subject to change from one component to the next
 type deployer struct {
@@ -116,12 +131,8 @@ type DeployResult struct {
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	start := time.Now()
 	pkg := pkgLayout.Definition()
-	if opts.Connected && pkg.IsInitConfig() {
-		return DeployResult{}, fmt.Errorf("--connected is not supported for init packages")
-	}
-
-	if opts.SkipArchitectureCheck && pkg.IsInitConfig() {
-		return DeployResult{}, fmt.Errorf("skipping architecture checks is not supported for init packages")
+	if err := opts.Validate(pkg); err != nil {
+		return DeployResult{}, err
 	}
 
 	// Validate operational requirements before proceeding
