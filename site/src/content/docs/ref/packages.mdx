@@ -77,34 +77,26 @@ A remote tarball is a Zarf package tarball that is hosted on a web server that i
 
 An OCI package is one that has been published to an OCI compatible registry using `zarf package publish` or the `-o` option on `zarf package create`.  These packages live within a given registry and you can learn more about them in our [Publish & Deploy Packages w/OCI Tutorial](/tutorials/6-publish-and-deploy/).
 
-:::note
+### Deployed Packages
 
-In addition to the traditional sources outlined above, there is also a special "Cluster" source available on `inspect` and `remove` that allows for referencing a deployed package via its name:
+{/*TODO probably worth having a published package state schema to link to and a drop down example verified against said schema*/}
 
-- `zarf package inspect <package name>`
+When a package is deployed to a cluster, Zarf stores its definition and installed components in a `zarf-package-*` Secret in the `zarf` namespace. This state is used to list, inspect, update, and remove deployed packages.
+
+Deployed packages can be referenced by name as a "Cluster" source for `inspect` and `remove`:
+
+- `zarf package inspect definition|digest|images <package name> `
 - `zarf package remove <package name>`
 
-Additionally, inspecting a package deployed to a cluster will not be able to show the package's SBOMs, as they are not currently persisted to the cluster.
-
-### Deployed Package State
-
-{/* TODO probably worth having a published schema for state and a drop down example verified against said schema*/}
-Zarf stores deployed package definitions and installed components in `zarf-package-*` Secrets in the `zarf` namespace. This state is used to list, inspect, update, and remove deployed packages.
-
-The `data` entry contains gzip-compressed JSON. To inspect it directly:
+Deployed packages are stored as gzip-compressed JSON data in a Kubernetes secret. To inspect it directly:
 
 ```sh
 zarf tools kubectl get secret -n zarf zarf-package-<package-name> -o jsonpath='{.data.data}' | base64 -d | gzip -dc
 ```
 
-Existing uncompressed state remains readable and is compressed the next time Zarf updates it.
-
 :::caution
 
-pre v1.0 versions of Zarf only recognized uncompressed state and will fail to read deployment state written by v1.0+ CLIs. This can affect package deploy, package list, package remove, registry prune, and update-creds.
-
-:::
-
+Pre-v1.0 versions of Zarf only recognized uncompressed state and will fail to read deployment state written by v1.0+ CLIs.
 
 :::
 
