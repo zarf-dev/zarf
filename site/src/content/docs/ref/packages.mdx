@@ -88,19 +88,20 @@ Additionally, inspecting a package deployed to a cluster will not be able to sho
 
 ### Deployed Package State
 
-Zarf stores deployed package definitions and component status in `zarf-package-*` Secrets in the `zarf` namespace. This state is used to list, inspect, update, and remove deployed packages.
+{/* TODO probably worth having a published schema for state and a drop down example verified against said schema*/}
+Zarf stores deployed package definitions and installed components in `zarf-package-*` Secrets in the `zarf` namespace. This state is used to list, inspect, update, and remove deployed packages.
 
 The `data` entry contains gzip-compressed JSON. To inspect it directly:
 
 ```sh
-kubectl get secret -n zarf zarf-package-<package-name> -o jsonpath='{.data.data}' | base64 -d | gzip -dc
+zarf tools kubectl get secret -n zarf zarf-package-<package-name> -o jsonpath='{.data.data}' | base64 -d | gzip -dc
 ```
 
 Existing uncompressed state remains readable and is compressed the next time Zarf updates it.
 
 :::caution
 
-pre v1.0 Zarf CLIs only recognize uncompressed state and will fail when reading v1.0+ packages. This can affect package deploy, package list, package remove, and update-creds.
+pre v1.0 versions of Zarf only recognized uncompressed state and will fail when reading deployment state written by v1.0+ CLIs. This can affect package deploy, package list, package remove, registry prune, and update-creds.
 
 :::
 
