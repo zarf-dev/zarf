@@ -513,9 +513,26 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	}
 
 	s := &state.State{}
-	err = json.Unmarshal(secret.Data[state.ZarfStateDataKey], s)
+	// Keep the pre-v0.85 agent fields at the read boundary; saves use only state.State.
+	stored := struct {
+		*state.State
+		AgentInfo            *state.AgentInfo     `json:"agentInfo"`
+		AgentTLS             pki.GeneratedPKI     `json:"agentTLS"`
+		AgentTLSUserProvided bool                 `json:"agentTLSUserProvided"`
+		AgentMutationPolicy  state.MutationPolicy `json:"agentMutationPolicy"`
+	}{State: s}
+	err = json.Unmarshal(secret.Data[state.ZarfStateDataKey], &stored)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
+	}
+	if stored.AgentInfo != nil {
+		s.AgentInfo = *stored.AgentInfo
+	} else {
+		s.AgentInfo = state.AgentInfo{
+			TLS:             stored.AgentTLS,
+			TLSUserProvided: stored.AgentTLSUserProvided,
+			MutationPolicy:  stored.AgentMutationPolicy,
+		}
 	}
 	// Older state identified the Git server by address without recording its mode.
 	if s.GitServer.IsConfigured() && s.GitServer.GitServerMode == "" {
