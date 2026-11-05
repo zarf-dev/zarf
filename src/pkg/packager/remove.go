@@ -39,10 +39,11 @@ type RemoveOptions struct {
 	SkipVersionCheck bool
 }
 
-// Remove runs removal actions and uninstalls recorded Helm charts for the selected
-// components. When a deployment record exists, it preserves unselected components
-// and records progress even for local-only selections. Standalone local packages
-// without a deployment record never create one during removal.
+// Remove runs removal actions and uninstalls recorded Helm charts for components
+// selected by the ordered ComponentSelectors list, with the last matching selector
+// taking precedence. An empty list selects all components. When a deployment record
+// exists, it preserves unselected components and records progress even for local-only
+// selections. Standalone local packages without a deployment record never create one.
 func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) error {
 	if err := definition.Validate(); err != nil {
 		return err
@@ -59,18 +60,18 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 		opts.Timeout = config.ZarfDefaultTimeout
 	}
 
-	normalizedSelectors, err := filters.NormalizeComponentSelectors(opts.OptionalComponents)
+	normalizedSelectors, err := filters.NormalizeComponentSelectorList(opts.ComponentSelectors)
 	if err != nil {
 		return err
 	}
-	opts.OptionalComponents = normalizedSelectors
+	opts.ComponentSelectors = normalizedSelectors
 	removeConfigDigest, err := opts.RemoveConfig.Digest()
 	if err != nil {
 		return fmt.Errorf("digest remove config: %w", err)
 	}
 	definition, err = filters.Apply(definition, filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
-		filters.BySelectState(opts.OptionalComponents),
+		filters.ByComponentSelectors(opts.ComponentSelectors),
 	))
 	if err != nil {
 		return err

@@ -6,6 +6,7 @@ package filters
 
 import (
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -19,17 +20,33 @@ const (
 
 // NormalizeComponentSelectors normalizes selectors while preserving their order and repetitions.
 func NormalizeComponentSelectors(selectors string) (string, error) {
-	parsed, err := parseComponentSelectors(selectors)
+	parsed, err := ParseComponentSelectors(selectors)
 	if err != nil {
 		return "", err
 	}
 	return strings.Join(parsed, ","), nil
 }
 
-func parseComponentSelectors(selectors string) ([]string, error) {
-	parts := strings.Split(selectors, ",")
-	result := parts[:0]
-	for _, selector := range parts {
+// ParseComponentSelectors parses comma-separated selectors into a normalized,
+// ordered list, preserving repetitions.
+func ParseComponentSelectors(selectors string) ([]string, error) {
+	if selectors == "" {
+		return nil, nil
+	}
+	return normalizeComponentSelectorList(strings.Split(selectors, ","))
+}
+
+// NormalizeComponentSelectorList returns a detached, normalized selector list.
+// Entries are individual patterns, not comma-separated strings. Order and
+// repetitions are preserved, and empty entries are discarded.
+func NormalizeComponentSelectorList(selectors []string) ([]string, error) {
+	return normalizeComponentSelectorList(slices.Clone(selectors))
+}
+
+// normalizeComponentSelectorList compacts and normalizes an owned slice in place.
+func normalizeComponentSelectorList(selectors []string) ([]string, error) {
+	result := selectors[:0]
+	for _, selector := range selectors {
 		selector = strings.ToLower(strings.TrimSpace(selector))
 		if selector == "" {
 			continue
@@ -39,6 +56,9 @@ func parseComponentSelectors(selectors string) ([]string, error) {
 			return nil, err
 		}
 		result = append(result, selector)
+	}
+	if len(result) == 0 {
+		return nil, nil
 	}
 	return result, nil
 }

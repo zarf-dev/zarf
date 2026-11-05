@@ -49,7 +49,7 @@ func (p *PackageLayout) Definition() api.Package {
 
 // SetComponentSelectors restores runtime selection provenance after an in-process
 // definition reload. Normal selection is recorded by Filter or package loading.
-func (p *PackageLayout) SetComponentSelectors(selectors string) {
+func (p *PackageLayout) SetComponentSelectors(selectors []string) {
 	p.pkg.SetComponentSelectors(selectors)
 }
 

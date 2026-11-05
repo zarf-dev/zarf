@@ -994,7 +994,7 @@ func TestConfigDigestNormalizesSelectors(t *testing.T) {
 		Values:             value.Values{"nested": map[string]any{"enabled": true}},
 		NamespaceOverride:  "namespace",
 		ValuesOverridesMap: ValuesOverrides{"component": {"chart": value.Values{"replicas": 2}}},
-		OptionalComponents: " B, -A,b ",
+		ComponentSelectors: []string{" B ", " -A", "b "},
 		Connectivity:       PackageConnectivityConnected,
 	}
 	deployB := DeployConfig{
@@ -1002,7 +1002,7 @@ func TestConfigDigestNormalizesSelectors(t *testing.T) {
 		Values:             value.Values{"nested": map[string]any{"enabled": true}},
 		NamespaceOverride:  "namespace",
 		ValuesOverridesMap: ValuesOverrides{"component": {"chart": value.Values{"replicas": 2}}},
-		OptionalComponents: "b,-a,b",
+		ComponentSelectors: []string{"b", "-a", "b"},
 		Connectivity:       PackageConnectivityConnected,
 	}
 	deployDigestA, err := deployA.Digest()
@@ -1011,29 +1011,31 @@ func TestConfigDigestNormalizesSelectors(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, deployDigestA, deployDigestB)
 	require.True(t, deployDigestA.Algorithm().Available())
+	require.Equal(t, []string{" B ", " -A", "b "}, deployA.ComponentSelectors)
 
-	deployB.OptionalComponents = "-a,b,b"
+	deployB.ComponentSelectors = []string{"-a", "b", "b"}
 	changedDeployDigest, err := deployB.Digest()
 	require.NoError(t, err)
 	require.NotEqual(t, deployDigestA, changedDeployDigest)
 
-	deployB.OptionalComponents = deployA.OptionalComponents
+	deployB.ComponentSelectors = deployA.ComponentSelectors
 
 	deployB.Connectivity = PackageConnectivityAirGap
 	changedDeployDigest, err = deployB.Digest()
 	require.NoError(t, err)
 	require.NotEqual(t, deployDigestA, changedDeployDigest)
 
-	removeA := RemoveConfig{Values: value.Values{"force": true}, NamespaceOverride: "namespace", OptionalComponents: " B, -A,b "}
-	removeB := RemoveConfig{Values: value.Values{"force": true}, NamespaceOverride: "namespace", OptionalComponents: "b,-a,b"}
+	removeA := RemoveConfig{Values: value.Values{"force": true}, NamespaceOverride: "namespace", ComponentSelectors: []string{" B ", " -A", "b "}}
+	removeB := RemoveConfig{Values: value.Values{"force": true}, NamespaceOverride: "namespace", ComponentSelectors: []string{"b", "-a", "b"}}
 	removeDigestA, err := removeA.Digest()
 	require.NoError(t, err)
 	removeDigestB, err := removeB.Digest()
 	require.NoError(t, err)
 	require.Equal(t, removeDigestA, removeDigestB)
 	require.True(t, removeDigestA.Algorithm().Available())
+	require.Equal(t, []string{" B ", " -A", "b "}, removeA.ComponentSelectors)
 
-	removeB.OptionalComponents = "-a,b,b"
+	removeB.ComponentSelectors = []string{"-a", "b", "b"}
 	changedRemoveDigest, err := removeB.Digest()
 	require.NoError(t, err)
 	require.NotEqual(t, removeDigestA, changedRemoveDigest)
@@ -1042,12 +1044,79 @@ func TestConfigDigestNormalizesSelectors(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestConfigSelectorDigestForms(t *testing.T) {
+	t.Parallel()
+
+	for _, kind := range []string{"deploy", "remove"} {
+		t.Run(kind, func(t *testing.T) {
+			digestFor := func(selectors []string) (string, error) {
+				if kind == "deploy" {
+					d, err := (DeployConfig{ComponentSelectors: selectors}).Digest()
+					return d.String(), err
+				}
+				d, err := (RemoveConfig{ComponentSelectors: selectors}).Digest()
+				return d.String(), err
+			}
+			empty, err := digestFor(nil)
+			require.NoError(t, err)
+			for _, selectors := range [][]string{{}, {""}, {" ", "\t", ""}} {
+				got, err := digestFor(selectors)
+				require.NoError(t, err)
+				require.Equal(t, empty, got)
+			}
+
+			selectors := []string{" A ", "", " -* ", "a"}
+			original := append([]string(nil), selectors...)
+			repeated, err := digestFor(selectors)
+			require.NoError(t, err)
+			require.Equal(t, original, selectors)
+			normalized, err := digestFor([]string{"a", "-*", "a"})
+			require.NoError(t, err)
+			require.Equal(t, repeated, normalized)
+			for _, changed := range [][]string{{"a", "-*"}, {"a", "a", "-*"}, {"a", "-*", "a", "a"}} {
+				got, err := digestFor(changed)
+				require.NoError(t, err)
+				require.NotEqual(t, repeated, got)
+			}
+			_, err = digestFor([]string{"["})
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestConfigSelectorJSON(t *testing.T) {
+	t.Parallel()
+
+	selectors := []string{"a", "-*", "a"}
+	t.Run("deploy", func(t *testing.T) {
+		config := DeployConfig{ComponentSelectors: selectors}
+		data, err := json.Marshal(config)
+		require.NoError(t, err)
+		require.JSONEq(t, `{"componentSelectors":["a","-*","a"]}`, string(data))
+		var restored DeployConfig
+		require.NoError(t, json.Unmarshal(data, &restored))
+		require.Equal(t, config, restored)
+		require.Error(t, json.Unmarshal([]byte(`{"componentSelectors":"a"}`), &restored))
+	})
+	t.Run("remove", func(t *testing.T) {
+		config := RemoveConfig{ComponentSelectors: selectors}
+		data, err := json.Marshal(config)
+		require.NoError(t, err)
+		require.JSONEq(t, `{"componentSelectors":["a","-*","a"]}`, string(data))
+		var restored RemoveConfig
+		require.NoError(t, json.Unmarshal(data, &restored))
+		require.Equal(t, config, restored)
+		require.Error(t, json.Unmarshal([]byte(`{"componentSelectors":"a"}`), &restored))
+	})
+}
+
 func TestDeployedPackageSetDeployConfigCopiesNestedValues(t *testing.T) {
 	t.Parallel()
 
 	config := DeployConfig{
-		SetVariables: map[string]string{"VARIABLE": "original"},
-		Values:       value.Values{"nested": map[string]any{"value": "original"}},
+		SetVariables:       map[string]string{"VARIABLE": "original"},
+		ComponentSelectors: []string{"original"},
+		Values:             value.Values{"nested": map[string]any{"value": "original"}},
 		ValuesOverridesMap: ValuesOverrides{
 			"component": {
 				"chart": value.Values{"nested": map[string]any{"value": "original"}},
@@ -1058,6 +1127,7 @@ func TestDeployedPackageSetDeployConfigCopiesNestedValues(t *testing.T) {
 	deployed.SetDeployConfig(config)
 
 	config.SetVariables["VARIABLE"] = "mutated"
+	config.ComponentSelectors[0] = "mutated"
 	configValues, ok := config.Values["nested"].(map[string]any)
 	require.True(t, ok)
 	configValues["value"] = "mutated"
@@ -1066,6 +1136,7 @@ func TestDeployedPackageSetDeployConfigCopiesNestedValues(t *testing.T) {
 	configOverrides["value"] = "mutated"
 
 	require.Equal(t, "original", deployed.DeployConfig.SetVariables["VARIABLE"])
+	require.Equal(t, []string{"original"}, deployed.DeployConfig.ComponentSelectors)
 	deployedValues, ok := deployed.DeployConfig.Values["nested"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, "original", deployedValues["value"])
@@ -1096,8 +1167,9 @@ func TestDeployedPackageGetDeployConfigCopiesNestedValues(t *testing.T) {
 	t.Parallel()
 
 	config := DeployConfig{
-		SetVariables: map[string]string{"VARIABLE": "original"},
-		Values:       value.Values{"nested": map[string]any{"value": "original"}},
+		SetVariables:       map[string]string{"VARIABLE": "original"},
+		ComponentSelectors: []string{"original"},
+		Values:             value.Values{"nested": map[string]any{"value": "original"}},
 		ValuesOverridesMap: ValuesOverrides{
 			"component": {
 				"chart": value.Values{"nested": map[string]any{"value": "original"}},
@@ -1110,6 +1182,7 @@ func TestDeployedPackageGetDeployConfigCopiesNestedValues(t *testing.T) {
 	snapshot, ok := deployed.GetDeployConfig()
 	require.True(t, ok)
 	snapshot.SetVariables["VARIABLE"] = "mutated"
+	snapshot.ComponentSelectors[0] = "mutated"
 	snapshotValues, ok := snapshot.Values["nested"].(map[string]any)
 	require.True(t, ok)
 	snapshotValues["value"] = "mutated"

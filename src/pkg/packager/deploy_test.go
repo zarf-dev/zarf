@@ -70,7 +70,7 @@ func TestDeployLeavesComponentSelectionToCaller(t *testing.T) {
 	require.Equal(t, "component-b", result.DeployedComponents[0].Name)
 	selectors, applied := pkgLayout.Definition().ComponentSelectors()
 	require.True(t, applied)
-	require.Equal(t, "component-b,component-b", selectors)
+	require.Equal(t, []string{"component-b", "component-b"}, selectors)
 }
 
 func TestPrepareDeploymentStateCreatesNamespaceBeforePackageSecret(t *testing.T) {
@@ -263,7 +263,7 @@ func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
 	config := state.DeployConfig{
 		SetVariables:       opts.SetVariables,
 		Values:             opts.Values,
-		OptionalComponents: "component,component",
+		ComponentSelectors: []string{"component", "component"},
 		Connectivity:       state.PackageConnectivityConnected,
 	}
 	d := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false), vals: value.Values{"user": "override", "package": "default"}}
@@ -282,7 +282,7 @@ func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
 	actualDigest, err := persistedConfig.Digest()
 	require.NoError(t, err)
 	require.Equal(t, expectedDigest, actualDigest)
-	require.Equal(t, "component,component", persistedConfig.OptionalComponents)
+	require.Equal(t, []string{"component", "component"}, persistedConfig.ComponentSelectors)
 	require.Equal(t, actualDigest, deployed.Events[0].ConfigDigest)
 	require.Equal(t, actualDigest, deployed.Events[len(deployed.Events)-1].ConfigDigest)
 	require.Equal(t, opts.Source, deployed.Events[0].Source)
@@ -310,7 +310,7 @@ func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
 	retryConfig := config
 	retryConfig.SetVariables = retryOpts.SetVariables
 	retryConfig.Values = nil
-	retryConfig.OptionalComponents = "component"
+	retryConfig.ComponentSelectors = []string{"component"}
 	retryDigest, err := retryConfig.Digest()
 	require.NoError(t, err)
 	require.NotEqual(t, expectedDigest, retryDigest)

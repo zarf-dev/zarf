@@ -4,7 +4,10 @@
 // Package api defines Zarf's version-neutral package model.
 package api
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // Package is the version-neutral representation used by package operations and converters.
 type Package struct {
@@ -22,21 +25,28 @@ type Package struct {
 	Constants []Constant
 
 	// Runtime selection provenance is not part of either package wire schema.
-	componentSelectors        string
+	componentSelectors        []string
 	componentSelectorsApplied bool
 }
 
-// ComponentSelectors returns the normalized deployment selectors applied to this
-// package. The boolean distinguishes default selection from no recorded selection.
-func (p Package) ComponentSelectors() (string, bool) {
-	return p.componentSelectors, p.componentSelectorsApplied
+// ComponentSelectors returns a detached copy of the normalized, ordered deployment
+// selectors applied to this package. The boolean distinguishes default selection
+// from no recorded selection.
+func (p Package) ComponentSelectors() ([]string, bool) {
+	return slices.Clone(p.componentSelectors), p.componentSelectorsApplied
+}
+
+// HasComponentSelection reports whether deployment selection was applied,
+// including an empty selector list that uses required components and defaults.
+func (p Package) HasComponentSelection() bool {
+	return p.componentSelectorsApplied
 }
 
 // SetComponentSelectors records a successful deployment selection. Filtering
 // supplies normalized selectors; assembly may restore them after an in-memory
 // definition crosses a serialization boundary.
-func (p *Package) SetComponentSelectors(selectors string) {
-	p.componentSelectors = selectors
+func (p *Package) SetComponentSelectors(selectors []string) {
+	p.componentSelectors = slices.Clone(selectors)
 	p.componentSelectorsApplied = true
 }
 

@@ -1265,7 +1265,7 @@ func TestAssemblePackagePreservesDeploymentSelection(t *testing.T) {
 			require.Equal(t, []api.Component{{Name: "one", Optional: true}}, actual.Components)
 			selectors, applied := actual.ComponentSelectors()
 			require.True(t, applied)
-			require.Equal(t, "one,-two", selectors)
+			require.Equal(t, []string{"one", "-two"}, selectors)
 
 			data, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML))
 			require.NoError(t, err)

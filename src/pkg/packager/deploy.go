@@ -303,7 +303,7 @@ func (d *deployer) startDeploymentState(ctx context.Context, pkgLayout *layout.P
 		Values:             opts.Values,
 		NamespaceOverride:  opts.NamespaceOverride,
 		ValuesOverridesMap: opts.ValuesOverridesMap,
-		OptionalComponents: selectors,
+		ComponentSelectors: selectors,
 		Connectivity:       opts.Connectivity,
 	}
 	d.configDigest, err = d.deployConfig.Digest()

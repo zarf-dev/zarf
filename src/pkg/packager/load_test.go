@@ -388,7 +388,7 @@ components:
 			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 			selectors, applied := pkgLayout.Definition().ComponentSelectors()
 			require.True(t, applied)
-			require.Equal(t, "one,-two", selectors)
+			require.Equal(t, []string{"one", "-two"}, selectors)
 
 			result, err := Deploy(ctx, pkgLayout, DeployOptions{})
 			require.NoError(t, err)

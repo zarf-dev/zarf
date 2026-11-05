@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -154,7 +155,7 @@ func TestRemoveSelectsOnlyRequestedComponents(t *testing.T) {
 	}, 1)
 	require.NoError(t, err)
 
-	config := RemoveConfig{OptionalComponents: "one"}
+	config := RemoveConfig{ComponentSelectors: []string{"one"}}
 	require.NoError(t, Remove(ctx, pkg, RemoveOptions{Cluster: c, RemoveConfig: config}))
 
 	deployed, err := c.GetDeployedPackage(ctx, pkg.Metadata.Name)
@@ -170,6 +171,92 @@ func TestRemoveSelectsOnlyRequestedComponents(t *testing.T) {
 	expectedDigest, err := config.Digest()
 	require.NoError(t, err)
 	require.Equal(t, expectedDigest, deployed.Events[1].ConfigDigest)
+}
+
+func TestRemoveComponentSelectorLists(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name      string
+		selectors []string
+		selected  []string
+		wantError bool
+	}{
+		{
+			name:     "nil selects all",
+			selected: []string{"alpha", "beta", "gamma"},
+		},
+		{
+			name:      "empty selects all",
+			selectors: []string{},
+			selected:  []string{"alpha", "beta", "gamma"},
+		},
+		{
+			name:      "ordered glob exclusion and repeated inclusion",
+			selectors: []string{"*", "-a*", "alpha"},
+			selected:  []string{"alpha", "beta", "gamma"},
+		},
+		{
+			name:      "repeated exclusion wins last",
+			selectors: []string{"*", "-a*", "alpha", "-a*"},
+			selected:  []string{"beta", "gamma"},
+		},
+		{
+			name:      "normalization leaves caller unchanged",
+			selectors: []string{" B* ", "", " GAMMA ", "-g*", " Gamma "},
+			selected:  []string{"beta", "gamma"},
+		},
+		{
+			name:      "list entries are not comma split",
+			selectors: []string{"alpha,beta"},
+			wantError: true,
+		},
+		{
+			name:      "malformed pattern precedes side effects",
+			selectors: []string{"*", "["},
+			wantError: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			dir := t.TempDir()
+			client := fake.NewClientset()
+			c := &cluster.Cluster{Clientset: client}
+			pkg := api.Package{
+				Kind:     api.ZarfPackageConfig,
+				Metadata: api.PackageMetadata{Name: "selector-removal"},
+			}
+			for _, name := range []string{"alpha", "beta", "gamma"} {
+				pkg.Components = append(pkg.Components, api.Component{
+					Name: name,
+					Actions: api.ComponentActions{OnRemove: api.ActionSet{
+						Before: []api.Action{{Cmd: fmt.Sprintf("echo removed > %q", filepath.Join(dir, name))}},
+					}},
+				})
+			}
+			original := slices.Clone(tc.selectors)
+			err := Remove(ctx, pkg, RemoveOptions{
+				Cluster:      c,
+				RemoveConfig: RemoveConfig{ComponentSelectors: tc.selectors},
+			})
+			if tc.wantError {
+				require.Error(t, err)
+				require.Empty(t, client.Actions(), "invalid selection must fail before cluster access")
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, original, tc.selectors, "removal must not mutate caller selectors")
+			for _, component := range pkg.Components {
+				marker := filepath.Join(dir, component.Name)
+				if slices.Contains(tc.selected, component.Name) {
+					require.FileExists(t, marker)
+				} else {
+					require.NoFileExists(t, marker)
+				}
+			}
+		})
+	}
 }
 
 func TestRemoveLocalPackageDoesNotCreateDeploymentRecord(t *testing.T) {
@@ -240,7 +327,7 @@ func TestRemoveLocalComponentPreservesRecordedPackage(t *testing.T) {
 			initialEvent := state.PackageEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded, Timestamp: time.Unix(1, 0).UTC()}
 			recorded.AppendEvent(initialEvent)
 			require.NoError(t, c.UpdateDeployedPackage(ctx, *recorded))
-			removeConfig := RemoveConfig{OptionalComponents: "local", NamespaceOverride: "tenant"}
+			removeConfig := RemoveConfig{ComponentSelectors: []string{"local"}, NamespaceOverride: "tenant"}
 
 			err = Remove(ctx, pkg, RemoveOptions{Cluster: c, RemoveConfig: removeConfig})
 			if fail {

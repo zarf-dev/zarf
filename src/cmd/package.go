@@ -1640,6 +1640,10 @@ func newPackageRemoveCommand(v *viper.Viper, architecture *architectureOptions) 
 
 func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	componentSelectors, err := filters.ParseComponentSelectors(o.optionalComponents)
+	if err != nil {
+		return err
+	}
 	packageSource, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
@@ -1675,7 +1679,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	removeOpt := packager.RemoveOptions{
 		RemoveConfig: packager.RemoveConfig{
 			NamespaceOverride:  o.namespaceOverride,
-			OptionalComponents: o.optionalComponents,
+			ComponentSelectors: componentSelectors,
 			Values:             vals,
 		},
 		Cluster:          c,

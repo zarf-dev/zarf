@@ -39,7 +39,7 @@ var (
 
 // Apply applies the filter.
 func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
-	requestedComponents, err := parseComponentSelectors(f.optionalComponents)
+	requestedComponents, err := ParseComponentSelectors(f.optionalComponents)
 	if err != nil {
 		return nil, err
 	}
@@ -47,10 +47,10 @@ func (f *deploymentFilter) Apply(pkg api.Package) ([]api.Component, error) {
 }
 
 func (f *deploymentFilter) applyPackage(pkg api.Package) (api.Package, error) {
-	if _, applied := pkg.ComponentSelectors(); applied {
+	if pkg.HasComponentSelection() {
 		return api.Package{}, fmt.Errorf("deployment component selection has already been applied")
 	}
-	requestedComponents, err := parseComponentSelectors(f.optionalComponents)
+	requestedComponents, err := ParseComponentSelectors(f.optionalComponents)
 	if err != nil {
 		return api.Package{}, err
 	}
@@ -59,7 +59,7 @@ func (f *deploymentFilter) applyPackage(pkg api.Package) (api.Package, error) {
 		return api.Package{}, err
 	}
 	pkg.Components = components
-	pkg.SetComponentSelectors(strings.Join(requestedComponents, ","))
+	pkg.SetComponentSelectors(requestedComponents)
 	return pkg, nil
 }
 

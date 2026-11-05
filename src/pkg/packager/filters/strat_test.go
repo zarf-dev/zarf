@@ -112,11 +112,11 @@ func TestApplyRecordsDeploymentSelection(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
 		selectors  string
-		want       string
+		want       []string
 		components []api.Component
 	}{
-		{"defaults", " , ", "", pkg.Components},
-		{"explicit choices", " , ONE, , -TWO, ONE ", "one,-two,one", pkg.Components[:2]},
+		{"defaults", " , ", nil, pkg.Components},
+		{"explicit choices", " , ONE, , -TWO, ONE ", []string{"one", "-two", "one"}, pkg.Components[:2]},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			filtered, err := Apply(pkg, Combine(
