@@ -28,19 +28,20 @@ import (
 const registryListResponseHeaderTimeout = 10 * time.Second
 
 func newRegistryListCommand() *cobra.Command {
-	var fullRef, omitDigestTags, plainHTTP, insecureSkipTLSVerify, deprecatedInsecure bool
+	var fullRef, omitDigestTags, plainHTTP, insecureSkipTLSVerify bool
 
 	cmd := &cobra.Command{
 		Use:     "ls REPO",
 		Short:   "List the tags in a repo",
 		Args:    cobra.ExactArgs(1),
 		Example: lang.CmdToolsRegistryListExample,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			// --insecure used to mean both of these at once; keeping this behavior for anyone still using it.
-			if deprecatedInsecure {
-				plainHTTP = true
-				insecureSkipTLSVerify = true
+		PreRunE: func(cmd *cobra.Command, _ []string) error {
+			if cmd.Flags().Changed("insecure") {
+				return fmt.Errorf("--insecure is not supported by registry ls; use --plain-http and --insecure-skip-tls-verify instead")
 			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRegistryList(cmd.Context(), cmd.OutOrStdout(), args[0], plainHTTP, insecureSkipTLSVerify, fullRef, omitDigestTags)
 		},
 	}
@@ -48,10 +49,6 @@ func newRegistryListCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&omitDigestTags, "omit-digest-tags", "O", false, "(Optional), if true, omit digest tags (e.g., ':sha256-...')")
 	cmd.Flags().BoolVar(&plainHTTP, "plain-http", false, "(Optional) if true, use plain HTTP instead of HTTPS")
 	cmd.Flags().BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", false, "(Optional) if true, skip TLS certificate verification")
-	cmd.Flags().BoolVar(&deprecatedInsecure, "insecure", false, "(Optional) if true, use plain HTTP and skip TLS certificate verification")
-	if err := cmd.Flags().MarkDeprecated("insecure", "use --plain-http and --insecure-skip-tls-verify instead"); err != nil {
-		panic(fmt.Errorf("marking --insecure deprecated: %w", err))
-	}
 	return cmd
 }
 

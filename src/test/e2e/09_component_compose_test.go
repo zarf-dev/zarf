@@ -27,7 +27,7 @@ func TestComposabilityExample(t *testing.T) {
 
 	tmpDir := t.TempDir()
 	composeExample := filepath.Join("examples", "composable-packages")
-	_, _, err := e2e.Zarf(t, "package", "create", composeExample, "-o", tmpDir, "--no-color", "--confirm", "--zarf-cache", tmpDir)
+	_, _, err := e2e.Zarf(t, "package", "create", composeExample, "-o", tmpDir, "--no-color", "--confirm", "--cache", tmpDir)
 	require.NoError(t, err)
 
 	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
