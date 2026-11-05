@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
+	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -789,4 +791,58 @@ components:
 		_, err := resolveImportsV1Beta1(ctx, pkg, mustPackagePath(t, dir), "amd64", "", false, types.RemoteOptions{}, "")
 		require.ErrorContains(t, err, "multiple")
 	})
+}
+
+func TestResolveInitPackageV1Beta1(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	initDir := filepath.Join("..", "..", "..", "..", "packages", "init", "v1beta1")
+	manifestPath := filepath.Join(initDir, "zarf.gen.yaml")
+	b, err := os.ReadFile(manifestPath)
+	require.NoError(t, err)
+	pkg, err := pkgcfg.ParseAs(ctx, b, pkgcfg.V1Beta1)
+	require.NoError(t, err)
+
+	pkgPath, err := layout.ResolvePackagePath(manifestPath)
+	require.NoError(t, err)
+
+	for _, arch := range []string{"amd64", "arm64"} {
+		arch := arch
+		t.Run(arch, func(t *testing.T) {
+			t.Parallel()
+			resolution, err := resolveImportsV1Beta1(ctx, pkg, pkgPath, arch, "", false, types.RemoteOptions{}, "")
+			require.NoError(t, err)
+
+			expectedComponents := []string{"k3s", "zarf-injector", "zarf-seed-registry", "zarf-registry", "zarf-agent", "git-server"}
+			require.Len(t, resolution.pkg.Components, len(expectedComponents))
+			for i, expectedName := range expectedComponents {
+				require.Equal(t, expectedName, resolution.pkg.Components[i].Name)
+				require.Empty(t, resolution.pkg.Components[i].Import.Local, "local imports must be cleared after resolution")
+			}
+
+			for _, comp := range resolution.pkg.Components {
+				errs := internalv1beta1.ValidateComponent(comp)
+				require.Empty(t, errs, "component %s must pass validation: %v", comp.Name, errs)
+				for _, f := range comp.Files {
+					require.False(t, strings.Contains(f.Source, "\\"), "file source contains backslash: %s", f.Source)
+				}
+				for _, ch := range comp.Charts {
+					if ch.Local != nil {
+						require.False(t, strings.Contains(ch.Local.Path, "\\"), "local chart path contains backslash: %s", ch.Local.Path)
+					}
+					for _, vf := range ch.ValuesFiles {
+						require.False(t, strings.Contains(vf.Path, "\\"), "values file contains backslash: %s", vf.Path)
+					}
+				}
+				for _, m := range comp.Manifests {
+					for _, mf := range m.Files {
+						require.False(t, strings.Contains(mf, "\\"), "manifest file contains backslash: %s", mf)
+					}
+					for _, kf := range m.Kustomize.Files {
+						require.False(t, strings.Contains(kf, "\\"), "kustomize file contains backslash: %s", kf)
+					}
+				}
+			}
+		})
+	}
 }
