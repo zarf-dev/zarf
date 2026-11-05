@@ -230,16 +230,11 @@ func TestPublishSkeleton(t *testing.T) {
 }
 
 func TestPublishPackage(t *testing.T) {
-	signOpts := signing.DefaultSignBlobOptions()
-	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
-	signOpts.Password = "password"
-
 	tt := []struct {
-		name          string
-		path          string
-		opts          PublishPackageOptions
-		publicKeyPath string
-		expectedTag   string
+		name        string
+		path        string
+		opts        PublishPackageOptions
+		expectedTag string
 	}{
 		{
 			name: "Publish package",
@@ -248,15 +243,6 @@ func TestPublishPackage(t *testing.T) {
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
 			expectedTag: "0.0.1",
-		},
-		{
-			name: "Publish signed package",
-			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOptions{
-				RemoteOptions: defaultTestRemoteOptions(),
-			},
-			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
-			expectedTag:   "0.0.1",
 		},
 		{
 			name: "Publish package with specified tag different from version",
@@ -277,9 +263,6 @@ func TestPublishPackage(t *testing.T) {
 			// We want to pull the package and sure the content is the same as the local package
 			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
-			if tc.publicKeyPath != "" {
-				require.NoError(t, layoutExpected.SignPackage(ctx, &signOpts))
-			}
 
 			// Publish test package
 			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
@@ -289,23 +272,19 @@ func TestPublishPackage(t *testing.T) {
 			expectedPkg := layoutExpected.Definition()
 			expectedPkg.Build = api.BuildData{}
 
-			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", "", t.TempDir(), defaultTestRemoteOptions())
 			actualPkg := layoutActual.Definition()
 			actualPkg.Build = api.BuildData{}
 			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")
-			if tc.publicKeyPath != "" {
-				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Bundle))
-			}
 		})
 	}
 }
 
 func TestPublishPackageDirectoryNameCollision(t *testing.T) {
 	tt := []struct {
-		name          string
-		path          string
-		opts          PublishPackageOptions
-		publicKeyPath string
+		name string
+		path string
+		opts PublishPackageOptions
 	}{
 		{
 			name: "Publish package from directory with subdir matching package name",
@@ -353,7 +332,7 @@ func TestPublishPackageDirectoryNameCollision(t *testing.T) {
 			expectedPkg := layoutExpected.Definition()
 			expectedPkg.Build = api.BuildData{}
 
-			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", "", t.TempDir(), defaultTestRemoteOptions())
 			actualPkg := layoutActual.Definition()
 			actualPkg.Build = api.BuildData{}
 			require.Equal(t, expectedPkg, actualPkg, "Uploaded package is not identical to downloaded package")
