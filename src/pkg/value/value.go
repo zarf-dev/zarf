@@ -337,6 +337,9 @@ func (v Values) DeepCopy() Values {
 func deepCopyValue(val any) any {
 	switch t := val.(type) {
 	case map[string]any:
+		if t == nil {
+			return t
+		}
 		cp := make(map[string]any, len(t))
 		for k, sub := range t {
 			cp[k] = deepCopyValue(sub)
@@ -346,6 +349,9 @@ func deepCopyValue(val any) any {
 	case Values:
 		return deepCopyValue(map[string]any(t))
 	case []any:
+		if t == nil {
+			return t
+		}
 		cp := make([]any, len(t))
 		for i, sub := range t {
 			cp[i] = deepCopyValue(sub)
