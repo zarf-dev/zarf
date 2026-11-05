@@ -172,13 +172,30 @@ func TestGitServerInfoIsInternal(t *testing.T) {
 	}{
 		{name: "internal mode takes precedence over external address", gitServer: GitServerInfo{Address: "https://git.example.com", GitServerMode: GitServerModeInternal}, isInternal: true},
 		{name: "external mode takes precedence over internal address", gitServer: GitServerInfo{Address: ZarfInClusterGitServiceURL, GitServerMode: GitServerModeExternal}},
-		{name: "older internal state uses address", gitServer: GitServerInfo{Address: ZarfInClusterGitServiceURL}, isInternal: true},
-		{name: "older external state uses address", gitServer: GitServerInfo{Address: "https://git.example.com"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			require.Equal(t, tt.isInternal, tt.gitServer.IsInternal())
+		})
+	}
+}
+
+func TestRegistryInfoIsInternal(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name     string
+		registry RegistryInfo
+		want     bool
+	}{
+		{name: "nodeport", registry: RegistryInfo{RegistryMode: RegistryModeNodePort}, want: true},
+		{name: "proxy", registry: RegistryInfo{RegistryMode: RegistryModeProxy}, want: true},
+		{name: "external", registry: RegistryInfo{RegistryMode: RegistryModeExternal, Address: "127.0.0.1:31999", Port: 31999}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.want, tt.registry.IsInternal())
 		})
 	}
 }

@@ -12,7 +12,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -163,10 +162,6 @@ type PublishSkeletonOptions struct {
 	Architecture string
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
-	// SigningKeyPath points to a signing key on the local disk.
-	SigningKeyPath string
-	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
-	SigningKeyPassword string
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
 	// Flavor specifies the flavor to use
@@ -242,14 +237,6 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	pkgLayout, err := assemble.AssembleSkeleton(ctx, loaded, createOpts)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
-	}
-	if opts.SigningKeyPath != "" {
-		signOpts := signing.DefaultSignBlobOptions()
-		signOpts.Key = opts.SigningKeyPath
-		signOpts.Password = opts.SigningKeyPassword
-		if err := pkgLayout.SignPackage(ctx, &signOpts); err != nil {
-			return registry.Reference{}, fmt.Errorf("unable to sign skeleton: %w", err)
-		}
 	}
 	referenceOptions := zoci.ReferenceFromMetadataOptions{
 		Tag: opts.Tag,

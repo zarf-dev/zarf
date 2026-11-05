@@ -162,11 +162,10 @@ func TestPublishFromOCIValidation(t *testing.T) {
 
 func TestPublishSkeleton(t *testing.T) {
 	tt := []struct {
-		name          string
-		path          string
-		opts          PublishSkeletonOptions
-		publicKeyPath string
-		expectedTag   string
+		name        string
+		path        string
+		opts        PublishSkeletonOptions
+		expectedTag string
 	}{
 		{
 			name: "Publish skeleton package",
@@ -175,17 +174,6 @@ func TestPublishSkeleton(t *testing.T) {
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
 			expectedTag: "0.0.1",
-		},
-		{
-			name: "Sign and publish skeleton package",
-			path: "testdata/skeleton",
-			opts: PublishSkeletonOptions{
-				RemoteOptions:      defaultTestRemoteOptions(),
-				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
-				SigningKeyPassword: "password",
-			},
-			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
-			expectedTag:   "0.0.1",
 		},
 		{
 			name: "Publish skeleton package with tag",
@@ -237,11 +225,6 @@ func TestPublishSkeleton(t *testing.T) {
 			// NOTE(mkcp): In future schema version move ZarfPackage.Metadata.AggregateChecksum
 			// to ZarfPackage.Build.AggregateChecksum. See ADR #26
 			require.Equal(t, expected, pkg)
-			if tc.publicKeyPath != "" {
-				signedLayout := pullFromRemote(ctx, t, ref.String(), v1alpha1.SkeletonArch, tc.publicKeyPath, t.TempDir(), defaultTestRemoteOptions())
-				t.Cleanup(func() { require.NoError(t, signedLayout.Cleanup()) })
-				require.True(t, signedLayout.IsSigned())
-			}
 		})
 	}
 }

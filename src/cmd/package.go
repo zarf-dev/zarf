@@ -245,12 +245,6 @@ func newPackageCreateCommand(v *viper.Viper, architecture *architectureOptions) 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageCreateFlagConfirm)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 
-	outputDirectory := v.GetString("package.create.output_directory")
-	output := v.GetString(VPkgCreateOutput)
-	if outputDirectory != "" && output == "" {
-		v.Set(VPkgCreateOutput, outputDirectory)
-	}
-	cmd.Flags().StringVar(&o.output, "output-directory", v.GetString("package.create.output_directory"), lang.CmdPackageCreateFlagOutput)
 	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgCreateOutput), lang.CmdPackageCreateFlagOutput)
 
 	cmd.Flags().StringVar(&o.differentialPackagePath, "differential", v.GetString(VPkgCreateDifferential), lang.CmdPackageCreateFlagDifferential)
@@ -282,11 +276,6 @@ func newPackageCreateCommand(v *viper.Viper, architecture *architectureOptions) 
 	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgCreateWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
 
 	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
-
-	errOD := cmd.Flags().MarkHidden("output-directory")
-	if errOD != nil {
-		logger.Default().Debug("unable to mark flag output-directory", "error", errOD)
-	}
 
 	return cmd
 }
@@ -2270,16 +2259,11 @@ const (
 	verifyModeAlways     verifyMode = "always"
 )
 
-// Set implements pflag.Value. Accepts the three canonical values and legacy bool strings.
+// Set implements pflag.Value.
 func (m *verifyMode) Set(s string) error {
 	switch verifyMode(s) {
 	case verifyModeNever, verifyModeIfPossible, verifyModeAlways:
 		*m = verifyMode(s)
-	// Accept legacy bool values from viper configs written before the enum was introduced.
-	case "true":
-		*m = verifyModeAlways
-	case "false":
-		*m = verifyModeIfPossible
 	default:
 		return fmt.Errorf("invalid --verify value %q (must be never, if-possible, or always)", s)
 	}
@@ -2407,7 +2391,6 @@ func (f *packageVerifyFlags) validateKeylessVerifyTlog(cmd *cobra.Command, v *vi
 func (f *packageVerifyFlags) preRunE(cmd *cobra.Command, _ []string) error {
 	v := getViper()
 	// Apply viper default for --verify when the flag was not set on the CLI.
-	// Accepts legacy bool values ("true"/"false") from existing configs.
 	if !cmd.Flags().Changed("verify") && v.IsSet(VPkgVerify) {
 		if err := f.verify.Set(v.GetString(VPkgVerify)); err != nil {
 			return fmt.Errorf("invalid package.verify config value %q: %w", v.GetString(VPkgVerify), err)

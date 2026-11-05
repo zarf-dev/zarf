@@ -227,12 +227,9 @@ type GitServerInfo struct {
 	GitServerMode GitServerMode `json:"gitServerMode,omitempty"`
 }
 
-// IsInternal reports whether Zarf manages the git server. Older state without a mode uses the address.
+// IsInternal reports whether Zarf manages the git server.
 func (gs GitServerInfo) IsInternal() bool {
-	if gs.GitServerMode != "" {
-		return gs.GitServerMode == GitServerModeInternal
-	}
-	return gs.Address == ZarfInClusterGitServiceURL
+	return gs.GitServerMode == GitServerModeInternal
 }
 
 func gitServerModeForAddress(address string) GitServerMode {
@@ -373,14 +370,9 @@ type RegistryInfo struct {
 	MTLSStrategy MTLSStrategy `json:"mtlsStrategy,omitempty"`
 }
 
-// IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
+// IsInternal reports whether Zarf manages the registry.
 func (ri RegistryInfo) IsInternal() bool {
-	if ri.RegistryMode != "" {
-		return ri.RegistryMode != RegistryModeExternal
-	}
-	// This is kept for backwards compatibility with previous versions of Zarf that did not set the registry mode
-	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.Port) ||
-		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.Port)
+	return ri.RegistryMode == RegistryModeNodePort || ri.RegistryMode == RegistryModeProxy
 }
 
 // IsConfigured returns true if the registry info address has been set

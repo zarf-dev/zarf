@@ -19,7 +19,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"oras.land/oras-go/v2/content"
@@ -125,19 +124,6 @@ func addNameAnnotationsToDesc(desc ocispec.Descriptor, ref string) ocispec.Descr
 	desc.Annotations[ocispec.AnnotationRefName] = ref
 	desc.Annotations[ocispec.AnnotationBaseImageName] = ref
 	return desc
-}
-
-func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
-	idxPath := filepath.Join(dir, "index.json")
-	b, err := json.Marshal(idx)
-	if err != nil {
-		return fmt.Errorf("unable to marshal index.json: %w", err)
-	}
-	err = os.WriteFile(idxPath, b, helpers.ReadAllWriteUser)
-	if err != nil {
-		return fmt.Errorf("failed to save changes to index.json: %w", err)
-	}
-	return nil
 }
 
 // NewAuthClientFromDocker creates an ORAS auth client from the default Docker credentials store.

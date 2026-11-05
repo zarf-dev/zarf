@@ -7,12 +7,40 @@ package test
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
+
+func TestConfigFileFormats(t *testing.T) {
+	source, err := filepath.Abs("src/test/packages/12-package-signing")
+	require.NoError(t, err)
+
+	for _, tt := range []struct {
+		name     string
+		ext      string
+		contents string
+	}{
+		{name: "yaml", ext: "yaml", contents: "package:\n  create:\n    output: %q\n"},
+		{name: "yml", ext: "yml", contents: "package:\n  create:\n    output: %q\n"},
+		{name: "toml", ext: "toml", contents: "[package.create]\noutput = %q\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			workdir := t.TempDir()
+			output := t.TempDir()
+			configPath := filepath.Join(t.TempDir(), "zarf-config."+tt.ext)
+			contents := fmt.Sprintf(tt.contents, filepath.ToSlash(output))
+			require.NoError(t, os.WriteFile(configPath, []byte(contents), 0o600))
+			t.Setenv("ZARF_CONFIG", configPath)
+			_, stderr, err := e2e.ZarfInDir(t, workdir, "package", "create", source, "--confirm", "--skip-sbom")
+			require.NoError(t, err, stderr)
+			require.FileExists(t, filepath.Join(output, fmt.Sprintf("zarf-package-basic-signing-%s.tar.zst", e2e.Arch)))
+		})
+	}
+}
 
 func TestConfigFileCreate(t *testing.T) {
 	tmpDir := t.TempDir()

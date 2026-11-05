@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -179,9 +178,22 @@ var (
 	vConfigError error
 )
 
+type configDecoderRegistry struct {
+	viper.DecoderRegistry
+}
+
+func (r configDecoderRegistry) Decoder(format string) (viper.Decoder, error) {
+	switch strings.ToLower(format) {
+	case "yaml", "yml", "toml":
+		return r.DecoderRegistry.Decoder(format)
+	default:
+		return nil, fmt.Errorf("unsupported configuration format %q: only YAML and TOML are supported", format)
+	}
+}
+
 // initializes the viper singleton for the CLI
 func initViper() *viper.Viper {
-	v = viper.New()
+	v = viper.NewWithOptions(viper.WithDecoderRegistry(configDecoderRegistry{viper.NewCodecRegistry()}))
 
 	// Skip viper file setup for vendor-only commands
 	if checkVendorOnlyFromArgs() {
@@ -258,17 +270,6 @@ func PrintViperConfigUsed(ctx context.Context) error {
 	// Zarf skips loading the config file for version and tool commands, this avoids output in those cases
 	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
 		l.Info("using config file", "location", cfgFile)
-		ext := filepath.Ext(cfgFile)
-		switch ext {
-		case ".yml", ".yaml":
-			return nil
-		case ".toml":
-			return nil
-		default:
-			l.Warn("configuration file types other than yaml and toml are deprecated and will be removed in a future release",
-				"fileType", strings.TrimPrefix(ext, "."))
-			return nil
-		}
 	}
 	return nil
 }
