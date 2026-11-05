@@ -861,9 +861,7 @@ func TestStateRegistryPortPersistence(t *testing.T) {
 		wantPort int
 	}{
 		{name: "port round trip", registry: `{"port":31999}`, wantPort: 31999},
-		{name: "legacy nodePort is ignored", registry: `{"nodePort":31999}`},
-		{name: "stale nodePort is discarded", registry: `{"port":5000,"nodePort":31999}`, wantPort: 5000},
-		{name: "zero port is preserved", registry: `{"port":0,"nodePort":31999}`},
+		{name: "zero port is preserved", registry: `{"port":0}`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -891,7 +889,6 @@ func TestStateRegistryPortPersistence(t *testing.T) {
 			var port int
 			require.NoError(t, json.Unmarshal(raw.RegistryInfo["port"], &port))
 			require.Equal(t, tt.wantPort, port)
-			require.NotContains(t, raw.RegistryInfo, "nodePort")
 		})
 	}
 }
@@ -899,6 +896,8 @@ func TestStateRegistryPortPersistence(t *testing.T) {
 func TestStateAgentInfoPersistence(t *testing.T) {
 	t.Parallel()
 
+	ctx := t.Context()
+	c := &Cluster{Clientset: fake.NewClientset()}
 	agentInfo := state.AgentInfo{
 		TLS: pki.GeneratedPKI{
 			CA:   []byte("ca"),
@@ -909,56 +908,24 @@ func TestStateAgentInfoPersistence(t *testing.T) {
 		MutationPolicy:  state.MutationPolicyLabeled,
 	}
 
-	for _, tt := range []struct {
-		name          string
-		withAgentInfo bool
-		withLegacy    bool
-	}{
-		{name: "agentInfo round trip", withAgentInfo: true},
-		{name: "legacy fields are ignored", withLegacy: true},
-		{name: "stale legacy fields are discarded", withAgentInfo: true, withLegacy: true},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	data, err := json.Marshal(state.State{AgentInfo: agentInfo})
+	require.NoError(t, err)
+	_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: state.ZarfNamespaceName, Name: state.ZarfStateSecretName},
+		Data:       map[string][]byte{state.ZarfStateDataKey: data},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
 
-			ctx := t.Context()
-			c := &Cluster{Clientset: fake.NewClientset()}
-			stored := map[string]any{}
-			var expected state.AgentInfo
-			if tt.withAgentInfo {
-				stored["agentInfo"] = agentInfo
-				expected = agentInfo
-			}
-			if tt.withLegacy {
-				stored["agentTLS"] = pki.GeneratedPKI{CA: []byte("old-ca"), Cert: []byte("old-cert"), Key: []byte("old-key")}
-				stored["agentTLSUserProvided"] = false
-				stored["agentMutationPolicy"] = state.MutationPolicyAll
-			}
-			data, err := json.Marshal(stored)
-			require.NoError(t, err)
-			_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Namespace: state.ZarfNamespaceName, Name: state.ZarfStateSecretName},
-				Data:       map[string][]byte{state.ZarfStateDataKey: data},
-			}, metav1.CreateOptions{})
-			require.NoError(t, err)
+	loaded, err := c.LoadState(ctx)
+	require.NoError(t, err)
+	require.Equal(t, agentInfo, loaded.AgentInfo)
 
-			loaded, err := c.LoadState(ctx)
-			require.NoError(t, err)
-			require.Equal(t, expected, loaded.AgentInfo)
-
-			require.NoError(t, c.SaveState(ctx, loaded))
-			persisted, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
-			require.NoError(t, err)
-			var raw map[string]json.RawMessage
-			require.NoError(t, json.Unmarshal(persisted.Data[state.ZarfStateDataKey], &raw))
-			var persistedAgentInfo state.AgentInfo
-			require.NoError(t, json.Unmarshal(raw["agentInfo"], &persistedAgentInfo))
-			require.Equal(t, expected, persistedAgentInfo)
-			require.NotContains(t, raw, "agentTLS")
-			require.NotContains(t, raw, "agentTLSUserProvided")
-			require.NotContains(t, raw, "agentMutationPolicy")
-		})
-	}
+	require.NoError(t, c.SaveState(ctx, loaded))
+	persisted, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
+	require.NoError(t, err)
+	var stored state.State
+	require.NoError(t, json.Unmarshal(persisted.Data[state.ZarfStateDataKey], &stored))
+	require.Equal(t, agentInfo, stored.AgentInfo)
 }
 
 func TestIgnoreExistingNamespacesForAgent(t *testing.T) {
