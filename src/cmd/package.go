@@ -1540,7 +1540,7 @@ func (o *packageListOptions) run(ctx context.Context, args []string) error {
 				info.Package, info.NamespaceOverride, info.Version, string(info.Connectivity), fmt.Sprintf("%v", info.Components),
 			})
 		}
-		message.TableWithWriter(o.outputWriter, header, packageData)
+		message.Table(o.outputWriter, header, packageData)
 	default:
 		return fmt.Errorf("unsupported output format: %s", o.outputFormat)
 	}
