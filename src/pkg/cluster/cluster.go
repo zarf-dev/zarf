@@ -517,6 +517,14 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
+	// Older state identified the Git server by address without recording its mode.
+	if s.GitServer.IsConfigured() && s.GitServer.GitServerMode == "" {
+		if s.GitServer.IsInternal() {
+			s.GitServer.GitServerMode = state.GitServerModeInternal
+		} else {
+			s.GitServer.GitServerMode = state.GitServerModeExternal
+		}
+	}
 	return s, nil
 }
 

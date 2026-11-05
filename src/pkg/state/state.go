@@ -227,9 +227,12 @@ type GitServerInfo struct {
 	GitServerMode GitServerMode `json:"gitServerMode,omitempty"`
 }
 
-// IsInternal reports whether Zarf manages the git server.
+// IsInternal reports whether Zarf manages the git server
 func (gs GitServerInfo) IsInternal() bool {
-	return gs.GitServerMode == GitServerModeInternal
+	if gs.GitServerMode != "" {
+		return gs.GitServerMode == GitServerModeInternal
+	}
+	return gs.Address == ZarfInClusterGitServiceURL
 }
 
 func gitServerModeForAddress(address string) GitServerMode {

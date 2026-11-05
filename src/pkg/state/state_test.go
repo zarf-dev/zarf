@@ -172,6 +172,9 @@ func TestGitServerInfoIsInternal(t *testing.T) {
 	}{
 		{name: "internal mode takes precedence over external address", gitServer: GitServerInfo{Address: "https://git.example.com", GitServerMode: GitServerModeInternal}, isInternal: true},
 		{name: "external mode takes precedence over internal address", gitServer: GitServerInfo{Address: ZarfInClusterGitServiceURL, GitServerMode: GitServerModeExternal}},
+		{name: "internal server without mode uses address", gitServer: GitServerInfo{Address: ZarfInClusterGitServiceURL}, isInternal: true},
+		{name: "external server without mode uses address", gitServer: GitServerInfo{Address: "https://git.example.com"}},
+		{name: "unconfigured server is not internal"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -775,6 +775,83 @@ func TestInitStateServicesGating(t *testing.T) {
 	})
 }
 
+func TestInitStateBackfillsGitServerMode(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name string
+		git  state.GitServerInfo
+		mode state.GitServerMode
+	}{
+		{
+			name: "internal server without mode",
+			git: state.GitServerInfo{
+				Address:      state.ZarfInClusterGitServiceURL,
+				PushUsername: "push-user",
+				PushPassword: "push-password",
+				PullUsername: "pull-user",
+				PullPassword: "pull-password",
+			},
+			mode: state.GitServerModeInternal,
+		},
+		{
+			name: "external server without mode",
+			git: state.GitServerInfo{
+				Address:      "https://git.example.com",
+				PushUsername: "push-user",
+				PushPassword: "push-password",
+				PullUsername: "pull-user",
+				PullPassword: "pull-password",
+			},
+			mode: state.GitServerModeExternal,
+		},
+		{
+			name: "backfill does not generate credentials",
+			git:  state.GitServerInfo{Address: state.ZarfInClusterGitServiceURL},
+			mode: state.GitServerModeInternal,
+		},
+		{
+			name: "explicit external mode is preserved",
+			git: state.GitServerInfo{
+				Address:       state.ZarfInClusterGitServiceURL,
+				GitServerMode: state.GitServerModeExternal,
+			},
+			mode: state.GitServerModeExternal,
+		},
+		{
+			name: "explicit internal mode is preserved",
+			git: state.GitServerInfo{
+				Address:       "https://git.example.com",
+				GitServerMode: state.GitServerModeInternal,
+			},
+			mode: state.GitServerModeInternal,
+		},
+		{name: "unconfigured server stays unconfigured"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := t.Context()
+			c := newFakeInitStateCluster(ctx, t, &state.State{GitServer: tt.git})
+			expected := tt.git
+			expected.GitServerMode = tt.mode
+
+			loaded, err := c.LoadState(ctx)
+			require.NoError(t, err)
+			require.Equal(t, expected, loaded.GitServer)
+
+			initialized, err := c.InitState(ctx, InitStateOptions{})
+			require.NoError(t, err)
+			require.Equal(t, expected, initialized.GitServer)
+
+			secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
+			require.NoError(t, err)
+			var persisted state.State
+			require.NoError(t, json.Unmarshal(secret.Data[state.ZarfStateDataKey], &persisted))
+			require.Equal(t, expected, persisted.GitServer)
+		})
+	}
+}
+
 func TestStateRegistryPortPersistence(t *testing.T) {
 	t.Parallel()
 
