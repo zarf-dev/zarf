@@ -23,8 +23,6 @@ If there are deployment errors, the common pattern is to reset the cluster (ex: 
 
 `zarf package create` is designed around air-gapped environments where the package is created in one environment and deployed in another. Due to this architecture, a package's dependencies _must_ be retrieved and assembled _each_ and _every_ time.
 
-There already exists the concept of [`YOLO` mode](0010-yolo-mode.md), which can build + deploy a package without the need for `zarf init`, and builds without fetching certain heavy dependencies (like Docker images). However, `YOLO` mode is not exposed via CLI flags, and is meant to develop and deploy packages in fully connected environments.
-
 ## Decision
 
 Introduce a `dev deploy` command that will combine the lifecycle of `package create` and `package deploy` into a single command. This command will:

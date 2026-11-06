@@ -511,7 +511,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdDevShort = "Commands useful for developing packages"
 
 	CmdDevDeployShort         = "Creates and deploys a Zarf package from a given directory"
-	CmdDevDeployLong          = "Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
+	CmdDevDeployLong          = "Creates and deploys a Zarf package from a given directory, using `connected` mode by default for faster iteration."
 	CmdDevDeployFlagConnected = "Create and deploy without images and repositories; label resources to bypass the Zarf agent"
 
 	CmdDevGenerateShort   = "Creates a zarf.yaml automatically from a given remote (git) Helm chart"
