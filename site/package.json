@@ -25,6 +25,7 @@
     "@fontsource/source-code-pro": "^5.0.17",
     "astro": "^7.3.2",
     "mermaid": "^10.9.8",
+    "posthog-js": "^1.438.21",
     "rehype-autolink-headings": "^7.1.0",
     "sharp": "^0.35.5",
     "starlight-sidebar-topics": "^0.7.0",
