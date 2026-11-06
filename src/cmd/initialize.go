@@ -30,10 +30,15 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/spf13/cobra"
+)
+
+const (
+	initAPIVersionV1Alpha1 = "v1alpha1"
+	initAPIVersionV1Beta1  = "v1beta1"
+	initPackageRepository  = "ghcr.io/zarf-dev/packages"
 )
 
 type initOptions struct {
@@ -320,9 +325,23 @@ func (o *initOptions) findInitPackage(ctx context.Context) (string, error) {
 	return filepath.Join(absCachePath, initPackageName), nil
 }
 
+func getInitPackageURL(version, apiVersion string) (string, error) {
+	switch apiVersion {
+	case initAPIVersionV1Alpha1:
+		return fmt.Sprintf("%s/init:%s", initPackageRepository, version), nil
+	case initAPIVersionV1Beta1:
+		return fmt.Sprintf("%s/%s/init:%s", initPackageRepository, apiVersion, version), nil
+	default:
+		return "", fmt.Errorf("unsupported init package API version %q: must be %s or %s", apiVersion, initAPIVersionV1Alpha1, initAPIVersionV1Beta1)
+	}
+}
+
 func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory string) error {
 	l := logger.From(ctx)
-	url := zoci.GetInitPackageURL(config.CLIVersion)
+	url, err := getInitPackageURL(config.CLIVersion, initAPIVersionV1Beta1)
+	if err != nil {
+		return err
+	}
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
 	l.Info("the init package was not found locally, but can be pulled in connected environments", "url", fmt.Sprintf("oci://%s", url))
