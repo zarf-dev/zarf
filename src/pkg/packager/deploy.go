@@ -146,7 +146,7 @@ type DeployResult struct {
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	start := time.Now()
 	pkg := pkgLayout.Definition()
-	internalv1alpha1.WarnIfDeprecated(ctx, pkg.GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 	if err := opts.Validate(pkg); err != nil {
 		return DeployResult{}, err
 	}

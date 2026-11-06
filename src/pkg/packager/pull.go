@@ -103,7 +103,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	if err != nil {
 		return "", err
 	}
-	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition().GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 	if err := pkgLayout.Cleanup(); err != nil {
 		return "", err
 	}

@@ -68,7 +68,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 		return nil, err
 	}
 	pkg := pkgLayout.Definition()
-	internalv1alpha1.WarnIfDeprecated(ctx, pkg.GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 
 	if !feature.IsEnabled(feature.Values) && (len(pkg.Values.Files) > 0 || len(opts.Values) > 0) {
 		return nil, fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
@@ -330,7 +330,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		err = errors.Join(err, loaded.Close())
 	}()
 	pkg := loaded.Definition
-	internalv1alpha1.WarnIfDeprecated(ctx, pkg.GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 	selectedComponents := pkg.Components
 	if opts.Components != "" {
 		filteredPkg, err := filters.Apply(pkg, filters.BySelectState(opts.Components))

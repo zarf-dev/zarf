@@ -6,6 +6,7 @@ package v1alpha1
 import (
 	"context"
 
+	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -15,8 +16,8 @@ const DeprecationWarning = "v1alpha1 packages are deprecated and do not have lon
 
 // WarnIfDeprecated reports v1alpha1 deprecation at package operation boundaries.
 // An omitted API version is treated as v1alpha1.
-func WarnIfDeprecated(ctx context.Context, apiVersion string) {
-	if apiVersion == "" || apiVersion == v1alpha1.APIVersion {
-		logger.From(ctx).Warn(DeprecationWarning)
+func WarnIfDeprecated(ctx context.Context, pkg api.Package) {
+	if pkg.GetAPIVersion() == v1alpha1.APIVersion {
+		logger.From(ctx).Warn(DeprecationWarning, "package", pkg.Metadata.Name)
 	}
 }

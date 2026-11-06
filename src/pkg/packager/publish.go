@@ -149,7 +149,7 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
 	}
 
-	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition().GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 
 	signOpts := opts.SignBlobOptions
 	if opts.SigningKeyPath != "" && signOpts.Key == "" {
@@ -254,7 +254,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		err = errors.Join(err, loaded.Close())
 	}()
 	pkg := loaded.Definition
-	internalv1alpha1.WarnIfDeprecated(ctx, pkg.GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 	for _, comp := range pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")

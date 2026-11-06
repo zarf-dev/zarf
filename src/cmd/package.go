@@ -786,7 +786,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	if err != nil {
 		return err
 	}
-	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition().GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 	defer func() {
 		// Cleanup package files
 		err = errors.Join(err, pkgLayout.Cleanup())
@@ -1232,7 +1232,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition().GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
@@ -1313,7 +1313,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	internalv1alpha1.WarnIfDeprecated(ctx, pkg.GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 
 	images := make([]string, 0)
 	for _, component := range pkg.Components {
@@ -1388,7 +1388,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition().GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
@@ -1454,7 +1454,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	internalv1alpha1.WarnIfDeprecated(ctx, pkg.GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 
 	displayPackage, err := packageForDisplay(pkg)
 	if err != nil {
@@ -1544,7 +1544,11 @@ func (o *packageListOptions) run(ctx context.Context, args []string) error {
 			return err
 		}
 		if pkg.GetAPIVersion() == v1alpha1.APIVersion {
-			logger.From(ctx).Warn(internalv1alpha1.DeprecationWarning, "package", depPkg.Name, "namespaceOverride", depPkg.NamespaceOverride)
+			attrs := []any{"package", depPkg.Name}
+			if depPkg.NamespaceOverride != "" {
+				attrs = append(attrs, "namespaceOverride", depPkg.NamespaceOverride)
+			}
+			logger.From(ctx).Warn(internalv1alpha1.DeprecationWarning, attrs...)
 		}
 		packageList = append(packageList, packageListInfo{
 			Package:           depPkg.Name,
@@ -2132,7 +2136,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to load package for signing: %w", err)
 	}
-	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition().GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 	defer func() {
 		if cleanupErr := pkgLayout.Cleanup(); cleanupErr != nil {
 			l.Warn("failed to cleanup package layout", "error", cleanupErr)
@@ -2249,7 +2253,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("package verification failed: %w", err)
 	}
-	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition().GetAPIVersion())
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 	defer func() {
 		if cleanupErr := pkgLayout.Cleanup(); cleanupErr != nil {
 			l.Warn("failed to cleanup package", "error", cleanupErr)

@@ -57,7 +57,7 @@ func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions
 			return "", fmt.Errorf("unable to get deployed package %q from cluster: %w", source, err)
 		}
 		if definition, err := depPkg.Definition(); err == nil {
-			internalv1alpha1.WarnIfDeprecated(ctx, definition.GetAPIVersion())
+			internalv1alpha1.WarnIfDeprecated(ctx, definition)
 		}
 		if depPkg.Digest == "" {
 			return "", fmt.Errorf("deployed package %q does not have a stored OCI manifest digest; it may have been deployed before this feature was added", source)
@@ -107,7 +107,7 @@ func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions
 				logger.From(ctx).Warn("failed to cleanup package layout", "error", err)
 			}
 		}()
-		internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition().GetAPIVersion())
+		internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 		if pkgLayout.Digest() == "" {
 			return "", fmt.Errorf("unable to compute OCI manifest digest for package")
 		}
