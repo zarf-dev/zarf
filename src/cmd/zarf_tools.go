@@ -32,7 +32,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 const (
@@ -661,6 +660,7 @@ func (o *clearCacheOptions) run(cmd *cobra.Command, _ []string) error {
 type downloadInitOptions struct {
 	*architectureOptions
 	version         string
+	apiVersion      string
 	outputDirectory string
 }
 
@@ -675,22 +675,24 @@ func newDownloadInitCommand(architecture *architectureOptions) *cobra.Command {
 
 	cmd.Flags().StringVarP(&o.outputDirectory, "output-directory", "o", "", lang.CmdToolsDownloadInitFlagOutputDirectory)
 	cmd.Flags().StringVarP(&o.version, "version", "v", o.version, "Specify version to download (defaults to current CLI version)")
+	cmd.Flags().StringVar(&o.apiVersion, "api-version", initAPIVersionV1Beta1, lang.CmdToolsDownloadInitFlagAPIVersion)
 	return cmd
 }
 
 func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
-	var url string
-
-	if o.version == "" {
-		url = zoci.GetInitPackageURL(config.CLIVersion)
-	} else {
+	version := config.CLIVersion
+	if o.version != "" {
 		ver, err := semver.NewVersion(o.version)
 		if err != nil {
 			return fmt.Errorf("unable to parse version %s: %w", o.version, err)
 		}
+		version = fmt.Sprintf("v%s", ver.String())
+	}
 
-		url = zoci.GetInitPackageURL(fmt.Sprintf("v%s", ver.String()))
+	url, err := getInitPackageURL(version, o.apiVersion)
+	if err != nil {
+		return err
 	}
 
 	// Add the oci:// prefix

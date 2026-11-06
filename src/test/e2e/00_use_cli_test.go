@@ -56,6 +56,34 @@ func TestTrustedRootCreate(t *testing.T) {
 func TestUseCLI(t *testing.T) {
 	t.Parallel()
 
+	t.Run("zarf tools download-init", func(t *testing.T) {
+		t.Parallel()
+		for _, apiVersion := range []string{"v1beta1", "v1alpha1"} {
+			t.Run(apiVersion, func(t *testing.T) {
+				t.Parallel()
+				outputDir := t.TempDir()
+				const version = "v0.89.0"
+				args := []string{"tools", "download-init", "--version", version, "--output-directory", outputDir}
+				// Verify v1beta1 is the default and v1alpha1 can be selected explicitly.
+				if apiVersion == "v1alpha1" {
+					args = append(args, "--api-version", apiVersion)
+				}
+				stdOut, stdErr, err := e2e.Zarf(t, args...)
+				require.NoError(t, err, stdOut, stdErr)
+
+				packagePath := filepath.Join(outputDir, fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, version))
+				require.FileExists(t, packagePath)
+				ctx := logger.WithContext(t.Context(), test.GetLogger(t))
+				pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{})
+				require.NoError(t, err)
+				t.Cleanup(func() {
+					require.NoError(t, pkgLayout.Cleanup())
+				})
+				require.Equal(t, "zarf.dev/"+apiVersion, pkgLayout.Definition().GetAPIVersion())
+			})
+		}
+	})
+
 	t.Run("zarf dev upgrade", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()

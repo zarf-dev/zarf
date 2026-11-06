@@ -17,6 +17,7 @@ zarf tools download-init [flags]
 ### Options
 
 ```
+      --api-version string        Specify the init package API version (v1alpha1 or v1beta1). (default "v1beta1")
   -h, --help                      help for download-init
   -o, --output-directory string   Specify a directory to place the init package in.
   -v, --version string            Specify version to download (defaults to current CLI version)
