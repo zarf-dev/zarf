@@ -759,7 +759,7 @@ github.com/anchore/syft/syft/source/ocimodelsource
 github.com/anchore/syft/syft/source/snapsource
 github.com/anchore/syft/syft/source/sourceproviders
 github.com/anchore/syft/syft/source/stereoscopesource
-# github.com/andybalholm/brotli v1.2.7
+# github.com/andybalholm/brotli v1.2.8
 ## explicit; go 1.22
 github.com/andybalholm/brotli
 github.com/andybalholm/brotli/matchfinder
