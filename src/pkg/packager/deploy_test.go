@@ -45,17 +45,29 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
 
-func TestDeployRejectsOversizedStateBeforeActions(t *testing.T) {
+func TestDeploySecretSize(t *testing.T) {
 	t.Parallel()
+	large := deploymentStateText(1_100_000)
+	medium := deploymentStateText(600_000)
 	for _, tt := range []struct {
-		name        string
-		apiVersion  string
-		description string
+		name          string
+		apiVersion    string
+		description   string
+		defaultValues value.Values
+		opts          DeployOptions
+		wantError     bool
 	}{
-		{name: "legacy", description: strings.Repeat("a", corev1.MaxSecretSize)},
-		{name: "alpha", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", corev1.MaxSecretSize)},
-		{name: "json escaping", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("&", 180_000)},
-		{name: "beta compatibility copy", apiVersion: v1beta1.APIVersion, description: strings.Repeat("a", 600_000)},
+		{name: "legacy compressed over limit", description: large, wantError: true},
+		{name: "alpha compressed over limit", apiVersion: v1alpha1.APIVersion, description: large, wantError: true},
+		{name: "compressible definition", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 2_000_000)},
+		{name: "compressible JSON escaping", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("&", 180_000)},
+		{name: "beta compatibility copy", apiVersion: v1beta1.APIVersion, description: medium, wantError: true},
+		{name: "values overrides", apiVersion: v1beta1.APIVersion, opts: DeployOptions{Values: value.Values{"input": large}}, wantError: true},
+		{name: "chart values overrides", opts: DeployOptions{ValuesOverridesMap: ValuesOverrides{"local": {"chart": value.Values{"input": large}}}}, wantError: true},
+		{name: "variable overrides", opts: DeployOptions{SetVariables: map[string]string{"INPUT": large}}, wantError: true},
+		{name: "definition and values combined", apiVersion: v1alpha1.APIVersion, description: medium, opts: DeployOptions{Values: value.Values{"input": medium}}, wantError: true},
+		{name: "compressible values overrides", apiVersion: v1beta1.APIVersion, opts: DeployOptions{Values: value.Values{"input": strings.Repeat("a", 2_000_000)}}},
+		{name: "package default values are not saved", apiVersion: v1beta1.APIVersion, defaultValues: value.Values{"input": large}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -69,13 +81,18 @@ func TestDeployRejectsOversizedStateBeforeActions(t *testing.T) {
 					Before: []api.Action{{Cmd: fmt.Sprintf("touch %q", marker)}},
 				}}}},
 			}
-			pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+			pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir()), Values: tt.defaultValues}, assemble.AssembleOptions{SkipSBOM: true})
 			require.NoError(t, err)
 			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 
-			_, err = Deploy(ctx, pkgLayout, DeployOptions{})
-			require.ErrorContains(t, err, "1048576-byte Secret data limit")
-			require.NoFileExists(t, marker, "size validation must precede even local components")
+			_, err = Deploy(ctx, pkgLayout, tt.opts)
+			if tt.wantError {
+				require.ErrorContains(t, err, "1048576-byte Secret data limit")
+				require.NoFileExists(t, marker, "size validation must precede even local components")
+				return
+			}
+			require.NoError(t, err)
+			require.FileExists(t, marker)
 		})
 	}
 }

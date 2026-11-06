@@ -117,6 +117,18 @@ func (opts DeployOptions) Validate(pkg api.Package) error {
 	return nil
 }
 
+func (opts DeployOptions) deployConfig(pkg api.Package) state.DeployConfig {
+	selectors, _ := pkg.ComponentSelectors()
+	return state.DeployConfig{
+		SetVariables:       opts.SetVariables,
+		Values:             opts.Values,
+		NamespaceOverride:  opts.NamespaceOverride,
+		ValuesOverridesMap: opts.ValuesOverridesMap,
+		ComponentSelectors: selectors,
+		Connectivity:       opts.Connectivity,
+	}
+}
+
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
 // any of these fields are subject to change from one component to the next
 type deployer struct {
@@ -148,7 +160,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	if err := opts.Validate(pkg); err != nil {
 		return DeployResult{}, err
 	}
-	if err := validatePackageSecretSize(pkg, pkgLayout.Digest()); err != nil {
+	if err := validatePackageSecretSize(pkg, pkgLayout.Digest(), opts.deployConfig(pkg)); err != nil {
 		return DeployResult{}, err
 	}
 
@@ -300,15 +312,7 @@ func (d *deployer) startDeploymentState(ctx context.Context, pkgLayout *layout.P
 	deployedPkg.CLIVersion = config.CLIVersion
 	deployedPkg.NamespaceOverride = opts.NamespaceOverride
 
-	selectors, _ := pkg.ComponentSelectors()
-	d.deployConfig = state.DeployConfig{
-		SetVariables:       opts.SetVariables,
-		Values:             opts.Values,
-		NamespaceOverride:  opts.NamespaceOverride,
-		ValuesOverridesMap: opts.ValuesOverridesMap,
-		ComponentSelectors: selectors,
-		Connectivity:       opts.Connectivity,
-	}
+	d.deployConfig = opts.deployConfig(pkg)
 	d.configDigest, err = d.deployConfig.Digest()
 	if err != nil {
 		return fmt.Errorf("digest deploy config: %w", err)

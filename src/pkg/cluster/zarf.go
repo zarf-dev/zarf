@@ -147,7 +147,17 @@ func encodeDeployedPackage(depPkg state.DeployedPackage) ([]byte, error) {
 	if err := writer.Close(); err != nil {
 		return nil, err
 	}
+	if buf.Len() > corev1.MaxSecretSize {
+		return nil, fmt.Errorf("package %q compressed deployment metadata is %d bytes, exceeding Kubernetes' %d-byte Secret data limit; reduce the package definition size or deployment overrides", depPkg.Name, buf.Len(), corev1.MaxSecretSize)
+	}
 	return buf.Bytes(), nil
+}
+
+// ValidateDeployedPackageSecretSize returns an error if the compressed deployment record
+// exceeds Kubernetes' Secret data limit. It does not access the cluster.
+func ValidateDeployedPackageSecretSize(depPkg state.DeployedPackage) error {
+	_, err := encodeDeployedPackage(depPkg)
+	return err
 }
 
 func decodeDeployedPackage(secret *corev1.Secret, depPkg *state.DeployedPackage) error {

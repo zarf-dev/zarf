@@ -4,7 +4,9 @@
 package packager
 
 import (
+	"encoding/base64"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -20,23 +22,36 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
+// Use deterministic high-entropy text to exercise compressed Secret limits.
+func deploymentStateText(size int) string {
+	rng := rand.New(rand.NewPCG(1, 2))
+	data := make([]byte, size)
+	for i := range data {
+		data[i] = byte(rng.Uint32())
+	}
+	return base64.StdEncoding.EncodeToString(data)
+}
+
 func TestPackageCreateSecretSize(t *testing.T) {
 	t.Parallel()
+	large := deploymentStateText(1_100_000)
+	medium := deploymentStateText(600_000)
 	for _, tt := range []struct {
 		name        string
 		apiVersion  string
 		description string
+		values      string
 		wantError   bool
 	}{
-		{name: "implicit-alpha-over-limit", description: strings.Repeat("a", 1_048_576), wantError: true},
-		{name: "alpha-below-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 900_000)},
-		{name: "alpha-above-old-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 1_030_000)},
-		{name: "alpha-over-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 1_048_576), wantError: true},
-		// Ampersands exercise JSON escaping and remain quoted when the definition is written as YAML.
-		{name: "alpha-json-escaping-exceeds-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("&", 180_000), wantError: true},
-		{name: "beta-below-limit", apiVersion: v1beta1.APIVersion, description: strings.Repeat("a", 450_000)},
-		// The beta definition fits alone, but its alpha compatibility copy pushes the secret over the limit.
-		{name: "beta-compatibility-copy-exceeds-limit", apiVersion: v1beta1.APIVersion, description: strings.Repeat("a", 600_000), wantError: true},
+		{name: "implicit-alpha-compressed-over-limit", description: large, wantError: true},
+		{name: "alpha-compressed-below-limit", apiVersion: v1alpha1.APIVersion, description: medium},
+		{name: "alpha-large-compressible-definition", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 2_000_000)},
+		{name: "alpha-compressed-over-limit", apiVersion: v1alpha1.APIVersion, description: large, wantError: true},
+		{name: "alpha-compressible-json-escaping", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("&", 180_000)},
+		{name: "beta-large-compressible-definition", apiVersion: v1beta1.APIVersion, description: strings.Repeat("a", 2_000_000)},
+		// The beta definition fits alone, but its alpha compatibility copy pushes the compressed Secret over the limit.
+		{name: "beta-compatibility-copy-exceeds-limit", apiVersion: v1beta1.APIVersion, description: medium, wantError: true},
+		{name: "package-default-values-are-not-saved", apiVersion: v1beta1.APIVersion, values: large},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -52,6 +67,10 @@ components:
 `, tt.description)
 			if tt.apiVersion != "" {
 				definition = "apiVersion: " + tt.apiVersion + "\n" + definition
+			}
+			if tt.values != "" {
+				definition += "values:\n  files:\n    - values.yaml\n"
+				require.NoError(t, os.WriteFile(filepath.Join(packageDir, "values.yaml"), []byte("input: "+tt.values+"\n"), 0o600))
 			}
 			require.NoError(t, os.WriteFile(filepath.Join(packageDir, layout.ZarfYAML), []byte(definition), 0o600))
 			packagePath, err := Create(ctx, packageDir, outputDir, CreateOptions{
