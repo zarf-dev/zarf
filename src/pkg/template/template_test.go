@@ -1174,6 +1174,7 @@ func TestWithState_NonSensitiveFields(t *testing.T) {
 	require.Contains(t, objs, objectKeyState)
 
 	for tmpl, expected := range map[string]string{
+		`{{ .State.StorageClass }}`:               "",
 		`{{ .State.IPFamily }}`:                   string(s.IPFamily),
 		`{{ .State.Registry.Address }}`:           s.RegistryInfo.Address,
 		`{{ .State.Registry.PushUsername }}`:      s.RegistryInfo.PushUsername,
