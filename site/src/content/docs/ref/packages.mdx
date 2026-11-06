@@ -81,7 +81,7 @@ An OCI package is one that has been published to an OCI compatible registry usin
 
 {/*TODO probably worth having a published package state schema to link to and a drop down example verified against said schema*/}
 
-When a package is deployed to a cluster, Zarf stores its definition and installed components in a `zarf-package-*` Secret in the `zarf` namespace. This state is used to list, inspect, update, and remove deployed packages.
+When a package is deployed to a cluster, Zarf stores its definition and deployment state in a `zarf-package-*` Secret in the `zarf` namespace. This state is used to list, inspect, update, and remove deployed packages.
 
 Deployed packages can be referenced by name as a "Cluster" source for `inspect` and `remove`:
 
