@@ -38,11 +38,7 @@ type CreateOptions struct {
 	Flavor            string
 	RegistryOverrides []images.RegistryOverride
 	// A nil value leaves the package unsigned; a non-nil value requests signing.
-	SignBlobOptions *signing.SignBlobOptions
-	// Deprecated: populate SignBlobOptions.Key directly.
-	SigningKeyPath string
-	// Deprecated: populate SignBlobOptions.Password directly.
-	SigningKeyPassword      string
+	SignBlobOptions         *signing.SignBlobOptions
 	SetVariables            map[string]string
 	MaxPackageSizeMB        int
 	SBOMOut                 string
@@ -119,8 +115,6 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		Flavor:               opts.Flavor,
 		RegistryOverrides:    opts.RegistryOverrides,
 		SignBlobOptions:      opts.SignBlobOptions,
-		SigningKeyPath:       opts.SigningKeyPath,     //nolint:staticcheck // Forward deprecated public options to preserve API compatibility.
-		SigningKeyPassword:   opts.SigningKeyPassword, //nolint:staticcheck // Forward deprecated public options to preserve API compatibility.
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,
@@ -143,7 +137,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err != nil {
 			return "", err
 		}
-		remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), oci.PlatformForArch(pkg.Build.Architecture), zoci.RemoteClientOptions{
+		remote, err := zoci.NewRemote(ctx, ref.String(), oci.PlatformForArch(pkg.Build.Architecture), zoci.RemoteClientOptions{
 			RemoteOptions: opts.RemoteOptions,
 		})
 		if err != nil {

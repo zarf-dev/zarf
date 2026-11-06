@@ -67,9 +67,6 @@ type SignBlobOptions struct {
 	Password  string
 	PassFunc  cosign.PassFunc
 	Overwrite bool
-
-	// Deprecated: use Key. Removed in a future version.
-	KeyRef string
 }
 
 // VerifyBlobOptions holds verification configuration for zarf blob operations.
@@ -86,11 +83,6 @@ type VerifyBlobOptions struct {
 
 	TempDir string
 	Timeout time.Duration
-
-	// Deprecated: use Key. Removed in a future version.
-	KeyRef string
-	// Deprecated: use Signature. Removed in a future version.
-	SigRef string
 }
 
 // SignManifestOptions holds component-signing configuration.
@@ -190,13 +182,6 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
 		defer cancel()
-	}
-
-	if opts.KeyRef != "" {
-		l.Warn("SignBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
-		if opts.Key == "" {
-			opts.Key = opts.KeyRef
-		}
 	}
 
 	rootOpts := &options.RootOptions{
@@ -433,19 +418,6 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
 		defer cancel()
-	}
-
-	if opts.KeyRef != "" {
-		l.Warn("VerifyBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
-		if opts.Key == "" {
-			opts.Key = opts.KeyRef
-		}
-	}
-	if opts.SigRef != "" {
-		l.Warn("VerifyBlobOptions.SigRef is deprecated, use Signature (removed in v1.0)")
-		if opts.Signature == "" {
-			opts.Signature = opts.SigRef
-		}
 	}
 
 	hashAlgorithm, err := opts.SignatureDigest.HashAlgorithm()

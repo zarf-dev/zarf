@@ -41,7 +41,7 @@ const (
 	RootCmdLong  = "Zarf eliminates the complexity of airgap software delivery for Kubernetes clusters and cloud native workloads\n" +
 		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
-	RootCmdFlagLogLevel              = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
+	RootCmdFlagLogLevel              = "Log level when running Zarf. Valid options are: error, warn, info, debug"
 	RootCmdFlagArch                  = "Architecture for OCI images and Zarf packages"
 	RootCmdFlagCachePath             = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir               = "Specify the temporary directory to use for intermediate files"
@@ -403,13 +403,8 @@ $ zarf package publish oci://source-registry.com/my-namespace/my-package:1.0.0 o
 # Publish a package with a specific tag different from the package metadata.version
 $ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry.com/my-namespace --tag v0.0.1
 `
-	CmdPackagePublishFlagSigningKey           = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider"
-	CmdPackagePublishFlagSigningKeyPassword   = "Password to the private key used for publishing packages"
-	CmdPackagePublishFlagConfirm              = "Confirms package publish without prompting. Skips prompt for the signing key password"
-	CmdPackagePublishFlagFlavor               = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
-	CmdPackagePublishFlagTag                  = "The tag to be used in the OCI reference for the package in the registry"
-	CmdPackagePublishSigningDeprecation       = "This flag is deprecated. Use signing during package creation or 'zarf package sign' before publishing when applicable."
-	CmdPackagePublishSigningConfigDeprecation = "package.publish signing configuration is deprecated. Use signing during package creation or 'zarf package sign' before publishing."
+	CmdPackagePublishFlagFlavor = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
+	CmdPackagePublishFlagTag    = "The tag to be used in the OCI reference for the package in the registry"
 
 	CmdComponentShort          = "Commands for reusable Zarf components"
 	CmdComponentPublishShort   = "Publishes a v1beta1 Zarf component to a remote registry"
@@ -454,7 +449,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 `
 	CmdPackageSignFlagSigningKey        = "Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)"
 	CmdPackageSignFlagSigningKeyPass    = "Password for encrypted private key"
-	CmdPackageSignFlagOutput            = "Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources"
+	CmdPackageSignFlagOutput            = "Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, source repository for OCI sources"
 	CmdPackageSignFlagOverwrite         = "Overwrite an existing signature if the package is already signed"
 	CmdPackageSignFlagKey               = "Public key to verify the existing signature before re-signing (optional)"
 	CmdPackageSignFlagKeyless           = "Sign without a private key using Sigstore's keyless flow (Fulcio/OIDC)"
@@ -533,8 +528,8 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 
 	CmdDevGenerateConfigShort = "Generates a config file for Zarf"
 	CmdDevGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
-		"The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc.\n" +
-		"Accepted extensions are json, toml, yaml.\n\n" +
+		"The extension determines the format of the config file, e.g. env-1.yaml, env-2.toml.\n" +
+		"Accepted extensions are yaml, yml, toml.\n\n" +
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 
 	CmdDevFlagExtractPath                  = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
