@@ -95,6 +95,7 @@ func ParseAs[T any](ctx context.Context, b []byte, d Decoder[T]) (T, error) {
 		if normalizeAPIVersion(version) != d.version {
 			continue
 		}
+		warnOnDeprecatedAPIVersion(ctx, d.version)
 		return d.decode(ctx, doc.Body)
 	}
 	return zero, fmt.Errorf("no %q document found in package definition", d.version)
@@ -135,6 +136,7 @@ func SelectDocument(ctx context.Context, b []byte) (Document, error) {
 	if err != nil {
 		return Document{}, err
 	}
+	warnOnDeprecatedAPIVersion(ctx, d.version)
 	return Document{decoder: d, node: node}, nil
 }
 
@@ -153,6 +155,12 @@ func ParseMultiDocNative(ctx context.Context, b []byte) (any, api.Package, error
 		return nil, api.Package{}, err
 	}
 	return document.decoder.decode(ctx, document.node)
+}
+
+func warnOnDeprecatedAPIVersion(ctx context.Context, version string) {
+	if version == v1alpha1.APIVersion {
+		logger.From(ctx).Warn(internalv1alpha1.DeprecationWarning)
+	}
 }
 
 func decodeV1Alpha1(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, error) {

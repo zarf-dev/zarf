@@ -65,7 +65,8 @@ func TestGetDeployedPackageWarnsOnUnrecognizedAPIVersion(t *testing.T) {
 	require.NoError(t, err)
 	_, err = c.GetDeployedPackage(ctx, known.Name)
 	require.NoError(t, err)
-	require.Empty(t, logs.String())
+	require.NotContains(t, logs.String(), "this version of Zarf does not recognize")
+	logs.Reset()
 
 	loaded, err := c.GetDeployedPackage(ctx, deployed.Name)
 	require.NoError(t, err)
@@ -303,4 +304,50 @@ func TestUpdateDeployedPackagePreservesLifecycleState(t *testing.T) {
 		state.ZarfPackageInfoLabel: definition.Metadata.Name,
 	}, secret.Labels)
 	require.Contains(t, secret.Data, "data")
+}
+
+func TestDeployedPackageDeprecationWarning(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name        string
+		apiVersion  string
+		wantWarning bool
+	}{
+		{name: "v1alpha1", apiVersion: v1alpha1.APIVersion, wantWarning: true},
+		{name: "omitted apiVersion", wantWarning: true},
+		{name: "v1beta1 with compatibility data", apiVersion: v1beta1.APIVersion},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var deployed state.DeployedPackage
+			deployed.Name = "test"
+			require.NoError(t, deployed.SetPackageDefinition(api.Package{APIVersion: tt.apiVersion, Metadata: api.PackageMetadata{Name: "test"}}))
+			data, err := json.Marshal(deployed)
+			require.NoError(t, err)
+			c := &Cluster{Clientset: fake.NewClientset(&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: deployed.GetSecretName(), Namespace: state.ZarfNamespaceName, Labels: map[string]string{state.ZarfPackageInfoLabel: deployed.Name}},
+				Data:       map[string][]byte{"data": data},
+			})}
+			var logs bytes.Buffer
+			ctx := logger.WithContext(t.Context(), slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn})))
+			for _, operation := range []string{"get", "list"} {
+				t.Run(operation, func(t *testing.T) {
+					logs.Reset()
+					if operation == "get" {
+						_, err = c.GetDeployedPackage(ctx, deployed.Name)
+					} else {
+						_, err = c.GetDeployedZarfPackages(ctx)
+					}
+					require.NoError(t, err)
+					if tt.wantWarning {
+						require.Contains(t, logs.String(), "level=WARN")
+						require.Contains(t, logs.String(), "v1alpha1 packages are deprecated")
+						require.Contains(t, logs.String(), "do not have long-term support in Zarf v1.0")
+					} else {
+						require.Empty(t, logs.String())
+					}
+				})
+			}
+		})
+	}
 }

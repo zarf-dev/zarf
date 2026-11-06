@@ -20,7 +20,9 @@ import (
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -50,7 +52,7 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]state.Deployed
 			errs = append(errs, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
 			continue
 		}
-		warnOnUnrecognizedPackageAPIVersions(ctx, deployedPackage)
+		warnOnPackageAPIVersions(ctx, deployedPackage)
 		deployedPackages = append(deployedPackages, deployedPackage)
 	}
 
@@ -82,11 +84,14 @@ func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, op
 	if err != nil {
 		return nil, err
 	}
-	warnOnUnrecognizedPackageAPIVersions(ctx, *deployedPackage)
+	warnOnPackageAPIVersions(ctx, *deployedPackage)
 	return deployedPackage, nil
 }
 
-func warnOnUnrecognizedPackageAPIVersions(ctx context.Context, deployedPackage state.DeployedPackage) {
+func warnOnPackageAPIVersions(ctx context.Context, deployedPackage state.DeployedPackage) {
+	if definition, err := deployedPackage.Definition(); err == nil && definition.GetAPIVersion() == v1alpha1.APIVersion {
+		logger.From(ctx).Warn(internalv1alpha1.DeprecationWarning, "package", deployedPackage.Name)
+	}
 	var unknown []string
 	known := api.KnownAPIVersions()
 	for version := range deployedPackage.PackageData {

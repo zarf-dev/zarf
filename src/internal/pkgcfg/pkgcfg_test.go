@@ -4,7 +4,9 @@
 package pkgcfg
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,6 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // newer is a future apiVersion this binary does not understand.
@@ -248,4 +251,48 @@ func TestDecoderFor(t *testing.T) {
 		}
 		priorities[d.priority] = d.version
 	}
+}
+
+func TestParseMultiDocDeprecationWarning(t *testing.T) {
+	t.Parallel()
+	alpha := "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: legacy\n"
+	beta := "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: current\n"
+	for _, tt := range []struct {
+		name        string
+		definition  string
+		wantWarning bool
+	}{
+		{name: "v1alpha1", definition: alpha, wantWarning: true},
+		{name: "omitted apiVersion", definition: "kind: ZarfPackageConfig\nmetadata:\n  name: legacy\n", wantWarning: true},
+		{name: "v1beta1", definition: beta},
+		{name: "v1beta1 selected over v1alpha1", definition: alpha + "---\n" + beta},
+		{name: "v1alpha1 fallback", definition: alpha + "---\napiVersion: zarf.dev/v1beta999\n", wantWarning: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var logs bytes.Buffer
+			ctx := logger.WithContext(t.Context(), slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn})))
+			_, err := ParseMultiDoc(ctx, []byte(tt.definition))
+			require.NoError(t, err)
+			if tt.wantWarning {
+				require.Contains(t, logs.String(), "level=WARN")
+				require.Contains(t, logs.String(), "v1alpha1 packages are deprecated")
+				require.Contains(t, logs.String(), "do not have long-term support in Zarf v1.0")
+			} else {
+				require.Empty(t, logs.String())
+			}
+		})
+	}
+}
+
+func TestParseAsV1Alpha1DeprecationWarning(t *testing.T) {
+	t.Parallel()
+	var logs bytes.Buffer
+	ctx := logger.WithContext(t.Context(), slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	// An explicitly selected v1alpha1 document is deprecated even when v1beta1 is also present.
+	_, err := ParseAs(ctx, []byte("apiVersion: zarf.dev/v1alpha1\nmetadata:\n  name: legacy\n---\napiVersion: zarf.dev/v1beta1\n"), V1Alpha1)
+	require.NoError(t, err)
+	require.Contains(t, logs.String(), "level=WARN")
+	require.Contains(t, logs.String(), "v1alpha1 packages are deprecated")
+	require.Contains(t, logs.String(), "do not have long-term support in Zarf v1.0")
 }

@@ -79,6 +79,11 @@ linters:
     testifylint:
       enable-all: true
   exclusions:
+    rules:
+      # Auto exclude while we still support v1alpha1
+      - linters:
+          - staticcheck
+        text: 'SA1019: .* is deprecated: Only supported by deprecated v1alpha1 packages\.'
     presets:
       - common-false-positives
       - legacy

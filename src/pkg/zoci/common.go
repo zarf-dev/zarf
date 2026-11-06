@@ -194,6 +194,8 @@ func GetOCICacheModifier(cachePath string) (oci.Modifier, error) {
 }
 
 // PlatformForSkeleton sets the target architecture for the remote to skeleton
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PlatformForSkeleton() ocispec.Platform {
 	return ocispec.Platform{
 		OS:           oci.MultiOS,

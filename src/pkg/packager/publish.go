@@ -204,6 +204,8 @@ type PublishSkeletonOptions struct {
 
 // PublishSkeleton takes a Path to the package definition and uploads a skeleton package to the given a registry.
 // dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (_ registry.Reference, err error) {
 	l := logger.From(ctx)
 
