@@ -62,8 +62,6 @@ type DeployOptions struct {
 	Connectivity state.PackageConnectivity
 	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
 	TakeOwnership bool
-	// Connected deploys without mirroring images/repos and labels resources to bypass the Zarf agent
-	Connected bool
 	// Force Helm to take ownership of conflicting fields during Server-Side Apply operations
 	ForceConflicts bool
 	// Timeout for Helm operations
