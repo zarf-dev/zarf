@@ -1543,7 +1543,9 @@ func (o *packageListOptions) run(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		internalv1alpha1.WarnIfDeprecated(ctx, pkg.GetAPIVersion())
+		if pkg.GetAPIVersion() == v1alpha1.APIVersion {
+			logger.From(ctx).Warn(internalv1alpha1.DeprecationWarning, "package", depPkg.Name, "namespaceOverride", depPkg.NamespaceOverride)
+		}
 		packageList = append(packageList, packageListInfo{
 			Package:           depPkg.Name,
 			NamespaceOverride: depPkg.NamespaceOverride,
