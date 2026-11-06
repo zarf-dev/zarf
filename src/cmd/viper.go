@@ -183,11 +183,18 @@ type configDecoderRegistry struct {
 }
 
 func (r configDecoderRegistry) Decoder(format string) (viper.Decoder, error) {
+	if err := validateConfigFormat(format); err != nil {
+		return nil, err
+	}
+	return r.DecoderRegistry.Decoder(format)
+}
+
+func validateConfigFormat(format string) error {
 	switch strings.ToLower(format) {
 	case "yaml", "yml", "toml":
-		return r.DecoderRegistry.Decoder(format)
+		return nil
 	default:
-		return nil, fmt.Errorf("unsupported configuration format %q: only YAML and TOML are supported", format)
+		return fmt.Errorf("unsupported configuration format %q: only YAML and TOML are supported", format)
 	}
 }
 

@@ -528,8 +528,8 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 
 	CmdDevGenerateConfigShort = "Generates a config file for Zarf"
 	CmdDevGenerateConfigLong  = "Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.\n\n" +
-		"The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc.\n" +
-		"Accepted extensions are json, toml, yaml.\n\n" +
+		"The extension determines the format of the config file, e.g. env-1.yaml, env-2.toml.\n" +
+		"Accepted extensions are yaml, yml, toml.\n\n" +
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 
 	CmdDevFlagExtractPath                  = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
