@@ -730,6 +730,7 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 
 	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
 	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."
+	CmdToolsDownloadInitFlagAPIVersion      = "Specify the init package API version (v1alpha1 or v1beta1)."
 
 	CmdToolsGenPkiShort       = "Generates a Certificate Authority and PKI chain of trust for the given host"
 	CmdToolsGenPkiSuccess     = "Successfully created a chain of trust for %s"

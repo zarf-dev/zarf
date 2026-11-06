@@ -1530,10 +1530,6 @@ github.com/extism/go-sdk
 # github.com/facebookincubator/nvdtools v0.1.5
 ## explicit; go 1.14
 github.com/facebookincubator/nvdtools/wfn
-# github.com/fairwindsops/pluto/v5 v5.24.3
-## explicit; go 1.26.2
-github.com/fairwindsops/pluto/v5
-github.com/fairwindsops/pluto/v5/pkg/api
 # github.com/fatih/camelcase v1.0.0
 ## explicit
 github.com/fatih/camelcase
@@ -1918,7 +1914,6 @@ github.com/google/go-containerregistry/pkg/name
 github.com/google/go-containerregistry/pkg/registry
 github.com/google/go-containerregistry/pkg/v1
 github.com/google/go-containerregistry/pkg/v1/cache
-github.com/google/go-containerregistry/pkg/v1/daemon
 github.com/google/go-containerregistry/pkg/v1/empty
 github.com/google/go-containerregistry/pkg/v1/google
 github.com/google/go-containerregistry/pkg/v1/layout
@@ -4109,7 +4104,7 @@ helm.sh/helm/v4/pkg/uploader
 # howett.net/plist v1.0.1
 ## explicit; go 1.12
 howett.net/plist
-# k8s.io/api v0.37.1
+# k8s.io/api v0.37.2
 ## explicit; go 1.26.0
 k8s.io/api/admission/v1
 k8s.io/api/admission/v1beta1
@@ -4175,7 +4170,7 @@ k8s.io/api/storagemigration/v1beta1
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1
-# k8s.io/apimachinery v0.37.1
+# k8s.io/apimachinery v0.37.2
 ## explicit; go 1.26.0
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/errors
@@ -4248,13 +4243,13 @@ k8s.io/apimachinery/third_party/forked/golang/reflect
 # k8s.io/apiserver v0.37.0
 ## explicit; go 1.26.0
 k8s.io/apiserver/pkg/endpoints/deprecation
-# k8s.io/cli-runtime v0.37.1
+# k8s.io/cli-runtime v0.37.2
 ## explicit; go 1.26.0
 k8s.io/cli-runtime/pkg/genericclioptions
 k8s.io/cli-runtime/pkg/genericiooptions
 k8s.io/cli-runtime/pkg/printers
 k8s.io/cli-runtime/pkg/resource
-# k8s.io/client-go v0.37.1
+# k8s.io/client-go v0.37.2
 ## explicit; go 1.26.0
 k8s.io/client-go/applyconfigurations
 k8s.io/client-go/applyconfigurations/admissionregistration/v1
@@ -4617,11 +4612,11 @@ k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 k8s.io/client-go/util/watchlist
 k8s.io/client-go/util/workqueue
-# k8s.io/component-base v0.37.1
+# k8s.io/component-base v0.37.2
 ## explicit; go 1.26.0
 k8s.io/component-base/cli/flag
 k8s.io/component-base/version
-# k8s.io/component-helpers v0.37.1
+# k8s.io/component-helpers v0.37.2
 ## explicit; go 1.26.0
 k8s.io/component-helpers/auth/rbac/reconciliation
 k8s.io/component-helpers/auth/rbac/validation
@@ -4655,7 +4650,7 @@ k8s.io/kube-openapi/pkg/util
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/util/proto/validation
 k8s.io/kube-openapi/pkg/validation/spec
-# k8s.io/kubectl v0.37.1
+# k8s.io/kubectl v0.37.2
 ## explicit; go 1.26.0
 k8s.io/kubectl/pkg/apps
 k8s.io/kubectl/pkg/cmd
@@ -4739,7 +4734,7 @@ k8s.io/kubectl/pkg/util/storage
 k8s.io/kubectl/pkg/util/templates
 k8s.io/kubectl/pkg/util/term
 k8s.io/kubectl/pkg/validation
-# k8s.io/metrics v0.37.1
+# k8s.io/metrics v0.37.2
 ## explicit; go 1.26.0
 k8s.io/metrics/pkg/apis/metrics
 k8s.io/metrics/pkg/apis/metrics/v1

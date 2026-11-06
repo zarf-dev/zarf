@@ -47,6 +47,12 @@ func (p *PackageLayout) Definition() api.Package {
 	return p.pkg
 }
 
+// SetComponentSelectors restores runtime selection provenance after an in-process
+// definition reload. Normal selection is recorded by Filter or package loading.
+func (p *PackageLayout) SetComponentSelectors(selectors []string) {
+	p.pkg.SetComponentSelectors(selectors)
+}
+
 // SetName updates the package metadata name.
 func (p *PackageLayout) SetName(name string) {
 	p.pkg.Metadata.Name = name
@@ -102,7 +108,8 @@ func (p *PackageLayout) OverrideNamespace(namespace string) error {
 	return p.pkg.OverrideNamespace(namespace)
 }
 
-// Filter applies a component filter to this layout's package definition.
+// Filter updates the package definition and retains deployment selection
+// provenance for Deploy.
 func (p *PackageLayout) Filter(filter filters.ComponentFilterStrategy) error {
 	definition, err := filters.Apply(p.pkg, filter)
 	if err != nil {
