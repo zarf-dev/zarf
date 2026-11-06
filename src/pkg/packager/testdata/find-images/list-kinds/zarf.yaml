@@ -1,0 +1,14 @@
+---
+kind: ZarfPackageConfig
+metadata:
+  name: list-kinds
+components:
+  - name: baseline
+    required: true
+    manifests:
+      - name: list-kinds
+        namespace: list-kinds
+        files:
+          - list.yaml
+          - oci-list.yaml
+          - helm-test-list.yaml
