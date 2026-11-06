@@ -70,7 +70,6 @@ func TestGetCreds(t *testing.T) {
 					Address:      "127.0.0.1:30001",
 					Port:         30001,
 				},
-				Distro: "test",
 			}
 
 			b, err := json.Marshal(s)
@@ -126,7 +125,6 @@ func TestGetCredsOnlyConfiguredServices(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
 			s := &state.State{
-				Distro: "test",
 				RegistryInfo: state.RegistryInfo{
 					Address:      tt.registryAddress,
 					RegistryMode: tt.registryMode,

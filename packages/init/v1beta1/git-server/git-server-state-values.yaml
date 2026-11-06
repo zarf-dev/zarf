@@ -1,5 +1,3 @@
-persistence:
-  storageClass: {{ .State.StorageClass | quote }}
 gitea:
   admin:
     username: {{ .State.Git.PushUsername | quote }}

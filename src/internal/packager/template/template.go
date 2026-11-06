@@ -50,7 +50,6 @@ func GetZarfTemplates(ctx context.Context, apiVersion string, service api.Servic
 		gitInfo := s.GitServer
 
 		builtinMap := map[string]string{
-			"STORAGE_CLASS":               s.StorageClass,
 			"IPV6_ONLY":                   fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
 			"REGISTRY_MTLS_ENABLED":       fmt.Sprintf("%t", s.RegistryInfo.ShouldUseMTLS()),
 			"REGISTRY_PROXY":              fmt.Sprintf("%t", s.RegistryInfo.RegistryMode == state.RegistryModeProxy),

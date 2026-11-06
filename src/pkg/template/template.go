@@ -157,13 +157,11 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 	}
 
 	stateMap := map[string]any{
-		"Distro":       s.Distro,
-		"StorageClass": s.StorageClass,
-		"IPFamily":     string(s.IPFamily),
-		"Registry":     registry,
-		"Git":          git,
-		"Injector":     injector,
-		"Agent":        agent,
+		"IPFamily": s.IPFamily,
+		"Registry": registry,
+		"Git":      git,
+		"Injector": injector,
+		"Agent":    agent,
 	}
 
 	if slices.Contains(access.AccessKeys, api.StateAccessAgentCerts) {

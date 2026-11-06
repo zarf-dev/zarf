@@ -162,15 +162,10 @@ const IPV6Localhost = "::1"
 
 // State is maintained as a secret in the Zarf namespace to track Zarf init data.
 type State struct {
-	// Indicates if Zarf was initialized while deploying its own k8s cluster
+	// ZarfAppliance reports whether Zarf installed the cluster control plane and can run host cleanup on destroy.
 	ZarfAppliance bool `json:"zarfAppliance"`
-	// K8s distribution of the cluster Zarf was deployed to
-	Distro string `json:"distro"`
-	// Default StorageClass value Zarf uses for variable templating
-	StorageClass string `json:"storageClass"`
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
-	IPFamily IPFamily `json:"ipFamily,omitempty"`
-	// AgentInfo contains information Zarf uses to configure the agent.
+	IPFamily  IPFamily  `json:"ipFamily,omitempty"`
 	AgentInfo AgentInfo `json:"agentInfo"`
 	// Deprecated: Use AgentInfo.TLS instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`

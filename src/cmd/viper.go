@@ -45,9 +45,7 @@ const (
 
 	// Init config keys
 
-	VInitComponents   = "init.components"
-	VInitStorageClass = "init.storage_class"
-
+	VInitComponents = "init.components"
 	// Init Git config keys
 
 	VInitGitURL      = "init.git.url"

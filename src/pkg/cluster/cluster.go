@@ -166,14 +166,12 @@ func (w *invalidatingWatcher) Watch(ctx context.Context, objs object.ObjMetadata
 
 // InitStateOptions tracks the user-defined options during cluster initialization.
 type InitStateOptions struct {
-	// Indicates if Zarf was initialized while deploying its own k8s cluster
+	// ApplianceMode indicates Zarf installed the cluster control plane and should run host cleanup on destroy.
 	ApplianceMode bool
 	// Information about the repository Zarf is going to be using
 	GitServer state.GitServerInfo
 	// Information about the container registry Zarf is going to be using
 	RegistryInfo state.RegistryInfo
-	// StorageClass of the k8s cluster Zarf is initializing
-	StorageClass string
 	// InjectorPort is the port that the injector will be exposed through
 	InjectorPort int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
@@ -211,31 +209,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 
 	// If state is nil, this is a new cluster.
 	if s == nil {
-		s = &state.State{}
+		s = &state.State{ZarfAppliance: opts.ApplianceMode}
 		l.Debug("new cluster, no prior Zarf deployments found")
-		if opts.ApplianceMode {
-			// If the K3s component is being deployed, skip distro detection.
-			s.Distro = DistroIsK3s
-			s.ZarfAppliance = true
-		} else {
-			// Otherwise, trying to detect the K8s distro type.
-			nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-			if err != nil {
-				return nil, err
-			}
-			if len(nodeList.Items) == 0 {
-				return nil, fmt.Errorf("cannot init Zarf state in empty cluster")
-			}
-			namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
-			if err != nil {
-				return nil, err
-			}
-			s.Distro = detectDistro(nodeList.Items[0], namespaceList.Items)
-		}
-
-		if s.Distro != DistroIsUnknown {
-			l.Debug("Detected K8s distro", "name", s.Distro)
-		}
 
 		if opts.InternalServices.Has(state.AgentKey) {
 			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
@@ -333,21 +308,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, fmt.Errorf("failed to generate certs: %w", err)
 		}
 		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
-	}
-
-	switch s.Distro {
-	case DistroIsK3s, DistroIsK3d:
-		s.StorageClass = "local-path"
-
-	case DistroIsKind, DistroIsGKE:
-		s.StorageClass = "standard"
-
-	case DistroIsDockerDesktop:
-		s.StorageClass = "hostpath"
-	}
-
-	if opts.StorageClass != "" {
-		s.StorageClass = opts.StorageClass
 	}
 
 	if opts.InjectorPort != 0 {

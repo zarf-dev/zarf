@@ -103,7 +103,6 @@ func TestInit(t *testing.T) {
 	require.NoError(t, err)
 
 	existingState := state.State{
-		Distro: DistroIsK3d,
 		RegistryInfo: state.RegistryInfo{
 			PushUsername: "push-user",
 			PullUsername: "pull-user",
@@ -124,10 +123,6 @@ func TestInit(t *testing.T) {
 		secrets     []corev1.Secret
 		expectedErr string
 	}{
-		{
-			name:        "no nodes in cluster",
-			expectedErr: "cannot init Zarf state in empty cluster",
-		},
 		{
 			name:     "no namespaces exist",
 			initOpts: InitStateOptions{},
@@ -506,9 +501,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 				Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
 			}
 
-			// Seed the fake cluster with the minimum objects InitState expects:
-			// a node, the zarf namespace, the state secret, and the IP family service.
-			tt.current.Distro = DistroIsK3d
+			// Seed the fake cluster with the state secret and the IP family service.
 			tt.current.RegistryInfo.PushUsername = "push-user"
 			tt.current.RegistryInfo.PullUsername = "pull-user"
 			tt.current.RegistryInfo.Secret = "secret"
@@ -591,6 +584,26 @@ func newFakeInitStateCluster(ctx context.Context, t *testing.T, existing *state.
 	return c
 }
 
+func TestInitStateApplianceMode(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	c := newFakeInitStateCluster(ctx, t, nil)
+
+	s, err := c.InitState(ctx, InitStateOptions{ApplianceMode: true})
+	require.NoError(t, err)
+	require.True(t, s.ZarfAppliance)
+}
+
+func TestInitStatePreservesApplianceMode(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	c := newFakeInitStateCluster(ctx, t, &state.State{ZarfAppliance: true})
+
+	s, err := c.InitState(ctx, InitStateOptions{})
+	require.NoError(t, err)
+	require.True(t, s.ZarfAppliance)
+}
+
 func TestInitStateServicesGating(t *testing.T) {
 	t.Run("new cluster without git service leaves git empty", func(t *testing.T) {
 		ctx := context.Background()
@@ -635,7 +648,6 @@ func TestInitStateServicesGating(t *testing.T) {
 	t.Run("re-init adds a missing git service without overwriting existing registry", func(t *testing.T) {
 		ctx := context.Background()
 		existing := &state.State{
-			Distro: DistroIsK3d,
 			RegistryInfo: state.RegistryInfo{
 				Address:      "127.0.0.1:31999",
 				Port:         31999,
@@ -658,7 +670,6 @@ func TestInitStateServicesGating(t *testing.T) {
 	t.Run("re-init adds missing agent and ignores existing namespaces", func(t *testing.T) {
 		ctx := context.Background()
 		existing := &state.State{
-			Distro: DistroIsK3d,
 			RegistryInfo: state.RegistryInfo{
 				Address:      "127.0.0.1:31999",
 				Port:         31999,
@@ -688,7 +699,7 @@ func TestInitStateServicesGating(t *testing.T) {
 
 	t.Run("re-init uses provided agent TLS when adding missing agent", func(t *testing.T) {
 		ctx := context.Background()
-		existing := &state.State{Distro: DistroIsK3d}
+		existing := &state.State{}
 		c := newFakeInitStateCluster(ctx, t, existing)
 		agentTLS := pki.GeneratedPKI{
 			CA:   []byte("ca"),
@@ -725,7 +736,6 @@ func TestInitStateServicesGating(t *testing.T) {
 	t.Run("re-init does not wipe services not listed", func(t *testing.T) {
 		ctx := context.Background()
 		existing := &state.State{
-			Distro: DistroIsK3d,
 			GitServer: state.GitServerInfo{
 				Address:      state.ZarfInClusterGitServiceURL,
 				PushUsername: "zarf-git-user",
@@ -751,7 +761,6 @@ func TestInitStateServicesGating(t *testing.T) {
 	t.Run("re-init propagates RegistryMode when registry is not in InternalServices", func(t *testing.T) {
 		ctx := context.Background()
 		existing := &state.State{
-			Distro: DistroIsK3d,
 			RegistryInfo: state.RegistryInfo{
 				Address:      "127.0.0.1:31999",
 				Port:         31999,
