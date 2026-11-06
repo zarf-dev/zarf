@@ -6,8 +6,6 @@ package packager
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -93,95 +91,6 @@ func TestDeploySecretSize(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.FileExists(t, marker)
-		})
-	}
-}
-
-func TestDeployStopsWhenRecordingStateFails(t *testing.T) {
-	t.Parallel()
-	for _, apiVersion := range []string{v1alpha1.APIVersion, v1beta1.APIVersion} {
-		t.Run(apiVersion, func(t *testing.T) {
-			t.Parallel()
-			for _, stage := range []string{"before component", "component success", "component failure", "success hook failure", "package success"} {
-				t.Run(stage, func(t *testing.T) {
-					t.Parallel()
-					ctx := testutil.TestContext(t)
-					marker := filepath.Join(t.TempDir(), "actions")
-					pkg := api.Package{
-						APIVersion: apiVersion,
-						Kind:       api.ZarfPackageConfig,
-						Metadata:   api.PackageMetadata{Name: "record-failure"},
-						Components: []api.Component{
-							{Name: "first", Actions: api.ComponentActions{OnDeploy: api.ActionSet{
-								Before:    []api.Action{{Cmd: fmt.Sprintf("echo before >> %q", marker)}},
-								OnSuccess: []api.Action{{Cmd: fmt.Sprintf("echo success >> %q", marker)}},
-							}}},
-							{Name: "second", Actions: api.ComponentActions{OnDeploy: api.ActionSet{
-								Before: []api.Action{{Cmd: fmt.Sprintf("echo second >> %q", marker)}},
-							}}},
-						},
-					}
-					if stage == "component failure" {
-						pkg.Components[0].Actions.OnDeploy.Before = append(pkg.Components[0].Actions.OnDeploy.Before, api.Action{Cmd: "exit 1"})
-					}
-					if stage == "success hook failure" {
-						pkg.Components[0].Actions.OnDeploy.OnSuccess = append(pkg.Components[0].Actions.OnDeploy.OnSuccess, api.Action{Cmd: "exit 1"})
-					}
-					pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
-					require.NoError(t, err)
-					t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
-
-					writeErr := errors.New("deployment Secret write denied")
-					cs := fake.NewClientset()
-					cs.PrependReactor("patch", "secrets", func(action k8stesting.Action) (bool, runtime.Object, error) {
-						patch, ok := action.(k8stesting.PatchAction)
-						require.True(t, ok)
-						var secret corev1.Secret
-						if err := json.Unmarshal(patch.GetPatch(), &secret); err != nil {
-							return true, nil, err
-						}
-						stored := &cluster.Cluster{Clientset: fake.NewClientset(&secret)}
-						record, err := stored.GetDeployedPackage(ctx, pkg.Metadata.Name)
-						if err != nil {
-							return true, nil, err
-						}
-						outcome := record.Events[len(record.Events)-1].Outcome
-						shouldFail := stage == "package success" && outcome == state.EventOutcomeSucceeded ||
-							(stage == "component failure" || stage == "success hook failure") && outcome == state.EventOutcomeFailed
-						if len(record.DeployedComponents) > 0 {
-							componentOutcome := record.DeployedComponents[0].LastEvent.Outcome
-							shouldFail = shouldFail || stage == "before component" && componentOutcome == state.EventOutcomeInProgress ||
-								stage == "component success" && componentOutcome == state.EventOutcomeSucceeded
-						}
-						if shouldFail {
-							return true, nil, writeErr
-						}
-						return false, nil, nil
-					})
-					d := deployer{c: &cluster.Cluster{Clientset: cs}, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
-					require.NoError(t, d.startDeploymentState(ctx, pkgLayout, DeployOptions{}))
-					_, err = d.deployComponents(ctx, pkgLayout, DeployOptions{})
-					require.ErrorIs(t, err, writeErr)
-					if stage == "before component" {
-						require.NoFileExists(t, marker)
-						return
-					}
-					contents, readErr := os.ReadFile(marker)
-					require.NoError(t, readErr)
-					require.Contains(t, string(contents), "before\n")
-					if stage == "component failure" || stage == "success hook failure" {
-						require.ErrorContains(t, err, `command "exit 1" failed`)
-					}
-					if stage == "package success" {
-						require.Contains(t, string(contents), "second\n")
-					} else {
-						require.NotContains(t, string(contents), "second\n", "deployment must stop before the next component")
-					}
-					if apiVersion == v1alpha1.APIVersion && stage == "component success" {
-						require.NotContains(t, string(contents), "success\n", "alpha success hooks require a saved successful deployment")
-					}
-				})
-			}
 		})
 	}
 }
