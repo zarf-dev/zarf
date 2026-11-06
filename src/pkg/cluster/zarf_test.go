@@ -8,14 +8,18 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"log/slog"
+	"math/rand/v2"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -25,7 +29,44 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 )
+
+func TestUpdateDeployedPackageSecretSize(t *testing.T) {
+	t.Parallel()
+	rng := rand.New(rand.NewPCG(1, 2))
+	data := make([]byte, 1_100_000)
+	for i := range data {
+		data[i] = byte(rng.Uint32())
+	}
+	for _, tt := range []struct {
+		name      string
+		input     string
+		wantError bool
+	}{
+		{name: "large compressible values", input: strings.Repeat("a", 2_000_000)},
+		{name: "compressed values over limit", input: base64.StdEncoding.EncodeToString(data), wantError: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := t.Context()
+			c := &Cluster{Clientset: fake.NewClientset()}
+			deployed := state.DeployedPackage{Name: "secret-size"}
+			deployed.SetDeployConfig(state.DeployConfig{Values: value.Values{"input": tt.input}})
+			err := c.StoreDeployedPackage(ctx, deployed)
+			if tt.wantError {
+				require.ErrorContains(t, err, "1048576-byte Secret data limit")
+				_, err = c.GetDeployedPackage(ctx, deployed.Name)
+				require.True(t, kerrors.IsNotFound(err), "oversized state must not be written")
+				return
+			}
+			require.NoError(t, err)
+			loaded, err := c.GetDeployedPackage(ctx, deployed.Name)
+			require.NoError(t, err)
+			require.Equal(t, deployed, *loaded)
+		})
+	}
+}
 
 func TestGetDeployedPackageWarnsOnUnrecognizedAPIVersion(t *testing.T) {
 	t.Parallel()

@@ -5,7 +5,6 @@ package packager
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -27,9 +27,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
-
-// Leave headroom below Kubernetes' 1 MiB Secret limit for deployment metadata.
-const packageSecretSizeLimit = 1_000_000
 
 // CreateOptions are the optional parameters to create.
 type CreateOptions struct {
@@ -132,7 +129,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	if err := validatePackageSecretSize(pkgLayout.Definition(), pkgLayout.Digest()); err != nil {
+	if err := validatePackageSecretSize(pkgLayout.Definition(), pkgLayout.Digest(), state.DeployConfig{}); err != nil {
 		return "", err
 	}
 
@@ -182,9 +179,9 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	return packageLocation, nil
 }
 
-// Check the persisted definition, including compatibility copies and component status,
-// before writing a created package.
-func validatePackageSecretSize(pkg api.Package, digest string) error {
+// Check the compressed deployment record, including compatibility copies, component
+// status, and saved overrides, before creating or deploying a package.
+func validatePackageSecretSize(pkg api.Package, digest string, deployConfig state.DeployConfig) error {
 	components := make([]state.DeployedComponent, 0, len(pkg.Components))
 	for _, component := range pkg.Components {
 		components = append(components, state.DeployedComponent{
@@ -193,16 +190,10 @@ func validatePackageSecretSize(pkg api.Package, digest string) error {
 			ObservedGeneration: 1,
 		})
 	}
-	deployed, err := state.NewDeployedPackage(pkg, digest, config.CLIVersion, components, 1)
+	deployed, err := state.NewDeployedPackage(pkg, digest, config.CLIVersion, components, 1, state.WithPackageNamespaceOverride(deployConfig.NamespaceOverride))
 	if err != nil {
 		return err
 	}
-	data, err := json.Marshal(deployed)
-	if err != nil {
-		return err
-	}
-	if len(data) > packageSecretSizeLimit {
-		return fmt.Errorf("package %q cannot be created: its deployment metadata is %d bytes, exceeding Zarf's %d-byte limit for Kubernetes Secret storage; reduce the package definition size", pkg.Metadata.Name, len(data), packageSecretSizeLimit)
-	}
-	return nil
+	deployed.SetDeployConfig(deployConfig)
+	return cluster.ValidateDeployedPackageSecretSize(*deployed)
 }
