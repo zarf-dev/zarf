@@ -371,6 +371,101 @@ func TestValidatePackageSchema(t *testing.T) {
 	require.Empty(t, findings)
 }
 
+func TestValidatePackageSchemaV1Beta1(t *testing.T) {
+	t.Parallel()
+
+	validPkg := map[string]any{
+		"apiVersion": "zarf.dev/v1beta1",
+		"kind":       "ZarfPackageConfig",
+		"metadata": map[string]any{
+			"name": "valid-package",
+		},
+		"components": []any{
+			map[string]any{
+				"name": "test-comp",
+			},
+		},
+	}
+	findings, err := ValidatePackageSchemaV1Beta1(validPkg)
+	require.NoError(t, err)
+	require.Empty(t, findings)
+
+	invalidPkg := map[string]any{
+		"apiVersion": "zarf.dev/v1beta1",
+		"kind":       "ZarfPackageConfig",
+		"metadata": map[string]any{
+			"name": "INVALID_NAME_WITH_CAPS",
+		},
+		"components": []any{},
+	}
+	findings, err = ValidatePackageSchemaV1Beta1(invalidPkg)
+	require.NoError(t, err)
+	require.NotEmpty(t, findings)
+}
+
+func TestValidatePackageSchemaBytesV1Beta1(t *testing.T) {
+	t.Parallel()
+
+	validYAML := []byte(`
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: valid-package
+components:
+  - name: test-comp
+`)
+	findings, err := ValidatePackageSchemaBytesV1Beta1(validYAML)
+	require.NoError(t, err)
+	require.Empty(t, findings)
+
+	invalidYAML := []byte(`
+apiVersion: zarf.dev/v1beta1
+kind: InvalidKind
+metadata:
+  name: test-pkg
+components: []
+`)
+	findings, err = ValidatePackageSchemaBytesV1Beta1(invalidYAML)
+	require.NoError(t, err)
+	require.NotEmpty(t, findings)
+
+	malformedYAML := []byte(`: invalid yaml : : `)
+	_, err = ValidatePackageSchemaBytesV1Beta1(malformedYAML)
+	require.Error(t, err)
+}
+
+func TestValidateComponentConfigSchemaBytesV1Beta1(t *testing.T) {
+	t.Parallel()
+
+	validYAML := []byte(`
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: valid-comp
+component:
+  images:
+    - name: nginx:1.27
+`)
+	findings, err := ValidateComponentConfigSchemaBytesV1Beta1(validYAML)
+	require.NoError(t, err)
+	require.Empty(t, findings)
+
+	invalidYAML := []byte(`
+apiVersion: zarf.dev/v1beta1
+kind: WrongKind
+metadata:
+  name: test-comp
+component: {}
+`)
+	findings, err = ValidateComponentConfigSchemaBytesV1Beta1(invalidYAML)
+	require.NoError(t, err)
+	require.NotEmpty(t, findings)
+
+	malformedYAML := []byte(`: [bad yaml`)
+	_, err = ValidateComponentConfigSchemaBytesV1Beta1(malformedYAML)
+	require.Error(t, err)
+}
+
 func TestYqCompat(t *testing.T) {
 	t.Parallel()
 	t.Run("Wrap standalone numbers in bracket", func(t *testing.T) {
