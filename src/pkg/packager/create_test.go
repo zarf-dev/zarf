@@ -28,9 +28,10 @@ func TestPackageCreateSecretSize(t *testing.T) {
 		description string
 		wantError   bool
 	}{
-		{name: "implicit-alpha-over-limit", description: strings.Repeat("a", 1_000_000), wantError: true},
+		{name: "implicit-alpha-over-limit", description: strings.Repeat("a", 1_048_576), wantError: true},
 		{name: "alpha-below-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 900_000)},
-		{name: "alpha-over-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 1_000_000), wantError: true},
+		{name: "alpha-above-old-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 1_030_000)},
+		{name: "alpha-over-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 1_048_576), wantError: true},
 		// Ampersands exercise JSON escaping and remain quoted when the definition is written as YAML.
 		{name: "alpha-json-escaping-exceeds-limit", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("&", 180_000), wantError: true},
 		{name: "beta-below-limit", apiVersion: v1beta1.APIVersion, description: strings.Repeat("a", 450_000)},
@@ -58,7 +59,7 @@ components:
 				SkipSBOM:  true,
 			})
 			if tt.wantError {
-				require.ErrorContains(t, err, "1000000-byte limit")
+				require.ErrorContains(t, err, "1048576-byte Secret data limit")
 				require.Empty(t, packagePath)
 				entries, err := os.ReadDir(outputDir)
 				require.NoError(t, err)

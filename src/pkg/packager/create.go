@@ -26,10 +26,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
+	corev1 "k8s.io/api/core/v1"
 )
-
-// Leave headroom below Kubernetes' 1 MiB Secret limit for deployment metadata.
-const packageSecretSizeLimit = 1_000_000
 
 // CreateOptions are the optional parameters to create.
 type CreateOptions struct {
@@ -182,8 +180,8 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	return packageLocation, nil
 }
 
-// Check the persisted definition, including compatibility copies and component status,
-// before writing a created package.
+// Check the serialized deployment record, including compatibility copies and component
+// status, before creating or deploying a package.
 func validatePackageSecretSize(pkg api.Package, digest string) error {
 	components := make([]state.DeployedComponent, 0, len(pkg.Components))
 	for _, component := range pkg.Components {
@@ -201,8 +199,8 @@ func validatePackageSecretSize(pkg api.Package, digest string) error {
 	if err != nil {
 		return err
 	}
-	if len(data) > packageSecretSizeLimit {
-		return fmt.Errorf("package %q cannot be created: its deployment metadata is %d bytes, exceeding Zarf's %d-byte limit for Kubernetes Secret storage; reduce the package definition size", pkg.Metadata.Name, len(data), packageSecretSizeLimit)
+	if len(data) > corev1.MaxSecretSize {
+		return fmt.Errorf("package %q deployment metadata is %d bytes, exceeding Kubernetes' %d-byte Secret data limit; reduce the package definition size", pkg.Metadata.Name, len(data), corev1.MaxSecretSize)
 	}
 	return nil
 }
