@@ -1,5 +1,47 @@
 # Changelog
 
+## [1.0.0](https://github.com/zarf-dev/zarf/compare/v0.89.0...v1.0.0) (2026-11-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* default to v1beta1 init package ([#5598](https://github.com/zarf-dev/zarf/issues/5598))
+* removed deprecated k8s api migration ([#5613](https://github.com/zarf-dev/zarf/issues/5613))
+* state enhancement updates ([#5525](https://github.com/zarf-dev/zarf/issues/5525))
+* error when variables are used with v1beta1 ([#5606](https://github.com/zarf-dev/zarf/issues/5606))
+* remove daemon pull through crane ([#5568](https://github.com/zarf-dev/zarf/issues/5568))
+* remove zarf tools registry export ([#5562](https://github.com/zarf-dev/zarf/issues/5562))
+* remove deprecated commands and flags ([#5605](https://github.com/zarf-dev/zarf/issues/5605))
+* replace global architecture state with per-operation options ([#5498](https://github.com/zarf-dev/zarf/issues/5498))
+* remove sbom viewer ([#5563](https://github.com/zarf-dev/zarf/issues/5563))
+* delete artifact server ([#5561](https://github.com/zarf-dev/zarf/issues/5561))
+
+### Features
+
+* default to v1beta1 init package ([#5598](https://github.com/zarf-dev/zarf/issues/5598)) ([6c2e879](https://github.com/zarf-dev/zarf/commit/6c2e879e3290c2fff0ae566793fbe6ce0e1779fa))
+* delete artifact server ([#5561](https://github.com/zarf-dev/zarf/issues/5561)) ([2b51f6c](https://github.com/zarf-dev/zarf/commit/2b51f6ce06c67138dd3e0c844ad93dc227b17a6e))
+* dev sha256sum not working with `extract-path` flag ([#5160](https://github.com/zarf-dev/zarf/issues/5160)) ([badae8f](https://github.com/zarf-dev/zarf/commit/badae8f9274c7d98daafcf27765d7941d4d0fc51))
+* **dev:** add --confirm flag to patch-git ([#5531](https://github.com/zarf-dev/zarf/issues/5531)) ([f0861e2](https://github.com/zarf-dev/zarf/commit/f0861e2aef35793d2e2773f3561248ef8db8121a))
+* error when variables are used with v1beta1 ([#5606](https://github.com/zarf-dev/zarf/issues/5606)) ([8e854f4](https://github.com/zarf-dev/zarf/commit/8e854f4fd753fcc0f25992eda338255af5757b36))
+* **oci:** added chuncked retryable resumable blob pulls ([#5597](https://github.com/zarf-dev/zarf/issues/5597)) ([d0d271c](https://github.com/zarf-dev/zarf/commit/d0d271c71080c97ef59714ab9b83a7cf57e9260a))
+* remove daemon pull through crane ([#5568](https://github.com/zarf-dev/zarf/issues/5568)) ([c7fc4d4](https://github.com/zarf-dev/zarf/commit/c7fc4d48ead67a3b7ab45bdeceeeffab7db5233a))
+* remove deprecated commands and flags ([#5605](https://github.com/zarf-dev/zarf/issues/5605)) ([3501866](https://github.com/zarf-dev/zarf/commit/3501866dd5b7b5fa048a1fbbdc8a2615a7f31a3f))
+* remove sbom viewer ([#5563](https://github.com/zarf-dev/zarf/issues/5563)) ([f8e60d0](https://github.com/zarf-dev/zarf/commit/f8e60d08f94bbb9825c650f8530ee8ae5f8bf6a3))
+* remove zarf tools registry export ([#5562](https://github.com/zarf-dev/zarf/issues/5562)) ([f3961a9](https://github.com/zarf-dev/zarf/commit/f3961a936af5e2e6a7a46759772319d8a3cfd136))
+* removed deprecated k8s api migration ([#5613](https://github.com/zarf-dev/zarf/issues/5613)) ([dbb02f0](https://github.com/zarf-dev/zarf/commit/dbb02f0b625adc78e88976f65ac57a4eef0f1f40))
+* state enhancement updates ([#5525](https://github.com/zarf-dev/zarf/issues/5525)) ([517db72](https://github.com/zarf-dev/zarf/commit/517db7260b34d5fd67b7add0676c7ab9b81b73ab))
+
+
+### Bug Fixes
+
+* deep copy values on merge so a chart mapping can't leak into later components ([#5585](https://github.com/zarf-dev/zarf/issues/5585)) ([8802592](https://github.com/zarf-dev/zarf/commit/8802592801e6e8d12712ddbb1dc2990d59038d98))
+* print a valid skeleton import example from the CLI ([#5530](https://github.com/zarf-dev/zarf/issues/5530)) ([a9d5dd5](https://github.com/zarf-dev/zarf/commit/a9d5dd5e28e987e6cc1f13aeb8fd3e28aed1dcbb))
+
+
+### Refactoring
+
+* replace global architecture state with per-operation options ([#5498](https://github.com/zarf-dev/zarf/issues/5498)) ([049d855](https://github.com/zarf-dev/zarf/commit/049d85579fc52159cb642a2633954cd3313d0f8d))
+
 ## [0.89.0](https://github.com/zarf-dev/zarf/compare/v0.88.0...v0.89.0) (2026-10-29)
 
 
