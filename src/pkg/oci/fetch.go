@@ -67,10 +67,14 @@ func (o *OrasRemote) FetchManifest(ctx context.Context, desc ocispec.Descriptor)
 // src returns the read target for layer fetches, wrapping the repository with the
 // layer cache when one is configured.
 func (o *OrasRemote) src() oras.ReadOnlyTarget {
-	if o.cache != nil {
-		return cache.New(o.repo, o.cache)
+	var source oras.ReadOnlyTarget = o.repo
+	if o.retryPolicy != nil {
+		source = &retrySource{Repository: o.repo, policy: o.retryPolicy}
 	}
-	return o.repo
+	if o.cache != nil {
+		return cache.New(source, o.cache)
+	}
+	return source
 }
 
 // Fetch fetches the content for the given descriptor, honoring the layer cache

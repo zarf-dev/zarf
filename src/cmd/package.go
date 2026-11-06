@@ -32,6 +32,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/cli/selection"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -98,7 +99,6 @@ func annotateFlagGroup(fs *pflag.FlagSet, title string) {
 type packageVerifyFlags struct {
 	publicKeyPath               string
 	verify                      verifyMode
-	skipSignatureValidation     bool // deprecated
 	certificateIdentity         string
 	certificateIdentityRegexp   string
 	certificateOIDCIssuer       string
@@ -282,22 +282,11 @@ func newPackageCreateCommand(v *viper.Viper, architecture *architectureOptions) 
 
 	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgCreateWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
 
-	cmd.Flags().StringVarP(&o.signingKeyPath, "key", "k", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagDeprecatedKey)
-	cmd.Flags().StringVar(&o.signingKeyPassword, "key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagDeprecatedKeyPassword)
 	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
-	cmd.MarkFlagsMutuallyExclusive("keyless", "key")
 
 	errOD := cmd.Flags().MarkHidden("output-directory")
 	if errOD != nil {
 		logger.Default().Debug("unable to mark flag output-directory", "error", errOD)
-	}
-	errKey := cmd.Flags().MarkHidden("key")
-	if errKey != nil {
-		logger.Default().Debug("unable to mark flag key", "error", errKey)
-	}
-	errKP := cmd.Flags().MarkHidden("key-pass")
-	if errKP != nil {
-		logger.Default().Debug("unable to mark flag key-pass", "error", errKP)
 	}
 
 	return cmd
@@ -441,16 +430,12 @@ func newPackageDeployCommand(v *viper.Viper, architecture *architectureOptions) 
 
 	// Always require take-ownership flag (no viper)
 	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
-	cmd.Flags().BoolVar(&o.takeOwnership, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().BoolVar(&o.connected, "connected", v.GetBool(VPkgDeployConnected), lang.CmdPackageDeployFlagConnected)
 	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
-	_ = cmd.Flags().MarkDeprecated("set", "Use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
@@ -491,12 +476,20 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		return err
 	}
 
-	// If deploy is confirmed, then only pull the necessary layers as we won't need to prompt for optional components
+	connectivity := state.PackageConnectivityAirGap
+	if o.connected {
+		connectivity = state.PackageConnectivityConnected
+	}
+
+	optionalComponents, err := filters.NormalizeComponentSelectors(o.optionalComponents)
+	if err != nil {
+		return err
+	}
 	filter := filters.Empty()
 	if o.confirm {
 		filter = filters.Combine(
 			filters.ByLocalOS(runtime.GOOS),
-			filters.ForDeploy(o.optionalComponents, false),
+			filters.ForDeploy(optionalComponents),
 		)
 	}
 
@@ -521,14 +514,15 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 
 	deployOpts := packager.DeployOptions{
 		Values:                     values,
+		SetVariables:               o.setVariables,
+		NamespaceOverride:          o.namespaceOverride,
+		Connectivity:               connectivity,
+		Source:                     packageSource,
 		TakeOwnership:              o.takeOwnership,
-		Connected:                  o.connected,
 		ForceConflicts:             o.forceConflicts,
 		Timeout:                    o.timeout,
 		Retries:                    o.retries,
 		OCIConcurrency:             o.ociConcurrency,
-		SetVariables:               o.setVariables,
-		NamespaceOverride:          o.namespaceOverride,
 		RemoteOptions:              defaultRemoteOptions(),
 		IsInteractive:              !o.confirm,
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
@@ -536,7 +530,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		SkipVersionCheck:           o.skipVersionCheck,
 	}
 
-	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)
+	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, optionalComponents)
 	if err != nil {
 		return err
 	}
@@ -556,25 +550,31 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
-	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
+func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, optionalComponents string) ([]state.DeployedComponent, error) {
+	if err := opts.Validate(pkgLayout.Definition()); err != nil {
+		return nil, err
+	}
+	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below.
 	if opts.NamespaceOverride != "" {
 		if err := pkgLayout.OverrideNamespace(opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
-	err := confirmDeploy(ctx, pkgLayout, setVariables, opts.IsInteractive, opts.Connected)
-	if err != nil {
+	if err := confirmDeploy(ctx, pkgLayout, opts.SetVariables, opts.IsInteractive, opts.Connectivity.IsConnected()); err != nil {
 		return nil, err
 	}
-
-	// In the interactive case we wait until after the component prompt to filter
 	if opts.IsInteractive {
-		filter := filters.Combine(
-			filters.ByLocalOS(runtime.GOOS),
-			filters.ForDeploy(optionalComponents, true),
-		)
-		if err := pkgLayout.Filter(filter); err != nil {
+		if optionalComponents == "" {
+			pkg, err := filters.Apply(pkgLayout.Definition(), filters.ByLocalOS(runtime.GOOS))
+			if err != nil {
+				return nil, err
+			}
+			optionalComponents, err = selection.DeploymentSelectors(pkg)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if err := pkgLayout.Filter(filters.Combine(filters.ByLocalOS(runtime.GOOS), filters.ForDeploy(optionalComponents))); err != nil {
 			return nil, err
 		}
 	}
@@ -979,8 +979,6 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper, architecture *architect
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
-	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
@@ -1090,8 +1088,6 @@ func newPackageInspectManifestsCommand(v *viper.Viper, architecture *architectur
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show manifests for")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
-	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
@@ -1644,6 +1640,10 @@ func newPackageRemoveCommand(v *viper.Viper, architecture *architectureOptions) 
 
 func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	componentSelectors, err := filters.ParseComponentSelectors(o.optionalComponents)
+	if err != nil {
+		return err
+	}
 	packageSource, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
@@ -1656,10 +1656,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.BySelectState(o.optionalComponents),
-	)
+	filter := filters.Empty()
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -1680,11 +1677,14 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	removeOpt := packager.RemoveOptions{
-		Cluster:           c,
-		Timeout:           config.ZarfDefaultTimeout,
-		NamespaceOverride: o.namespaceOverride,
-		SkipVersionCheck:  o.skipVersionCheck,
-		Values:            vals,
+		RemoveConfig: packager.RemoveConfig{
+			NamespaceOverride:  o.namespaceOverride,
+			ComponentSelectors: componentSelectors,
+			Values:             vals,
+		},
+		Cluster:          c,
+		Timeout:          config.ZarfDefaultTimeout,
+		SkipVersionCheck: o.skipVersionCheck,
 	}
 	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
 	displayPackage, err := packageForDisplay(pkg)
@@ -1740,6 +1740,7 @@ func newPackagePublishCommand(v *viper.Viper, architecture *architectureOptions)
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	// Skeletons have no standalone CLI path for signing before their initial publication.
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
 	_ = cmd.Flags().MarkDeprecated("signing-key", lang.CmdPackagePublishSigningDeprecation)
@@ -2398,7 +2399,7 @@ func newKeylessVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagS
 	return fs
 }
 
-// newVerifyFlagSet creates a pflag.FlagSet containing all 10 package verification flags
+// newVerifyFlagSet creates a pflag.FlagSet containing all package verification flags
 func newVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
 	fs := pflag.NewFlagSet("verify", pflag.ContinueOnError)
 
@@ -2406,9 +2407,6 @@ func newVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
 	f.verify = verifyModeIfPossible
 	fs.VarP(&f.verify, "verify", "", lang.CmdPackageFlagVerify)
 	fs.Lookup("verify").NoOptDefVal = string(verifyModeAlways)
-	fs.BoolVar(&f.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	_ = fs.MarkDeprecated("skip-signature-validation",
-		"Use --verify=never to skip signature validation. This flag will be removed in Zarf v1.0.0.")
 
 	fs.AddFlagSet(newKeylessVerifyFlagSet(v, f))
 	annotateFlagGroup(fs, verifyFlagGroupTitle)
@@ -2477,15 +2475,6 @@ func (f *packageVerifyFlags) preRunE(cmd *cobra.Command, _ []string) error {
 	if !cmd.Flags().Changed("verify") && v.IsSet(VPkgVerify) {
 		if err := f.verify.Set(v.GetString(VPkgVerify)); err != nil {
 			return fmt.Errorf("invalid package.verify config value %q: %w", v.GetString(VPkgVerify), err)
-		}
-	}
-	if cmd.Flags().Changed("skip-signature-validation") {
-		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. " +
-			"Use --verify=never to skip signature validation.")
-		if !cmd.Flags().Changed("verify") {
-			if f.skipSignatureValidation {
-				f.verify = verifyModeNever
-			}
 		}
 	}
 	return nil

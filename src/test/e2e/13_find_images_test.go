@@ -152,7 +152,7 @@ func TestFindImages(t *testing.T) {
 		require.Contains(t, stdOut, "busybox:latest")
 
 		path := filepath.Join("src", "test", "packages", "13-find-images-with-vars")
-		stdOut, stdErr, err = e2e.Zarf(t, "dev", "find-images", path, "--deploy-set", "PODINFO_IMAGE=zarf.dev/podinfo:latest", "--skip-cosign")
+		stdOut, stdErr, err = e2e.Zarf(t, "dev", "find-images", path, "--deploy-set-variables", "PODINFO_IMAGE=zarf.dev/podinfo:latest", "--skip-cosign")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, "ghcr.io/zarf-dev/zarf/agent:v0.36.1")
 		require.Contains(t, stdOut, "zarf.dev/podinfo:latest")
@@ -163,7 +163,7 @@ func TestFindImages(t *testing.T) {
 		testPackagePath := filepath.Join("examples", "wordpress")
 		sets := []string{"WORDPRESS_USERNAME=zarf", "WORDPRESS_PASSWORD=fake", "WORDPRESS_EMAIL=hello@defenseunicorns.com", "WORDPRESS_FIRST_NAME=zarf", "WORDPRESS_LAST_NAME=zarf", "WORDPRESS_BLOG_NAME=blog"}
 		deploysSet := strings.Join(sets, ",")
-		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", testPackagePath, "--why", "docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55", "--deploy-set", deploysSet)
+		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", testPackagePath, "--why", "docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55", "--deploy-set-variables", deploysSet)
 		require.NoError(t, err)
 		require.Contains(t, stdOut, "component: wordpress")
 		require.Contains(t, stdOut, "chart: wordpress")

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api"
@@ -20,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/ocischeme"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
 func TestDeployedPackagePackageDefinition(t *testing.T) {
@@ -63,6 +65,111 @@ func TestDeployedPackagePackageDefinition(t *testing.T) {
 	require.Equal(t, v1beta1.APIVersion, actual.GetAPIVersion())
 	require.Equal(t, beta.APIVersion, convert.PackageToV1beta1(actual).APIVersion)
 	require.Equal(t, beta.Metadata, convert.PackageToV1beta1(actual).Metadata)
+}
+
+func TestDeployedPackageSetDeployedComponentsRefreshesConnectStrings(t *testing.T) {
+	t.Parallel()
+
+	deployed := &DeployedPackage{
+		ConnectStrings: ConnectStrings{
+			"stale": {Description: "Stale", URL: "https://stale.example.com"},
+			"web":   {Description: "Old web", URL: "https://old.example.com"},
+		},
+	}
+	components := []DeployedComponent{
+		{
+			Name: "web",
+			InstalledCharts: []InstalledChart{{
+				ChartName:      "web",
+				ConnectStrings: ConnectStrings{"web": {Description: "Web", URL: "https://web.example.com"}},
+			}},
+		},
+		{
+			Name: "api",
+			InstalledCharts: []InstalledChart{{
+				ChartName:      "api",
+				ConnectStrings: ConnectStrings{"api": {Description: "API", URL: "https://api.example.com"}},
+			}},
+		},
+	}
+
+	deployed.SetDeployedComponents(components)
+
+	require.Equal(t, components, deployed.DeployedComponents)
+	require.Equal(t, ConnectStrings{
+		"web": {Description: "Web", URL: "https://web.example.com"},
+		"api": {Description: "API", URL: "https://api.example.com"},
+	}, deployed.ConnectStrings)
+}
+
+func TestDeployedPackageGetPackageConnectivity(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name   string
+		pkg    DeployedPackage
+		expect PackageConnectivity
+	}{
+		{
+			name:   "defaults legacy state to airgap",
+			expect: PackageConnectivityAirGap,
+		},
+		{
+			name:   "uses legacy state without deploy config",
+			pkg:    DeployedPackage{PackageConnectivity: PackageConnectivityConnected},
+			expect: PackageConnectivityConnected,
+		},
+		{
+			name:   "uses persisted deploy config",
+			pkg:    DeployedPackage{DeployConfig: &DeployConfig{Connectivity: PackageConnectivityConnected}},
+			expect: PackageConnectivityConnected,
+		},
+		{
+			name:   "prefers deploy config over legacy state",
+			pkg:    DeployedPackage{PackageConnectivity: PackageConnectivityConnected, DeployConfig: &DeployConfig{}},
+			expect: PackageConnectivityAirGap,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expect, tt.pkg.GetPackageConnectivity())
+		})
+	}
+}
+
+func TestSetDeployConfigLegacyConnectivity(t *testing.T) {
+	t.Parallel()
+
+	deployed := DeployedPackage{}
+	for _, step := range []struct {
+		name         string
+		connectivity PackageConnectivity
+		want         PackageConnectivity
+	}{
+		{"new connected deployment", PackageConnectivityConnected, PackageConnectivityConnected},
+		{"switch to explicit airgap", PackageConnectivityAirGap, PackageConnectivityAirGap},
+		{"switch back to connected", PackageConnectivityConnected, PackageConnectivityConnected},
+		{"switch to default airgap", "", PackageConnectivityAirGap},
+		{"switch from default airgap to connected", PackageConnectivityConnected, PackageConnectivityConnected},
+	} {
+		t.Run(step.name, func(t *testing.T) {
+			deployed.SetDeployConfig(DeployConfig{Connectivity: step.connectivity})
+			data, err := json.Marshal(deployed)
+			require.NoError(t, err)
+
+			// Model an older client that knows only the legacy JSON field.
+			var legacy struct {
+				PackageConnectivity PackageConnectivity `json:"packageConnectivity"`
+			}
+			require.NoError(t, json.Unmarshal(data, &legacy))
+			require.Equal(t, step.want, legacy.PackageConnectivity)
+			require.Equal(t, step.want, deployed.GetPackageConnectivity())
+
+			var restored DeployedPackage
+			require.NoError(t, json.Unmarshal(data, &restored))
+			require.Equal(t, step.connectivity, restored.DeployConfig.Connectivity)
+			require.Equal(t, step.want, restored.GetPackageConnectivity())
+		})
+	}
 }
 
 func TestDeployedPackagePackageDefinition_legacyData(t *testing.T) {
@@ -837,4 +944,256 @@ func TestRegistryCertSecretData(t *testing.T) {
 		_, err := RegistryCertFromSecretData(nil)
 		require.ErrorContains(t, err, "incomplete")
 	})
+}
+
+func TestDeployedPackageEventsLegacyAndRetention(t *testing.T) {
+	t.Parallel()
+
+	legacyData, err := json.Marshal(DeployedPackage{Name: "legacy"})
+	require.NoError(t, err)
+
+	var legacy DeployedPackage
+	require.NoError(t, json.Unmarshal(legacyData, &legacy))
+	require.Empty(t, legacy.Events)
+	_, ok := legacy.LatestEvent()
+	require.False(t, ok)
+	_, ok = legacy.LastSuccessfulDeploy()
+	require.False(t, ok)
+
+	deployed := DeployedPackage{}
+	for i := range 11 {
+		outcome := EventOutcomeFailed
+		if i == 3 {
+			outcome = EventOutcomeSucceeded
+		}
+		deployed.AppendEvent(PackageEvent{
+			Type:      EventTypeDeploy,
+			Outcome:   outcome,
+			Timestamp: time.Unix(int64(i), 0),
+		})
+	}
+	deployed.AppendEvent(PackageEvent{Type: EventTypeRemove, Outcome: EventOutcomeSucceeded, Timestamp: time.Unix(12, 0)})
+	deployed.AppendEvent(PackageEvent{Type: EventTypeDeploy, Outcome: EventOutcomeCancelled, Timestamp: time.Unix(13, 0)})
+
+	require.Len(t, deployed.Events, 10)
+	require.Equal(t, time.Unix(3, 0), deployed.Events[0].Timestamp)
+	require.Equal(t, time.Unix(13, 0), deployed.Events[9].Timestamp)
+	latest, ok := deployed.LatestEvent()
+	require.True(t, ok)
+	require.Equal(t, EventOutcomeCancelled, latest.Outcome)
+	success, ok := deployed.LastSuccessfulDeploy()
+	require.True(t, ok)
+	require.Equal(t, time.Unix(3, 0), success.Timestamp)
+}
+
+func TestConfigDigestNormalizesSelectors(t *testing.T) {
+	t.Parallel()
+
+	deployA := DeployConfig{
+		SetVariables:       map[string]string{"B": "two", "A": "one"},
+		Values:             value.Values{"nested": map[string]any{"enabled": true}},
+		NamespaceOverride:  "namespace",
+		ValuesOverridesMap: ValuesOverrides{"component": {"chart": value.Values{"replicas": 2}}},
+		ComponentSelectors: []string{" B ", " -A", "b "},
+		Connectivity:       PackageConnectivityConnected,
+	}
+	deployB := DeployConfig{
+		SetVariables:       map[string]string{"A": "one", "B": "two"},
+		Values:             value.Values{"nested": map[string]any{"enabled": true}},
+		NamespaceOverride:  "namespace",
+		ValuesOverridesMap: ValuesOverrides{"component": {"chart": value.Values{"replicas": 2}}},
+		ComponentSelectors: []string{"b", "-a", "b"},
+		Connectivity:       PackageConnectivityConnected,
+	}
+	deployDigestA, err := deployA.Digest()
+	require.NoError(t, err)
+	deployDigestB, err := deployB.Digest()
+	require.NoError(t, err)
+	require.Equal(t, deployDigestA, deployDigestB)
+	require.True(t, deployDigestA.Algorithm().Available())
+	require.Equal(t, []string{" B ", " -A", "b "}, deployA.ComponentSelectors)
+
+	deployB.ComponentSelectors = []string{"-a", "b", "b"}
+	changedDeployDigest, err := deployB.Digest()
+	require.NoError(t, err)
+	require.NotEqual(t, deployDigestA, changedDeployDigest)
+
+	deployB.ComponentSelectors = deployA.ComponentSelectors
+
+	deployB.Connectivity = PackageConnectivityAirGap
+	changedDeployDigest, err = deployB.Digest()
+	require.NoError(t, err)
+	require.NotEqual(t, deployDigestA, changedDeployDigest)
+
+	removeA := RemoveConfig{Values: value.Values{"force": true}, NamespaceOverride: "namespace", ComponentSelectors: []string{" B ", " -A", "b "}}
+	removeB := RemoveConfig{Values: value.Values{"force": true}, NamespaceOverride: "namespace", ComponentSelectors: []string{"b", "-a", "b"}}
+	removeDigestA, err := removeA.Digest()
+	require.NoError(t, err)
+	removeDigestB, err := removeB.Digest()
+	require.NoError(t, err)
+	require.Equal(t, removeDigestA, removeDigestB)
+	require.True(t, removeDigestA.Algorithm().Available())
+	require.Equal(t, []string{" B ", " -A", "b "}, removeA.ComponentSelectors)
+
+	removeB.ComponentSelectors = []string{"-a", "b", "b"}
+	changedRemoveDigest, err := removeB.Digest()
+	require.NoError(t, err)
+	require.NotEqual(t, removeDigestA, changedRemoveDigest)
+
+	_, err = (DeployConfig{Values: value.Values{"invalid": func() {}}}).Digest()
+	require.Error(t, err)
+}
+
+func TestConfigSelectorDigestForms(t *testing.T) {
+	t.Parallel()
+
+	for _, kind := range []string{"deploy", "remove"} {
+		t.Run(kind, func(t *testing.T) {
+			digestFor := func(selectors []string) (string, error) {
+				if kind == "deploy" {
+					d, err := (DeployConfig{ComponentSelectors: selectors}).Digest()
+					return d.String(), err
+				}
+				d, err := (RemoveConfig{ComponentSelectors: selectors}).Digest()
+				return d.String(), err
+			}
+			empty, err := digestFor(nil)
+			require.NoError(t, err)
+			for _, selectors := range [][]string{{}, {""}, {" ", "\t", ""}} {
+				got, err := digestFor(selectors)
+				require.NoError(t, err)
+				require.Equal(t, empty, got)
+			}
+
+			selectors := []string{" A ", "", " -* ", "a"}
+			original := append([]string(nil), selectors...)
+			repeated, err := digestFor(selectors)
+			require.NoError(t, err)
+			require.Equal(t, original, selectors)
+			normalized, err := digestFor([]string{"a", "-*", "a"})
+			require.NoError(t, err)
+			require.Equal(t, repeated, normalized)
+			for _, changed := range [][]string{{"a", "-*"}, {"a", "a", "-*"}, {"a", "-*", "a", "a"}} {
+				got, err := digestFor(changed)
+				require.NoError(t, err)
+				require.NotEqual(t, repeated, got)
+			}
+			_, err = digestFor([]string{"["})
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestConfigSelectorJSON(t *testing.T) {
+	t.Parallel()
+
+	selectors := []string{"a", "-*", "a"}
+	t.Run("deploy", func(t *testing.T) {
+		config := DeployConfig{ComponentSelectors: selectors}
+		data, err := json.Marshal(config)
+		require.NoError(t, err)
+		require.JSONEq(t, `{"componentSelectors":["a","-*","a"]}`, string(data))
+		var restored DeployConfig
+		require.NoError(t, json.Unmarshal(data, &restored))
+		require.Equal(t, config, restored)
+		require.Error(t, json.Unmarshal([]byte(`{"componentSelectors":"a"}`), &restored))
+	})
+	t.Run("remove", func(t *testing.T) {
+		config := RemoveConfig{ComponentSelectors: selectors}
+		data, err := json.Marshal(config)
+		require.NoError(t, err)
+		require.JSONEq(t, `{"componentSelectors":["a","-*","a"]}`, string(data))
+		var restored RemoveConfig
+		require.NoError(t, json.Unmarshal(data, &restored))
+		require.Equal(t, config, restored)
+		require.Error(t, json.Unmarshal([]byte(`{"componentSelectors":"a"}`), &restored))
+	})
+}
+
+func TestDeployedPackageSetDeployConfigCopiesNestedValues(t *testing.T) {
+	t.Parallel()
+
+	config := DeployConfig{
+		SetVariables:       map[string]string{"VARIABLE": "original"},
+		ComponentSelectors: []string{"original"},
+		Values:             value.Values{"nested": map[string]any{"value": "original"}},
+		ValuesOverridesMap: ValuesOverrides{
+			"component": {
+				"chart": value.Values{"nested": map[string]any{"value": "original"}},
+			},
+		},
+	}
+	deployed := DeployedPackage{}
+	deployed.SetDeployConfig(config)
+
+	config.SetVariables["VARIABLE"] = "mutated"
+	config.ComponentSelectors[0] = "mutated"
+	configValues, ok := config.Values["nested"].(map[string]any)
+	require.True(t, ok)
+	configValues["value"] = "mutated"
+	configOverrides, ok := config.ValuesOverridesMap["component"]["chart"]["nested"].(map[string]any)
+	require.True(t, ok)
+	configOverrides["value"] = "mutated"
+
+	require.Equal(t, "original", deployed.DeployConfig.SetVariables["VARIABLE"])
+	require.Equal(t, []string{"original"}, deployed.DeployConfig.ComponentSelectors)
+	deployedValues, ok := deployed.DeployConfig.Values["nested"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "original", deployedValues["value"])
+	deployedOverrides, ok := deployed.DeployConfig.ValuesOverridesMap["component"]["chart"]["nested"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "original", deployedOverrides["value"])
+}
+
+func TestDeployedPackageGetDeployConfigPresence(t *testing.T) {
+	t.Parallel()
+
+	deployed := DeployedPackage{
+		PackageConnectivity: PackageConnectivityConnected,
+		NamespaceOverride:   "legacy",
+	}
+	config, ok := deployed.GetDeployConfig()
+	require.False(t, ok)
+	require.Equal(t, DeployConfig{}, config)
+	require.Nil(t, deployed.DeployConfig)
+
+	deployed.SetDeployConfig(DeployConfig{})
+	config, ok = deployed.GetDeployConfig()
+	require.True(t, ok)
+	require.Equal(t, DeployConfig{}, config)
+}
+
+func TestDeployedPackageGetDeployConfigCopiesNestedValues(t *testing.T) {
+	t.Parallel()
+
+	config := DeployConfig{
+		SetVariables:       map[string]string{"VARIABLE": "original"},
+		ComponentSelectors: []string{"original"},
+		Values:             value.Values{"nested": map[string]any{"value": "original"}},
+		ValuesOverridesMap: ValuesOverrides{
+			"component": {
+				"chart": value.Values{"nested": map[string]any{"value": "original"}},
+			},
+		},
+	}
+	deployed := DeployedPackage{}
+	deployed.SetDeployConfig(config)
+
+	snapshot, ok := deployed.GetDeployConfig()
+	require.True(t, ok)
+	snapshot.SetVariables["VARIABLE"] = "mutated"
+	snapshot.ComponentSelectors[0] = "mutated"
+	snapshotValues, ok := snapshot.Values["nested"].(map[string]any)
+	require.True(t, ok)
+	snapshotValues["value"] = "mutated"
+	snapshotOverrides, ok := snapshot.ValuesOverridesMap["component"]["chart"]["nested"].(map[string]any)
+	require.True(t, ok)
+	snapshotOverrides["value"] = "mutated"
+	snapshot.ValuesOverridesMap["component"]["added"] = value.Values{"value": "mutated"}
+	snapshot.ValuesOverridesMap["added"] = map[string]value.Values{"chart": {"value": "mutated"}}
+
+	require.Equal(t, config, *deployed.DeployConfig)
+	laterSnapshot, ok := deployed.GetDeployConfig()
+	require.True(t, ok)
+	require.Equal(t, config, laterSnapshot)
 }

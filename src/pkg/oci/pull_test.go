@@ -25,7 +25,9 @@ func TestCopyToTargetCopiesOnlyRequestedLayers(t *testing.T) {
 		Repository: "packages",
 		Reference:  "example",
 	}
-	remote, err := NewOrasRemote(ref.String(), ocispec.Platform{}, WithPlainHTTP(true))
+	cache := memory.New()
+	remote, err := NewOrasRemote(ref.String(), ocispec.Platform{}, WithPlainHTTP(true),
+		WithCache(cache), WithRetryPolicy(testRetryPolicy(1)))
 	require.NoError(t, err)
 
 	source := memory.New()
@@ -52,4 +54,7 @@ func TestCopyToTargetCopiesOnlyRequestedLayers(t *testing.T) {
 	exists, err = target.Exists(ctx, excluded)
 	require.NoError(t, err)
 	require.False(t, exists)
+	cached, err := content.FetchAll(ctx, cache, requested)
+	require.NoError(t, err)
+	require.Equal(t, []byte("requested"), cached)
 }

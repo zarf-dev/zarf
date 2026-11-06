@@ -795,6 +795,53 @@ func TestDeepMerge(t *testing.T) {
 	}
 }
 
+// A merge must not hand the destination a live reference into the
+// source, or a later write through the destination silently rewrites the source tree.
+func TestDeepMergeDoesNotShareNestedValuesWithSource(t *testing.T) {
+	t.Parallel()
+	src := Values{
+		"nested": map[string]any{
+			"keep": "original",
+			"list": []any{map[string]any{"deep": "original"}},
+		},
+	}
+	snapshot := Values{
+		"nested": map[string]any{
+			"keep": "original",
+			"list": []any{map[string]any{"deep": "original"}},
+		},
+	}
+
+	dst := Values{}
+	dst.DeepMerge(src)
+	require.Equal(t, snapshot, dst)
+
+	// Writing through the destination must leave the source alone.
+	dst.DeepMerge(Values{"nested": map[string]any{"keep": "mutated"}})
+	nested, ok := dst["nested"].(map[string]any)
+	require.True(t, ok)
+	list, ok := nested["list"].([]any)
+	require.True(t, ok)
+	deepMap, ok := list[0].(map[string]any)
+	require.True(t, ok)
+	deepMap["deep"] = "mutated"
+
+	require.Equal(t, snapshot, src)
+}
+
+func TestSetDoesNotShareNestedValuesWithNewVal(t *testing.T) {
+	t.Parallel()
+	newVal := map[string]any{"keep": "original"}
+	snapshot := map[string]any{"keep": "original"}
+
+	dst := Values{}
+	require.NoError(t, dst.Set(".target", newVal))
+	require.Equal(t, snapshot, dst["target"])
+
+	require.NoError(t, dst.Set(".target.keep", "mutated"))
+	require.Equal(t, snapshot, newVal)
+}
+
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name       string

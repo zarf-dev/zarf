@@ -34,28 +34,26 @@ func TestWaitFor(t *testing.T) {
 		_, _, err := e2e.Kubectl(t, "delete", "-f", svcCRDFile)
 		require.NoError(t, err)
 	})
-	_, _, err = e2e.Zarf(t, "tools", "wait-for", "crds", svcCRDName, "established", "--timeout=10s")
+	_, _, err = e2e.Zarf(t, "tools", "wait-for", "resource", "crds", svcCRDName, "established", "--timeout=10s")
 	require.NoError(t, err)
 
 	t.Run("wait for non-existent resource times out", func(t *testing.T) {
 		t.Parallel()
-		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "pod", "does-not-exist-pod", "ready", "-n", namespace, "--timeout", "3s")
+		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "pod", "does-not-exist-pod", "ready", "-n", namespace, "--timeout", "3s")
 		require.Error(t, err, stdout, stderr)
 	})
 
 	t.Run("wait for resource without specifying the namespace only looks in default namespace", func(t *testing.T) {
 		t.Parallel()
 		// There are never any jobs by default
-		_, _, err := e2e.Zarf(t, "tools", "wait-for", "jobs", "--timeout", "3s")
+		_, _, err := e2e.Zarf(t, "tools", "wait-for", "resource", "jobs", "--timeout", "3s")
 		require.Error(t, err)
 	})
 
 	t.Run("wait for resource pulls from default namespace", func(t *testing.T) {
 		t.Parallel()
 		// There's always a kubernetes svc in the default namespace
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "svc", "--timeout", "3s")
-		require.NoError(t, err, stdOut, stdErr)
-		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "svc", "--timeout", "3s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "svc", "--timeout", "3s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
@@ -71,7 +69,7 @@ func TestWaitFor(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "po", podName, "ready", "-n", namespace, "--timeout", "20s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "po", podName, "ready", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
@@ -87,15 +85,15 @@ func TestWaitFor(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "configmap", configMapName, "exists", "-n", namespace, "--timeout", "30s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "configmap", configMapName, "exists", "-n", namespace, "--timeout", "30s")
 		require.NoError(t, err, stdOut, stdErr)
-		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "configmap", configMapName, "create", "-n", namespace, "--timeout", "30s")
+		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "configmap", configMapName, "create", "-n", namespace, "--timeout", "30s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
 	t.Run("wait for delete succeeds on non-existent resource", func(t *testing.T) {
 		t.Parallel()
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "configmap", "does-not-exist", "delete", "-n", namespace, "--timeout", "10s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "configmap", "does-not-exist", "delete", "-n", namespace, "--timeout", "10s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
@@ -113,9 +111,7 @@ func TestWaitFor(t *testing.T) {
 		})
 
 		// Wait using label selector
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", "test-label=wait-test", "ready", "-n", namespace, "--timeout", "20s")
-		require.NoError(t, err, stdOut, stdErr)
-		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "pod", "test-label=wait-test", "ready", "-n", namespace, "--timeout", "20s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "pod", "test-label=wait-test", "ready", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
@@ -131,12 +127,12 @@ func TestWaitFor(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "{.status.phase}=Running", "-n", namespace, "--timeout", "20s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "pod", podName, "{.status.phase}=Running", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdOut, stdErr)
-		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "pod", podName, "'{.status.phase}'=Running", "-n", namespace, "--timeout", "20s")
+		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "pod", podName, "'{.status.phase}'=Running", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdOut, stdErr)
 		// Advanced condition
-		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "pod", podName, "{.status.conditions[?(@.type==\"ContainersReady\")].status}=True", "-n", namespace, "--timeout", "20s")
+		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "pod", podName, "{.status.conditions[?(@.type==\"ContainersReady\")].status}=True", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
@@ -152,7 +148,7 @@ func TestWaitFor(t *testing.T) {
 		})
 
 		// Wait for any deployment in the empty namespace - should timeout
-		_, _, err = e2e.Zarf(t, "tools", "wait-for", "deployment", "-n", emptyNamespace, "--timeout", "3s")
+		_, _, err = e2e.Zarf(t, "tools", "wait-for", "resource", "deployment", "-n", emptyNamespace, "--timeout", "3s")
 		require.Error(t, err)
 	})
 
@@ -167,13 +163,13 @@ func TestWaitFor(t *testing.T) {
 		})
 
 		// Wait for any configmap in the namespace - should succeed
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "configmap", "-n", namespace, "--timeout", "10s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "configmap", "-n", namespace, "--timeout", "10s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
 	t.Run("wait for any cluster-scoped resource of kind", func(t *testing.T) {
 		t.Parallel()
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "storageclass", "--timeout", "10s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "storageclass", "--timeout", "10s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
@@ -188,7 +184,7 @@ func TestWaitFor(t *testing.T) {
 		// Start waiting before the CRD exists
 		errCh := make(chan error, 1)
 		go func() {
-			_, _, err := e2e.Zarf(t, "tools", "wait-for", "ZarfWaitTest", resourceName, "exists", "-n", namespace, "--timeout", "30s")
+			_, _, err := e2e.Zarf(t, "tools", "wait-for", "resource", "ZarfWaitTest", resourceName, "exists", "-n", namespace, "--timeout", "30s")
 			errCh <- err
 		}()
 
@@ -204,7 +200,7 @@ func TestWaitFor(t *testing.T) {
 		})
 
 		// Wait for the CRD to be established before creating an instance
-		_, _, err = e2e.Zarf(t, "tools", "wait-for", "crds", crdName, "established", "--timeout=10s")
+		_, _, err = e2e.Zarf(t, "tools", "wait-for", "resource", "crds", crdName, "established", "--timeout=10s")
 		require.NoError(t, err)
 
 		_, _, err = e2e.Kubectl(t, "apply", "-f", resourceFile)
@@ -235,7 +231,7 @@ func TestWaitFor(t *testing.T) {
 		})
 
 		// "services.v1beta1.test.zarf.dev" exercises the group kind instead of falling back to the GroupResource path (which could resolve to the built-in v1/Service instead).
-		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "service.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "20s")
+		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "service.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdout, stderr)
 		stdout, stderr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "services.test.zarf.dev", resourceName, "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdout, stderr)
@@ -261,7 +257,7 @@ func TestWaitFor(t *testing.T) {
 		// reachable via v1beta1 (the storage version) as well.
 		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "services.v1beta1.test.zarf.dev", resourceName, "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdout, stderr)
-		stdout, stderr, err = e2e.Zarf(t, "tools", "wait-for", "services.v1beta1.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "20s")
+		stdout, stderr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "services.v1beta1.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdout, stderr)
 	})
 
@@ -272,7 +268,7 @@ func TestWaitFor(t *testing.T) {
 		// Start waiting for the pod in a goroutine before it exists
 		errCh := make(chan error, 1)
 		go func() {
-			_, _, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "ready", "-n", namespace, "--timeout", "20s")
+			_, _, err := e2e.Zarf(t, "tools", "wait-for", "resource", "pod", podName, "ready", "-n", namespace, "--timeout", "20s")
 			errCh <- err
 		}()
 
