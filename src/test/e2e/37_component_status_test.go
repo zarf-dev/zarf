@@ -59,7 +59,7 @@ func TestComponentStatus(t *testing.T) {
 					errCh <- fmt.Errorf("expected 1 component got %d", len(deployedPackage.DeployedComponents))
 					return
 				}
-				status := deployedPackage.DeployedComponents[0].Status
+				status := deployedPackage.DeployedComponents[0].Status //nolint:staticcheck // Verify legacy status remains persisted.
 				if status != state.ComponentStatusDeploying {
 					errCh <- fmt.Errorf("expected %s got %s", state.ComponentStatusDeploying, status)
 					return
@@ -84,7 +84,7 @@ func TestComponentStatus(t *testing.T) {
 	deployedPackage, err := getDeployedPackage(stdOut)
 	require.NoError(t, err)
 	require.Len(t, deployedPackage.DeployedComponents, 1)
-	require.Equal(t, state.ComponentStatusSucceeded, deployedPackage.DeployedComponents[0].Status)
+	require.Equal(t, state.ComponentStatusSucceeded, deployedPackage.DeployedComponents[0].Status) //nolint:staticcheck // Verify legacy status remains persisted.
 	// Remove the package
 	t.Cleanup(func() {
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "component-status", "--confirm")

@@ -150,6 +150,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
+
 	if supportsFiltering(desc.Platform) {
 		pkg, err = filters.Apply(pkg, opts.Filter)
 		if err != nil {
