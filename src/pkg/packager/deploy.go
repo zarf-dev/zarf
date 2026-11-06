@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -145,6 +146,7 @@ type DeployResult struct {
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	start := time.Now()
 	pkg := pkgLayout.Definition()
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 	if err := opts.Validate(pkg); err != nil {
 		return DeployResult{}, err
 	}

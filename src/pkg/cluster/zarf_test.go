@@ -65,7 +65,8 @@ func TestGetDeployedPackageWarnsOnUnrecognizedAPIVersion(t *testing.T) {
 	require.NoError(t, err)
 	_, err = c.GetDeployedPackage(ctx, known.Name)
 	require.NoError(t, err)
-	require.Empty(t, logs.String())
+	require.NotContains(t, logs.String(), "this version of Zarf does not recognize")
+	logs.Reset()
 
 	loaded, err := c.GetDeployedPackage(ctx, deployed.Name)
 	require.NoError(t, err)

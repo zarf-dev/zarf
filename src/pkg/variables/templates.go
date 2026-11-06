@@ -25,6 +25,8 @@ type TextTemplate struct {
 }
 
 // GetAllTemplates gets all of the current templates stored in the VariableConfig
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (vc *VariableConfig) GetAllTemplates() map[string]*TextTemplate {
 	templateMap := vc.applicationTemplates
 
@@ -50,6 +52,8 @@ func (vc *VariableConfig) GetAllTemplates() map[string]*TextTemplate {
 }
 
 // ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (vc *VariableConfig) ReplaceTextTemplate(path string) (err error) {
 	templateMap := vc.GetAllTemplates()
 	if len(templateMap) == 0 {

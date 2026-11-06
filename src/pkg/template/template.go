@@ -63,6 +63,8 @@ func (o Objects) WithValues(values value.Values) Objects {
 
 // WithConstants takes a slice of api.Constants and unwraps it into the templating Objects map so constants can be
 // accessed in templates by their key name.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (o Objects) WithConstants(constants []api.Constant) Objects {
 	m := make(map[string]string)
 	for _, v := range constants {
@@ -74,6 +76,8 @@ func (o Objects) WithConstants(constants []api.Constant) Objects {
 
 // WithVariables takes a variables.SetVariableMap and unwraps it into the templating Objects map so variables can be
 // accessed by their key name.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (o Objects) WithVariables(vars variables.SetVariableMap) Objects {
 	m := make(map[string]string)
 	for k, v := range vars {

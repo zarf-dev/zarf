@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -102,6 +103,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	if err != nil {
 		return "", err
 	}
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 	if err := pkgLayout.Cleanup(); err != nil {
 		return "", err
 	}
