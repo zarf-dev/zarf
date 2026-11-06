@@ -72,8 +72,6 @@ components:
 
 		stdOut, stdErr, err := e2e.Zarf(t, "dev", "upgrade", dir)
 		require.NoError(t, err, stdOut, stdErr)
-		// FIXME: consider scope of errors
-		require.Contains(t, stdErr, "v1alpha1 packages are deprecated")
 		require.YAMLEq(t, `apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:

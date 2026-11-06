@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -148,6 +149,8 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
 	}
 
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition().GetAPIVersion())
+
 	signOpts := opts.SignBlobOptions
 	if opts.SigningKeyPath != "" && signOpts.Key == "" {
 		signOpts.Key = opts.SigningKeyPath
@@ -251,6 +254,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		err = errors.Join(err, loaded.Close())
 	}()
 	pkg := loaded.Definition
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg.GetAPIVersion())
 	for _, comp := range pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")

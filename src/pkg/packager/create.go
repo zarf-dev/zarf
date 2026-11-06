@@ -13,6 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -89,6 +90,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		err = errors.Join(err, loaded.Close())
 	}()
 	pkg := loaded.Definition
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg.GetAPIVersion())
 	if pkg.GetAPIVersion() == v1beta1.APIVersion && !feature.IsEnabled(feature.V1Beta1) {
 		return "", fmt.Errorf("creating a %s package requires the %q feature. Run again with --features=%s=true",
 			v1beta1.APIVersion, feature.V1Beta1, feature.V1Beta1)
