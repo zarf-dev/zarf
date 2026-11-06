@@ -47,34 +47,12 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b>$ zarf package pull oci://$REPOSITORY_URL/helm-oci-chart:0.0.1</b>
-
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-30-11-56-13-4058959193.log</b>
-<b class=YEL></b>  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Pulling Zarf package from $REPOSITORY_URL/helm-oci-chart:0.0.1</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Pulling Zarf package data (0.00 Byte of 26.90 MBs)</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">515aceaacb8d images/index.json</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">fd143c92d486 zarf.yaml</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">d8399f7b56ca [application/vnd.unknown.config.v1+json]</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">b66dbb27a733 images/oci-layout</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">42c097bd02de components/helm-oci-chart.tar</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">46564f0eff85 images/blobs/sha256/46564f0...06008f762391a7bb7d58f339ee</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">4f4fb700ef54 images/blobs/sha256/4f4fb70...b5577484a6d75e68dc38e8acc1</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">932a2288fd3a sboms.tar</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">74eae207aa23 images/blobs/sha256/74eae20...fcb007d3da7b842313f80d2c33</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">a9eaa45ef418 images/blobs/sha256/a9eaa45...6789c52a87ba5a9e6483f2b74f</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">ab67ffd6e92e images/blobs/sha256/ab67ffd...f8c9d93c0e719f6350e99d3aea</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">6ff8f4799d50 images/blobs/sha256/6ff8f47...4bc00ec8b988d28cef78ea9a5b</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">e2b45cdcd8bf images/blobs/sha256/e2b45cd...000f1bc1695014e38821dc675c</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">b95c82728c36 images/blobs/sha256/b95c827...042a9c5d84426c1674044916d4</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">8c5b695f4724 images/blobs/sha256/8c5b695...014f94c8d4ea62772c477c1e03</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">cf79ae90993d [application/vnd.oci.image.manifest.v1+json]</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Pulling Zarf package data (26.90 MBs)</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Pulled $REPOSITORY_URL/helm-oci-chart:0.0.1</b>
-
-<b class="GRN"># Use vim if you want to inspect the tarball's contents without decompressing it</b>
-$ vim zarf-package-helm-oci-chart-arm64-0.0.1.tar.zst
-<b class="GRN"># You quit vim with the keyboard command `:q`</b>
+<b class="WHI">$ zarf package pull oci://$REPOSITORY_URL/helm-oci-chart:0.0.1</b>
+<b class="HIK">2026-11-02 15:50:44</b> <b class="HIG">INF</b> pulling package <b class="HIC">name=</b><b class="WHI">registry-1.docker.io/your-username/helm-oci-chart:0.0.1</b> <b class="HIC">size=</b><b class="WHI">26.45 MBs</b>
+<b class="HIK">2026-11-02 15:50:44</b> <b class="HIG">INF</b> finished pulling package layers <b class="HIC">duration=</b><b class="WHI">100ms</b>
+<b class="HIK">2026-11-02 15:50:44</b> <b class="HIY">WRN</b> package signature not verified; continuing <b class="HIC">reason=</b><b class="WHI">package is not signed - verification cannot be performed: no verification material available</b>
+<b class="HIK">2026-11-02 15:50:44</b> <b class="HIG">INF</b> writing package to disk <b class="HIC">path=</b><b class="WHI">/tmp/zarf-publish-tutorial/zarf-package-helm-oci-chart-arm64-0.0.1.tar.zst</b>
+<b class="HIK">2026-11-02 15:50:44</b> <b class="HIG">INF</b> package downloaded successful <b class="HIC">path=</b><b class="WHI">/tmp/zarf-publish-tutorial/zarf-package-helm-oci-chart-arm64-0.0.1.tar.zst</b>
 </pre>
 </body>
 </html>

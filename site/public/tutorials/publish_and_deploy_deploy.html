@@ -47,81 +47,50 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b>$ zarf package deploy oci://$REPOSITORY_URL/helm-oci-chart:0.0.1</b>
+<b class="WHI">$ zarf package deploy oci://$REPOSITORY_URL/helm-oci-chart:0.0.1</b>
+<b class="HIK">2026-11-02 15:49:34</b> <b class="HIG">INF</b> pulling package <b class="HIC">name=</b><b class="WHI">registry-1.docker.io/your-username/helm-oci-chart:0.0.1</b> <b class="HIC">size=</b><b class="WHI">26.45 MBs</b>
+<b class="HIK">2026-11-02 15:49:34</b> <b class="HIG">INF</b> finished pulling package layers <b class="HIC">duration=</b><b class="WHI">400ms</b>
+<b class="HIK">2026-11-02 15:49:34</b> <b class="HIY">WRN</b> package signature not verified; continuing <b class="HIC">reason=</b><b class="WHI">package is not signed - verification cannot be performed: no verification material available</b>
 
-<b class=YEL>Saving log file to</b>
-<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-03-30-12-09-38-2083571763.log</b>
-<b class=YEL></b>  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Pulling Zarf package from $REPOSITORY_URL/helm-oci-chart:0.0.1</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Pulling Zarf package data (0.00 Byte of 26.90 MBs)</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">d8399f7b56ca [application/vnd.unknown.config.v1+json]</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">fd143c92d486 zarf.yaml</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">515aceaacb8d images/index.json</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">b66dbb27a733 images/oci-layout</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">42c097bd02de components/helm-oci-chart.tar</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">46564f0eff85 images/blobs/sha256/46564f0...06008f762391a7bb7d58f339ee</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">4f4fb700ef54 images/blobs/sha256/4f4fb70...b5577484a6d75e68dc38e8acc1</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">932a2288fd3a sboms.tar</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">74eae207aa23 images/blobs/sha256/74eae20...fcb007d3da7b842313f80d2c33</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">a9eaa45ef418 images/blobs/sha256/a9eaa45...6789c52a87ba5a9e6483f2b74f</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">ab67ffd6e92e images/blobs/sha256/ab67ffd...f8c9d93c0e719f6350e99d3aea</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">6ff8f4799d50 images/blobs/sha256/6ff8f47...4bc00ec8b988d28cef78ea9a5b</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">e2b45cdcd8bf images/blobs/sha256/e2b45cd...000f1bc1695014e38821dc675c</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">b95c82728c36 images/blobs/sha256/b95c827...042a9c5d84426c1674044916d4</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">8c5b695f4724 images/blobs/sha256/8c5b695...014f94c8d4ea62772c477c1e03</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">cf79ae90993d [application/vnd.oci.image.manifest.v1+json]</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Pulling Zarf package data (26.90 MBs)</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Pulled $REPOSITORY_URL/helm-oci-chart:0.0.1</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package /var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-3635611772</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading Zarf Package /var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-3635611772</b>
-
-<b style="color:#55ffff;">kind</b>:<b style="color:#ff55ff;"> ZarfPackageConfig</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">metadata</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> helm-oci-chart</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Deploy podinfo using a Helm OCI chart</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 0.0.1</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> arm64</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">build</b>:<b style="color:#55ffff;"></b>
-<b style="color:#55ffff;">  terminal</b>:<b style="color:#ff55ff;"> JvBUnicornMBP5</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">user</b>:<b style="color:#ff55ff;"> jason</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">architecture</b>:<b style="color:#ff55ff;"> arm64</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">timestamp</b>:<b style="color:#ff55ff;"> Thu, 30 Mar 2023 11:04:19 -0400</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> v0.25.0</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">migrations</b>:
-  -<b style="color:#ff55ff;"> scripts-to-actions</b>
-<b style="color:#ff55ff;"></b><b style="color:#55ffff;">components</b>:
--<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> helm-oci-chart</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
-<b style="color:#ffffff;">  </b><b style="color:#55ffff;">charts</b>:
-  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> podinfo</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">url</b>:<b style="color:#ff55ff;"> oci://ghcr.io/stefanprodan/charts/podinfo</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 6.3.3</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> helm-oci-demo</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
-  -<b style="color:#ff55ff;"> ghcr.io/stefanprodan/podinfo:6.3.3</b>
-<b class=YEL>This package has 1 artifacts with software bill-of-materials (SBOM) included. You can view them now</b>
-<b class=YEL>in the zarf-sbom folder in this directory or to go directly to one, open this in your browser:</b>
-<b class=YEL>/Users/jason/src/github.com/jasonvanbrackel/zarf/docs-website/static/docs/tutorials/zarf-sbom/sbom-viewer-ghcr.io_stefanprodan_podinfo_6.3.3.html</b>
-<b class=YEL></b>
-<b class=YEL>* This directory will be removed after package deployment.</b>
-<b class=YEL></b>
-<b style="color:#55ff55;">?</b><b class="WHI">Deploy this Zarf package?</b> (y/N) <span style="color:#00aaaa">Yes</span>
-
-<div style="background-color:#555555">
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 HELM-OCI-CHART COMPONENT                                                   </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-</div>
-
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading the Zarf State from the Kubernetes cluster</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading the Zarf State from the Kubernetes cluster</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Opening tunnel 55523 -&gt; 5000 for svc/zarf-docker-registry in namespace zarf</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Creating port forwarding tunnel at http://127.0.0.1:55523/v2/_catalog</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Storing images in the zarf registry</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Storing images in the zarf registry</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart podinfo:6.3.3 from oci://ghcr.io/stefanprodan/charts/podinfo</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart podinfo:6.3.3 from oci://ghcr.io/stefanprodan/charts/podinfo</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Zarf deployment complete</b>
+<b class="HIC">kind</b>:<b class="HIM"> ZarfPackageConfig</b>
+<b class="HIC">metadata</b>:
+  <b class="HIC">name</b>:<b class="HIM"> helm-oci-chart</b>
+  <b class="HIC">description</b>:<b class="HIM"> Deploy podinfo using a Helm OCI chart</b>
+  <b class="HIC">version</b>:<b class="HIM"> 0.0.1</b>
+  <b class="HIC">architecture</b>:<b class="HIM"> arm64</b>
+  <b class="HIC">aggregateChecksum</b>:<b class="HIM"> 422a99720bcfa14a6126ebcfaab786e327d9acfbb70a858b8402fba3e3c28d5a</b>
+  <b class="HIC">allowNamespaceOverride</b>:<b class="HIW"> true</b>
+<b class="HIC">build</b>:
+  <b class="HIC">architecture</b>:<b class="HIM"> arm64</b>
+  <b class="HIC">timestamp</b>:<b class="HIM"> Mon, 02 Nov 2026 15:30:46 -0600</b>
+  <b class="HIC">version</b>:<b class="HIM"> v0.89.0</b>
+  <b class="HIC">migrations</b>:
+  -<b class="HIM"> scripts-to-actions</b>
+  -<b class="HIM"> pluralize-set-variable</b>
+  <b class="HIC">signed</b>:<b class="HIW"> false</b>
+  <b class="HIC">provenanceFiles</b>:
+  -<b class="HIM"> checksums.txt</b>
+<b class="HIC">components</b>:
+- <b class="HIC">name</b>:<b class="HIM"> helm-oci-chart</b>
+  <b class="HIC">required</b>:<b class="HIW"> true</b>
+  <b class="HIC">charts</b>:
+  - <b class="HIC">name</b>:<b class="HIM"> podinfo</b>
+    <b class="HIC">version</b>:<b class="HIM"> 6.3.3</b>
+    <b class="HIC">url</b>:<b class="HIM"> oci://ghcr.io/stefanprodan/charts/podinfo</b>
+    <b class="HIC">namespace</b>:<b class="HIM"> helm-oci-demo</b>
+    <b class="HIC">schemaValidation</b>:<b class="HIW"> true</b>
+  <b class="HIC">images</b>:
+  -<b class="HIM"> ghcr.io/stefanprodan/podinfo:6.3.3</b>
+<b class="HIK">2026-11-02 15:49:34</b> <b class="HIG">INF</b> this package has SBOMs available for review in a temporary directory <b class="HIC">directory=</b><b class="WHI">/tmp/zarf-publish-tutorial/zarf-sbom</b>
+<b class="HIG">?</b> <b class="WHI">Deploy this Zarf package?</b> <b class="CYN">Yes</b>
+<b class="HIK">2026-11-02 15:49:49</b> <b class="HIG">INF</b> starting deploy <b class="HIC">package=</b><b class="WHI">helm-oci-chart</b>
+<b class="HIK">2026-11-02 15:49:49</b> <b class="HIG">INF</b> waiting for cluster connection
+<b class="HIK">2026-11-02 15:49:49</b> <b class="HIG">INF</b> deploying component <b class="HIC">name=</b><b class="WHI">helm-oci-chart</b>
+<b class="HIK">2026-11-02 15:49:49</b> <b class="HIG">INF</b> pushing image <b class="HIC">name=</b><b class="WHI">ghcr.io/stefanprodan/podinfo:6.3.3</b> <b class="HIC">count=</b><b class="WHI">1/1</b>
+<b class="HIK">2026-11-02 15:49:50</b> <b class="HIG">INF</b> done pushing images <b class="HIC">count=</b><b class="WHI">1</b> <b class="HIC">duration=</b><b class="WHI">1.1s</b>
+<b class="HIK">2026-11-02 15:49:50</b> <b class="HIG">INF</b> processing Helm chart <b class="HIC">name=</b><b class="WHI">podinfo</b> <b class="HIC">source=</b><b class="WHI">oci://ghcr.io/stefanprodan/charts/podinfo</b>
+<b class="HIK">2026-11-02 15:49:50</b> <b class="HIG">INF</b> performing Helm install <b class="HIC">chart=</b><b class="WHI">podinfo</b>
+<b class="HIK">2026-11-02 15:49:52</b> <b class="HIG">INF</b> running health checks <b class="HIC">chart=</b><b class="WHI">podinfo</b>
 
 </pre>
 </body>
