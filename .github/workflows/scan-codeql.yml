@@ -13,7 +13,6 @@ on:
       - "**.png"
       - "**.gif"
       - "**.svg"
-      - "adr/**"
       - "docs/**"
       - "CODEOWNERS"
   schedule:
