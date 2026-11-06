@@ -32,6 +32,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/cli/selection"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -464,12 +465,20 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		return err
 	}
 
-	// If deploy is confirmed, then only pull the necessary layers as we won't need to prompt for optional components
+	connectivity := state.PackageConnectivityAirGap
+	if o.connected {
+		connectivity = state.PackageConnectivityConnected
+	}
+
+	optionalComponents, err := filters.NormalizeComponentSelectors(o.optionalComponents)
+	if err != nil {
+		return err
+	}
 	filter := filters.Empty()
 	if o.confirm {
 		filter = filters.Combine(
 			filters.ByLocalOS(runtime.GOOS),
-			filters.ForDeploy(o.optionalComponents, false),
+			filters.ForDeploy(optionalComponents),
 		)
 	}
 
@@ -494,14 +503,15 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 
 	deployOpts := packager.DeployOptions{
 		Values:                     values,
+		SetVariables:               o.setVariables,
+		NamespaceOverride:          o.namespaceOverride,
+		Connectivity:               connectivity,
+		Source:                     packageSource,
 		TakeOwnership:              o.takeOwnership,
-		Connected:                  o.connected,
 		ForceConflicts:             o.forceConflicts,
 		Timeout:                    o.timeout,
 		Retries:                    o.retries,
 		OCIConcurrency:             o.ociConcurrency,
-		SetVariables:               o.setVariables,
-		NamespaceOverride:          o.namespaceOverride,
 		RemoteOptions:              defaultRemoteOptions(),
 		IsInteractive:              !o.confirm,
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
@@ -509,7 +519,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		SkipVersionCheck:           o.skipVersionCheck,
 	}
 
-	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)
+	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, optionalComponents)
 	if err != nil {
 		return err
 	}
@@ -529,28 +539,31 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
+func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, optionalComponents string) ([]state.DeployedComponent, error) {
 	if err := opts.Validate(pkgLayout.Definition()); err != nil {
 		return nil, err
 	}
-	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
+	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below.
 	if opts.NamespaceOverride != "" {
 		if err := pkgLayout.OverrideNamespace(opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
-	err := confirmDeploy(ctx, pkgLayout, setVariables, opts.IsInteractive, opts.Connected)
-	if err != nil {
+	if err := confirmDeploy(ctx, pkgLayout, opts.SetVariables, opts.IsInteractive, opts.Connectivity.IsConnected()); err != nil {
 		return nil, err
 	}
-
-	// In the interactive case we wait until after the component prompt to filter
 	if opts.IsInteractive {
-		filter := filters.Combine(
-			filters.ByLocalOS(runtime.GOOS),
-			filters.ForDeploy(optionalComponents, true),
-		)
-		if err := pkgLayout.Filter(filter); err != nil {
+		if optionalComponents == "" {
+			pkg, err := filters.Apply(pkgLayout.Definition(), filters.ByLocalOS(runtime.GOOS))
+			if err != nil {
+				return nil, err
+			}
+			optionalComponents, err = selection.DeploymentSelectors(pkg)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if err := pkgLayout.Filter(filters.Combine(filters.ByLocalOS(runtime.GOOS), filters.ForDeploy(optionalComponents))); err != nil {
 			return nil, err
 		}
 	}
@@ -1616,6 +1629,10 @@ func newPackageRemoveCommand(v *viper.Viper, architecture *architectureOptions) 
 
 func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	componentSelectors, err := filters.ParseComponentSelectors(o.optionalComponents)
+	if err != nil {
+		return err
+	}
 	packageSource, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
@@ -1628,10 +1645,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.BySelectState(o.optionalComponents),
-	)
+	filter := filters.Empty()
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -1652,11 +1666,14 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	removeOpt := packager.RemoveOptions{
-		Cluster:           c,
-		Timeout:           config.ZarfDefaultTimeout,
-		NamespaceOverride: o.namespaceOverride,
-		SkipVersionCheck:  o.skipVersionCheck,
-		Values:            vals,
+		RemoveConfig: packager.RemoveConfig{
+			NamespaceOverride:  o.namespaceOverride,
+			ComponentSelectors: componentSelectors,
+			Values:             vals,
+		},
+		Cluster:          c,
+		Timeout:          config.ZarfDefaultTimeout,
+		SkipVersionCheck: o.skipVersionCheck,
 	}
 	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
 	displayPackage, err := packageForDisplay(pkg)

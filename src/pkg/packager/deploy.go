@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opencontainers/go-digest"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -46,13 +47,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DeployOptions are optional parameters to packager.Deploy
+// DeployOptions are optional parameters to Deploy. Component selection is applied
+// by filtering the package before deployment.
 type DeployOptions struct {
-	// Deploy time set variables
+	// SetVariables supplies deploy-time variable overrides.
 	SetVariables map[string]string
-	// Values are values passed in at deploy time. They can come from the CLI, user configuration, or set directly by
-	// API callers.
-	value.Values
+	// Values supplies deploy-time package value overrides.
+	Values value.Values
+	// NamespaceOverride overrides the namespace used by deployed resources.
+	NamespaceOverride string
+	// ValuesOverridesMap supplies per-component chart value overrides.
+	ValuesOverridesMap ValuesOverrides
+	// Connectivity controls whether deployment uses connected or air-gap mode.
+	Connectivity state.PackageConnectivity
 	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
 	TakeOwnership bool
 	// Connected deploys without mirroring images/repos and labels resources to bypass the Zarf agent
@@ -65,8 +72,6 @@ type DeployOptions struct {
 	Retries int
 	// Number of layers to push concurrently per image
 	OCIConcurrency int
-	// Namespace is an optional namespace override for package deployment
-	NamespaceOverride string
 	// Remote Options for image pushes
 	types.RemoteOptions
 	// How to configure Zarf state if it's not already been configured
@@ -80,9 +85,8 @@ type DeployOptions struct {
 	AgentTLS *pki.GeneratedPKI
 	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
 	AgentMutationPolicy state.MutationPolicy
-
-	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
-	ValuesOverridesMap ValuesOverrides
+	// Source identifies the resolved package source for event provenance.
+	Source string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	// SkipValuesSchemaValidation skips validation of the merged package values against the package schema.
@@ -96,10 +100,13 @@ type DeployOptions struct {
 
 // Validate checks whether the deployment options are supported by the package.
 func (opts DeployOptions) Validate(pkg api.Package) error {
+	if !opts.Connectivity.IsValid() {
+		return fmt.Errorf("unsupported package connectivity mode %q", opts.Connectivity)
+	}
 	if pkg.GetAPIVersion() == v1beta1.APIVersion && len(opts.SetVariables) > 0 {
 		return fmt.Errorf("variables are not supported in v1beta1 packages; use package values instead")
 	}
-	if opts.Connected && pkg.IsInitConfig() {
+	if opts.Connectivity.IsConnected() && pkg.IsInitConfig() {
 		return fmt.Errorf("connected mode is not supported for init packages")
 	}
 	if opts.SkipArchitectureCheck && pkg.IsInitConfig() {
@@ -111,10 +118,13 @@ func (opts DeployOptions) Validate(pkg api.Package) error {
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
 // any of these fields are subject to change from one component to the next
 type deployer struct {
-	s    *state.State
-	c    *cluster.Cluster
-	vc   *variables.VariableConfig
-	vals value.Values
+	s            *state.State
+	c            *cluster.Cluster
+	vc           *variables.VariableConfig
+	vals         value.Values
+	deployedPkg  *state.DeployedPackage
+	deployConfig state.DeployConfig
+	configDigest digest.Digest
 
 	// runtimeDir holds runtime files across components. v1alpha1 uses the package layout.
 	runtimeDir string
@@ -127,7 +137,9 @@ type DeployResult struct {
 	Values             value.Values
 }
 
-// Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
+// Deploy deploys the components present in pkgLayout and returns their deployment
+// records, variable configuration, and values on success.
+// Component selection and its provenance come from the already-filtered layout.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	start := time.Now()
 	pkg := pkgLayout.Definition()
@@ -154,7 +166,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	if pkg.Metadata.YOLO {
-		opts.Connected = true
+		opts.Connectivity = state.PackageConnectivityConnected
 	}
 
 	if opts.NamespaceOverride != "" {
@@ -171,11 +183,10 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		opts.Timeout = config.ZarfDefaultTimeout
 	}
 
-	var err error
 	if err := pkgLayout.Filter(filters.ByLocalOS(runtime.GOOS)); err != nil {
 		return DeployResult{}, err
 	}
-	if opts.Connected {
+	if opts.Connectivity.IsConnected() {
 		pkgLayout.RemoveImages()
 		pkgLayout.RemoveRepositories()
 	}
@@ -251,6 +262,96 @@ func (d *deployer) isConnectedToCluster() bool {
 	return d.c != nil
 }
 
+func (d *deployer) startDeploymentState(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) error {
+	if d.deployedPkg != nil {
+		return nil
+	}
+
+	pkg := pkgLayout.Definition()
+	deployedPkg, err := d.c.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
+	switch {
+	case err == nil:
+		deployedPkg.Generation++
+	case kerrors.IsNotFound(err):
+		deployedPkg, err = state.NewDeployedPackage(
+			pkg,
+			pkgLayout.Digest(),
+			config.CLIVersion,
+			nil,
+			1,
+			state.WithPackageNamespaceOverride(opts.NamespaceOverride),
+		)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("load deployed package state: %w", err)
+	}
+
+	if err := deployedPkg.SetPackageDefinition(pkg); err != nil {
+		return err
+	}
+	deployedPkg.Digest = pkgLayout.Digest()
+	deployedPkg.CLIVersion = config.CLIVersion
+	deployedPkg.NamespaceOverride = opts.NamespaceOverride
+
+	selectors, _ := pkg.ComponentSelectors()
+	d.deployConfig = state.DeployConfig{
+		SetVariables:       opts.SetVariables,
+		Values:             opts.Values,
+		NamespaceOverride:  opts.NamespaceOverride,
+		ValuesOverridesMap: opts.ValuesOverridesMap,
+		ComponentSelectors: selectors,
+		Connectivity:       opts.Connectivity,
+	}
+	d.configDigest, err = d.deployConfig.Digest()
+	if err != nil {
+		return fmt.Errorf("digest deploy config: %w", err)
+	}
+	deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeInProgress))
+	d.deployedPkg = deployedPkg
+	return d.c.UpdateDeployedPackage(ctx, *d.deployedPkg)
+}
+
+func (d *deployer) prepareDeploymentState(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) error {
+	if d.s == nil {
+		var err error
+		d.s, err = setupState(ctx, d.c, opts.Connectivity.IsConnected())
+		if err != nil {
+			return fmt.Errorf("setup Zarf state: %w", err)
+		}
+	}
+	if opts.Connectivity.IsConnected() && opts.RegistryInfo.Address != "" {
+		d.s.RegistryInfo.Address = opts.RegistryInfo.Address
+	}
+	if err := d.startDeploymentState(ctx, pkgLayout, opts); err != nil {
+		return fmt.Errorf("start package deployment state: %w", err)
+	}
+	return nil
+}
+
+func (d *deployer) deployPackageEvent(pkgLayout *layout.PackageLayout, opts DeployOptions, outcome state.EventOutcome) state.PackageEvent {
+	pkg := pkgLayout.Definition()
+	return state.PackageEvent{
+		Type:         state.EventTypeDeploy,
+		Outcome:      outcome,
+		Timestamp:    time.Now(),
+		Version:      pkg.Metadata.Version,
+		Flavor:       pkg.Build.Flavor,
+		Digest:       digest.Digest(pkgLayout.Digest()),
+		Source:       opts.Source,
+		ConfigDigest: d.configDigest,
+	}
+}
+
+func (d *deployer) persistDeploymentState(ctx context.Context, components []state.DeployedComponent) error {
+	if d.deployedPkg == nil {
+		return nil
+	}
+	d.deployedPkg.SetDeployedComponents(components)
+	return d.c.UpdateDeployedPackage(ctx, *d.deployedPkg)
+}
+
 func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (deployedComponents []state.DeployedComponent, err error) {
 	l := logger.From(ctx)
 	pkg := pkgLayout.Definition()
@@ -272,39 +373,39 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 	}
 
 	for _, component := range pkg.Components {
-		packageGeneration := 1
-		// Connect to cluster if a component requires it.
-		if component.RequiresCluster() {
-			if !d.isConnectedToCluster() {
-				timeout := cluster.DefaultTimeout
-				if pkg.IsInitConfig() {
-					timeout = 5 * time.Minute
-				}
-				connectCtx, cancel := context.WithTimeout(ctx, timeout)
-				defer cancel()
-				var err error
-				d.c, err = cluster.NewWithWait(connectCtx)
-				if err != nil {
-					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
-				}
-				if err := d.verifyPackageIsDeployable(ctx, pkgLayout, opts.SkipArchitectureCheck); err != nil {
-					return nil, fmt.Errorf("package is not deployable to this system: %w", err)
-				}
+		if component.RequiresCluster() && !d.isConnectedToCluster() {
+			timeout := cluster.DefaultTimeout
+			if pkg.IsInitConfig() {
+				timeout = 5 * time.Minute
 			}
-			// If this package has been deployed before, increment the package generation within the secret
-			//nolint: errcheck // this may be the first time deploying the package therefore it will not exist
-			if existingDeployedPackage, _ := d.c.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); existingDeployedPackage != nil {
-				packageGeneration = existingDeployedPackage.Generation + 1
+			connectCtx, cancel := context.WithTimeout(ctx, timeout)
+			defer cancel()
+			d.c, err = cluster.NewWithWait(connectCtx)
+			if err != nil {
+				return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+			}
+			if err := d.verifyPackageIsDeployable(ctx, pkgLayout, opts.SkipArchitectureCheck); err != nil {
+				return nil, fmt.Errorf("package is not deployable to this system: %w", err)
+			}
+		}
+		if component.RequiresCluster() && !pkg.IsInitConfig() && (d.s == nil || d.deployedPkg == nil) {
+			if err := d.prepareDeploymentState(ctx, pkgLayout, opts); err != nil {
+				return nil, err
 			}
 		}
 
+		packageGeneration := 1
+		if d.deployedPkg != nil {
+			packageGeneration = d.deployedPkg.Generation
+		}
 		deployedComponent := state.DeployedComponent{
 			Name:               component.Name,
-			Status:             state.ComponentStatusDeploying,
+			Status:             state.ComponentStatusDeploying, //nolint:staticcheck // Legacy status remains persisted for compatibility.
+			LastEvent:          state.ComponentEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeInProgress, Timestamp: time.Now()},
 			ObservedGeneration: packageGeneration,
 		}
 
-		// Ensure we don't overwrite any installedCharts data when updating the package secret
+		// Ensure we don't overwrite any installedCharts data when updating the package secret.
 		if d.isConnectedToCluster() {
 			installedCharts, err := d.c.GetInstalledChartsForComponent(ctx, pkg.Metadata.Name, component, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 			if err != nil {
@@ -315,23 +416,27 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
+
 		var charts []state.InstalledChart
 		var deployErr error
-		// Initialize at the first cluster component so deployment status has a namespace to be saved in.
+		// InitState creates the Zarf namespace required to persist deployed package state.
 		if pkg.IsInitConfig() && component.RequiresCluster() && d.s == nil {
-			deployErr = d.initState(ctx, pkg, opts)
-		}
-		if d.isConnectedToCluster() {
-			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Definition(), pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
-				l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
+			if err := d.initState(ctx, pkg, opts); err != nil {
+				return nil, err
 			}
 		}
-		if deployErr == nil {
-			if pkg.IsInitConfig() {
-				charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
-			} else {
-				charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
+		if pkg.IsInitConfig() && d.isConnectedToCluster() && d.deployedPkg == nil && d.s != nil {
+			if err := d.startDeploymentState(ctx, pkgLayout, opts); err != nil {
+				return nil, fmt.Errorf("start package deployment state: %w", err)
 			}
+		}
+		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
+			l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
+		}
+		if pkg.IsInitConfig() {
+			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
+		} else {
+			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
 		}
 
 		onDeploy := component.Actions.OnDeploy
@@ -365,17 +470,19 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			cleanup := func(ctx context.Context) {
 				onFailure()
 				l.Debug("component deployment failed", "component", component.Name, "error", deployErr.Error())
-				deployedComponents[idx].Status = state.ComponentStatusFailed
+				deployedComponents[idx].Status = state.ComponentStatusFailed //nolint:staticcheck // Legacy status remains persisted for compatibility.
+				deployedComponents[idx].LastEvent = state.ComponentEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeFailed, Timestamp: time.Now()}
 				deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, true)
-				if d.isConnectedToCluster() {
-					if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Definition(), pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
-						l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
-					}
+				if d.deployedPkg != nil {
+					d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeFailed))
+				}
+				if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
+					l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
 				}
 			}
 			select {
 			case <-ctx.Done():
-				// Use background context here in order to ensure the cleanup logic can run when the context is cancelled
+				// Use background context here in order to ensure the cleanup logic can run when the context is cancelled.
 				cleanup(context.Background())
 				return nil, fmt.Errorf("context cancelled while deploying component %q: %w", component.Name, deployErr)
 			default:
@@ -384,24 +491,36 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 
-		// Update the package secret to indicate that we successfully deployed this component
+		// Update the package secret to indicate that we successfully deployed this component.
 		deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, false)
-		deployedComponents[idx].Status = state.ComponentStatusSucceeded
-		if d.isConnectedToCluster() {
-			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Definition(), pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
-				l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
-			}
+		deployedComponents[idx].Status = state.ComponentStatusSucceeded //nolint:staticcheck // Legacy status remains persisted for compatibility.
+		deployedComponents[idx].LastEvent = state.ComponentEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded, Timestamp: time.Now()}
+		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
+			l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
 		}
 
-		// Alpha success hooks observe the saved successful deployment
+		// Alpha success hooks observe the saved successful deployment.
 		if pkg.GetAPIVersion() == v1alpha1.APIVersion {
 			if err := onSuccess(); err != nil {
 				onFailure()
+				if d.deployedPkg != nil {
+					d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeFailed))
+				}
+				if persistErr := d.persistDeploymentState(ctx, deployedComponents); persistErr != nil {
+					l.Error("unable to record package deployment", "component", component.Name, "error", persistErr.Error())
+				}
 				return nil, err
 			}
 		}
 	}
 
+	if d.deployedPkg != nil {
+		d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeSucceeded))
+		d.deployedPkg.SetDeployConfig(d.deployConfig)
+		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
+			l.Error("unable to record package deployment", "error", err.Error())
+		}
+	}
 	return deployedComponents, nil
 }
 
@@ -548,7 +667,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		// Setup the state in the config
 		if d.s == nil {
 			var err error
-			d.s, err = setupState(ctx, d.c, opts.Connected)
+			d.s, err = setupState(ctx, d.c, opts.Connectivity.IsConnected())
 			if err != nil {
 				return nil, err
 			}
@@ -720,7 +839,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			VariableConfig:    d.vc,
 			State:             d.s,
 			Cluster:           d.c,
-			ConnectedDeploy:   opts.Connected,
+			ConnectedDeploy:   opts.Connectivity.IsConnected(),
 			Timeout:           opts.Timeout,
 			Retries:           opts.Retries,
 			PkgName:           pkg.Metadata.Name,
@@ -816,7 +935,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			VariableConfig:    d.vc,
 			State:             d.s,
 			Cluster:           d.c,
-			ConnectedDeploy:   opts.Connected,
+			ConnectedDeploy:   opts.Connectivity.IsConnected(),
 			Timeout:           opts.Timeout,
 			Retries:           opts.Retries,
 			PkgName:           pkg.Metadata.Name,

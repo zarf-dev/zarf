@@ -211,12 +211,15 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
+	optionalComponents, err := filters.NormalizeComponentSelectors(o.optionalComponents)
+	if err != nil {
+		return err
+	}
 	filter := filters.Empty()
 	if o.confirm {
 		filter = filters.Combine(
 			filters.ByLocalOS(runtime.GOOS),
-			filters.ForDeploy(o.optionalComponents, false),
+			filters.ForDeploy(optionalComponents),
 		)
 	}
 
@@ -240,6 +243,9 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}()
 
 	opts := packager.DeployOptions{
+		SetVariables:               o.setVariables,
+		Values:                     values,
+		Source:                     packageSource,
 		GitServer:                  o.gitServer,
 		RegistryInfo:               o.registryInfo,
 		TakeOwnership:              o.takeOwnership,
@@ -247,8 +253,6 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		Timeout:                    o.timeout,
 		Retries:                    o.retries,
 		OCIConcurrency:             o.ociConcurrency,
-		SetVariables:               o.setVariables,
-		Values:                     values,
 		StorageClass:               o.storageClass,
 		InjectorPort:               o.injectorPort,
 		InjectorImage:              o.injectorImage,
@@ -258,7 +262,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		AgentMutationPolicy:        state.MutationPolicy(o.agentMutationPolicy),
 		SkipValuesSchemaValidation: o.skipValuesSchemaValidation,
 	}
-	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
+	_, err = deploy(ctx, pkgLayout, opts, optionalComponents)
 	if err != nil {
 		return err
 	}

@@ -98,12 +98,10 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			Connected:            opts.Connected,
 			CachePath:            opts.CachePath,
 		}
-
 		pkgLayout, err := pullOCI(ctx, ociOpts)
 		if err != nil {
 			return nil, err
 		}
-		// OCI is a special case since it doesn't create a tar unless the tar file is output
 		if opts.Output != "" {
 			_, err := pkgLayout.Archive(ctx, opts.Output, 0)
 			if err != nil {
