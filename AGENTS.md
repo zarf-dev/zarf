@@ -18,6 +18,8 @@ Zarf is a Go CLI (`main.go`, `go.mod`). Application code under `src/`. Unit test
 
 Write idiomatic Go; `golangci-lint fmt` applies `gofmt` and `goimports`. Keep packages and files lowercase and descriptive; use `PascalCase` for exported identifiers and `camelCase` otherwise. New Go files need the SPDX header. Keep comments concise and focused on intent, not a restatement of code. Handle errors and justify every `//nolint:<linter>` comment.
 
+Keep CLI-specific validation and flag names in `src/cmd`. Validation errors outside of `src/cmd` should describe configuration options in API-neutral terms.
+
 Install hooks with `pre-commit install`; they enforce formatting, linting, credentials checks, and generated schema/docs consistency.
 
 ## Testing Guidelines

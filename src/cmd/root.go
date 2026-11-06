@@ -235,7 +235,6 @@ func NewZarfCommand() *cobra.Command {
 
 // setupRootFlags sets up the persistent flags for the root command
 func setupRootFlags(rootCmd *cobra.Command, architecture *architectureOptions) {
-	var showNoProgressDeprecation bool
 	vpr := getViper()
 
 	// Features
@@ -253,8 +252,6 @@ func setupRootFlags(rootCmd *cobra.Command, architecture *architectureOptions) {
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", logShorthand, vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", vpr.GetString(VLogFormat), "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'.")
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", vpr.GetBool(VNoColor), "Disable terminal color codes in logging and stdout prints.")
-	rootCmd.PersistentFlags().BoolVar(&showNoProgressDeprecation, "no-progress", v.GetBool("no_progress"), "Disable fancy UI progress bars, spinners, logos, etc")
-	_ = rootCmd.PersistentFlags().MarkDeprecated("no-progress", "Progress bars and spinners were removed with --log-format=legacy, this flag will be removed in a future version of Zarf.")
 
 	// Core functionality
 	rootCmd.PersistentFlags().StringVarP(&architecture.architecture, "architecture", archShorthand, vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
@@ -265,8 +262,6 @@ func setupRootFlags(rootCmd *cobra.Command, architecture *architectureOptions) {
 	if cachePath == "" {
 		cachePath = config.ZarfDefaultCachePath
 	}
-	rootCmd.PersistentFlags().StringVar(&cachePath, "zarf-cache", cachePath, lang.RootCmdFlagCachePath)
-	_ = rootCmd.PersistentFlags().MarkDeprecated("zarf-cache", "use --cache instead")
 	rootCmd.PersistentFlags().StringVar(&cachePath, "cache", cachePath, lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
@@ -285,7 +280,7 @@ func Execute(ctx context.Context) error {
 	// Check if we need to use the default err printer
 	defaultPrintCmds := []string{"helm", "yq", "kubectl"}
 	comps := strings.Split(cmd.CommandPath(), " ")
-	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
+	if len(comps) > 2 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
 		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
 		os.Exit(1)
 	}

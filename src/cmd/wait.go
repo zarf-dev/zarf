@@ -10,65 +10,25 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/wait"
 
 	// Import to initialize client auth plugins.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-type waitForOptions struct {
-	waitTimeout   string
-	waitNamespace string
-}
-
 func newWaitForCommand() *cobra.Command {
-	o := waitForOptions{}
 	cmd := &cobra.Command{
-		Use:     "wait-for { KIND | PROTOCOL } { NAME | SELECTOR | URI } { CONDITION | HTTP_CODE }",
+		Use:     "wait-for COMMAND",
 		Aliases: []string{"w", "wait"},
 		Short:   lang.CmdToolsWaitForShort,
 		Long:    lang.CmdToolsWaitForLong,
 		Example: lang.CmdToolsWaitForExample,
-		Args:    cobra.MinimumNArgs(1),
-		RunE:    o.run,
+		Args:    cobra.NoArgs,
+		RunE:    func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
 	}
 	cmd.AddCommand(newWaitForResourceCommand())
 	cmd.AddCommand(newWaitForNetworkCommand())
-
-	cmd.Flags().StringVar(&o.waitTimeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
-	cmd.Flags().StringVarP(&o.waitNamespace, "namespace", "n", "", lang.CmdToolsWaitForFlagNamespace)
-
 	return cmd
-}
-
-func (o *waitForOptions) run(cmd *cobra.Command, args []string) error {
-	logger.From(cmd.Context()).Warn("direct use of `zarf tools wait-for` is deprecated. Use `zarf tools wait-for resource` or `zarf tools wait-for network` instead.")
-	// Parse the timeout string
-	timeout, err := time.ParseDuration(o.waitTimeout)
-	if err != nil {
-		return fmt.Errorf("invalid timeout duration %s, use a valid duration string e.g. 1s, 2m, 3h: %w", o.waitTimeout, err)
-	}
-
-	kind := args[0]
-
-	// identifier is optional to allow for commands like `zarf tools wait-for storageclass` without specifying a name.
-	identifier := ""
-	if len(args) > 1 {
-		identifier = args[1]
-	}
-
-	condition := ""
-	if len(args) > 2 {
-		condition = args[2]
-	}
-
-	switch kind {
-	case "http", "https", "tcp":
-		return wait.ForNetwork(cmd.Context(), kind, identifier, condition, timeout)
-	default:
-		return wait.ForResource(cmd.Context(), kind, identifier, condition, o.waitNamespace, timeout)
-	}
 }
 
 type waitForResourceOptions struct {
@@ -100,7 +60,7 @@ func (o *waitForResourceOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	kind := args[0]
-	// identifier is optional to allow for waiting for any resource of a kind to exist in cluster. For instance, `zarf tools wait-for storageclass`
+	// identifier is optional to allow for waiting for any resource of a kind to exist in cluster. For instance, `zarf tools wait-for resource storageclass`
 	identifier := ""
 	if len(args) > 1 {
 		identifier = args[1]
