@@ -209,3 +209,32 @@ func TestManifestGetServerSideApply(t *testing.T) {
 		})
 	}
 }
+
+func TestPackageComponentSelectionIsIsolated(t *testing.T) {
+	t.Parallel()
+
+	var pkg api.Package
+	_, applied := pkg.ComponentSelectors()
+	require.False(t, applied)
+	require.False(t, pkg.HasComponentSelection())
+
+	selectors := []string{"one", "-two", "one"}
+	pkg.SetComponentSelectors(selectors)
+	selectors[0] = "changed-input"
+	snapshot, applied := pkg.ComponentSelectors()
+	require.True(t, applied)
+	require.True(t, pkg.HasComponentSelection())
+	require.Equal(t, []string{"one", "-two", "one"}, snapshot)
+	snapshot[1] = "changed-output"
+	actual, _ := pkg.ComponentSelectors()
+	require.Equal(t, []string{"one", "-two", "one"}, actual)
+
+	pkgCopy := pkg
+	pkgCopy.SetComponentSelectors(nil)
+	empty, applied := pkgCopy.ComponentSelectors()
+	require.True(t, applied)
+	require.True(t, pkgCopy.HasComponentSelection())
+	require.Empty(t, empty)
+	actual, _ = pkg.ComponentSelectors()
+	require.Equal(t, []string{"one", "-two", "one"}, actual)
+}

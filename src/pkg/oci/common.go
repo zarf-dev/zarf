@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package oci provides Zarf's ORAS registry client and OCI descriptor helpers.
 package oci
 
 import (
@@ -36,6 +35,7 @@ type OrasRemote struct {
 	targetPlatform     *ocispec.Platform
 	insecureSkipVerify *bool
 	log                *slog.Logger
+	retryPolicy        retry.Policy
 }
 
 // Modifier is a function that modifies an OrasRemote
@@ -106,6 +106,27 @@ func WithLogger(logger *slog.Logger) Modifier {
 // WithCache sets the cache for the remote
 func WithCache(cache content.Storage) Modifier {
 	return func(o *OrasRemote) { o.cache = cache }
+}
+
+// WithRetryPolicy configures HTTP retries and resumable blob reads.
+// Nil keeps default HTTP retries and disables read recovery.
+//
+// On policy-approved read failures, the returned reader automatically continues
+// after the bytes already returned to the caller. If recovery fails or retries
+// are exhausted, Read returns an error.
+//
+// Read recovery requires range-capable blobs and lasts only for one reader.
+// Manifest bodies, destination uploads, and later processes are not resumed.
+//
+// The policy may be called concurrently. For read failures, the response is nil.
+func WithRetryPolicy(policy retry.Policy) Modifier {
+	return func(o *OrasRemote) {
+		o.retryPolicy = policy
+		o.progTransport.Policy = nil
+		if policy != nil {
+			o.progTransport.Policy = func() retry.Policy { return policy }
+		}
+	}
 }
 
 // PlatformForArch sets the target architecture for the remote

@@ -4,7 +4,10 @@
 // Package api defines Zarf's version-neutral package model.
 package api
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // Package is the version-neutral representation used by package operations and converters.
 type Package struct {
@@ -20,6 +23,31 @@ type Package struct {
 	// v1alpha1-only fields
 	Variables []InteractiveVariable
 	Constants []Constant
+
+	// Runtime selection provenance is not part of either package wire schema.
+	componentSelectors        []string
+	componentSelectorsApplied bool
+}
+
+// ComponentSelectors returns a detached copy of the normalized, ordered deployment
+// selectors applied to this package. The boolean distinguishes default selection
+// from no recorded selection.
+func (p Package) ComponentSelectors() ([]string, bool) {
+	return slices.Clone(p.componentSelectors), p.componentSelectorsApplied
+}
+
+// HasComponentSelection reports whether deployment selection was applied,
+// including an empty selector list that uses required components and defaults.
+func (p Package) HasComponentSelection() bool {
+	return p.componentSelectorsApplied
+}
+
+// SetComponentSelectors records a successful deployment selection. Filtering
+// supplies normalized selectors; assembly may restore them after an in-memory
+// definition crosses a serialization boundary.
+func (p *Package) SetComponentSelectors(selectors []string) {
+	p.componentSelectors = slices.Clone(selectors)
+	p.componentSelectorsApplied = true
 }
 
 // PackageMetadata contains metadata from all supported package API versions.

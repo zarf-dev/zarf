@@ -6,6 +6,7 @@ package filters
 
 import (
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -17,34 +18,73 @@ const (
 	excluded
 )
 
-func includedOrExcluded(componentName string, requestedComponentNames []string) (selectState, string, error) {
-	// Check if the component has a leading dash indicating it should be excluded - this is done first so that exclusions precede inclusions
-	for _, requestedComponent := range requestedComponentNames {
-		if strings.HasPrefix(requestedComponent, "-") {
-			// If the component glob matches one of the requested components, then return true
-			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
-			matched, err := path.Match(strings.TrimPrefix(requestedComponent, "-"), componentName)
-			if err != nil {
-				return unknown, "", err
-			}
-			if matched {
-				return excluded, requestedComponent, nil
-			}
-		}
+// NormalizeComponentSelectors normalizes selectors while preserving their order and repetitions.
+func NormalizeComponentSelectors(selectors string) (string, error) {
+	parsed, err := ParseComponentSelectors(selectors)
+	if err != nil {
+		return "", err
 	}
-	// Check if the component matches a glob pattern and should be included
-	for _, requestedComponent := range requestedComponentNames {
-		// If the component glob matches one of the requested components, then return true
-		// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
-		matched, err := path.Match(requestedComponent, componentName)
-		if err != nil {
-			return unknown, "", err
-		}
-		if matched {
-			return included, requestedComponent, nil
-		}
-	}
+	return strings.Join(parsed, ","), nil
+}
 
-	// All other cases we don't know if we should include or exclude yet
-	return unknown, "", nil
+// ParseComponentSelectors parses comma-separated selectors into a normalized,
+// ordered list, preserving repetitions.
+func ParseComponentSelectors(selectors string) ([]string, error) {
+	if selectors == "" {
+		return nil, nil
+	}
+	return normalizeComponentSelectorList(strings.Split(selectors, ","))
+}
+
+// NormalizeComponentSelectorList returns a detached, normalized selector list.
+// Entries are individual patterns, not comma-separated strings. Order and
+// repetitions are preserved, and empty entries are discarded.
+func NormalizeComponentSelectorList(selectors []string) ([]string, error) {
+	return normalizeComponentSelectorList(slices.Clone(selectors))
+}
+
+// normalizeComponentSelectorList compacts and normalizes an owned slice in place.
+func normalizeComponentSelectorList(selectors []string) ([]string, error) {
+	result := selectors[:0]
+	for _, selector := range selectors {
+		selector = strings.ToLower(strings.TrimSpace(selector))
+		if selector == "" {
+			continue
+		}
+		pattern := strings.TrimPrefix(selector, "-")
+		if _, err := path.Match(pattern, ""); err != nil {
+			return nil, err
+		}
+		result = append(result, selector)
+	}
+	if len(result) == 0 {
+		return nil, nil
+	}
+	return result, nil
+}
+
+// includedOrExcluded records every matching selector; the last match determines the state.
+func includedOrExcluded(componentName string, requestedComponentNames []string, matchedRequests map[string]bool) (selectState, error) {
+	state := unknown
+	for _, requestedComponent := range requestedComponentNames {
+		isExclusion := strings.HasPrefix(requestedComponent, "-")
+		pattern := strings.TrimPrefix(requestedComponent, "-")
+		// Use path.Match for consistent glob behavior across operating systems.
+		matched, err := path.Match(pattern, componentName)
+		if err != nil {
+			return unknown, err
+		}
+		if !matched {
+			continue
+		}
+		if matchedRequests != nil {
+			matchedRequests[requestedComponent] = true
+		}
+		if isExclusion {
+			state = excluded
+		} else {
+			state = included
+		}
+	}
+	return state, nil
 }

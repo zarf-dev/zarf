@@ -7,6 +7,7 @@ package test
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -236,4 +237,47 @@ func TestStateTemplates(t *testing.T) {
 		require.Error(t, err, "deploy should fail when accessing sensitive state without stateAccess")
 		require.Contains(t, stdErr, "PushPassword", "error should identify the inaccessible field")
 	})
+}
+
+// comp-a maps .shared and .extra onto the chart root, comp-b maps only
+// .shared. Rendering comp-a must not rewrite the shared package values tree, so comp-b must
+// resolve nested.both to from-shared whether or not comp-a is in the same command.
+func TestValuesMappingDoesNotLeakBetweenComponents(t *testing.T) {
+	t.Log("E2E: Values mapping isolation")
+
+	src := filepath.Join("src", "test", "packages", "42-values", "values-leak")
+	tmpdir := t.TempDir()
+
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	packageName := fmt.Sprintf("zarf-package-test-values-leak-%s.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
+
+	fullOut, stdErr, err := e2e.Zarf(t, "package", "inspect", "values-files", path)
+	require.NoError(t, err, fullOut, stdErr)
+
+	docs := splitValuesFileDocs(fullOut)
+	require.Len(t, docs, 2, "expected one values file per component:\n%s", fullOut)
+	require.Contains(t, docs[0], "both: from-extra", "comp-a maps .extra and must win for itself")
+	require.Contains(t, docs[1], "both: from-shared", "comp-b does not map .extra and must not inherit it from comp-a")
+
+	// The same component must render identically on its own.
+	soloOut, stdErr, err := e2e.Zarf(t, "package", "inspect", "values-files", path, "--components", "comp-b")
+	require.NoError(t, err, soloOut, stdErr)
+
+	soloDocs := splitValuesFileDocs(soloOut)
+	require.Len(t, soloDocs, 1, "expected one values file:\n%s", soloOut)
+	require.Equal(t, docs[1], soloDocs[0], "comp-b's values must not depend on which components are in the command")
+}
+
+// splitValuesFileDocs splits `inspect values-files` output into its per-chart YAML documents.
+func splitValuesFileDocs(out string) []string {
+	var docs []string
+	for _, doc := range strings.Split(out, "---") {
+		if trimmed := strings.TrimSpace(doc); trimmed != "" {
+			docs = append(docs, trimmed)
+		}
+	}
+	return docs
 }

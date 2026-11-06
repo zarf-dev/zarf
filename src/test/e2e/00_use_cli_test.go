@@ -56,6 +56,34 @@ func TestTrustedRootCreate(t *testing.T) {
 func TestUseCLI(t *testing.T) {
 	t.Parallel()
 
+	t.Run("zarf tools download-init", func(t *testing.T) {
+		t.Parallel()
+		for _, apiVersion := range []string{"v1beta1", "v1alpha1"} {
+			t.Run(apiVersion, func(t *testing.T) {
+				t.Parallel()
+				outputDir := t.TempDir()
+				const version = "v0.89.0"
+				args := []string{"tools", "download-init", "--version", version, "--output-directory", outputDir}
+				// Verify v1beta1 is the default and v1alpha1 can be selected explicitly.
+				if apiVersion == "v1alpha1" {
+					args = append(args, "--api-version", apiVersion)
+				}
+				stdOut, stdErr, err := e2e.Zarf(t, args...)
+				require.NoError(t, err, stdOut, stdErr)
+
+				packagePath := filepath.Join(outputDir, fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, version))
+				require.FileExists(t, packagePath)
+				ctx := logger.WithContext(t.Context(), test.GetLogger(t))
+				pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{})
+				require.NoError(t, err)
+				t.Cleanup(func() {
+					require.NoError(t, pkgLayout.Cleanup())
+				})
+				require.Equal(t, "zarf.dev/"+apiVersion, pkgLayout.Definition().GetAPIVersion())
+			})
+		}
+	})
+
 	t.Run("zarf dev upgrade", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
@@ -310,6 +338,45 @@ components:
 		_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=*,-deselect-me", "--confirm")
 		require.NoError(t, err)
 		require.NotContains(t, stdErr, "DESELECT-ME COMPONENT")
+	})
+
+	t.Run("zarf deploy respects component selector order", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		one := filepath.Join(dir, "one")
+		two := filepath.Join(dir, "two")
+		definition := fmt.Sprintf(`kind: ZarfPackageConfig
+metadata:
+  name: component-selector
+components:
+  - name: one
+    default: true
+    actions:
+      onDeploy:
+        after:
+          - cmd: %q
+  - name: two
+    default: true
+    actions:
+      onDeploy:
+        after:
+          - cmd: %q
+`, fmt.Sprintf("touch %q", one), fmt.Sprintf("touch %q", two))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(definition), 0o600))
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", dir, "-o", dir, "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+		pkg := filepath.Join(dir, fmt.Sprintf("zarf-package-component-selector-%s.tar.zst", e2e.Arch))
+
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkg, "--components=-*,two", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+		require.NoFileExists(t, one)
+		require.FileExists(t, two)
+
+		require.NoError(t, os.Remove(two))
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkg, "--components=two,-*", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+		require.NoFileExists(t, one)
+		require.NoFileExists(t, two)
 	})
 
 	t.Run("changing log level", func(t *testing.T) {

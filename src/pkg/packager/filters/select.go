@@ -6,32 +6,39 @@ package filters
 
 import (
 	"github.com/zarf-dev/zarf/src/api"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 )
 
 // BySelectState creates a new simple included filter.
 func BySelectState(optionalComponents string) ComponentFilterStrategy {
-	requested := helpers.StringToSlice(optionalComponents)
+	requested, err := ParseComponentSelectors(optionalComponents)
+	return &selectStateFilter{requestedComponents: requested, err: err}
+}
 
-	return &selectStateFilter{
-		requested,
-	}
+// ByComponentSelectors selects components using an ordered list of names, globs,
+// and exclusions. It takes a detached snapshot; invalid patterns fail on Apply.
+func ByComponentSelectors(selectors []string) ComponentFilterStrategy {
+	requested, err := NormalizeComponentSelectorList(selectors)
+	return &selectStateFilter{requestedComponents: requested, err: err}
 }
 
 // selectStateFilter sorts based purely on the internal included state of the component.
 type selectStateFilter struct {
 	requestedComponents []string
+	err                 error
 }
 
 // Apply applies the filter.
 func (f *selectStateFilter) Apply(pkg api.Package) ([]api.Component, error) {
-	isPartial := len(f.requestedComponents) > 0 && f.requestedComponents[0] != ""
+	if f.err != nil {
+		return nil, f.err
+	}
+	isPartial := len(f.requestedComponents) > 0
 	result := []api.Component{}
 	for _, component := range pkg.Components {
 		selectState := included
 		if isPartial {
 			var err error
-			selectState, _, err = includedOrExcluded(component.Name, f.requestedComponents)
+			selectState, err = includedOrExcluded(component.Name, f.requestedComponents, nil)
 			if err != nil {
 				return nil, err
 			}
