@@ -18,6 +18,7 @@ zarf dev template [ PATH ] [flags]
 
 ```
   -h, --help                 help for template
+      --recursive            Recursively render templates referenced by local component imports
       --set stringToString   Set a package template value (key=value) (default [])
       --set-file string      YAML file containing package template values
       --skip-validation      Skip schema validation of the rendered definition
