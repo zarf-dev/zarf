@@ -199,7 +199,7 @@ func TestGetDeployedPackage(t *testing.T) {
 
 	for _, p := range packages {
 		if p.NamespaceOverride != "" {
-			require.NoError(t, c.UpdateDeployedPackage(ctx, p))
+			require.NoError(t, c.StoreDeployedPackage(ctx, p))
 		} else {
 			// Existing uncompressed state must remain readable alongside new state.
 			b, err := json.Marshal(p)
@@ -353,11 +353,11 @@ func TestUpdateDeployedPackagePreservesLifecycleState(t *testing.T) {
 	require.NoError(t, err)
 	deployed.AppendEvent(state.PackageEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded, Timestamp: time.Unix(2, 0).UTC()})
 	deployed.SetDeployConfig(state.DeployConfig{SetVariables: map[string]string{"VARIABLE": "value"}})
-	require.NoError(t, c.UpdateDeployedPackage(ctx, *deployed))
+	require.NoError(t, c.StoreDeployedPackage(ctx, *deployed))
 
 	deployed.DeployedComponents[0].Status = state.ComponentStatusSucceeded //nolint:staticcheck // Verify legacy status remains serialized.
 	deployed.DeployedComponents[0].LastEvent = state.ComponentEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded, Timestamp: time.Unix(3, 0).UTC()}
-	require.NoError(t, c.UpdateDeployedPackage(ctx, *deployed))
+	require.NoError(t, c.StoreDeployedPackage(ctx, *deployed))
 
 	loaded, err := c.GetDeployedPackage(ctx, definition.Metadata.Name)
 	require.NoError(t, err)

@@ -312,7 +312,7 @@ func (d *deployer) startDeploymentState(ctx context.Context, pkgLayout *layout.P
 	}
 	deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeInProgress))
 	d.deployedPkg = deployedPkg
-	return d.c.UpdateDeployedPackage(ctx, *d.deployedPkg)
+	return d.c.StoreDeployedPackage(ctx, *d.deployedPkg)
 }
 
 func (d *deployer) prepareDeploymentState(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) error {
@@ -351,7 +351,7 @@ func (d *deployer) persistDeploymentState(ctx context.Context, components []stat
 		return nil
 	}
 	d.deployedPkg.SetDeployedComponents(components)
-	return d.c.UpdateDeployedPackage(ctx, *d.deployedPkg)
+	return d.c.StoreDeployedPackage(ctx, *d.deployedPkg)
 }
 
 func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (deployedComponents []state.DeployedComponent, err error) {

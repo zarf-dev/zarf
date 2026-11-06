@@ -106,18 +106,11 @@ func warnOnUnrecognizedPackageAPIVersions(ctx context.Context, deployedPackage s
 	logger.From(ctx).Warn("deployed package contains an API version this version of Zarf does not recognize; operations may use an older converted API version", "package", deployedPackage.Name, "apiVersions", unknown)
 }
 
-// UpdateDeployedPackage updates the deployed package metadata.
-func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
-	if err := c.applyDeployedPackage(ctx, depPkg); err != nil {
-		return fmt.Errorf("unable to apply the deployed package secret: %w", err)
-	}
-	return nil
-}
-
-func (c *Cluster) applyDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
+// StoreDeployedPackage creates or updates the deployed package metadata Secret.
+func (c *Cluster) StoreDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
 	packageSecretData, err := encodeDeployedPackage(depPkg)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to apply the deployed package secret: %w", err)
 	}
 	packageSecret := v1ac.Secret(depPkg.GetSecretName(), state.ZarfNamespaceName).
 		WithLabels(map[string]string{
@@ -132,7 +125,10 @@ func (c *Cluster) applyDeployedPackage(ctx context.Context, depPkg state.Deploye
 		}).
 		WithType(corev1.SecretTypeOpaque)
 	_, err = c.Clientset.CoreV1().Secrets(*packageSecret.Namespace).Apply(ctx, packageSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-	return err
+	if err != nil {
+		return fmt.Errorf("unable to apply the deployed package secret: %w", err)
+	}
+	return nil
 }
 
 func encodeDeployedPackage(depPkg state.DeployedPackage) ([]byte, error) {
@@ -234,7 +230,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg api.Package, 
 		return nil, err
 	}
 
-	if err := c.UpdateDeployedPackage(ctx, *deployedPackage); err != nil {
+	if err := c.StoreDeployedPackage(ctx, *deployedPackage); err != nil {
 		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", deployedPackage.GetSecretName(), err)
 	}
 	return deployedPackage, nil
