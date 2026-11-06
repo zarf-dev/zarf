@@ -195,8 +195,6 @@ type ZarfFile struct {
 // IsTemplate returns if the ZarfFile should be templated or not.
 //
 // Deprecated: Only supported by deprecated v1alpha1 packages.
-//
-// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (f ZarfFile) IsTemplate() bool {
 	if f.Template != nil {
 		return *f.Template
@@ -258,8 +256,6 @@ func (zc ZarfChart) ShouldRunSchemaValidation() bool {
 // GetServerSideApply returns server side apply with default of "auto" if it is not set
 //
 // Deprecated: Only supported by deprecated v1alpha1 packages.
-//
-// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (zc ZarfChart) GetServerSideApply() string {
 	if zc.ServerSideApply == "" {
 		return "auto"
@@ -319,8 +315,6 @@ type ZarfManifest struct {
 // GetServerSideApply returns server side apply with default of "auto" if it is not set
 //
 // Deprecated: Only supported by deprecated v1alpha1 packages.
-//
-// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (m ZarfManifest) GetServerSideApply() string {
 	if m.ServerSideApply == "" {
 		return "auto"
@@ -329,8 +323,6 @@ func (m ZarfManifest) GetServerSideApply() string {
 }
 
 // IsTemplate returns if the ZarfFile should be templated.
-//
-// Deprecated: Only supported by deprecated v1alpha1 packages.
 //
 // Deprecated: Only supported by deprecated v1alpha1 packages.
 func (m ZarfManifest) IsTemplate() bool {
