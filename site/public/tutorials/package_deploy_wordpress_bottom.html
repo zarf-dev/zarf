@@ -46,43 +46,36 @@ b.BWHI {background-color: #aaaaaa}
 </head>
 <body>
 <pre>
-<b class="BOLD FONT HIG"> ? </b><b class="BOLD FONT HIW">Deploy this Zarf package? </b>(y/N) <span style="color:#55ffff;">Yes</span> <br/>
-<b style="color:#55ff55;"> The username that is used to login to the WordPress admin account</b>
-<b class="BOLD FONT HIG"> ? </b><b class="BOLD FONT HIW">Please provide a value for "WORDPRESS_USERNAME"</b><span style="color:#55ffff;">zarf</span> <br/>
-<b style="color:#55ff55;"> The password that is used to login to the WordPress admin account</b>
-<b class="BOLD FONT HIG"> ? </b><b class="BOLD FONT HIW">Please provide a value for "WORDPRESS_PASSWORD"</b><span style="color:#55ffff;">password</span> <br/>
-<b style="color:#55ff55;"> The email that is used for the WordPress admin account</b>
-<b class="BOLD FONT HIG"> ? </b><b class="BOLD FONT HIW">Please provide a value for "WORDPRESS_EMAIL"</b><span style="color:#55ffff;">hello@defenseunicorns.com</span> <br/>
-<b style="color:#55ff55;"> The first name that is used for the WordPress admin account</b>
-<b class="BOLD FONT HIG"> ? </b><b class="BOLD FONT HIW">Please provide a value for "WORDPRESS_FIRST_NAME"</b><span style="color:#55ffff;">Zarf</span> <br/>
-<b style="color:#55ff55;"> The last name that is used for the WordPress admin account</b>
-<b class="BOLD FONT HIG"> ? </b><b class="BOLD FONT HIW">Please provide a value for "WORDPRESS_LAST_NAME"</b><span style="color:#55ffff;">The Axolotl</span> <br/>
-<b style="color:#55ff55;"> The blog name that is used for the WordPress admin account</b>
-<b class="BOLD FONT HIG"> ? </b><b class="BOLD FONT HIW">Please provide a value for "WORDPRESS_BLOG_NAME"</b><span style="color:#55ffff;">The Zarf Blog</span> <br/>
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 WORDPRESS COMPONENT                                                        </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
-<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+<b class="HIG">?</b> <b class="HIW">Deploy this Zarf package? </b><b class="HIC">Yes</b>
+<b class="HIK">2026-11-01 08:57:17</b> <b class="HIG">INF</b> <b class="HIW">starting deploy</b> <b class="HIC">package=</b><b class="WHI">wordpress</b>
+<b class="HIK">2026-11-01 08:57:17</b> <b class="HIG">INF</b> <b class="HIW">The username that is used to login to the WordPress admin account</b>
+<b class="HIG">?</b> <b class="HIW">Please provide a value for "WORDPRESS_USERNAME" </b><b class="HIC">zarf</b>
+<b class="HIK">2026-11-01 08:59:06</b> <b class="HIG">INF</b> <b class="HIW">The password that is used to login to the WordPress admin account</b>
+<b class="HIG">?</b> <b class="HIW">Please provide a value for "WORDPRESS_PASSWORD" </b><b class="HIC">password</b>
+<b class="HIK">2026-11-01 08:59:12</b> <b class="HIG">INF</b> <b class="HIW">The email that is used for the WordPress admin account</b>
+<b class="HIG">?</b> <b class="HIW">Please provide a value for "WORDPRESS_EMAIL" </b><b class="HIC">hello@defenseunicorns.com</b>
+<b class="HIK">2026-11-01 08:59:52</b> <b class="HIG">INF</b> <b class="HIW">The first name that is used for the WordPress admin account</b>
+<b class="HIG">?</b> <b class="HIW">Please provide a value for "WORDPRESS_FIRST_NAME" </b><b class="HIC">Zarf</b>
+<b class="HIK">2026-11-01 09:00:01</b> <b class="HIG">INF</b> <b class="HIW">The last name that is used for the WordPress admin account</b>
+<b class="HIG">?</b> <b class="HIW">Please provide a value for "WORDPRESS_LAST_NAME" </b><b class="HIC">The Axolotl</b>
+<b class="HIK">2026-11-01 09:00:05</b> <b class="HIG">INF</b> <b class="HIW">The blog name that is used for the WordPress admin account</b>
+<b class="HIG">?</b> <b class="HIW">Please provide a value for "WORDPRESS_BLOG_NAME" </b><b class="HIC">The Zarf Blog</b>
+<b class="HIK">2026-11-01 09:00:07</b> <b class="HIG">INF</b> <b class="HIW">waiting for cluster connection</b>
+<b class="HIK">2026-11-01 09:00:07</b> <b class="HIG">INF</b> <b class="HIW">deploying component</b> <b class="HIC">name=</b><b class="WHI">wordpress</b>
+<b class="HIK">2026-11-01 09:00:08</b> <b class="HIG">INF</b> <b class="HIW">pushing image</b> <b class="HIC">name=</b><b class="WHI">docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55</b> <b class="HIC">count=</b><b class="WHI">1/3</b>
+<b class="HIK">2026-11-01 09:00:08</b> <b class="HIG">INF</b> <b class="HIW">pushing image</b> <b class="HIC">name=</b><b class="WHI">docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0</b> <b class="HIC">count=</b><b class="WHI">2/3</b>
+<b class="HIK">2026-11-01 09:00:10</b> <b class="HIG">INF</b> <b class="HIW">pushing image</b> <b class="HIC">name=</b><b class="WHI">docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4</b> <b class="HIC">count=</b><b class="WHI">3/3</b>
+<b class="HIK">2026-11-01 09:00:11</b> <b class="HIG">INF</b> <b class="HIW">done pushing images</b> <b class="HIC">count=</b><b class="WHI">3</b> <b class="HIC">duration=</b><b class="WHI">4s</b>
+<b class="HIK">2026-11-01 09:00:11</b> <b class="HIG">INF</b> <b class="HIW">processing Helm chart</b> <b class="HIC">name=</b><b class="WHI">wordpress</b> <b class="HIC">source=</b><b class="WHI">oci://registry-1.docker.io/bitnamicharts/wordpress</b>
+<b class="HIK">2026-11-01 09:00:11</b> <b class="HIG">INF</b> <b class="HIW">performing Helm install</b> <b class="HIC">chart=</b><b class="WHI">wordpress</b>
+<b class="HIK">2026-11-01 09:01:04</b> <b class="HIG">INF</b> <b class="HIW">running health checks</b> <b class="HIC">chart=</b><b class="WHI">wordpress</b>
+<b class="HIK">2026-11-01 09:01:04</b> <b class="HIG">INF</b> <b class="HIW">processing Helm chart</b> <b class="HIC">name=</b><b class="WHI">raw-wordpress-wordpress-connect-services</b> <b class="HIC">source=</b><b class="WHI">Zarf-generated</b>
+<b class="HIK">2026-11-01 09:01:04</b> <b class="HIG">INF</b> <b class="HIW">performing Helm install</b> <b class="HIC">chart=</b><b class="WHI">raw-wordpress-wordpress-connect-services</b>
+<b class="HIK">2026-11-01 09:01:04</b> <b class="HIG">INF</b> <b class="HIW">running health checks</b> <b class="HIC">chart=</b><b class="WHI">raw-wordpress-wordpress-connect-services</b>
 
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Waiting for cluster connection (30s timeout)</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Waiting for cluster connection (30s timeout)</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading the Zarf State from the Kubernetes cluster</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading the Zarf State from the Kubernetes cluster</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Pushing 3 images to the zarf registry</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Pushed 3 images to the zarf registry</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart wordpress:26.0.0 from oci://registry-1.docker.io/bitnamicharts/wordpress</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart wordpress:26.0.0 from oci://registry-1.docker.io/bitnamicharts/wordpress</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation connect-services</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Starting helm chart generation connect-services</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-wordpress-wordpress-connect-services:0.1.1683421314 from Zarf-generated</b>
-       <b style="color:#55ffff;"></b><b style="color:#55ffff;">helm chart</b>
-  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart raw-wordpress-wordpress-connect-services:0.1.1683421314 from Zarf-generated</b>
-       <b style="color:#55ffff;"></b><b style="color:#55ffff;">helm chart</b>
-<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Zarf deployment complete</b>
-
-<b style="color:#55ffff;"></b><b style="color:#55ffff;">Connect Command             </b><b style="color:#555555;"></b><b style="color:#555555;"> | </b><b style="color:#55ffff;"></b><b style="color:#55ffff;">Description</b>
-<b style="color:#55ffff;"></b>zarf connect wordpress-blog <b style="color:#555555;"></b><b style="color:#555555;"> | </b>The public facing WordPress blog site
-zarf connect wordpress-admin<b style="color:#555555;"></b><b style="color:#555555;"> | </b>The login page for the WordPress admin panel
+      <b class="HIC">Connect Command</b>              <b class="HIK">|</b> <b class="HIC">Description</b>
+      <b class="WHI">zarf connect wordpress-admin</b> <b class="HIK">|</b> <b class="WHI">The login page for the WordPress admin panel</b>
+      <b class="WHI">zarf connect wordpress-blog</b>  <b class="HIK">|</b> <b class="WHI">The public facing WordPress blog site</b>
 </pre>
 </body>
 </html>
