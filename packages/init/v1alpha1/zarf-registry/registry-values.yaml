@@ -1,5 +1,6 @@
 persistence:
   enabled: ###ZARF_VAR_REGISTRY_PVC_ENABLED###
+  storageClass: "###ZARF_VAR_REGISTRY_STORAGE_CLASS###"
   size: "###ZARF_VAR_REGISTRY_PVC_SIZE###"
   existingClaim: "###ZARF_VAR_REGISTRY_EXISTING_PVC###"
   accessMode: "###ZARF_VAR_REGISTRY_PVC_ACCESS_MODE###"
