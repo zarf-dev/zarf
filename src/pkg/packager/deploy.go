@@ -79,7 +79,6 @@ type DeployOptions struct {
 	// How to configure Zarf state if it's not already been configured
 	GitServer    state.GitServerInfo
 	RegistryInfo state.RegistryInfo
-	StorageClass string
 	InjectorPort int
 	// InjectorImage is the injector container image. Proxy mode defaults to the image saved in cluster state and requires an image on first init.
 	InjectorImage string
@@ -546,18 +545,20 @@ func internalServicesFor(components []api.Component, opts DeployOptions) state.S
 }
 
 func (d *deployer) initState(ctx context.Context, pkg api.Package, opts DeployOptions) error {
+	// TODO: Let host-managed init components declare appliance cleanup ownership without relying on the "k3s" name.
 	applianceMode := false
 	for _, component := range pkg.Components {
 		if component.Name == "k3s" {
 			applianceMode = true
+			break
 		}
 	}
+
 	var err error
 	d.s, err = d.c.InitState(ctx, cluster.InitStateOptions{
+		ApplianceMode:       applianceMode,
 		GitServer:           opts.GitServer,
 		RegistryInfo:        opts.RegistryInfo,
-		ApplianceMode:       applianceMode,
-		StorageClass:        opts.StorageClass,
 		InjectorPort:        opts.InjectorPort,
 		AgentTLS:            opts.AgentTLS,
 		AgentMutationPolicy: opts.AgentMutationPolicy,

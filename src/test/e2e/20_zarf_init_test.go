@@ -17,6 +17,11 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
+const (
+	v1AlphaUpgradeStorageClassVariables = "REGISTRY_STORAGE_CLASS=local-path,GIT_SERVER_STORAGE_CLASS=local-path"
+	v1BetaUpgradeStorageClassValues     = "registry.persistence.storageClass=local-path,gitServer.persistence.storageClass=local-path"
+)
+
 func TestZarfInit(t *testing.T) {
 	t.Log("E2E: Zarf init")
 
@@ -54,8 +59,12 @@ func TestZarfInit(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// run `zarf init`
-	_, _, err := e2e.Zarf(t, "init", "--components="+initComponents, "--registry-port", "31337", "--injector-port", "31888", "--confirm")
+	// Run `zarf init`.
+	v1AlphaInitArgs := []string{"init", "--components=" + initComponents, "--registry-port", "31337", "--injector-port", "31888", "--confirm"}
+	if e2e.ApplianceModeKeep {
+		v1AlphaInitArgs = append(v1AlphaInitArgs, "--set-variables", v1AlphaUpgradeStorageClassVariables)
+	}
+	_, _, err := e2e.Zarf(t, v1AlphaInitArgs...)
 	require.NoError(t, err)
 
 	// Load the initialized cluster state.
@@ -92,13 +101,21 @@ func TestZarfInit(t *testing.T) {
 	verifyZarfPodLabels(t)
 	verifyZarfServiceLabels(t)
 
-	// Zarf should fail since registry credentials are changing on a subsequent init
-	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--registry-push-password", "new-password", "--confirm")
+	// Zarf should fail since registry credentials are changing on a subsequent init.
+	v1AlphaReinitArgs := []string{"init", "--components=" + initComponents, "--registry-push-password", "new-password", "--confirm"}
+	if e2e.ApplianceModeKeep {
+		v1AlphaReinitArgs = append(v1AlphaReinitArgs, "--set-variables", v1AlphaUpgradeStorageClassVariables)
+	}
+	_, _, err = e2e.Zarf(t, v1AlphaReinitArgs...)
 	require.Error(t, err)
 
 	// Upgrade the v1alpha1 init installation to the v1beta1 init package.
 	initPackageV1beta1 := filepath.Join("build", "v1beta1-init", fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, initPackageVersion))
-	stdOut, stdErr, err := e2e.Zarf(t, "init", initPackageV1beta1, "--components="+initComponents, "--features=v1beta1=true,values=true", "--confirm")
+	v1BetaInitArgs := []string{"init", initPackageV1beta1, "--components=" + initComponents, "--features=v1beta1=true,values=true", "--confirm"}
+	if e2e.ApplianceModeKeep {
+		v1BetaInitArgs = append(v1BetaInitArgs, "--set-values", v1BetaUpgradeStorageClassValues)
+	}
+	stdOut, stdErr, err := e2e.Zarf(t, v1BetaInitArgs...)
 	require.NoError(t, err, stdOut, stdErr)
 
 	verifyZarfNamespaceLabels(t)

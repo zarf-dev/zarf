@@ -5,4 +5,3 @@ metadata:
   namespace: default
 data:
   registryAddress: "{{ .State.Registry.Address }}"
-  storageClass: "{{ .State.StorageClass }}"
