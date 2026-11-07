@@ -117,6 +117,18 @@ func (opts DeployOptions) Validate(pkg api.Package) error {
 	return nil
 }
 
+func (opts DeployOptions) deployConfig(pkg api.Package) state.DeployConfig {
+	selectors, _ := pkg.ComponentSelectors()
+	return state.DeployConfig{
+		SetVariables:       opts.SetVariables,
+		Values:             opts.Values,
+		NamespaceOverride:  opts.NamespaceOverride,
+		ValuesOverridesMap: opts.ValuesOverridesMap,
+		ComponentSelectors: selectors,
+		Connectivity:       opts.Connectivity,
+	}
+}
+
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
 // any of these fields are subject to change from one component to the next
 type deployer struct {
@@ -146,6 +158,9 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	start := time.Now()
 	pkg := pkgLayout.Definition()
 	if err := opts.Validate(pkg); err != nil {
+		return DeployResult{}, err
+	}
+	if err := validatePackageSecretSize(pkg, pkgLayout.Digest(), opts.deployConfig(pkg)); err != nil {
 		return DeployResult{}, err
 	}
 
@@ -297,15 +312,7 @@ func (d *deployer) startDeploymentState(ctx context.Context, pkgLayout *layout.P
 	deployedPkg.CLIVersion = config.CLIVersion
 	deployedPkg.NamespaceOverride = opts.NamespaceOverride
 
-	selectors, _ := pkg.ComponentSelectors()
-	d.deployConfig = state.DeployConfig{
-		SetVariables:       opts.SetVariables,
-		Values:             opts.Values,
-		NamespaceOverride:  opts.NamespaceOverride,
-		ValuesOverridesMap: opts.ValuesOverridesMap,
-		ComponentSelectors: selectors,
-		Connectivity:       opts.Connectivity,
-	}
+	d.deployConfig = opts.deployConfig(pkg)
 	d.configDigest, err = d.deployConfig.Digest()
 	if err != nil {
 		return fmt.Errorf("digest deploy config: %w", err)
@@ -433,7 +440,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
-			l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
+			return nil, err
 		}
 		if pkg.IsInitConfig() {
 			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
@@ -469,7 +476,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		}
 
 		if deployErr != nil {
-			cleanup := func(ctx context.Context) {
+			cleanup := func(ctx context.Context) error {
 				onFailure()
 				l.Debug("component deployment failed", "component", component.Name, "error", deployErr.Error())
 				deployedComponents[idx].Status = state.ComponentStatusFailed //nolint:staticcheck // Legacy status remains persisted for compatibility.
@@ -478,18 +485,14 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				if d.deployedPkg != nil {
 					d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeFailed))
 				}
-				if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
-					l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
-				}
+				return d.persistDeploymentState(ctx, deployedComponents)
 			}
 			select {
 			case <-ctx.Done():
 				// Use background context here in order to ensure the cleanup logic can run when the context is cancelled.
-				cleanup(context.Background())
-				return nil, fmt.Errorf("context cancelled while deploying component %q: %w", component.Name, deployErr)
+				return nil, fmt.Errorf("context cancelled while deploying component %q: %w", component.Name, errors.Join(deployErr, cleanup(context.Background())))
 			default:
-				cleanup(ctx)
-				return nil, fmt.Errorf("unable to deploy component %q: %w", component.Name, deployErr)
+				return nil, fmt.Errorf("unable to deploy component %q: %w", component.Name, errors.Join(deployErr, cleanup(ctx)))
 			}
 		}
 
@@ -498,7 +501,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		deployedComponents[idx].Status = state.ComponentStatusSucceeded //nolint:staticcheck // Legacy status remains persisted for compatibility.
 		deployedComponents[idx].LastEvent = state.ComponentEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded, Timestamp: time.Now()}
 		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
-			l.Error("unable to record package deployment", "component", component.Name, "error", err.Error())
+			return nil, err
 		}
 
 		// Alpha success hooks observe the saved successful deployment.
@@ -508,10 +511,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				if d.deployedPkg != nil {
 					d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeFailed))
 				}
-				if persistErr := d.persistDeploymentState(ctx, deployedComponents); persistErr != nil {
-					l.Error("unable to record package deployment", "component", component.Name, "error", persistErr.Error())
-				}
-				return nil, err
+				return nil, errors.Join(err, d.persistDeploymentState(ctx, deployedComponents))
 			}
 		}
 	}
@@ -520,7 +520,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		d.deployedPkg.AppendEvent(d.deployPackageEvent(pkgLayout, opts, state.EventOutcomeSucceeded))
 		d.deployedPkg.SetDeployConfig(d.deployConfig)
 		if err := d.persistDeploymentState(ctx, deployedComponents); err != nil {
-			l.Error("unable to record package deployment", "error", err.Error())
+			return nil, err
 		}
 	}
 	return deployedComponents, nil
