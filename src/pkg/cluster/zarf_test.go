@@ -6,8 +6,10 @@ package cluster
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"testing"
 	"time"
@@ -105,11 +107,17 @@ func TestRecordPackageDefinitionDeployment(t *testing.T) {
 
 	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, recorded.GetSecretName(), metav1.GetOptions{})
 	require.NoError(t, err)
+	require.Equal(t, "gzip", secret.Annotations["zarf.dev/compression-format"])
+	reader, err := gzip.NewReader(bytes.NewReader(secret.Data["data"]))
+	require.NoError(t, err)
+	secretData, err := io.ReadAll(reader)
+	require.NoError(t, reader.Close())
+	require.NoError(t, err)
 	var serialized struct {
 		Data        v1alpha1.ZarfPackage       `json:"data"`
 		PackageData map[string]json.RawMessage `json:"packageData"`
 	}
-	require.NoError(t, json.Unmarshal(secret.Data["data"], &serialized))
+	require.NoError(t, json.Unmarshal(secretData, &serialized))
 	require.Equal(t, convert.PackageToV1alpha1(definition), serialized.Data)
 	require.Len(t, serialized.PackageData, 1)
 	require.Contains(t, serialized.PackageData, v1beta1.APIVersion)
@@ -190,22 +198,27 @@ func TestGetDeployedPackage(t *testing.T) {
 	}
 
 	for _, p := range packages {
-		b, err := json.Marshal(p)
-		require.NoError(t, err)
-		secret := corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      p.GetSecretName(),
-				Namespace: "zarf",
-				Labels: map[string]string{
-					state.ZarfPackageInfoLabel: p.Name,
+		if p.NamespaceOverride != "" {
+			require.NoError(t, c.StoreDeployedPackage(ctx, p))
+		} else {
+			// Existing uncompressed state must remain readable alongside new state.
+			b, err := json.Marshal(p)
+			require.NoError(t, err)
+			secret := corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      p.GetSecretName(),
+					Namespace: "zarf",
+					Labels: map[string]string{
+						state.ZarfPackageInfoLabel: p.Name,
+					},
 				},
-			},
-			Data: map[string][]byte{
-				"data": b,
-			},
+				Data: map[string][]byte{
+					"data": b,
+				},
+			}
+			_, err = c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})
+			require.NoError(t, err)
 		}
-		_, err = c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})
-		require.NoError(t, err)
 		actual, err := c.GetDeployedPackage(ctx, p.Name, state.WithPackageNamespaceOverride(p.NamespaceOverride))
 		require.NoError(t, err)
 		require.Equal(t, p, *actual)
@@ -226,6 +239,63 @@ func TestGetDeployedPackage(t *testing.T) {
 	actualList, err := c.GetDeployedZarfPackages(ctx)
 	require.NoError(t, err)
 	require.ElementsMatch(t, packages, actualList)
+}
+
+func TestGetDeployedPackageCompressedState(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	writer := gzip.NewWriter(&buf)
+	_, err := writer.Write([]byte(`{"name":"compressed"}`))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+	compressed := buf.Bytes()
+	badChecksum := bytes.Clone(compressed)
+	badChecksum[len(badChecksum)-8] ^= 0xff
+
+	for name, tt := range map[string]struct {
+		format string
+		data   []byte
+		err    string
+	}{
+		"valid":                   {"gzip", compressed, ""},
+		"truncated header":        {"gzip", []byte{0x1f, 0x8b, 0x08}, io.ErrUnexpectedEOF.Error()},
+		"truncated gzip":          {"gzip", compressed[:len(compressed)-1], io.ErrUnexpectedEOF.Error()},
+		"invalid checksum":        {"gzip", badChecksum, gzip.ErrChecksum.Error()},
+		"uncompressed gzip data":  {"gzip", []byte(`{"name":"compressed"}`), gzip.ErrHeader.Error()},
+		"unsupported compression": {"zstd", []byte(`{"name":"compressed"}`), `unsupported deployed package compression format "zstd"`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-package-compressed",
+					Namespace: state.ZarfNamespaceName,
+					Labels:    map[string]string{state.ZarfPackageInfoLabel: "compressed"},
+					Annotations: map[string]string{
+						"zarf.dev/compression-format": tt.format,
+					},
+				},
+				Data: map[string][]byte{"data": tt.data},
+			}
+			c := &Cluster{Clientset: fake.NewClientset(secret)}
+			loaded, err := c.GetDeployedPackage(t.Context(), "compressed")
+			listed, listErr := c.GetDeployedZarfPackages(t.Context())
+			if tt.err == "" {
+				require.NoError(t, err)
+				require.NoError(t, listErr)
+				require.Equal(t, &state.DeployedPackage{Name: "compressed"}, loaded)
+				require.Equal(t, []state.DeployedPackage{*loaded}, listed)
+				return
+			}
+			require.ErrorContains(t, err, tt.err)
+			require.ErrorContains(t, err, "zarf/zarf-package-compressed")
+			require.Nil(t, loaded)
+			require.ErrorContains(t, listErr, tt.err)
+			require.ErrorContains(t, listErr, "zarf/zarf-package-compressed")
+			require.Nil(t, listed)
+		})
+	}
 }
 
 func TestInternalGitServerExists(t *testing.T) {
@@ -283,11 +353,11 @@ func TestUpdateDeployedPackagePreservesLifecycleState(t *testing.T) {
 	require.NoError(t, err)
 	deployed.AppendEvent(state.PackageEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded, Timestamp: time.Unix(2, 0).UTC()})
 	deployed.SetDeployConfig(state.DeployConfig{SetVariables: map[string]string{"VARIABLE": "value"}})
-	require.NoError(t, c.UpdateDeployedPackage(ctx, *deployed))
+	require.NoError(t, c.StoreDeployedPackage(ctx, *deployed))
 
 	deployed.DeployedComponents[0].Status = state.ComponentStatusSucceeded //nolint:staticcheck // Verify legacy status remains serialized.
 	deployed.DeployedComponents[0].LastEvent = state.ComponentEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded, Timestamp: time.Unix(3, 0).UTC()}
-	require.NoError(t, c.UpdateDeployedPackage(ctx, *deployed))
+	require.NoError(t, c.StoreDeployedPackage(ctx, *deployed))
 
 	loaded, err := c.GetDeployedPackage(ctx, definition.Metadata.Name)
 	require.NoError(t, err)
@@ -302,5 +372,6 @@ func TestUpdateDeployedPackagePreservesLifecycleState(t *testing.T) {
 		state.ZarfManagedByLabel:   "zarf",
 		state.ZarfPackageInfoLabel: definition.Metadata.Name,
 	}, secret.Labels)
+	require.Equal(t, "gzip", secret.Annotations["zarf.dev/compression-format"])
 	require.Contains(t, secret.Data, "data")
 }
