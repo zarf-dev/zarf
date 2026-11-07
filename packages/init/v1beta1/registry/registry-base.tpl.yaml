@@ -41,9 +41,6 @@ component:
             - .registry.service.registryPort
             - .registry.service.nodePort
             - .registry.fullnameOverride
-            # The state-managed label key contains dots and cannot be addressed individually.
-            # FIXME: probably don't need all pod labels
-            - .registry.podLabels
             - .registry.image.repository
             - .registry.image.tag
             - .registry.image.digest
