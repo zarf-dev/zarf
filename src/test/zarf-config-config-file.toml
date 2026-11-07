@@ -4,7 +4,7 @@ log_level = 'info'
 [package.create]
 skip_sbom = false
 
-[package.create.set]
+[dev.template.set]
 zebra = 'stripes'
 leopard = 'spots'
 

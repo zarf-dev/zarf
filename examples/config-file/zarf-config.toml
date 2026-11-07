@@ -1,11 +1,11 @@
-# Example config file, use "zarf prepare generate-config" to generate a new one
+# Example config file, use "zarf dev generate-config" to generate a new one
 log_level = 'info'
 
 [package]
 [package.create]
 skip_sbom = false
 
-[package.create.set]
+[dev.template.set]
 zebra = 'stripes'
 leopard = 'spots'
 

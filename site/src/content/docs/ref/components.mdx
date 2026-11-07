@@ -245,35 +245,33 @@ During `zarf package create`, data injections pull files from the host at the pa
 ### Component Imports
 
 <Properties item="ZarfComponent" include={["import"]} />
+The v1beta1 `import` key supports two sources for reusable `ZarfComponentConfig` definitions:
 
-The `import` key in Zarf supports two modes to pull in a component:
+1. `local[].path` references a component definition file on the local filesystem.
+2. `remote[].url` references a component published to an OCI registry with `zarf component publish`.
 
-1. The `path` key allows you to specify a path to a directory that contains the `zarf.yaml` that you wish to import on your local filesystem.  This allows you to have a common component that you can reuse across multiple packages *within* a project (i.e. within one team/codebase).
+These fields are lists so you can provide alternative component variants. Zarf selects exactly one source whose `variant.flavor` and `variant.architecture` match the package creation target. Multiple entries are alternatives, not components to merge together. Use nested imports to extend a component.
 
-2. The `url` key allows you to specify an `oci://` URL to a skeleton package that was published to an OCI registry.  Skeleton packages are special package bundles that contain the `zarf.yaml` package definition and any local files referenced by that definition at publish time.  This allows you to version a set of reusable components and import them into multiple packages *across* projects (i.e. across teams/codebases).
-
-:::caution
-
-The import `path` or `url` must be statically defined at create time.  You cannot use [package templates](/ref/create/#package-templates) within them.
-
-:::
+The examples below use v1beta1. For v1alpha1, imports use `path` to reference a package directory or `url` to reference a skeleton package. See [Migrating Packages from v1alpha1 to v1beta1](/best-practices/v1alpha1-to-v1beta1/#component-imports) for migration details.
 
 <Tabs>
   <TabItem label="Local Path">
-    <ExampleYAML src={import("../../../../../examples/composable-packages/zarf.yaml?raw")} component="local-games-path" />
+    <ExampleYAML src={import("../../../../../examples/composable-packages/zarf.yaml?raw")} component="local-import" />
   </TabItem>
   <TabItem label="OCI URL">
-    <ExampleYAML src={import("../../../../../examples/composable-packages/zarf.yaml?raw")} component="oci-games-url" />
+    <ExampleYAML src={import("../../../../../examples/composable-packages/zarf.yaml?raw")} component="remote-import" />
   </TabItem>
 </Tabs>
 
 :::tip
 
-You can create a skeleton package from a `zarf.yaml` by pointing `zarf package publish` at the directory that contains it:
+Publish the reusable component before creating the package that imports it:
 
 ```bash
-zarf package publish path/containing/package/definition oci://your-registry.com
+zarf component publish examples/composable-packages/components/application.yaml oci://your-registry.com
 ```
+
+Set `import.remote[].url` to the resulting component URL. The [composable packages example](/ref/examples/composable-packages/) includes a local registry workflow.
 
 :::
 

@@ -20,7 +20,11 @@ func TestConfigFileCreate(t *testing.T) {
 
 	t.Setenv("ZARF_CONFIG", filepath.Join("src", "test", "zarf-config-config-file.toml"))
 
-	_, _, err := e2e.Zarf(t, "package", "create", dir, "--confirm", "-o", tmpDir)
+	_, _, err := e2e.Zarf(t, "dev", "template", dir)
+	require.NoError(t, err)
+	t.Cleanup(func() { e2e.CleanFiles(t, filepath.Join(dir, "zarf.gen.yaml")) })
+
+	_, _, err = e2e.Zarf(t, "package", "create", dir, "--confirm", "-o", tmpDir)
 	require.NoError(t, err)
 
 	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch))

@@ -23,13 +23,19 @@ export async function generateExamples({
   const examples = [];
   for (const dir of dirs) {
     let content;
-    try {
-      content = await fs.readFile(path.join(examplesDir, dir, "zarf.yaml"), "utf-8");
-    } catch {
-      continue;
+    let definitionFile;
+    for (const filename of ["zarf.yaml", "zarf.tpl.yaml"]) {
+      try {
+        content = await fs.readFile(path.join(examplesDir, dir, filename), "utf-8");
+        definitionFile = filename;
+        break;
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
     }
+    if (!content) continue;
     const parsed = yaml.parse(content);
-    const readmeFile = parsed.documentation?.readme;
+    const readmeFile = (parsed.attachments ?? parsed.documentation)?.readme;
     if (!readmeFile) {
       continue;
     }
@@ -61,7 +67,7 @@ To view the full example, as well as its dependencies, please visit [examples/${
     const final = `${fm}
 ${readme}
 
-## zarf.yaml
+## ${definitionFile}
 
 \`\`\`yaml
 ${pkg}

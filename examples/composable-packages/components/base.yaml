@@ -1,0 +1,11 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: base-settings
+  description: Shared configuration reused by application components
+component:
+  manifests:
+    - name: configuration
+      namespace: imports-base
+      files:
+        - ../manifests/shared-settings.yaml

@@ -1,3 +1,4 @@
+apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: podinfo-flux
@@ -6,37 +7,34 @@ metadata:
 components:
   - name: flux
     description: Installs the flux CRDs / controllers to use flux-based deployments in the cluster
-    required: true
     manifests:
       - name: flux-install
         namespace: flux-system
         files:
           - https://github.com/fluxcd/flux2/releases/download/v2.4.0/install.yaml
     images:
-      - ghcr.io/fluxcd/helm-controller:v1.1.0
-      - ghcr.io/fluxcd/image-automation-controller:v0.39.0
-      - ghcr.io/fluxcd/image-reflector-controller:v0.33.0
-      - ghcr.io/fluxcd/kustomize-controller:v1.4.0
-      - ghcr.io/fluxcd/notification-controller:v1.4.0
-      - ghcr.io/fluxcd/source-controller:v1.4.1
+      - name: ghcr.io/fluxcd/helm-controller:v1.1.0
+      - name: ghcr.io/fluxcd/image-automation-controller:v0.39.0
+      - name: ghcr.io/fluxcd/image-reflector-controller:v0.33.0
+      - name: ghcr.io/fluxcd/kustomize-controller:v1.4.0
+      - name: ghcr.io/fluxcd/notification-controller:v1.4.0
+      - name: ghcr.io/fluxcd/source-controller:v1.4.1
 
   - name: podinfo-via-flux-git
     description: Example deployment via flux (git) using the famous podinfo example
-    required: true
     manifests:
       - name: podinfo
         namespace: podinfo-git
         files:
           - git/podinfo-source.yaml
           - git/podinfo-kustomization.yaml
-    repos:
-      - https://github.com/stefanprodan/podinfo.git
+    repositories:
+      - url: https://github.com/stefanprodan/podinfo.git
     images:
-      - ghcr.io/stefanprodan/podinfo:6.4.0
+      - name: ghcr.io/stefanprodan/podinfo:6.4.0
 
   - name: podinfo-via-flux-helm
     description: Example deployment via flux (helm oci) using the famous podinfo example
-    required: true
     manifests:
       - name: podinfo
         namespace: podinfo-helm
@@ -44,13 +42,12 @@ components:
           - helm/podinfo-source.yaml
           - helm/podinfo-helmrelease.yaml
     images:
-      - ghcr.io/stefanprodan/podinfo:6.4.0
+      - name: ghcr.io/stefanprodan/podinfo:6.4.0
       # Note: this is a helm OCI artifact rather than a container image
-      - ghcr.io/stefanprodan/charts/podinfo:6.4.0
+      - name: ghcr.io/stefanprodan/charts/podinfo:6.4.0
 
   - name: podinfo-via-flux-helm-oci
     description: Example deployment via flux (helm oci repo) using the famous podinfo example
-    required: true
     manifests:
       - name: podinfo
         namespace: podinfo-helm-oci
@@ -58,13 +55,12 @@ components:
           - helm-oci/podinfo-source.yaml
           - helm-oci/podinfo-helmrelease.yaml
     images:
-      - ghcr.io/stefanprodan/podinfo:6.4.0
+      - name: ghcr.io/stefanprodan/podinfo:6.4.0
       # Note: this is a helm OCI artifact rather than a container image
-      - ghcr.io/stefanprodan/charts/podinfo:6.4.0
+      - name: ghcr.io/stefanprodan/charts/podinfo:6.4.0
 
   - name: podinfo-via-flux-oci
     description: Example deployment via flux (native oci) using the famous podinfo example
-    required: true
     manifests:
       - name: podinfo
         namespace: podinfo-oci
@@ -72,9 +68,9 @@ components:
           - oci/podinfo-source.yaml
           - oci/podinfo-kustomization.yaml
     images:
-      - ghcr.io/stefanprodan/podinfo:6.4.0
+      - name: ghcr.io/stefanprodan/podinfo:6.4.0
       # Note: this is a flux kustomize OCI artifact rather than a container image
-      - ghcr.io/stefanprodan/manifests/podinfo:6.4.0
+      - name: ghcr.io/stefanprodan/manifests/podinfo:6.4.0
 
-documentation:
+attachments:
   readme: readme.md

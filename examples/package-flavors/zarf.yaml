@@ -1,17 +1,17 @@
+apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: package-flavors
-  description: Simple example to show how to use the `only.flavor` key to build package variants.
+  description: Simple example to show how to use the `selector.flavor` key to build package variants.
   version: 1.0.0
 
 components:
   - name: image
-    required: true
     description: "Sets the Enterprise Linux flavor to Rocky Linux"
-    only:
+    selector:
       flavor: rocky-road
     images:
-      - rockylinux:9-minimal
+      - name: rockylinux:9-minimal
     actions:
       onDeploy:
         before:
@@ -20,12 +20,11 @@ components:
               - key: .image
 
   - name: image
-    required: true
     description: "Sets the Enterprise Linux flavor to Oracle Linux"
-    only:
+    selector:
       flavor: oracle-cookie-crunch
     images:
-      - oraclelinux:9-slim
+      - name: oraclelinux:9-slim
     actions:
       onDeploy:
         before:
@@ -34,12 +33,11 @@ components:
               - key: .image
 
   - name: image
-    required: true
     description: "Sets the Enterprise Linux flavor to Alma Linux"
-    only:
+    selector:
       flavor: vanilla-alma-nd
     images:
-      - almalinux:9-minimal
+      - name: almalinux:9-minimal
     actions:
       onDeploy:
         before:
@@ -48,12 +46,11 @@ components:
               - key: .image
 
   - name: image
-    required: true
     description: "Sets the Enterprise Linux flavor to OpenSUSE"
-    only:
+    selector:
       flavor: strawberry-suse
     images:
-      - opensuse/leap:15
+      - name: opensuse/leap:15
     actions:
       onDeploy:
         before:
@@ -63,13 +60,12 @@ components:
 
   - name: pod
     description: "The pod that runs the specified flavor of Enterprise Linux"
-    required: true
     manifests:
       - name: enterprise-linux
-        template: true
+        enableTemplating: true
         namespace: enterprise-linux
         files:
           - pod.yaml
 
-documentation:
+attachments:
   readme: readme.md

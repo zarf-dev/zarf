@@ -4,7 +4,7 @@ This example demonstrates Zarf's beta values templating system, including suppor
 
 ## Features Demonstrated
 
-- **Basic templating** with `{{ .Values.* }}`, `{{ .Build.* }}`, `{{ .Metadata.* }}`, `{{ .Constants.* }}`, and `{{ .Variables.* }}`
+- **Basic templating** with `{{ .Values.* }}`, `{{ .Build.* }}`, and `{{ .Metadata.* }}`
 - **Cluster state** with `{{ .State.Registry.Address }}`, `{{ .State.StorageClass }}`, `{{ .State.IPFamily }}`, and other non-sensitive runtime fields via `.State`
 - **Package object** access via `.Pkg`, including `{{ (.Pkg.GetComponent "name").Images }}` to look up a component by name
 - **Sprig functions** for string manipulation, lists, math, encoding, and more

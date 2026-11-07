@@ -42,15 +42,17 @@ import configToml from "../../../../../examples/config-file/zarf-config.toml?raw
 
 ## Example Package
 
-import packageConfig from "../../../../../examples/config-file/zarf.yaml?raw";
+import packageConfig from "../../../../../examples/config-file/zarf.tpl.yaml?raw";
 
 ```bash
-export ZARF_CONFIG=examples/config-file/zarf-config.yaml
+cd examples/config-file
+export ZARF_CONFIG=zarf-config.yaml
 
-zarf package create examples/config-file --confirm
+zarf dev template
+zarf package create . --confirm
 
 # replace <arch> with your system architecture
 zarf package deploy zarf-package-config-file-<arch>.tar.zst --confirm
 ```
 
-<Code code={packageConfig} lang="yaml" title="zarf.yaml" />
+<Code code={packageConfig} lang="yaml" title="zarf.tpl.yaml" />

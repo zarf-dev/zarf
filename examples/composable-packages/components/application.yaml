@@ -1,0 +1,15 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: application
+  description: Application configuration extending a shared base component
+  version: 1.0.0
+component:
+  import:
+    local:
+      - path: base.yaml
+  manifests:
+    # Extend the imported manifest group by appending another file.
+    - name: configuration
+      files:
+        - ../manifests/application-settings.yaml
