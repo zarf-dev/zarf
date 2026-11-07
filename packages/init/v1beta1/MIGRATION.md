@@ -94,6 +94,11 @@ a file path. Packaged images are selected when the package is built, and runtime
 addresses and credentials are supplied by Zarf; neither needs a deploy-time image
 or credential variable.
 
+Values cannot override fields supplied by Zarf state, including service ports,
+registry mode, credentials, agent certificates and mutation policy, or the
+packaged image references. Overrides for these fields fail values validation.
+Use the corresponding `zarf init` options to configure these.
+
 `GIT_SERVER_CREATE_PVC` remains action-managed as `gitServer.persistence.create`.
 The pre-deploy action overwrites any supplied value based on whether the PVC
 exists. Set `gitServer.persistence.claimName` to choose the PVC.

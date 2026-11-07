@@ -208,15 +208,11 @@
                   "type": "string"
                 },
                 "existingSecret": {},
-                "password": {
-                  "type": "string"
-                },
+                "password": false,
                 "passwordMode": {
                   "type": "string"
                 },
-                "username": {
-                  "type": "string"
-                }
+                "username": false
               },
               "type": "object"
             },
@@ -480,9 +476,7 @@
             "digest": {
               "type": "string"
             },
-            "fullOverride": {
-              "type": "string"
-            },
+            "fullOverride": false,
             "pullPolicy": {
               "type": "string"
             },

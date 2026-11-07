@@ -10,9 +10,7 @@
             "null"
           ]
         },
-        "caBundle": {
-          "type": "string"
-        },
+        "caBundle": false,
         "clusterRole": {
           "properties": {
             "name": {
@@ -42,18 +40,12 @@
         },
         "image": {
           "properties": {
-            "digest": {
-              "type": "string"
-            },
+            "digest": false,
             "pullSecret": {
               "type": "string"
             },
-            "repository": {
-              "type": "string"
-            },
-            "tag": {
-              "type": "string"
-            }
+            "repository": false,
+            "tag": false
           },
           "type": "object"
         },
@@ -67,13 +59,7 @@
           },
           "type": "array"
         },
-        "mutationPolicy": {
-          "enum": [
-            "all",
-            "labeled"
-          ],
-          "type": "string"
-        },
+        "mutationPolicy": false,
         "nodeSelector": {
           "additionalProperties": {
             "type": "string"
@@ -144,12 +130,8 @@
             "name": {
               "type": "string"
             },
-            "tlsCrt": {
-              "type": "string"
-            },
-            "tlsKey": {
-              "type": "string"
-            }
+            "tlsCrt": false,
+            "tlsKey": false
           },
           "type": "object"
         },

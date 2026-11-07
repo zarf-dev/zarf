@@ -27,3 +27,27 @@ component:
       values:
         - sourcePath: .registry
           targetPath: .
+          excludePaths:
+            - .registry.proxy.enabled
+            - .registry.proxy.injector.hostPort
+            - .registry.proxy.injector.image
+            - .registry.proxy.injector.payLoadConfigMapAmount
+            - .registry.proxy.injector.shasum
+            - .registry.imagePullSecrets
+            - .registry.mtls.enabled
+            - .registry.secrets.htpasswd
+            - .registry.secrets.configData.http.secret
+            - .registry.ipv6Only
+            - .registry.service.registryPort
+            - .registry.service.nodePort
+            - .registry.fullnameOverride
+            # The state-managed label key contains dots and cannot be addressed individually.
+            # FIXME: probably don't need all pod labels
+            - .registry.podLabels
+            - .registry.image.repository
+            - .registry.image.tag
+            - .registry.image.digest
+            - .registry.proxy.image.repository
+            - .registry.proxy.image.tag
+            - .registry.proxy.image.digest
+            - .registry.proxy.registry.image.repository

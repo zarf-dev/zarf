@@ -65,42 +65,20 @@
             "null"
           ]
         },
-        "fullnameOverride": {
-          "type": "string"
-        },
+        "fullnameOverride": false,
         "image": {
           "properties": {
-            "digest": {
-              "type": "string"
-            },
-            "repository": {
-              "type": "string"
-            },
-            "tag": {
-              "type": "string"
-            }
+            "digest": false,
+            "repository": false,
+            "tag": false
           },
           "type": "object"
         },
-        "imagePullSecrets": {
-          "items": {
-            "properties": {
-              "name": {
-                "type": "string"
-              }
-            },
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "ipv6Only": {
-          "type": "boolean"
-        },
+        "imagePullSecrets": false,
+        "ipv6Only": false,
         "mtls": {
           "properties": {
-            "enabled": {
-              "type": "boolean"
-            }
+            "enabled": false
           },
           "type": "object"
         },
@@ -179,51 +157,30 @@
             "type": "string"
           },
           "properties": {
-            "zarf.dev/agent": {
-              "type": "string"
-            }
+            "zarf.dev/agent": false
           },
           "type": "object"
         },
         "proxy": {
           "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
+            "enabled": false,
             "hostNetwork": {
               "type": "boolean"
             },
             "image": {
               "properties": {
-                "digest": {
-                  "type": "string"
-                },
-                "repository": {
-                  "type": "string"
-                },
-                "tag": {
-                  "type": "string"
-                }
+                "digest": false,
+                "repository": false,
+                "tag": false
               },
               "type": "object"
             },
             "injector": {
               "properties": {
-                "hostPort": {
-                  "type": "integer"
-                },
-                "image": {
-                  "type": "string"
-                },
-                "payLoadConfigMapAmount": {
-                  "type": [
-                    "integer",
-                    "string"
-                  ]
-                },
-                "shasum": {
-                  "type": "string"
-                }
+                "hostPort": false,
+                "image": false,
+                "payLoadConfigMapAmount": false,
+                "shasum": false
               },
               "type": "object"
             },
@@ -234,9 +191,7 @@
               "properties": {
                 "image": {
                   "properties": {
-                    "repository": {
-                      "type": "string"
-                    }
+                    "repository": false
                   },
                   "type": "object"
                 }
@@ -355,9 +310,7 @@
                       },
                       "type": "object"
                     },
-                    "secret": {
-                      "type": "string"
-                    }
+                    "secret": false
                   },
                   "type": "object"
                 },
@@ -393,9 +346,7 @@
               },
               "type": "object"
             },
-            "htpasswd": {
-              "type": "string"
-            }
+            "htpasswd": false
           },
           "type": "object"
         },
@@ -418,23 +369,11 @@
             "name": {
               "type": "string"
             },
-            "nodePort": {
-              "type": [
-                "integer",
-                "string",
-                "null"
-              ]
-            },
+            "nodePort": false,
             "port": {
               "type": "integer"
             },
-            "registryPort": {
-              "type": [
-                "integer",
-                "string",
-                "null"
-              ]
-            },
+            "registryPort": false,
             "type": {
               "type": "string"
             }
