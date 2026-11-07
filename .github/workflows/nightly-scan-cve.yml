@@ -14,7 +14,7 @@ permissions:
 jobs:
   cve-scan:
     # Only run this job for the main Zarf repository unless explicitly triggered manually
-    if: ${{ github.repository == 'zarf-dev/zarf' || github.event_name == 'workflow_dispatch' }} 
+    if: ${{ github.repository == 'zarf-dev/zarf' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,8 +23,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: main
 
       - name: Setup golang
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -80,8 +78,8 @@ jobs:
             build/grype.json
             build/grype.sarif
 
-      - name: Send trigger to Slack on workflow failure
-        if: failure()
+      - name: Send trigger to Slack on scheduled workflow failure
+        if: ${{ failure() && github.event_name == 'schedule' }}
         uses: ./.github/actions/slack
         with:
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
