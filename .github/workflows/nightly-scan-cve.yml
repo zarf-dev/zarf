@@ -58,6 +58,13 @@ jobs:
       - name: Run grype scan (fails on High+)
         run: make scan-grype GRYPE="${{ steps.grype.outputs.cmd }}"
 
+      - name: Upload grype SARIF to Code Scanning
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        if: always()
+        with:
+          sarif_file: build/grype.sarif
+          category: grype
+
       - name: Check for orphaned VEX statements
         if: always()
         run: make vex-lint
@@ -70,6 +77,7 @@ jobs:
           retention-days: 30
           path: |
             build/grype.json
+            build/grype.sarif
 
       - name: Send trigger to Slack on workflow failure
         if: failure()
