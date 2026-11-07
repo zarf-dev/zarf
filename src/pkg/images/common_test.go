@@ -121,3 +121,56 @@ func TestInspectIndex(t *testing.T) {
 		require.ElementsMatch(t, []string{"amd64"}, platforms)
 	})
 }
+
+func TestIsContainerImage(t *testing.T) {
+	tests := map[string]struct {
+		manifest ocispec.Manifest
+		isImage  bool
+	}{
+		"accepts OCI image": {
+			manifest: ocispec.Manifest{
+				Config: ocispec.Descriptor{MediaType: ocispec.MediaTypeImageConfig},
+				Layers: []ocispec.Descriptor{{MediaType: ocispec.MediaTypeImageLayerGzip}},
+			},
+			isImage: true,
+		},
+		"accepts docker image": {
+			manifest: ocispec.Manifest{
+				Config: ocispec.Descriptor{MediaType: DockerMediaTypeConfig},
+				Layers: []ocispec.Descriptor{{MediaType: DockerLayer}},
+			},
+			isImage: true,
+		},
+		"rejects image config without layers": {
+			manifest: ocispec.Manifest{
+				Config: ocispec.Descriptor{MediaType: ocispec.MediaTypeImageConfig},
+			},
+			isImage: false,
+		},
+		"rejects OCI empty descriptor layer": {
+			manifest: ocispec.Manifest{
+				Config: ocispec.Descriptor{MediaType: ocispec.MediaTypeImageConfig},
+				Layers: []ocispec.Descriptor{ocispec.DescriptorEmptyJSON},
+			},
+			isImage: false,
+		},
+		"rejects image layer with unknown config mediatype": {
+			manifest: ocispec.Manifest{
+				Config: ocispec.Descriptor{
+					MediaType: "application/vnd.unknown.config.v1+json",
+				},
+				Layers: []ocispec.Descriptor{{
+					MediaType: ocispec.MediaTypeImageLayerGzip,
+				}},
+			},
+			isImage: false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, IsContainerImage(test.manifest), test.isImage)
+		})
+	}
+}
