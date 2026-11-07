@@ -208,13 +208,7 @@
                   "type": "string"
                 },
                 "existingSecret": {},
-                "password": {
-                  "type": "string"
-                },
                 "passwordMode": {
-                  "type": "string"
-                },
-                "username": {
                   "type": "string"
                 }
               },
@@ -480,9 +474,6 @@
             "digest": {
               "type": "string"
             },
-            "fullOverride": {
-              "type": "string"
-            },
             "pullPolicy": {
               "type": "string"
             },
@@ -609,11 +600,11 @@
               "type": "object"
             },
             "claimName": {
-              "type": "string",
               "description": "Name of the Gitea persistent volume claim (a Kubernetes DNS subdomain).",
-              "minLength": 1,
               "maxLength": 253,
-              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+              "minLength": 1,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+              "type": "string"
             },
             "create": {
               "type": "boolean"

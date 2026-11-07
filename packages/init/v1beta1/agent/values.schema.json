@@ -10,9 +10,6 @@
             "null"
           ]
         },
-        "caBundle": {
-          "type": "string"
-        },
         "clusterRole": {
           "properties": {
             "name": {
@@ -42,16 +39,7 @@
         },
         "image": {
           "properties": {
-            "digest": {
-              "type": "string"
-            },
             "pullSecret": {
-              "type": "string"
-            },
-            "repository": {
-              "type": "string"
-            },
-            "tag": {
               "type": "string"
             }
           },
@@ -66,13 +54,6 @@
             "type": "string"
           },
           "type": "array"
-        },
-        "mutationPolicy": {
-          "enum": [
-            "all",
-            "labeled"
-          ],
-          "type": "string"
         },
         "nodeSelector": {
           "additionalProperties": {
@@ -142,12 +123,6 @@
         "secret": {
           "properties": {
             "name": {
-              "type": "string"
-            },
-            "tlsCrt": {
-              "type": "string"
-            },
-            "tlsKey": {
               "type": "string"
             }
           },

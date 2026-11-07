@@ -35,6 +35,10 @@ component:
       values:
         - sourcePath: .gitServer
           targetPath: .
+          excludePaths:
+            - .gitServer.gitea.admin.username
+            - .gitServer.gitea.admin.password
+            - .gitServer.image.fullOverride
   actions:
     onDeploy:
       before:
