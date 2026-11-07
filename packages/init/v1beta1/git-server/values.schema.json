@@ -207,7 +207,7 @@
                 "email": {
                   "type": "string"
                 },
-                "existingSecret": {},
+                "existingSecret": false,
                 "password": false,
                 "passwordMode": {
                   "type": "string"
