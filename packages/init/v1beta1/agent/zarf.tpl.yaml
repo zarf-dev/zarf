@@ -29,3 +29,11 @@ component:
       values:
         - sourcePath: .agent
           targetPath: .
+          excludePaths:
+            - .agent.caBundle
+            - .agent.mutationPolicy
+            - .agent.image.repository
+            - .agent.image.tag
+            - .agent.image.digest
+            - .agent.secret.tlsCrt
+            - .agent.secret.tlsKey

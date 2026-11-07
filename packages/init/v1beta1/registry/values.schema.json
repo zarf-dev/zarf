@@ -69,17 +69,7 @@
           "type": "string"
         },
         "image": {
-          "properties": {
-            "digest": {
-              "type": "string"
-            },
-            "repository": {
-              "type": "string"
-            },
-            "tag": {
-              "type": "string"
-            }
-          },
+          "properties": {},
           "type": "object"
         },
         "imagePullSecrets": {
@@ -93,15 +83,8 @@
           },
           "type": "array"
         },
-        "ipv6Only": {
-          "type": "boolean"
-        },
         "mtls": {
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            }
-          },
+          "properties": {},
           "type": "object"
         },
         "nameOverride": {
@@ -187,44 +170,15 @@
         },
         "proxy": {
           "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
             "hostNetwork": {
               "type": "boolean"
             },
             "image": {
-              "properties": {
-                "digest": {
-                  "type": "string"
-                },
-                "repository": {
-                  "type": "string"
-                },
-                "tag": {
-                  "type": "string"
-                }
-              },
+              "properties": {},
               "type": "object"
             },
             "injector": {
-              "properties": {
-                "hostPort": {
-                  "type": "integer"
-                },
-                "image": {
-                  "type": "string"
-                },
-                "payLoadConfigMapAmount": {
-                  "type": [
-                    "integer",
-                    "string"
-                  ]
-                },
-                "shasum": {
-                  "type": "string"
-                }
-              },
+              "properties": {},
               "type": "object"
             },
             "injectorHostPort": {
@@ -233,11 +187,7 @@
             "registry": {
               "properties": {
                 "image": {
-                  "properties": {
-                    "repository": {
-                      "type": "string"
-                    }
-                  },
+                  "properties": {},
                   "type": "object"
                 }
               },
@@ -354,9 +304,6 @@
                         }
                       },
                       "type": "object"
-                    },
-                    "secret": {
-                      "type": "string"
                     }
                   },
                   "type": "object"
@@ -392,9 +339,6 @@
                 }
               },
               "type": "object"
-            },
-            "htpasswd": {
-              "type": "string"
             }
           },
           "type": "object"
@@ -418,22 +362,8 @@
             "name": {
               "type": "string"
             },
-            "nodePort": {
-              "type": [
-                "integer",
-                "string",
-                "null"
-              ]
-            },
             "port": {
               "type": "integer"
-            },
-            "registryPort": {
-              "type": [
-                "integer",
-                "string",
-                "null"
-              ]
             },
             "type": {
               "type": "string"
