@@ -34,11 +34,12 @@ component:
         - path: git-server-state-values.yaml
           enableTemplating: true
       values:
-        - sourcePath: .gitServer.podSecurityContext
-          targetPath: .podSecurityContext
-          excludePaths:
-            - .gitServer.podSecurityContext.runAsNonRoot
-            - .gitServer.podSecurityContext.seccompProfile
+        - sourcePath: .gitServer.podSecurityContext.fsGroup
+          targetPath: .podSecurityContext.fsGroup
+        - sourcePath: .gitServer.podSecurityContext.runAsGroup
+          targetPath: .podSecurityContext.runAsGroup
+        - sourcePath: .gitServer.podSecurityContext.runAsUser
+          targetPath: .podSecurityContext.runAsUser
         - sourcePath: .gitServer.resources
           targetPath: .resources
         - sourcePath: .gitServer.persistence.claimName
