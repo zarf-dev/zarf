@@ -15,9 +15,9 @@ A package schema defines the fields and structure of the `zarf.yaml` package def
 
 ### v1alpha1 Deprecation
 
-The legacy package schema, `v1alpha1`, is deprecated in `v1.0.0`. However, we know there are countless existing `v1alpha1` packages supporting many critical systems across the world. To accommodate, we are giving an extended deprecation period for users to migrate. Zarf will support `v1alpha1` packages through August 2027, nine months after the `v1.0.0` release in November 2026.
+The legacy package schema, `v1alpha1`, is deprecated in `v1.0.0`. However, we know there are countless existing `v1alpha1` packages supporting many critical systems across the world. To give users time to migrate, we are providing an extended deprecation period. Zarf will support `v1alpha1` packages through August 2027, nine months after the `v1.0.0` release in November 2026.
 
-On release of `v1.0.0`, Zarf will log a warning when `v1alpha1` packages are used. Starting in May 2027, create time operations such as `package create`, `publish`, and `sign` will require `--features=v1alpha1=true` for continued use. Deploy time operations will require the feature flag starting in June 2027.
+With the release of `v1.0.0`, Zarf will log a warning when `v1alpha1` packages are used. Starting in May 2027, create-time operations such as `package create`, `publish`, and `sign` will require `--features=v1alpha1=true` for continued use. Deploy-time operations will require the feature flag starting in June 2027.
 
 <Timeline
   label="v1alpha1 deprecation timeline"
@@ -29,17 +29,17 @@ On release of `v1.0.0`, Zarf will log a warning when `v1alpha1` packages are use
   ]}
 />
 
-Removing packages will operate without a feature flag until `v1alpha1` is fully unsupported. Follow the [`v1alpha1` to `v1beta1` migration guide](/best-practices/v1alpha1-to-v1beta1/) to update existing package definitions.
+Package removal will continue to work without a feature flag until `v1alpha1` is fully unsupported. Follow the [`v1alpha1` to `v1beta1` migration guide](/best-practices/v1alpha1-to-v1beta1/) to update existing package definitions.
 
 ## Init Package
 
-The default init package has migrated to v1beta1. Note that deployment must be configured through values instead of variables. The v1beta1 init package has a built-in migration guide through `zarf package inspect attachments --keys=migration` or find it at [MIGRATION.md](https://github.com/zarf-dev/zarf/blob/main/packages/init/v1beta1/MIGRATION.md).
+The default init package has migrated to v1beta1. Note that deployment must be configured through values instead of variables. You can read the migration guide using `zarf package inspect attachments --keys=migration` or in [MIGRATION.md](https://github.com/zarf-dev/zarf/blob/main/packages/init/v1beta1/MIGRATION.md).
 
-The flag `--storage-class` has been removed from `zarf init`. Storage class can be configured through `registry.persistence.storageClass` and `gitServer.persistence.storageClass`. Additionally, the storage class for new deployments now default to the default storage class in the cluster. Previously, Zarf assigned a default storage class based on the Kubernetes distribution. Upgrades continue to use the existing storageclass.
+The flag `--storage-class` has been removed from `zarf init`. The storage class can be configured through `registry.persistence.storageClass` and `gitServer.persistence.storageClass`. New deployments now use the cluster's default storage class. Previously, Zarf assigned a default storage class based on the Kubernetes distribution. Upgrades continue to use the existing storage class.
 
 ## Deployed Package State
 
-Starting in v1.0, [deployed package secrets](/ref/packages/#deployed-packages) contain deploy configuration and increased deployment status fidelity. This information will enable additional features described in the [Enhanced State Management ZEP](https://github.com/zarf-dev/proposals/blob/main/0026-enhanced-state-management/README.md). Failure to write package state will now cause deploy to error. To prevent oversized secret write failures, secrets are now gzip-compressed.
+Starting in v1.0, [deployed package secrets](/ref/packages/#deployed-packages) contain deploy configuration and increased deployment status fidelity. This information will enable additional features described in the [Enhanced State Management ZEP](https://github.com/zarf-dev/proposals/blob/main/0026-enhanced-state-management/README.md). Failure to write package state will now cause deployment to fail. To prevent oversized secret write failures, secrets are now gzip-compressed.
 
 Pre-v1.0 Zarf versions cannot read the gzipped secrets v1.0+ creates. Old CLIs may fail when accessing deployed packages created with v1.0+.
 
@@ -47,7 +47,7 @@ Pre-v1.0 Zarf versions cannot read the gzipped secrets v1.0+ creates. Old CLIs m
 
 Notable features removed in `v1.0.0`:
 
-- The Zarf artifact server, which used Gitea to store artifacts such as npm packages, was removed due to limited adoption
+- The Zarf artifact server, which used Gitea to store artifacts such as npm packages, was removed due to limited adoption.
 - `zarf tools registry export`: Removed as registry commands focus on generic OCI operations, and container image exports were outside this scope.
 - The SBOM viewer: Zarf no longer produces HTML files for human-friendly SBOM reading.
-- Older Docker engine compatibility: Pulling images from a local Docker daemon now requires Docker Engine `25.0.0` or later
+- Older Docker engine compatibility: Pulling images from a local Docker daemon now requires Docker Engine `25.0.0` or later.
