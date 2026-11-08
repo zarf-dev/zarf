@@ -33,13 +33,13 @@ Removing packages will operate without a feature flag until `v1alpha1` is fully 
 
 ## Init Package
 
-The default init package has migrated to v1beta1. Note that deployment must be configured through values instead of variables. The v1beta1 init package has a built-in migration guide through `zarf package inspect attachments --keys=migration` or find it at [migration.md](add-link).
+The default init package has migrated to v1beta1. Note that deployment must be configured through values instead of variables. The v1beta1 init package has a built-in migration guide through `zarf package inspect attachments --keys=migration` or find it at [MIGRATION.md](https://github.com/zarf-dev/zarf/blob/main/packages/init/v1beta1/MIGRATION.md).
 
-The flag `--storage-class` has been removed. Storage class can be configured through (Y registry and x git server value). Additionally, the default storage class for init components is now the default storage class in the cluster. Previously, Zarf assigned a default storage class based on the distribution.
+The flag `--storage-class` has been removed from `zarf init`. Storage class can be configured through `registry.persistence.storageClass` and `gitServer.persistence.storageClass`. Additionally, the default storage class for the registry and Git server is the default storage class in the cluster. Previously, Zarf assigned a default storage class based on the distribution.
 
 ## Deployed Package State
 
-Starting in v1.0, [deployed package secrets](link-to-reference) contain deploy configuration and increased deployment status fidelity. This information will enable additional features see enhanced-package-state-ZEP. Failure to write package state will now cause deploy to error. To prevent oversized secret write failures, secrets are now gzipped compressed.
+Starting in v1.0, [deployed package secrets](/ref/packages/#deployed-packages) contain deploy configuration and increased deployment status fidelity. This information will enable additional features described in the [Enhanced State Management ZEP](https://github.com/zarf-dev/proposals/blob/main/0026-enhanced-state-management/README.md). Failure to write package state will now cause deploy to error. To prevent oversized secret write failures, secrets are now gzip-compressed.
 
 Pre-v1.0 Zarf versions cannot read the gzipped secrets v1.0+ creates. Old CLIs may fail when accessing deployed packages created with v1.0+.
 
