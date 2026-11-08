@@ -184,6 +184,6 @@ func printConnectStringTable(connectStrings state.ConnectStrings) {
 
 		// Create the table output with the data
 		header := []string{"Connect Command", "Description"}
-		message.TableWithWriter(OutputWriter, header, connectData)
+		message.Table(OutputWriter, header, connectData)
 	}
 }

@@ -14,8 +14,8 @@ Generates a config file for Zarf
 
 Generates a Zarf config file for controlling how the Zarf CLI operates. Optionally accepts a filename to write the config to.
 
-The extension will determine the format of the config file, e.g. env-1.yaml, env-2.json, env-3.toml etc.
-Accepted extensions are json, toml, yaml.
+The extension determines the format of the config file, e.g. env-1.yaml, env-2.toml.
+Accepted extensions are yaml, yml, toml.
 
 NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml.
 
@@ -37,7 +37,7 @@ zarf dev generate-config [ FILENAME ] [flags]
       --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+  -l, --log-level string           Log level when running Zarf. Valid options are: error, warn, info, debug (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files

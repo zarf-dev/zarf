@@ -171,7 +171,7 @@ components:
 	reg := createRegistry(ctx, t)
 	ref, err := PublishSkeleton(ctx, pkg, reg, PublishSkeletonOptions{Architecture: target, CachePath: t.TempDir(), RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
-	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{RemoteOptions: defaultTestRemoteOptions()})
+	remote, err := zoci.NewRemote(ctx, ref.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{RemoteOptions: defaultTestRemoteOptions()})
 	require.NoError(t, err)
 	definition, err := remote.FetchZarfYAML(ctx)
 	require.NoError(t, err)

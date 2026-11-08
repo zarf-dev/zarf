@@ -459,34 +459,7 @@ func (e *SchemaValidationError) Error() string {
 	return fmt.Sprintf("schema validation failed for %s", e.SchemaPath)
 }
 
-// ValidateSchemaFile validates that a file at schemaPath is a valid JSON Schema.
-// It checks that the file exists, is readable, and can be parsed as a valid JSON Schema.
-func ValidateSchemaFile(schemaPath string) error {
-	// Check file exists and is readable
-	if _, err := os.Stat(schemaPath); err != nil {
-		return fmt.Errorf("unable to access schema file %s: %w", schemaPath, err)
-	}
-
-	// Convert to absolute path and ensure forward slashes for URI
-	absPath, err := filepath.Abs(schemaPath)
-	if err != nil {
-		return fmt.Errorf("failed to resolve absolute path of %s: %w", schemaPath, err)
-	}
-	absPath = filepath.ToSlash(absPath)
-
-	// Attempt to compile the schema - this validates it's valid JSON Schema
-	schemaLoader := gojsonschema.NewReferenceLoader("file:///" + absPath)
-	_, err = gojsonschema.NewSchema(schemaLoader)
-	if err != nil {
-		return fmt.Errorf("invalid JSON schema at %s: %w", schemaPath, err)
-	}
-
-	return nil
-}
-
 // ValidateSchemaDocument validates that an already-parsed document is a valid JSON Schema.
-// Prefer this over ValidateSchemaFile when the document has already been read and unmarshaled,
-// as it avoids a second disk read and parse.
 func ValidateSchemaDocument(doc map[string]any) error {
 	_, err := gojsonschema.NewSchema(gojsonschema.NewGoLoader(doc))
 	if err != nil {

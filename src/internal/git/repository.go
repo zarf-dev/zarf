@@ -36,17 +36,8 @@ func Open(rootPath string, source api.Repository) (*Repository, error) {
 	}
 	repoPath := filepath.Join(rootPath, repoFolder)
 
-	// Check that this package is using the new repo format (if not fallback to the format from <= 0.24.x)
-	_, err = os.Stat(repoPath)
-	if err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-	if os.IsNotExist(err) {
-		repoFolder, err = transform.GitURLtoRepoName(address)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse git url %s: %w", address, err)
-		}
-		repoPath = filepath.Join(rootPath, repoFolder)
+	if _, err := os.Stat(repoPath); err != nil {
+		return nil, fmt.Errorf("unable to open git repository %s: %w", repoPath, err)
 	}
 
 	return &Repository{

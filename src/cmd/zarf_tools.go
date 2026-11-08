@@ -177,7 +177,7 @@ func printCredentialTable(s *state.State, outputFormat outputFormat, out io.Writ
 				cred.Application, cred.Username, cred.Password, cred.Connect, cred.GetCredsKey,
 			})
 		}
-		message.TableWithWriter(out, header, tableData)
+		message.Table(out, header, tableData)
 	default:
 		return fmt.Errorf("unsupported output format: %s", outputFormat)
 	}
@@ -334,7 +334,7 @@ func resolveRegistryUpdate(ctx context.Context, c *cluster.Cluster, oldRegistryI
 		return registryInfo, fmt.Errorf("unable to resolve registry update: %w", err)
 	}
 	registryInfo.RegistryMode = mode
-	registryInfo.SetPort(port)
+	registryInfo.Port = port
 	registryInfo.MTLSStrategy = state.MTLSStrategyNone
 	if mode == state.RegistryModeProxy {
 		registryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged

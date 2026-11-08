@@ -5,9 +5,13 @@
 package test
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -96,6 +100,14 @@ func getDeployedPackage(secret string) (*state.DeployedPackage, error) {
 	deployedPackage := &state.DeployedPackage{}
 	decoded, err := base64.StdEncoding.DecodeString(secret)
 	if err != nil {
+		return nil, err
+	}
+	reader, err := gzip.NewReader(bytes.NewReader(decoded))
+	if err != nil {
+		return nil, err
+	}
+	decoded, err = io.ReadAll(reader)
+	if err = errors.Join(err, reader.Close()); err != nil {
 		return nil, err
 	}
 	err = json.Unmarshal(decoded, &deployedPackage)

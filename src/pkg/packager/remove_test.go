@@ -98,7 +98,7 @@ func TestRemovePersistsChartProgress(t *testing.T) {
 			require.NoError(t, err)
 			deployed.SetDeployConfig(DeployConfig{SetVariables: map[string]string{"VARIABLE": "value"}})
 			deployed.AppendEvent(state.PackageEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded})
-			require.NoError(t, c.UpdateDeployedPackage(ctx, *deployed))
+			require.NoError(t, c.StoreDeployedPackage(ctx, *deployed))
 			opts := RemoveOptions{Cluster: c}
 
 			// Both the initial failure and a retry must retain only the outstanding chart.
@@ -326,7 +326,7 @@ func TestRemoveLocalComponentPreservesRecordedPackage(t *testing.T) {
 			recorded.SetDeployConfig(config)
 			initialEvent := state.PackageEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeSucceeded, Timestamp: time.Unix(1, 0).UTC()}
 			recorded.AppendEvent(initialEvent)
-			require.NoError(t, c.UpdateDeployedPackage(ctx, *recorded))
+			require.NoError(t, c.StoreDeployedPackage(ctx, *recorded))
 			removeConfig := RemoveConfig{ComponentSelectors: []string{"local"}, NamespaceOverride: "tenant"}
 
 			err = Remove(ctx, pkg, RemoveOptions{Cluster: c, RemoveConfig: removeConfig})
