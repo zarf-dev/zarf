@@ -54,7 +54,7 @@ func GenerateValuesSchema(ctx context.Context, source string, opts GenerateValue
 		}
 	}()
 	pkg := loaded.Definition
-	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
+	internalv1alpha1.WarnAuthorIfDeprecated(ctx, pkg)
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, nil, opts.IsInteractive)
 	if err != nil {

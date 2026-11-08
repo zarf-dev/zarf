@@ -80,7 +80,7 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	if err != nil {
 		return err
 	}
-	internalv1alpha1.WarnIfDeprecated(ctx, definition)
+	internalv1alpha1.WarnAuthorIfDeprecated(ctx, definition)
 	findings := []lint.PackageFinding{}
 	switch definition.GetAPIVersion() {
 	case v1alpha1.APIVersion:

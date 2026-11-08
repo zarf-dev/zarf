@@ -330,7 +330,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		err = errors.Join(err, loaded.Close())
 	}()
 	pkg := loaded.Definition
-	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
+	internalv1alpha1.WarnAuthorIfDeprecated(ctx, pkg)
 	selectedComponents := pkg.Components
 	if opts.Components != "" {
 		filteredPkg, err := filters.Apply(pkg, filters.BySelectState(opts.Components))
