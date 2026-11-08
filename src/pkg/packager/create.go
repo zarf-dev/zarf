@@ -21,7 +21,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -35,7 +34,7 @@ type CreateOptions struct {
 	Flavor            string
 	RegistryOverrides []images.RegistryOverride
 	// A nil value leaves the package unsigned; a non-nil value requests signing.
-	SignBlobOptions         *signing.SignBlobOptions
+	SignOptions             *types.SignOptions
 	SetVariables            map[string]string
 	MaxPackageSizeMB        int
 	SBOMOut                 string
@@ -111,7 +110,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		DifferentialPackage:  differentialPkg,
 		Flavor:               opts.Flavor,
 		RegistryOverrides:    opts.RegistryOverrides,
-		SignBlobOptions:      opts.SignBlobOptions,
+		SignOptions:          opts.SignOptions,
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,

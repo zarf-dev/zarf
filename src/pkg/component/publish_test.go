@@ -225,8 +225,8 @@ func TestPublishComponent(t *testing.T) {
 
 	ctx := context.Background()
 	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
-		SignManifestOptions: nil,
-		RemoteOptions:       defaultTestRemoteOptions(),
+		SignOptions:   nil,
+		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
 
@@ -292,16 +292,16 @@ func TestPublishComponentSignsManifest(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	signOpts := signing.DefaultSignManifestOptions()
+	signOpts := types.DefaultSignOptions()
 	signOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.key")
 	signOpts.Password = "test"
 	published, err := Publish(ctx, filepath.Join("testdata", "publish-component-v1beta1", "component.yaml"), createRegistry(ctx, t), PublishOptions{
-		SignManifestOptions: &signOpts,
-		RemoteOptions:       defaultTestRemoteOptions(),
+		SignOptions:   &signOpts,
+		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.NoError(t, err)
 
-	verifyOpts := signing.DefaultVerifyManifestOptions()
+	verifyOpts := types.DefaultVerifyOptions()
 	verifyOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.pub")
 	require.NoError(t, signing.VerifyManifest(ctx, published.String(), verifyOpts, defaultTestRemoteOptions()))
 }
@@ -312,12 +312,12 @@ func TestPublishComponentDoesNotTagOnSigningFailure(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	componentPath := filepath.Join("testdata", "publish-component-v1beta1", "component.yaml")
 	destination := createRegistry(ctx, t)
-	signOpts := signing.DefaultSignManifestOptions()
+	signOpts := types.DefaultSignOptions()
 	signOpts.Key = filepath.Join(t.TempDir(), "missing.key")
 
 	_, err := Publish(ctx, componentPath, destination, PublishOptions{
-		SignManifestOptions: &signOpts,
-		RemoteOptions:       defaultTestRemoteOptions(),
+		SignOptions:   &signOpts,
+		RemoteOptions: defaultTestRemoteOptions(),
 	})
 	require.Error(t, err)
 
@@ -669,7 +669,7 @@ func TestPublishComponentArchitectureIndexImportsMatchingFlavorVariant(t *testin
 	destination := createRegistry(ctx, t)
 	const flavor = "hardened"
 
-	signOpts := signing.DefaultSignManifestOptions()
+	signOpts := types.DefaultSignOptions()
 	signOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.key")
 	signOpts.Password = "test"
 
@@ -691,8 +691,8 @@ component:
 `, flavor, architecture, architecture)
 		require.NoError(t, os.WriteFile(componentPath, []byte(componentYAML), 0o600))
 		published, err := Publish(ctx, componentPath, destination, PublishOptions{
-			SignManifestOptions: &signOpts,
-			RemoteOptions:       defaultTestRemoteOptions(),
+			SignOptions:   &signOpts,
+			RemoteOptions: defaultTestRemoteOptions(),
 		})
 		require.NoError(t, err)
 		require.Equal(t, "0.0.1-hardened", published.Reference)
@@ -707,7 +707,7 @@ component:
 	require.NoError(t, err)
 	require.Equal(t, ocispec.MediaTypeImageIndex, rootDescriptor.MediaType)
 
-	verifyOpts := signing.DefaultVerifyManifestOptions()
+	verifyOpts := types.DefaultVerifyOptions()
 	verifyOpts.Key = filepath.Join("..", "signing", "testdata", "cosign.pub")
 	require.NoError(t, signing.VerifyManifest(ctx, published.String(), verifyOpts, defaultTestRemoteOptions()))
 

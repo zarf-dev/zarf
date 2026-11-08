@@ -21,7 +21,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -33,10 +32,10 @@ type LoadOptions struct {
 	Shasum string
 	// Architecture selects the target architecture for OCI sources.
 	// Empty uses the host architecture. Ignored for local archives.
-	Architecture      string
-	VerifyBlobOptions *signing.VerifyBlobOptions
-	Filter            filters.ComponentFilterStrategy
-	Output            string
+	Architecture  string
+	VerifyOptions *types.VerifyOptions
+	Filter        filters.ComponentFilterStrategy
+	Output        string
 	// number of layers to pull in parallel
 	OCIConcurrency int
 	// LayerSelection specifies which optional package resources to pull from OCI.
@@ -87,7 +86,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		arch := helpers.ResolveArch(opts.Architecture)
 		ociOpts := pullOCIOptions{
 			Source:               source,
-			VerifyBlobOptions:    opts.VerifyBlobOptions,
+			VerifyOptions:        opts.VerifyOptions,
 			VerificationStrategy: opts.VerificationStrategy,
 			Shasum:               opts.Shasum,
 			Architecture:         arch,
@@ -138,7 +137,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	layoutOpts := layout.PackageLayoutOptions{
-		VerifyBlobOptions:    opts.VerifyBlobOptions,
+		VerifyOptions:        opts.VerifyOptions,
 		VerificationStrategy: opts.VerificationStrategy,
 		Filter:               opts.Filter,
 	}

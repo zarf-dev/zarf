@@ -18,7 +18,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/internal/checksum"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 
@@ -39,8 +38,8 @@ type PullOptions struct {
 	SHASum string
 	// Architecture is the package architecture.
 	Architecture string
-	// VerifyBlobOptions configures package signature verification.
-	VerifyBlobOptions *signing.VerifyBlobOptions
+	// VerifyOptions configures package signature verification.
+	VerifyOptions *types.VerifyOptions
 	// OCIConcurrency is the number of layers pulled in parallel
 	OCIConcurrency int
 	// CachePath is used to cache layers from OCI package pulls
@@ -81,7 +80,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
 		Shasum:               opts.SHASum,
 		Architecture:         arch,
-		VerifyBlobOptions:    opts.VerifyBlobOptions,
+		VerifyOptions:        opts.VerifyOptions,
 		VerificationStrategy: opts.VerificationStrategy,
 		Output:               destination,
 		OCIConcurrency:       opts.OCIConcurrency,
@@ -104,15 +103,15 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 }
 
 type pullOCIOptions struct {
-	Source            string
-	Shasum            string
-	Architecture      string
-	LayerSelection    *zoci.LayerSelection
-	Filter            filters.ComponentFilterStrategy
-	OCIConcurrency    int
-	CachePath         string
-	VerifyBlobOptions *signing.VerifyBlobOptions
-	Connected         bool
+	Source         string
+	Shasum         string
+	Architecture   string
+	LayerSelection *zoci.LayerSelection
+	Filter         filters.ComponentFilterStrategy
+	OCIConcurrency int
+	CachePath      string
+	VerifyOptions  *types.VerifyOptions
+	Connected      bool
 	types.RemoteOptions
 	layout.VerificationStrategy
 }
@@ -183,7 +182,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	}
 
 	layoutOpts := layout.PackageLayoutOptions{
-		VerifyBlobOptions:    opts.VerifyBlobOptions,
+		VerifyOptions:        opts.VerifyOptions,
 		VerificationStrategy: opts.VerificationStrategy,
 		IsPartial:            isPartial,
 		Filter:               opts.Filter,

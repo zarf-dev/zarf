@@ -22,8 +22,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestOCIOperationsArchitecturePrecedence(t *testing.T) {
@@ -150,13 +150,13 @@ func TestLoadPackage(t *testing.T) {
 		tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
 
 		keyPath := filepath.Join("layout", "testdata", "cosign.pub")
-		verifyOpts := signing.DefaultVerifyBlobOptions()
+		verifyOpts := types.DefaultVerifyOptions()
 		verifyOpts.Key = keyPath
 
 		// VerifyNever should skip verification entirely and succeed
 		opt := LoadOptions{
 			VerificationStrategy: layout.VerifyNever,
-			VerifyBlobOptions:    &verifyOpts,
+			VerifyOptions:        &verifyOpts,
 			Filter:               filters.Empty(),
 		}
 		pkgLayout, err := LoadPackage(ctx, tarPath, opt)
@@ -175,7 +175,7 @@ func TestLoadPackage(t *testing.T) {
 		// VerifyIfPossible with a key against an unsigned package is always fatal
 		opt = LoadOptions{
 			VerificationStrategy: layout.VerifyIfPossible,
-			VerifyBlobOptions:    &verifyOpts,
+			VerifyOptions:        &verifyOpts,
 			Filter:               filters.Empty(),
 		}
 		_, err = LoadPackage(ctx, tarPath, opt)
@@ -185,7 +185,7 @@ func TestLoadPackage(t *testing.T) {
 		// VerifyAlways should fail on unsigned package
 		opt = LoadOptions{
 			VerificationStrategy: layout.VerifyAlways,
-			VerifyBlobOptions:    &verifyOpts,
+			VerifyOptions:        &verifyOpts,
 			Filter:               filters.Empty(),
 		}
 		_, err = LoadPackage(ctx, tarPath, opt)

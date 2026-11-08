@@ -51,9 +51,9 @@ type PublishOptions struct {
 	OCIConcurrency int
 	// Retries is the number of attempts to make when publishing fails.
 	Retries int
-	// SignManifestOptions configures an optional signature published after the component artifact.
+	// SignOptions configures an optional signature published after the component artifact.
 	// A nil value publishes without signing.
-	SignManifestOptions *signing.SignManifestOptions
+	SignOptions *types.SignOptions
 	types.RemoteOptions
 }
 
@@ -160,9 +160,9 @@ func Publish(ctx context.Context, componentPath string, destination registry.Ref
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	if opts.SignManifestOptions != nil {
+	if opts.SignOptions != nil {
 		immutableRef := fmt.Sprintf("%s/%s@%s", componentRef.Registry, componentRef.Repository, published.Digest)
-		if err := signing.SignManifest(ctx, immutableRef, *opts.SignManifestOptions, opts.RemoteOptions); err != nil {
+		if err := signing.SignManifest(ctx, immutableRef, *opts.SignOptions, opts.RemoteOptions); err != nil {
 			return registry.Reference{}, fmt.Errorf("failed to sign published component: %w", err)
 		}
 	}

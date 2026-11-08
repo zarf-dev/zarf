@@ -18,8 +18,8 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Use deterministic high-entropy text to exercise compressed Secret limits.
@@ -231,7 +231,7 @@ func TestPackageCreatePublishArch(t *testing.T) {
 
 func TestPackageCreateSignsArchiveAndOCIOutputs(t *testing.T) {
 	ctx := testutil.TestContext(t)
-	signOpts := signing.DefaultSignBlobOptions()
+	signOpts := types.DefaultSignOptions()
 	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
 	signOpts.Password = "password"
 	publicKeyPath := filepath.Join("testdata", "publish", "cosign.pub")
@@ -239,16 +239,16 @@ func TestPackageCreateSignsArchiveAndOCIOutputs(t *testing.T) {
 
 	t.Run("archive", func(t *testing.T) {
 		packagePath, err := Create(ctx, source, t.TempDir(), CreateOptions{
-			CachePath:       t.TempDir(),
-			SignBlobOptions: &signOpts,
+			CachePath:   t.TempDir(),
+			SignOptions: &signOpts,
 		})
 		require.NoError(t, err)
 
-		verifyOpts := signing.DefaultVerifyBlobOptions()
+		verifyOpts := types.DefaultVerifyOptions()
 		verifyOpts.Key = publicKeyPath
 		pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{
 			VerificationStrategy: layout.VerifyAlways,
-			VerifyBlobOptions:    &verifyOpts,
+			VerifyOptions:        &verifyOpts,
 		})
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
@@ -259,9 +259,9 @@ func TestPackageCreateSignsArchiveAndOCIOutputs(t *testing.T) {
 	t.Run("OCI", func(t *testing.T) {
 		registryRef := createRegistry(ctx, t)
 		packageRef, err := Create(ctx, source, fmt.Sprintf("oci://%s", registryRef.String()), CreateOptions{
-			CachePath:       t.TempDir(),
-			RemoteOptions:   defaultTestRemoteOptions(),
-			SignBlobOptions: &signOpts,
+			CachePath:     t.TempDir(),
+			RemoteOptions: defaultTestRemoteOptions(),
+			SignOptions:   &signOpts,
 		})
 		require.NoError(t, err)
 

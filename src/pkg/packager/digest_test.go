@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 const testTarball = "testdata/load-package/compressed/zarf-package-test-amd64-0.0.1.tar.zst"
@@ -65,8 +65,8 @@ func TestPackageDigestOCI(t *testing.T) {
 	require.Equal(t, expectedDigest, digest, "the OCI digest should match the expected digest after publishing and lookup with PackageDigest")
 }
 
-func testSignOpts() *signing.SignBlobOptions {
-	opts := signing.DefaultSignBlobOptions()
+func testSignOpts() *types.SignOptions {
+	opts := types.DefaultSignOptions()
 	opts.Key = filepath.Join("testdata", "publish", "cosign.key")
 	opts.Password = "password"
 	return &opts
@@ -85,7 +85,7 @@ func TestPackageDigestSignedDiffersFromUnsigned(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, pkgLayout.Cleanup()) }()
 
-	require.NoError(t, pkgLayout.SignPackage(ctx, testSignOpts()))
+	require.NoError(t, pkgLayout.SignPackage(ctx, testSignOpts(), false))
 
 	require.NotEqual(t, unsignedDigest, pkgLayout.Digest(),
 		"signing should change the OCI manifest digest because the sig file is a new layer")
@@ -102,7 +102,7 @@ func TestPackageDigestSignedConsistency(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, pkgLayout.Cleanup()) }()
 
-	require.NoError(t, pkgLayout.SignPackage(ctx, testSignOpts()))
+	require.NoError(t, pkgLayout.SignPackage(ctx, testSignOpts(), false))
 	localDigest := pkgLayout.Digest()
 
 	packageRef, err := PublishPackage(ctx, pkgLayout, registryRef, PublishPackageOptions{

@@ -41,7 +41,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -95,7 +94,7 @@ func annotateFlagGroup(fs *pflag.FlagSet, title string) {
 // packageVerifyFlags holds all package signature and keyless verification flags.
 // Embed this in any command options struct that performs a package load operation.
 // To add a new verification flag in the future, add the field here and register it
-// in newVerifyFlagSet / newKeylessVerifyFlagSet, then update buildVerifyBlobOptions.
+// in newVerifyFlagSet / newKeylessVerifyFlagSet, then update buildVerifyOptions.
 type packageVerifyFlags struct {
 	publicKeyPath               string
 	verify                      verifyMode
@@ -143,29 +142,12 @@ func newSigningFlagSet(v *viper.Viper, f *packageSigningFlags, keys packageSigni
 	return fs
 }
 
-func (f *packageSigningFlags) buildSignBlobOptions(cmd *cobra.Command, v *viper.Viper, tlogUploadKey string, overwrite, skipConfirmation bool) *signing.SignBlobOptions {
+func (f *packageSigningFlags) buildSignOptions(cmd *cobra.Command, v *viper.Viper, tlogUploadKey string, skipConfirmation bool) *types.SignOptions {
 	if !f.keyless && f.signingKeyPath == "" && f.identityToken == "" {
 		return nil
 	}
 
-	opts := signing.DefaultSignBlobOptions()
-	opts.Key = f.signingKeyPath
-	opts.Password = f.signingKeyPassword
-	opts.Fulcio.IdentityToken = f.identityToken
-	opts.Fulcio.URL = f.fulcioURL
-	opts.Fulcio.AuthFlow = f.fulcioAuthFlow
-	opts.OIDC.Issuer = f.oidcIssuer
-	opts.OIDC.ClientID = f.oidcClientID
-	opts.Rekor.URL = f.rekorURL
-	opts.TlogUpload = f.resolveTlogUpload(cmd, v, tlogUploadKey)
-	opts.TSAServerURL = f.tsaServerURL
-	opts.Overwrite = overwrite
-	opts.SkipConfirmation = skipConfirmation
-	return &opts
-}
-
-func (f *packageSigningFlags) buildSignManifestOptions(cmd *cobra.Command, v *viper.Viper, tlogUploadKey string, skipConfirmation bool) signing.SignManifestOptions {
-	opts := signing.DefaultSignManifestOptions()
+	opts := types.DefaultSignOptions()
 	opts.Key = f.signingKeyPath
 	opts.Password = f.signingKeyPassword
 	opts.IdentityToken = f.identityToken
@@ -177,7 +159,7 @@ func (f *packageSigningFlags) buildSignManifestOptions(cmd *cobra.Command, v *vi
 	opts.TlogUpload = f.resolveTlogUpload(cmd, v, tlogUploadKey)
 	opts.TSAServerURL = f.tsaServerURL
 	opts.SkipConfirmation = skipConfirmation
-	return opts
+	return &opts
 }
 
 // resolveTlogUpload applies the safe keyless default and warns when the resulting
@@ -330,7 +312,7 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	v := getViper()
-	signOpts := o.buildSignBlobOptions(cmd, v, VPkgCreateTlogUpload, false, o.confirm)
+	signOpts := o.buildSignOptions(cmd, v, VPkgCreateTlogUpload, o.confirm)
 	if signOpts != nil {
 		if err := o.validateSigningMode(); err != nil {
 			return err
@@ -352,7 +334,7 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 		Architecture:            o.selectedArchitecture(),
 		Flavor:                  o.flavor,
 		RegistryOverrides:       overrides,
-		SignBlobOptions:         signOpts,
+		SignOptions:             signOpts,
 		SetVariables:            o.setVariables,
 		MaxPackageSizeMB:        o.maxPackageSizeMB,
 		SBOMOut:                 o.sbomOutput,
@@ -484,7 +466,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyOptions:        o.buildVerifyOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
 		Filter:               filter,
 		Architecture:         o.selectedArchitecture(),
@@ -762,7 +744,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	v := getViper()
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyOptions:        o.buildVerifyOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
 		Filter:               filter,
 		Architecture:         o.selectedArchitecture(),
@@ -1000,7 +982,7 @@ func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string
 
 	loadOpts := packager.LoadOptions{
 		Architecture:         o.selectedArchitecture(),
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyOptions:        o.buildVerifyOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
 		LayerSelection:       &zoci.LayerSelection{IncludeComponents: true},
 		Filter:               filters.BySelectState(o.components),
@@ -1109,7 +1091,7 @@ func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) 
 
 	loadOpts := packager.LoadOptions{
 		Architecture:         o.selectedArchitecture(),
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyOptions:        o.buildVerifyOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
 		LayerSelection:       &zoci.LayerSelection{IncludeComponents: true},
 		Filter:               filters.BySelectState(o.components),
@@ -1207,7 +1189,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	v := getViper()
 	loadOpts := packager.LoadOptions{
 		Architecture:         o.selectedArchitecture(),
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyOptions:        o.buildVerifyOptions(cmd, v),
 		VerificationStrategy: o.verify.toStrategy(),
 		LayerSelection:       &zoci.LayerSelection{SBOMs: &zoci.SBOMSelection{Keys: o.keys}},
 		Filter:               filters.Empty(),
@@ -1290,7 +1272,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		VerificationStrategy: o.verify.toStrategy(),
 		Architecture:         o.selectedArchitecture(),
 		Filter:               filters.Empty(),
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyOptions:        o.buildVerifyOptions(cmd, v),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1363,7 +1345,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		VerificationStrategy: o.verify.toStrategy(),
 		Architecture:         o.selectedArchitecture(),
 		Filter:               filters.Empty(),
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyOptions:        o.buildVerifyOptions(cmd, v),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1429,7 +1411,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		VerificationStrategy: o.verify.toStrategy(),
 		Architecture:         o.selectedArchitecture(),
 		Filter:               filters.Empty(),
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyOptions:        o.buildVerifyOptions(cmd, v),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1656,7 +1638,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		VerificationStrategy: o.verify.toStrategy(),
 		Architecture:         o.selectedArchitecture(),
 		Filter:               filter,
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyOptions:        o.buildVerifyOptions(cmd, v),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1823,7 +1805,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	verificationStrategy := o.verify.toStrategy()
 
 	loadOpt := packager.LoadOptions{
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyOptions:        o.buildVerifyOptions(cmd, v),
 		VerificationStrategy: verificationStrategy,
 		Filter:               filters.Empty(),
 		Architecture:         o.selectedArchitecture(),
@@ -1937,7 +1919,7 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 	packagePath, err := packager.Pull(ctx, srcURL, outputDir, packager.PullOptions{
 		SHASum:               o.shasum,
 		VerificationStrategy: o.verify.toStrategy(),
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
+		VerifyOptions:        o.buildVerifyOptions(cmd, v),
 		Architecture:         o.selectedArchitecture(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -2077,7 +2059,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	// To prevent a warning for package not being signed - we'll only run verification when enforced
 	if signed {
 		if o.verify == verifyModeAlways {
-			verifyOpts := o.buildVerifyBlobOptions(cmd, getViper())
+			verifyOpts := o.buildVerifyOptions(cmd, getViper())
 			err = pkgLayout.VerifyPackageSignature(ctx, *verifyOpts)
 			if err != nil {
 				return err
@@ -2095,8 +2077,8 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		l.Info("signing package with provided key")
 	}
 
-	signOpts := o.buildSignBlobOptions(cmd, getViper(), VPkgSignTlogUpload, o.overwrite, o.confirm)
-	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
+	signOpts := o.buildSignOptions(cmd, getViper(), VPkgSignTlogUpload, o.confirm)
+	if err := pkgLayout.SignPackage(ctx, signOpts, o.overwrite); err != nil {
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
@@ -2170,7 +2152,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpts := packager.LoadOptions{
-		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, getViper()),
+		VerifyOptions:        o.buildVerifyOptions(cmd, getViper()),
 		VerificationStrategy: layout.VerifyAlways, // Always enforce strict verification
 		Filter:               filters.Empty(),
 		Architecture:         o.selectedArchitecture(),
@@ -2373,18 +2355,17 @@ func markVerifyFlagsMutuallyExclusive(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive("certificate-oidc-issuer", "certificate-oidc-issuer-regexp")
 }
 
-// buildVerifyBlobOptions builds signing.VerifyBlobOptions from the verification flags,
-// applying the tlog auto-disable logic for keyless identity verification.
-func (f *packageVerifyFlags) buildVerifyBlobOptions(cmd *cobra.Command, v *viper.Viper) *signing.VerifyBlobOptions {
-	opts := signing.DefaultVerifyBlobOptions()
+// buildVerifyOptions resolves verification flags into shared trust policy.
+func (f *packageVerifyFlags) buildVerifyOptions(cmd *cobra.Command, v *viper.Viper) *types.VerifyOptions {
+	opts := types.DefaultVerifyOptions()
 	opts.Key = f.publicKeyPath
-	opts.CertVerify.CertIdentity = f.certificateIdentity
-	opts.CertVerify.CertIdentityRegexp = f.certificateIdentityRegexp
-	opts.CertVerify.CertOidcIssuer = f.certificateOIDCIssuer
-	opts.CertVerify.CertOidcIssuerRegexp = f.certificateOIDCIssuerRegexp
-	opts.CommonVerifyOptions.TrustedRootPath = f.trustedRoot
-	opts.CommonVerifyOptions.UseSignedTimestamps = f.useSignedTimestamps
-	opts.CommonVerifyOptions.IgnoreTlog = f.validateKeylessVerifyTlog(cmd, v)
+	opts.CertificateIdentity = f.certificateIdentity
+	opts.CertificateIdentityRegexp = f.certificateIdentityRegexp
+	opts.CertificateOIDCIssuer = f.certificateOIDCIssuer
+	opts.CertificateOIDCIssuerRegexp = f.certificateOIDCIssuerRegexp
+	opts.TrustedRoot = f.trustedRoot
+	opts.UseSignedTimestamps = f.useSignedTimestamps
+	opts.InsecureIgnoreTlog = f.validateKeylessVerifyTlog(cmd, v)
 	return &opts
 }
 

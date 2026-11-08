@@ -32,6 +32,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // PackageLayout manages the layout for a package.
@@ -125,15 +126,15 @@ type PackageLayoutOptions struct {
 	VerificationStrategy VerificationStrategy
 	IsPartial            bool
 	Filter               filters.ComponentFilterStrategy
-	VerifyBlobOptions    *signing.VerifyBlobOptions
+	VerifyOptions        *types.VerifyOptions
 }
 
 // VerificationStrategy describes a strategy for determining whether to verify a package.
 type VerificationStrategy int
 
 const (
-	// VerifyIfPossible will attempt a verification, it will not error if verification
-	// data is missing. But it will not stop processing if verification fails.
+	// VerifyIfPossible attempts verification, tolerating only missing verification
+	// material. All other verification failures stop processing.
 	VerifyIfPossible VerificationStrategy = iota
 	// VerifyAlways will always attempt a verification, and will fail if the
 	// verification fails.
@@ -239,9 +240,9 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	}
 
 	if opts.VerificationStrategy != VerifyNever {
-		verifyOptions := signing.DefaultVerifyBlobOptions()
-		if opts.VerifyBlobOptions != nil {
-			verifyOptions = *opts.VerifyBlobOptions
+		verifyOptions := types.DefaultVerifyOptions()
+		if opts.VerifyOptions != nil {
+			verifyOptions = *opts.VerifyOptions
 		}
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
 		if err != nil {
@@ -290,7 +291,7 @@ func (p *PackageLayout) ContainsSBOM() bool {
 
 // SignPackage signs the zarf package using cosign with the provided options.
 // A nil value leaves the package unsigned; a non-nil value requests signing.
-func (p *PackageLayout) SignPackage(ctx context.Context, opts *signing.SignBlobOptions) (err error) {
+func (p *PackageLayout) SignPackage(ctx context.Context, opts *types.SignOptions, overwrite bool) (err error) {
 	if opts == nil {
 		return nil
 	}
@@ -364,7 +365,8 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts *signing.SignBlobO
 	}
 
 	// Configure signing. cosign v3.1.1+ writes only the bundle when NewBundleFormat=true.
-	signOpts := *opts
+	signOpts := signBlobOptions(*opts)
+	signOpts.Overwrite = overwrite
 	signOpts.NewBundleFormat = true
 	actualBundlePath := filepath.Join(p.dirPath, Bundle)
 	signOpts.BundlePath = actualBundlePath
@@ -422,7 +424,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts *signing.SignBlobO
 }
 
 // VerifyPackageSignature verifies the package signature
-func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing.VerifyBlobOptions) error {
+func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts types.VerifyOptions) error {
 	l := logger.From(ctx)
 	l.Debug("verifying package signature")
 
@@ -437,9 +439,8 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 	}
 
 	hasKey := opts.Key != ""
-	hasKeylessIdentity := opts.CertVerify.CertIdentity != "" || opts.CertVerify.CertIdentityRegexp != ""
-	hasCert := opts.CertVerify.Cert != ""
-	hasVerificationMaterial := hasKey || hasKeylessIdentity || hasCert
+	hasKeylessIdentity := opts.CertificateIdentity != "" || opts.CertificateIdentityRegexp != ""
+	hasVerificationMaterial := hasKey || hasKeylessIdentity
 
 	// Handle the case where the package is not signed
 	if !p.IsSigned() {
@@ -460,11 +461,11 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 	if hasBundleInfo {
 		switch bundleInfo.Method {
 		case signing.SigningMethodKeyless:
-			if !hasKeylessIdentity && !hasCert {
+			if !hasKeylessIdentity {
 				return fmt.Errorf("package was signed with keyless method; provide --certificate-identity + --certificate-oidc-issuer to verify: %w", ErrNoVerificationMaterial)
 			}
 		case signing.SigningMethodKey:
-			if !hasKey && !hasCert {
+			if !hasKey {
 				return fmt.Errorf("package was signed with a key; provide --key to verify: %w", ErrNoVerificationMaterial)
 			}
 		}
@@ -474,22 +475,20 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 		return fmt.Errorf("package is signed but no verification material was provided (--key, --certificate-identity + --certificate-oidc-issuer): %w", ErrNoVerificationMaterial)
 	}
 
-	// Preserve a caller-provided staging directory while retaining Zarf's default.
-	if opts.TempDir == "" {
-		opts.TempDir = config.CommonOptions.TempDirectory
-	}
+	backendOpts := verifyBlobOptions(opts)
+	backendOpts.TempDir = config.CommonOptions.TempDirectory
 
 	if hasBundleInfo {
-		opts.BundlePath = bundlePath
+		backendOpts.BundlePath = bundlePath
 		// Auto-enable UseSignedTimestamps when the bundle contains timestamps.
 		// The bundle was signed with a TSA; using those timestamps is required to
 		// verify the signature after the short-lived Fulcio cert expires.
-		if bundleInfo.HasTSATimestamps && !opts.CommonVerifyOptions.UseSignedTimestamps {
+		if bundleInfo.HasTSATimestamps && !backendOpts.CommonVerifyOptions.UseSignedTimestamps {
 			l.Debug("bundle contains TSA timestamps; enabling signed-timestamp verification automatically")
-			opts.CommonVerifyOptions.UseSignedTimestamps = true
+			backendOpts.CommonVerifyOptions.UseSignedTimestamps = true
 		}
 		ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
-		return signing.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
+		return signing.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, backendOpts)
 	}
 	if !errors.Is(bundleErr, os.ErrNotExist) {
 		return fmt.Errorf("error checking bundle signature: %w", bundleErr)
@@ -514,11 +513,11 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 
 	// Legacy signature found
 	l.Warn("bundle format signature not found: legacy signature is being deprecated.")
-	opts.Signature = signaturePath
+	backendOpts.Signature = signaturePath
 
-	opts.CommonVerifyOptions.NewBundleFormat = false
+	backendOpts.CommonVerifyOptions.NewBundleFormat = false
 	ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
-	return signing.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
+	return signing.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, backendOpts)
 }
 
 // IsSigned returns true if the package is signed.

@@ -85,35 +85,6 @@ type VerifyBlobOptions struct {
 	Timeout time.Duration
 }
 
-// SignManifestOptions holds component-signing configuration.
-type SignManifestOptions struct {
-	Key              string
-	Password         string
-	IdentityToken    string
-	FulcioURL        string
-	FulcioAuthFlow   string
-	OIDCIssuer       string
-	OIDCClientID     string
-	RekorURL         string
-	TlogUpload       bool
-	SkipConfirmation bool
-	TSAServerURL     string
-	Timeout          time.Duration
-}
-
-// VerifyManifestOptions holds component-verification configuration.
-type VerifyManifestOptions struct {
-	Key                         string
-	CertificateIdentity         string
-	CertificateIdentityRegexp   string
-	CertificateOIDCIssuer       string
-	CertificateOIDCIssuerRegexp string
-	TrustedRoot                 string
-	InsecureIgnoreTlog          bool
-	UseSignedTimestamps         bool
-	Timeout                     time.Duration
-}
-
 // CheckOverwrite errors if any output file exists and Overwrite is false.
 func (opts SignBlobOptions) CheckOverwrite(ctx context.Context) error {
 	for _, path := range []string{opts.BundlePath, opts.OutputSignature} {
@@ -156,22 +127,6 @@ func DefaultVerifyBlobOptions() VerifyBlobOptions {
 	opts.CommonVerifyOptions.NewBundleFormat = true
 	opts.Timeout = CosignDefaultTimeout
 	return opts
-}
-
-// DefaultSignManifestOptions returns the defaults for component signing.
-func DefaultSignManifestOptions() SignManifestOptions {
-	return SignManifestOptions{
-		OIDCClientID: "sigstore",
-		Timeout:      CosignDefaultTimeout,
-	}
-}
-
-// DefaultVerifyManifestOptions returns the defaults for component verification.
-func DefaultVerifyManifestOptions() VerifyManifestOptions {
-	return VerifyManifestOptions{
-		InsecureIgnoreTlog: true,
-		Timeout:            CosignDefaultTimeout,
-	}
 }
 
 // CosignSignBlobWithOptions signs a blob via cosign's SignBlobCmd.
@@ -265,13 +220,10 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 // SignManifest signs an OCI manifest and publishes the
 // resulting Sigstore bundle as an OCI referrer. Unlike blob signing, this does
 // not require downloading or modifying the artifact's contents.
-func SignManifest(ctx context.Context, manifestRef string, opts SignManifestOptions, registryOpts types.RemoteOptions) error {
+func SignManifest(ctx context.Context, manifestRef string, opts types.SignOptions, registryOpts types.RemoteOptions) error {
 	l := logger.From(ctx)
-	if opts.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
-		defer cancel()
-	}
+	ctx, cancel := context.WithTimeout(ctx, CosignDefaultTimeout)
+	defer cancel()
 
 	oidcClientSecret, err := (&options.OIDCOptions{
 		Issuer:   opts.OIDCIssuer,
@@ -329,7 +281,7 @@ func SignManifest(ctx context.Context, manifestRef string, opts SignManifestOpti
 	manifestRef = ref.Context().Digest(descriptor.Digest.String()).String()
 
 	l.Debug("signing OCI manifest with cosign referrer", "reference", manifestRef, "key", opts.Key)
-	rootOpts := &options.RootOptions{Timeout: opts.Timeout}
+	rootOpts := &options.RootOptions{Timeout: CosignDefaultTimeout}
 	signOpts := options.SignOptions{
 		Upload:           true,
 		SkipConfirmation: opts.SkipConfirmation,
@@ -350,13 +302,10 @@ func SignManifest(ctx context.Context, manifestRef string, opts SignManifestOpti
 // VerifyManifest verifies a manifest signature stored as an
 // OCI referrer. It verifies both the Sigstore signature and the bundle's
 // in-toto subject claim against the resolved manifest digest.
-func VerifyManifest(ctx context.Context, manifestRef string, opts VerifyManifestOptions, registryOpts types.RemoteOptions) error {
+func VerifyManifest(ctx context.Context, manifestRef string, opts types.VerifyOptions, registryOpts types.RemoteOptions) error {
 	l := logger.From(ctx)
-	if opts.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
-		defer cancel()
-	}
+	ctx, cancel := context.WithTimeout(ctx, CosignDefaultTimeout)
+	defer cancel()
 
 	// Keyless verification needs a trusted root. Use the bundled copy unless the
 	// caller supplied one

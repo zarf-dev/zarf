@@ -84,24 +84,22 @@ func (o *componentPublishOptions) run(cmd *cobra.Command, args []string) error {
 	if err := destination.ValidateRegistry(); err != nil {
 		return err
 	}
-	var signOpts *signing.SignManifestOptions
-	if o.keyless || o.signingKeyPath != "" || o.identityToken != "" {
+	signOpts := o.buildSignOptions(cmd, getViper(), VPkgSignTlogUpload, o.confirm)
+	if signOpts != nil {
 		if err := o.validateSigningMode(); err != nil {
 			return err
 		}
-		opts := o.buildSignManifestOptions(cmd, getViper(), VPkgSignTlogUpload, o.confirm)
-		signOpts = &opts
 	}
 	cachePath, err := getCachePath(cmd.Context())
 	if err != nil {
 		return err
 	}
 	_, err = component.Publish(cmd.Context(), args[0], destination, component.PublishOptions{
-		CachePath:           cachePath,
-		OCIConcurrency:      o.ociConcurrency,
-		Retries:             o.retries,
-		SignManifestOptions: signOpts,
-		RemoteOptions:       defaultRemoteOptions(),
+		CachePath:      cachePath,
+		OCIConcurrency: o.ociConcurrency,
+		Retries:        o.retries,
+		SignOptions:    signOpts,
+		RemoteOptions:  defaultRemoteOptions(),
 	})
 	return err
 }
@@ -165,8 +163,8 @@ func (o *componentSignOptions) run(cmd *cobra.Command, args []string) error {
 		logger.From(cmd.Context()).Info("signing component manifest with provided key")
 	}
 
-	signOpts := o.buildSignManifestOptions(cmd, getViper(), VPkgSignTlogUpload, o.confirm)
-	err = signing.SignManifest(cmd.Context(), componentRef.String(), signOpts, defaultRemoteOptions())
+	signOpts := o.buildSignOptions(cmd, getViper(), VPkgSignTlogUpload, o.confirm)
+	err = signing.SignManifest(cmd.Context(), componentRef.String(), *signOpts, defaultRemoteOptions())
 	if err != nil {
 		return fmt.Errorf("failed to sign component manifest: %w", err)
 	}
@@ -213,16 +211,8 @@ func (o *componentVerifyOptions) run(cmd *cobra.Command, args []string) error {
 
 	l := logger.From(cmd.Context())
 	l.Info("verifying component manifest signature", "source", helpers.OCIURLPrefix+componentRef.String())
-	verifyOpts := signing.DefaultVerifyManifestOptions()
-	verifyOpts.Key = o.publicKeyPath
-	verifyOpts.CertificateIdentity = o.certificateIdentity
-	verifyOpts.CertificateIdentityRegexp = o.certificateIdentityRegexp
-	verifyOpts.CertificateOIDCIssuer = o.certificateOIDCIssuer
-	verifyOpts.CertificateOIDCIssuerRegexp = o.certificateOIDCIssuerRegexp
-	verifyOpts.TrustedRoot = o.trustedRoot
-	verifyOpts.InsecureIgnoreTlog = o.validateKeylessVerifyTlog(cmd, getViper())
-	verifyOpts.UseSignedTimestamps = o.useSignedTimestamps
-	if err := signing.VerifyManifest(cmd.Context(), componentRef.String(), verifyOpts, defaultRemoteOptions()); err != nil {
+	verifyOpts := o.buildVerifyOptions(cmd, getViper())
+	if err := signing.VerifyManifest(cmd.Context(), componentRef.String(), *verifyOpts, defaultRemoteOptions()); err != nil {
 		return fmt.Errorf("component signature verification failed: %w", err)
 	}
 

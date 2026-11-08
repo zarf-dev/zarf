@@ -27,7 +27,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/images"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -784,8 +783,8 @@ func TestComponentPublishConfirm(t *testing.T) {
 	require.NotNil(t, flag)
 	require.Equal(t, "false", flag.DefValue)
 
-	o := componentPublishOptions{confirm: true}
-	signOpts := o.buildSignManifestOptions(nil, newTestViper(), VPkgSignTlogUpload, o.confirm)
+	o := componentPublishOptions{confirm: true, packageSigningFlags: packageSigningFlags{keyless: true}}
+	signOpts := o.buildSignOptions(nil, newTestViper(), VPkgSignTlogUpload, o.confirm)
 	require.True(t, signOpts.SkipConfirmation)
 }
 
@@ -824,7 +823,7 @@ func TestPackageSigningTlogUpload(t *testing.T) {
 	t.Parallel()
 
 	t.Run("keyless defaults tlog upload", func(t *testing.T) {
-		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		opts := (&packageSigningFlags{keyless: true}).buildSignOptions(nil, newTestViper(), VPkgCreateTlogUpload, false)
 		require.NotNil(t, opts)
 		require.True(t, opts.TlogUpload)
 	})
@@ -832,14 +831,14 @@ func TestPackageSigningTlogUpload(t *testing.T) {
 		cmd := &cobra.Command{}
 		cmd.Flags().Bool("tlog-upload", false, "")
 		require.NoError(t, cmd.Flags().Set("tlog-upload", "false"))
-		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(cmd, newTestViper(), VPkgCreateTlogUpload, false, false)
+		opts := (&packageSigningFlags{keyless: true}).buildSignOptions(cmd, newTestViper(), VPkgCreateTlogUpload, false)
 		require.NotNil(t, opts)
 		require.False(t, opts.TlogUpload)
 	})
 	t.Run("config tlog opt-out is honored", func(t *testing.T) {
 		v := newTestViper()
 		v.Set(VPkgCreateTlogUpload, false)
-		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, v, VPkgCreateTlogUpload, false, false)
+		opts := (&packageSigningFlags{keyless: true}).buildSignOptions(nil, v, VPkgCreateTlogUpload, false)
 		require.NotNil(t, opts)
 		require.False(t, opts.TlogUpload)
 	})
@@ -853,7 +852,7 @@ func TestPackageSigningModeGuard(t *testing.T) {
 		{signingKeyPath: "key"},
 		{keyless: true},
 	} {
-		opts := flags.buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		opts := flags.buildSignOptions(nil, newTestViper(), VPkgCreateTlogUpload, false)
 		require.NotNil(t, opts)
 		if flags.signingKeyPath != "" || flags.keyless {
 			require.NoError(t, flags.validateSigningMode())
@@ -863,20 +862,12 @@ func TestPackageSigningModeGuard(t *testing.T) {
 	}
 }
 
-func TestBuildSignBlobOptions(t *testing.T) {
+func TestBuildSignOptions(t *testing.T) {
 	t.Parallel()
 
 	t.Run("no signing inputs leaves the package unsigned", func(t *testing.T) {
-		opts := (&packageSigningFlags{}).buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
+		opts := (&packageSigningFlags{}).buildSignOptions(nil, newTestViper(), VPkgCreateTlogUpload, false)
 		require.Nil(t, opts)
-	})
-
-	t.Run("keyless requests signing with defaults", func(t *testing.T) {
-		opts := (&packageSigningFlags{keyless: true}).buildSignBlobOptions(nil, newTestViper(), VPkgCreateTlogUpload, false, false)
-		expected := signing.DefaultSignBlobOptions()
-		expected.TlogUpload = true
-		expected.OIDC.ClientID = ""
-		require.Equal(t, &expected, opts)
 	})
 }
 
@@ -934,7 +925,7 @@ func TestVerifyInsecureIgnoreTlogEnvRespected(t *testing.T) {
 	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
 }
 
-func TestBuildVerifyBlobOptions(t *testing.T) {
+func TestBuildVerifyOptions(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name            string
@@ -994,8 +985,8 @@ func TestBuildVerifyBlobOptions(t *testing.T) {
 				require.NoError(t, cmd.Flags().Set("insecure-ignore-tlog", "true"))
 			}
 
-			opts := f.buildVerifyBlobOptions(cmd, v)
-			require.Equal(t, tc.wantIgnoreTlog, opts.CommonVerifyOptions.IgnoreTlog)
+			opts := f.buildVerifyOptions(cmd, v)
+			require.Equal(t, tc.wantIgnoreTlog, opts.InsecureIgnoreTlog)
 		})
 	}
 }

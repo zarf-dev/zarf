@@ -21,7 +21,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -40,17 +39,17 @@ func defaultTestRemoteOptions() types.RemoteOptions {
 func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string, remoteOptions types.RemoteOptions) *layout.PackageLayout {
 	t.Helper()
 
-	verifyOpts := signing.DefaultVerifyBlobOptions()
+	verifyOpts := types.DefaultVerifyOptions()
 	verifyOpts.Key = publicKeyPath
 
 	// Generate tmpdir and pull published package from local registry
 	pullOCIOpts := pullOCIOptions{
-		Source:            packageRef,
-		Architecture:      architecture,
-		Filter:            filters.Empty(),
-		RemoteOptions:     remoteOptions,
-		VerifyBlobOptions: &verifyOpts,
-		CachePath:         cachePath,
+		Source:        packageRef,
+		Architecture:  architecture,
+		Filter:        filters.Empty(),
+		RemoteOptions: remoteOptions,
+		VerifyOptions: &verifyOpts,
+		CachePath:     cachePath,
 	}
 	pkgLayout, err := pullOCI(ctx, pullOCIOpts)
 	require.NoError(t, err)
@@ -541,10 +540,10 @@ func TestSignOCITransportNegotiation(t *testing.T) {
 		require.NoError(t, sourceLayout.Cleanup())
 	})
 
-	signOpts := signing.DefaultSignBlobOptions()
+	signOpts := types.DefaultSignOptions()
 	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
 	signOpts.Password = "password"
-	require.NoError(t, sourceLayout.SignPackage(ctx, &signOpts))
+	require.NoError(t, sourceLayout.SignPackage(ctx, &signOpts, false))
 
 	destinationRef, err := PublishPackage(ctx, sourceLayout, registry.Reference{
 		Registry:   destinationAddress,

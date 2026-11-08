@@ -41,7 +41,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -55,8 +54,8 @@ type AssembleOptions struct {
 	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry.
 	RegistryOverrides []images.RegistryOverride
 	// A nil value leaves the package unsigned; a non-nil value requests signing.
-	SignBlobOptions *signing.SignBlobOptions
-	SkipSBOM        bool
+	SignOptions *types.SignOptions
+	SkipSBOM    bool
 	// When DifferentialPackage is set the zarf package created only includes images and repos not in the differential package.
 	DifferentialPackage api.Package
 	OCIConcurrency      int
@@ -245,7 +244,7 @@ func AssemblePackage(ctx context.Context, resolvedPackage *load.ResolvedPackage,
 		pkgLayout.SetComponentSelectors(selectors)
 	}
 
-	if err := pkgLayout.SignPackage(ctx, opts.SignBlobOptions); err != nil {
+	if err := pkgLayout.SignPackage(ctx, opts.SignOptions, false); err != nil {
 		return nil, err
 	}
 
