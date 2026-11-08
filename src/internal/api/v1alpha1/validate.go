@@ -54,6 +54,8 @@ const (
 )
 
 // ValidatePackage runs all validation checks on the package.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	var err error
 	if len(pkg.Components) == 0 {

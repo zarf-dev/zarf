@@ -127,6 +127,7 @@ func resolve(ctx context.Context, packagePath string, opts DefinitionOptions) (r
 	if err := layout.ValidatePackagePaths(defined.definition); err != nil {
 		return resolution{}, err
 	}
+	internalv1alpha1.WarnDeprecatedVariablesAndConstants(ctx, defined.definition)
 
 	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
 	return defined, nil

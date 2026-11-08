@@ -69,6 +69,8 @@ func GetStartTime() int64 {
 }
 
 // GetDataInjectionMarker returns the data injection marker based on the current CLI start time.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func GetDataInjectionMarker() string {
 	return fmt.Sprintf(dataInjectionMarker, operationStartTime)
 }
