@@ -16,6 +16,8 @@ import (
 )
 
 // PackageFromV1alpha1 converts a v1alpha1 ZarfPackage to the internal generic representation.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PackageFromV1alpha1(pkg v1alpha1.ZarfPackage) api.Package {
 	// Direct conversions need the same legacy action migration as decoded packages.
 	pkg, _ = migrateDeprecated(pkg)
@@ -400,6 +402,8 @@ func waitToGeneric(w *v1alpha1.ZarfComponentActionWait) *api.ActionWait {
 }
 
 // PackageToV1alpha1 converts the internal generic representation to a v1alpha1 ZarfPackage.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PackageToV1alpha1(g api.Package) v1alpha1.ZarfPackage {
 	// An absent v1alpha1 apiVersion predates the required field and must remain absent when the
 	// operational package is written back out.

@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"oras.land/oras-go/v2/registry"
 
@@ -246,12 +247,6 @@ func newPackageCreateCommand(v *viper.Viper, architecture *architectureOptions) 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageCreateFlagConfirm)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 
-	outputDirectory := v.GetString("package.create.output_directory")
-	output := v.GetString(VPkgCreateOutput)
-	if outputDirectory != "" && output == "" {
-		v.Set(VPkgCreateOutput, outputDirectory)
-	}
-	cmd.Flags().StringVar(&o.output, "output-directory", v.GetString("package.create.output_directory"), lang.CmdPackageCreateFlagOutput)
 	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgCreateOutput), lang.CmdPackageCreateFlagOutput)
 
 	cmd.Flags().StringVar(&o.differentialPackagePath, "differential", v.GetString(VPkgCreateDifferential), lang.CmdPackageCreateFlagDifferential)
@@ -283,11 +278,6 @@ func newPackageCreateCommand(v *viper.Viper, architecture *architectureOptions) 
 	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgCreateWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
 
 	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
-
-	errOD := cmd.Flags().MarkHidden("output-directory")
-	if errOD != nil {
-		logger.Default().Debug("unable to mark flag output-directory", "error", errOD)
-	}
 
 	return cmd
 }
@@ -785,6 +775,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	if err != nil {
 		return err
 	}
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 	defer func() {
 		// Cleanup package files
 		err = errors.Join(err, pkgLayout.Cleanup())
@@ -1230,6 +1221,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
@@ -1310,6 +1302,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 
 	images := make([]string, 0)
 	for _, component := range pkg.Components {
@@ -1384,6 +1377,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
@@ -1449,6 +1443,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 
 	displayPackage, err := packageForDisplay(pkg)
 	if err != nil {
@@ -1537,6 +1532,13 @@ func (o *packageListOptions) run(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
+		if pkg.GetAPIVersion() == v1alpha1.APIVersion {
+			attrs := []any{"package", depPkg.Name}
+			if depPkg.NamespaceOverride != "" {
+				attrs = append(attrs, "namespaceOverride", depPkg.NamespaceOverride)
+			}
+			logger.From(ctx).Warn(internalv1alpha1.DeprecationWarning, attrs...)
+		}
 		packageList = append(packageList, packageListInfo{
 			Package:           depPkg.Name,
 			NamespaceOverride: depPkg.NamespaceOverride,
@@ -1567,7 +1569,7 @@ func (o *packageListOptions) run(ctx context.Context, args []string) error {
 				info.Package, info.NamespaceOverride, info.Version, string(info.Connectivity), fmt.Sprintf("%v", info.Components),
 			})
 		}
-		message.TableWithWriter(o.outputWriter, header, packageData)
+		message.Table(o.outputWriter, header, packageData)
 	default:
 		return fmt.Errorf("unsupported output format: %s", o.outputFormat)
 	}
@@ -1716,9 +1718,6 @@ type packagePublishOptions struct {
 	*architectureOptions
 	flavor               string
 	retries              int
-	signingKeyPath       string
-	signingKeyPassword   string
-	confirm              bool
 	ociConcurrency       int
 	skipVersionCheck     bool
 	withBuildMachineInfo bool
@@ -1740,15 +1739,9 @@ func newPackagePublishCommand(v *viper.Viper, architecture *architectureOptions)
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	// Skeletons have no standalone CLI path for signing before their initial publication.
-	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
-	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
-	_ = cmd.Flags().MarkDeprecated("signing-key", lang.CmdPackagePublishSigningDeprecation)
-	_ = cmd.Flags().MarkDeprecated("signing-key-pass", lang.CmdPackagePublishSigningDeprecation)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVarP(&o.tag, "tag", "t", "", lang.CmdPackagePublishFlagTag)
-	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when publishing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgPublishWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
@@ -1763,12 +1756,6 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 	v := getViper()
 	isSkeletonPackage := helpers.IsDir(packageSource)
-	if !isSkeletonPackage &&
-		!cmd.Flags().Changed("signing-key") &&
-		!cmd.Flags().Changed("signing-key-pass") &&
-		(v.IsSet(VPkgPublishSigningKey) || v.IsSet(VPkgPublishSigningKeyPassword)) {
-		logger.From(ctx).Warn(lang.CmdPackagePublishSigningConfigDeprecation)
-	}
 	if !isSkeletonPackage {
 		packageSource = zoci.NormalizeOCISource(packageSource)
 	}
@@ -1798,8 +1785,6 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		skeletonOpts := packager.PublishSkeletonOptions{
 			Architecture:         o.selectedArchitecture(),
 			OCIConcurrency:       o.ociConcurrency,
-			SigningKeyPath:       o.signingKeyPath,
-			SigningKeyPassword:   o.signingKeyPassword,
 			Retries:              o.retries,
 			RemoteOptions:        defaultRemoteOptions(),
 			CachePath:            cachePath,
@@ -1819,7 +1804,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	if helpers.IsOCIURL(packageSource) && o.signingKeyPath == "" {
+	if helpers.IsOCIURL(packageSource) {
 		ociOpts := packager.PublishFromOCIOptions{
 			OCIConcurrency: o.ociConcurrency,
 			Architecture:   o.selectedArchitecture(),
@@ -1850,30 +1835,6 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	// Establish default stance
 	verificationStrategy := o.verify.toStrategy()
 
-	if helpers.IsOCIURL(packageSource) && o.signingKeyPath != "" {
-		l.Info("pulling source package locally to sign", "reference", packageSource)
-		tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			err = errors.Join(err, os.RemoveAll(tmpdir))
-		}()
-
-		packagePath, err := packager.Pull(ctx, packageSource, tmpdir, packager.PullOptions{
-			VerificationStrategy: verificationStrategy,
-			VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
-			Architecture:         o.selectedArchitecture(),
-			OCIConcurrency:       o.ociConcurrency,
-			RemoteOptions:        defaultRemoteOptions(),
-			CachePath:            cachePath,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to pull package: %w", err)
-		}
-		packageSource = packagePath
-	}
-
 	loadOpt := packager.LoadOptions{
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: verificationStrategy,
@@ -1891,15 +1852,6 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	if o.signingKeyPath != "" {
-		publishSignOpts := signing.DefaultSignBlobOptions()
-		publishSignOpts.Key = o.signingKeyPath
-		publishSignOpts.Password = o.signingKeyPassword
-		publishSignOpts.Overwrite = true
-		if err := pkgLayout.SignPackage(ctx, &publishSignOpts); err != nil {
-			return fmt.Errorf("unable to sign package: %w", err)
-		}
-	}
 	publishPackageOpts := packager.PublishPackageOptions{
 		OCIConcurrency: o.ociConcurrency,
 		Retries:        o.retries,
@@ -1915,7 +1867,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 // It reads the definition back from the registry so it matches what was published without resolving imports again.
 func printSkeletonImportExample(ctx context.Context, pkgRef registry.Reference, remoteOpts types.RemoteOptions) error {
 	l := logger.From(ctx)
-	remote, err := zoci.NewRemoteWithOptions(ctx, pkgRef.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, pkgRef.String(), zoci.PlatformForSkeleton(), zoci.RemoteClientOptions{
 		RemoteOptions: remoteOpts,
 	})
 	if err != nil {
@@ -2079,6 +2031,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 
 	// Determine output destination
 	outputDest := o.output
+	var publishTag string
 	if outputDest == "" {
 		if helpers.IsOCIURL(packageSource) {
 			// For OCI sources, default to publishing back to the same OCI location
@@ -2087,6 +2040,9 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 			srcRef, err := registry.ParseReference(trimmed)
 			if err != nil {
 				return fmt.Errorf("failed to parse source OCI reference: %w", err)
+			}
+			if srcRef.ValidateReferenceAsTag() == nil {
+				publishTag = srcRef.Reference
 			}
 
 			// Extract repository path without the package name
@@ -2123,6 +2079,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to load package for signing: %w", err)
 	}
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 	defer func() {
 		if cleanupErr := pkgLayout.Cleanup(); cleanupErr != nil {
 			l.Warn("failed to cleanup package layout", "error", cleanupErr)
@@ -2158,8 +2115,9 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	if helpers.IsOCIURL(outputDest) {
-		dstRef, err := registry.ParseReference(strings.TrimPrefix(outputDest, helpers.OCIURLPrefix))
-		if err != nil {
+		var dstRef registry.Reference
+		dstRef.Registry, dstRef.Repository, _ = strings.Cut(strings.TrimPrefix(outputDest, helpers.OCIURLPrefix), "/")
+		if err := dstRef.ValidateRegistry(); err != nil {
 			return fmt.Errorf("invalid destination OCI reference: %w", err)
 		}
 		l.Info("signing and publishing package to OCI registry", "destination", outputDest)
@@ -2167,6 +2125,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 			OCIConcurrency: o.ociConcurrency,
 			Retries:        o.retries,
 			RemoteOptions:  defaultRemoteOptions(),
+			Tag:            publishTag,
 		})
 		return err
 	}
@@ -2239,6 +2198,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("package verification failed: %w", err)
 	}
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 	defer func() {
 		if cleanupErr := pkgLayout.Cleanup(); cleanupErr != nil {
 			l.Warn("failed to cleanup package", "error", cleanupErr)
@@ -2334,16 +2294,11 @@ const (
 	verifyModeAlways     verifyMode = "always"
 )
 
-// Set implements pflag.Value. Accepts the three canonical values and legacy bool strings.
+// Set implements pflag.Value.
 func (m *verifyMode) Set(s string) error {
 	switch verifyMode(s) {
 	case verifyModeNever, verifyModeIfPossible, verifyModeAlways:
 		*m = verifyMode(s)
-	// Accept legacy bool values from viper configs written before the enum was introduced.
-	case "true":
-		*m = verifyModeAlways
-	case "false":
-		*m = verifyModeIfPossible
 	default:
 		return fmt.Errorf("invalid --verify value %q (must be never, if-possible, or always)", s)
 	}
@@ -2471,7 +2426,6 @@ func (f *packageVerifyFlags) validateKeylessVerifyTlog(cmd *cobra.Command, v *vi
 func (f *packageVerifyFlags) preRunE(cmd *cobra.Command, _ []string) error {
 	v := getViper()
 	// Apply viper default for --verify when the flag was not set on the CLI.
-	// Accepts legacy bool values ("true"/"false") from existing configs.
 	if !cmd.Flags().Changed("verify") && v.IsSet(VPkgVerify) {
 		if err := f.verify.Set(v.GetString(VPkgVerify)); err != nil {
 			return fmt.Errorf("invalid package.verify config value %q: %w", v.GetString(VPkgVerify), err)

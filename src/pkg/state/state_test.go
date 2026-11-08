@@ -279,8 +279,9 @@ func TestGitServerInfoIsInternal(t *testing.T) {
 	}{
 		{name: "internal mode takes precedence over external address", gitServer: GitServerInfo{Address: "https://git.example.com", GitServerMode: GitServerModeInternal}, isInternal: true},
 		{name: "external mode takes precedence over internal address", gitServer: GitServerInfo{Address: ZarfInClusterGitServiceURL, GitServerMode: GitServerModeExternal}},
-		{name: "older internal state uses address", gitServer: GitServerInfo{Address: ZarfInClusterGitServiceURL}, isInternal: true},
-		{name: "older external state uses address", gitServer: GitServerInfo{Address: "https://git.example.com"}},
+		{name: "internal server without mode uses address", gitServer: GitServerInfo{Address: ZarfInClusterGitServiceURL}, isInternal: true},
+		{name: "external server without mode uses address", gitServer: GitServerInfo{Address: "https://git.example.com"}},
+		{name: "unconfigured server is not internal"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -290,26 +291,23 @@ func TestGitServerInfoIsInternal(t *testing.T) {
 	}
 }
 
-func TestStateReconcile(t *testing.T) {
+func TestRegistryInfoIsInternal(t *testing.T) {
 	t.Parallel()
 
-	legacyTLS := pki.GeneratedPKI{Cert: []byte("legacy-cert")}
-	s := State{
-		AgentTLS:             legacyTLS,
-		AgentTLSUserProvided: true,
-		AgentMutationPolicy:  MutationPolicyLabeled,
-		RegistryInfo: RegistryInfo{
-			NodePort: 1234,
-		},
+	for _, tt := range []struct {
+		name     string
+		registry RegistryInfo
+		want     bool
+	}{
+		{name: "nodeport", registry: RegistryInfo{RegistryMode: RegistryModeNodePort}, want: true},
+		{name: "proxy", registry: RegistryInfo{RegistryMode: RegistryModeProxy}, want: true},
+		{name: "external", registry: RegistryInfo{RegistryMode: RegistryModeExternal, Address: "127.0.0.1:31999", Port: 31999}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.want, tt.registry.IsInternal())
+		})
 	}
-
-	s.Reconcile()
-
-	require.Equal(t, legacyTLS, s.AgentInfo.TLS)
-	require.True(t, s.AgentInfo.TLSUserProvided)
-	require.Equal(t, MutationPolicyLabeled, s.AgentInfo.MutationPolicy)
-	require.Equal(t, 1234, s.RegistryInfo.Port)
-	require.Equal(t, 1234, s.RegistryInfo.NodePort)
 }
 
 func TestRegistryInfoKnownPlainHTTP(t *testing.T) {
@@ -419,21 +417,18 @@ func TestMergeStateRegistry(t *testing.T) {
 		{
 			name: "internal server auto generate",
 			oldRegistry: RegistryInfo{
-				Address:  fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
-				NodePort: 1,
-				Port:     1,
+				Address: fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
+				Port:    1,
 			},
 			expectedRegistry: RegistryInfo{
-				Address:  fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
-				NodePort: 1,
-				Port:     1,
+				Address: fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
+				Port:    1,
 			},
 		},
 		{
 			name: "internal server explicit same password is preserved",
 			oldRegistry: RegistryInfo{
 				Address:      fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
-				NodePort:     1,
 				Port:         1,
 				PushPassword: "same-password",
 				PullPassword: "same-password",
@@ -444,7 +439,6 @@ func TestMergeStateRegistry(t *testing.T) {
 			},
 			expectedRegistry: RegistryInfo{
 				Address:      fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
-				NodePort:     1,
 				Port:         1,
 				PushPassword: "same-password",
 				PullPassword: "same-password",
@@ -456,14 +450,12 @@ func TestMergeStateRegistry(t *testing.T) {
 				PushUsername: "doesn't matter",
 				PullUsername: "doesn't matter",
 				Address:      "doesn't matter",
-				NodePort:     0,
 				Secret:       "doesn't matter",
 			},
 			initRegistry: RegistryInfo{
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 				Address:      "address",
-				NodePort:     1,
 				Port:         1,
 				Secret:       "secret",
 			},
@@ -471,7 +463,6 @@ func TestMergeStateRegistry(t *testing.T) {
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 				Address:      "address",
-				NodePort:     1,
 				Port:         1,
 				Secret:       "secret",
 			},
@@ -482,7 +473,6 @@ func TestMergeStateRegistry(t *testing.T) {
 				PushUsername: "",
 				PullUsername: "",
 				Address:      "",
-				NodePort:     0,
 				Secret:       "",
 			},
 		},
@@ -502,7 +492,6 @@ func TestMergeStateRegistry(t *testing.T) {
 			require.Equal(t, tt.expectedRegistry.PushUsername, newState.RegistryInfo.PushUsername)
 			require.Equal(t, tt.expectedRegistry.PullUsername, newState.RegistryInfo.PullUsername)
 			require.Equal(t, tt.expectedRegistry.Address, newState.RegistryInfo.Address)
-			require.Equal(t, tt.expectedRegistry.NodePort, newState.RegistryInfo.NodePort)
 			require.Equal(t, tt.expectedRegistry.Port, newState.RegistryInfo.Port)
 			require.Equal(t, tt.expectedRegistry.Secret, newState.RegistryInfo.Secret)
 			// Only check passwords if explicitly set in expected (non-empty means explicit expectation)
@@ -541,7 +530,6 @@ func TestMergeStateRegistryResolvedPort(t *testing.T) {
 	t.Run("preserves port when mode is omitted", func(t *testing.T) {
 		oldState := &State{RegistryInfo: RegistryInfo{
 			RegistryMode: RegistryModeNodePort,
-			NodePort:     31999,
 			Port:         31999,
 			PushPassword: "push-password",
 			PullPassword: "pull-password",
@@ -556,13 +544,11 @@ func TestMergeStateRegistryResolvedPort(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, 31999, newState.RegistryInfo.Port)
-		require.Equal(t, 31999, newState.RegistryInfo.NodePort)
 	})
 
 	t.Run("clears port for resolved explicit mode", func(t *testing.T) {
 		oldState := &State{RegistryInfo: RegistryInfo{
 			RegistryMode: RegistryModeProxy,
-			NodePort:     5000,
 			Port:         5000,
 			MTLSStrategy: MTLSStrategyZarfManaged,
 		}}
@@ -575,7 +561,6 @@ func TestMergeStateRegistryResolvedPort(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Zero(t, newState.RegistryInfo.Port)
-		require.Zero(t, newState.RegistryInfo.NodePort)
 		require.Equal(t, RegistryModeExternal, newState.RegistryInfo.RegistryMode)
 		require.Equal(t, MTLSStrategyNone, newState.RegistryInfo.MTLSStrategy)
 	})

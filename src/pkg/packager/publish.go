@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -79,11 +79,11 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	remoteOptions := zoci.RemoteClientOptions{
 		RemoteOptions: opts.RemoteOptions,
 	}
-	srcRemote, err := zoci.NewRemoteWithOptions(ctx, src.String(), p, remoteOptions)
+	srcRemote, err := zoci.NewRemote(ctx, src.String(), p, remoteOptions)
 	if err != nil {
 		return fmt.Errorf("could not instantiate source remote: %w", err)
 	}
-	dstRemote, err := zoci.NewRemoteWithOptions(ctx, dst.String(), p, remoteOptions)
+	dstRemote, err := zoci.NewRemote(ctx, dst.String(), p, remoteOptions)
 	if err != nil {
 		return fmt.Errorf("could not instantiate destination remote: %w", err)
 	}
@@ -111,18 +111,11 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 type PublishPackageOptions struct {
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
-	// Deprecated: sign the layout explicitly with PackageLayout.SignPackage before publishing.
-	SignBlobOptions signing.SignBlobOptions
 	// Retries specifies the number of retries to use
 	Retries int
 	types.RemoteOptions
 	// Tag is an optional tag for the OCI reference separate from the package metadata.version
 	Tag string
-
-	// Deprecated: populate SignBlobOptions.Key directly.
-	SigningKeyPath string
-	// Deprecated: populate SignBlobOptions.Password directly.
-	SigningKeyPassword string
 }
 
 // PublishPackage takes a package layout and pushes the package to the given registry.
@@ -148,18 +141,7 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
 	}
 
-	signOpts := opts.SignBlobOptions
-	if opts.SigningKeyPath != "" && signOpts.Key == "" {
-		signOpts.Key = opts.SigningKeyPath
-	}
-	if opts.SigningKeyPassword != "" && signOpts.Password == "" {
-		signOpts.Password = opts.SigningKeyPassword
-	}
-	if signOpts.Key != "" || signOpts.KeyRef != "" { //nolint:staticcheck // KeyRef remains supported through its documented removal window.
-		if err := pkgLayout.SignPackage(ctx, &signOpts); err != nil {
-			return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
-		}
-	}
+	internalv1alpha1.WarnIfDeprecated(ctx, pkgLayout.Definition())
 
 	referenceOptions := zoci.ReferenceFromMetadataOptions{
 		Tag: opts.Tag,
@@ -183,10 +165,6 @@ type PublishSkeletonOptions struct {
 	Architecture string
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
-	// SigningKeyPath points to a signing key on the local disk.
-	SigningKeyPath string
-	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
-	SigningKeyPassword string
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
 	// Flavor specifies the flavor to use
@@ -204,6 +182,8 @@ type PublishSkeletonOptions struct {
 
 // PublishSkeleton takes a Path to the package definition and uploads a skeleton package to the given a registry.
 // dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (_ registry.Reference, err error) {
 	l := logger.From(ctx)
 
@@ -249,6 +229,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		err = errors.Join(err, loaded.Close())
 	}()
 	pkg := loaded.Definition
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 	for _, comp := range pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")
@@ -262,14 +243,6 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	pkgLayout, err := assemble.AssembleSkeleton(ctx, loaded, createOpts)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
-	}
-	if opts.SigningKeyPath != "" {
-		signOpts := signing.DefaultSignBlobOptions()
-		signOpts.Key = opts.SigningKeyPath
-		signOpts.Password = opts.SigningKeyPassword
-		if err := pkgLayout.SignPackage(ctx, &signOpts); err != nil {
-			return registry.Reference{}, fmt.Errorf("unable to sign skeleton: %w", err)
-		}
 	}
 	referenceOptions := zoci.ReferenceFromMetadataOptions{
 		Tag: opts.Tag,
@@ -292,7 +265,7 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 	// Set platform
 	platform := oci.PlatformForArch(arch)
 
-	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), platform, zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, ref.String(), platform, zoci.RemoteClientOptions{
 		RemoteOptions: remoteOpts,
 	})
 	if err != nil {

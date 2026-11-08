@@ -422,8 +422,6 @@ func TestResolveRegistryUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, state.RegistryModeNodePort, resolved.RegistryMode)
 		require.Equal(t, 31999, resolved.Port)
-		//nolint:staticcheck // verify backwards compatibility sync
-		require.Equal(t, 31999, resolved.NodePort)
 		require.Equal(t, state.MTLSStrategyNone, resolved.MTLSStrategy)
 		require.Equal(t, given.PullUsername, resolved.PullUsername)
 		require.Equal(t, given.PullPassword, resolved.PullPassword)
@@ -456,8 +454,6 @@ func TestResolveRegistryUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, state.RegistryModeProxy, resolved.RegistryMode)
 		require.Equal(t, 5000, resolved.Port)
-		//nolint:staticcheck // verify backwards compatibility sync
-		require.Equal(t, 5000, resolved.NodePort)
 		require.Equal(t, state.MTLSStrategyZarfManaged, resolved.MTLSStrategy)
 	})
 
@@ -484,8 +480,6 @@ func TestResolveRegistryUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, state.RegistryModeExternal, resolved.RegistryMode)
 		require.Zero(t, resolved.Port)
-		//nolint:staticcheck // verify backwards compatibility sync
-		require.Zero(t, resolved.NodePort)
 		require.Equal(t, state.MTLSStrategyNone, resolved.MTLSStrategy)
 		require.Equal(t, given.PushUsername, resolved.PullUsername)
 		require.Equal(t, given.PushPassword, resolved.PullPassword)

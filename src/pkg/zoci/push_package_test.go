@@ -28,7 +28,7 @@ func TestPushPackage(t *testing.T) {
 
 	pkgDefinition := pkgLayout.Definition()
 	platform := oci.PlatformForArch(pkgDefinition.Build.Architecture)
-	remote, err := zoci.NewRemoteWithOptions(ctx, pkg.registryAddr+"/"+pkgDefinition.Metadata.Name+":"+pkgDefinition.Metadata.Version, platform, zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, pkg.registryAddr+"/"+pkgDefinition.Metadata.Name+":"+pkgDefinition.Metadata.Version, platform, zoci.RemoteClientOptions{
 		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
 	})
 	require.NoError(t, err)

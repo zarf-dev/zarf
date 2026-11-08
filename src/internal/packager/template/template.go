@@ -26,6 +26,8 @@ const (
 )
 
 // GetZarfVariableConfig gets a variable configuration specific to Zarf
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func GetZarfVariableConfig(ctx context.Context, isInteractive bool) *variables.VariableConfig {
 	prompt := func(variable api.InteractiveVariable) (value string, err error) {
 		if isInteractive {
@@ -38,6 +40,8 @@ func GetZarfVariableConfig(ctx context.Context, isInteractive bool) *variables.V
 }
 
 // GetZarfTemplates returns legacy template keys and values for v1alpha1 packages.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func GetZarfTemplates(ctx context.Context, apiVersion string, service api.ServiceName, s *state.State) (templateMap map[string]*variables.TextTemplate, err error) {
 	templateMap = make(map[string]*variables.TextTemplate)
 	if apiVersion != v1alpha1.APIVersion {
@@ -45,7 +49,6 @@ func GetZarfTemplates(ctx context.Context, apiVersion string, service api.Servic
 	}
 
 	if s != nil {
-		s.Reconcile()
 		regInfo := s.RegistryInfo
 		gitInfo := s.GitServer
 

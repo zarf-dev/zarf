@@ -1,1 +1,0 @@
-{"name":"podinfo","home":"https://github.com/stefanprodan/podinfo","sources":["https://github.com/stefanprodan/podinfo"],"version":"6.4.0","description":"Podinfo Helm chart for Kubernetes","maintainers":[{"name":"stefanprodan","email":"stefanprodan@users.noreply.github.com"}],"apiVersion":"v1","appVersion":"6.4.0","kubeVersion":"\u003e=1.23.0-0"}
