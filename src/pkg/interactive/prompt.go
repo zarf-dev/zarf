@@ -14,6 +14,8 @@ import (
 )
 
 // PromptVariable prompts the user for a value for a variable
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func PromptVariable(ctx context.Context, variable api.InteractiveVariable) (string, error) {
 	if variable.Description != "" {
 		logger.From(ctx).Info(variable.Description)
