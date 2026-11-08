@@ -4,30 +4,35 @@ metadata:
   name: composable-packages
   description: Import a reusable web server and serve different pages in separate namespaces
 
+values:
+  files:
+    - values.yaml
+
 components:
   - name: local-import
     description: Serve a page supplied by this package using a local web-server component
     import:
       local:
         - path: components/web-server.yaml
-    manifests:
-      # Matching names merge: namespace overrides the component's default, and files append.
+    charts:
       - name: web-server
         namespace: imports-local
-        files:
-          - content/local-content.yaml
+        values:
+          - sourcePath: .webServers.local
+            targetPath: .
 
   - name: remote-import
     description: Serve a different page using the same component imported from a registry
     import:
-      # Publish components/web-server.yaml and replace this registry before creating the package.
+      # FIXME: Publish components/web-server.yaml and replace this registry before creating the package.
       remote:
-        - url: oci://registry.example.com/web-server:1.0.0
-    manifests:
+        - url: oci://ghcr.io/austinabro321/web-server:1.0.0
+    charts:
       - name: web-server
         namespace: imports-remote
-        files:
-          - content/remote-content.yaml
+        values:
+          - sourcePath: .webServers.remote
+            targetPath: .
 
 attachments:
   readme: readme.md

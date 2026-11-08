@@ -8,10 +8,9 @@ data:
     <html lang="en">
       <head>
         <meta charset="utf-8">
-        <title>Local component import</title>
+        <title>Composable Zarf packages</title>
       </head>
       <body>
-        <h1>Hello from the local component import!</h1>
-        <p>This page comes from local-content.yaml in the consuming package.</p>
+        <h1>{{ .Values.message | html }}</h1>
       </body>
     </html>

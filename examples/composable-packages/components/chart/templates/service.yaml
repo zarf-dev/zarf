@@ -3,9 +3,9 @@ kind: Service
 metadata:
   name: web-server
   labels:
-    zarf.dev/connect-name: web-server
+    zarf.dev/connect-name: {{ .Values.connectName | quote }}
   annotations:
-    zarf.dev/connect-description: Open the web page supplied by the consuming package
+    zarf.dev/connect-description: Open this web server's page
     zarf.dev/connect-url: /
 spec:
   selector:

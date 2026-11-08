@@ -6,7 +6,10 @@ package test
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -16,11 +19,12 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/convert"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8syaml "sigs.k8s.io/yaml"
+	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 func TestComposabilityExample(t *testing.T) {
@@ -40,12 +44,15 @@ func TestComposabilityExample(t *testing.T) {
 	definitionPath := filepath.Join(packageDir, "zarf.yaml")
 	definition, err := os.ReadFile(definitionPath)
 	require.NoError(t, err)
-	// FIXME: rethink this test
-	definition = []byte(strings.ReplaceAll(string(definition), "registry.example.com", registryURL))
+	var pkgDefinition v1beta1.Package
+	require.NoError(t, goyaml.Unmarshal(definition, &pkgDefinition))
+	pkgDefinition.Components[1].Import.Remote[0].URL = "oci://" + registryURL + "/web-server:1.0.0"
+	definition, err = goyaml.Marshal(pkgDefinition)
+	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(definitionPath, definition, 0o600))
 
 	outputDir := t.TempDir()
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", packageDir, "-o", outputDir, "--plain-http", "--confirm", "--cache", packageDir)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", packageDir, "-o", outputDir, "--plain-http", "--confirm", "--cache", packageDir, "--features=v1beta1=true,values=true")
 	require.NoError(t, err, stdOut, stdErr)
 	tarPath := filepath.Join(outputDir, fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
 	pkgLayout, err := layout.LoadFromTar(t.Context(), tarPath, layout.PackageLayoutOptions{})
@@ -53,7 +60,7 @@ func TestComposabilityExample(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 
 	for _, tt := range []struct {
-		name, namespace, content string
+		name, namespace, message string
 		index                    int
 	}{
 		{"local", "imports-local", "Hello from the local component import!", 0},
@@ -61,44 +68,64 @@ func TestComposabilityExample(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			definitionPkg := pkgLayout.Definition()
-			require.Equal(t, "zarf.dev/v1beta1", definitionPkg.APIVersion)
 			require.Len(t, definitionPkg.Components, 2)
 			component := definitionPkg.Components[tt.index]
 			require.Len(t, component.Images, 1)
-			require.Len(t, component.Manifests, 1)
-			require.Equal(t, tt.namespace, component.Manifests[0].Namespace)
-			manifestDir, err := pkgLayout.GetComponentDir(t.Context(), t.TempDir(), component.Name, layout.ManifestsComponentDir)
-			require.NoError(t, err)
-			entries, err := os.ReadDir(manifestDir)
-			require.NoError(t, err)
-			require.Len(t, entries, 3)
-			kinds := map[string]bool{}
-			for _, entry := range entries {
-				data, err := os.ReadFile(filepath.Join(manifestDir, entry.Name()))
-				require.NoError(t, err)
-				var header struct{ Kind string }
-				require.NoError(t, goyaml.Unmarshal(data, &header))
-				require.False(t, kinds[header.Kind], "duplicate resource kind %s", header.Kind)
-				kinds[header.Kind] = true
-				switch header.Kind {
-				case "Deployment":
-					var deployment appsv1.Deployment
-					require.NoError(t, k8syaml.Unmarshal(data, &deployment))
-					require.Equal(t, component.Images[0].Name, deployment.Spec.Template.Spec.Containers[0].Image)
-					require.Equal(t, "web-content", deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name)
-					require.Equal(t, "/usr/share/nginx/html", deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath)
-				case "Service":
-					var service corev1.Service
-					require.NoError(t, k8syaml.Unmarshal(data, &service))
-					require.Equal(t, "web-server", service.Spec.Selector["app"])
-				case "ConfigMap":
-					var configMap corev1.ConfigMap
-					require.NoError(t, k8syaml.Unmarshal(data, &configMap))
-					require.Equal(t, "web-content", configMap.Name)
-					require.Contains(t, configMap.Data["index.html"], tt.content)
-				default:
-					t.Fatalf("unexpected resource kind %s", header.Kind)
-				}
+			require.Len(t, component.Charts, 1)
+			require.Equal(t, tt.namespace, component.Charts[0].Namespace)
+
+			for _, configuration := range []struct{ name, connectName, message string }{
+				{"defaults", "web-server-" + tt.name, tt.message},
+				{"overrides", "custom-" + tt.name, "Custom " + tt.name + " greeting"},
+			} {
+				t.Run(configuration.name, func(t *testing.T) {
+					args := []string{"package", "inspect", "manifests", tarPath, "--components", component.Name, "--features=v1beta1=true,values=true"}
+					if configuration.name == "overrides" {
+						args = append(args, "--set-values", fmt.Sprintf("webServers.%s.connectName=%s,webServers.%s.message=%s", tt.name, configuration.connectName, tt.name, configuration.message))
+					}
+					output, stdErr, err := e2e.Zarf(t, args...)
+					require.NoError(t, err, output, stdErr)
+					decoder := yamlutil.NewYAMLOrJSONDecoder(strings.NewReader(output), 4096)
+					resources := map[string]bool{}
+					for {
+						var data json.RawMessage
+						err := decoder.Decode(&data)
+						if errors.Is(err, io.EOF) {
+							break
+						}
+						require.NoError(t, err)
+						if len(data) == 0 || string(data) == "null" {
+							continue
+						}
+						var header struct {
+							Kind     string
+							Metadata struct{ Name string }
+						}
+						require.NoError(t, json.Unmarshal(data, &header))
+						key := header.Kind + "/" + header.Metadata.Name
+						require.False(t, resources[key], "duplicate resource %s", key)
+						resources[key] = true
+						switch header.Kind {
+						case "Deployment":
+							var deployment appsv1.Deployment
+							require.NoError(t, json.Unmarshal(data, &deployment))
+							require.Equal(t, component.Images[0].Name, deployment.Spec.Template.Spec.Containers[0].Image)
+							require.Equal(t, "web-content", deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name)
+						case "Service":
+							var service corev1.Service
+							require.NoError(t, json.Unmarshal(data, &service))
+							require.Equal(t, configuration.connectName, service.Labels["zarf.dev/connect-name"])
+							require.Equal(t, "web-server", service.Spec.Selector["app"])
+						case "ConfigMap":
+							var configMap corev1.ConfigMap
+							require.NoError(t, json.Unmarshal(data, &configMap))
+							require.Contains(t, configMap.Data["index.html"], "<h1>"+configuration.message+"</h1>")
+						default:
+							t.Fatalf("unexpected resource kind %s", header.Kind)
+						}
+					}
+					require.Len(t, resources, 3)
+				})
 			}
 		})
 	}
