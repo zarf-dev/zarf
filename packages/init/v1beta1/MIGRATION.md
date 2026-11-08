@@ -60,6 +60,8 @@ All 49 declared deploy-time variables from the v1alpha1 init components map as f
 | `GIT_SERVER_SECURITY_CONTEXT_FS_GROUP` | `gitServer.podSecurityContext.fsGroup` |
 | `GIT_SERVER_SECURITY_CONTEXT_RUN_AS_GROUP` | `gitServer.podSecurityContext.runAsGroup` |
 
+There are no additional v1beta1 specific configuration options.
+
 Write maps, arrays, booleans, and numbers as native YAML rather than strings
 containing YAML. For example, save this as `init-values.yaml`:
 
@@ -93,11 +95,6 @@ For `REGISTRY_CA_BUNDLE`, put the certificate contents in `registry.caBundle`, n
 a file path. Packaged images are selected when the package is built, and runtime
 addresses and credentials are supplied by Zarf; neither needs a deploy-time image
 or credential variable.
-
-Values cannot override fields supplied by Zarf state, including service ports,
-registry mode, credentials, agent certificates and mutation policy, or the
-packaged image references. Overrides for these fields fail values validation.
-Use the corresponding `zarf init` options to configure these.
 
 `GIT_SERVER_CREATE_PVC` remains action-managed as `gitServer.persistence.create`.
 The pre-deploy action overwrites any supplied value based on whether the PVC

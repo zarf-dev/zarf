@@ -1,5 +1,6 @@
 persistence:
   storageClass: {{ .State.StorageClass | quote }}
+  create: {{ .Values.gitServer.persistence.create }}
 gitea:
   admin:
     username: {{ .State.Git.PushUsername | quote }}

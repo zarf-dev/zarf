@@ -27,13 +27,13 @@ component:
         - path: agent-state-values.yaml
           enableTemplating: true
       values:
-        - sourcePath: .agent
-          targetPath: .
-          excludePaths:
-            - .agent.caBundle
-            - .agent.mutationPolicy
-            - .agent.image.repository
-            - .agent.image.tag
-            - .agent.image.digest
-            - .agent.secret.tlsCrt
-            - .agent.secret.tlsKey
+        - sourcePath: .agent.affinity
+          targetPath: .affinity
+        - sourcePath: .agent.tolerations
+          targetPath: .tolerations
+        - sourcePath: .agent.nodeSelector
+          targetPath: .nodeSelector
+        - sourcePath: .agent.webhookAnnotations
+          targetPath: .webhookAnnotations
+        - sourcePath: .agent.mutationExclusions
+          targetPath: .mutationExclusions

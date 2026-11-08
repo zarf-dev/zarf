@@ -1,7 +1,11 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
   "properties": {
     "agent": {
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
         "affinity": {
           "properties": {},
@@ -10,43 +14,30 @@
             "null"
           ]
         },
-        "caBundle": false,
-        "clusterRole": {
-          "properties": {
-            "name": {
-              "type": "string"
-            }
+        "tolerations": {
+          "items": {
+            "type": "object"
           },
-          "type": "object"
+          "type": [
+            "array",
+            "null"
+          ]
         },
-        "clusterRoleBinding": {
-          "properties": {
-            "name": {
-              "type": "string"
-            }
+        "nodeSelector": {
+          "additionalProperties": {
+            "type": "string"
           },
-          "type": "object"
+          "properties": {},
+          "type": [
+            "object",
+            "null"
+          ]
         },
-        "deployment": {
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "replicaCount": {
-              "type": "integer"
-            }
+        "webhookAnnotations": {
+          "additionalProperties": {
+            "type": "string"
           },
-          "type": "object"
-        },
-        "image": {
-          "properties": {
-            "digest": false,
-            "pullSecret": {
-              "type": "string"
-            },
-            "repository": false,
-            "tag": false
-          },
+          "properties": {},
           "type": "object"
         },
         "mutationExclusions": {
@@ -58,118 +49,8 @@
             "type": "string"
           },
           "type": "array"
-        },
-        "mutationPolicy": false,
-        "nodeSelector": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "properties": {},
-          "type": [
-            "object",
-            "null"
-          ]
-        },
-        "resources": {
-          "properties": {
-            "limits": {
-              "properties": {
-                "cpu": {
-                  "type": [
-                    "string",
-                    "number"
-                  ]
-                },
-                "memory": {
-                  "type": [
-                    "string",
-                    "number"
-                  ]
-                }
-              },
-              "type": "object"
-            },
-            "requests": {
-              "properties": {
-                "cpu": {
-                  "type": [
-                    "string",
-                    "number"
-                  ]
-                },
-                "memory": {
-                  "type": [
-                    "string",
-                    "number"
-                  ]
-                }
-              },
-              "type": "object"
-            }
-          },
-          "type": "object"
-        },
-        "role": {
-          "properties": {
-            "name": {
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
-        "roleBinding": {
-          "properties": {
-            "name": {
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
-        "secret": {
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "tlsCrt": false,
-            "tlsKey": false
-          },
-          "type": "object"
-        },
-        "service": {
-          "properties": {
-            "name": {
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
-        "serviceAccount": {
-          "properties": {
-            "name": {
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
-        "tolerations": {
-          "items": {
-            "type": "object"
-          },
-          "type": [
-            "array",
-            "null"
-          ]
-        },
-        "webhookAnnotations": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "properties": {},
-          "type": "object"
         }
-      },
-      "type": "object"
+      }
     }
-  },
-  "type": "object"
+  }
 }
