@@ -1,0 +1,16 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: web-server
+  description: A reusable Nginx web server that serves content from a consumer-provided ConfigMap
+  version: 1.0.0
+component:
+  images:
+    - name: docker.io/library/nginx:1.30.6-alpine
+  manifests:
+    - name: web-server
+     # FIXME: maybe remove namespace
+      namespace: web-server
+      files:
+        - deployment.yaml
+        - service.yaml

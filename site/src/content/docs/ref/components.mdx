@@ -268,10 +268,10 @@ The examples below use v1beta1. For v1alpha1, imports use `path` to reference a 
 Publish the reusable component before creating the package that imports it:
 
 ```bash
-zarf component publish examples/composable-packages/components/application.yaml oci://your-registry.com
+zarf component publish examples/composable-packages/components/web-server.yaml oci://your-registry.com
 ```
 
-Set `import.remote[].url` to the resulting component URL. The [composable packages example](/ref/examples/composable-packages/) includes a local registry workflow.
+Set `import.remote[].url` to the resulting component URL. The [composable packages example](/ref/examples/composable-packages/) shows how to supply web content and a namespace for a reusable web server.
 
 :::
 

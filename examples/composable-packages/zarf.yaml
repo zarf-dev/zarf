@@ -2,30 +2,32 @@ apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: composable-packages
-  description: Local, nested, and published component imports with resource overrides
+  description: Import a reusable web server and serve different pages in separate namespaces
 
 components:
   - name: local-import
-    description: Import a local component and extend its configuration
+    description: Serve a page supplied by this package using a local web-server component
     import:
       local:
-        - path: components/application.yaml
+        - path: components/web-server.yaml
     manifests:
-      # Matching names merge: namespace overrides the imported value, and files append.
-      - name: configuration
+      # Matching names merge: namespace overrides the component's default, and files append.
+      - name: web-server
         namespace: imports-local
         files:
-          - manifests/local-settings.yaml
+          - content/local-content.yaml
 
   - name: remote-import
-    description: Import the published component into a separate namespace
+    description: Serve a different page using the same component imported from a registry
     import:
-      # Publish components/application.yaml first; see readme.md.
+      # Publish components/web-server.yaml and replace this registry before creating the package.
       remote:
-        - url: oci://localhost:5000/application:1.0.0
+        - url: oci://registry.example.com/web-server:1.0.0
     manifests:
-      - name: configuration
+      - name: web-server
         namespace: imports-remote
+        files:
+          - content/remote-content.yaml
 
 attachments:
   readme: readme.md

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-server
+  labels:
+    zarf.dev/connect-name: web-server
+  annotations:
+    zarf.dev/connect-description: Open the web page supplied by the consuming package
+    zarf.dev/connect-url: /
+spec:
+  selector:
+    app: web-server
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
