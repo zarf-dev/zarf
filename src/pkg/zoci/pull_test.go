@@ -63,7 +63,7 @@ func publishAndConnect(ctx context.Context, t *testing.T, srcPath string) (*zoci
 	t.Cleanup(func() { os.Remove(pkgLayout.Definition().Metadata.Name) }) //nolint:errcheck
 
 	platform := oci.PlatformForArch(pkgLayout.Definition().Build.Architecture)
-	remote, err := zoci.NewRemoteWithOptions(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
 		CachePath:     tmpdir,
 		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
 	})
@@ -161,7 +161,7 @@ func publishPackage(ctx context.Context, t *testing.T, packagePath, upstream str
 	require.NoError(t, err)
 
 	platform := oci.PlatformForArch(pkgLayout.Definition().Build.Architecture)
-	r, err := zoci.NewRemoteWithOptions(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
+	r, err := zoci.NewRemote(ctx, packageRef.String(), platform, zoci.RemoteClientOptions{
 		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
 	})
 	require.NoError(t, err)
