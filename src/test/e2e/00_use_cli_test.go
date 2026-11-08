@@ -194,7 +194,7 @@ components:
 			},
 		} {
 			t.Run(tc.command, func(t *testing.T) {
-				stdOut, stdErr, err := e2e.Zarf(t, "dev", "inspect", tc.command, initPath, "--cache", filepath.Join(dir, "cache"))
+				stdOut, stdErr, err := e2e.Zarf(t, "dev", "inspect", tc.command, initPath)
 				require.NoError(t, err, stdOut, stdErr)
 				for _, want := range tc.want {
 					require.Contains(t, stdOut, want)
