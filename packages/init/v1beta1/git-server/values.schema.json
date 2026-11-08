@@ -572,9 +572,7 @@
         "initPreScript": {
           "type": "string"
         },
-        "namespace": {
-          "type": "string"
-        },
+        "namespace": false,
         "nodeSelector": {
           "properties": {},
           "type": "object"

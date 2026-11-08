@@ -36,6 +36,7 @@ component:
         - sourcePath: .gitServer
           targetPath: .
           excludePaths:
+            - .gitServer.namespace
             - .gitServer.gitea.admin.existingSecret
             - .gitServer.gitea.admin.username
             - .gitServer.gitea.admin.password

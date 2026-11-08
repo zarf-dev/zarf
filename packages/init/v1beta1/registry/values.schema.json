@@ -85,9 +85,7 @@
         "nameOverride": {
           "type": "string"
         },
-        "namespace": {
-          "type": "string"
-        },
+        "namespace": false,
         "nodeSelector": {
           "additionalProperties": {
             "type": "string"
