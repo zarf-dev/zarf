@@ -5,10 +5,13 @@
 package cluster
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"sort"
 	"strings"
@@ -25,6 +28,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
+
+const packageCompressionFormatAnnotation = "zarf.dev/compression-format"
 
 // GetDeployedZarfPackages gets metadata information about packages that have been deployed to the cluster.
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
@@ -45,9 +50,9 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]state.Deployed
 		}
 		var deployedPackage state.DeployedPackage
 		// Process the k8s secret into our internal structs
-		err := json.Unmarshal(secret.Data["data"], &deployedPackage)
+		err := decodeDeployedPackage(&secret, &deployedPackage)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
+			errs = append(errs, fmt.Errorf("unable to decode the secret %s/%s: %w", secret.Namespace, secret.Name, err))
 			continue
 		}
 		warnOnUnrecognizedPackageAPIVersions(ctx, deployedPackage)
@@ -78,9 +83,9 @@ func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, op
 		return nil, err
 	}
 
-	err = json.Unmarshal(secret.Data["data"], deployedPackage)
+	err = decodeDeployedPackage(secret, deployedPackage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to decode the secret %s/%s: %w", secret.Namespace, secret.Name, err)
 	}
 	warnOnUnrecognizedPackageAPIVersions(ctx, *deployedPackage)
 	return deployedPackage, nil
@@ -101,24 +106,78 @@ func warnOnUnrecognizedPackageAPIVersions(ctx context.Context, deployedPackage s
 	logger.From(ctx).Warn("deployed package contains an API version this version of Zarf does not recognize; operations may use an older converted API version", "package", deployedPackage.Name, "apiVersions", unknown)
 }
 
-// UpdateDeployedPackage updates the deployed package metadata.
-func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
-	packageSecretData, err := json.Marshal(depPkg)
+// StoreDeployedPackage creates or updates the deployed package metadata Secret.
+func (c *Cluster) StoreDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
+	packageSecretData, err := encodeDeployedPackage(depPkg)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to apply the deployed package secret: %w", err)
 	}
 	packageSecret := v1ac.Secret(depPkg.GetSecretName(), state.ZarfNamespaceName).
 		WithLabels(map[string]string{
 			state.ZarfManagedByLabel:   "zarf",
 			state.ZarfPackageInfoLabel: depPkg.Name,
-		}).WithData(map[string][]byte{
-		"data": packageSecretData,
-	}).WithType(corev1.SecretTypeOpaque)
+		}).
+		WithAnnotations(map[string]string{
+			packageCompressionFormatAnnotation: "gzip",
+		}).
+		WithData(map[string][]byte{
+			"data": packageSecretData,
+		}).
+		WithType(corev1.SecretTypeOpaque)
 	_, err = c.Clientset.CoreV1().Secrets(*packageSecret.Namespace).Apply(ctx, packageSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return fmt.Errorf("unable to apply the deployed package secret: %w", err)
 	}
 	return nil
+}
+
+// ValidateDeployedPackageSecretSize returns an error if the compressed deployment record
+// exceeds Kubernetes' Secret data limit. It does not access the cluster.
+func ValidateDeployedPackageSecretSize(depPkg state.DeployedPackage) error {
+	_, err := encodeDeployedPackage(depPkg)
+	return err
+}
+
+func encodeDeployedPackage(depPkg state.DeployedPackage) ([]byte, error) {
+	data, err := json.Marshal(depPkg)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	writer, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := writer.Write(data); err != nil {
+		return nil, errors.Join(err, writer.Close())
+	}
+	if err := writer.Close(); err != nil {
+		return nil, err
+	}
+	if buf.Len() > corev1.MaxSecretSize {
+		return nil, fmt.Errorf("package %q compressed deployment metadata is %d bytes, exceeding Kubernetes' %d-byte Secret data limit; reduce the package definition size or deployment overrides", depPkg.Name, buf.Len(), corev1.MaxSecretSize)
+	}
+	return buf.Bytes(), nil
+}
+
+func decodeDeployedPackage(secret *corev1.Secret, depPkg *state.DeployedPackage) error {
+	data := secret.Data["data"]
+	switch format := secret.Annotations[packageCompressionFormatAnnotation]; format {
+	case "":
+		// Packages stored before compression was introduced contain plain JSON.
+	case "gzip":
+		reader, err := gzip.NewReader(bytes.NewReader(data))
+		if err != nil {
+			return err
+		}
+		data, err = io.ReadAll(reader)
+		if err = errors.Join(err, reader.Close()); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unsupported deployed package compression format %q", format)
+	}
+	return json.Unmarshal(data, depPkg)
 }
 
 // DeleteDeployedPackage removes the metadata for the deployed package.
@@ -181,25 +240,8 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg api.Package, 
 		return nil, err
 	}
 
-	packageData, err := json.Marshal(deployedPackage)
-	if err != nil {
-		return nil, err
-	}
-
-	deployedPackageSecret := v1ac.Secret(deployedPackage.GetSecretName(), state.ZarfNamespaceName).
-		WithLabels(map[string]string{
-			state.ZarfManagedByLabel:   "zarf",
-			state.ZarfPackageInfoLabel: deployedPackage.Name,
-		}).WithType(corev1.SecretTypeOpaque).
-		WithData(map[string][]byte{
-			"data": packageData,
-		})
-	updatedSecret, err := c.Clientset.CoreV1().Secrets(*deployedPackageSecret.Namespace).Apply(ctx, deployedPackageSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-	if err != nil {
-		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", *deployedPackageSecret.Name, err)
-	}
-	if err := json.Unmarshal(updatedSecret.Data["data"], &deployedPackage); err != nil {
-		return nil, err
+	if err := c.StoreDeployedPackage(ctx, *deployedPackage); err != nil {
+		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", deployedPackage.GetSecretName(), err)
 	}
 	return deployedPackage, nil
 }
@@ -219,40 +261,6 @@ func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageNam
 	}
 
 	return installedCharts, nil
-}
-
-// UpdateInternalArtifactServerToken updates the the artifact server token on the internal gitea server and returns it
-func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitServer state.GitServerInfo) (string, error) {
-	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
-	if err != nil {
-		return "", err
-	}
-	_, err = tunnel.Connect(ctx)
-	if err != nil {
-		return "", err
-	}
-	defer tunnel.Close()
-	// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
-	tunnelURLs := tunnel.HTTPEndpoints()
-	if len(tunnelURLs) == 0 {
-		return "", errors.New("no tunnel endpoints found")
-	}
-	giteaClient, err := gitea.NewClient(tunnelURLs[0], oldGitServer.PushUsername, oldGitServer.PushPassword)
-	if err != nil {
-		return "", err
-	}
-	var newToken string
-	err = tunnel.Wrap(func() error {
-		newToken, err = giteaClient.CreatePackageRegistryToken(ctx)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return "", err
-	}
-	return newToken, nil
 }
 
 // UpdateInternalGitServerSecret updates the internal gitea server secrets with the new git server info

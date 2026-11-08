@@ -6,6 +6,7 @@ package packager
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -27,16 +28,210 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/assemble"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
+
+func TestDeploySecretSize(t *testing.T) {
+	t.Parallel()
+	large := deploymentStateText(1_100_000)
+	medium := deploymentStateText(600_000)
+	for _, tt := range []struct {
+		name          string
+		apiVersion    string
+		description   string
+		defaultValues value.Values
+		opts          DeployOptions
+		wantError     bool
+	}{
+		{name: "legacy compressed over limit", description: large, wantError: true},
+		{name: "alpha compressed over limit", apiVersion: v1alpha1.APIVersion, description: large, wantError: true},
+		{name: "compressible definition", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("a", 2_000_000)},
+		{name: "compressible JSON escaping", apiVersion: v1alpha1.APIVersion, description: strings.Repeat("&", 180_000)},
+		{name: "beta compatibility copy", apiVersion: v1beta1.APIVersion, description: medium, wantError: true},
+		{name: "values overrides", apiVersion: v1beta1.APIVersion, opts: DeployOptions{Values: value.Values{"input": large}}, wantError: true},
+		{name: "chart values overrides", opts: DeployOptions{ValuesOverridesMap: ValuesOverrides{"local": {"chart": value.Values{"input": large}}}}, wantError: true},
+		{name: "variable overrides", opts: DeployOptions{SetVariables: map[string]string{"INPUT": large}}, wantError: true},
+		{name: "definition and values combined", apiVersion: v1alpha1.APIVersion, description: medium, opts: DeployOptions{Values: value.Values{"input": medium}}, wantError: true},
+		{name: "compressible values overrides", apiVersion: v1beta1.APIVersion, opts: DeployOptions{Values: value.Values{"input": strings.Repeat("a", 2_000_000)}}},
+		{name: "package default values are not saved", apiVersion: v1beta1.APIVersion, defaultValues: value.Values{"input": large}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			marker := filepath.Join(t.TempDir(), "deployed")
+			pkg := api.Package{
+				APIVersion: tt.apiVersion,
+				Kind:       api.ZarfPackageConfig,
+				Metadata:   api.PackageMetadata{Name: "oversized", Description: tt.description},
+				Components: []api.Component{{Name: "local", Actions: api.ComponentActions{OnDeploy: api.ActionSet{
+					Before: []api.Action{{Cmd: fmt.Sprintf("touch %q", marker)}},
+				}}}},
+			}
+			pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir()), Values: tt.defaultValues}, assemble.AssembleOptions{SkipSBOM: true})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+			_, err = Deploy(ctx, pkgLayout, tt.opts)
+			if tt.wantError {
+				require.ErrorContains(t, err, "1048576-byte Secret data limit")
+				require.NoFileExists(t, marker, "size validation must precede even local components")
+				return
+			}
+			require.NoError(t, err)
+			require.FileExists(t, marker)
+		})
+	}
+}
+
+func TestDeployLeavesComponentSelectionToCaller(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	pkg := api.Package{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       api.ZarfPackageConfig,
+		Metadata:   api.PackageMetadata{Name: "non-interactive"},
+		Components: []api.Component{
+			{Name: "component-a", Group: "group"},
+			{Name: "component-b", Group: "group"},
+		},
+	}
+	pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	result, err := Deploy(ctx, pkgLayout, DeployOptions{IsInteractive: true})
+	require.NoError(t, err)
+	require.Equal(t, []string{"component-a", "component-b"}, []string{result.DeployedComponents[0].Name, result.DeployedComponents[1].Name})
+
+	require.NoError(t, pkgLayout.Filter(filters.ForDeploy(" COMPONENT-B,component-b ")))
+	result, err = Deploy(ctx, pkgLayout, DeployOptions{IsInteractive: true})
+	require.NoError(t, err)
+	require.Len(t, result.DeployedComponents, 1)
+	require.Equal(t, "component-b", result.DeployedComponents[0].Name)
+	selectors, applied := pkgLayout.Definition().ComponentSelectors()
+	require.True(t, applied)
+	require.Equal(t, []string{"component-b", "component-b"}, selectors)
+}
+
+func TestPrepareDeploymentStateCreatesNamespaceBeforePackageSecret(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	clientset := fake.NewClientset()
+	var appliedResources []string
+	clientset.PrependReactor("patch", "namespaces", func(k8stesting.Action) (bool, runtime.Object, error) {
+		appliedResources = append(appliedResources, "namespace")
+		return false, nil, nil
+	})
+	clientset.PrependReactor("patch", "secrets", func(k8stesting.Action) (bool, runtime.Object, error) {
+		appliedResources = append(appliedResources, "secret")
+		return false, nil, nil
+	})
+
+	pkg := api.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       api.ZarfPackageConfig,
+		Metadata:   api.PackageMetadata{Name: "connected"},
+	}
+	pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	d := deployer{c: &cluster.Cluster{Clientset: clientset}}
+	err = d.prepareDeploymentState(ctx, pkgLayout, DeployOptions{
+		Connectivity: state.PackageConnectivityConnected,
+	})
+	require.NoError(t, err)
+	require.Equal(t, []string{"namespace", "secret"}, appliedResources)
+}
+
+func TestPrepareDeploymentStateAppliesConnectedRegistryOverride(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	clientset := fake.NewClientset(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: state.ZarfNamespaceName}})
+	pkg := api.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       api.ZarfPackageConfig,
+		Metadata:   api.PackageMetadata{Name: "connected-registry"},
+	}
+	pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+	d := deployer{
+		c: &cluster.Cluster{Clientset: clientset},
+		s: &state.State{RegistryInfo: state.RegistryInfo{Address: "cluster-registry.example.com"}},
+	}
+	err = d.prepareDeploymentState(ctx, pkgLayout, DeployOptions{
+		Connectivity: state.PackageConnectivityConnected,
+		RegistryInfo: state.RegistryInfo{Address: "override-registry.example.com"},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "override-registry.example.com", d.s.RegistryInfo.Address)
+}
+
+func TestDeployVariablesByAPIVersion(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name       string
+		apiVersion string
+		kind       api.PackageKind
+		variables  map[string]string
+		values     value.Values
+		wantError  bool
+	}{
+		{name: "legacy", variables: map[string]string{"INPUT": "supplied"}},
+		{name: "alpha", apiVersion: v1alpha1.APIVersion, variables: map[string]string{"INPUT": "supplied"}},
+		{name: "beta without variables", apiVersion: v1beta1.APIVersion},
+		{name: "beta empty variables", apiVersion: v1beta1.APIVersion, variables: map[string]string{}},
+		{name: "beta variables", apiVersion: v1beta1.APIVersion, variables: map[string]string{"INPUT": "supplied"}, wantError: true},
+		{name: "beta empty variable value", apiVersion: v1beta1.APIVersion, variables: map[string]string{"INPUT": ""}, wantError: true},
+		{name: "beta init variables", apiVersion: v1beta1.APIVersion, kind: api.ZarfInitConfig, variables: map[string]string{"INPUT": "supplied"}, wantError: true},
+		{name: "beta values", apiVersion: v1beta1.APIVersion, values: value.Values{"input": "supplied"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+			kind := tt.kind
+			if kind == "" {
+				kind = api.ZarfPackageConfig
+			}
+			pkg := api.Package{
+				APIVersion: tt.apiVersion,
+				Kind:       kind,
+				Metadata:   api.PackageMetadata{Name: "deploy-variables"},
+			}
+			pkgLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: pkg, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
+
+			result, err := Deploy(ctx, pkgLayout, DeployOptions{SetVariables: tt.variables, Values: tt.values})
+			if tt.wantError {
+				require.ErrorContains(t, err, "variables are not supported in v1beta1 packages")
+				require.ErrorContains(t, err, "use package values instead")
+				return
+			}
+			require.NoError(t, err)
+			if tt.values != nil {
+				require.Equal(t, tt.values, result.Values)
+			}
+		})
+	}
+}
 
 func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
 	t.Parallel()
@@ -55,7 +250,7 @@ func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 				deployed, err := c.GetDeployedPackage(ctx, "success-hooks")
 				if assert.NoError(t, err) {
-					assert.Equal(t, tt.duringHook, deployed.DeployedComponents[0].Status)
+					assert.Equal(t, tt.duringHook, deployed.DeployedComponents[0].Status) //nolint:staticcheck // Verify legacy status remains persisted.
 				}
 			}))
 			t.Cleanup(srv.Close)
@@ -75,13 +270,105 @@ func TestDeploySuccessHooksPersistStatusByAPIVersion(t *testing.T) {
 			require.NoError(t, err)
 			t.Cleanup(func() { require.NoError(t, pkgLayout.Cleanup()) })
 			d := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
+			require.NoError(t, d.startDeploymentState(ctx, pkgLayout, DeployOptions{}))
 			_, err = d.deployComponents(ctx, pkgLayout, DeployOptions{})
 			require.ErrorContains(t, err, `command "exit 1" failed`)
 			deployed, err := c.GetDeployedPackage(ctx, pkg.Metadata.Name)
 			require.NoError(t, err)
-			require.Equal(t, tt.final, deployed.DeployedComponents[0].Status)
+			require.Equal(t, tt.final, deployed.DeployedComponents[0].Status) //nolint:staticcheck // Verify legacy status remains persisted.
+			require.Equal(t, []state.EventOutcome{state.EventOutcomeInProgress, state.EventOutcomeFailed}, []state.EventOutcome{
+				deployed.Events[0].Outcome,
+				deployed.Events[1].Outcome,
+			})
+			require.Equal(t, state.EventTypeDeploy, deployed.DeployedComponents[0].LastEvent.Type)
+			if tt.final == state.ComponentStatusFailed {
+				require.Equal(t, state.EventOutcomeFailed, deployed.DeployedComponents[0].LastEvent.Outcome)
+			} else {
+				require.Equal(t, state.EventOutcomeSucceeded, deployed.DeployedComponents[0].LastEvent.Outcome)
+			}
 		})
 	}
+}
+
+func TestDeployPersistsSuccessfulConfigAndRetainsItOnFailure(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	c := &cluster.Cluster{Clientset: fake.NewClientset()}
+	success := api.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       api.ZarfPackageConfig,
+		Metadata:   api.PackageMetadata{Name: "config-retry", Version: "1.0.0"},
+		Components: []api.Component{{Name: "component"}, {Name: "unselected", Optional: true}},
+	}
+	successLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: success, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, successLayout.Cleanup()) })
+	require.NoError(t, successLayout.Filter(filters.ForDeploy(" COMPONENT,component ")))
+	require.Equal(t, []api.Component{{Name: "component"}}, successLayout.Definition().Components)
+
+	opts := DeployOptions{
+		SetVariables: map[string]string{"VARIABLE": "value"},
+		Values:       value.Values{"user": "override"},
+		Connectivity: state.PackageConnectivityConnected,
+		Source:       "package-source",
+	}
+	config := state.DeployConfig{
+		SetVariables:       opts.SetVariables,
+		Values:             opts.Values,
+		ComponentSelectors: []string{"component", "component"},
+		Connectivity:       state.PackageConnectivityConnected,
+	}
+	d := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false), vals: value.Values{"user": "override", "package": "default"}}
+	require.NoError(t, d.startDeploymentState(ctx, successLayout, opts))
+	_, err = d.deployComponents(ctx, successLayout, opts)
+	require.NoError(t, err)
+
+	deployed, err := c.GetDeployedPackage(ctx, success.Metadata.Name)
+	require.NoError(t, err)
+	require.Equal(t, state.EventOutcomeSucceeded, deployed.Events[len(deployed.Events)-1].Outcome)
+	expectedDigest, err := config.Digest()
+	require.NoError(t, err)
+	persistedConfig, ok := deployed.GetDeployConfig()
+	require.True(t, ok)
+	require.Equal(t, config, persistedConfig)
+	actualDigest, err := persistedConfig.Digest()
+	require.NoError(t, err)
+	require.Equal(t, expectedDigest, actualDigest)
+	require.Equal(t, []string{"component", "component"}, persistedConfig.ComponentSelectors)
+	require.Equal(t, actualDigest, deployed.Events[0].ConfigDigest)
+	require.Equal(t, actualDigest, deployed.Events[len(deployed.Events)-1].ConfigDigest)
+	require.Equal(t, opts.Source, deployed.Events[0].Source)
+	require.Equal(t, opts.Source, deployed.Events[len(deployed.Events)-1].Source)
+
+	failed := success
+	failed.Components = []api.Component{{Name: "component", Actions: api.ComponentActions{OnDeploy: api.ActionSet{OnSuccess: []api.Action{{Cmd: "exit 1"}}}}}}
+	failedLayout, err := assemble.AssemblePackage(ctx, &load.ResolvedPackage{Definition: failed, Resources: load.NewResourceSet(t.TempDir())}, assemble.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, failedLayout.Cleanup()) })
+	require.NoError(t, failedLayout.Filter(filters.ForDeploy("component")))
+
+	retry := deployer{c: c, vc: ptmpl.GetZarfVariableConfig(ctx, false)}
+	retryOpts := DeployOptions{SetVariables: map[string]string{"VARIABLE": "changed"}, Connectivity: state.PackageConnectivityConnected}
+	require.NoError(t, retry.startDeploymentState(ctx, failedLayout, retryOpts))
+	_, err = retry.deployComponents(ctx, failedLayout, retryOpts)
+	require.ErrorContains(t, err, `command "exit 1" failed`)
+
+	deployed, err = c.GetDeployedPackage(ctx, success.Metadata.Name)
+	require.NoError(t, err)
+	require.Equal(t, state.EventOutcomeFailed, deployed.Events[len(deployed.Events)-1].Outcome)
+	retainedConfig, ok := deployed.GetDeployConfig()
+	require.True(t, ok)
+	require.Equal(t, config, retainedConfig)
+	retryConfig := config
+	retryConfig.SetVariables = retryOpts.SetVariables
+	retryConfig.Values = nil
+	retryConfig.ComponentSelectors = []string{"component"}
+	retryDigest, err := retryConfig.Digest()
+	require.NoError(t, err)
+	require.NotEqual(t, expectedDigest, retryDigest)
+	require.Equal(t, retryDigest, deployed.Events[len(deployed.Events)-2].ConfigDigest)
+	require.Equal(t, retryDigest, deployed.Events[len(deployed.Events)-1].ConfigDigest)
 }
 
 func TestDeployInitComponentServices(t *testing.T) {
@@ -156,7 +443,6 @@ func TestDeployInitComponentServices(t *testing.T) {
 			ctx := testutil.TestContext(t)
 			cs := fake.NewClientset(
 				&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node"}},
-				&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: state.ZarfNamespaceName}},
 				&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "default", Namespace: state.ZarfNamespaceName}},
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{Name: "zarf-ip-family-test", Namespace: state.ZarfNamespaceName},
@@ -197,6 +483,16 @@ func TestDeployInitComponentServices(t *testing.T) {
 			require.Equal(t, tt.git, s.GitServer.IsConfigured())
 			if tt.opts.RegistryInfo.Address != "" {
 				require.Equal(t, tt.opts.RegistryInfo.Address, s.RegistryInfo.Address)
+			}
+
+			_, err = cs.CoreV1().Namespaces().Get(ctx, state.ZarfNamespaceName, metav1.GetOptions{})
+			require.NoError(t, err)
+			deployed, err := c.GetDeployedPackage(ctx, pkg.Metadata.Name)
+			require.NoError(t, err)
+			require.Equal(t, 1, deployed.Generation)
+			require.Equal(t, state.EventOutcomeInProgress, deployed.Events[0].Outcome)
+			for _, component := range deployed.DeployedComponents {
+				require.Equal(t, 1, component.ObservedGeneration)
 			}
 		})
 	}
@@ -439,7 +735,11 @@ func TestDeployFileTemplatesByAPIVersion(t *testing.T) {
 			definitionPath := filepath.Join(pkgLayout.DirPath(), layout.ZarfYAML)
 			originalDefinition, err := os.ReadFile(definitionPath)
 			require.NoError(t, err)
-			_, err = Deploy(ctx, pkgLayout, DeployOptions{SetVariables: map[string]string{"INPUT": "supplied"}})
+			opts := DeployOptions{}
+			if tt.apiVersion == v1alpha1.APIVersion {
+				opts.SetVariables = map[string]string{"INPUT": "supplied"}
+			}
+			_, err = Deploy(ctx, pkgLayout, opts)
 			if tt.fail {
 				require.ErrorContains(t, err, `command "exit 1" failed`)
 			} else {

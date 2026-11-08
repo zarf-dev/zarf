@@ -5,11 +5,9 @@ package assemble
 
 import (
 	"context"
-	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -31,12 +29,11 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/pkg/helpers"
 
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/helpers"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -45,9 +42,6 @@ import (
 )
 
 const componentPrefix = "zarf-component-"
-
-//go:embed viewer/*
-var viewerAssets embed.FS
 
 type imageSBOMTarget struct {
 	img                v1.Image
@@ -113,7 +107,7 @@ func generateGranularSBOMs(ctx context.Context, pkg api.Package, buildPath strin
 	l := logger.From(ctx)
 	for index, target := range targets {
 		l.Info("creating image SBOM", "reference", target.resourceIdentifier, "count", fmt.Sprintf("%d/%d", index+1, len(targets)))
-		if _, err := createImageSBOMResource(ctx, cachePath, buildPath, target.img, target.resourceIdentifier, target.imageReference); err != nil {
+		if err := createImageSBOMResource(ctx, cachePath, buildPath, target.img, target.resourceIdentifier, target.imageReference); err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
 		}
 	}
@@ -121,7 +115,7 @@ func generateGranularSBOMs(ctx context.Context, pkg api.Package, buildPath strin
 		if len(component.Files) == 0 {
 			continue
 		}
-		if _, err := createFileSBOMResource(ctx, component, buildPath, buildPath); err != nil {
+		if err := createFileSBOMResource(ctx, component, buildPath, buildPath); err != nil {
 			return err
 		}
 	}
@@ -137,78 +131,47 @@ func generateArchivedSBOMs(ctx context.Context, pkg api.Package, buildPath strin
 		err = errors.Join(err, os.RemoveAll(outputPath))
 	}()
 
-	sbomViewerEnabled := feature.IsEnabled(feature.SBOMViewer)
-	var jsonList []byte
-	if sbomViewerEnabled {
-		componentSBOMs := make([]string, 0, len(pkg.Components))
-		for _, component := range pkg.Components {
-			if len(component.Files) > 0 || len(component.DataInjections) > 0 {
-				componentSBOMs = append(componentSBOMs, component.Name)
-			}
-		}
-		identifiers := make([]string, 0, len(targets))
-		for _, target := range targets {
-			identifiers = append(identifiers, target.resourceIdentifier)
-		}
-		jsonList, err = generateJSONList(componentSBOMs, identifiers)
-		if err != nil {
-			return err
-		}
-	}
-
 	l := logger.From(ctx)
 	for index, target := range targets {
 		l.Info("creating image SBOM", "reference", target.resourceIdentifier, "count", fmt.Sprintf("%d/%d", index+1, len(targets)))
-		jsonData, err := createImageSBOM(ctx, cachePath, outputPath, target.img, target.resourceIdentifier)
-		if err != nil {
+		if err := createImageSBOM(ctx, cachePath, outputPath, target.img, target.resourceIdentifier); err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
-		}
-		if sbomViewerEnabled {
-			if err := createSBOMViewerAsset(outputPath, target.resourceIdentifier, jsonData, jsonList); err != nil {
-				return err
-			}
 		}
 	}
 	for _, component := range pkg.Components {
 		if len(component.Files) == 0 && len(component.DataInjections) == 0 {
 			continue
 		}
-		jsonData, err := createFileSBOM(ctx, component, outputPath, buildPath)
-		if err != nil {
+		if err := createFileSBOM(ctx, component, outputPath, buildPath); err != nil {
 			return err
-		}
-		if sbomViewerEnabled {
-			if err := createSBOMViewerAsset(outputPath, fmt.Sprintf("%s%s", componentPrefix, component.Name), jsonData, jsonList); err != nil {
-				return err
-			}
 		}
 	}
 	return createReproducibleTarballFromDir(outputPath, "", filepath.Join(buildPath, layout.SBOMTar), false)
 }
 
-func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, identifier string) ([]byte, error) {
+func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, identifier string) error {
 	filename := layout.NormalizeSBOMFilename(fmt.Sprintf("%s.json", identifier))
 	return createImageSBOMAtPath(ctx, cachePath, filepath.Join(outputPath, filename), img, identifier)
 }
 
 // createImageSBOMResource stores an image SBOM under resourceIdentifier while recording imageReference in the SBOM.
-func createImageSBOMResource(ctx context.Context, cachePath, outputPath string, img v1.Image, resourceIdentifier, imageReference string) ([]byte, error) {
+func createImageSBOMResource(ctx context.Context, cachePath, outputPath string, img v1.Image, resourceIdentifier, imageReference string) error {
 	resourcePath := filepath.FromSlash(layout.ImageSBOMResourcePath(resourceIdentifier))
 	return createImageSBOMAtPath(ctx, cachePath, filepath.Join(outputPath, resourcePath), img, imageReference)
 }
 
-func createImageSBOMAtPath(ctx context.Context, cachePath, sbomPath string, img v1.Image, identifier string) ([]byte, error) {
+func createImageSBOMAtPath(ctx context.Context, cachePath, sbomPath string, img v1.Image, identifier string) error {
 	imageCachePath := filepath.Join(cachePath, layout.ImagesDir)
 
 	// This is a write cache
 	if err := helpers.CreateDirectory(imageCachePath, helpers.ReadExecuteAllWriteUser); err != nil {
-		return nil, fmt.Errorf("failed to create image cache directory %s: %w", imageCachePath, err)
+		return fmt.Errorf("failed to create image cache directory %s: %w", imageCachePath, err)
 	}
 
 	syftImage := image.New(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(identifier))
 	err := syftImage.Read()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	cfg := getDefaultSyftConfig()
 	syftSrc := stereoscopesource.New(syftImage, stereoscopesource.ImageConfig{
@@ -216,37 +179,34 @@ func createImageSBOMAtPath(ctx context.Context, cachePath, sbomPath string, img 
 	})
 	sbom, err := syft.CreateSBOM(ctx, syftSrc, cfg)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	jsonData, err := format.Encode(*sbom, syftjson.NewFormatEncoder())
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := os.MkdirAll(filepath.Dir(sbomPath), helpers.ReadWriteExecuteUser); err != nil {
-		return nil, fmt.Errorf("creating SBOM resource directory: %w", err)
+		return fmt.Errorf("creating SBOM resource directory: %w", err)
 	}
-	if err := os.WriteFile(sbomPath, jsonData, 0o666); err != nil {
-		return nil, err
-	}
-	return jsonData, nil
+	return os.WriteFile(sbomPath, jsonData, 0o666)
 }
 
-func createFileSBOM(ctx context.Context, component api.Component, outputPath, buildPath string) ([]byte, error) {
+func createFileSBOM(ctx context.Context, component api.Component, outputPath, buildPath string) error {
 	filename := layout.NormalizeSBOMFilename(fmt.Sprintf("%s%s.json", componentPrefix, component.Name))
 	return createFileSBOMAtPath(ctx, component, buildPath, filepath.Join(outputPath, filename))
 }
 
-func createFileSBOMResource(ctx context.Context, component api.Component, outputPath, buildPath string) ([]byte, error) {
+func createFileSBOMResource(ctx context.Context, component api.Component, outputPath, buildPath string) error {
 	resourcePath := filepath.FromSlash(layout.ComponentSBOMResourcePath(component.Name))
 	return createFileSBOMAtPath(ctx, component, buildPath, filepath.Join(outputPath, resourcePath))
 }
 
-func createFileSBOMAtPath(ctx context.Context, component api.Component, buildPath, sbomPath string) (_ []byte, err error) {
+func createFileSBOMAtPath(ctx context.Context, component api.Component, buildPath, sbomPath string) (err error) {
 	l := logger.From(ctx)
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(tmpDir))
@@ -254,7 +214,7 @@ func createFileSBOMAtPath(ctx context.Context, component api.Component, buildPat
 	tarPath := filepath.Join(buildPath, layout.ComponentsDir, component.Name) + ".tar"
 	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	sbomFiles := []string{}
 	appendSBOMFiles := func(path string) error {
@@ -273,20 +233,20 @@ func createFileSBOMAtPath(ctx context.Context, component api.Component, buildPat
 		path := filepath.Join(tmpDir, component.Name, string(layout.FilesComponentDir), layout.ComponentFileRelPath(i, file.Destination))
 		err := appendSBOMFiles(path)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 	for i, data := range component.DataInjections {
 		path := filepath.Join(tmpDir, component.Name, string(layout.DataComponentDir), strconv.Itoa(i), filepath.Base(data.Target.Path))
 		err := appendSBOMFiles(path)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	parentSource, err := directorysource.NewFromPath(tmpDir)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	catalog := pkg.NewCollection()
 	relationships := []artifact.Relationship{}
@@ -294,20 +254,20 @@ func createFileSBOMAtPath(ctx context.Context, component api.Component, buildPat
 		l.Info("creating file SBOMs", "file", sbomFile, "count", fmt.Sprintf("%d/%d", index+1, len(sbomFiles)))
 		fileSrc, err := filesource.NewFromPath(sbomFile)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		cfg := getDefaultSyftConfig()
 		sbom, err := syft.CreateSBOM(ctx, fileSrc, cfg)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		for pkg := range sbom.Artifacts.Packages.Enumerate() {
 			containsSource := false
 			fileMetadata, ok := fileSrc.Describe().Metadata.(source.FileMetadata)
 			if !ok {
-				return nil, errors.New("failed to get file metadata from SBOM source")
+				return errors.New("failed to get file metadata from SBOM source")
 			}
 
 			// See if the source locations for this package contain the file Zarf indexed
@@ -349,102 +309,13 @@ func createFileSBOMAtPath(ctx context.Context, component api.Component, buildPat
 	}
 	jsonData, err := format.Encode(artifact, syftjson.NewFormatEncoder())
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := os.MkdirAll(filepath.Dir(sbomPath), helpers.ReadWriteExecuteUser); err != nil {
-		return nil, fmt.Errorf("creating SBOM resource directory: %w", err)
+		return fmt.Errorf("creating SBOM resource directory: %w", err)
 	}
-	if err := os.WriteFile(sbomPath, jsonData, 0o666); err != nil {
-		return nil, err
-	}
-	return jsonData, nil
-}
-
-func createSBOMViewerAsset(outputDir, identifier string, jsonData, jsonList []byte) error {
-	filename := fmt.Sprintf("sbom-viewer-%s.html", layout.NormalizeSBOMFilename(identifier))
-	return createSBOMHTML(outputDir, filename, "viewer/template.gohtml", jsonData, jsonList)
-}
-
-func createSBOMHTML(outputDir, filename, goTemplate string, jsonData, jsonList []byte) error {
-	path := filepath.Join(outputDir, layout.NormalizeSBOMFilename(filename))
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, file.Close())
-	}()
-	themeCSS, err := loadFileCSS("theme.css")
-	if err != nil {
-		return err
-	}
-	viewerCSS, err := loadFileCSS("styles.css")
-	if err != nil {
-		return err
-	}
-	libraryJS, err := loadFileJS("library.js")
-	if err != nil {
-		return err
-	}
-	commonJS, err := loadFileJS("common.js")
-	if err != nil {
-		return err
-	}
-	viewerJS, err := loadFileJS("viewer.js")
-	if err != nil {
-		return err
-	}
-	tplData := struct {
-		ThemeCSS  template.CSS
-		ViewerCSS template.CSS
-		List      template.JS
-		Data      template.JS
-		LibraryJS template.JS
-		CommonJS  template.JS
-		ViewerJS  template.JS
-	}{
-		ThemeCSS:  themeCSS,
-		ViewerCSS: viewerCSS,
-		List:      template.JS(jsonList),
-		Data:      template.JS(jsonData),
-		LibraryJS: libraryJS,
-		CommonJS:  commonJS,
-		ViewerJS:  viewerJS,
-	}
-	tpl, err := template.ParseFS(viewerAssets, goTemplate)
-	if err != nil {
-		return err
-	}
-	return tpl.Execute(file, tplData)
-}
-
-func loadFileCSS(name string) (template.CSS, error) {
-	data, err := viewerAssets.ReadFile("viewer/" + name)
-	if err != nil {
-		return "", err
-	}
-	return template.CSS(data), nil
-}
-
-func loadFileJS(name string) (template.JS, error) {
-	data, err := viewerAssets.ReadFile("viewer/" + name)
-	if err != nil {
-		return "", err
-	}
-	return template.JS(data), nil
-}
-
-func generateJSONList(components []string, imageIdentifiers []string) ([]byte, error) {
-	var jsonList []string
-	for _, id := range imageIdentifiers {
-		jsonList = append(jsonList, layout.NormalizeSBOMFilename(id))
-	}
-	for _, k := range components {
-		normalized := layout.NormalizeSBOMFilename(fmt.Sprintf("%s%s", componentPrefix, k))
-		jsonList = append(jsonList, normalized)
-	}
-	return json.Marshal(jsonList)
+	return os.WriteFile(sbomPath, jsonData, 0o666)
 }
 
 func getDefaultSyftConfig() *syft.CreateSBOMConfig {

@@ -247,7 +247,7 @@ func selectImportVariant(ctx context.Context, imp v1beta1.ComponentImport, specD
 }
 
 func (c remoteReferenceCache) load(ctx context.Context, importURL, arch string, remoteOptions types.RemoteOptions, cachePath string) (loadedComponentConfig, error) {
-	remote, err := zoci.NewRemoteWithOptions(ctx, importURL, ocispec.Platform{Architecture: arch}, zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, importURL, ocispec.Platform{Architecture: arch}, zoci.RemoteClientOptions{
 		CachePath:     cachePath,
 		RemoteOptions: remoteOptions,
 	})

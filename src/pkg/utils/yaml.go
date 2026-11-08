@@ -117,16 +117,6 @@ func AddRootListHint(hints map[string]string, listKey string, listValue string, 
 	return hints
 }
 
-// AddRootHint adds a hint string for a given root key.
-func AddRootHint(hints map[string]string, rootKey string, hintText string) map[string]string {
-	key := fmt.Sprintf("%s%s%s:", yamlFormat(color.FgHiCyan), rootKey, yamlFormat(color.Reset))
-	newKey := fmt.Sprintf("%s%s:%s", yamlFormat(color.FgBlack)+yamlFormat(color.BgWhite), rootKey, yamlFormat(color.Reset))
-	hint := fmt.Sprintf("%s  %s%s", yamlFormat(color.FgHiBlack), hintText, yamlFormat(color.Reset))
-	hints[key] = fmt.Sprintf("\n%s\n%s%s", message.RuleLine, newKey, hint)
-
-	return hints
-}
-
 // ReadYaml reads a yaml file and unmarshals it into a given config.
 func ReadYaml(path string, destConfig any) error {
 	file, err := os.ReadFile(path)

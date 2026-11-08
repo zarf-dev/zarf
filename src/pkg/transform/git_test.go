@@ -29,13 +29,6 @@ var gitURLs = []string{
 	"https://github.com/prometheus-community/helm-charts.git@kube-prometheus-stack-47.3.0",
 	"https://github.com/prometheus-community/",
 	"https://github.com/",
-
-	// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
-	"https://github.com/zarf-dev/zarf.helm.git/info/refs",
-	"https://github.com/zarf-dev/zarf.helm.git/info/refs?service=git-upload-pack",
-	"https://github.com/zarf-dev/zarf.helm.git/info/refs?service=git-receive-pack",
-	"https://github.com/zarf-dev/zarf.helm.git/git-upload-pack",
-	"https://github.com/zarf-dev/zarf.helm.git/git-receive-pack",
 }
 
 var badGitURLs = []string{
@@ -93,13 +86,6 @@ func TestGitURLSplitRef(t *testing.T) {
 		{"https://github.com/prometheus-community/helm-charts.git", "kube-prometheus-stack-47.3.0"},
 		{"https://github.com/prometheus-community", ""},
 		{"https://github.com/", ""},
-
-		// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
-		{"https://github.com/zarf-dev/zarf.helm.git", ""},
-		{"https://github.com/zarf-dev/zarf.helm.git", ""},
-		{"https://github.com/zarf-dev/zarf.helm.git", ""},
-		{"https://github.com/zarf-dev/zarf.helm.git", ""},
-		{"https://github.com/zarf-dev/zarf.helm.git", ""},
 	}
 
 	for idx, url := range gitURLs {
@@ -135,13 +121,6 @@ func TestGitURLtoFolderName(t *testing.T) {
 		"helm-charts-1319967699",
 		"prometheus-community-3453166319",
 		"-1276058275",
-
-		// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
-		"zarf.helm-93697844",
-		"zarf.helm-93697844",
-		"zarf.helm-93697844",
-		"zarf.helm-93697844",
-		"zarf.helm-93697844",
 	}
 
 	for idx, url := range gitURLs {
@@ -176,13 +155,6 @@ func TestGitURLtoRepoName(t *testing.T) {
 		"helm-charts-3648076006",
 		"prometheus-community-2749132599",
 		"-98306241",
-
-		// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
-		"zarf.helm-693435256",
-		"zarf.helm-693435256",
-		"zarf.helm-693435256",
-		"zarf.helm-693435256",
-		"zarf.helm-693435256",
 	}
 
 	for idx, url := range gitURLs {
@@ -217,13 +189,6 @@ func TestGitURL(t *testing.T) {
 		"https://gitlab.com/repo-owner/helm-charts-3648076006.git",
 		"https://gitlab.com/repo-owner/prometheus-community-2749132599",
 		"https://gitlab.com/repo-owner/-98306241",
-
-		// Smart Git Protocol URLs for proxying (https://www.git-scm.com/docs/http-protocol)
-		"https://gitlab.com/repo-owner/zarf.helm-693435256.git/info/refs",
-		"https://gitlab.com/repo-owner/zarf.helm-693435256.git/info/refs?service=git-upload-pack",
-		"https://gitlab.com/repo-owner/zarf.helm-693435256.git/info/refs?service=git-receive-pack",
-		"https://gitlab.com/repo-owner/zarf.helm-693435256.git/git-upload-pack",
-		"https://gitlab.com/repo-owner/zarf.helm-693435256.git/git-receive-pack",
 	}
 
 	for idx, url := range gitURLs {

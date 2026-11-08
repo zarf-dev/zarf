@@ -1143,11 +1143,6 @@ func testState() *state.State {
 			PullUsername: "git-pull-user",
 			PullPassword: "git-pull-secret",
 		},
-		ArtifactServer: state.ArtifactServerInfo{
-			Address:      "artifact.example.com",
-			PushUsername: "artifact-user",
-			PushToken:    "artifact-token",
-		},
 		InjectorInfo: state.InjectorInfo{
 			Image:                  "injector:latest",
 			Port:                   5001,

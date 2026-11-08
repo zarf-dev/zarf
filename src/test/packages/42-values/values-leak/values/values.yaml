@@ -1,0 +1,7 @@
+shared:
+  fromShared: shared-value
+  nested:
+    both: from-shared
+extra:
+  nested:
+    both: from-extra

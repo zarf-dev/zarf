@@ -172,6 +172,10 @@ func InferType(s string) any {
 
 // DeepMerge merges one or more Values maps recursively into the receiver via mutation.
 // Later maps in the variadic arguments take precedence over earlier ones.
+// Values taken from the sources are deep copied, so the sources are never mutated.
+//
+// TODO: Extend deep copying to other map and slice types, such as map[string]string
+// and []string, so modifying merged values cannot mutate the sources.
 func (v Values) DeepMerge(sources ...Values) {
 	if v == nil {
 		return
@@ -190,11 +194,11 @@ func (v Values) DeepMerge(sources ...Values) {
 					Values(dstMap).DeepMerge(srcMap)
 				} else {
 					// Not both maps, src overwrites dst
-					v[key] = srcVal
+					v[key] = deepCopyValue(srcVal)
 				}
 			} else {
 				// Key only in src
-				v[key] = srcVal
+				v[key] = deepCopyValue(srcVal)
 			}
 		}
 	}
@@ -202,6 +206,7 @@ func (v Values) DeepMerge(sources ...Values) {
 
 // Extract retrieves a value from a nested Values map using dot notation path.
 // Path format: ".key.subkey.value" where each dot represents a map level.
+// The result is a live reference into v, not a copy, so callers must not mutate it.
 func (v Values) Extract(path Path) (any, error) {
 	if err := path.Validate(); err != nil {
 		return nil, err
@@ -241,6 +246,8 @@ func (v Values) Extract(path Path) (any, error) {
 
 // Set takes a Values, a Path to a new or existing key, and any value and stores the newVal at the path.
 // Special case: path "." merges the newVal's map contents directly into v (at the root).
+// newVal is deep copied, with the same type limits as DeepMerge: only map[string]any, []any and
+// scalars are copied, any other map or slice type is stored by reference.
 func (v Values) Set(path Path, newVal any) error {
 	if err := path.Validate(); err != nil {
 		return err
@@ -267,7 +274,7 @@ func (v Values) Set(path Path, newVal any) error {
 			if newIsMap && currIsMap {
 				Values(currMap).DeepMerge(newMap)
 			} else {
-				current[part] = newVal
+				current[part] = deepCopyValue(newVal)
 			}
 		} else {
 			if _, exists := current[part]; !exists {
@@ -317,7 +324,8 @@ func (v Values) Delete(path Path) error {
 }
 
 // DeepCopy returns a recursive copy of v so the result can be mutated without
-// affecting the original maps or slices.
+// affecting the original maps or slices. Only map[string]any, []any and scalars are
+// copied; any other map or slice type is shared with v.
 func (v Values) DeepCopy() Values {
 	cp := make(Values, len(v))
 	for k, val := range v {
@@ -329,6 +337,9 @@ func (v Values) DeepCopy() Values {
 func deepCopyValue(val any) any {
 	switch t := val.(type) {
 	case map[string]any:
+		if t == nil {
+			return t
+		}
 		cp := make(map[string]any, len(t))
 		for k, sub := range t {
 			cp[k] = deepCopyValue(sub)
@@ -338,6 +349,9 @@ func deepCopyValue(val any) any {
 	case Values:
 		return deepCopyValue(map[string]any(t))
 	case []any:
+		if t == nil {
+			return t
+		}
 		cp := make([]any, len(t))
 		for i, sub := range t {
 			cp[i] = deepCopyValue(sub)
@@ -445,34 +459,7 @@ func (e *SchemaValidationError) Error() string {
 	return fmt.Sprintf("schema validation failed for %s", e.SchemaPath)
 }
 
-// ValidateSchemaFile validates that a file at schemaPath is a valid JSON Schema.
-// It checks that the file exists, is readable, and can be parsed as a valid JSON Schema.
-func ValidateSchemaFile(schemaPath string) error {
-	// Check file exists and is readable
-	if _, err := os.Stat(schemaPath); err != nil {
-		return fmt.Errorf("unable to access schema file %s: %w", schemaPath, err)
-	}
-
-	// Convert to absolute path and ensure forward slashes for URI
-	absPath, err := filepath.Abs(schemaPath)
-	if err != nil {
-		return fmt.Errorf("failed to resolve absolute path of %s: %w", schemaPath, err)
-	}
-	absPath = filepath.ToSlash(absPath)
-
-	// Attempt to compile the schema - this validates it's valid JSON Schema
-	schemaLoader := gojsonschema.NewReferenceLoader("file:///" + absPath)
-	_, err = gojsonschema.NewSchema(schemaLoader)
-	if err != nil {
-		return fmt.Errorf("invalid JSON schema at %s: %w", schemaPath, err)
-	}
-
-	return nil
-}
-
 // ValidateSchemaDocument validates that an already-parsed document is a valid JSON Schema.
-// Prefer this over ValidateSchemaFile when the document has already been read and unmarshaled,
-// as it avoids a second disk read and parse.
 func ValidateSchemaDocument(doc map[string]any) error {
 	_, err := gojsonschema.NewSchema(gojsonschema.NewGoLoader(doc))
 	if err != nil {

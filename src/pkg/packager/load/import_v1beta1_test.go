@@ -77,7 +77,7 @@ func TestRemoteComponentConfigRejectsPlatformVariantMismatch(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
 
-	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, ref.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
 		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
 	})
 	require.NoError(t, err)
@@ -113,7 +113,7 @@ func TestRemoteComponentConfigRejectsOnCreateActions(t *testing.T) {
 	manifest, err := oras.PackManifest(ctx, store, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{ConfigDescriptor: &configDescriptor})
 	require.NoError(t, err)
 	require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
-	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), ocispec.Platform{}, zoci.RemoteClientOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
+	remote, err := zoci.NewRemote(ctx, ref.String(), ocispec.Platform{}, zoci.RemoteClientOptions{RemoteOptions: types.RemoteOptions{PlainHTTP: true}})
 	require.NoError(t, err)
 	_, err = oras.Copy(ctx, store, manifest.Digest.String(), remote.Repo(), ref.Reference, remote.GetDefaultCopyOpts())
 	require.NoError(t, err)
@@ -190,7 +190,7 @@ func publishRemoteComponentConfig(ctx context.Context, t *testing.T, ref registr
 	require.NoError(t, err)
 	require.NoError(t, store.Tag(ctx, manifest, manifest.Digest.String()))
 
-	remote, err := zoci.NewRemoteWithOptions(ctx, ref.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
+	remote, err := zoci.NewRemote(ctx, ref.String(), ocispec.Platform{}, zoci.RemoteClientOptions{
 		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
 	})
 	require.NoError(t, err)
