@@ -180,10 +180,9 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 func validatePackageSecretSize(pkg api.Package, digest string, deployConfig state.DeployConfig) error {
 	components := make([]state.DeployedComponent, 0, len(pkg.Components))
 	for _, component := range pkg.Components {
-		//nolint:staticcheck // Populate the legacy status for compatibility with older clients.
 		components = append(components, state.DeployedComponent{
 			Name:               component.Name,
-			Status:             state.ComponentStatusSucceeded,
+			Status:             state.ComponentStatusSucceeded, //nolint:staticcheck // Legacy status remains persisted for compatibility.
 			ObservedGeneration: 1,
 		})
 	}
