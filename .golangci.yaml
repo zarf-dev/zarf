@@ -80,10 +80,10 @@ linters:
       enable-all: true
   exclusions:
     rules:
-      # Auto exclude while we still support v1alpha1
+      # Legacy v1alpha1 APIs remain necessary; method-chain diagnostics can span lines.
       - linters:
           - staticcheck
-        text: 'SA1019: .* is deprecated: Only supported by deprecated v1alpha1 packages\.'
+        text: '(?s)SA1019: .* is deprecated: Only supported by deprecated v1alpha1 packages\.'
     presets:
       - common-false-positives
       - legacy

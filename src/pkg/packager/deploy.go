@@ -405,9 +405,10 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		if d.deployedPkg != nil {
 			packageGeneration = d.deployedPkg.Generation
 		}
+		//nolint:staticcheck // Populate the legacy status for compatibility with older clients.
 		deployedComponent := state.DeployedComponent{
 			Name:               component.Name,
-			Status:             state.ComponentStatusDeploying, //nolint:staticcheck // Legacy status remains persisted for compatibility.
+			Status:             state.ComponentStatusDeploying,
 			LastEvent:          state.ComponentEvent{Type: state.EventTypeDeploy, Outcome: state.EventOutcomeInProgress, Timestamp: time.Now()},
 			ObservedGeneration: packageGeneration,
 		}
