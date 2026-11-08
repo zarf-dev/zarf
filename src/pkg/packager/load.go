@@ -33,9 +33,7 @@ type LoadOptions struct {
 	Shasum string
 	// Architecture selects the target architecture for OCI sources.
 	// Empty uses the host architecture. Ignored for local archives.
-	Architecture string
-	// Deprecated: Use VerifyBlobOptions instead.
-	PublicKeyPath     string
+	Architecture      string
 	VerifyBlobOptions *signing.VerifyBlobOptions
 	Filter            filters.ComponentFilterStrategy
 	Output            string
@@ -62,15 +60,6 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	source = zoci.NormalizeOCISource(source)
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
-	}
-
-	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
-	// Only applies when VerifyBlobOptions is not already set,
-	// ensuring the new API takes precedence over the deprecated field.
-	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
-		defaults := signing.DefaultVerifyBlobOptions()
-		defaults.Key = opts.PublicKeyPath
-		opts.VerifyBlobOptions = &defaults
 	}
 
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)

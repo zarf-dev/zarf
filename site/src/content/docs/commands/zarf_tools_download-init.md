@@ -17,6 +17,7 @@ zarf tools download-init [flags]
 ### Options
 
 ```
+      --api-version string        Specify the init package API version (v1alpha1 or v1beta1). (default "v1beta1")
   -h, --help                      help for download-init
   -o, --output-directory string   Specify a directory to place the init package in.
   -v, --version string            Specify version to download (defaults to current CLI version)
@@ -30,7 +31,7 @@ zarf tools download-init [flags]
       --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+  -l, --log-level string           Log level when running Zarf. Valid options are: error, warn, info, debug (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files

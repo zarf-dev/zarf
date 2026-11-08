@@ -141,7 +141,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 	}
 	if persistState {
 		depPkg.AppendEvent(removePackageEvent(state.EventOutcomeInProgress))
-		if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
+		if err := opts.Cluster.StoreDeployedPackage(ctx, *depPkg); err != nil {
 			l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 		}
 	}
@@ -170,7 +170,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 		depComp.Status = state.ComponentStatusRemoving //nolint:staticcheck // Legacy status remains persisted for compatibility.
 		depComp.LastEvent = state.ComponentEvent{Type: state.EventTypeRemove, Outcome: state.EventOutcomeInProgress, Timestamp: time.Now()}
 		if persistState {
-			if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
+			if err := opts.Cluster.StoreDeployedPackage(ctx, *depPkg); err != nil {
 				l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 			}
 		}
@@ -200,7 +200,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 					// remove the helm chart from the installed charts slice.
 					depComp.InstalledCharts = slices.Delete(depComp.InstalledCharts, j, j+1)
 
-					err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
+					err = opts.Cluster.StoreDeployedPackage(ctx, *depPkg)
 					if err != nil {
 						// We warn and ignore errors because we may have removed the cluster that this package was inside of
 						l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
@@ -228,7 +228,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 			// Remove completed components locally even when no deployment record exists.
 			depPkg.DeployedComponents = slices.Delete(depPkg.DeployedComponents, i, i+1)
 			if persistState {
-				err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
+				err = opts.Cluster.StoreDeployedPackage(ctx, *depPkg)
 				if err != nil {
 					// We warn and ignore errors because we may have removed the cluster that this package was inside of
 					l.Warn("unable to update secret package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
@@ -241,7 +241,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 				depComp.Status = state.ComponentStatusFailed //nolint:staticcheck // Legacy status remains persisted for compatibility.
 				depComp.LastEvent = state.ComponentEvent{Type: state.EventTypeRemove, Outcome: state.EventOutcomeFailed, Timestamp: time.Now()}
 				depPkg.AppendEvent(removePackageEvent(state.EventOutcomeFailed))
-				if updateErr := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); updateErr != nil {
+				if updateErr := opts.Cluster.StoreDeployedPackage(ctx, *depPkg); updateErr != nil {
 					l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", updateErr.Error())
 				}
 			}
@@ -265,7 +265,7 @@ func Remove(ctx context.Context, definition api.Package, opts RemoveOptions) err
 			if err != nil {
 				l.Warn("unable to delete secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 			}
-		} else if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
+		} else if err := opts.Cluster.StoreDeployedPackage(ctx, *depPkg); err != nil {
 			l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 		}
 	}
