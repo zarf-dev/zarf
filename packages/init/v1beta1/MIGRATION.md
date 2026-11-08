@@ -60,8 +60,6 @@ All 49 declared deploy-time variables from the v1alpha1 init components map as f
 | `GIT_SERVER_SECURITY_CONTEXT_FS_GROUP` | `gitServer.podSecurityContext.fsGroup` |
 | `GIT_SERVER_SECURITY_CONTEXT_RUN_AS_GROUP` | `gitServer.podSecurityContext.runAsGroup` |
 
-There are no additional v1beta1 specific configuration options.
-
 Write maps, arrays, booleans, and numbers as native YAML rather than strings
 containing YAML. For example, save this as `init-values.yaml`:
 
