@@ -37,12 +37,6 @@ func migrateDeprecated(pkg v1alpha1.ZarfPackage) (v1alpha1.ZarfPackage, []string
 	if pkg.Metadata.YOLO {
 		warnings = append(warnings, "metadata.yolo is deprecated and will be removed in the next schema version. Use --connected when running zarf package deploy instead.")
 	}
-	if len(pkg.Variables) > 0 {
-		warnings = append(warnings, "variables are deprecated and removed in v1beta1. Migrate to Zarf values instead")
-	}
-	if len(pkg.Constants) > 0 {
-		warnings = append(warnings, "constants are deprecated and removed in v1beta1. Migrate to Zarf values instead")
-	}
 
 	migratedComponents := []v1alpha1.ZarfComponent{}
 	for _, comp := range pkg.Components {

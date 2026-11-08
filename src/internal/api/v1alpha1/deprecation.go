@@ -21,3 +21,17 @@ func WarnIfDeprecated(ctx context.Context, pkg api.Package) {
 		logger.From(ctx).Warn(DeprecationWarning, "package", pkg.Metadata.Name)
 	}
 }
+
+// WarnDeprecatedVariablesAndConstants reports legacy inputs after an authoring operation loads the complete package.
+func WarnDeprecatedVariablesAndConstants(ctx context.Context, pkg api.Package) {
+	if pkg.GetAPIVersion() != v1alpha1.APIVersion {
+		return
+	}
+	l := logger.From(ctx)
+	if len(pkg.Variables) > 0 {
+		l.Warn("variables are deprecated and removed in v1beta1. Migrate to Zarf values instead", "package", pkg.Metadata.Name)
+	}
+	if len(pkg.Constants) > 0 {
+		l.Warn("constants are deprecated and removed in v1beta1. Migrate to Zarf values instead", "package", pkg.Metadata.Name)
+	}
+}
