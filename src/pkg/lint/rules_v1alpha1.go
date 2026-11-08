@@ -34,6 +34,8 @@ func isTemplatedImage(image string) bool {
 }
 
 // CheckComponentValues runs lint rules validating values on component keys, should be run after templating
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func CheckComponentValues(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
 	findings = append(findings, checkForUnpinnedRepos(c, i)...)

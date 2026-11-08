@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api"
 	"github.com/zarf-dev/zarf/src/config"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -292,6 +293,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 }
 
 func findImages(ctx context.Context, pkg api.Package, resourceSet *load.ResourceSet, packageValues value.Values, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
+	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
 	l := logger.From(ctx)
 	s, err := state.Default()
 	if err != nil {

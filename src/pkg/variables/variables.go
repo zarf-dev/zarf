@@ -22,17 +22,23 @@ type SetVariable struct {
 }
 
 // GetSetVariable gets a variable set within a VariableConfig by its name
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (vc *VariableConfig) GetSetVariable(name string) (*SetVariable, bool) {
 	variable, ok := vc.setVariableMap[strings.ToUpper(name)]
 	return variable, ok
 }
 
 // GetSetVariableMap retrieves all SetVariables
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (vc *VariableConfig) GetSetVariableMap() SetVariableMap {
 	return vc.setVariableMap
 }
 
 // PopulateVariables handles setting the active variables within a VariableConfig's SetVariableMap
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (vc *VariableConfig) PopulateVariables(variables []api.InteractiveVariable, presetVariables map[string]string) error {
 	for name, value := range presetVariables {
 		vc.SetVariable(name, value, false, false, "")
@@ -77,6 +83,8 @@ func (vc *VariableConfig) PopulateVariables(variables []api.InteractiveVariable,
 }
 
 // SetVariable sets a variable in a VariableConfig's SetVariableMap
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (vc *VariableConfig) SetVariable(name, value string, sensitive bool, autoIndent bool, varType api.VariableType) {
 	name = strings.ToUpper(name)
 	vc.setVariableMap[name] = &SetVariable{
@@ -91,6 +99,8 @@ func (vc *VariableConfig) SetVariable(name, value string, sensitive bool, autoIn
 }
 
 // CheckVariablePattern checks to see if a current variable is set to a value that matches its pattern
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func (vc *VariableConfig) CheckVariablePattern(name, pattern string) error {
 	if variable, ok := vc.setVariableMap[name]; ok {
 		r, err := regexp.Compile(pattern)
