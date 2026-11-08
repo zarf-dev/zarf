@@ -171,14 +171,8 @@ type State struct {
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
 	IPFamily IPFamily `json:"ipFamily,omitempty"`
 	// AgentInfo contains information Zarf uses to configure the agent.
-	AgentInfo AgentInfo `json:"agentInfo"`
-	// Deprecated: Use AgentInfo.TLS instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
-	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
-	// Deprecated: Use AgentInfo.TLSUserProvided instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
-	AgentTLSUserProvided bool `json:"agentTLSUserProvided,omitempty"`
-	// Deprecated: Use AgentInfo.MutationPolicy instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
-	AgentMutationPolicy MutationPolicy `json:"agentMutationPolicy"`
-	InjectorInfo        InjectorInfo   `json:"injectorInfo"`
+	AgentInfo    AgentInfo    `json:"agentInfo"`
+	InjectorInfo InjectorInfo `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -199,55 +193,6 @@ type AgentInfo struct {
 // IsConfigured returns true when a complete agent TLS bundle is configured.
 func (ai AgentInfo) IsConfigured() bool {
 	return len(ai.TLS.CA) > 0 && len(ai.TLS.Cert) > 0 && len(ai.TLS.Key) > 0
-}
-
-// AgentIsConfigured returns true when Zarf has agent TLS configured.
-//
-// Deprecated: Use AgentInfo.IsConfigured instead.
-func (s *State) AgentIsConfigured() bool {
-	s.Reconcile()
-	return s.AgentInfo.IsConfigured()
-}
-
-// Reconcile synchronizes compatibility fields with their canonical replacements.
-// Call it when State crosses an application boundary or before reading compatibility-sensitive fields.
-func (s *State) Reconcile() {
-	s.RegistryInfo.ReconcilePort()
-	s.ReconcileAgentInfo()
-}
-
-// ReconcileAgentInfo syncs AgentInfo with deprecated agent fields.
-// When AgentInfo is empty, the deprecated fields are assumed to be the source of truth so
-// callers that still construct State with the legacy fields remain supported.
-func (s *State) ReconcileAgentInfo() {
-	if s.AgentInfo.isZero() {
-		s.AgentInfo = s.legacyAgentInfo()
-	}
-	s.syncLegacyAgentFields()
-}
-
-// SetAgentInfo updates AgentInfo and its deprecated compatibility fields together.
-func (s *State) SetAgentInfo(agentInfo AgentInfo) {
-	s.AgentInfo = agentInfo
-	s.syncLegacyAgentFields()
-}
-
-func (s *State) legacyAgentInfo() AgentInfo {
-	return AgentInfo{
-		TLS:             s.AgentTLS,
-		TLSUserProvided: s.AgentTLSUserProvided,
-		MutationPolicy:  s.AgentMutationPolicy,
-	}
-}
-
-func (s *State) syncLegacyAgentFields() {
-	s.AgentTLS = s.AgentInfo.TLS
-	s.AgentTLSUserProvided = s.AgentInfo.TLSUserProvided
-	s.AgentMutationPolicy = s.AgentInfo.MutationPolicy
-}
-
-func (ai AgentInfo) isZero() bool {
-	return len(ai.TLS.CA) == 0 && len(ai.TLS.Cert) == 0 && len(ai.TLS.Key) == 0 && !ai.TLSUserProvided && ai.MutationPolicy == ""
 }
 
 // InjectorInfo contains information on how to run the long lived Daemonset Injector
@@ -288,7 +233,7 @@ type GitServerInfo struct {
 	GitServerMode GitServerMode `json:"gitServerMode,omitempty"`
 }
 
-// IsInternal reports whether Zarf manages the git server. Older state without a mode uses the address.
+// IsInternal reports whether Zarf manages the git server
 func (gs GitServerInfo) IsInternal() bool {
 	if gs.GitServerMode != "" {
 		return gs.GitServerMode == GitServerModeInternal
@@ -424,8 +369,6 @@ type RegistryInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the registry
 	Address string `json:"address"`
-	// Deprecated: Use Port instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
-	NodePort int `json:"nodePort"`
 	// Port of the internal registry. In nodeport mode this is a Kubernetes NodePort, in proxy mode it is a host port.
 	Port int `json:"port"`
 	// Secret value that the registry was seeded with
@@ -436,30 +379,9 @@ type RegistryInfo struct {
 	MTLSStrategy MTLSStrategy `json:"mtlsStrategy,omitempty"`
 }
 
-// SetPort updates the registry port and its deprecated compatibility field.
-func (ri *RegistryInfo) SetPort(port int) {
-	ri.Port = port
-	ri.NodePort = port
-}
-
-// ReconcilePort syncs the deprecated NodePort field with Port at serialization boundaries.
-// On read (LoadState): copies NodePort into Port when Port is unset, for state written by older Zarf.
-// On write (SaveState): copies Port into NodePort so older Zarf versions can read the state.
-func (ri *RegistryInfo) ReconcilePort() {
-	if ri.Port == 0 && ri.NodePort != 0 {
-		ri.Port = ri.NodePort
-	}
-	ri.NodePort = ri.Port
-}
-
-// IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
+// IsInternal reports whether Zarf manages the registry.
 func (ri RegistryInfo) IsInternal() bool {
-	if ri.RegistryMode != "" {
-		return ri.RegistryMode != RegistryModeExternal
-	}
-	// This is kept for backwards compatibility with previous versions of Zarf that did not set the registry mode
-	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.Port) ||
-		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.Port)
+	return ri.RegistryMode == RegistryModeNodePort || ri.RegistryMode == RegistryModeProxy
 }
 
 // IsConfigured returns true if the registry info address has been set
@@ -629,7 +551,6 @@ func Default() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	state.Reconcile()
 	return state, nil
 }
 
@@ -648,14 +569,13 @@ type MergeOptions struct {
 // Merge merges init options for provided services into the provided state to create a new state struct
 func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	newState := *oldState
-	newState.Reconcile()
 	var err error
 	if opts.Services.Has(RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, opts.RegistryInfo)
 		// A resolved mode makes the access fields authoritative, including a zero external port.
 		if opts.RegistryInfo.RegistryMode != "" {
-			newState.RegistryInfo.SetPort(opts.RegistryInfo.Port)
+			newState.RegistryInfo.Port = opts.RegistryInfo.Port
 		}
 
 		// Only autogenerate passwords if the user didn't provide one and the target registry is internal
@@ -705,10 +625,9 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 		if opts.AgentMutationPolicy != "" {
 			agentInfo.MutationPolicy = opts.AgentMutationPolicy
 		}
-		newState.SetAgentInfo(agentInfo)
+		newState.AgentInfo = agentInfo
 	}
 
-	newState.Reconcile()
 	return &newState, nil
 }
 
@@ -724,12 +643,10 @@ func DebugPrint(ctx context.Context, state *State) {
 }
 
 func sanitizeState(s *State) *State {
-	// Overwrite the AgentTLS information
-	agentInfo := s.AgentInfo
-	agentInfo.TLS.CA = []byte("**sanitized**")
-	agentInfo.TLS.Cert = []byte("**sanitized**")
-	agentInfo.TLS.Key = []byte("**sanitized**")
-	s.SetAgentInfo(agentInfo)
+	// Overwrite the agent TLS information
+	s.AgentInfo.TLS.CA = []byte("**sanitized**")
+	s.AgentInfo.TLS.Cert = []byte("**sanitized**")
+	s.AgentInfo.TLS.Key = []byte("**sanitized**")
 
 	// Overwrite the GitServer passwords
 	s.GitServer.PushPassword = "**sanitized**"

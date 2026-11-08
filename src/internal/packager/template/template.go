@@ -45,7 +45,6 @@ func GetZarfTemplates(ctx context.Context, apiVersion string, service api.Servic
 	}
 
 	if s != nil {
-		s.Reconcile()
 		regInfo := s.RegistryInfo
 		gitInfo := s.GitServer
 

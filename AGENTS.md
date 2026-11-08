@@ -20,6 +20,8 @@ Write idiomatic Go; `golangci-lint fmt` applies `gofmt` and `goimports`. Keep pa
 
 Keep CLI-specific validation and flag names in `src/cmd`. Validation errors outside of `src/cmd` should describe configuration options in API-neutral terms.
 
+When removing functionality, delete its obsolete tests and do not add tests solely to prove the removed behavior is absent or rejected; test the remaining supported behavior.
+
 Install hooks with `pre-commit install`; they enforce formatting, linting, credentials checks, and generated schema/docs consistency.
 
 ## Testing Guidelines

@@ -1411,38 +1411,6 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
 		require.NoError(t, err, "verification should succeed with legacy signature format")
 	})
-
-	t.Run("deprecated KeyRef alias resolves before hasKey is computed", func(t *testing.T) {
-		t.Parallel()
-
-		tmpDir := t.TempDir()
-		yamlPath := filepath.Join(tmpDir, ZarfYAML)
-
-		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
-		require.NoError(t, err)
-		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
-
-		pkgLayout := &PackageLayout{
-			dirPath: tmpDir,
-			pkg:     packageDefinition(v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion}),
-		}
-
-		signOpts := signing.DefaultSignBlobOptions()
-		signOpts.Key = "./testdata/cosign.key"
-		signOpts.Password = "test"
-
-		err = pkgLayout.SignPackage(ctx, &signOpts)
-		require.NoError(t, err)
-
-		// Use only the deprecated KeyRef alias with Key intentionally left empty.
-		// Without the ordering fix, hasKey was computed before the KeyRef→Key sync,
-		// causing verification to fail with "package was signed with a key; provide --key to verify".
-		verifyOpts := signing.DefaultVerifyBlobOptions()
-		verifyOpts.KeyRef = "./testdata/cosign.pub" //nolint:staticcheck
-
-		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
-		require.NoError(t, err)
-	})
 }
 
 func TestGetAttachments(t *testing.T) {
@@ -1970,34 +1938,6 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		// Empty options - should default to VerifyNever (zero value)
 		opts := PackageLayoutOptions{}
 
-		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
-		require.NoError(t, err)
-		require.NotNil(t, pkgLayout)
-	})
-
-	t.Run("deprecated PublicKeyPath bridges to VerifyBlobOptions", func(t *testing.T) {
-		pkgDir, pubKeyPath := setupTestPackage(t, true)
-
-		opts := PackageLayoutOptions{
-			VerificationStrategy: VerifyAlways,
-			PublicKeyPath:        pubKeyPath,
-		}
-
-		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
-		require.NoError(t, err)
-		require.NotNil(t, pkgLayout)
-	})
-
-	t.Run("VerifyBlobOptions takes precedence over deprecated PublicKeyPath", func(t *testing.T) {
-		pkgDir, pubKeyPath := setupTestPackage(t, true)
-
-		opts := PackageLayoutOptions{
-			VerificationStrategy: VerifyAlways,
-			PublicKeyPath:        "./testdata/nonexistent.pub",
-			VerifyBlobOptions:    verifyOptsFromKey(pubKeyPath),
-		}
-
-		// Should use VerifyBlobOptions (correct key), not PublicKeyPath (wrong key)
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)
