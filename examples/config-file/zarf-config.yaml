@@ -8,9 +8,3 @@ package:
     components: 'lion'
     values:
       - deploy-values.yaml
-
-dev:
-  template:
-    set:
-      zebra: 'stripes'
-      leopard: 'spots'

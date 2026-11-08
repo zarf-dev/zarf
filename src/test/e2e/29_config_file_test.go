@@ -5,13 +5,11 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 func TestConfigFileCreate(t *testing.T) {
@@ -20,19 +18,10 @@ func TestConfigFileCreate(t *testing.T) {
 
 	t.Setenv("ZARF_CONFIG", filepath.Join("src", "test", "zarf-config-config-file.toml"))
 
-	_, _, err := e2e.Zarf(t, "dev", "template", dir)
-	require.NoError(t, err)
-	t.Cleanup(func() { e2e.CleanFiles(t, filepath.Join(dir, "zarf.gen.yaml")) })
-
-	_, _, err = e2e.Zarf(t, "package", "create", dir, "--confirm", "-o", tmpDir)
+	_, _, err := e2e.Zarf(t, "package", "create", dir, "--confirm", "-o", tmpDir)
 	require.NoError(t, err)
 
 	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch))
-	pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{})
-	require.NoError(t, err)
-	require.Equal(t, "This is a zebra and they have stripes", pkgLayout.Definition().Components[1].Description)
-	require.Equal(t, "This is a leopard and they have spots", pkgLayout.Definition().Components[2].Description)
-
 	_, _, err = e2e.Zarf(t, "package", "deploy", tarPath, "--confirm")
 	require.NoError(t, err)
 

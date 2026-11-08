@@ -5,10 +5,6 @@ log_level = 'info'
 [package.create]
 skip_sbom = false
 
-[dev.template.set]
-zebra = 'stripes'
-leopard = 'spots'
-
 [package.deploy]
 components = 'lion'
 values = ['deploy-values.yaml']
