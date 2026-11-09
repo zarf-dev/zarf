@@ -2,6 +2,7 @@ gitServer:
   persistence:
     claimName: data-zarf-gitea-0
     size: 10Gi
+    storageClass: ""
     accessModes:
       - ReadWriteOnce
   replicaCount: 1

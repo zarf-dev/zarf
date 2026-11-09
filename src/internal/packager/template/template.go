@@ -53,7 +53,8 @@ func GetZarfTemplates(ctx context.Context, apiVersion string, service api.Servic
 		gitInfo := s.GitServer
 
 		builtinMap := map[string]string{
-			"STORAGE_CLASS":               s.StorageClass,
+			// Older init packages contain this legacy placeholder. An empty value leaves PVC storageClassName unset.
+			"STORAGE_CLASS":               "",
 			"IPV6_ONLY":                   fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
 			"REGISTRY_MTLS_ENABLED":       fmt.Sprintf("%t", s.RegistryInfo.ShouldUseMTLS()),
 			"REGISTRY_PROXY":              fmt.Sprintf("%t", s.RegistryInfo.RegistryMode == state.RegistryModeProxy),
@@ -61,7 +62,6 @@ func GetZarfTemplates(ctx context.Context, apiVersion string, service api.Servic
 			"INJECTOR_HOSTPORT":           fmt.Sprintf("%d", s.InjectorInfo.Port),
 			"INJECTOR_PAYLOAD_CONFIGMAPS": fmt.Sprintf("%d", s.InjectorInfo.PayLoadConfigMapAmount),
 			"INJECTOR_SHASUM":             s.InjectorInfo.PayLoadShaSum,
-
 			// Registry info
 			"REGISTRY":           regInfo.Address,
 			"NODEPORT":           fmt.Sprintf("%d", regInfo.Port),

@@ -160,8 +160,8 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 	}
 
 	stateMap := map[string]any{
-		"Distro":       s.Distro,
-		"StorageClass": s.StorageClass,
+		// Older packages access this removed state field. An empty value leaves PVC storageClassName unset.
+		"StorageClass": "",
 		"IPFamily":     string(s.IPFamily),
 		"Registry":     registry,
 		"Git":          git,

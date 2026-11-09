@@ -19,6 +19,9 @@
             "size": {
               "type": "string"
             },
+            "storageClass": {
+              "type": "string"
+            },
             "accessMode": {
               "enum": [
                 "ReadWriteOnce",
