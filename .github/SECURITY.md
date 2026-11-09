@@ -22,14 +22,14 @@ Use the [issue tracker](https://github.com/zarf-dev/zarf/issues) for non-securit
 
 ## Supported Versions
 
-Security fixes are provided for the latest stable minor release of the current major version. Earlier minor releases, release candidates, and nightly builds are unsupported; affected users should upgrade to the current supported release. Maintainers MAY provide a backport when operational impact warrants it.
+Security fixes are provided for the latest stable minor release of the current major version. Affected users should upgrade to the current supported release. Maintainers MAY provide a backport when operational impact warrants it.
 
 ## Disclosure and Remediation Process
 
 1. Maintainers acknowledge the report and assess its impact.
 2. Maintainers coordinate a fix and disclosure with the reporter when appropriate.
 3. Zarf publishes a fixed release, security advisory, and migration guidance as applicable.
-4. Zarf pursues CVE assignment when appropriate; a CVE is not required before a fix is released.
+4. Zarf pursues CVE assignment when appropriate. A CVE is not required before a fix is released.
 
 ## Contacting Us
 
