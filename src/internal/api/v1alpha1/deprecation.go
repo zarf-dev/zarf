@@ -24,7 +24,7 @@ func WarnIfDeprecated(ctx context.Context, pkg api.Package) {
 // WarnAuthorIfDeprecated reports v1alpha1 deprecation when operating on a source manifest.
 func WarnAuthorIfDeprecated(ctx context.Context, pkg api.Package) {
 	if pkg.GetAPIVersion() == v1alpha1.APIVersion {
-		logger.From(ctx).Warn(DeprecationWarning+" See the deprecation strategy: https://docs.zarf.dev/v1.0/#v1alpha1-deprecation", "package", pkg.Metadata.Name)
+		logger.From(ctx).Warn(DeprecationWarning+" See the migration guide: https://docs.zarf.dev/best-practices/v1alpha1-to-v1beta1/", "package", pkg.Metadata.Name)
 	}
 }
 
