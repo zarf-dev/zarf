@@ -1,7 +1,5 @@
 # Zarf Deprecation and Compatibility Policy
 
-**Status:** Draft for Zarf v1.0.0
-
 ## Scope
 
 Zarf's explicit SemVer compatibility contract is limited to the package lifecycle:
@@ -10,18 +8,21 @@ Zarf's explicit SemVer compatibility contract is limited to the package lifecycl
 2. The package artifacts produced by supported `zarf package create` workflows.
 3. The package artifacts accepted by `zarf package deploy`.
 4. The observable deployment and runtime behavior of those artifacts.
+5. Zarf-managed in-cluster and deployed-package state for supported package deployments.
+
+A later compatible Zarf 1.x release MUST preserve or migrate state written by an earlier supported Zarf 1.x release so that supported package deployments remain manageable.
 
 A package artifact includes the metadata, layout, signatures, and OCI representations required for the supported create and deploy workflows to interoperate.
 
 The following are outside the explicit SemVer compatibility contract:
 
 - Every command, flag, output format, and behavior below `zarf tools`.
-- Commands other than `zarf package create` and `zarf package deploy`.
 - Configuration-file keys, environment variables, hidden flags, cache layouts, temporary files, and undocumented behavior.
-- Go packages and exported symbols, including `src/api`, `src/api/convert`, `src/pkg/signing`, `src/pkg/oci`, and `src/pkg/zoci`.
+- Logging structure and syntax, including levels, field names, message text, and encoding.
+- Go packages and exported symbols, including `src/pkg/signing`, `src/pkg/oci`, and `src/pkg/zoci`.
 - The implementation, command syntax, flags, defaults, and output of standalone signing, verification, publishing, and pulling commands.
 
-Code outside this scope may still follow normal project deprecation practices. It does not receive an independent SemVer support promise from this policy.
+Code outside this scope remains subject to the project-wide deprecation lifecycle below, but does not receive an independent SemVer support promise from this policy.
 
 ## Schema Contract
 
@@ -37,16 +38,24 @@ A new Zarf 1.x release MAY add backward-compatible schema capabilities. A packag
 
 ### `zarf.dev/v1alpha1`
 
-`zarf.dev/v1alpha1`, including a package definition that omits `apiVersion`, is a pre-GA legacy schema. It is not part of the stable Zarf 1.x schema contract. It is retained only for the migration period below.
+`zarf.dev/v1alpha1`, including a package definition that omits `apiVersion`, is a pre-GA legacy schema. It is not part of the stable Zarf 1.x schema contract. It is retained only for its migration period.
 
-- **November 2026:** Zarf v1.0.0 deprecates v1alpha1 and warns when it is used.
-- **May 2027:** Alpha create-time operations, including package creation, publishing, and signing, require `--features=v1alpha1=true`.
-- **June 2027:** Alpha deploy-time operations require `--features=v1alpha1=true`.
-- **August 2027:** v1alpha1 support ends.
-
-`zarf package remove` remains available for v1alpha1 deployments without that feature flag until v1alpha1 support ends. After August 2027, Zarf does not guarantee creation, deployment, removal, inspection, or other management of v1alpha1 packages or deployments.
+The v1alpha1 migration and retirement plan is a one-time v1.0 transition documented with that release. It does not define the project's ongoing deprecation lifecycle.
 
 The temporary v1alpha1 migration path does not make v1alpha1 a stable Zarf 1.x API. Its scheduled retirement therefore does not require a Zarf v2 release.
+
+## Deprecation Lifecycle
+
+The following lifecycle applies to deprecated SDK and CLI logic, including logic outside the explicit SemVer contract above.
+
+- **SDK logic** is a Go API or programmatic integration explicitly made available to consumers.
+- **CLI logic** is a user-invoked command, subcommand, flag, or documented CLI behavior, including `zarf tools`.
+
+The project MUST retain deprecated SDK logic through at least three subsequent minor releases and deprecated CLI logic through at least six subsequent minor releases. For example, logic deprecated in v1.2.0 remains available in v1.3.0, v1.4.0, and v1.5.0 as SDK logic, so v1.6.0 is its earliest removal release. CLI logic remains available through v1.8.0, so v1.9.0 is its earliest removal release. Maintainers MAY extend either window at their discretion.
+
+A deprecation MUST identify the affected logic, its replacement or removal rationale, the announcing release, and the earliest removal release. SDK deprecations MUST use Go's `Deprecated:` documentation convention. CLI deprecations MUST issue an actionable warning when used. Release notes MUST describe the migration required before removal.
+
+The security exception below is the only exception to these minimum windows.
 
 ## Compatibility Directions
 
@@ -57,8 +66,6 @@ A later Zarf 1.x CLI MUST create and deploy packages using supported schema capa
 ### Newer package on an older CLI
 
 Zarf does not guarantee that an older CLI can deploy every newer package. When a package depends on a later CLI's schema capability, artifact representation, or runtime behavior, package creation MUST record the minimum required Zarf version and the reason. Package deployment MUST validate that requirement before changing cluster state.
-
-This is a fail-fast compatibility guarantee, not permission to deploy with unknown behavior. A package consumer can upgrade Zarf or choose not to deploy the package.
 
 ## Signing and OCI Interoperability
 
