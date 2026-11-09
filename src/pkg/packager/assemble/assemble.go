@@ -258,6 +258,8 @@ type AssembleSkeletonOptions struct {
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
+//
+// Deprecated: Only supported by deprecated v1alpha1 packages.
 func AssembleSkeleton(ctx context.Context, resolvedPackage *load.ResolvedPackage, opts AssembleSkeletonOptions) (*layout.PackageLayout, error) {
 	if err := resolvedPackage.Definition.Validate(); err != nil {
 		return nil, err
