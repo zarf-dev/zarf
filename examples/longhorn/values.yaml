@@ -2,7 +2,7 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 global:
-  imageRegistry: "{{ .State.Registry.Address }}"
+  imageRegistry: "###ZARF_REGISTRY###"
   cattle:
     systemDefaultRegistry: ""
     windowsCluster:
@@ -288,7 +288,7 @@ ingress:
   tlsSecret: longhorn.local-tls
 
   ## If ingress is enabled you can set the default ingress path
-  ## then you can access the UI by using the following full path host + path
+  ## then you can access the UI by using the following full path {{host}}+{{path}}
   path: /
 
   ## Ingress annotations done as key:value pairs
