@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ template "docker-registry.fullname" . }}
-  namespace: {{ .Values.namespace | default .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ template "docker-registry.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
@@ -25,6 +25,7 @@ spec:
         {{- if .Values.podLabels }}
 {{ toYaml .Values.podLabels | indent 8 }}
         {{- end }}
+        zarf.dev/agent: ignore
       annotations:
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
 {{- if .Values.mtls.enabled }}

@@ -20,5 +20,3 @@ service:
   registryPort: {{ .State.Registry.Port }}
   nodePort: {{ .State.Registry.Port }}
 fullnameOverride: zarf-docker-registry
-podLabels:
-  zarf.dev/agent: ignore

@@ -54,9 +54,6 @@ resources:
 
 fullnameOverride: "zarf-docker-registry"
 
-podLabels:
-  zarf.dev/agent: "ignore"
-
 affinity:
   enabled: ###ZARF_VAR_REGISTRY_AFFINITY_ENABLE###
   custom:

@@ -4,7 +4,7 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: {{ template "docker-registry.fullname" . }}
-  namespace: {{ .Values.namespace | default .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ template "docker-registry.fullname" . }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"

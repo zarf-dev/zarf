@@ -25,5 +25,53 @@ component:
         - path: registry-common-state-values.yaml
           enableTemplating: true
       values:
-        - sourcePath: .registry
-          targetPath: .
+        - sourcePath: .registry.resources
+          targetPath: .resources
+        - sourcePath: .registry.persistence.existingClaim
+          targetPath: .persistence.existingClaim
+        - sourcePath: .registry.persistence.enabled
+          targetPath: .persistence.enabled
+        - sourcePath: .registry.persistence.size
+          targetPath: .persistence.size
+        - sourcePath: .registry.persistence.accessMode
+          targetPath: .persistence.accessMode
+        - sourcePath: .registry.autoscaling.minReplicas
+          targetPath: .autoscaling.minReplicas
+        - sourcePath: .registry.autoscaling.maxReplicas
+          targetPath: .autoscaling.maxReplicas
+        - sourcePath: .registry.autoscaling.enabled
+          targetPath: .autoscaling.enabled
+        - sourcePath: .registry.caBundle
+          targetPath: .caBundle
+        - sourcePath: .registry.extraEnvVars
+          targetPath: .extraEnvVars
+        - sourcePath: .registry.opentelemetry.exporter
+          targetPath: .opentelemetry.exporter
+        - sourcePath: .registry.serviceAccount.create
+          targetPath: .serviceAccount.create
+        - sourcePath: .registry.serviceAccount.name
+          targetPath: .serviceAccount.name
+        - sourcePath: .registry.serviceAccount.annotations
+          targetPath: .serviceAccount.annotations
+        - sourcePath: .registry.affinity.enabled
+          targetPath: .affinity.enabled
+        - sourcePath: .registry.affinity.custom
+          targetPath: .affinity.custom
+        - sourcePath: .registry.tolerations
+          targetPath: .tolerations
+        - sourcePath: .registry.nodeSelector
+          targetPath: .nodeSelector
+        - sourcePath: .registry.proxy.tolerations
+          targetPath: .proxy.tolerations
+        - sourcePath: .registry.autoscaling.mapReplicasToNodes
+          targetPath: .autoscaling.mapReplicasToNodes
+        - sourcePath: .registry.autoscaling.targetCPUUtilizationPercentage
+          targetPath: .autoscaling.targetCPUUtilizationPercentage
+        - sourcePath: .registry.proxy.hostNetwork
+          targetPath: .proxy.hostNetwork
+        - sourcePath: .registry.securityContext.runAsUser
+          targetPath: .securityContext.runAsUser
+        - sourcePath: .registry.securityContext.fsGroup
+          targetPath: .securityContext.fsGroup
+        - sourcePath: .registry.securityContext.runAsGroup
+          targetPath: .securityContext.runAsGroup

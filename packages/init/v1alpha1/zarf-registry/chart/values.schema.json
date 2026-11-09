@@ -8,9 +8,7 @@
     "fullnameOverride": {
       "type": "string"
     },
-    "namespace": {
-      "type": "string"
-    },
+    "namespace": false,
     "customLabels": {
       "type": "object",
       "additionalProperties": {
