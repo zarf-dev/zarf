@@ -17,7 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
-func TestComposabilityV1beta1(t *testing.T) {
+func TestComposabilityExample(t *testing.T) {
 	t.Parallel()
 
 	// Skip for Windows until path separators in packages are standardized.

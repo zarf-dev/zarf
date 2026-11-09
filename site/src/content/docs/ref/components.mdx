@@ -291,32 +291,6 @@ Some package level fields from imported components will also be merged with the 
 | Un'name'd Primitive Arrays | `values.files` | The importing package definition's array will be appended to the end of the arrays from imported component configs. Duplicate paths are collapsed, with the first occurrence retained so the earliest position in the merge order is preserved. |
 | Global Behavior | `values.schema` | Schemas are merged with the importing package's schema taking precedence, followed by earlier component imports. Nested imports have lower precedence than the component importing them |
 
-### Health Checks
-
-Use cluster wait actions in `actions.onDeploy.onSuccess` to check resource readiness after deploying a component.
-
-<Properties apiVersion="v1beta1" item="ComponentActionWait" include={["cluster"]} />
-
-With `condition` omitted, cluster wait actions wait until the specified resources are fully reconciled, meaning that their desired and current states match. Internally, [kstatus](https://github.com/kubernetes-sigs/cli-utils/blob/master/pkg/kstatus/README.md#kstatus) is used to assess when reconciliation is complete. These checks support all Kubernetes resources that implement the [status](https://kubernetes.io/docs/concepts/overview/working-with-objects/#object-spec-and-status) field, including custom resources. If the status field is not implemented on a resource, it will automatically pass the health check.
-
-For non-core resources, include the API version and group in `kind`, such as `StatefulSet.v1.apps`.
-
-```yaml
-    actions:
-      onDeploy:
-        onSuccess:
-          - wait:
-              cluster:
-                kind: Pod
-                name: my-pod
-                namespace: my-namespace
-          - wait:
-              cluster:
-                kind: StatefulSet.v1.apps
-                name: my-stateful-set
-                namespace: my-namespace
-```
-
 ## Deploying Components
 
 When deploying a Zarf package, components are deployed in the order they are defined in the `zarf.yaml`.

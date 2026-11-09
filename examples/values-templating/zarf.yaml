@@ -13,6 +13,7 @@ components:
     description: This component demonstrates templating manifest files by deploying an nginx page to the cluster
     images:
       - name: "docker.io/library/nginx:1.29.2"
+        id: nginx
     actions:
       onRemove:
         before:
