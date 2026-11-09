@@ -79,4 +79,4 @@ Before using this exception, maintainers SHOULD preserve compatibility through a
 
 ## Policy Changes
 
-Changing this policy changes Zarf's declared public API. A policy change MUST be reviewed as a project decision and MUST NOT silently narrow an existing major-version guarantee.
+The guarantees in this policy are minimum project commitments. An amendment MAY clarify or strengthen them, but MUST NOT reduce them or add an exception that weakens them.
