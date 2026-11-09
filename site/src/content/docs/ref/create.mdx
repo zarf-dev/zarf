@@ -17,8 +17,7 @@ graph TD
     A3(filter components by architecture)-->A4
     A4(detect init package)-->A5
     A5(handle deprecations)-->A6
-    A6(parse component imports)-->A7
-    A7(process create-time variables)-->A8
+    A6(parse component imports)-->A8
     A8(write build data and zarf.yaml)-->A9
 
     A9(run validations)-->A10
@@ -64,47 +63,34 @@ graph TD
 
 ## Package Templates
 
-Package configuration templates can be used during `zarf package create` to configure the `zarf.yaml` file. Templates are baked into the Zarf package so they cannot be changed post create.
+Use [`zarf dev template`](/commands/zarf_dev_template/) to render a package or component definition before creating a package. Templates use Go template syntax with `[[` and `]]` delimiters. The rendered definition is included in the package, so its template values cannot be changed after creation.
 
-:::caution
+For example, save this definition as `zarf.tpl.yaml`:
 
-`zarf package create` templates only template `###ZARF_PKG_TMPL_*###` entries the `zarf.yaml` file while `zarf package deploy` only templates other `manifests`, `charts`, `files`, and `actions`.  To learn more about using deployment values see the [Deployment Values](/ref/values) page.
-
-:::
-
-You can specify `zarf.yaml` templates at package create time by including `###_ZARF_PKG_TMPL_*###` as the value for any string-type data in your package definition. Template values can be defined using [config files](/ref/config-files/) or the `--set` flag. If a template is undefined during `zarf package create` if will always be prompted for unless `--confirm` is used.
-
-An example of templates is below:
 ```yaml
+apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
-  name: 'pkg-variables'
-  description: 'Prompt for a variables during package create'
-
-constants:
-  - name: PROMPT_IMAGE
-    value: '###ZARF_PKG_TMPL_PROMPT_ON_CREATE###'
-
+  name: app
+  version: "[[ .VERSION ]]"
 components:
-  - name: zarf-prompt-image
-    required: true
+  - name: app
     images:
-      - '###ZARF_PKG_TMPL_PROMPT_ON_CREATE###'
+      - name: "[[ .IMAGE ]]"
 ```
 
-:::caution
+Render the template and create the package from the generated definition:
 
-It is not recommended to use package configuration templates for any `sensitive` data as this will be baked into the package as plain text.  Please use a deploy-time variable with the `sensitive` key set instead.
+```bash
+zarf dev template --set VERSION=1.0.0 --set IMAGE=ghcr.io/example/app:1.0.0
+zarf package create zarf.gen.yaml
+```
 
-:::
+You can also provide a YAML mapping with `--set-file template-values.yaml`. Values passed with `--set` take precedence over the file. Template keys are case-sensitive, and missing values cause an error. Rendering validates the generated definition and writes it alongside the template with a `.gen.yaml` suffix.
 
-:::note
+Render local component templates separately and use their generated paths in `import.local[].path`. Render remote components before publishing them.
 
-You can only template string values in this way as non-string values will not marshal/unmarshal properly through the yaml.
-
-Additionally, you cannot template the component import path using package configuration templates
-
-:::
+Do not put sensitive data in package templates: rendered values are stored in the package. For configuration supplied at deploy time, see [Package Values](/ref/package-values/).
 
 ## Differential Packages
 
