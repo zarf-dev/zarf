@@ -2,7 +2,7 @@ apiVersion: zarf.dev/v1beta1
 kind: ZarfPackageConfig
 metadata:
   name: composable-packages
-  description: Import a reusable web server and serve different pages in separate namespaces
+  description: Demo Zarf package composability
 
 values:
   files:

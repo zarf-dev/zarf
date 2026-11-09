@@ -15,7 +15,6 @@ These components define what dependencies they have along with a declarative def
 Each package can have as many components as the package creator wants but a package isn't anything without at least one component.
 
 {/*
-
 ## What can be Packaged?
 
 The following types of software can be rolled into a Zarf Package:
@@ -326,6 +325,6 @@ You can also exclude optional components from the CLI with a leading dash (`-`) 
 $ zarf package deploy ./path/to/package.tar.zst --components='*,-optional-component-2'
 ```
 
-When a component matches multiple selectors, the last matching selector takes precedence. For example, `--components='-*,optional-component-1'` excludes optional components except `optional-component-1`. Reversing the selectors excludes it too. Required components remain selected.
+When a component matches multiple selectors, the last matching selector takes precedence. For example, `--components='-*,optional-component-1'` excludes optional components except `optional-component-1`. Reversing the selectors excludes it too. Required components remain selected. Previously exclusions always took precedence; place exclusions last to retain that behavior.
 
 :::

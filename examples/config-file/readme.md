@@ -9,4 +9,3 @@ zarf package deploy zarf-package-config-file-*.tar.zst --confirm
 
 `log_level` configures logging, `package.create.skip_sbom` controls SBOM generation, `package.deploy.components` selects the lion component, and `package.deploy.values` loads its runtime values from `deploy-values.yaml`. Command-line flags override these defaults.
 
-Use `zarf dev generate-config` to generate a config file with the available options.
