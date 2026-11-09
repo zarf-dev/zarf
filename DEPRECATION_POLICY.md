@@ -32,7 +32,7 @@ A major release MAY introduce a time-bounded legacy compatibility path. The tran
 
 Schema identifiers and Zarf CLI major versions are independent. A schema suffix such as `beta1` does not determine its support level.
 
-The applicable major release transition document identifies the generally available package schema or schemas. Within that major version, Zarf MUST NOT remove a stable schema field, kind, enumerated value, or documented core behavior, or change it incompatibly. A future incompatible package schema requires a new schema identity.
+The applicable major release transition document identifies the generally available package schema or schemas. Within that major version, Zarf MUST NOT remove a stable schema field, kind, enumerated value, or documented core behavior, or change it incompatibly. A future incompatible package schema requires a new schema identity. A subsequent major release that changes a stable schema or documented core behavior incompatibly MUST document the migration in release notes and update compatibility coverage for create, deployment and runtime behavior, and managed state.
 
 A new release MAY add backward-compatible schema capabilities. A package using semantics or an artifact format introduced after an older CLI release MUST record the required minimum CLI version in its build metadata. An older CLI MUST fail before deployment with the requirement and its reason, rather than deploy with unknown or changed behavior.
 
@@ -46,8 +46,6 @@ The following lifecycle applies to deprecated SDK and CLI logic, including logic
 The project MUST retain deprecated SDK logic through at least three subsequent minor releases and deprecated CLI logic through at least six subsequent minor releases. For an item deprecated in `vM.N.0`, the earliest SDK removal release is `vM.(N+4).0` and the earliest CLI removal release is `vM.(N+7).0`. Maintainers MAY extend either window at their discretion.
 
 A deprecation MUST identify the affected logic, its replacement or removal rationale, the announcing release, and the earliest removal release. SDK deprecations MUST use Go's `Deprecated:` documentation convention. CLI deprecations MUST issue an actionable warning when used. Release notes MUST describe the migration required before removal.
-
-The security exception below is the only exception to these minimum windows.
 
 ## Compatibility Directions
 
@@ -67,24 +65,6 @@ A later compatible `zarf package deploy` MUST continue to load and verify a vali
 
 Likewise, a later compatible `zarf package deploy` MUST continue to consume a compatible package artifact stored in OCI by an earlier supported package workflow. It MAY change standalone publish or pull commands and OCI utility APIs.
 
-## General Deprecation Process
-
-When Zarf functionality is deprecated, including functionality not tied to a schema version, it follows this minimum retirement schedule:
-
-1. For at least six months after deprecation is announced, the functionality MUST remain enabled by default behind a feature flag.
-2. After that period, the feature flag MAY default to disabled, but the functionality MUST remain available when explicitly enabled for at least three more months. This period starts with the first release that changes the default.
-3. After both periods have elapsed, the functionality MAY be removed without a major Zarf release, provided removal does not violate a compatibility guarantee in this policy.
-
-When Zarf detects use of deprecated functionality, it MUST emit a warning to standard error identifying the functionality, its replacement if available, and the scheduled default change and removal dates or releases if known. Release notes and documentation MUST identify the feature flag and explain how to migrate.
-
-## Deprecating Stable Package Behavior
-
-A deprecation of stable package behavior MUST identify the affected package contract and replacement, describe the migration in release notes and package documentation, preserve the deprecated behavior for the remainder of the major version, and add or update compatibility coverage for create, deploy, runtime behavior, and managed state.
-
-The general deprecation process does not override the stable package contract: behavior protected by that contract MUST remain enabled by default throughout Zarf 1.x. Its default-disabled period starts no earlier than the first release that can change the default without violating that contract.
-
-The project MAY add an automated migration tool. Such tooling MUST either perform a safe transformation or fail with an actionable description of the manual migration required. It MUST NOT claim lossless conversion where removed features cannot be represented in the target schema.
-
 ## Security Exception
 
 A breaking change required to respond to a vulnerability is exempt from the major-version rule and MAY ship in a patch or minor Zarf release. This exception applies whether or not the vulnerability has a CVE.
@@ -95,10 +75,4 @@ The change MUST be limited to the required remediation. Release notes MUST ident
 
 Zarf MAY accelerate a migration or make an otherwise incompatible change within a major release when an upstream dependency removes or incompatibly changes a required capability, including Kubernetes API removals, container-runtime incompatibilities, or OCI specification changes.
 
-Before using this exception, maintainers SHOULD preserve compatibility through an adapter, compatibility layer, or documented workaround where practical. If that is not practical, the release notes MUST identify the upstream change, affected Zarf contract, impacted environments and releases, required operator action, and migration or workaround. The change MUST be limited to restoring compatibility with the supported upstream environment.
-
-This exception does not apply to ordinary dependency upgrades, implementation refactors, or optional upstream capabilities.
-
-## Policy Changes
-
-Changing this policy changes Zarf's declared public API. A policy change MUST be reviewed as a project decision and documented in this file's history. It MUST NOT silently narrow an existing major-version guarantee.
+Before using this exception, maintainers SHOULD preserve compatibility through an adapter, compatibility layer, or documented workaround where practical. If that is not practical, the release notes MUST identify the upstream change, affected Zarf contract, impacted environments and releases, required operator action, and migration or workaround.
