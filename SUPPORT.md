@@ -19,7 +19,7 @@ After an issue is made, this issue can be brought into other channels such as th
 
 
 ## Sensitive Information Process
-For issues from those who are unable to post on Github, you may send an email using the following issue template filled out to [zarf-dev-private@googlegroups.com](zarf-dev-private@googlegroups.com)
+For issues from those who are unable to post on Github, you may send an email using the following issue template filled out to [zarf-dev-private@googlegroups.com](mailto:zarf-dev-private@googlegroups.com)
 
 The response time to emails may be delayed  as they are not able to receive community help, so we encourage participation into Github Issues as much as possible.
 
