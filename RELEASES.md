@@ -4,10 +4,6 @@ This document provides guidance on how to create Zarf releases, address release 
 
 This project uses [Release Please](https://github.com/googleapis/release-please) to automate release management and [goreleaser](https://github.com/goreleaser/goreleaser-action) for building and publishing release artifacts.
 
-## Compatibility Policies
-
-Release maintainers MUST apply the [Deprecation and Compatibility Policy](DEPRECATION_POLICY.md). The [v1 Transition and Migration](V1_MIGRATION.md) document defines the v1-specific stable contract and legacy-schema migration.
-
 ## How Releases Work
 
 ### Automated Releases (Release Please)
