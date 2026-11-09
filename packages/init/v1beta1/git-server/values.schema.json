@@ -20,6 +20,9 @@
             "size": {
               "type": "string"
             },
+            "storageClass": {
+              "type": "string"
+            },
             "accessModes": {
               "items": {
                 "type": "string"

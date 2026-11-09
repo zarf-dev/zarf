@@ -46,6 +46,8 @@ component:
           targetPath: .persistence.claimName
         - sourcePath: .gitServer.persistence.size
           targetPath: .persistence.size
+        - sourcePath: .gitServer.persistence.storageClass
+          targetPath: .persistence.storageClass
         - sourcePath: .gitServer.persistence.accessModes
           targetPath: .persistence.accessModes
         - sourcePath: .gitServer.replicaCount

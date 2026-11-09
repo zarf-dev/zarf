@@ -33,6 +33,8 @@ component:
           targetPath: .persistence.enabled
         - sourcePath: .registry.persistence.size
           targetPath: .persistence.size
+        - sourcePath: .registry.persistence.storageClass
+          targetPath: .persistence.storageClass
         - sourcePath: .registry.persistence.accessMode
           targetPath: .persistence.accessMode
         - sourcePath: .registry.autoscaling.minReplicas
