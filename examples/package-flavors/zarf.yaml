@@ -12,12 +12,7 @@ components:
       flavor: rocky-road
     images:
       - name: rockylinux:9-minimal
-    actions:
-      onDeploy:
-        before:
-          - cmd: echo "rockylinux:9-minimal"
-            setValues:
-              - key: .image
+        id: enterprise-linux
 
   - name: image
     description: "Sets the Enterprise Linux flavor to Oracle Linux"
@@ -25,12 +20,7 @@ components:
       flavor: oracle-cookie-crunch
     images:
       - name: oraclelinux:9-slim
-    actions:
-      onDeploy:
-        before:
-          - cmd: echo "oraclelinux:9-slim"
-            setValues:
-              - key: .image
+        id: enterprise-linux
 
   - name: image
     description: "Sets the Enterprise Linux flavor to Alma Linux"
@@ -38,12 +28,7 @@ components:
       flavor: vanilla-alma-nd
     images:
       - name: almalinux:9-minimal
-    actions:
-      onDeploy:
-        before:
-          - cmd: echo "almalinux:9-minimal"
-            setValues:
-              - key: .image
+        id: enterprise-linux
 
   - name: image
     description: "Sets the Enterprise Linux flavor to OpenSUSE"
@@ -51,12 +36,7 @@ components:
       flavor: strawberry-suse
     images:
       - name: opensuse/leap:15
-    actions:
-      onDeploy:
-        before:
-          - cmd: echo "opensuse/leap:15"
-            setValues:
-              - key: .image
+        id: enterprise-linux
 
   - name: pod
     description: "The pod that runs the specified flavor of Enterprise Linux"
