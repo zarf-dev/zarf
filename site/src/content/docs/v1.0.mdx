@@ -15,17 +15,17 @@ A package schema defines the fields and structure of the `zarf.yaml` package def
 
 ### v1alpha1 Deprecation
 
-The legacy package schema, `v1alpha1`, is deprecated in `v1.0.0`. However, we know there are countless existing `v1alpha1` packages supporting many critical systems across the world. To give users time to migrate, we are providing an extended deprecation period. Zarf will support `v1alpha1` packages through August 2027, nine months after the `v1.0.0` release in November 2026.
+The legacy package schema, `v1alpha1`, is deprecated in `v1.0.0`. However, we know there are countless existing `v1alpha1` packages supporting many critical systems across the world. To give users time to migrate, we are providing an extended deprecation period. Zarf will support `v1alpha1` packages through May 2027, six months after the `v1.0.0` release in November 2026.
 
-With the release of `v1.0.0`, Zarf will log a warning when `v1alpha1` packages are used. Starting in May 2027, create-time operations such as `package create`, `publish`, and `sign` will require `--features=v1alpha1=true` for continued use. Deploy-time operations will require the feature flag starting in June 2027.
+With the release of `v1.0.0`, Zarf will log a warning when `v1alpha1` packages are used. Starting in February 2027, create-time operations such as `package create`, `publish`, and `sign` will require `--features=v1alpha1=true` for continued use. Deploy-time operations will require the feature flag starting in March 2027.
 
 <Timeline
   label="v1alpha1 deprecation timeline"
   milestones={[
     { title: "v1alpha1 Deprecated", date: "November 2026", datetime: "2026-11" },
-    { title: "Create-time opt-in", date: "May 2027", datetime: "2027-05" },
-    { title: "Deploy-time opt-in", date: "June 2027", datetime: "2027-06" },
-    { title: "Support ends", date: "August 2027", datetime: "2027-08" },
+    { title: "Create-time opt-in", date: "February 2027", datetime: "2027-02" },
+    { title: "Deploy-time opt-in", date: "March 2027", datetime: "2027-03" },
+    { title: "Support ends", date: "May 2027", datetime: "2027-05" },
   ]}
 />
 
