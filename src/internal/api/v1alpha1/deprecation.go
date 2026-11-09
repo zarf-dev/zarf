@@ -15,10 +15,16 @@ import (
 const DeprecationWarning = "v1alpha1 packages are deprecated and do not have long-term support in Zarf v1.0; migrate to zarf.dev/v1beta1."
 
 // WarnIfDeprecated reports v1alpha1 deprecation at package operation boundaries.
-// An omitted API version is treated as v1alpha1.
 func WarnIfDeprecated(ctx context.Context, pkg api.Package) {
 	if pkg.GetAPIVersion() == v1alpha1.APIVersion {
 		logger.From(ctx).Warn(DeprecationWarning, "package", pkg.Metadata.Name)
+	}
+}
+
+// WarnAuthorIfDeprecated reports v1alpha1 deprecation when operating on a source manifest.
+func WarnAuthorIfDeprecated(ctx context.Context, pkg api.Package) {
+	if pkg.GetAPIVersion() == v1alpha1.APIVersion {
+		logger.From(ctx).Warn(DeprecationWarning+" See the migration guide: https://docs.zarf.dev/best-practices/v1alpha1-to-v1beta1/", "package", pkg.Metadata.Name)
 	}
 }
 

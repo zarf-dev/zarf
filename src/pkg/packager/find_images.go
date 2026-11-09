@@ -293,7 +293,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg api.Package, resources
 }
 
 func findImages(ctx context.Context, pkg api.Package, resourceSet *load.ResourceSet, packageValues value.Values, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
-	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
+	internalv1alpha1.WarnAuthorIfDeprecated(ctx, pkg)
 	l := logger.From(ctx)
 	s, err := state.Default()
 	if err != nil {

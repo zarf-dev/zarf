@@ -242,7 +242,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	internalv1alpha1.WarnIfDeprecated(ctx, definition)
+	internalv1alpha1.WarnAuthorIfDeprecated(ctx, definition)
 
 	// The definition is printed in the apiVersion it was authored in.
 	if definition.APIVersion == v1beta1.APIVersion {

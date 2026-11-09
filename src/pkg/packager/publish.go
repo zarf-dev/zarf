@@ -229,7 +229,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		err = errors.Join(err, loaded.Close())
 	}()
 	pkg := loaded.Definition
-	internalv1alpha1.WarnIfDeprecated(ctx, pkg)
+	internalv1alpha1.WarnAuthorIfDeprecated(ctx, pkg)
 	for _, comp := range pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")
