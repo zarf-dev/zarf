@@ -246,9 +246,7 @@ The v1beta1 `import` key supports two sources for reusable `ZarfComponentConfig`
 1. `local[].path` references a component definition file on the local filesystem.
 2. `remote[].url` references a component published to an OCI registry with `zarf component publish`.
 
-These fields are lists so you can provide alternative component variants. Zarf selects exactly one source whose `variant.flavor` and `variant.architecture` match the package creation target. Multiple entries are alternatives, not components to merge together. Use nested imports to extend a component.
-
-For changes from v1alpha1 imports, see [Migrating Packages from v1alpha1 to v1beta1](/best-practices/v1alpha1-to-v1beta1/#component-imports).
+These fields are lists so you can provide alternative component variants. Zarf selects exactly one source whose `variant.flavor` and `variant.architecture` match the package creation target. If zero or multiple components match, package creation fails.
 
 <Tabs>
   <TabItem label="Local Path">
