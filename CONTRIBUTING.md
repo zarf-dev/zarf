@@ -77,7 +77,7 @@ Zarf maintainers will require one (1) core team review before merge. See the (co
    - :key: We follow the [conventional commits spec](https://www.conventionalcommits.org/en/v1.0.0/) with the [commitlint conventional config](https://github.com/conventional-changelog/commitlint/tree/master/%40commitlint/config-conventional) as extended types for PR titles.
 1. :key: Automated tests will begin based on the paths you have edited in your Pull Request.
    > ⚠️ **NOTE:** _If you are an external third-party contributor, the pipelines won't run until a [CODEOWNER](https://github.com/zarf-dev/zarf/blob/main/CODEOWNERS) approves the pipeline run._
-1. :key: Be sure to use the [needs-adr,needs-docs,needs-tests](https://github.com/zarf-dev/zarf/labels?q=needs) labels as appropriate for the PR. Once you have addressed all of the needs, remove the label.
+1. :key: Be sure to use the [needs-docs,needs-tests](https://github.com/zarf-dev/zarf/labels?q=needs) labels as appropriate for the PR. Once you have addressed all of the needs, remove the label.
 1. Once the review is complete and approved, a core member of the zarf project will merge your PR. If you are a contributor, two core members of the zarf project will be required to approve the PR.
 1. Close the issue if it is fully resolved by your PR. _Hint: You can add "Fixes #XX" to the PR description to automatically close an issue when the PR is merged._
 
@@ -103,8 +103,6 @@ Contributions are highly welcome. When adding an example, be sure to also add it
 ## Zarf Enhancement Proposals (ZEP)
 
 Zarf Enhancement Proposals (ZEP) provides a process to propose and document important decision points. Proposal topics includes large features, significant changes to the UX, and architecture re-designs requiring considerable effort. Anyone can create a ZEP by visiting the [zarf-dev/proposals repository](https://github.com/zarf-dev/proposals).
-
-ZEPs replace Architecture Decision Records (ADRs) which are kept at the base of the Zarf repository for historical purposes.
 
 ## Governance
 

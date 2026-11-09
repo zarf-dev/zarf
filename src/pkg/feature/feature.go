@@ -29,7 +29,7 @@ var User Mode = "user"
 // Name describes the canonical identifier for the feature. It must be globally unique across all features for the full
 // lifespan of the Zarf project. Once created, names are considered immutable and may not be removed or redacted. Should
 // a feature evolve enough to require renaming, then a new feature can be created and the original marked as Deprecated.
-// The Deprecated feature's Description should provide context (like the ZEP or ADR) and point users to the new feature.
+// The Deprecated feature's Description should provide context (like the ZEP) and point users to the new feature.
 type Name string
 
 // Description is an explanation of the feature, what to expect when it's enabled or disabled, the associated proposal,

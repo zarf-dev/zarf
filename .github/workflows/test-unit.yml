@@ -7,7 +7,6 @@ on:
       - "**.png"
       - "**.gif"
       - "**.svg"
-      - "adr/**"
       - "docs/**"
       - "CODEOWNERS"
   merge_group:
@@ -17,7 +16,6 @@ on:
       - "**.png"
       - "**.gif"
       - "**.svg"
-      - "adr/**"
       - "docs/**"
       - "CODEOWNERS"
   push:

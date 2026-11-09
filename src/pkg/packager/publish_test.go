@@ -223,7 +223,7 @@ func TestPublishSkeleton(t *testing.T) {
 			expected.Metadata.Architecture = "skeleton"
 
 			// NOTE(mkcp): In future schema version move ZarfPackage.Metadata.AggregateChecksum
-			// to ZarfPackage.Build.AggregateChecksum. See ADR #26
+			// to ZarfPackage.Build.AggregateChecksum.
 			require.Equal(t, expected, pkg)
 		})
 	}

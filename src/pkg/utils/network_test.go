@@ -21,8 +21,8 @@ import (
 func TestParseChecksum(t *testing.T) {
 	t.Parallel()
 
-	adr := "https://raw.githubusercontent.com/zarf-dev/zarf/main/.adr-dir"
-	sum := "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3"
+	fileURL := "https://example.com/.test-file"
+	sum := "f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2"
 
 	tests := []struct {
 		name        string
@@ -32,14 +32,14 @@ func TestParseChecksum(t *testing.T) {
 	}{
 		{
 			name:        "url with checksum",
-			url:         adr + "@" + sum,
-			expectedURI: adr,
+			url:         fileURL + "@" + sum,
+			expectedURI: fileURL,
 			expectedSum: sum,
 		},
 		{
 			name:        "url with query parameters and checksum",
-			url:         adr + "?foo=bar@" + sum,
-			expectedURI: adr + "?foo=bar",
+			url:         fileURL + "?foo=bar@" + sum,
+			expectedURI: fileURL + "?foo=bar",
 			expectedSum: sum,
 		},
 		{
@@ -72,8 +72,8 @@ func TestDownloadToFile(t *testing.T) {
 
 	// TODO: Explore replacing client transport instead of spinning up  http server.
 	files := map[string]string{
-		"README.md": "Hello World\n",
-		".adr-dir":  "adr\n",
+		"README.md":  "Hello World\n",
+		".test-file": "test\n",
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		_, fileName := path.Split(req.URL.Path)
@@ -105,20 +105,20 @@ func TestDownloadToFile(t *testing.T) {
 		},
 		{
 			name:     "existing file with shasum",
-			fileName: ".adr-dir",
-			shasum:   "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3",
+			fileName: ".test-file",
+			shasum:   "f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2",
 		},
 		{
 			name:        "existing file with wrong shasum",
-			fileName:    ".adr-dir",
+			fileName:    ".test-file",
 			shasum:      "badsha",
-			expectedErr: "expected badsha, got 930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3",
+			expectedErr: "expected badsha, got f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2",
 		},
 		{
 			name:        "existing file with shasum and query parameters",
-			fileName:    ".adr-dir",
+			fileName:    ".test-file",
 			queryParams: "foo=bar",
-			shasum:      "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3",
+			shasum:      "f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2",
 		},
 	}
 	for _, tt := range tests {
