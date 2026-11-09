@@ -41,6 +41,7 @@ const options = [
 
 <script>
   import { captureDocsEvent } from "../lib/analytics";
+  import { versionFromPath } from "../lib/version";
 
   class StarlightVersionSelect extends HTMLElement {
     constructor() {
@@ -52,7 +53,7 @@ const options = [
       select.addEventListener("change", () => {
         const targetBase = select.value;
         captureDocsEvent("documentation_version_selected", {
-          target_version: targetBase === "/" ? "latest" : targetBase.slice(1, -1),
+          target_version: versionFromPath(targetBase),
         });
         const { pathname, search, hash } = window.location;
         const sub = pathname.startsWith(currentBase)
