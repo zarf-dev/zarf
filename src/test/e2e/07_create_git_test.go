@@ -40,7 +40,7 @@ func TestCreateGit(t *testing.T) {
 		"v0.0.1\n", "  dragons\n* main\n")
 
 	// Verify specific tag component shorthand tag
-	gitDir = fmt.Sprintf("%s/components/specific-tag/repos/zarf-public-test-470731282/.git", extractDir)
+	gitDir = fmt.Sprintf("%s/components/specific-tag/repos/zarf-public-test-482869567/.git", extractDir)
 	verifyGitRepo(t, gitDir,
 		"5249809", "(HEAD -> zarf-ref-v0.0.1, tag: v0.0.1)", "Added README.md",
 		"v0.0.1\n", "* zarf-ref-v0.0.1\n")
